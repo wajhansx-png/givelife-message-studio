@@ -1,4 +1,4 @@
-import os,json,time,subprocess,signal,urllib.request,uuid,shutil
+import os,json,time,subprocess,signal,urllib.request,urllib.parse,uuid,shutil,threading,re
 from pathlib import Path
 from persist import configured_store
 ROOT=Path(__file__).resolve().parent
@@ -11,6 +11,10 @@ for name in ('drafts.json','poster.jpg','state.md'):
 store.restore(DATA,ROOT)
 gowa_data=Path('/data/gowa');gowa_data.mkdir(parents=True,exist_ok=True)
 env=os.environ.copy();env.update(APP_HOST='127.0.0.1',APP_PORT='3000',APP_UI_ENABLED='false',APP_UI_AUTO_UPDATE='false',MCP_ENABLED='false',WHATSAPP_AUTO_DOWNLOAD_MEDIA='false',TZ='Asia/Karachi')
+parsed=urllib.parse.urlsplit(env['DB_URI'])
+query=urllib.parse.parse_qsl(parsed.query,keep_blank_values=True)
+query=[(k,v) for k,v in query if k!='channel_binding']
+env['DB_URI']=urllib.parse.urlunsplit(('postgres',parsed.netloc,parsed.path,urllib.parse.urlencode(query),''))
 children=[]
 def stop(*args):
  for child in children:
@@ -20,7 +24,12 @@ def stop(*args):
   except subprocess.TimeoutExpired:child.kill()
  raise SystemExit(0)
 signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
-gowa=subprocess.Popen(['/usr/local/bin/whatsapp','rest'],cwd=gowa_data,env=env);children.append(gowa)
+gowa=subprocess.Popen(['/usr/local/bin/whatsapp','rest'],cwd=gowa_data,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1);children.append(gowa)
+def safe_logs():
+ for line in gowa.stdout:
+  line=line.replace(os.environ['DB_URI'],'[private database]').replace(env['DB_URI'],'[private database]')
+  print(re.sub(r"postgres(?:ql)?://[^\s'\"]+",'[private database]',line),end='',flush=True)
+threading.Thread(target=safe_logs,daemon=True).start()
 for attempt in range(90):
  try:
   with urllib.request.urlopen('http://127.0.0.1:3000/devices',timeout=3) as response:devices=json.load(response).get('results',[])

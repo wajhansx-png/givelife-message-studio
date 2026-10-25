@@ -6,6 +6,7 @@ RUN curl -fsSL https://github.com/aldinokemal/go-whatsapp-web-multidevice/releas
  && chmod +x /usr/local/bin/whatsapp && rm /tmp/gowa.zip
 WORKDIR /app/studio
 COPY . .
+RUN pip install --no-cache-dir -r requirements.txt
 ENV PYTHONUNBUFFERED=1 DATA_DIR=/data/studio TZ=Asia/Karachi
 EXPOSE 10000
 CMD ["python", "launcher.py"]

@@ -1,6 +1,7 @@
 import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, datetime, math, re, secrets, os, base64
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from persist import configured_store
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get('DATA_DIR','/data/studio'))
 DATA.mkdir(parents=True,exist_ok=True)
@@ -8,6 +9,9 @@ DRAFT=DATA/'drafts.json'
 DEVICE=os.environ.get('WHATSAPP_DEVICE_ID','')
 GROUPS={'community':('Upwork Community 2026','120363398623589385@g.us'),'fiverr':('Fiverr Course 2026','120363411617215937@g.us'),'upwork':('Upwork Course 2026','120363430624868021@g.us'),'uet':('Fiverr Course UET','120363412286860707@g.us'),'toprated':('Top Rated Upworkers','120363427826119453@g.us')}
 JOBS={};LOCK=threading.Lock();SEND_LOCK=threading.Lock();ACTIVE=None
+STORE=configured_store()
+def persist_file(key,path):
+ if STORE:STORE.put(key,path.read_text(encoding='utf-8'))
 
 def api(path):
  req=urllib.request.Request('http://127.0.0.1:3000'+path,headers={'X-Device-Id':DEVICE})
@@ -16,18 +20,22 @@ def api(path):
 def next_message():
  with LOCK:
   file=DATA/'variant-state.json';n=json.loads(file.read_text()).get('index',0) if file.exists() else 0
-  file.write_text(json.dumps({'index':n+1}))
+  file.write_text(json.dumps({'index':n+1}));persist_file('variants',file)
   state=(DATA/'state.md').read_text(encoding='utf-8-sig');match=re.search(r'^LEFT:\s*(\d+)',state,re.M);left=int(match[1]) if match else 39000
   openings=['💔 *Yousuf is only 2. His treatment needs our support.*','🤲 *A small contribution can help close a serious treatment gap.*','⚠️ *Yousuf faces the risk of paralysis and damage to his eyesight.*','💔 *At 2 years old, Yousuf needs help getting treatment.*','🤲 *Can we come together for Yousuf today?*','⚠️ *The risks to Yousuf are serious. Every contribution matters.*','💔 *One donation brings Yousuf closer to the treatment he needs.*']
   facts=["_Fluid in his brain can paralyse his body and damage his eyesight. Both kidneys are badly swollen, and he also has a hernia._","_Fluid in Yousuf’s brain can cause paralysis and damage his eyesight. Both kidneys are badly swollen, and he has a hernia._","_Yousuf has fluid in his brain, swelling in both kidneys, and a hernia. The brain fluid can paralyse his body and damage his eyesight._"]
   asks=['*Could you give Rs. 1,000 or Rs. 2,000 today?* Even a smaller amount helps. 🤲','*Will you be one of the people who helps cover his treatment?* Your contribution matters. 🤲','*Please help with whatever you can today.* Together, small donations can cover the gap. 🤲','*If you can contribute, please take that step today.* Thank you for helping Yousuf. 🤲','*Can you help bring the remaining amount down?* Rs. 1,000 or Rs. 2,000 would make a difference. 🤲']
   text=f'{openings[n%7]}\n\n{facts[(n//7)%3]}\n\n💰 *_Rs. {left:,} LEFT_*\n\n* *_{math.ceil(left/2000)} people giving Rs. 2,000 or {math.ceil(left/1000)} giving Rs. 1,000 can cover what remains._*\n\n{asks[(n//3)%5]}\n\n📲 *03097458815*\nEasypaisa / JazzCash: Wajdan Khan\nFor GiveLife Foundation\n\nReply *Done* after donating.'
-  draft=json.loads(DRAFT.read_text(encoding='utf-8'));draft['group']=text;DRAFT.write_text(json.dumps(draft,ensure_ascii=False),encoding='utf-8');return text
+  draft=json.loads(DRAFT.read_text(encoding='utf-8'));draft['group']=text;DRAFT.write_text(json.dumps(draft,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT);return text
 
 def send_image(jid,caption,check_gap=False):
  status=api('/devices/'+DEVICE+'/status').get('results',{})
  if not status.get('is_connected') or not status.get('is_logged_in'):return {'code':'ERROR','message':'WhatsApp disconnected. Log in again.'}
  if check_gap:
+  saved=STORE.get('last_sent',{}) if STORE else {}
+  if jid in saved:
+   age=time.time()-saved[jid]
+   if age<900:return {'code':'COOLDOWN','message':f'Posted recently. Try in {math.ceil((900-age)/60)} min.'}
   messages=api('/chat/'+urllib.parse.quote(jid,safe='')+'/messages?limit=50').get('results',{}).get('data',[]);outgoing=[m for m in messages if m.get('is_from_me')]
   if outgoing:
    latest=max(datetime.datetime.fromisoformat(m['timestamp'].replace('Z','+00:00')) for m in outgoing);age=(datetime.datetime.now(datetime.timezone.utc)-latest).total_seconds()
@@ -36,6 +44,11 @@ def send_image(jid,caption,check_gap=False):
  r=subprocess.run(['curl','-s','--max-time','40','-X','POST','http://127.0.0.1:3000/send/image','-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'image=@{DATA / "poster.jpg"};type=image/jpeg','-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
  try:result=json.loads(r.stdout)
  except Exception:result={'code':'ERROR','message':'Send not confirmed. Check WhatsApp before retrying.'}
+ if STORE:
+  receipt={'time':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jid':jid,'code':result.get('code'),'message_id':result.get('results',{}).get('message_id')}
+  STORE.put('receipt_'+uuid.uuid4().hex,receipt)
+  if result.get('code')=='SUCCESS':
+   saved=STORE.get('last_sent',{});saved[jid]=time.time();STORE.put('last_sent',saved)
  with (DATA/'group-send-log.jsonl').open('a',encoding='utf-8') as f:f.write(json.dumps({'time':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jid':jid,'caption':caption,'response':result},ensure_ascii=False)+'\n')
  return result
 
@@ -97,7 +110,8 @@ class Handler(BaseHTTPRequestHandler):
   try:body=json.loads(self.rfile.read(int(self.headers.get('Content-Length',0))))
   except Exception:return self.reply({'error':'Invalid request'},status=400)
   if self.path=='/drafts':
-   with LOCK:DRAFT.write_text(json.dumps({k:str(body[k]) for k in ('group','dm')},ensure_ascii=False),encoding='utf-8')
+   with LOCK:
+    DRAFT.write_text(json.dumps({k:str(body[k]) for k in ('group','dm')},ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
    self.reply({'saved':True})
   elif self.path=='/wa-login':
    try:

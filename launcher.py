@@ -1,10 +1,14 @@
 import os,json,time,subprocess,signal,urllib.request,uuid,shutil
 from pathlib import Path
+from persist import configured_store
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get('DATA_DIR','/data/studio'));DATA.mkdir(parents=True,exist_ok=True)
 if not os.environ.get('UI_ACCESS_KEY'):raise SystemExit('UI_ACCESS_KEY must be configured before startup.')
+store=configured_store()
+if store is None:raise SystemExit('DB_URI must be configured with the free persistent PostgreSQL database.')
 for name in ('drafts.json','poster.jpg','state.md'):
  if not (DATA/name).exists():shutil.copyfile(ROOT/name,DATA/name)
+store.restore(DATA,ROOT)
 gowa_data=Path('/data/gowa');gowa_data.mkdir(parents=True,exist_ok=True)
 env=os.environ.copy();env.update(APP_HOST='127.0.0.1',APP_PORT='3000',APP_UI_ENABLED='false',APP_UI_AUTO_UPDATE='false',MCP_ENABLED='false',WHATSAPP_AUTO_DOWNLOAD_MEDIA='false',TZ='Asia/Karachi')
 children=[]

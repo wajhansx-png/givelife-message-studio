@@ -1,8 +1,12 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><meta name="theme-color" content="#12684f"><title>GiveLife · Message studio</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><meta name="theme-color" content="#0f5c47"><title>GiveLife · Message studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f4f2ec;--card:#fffefb;--line:#e2ded3;--ink:#1c2420;--mut:#5f6a64;--g:#12684f;--gd:#0d5640;--gs:#e4f1ea;--bub:#e1f2d7;--me:#dfeaf6;--warn:#9a4a12;--wbg:#fbeee2;--red:#b3262d;--rd:#951d23;--soft:#eeebe3;--ring:#2f7dd1;--sh:0 1px 2px rgba(0,0,0,.06),0 2px 10px rgba(0,0,0,.05)}
-@media(prefers-color-scheme:dark){:root{--bg:#121513;--card:#1b201d;--line:#2c332f;--ink:#e8ede9;--mut:#a2ada7;--g:#34a585;--gd:#2b8d71;--gs:#1d3229;--bub:#213c2d;--me:#23303d;--warn:#eaa063;--wbg:#33261b;--red:#e5545b;--rd:#c9444b;--soft:#242a27;--ring:#6aa9ee;--sh:none}}
+:root{--bg:#f3f4f1;--card:#ffffff;--line:#e3e6e1;--ink:#14201b;--mut:#5d6b64;--g:#0f6b52;--gd:#0b5541;--gs:#e5f2ec;--bub:#e3f4dc;--me:#e3ecf8;--warn:#9a4a12;--wbg:#fcf0e3;--red:#c0313a;--rd:#a1262e;--soft:#eef0ec;--ring:#2f7dd1;--sh:0 1px 2px rgba(16,24,20,.05),0 4px 16px rgba(16,24,20,.05)}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1210;--card:#171c19;--line:#29302c;--ink:#e9eeeb;--mut:#a3aea8;--g:#3aae8c;--gd:#2f9476;--gs:#1a2e25;--bub:#1f3a2c;--me:#22303f;--warn:#eaa063;--wbg:#33261b;--red:#e85a62;--rd:#cc4850;--soft:#222826;--ring:#6aa9ee;--sh:none}}
+body{font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif!important;letter-spacing:-.005em}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.02em}
+.brand small{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font:16px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overflow:hidden}
@@ -95,6 +99,7 @@ dialog.hist header .tool{flex:none!important;width:auto;padding:0 16px}
 .talk .log{cursor:pointer}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 /* tablet and phone: one column, nothing scrolls, thumb zone at the bottom */
+@media(max-width:1100px){.bname{display:none}}
 @media(max-width:899px){
  .layout{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
  .side{gap:8px}
@@ -118,7 +123,7 @@ dialog.hist header .tool{flex:none!important;width:auto;padding:0 16px}
 }
 @media(max-width:560px){
  .app{padding:8px 8px calc(8px + env(safe-area-inset-bottom));gap:8px}
- .brandbar{gap:6px}.mark{display:none}.seg button{padding:0 14px}.leftchip{padding:0 10px;font-size:14px}
+ .brandbar{gap:6px}.brand{display:none}.seg button{padding:0 14px}.leftchip{padding:0 10px;font-size:14px}
  .brandbar .connect-badge{font-size:0!important;width:40px;min-width:40px;min-height:40px!important;padding:0!important;display:grid;place-items:center;flex:none}
  .brandbar .connect-badge::before{font-size:18px;content:'◌'}.brandbar .connect-badge[data-state=online]::before{content:'●';color:#22a06b}.brandbar .connect-badge[data-state=offline]::before{content:'●';color:#d1453b}
  .ctx span{display:none}.tools{padding:8px 8px 0}.tools .sp{display:none}.tool{flex:1 1 0;min-width:0;min-height:42px;padding:0 6px}
@@ -137,7 +142,7 @@ dialog.hist header .tool{flex:none!important;width:auto;padding:0 16px}
 <body data-view="group">
 <div class="app">
  <header class="brandbar">
-  <div class="mark" aria-hidden="true">♡</div>
+  <div class="brand"><div class="mark" aria-hidden="true">♡</div><div class="bname">GiveLife<small>Foundation studio</small></div></div>
   <div class="seg" role="tablist" aria-label="Message type"><button data-view-button="group" aria-pressed="true" title="Group message (G)">Group</button><button data-view-button="dm" aria-pressed="false" title="Direct message (D)">DM</button></div>
   <span class="sp"></span>
   <span class="pace" id="pace" data-pace="L1" title="Donations normal"></span><button id="leftChip" class="leftchip" title="Change the amount left">Rs. … left</button>

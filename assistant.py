@@ -26,7 +26,8 @@ What the studio does: GiveLife raises money for Yousuf, a 2-year-old. Confirmed 
 Groups you can send to: main (GiveLife Foundation, ~130 members), community (Upwork Community 2026), fiverr (Fiverr Course 2026), upwork (Upwork Course 2026), uet (Fiverr Course UET), toprated (Top Rated Upworkers), free (all 5 freelance), all (main + 5 freelance), test (Givelife test group). Each group needs 15 minutes between posts; the server enforces this.
 
 How to act:
-- Do what the owner asks with the tools. If something is unclear, ask one short question instead of guessing.
+- Do what the owner asks with the tools, right away. His newest instruction always wins over the playbook and saved rules: if he tells you to change a rule or do something against one, do it without asking for confirmation, and save the new rule with remember when it is meant for the future. The only things you never do: invent medical facts or amounts, and the server keeps WhatsApp safety floors (15 minutes per group, 45 seconds between DMs).
+- If something is truly unclear, ask one short question instead of guessing.
 - Amounts: "34k left" means set_left 34000. "came 2000" means money_came 2000. Never invent an amount.
 - When money comes, never celebrate; the owner wants urgency kept.
 - Messages: never add begging closing lines ("Please send now", "Please help if you can"). Keep the owner's format and icons.
@@ -75,6 +76,7 @@ SETTING_TOOLS = [
     tool('resume_group', 'Let autopilot post in a paused group again.', {'key': GROUP_ONLY}, ['key']),
     tool('set_quiet_hours', 'Hours (0-23, Pakistan time) when autopilot sends nothing. Same start and end turns quiet hours off.', {'start': {'type': 'integer'}, 'end': {'type': 'integer'}}, ['start', 'end']),
     tool('set_dms', 'Turn autopilot DMs to donor contacts on or off, with a daily maximum.', {'enabled': {'type': 'boolean'}, 'daily': {'type': 'integer'}}, ['enabled', 'daily']),
+    tool('set_pace', 'Owner override of autopilot posting pace in minutes (0 and 0 returns to the normal ladder).', {'main_minutes': {'type': 'integer'}, 'freelance_minutes': {'type': 'integer'}}, ['main_minutes', 'freelance_minutes']),
 ]
 CHAT_TOOLS += SETTING_TOOLS + [
     tool('dm_list', 'Send the DM (poster or the attached picture, plus caption) to a list of people, one by one with a gap. '
@@ -97,7 +99,9 @@ def _system(memory):
 
 def _call(key, system, tools, messages):
     body = {'model': MODEL, 'messages': [{'role': 'system', 'content': system}] + messages,
-            'tools': tools, 'tool_choice': 'auto', 'max_tokens': 2000, 'temperature': 0.3}
+            'max_tokens': 2000, 'temperature': 0.3}
+    if tools:
+        body.update(tools=tools, tool_choice='auto')
     req = urllib.request.Request(API_URL, data=json.dumps(body).encode('utf-8'), method='POST',
                                  headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key})
     try:
@@ -189,3 +193,23 @@ class Autopilot:
         for name, inp in calls[:3]:
             if name in do:
                 self.log_fn('Autopilot rule check: ' + str(do[name](**inp)))
+
+
+DONOR_SYSTEM = """You reply on WhatsApp for GiveLife Foundation to someone who received our appeal for Yousuf, a 2-year-old.
+Confirmed facts only: fluid in his brain (can paralyse his body and damage his eyesight), both kidneys badly swollen, a hernia.
+Donations: 03097458815, Easypaisa / JazzCash, account name Wajdan Khan. Amount still needed: Rs. {left}.
+Medical papers are available and can be sent privately.
+Write 1 to 3 short, warm sentences in the same language the person used. Never invent facts, hospitals, dates or promises.
+If you cannot answer from these facts, reply exactly: SKIP"""
+
+
+def donor_reply(question, left):
+    """Short factual answer to a donor's DM, or None when the owner should answer himself."""
+    key = client()
+    if key is None:
+        return None
+    try:
+        text, _ = _call(key, DONOR_SYSTEM.format(left=f'{left:,}'), [], [{'role': 'user', 'content': str(question)[:1000]}])
+    except Exception:
+        return None
+    return None if not text or 'SKIP' in text else text[:600]

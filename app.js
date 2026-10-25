@@ -143,6 +143,10 @@ async function quick(t){const low=t.toLowerCase();let m;
   if(left==null)throw Error('Amount left is not loaded yet.');const n=num(m[1],m[2]),nl=Math.max(0,left-n);await setLeft(nl);return `Rs. ${fmt(n)} came. Rs. ${fmt(nl)} left now; both messages updated.`}
  if(!/3\d{2}[\s-]?\d{7}/.test(t)&&(m=low.match(/^(?:left|remain(?:ing)?|baqi|need(?:ed)?)?\s*(?:rs\.?\s*)?([\d,.]+)\s*(k)?\s*(?:left|remain(?:ing)?|remains|baqi|reh gaye|needed)?$/))){
   const n=num(m[1],m[2]);if(!(n>=0&&n<=10000000))throw Error('That amount looks wrong.');await setLeft(n);return `Rs. ${fmt(n)} left. Both messages updated.`}
+ if(/\bpapers?\b|\breports?\b|\bdocuments?\b/i.test(t)&&attached&&/\b(these|this|is|are|save|use|add)\b/i.test(t)){const r=await post('/upload-image',{data:attached.data,use:'papers'}),d=await r.json();if(!r.ok)throw Error(d.error);
+  clearAttachment();return `Saved as medical papers (${String(d.id).replace('papers-','')} page${d.id==='papers-1'?'':'s'} so far). I will send them privately to anyone who asks. Attach more pages the same way.`}
+ if(m=low.match(/^(?:pace|speed)\s+(\d+)\s*(?:\/|and|,|\s)\s*(\d+)$/)){const r=await post('/autopilot-settings',{action:'pace',main:+m[1],freelance:+m[2]}),d=await r.json();return d.reply||d.error}
+ if(/^(normal|default) (pace|speed)$/.test(low)){const r=await post('/autopilot-settings',{action:'pace',main:0,freelance:0}),d=await r.json();return d.reply}
  if(/\b(make|use|set)\b.*\bposter\b|^poster$/i.test(t)&&attached){const r=await post('/upload-image',{data:attached.data,use:'poster'}),d=await r.json();if(!r.ok)throw Error(d.error);
   $('poster').src=attached.url;$('poster').hidden=false;clearAttachment();return 'Done. This picture is now the poster for group posts and DMs.'}
  const list=parseList(t);
@@ -206,7 +210,7 @@ function dismiss(hours){if(!sug)return;const dm=dismissed();dm[sug.id]=Date.now(
 $('suggNo').onclick=()=>dismiss(1);
 $('suggDo').onclick=async()=>{if(!sug)return;const s=sug;dismiss(s.action==='owner'?6:0.5);
  if(s.action==='send_all'){setView('group');await freshWording();armAll();say('app','Fresh message going to all groups. Tap the orange button within 3 seconds to cancel.')}
- else if(s.action==='dm_batch'){const r=await post('/suggestion',{action:'dm_batch'}),d=await r.json();say('app',d.reply||d.error,!r.ok)}
+ else if(s.action==='dm_batch'||s.action==='share'){const r=await post('/suggestion',{action:s.action}),d=await r.json();say('app',d.reply||d.error,!r.ok)}
  else say('app','Noted: '+s.text)};
 
 /* ---- keyboard: the cursor lives in the chat box ---- */

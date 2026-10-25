@@ -96,6 +96,9 @@ class Engine:
         mins = (now() - since) / 60
         for limit, name, main_gap, free_gap in LADDER:
             if mins >= limit:
+                po = self.s.get('pace_override')
+                if po:
+                    main_gap, free_gap = po
                 return name, main_gap, free_gap, mins
 
     def tick(self):
@@ -107,14 +110,23 @@ class Engine:
             self.s['last_money'] = now()
             self.log(f'Money noticed: Rs. {self.s["left_seen"] - left:,}. Back to normal pace.')
         self.s['left_seen'] = left
-        if left <= 0:
-            return self.notify('goal', 'The goal is reached (Rs. 0 left). Posting stopped. Send the final thank-you yourself and set up the next case.', 86400)
         if not self.h['wa_ok']():
             return self.notify('wa', 'WhatsApp is disconnected. Open the studio and link WhatsApp again. Nothing is being sent.', 3 * 3600)
+        if left <= 0:
+            if not self.s.get('d1_done'):
+                self.s['d1_done'] = True
+                self.h['post_text_all'](self.h['done_text']())
+                self.log('Goal complete: completion message posted to all groups. Posting stopped.')
+            return self.notify('goal', 'The goal is complete (Rs. 0 left). I posted the completion message and stopped. Set up the next case when ready.', 86400)
+        self.s['d1_done'] = False
         if now() - self.s['last_scan'] >= 300:
             self.s['last_scan'] = now()
             self.scan_replies()
+        if now() - self.s.get('last_dm_scan', 0) >= 600:
+            self.s['last_dm_scan'] = now()
+            self.scan_dms()
         self.post_if_due()
+        self.share_if_due()
         self.dm_if_due()
         for sg in self.suggestions():  # things only the owner can do: tell him once
             if sg['action'] == 'owner':
@@ -173,19 +185,98 @@ class Engine:
                     continue
                 text = str(m.get('content') or '')
                 who = str(m.get('sender_jid') or m.get('sender') or '').split('@')[0]
+                phone = self.h['sender_phone'](m)
                 if COMPLAINT.search(text) and key != 'main':
                     self.s['paused'][key] = now() + 7 * 86400
                     self.notify('complaint-' + key, f'Someone complained in {key} ("{text[:80]}"). I stopped posting there for 7 days. Tell me "resume {key}" to restart.', 600)
                 elif PAPERS.search(text) and '?' in text:
+                    sent = bool(phone) and self.h['send_papers'](phone)
                     try:
-                        self.h['send_text'](jid, Q1)
+                        self.h['send_text'](jid, 'I have sent you the medical papers privately. 🤲' if sent else Q1)
                     except Exception:
                         pass
-                    self.notify('papers-' + who, f'{who} asked "{text[:80]}" in {key}. I replied that papers are available privately. Please send them the papers.', 600)
+                    self.notify('papers-' + who, f'{who} asked "{text[:80]}" in {key}. ' + ('I sent the papers privately.' if sent else 'I said papers are available privately. Attach the papers in the studio ("these are the papers") so I can send them myself.'), 600)
                 elif DONE.search(text) or m.get('media_type') == 'image':
                     self.s['done_today'] += 1
-                    self.notify('done-' + str(mid), f'{who} posted "{text[:60] or "a picture"}" in {key}. It may be a donation. Check Easypaisa/JazzCash and tell me the new amount left (for example "34k left").', 0)
+                    if phone:
+                        self.thank(phone)
+                    self.notify('done-' + str(mid), f'{who} posted "{text[:60] or "a picture"}" in {key}. I thanked them privately and asked them to share. Check Easypaisa/JazzCash and tell me the new amount left (for example "34k left").', 0)
         self.s['seen'] = list(seen)[-800:]
+
+    def thank(self, phone):
+        """Private thank-you plus a request to share, at most once a day per person."""
+        day = self.s['day']
+        if self.s.setdefault('thanked', {}).get(phone) == day:
+            return
+        self.s['thanked'][phone] = day
+        try:
+            self.h['send_text'](phone + '@s.whatsapp.net', self.h['thank_text']())
+        except Exception:
+            pass
+
+    # ---------- replies to our DMs ----------
+    def scan_dms(self):
+        seen = set(self.s['seen'])
+        replied = self.s.setdefault('replied', {})
+        for phone, sent_at in self.h['recent_dms']():
+            jid = phone + '@s.whatsapp.net'
+            try:
+                msgs = self.h['messages'](jid)
+            except Exception:
+                continue
+            for m in msgs:
+                mid = m.get('id')
+                if not mid or mid in seen or m.get('is_from_me'):
+                    continue
+                seen.add(mid)
+                try:
+                    ts = datetime.datetime.fromisoformat(str(m.get('timestamp', '')).replace('Z', '+00:00')).timestamp()
+                except Exception:
+                    ts = now()
+                if ts < sent_at:
+                    continue
+                text = str(m.get('content') or '')
+                tail = phone[-4:]
+                if OPT_OUT.search(text) and not DONE.search(text):
+                    self.h['optout'](phone)
+                    self._reply(jid, 'Sorry for the disturbance. We will not message you again. 🤲')
+                    self.log(f'…{tail} asked not to be messaged. Removed for good.')
+                elif DONE.search(text) or m.get('media_type') == 'image':
+                    self.s['done_today'] += 1
+                    self.thank(phone)
+                    self.notify('dmdone-' + str(mid), f'…{tail} replied "{text[:60] or "a picture"}" to our DM. I thanked them and asked them to share. Check Easypaisa/JazzCash and tell me the new amount left.', 0)
+                elif PAPERS.search(text):
+                    sent = self.h['send_papers'](phone)
+                    if not sent:
+                        self._reply(jid, Q1)
+                    self.notify('dmpapers-' + tail, f'…{tail} asked about papers. ' + ('I sent them.' if sent else 'Attach the papers in the studio so I can send them.'), 3600)
+                elif now() - replied.get(phone, 0) > 3600:
+                    replied[phone] = now()
+                    answer = self.h['donor_answer'](text)
+                    if answer:
+                        self._reply(jid, answer)
+                        self.log(f'Answered …{tail}: "{text[:50]}"')
+                    else:
+                        self.notify('dmq-' + str(mid), f'…{tail} replied: "{text[:120]}". Please answer them.', 0)
+        self.s['seen'] = list(seen)[-800:]
+
+    def _reply(self, jid, text):
+        try:
+            self.h['send_text'](jid, text)
+        except Exception:
+            pass
+
+    # ---------- share request when donations are very slow ----------
+    def share_if_due(self):
+        name = self.level()[0]
+        if name != 'L3' or self.s.get('share_day') == self.s['day'] or self.quiet_now() or self.h['busy']():
+            return
+        last = self.h['last_sent']().get('main')
+        if last and (now() - last) / 60 < 15:
+            return
+        if self.h['start_job'](['main'], self.h['share_text']()):
+            self.s['share_day'] = self.s['day']
+            self.log('Very slow: asked the main group to share the poster.')
 
     # ---------- DMs to donor contacts ----------
     def dm_if_due(self):
@@ -215,6 +306,7 @@ class Engine:
                     break
                 sent += 1
                 self.s['dms_today'] += 1
+                self.h['note_dm'](phone)
                 time.sleep(random.uniform(100, 150))
             if sent:
                 self.log(f'Sent {sent} DM(s) to donor contacts.')
@@ -245,6 +337,18 @@ class Engine:
         self.save()
         return 'Quiet hours off.' if start == end else f'Quiet hours {int(start):02d}:00 to {int(end):02d}:00.'
 
+    def set_pace(self, main_minutes, freelance_minutes):
+        """Owner override of the posting pace. Floors protect the number from WhatsApp limits."""
+        if not main_minutes and not freelance_minutes:
+            self.s['pace_override'] = None
+            self.save()
+            return 'Back to the normal pace ladder.'
+        m, f = max(15, int(main_minutes or 20)), max(15, int(freelance_minutes or 60))
+        self.s['pace_override'] = [m, f]
+        self.save()
+        note = ' (15 minutes is the fastest WhatsApp safely allows per group)' if min(int(main_minutes or 99), int(freelance_minutes or 99)) < 15 else ''
+        return f'Pace set: main every {m} min, freelance every {f} min{note}.'
+
     def set_dms(self, enabled, daily):
         self.s['dm_enabled'] = bool(enabled)
         self.s['dm_daily'] = max(0, int(daily))
@@ -270,6 +374,12 @@ class Engine:
         if name == 'L3' and self.s['posts_today'] >= 3:
             out.append({'id': f'photo-{self.s["day"]}', 'level': name, 'action': 'owner',
                         'text': 'Several posts and no money. A new photo or an update from the family usually helps. Ask them for one.'})
+        if not self.h['has_papers']():
+            out.append({'id': 'papers-missing', 'level': 'L1', 'action': 'owner',
+                        'text': 'Attach the medical papers once (📎 then "these are the papers"). I will send them privately to anyone who asks.'})
+        if name != 'L1' and self.s.get('share_day') != self.s['day']:
+            out.append({'id': f'share-{self.s["day"]}', 'level': name, 'action': 'share',
+                        'text': 'Ask the main group to share the poster on their WhatsApp status. Shares reach new donors for free.'})
         poster = self.h['poster_left']()
         if poster and poster != self.h['read_left']():
             out.append({'id': f'poster-{poster}', 'level': 'L2', 'action': 'owner',
@@ -280,6 +390,12 @@ class Engine:
         return out
 
     def run_suggestion(self, action):
+        if action == 'share':
+            if self.h['start_job'](['main'], self.h['share_text']()):
+                self.s['share_day'] = self.s['day']
+                self.save()
+                return 'Asking the main group to share the poster now.'
+            return 'Another send is running. Try again in a minute.'
         if action == 'dm_batch':
             if self.dm_running:
                 return 'DMs are already being sent.'
@@ -292,5 +408,5 @@ class Engine:
         name, main_gap, free_gap, mins = self.level()
         return {'pace': name, 'main_every': main_gap, 'freelance_every': free_gap, 'minutes_since_money': round(mins),
                 'paused': {k: round((v - now()) / 3600, 1) for k, v in self.s['paused'].items() if v > now()},
-                'quiet': self.s['quiet'], 'posts_today': self.s['posts_today'], 'dms_today': self.s['dms_today'],
+                'quiet': self.s['quiet'], 'pace_override': self.s.get('pace_override'), 'posts_today': self.s['posts_today'], 'dms_today': self.s['dms_today'],
                 'dm_daily': self.s['dm_daily'], 'dm_enabled': self.s['dm_enabled'], 'possible_donations_today': self.s['done_today']}

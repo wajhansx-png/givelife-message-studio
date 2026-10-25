@@ -84,9 +84,15 @@ def write_left(left):
  state=re.sub(r'^LEFT:.*$','LEFT: '+str(left),state,flags=re.M) if re.search(r'^LEFT:',state,re.M) else 'LEFT: '+str(left)+'\n'+state
  f.write_text(state,encoding='utf-8');persist_file('campaign',f)
 
+ALMOST=[("We are almost there. Only Rs. {L} left for Yousuf.","Just {P2} people can finish this today."),
+ ("Rs. {L} is all that stands between Yousuf and his treatment.","Be one of the last {P2}. Today."),
+ ("The last few people decide it. Rs. {L} left.","If {P2} people send Rs. 2,000 now, it is done.")]
+
 def build_group(n,left):
  p2,p1=math.ceil(left/2000),math.ceil(left/1000)
- hook=HOOKS[n%8][0].replace('{P2}',str(p2));push=HOOKS[(n*3+1)%8][1].replace('{P2}',str(p2))
+ pool=ALMOST if 0<left<=10000 else None
+ hook=(pool[n%len(pool)][0] if pool else HOOKS[n%8][0]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
+ push=(pool[(n+1)%len(pool)][1] if pool else HOOKS[(n*3+1)%8][1]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
  return (f'*{hook}*\n\nFluid in Yousuf\'s brain *can paralyse his body and damage his eyesight.* Both his kidneys are badly swollen. 💔\n\n'
          f'*_Rs. {left:,} LEFT_*\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n{push}\n\n'
          '*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation')
@@ -271,7 +277,7 @@ def donor_contacts():
  _random.shuffle(out);return out
 
 def already_dmed(digest):
- return digest in BLOCKED or bool(STORE and STORE.get('dm_recipient_'+digest))
+ return digest in BLOCKED or bool(STORE and (STORE.get('dm_recipient_'+digest) or STORE.get('optout_'+digest)))
 
 def dm_text(name):
  sel=[_random.randrange(len(a)) for a in DP];t=build_dm(sel,read_left())
@@ -291,6 +297,7 @@ if STORE:
 CAMPAIGN={'running':False,'stop':False,'total':0,'sent':0,'failed':0,'skipped':0,'next_at':0,'current':'','log':[],'id':None}
 
 def save_upload(data_url,use):
+ if use=='papers':return 'papers-'+str(save_papers(data_url))
  raw=base64.b64decode(data_url.split(',',1)[-1])
  if len(raw)>8_000_000:raise ValueError('Picture is too big (max 8 MB).')
  if use=='poster':
@@ -337,6 +344,7 @@ def dm_campaign(people,gap,image,vary,message,start_after,rest_every,rest_minute
    phone=norm_phone(p.get('phone',''));name=str(p.get('name','') or '').strip()[:30];gender=p.get('gender','Brother')
    if not phone:c['skipped']+=1;continue
    digest=hashlib.sha256((phone+'@s.whatsapp.net').encode()).hexdigest()
+   if digest in BLOCKED or (STORE and STORE.get('optout_'+digest)):c['skipped']+=1;c['log'].append(f'Skipped …{phone[-4:]} (asked not to be messaged)');continue
    if STORE and STORE.get('dm_recipient_'+digest) and not p.get('again'):c['skipped']+=1;c['log'].append(f'Skipped …{phone[-4:]} (already messaged)');continue
    if not wa_ok():c['log'].append('WhatsApp disconnected. Stopped.');return
    base=build_dm([_random.randrange(len(a)) for a in DP],read_left()) if (vary or not message) else message
@@ -346,7 +354,7 @@ def dm_campaign(people,gap,image,vary,message,start_after,rest_every,rest_minute
    if STORE:STORE.put('dm_recipient_'+digest,{'state':r.get('code','UNCERTAIN'),'time':time.time()})
    if r.get('code')!='SUCCESS':
     c['failed']+=1;c['log'].append(f'Failed …{phone[-4:]}: {str(r.get("message",""))[:80]}. Stopped to protect your number.');return
-   c['sent']+=1;c['log'].append(f'✓ {(name+" ") if name else ""}{gender} …{phone[-4:]}')
+   c['sent']+=1;note_dm(phone);c['log'].append(f'✓ {(name+" ") if name else ""}{gender} …{phone[-4:]}')
    if i<len(people)-1:
     wait=_random.uniform(gap,gap*1.25)
     if rest_every and c['sent']%rest_every==0:wait=max(wait,rest_minutes*60);c['log'].append(f'Resting {rest_minutes} min after {c["sent"]} messages')
@@ -367,14 +375,80 @@ def start_campaign(body):
  threading.Thread(target=dm_campaign,args=args,daemon=True).start()
  return f'Sending to {len(people)} people, about {round(gap/60,1)} min apart'+(f', starting in {round(args[5]/60,1)} min' if args[5] else '')+'.'
 
+
+PAPERS=DATA/'papers';PAPERS.mkdir(exist_ok=True)
+if STORE:
+ for _i,_b in enumerate(STORE.get('papers_b64',[]) or []):(PAPERS/f'paper-{_i}.jpg').write_bytes(base64.b64decode(_b))
+RECENT_LOCAL=[]
+
+def thank_text():
+ return ('JazakAllah 🤲 May Allah reward you and your family.\n\n'
+  "One more favour: please share Yousuf's poster on your WhatsApp status and in your family groups. "
+  'Every share reaches someone who can help.\n- GiveLife Foundation')
+
+def share_text():
+ left=read_left()
+ return (f"*Rs. {left:,} is still left for Yousuf.* 💔\n\nIf you cannot donate right now, you can still help: "
+  "*share this poster on your WhatsApp status* and send it to 3 friends today. Sharing costs nothing and reaches new donors. 🤲\n\n"
+  "*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n- GiveLife Foundation")
+
+def done_text():
+ return ('Alhamdulillah. The amount for Yousuf\'s treatment is complete. 🤲\n\n'
+  'JazakAllah to everyone who donated, shared and prayed. May Allah reward you all.\n- GiveLife Foundation')
+
+def sender_phone(m):
+ j=str(m.get('sender_jid') or m.get('sender') or '')
+ p=j.split('@')[0].split(':')[0]
+ return p if j.endswith('@s.whatsapp.net') and p.isdigit() else ''
+
+def has_papers():
+ return any(PAPERS.glob('*.jpg'))
+
+def send_papers(phone):
+ files=sorted(PAPERS.glob('*.jpg'))[:6]
+ if not files:return False
+ for i,f in enumerate(files):
+  send_with_image(phone+'@s.whatsapp.net','Medical papers for Yousuf (GiveLife Foundation).' if i==0 else '',f);time.sleep(3)
+ return True
+
+def save_papers(data_url):
+ raw=base64.b64decode(data_url.split(',',1)[-1]);n=len(list(PAPERS.glob('*.jpg')))
+ (PAPERS/f'paper-{n}.jpg').write_bytes(raw)
+ if STORE:
+  saved=STORE.get('papers_b64',[]) or [];saved.append(base64.b64encode(raw).decode());STORE.put('papers_b64',saved[-6:])
+ return n+1
+
+def note_dm(phone):
+ item=[phone,time.time()]
+ if STORE:
+  r=[x for x in (STORE.get('recent_dms',[]) or []) if time.time()-x[1]<7*86400 and x[0]!=phone];r.append(item);STORE.put('recent_dms',r[-300:])
+ else:RECENT_LOCAL.append(item);del RECENT_LOCAL[:-300]
+
+def recent_dms():
+ r=(STORE.get('recent_dms',[]) if STORE else RECENT_LOCAL) or []
+ return [(p,t) for p,t in r if time.time()-t<7*86400][-60:]
+
+def optout(phone):
+ d=hashlib.sha256((phone+'@s.whatsapp.net').encode()).hexdigest()
+ if STORE:STORE.put('optout_'+d,True)
+ BLOCKED.add(d)
+
+def post_text_all(text):
+ def run():
+  for k,(name,jid) in GROUPS.items():
+   try:send_text(jid,text)
+   except Exception:pass
+   time.sleep(60)
+ threading.Thread(target=run,daemon=True).start()
+
 ENGINE=autopilot.Engine({'DATA':DATA,'store_get':lambda k:STORE.get(k) if STORE else None,'persist':persist_file,'log':auto_log,
  'send_text':send_text,'owner_jid':lambda:OWNER_PHONE+'@s.whatsapp.net','enabled':auto_on,'read_left':read_left,'wa_ok':wa_ok,
  'busy':lambda:ACTIVE is not None,'last_sent':last_sent_by_key,'groups':lambda:list(GROUPS),'group_jids':lambda:{k:v[1] for k,v in GROUPS.items()},
  'caption':lambda:json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),'start_job':start_keys_job,'messages':group_messages,
- 'donor_contacts':donor_contacts,'poster_left':poster_left,'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm})
+ 'donor_contacts':donor_contacts,'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm})
 
 def engine_do():
- return {'pause_group':lambda key,hours:ENGINE.pause(key,hours),'resume_group':lambda key:ENGINE.resume(key),
+ return {'set_pace':lambda main_minutes,freelance_minutes:ENGINE.set_pace(main_minutes,freelance_minutes),'pause_group':lambda key,hours:ENGINE.pause(key,hours),'resume_group':lambda key:ENGINE.resume(key),
   'set_quiet_hours':lambda start,end:ENGINE.set_quiet(start,end),'set_dms':lambda enabled,daily:ENGINE.set_dms(enabled,daily),
   'notify_owner':lambda text:(ENGINE.notify('ai-'+str(int(time.time())),text,0),'Owner told.')[1]}
 
@@ -471,7 +545,7 @@ class Handler(BaseHTTPRequestHandler):
    a=str(body.get('action',''));key=str(body.get('key',''))
    if a in ('pause','resume') and key not in GROUPS:return self.reply({'error':'Unknown group. Use: '+', '.join(GROUPS)},status=400)
    try:
-    msg=ENGINE.pause(key,float(body.get('hours',24))) if a=='pause' else ENGINE.resume(key) if a=='resume' else ENGINE.set_quiet(int(body.get('start',0)),int(body.get('end',0))) if a=='quiet' else ENGINE.set_dms(bool(body.get('enabled',True)),int(body.get('daily',30))) if a=='dms' else None
+    msg=ENGINE.pause(key,float(body.get('hours',24))) if a=='pause' else ENGINE.resume(key) if a=='resume' else ENGINE.set_quiet(int(body.get('start',0)),int(body.get('end',0))) if a=='quiet' else ENGINE.set_dms(bool(body.get('enabled',True)),int(body.get('daily',30))) if a=='dms' else ENGINE.set_pace(body.get('main'),body.get('freelance')) if a=='pace' else None
    except Exception as e:return self.reply({'error':str(e)[:120]},status=400)
    if msg is None:return self.reply({'error':'Unknown setting'},status=400)
    self.reply({'reply':msg,'summary':ENGINE.summary()})

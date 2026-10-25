@@ -1,20 +1,179 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GiveLife · Message studio</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><meta name="theme-color" content="#12684f"><title>GiveLife · Message studio</title>
 <style>
-:root{color-scheme:light;--bg:#f1f4ef;--surface:#fff;--ink:#20362f;--muted:#62796e;--green:#11634e;--soft:#e9f1e8;--line:#dce6dc;--bubble:#e1f5da}*{box-sizing:border-box}html,body{height:100%;margin:0}body{background:var(--bg);color:var(--ink);font:14px/1.4 'Segoe UI',Arial,sans-serif;display:flex;flex-direction:column;padding:10px;gap:8px}button{font:inherit;cursor:pointer;border:0;border-radius:9px;min-height:32px;padding:6px 10px;color:var(--ink);background:var(--soft);transition:background .15s,box-shadow .15s}button:hover{background:#dcebdc}button:focus-visible,textarea:focus-visible{outline:3px solid #b3d4a4;outline-offset:2px}button:disabled{opacity:.45;cursor:wait}button.primary{background:var(--green);color:#fff}button.primary:hover{background:#0c513e}button:active{transform:translateY(1px)}.brandbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0}.brand{display:flex;align-items:center;gap:8px}.brandmark{width:29px;height:29px;background:var(--green);border-radius:10px;color:white;display:grid;place-items:center;font-size:19px}.brand b{font-size:15px;letter-spacing:-.3px}.brand small{font-size:10px;display:block;color:var(--muted);line-height:1.1}.checking{font-size:11px;display:flex;align-items:center;gap:5px;color:var(--muted)}.dot{width:6px;height:6px;border-radius:100%;background:#a5b7a9}.commandbar{display:flex;align-items:center;gap:5px;flex-shrink:0}.views{padding:3px;background:#e2eae0;border-radius:11px;display:flex;gap:2px;margin-right:auto}.views button{background:transparent;min-height:29px;padding:4px 10px;font-size:12px;color:#536b5d}.views button[aria-pressed=true]{background:#fff;color:var(--green);box-shadow:0 1px 4px #28402a13;font-weight:600}.commandbar>button{font-size:12px;padding:5px 9px;background:#fff;border:1px solid var(--line)}#fresh{color:var(--green);font-weight:600}#more{font-weight:700;padding:5px 10px}.grid{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;gap:8px}body[data-view=group] .grid,body[data-view=dm] .grid{grid-template-columns:1fr}body[data-view=group] #dmCard,body[data-view=dm] #groupCard{display:none}.panel{min-width:0;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 3px 15px #23382b05}.panelhead{padding:7px 11px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eaf0e8;flex-shrink:0}.panelhead strong{font-size:12px;font-weight:600}.attachment{font-size:10px;color:var(--muted)}.chat{flex:1;min-height:0;padding:9px;overflow:auto;background:#f5f6ef}.bubble{border-radius:11px 3px 11px 11px;background:var(--bubble);padding:11px 12px;box-shadow:0 1px 1px #40593612;overflow-wrap:anywhere}.message{font-size:14px;color:#14281d}.wa-line{white-space:break-spaces;line-height:1.3;min-height:1.3em;overflow-wrap:anywhere;tab-size:4}.wa-line.blank{height:1.3em}.wa-list{display:inline-block;padding-left:12px;text-indent:-9px}.wa-quote{border-left:3px solid #849c83;padding-left:8px;color:#536851}.message code{font-family:Consolas,monospace;background:#bddab64d;padding:1px 3px;border-radius:3px}.poster{display:none}strong{font-weight:700}.show-spaces .wa-line::after{content:'↵';color:#5f8978;font-size:10px}.show-spaces .wa-line.blank{background:#659b5a0b}.space-mark{color:#5f8978}.editorwrap{display:none;flex:0 0 130px;min-height:0;border-top:1px solid var(--line)}.editing .editorwrap{display:block}.editor{width:100%;height:100%;border:0;resize:none;outline:none;padding:10px 12px;background:#fffef8;color:#273c30;font:14px/1.45 'Segoe UI',Arial;white-space:pre-wrap}.editing .chat{padding:6px}.actions{padding:7px;background:#fff;border-top:1px solid #e7eee3;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;flex-shrink:0}.actions button{font-size:11px;line-height:1.2;min-height:30px;padding:5px 6px;background:#edf3e9;border:1px solid #e0e9db;color:#284c38;overflow-wrap:anywhere}.actions .all-groups{grid-column:1/-1;background:var(--green);border-color:var(--green);color:#fff;font-weight:600;font-size:12px;min-height:33px}.dm-actions{grid-template-columns:1fr}.dm-actions button{background:#e9f1e5}.actions .test-button{background:#f5f6f2;color:#667b69;border-color:#e5e9e0}.key{font-size:10px;opacity:.55;padding-left:4px}#groupStatus{font-size:11px;white-space:pre-line;max-height:65px;overflow:auto;background:#fafcf7}#groupStatus:not(:empty){padding:7px 10px;border-top:1px solid var(--line)}.footer{display:flex;align-items:center;gap:8px;justify-content:space-between;font-size:10px;color:var(--muted);flex-shrink:0;padding:0 2px}.footer #status{color:var(--green);font-weight:600}.shortcuts{white-space:nowrap}.options{background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;gap:5px;align-items:center;flex-shrink:0}.options[hidden]{display:none}.options button{font-size:11px;min-height:28px}.options span{font-size:10px;color:var(--muted)}.formatbar{display:none;gap:4px;align-items:center;background:#fff;padding:4px 7px;border:1px solid var(--line);border-radius:9px;flex-shrink:0}.is-editing .formatbar{display:flex}.formatbar button{min-height:27px;padding:3px 10px;font-size:12px}.formatbar span{font-size:10px;color:var(--muted);margin-left:auto}body[data-view=both] .actions{grid-template-columns:1fr 1fr}body[data-view=both] .actions button{font-size:10px;min-height:27px}body[data-view=both] .bubble{padding:8px}.meta{display:none}@media(max-width:440px){body{padding:6px;gap:6px}.brand b{font-size:14px}.brand small{display:none}.checking{font-size:10px}.commandbar{gap:3px}.commandbar>button{padding:5px 6px;font-size:11px}.views button{padding:4px 7px}.key{display:none}.actions button{font-size:10px}.shortcuts{display:none}}@media(prefers-reduced-motion:reduce){button{transition:none}}
-body{padding:8px;gap:6px}.brandmark{width:25px;height:25px;border-radius:8px}.brand small{display:none}.commandbar button{min-height:28px}.views{padding:2px}.views button{min-height:26px}.panelhead{padding:4px 10px}.bubble{padding:8px 10px}.actions{grid-template-columns:repeat(5,minmax(0,1fr));padding:6px;gap:4px}.actions button{font-size:10px;min-height:29px;padding:4px 3px}.actions .test-button{grid-column:1}.actions .all-groups{grid-column:2/-1;min-height:29px}.dm-actions{grid-template-columns:1fr}body[data-view=both] .actions .all-groups{grid-column:1/-1}body[data-view=both] .actions .test-button{grid-column:auto}
-</style><link rel="stylesheet" href="/workbench.css"></head>
+:root{--bg:#f4f2ec;--card:#fffefb;--line:#e2ded3;--ink:#1c2420;--mut:#5f6a64;--g:#12684f;--gd:#0d5640;--gs:#e4f1ea;--bub:#e1f2d7;--me:#dfeaf6;--warn:#9a4a12;--wbg:#fbeee2;--red:#b3262d;--rd:#951d23;--soft:#eeebe3;--ring:#2f7dd1;--sh:0 1px 2px rgba(0,0,0,.06),0 2px 10px rgba(0,0,0,.05)}
+@media(prefers-color-scheme:dark){:root{--bg:#121513;--card:#1b201d;--line:#2c332f;--ink:#e8ede9;--mut:#a2ada7;--g:#34a585;--gd:#2b8d71;--gs:#1d3229;--bub:#213c2d;--me:#23303d;--warn:#eaa063;--wbg:#33261b;--red:#e5545b;--rd:#c9444b;--soft:#242a27;--ring:#6aa9ee;--sh:none}}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overflow:hidden}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation;border:0;background:none}
+button:disabled{opacity:.5;cursor:wait}
+:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+.sp{flex:1}
+.app{height:100dvh;max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:10px;padding:12px max(14px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+/* 1. top bar: where the eye starts (top-left → top-right) */
+.brandbar{display:flex;align-items:center;gap:10px;min-height:44px}
+.mark{width:34px;height:34px;border-radius:10px;background:var(--g);color:#fff;display:grid;place-items:center;font-size:17px;flex:none}
+.seg{display:flex;background:var(--soft);border-radius:12px;padding:3px}
+.seg button{min-height:40px;padding:0 18px;border-radius:9px;font-weight:600;color:var(--mut)}
+.seg button[aria-pressed=true]{background:var(--card);color:var(--g);box-shadow:var(--sh)}
+.leftchip{min-height:40px;padding:0 14px;border-radius:12px;background:var(--gs);color:var(--g);font-weight:700;white-space:nowrap}
+.leftchip:hover{outline:2px solid var(--g)}
+.connect-badge{border-radius:999px!important;font-weight:600}
+/* layout */
+.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh);min-height:0;min-width:0}
+.layout>*,.brandbar>*{min-width:0}
+/* 2. the message: largest, centre of attention */
+.msgcard{display:flex;flex-direction:column;overflow:hidden}
+.tools{display:flex;align-items:center;gap:6px;padding:10px 10px 0}
+.ctx{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--mut);min-width:0}
+.ctx img{width:34px;height:34px;object-fit:cover;border-radius:7px;border:1px solid var(--line);flex:none}
+.ctx span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tool{min-height:40px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:14px;font-weight:600;white-space:nowrap}
+.tool:hover{background:var(--soft)}.tool.on{background:var(--g);color:#fff;border-color:var(--g)}
+.chat{flex:1;min-height:0;margin:10px;border-radius:14px;background:var(--bub);padding:16px 18px;overflow:hidden;cursor:text}
+.chat:hover{outline:2px dashed var(--g);outline-offset:-2px}
+.editing .chat{outline:2px solid var(--g)!important;outline-offset:-2px;overflow:auto;cursor:auto}
+.message{line-height:1.42;max-width:700px;overflow-wrap:anywhere}.message:focus{outline:none}
+.wa-line{white-space:break-spaces;min-height:1.42em}.wa-line.blank{height:.55em;min-height:.55em}
+.wa-list{display:inline-block;padding-left:12px;text-indent:-9px}.wa-quote{border-left:3px solid #849c83;padding-left:8px}
+body[data-view=group] #dmPreview,body[data-view=dm] #groupPreview,body[data-view=group] .dm-send,body[data-view=dm] .group-send{display:none}
+/* 3. right column: talk + act, all within one short hand movement */
+.side{display:flex;flex-direction:column;gap:10px;min-height:0}
+.talk{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.log{flex:1;min-height:0;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.e{max-width:92%;padding:8px 12px;border-radius:14px;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere}
+.e.you{align-self:flex-end;background:var(--me);border-bottom-right-radius:4px}
+.e.app{align-self:flex-start;background:var(--soft);border-bottom-left-radius:4px}
+.e.auto{align-self:flex-start;background:var(--wbg);color:var(--warn);font-size:14px}
+.e.err{color:var(--red)}
+.cmd{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
+.cmd input{flex:1;min-width:0;min-height:48px;padding:0 14px;border:2px solid var(--line);border-radius:14px;background:var(--card);font-size:16px}
+.cmd input:focus{border-color:var(--g);outline:none;box-shadow:0 0 0 4px var(--gs)}
+.go{min-height:48px;min-width:64px;padding:0 16px;border-radius:14px;background:var(--g);color:#fff;font-weight:700}
+.go:hover{background:var(--gd)}
+.auto{min-height:48px;padding:0 12px;border-radius:14px;border:1.5px solid var(--line);font-weight:700;font-size:14px;color:var(--mut);white-space:nowrap}
+.auto[aria-pressed=true]{background:var(--warn);border-color:var(--warn);color:#fff}
+.send{padding:10px;display:flex;flex-direction:column;gap:8px}
+.big{min-height:54px;border-radius:14px;font-size:17px;font-weight:700;color:#fff;background:var(--g);width:100%}
+.big:hover{background:var(--gd)}.big.all{background:var(--red)}.big.all:hover{background:var(--rd)}.big.arm{background:var(--warn)!important}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chips button{min-height:44px;padding:4px 6px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);font-size:14px;font-weight:600;line-height:1.15}
+.chips button:hover{border-color:var(--g);background:var(--gs)}
+.chips .main{border-color:var(--g);color:var(--g)}.chips .muted{color:var(--mut);border-style:dashed}
+.dmrow{display:grid;grid-template-columns:1fr auto;gap:8px}
+.dmrow input{min-height:46px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);min-width:0}
+.dmrow input:focus{border-color:var(--g);outline:none}.dmrow #dmPhone{grid-column:1/-1}
+.duo{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.ghost{min-height:54px;border:1.5px solid var(--line);border-radius:14px;font-weight:700;background:var(--card)}
+#groupStatus{font-size:13px;white-space:pre-line;color:var(--mut)}
+.pace{width:12px;height:12px;border-radius:50%;background:#22a06b;flex:none;box-shadow:0 0 0 4px var(--gs)}
+.pace[data-pace=L2]{background:#e0a020;box-shadow:0 0 0 4px var(--wbg)}.pace[data-pace=L3]{background:var(--red);box-shadow:0 0 0 4px var(--wbg)}
+.sugg{margin:10px 10px 0;padding:10px 12px;border-radius:14px;background:var(--wbg);color:var(--ink);display:flex;flex-direction:column;gap:8px;font-size:15px;line-height:1.35;border-left:4px solid var(--warn)}
+.sugg[data-level=L1]{border-left-color:var(--g);background:var(--gs)}
+.sugg[hidden],.camp[hidden],.att[hidden]{display:none}
+.camp{margin:10px 10px 0;padding:8px 8px 8px 12px;border-radius:14px;background:var(--gs);border-left:4px solid var(--g);display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.camp span{flex:1;min-width:0}
+.att{margin:0 10px;padding:6px;border-radius:12px;background:var(--soft);display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut)}
+.att img{width:40px;height:40px;object-fit:cover;border-radius:8px}.att span{flex:1;min-width:0}
+.clip{min-height:48px;min-width:44px;border-radius:14px;border:1.5px solid var(--line);font-size:18px}
+.clip:hover{background:var(--soft)}
+.sbtns{display:flex;gap:8px}.sbtns .go{flex:1;min-height:44px}
+.later{min-height:44px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line);font-weight:600;color:var(--mut)}
+.foot{display:flex;gap:10px;font-size:13px;color:var(--mut);min-height:18px}
+#status{font-weight:600;color:var(--g);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#status.err{color:var(--red)}
+dialog.hist{border:0;border-radius:18px;background:var(--card);color:var(--ink);width:min(620px,calc(100vw - 20px));height:min(86dvh,760px);padding:0;margin:auto}
+dialog.hist[open]{display:flex;flex-direction:column}
+dialog.hist::backdrop{background:#0008}
+dialog.hist .log{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}
+dialog.hist .log .e{display:block}
+dialog.hist header{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);font-weight:700;font-size:17px}
+dialog.hist .cmd{padding:10px 10px calc(10px + env(safe-area-inset-bottom))}
+dialog.hist header .tool{flex:none!important;width:auto;padding:0 16px}
+.talk .log{cursor:pointer}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* tablet and phone: one column, nothing scrolls, thumb zone at the bottom */
+@media(max-width:899px){
+ .layout{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+ .side{gap:8px}
+ .talk{flex:none}
+ .camp{margin:0;font-size:14px}.att{margin:0}.att span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ .cmdForm .clip,#cmdForm .clip{display:none}
+ .sugg{margin:0;flex-direction:row;align-items:center;padding:6px 6px 6px 12px;font-size:14px}
+ .sugg span{flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ .sbtns .go{min-width:72px;flex:none}.sbtns .later{font-size:0;padding:0;width:44px}.sbtns .later::before{content:'✕';font-size:16px}
+ .talk .log{display:block;flex:none;height:34px;padding:0;overflow:hidden;cursor:pointer}
+ .talk .log .e{display:none}.talk .log .e:last-child{display:block;max-width:100%;height:34px;line-height:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:6px 12px;font-size:14px;border-radius:12px}
+ .talk.card{background:none;border:0;box-shadow:none}
+ .cmd{padding:0;border:0}
+ .send{padding:0}
+ .chips{display:flex;overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity}
+ .chips::-webkit-scrollbar{display:none}
+ .chips button{flex:0 0 auto;min-width:112px;scroll-snap-align:start}
+ .send.card{background:none;border:0;box-shadow:none}
+ .keys{display:none}
+ dialog.hist{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;margin:0}
+}
+@media(max-width:560px){
+ .app{padding:8px 8px calc(8px + env(safe-area-inset-bottom));gap:8px}
+ .brandbar{gap:6px}.mark{display:none}.seg button{padding:0 14px}.leftchip{padding:0 10px;font-size:14px}
+ .brandbar .connect-badge{font-size:0!important;width:40px;min-width:40px;min-height:40px!important;padding:0!important;display:grid;place-items:center;flex:none}
+ .brandbar .connect-badge::before{font-size:18px;content:'◌'}.brandbar .connect-badge[data-state=online]::before{content:'●';color:#22a06b}.brandbar .connect-badge[data-state=offline]::before{content:'●';color:#d1453b}
+ .ctx span{display:none}.tools{padding:8px 8px 0}.tools .sp{display:none}.tool{flex:1 1 0;min-width:0;min-height:42px;padding:0 6px}
+ .chat{margin:8px;padding:12px 14px}.chat:hover{outline:none}
+ .big,.ghost{min-height:50px}.auto{padding:0 10px}
+ .foot{display:none}
+}
+@media(max-height:600px){.tools .ctx img{display:none}}
+@media(max-width:899px) and (max-height:760px){
+ .dmrow{grid-template-columns:1fr 1.15fr auto}.dmrow #dmPhone{grid-column:auto;order:2}.dmrow #gender{order:3}
+ .dmrow input{min-height:44px;padding:0 10px}.dmrow .seg button{min-height:38px;padding:0 10px}
+ .sugg span{-webkit-line-clamp:1}.sugg{padding:4px 4px 4px 10px}.sbtns .go,.sbtns .later{min-height:40px}
+ .tools{padding-top:6px}.tool{min-height:38px}.chat{margin:6px 8px}
+}
+</style></head>
 <body data-view="group">
-<div class="brandbar"><div class="brand"><div class="brandmark">♡</div><div><b>GiveLife</b><small>Message studio</small></div></div><span class="checking" title="Automatic donor checks are off. Ask in chat to start checking."><span class="dot"></span>Donor checks off</span></div>
-<div class="commandbar"><div class="views" aria-label="Message view"><button data-view-button="group" aria-pressed="true" title="Group message · G">Group<span class="key">G</span></button><button data-view-button="dm" aria-pressed="false" title="Donor message · D">DM<span class="key">D</span></button><button data-view-button="both" aria-pressed="false" title="Compare both · B">Both</button></div><button id="edit" title="Edit caption · E">✎ Edit</button><button id="fresh" title="Prepare new group wording · N">↻ New</button><button id="more" title="Text size, spaces and copy" aria-expanded="false" aria-controls="options">···</button></div>
-<div id="options" class="options" hidden><button id="size" title="Toggle larger reading text">A+ Larger text</button><button id="spaces" aria-pressed="false">Show spaces</button><button id="copy" title="Copy current caption · C">Copy caption</button><span>Preview formatting stays intact.</span></div>
-<div class="formatbar"><button data-format="bold" title="Bold selected text"><b>B</b></button><button data-format="italic" title="Italic selected text"><i>I</i></button><button data-format="both" title="Bold italic selected text"><b><i>BI</i></b></button><button data-format="bullet" title="Add bullet">• List</button><span>Select text to format · Esc finishes</span></div>
-<main class="grid">
-<section id="groupCard" class="panel"><div class="panelhead"><strong>Group caption</strong><span class="attachment">▧ Poster included</span></div><div class="chat"><div class="bubble"><div class="message" id="groupPreview"></div></div></div><div class="editorwrap"><textarea class="editor" id="group" aria-label="Edit group message" spellcheck="true"></textarea></div><div class="actions group-actions"><button data-group="community" title="Send to Upwork Community 2026">Upwork Community</button><button data-group="fiverr" title="Send to Fiverr Course 2026">Fiverr Course</button><button data-group="upwork" title="Send to Upwork Course 2026">Upwork Course</button><button data-group="uet" title="Send to Fiverr Course UET">Fiverr UET</button><button data-group="toprated" title="Send to Top Rated Upworkers">Top Rated Upworkers</button><button class="test-button" data-send="group" title="Send group caption and poster to Givelife test">Test group</button><button data-group="all" class="all-groups">Send to all 5 freelance groups ↗</button></div><div id="groupStatus" role="status"></div></section>
-<section id="dmCard" class="panel"><div class="panelhead"><strong>Donor caption</strong><span class="attachment">▧ Poster included on send</span></div><div class="chat"><div class="bubble"><div class="message" id="dmPreview"></div></div></div><div class="editorwrap"><textarea class="editor" id="dm" aria-label="Edit donor message" spellcheck="true"></textarea></div><div class="actions dm-actions"><button data-send="dm">Send a test to Givelife test ↗</button></div></section>
-</main>
-<div class="footer"><span id="status" role="status">Loading…</span><span class="shortcuts">G Group · D DM · E Edit · N New · C Copy</span><span title="All groups send one minute apart. Minimum 15 minutes between posts in the same group.">60s gaps · 15m per group</span></div>
-<script src="/connection.js"></script><script src="/format.js"></script><script src="/app.js"></script><script src="/quick-send.js"></script><script src="/workbench.js"></script></body></html>
-
-
-
+<div class="app">
+ <header class="brandbar">
+  <div class="mark" aria-hidden="true">♡</div>
+  <div class="seg" role="tablist" aria-label="Message type"><button data-view-button="group" aria-pressed="true" title="Group message (G)">Group</button><button data-view-button="dm" aria-pressed="false" title="Direct message (D)">DM</button></div>
+  <span class="sp"></span>
+  <span class="pace" id="pace" data-pace="L1" title="Donations normal"></span><button id="leftChip" class="leftchip" title="Change the amount left">Rs. … left</button>
+ </header>
+ <main class="layout">
+  <section class="card msgcard" id="card" aria-label="Message">
+   <div class="tools"><div class="ctx"><img id="poster" alt="" hidden><span id="ctx">Group message · poster attached</span></div><span class="sp"></span>
+    <button class="tool" id="edit" title="Edit (E) · or tap the message">Edit</button><button class="tool" id="fresh" title="New wording (N)">New</button><button class="tool" id="copy" title="Copy (C)">Copy</button></div>
+   <div class="chat" id="chat" title="Tap to edit"><div class="message" id="groupPreview"></div><div class="message" id="dmPreview"></div></div>
+  </section>
+  <aside class="side">
+   <section class="card talk" aria-label="Assistant">
+    <div class="camp" id="camp" hidden role="status"><span id="campText"></span><button type="button" id="campStop" class="later">Stop</button></div>
+    <div class="sugg" id="sugg" hidden role="status"><span id="suggText"></span><div class="sbtns"><button id="suggDo" class="go">Do it</button><button id="suggNo" class="later">Not now</button></div></div>
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="att" id="att" hidden><img id="attImg" alt=""><span>Picture attached. It will be sent with the next DMs. Say "make it the poster" to use it for groups.</span><button type="button" class="later" id="attX" aria-label="Remove picture">✕</button></div>
+    <form id="cmdForm" class="cmd" autocomplete="off"><button type="button" class="auto" id="auto" aria-pressed="false" title="Autopilot: the app posts on its own, following your rules">Auto</button><button type="button" class="clip" data-clip title="Attach a picture">📎</button><input id="cmd" enterkeyhint="send" aria-label="Tell the app what to do" placeholder="Tell me: 34k left · came 2000 · Ali 0300…"><button class="go" type="submit">Go</button></form>
+   </section>
+   <section class="card send group-send" aria-label="Send group message">
+    <button class="big all" id="sendAll" title="GiveLife main + 5 freelance groups, 60 seconds apart">Send to ALL 6 groups</button>
+    <div class="chips">
+     <button class="main" data-group="main">GiveLife main</button><button data-group="free">All 5 freelance</button>
+     <button data-group="community">Upwork Community</button><button data-group="fiverr">Fiverr Course</button>
+     <button data-group="upwork">Upwork Course</button><button data-group="uet">Fiverr UET</button>
+     <button data-group="toprated">Top Rated</button><button class="muted" data-test="group">Test group</button>
+    </div>
+    <div id="groupStatus" role="status"></div>
+   </section>
+   <section class="card send dm-send" aria-label="Send direct message">
+    <div class="dmrow"><input id="dmName" placeholder="Name (optional)" autocomplete="off"><div class="seg" id="gender"><button type="button" data-g="Brother" aria-pressed="true">Brother</button><button type="button" data-g="Sister" aria-pressed="false">Sister</button></div><input id="dmPhone" inputmode="tel" placeholder="Phone, e.g. 0300 1234567" autocomplete="off"></div>
+    <div class="duo"><button class="big" id="sendDm">Send DM with poster</button><button class="ghost" data-test="dm">Test</button></div>
+   </section>
+  </aside>
+ </main>
+ <footer class="foot"><span id="status" role="status">Loading…</span><span class="sp"></span><span class="keys">/ talk · E edit · N new · C copy · G/D switch</span></footer>
+</div>
+<dialog class="hist" id="hist" aria-label="Chat with the GiveLife assistant"><header><span>Chat</span><span class="sp"></span><button type="button" class="tool" id="histClose">Close</button></header><div class="log" id="histLog"></div><form id="histForm" class="cmd" autocomplete="off"><button type="button" class="clip" data-clip title="Attach a picture">📎</button><input id="histCmd" enterkeyhint="send" aria-label="Message the assistant" placeholder="Type anything…"><button class="go" type="submit">Send</button></form></dialog>
+<input type="file" id="file" accept="image/*" hidden><textarea id="group" hidden></textarea><textarea id="dm" hidden></textarea>
+<script src="/connection.js"></script><script src="/format.js"></script><script src="/app.js"></script></body></html>

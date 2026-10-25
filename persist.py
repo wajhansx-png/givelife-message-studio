@@ -1,6 +1,9 @@
 import os,json
-import psycopg
-from psycopg.types.json import Jsonb
+try:
+ import psycopg
+ from psycopg.types.json import Jsonb
+except ImportError:  # local preview without the cloud database
+ psycopg=Jsonb=None
 
 class CloudStore:
  def __init__(self,uri):self.uri=uri

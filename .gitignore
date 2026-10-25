@@ -6,3 +6,4 @@ remote-access.json
 *.zip
 ui/
 seed/
+localdata/

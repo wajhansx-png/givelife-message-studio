@@ -17,5 +17,7 @@ services:
         value: /tmp/studio
       - key: DB_URI
         sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
       - key: PORT
         value: '10000'

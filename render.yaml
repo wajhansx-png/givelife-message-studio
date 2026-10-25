@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: givelife-message-studio
+    runtime: docker
+    region: oregon
+    plan: 0.5c-512mb
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: 'off'
+    disk:
+      name: givelife-persistent-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: UI_ACCESS_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://givelife-message-studio.chicglobe256.chatgpt.site
+      - key: DATA_DIR
+        value: /data/studio
+      - key: PORT
+        value: '10000'

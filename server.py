@@ -2,6 +2,7 @@ import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, da
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store
+import assistant as studio_assistant
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get('DATA_DIR','/data/studio'))
 DATA.mkdir(parents=True,exist_ok=True)
@@ -13,6 +14,12 @@ STORE=configured_store()
 BLOCKED=set(json.loads((ROOT/'campaign-blocks.json').read_text())) if (ROOT/'campaign-blocks.json').exists() else set()
 def persist_file(key,path):
  if STORE:STORE.put(key,path.read_text(encoding='utf-8'))
+
+def read_drafts():return json.loads(DRAFT.read_text(encoding='utf-8'))
+
+def write_drafts(drafts):
+ with LOCK:
+  DRAFT.write_text(json.dumps(drafts,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
 
 def api(path):
  req=urllib.request.Request('http://127.0.0.1:3000'+path,headers={'X-Device-Id':DEVICE})
@@ -131,10 +138,13 @@ class Handler(BaseHTTPRequestHandler):
   self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(data if isinstance(data,bytes) else data.encode())
  def do_GET(self):
   if self.path=='/health':return self.reply({'ok':True})
-  if self.path in ('/','/app.js','/format.js','/connection.js','/quick-send.js'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/quick-send.js','/workbench.js','/workbench.css'):
    name='index.html' if self.path=='/' else self.path[1:]
-   return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'application/javascript')
+   return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if name.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
+  if self.path=='/assistant/state':
+   try:return self.reply(studio_assistant.state(STORE))
+   except studio_assistant.AssistantError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/wa-status':
    try:return self.reply(api('/devices/'+DEVICE+'/status'))
    except Exception:return self.reply({'error':'WhatsApp is restarting. Try again shortly.'},status=502)
@@ -154,6 +164,15 @@ class Handler(BaseHTTPRequestHandler):
   if origin and not same_origin and origin not in self.remote_config().get('origins',[]):return self.reply({},status=403)
   try:body=json.loads(self.rfile.read(int(self.headers.get('Content-Length',0))))
   except Exception:return self.reply({'error':'Invalid request'},status=400)
+  if not isinstance(body,dict):return self.reply({'error':'Invalid request'},status=400)
+  if self.path in ('/assistant/config','/assistant/chat','/assistant/action'):
+   try:
+    if self.path=='/assistant/config':result=studio_assistant.configure(STORE,body)
+    elif self.path=='/assistant/chat':result=studio_assistant.chat(STORE,body,read_drafts,write_drafts,custom_recipient)
+    else:result=studio_assistant.act(STORE,body,read_drafts,write_drafts,send_custom)
+    return self.reply(result)
+   except studio_assistant.AssistantError as e:return self.reply({'error':str(e)},status=400)
+   except Exception:return self.reply({'error':'Assistant unavailable. No automatic retry will occur.'},status=502)
   if self.path=='/drafts':
    with LOCK:
     DRAFT.write_text(json.dumps({k:str(body[k]) for k in ('group','dm')},ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)

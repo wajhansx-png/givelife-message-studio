@@ -92,7 +92,9 @@ class Handler(BaseHTTPRequestHandler):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
-  if self.path=='/wa-status':return self.reply(api('/devices/'+DEVICE+'/status'))
+  if self.path=='/wa-status':
+   try:return self.reply(api('/devices/'+DEVICE+'/status'))
+   except Exception:return self.reply({'error':'WhatsApp is restarting. Try again shortly.'},status=502)
   if self.path=='/drafts':self.reply(DRAFT.read_bytes())
   elif self.path=='/poster':self.reply((DATA/'poster.jpg').read_bytes(),'image/jpeg')
   elif self.path=='/format.js':self.reply((ROOT/'format.js').read_bytes(),'application/javascript')
@@ -113,6 +115,11 @@ class Handler(BaseHTTPRequestHandler):
    with LOCK:
     DRAFT.write_text(json.dumps({k:str(body[k]) for k in ('group','dm')},ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
    self.reply({'saved':True})
+  elif self.path=='/wa-reconnect':
+   try:
+    api('/app/reconnect')
+    self.reply({'ok':True})
+   except Exception:self.reply({'error':'Could not restore the connection. Try linking with a QR code.'},status=502)
   elif self.path=='/wa-login':
    try:
     data=api('/devices/'+DEVICE+'/login');url=data.get('results',{}).get('qr_link','');path=urllib.parse.urlparse(url).path
@@ -139,3 +146,4 @@ class Handler(BaseHTTPRequestHandler):
   else:self.reply({},status=404)
  def log_message(self,*args):pass
 if __name__=='__main__':ThreadingHTTPServer(('0.0.0.0',int(os.environ.get('PORT','10000'))),Handler).serve_forever()
+

@@ -19,7 +19,11 @@ def playbook():
     return f.read_text(encoding='utf-8') if f.exists() else ''
 
 
-SYSTEM = """You are the assistant inside the GiveLife Foundation message studio. The owner, Wajdan, types short instructions (often in a hurry, mixed English/Urdu). You act on them with tools and reply in one or two short, plain sentences.
+SYSTEM = """You are Wajdan's chief of staff inside the GiveLife Foundation studio: capable, quick, warm and decisive, like a trusted partner who runs the foundation with him. He types short, often misspelled messages (English, Urdu, mixed: "sebd man" means "send, man"). Read what he means from the conversation, do it with your tools, and reply in one or two natural sentences. Never reply with a menu of questions when you can find out yourself with a tool.
+
+You are connected to his WhatsApp account. You CAN message anyone he names: use find_contact to look up a saved contact or chat by name (for example "jr account", "Ali", "my wife"), then send_message. You can also send to any phone number he gives you, to the foundation's groups, and attach the picture he attached. Never say "I can't see your chats" or "I can only send to groups": search first with find_contact, and only ask if nothing matches.
+
+When he says "hi" or chats casually, answer like a person in one friendly line and offer the most useful next step from the suggestions. Do not repeat the full status unless he asks. When he says send a message to someone with some text, send exactly that text (clean up obvious typos only).
 
 What the studio does: GiveLife raises money for Yousuf, a 2-year-old. Confirmed facts only: fluid in his brain (can paralyse his body and damage his eyesight), both kidneys badly swollen, a hernia. Never say dying, will die, extreme pain, last chance, danger, or any fact not listed. Account: 03097458815 Easypaisa / JazzCash (Wajdan Khan).
 
@@ -79,6 +83,11 @@ SETTING_TOOLS = [
     tool('set_pace', 'Owner override of autopilot posting pace in minutes (0 and 0 returns to the normal ladder).', {'main_minutes': {'type': 'integer'}, 'freelance_minutes': {'type': 'integer'}}, ['main_minutes', 'freelance_minutes']),
 ]
 CHAT_TOOLS += SETTING_TOOLS + [
+    tool('find_contact', 'Search the owner\'s WhatsApp contacts and chats by name or part of a name. Returns matches with their id, name and whether it is a group. Use this before send_message whenever he names someone.',
+         {'query': {'type': 'string'}}, ['query']),
+    tool('send_message', 'Send a message now to one chat: an id returned by find_contact, a phone number, or a foundation group key (main, community, fiverr, upwork, uet, toprated, test). '
+         'Sends exactly the text given. Set with_picture true to attach the picture the owner attached (or the poster if none).',
+         {'to': {'type': 'string'}, 'text': {'type': 'string'}, 'with_picture': {'type': 'boolean'}}, ['to', 'text', 'with_picture']),
     tool('dm_list', 'Send the DM (poster or the attached picture, plus caption) to a list of people, one by one with a gap. '
          'Use when the owner gives numbers. Name: first name if it is a real name, otherwise empty (greeting becomes Brother). '
          'Gender Sister only for clearly female names or when he says sister.',
@@ -97,9 +106,10 @@ def _system(memory):
     return SYSTEM + '\n\nPLAYBOOK:\n' + playbook() + '\n\nSAVED RULES FROM THE OWNER:\n' + rules
 
 
-def _call(key, system, tools, messages):
+def _chat_raw(key, system, tools, messages):
+    """One call to DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
     body = {'model': MODEL, 'messages': [{'role': 'system', 'content': system}] + messages,
-            'max_tokens': 2000, 'temperature': 0.3}
+            'max_tokens': 2000, 'temperature': 0.4}
     if tools:
         body.update(tools=tools, tool_choice='auto')
     req = urllib.request.Request(API_URL, data=json.dumps(body).encode('utf-8'), method='POST',
@@ -109,7 +119,10 @@ def _call(key, system, tools, messages):
             data = json.load(r)
     except urllib.error.HTTPError as e:
         raise RuntimeError(f'DeepSeek returned {e.code}' + (' (check the API key)' if e.code in (401, 403) else ''))
-    msg = (data.get('choices') or [{}])[0].get('message') or {}
+    return (data.get('choices') or [{}])[0].get('message') or {}
+
+
+def _parse_calls(msg):
     calls = []
     for tc in msg.get('tool_calls') or []:
         fn = tc.get('function') or {}
@@ -117,17 +130,27 @@ def _call(key, system, tools, messages):
             args = json.loads(fn.get('arguments') or '{}')
         except json.JSONDecodeError:
             continue
-        calls.append((fn.get('name'), args))
-    return (msg.get('content') or '').strip(), calls
+        calls.append((tc.get('id'), fn.get('name'), args))
+    return calls
+
+
+def _call(key, system, tools, messages):
+    """Single-shot helper: returns (text, [(name, args), ...])."""
+    msg = _chat_raw(key, system, tools, messages)
+    return (msg.get('content') or '').strip(), [(n, a) for _, n, a in _parse_calls(msg)]
+
+
+SCREEN_ACTIONS = ('prepare_dm', 'send')
 
 
 def chat(text, history, state, memory, do):
-    """do: dict of server callbacks. Returns reply text, client actions and changes."""
-    c = client()
-    if c is None:
+    """Tool loop: the model can look things up (contacts), act, see the result, and keep going.
+    `do` maps tool names to server callbacks. prepare_dm and send are carried out on the owner's screen."""
+    key = client()
+    if key is None:
         return None
     msgs = []
-    for h in history[-12:]:
+    for h in history[-14:]:
         role = 'user' if h.get('who') == 'you' else 'assistant'
         t = str(h.get('text', ''))[:2000]
         if not t:
@@ -139,21 +162,36 @@ def chat(text, history, state, memory, do):
     while msgs and msgs[0]['role'] != 'user':
         msgs.pop(0)
     now = datetime.datetime.now(PKT).strftime('%Y-%m-%d %H:%M')
-    msgs.append({'role': 'user', 'content': f'[Now {now} PKT. Screen state: {json.dumps(state)}]\n{text}'})
-    if len(msgs) > 1 and msgs[-2]['role'] == 'user':
-        msgs[-2:] = [{'role': 'user', 'content': msgs[-2]['content'] + '\n' + msgs[-1]['content']}]
-    reply, calls = _call(c, _system(memory), CHAT_TOOLS, msgs)
-    actions, done = [], []
-    for name, inp in calls:
-        try:
-            if name in do:
-                done.append(do[name](**inp))
-            elif name in ('prepare_dm', 'send'):
-                actions.append({'type': name, **inp})
-        except Exception as e:
-            done.append(f'Could not {name}: {e}')
+    stamped = f'[Now {now} PKT. Screen state: {json.dumps(state)}]\n{text}'
+    if msgs and msgs[-1]['role'] == 'user':
+        msgs[-1]['content'] += '\n' + stamped
+    else:
+        msgs.append({'role': 'user', 'content': stamped})
+    system = _system(memory)
+    actions, done, reply = [], [], ''
+    for _ in range(5):
+        msg = _chat_raw(key, system, CHAT_TOOLS, msgs)
+        calls = _parse_calls(msg)
+        reply = (msg.get('content') or '').strip()
+        if not calls:
+            break
+        msgs.append({'role': 'assistant', 'content': msg.get('content') or '', 'tool_calls': msg.get('tool_calls')})
+        for call_id, name, inp in calls:
+            try:
+                if name in SCREEN_ACTIONS:
+                    actions.append({'type': name, **inp})
+                    result = 'Started on the owner\'s screen.'
+                elif name in do:
+                    result = str(do[name](**inp))
+                    done.append(result)
+                else:
+                    result = f'Unknown tool {name}.'
+            except Exception as e:
+                result = f'Failed: {e}'
+                done.append(f'Could not {name}: {e}')
+            msgs.append({'role': 'tool', 'tool_call_id': call_id, 'content': result[:3000]})
     if not reply:
-        reply = ' '.join(d for d in done if d) or ('Ready on your screen.' if actions else 'Done.')
+        reply = ' '.join(d for d in done[-3:] if d) or ('Started on your screen.' if actions else 'Done.')
     return {'reply': reply, 'actions': actions, 'done': done}
 
 

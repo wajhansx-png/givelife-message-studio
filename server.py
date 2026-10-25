@@ -230,6 +230,64 @@ def auto_post(target):
  caption=json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')
  if not caption.strip() or not start_group_job(target,caption):auto_log('Autopilot skipped: another send is running.')
 
+
+def _items(resp):
+ r=resp.get('results',resp) if isinstance(resp,dict) else resp
+ if isinstance(r,dict):r=r.get('data') or r.get('contacts') or r.get('chats') or []
+ return r if isinstance(r,list) else []
+
+def _norm_item(x):
+ if not isinstance(x,dict):return None
+ jid=str(x.get('jid') or x.get('chat_jid') or x.get('JID') or x.get('id') or '')
+ name=str(x.get('name') or x.get('push_name') or x.get('display_name') or x.get('full_name') or x.get('first_name') or x.get('PushName') or x.get('FullName') or '').strip()
+ return {'name':name or jid.split('@')[0],'id':jid,'group':jid.endswith('@g.us')} if jid else None
+
+def find_contacts(query):
+ q=str(query).strip().lower();words=[w for w in re.split(r'\s+',q) if w]
+ if not words:return 'Give a name to search for.'
+ found={}
+ for path in ('/chats?limit=300&search='+urllib.parse.quote(q),'/chats?limit=500','/user/my/contacts'):
+  try:items=_items(api(path))
+  except Exception:continue
+  for it in items:
+   n=_norm_item(it)
+   if not n or n['id'] in found:continue
+   hay=(n['name']+' '+n['id'].split('@')[0]).lower()
+   if all(w in hay for w in words) or q in hay:found[n['id']]=n
+ if not found:return 'No chat or contact matches "'+str(query)+'". Ask the owner for the number.'
+ out=sorted(found.values(),key=lambda n:(n['group'],len(n['name'])))[:8]
+ return json.dumps(out,ensure_ascii=False)
+
+SEND_LOCK2=threading.Lock();LAST_FREE_SEND=[0]
+
+def send_free(to,text,with_picture):
+ text=str(text).strip()
+ if not text or len(text)>4000:raise ValueError('Message must be 1 to 4,000 characters.')
+ to=str(to).strip()
+ if not wa_ok():raise ValueError('WhatsApp is not connected. Link it first.')
+ if to.lower() in GROUPS:
+  key=to.lower();jid=GROUPS[key][1]
+  last=last_sent_by_key().get(key)
+  if last and time.time()-last<900:raise ValueError('That group was posted to less than 15 minutes ago.')
+  target=jid
+ elif to.endswith('@g.us'):
+  if to not in [v[1] for v in GROUPS.values()] and to!='120363431210327603@g.us':raise ValueError('That group is not one of the foundation groups.')
+  target=to
+ elif to.endswith('@s.whatsapp.net'):target=to
+ else:
+  p=norm_phone(to)
+  if not p:raise ValueError('That is not a valid group, contact id or phone number.')
+  target=p+'@s.whatsapp.net'
+ with SEND_LOCK2:
+  wait=LAST_FREE_SEND[0]+20-time.time()
+  if wait>0:time.sleep(wait)
+  img=image_path(CHAT_IMAGE.get('id') or 'poster') if with_picture else None
+  r=send_with_image(target,text,img);LAST_FREE_SEND[0]=time.time()
+ if r.get('code')!='SUCCESS':raise ValueError('Not confirmed: '+str(r.get('message',''))[:100]+' Check WhatsApp before retrying.')
+ if target.endswith('@g.us'):LAST_LOCAL[target]=time.time()
+ auto_log('Sent a message from chat to '+target.split('@')[0][-6:])
+ return 'Sent.'
+
 CHAT_IMAGE={}
 def chat_callbacks():
  def came(amount):
@@ -239,6 +297,7 @@ def chat_callbacks():
   'new_wording':lambda kind:(next_message() if kind=='group' else next_dm(),'New '+kind+' wording ready.')[1],
   'set_message':lambda kind,text:(save_draft(kind,text),'Message replaced.')[1],
   'remember':mem_add,'autopilot':set_auto,**engine_do(),
+  'find_contact':find_contacts,'send_message':send_free,
   'dm_list':lambda people,gap_minutes,vary,start_after_minutes:start_campaign({'people':people,'gap_seconds':float(gap_minutes)*60,'vary':vary,'start_after_seconds':float(start_after_minutes)*60,'image':CHAT_IMAGE.get('id') or 'poster'})}
 
 

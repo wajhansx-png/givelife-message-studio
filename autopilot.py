@@ -384,7 +384,10 @@ class Engine:
         if poster and poster != self.h['read_left']():
             out.append({'id': f'poster-{poster}', 'level': 'L2', 'action': 'owner',
                         'text': f'The poster still shows Rs. {poster:,}. A poster with the current amount looks more trustworthy.'})
-        if now() - self.s.get('last_amount', self.s['started']) > 6 * 3600:
+        if 'last_amount' not in self.s:
+            out.append({'id': 'amount-first', 'level': 'L2', 'action': 'owner',
+                        'text': 'The amount left is still the starting value. Tell me the real amount (for example "34k left") so every message is right.'})
+        elif now() - self.s['last_amount'] > 6 * 3600:
             out.append({'id': f'amount-{int(now() // 21600)}', 'level': 'L2', 'action': 'owner',
                         'text': 'The amount left has not been updated for 6 hours. Check Easypaisa/JazzCash and tell me (for example "34k left").'})
         return out

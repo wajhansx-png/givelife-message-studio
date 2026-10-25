@@ -352,7 +352,7 @@ def chat_callbacks():
   'dm_list':lambda people,gap_minutes,vary,start_after_minutes:start_campaign({'people':people,'gap_seconds':float(gap_minutes)*60,'vary':vary,'start_after_seconds':float(start_after_minutes)*60,'image':CHAT_IMAGE.get('id') or 'poster'})}
 
 
-import autopilot, random as _random
+import autopilot, learning as learning_mod, random as _random
 OWNER_PHONE=os.environ.get('OWNER_PHONE','923205069925')
 
 def send_text(jid,text):
@@ -375,23 +375,25 @@ def start_keys_job(keys,caption):
 def group_messages(jid):
  return api('/chat/'+urllib.parse.quote(jid,safe='')+'/messages?limit=20').get('results',{}).get('data',[]) or []
 
-def donor_contacts():
- data=api('/group/participants?group_id='+urllib.parse.quote(GROUPS['main'][1],safe='')).get('results',{})
- people=data.get('participants',[]) if isinstance(data,dict) else []
- out=[]
- for p in people:
-  name=str(p.get('display_name') or '');phone=str(p.get('phone_number') or '')
-  if 'donor' not in name.lower() or not phone.isdigit() or phone==OWNER_PHONE:continue
-  first=re.sub(r'(?i)\bdonor\b|member|\d+','',name).strip().split(' ')[0] if name else ''
-  out.append((phone,first if re.fullmatch(r'[A-Za-z]{2,20}',first or '') else ''))
- _random.shuffle(out);return out
-
 def already_dmed(digest):
  return digest in BLOCKED or bool(STORE and (STORE.get('dm_recipient_'+digest) or STORE.get('optout_'+digest)))
 
-def dm_text(name):
- sel=[_random.randrange(len(a)) for a in DP];t=build_dm(sel,read_left())
- return t.replace('Brother, ',(name+' Brother, ') if name else 'Brother, ',1)
+FEMALE=set('ayesha aisha fatima zainab maryam mariam laiba sana hira iqra amna sawaira yusra areeba mahnoor noor kiran sadia saba rabia hina nida mehwish sidra anam anum bushra khadija asma uzma sara sarah zoya alina hajra dania rimsha mehak esha ifra aleena maham momina tehreem eman iman aiman kinza fiza javeria sobia shazia nadia farah rida ramsha warda wajeeha hafsa sumaira tayyaba uswa zara zahra nimra minahil bisma'.split())
+NOT_NAME=re.compile(r'(?i)\b(web|develop|graphic|entrepreneur|official|store|shop|studio|agency|design|market|services?|tech|digital|freelanc|admin|group|team|seo|business|donor|member|upwork|fiverr)')
+PERSONAL=re.compile(r"(?i)(wife|wifey|\bmom\b|\bmum\b|mother|\bdad\b|father|baba|papa|\babu\b|abbu|ammi|amma|family|bhai|\bbro\b|\bsis\b|baji|uncle|aunt|chacha|mama|khala|dada|nani|nana|\bhome\b|\blove\b|jaan|janu|honey|dear|hubby|husband|\bson\b|daughter|boss|jr account)|[\u2764\U0001F495\U0001F60D\U0001F496\U0001F48B]")
+
+def clean_first_name(name):
+ if not name or NOT_NAME.search(name):return ''
+ first=re.sub(r'[^A-Za-z ]','',str(name)).strip().split(' ')[0] if str(name).strip() else ''
+ return first.title() if re.fullmatch(r'[A-Za-z]{2,15}',first or '') else ''
+
+def dm_text(name,tier='member'):
+ left=read_left();first=clean_first_name(name);who=(first+' ' if first else '')+('Sister' if first.lower() in FEMALE else 'Brother')
+ acct='📲 *03097458815* — Easypaisa / JazzCash\nWajdan Khan (GiveLife Foundation account)'
+ if tier=='repeat':return f'{who}, JazakAllah for helping Yousuf before. 🤲\n\nRs. {left:,} is still needed for his treatment. Could you help once more, or share his poster with family and friends today?\n\n{acct}'
+ if tier=='reminder':return f'{who}, a gentle reminder about Yousuf. 🤲\n\nRs. {left:,} is still needed for his treatment. If you have already sent it, JazakAllah. If not, whenever you can:\n\n{acct}\n\nReply *Done* after you donate.'
+ sel=[_random.randrange(len(a)) for a in DP];t=build_dm(sel,left)
+ return t.replace('Brother, ',who+', ',1)
 
 def send_dm(phone,text,digest):
  if STORE:STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':time.time()})
@@ -551,11 +553,85 @@ def post_text_all(text):
    time.sleep(60)
  threading.Thread(target=run,daemon=True).start()
 
+def variant_pool():
+ return 'a' if 0<read_left()<=10000 else 'n'
+
+def variant_count():
+ return len(ALMOST) if variant_pool()=='a' else len(HOOKS)
+
+def caption_variant(i):
+ return build_group(int(i),read_left())
+
+def variant_names():
+ names={i:h[0].replace('{P2}','N')[:48] for i,h in enumerate(HOOKS)}
+ names.update({100+i:a[0].replace('{L}','X').replace('{P2}','N')[:48] for i,a in enumerate(ALMOST)})
+ return names
+
+def goal_value():
+ m=re.search(r'^GOAL:\s*(\d+)',(DATA/'state.md').read_text(encoding='utf-8-sig'),re.M);return int(m[1]) if m else 0
+
+def milestone_text(raised,left):
+ p2,p1=math.ceil(left/2000),math.ceil(left/1000)
+ return (f'*Rs. {raised:,} has been raised for Yousuf. Rs. {left:,} is still missing.* 💔\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n\n'
+  '*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation')
+
+def job_message():
+ j=JOBS.get(ACTIVE) if ACTIVE else None
+ return j.get('message','') if j else ''
+
+def recent_chats():
+ out=[]
+ try:items=_items(api('/chats?limit=60'))
+ except Exception:return out
+ for it in items:
+  n=_norm_item(it)
+  if n and not n['group'] and n['id'].endswith('@s.whatsapp.net'):
+   phone=n['id'].split('@')[0]
+   if phone!=OWNER_PHONE and not PERSONAL.search(n['name']):out.append((phone,n['name']))
+ return out[:40]
+
+def group_members():
+ try:data=api('/group/participants?group_id='+urllib.parse.quote(GROUPS['main'][1],safe='')).get('results',{})
+ except Exception:return []
+ out=[]
+ for p in (data.get('participants',[]) if isinstance(data,dict) else []):
+  phone=str(p.get('phone_number') or '');name=str(p.get('display_name') or '')
+  if phone.isdigit() and phone!=OWNER_PHONE and not PERSONAL.search(name):out.append((phone,name))
+ return out
+
+def outreach(caps):
+ """Who to DM next, best first: past donors, donor-labelled contacts, group members, saved chats."""
+ picked=[];seen=set()
+ def add(tier,people):
+  n=0
+  for phone,name in people:
+   if n>=caps.get(tier,0) or phone in seen:continue
+   d=hashlib.sha256((phone+'@s.whatsapp.net').encode()).hexdigest()
+   if d in BLOCKED or (STORE and STORE.get('optout_'+d)):continue
+   if tier!='repeat' and already_dmed(d):continue
+   seen.add(phone);picked.append((phone,name,tier));n+=1
+ add('repeat',learning_mod.repeat_donors(ENGINE.L))
+ members=group_members();_random.shuffle(members)
+ add('donor',[(p,n) for p,n in members if 'donor' in n.lower()])
+ add('member',[(p,n) for p,n in members if 'donor' not in n.lower()])
+ chats=recent_chats();_random.shuffle(chats);add('saved',chats)
+ return picked
+
+def ai_test():
+ key=assistant.client()
+ if not key:return {'ok':False,'error':'No DeepSeek key yet. Add DEEPSEEK_API_KEY in Render, then deploy.'}
+ t0=time.time()
+ try:text,_=assistant._call(key,'Reply with one word only.',[],[{'role':'user','content':'Reply with exactly: OK'}])
+ except Exception as e:
+  m=str(e);hint=' The key looks wrong or revoked.' if '401' in m or '403' in m else ' The DeepSeek balance may be empty.' if '402' in m else ' Check the internet or try again.'
+  return {'ok':False,'error':m[:120]+hint}
+ return {'ok':True,'ms':round((time.time()-t0)*1000),'reply':text[:40]}
+
 ENGINE=autopilot.Engine({'DATA':DATA,'store_get':lambda k:STORE.get(k) if STORE else None,'persist':persist_file,'log':auto_log,
  'send_text':send_text,'owner_jid':lambda:OWNER_PHONE+'@s.whatsapp.net','enabled':auto_on,'read_left':read_left,'wa_ok':wa_ok,
  'busy':lambda:ACTIVE is not None,'last_sent':last_sent_by_key,'groups':lambda:list(GROUPS),'group_jids':lambda:{k:v[1] for k,v in GROUPS.items()},
  'caption':lambda:json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),'start_job':start_keys_job,'messages':group_messages,
- 'donor_contacts':donor_contacts,'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm})
+ 'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm,'caption_variant':caption_variant,'variant_count':variant_count,'variant_pool':variant_pool,'variant_names':variant_names,'goal':goal_value,'milestone_text':milestone_text,'job_message':job_message,'recent_chats':recent_chats,'outreach':outreach})
 
 def engine_do():
  return {'set_pace':lambda main_minutes,freelance_minutes:ENGINE.set_pace(main_minutes,freelance_minutes),'pause_group':lambda key,hours:ENGINE.pause(key,hours),'resume_group':lambda key:ENGINE.resume(key),
@@ -593,10 +669,11 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/format.js':self.reply((ROOT/'format.js').read_bytes(),'application/javascript')
   elif self.path=='/app.js':self.reply((ROOT/'app.js').read_bytes(),'application/javascript')
   elif self.path=='/left':self.reply({'left':read_left()})
-  elif self.path.startswith('/autopilot'):self.reply({'on':auto_on(),'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':ENGINE.summary()})
+  elif self.path.startswith('/autopilot'):self.reply({'on':auto_on(),'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':ENGINE.summary(),'status':ENGINE.status() if auto_on() else None})
   elif self.path=='/memory':self.reply(mem_get())
   elif self.path=='/campaign':self.reply({**{k:v for k,v in CAMPAIGN.items() if k!='stop'},'log':CAMPAIGN['log'][-8:],'wait':max(0,round(CAMPAIGN['next_at']-time.time()))})
   elif self.path=='/rules':self.reply({'items':ENGINE.rule_list(),'autopilot':auto_on()})
+  elif self.path=='/ai-test':self.reply(ai_test())
   elif self.path=='/suggestions':self.reply({'items':ENGINE.suggestions(),'autopilot':auto_on(),'summary':ENGINE.summary()})
   elif self.path=='/groups':self.reply([{'key':k,'name':v[0]} for k,v in GROUPS.items()])
   elif self.path.startswith('/send-status/'):
@@ -606,6 +683,7 @@ class Handler(BaseHTTPRequestHandler):
  def do_POST(self):
   global ACTIVE
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
+  ENGINE.touch_owner()
   origin=self.headers.get('Origin');same_origin=origin and urllib.parse.urlparse(origin).netloc==self.headers.get('Host')
   if origin and not same_origin and origin not in self.remote_config().get('origins',[]):return self.reply({},status=403)
   try:body=json.loads(self.rfile.read(int(self.headers.get('Content-Length',0))))
@@ -671,7 +749,7 @@ class Handler(BaseHTTPRequestHandler):
    a=str(body.get('action',''));key=str(body.get('key',''))
    if a in ('pause','resume') and key not in GROUPS:return self.reply({'error':'Unknown group. Use: '+', '.join(GROUPS)},status=400)
    try:
-    msg=ENGINE.pause(key,float(body.get('hours',24))) if a=='pause' else ENGINE.resume(key) if a=='resume' else ENGINE.set_quiet(int(body.get('start',0)),int(body.get('end',0))) if a=='quiet' else ENGINE.set_dms(bool(body.get('enabled',True)),int(body.get('daily',30))) if a=='dms' else ENGINE.set_pace(body.get('main'),body.get('freelance')) if a=='pace' else None
+    msg=ENGINE.pause(key,float(body.get('hours',24))) if a=='pause' else ENGINE.resume(key) if a=='resume' else ENGINE.set_quiet(int(body.get('start',0)),int(body.get('end',0))) if a=='quiet' else ENGINE.set_dms(bool(body.get('enabled',True)),int(body.get('daily',30)),body.get('new_people')) if a=='dms' else ENGINE.set_pace(body.get('main'),body.get('freelance')) if a=='pace' else None
    except Exception as e:return self.reply({'error':str(e)[:120]},status=400)
    if msg is None:return self.reply({'error':'Unknown setting'},status=400)
    self.reply({'reply':msg,'summary':ENGINE.summary()})

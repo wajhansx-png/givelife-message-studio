@@ -82,3 +82,11 @@
 - While Auto is ON, anything he types that is a standing instruction (pace, quiet hours, caps, pauses, scheduled sends, preferences) is saved as a rule and followed. "rules" lists them, "forget N" removes one.
 - His newest instruction beats older rules without asking. Only invented facts/amounts and WhatsApp safety floors (15 min per group, 45 s between DMs) are refused.
 - He can message any saved contact by name; search his chats first, never say you cannot see them.
+## H. AUTO MODE BRAIN (owner 2026-10-26)
+- Owner may be away for days. Auto never stops on its own: it reads group and DM replies, spots "Done" donations, thanks once, asks for a share, and sends one reminder when someone says "later".
+- Pace ladder by minutes without money: L1 normal, L2 40+ min faster, L3 90+ min full effort, L4 360+ min eases off (main 30 / freelance 90 min) so groups do not get tired. Money resets to L1 and credits the wording that was posted.
+- It learns: wordings that bring donations are used more, and posting speeds up in hours when money usually comes. Past donors get a repeat DM after a few days.
+- DM order when slow: past donors, donor-labelled contacts, group members, saved chats (new people can be switched off in Settings). Quiet hours 23:00-08:00 for DMs, max 5 per batch, 100-150 s apart.
+- Milestone posts at 25/50/75/90% raised, once each. Goal reached: sends the final thanks and stops.
+- The owner is messaged only when he must act (new poster, WhatsApp down, long drought, complaints), at most once a day for the same thing.
+- Screen: the live box under the top bar says what Auto is doing now and what is next. Settings (gear): Test AI, DM sources, Log out WhatsApp.

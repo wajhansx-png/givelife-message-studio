@@ -6,12 +6,19 @@ function status(t,bad){const s=$('status');s.textContent=t;s.classList.toggle('e
 
 /* ---- conversation log (kept on this device) ---- */
 let history=[];try{history=JSON.parse(localStorage.getItem('givelife-chat')||'[]')}catch(e){}
-function drawLog(){const html=history.slice(-40).map(h=>`<div class="e ${h.who==='auto'?'sys':h.who}${h.err?' err':''}"></div>`).join('');
- for(const id of ['log','histLog']){const el=$(id);el.innerHTML=html;[...el.children].forEach((d,i)=>d.textContent=history.slice(-40)[i].text);el.scrollTop=el.scrollHeight}}
-function say(who,text,err){history.push({who,text,err:!!err,t:Date.now()});history=history.slice(-80);try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}drawLog()}
+let thinking=false;
+function drawLog(anim){const items=history.slice(-40);
+ for(const id of ['log','histLog']){const el=$(id);el.textContent='';
+  items.forEach((h,i)=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who)+(h.err?' err':'')+(anim&&i===items.length-1?' in':'');d.textContent=h.text;el.append(d)});
+  if(thinking){const d=document.createElement('div');d.className='e app dots in';d.innerHTML='<i></i><i></i><i></i>';el.append(d)}
+  el.scrollTop=el.scrollHeight}}
+function think(on){thinking=on;drawLog(false)}function say(who,text,err){history.push({who,text,err:!!err,t:Date.now()});history=history.slice(-80);try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}drawLog(true)}
 if(!history.length)say('app','Hi. Tell me what changed or what to do: "34k left", "came 2000", "Ali 0300 1234567", "send all", or anything else.');else drawLog();
 function openChat(){if($('hist').open)return;$('hist').showModal();drawLog();const l=$('histLog');l.scrollTop=l.scrollHeight;$('histCmd').focus()}
-$('log').onclick=openChat;
+const cf=on=>document.body.classList.toggle('cf',!!on&&!isPhone());
+$('log').onclick=()=>{if(isPhone())openChat();else{cf(true);$('cmd').focus()}};
+$('card').addEventListener('pointerdown',()=>cf(false));
+addEventListener('resize',()=>{if(isPhone())cf(false)});
 $('histClose').onclick=()=>$('hist').close();
 const isPhone=()=>matchMedia('(max-width:899px)').matches;
 
@@ -19,7 +26,7 @@ const isPhone=()=>matchMedia('(max-width:899px)').matches;
 function paint(k){$(k+'Preview').innerHTML=waFormat($(k).value).split('\n').map(l=>'<div class="wa-line'+(l?'':' blank')+'">'+(l||'<br>')+'</div>').join('')}
 function render(){paint('group');paint('dm');requestAnimationFrame(fit)}
 function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');
- for(let s=22;s>=12;s-=.5){m.style.fontSize=s+'px';if(m.scrollHeight<=chat.clientHeight-30)break}
+ for(let s=isPhone()?16:22;s>=11;s-=.5){m.style.fontSize=s+'px';if(m.scrollHeight<=chat.clientHeight-30)break}
  chat.style.overflowY=m.scrollHeight>chat.clientHeight-30?'auto':'hidden'}
 new ResizeObserver(()=>requestAnimationFrame(fit)).observe($('chat'));
 function save(){const data={group:$('group').value,dm:$('dm').value};
@@ -46,7 +53,7 @@ for(const k of ['group','dm'])$(k+'Preview').addEventListener('paste',e=>{e.prev
 function setView(v){if(editing)setEditing(false);document.body.dataset.view=v;document.querySelectorAll('[data-view-button]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.viewButton===v)));
  $('ctx').textContent=v==='group'?'Group message · poster attached':'DM · poster attached';localStorage.setItem('givelife-view',v);requestAnimationFrame(fit)}
 document.querySelectorAll('[data-view-button]').forEach(b=>b.onclick=()=>setView(b.dataset.viewButton));
-function showLeft(){$('leftChip').textContent=left==null?'Rs. … left':'Rs. '+fmt(left)+' left'}
+function showLeft(){const c=$('leftChip');c.textContent=left==null?'Rs. …':'Rs. '+fmt(left);const w=document.createElement('span');w.className='lw';w.textContent=' left';c.append(w)}
 function applyDrafts(d){if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
 async function setLeft(n){if(editing)setEditing(false);const r=await post('/left',{left:n}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not update amount');applyDrafts(d);await save()}
 $('leftChip').onclick=()=>{const c=$('cmd');c.value='';c.placeholder='New amount left, e.g. 34000 or 34k';c.focus()};
@@ -203,8 +210,8 @@ async function act(text){const t=text.trim();if(!t)return;say('you',t);
  const rr=await post('/rule-text',{text:t}),rd=await rr.json().catch(()=>({}));
  if(rd.rule){if(rd.saved){say('app','Rule saved: '+rd.summary+' Auto mode will follow it. Say "rules" to see them all.');return}
   if(!aiAvailable){say('app',rd.summary+' Auto mode is off, so I did not save it as a rule. Say "auto on" and tell me again.');return}}
- const r=await post('/assistant',{text:t,image:attached?attached.id:null,history:history.slice(-13,-1),screen:{view:view(),dm:{name:$('dmName').value,phone:$('dmPhone').value,gender}}});
- const d=await r.json().catch(()=>({}));
+ think(true);let r,d;
+ try{r=await post('/assistant',{text:t,image:attached?attached.id:null,history:history.slice(-13,-1),screen:{view:view(),dm:{name:$('dmName').value,phone:$('dmPhone').value,gender}}});d=await r.json().catch(()=>({}))}finally{think(false)}
  if(r.status===503){say('app','I did not understand that, and the AI assistant is not connected, so only direct commands work. Try: "34k left", "came 2000", "send hi to Ali", "send main", "fiverr every 30 min", "rules".',1);return}
  if(!r.ok)throw Error(d.error||'The assistant could not answer.');
  applyDrafts(d);if(d.autopilot!=null)paintAuto(d.autopilot);say('app',d.reply);
@@ -214,15 +221,50 @@ async function act(text){const t=text.trim();if(!t)return;say('you',t);
 $('cmdForm').onsubmit=async e=>{e.preventDefault();const c=$('cmd'),v=c.value;c.value='';
  try{await act(v)}catch(err){say('app',err.message,1)}paintAuto(autoOn)};
 $('histForm').onsubmit=async e=>{e.preventDefault();const c=$('histCmd'),v=c.value;c.value='';try{await act(v)}catch(err){say('app',err.message,1)}c.focus()};
-$('cmd').addEventListener('focus',()=>{if(isPhone()){$('cmd').blur();openChat()}});
+$('cmd').addEventListener('focus',()=>{if(isPhone()){$('cmd').blur();openChat()}else cf(true)});
 
 /* ---- autopilot ---- */
 let aiAvailable=false;
-function paintAuto(on){autoOn=!!on;$('auto').setAttribute('aria-pressed',String(autoOn));$('auto').textContent=autoOn?'Auto ON':'Auto';
+function paintAuto(on){autoOn=!!on;if(!autoOn)$('live').hidden=true;$('auto').setAttribute('aria-pressed',String(autoOn));$('auto').textContent=autoOn?'Auto ON':'Auto';
  const ph=autoOn?'Auto is on · tell me rules: "fiverr every 30 min"':'Tell me: 34k left · came 2000 · Ali 0300…';$('cmd').placeholder=ph;$('histCmd').placeholder=autoOn?'Auto is on · tell me rules or tasks…':'Type anything…'}
-async function toggleAuto(on){const r=await post('/autopilot',{on}),d=await r.json();paintAuto(d.on);say(d.on||!on?'auto':'app',d.reply,!d.on&&on)}
+async function toggleAuto(on){const r=await post('/autopilot',{on}),d=await r.json();paintAuto(d.on);say(d.on||!on?'auto':'app',d.reply,!d.on&&on);if(d.on)pollAuto()}
 $('auto').onclick=()=>toggleAuto(!autoOn).catch(e=>say('app',e.message,1));
-async function pollAuto(){try{const d=await (await fetch('/autopilot')).json();aiAvailable=!!d.ai;paintAuto(d.on);for(const x of d.log||[]){if(x.time*1000>seenAuto){seenAuto=x.time*1000;if(!x.q&&x.time*1000>Date.now()-15*60000)say('auto',x.text)}}}catch(e){}}
+async function pollAuto(){try{const d=await (await fetch('/autopilot')).json();aiAvailable=!!d.ai;paintAuto(d.on);paintLive(d.status);for(const x of d.log||[]){if(x.time*1000>seenAuto){seenAuto=x.time*1000;if(!x.q&&x.time*1000>Date.now()-15*60000)say('auto',x.text)}}}catch(e){}}
+
+/* ---- live box: what Auto is doing right now ---- */
+const GN={main:'GiveLife',community:'Upwork Community',fiverr:'Fiverr',upwork:'Upwork',uet:'Fiverr UET',toprated:'Top Rated'};
+const PACE={L1:'Normal pace: donations are coming.',L2:'Donations slowed: posting faster.',L3:'Donations very slow: working at full effort.',L4:'Long quiet spell: easing off so the groups do not get tired.'};
+function paintLive(st){const box=$('live');if(!autoOn||!st){box.hidden=true;return}
+ box.hidden=false;box.dataset.pace=st.pace;$('liveNow').textContent=st.now;
+ const n=(st.next||[])[0],t=st.today||{};
+ $('liveMeta').textContent=(n?`Next: ${GN[n.group]||n.group} ${n.in?'in '+n.in+' min':'now'} · `:'')+`${t.posts||0} posts · ${t.dms||0} DMs`;
+ const more=$('liveMore');more.textContent='';
+ const add=(k,v)=>{const d=document.createElement('div'),a=document.createElement('div');a.className='k';a.textContent=k;d.textContent=v;more.append(a,d)};
+ add('Pace',PACE[st.pace]||st.pace);
+ if((st.next||[]).length)add('Next posts',st.next.map(x=>`${GN[x.group]||x.group} ${x.in?'in '+x.in+' min':'now'}`).join(' · '));
+ add('Today',`${t.posts||0} group posts, ${t.dms||0} DMs, ${t.signals||0} people said they donated`);
+ if(st.away_hours>=1)add('You',`Away for ${st.away_hours} h. I am running things; I will only message you if something needs you.`);
+ for(const l of (st.learned||[]).slice(0,3))add('Learned',l)}
+$('liveBar').onclick=()=>{const m=$('liveMore'),open=m.hidden;m.hidden=!open;$('liveBar').setAttribute('aria-expanded',String(open))};
+document.addEventListener('pointerdown',e=>{if(!$('liveMore').hidden&&!$('live').contains(e.target)){$('liveMore').hidden=true;$('liveBar').setAttribute('aria-expanded','false')}});
+
+/* ---- settings: test AI, DM sources, log out WhatsApp ---- */
+const setNote=(id,text,cls)=>{const e=$(id);e.textContent=text;e.className=cls||''};
+async function loadSet(){try{const s=(await (await fetch('/autopilot')).json()).summary||{};$('swDm').checked=!!s.dm_enabled;$('swNew').checked=s.dm_new!==false;$('swNew').disabled=!s.dm_enabled;$('set').dataset.daily=s.dm_daily||30}catch(e){}}
+$('gear').onclick=()=>{$('set').showModal();loadSet()};
+$('setClose').onclick=()=>$('set').close();
+async function saveDms(){const on=$('swDm').checked;$('swNew').disabled=!on;
+ try{const r=await post('/autopilot-settings',{action:'dms',enabled:on,daily:+($('set').dataset.daily||30),new_people:$('swNew').checked}),d=await r.json();if(!r.ok)throw Error(d.error);status('✓ '+d.reply)}catch(e){status(e.message||'Could not save',1);loadSet()}}
+$('swDm').onchange=saveDms;$('swNew').onchange=saveDms;
+$('aiTest').onclick=async()=>{const b=$('aiTest');b.disabled=true;setNote('aiRes','Asking the assistant…');
+ try{const d=await (await fetch('/ai-test')).json();d.ok?setNote('aiRes',`Working. Answered in ${(d.ms/1000).toFixed(1)} s.`,'ok'):setNote('aiRes',d.error||'Not working.','err')}
+ catch(e){setNote('aiRes','Could not reach the server.','err')}finally{b.disabled=false}};
+let outT=null;
+$('waOut').onclick=async()=>{const b=$('waOut');
+ if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Tap again to confirm';clearTimeout(outT);outT=setTimeout(()=>{b.classList.remove('arm');b.textContent='Log out'},4000);return}
+ clearTimeout(outT);b.classList.remove('arm');b.textContent='Log out';b.disabled=true;
+ try{const r=await post('/wa-logout',{confirm:true}),d=await r.json();if(!r.ok)throw Error(d.error);setNote('waRes','Logged out. Use the WhatsApp dot at the top to link again.','ok');say('app','WhatsApp was logged out. Link it again from the WhatsApp dot at the top.')}
+ catch(e){setNote('waRes',e.message,'err')}finally{b.disabled=false}};
 
 /* ---- suggestions: what the owner would do next; one tap to do it ---- */
 let sug=null;const dismissed=()=>{try{return JSON.parse(localStorage.getItem('givelife-dismissed')||'{}')}catch(e){return{}}};
@@ -252,5 +294,5 @@ seenAuto=Number(localStorage.getItem('givelife-seen-auto')||0);addEventListener(
 fetch('/drafts').then(r=>r.json()).then(d=>{applyDrafts(d);status('✓ Ready')}).catch(()=>status('Could not load',1));
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;showLeft()}).catch(()=>{});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false}}).catch(()=>{});
-pollAuto();setInterval(pollAuto,30000);pollSuggestions();setInterval(pollSuggestions,60000);pollCamp();
+pollAuto();setInterval(pollAuto,10000);pollSuggestions();setInterval(pollSuggestions,60000);pollCamp();
 if(matchMedia('(min-width:900px) and (hover:hover)').matches)$('cmd').focus();

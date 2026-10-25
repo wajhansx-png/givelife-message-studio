@@ -6,7 +6,7 @@ function status(t,bad){const s=$('status');s.textContent=t;s.classList.toggle('e
 
 /* ---- conversation log (kept on this device) ---- */
 let history=[];try{history=JSON.parse(localStorage.getItem('givelife-chat')||'[]')}catch(e){}
-function drawLog(){const html=history.slice(-40).map(h=>`<div class="e ${h.who}${h.err?' err':''}"></div>`).join('');
+function drawLog(){const html=history.slice(-40).map(h=>`<div class="e ${h.who==='auto'?'sys':h.who}${h.err?' err':''}"></div>`).join('');
  for(const id of ['log','histLog']){const el=$(id);el.innerHTML=html;[...el.children].forEach((d,i)=>d.textContent=history.slice(-40)[i].text);el.scrollTop=el.scrollHeight}}
 function say(who,text,err){history.push({who,text,err:!!err,t:Date.now()});history=history.slice(-80);try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}drawLog()}
 if(!history.length)say('app','Hi. Tell me what changed or what to do: "34k left", "came 2000", "Ali 0300 1234567", "send all", or anything else.');else drawLog();
@@ -92,6 +92,18 @@ $('sendDm').onclick=async()=>{if(editing)setEditing(false);const phone=cleanPhon
   else say('app','Not confirmed: '+(d.message||'')+' Check WhatsApp before retrying.',1)}
  catch(e){say('app',e.message,1)}finally{busy(false)}};
 
+/* ---- send a plain message to a contact, group or number: works without the AI ---- */
+async function sendTo(who,text){
+ let to=who;const g=GKEY(who);
+ if(g)to=g;else if(who&&!/^\+?\d[\d\s-]{6,}$/.test(who)){
+  const r=await post('/find',{query:who}),d=await r.json();
+  if(!d.items.length)return `I checked your chats and contacts (${d.checked}) and found nobody called "${who}". Send me the number and I will message it.`;
+  if(d.items.length>1&&!d.items.some(x=>x.name.toLowerCase()===who.toLowerCase()))return 'Which one?\n'+d.items.slice(0,5).map((x,i)=>`${i+1}. ${x.name}`).join('\n')+'\nSay: send '+text+' to <full name>.';
+  const hit=d.items.find(x=>x.name.toLowerCase()===who.toLowerCase())||d.items[0];to=hit.id;who=hit.name}
+ const r=await post('/send-now',{to,text,with_picture:false}),d=await r.json();
+ if(!r.ok)throw Error(d.error||'Could not send');return `Sent "${text.slice(0,60)}" to ${who||d.to||'the last person'}.`}
+const GKEY=w=>({main:'main',givelife:'main',community:'community','upwork community':'community',fiverr:'fiverr','fiverr course':'fiverr',upwork:'upwork','upwork course':'upwork',uet:'uet','fiverr uet':'uet',toprated:'toprated','top rated':'toprated',test:'test','test group':'test'})[String(w).toLowerCase().trim()];
+
 /* ---- pictures in the chat ---- */
 let attached=null;
 function clearAttachment(){attached=null;$('att').hidden=true}
@@ -124,7 +136,7 @@ function parseList(t){const people=[],re=/(?:\+?92|0092|0)[\s-]?3\d{2}[\s-]?\d{7
 let listT=null;
 function startList(l){if(listT){clearTimeout(listT);listT=null}
  const names=l.people.slice(0,4).map(p=>(p.name?p.name+' ':'')+p.gender).join(', ')+(l.people.length>4?` +${l.people.length-4} more`:'');
- say('app',`Sending to ${l.people.length}: ${names}. Gap about ${Math.round(l.gap/6)/10} min, ${l.vary?'new wording for each person':'same message'}, ${attached?'your picture':'the poster'}${l.start?`, starting in ${Math.round(l.start/6)/10} min`:''}. Starting in 5 seconds — tap Stop to cancel.`);
+ say('app',`Sending to ${l.people.length} ${l.people.length===1?'person':'people'}: ${names}. Gap about ${Math.round(l.gap/6)/10} min, ${l.vary?'new wording for each person':'same message'}, ${attached?'your picture':'the poster'}${l.start?`, starting in ${Math.round(l.start/6)/10} min`:''}. Starting in 5 seconds — tap Stop to cancel.`);
  showCamp('Starting in 5 seconds…');
  listT=setTimeout(async()=>{listT=null;try{const r=await post('/campaign',{people:l.people,gap_seconds:l.gap,vary:l.vary,start_after_seconds:l.start,image:attached?attached.id:'poster',rest_every:10,rest_minutes:10}),d=await r.json();
   if(!r.ok)throw Error(d.error);say('app',d.reply);pollCamp()}catch(e){say('app',e.message,1);$('camp').hidden=true}},5000)}
@@ -149,6 +161,11 @@ async function quick(t){const low=t.toLowerCase();let m;
  if(/^(normal|default) (pace|speed)$/.test(low)){const r=await post('/autopilot-settings',{action:'pace',main:0,freelance:0}),d=await r.json();return d.reply}
  if(/\b(make|use|set)\b.*\bposter\b|^poster$/i.test(t)&&attached){const r=await post('/upload-image',{data:attached.data,use:'poster'}),d=await r.json();if(!r.ok)throw Error(d.error);
   $('poster').src=attached.url;$('poster').hidden=false;clearAttachment();return 'Done. This picture is now the poster for group posts and DMs.'}
+ const TIMED=/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\bat\s+\d{1,2}\b|\b(daily|every day|every \d+)\b/i;
+ if((m=t.match(/^(?:send|bhejo|message|msg|text)\s+(.+?)\s+(?:to|ko)\s+(.+)$/i))&&!/^(all|main|free|test|these|them|this|it|the (?:appeal|poster|message))\b/i.test(m[1])&&!TIMED.test(t)){
+  return await sendTo(m[2].trim(),m[1].replace(/^["“'](.*)["”']$/,'$1'))}
+ if((m=t.match(/^(?:send|bhejo)\s+(?!(?:all|main|free|test|to|the|a|my|these|them|this)\b)(.{1,300})$/i))&&!/\b(groups?|poster|picture|image)\b/i.test(m[1])&&!TIMED.test(t)&&!/3\d{2}[\s-]?\d{7}/.test(m[1])){
+  return await sendTo('',m[1].replace(/^["“'](.*)["”']$/,'$1'))}
  const list=parseList(t);
  if(list.people.length>=2||(list.people.length===1&&/\b(send|bhejo|message|msg|dm)\b/i.test(t))){startList(list);return null}
  if(m=t.match(/(?:\+?92|0092|0)?[\s-]?3\d{2}[\s-]?\d{7}/)){
@@ -158,6 +175,8 @@ async function quick(t){const low=t.toLowerCase();let m;
   const name=rest&&/^\p{L}/u.test(rest)&&rest.length<=30?rest.replace(/\b\p{L}/gu,c=>c.toUpperCase()):'';
   setView('dm');$('dmPhone').value=phone;$('dmName').value=name;setGender(sister?'Sister':'Brother');
   return `Ready: DM to ${greet()} (${phone}). Tap "Send DM with poster".`}
+ if(m=low.match(/^(?:rules?|my rules|show rules|list rules)$/)){const d=await (await fetch('/rules')).json();return d.items.length?'Auto mode follows:\n'+d.items.map((x,i)=>`${i+1}. ${x.text}`).join('\n')+'\nSay "forget 2" to remove one.':'No rules yet. With Auto on, just tell me things like "post in fiverr every 30 min" or "no posting 2am to 7am".'}
+ if(m=low.match(/^(?:forget|delete|remove)\s+(?:rule\s*)?#?(\d+)$/)){const d=await (await fetch('/rules')).json(),it=d.items[+m[1]-1];if(!it)return 'There is no rule '+m[1]+'.';await post('/rules',{delete:it.id});return 'Removed: '+it.text}
  if(/^(send )?(to )?all( groups)?$/.test(low)){setView('group');armAll();return 'Sending to all 6 groups in 3 seconds. Tap the orange button to cancel.'}
  if(/^(new|regenerate|next|naya)$/.test(low)){await freshWording();return 'New wording ready.'}
  if(/^copy$/.test(low)){$('copy').click();return 'Copied.'}
@@ -181,31 +200,36 @@ async function quick(t){const low=t.toLowerCase();let m;
  return undefined}
 async function act(text){const t=text.trim();if(!t)return;say('you',t);
  const q=await quick(t);if(q!==undefined){if(q)say('app',q);return}
+ const rr=await post('/rule-text',{text:t}),rd=await rr.json().catch(()=>({}));
+ if(rd.rule){if(rd.saved){say('app','Rule saved: '+rd.summary+' Auto mode will follow it. Say "rules" to see them all.');return}
+  if(!aiAvailable){say('app',rd.summary+' Auto mode is off, so I did not save it as a rule. Say "auto on" and tell me again.');return}}
  const r=await post('/assistant',{text:t,image:attached?attached.id:null,history:history.slice(-13,-1),screen:{view:view(),dm:{name:$('dmName').value,phone:$('dmPhone').value,gender}}});
  const d=await r.json().catch(()=>({}));
- if(r.status===503){say('app','I did not understand that, and the AI assistant is not connected yet. Try: "34k left", "came 2000", "Ali 0300 1234567", "send all", "remember: …".',1);return}
+ if(r.status===503){say('app','I did not understand that, and the AI assistant is not connected, so only direct commands work. Try: "34k left", "came 2000", "send hi to Ali", "send main", "fiverr every 30 min", "rules".',1);return}
  if(!r.ok)throw Error(d.error||'The assistant could not answer.');
  applyDrafts(d);if(d.autopilot!=null)paintAuto(d.autopilot);say('app',d.reply);
  for(const a of d.actions||[]){
   if(a.type==='prepare_dm'){setView('dm');$('dmPhone').value=a.phone||'';$('dmName').value=a.name||'';setGender(a.gender==='Sister'?'Sister':'Brother')}
-  if(a.type==='send'){if(a.target==='all'){setView('group');armAll()}else if(a.target==='test')sendTest('group');else sendGroup(a.target)}}}
-$('cmdForm').onsubmit=async e=>{e.preventDefault();const c=$('cmd'),v=c.value;c.value='';c.placeholder='Tell me: 34k left · came 2000 · Ali 0300…';
- try{await act(v)}catch(err){say('app',err.message,1)}};
+  }}
+$('cmdForm').onsubmit=async e=>{e.preventDefault();const c=$('cmd'),v=c.value;c.value='';
+ try{await act(v)}catch(err){say('app',err.message,1)}paintAuto(autoOn)};
 $('histForm').onsubmit=async e=>{e.preventDefault();const c=$('histCmd'),v=c.value;c.value='';try{await act(v)}catch(err){say('app',err.message,1)}c.focus()};
 $('cmd').addEventListener('focus',()=>{if(isPhone()){$('cmd').blur();openChat()}});
 
 /* ---- autopilot ---- */
-function paintAuto(on){autoOn=!!on;$('auto').setAttribute('aria-pressed',String(autoOn));$('auto').textContent=autoOn?'Auto ON':'Auto'}
+let aiAvailable=false;
+function paintAuto(on){autoOn=!!on;$('auto').setAttribute('aria-pressed',String(autoOn));$('auto').textContent=autoOn?'Auto ON':'Auto';
+ const ph=autoOn?'Auto is on · tell me rules: "fiverr every 30 min"':'Tell me: 34k left · came 2000 · Ali 0300…';$('cmd').placeholder=ph;$('histCmd').placeholder=autoOn?'Auto is on · tell me rules or tasks…':'Type anything…'}
 async function toggleAuto(on){const r=await post('/autopilot',{on}),d=await r.json();paintAuto(d.on);say(d.on||!on?'auto':'app',d.reply,!d.on&&on)}
 $('auto').onclick=()=>toggleAuto(!autoOn).catch(e=>say('app',e.message,1));
-async function pollAuto(){try{const d=await (await fetch('/autopilot')).json();paintAuto(d.on);for(const x of d.log||[]){if(x.time*1000>seenAuto){seenAuto=x.time*1000;if(x.time*1000>Date.now()-15*60000)say('auto',x.text)}}}catch(e){}}
+async function pollAuto(){try{const d=await (await fetch('/autopilot')).json();aiAvailable=!!d.ai;paintAuto(d.on);for(const x of d.log||[]){if(x.time*1000>seenAuto){seenAuto=x.time*1000;if(!x.q&&x.time*1000>Date.now()-15*60000)say('auto',x.text)}}}catch(e){}}
 
 /* ---- suggestions: what the owner would do next; one tap to do it ---- */
 let sug=null;const dismissed=()=>{try{return JSON.parse(localStorage.getItem('givelife-dismissed')||'{}')}catch(e){return{}}};
 function paintPace(s){const p=$('pace');if(!p||!s)return;p.dataset.pace=s.pace;p.title=s.pace==='L1'?'Donations normal':`No money for ${s.minutes_since_money} min`}
 async function pollSuggestions(){try{const d=await (await fetch('/suggestions')).json();paintPace(d.summary);const dm=dismissed(),now=Date.now();
  sug=(d.items||[]).find(x=>!(dm[x.id]>now)&&!(d.autopilot&&x.action!=='owner'))||null;
- $('sugg').hidden=!sug;if(sug){$('suggText').textContent=sug.text;$('suggDo').textContent=sug.action==='owner'?'OK, noted':'Do it';$('sugg').dataset.level=sug.level}}catch(e){}}
+ $('sugg').hidden=!sug;if(sug){$('suggText').textContent=isPhone()&&sug.short?sug.short:sug.text;$('suggText').title=sug.text;$('suggDo').textContent=sug.action==='owner'?'OK, noted':'Do it';$('sugg').dataset.level=sug.level}}catch(e){}}
 function dismiss(hours){if(!sug)return;const dm=dismissed();dm[sug.id]=Date.now()+hours*3600e3;try{localStorage.setItem('givelife-dismissed',JSON.stringify(dm))}catch(e){}$('sugg').hidden=true}
 $('suggNo').onclick=()=>dismiss(1);
 $('suggDo').onclick=async()=>{if(!sug)return;const s=sug;dismiss(s.action==='owner'?6:0.5);

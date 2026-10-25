@@ -1,5 +1,5 @@
 """In-app assistant and autopilot for the GiveLife studio (DeepSeek API)."""
-import os, json, time, datetime, threading, urllib.request, urllib.error
+import os, re, json, time, datetime, threading, urllib.request, urllib.error
 from pathlib import Path
 
 MODEL = os.environ.get('DEEPSEEK_MODEL', 'deepseek-chat')
@@ -24,6 +24,14 @@ SYSTEM = """You are Wajdan's chief of staff inside the GiveLife Foundation studi
 You are connected to his WhatsApp account. You CAN message anyone he names: use find_contact to look up a saved contact or chat by name (for example "jr account", "Ali", "my wife"), then send_message. You can also send to any phone number he gives you, to the foundation's groups, and attach the picture he attached. Never say "I can't see your chats" or "I can only send to groups": search first with find_contact, and only ask if nothing matches.
 
 When he says "hi" or chats casually, answer like a person in one friendly line and offer the most useful next step from the suggestions. Do not repeat the full status unless he asks. When he says send a message to someone with some text, send exactly that text (clean up obvious typos only).
+
+SENDING RULES (very important):
+- When he says "send", it sends NOW with send_message or send_appeal. Never ask him to tap Send, never say "ready on your screen", never use prepare_dm unless he says prepare/fill/check.
+- "send hi", "send ok", "send <text>" with no recipient means: send that text to screen_state.last_recipient (the person or group you just found or wrote to). Never use set_message for this. If there is no last_recipient, ask who. set_message is only for changing the stored appeal wording when he says "change the message to ...".
+- "send" with nothing else, after you just found a contact, means send the text he gave earlier. If he gave none, ask what to send.
+- "did you send it?": call recent_activity and answer from the result.
+- If a contact name is not found, you MUST have called find_contact first. Never claim you cannot find or see his chats without calling it. If find_contact says nothing matched, say so in one line with how many chats you checked, and ask for the number.
+- Auto mode: when screen_state.autopilot is on and he gives an instruction that should apply from now on (pace, quiet hours, pauses, daily limits, scheduled sends, preferences), save it with add_rule so Auto mode keeps following it, then tell him what rule you saved. Show or remove rules with list_rules / delete_rule.
 
 What the studio does: GiveLife raises money for Yousuf, a 2-year-old. Confirmed facts only: fluid in his brain (can paralyse his body and damage his eyesight), both kidneys badly swollen, a hernia. Never say dying, will die, extreme pain, last chance, danger, or any fact not listed. Account: 03097458815 Easypaisa / JazzCash (Wajdan Khan).
 
@@ -69,8 +77,12 @@ CHAT_TOOLS = [
     tool('money_came', 'Money arrived; subtract it from the amount left.', {'amount': {'type': 'integer'}}, ['amount']),
     tool('new_wording', 'Make fresh wording for the group or DM message.', {'kind': {'type': 'string', 'enum': ['group', 'dm']}}, ['kind']),
     tool('set_message', 'Replace the group or DM message with exact text the owner gave.', {'kind': {'type': 'string', 'enum': ['group', 'dm']}, 'text': {'type': 'string'}}, ['kind', 'text']),
-    tool('prepare_dm', 'Fill the DM form for one person. Name may be empty. The owner then taps Send.', {'phone': {'type': 'string'}, 'name': {'type': 'string'}, 'gender': {'type': 'string', 'enum': ['Brother', 'Sister']}}, ['phone', 'name', 'gender']),
-    tool('send', 'Send the current group message (with poster) to a group target. The screen shows a 3-second cancel for "all".', {'target': {'type': 'string', 'enum': GROUP_KEYS}}, ['target']),
+    tool('prepare_dm', 'ONLY when the owner says "prepare", "fill" or "let me check": fill the DM form for one person so he can review it. If he says send, use send_message instead.', {'phone': {'type': 'string'}, 'name': {'type': 'string'}, 'gender': {'type': 'string', 'enum': ['Brother', 'Sister']}}, ['phone', 'name', 'gender']),
+    tool('send_appeal', 'Send the current group appeal (poster + caption) to a group target immediately. No confirmation needed: when the owner says send, it goes.', {'target': {'type': 'string', 'enum': GROUP_KEYS}}, ['target']),
+    tool('recent_activity', 'What the studio sent or did recently. Use it to answer "did you send it?".', {}, []),
+    tool('add_rule', 'Save a standing rule for Auto mode (pace, quiet hours, pauses, caps, scheduled sends, or a note). Pass the owner\'s instruction in plain words, for example "post in fiverr every 30 min" or "no posting 2am to 7am".', {'text': {'type': 'string'}}, ['text']),
+    tool('list_rules', 'List the standing rules Auto mode follows.', {}, []),
+    tool('delete_rule', 'Remove a rule by its number.', {'rule_id': {'type': 'string'}}, ['rule_id']),
     tool('remember', 'Save a rule or preference the owner wants followed from now on.', {'rule': {'type': 'string'}}, ['rule']),
     tool('autopilot', 'Turn autopilot on or off.', {'on': {'type': 'boolean'}}, ['on']),
 ]
@@ -140,7 +152,7 @@ def _call(key, system, tools, messages):
     return (msg.get('content') or '').strip(), [(n, a) for _, n, a in _parse_calls(msg)]
 
 
-SCREEN_ACTIONS = ('prepare_dm', 'send')
+SCREEN_ACTIONS = ('prepare_dm',)
 
 
 def chat(text, history, state, memory, do):
@@ -169,14 +181,23 @@ def chat(text, history, state, memory, do):
         msgs.append({'role': 'user', 'content': stamped})
     system = _system(memory)
     actions, done, reply = [], [], ''
-    for _ in range(5):
+    searched = False
+    nudged = False
+    for _ in range(6):
         msg = _chat_raw(key, system, CHAT_TOOLS, msgs)
         calls = _parse_calls(msg)
         reply = (msg.get('content') or '').strip()
         if not calls:
+            gave_up = re.search(r"(don'?t have|do not have|can'?t (see|find|access)|cannot (see|find|access)|no .{0,30}(chat|contact)|not found|couldn'?t find)", reply, re.I)
+            if gave_up and not searched and not nudged:
+                nudged = True
+                msgs.append({'role': 'assistant', 'content': reply})
+                msgs.append({'role': 'user', 'content': 'You have not searched yet. Call find_contact with the name first, then answer.'})
+                continue
             break
         msgs.append({'role': 'assistant', 'content': msg.get('content') or '', 'tool_calls': msg.get('tool_calls')})
         for call_id, name, inp in calls:
+            searched = searched or name == 'find_contact'
             try:
                 if name in SCREEN_ACTIONS:
                     actions.append({'type': name, **inp})

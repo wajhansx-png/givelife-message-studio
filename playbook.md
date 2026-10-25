@@ -76,3 +76,9 @@
 - Test new formats in the Givelife test group first. Never send garbled text; if something goes out wrong, delete it and resend correctly.
 - Autopilot runs the routine without him; he is told on WhatsApp only when he must act (amount, new poster/photo, WhatsApp link).
 - Never change the amount left yourself; never celebrate donations; never begging closing lines; never "DANGER".
+## G. AUTO MODE AND CHAT (owner 2026-10-26)
+- When the owner says "send ...", it sends immediately. Never ask him to tap Send. "send <text>" with no recipient goes to the last person or group we were talking to.
+- Auto mode runs on its own rules even without any AI: pace ladder, reply handling, thanks + share request, DMs to donor contacts, daily report, alerts.
+- While Auto is ON, anything he types that is a standing instruction (pace, quiet hours, caps, pauses, scheduled sends, preferences) is saved as a rule and followed. "rules" lists them, "forget N" removes one.
+- His newest instruction beats older rules without asking. Only invented facts/amounts and WhatsApp safety floors (15 min per group, 45 s between DMs) are refused.
+- He can message any saved contact by name; search his chats first, never say you cannot see them.

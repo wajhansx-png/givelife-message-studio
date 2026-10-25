@@ -176,7 +176,7 @@ def run_job(job_id,keys,caption):
     elif result.get('code')!='COOLDOWN':break
    sent=sum(r.get('code')=='SUCCESS' for r in job['results'])
    if sent:job['next_caption']=next_message()
-   job['message']=f'Sent to {sent}/{len(keys)} groups.';job['done']=True
+   job['message']=f'Sent to {sent}/{len(keys)} groups.';job['done']=True;auto_log(job['message']+' '+', '.join(r['group']+(' ✓' if r.get('code')=='SUCCESS' else ' ✗ '+str(r.get('message',''))[:40]) for r in job['results']))
  except Exception as e:job.update(done=True,message='Could not send: '+str(e))
  finally:
   with LOCK:ACTIVE=None
@@ -205,8 +205,8 @@ def set_auto(on):
  AUTO.write_text(json.dumps({'on':bool(on),'since':time.time()}));persist_file('autopilot',AUTO)
  auto_log('Autopilot turned '+('ON' if on else 'OFF')+'.');return ('Autopilot is on. I will post on schedule, watch replies, DM donor contacts carefully and message you on WhatsApp when I need you.'+('' if assistant.client() else ' (AI key not set yet, so I follow the fixed playbook only.)')) if on else 'Autopilot is off.'
 
-def auto_log(text):
- AUTOLOG.append({'time':time.time(),'text':text});del AUTOLOG[:-50]
+def auto_log(text,quiet=False):
+ AUTOLOG.append({'time':time.time(),'text':text,'q':quiet});del AUTOLOG[:-50]
 
 def wa_ok():
  try:
@@ -242,20 +242,31 @@ def _norm_item(x):
  name=str(x.get('name') or x.get('push_name') or x.get('display_name') or x.get('full_name') or x.get('first_name') or x.get('PushName') or x.get('FullName') or '').strip()
  return {'name':name or jid.split('@')[0],'id':jid,'group':jid.endswith('@g.us')} if jid else None
 
-def find_contacts(query):
+def find_data(query):
  q=str(query).strip().lower();words=[w for w in re.split(r'\s+',q) if w]
- if not words:return 'Give a name to search for.'
- found={}
- for path in ('/chats?limit=300&search='+urllib.parse.quote(q),'/chats?limit=500','/user/my/contacts'):
+ if not words:return [],0
+ found={};pool={};checked=0
+ for path in ('/chats?limit=300&search='+urllib.parse.quote(q),'/chats?limit=100','/chats','/user/my/contacts'):
   try:items=_items(api(path))
   except Exception:continue
+  checked+=len(items)
   for it in items:
    n=_norm_item(it)
    if not n or n['id'] in found:continue
-   hay=(n['name']+' '+n['id'].split('@')[0]).lower()
-   if all(w in hay for w in words) or q in hay:found[n['id']]=n
- if not found:return 'No chat or contact matches "'+str(query)+'". Ask the owner for the number.'
+   hay=(n['name']+' '+n['id'].split('@')[0]).lower();pool[n['id']]=n
+   norm=re.sub(r'[^a-z0-9 ]','',hay)
+   if all(w in hay or w in norm for w in words) or q in hay:found[n['id']]=n
+ if not found and pool:
+  import difflib
+  for jid,n in pool.items():
+   if difflib.SequenceMatcher(None,q,n['name'].lower()).ratio()>=0.62:found[jid]=n
  out=sorted(found.values(),key=lambda n:(n['group'],len(n['name'])))[:8]
+ if len(out)==1:remember_recipient(out[0]['name'],out[0]['id'])
+ return out,checked
+
+def find_contacts(query):
+ out,checked=find_data(query)
+ if not out:return f'No chat or contact matches "{query}" (checked {checked} chats and contacts). Tell the owner honestly and ask for the number.'
  return json.dumps(out,ensure_ascii=False)
 
 SEND_LOCK2=threading.Lock();LAST_FREE_SEND=[0]
@@ -285,8 +296,43 @@ def send_free(to,text,with_picture):
   r=send_with_image(target,text,img);LAST_FREE_SEND[0]=time.time()
  if r.get('code')!='SUCCESS':raise ValueError('Not confirmed: '+str(r.get('message',''))[:100]+' Check WhatsApp before retrying.')
  if target.endswith('@g.us'):LAST_LOCAL[target]=time.time()
- auto_log('Sent a message from chat to '+target.split('@')[0][-6:])
+ remember_recipient(to if to.lower() in GROUPS else target.split('@')[0],target)
+ auto_log('Sent a message from chat to '+(to if to.lower() in GROUPS else '…'+target.split('@')[0][-4:]),True)
  return 'Sent.'
+
+LAST_RECIPIENT={}
+def remember_recipient(name,jid):
+ LAST_RECIPIENT.clear();LAST_RECIPIENT.update(name=name,id=jid)
+
+def send_scheduled(target,text):
+ t=str(target)
+ keys=[k for k in GROUPS] if t=='all' else FREELANCE if t=='free' else [t] if t in GROUPS else None
+ if keys:
+  caption=text or json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')
+  if not start_keys_job(keys,caption):raise ValueError('another send is running')
+  return
+ send_free(t,text or json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),True)
+
+def rule_from_text(text):
+ import rules as R
+ rule,msg=R.parse(text)
+ return rule,msg
+
+def send_appeal(target):
+ t=str(target).lower()
+ keys=list(GROUPS) if t=='all' else FREELANCE if t=='free' else [t] if t in GROUPS else None
+ if t=='test':
+  r=send_with_image('120363431210327603@g.us',json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),image_path('poster'));return 'Sent to the test group.' if r.get('code')=='SUCCESS' else 'Test send failed: '+str(r.get('message',''))
+ if not keys:raise ValueError('Unknown group.')
+ if not wa_ok():raise ValueError('WhatsApp is not connected. Link it first.')
+ if not start_keys_job(keys,json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')):raise ValueError('Another send is already running. Try again in a minute.')
+ auto_log('Posting the appeal to '+t+' (started from chat).')
+ return 'Posting the appeal to '+t+' now.'
+
+def add_rule_text(text):
+ rule,msg=rule_from_text(text)
+ if not rule:return 'That did not look like a rule.'
+ ENGINE.add_rule(rule);return 'Rule added: '+msg
 
 CHAT_IMAGE={}
 def chat_callbacks():
@@ -298,6 +344,11 @@ def chat_callbacks():
   'set_message':lambda kind,text:(save_draft(kind,text),'Message replaced.')[1],
   'remember':mem_add,'autopilot':set_auto,**engine_do(),
   'find_contact':find_contacts,'send_message':send_free,
+  'send_appeal':lambda target:send_appeal(target),
+  'recent_activity':lambda:' | '.join(x['text'] for x in AUTOLOG[-8:]) or 'Nothing sent yet from the studio this session.',
+  'add_rule':lambda text:add_rule_text(text),
+  'list_rules':lambda:'; '.join(f"#{r['id']} {r['text']}" for r in ENGINE.rule_list()) or 'No rules yet.',
+  'delete_rule':lambda rule_id:('Rule removed.' if ENGINE.delete_rule(rule_id) else 'No such rule.'),
   'dm_list':lambda people,gap_minutes,vary,start_after_minutes:start_campaign({'people':people,'gap_seconds':float(gap_minutes)*60,'vary':vary,'start_after_seconds':float(start_after_minutes)*60,'image':CHAT_IMAGE.get('id') or 'poster'})}
 
 
@@ -504,7 +555,7 @@ ENGINE=autopilot.Engine({'DATA':DATA,'store_get':lambda k:STORE.get(k) if STORE 
  'send_text':send_text,'owner_jid':lambda:OWNER_PHONE+'@s.whatsapp.net','enabled':auto_on,'read_left':read_left,'wa_ok':wa_ok,
  'busy':lambda:ACTIVE is not None,'last_sent':last_sent_by_key,'groups':lambda:list(GROUPS),'group_jids':lambda:{k:v[1] for k,v in GROUPS.items()},
  'caption':lambda:json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),'start_job':start_keys_job,'messages':group_messages,
- 'donor_contacts':donor_contacts,'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm})
+ 'donor_contacts':donor_contacts,'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm})
 
 def engine_do():
  return {'set_pace':lambda main_minutes,freelance_minutes:ENGINE.set_pace(main_minutes,freelance_minutes),'pause_group':lambda key,hours:ENGINE.pause(key,hours),'resume_group':lambda key:ENGINE.resume(key),
@@ -545,6 +596,7 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path.startswith('/autopilot'):self.reply({'on':auto_on(),'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':ENGINE.summary()})
   elif self.path=='/memory':self.reply(mem_get())
   elif self.path=='/campaign':self.reply({**{k:v for k,v in CAMPAIGN.items() if k!='stop'},'log':CAMPAIGN['log'][-8:],'wait':max(0,round(CAMPAIGN['next_at']-time.time()))})
+  elif self.path=='/rules':self.reply({'items':ENGINE.rule_list(),'autopilot':auto_on()})
   elif self.path=='/suggestions':self.reply({'items':ENGINE.suggestions(),'autopilot':auto_on(),'summary':ENGINE.summary()})
   elif self.path=='/groups':self.reply([{'key':k,'name':v[0]} for k,v in GROUPS.items()])
   elif self.path.startswith('/send-status/'):
@@ -596,6 +648,21 @@ class Handler(BaseHTTPRequestHandler):
    if body.get('stop'):CAMPAIGN['stop']=True;return self.reply({'reply':'Stopping the DM list.'})
    try:self.reply({'reply':start_campaign(body)})
    except Exception as e:self.reply({'error':str(e)[:160]},status=400)
+  elif self.path=='/find':
+   out,checked=find_data(str(body.get('query','')));self.reply({'items':out,'checked':checked})
+  elif self.path=='/send-now':
+   to=str(body.get('to','')).strip() or LAST_RECIPIENT.get('id','')
+   if not to:return self.reply({'error':'Who should I send it to? Say: send hi to <name or number>.'},status=400)
+   try:send_free(to,body.get('text',''),bool(body.get('with_picture')));self.reply({'ok':True,'to':LAST_RECIPIENT.get('name','')})
+   except ValueError as e:self.reply({'error':str(e)},status=400)
+   except Exception as e:self.reply({'error':'Could not send: '+str(e)[:100]},status=502)
+  elif self.path=='/rule-text':
+   rule,msg=rule_from_text(str(body.get('text','')))
+   if not rule:return self.reply({'rule':False})
+   if not auto_on():return self.reply({'rule':True,'saved':False,'summary':msg})
+   ENGINE.add_rule(rule);self.reply({'rule':True,'saved':True,'summary':msg})
+  elif self.path=='/rules':
+   self.reply({'removed':ENGINE.delete_rule(body.get('delete')),'items':ENGINE.rule_list()})
   elif self.path=='/suggestion':
    msg=ENGINE.run_suggestion(str(body.get('action','')))
    if msg is None:return self.reply({'error':'This one is done from the screen or by you.'},status=400)
@@ -611,7 +678,7 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/assistant':
    text=str(body.get('text',''))[:4000];CHAT_IMAGE['id']=body.get('image')
    if not text.strip():return self.reply({'error':'Type something first.'},status=400)
-   try:out=assistant.chat(text,body.get('history',[]),{**studio_state(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks())
+   try:out=assistant.chat(text,body.get('history',[]),{**studio_state(),'last_recipient':dict(LAST_RECIPIENT) or None,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks())
    except Exception as e:return self.reply({'error':'The assistant could not answer: '+str(e)[:160]},status=502)
    if out is None:return self.reply({'error':'ai-off'},status=503)
    d=json.loads(DRAFT.read_text(encoding='utf-8'));out.update(group=d.get('group',''),dm=d.get('dm',''),left=read_left(),autopilot=auto_on());self.reply(out)

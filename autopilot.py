@@ -3,6 +3,7 @@
 Never changes the amount left (only the owner can), never invents facts, never sends to unknown groups.
 """
 import json, re, time, datetime, threading, random, hashlib, os, urllib.request
+import rules
 
 PKT = datetime.timezone(datetime.timedelta(hours=5))
 # Escalation ladder from the owner's playbook: minutes between posts by minutes since money last came.
@@ -104,7 +105,7 @@ class Engine:
     def tick(self):
         today = pkt().date().isoformat()
         if self.s['day'] != today:
-            self.s.update(day=today, posts_today=0, dms_today=0, done_today=0)
+            self.s.update(day=today, posts_today=0, dms_today=0, done_today=0, posts_by={})
         left = self.h['read_left']()
         if self.s['left_seen'] is not None and left < self.s['left_seen']:
             self.s['last_money'] = now()
@@ -125,12 +126,14 @@ class Engine:
         if now() - self.s.get('last_dm_scan', 0) >= 600:
             self.s['last_dm_scan'] = now()
             self.scan_dms()
+        self.run_scheduled()
         self.post_if_due()
         self.share_if_due()
         self.dm_if_due()
-        for sg in self.suggestions():  # things only the owner can do: tell him once
-            if sg['action'] == 'owner':
-                self.notify('sg-' + sg['id'], sg['text'], 6 * 3600)
+        todo = [sg for sg in self.suggestions() if sg['action'] == 'owner']
+        if todo and now() - self.s['started'] > 600:  # things only the owner can do: one combined note, every 6 hours
+            body = ' '.join(f'({i + 1}) {sg["text"]}' for i, sg in enumerate(todo[:4]))
+            self.notify('owner-todo-' + ','.join(sg['id'] for sg in todo[:4]), f'{len(todo)} thing(s) need you: {body}', 6 * 3600)
         self.daily_report(left)
 
     # ---------- posting ----------
@@ -138,9 +141,71 @@ class Engine:
         q = self.s.get('quiet')
         if not q:
             return False
+        return rules.in_quiet(q[0], q[1], pkt().hour)
+
+    # ---------- owner rules (from chat) ----------
+    def rules(self):
+        return self.s.setdefault('rules', [])
+
+    def add_rule(self, rule):
+        rule = dict(rule)
+        rule['id'] = int(now() * 1000) % 10_000_000
+        k = rule['kind']
+        if k in ('gap', 'quiet', 'cap'):  # a newer rule replaces an older one for the same group
+            self.s['rules'] = [r for r in self.rules() if not (r['kind'] == k and r.get('group') == rule.get('group'))]
+        if k == 'pause':
+            self.s['paused'][rule['group']] = rule['until']
+        self.rules().append(rule)
+        self.save()
+        return rule
+
+    def delete_rule(self, rid):
+        gone = [r for r in self.rules() if str(r.get('id')) == str(rid)]
+        self.s['rules'] = [r for r in self.rules() if str(r.get('id')) != str(rid)]
+        for r in gone:
+            if r['kind'] == 'pause':
+                self.s['paused'].pop(r['group'], None)
+        self.save()
+        return bool(gone)
+
+    def rule_list(self):
+        return [{'id': r['id'], 'text': rules.describe(r)} for r in self.rules() if r['kind'] != 'pause' or r['until'] > now()]
+
+    def _matches(self, rule_group, key):
+        free = ('community', 'fiverr', 'upwork', 'uet', 'toprated')
+        return rule_group in ('all', key) or (rule_group == 'free' and key in free)
+
+    def gap_for(self, key, default):
+        for r in reversed(self.rules()):
+            if r['kind'] == 'gap' and self._matches(r['group'], key):
+                return r['minutes']
+        return default
+
+    def blocked(self, key):
         hr = pkt().hour
-        a, b = q
-        return a <= hr < b if a < b else (hr >= a or hr < b)
+        if self.s['paused'].get(key, 0) > now():
+            return True
+        for r in self.rules():
+            if r['kind'] == 'quiet' and self._matches(r['group'], key) and rules.in_quiet(r['start'], r['end'], hr):
+                return True
+            if r['kind'] == 'cap' and self._matches(r['group'], key) and self.s.setdefault('posts_by', {}).get(key, 0) >= r['per_day']:
+                return True
+        return False
+
+    def run_scheduled(self):
+        for r in self.rules():
+            if r['kind'] != 'schedule' or r.get('done') or now() < r['next']:
+                continue
+            try:
+                self.h['send_scheduled'](r['target'], r.get('text', ''))
+                self.log(f'Scheduled task done: {rules.describe(r)}')
+            except Exception as e:
+                self.notify('sched-' + str(r['id']), f'A scheduled send did not go through ({str(e)[:80]}): {rules.describe(r)}', 3600)
+            if r.get('daily'):
+                r['next'] = rules.next_epoch(r['at'])
+            else:
+                r['done'] = True
+        self.s['rules'] = [r for r in self.rules() if not r.get('done')]
 
     def post_if_due(self):
         if self.quiet_now() or self.h['busy']():
@@ -149,10 +214,9 @@ class Engine:
         last = self.h['last_sent']()
         keys = []
         for key in self.h['groups']():
-            until = self.s['paused'].get(key, 0)
-            if until and now() < until:
+            if self.blocked(key):
                 continue
-            gap = main_gap if key == 'main' else free_gap
+            gap = self.gap_for(key, main_gap if key == 'main' else free_gap)
             mins = (now() - last[key]) / 60 if last.get(key) else 9999
             if mins >= gap:
                 keys.append(key)
@@ -161,6 +225,9 @@ class Engine:
         caption = self.h['caption']()
         if self.h['start_job'](keys, caption):
             self.s['posts_today'] += len(keys)
+            by = self.s.setdefault('posts_by', {})
+            for k in keys:
+                by[k] = by.get(k, 0) + 1
             self.log(f'{name}: posting to {len(keys)} group(s): {", ".join(keys)}.')
 
     # ---------- replies in groups ----------
@@ -366,29 +433,29 @@ class Engine:
         last = self.h['last_sent']()
         due = [k for k in self.h['groups']() if not last.get(k) or (now() - last[k]) / 60 >= (main_gap if k == 'main' else free_gap)]
         if name != 'L1' and due:
-            out.append({'id': f'post-{int(mins // 30)}', 'level': name, 'action': 'send_all',
+            out.append({'id': f'post-{int(mins // 30)}', 'level': name, 'action': 'send_all', 'short': f'Slow {round(mins)} min: post to groups',
                         'text': f'No money for {round(mins)} min. Post a fresh message to the groups that are due ({len(due)}).'})
         if name == 'L3' and self.s.get('dm_enabled') and self.s['dms_today'] < self.s['dm_daily'] and not self.dm_running:
-            out.append({'id': f'dm-{int(mins // 45)}', 'level': name, 'action': 'dm_batch',
+            out.append({'id': f'dm-{int(mins // 45)}', 'level': name, 'action': 'dm_batch', 'short': 'DM 5 donor contacts',
                         'text': f'Still slow ({round(mins)} min). DM 5 donor contacts with the poster, about 2 minutes apart.'})
         if name == 'L3' and self.s['posts_today'] >= 3:
-            out.append({'id': f'photo-{self.s["day"]}', 'level': name, 'action': 'owner',
+            out.append({'id': f'photo-{self.s["day"]}', 'level': name, 'action': 'owner', 'short': 'Ask the family for a new photo',
                         'text': 'Several posts and no money. A new photo or an update from the family usually helps. Ask them for one.'})
         if not self.h['has_papers']():
-            out.append({'id': 'papers-missing', 'level': 'L1', 'action': 'owner',
+            out.append({'id': 'papers-missing', 'level': 'L1', 'action': 'owner', 'short': 'Attach the medical papers',
                         'text': 'Attach the medical papers once (📎 then "these are the papers"). I will send them privately to anyone who asks.'})
         if name != 'L1' and self.s.get('share_day') != self.s['day']:
-            out.append({'id': f'share-{self.s["day"]}', 'level': name, 'action': 'share',
+            out.append({'id': f'share-{self.s["day"]}', 'level': name, 'action': 'share', 'short': 'Ask groups to share the poster',
                         'text': 'Ask the main group to share the poster on their WhatsApp status. Shares reach new donors for free.'})
         poster = self.h['poster_left']()
         if poster and poster != self.h['read_left']():
-            out.append({'id': f'poster-{poster}', 'level': 'L2', 'action': 'owner',
+            out.append({'id': f'poster-{poster}', 'level': 'L2', 'action': 'owner', 'short': f'Poster shows Rs. {poster:,}',
                         'text': f'The poster still shows Rs. {poster:,}. A poster with the current amount looks more trustworthy.'})
         if 'last_amount' not in self.s:
-            out.append({'id': 'amount-first', 'level': 'L2', 'action': 'owner',
+            out.append({'id': 'amount-first', 'level': 'L2', 'action': 'owner', 'short': 'Tell me the real amount left',
                         'text': 'The amount left is still the starting value. Tell me the real amount (for example "34k left") so every message is right.'})
         elif now() - self.s['last_amount'] > 6 * 3600:
-            out.append({'id': f'amount-{int(now() // 21600)}', 'level': 'L2', 'action': 'owner',
+            out.append({'id': f'amount-{int(now() // 21600)}', 'level': 'L2', 'action': 'owner', 'short': 'Update the amount left',
                         'text': 'The amount left has not been updated for 6 hours. Check Easypaisa/JazzCash and tell me (for example "34k left").'})
         return out
 

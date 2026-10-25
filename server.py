@@ -1,4 +1,4 @@
-import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, datetime, math, re, secrets, os, base64
+import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, datetime, math, re, secrets, os, base64, hashlib
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store
@@ -10,12 +10,55 @@ DEVICE=os.environ.get('WHATSAPP_DEVICE_ID','')
 GROUPS={'community':('Upwork Community 2026','120363398623589385@g.us'),'fiverr':('Fiverr Course 2026','120363411617215937@g.us'),'upwork':('Upwork Course 2026','120363430624868021@g.us'),'uet':('Fiverr Course UET','120363412286860707@g.us'),'toprated':('Top Rated Upworkers','120363427826119453@g.us')}
 JOBS={};LOCK=threading.Lock();SEND_LOCK=threading.Lock();ACTIVE=None
 STORE=configured_store()
+BLOCKED=set(json.loads((ROOT/'campaign-blocks.json').read_text())) if (ROOT/'campaign-blocks.json').exists() else set()
 def persist_file(key,path):
  if STORE:STORE.put(key,path.read_text(encoding='utf-8'))
 
 def api(path):
  req=urllib.request.Request('http://127.0.0.1:3000'+path,headers={'X-Device-Id':DEVICE})
  with urllib.request.urlopen(req,timeout=12) as r:return json.load(r)
+
+def custom_recipient(body):
+ target=str(body.get('target',''))
+ if target=='test':return '120363431210327603@g.us',True
+ if target in GROUPS:return GROUPS[target][1],True
+ if target!='phone':raise ValueError('Choose a saved group or phone number.')
+ phone=re.sub(r'[\s()+-]','',str(body.get('phone','')))
+ if phone.startswith('00'):phone=phone[2:]
+ if phone.startswith('03') and len(phone)==11:phone='92'+phone[1:]
+ if not re.fullmatch(r'[1-9]\d{7,14}',phone):raise ValueError('Enter a valid phone number with country code, such as +92…')
+ return phone,False
+
+def send_custom(body):
+ jid,is_group=custom_recipient(body);message=str(body.get('message',''))
+ if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
+ if not STORE:raise ValueError('Persistent send records are unavailable. Try again later.')
+ if not SEND_LOCK.acquire(blocking=False):raise ValueError('Another send is running. Please wait for it to finish.')
+ try:
+  status=api('/devices/'+DEVICE+'/status').get('results',{})
+  if not status.get('is_connected') or not status.get('is_logged_in'):raise ValueError('WhatsApp is disconnected. Tap WhatsApp to reconnect.')
+  now=time.time();saved=STORE.get('last_sent',{})
+  if is_group and now-saved.get(jid,0)<900:raise ValueError('This group was posted to recently. Wait 15 minutes between posts.')
+  if not is_group:
+   digest=hashlib.sha256(jid.encode()).hexdigest()
+   if digest in BLOCKED or STORE.get('dm_recipient_'+digest):raise ValueError('This recipient was already contacted or has an uncertain send. Check WhatsApp before sending again.')
+   ledger=STORE.get('dm_daily',{});day=datetime.datetime.fromtimestamp(now,datetime.timezone(datetime.timedelta(hours=5))).date().isoformat()
+   if ledger.get('day')!=day:ledger={'day':day,'count':0,'last':ledger.get('last',0)}
+   if ledger['count']>=50:raise ValueError('The 50-DM daily limit has been reached.')
+   if now-ledger.get('last',0)<60:raise ValueError('Wait at least 60 seconds between DMs.')
+   ledger.update(count=ledger['count']+1,last=now);STORE.put('dm_daily',ledger);STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':now})
+  # Reserve before dispatch. A network failure must not silently allow duplicates.
+  if is_group:saved[jid]=now;STORE.put('last_sent',saved)
+  try:
+   if body.get('poster') is True:result=send_image(jid,message)
+   else:
+    req=urllib.request.Request('http://127.0.0.1:3000/send/message',data=json.dumps({'phone':jid,'message':message}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
+    with urllib.request.urlopen(req,timeout=40) as response:result=json.load(response)
+  except Exception:result={'code':'UNCERTAIN','message':'Send not confirmed. Check WhatsApp before retrying.'}
+  STORE.put('custom_receipt_'+uuid.uuid4().hex,{'time':now,'jid':jid,'code':result.get('code'),'message_id':result.get('results',{}).get('message_id')})
+  if not is_group:STORE.put('dm_recipient_'+digest,{'state':result.get('code','UNCERTAIN'),'time':now})
+  return result
+ finally:SEND_LOCK.release()
 
 def next_message():
  with LOCK:
@@ -88,7 +131,7 @@ class Handler(BaseHTTPRequestHandler):
   self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(data if isinstance(data,bytes) else data.encode())
  def do_GET(self):
   if self.path=='/health':return self.reply({'ok':True})
-  if self.path in ('/','/app.js','/format.js','/connection.js'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/quick-send.js'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
@@ -120,6 +163,17 @@ class Handler(BaseHTTPRequestHandler):
     api('/app/reconnect')
     self.reply({'ok':True})
    except Exception:self.reply({'error':'Could not restore the connection. Try linking with a QR code.'},status=502)
+  elif self.path=='/wa-logout':
+   if body.get('confirm') is not True:return self.reply({'error':'Confirm disconnect first.'},status=400)
+   if not SEND_LOCK.acquire(blocking=False):return self.reply({'error':'A send is running. Wait before disconnecting.'},status=409)
+   try:
+    api('/app/logout');self.reply({'ok':True})
+   except Exception:self.reply({'error':'Disconnect was not confirmed. Check the connection status.'},status=502)
+   finally:SEND_LOCK.release()
+  elif self.path=='/send-custom':
+   try:self.reply(send_custom(body))
+   except ValueError as e:self.reply({'error':str(e)},status=400)
+   except Exception:self.reply({'error':'Could not prepare this send. No automatic retry will occur.'},status=502)
   elif self.path=='/wa-login':
    try:
     data=api('/devices/'+DEVICE+'/login');url=data.get('results',{}).get('qr_link','');path=urllib.parse.urlparse(url).path

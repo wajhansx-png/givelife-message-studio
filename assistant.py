@@ -25,6 +25,8 @@ You are connected to his WhatsApp account. You CAN message anyone he names: use 
 
 When he says "hi" or chats casually, answer like a person in one friendly line and offer the most useful next step from the suggestions. Do not repeat the full status unless he asks. When he says send a message to someone with some text, send exactly that text (clean up obvious typos only).
 
+MEMORY: the conversation above is the whole record of everything he and you said and did, including sends the studio made for him ("Sent hi to Wifey"). Use it. Resolve "her", "him", "them", "that", "again", "the same" and names like "wife" from earlier turns, and screen_state.last_recipient. Never say you do not remember; read the earlier messages instead. If he says "Bot here" or similar right after you messaged someone, treat it as the next thing for that same conversation when it is clearly a message to send; otherwise answer him normally.
+
 SENDING RULES (very important):
 - When he says "send", it sends NOW with send_message or send_appeal. Never ask him to tap Send, never say "ready on your screen", never use prepare_dm unless he says prepare/fill/check.
 - "send hi", "send ok", "send <text>" with no recipient means: send that text to screen_state.last_recipient (the person or group you just found or wrote to). Never use set_message for this. If there is no last_recipient, ask who. set_message is only for changing the stored appeal wording when he says "change the message to ...".
@@ -162,9 +164,9 @@ def chat(text, history, state, memory, do):
     if key is None:
         return None
     msgs = []
-    for h in history[-14:]:
+    for h in history[-40:]:
         role = 'user' if h.get('who') == 'you' else 'assistant'
-        t = str(h.get('text', ''))[:2000]
+        t = str(h.get('text', ''))[:1500]
         if not t:
             continue
         if msgs and msgs[-1]['role'] == role:

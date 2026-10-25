@@ -50,7 +50,7 @@ body[data-view=group] #dmPreview,body[data-view=dm] #groupPreview,body[data-view
 .log{flex:1;min-height:0;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:15px}
 .e{max-width:92%;padding:8px 12px;border-radius:14px;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere}
 .e.you{align-self:flex-end;background:var(--me);border-bottom-right-radius:4px}
-.e.app{align-self:flex-start;background:var(--soft);border-bottom-left-radius:4px}
+.e.bot{align-self:flex-start;background:var(--soft);border-bottom-left-radius:4px}
 .e.sys{align-self:flex-start;background:var(--wbg);color:var(--warn);font-size:14px}
 .e.err{color:var(--red)}
 .cmd{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
@@ -113,6 +113,10 @@ dialog.hist header .tool{flex:none!important;width:auto;padding:0 16px}
  .talk .log .e{display:none}.talk .log .e:last-child{display:block;max-width:100%;height:34px;line-height:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:6px 12px;font-size:14px;border-radius:12px}
  .talk.card{background:none;border:0;box-shadow:none}
  .cmd{padding:0;border:0}
+ .talk .composer{flex-direction:row;align-items:center;gap:6px;margin:0;padding:4px 6px 4px 8px;border-radius:26px}
+ .talk .composer .ctools{display:contents}
+ .talk .composer .auto{order:1;min-height:40px}.talk .composer input{order:2;flex:1;min-width:0;min-height:40px!important}.talk .composer .go{order:3;min-width:40px;width:40px;min-height:40px}.talk .composer .sp{display:none}
+ .talk .log .e.bot,.talk .log .e.you,.talk .log .e.sys{font-family:inherit}
  .send{padding:0}
  .chips{grid-template-columns:repeat(4,1fr);gap:6px}
  .chips button{min-height:40px;font-size:12px;padding:2px}
@@ -133,6 +137,32 @@ dialog.hist header .tool{flex:none!important;width:auto;padding:0 16px}
  .foot{display:none}
 }
 @media(max-height:600px){.tools .ctx img{display:none}}
+
+/* chat, styled like Claude */
+:root{--cbg:#faf9f5;--cpill:#f0eee6;--cacc:#c6613f;--cline:#e6e3d8}
+@media(prefers-color-scheme:dark){:root{--cbg:#262624;--cpill:#34342f;--cacc:#d97757;--cline:#3d3d38}}
+.talk.card,dialog.hist{background:var(--cbg)}
+.log{padding:16px 16px 8px;gap:18px;font-size:15.5px;line-height:1.6}
+.e{max-width:100%;padding:0;border-radius:0;background:none;white-space:pre-wrap}
+.e.bot{font-family:ui-serif,Georgia,"Times New Roman",serif;font-size:16px;align-self:stretch;border-radius:0}
+.e.you{align-self:flex-end;max-width:85%;background:var(--cpill);padding:9px 14px;border-radius:18px;border-bottom-right-radius:18px;font-size:15px;line-height:1.5}
+.e.sys{align-self:stretch;background:none;color:var(--mut);font-size:13px;padding-left:14px;position:relative}
+.e.sys::before{content:'';position:absolute;left:0;top:.6em;width:6px;height:6px;border-radius:50%;background:var(--cacc)}
+.e.err{color:var(--red)}
+.e.dots{display:flex;flex-direction:row;align-items:center;gap:8px;padding:0;color:var(--cacc);font-family:ui-serif,Georgia,serif;font-size:15px}
+.e.dots .spark{display:inline-block;font-size:18px;animation:spin 2.4s linear infinite}
+.e.dots em{font-style:normal;color:var(--mut);animation:blink 1.6s infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.composer{flex-direction:column;gap:6px;margin:0 12px 12px;padding:10px 10px 8px 14px;border:1px solid var(--cline)!important;border-radius:22px;background:var(--card);box-shadow:0 2px 10px rgba(0,0,0,.05);transition:box-shadow .2s,border-color .2s}
+.composer:focus-within{border-color:var(--cacc)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--cacc) 22%,transparent)}
+.composer input{min-height:34px!important;border:0!important;box-shadow:none!important;padding:0!important;background:none!important;font-size:16px;outline:none}
+.ctools{display:flex;align-items:center;gap:6px}
+.composer .clip{min-height:36px;min-width:36px;width:36px;border-radius:50%;border:1px solid var(--cline);font-size:20px;line-height:1;color:var(--mut)}
+.composer .auto{min-height:36px;padding:0 12px;border-radius:999px;font-size:13px;border:1px solid var(--cline)}
+.composer .go{min-height:36px;min-width:36px;width:36px;padding:0;border-radius:50%;background:var(--cacc);font-size:19px;line-height:1}
+.composer .go:hover{background:var(--cacc);filter:brightness(.92)}
+dialog.hist .composer{margin:0 12px calc(12px + env(safe-area-inset-bottom))}
+dialog.hist header{background:var(--cbg)}
 /* motion */
 button{transition:background .15s,transform .12s,border-color .15s,box-shadow .15s,opacity .15s}
 button:active:not(:disabled){transform:scale(.97)}
@@ -232,7 +262,7 @@ dialog.set::backdrop{background:#0008}
     <div class="sugg" id="sugg" hidden role="status"><span id="suggText"></span><div class="sbtns"><button id="suggDo" class="go">Do it</button><button id="suggNo" class="later">Not now</button></div></div>
     <div class="log" id="log" aria-live="polite"></div>
     <div class="att" id="att" hidden><img id="attImg" alt=""><span>Picture attached. It will be sent with the next DMs. Say "make it the poster" to use it for groups.</span><button type="button" class="later" id="attX" aria-label="Remove picture">✕</button></div>
-    <form id="cmdForm" class="cmd" autocomplete="off"><button type="button" class="auto" id="auto" aria-pressed="false" title="Autopilot: the app posts on its own, following your rules">Auto</button><button type="button" class="clip" data-clip title="Attach a picture">📎</button><input id="cmd" enterkeyhint="send" aria-label="Tell the app what to do" placeholder="Tell me: 34k left · came 2000 · Ali 0300…"><button class="go" type="submit">Go</button></form>
+    <form id="cmdForm" class="cmd composer" autocomplete="off"><input id="cmd" enterkeyhint="send" aria-label="Tell the app what to do" placeholder="Reply to GiveLife… 34k left · came 2000 · Ali 0300"><div class="ctools"><button type="button" class="clip" data-clip title="Attach a picture" aria-label="Attach a picture">+</button><button type="button" class="auto" id="auto" aria-pressed="false" title="Autopilot: the app posts on its own, following your rules">Auto</button><span class="sp"></span><button class="go" type="submit" aria-label="Send">&#8593;</button></div></form>
    </section>
    <section class="card send group-send" aria-label="Send group message">
     <div class="prim"><button class="big main" data-group="main"><span class="l">GiveLife main</span><span class="s">GiveLife</span></button><button class="big all" id="sendAll" title="GiveLife main + 5 freelance groups, 60 seconds apart"><span class="l">Send to ALL 6 groups</span><span class="s">ALL 6</span></button></div>
@@ -252,7 +282,7 @@ dialog.set::backdrop{background:#0008}
  </main>
  <footer class="foot"><span id="status" role="status">Loading…</span><span class="sp"></span><span class="keys">/ talk · E edit · N new · C copy · G/D switch</span></footer>
 </div>
-<dialog class="hist" id="hist" aria-label="Chat with the GiveLife assistant"><header><span>Chat</span><span class="sp"></span><button type="button" class="tool" id="histClose">Close</button></header><div class="log" id="histLog"></div><form id="histForm" class="cmd" autocomplete="off"><button type="button" class="clip" data-clip title="Attach a picture">📎</button><input id="histCmd" enterkeyhint="send" aria-label="Message the assistant" placeholder="Type anything…"><button class="go" type="submit">Send</button></form></dialog>
+<dialog class="hist" id="hist" aria-label="Chat with the GiveLife assistant"><header><span>Chat</span><span class="sp"></span><button type="button" class="tool" id="histClose">Close</button></header><div class="log" id="histLog"></div><form id="histForm" class="cmd composer" autocomplete="off"><input id="histCmd" enterkeyhint="send" aria-label="Message the assistant" placeholder="Reply to GiveLife…"><div class="ctools"><button type="button" class="clip" data-clip title="Attach a picture" aria-label="Attach a picture">+</button><span class="sp"></span><button class="go" type="submit" aria-label="Send">&#8593;</button></div></form></dialog>
 <dialog class="set" id="set" aria-label="Settings"><header><span>Settings</span><span class="sp"></span><button type="button" class="tool" id="setClose">Done</button></header>
  <div class="body">
   <div class="row"><div class="t"><b>Test AI</b><small id="aiRes">Checks that the assistant can answer.</small></div><button type="button" class="tool" id="aiTest">Test</button></div>

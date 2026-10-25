@@ -9,12 +9,20 @@ let history=[];try{history=JSON.parse(localStorage.getItem('givelife-chat')||'[]
 let thinking=false;
 function drawLog(anim){const items=history.slice(-40);
  for(const id of ['log','histLog']){const el=$(id);el.textContent='';
-  items.forEach((h,i)=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who)+(h.err?' err':'')+(anim&&i===items.length-1?' in':'');d.textContent=h.text;el.append(d)});
-  if(thinking){const d=document.createElement('div');d.className='e app dots in';d.innerHTML='<i></i><i></i><i></i>';el.append(d)}
+  items.forEach((h,i)=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(anim&&i===items.length-1?' in':'');d.textContent=h.text;el.append(d)});
+  if(thinking){const d=document.createElement('div');d.className='e bot dots in';d.innerHTML='<span class="spark">✻</span><em>Thinking…</em>';el.append(d)}
   el.scrollTop=el.scrollHeight}}
-function think(on){thinking=on;drawLog(false)}function say(who,text,err){history.push({who,text,err:!!err,t:Date.now()});history=history.slice(-80);try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}drawLog(true)}
-if(!history.length)say('app','Hi. Tell me what changed or what to do: "34k left", "came 2000", "Ali 0300 1234567", "send all", or anything else.');else drawLog();
-function openChat(){if($('hist').open)return;$('hist').showModal();drawLog();const l=$('histLog');l.scrollTop=l.scrollHeight;$('histCmd').focus()}
+function think(on){thinking=on;drawLog(false)}let logChain=Promise.resolve();
+function say(who,text,err){history.push({who,text,err:!!err,t:Date.now()});history=history.slice(-80);if(who!=='auto')logChain=logChain.then(()=>post('/chat-log',{who,text,err:!!err})).catch(()=>{});try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}drawLog(true)}
+const GREETING='Hi. Tell me what changed or what to do: "34k left", "came 2000", "Ali 0300 1234567", "send all", or anything else. I remember everything we say here.';
+async function syncChat(){try{await logChain;const d=await (await fetch('/chat')).json();
+ if(d.items&&d.items.length){history=d.items.slice(-80).map(x=>({who:x.who,text:x.text,err:!!x.err,t:x.t}));try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}}
+ else if(!history.length)say('app',GREETING);
+ else for(const h of history.slice(-40))if(h.who!=='auto')logChain=logChain.then(()=>post('/chat-log',{who:h.who,text:h.text,err:h.err}));
+ drawLog(false)}catch(e){if(!history.length)say('app',GREETING)}}
+drawLog();syncChat();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!thinking)syncChat()});
+function openChat(){if($('hist').open)return;syncChat();$('hist').showModal();drawLog();const l=$('histLog');l.scrollTop=l.scrollHeight;$('histCmd').focus()}
 const cf=on=>document.body.classList.toggle('cf',!!on&&!isPhone());
 $('log').onclick=()=>{if(isPhone())openChat();else{cf(true);$('cmd').focus()}};
 $('card').addEventListener('pointerdown',()=>cf(false));
@@ -211,7 +219,7 @@ async function act(text){const t=text.trim();if(!t)return;say('you',t);
  if(rd.rule){if(rd.saved){say('app','Rule saved: '+rd.summary+' Auto mode will follow it. Say "rules" to see them all.');return}
   if(!aiAvailable){say('app',rd.summary+' Auto mode is off, so I did not save it as a rule. Say "auto on" and tell me again.');return}}
  think(true);let r,d;
- try{r=await post('/assistant',{text:t,image:attached?attached.id:null,history:history.slice(-13,-1),screen:{view:view(),dm:{name:$('dmName').value,phone:$('dmPhone').value,gender}}});d=await r.json().catch(()=>({}))}finally{think(false)}
+ try{await logChain;r=await post('/assistant',{text:t,image:attached?attached.id:null,history:history.slice(-13,-1),screen:{view:view(),dm:{name:$('dmName').value,phone:$('dmPhone').value,gender}}});d=await r.json().catch(()=>({}))}finally{think(false)}
  if(r.status===503){say('app','I did not understand that, and the AI assistant is not connected, so only direct commands work. Try: "34k left", "came 2000", "send hi to Ali", "send main", "fiverr every 30 min", "rules".',1);return}
  if(!r.ok)throw Error(d.error||'The assistant could not answer.');
  applyDrafts(d);if(d.autopilot!=null)paintAuto(d.autopilot);say('app',d.reply);
@@ -226,7 +234,7 @@ $('cmd').addEventListener('focus',()=>{if(isPhone()){$('cmd').blur();openChat()}
 /* ---- autopilot ---- */
 let aiAvailable=false;
 function paintAuto(on){autoOn=!!on;if(!autoOn)$('live').hidden=true;$('auto').setAttribute('aria-pressed',String(autoOn));$('auto').textContent=autoOn?'Auto ON':'Auto';
- const ph=autoOn?'Auto is on · tell me rules: "fiverr every 30 min"':'Tell me: 34k left · came 2000 · Ali 0300…';$('cmd').placeholder=ph;$('histCmd').placeholder=autoOn?'Auto is on · tell me rules or tasks…':'Type anything…'}
+ const ph=autoOn?'Auto is on · give me rules: "fiverr every 30 min"':'Reply to GiveLife… 34k left · came 2000';$('cmd').placeholder=ph;$('histCmd').placeholder=autoOn?'Auto is on · give me rules or tasks…':'Reply to GiveLife…'}
 async function toggleAuto(on){const r=await post('/autopilot',{on}),d=await r.json();paintAuto(d.on);say(d.on||!on?'auto':'app',d.reply,!d.on&&on);if(d.on)pollAuto()}
 $('auto').onclick=()=>toggleAuto(!autoOn).catch(e=>say('app',e.message,1));
 async function pollAuto(){try{const d=await (await fetch('/autopilot')).json();aiAvailable=!!d.ai;paintAuto(d.on);paintLive(d.status);for(const x of d.log||[]){if(x.time*1000>seenAuto){seenAuto=x.time*1000;if(!x.q&&x.time*1000>Date.now()-15*60000)say('auto',x.text)}}}catch(e){}}

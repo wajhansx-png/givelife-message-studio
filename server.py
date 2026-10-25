@@ -189,6 +189,24 @@ if STORE:
   v=STORE.get(key)
   if v:f.write_text(v if isinstance(v,str) else json.dumps(v),encoding='utf-8')
 
+CHATLOG=DATA/'chat.json';RECIP=DATA/'recipient.json'
+if STORE:
+ for key,f in (('chat',CHATLOG),('recipient',RECIP)):
+  v=STORE.get(key)
+  if v:f.write_text(v if isinstance(v,str) else json.dumps(v),encoding='utf-8')
+CHAT_LOCK=threading.Lock()
+
+def chat_get(n=300):
+ try:return json.loads(CHATLOG.read_text(encoding='utf-8'))[-n:] if CHATLOG.exists() else []
+ except Exception:return []
+
+def chat_add(who,text,err=False):
+ who=who if who in ('you','app','auto') else 'app';text=str(text)[:4000]
+ if not text.strip():return
+ with CHAT_LOCK:
+  items=chat_get(300);items.append({'who':who,'text':text,'err':bool(err),'t':int(time.time()*1000)})
+  CHATLOG.write_text(json.dumps(items[-300:],ensure_ascii=False),encoding='utf-8');persist_file('chat',CHATLOG)
+
 def mem_get():
  return json.loads(MEMORY.read_text(encoding='utf-8')) if MEMORY.exists() else []
 
@@ -303,6 +321,11 @@ def send_free(to,text,with_picture):
 LAST_RECIPIENT={}
 def remember_recipient(name,jid):
  LAST_RECIPIENT.clear();LAST_RECIPIENT.update(name=name,id=jid)
+ try:RECIP.write_text(json.dumps(LAST_RECIPIENT),encoding='utf-8');persist_file('recipient',RECIP)
+ except Exception:pass
+try:
+ if RECIP.exists():LAST_RECIPIENT.update(json.loads(RECIP.read_text(encoding='utf-8')))
+except Exception:pass
 
 def send_scheduled(target,text):
  t=str(target)
@@ -674,6 +697,7 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/campaign':self.reply({**{k:v for k,v in CAMPAIGN.items() if k!='stop'},'log':CAMPAIGN['log'][-8:],'wait':max(0,round(CAMPAIGN['next_at']-time.time()))})
   elif self.path=='/rules':self.reply({'items':ENGINE.rule_list(),'autopilot':auto_on()})
   elif self.path=='/ai-test':self.reply(ai_test())
+  elif self.path=='/chat':self.reply({'items':chat_get(200)})
   elif self.path=='/suggestions':self.reply({'items':ENGINE.suggestions(),'autopilot':auto_on(),'summary':ENGINE.summary()})
   elif self.path=='/groups':self.reply([{'key':k,'name':v[0]} for k,v in GROUPS.items()])
   elif self.path.startswith('/send-status/'):
@@ -718,6 +742,7 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/next-message':self.reply({'message':next_message()})
   elif self.path=='/next-dm':self.reply({'message':next_dm()})
   elif self.path=='/memory':self.reply({'reply':mem_add(body.get('rule',''))})
+  elif self.path=='/chat-log':chat_add(body.get('who'),body.get('text',''),body.get('err'));self.reply({'ok':True})
   elif self.path=='/autopilot':self.reply({'reply':set_auto(bool(body.get('on'))),'on':auto_on()})
   elif self.path=='/upload-image':
    try:self.reply({'id':save_upload(str(body.get('data','')),body.get('use','attachment'))})
@@ -756,7 +781,9 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/assistant':
    text=str(body.get('text',''))[:4000];CHAT_IMAGE['id']=body.get('image')
    if not text.strip():return self.reply({'error':'Type something first.'},status=400)
-   try:out=assistant.chat(text,body.get('history',[]),{**studio_state(),'last_recipient':dict(LAST_RECIPIENT) or None,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks())
+   hist=chat_get(60)
+   if hist and hist[-1]['who']=='you' and hist[-1]['text'].strip()==text.strip():hist=hist[:-1]
+   try:out=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':dict(LAST_RECIPIENT) or None,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks())
    except Exception as e:return self.reply({'error':'The assistant could not answer: '+str(e)[:160]},status=502)
    if out is None:return self.reply({'error':'ai-off'},status=503)
    d=json.loads(DRAFT.read_text(encoding='utf-8'));out.update(group=d.get('group',''),dm=d.get('dm',''),left=read_left(),autopilot=auto_on());self.reply(out)

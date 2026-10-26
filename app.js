@@ -22,6 +22,8 @@ async function syncChat(){try{await logChain;const d=await (await fetch('/chat')
  drawLog(false)}catch(e){if(!history.length)say('app',GREETING)}}
 drawLog();syncChat();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!thinking)syncChat()});
+const toEnd=()=>{const l=$('histLog');setTimeout(()=>{l.scrollTop=l.scrollHeight},250)};
+$('histCmd').addEventListener('focus',toEnd);if(window.visualViewport)visualViewport.addEventListener('resize',()=>{if($('hist').open)toEnd()});
 function openChat(){if($('hist').open)return;syncChat();$('hist').showModal();drawLog();const l=$('histLog');l.scrollTop=l.scrollHeight;$('histCmd').focus()}
 const cf=on=>document.body.classList.toggle('cf',!!on&&!isPhone());
 $('log').onclick=()=>{if(isPhone())openChat();else{cf(true);$('cmd').focus()}};

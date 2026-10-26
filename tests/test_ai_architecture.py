@@ -174,6 +174,10 @@ class ServerAuditTests(unittest.TestCase):
     req=urllib.request.Request('http://127.0.0.1:'+str(http.server_port)+'/drafts',data=json.dumps(body).encode(),headers={'Authorization':'Bearer test-only-studio-access-key','Content-Type':'application/json'})
     with self.assertRaises(urllib.error.HTTPError) as error:urllib.request.urlopen(req)
     self.assertEqual(error.exception.code,400);self.assertIn('error',json.load(error.exception))
+   for path,body in [('/command',{'text':['send main']}),('/assistant',{'text':{'message':'send main'}}),('/send-now',{'to':123,'text':'hi'}),('/send-group',{'group':[],'message':'hi'}),('/left',{'left':True})]:
+    req=urllib.request.Request('http://127.0.0.1:'+str(http.server_port)+path,data=json.dumps(body).encode(),headers={'Authorization':'Bearer test-only-studio-access-key','Content-Type':'application/json'})
+    with self.assertRaises(urllib.error.HTTPError) as error:urllib.request.urlopen(req)
+    self.assertEqual(error.exception.code,400);self.assertIn('error',json.load(error.exception))
   finally:http.shutdown();http.server_close()
 
 if __name__=='__main__':unittest.main()

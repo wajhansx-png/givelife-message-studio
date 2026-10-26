@@ -59,7 +59,8 @@ def custom_recipient(body):
  return phone,False
 
 def send_custom(body):
- jid,is_group=custom_recipient(body);message=str(body.get('message',''))
+ jid,is_group=custom_recipient(body);message=body.get('message','')
+ if not isinstance(message,str):raise ValueError('Message must be text.')
  if not is_group and body.get('kind')=='dm_appeal':
   message=greet_text(message,body.get('name',''),body.get('gender','Brother'))
   if not dm_composer.complete(message):raise ValueError('The full DM is incomplete. Restore its paragraphs and payment details before sending.')
@@ -325,7 +326,7 @@ def mem_get():
  except (ValueError,OSError):return []
 
 if not KNOWLEDGE.data['turns']:
- for item in chat_get(300):KNOWLEDGE.data['turns'].append({'id':item.get('id') or uuid.uuid4().hex,'who':item['who'],'text':item['text'],'time':item.get('t',0)/1000,'source':'owner_input' if item['who']=='you' else 'app_output'})
+ for item in chat_get(300):KNOWLEDGE.data['turns'].append({'id':item.get('id') or uuid.uuid4().hex,'who':item['who'],'text':safe_text(item['text']),'time':item.get('t',0)/1000,'source':'owner_input' if item['who']=='you' else 'app_output'})
  if KNOWLEDGE.data['turns']:KNOWLEDGE.save()
 
 def mem_add(rule):
@@ -1436,9 +1437,11 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/find':
    out,checked=find_data(str(body.get('query','')));self.reply({'items':out,'checked':checked})
   elif self.path=='/command':
+   if not isinstance(body.get('text',''),str) or len(body.get('text',''))>10000:return self.reply({'error':'Command must be text of at most 10,000 characters.'},status=400)
    try:self.reply(manual_command(str(body.get('text','')),body.get('request_id')))
    except ValueError as e:self.reply({'error':str(e)},status=400)
   elif self.path=='/send-now':
+   if not isinstance(body.get('text'),str) or not isinstance(body.get('to',''),str):return self.reply({'error':'Recipient and message must be text.'},status=400)
    to=str(body.get('to','')).strip() or LAST_RECIPIENT.get('id','')
    if not to:return self.reply({'error':'Who should I send it to? Say: send hi to <name or number>.'},status=400)
    try:send_free(to,body.get('text',''),bool(body.get('with_picture')),literal=body.get('literal') is True);self.reply({'ok':True,'to':LAST_RECIPIENT.get('name','')})
@@ -1473,11 +1476,13 @@ class Handler(BaseHTTPRequestHandler):
     ident=assistant_task(body);self.reply({'task_id':ident})
    except ValueError as e:self.reply({'error':str(e)},status=400)
   elif self.path=='/left':
+   if isinstance(body.get('left'),bool):return self.reply({'error':'Amount must be a number.'},status=400)
    try:left=int(body.get('left'))
    except Exception:return self.reply({'error':'Enter the amount as a number, like 34000.'},status=400)
    if not 0<=left<=10000000:return self.reply({'error':'Amount looks wrong.'},status=400)
    g,d=set_left(left);self.reply({'left':left,'group':g,'dm':d})
   elif self.path=='/send-group':
+   if not isinstance(body.get('group'),str) or not isinstance(body.get('message'),str):return self.reply({'error':'Group and caption must be text.'},status=400)
    key=body.get('group');caption=str(body.get('message',''))
    if key not in GROUPS and key not in ('all','free'):return self.reply({'error':'Unknown group'},status=400)
    try:

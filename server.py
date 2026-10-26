@@ -137,7 +137,8 @@ def set_left(left):
   g=build_group(variant(False),left);d=build_dm(dm_selection(False),left)
   save_draft('group',g);save_draft('dm',d);return g,d
 
-def send_image(jid,caption,check_gap=False):
+def send_image(jid,caption,check_gap=False,_retry=True):
+ if jid in NEVER_GROUPS:return {'code':'ERROR','message':'This group is never used.'}
  status=api('/devices/'+DEVICE+'/status').get('results',{})
  if not status.get('is_connected') or not status.get('is_logged_in'):return {'code':'ERROR','message':'WhatsApp disconnected. Log in again.'}
  if check_gap:
@@ -159,6 +160,10 @@ def send_image(jid,caption,check_gap=False):
   if result.get('code')=='SUCCESS':
    saved=STORE.get('last_sent',{});saved[jid]=time.time();STORE.put('last_sent',saved)
  if result.get('code')=='SUCCESS':LAST_LOCAL[jid]=time.time()
+ elif _retry and jid.endswith('@g.us') and NOT_MEMBER.search(str(result.get('message',''))):
+  key=next((k for k,v in GROUPS.items() if v[1]==jid),None);chk=check_groups(True)
+  if key and GROUPS[key][1]!=jid:return send_image(GROUPS[key][1],caption,check_gap,False)
+  if key and GROUPS[key][0] in chk.get('missing',[]):result={'code':'ERROR','message':'The WhatsApp number linked to the studio is not in '+GROUPS[key][0]+'. Link the number that is in the groups.'}
  with (DATA/'group-send-log.jsonl').open('a',encoding='utf-8') as f:f.write(json.dumps({'time':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jid':jid,'caption':caption,'response':result},ensure_ascii=False)+'\n')
  return result
 
@@ -173,7 +178,7 @@ def run_job(job_id,keys,caption):
      job['message']='Waiting 60 seconds before '+name;time.sleep(max(0,60-(time.monotonic()-last_send)))
     job['message']='Sending to '+name;result=send_image(jid,caption,True);job['results'].append({'group':name,**result})
     if result.get('code')=='SUCCESS':last_send=time.monotonic()
-    elif result.get('code')!='COOLDOWN':break
+    elif 'disconnected' in str(result.get('message','')).lower():break
    sent=sum(r.get('code')=='SUCCESS' for r in job['results'])
    if sent:job['next_caption']=next_message()
    job['message']=f'Sent to {sent}/{len(keys)} groups.';job['done']=True;auto_log(job['message']+' '+', '.join(r['group']+(' ✓' if r.get('code')=='SUCCESS' else ' ✗ '+str(r.get('message',''))[:40]) for r in job['results']))
@@ -230,6 +235,45 @@ def wa_ok():
  try:
   s=api('/devices/'+DEVICE+'/status').get('results',{});return bool(s.get('is_connected') and s.get('is_logged_in'))
  except Exception:return False
+
+NEVER_GROUPS={'120363432572916292@g.us','120363431093838536@g.us'}  # 37-member GiveLife copy, Exclusive Upwork Course
+GROUP_CHECK={'time':0,'missing':[],'checked':False}
+NOT_MEMBER=re.compile(r"(?i)not participating|not in (the )?group|not-authorized|forbidden|item-not-found|failed to get group")
+
+def my_groups():
+ """Groups the linked WhatsApp number is in: [(jid, name, members)]."""
+ out=[]
+ for x in _items(api('/user/my/groups')):
+  if not isinstance(x,dict):continue
+  jid=str(x.get('JID') or x.get('jid') or x.get('id') or '')
+  gn=x.get('GroupName');name=str((gn.get('Name') if isinstance(gn,dict) else '') or x.get('Name') or x.get('name') or x.get('subject') or '').strip()
+  people=x.get('Participants') or x.get('participants') or []
+  if jid.endswith('@g.us') and jid not in NEVER_GROUPS:out.append((jid,name,len(people) if isinstance(people,list) else 0))
+ return out
+
+def check_groups(force=False):
+ """Make sure every saved group is one the linked number is in; fix a changed JID by its name."""
+ if not force and time.time()-GROUP_CHECK['time']<600:return GROUP_CHECK
+ GROUP_CHECK['time']=time.time()
+ try:mine=my_groups()
+ except Exception:return GROUP_CHECK
+ if not mine:return GROUP_CHECK
+ ids={j for j,_,_ in mine};missing=[];fixed={}
+ for key,(name,jid) in list(GROUPS.items()):
+  if jid in ids:continue
+  same=[g for g in mine if g[1].strip().lower()==name.lower()]
+  if same:
+   best=max(same,key=lambda g:g[2])
+   if key=='main' and best[2] and best[2]<80:missing.append(name);continue  # never fall back to a small copy of the main group
+   GROUPS[key]=(name,best[0]);fixed[key]=best[0]
+  else:missing.append(name)
+ if fixed and STORE:STORE.put('group_jids',{k:GROUPS[k][1] for k in GROUPS})
+ GROUP_CHECK.update(missing=missing,checked=True,fixed=list(fixed))
+ return GROUP_CHECK
+
+if STORE:
+ for k,j in (STORE.get('group_jids') or {}).items():
+  if k in GROUPS and j not in NEVER_GROUPS:GROUPS[k]=(GROUPS[k][0],j)
 
 def studio_state():
  saved=STORE.get('last_sent',{}) if STORE else {}
@@ -697,6 +741,8 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/campaign':self.reply({**{k:v for k,v in CAMPAIGN.items() if k!='stop'},'log':CAMPAIGN['log'][-8:],'wait':max(0,round(CAMPAIGN['next_at']-time.time()))})
   elif self.path=='/rules':self.reply({'items':ENGINE.rule_list(),'autopilot':auto_on()})
   elif self.path=='/ai-test':self.reply(ai_test())
+  elif self.path=='/wa-check':
+   c=check_groups(True);self.reply({'checked':c.get('checked'),'missing':c.get('missing',[]),'fixed':c.get('fixed',[]),'whatsapp':wa_ok()})
   elif self.path=='/chat':self.reply({'items':chat_get(200)})
   elif self.path=='/suggestions':self.reply({'items':ENGINE.suggestions(),'autopilot':auto_on(),'summary':ENGINE.summary()})
   elif self.path=='/groups':self.reply([{'key':k,'name':v[0]} for k,v in GROUPS.items()])

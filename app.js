@@ -25,7 +25,10 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!thinking
 function openChat(){if($('hist').open)return;syncChat();$('hist').showModal();drawLog();const l=$('histLog');l.scrollTop=l.scrollHeight;$('histCmd').focus()}
 const cf=on=>document.body.classList.toggle('cf',!!on&&!isPhone());
 $('log').onclick=()=>{if(isPhone())openChat();else{cf(true);$('cmd').focus()}};
-$('card').addEventListener('pointerdown',()=>cf(false));
+/* the chat is big only while you are in it; it shrinks after the click outside has landed, so buttons never move under the finger */
+document.addEventListener('pointerdown',e=>{if(!document.body.classList.contains('cf')||e.target.closest('.talk,dialog'))return;
+ addEventListener('click',()=>setTimeout(()=>{if(!document.querySelector('.talk').contains(document.activeElement))cf(false)},0),{once:true,capture:false})});
+document.querySelector('.talk').addEventListener('focusout',e=>{if(e.relatedTarget&&!e.relatedTarget.closest('.talk'))setTimeout(()=>{if(!document.querySelector('.talk').contains(document.activeElement))cf(false)},0)});
 addEventListener('resize',()=>{if(isPhone())cf(false)});
 $('histClose').onclick=()=>$('hist').close();
 const isPhone=()=>matchMedia('(max-width:899px)').matches;
@@ -259,7 +262,11 @@ document.addEventListener('pointerdown',e=>{if(!$('liveMore').hidden&&!$('live')
 /* ---- settings: test AI, DM sources, log out WhatsApp ---- */
 const setNote=(id,text,cls)=>{const e=$(id);e.textContent=text;e.className=cls||''};
 async function loadSet(){try{const s=(await (await fetch('/autopilot')).json()).summary||{};$('swDm').checked=!!s.dm_enabled;$('swNew').checked=s.dm_new!==false;$('swNew').disabled=!s.dm_enabled;$('set').dataset.daily=s.dm_daily||30}catch(e){}}
-$('gear').onclick=()=>{$('set').showModal();loadSet()};
+async function checkWa(){setNote('waRes','Checking the groups…');try{const d=await (await fetch('/wa-check')).json();
+ if(!d.whatsapp)setNote('waRes','Not connected. Use the WhatsApp button at the top.','err');
+ else if(d.missing&&d.missing.length)setNote('waRes','Connected, but this number is not in: '+d.missing.join(', ')+'. Link the number that is in the groups.','err');
+ else setNote('waRes','Connected and in all 6 groups'+(d.fixed&&d.fixed.length?' (updated '+d.fixed.length+' group link'+(d.fixed.length>1?'s':'')+')':'')+'.','ok')}catch(e){setNote('waRes','Could not check.','err')}}
+$('gear').onclick=()=>{$('set').showModal();loadSet();checkWa()};
 $('setClose').onclick=()=>$('set').close();
 async function saveDms(){const on=$('swDm').checked;$('swNew').disabled=!on;
  try{const r=await post('/autopilot-settings',{action:'dms',enabled:on,daily:+($('set').dataset.daily||30),new_people:$('swNew').checked}),d=await r.json();if(!r.ok)throw Error(d.error);status('✓ '+d.reply)}catch(e){status(e.message||'Could not save',1);loadSet()}}
@@ -303,4 +310,4 @@ fetch('/drafts').then(r=>r.json()).then(d=>{applyDrafts(d);status('✓ Ready')})
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;showLeft()}).catch(()=>{});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false}}).catch(()=>{});
 pollAuto();setInterval(pollAuto,10000);pollSuggestions();setInterval(pollSuggestions,60000);pollCamp();
-if(matchMedia('(min-width:900px) and (hover:hover)').matches)$('cmd').focus();
+

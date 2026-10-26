@@ -32,6 +32,8 @@ def permitted(name,text):
   return any((p.get('kind')=='money')==(name=='money_came') for p in financial_plans(t))
  if name in ('set_group_pace','set_pace','pause_group','resume_group','set_quiet_hours','set_dms'):return bool(re.search(r'(?i)\b(every|after|pace|speed|slow|fast|pause|resume|quiet|enable|disable|start|stop|on|off)\b',t))
  if name=='edit_dm_name':return bool(re.search(r'(?i)\b(name|call him|call her|greeting)\b',t))
+ if name=='new_wording' and re.search(r'(?i)\b(rewrite|shorten|shorter|brief|bold|italic|remove|replace|edit|format)\b',t):return False
+ if name=='new_wording':return bool(re.search(r'(?i)\b(fresh|hook|new|rotate|regenerate|next|wording|variant)\b',t)) or i['send']
  if name in ('set_message','new_wording','prepare_dm'):return bool(re.search(r'(?i)\b(edit|change|write|rewrite|draft|prepare|preview|fill|wording|message|caption|structure|format|bold|italic|shorten|improve|new|correct|remove)\b',t)) or i['send']
  return False
 

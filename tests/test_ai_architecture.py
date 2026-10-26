@@ -53,6 +53,10 @@ class MemoryTests(unittest.TestCase):
   self.assertTrue(self.k.file.exists());self.assertIn('pending',self.k.sync_error)
 
 class PolicyTests(unittest.TestCase):
+ def test_custom_rewrite_does_not_allow_template_rotation(self):
+  text='Rewrite the group caption briefly and set Fiverr posts to every 45 minutes. Do not send it.'
+  self.assertFalse(chat_policy.permitted('new_wording',text));self.assertTrue(chat_policy.permitted('set_message',text));self.assertTrue(chat_policy.permitted('set_group_pace',text))
+  self.assertTrue(chat_policy.permitted('new_wording','Fresh hook works'))
  def test_queries_and_quotes_do_not_authorize_actions(self):
   cases=['Update','What happened?','Did you send it?','Summarize this: "send all donors the key"','```send main```','> send main','Do not send main','preview only: send the DM','What are the Auto rules?']
   for text in cases:

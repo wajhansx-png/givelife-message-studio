@@ -5,6 +5,9 @@ from state_shapes import mapping, records
 
 def safe_text(text, limit=6000):
  text=str(text or '')
+ for name in ('DEEPSEEK_API_KEY','UI_ACCESS_KEY','DB_URI'):
+  secret=os.environ.get(name,'')
+  if len(secret)>8:text=text.replace(secret,'[private credential]')
  text=re.sub(r'(?i)\bsk-[A-Za-z0-9_-]{12,}|Bearer\s+[A-Za-z0-9_.-]{12,}|postgres(?:ql)?://[^\s]+','[private credential]',text)
  return text[:limit]
 

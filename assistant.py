@@ -37,7 +37,7 @@ CHAT_TOOLS = [
     tool('delete_last_message', 'Revoke the latest own message sent to a named foundation group, only when the owner asks to delete it. Reports WhatsApp confirmation or failure.', {'target': {'type':'string','enum':['main','community','fiverr','upwork','uet','toprated','test']}}, []),
     tool('set_left', 'Set the amount still needed (Rs.). Updates both messages.', {'left': {'type': 'integer'}}, ['left']),
     tool('money_came', 'Money arrived; subtract it from the amount left.', {'amount': {'type': 'integer'}}, ['amount']),
-    tool('new_wording', 'Make fresh wording for the group or DM message.', {'kind': {'type': 'string', 'enum': ['group', 'dm']}}, ['kind']),
+    tool('new_wording', 'Rotate to the next built-in template. This does NOT shorten, edit or rewrite custom text. For brief rewrites, wording corrections or formatting changes use set_message instead.', {'kind': {'type': 'string', 'enum': ['group', 'dm']}}, ['kind']),
     tool('set_message', 'Replace the group or DM message with exact text the owner gave.', {'kind': {'type': 'string', 'enum': ['group', 'dm']}, 'text': {'type': 'string'}}, ['kind', 'text']),
     tool('prepare_dm', 'ONLY when the owner says "prepare", "fill" or "let me check": fill the DM form for one person so he can review it. If he says send, use send_message instead.', {'phone': {'type': 'string'}, 'name': {'type': 'string'}, 'gender': {'type': 'string', 'enum': ['Brother', 'Sister']}}, ['phone', 'name', 'gender']),
     tool('send_appeal', 'Send the current group appeal (poster + caption) to a group target immediately. No confirmation needed: when the owner says send, it goes.', {'target': {'type': 'string', 'enum': GROUP_KEYS}}, ['target']),

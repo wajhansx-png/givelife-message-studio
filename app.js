@@ -7,13 +7,23 @@ function status(t,bad){const s=$('status');s.textContent=t;s.classList.toggle('e
 /* ---- conversation log (kept on this device) ---- */
 let history=[];try{history=JSON.parse(localStorage.getItem('givelife-chat')||'[]')}catch(e){}
 let thinking=false;
+let rev=null;
 function drawLog(anim){const items=history.slice(-40);
- for(const id of ['log','histLog']){const el=$(id);el.textContent='';
-  items.forEach((h,i)=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(anim&&i===items.length-1?' in':'');d.textContent=h.text;el.append(d)});
+ for(const id of ['log','histLog']){const el=$(id),prev=el.scrollTop;el.textContent='';
+  items.forEach((h,i)=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(anim&&i===items.length-1?' in':'');d.dataset.t=h.t;
+   d.textContent=rev&&rev.t===h.t?rev.words.slice(0,rev.n).join(''):h.text;el.append(d)});
   if(thinking){const d=document.createElement('div');d.className='e bot dots in';d.innerHTML='<span class="spark">✻</span><em>Thinking…</em>';el.append(d)}
-  el.scrollTop=el.scrollHeight}}
+  if(anim){el.scrollTop=prev;el.scrollTo({top:el.scrollHeight,behavior:'smooth'})}else el.scrollTop=el.scrollHeight}}
+/* a reply appears word by word, like Claude, then stays */
+function prepareReveal(h){clearInterval(rev&&rev.timer);rev=null;
+ if(h.who!=='app'||h.err||h.text.length<24||matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+ const words=h.text.split(/(\s+)/);rev={t:h.t,words,n:0,timer:0}}
+function runReveal(){const r=rev;if(!r)return;const step=Math.max(2,Math.ceil(r.words.length/28));
+ r.timer=setInterval(()=>{r.n=Math.min(r.words.length,r.n+step);const txt=r.words.slice(0,r.n).join('');
+  document.querySelectorAll('[data-t="'+r.t+'"]').forEach(d=>{d.textContent=txt;const l=d.parentElement;l.scrollTop=l.scrollHeight});
+  if(r.n>=r.words.length){clearInterval(r.timer);if(rev===r)rev=null}},32)}
 function think(on){thinking=on;drawLog(false)}let logChain=Promise.resolve();
-function say(who,text,err){history.push({who,text,err:!!err,t:Date.now()});history=history.slice(-80);if(who!=='auto')logChain=logChain.then(()=>post('/chat-log',{who,text,err:!!err})).catch(()=>{});try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}drawLog(true)}
+function say(who,text,err){const item={who,text,err:!!err,t:Date.now()};history.push(item);prepareReveal(item);history=history.slice(-80);if(who!=='auto')logChain=logChain.then(()=>post('/chat-log',{who,text,err:!!err})).catch(()=>{});try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}drawLog(true);runReveal()}
 const GREETING='Hi. Tell me what changed or what to do: "34k left", "came 2000", "Ali 0300 1234567", "send all", or anything else. I remember everything we say here.';
 async function syncChat(){try{await logChain;const d=await (await fetch('/chat')).json();
  if(d.items&&d.items.length){history=d.items.slice(-80).map(x=>({who:x.who,text:x.text,err:!!x.err,t:x.t}));try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}}
@@ -235,9 +245,10 @@ async function act(text){const t=text.trim();if(!t)return;say('you',t);
  for(const a of d.actions||[]){
   if(a.type==='prepare_dm'){setView('dm');$('dmPhone').value=a.phone||'';$('dmName').value=a.name||'';setGender(a.gender==='Sister'?'Sister':'Brother')}
   }}
-$('cmdForm').onsubmit=async e=>{e.preventDefault();const c=$('cmd'),v=c.value;c.value='';
+const hideKeys=()=>{if(matchMedia('(pointer:coarse)').matches&&document.activeElement&&document.activeElement.blur)document.activeElement.blur()};
+$('cmdForm').onsubmit=async e=>{e.preventDefault();const c=$('cmd'),v=c.value;c.value='';hideKeys();
  try{await act(v)}catch(err){say('app',err.message,1)}paintAuto(autoOn)};
-$('histForm').onsubmit=async e=>{e.preventDefault();const c=$('histCmd'),v=c.value;c.value='';try{await act(v)}catch(err){say('app',err.message,1)}};
+$('histForm').onsubmit=async e=>{e.preventDefault();const c=$('histCmd'),v=c.value;c.value='';hideKeys();try{await act(v)}catch(err){say('app',err.message,1)}};
 $('cmd').addEventListener('focus',()=>{if(isPhone()){$('cmd').blur();openChat()}else cf(true)});
 
 /* ---- autopilot ---- */

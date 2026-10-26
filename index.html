@@ -207,6 +207,14 @@ button{transition:background .15s,transform .12s,border-color .15s,box-shadow .1
 button:active:not(:disabled){transform:scale(.97)}
 .layout{transition:grid-template-columns .3s cubic-bezier(.2,.8,.2,1)}
 .e.in{animation:pop .28s cubic-bezier(.2,.8,.2,1)}
+.e.you.in{transform-origin:100% 100%;animation:popRight .34s cubic-bezier(.2,.9,.25,1.04)}
+.e.bot.in:not(.dots){animation:riseIn .45s cubic-bezier(.2,.8,.2,1)}
+.e.dots.in{animation:riseIn .3s ease-out}
+@keyframes popRight{from{opacity:0;transform:translateY(12px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes riseIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.composer .go{transition:transform .15s,background .2s,filter .15s}
+.composer .go:active{transform:scale(.88)!important}
+.log .e{will-change:transform,opacity}
 @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
 .e.dots{display:flex;flex-direction:row;align-items:center;gap:4px;padding:12px 14px}
 .e.dots i{width:7px;height:7px;border-radius:50%;background:var(--mut);animation:blink 1.1s infinite}

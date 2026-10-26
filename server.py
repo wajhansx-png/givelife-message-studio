@@ -169,7 +169,34 @@ def send_image(jid,caption,check_gap=False,_retry=True):
  with (DATA/'group-send-log.jsonl').open('a',encoding='utf-8') as f:f.write(json.dumps({'time':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jid':jid,'caption':caption,'response':result},ensure_ascii=False)+'\n')
  return result
 
-def run_job(job_id,keys,caption):
+QUEUED={}
+def _hhmm(epoch):
+ return (datetime.datetime.fromtimestamp(epoch,datetime.timezone.utc)+datetime.timedelta(hours=5)).strftime('%H:%M')
+
+def queue_group(key,wait_s):
+ """Owner asked to post but the group is cooling down: post by itself the moment WhatsApp's 15-minute gap opens."""
+ at=time.time()+max(5,wait_s)
+ if key in QUEUED:return QUEUED[key]['at']
+ QUEUED[key]={'at':at}
+ def runner():
+  try:
+   while True:
+    q=QUEUED.get(key)
+    if not q or on_hold():return
+    left=q['at']-time.time()
+    if left>0:time.sleep(min(left,15));continue
+    caption=json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')
+    if not start_keys_job([key],caption):time.sleep(10);continue
+    while ACTIVE:time.sleep(2)
+    res=last_results();r=res[0] if res else (key,'?','')
+    m=re.search(r'in (\d+) min',str(r[2]))
+    if r[1]=='COOLDOWN' and m:q['at']=time.time()+int(m.group(1))*60+20;continue
+    auto_log(f'Queued post to {key}: '+('sent.' if r[1]=='SUCCESS' else 'did not go: '+str(r[2])[:60]),False);return
+  finally:QUEUED.pop(key,None)
+ threading.Thread(target=runner,daemon=True).start()
+ return at
+
+def run_job(job_id,keys,caption,queue=False):
  global ACTIVE
  job=JOBS[job_id];last_send=None
  try:
@@ -178,7 +205,11 @@ def run_job(job_id,keys,caption):
     name,jid=GROUPS[key]
     if last_send is not None:
      job['message']='Waiting 60 seconds before '+name;time.sleep(max(0,60-(time.monotonic()-last_send)))
-    job['message']='Sending to '+name;result=send_image(jid,caption,True);job['results'].append({'group':name,**result})
+    job['message']='Sending to '+name;result=send_image(jid,caption,True)
+    if queue and result.get('code')=='COOLDOWN':
+     m=re.search(r'in (\d+) min',str(result.get('message','')));at=queue_group(key,(int(m.group(1)) if m else 15)*60)
+     result={**result,'message':f'Posted recently (WhatsApp needs 15 minutes between posts). Queued: it goes by itself at {_hhmm(at)}.','queued':True}
+    job['results'].append({'group':name,**result})
     if result.get('code')=='SUCCESS':last_send=time.monotonic()
     elif 'disconnected' in str(result.get('message','')).lower():break
    sent=sum(r.get('code')=='SUCCESS' for r in job['results'])
@@ -424,9 +455,18 @@ def send_appeal(target):
   r=send_with_image('120363431210327603@g.us',json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),image_path('poster'));return 'Sent to the test group.' if r.get('code')=='SUCCESS' else 'Test send failed: '+str(r.get('message',''))
  if not keys:raise ValueError('Unknown group.')
  if not wa_ok():raise ValueError('WhatsApp is not connected. Link it first.')
- if not start_keys_job(keys,json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')):raise ValueError('Another send is already running. Try again in a minute.')
- auto_log('Posting the appeal to '+t+' (started from chat).')
- return 'Posting the appeal to '+t+' now.'
+ check_hold()
+ saved=last_sent_by_key();ready=[];waiting=[]
+ for k in keys:
+  last=saved.get(k);left=900-(time.time()-last) if last else 0
+  (waiting if left>0 else ready).append((k,left))
+ msg=[]
+ if ready:
+  if not start_keys_job([k for k,_ in ready],json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),True):raise ValueError('Another send is already running. Try again in a minute.')
+  auto_log('Posting the appeal to '+', '.join(k for k,_ in ready)+' (started from chat).');msg.append('Posting now to '+', '.join(GROUPS[k][0] for k,_ in ready)+'.')
+ for k,left in waiting:
+  at=queue_group(k,left);msg.append(f'{GROUPS[k][0]} was posted {round((900-left)/60)} min ago and WhatsApp needs 15 minutes between posts. Queued: it goes by itself at {_hhmm(at)}.')
+ return ' '.join(msg)
 
 def add_rule_text(text):
  rule,msg=rule_from_text(text)
@@ -472,13 +512,13 @@ def last_results():
  names={v[0]:k for k,v in GROUPS.items()}
  return [(names.get(r.get('group'),r.get('group')),r.get('code'),str(r.get('message',''))) for r in j['results']]
 
-def start_keys_job(keys,caption):
+def start_keys_job(keys,caption,queue=False):
  global ACTIVE
  if not caption.strip():return False
  with LOCK:
   if ACTIVE:return False
   job_id=uuid.uuid4().hex;ACTIVE=job_id;JOBS[job_id]={'done':False,'results':[],'message':'Autopilot…'}
- threading.Thread(target=run_job,args=(job_id,[k for k in GROUPS if k in keys],caption),daemon=True).start();return True
+ threading.Thread(target=run_job,args=(job_id,[k for k in GROUPS if k in keys],caption,queue),daemon=True).start();return True
 
 def group_messages(jid):
  return api('/chat/'+urllib.parse.quote(jid,safe='')+'/messages?limit=20').get('results',{}).get('data',[]) or []
@@ -946,7 +986,7 @@ class Handler(BaseHTTPRequestHandler):
    with LOCK:
     if ACTIVE:return self.reply({'error':'A group send is already running.'},status=409)
     job_id=uuid.uuid4().hex;ACTIVE=job_id;JOBS[job_id]={'done':False,'results':[],'message':'Starting…'}
-   threading.Thread(target=run_job,args=(job_id,list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key],caption),daemon=True).start();self.reply({'job_id':job_id})
+   threading.Thread(target=run_job,args=(job_id,list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key],caption,True),daemon=True).start();self.reply({'job_id':job_id})
   elif self.path=='/test':
    caption=str(body.get('message',''))
    if not caption.strip():return self.reply({'error':'Message is empty'},status=400)

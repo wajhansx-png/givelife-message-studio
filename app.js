@@ -96,7 +96,8 @@ $('copy').onclick=async()=>{if(editing)setEditing(false);try{await navigator.cli
 
 /* ---- sending ---- */
 function busy(on){document.body.classList.toggle('sending',on);document.querySelectorAll('[data-group],#sendAll,[data-test],#sendDm,#fresh').forEach(b=>b.disabled=on)}
-async function sendGroup(key){if(editing)setEditing(false);if(!$('chips').hidden)$('moreG').click();busy(true);
+let lastTarget=null;
+async function sendGroup(key){lastTarget=key;if(editing)setEditing(false);if(!$('chips').hidden)$('moreG').click();busy(true);
  try{clearTimeout(timer);await save();$('groupStatus').textContent='Starting…';
   const r=await post('/send-group',{group:key,message:$('group').value}),start=await r.json();if(!r.ok)throw Error(start.error||'Could not start');
   let done=false;while(!done){const j=await (await fetch('/send-status/'+start.job_id)).json();
@@ -197,10 +198,13 @@ async function quick(t){const low=t.toLowerCase();let m;
  const BATCH=async b=>{const r=await post('/dm-batch',b),d=await r.json();if(!r.ok)throw Error(d.error||'Could not start');return d.reply};
  if(m=t.match(/^(?:send\s+)?(?:(\d+)\s+)?(?:dms?|messages?)\s+(?:to\s+)?(?:(\d+)\s+)?(?:my\s+|our\s+|the\s+|past\s+|old\s+|existing\s+)*donors?$/i))return await BATCH({kind:'donors',count:+(m[1]||m[2]||10)});
  if(m=t.match(/^(?:send\s+)?(?:(\d+)\s+)?(?:dms?|messages?)\s+(?:to\s+)?(?:(\d+)\s+)?(?:members?\s+|people\s+|persons\s+)?(?:of|from|in)\s+(?:the\s+)?(.+?)(?:\s+group)?$/i)){const g=GKEY(m[3]);if(g&&g!=='test')return await BATCH({kind:'group',group:g,count:+(m[1]||m[2]||10)})}
+ if(m=low.match(/^(?:in|to|on)\s+(.+?)(?:\s+(?:group|groups|grp|froup|gruop|goup))?\s+(?:send|post|bhejo)(?:\s+(?:it|now))?$/)){const k=GKEY(m[1]);if(k&&k!=='test'){setView('group');sendGroup(k);return 'Sending to '+(GN[k]||k)+'. If it was posted less than 15 minutes ago it is queued and goes by itself.'}}
+ const CMDWORD=/^(now|it|this|that|again|please|asap|immediately|right now|fast|quick|and\b.*|restart\b.*|gap\b.*|the (appeal|message|poster)|appeal|message|poster|post)$/i;
+ if(/^(send|post|do it|go|send it|send now|post now|now|send again|post again|again|send it now|send right now)\W*$/i.test(t)&&lastTarget){sendGroup(lastTarget);return 'Sending to '+(GN[lastTarget]||lastTarget)+'. If it was posted less than 15 minutes ago it is queued and goes by itself.'}
  const TIMED=/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\bat\s+\d{1,2}\b|\b(daily|every day|every \d+)\b/i;
  if((m=t.match(/^(?:send|bhejo|message|msg|text)\s+(.+?)\s+(?:to|ko)\s+(.+)$/i))&&!/^(all|main|free|test|these|them|this|it|the (?:appeal|poster|message))\b/i.test(m[1])&&!TIMED.test(t)){
   return await sendTo(m[2].trim(),m[1].replace(/^["“'](.*)["”']$/,'$1'))}
- if((m=t.match(/^(?:send|bhejo)\s+(?!(?:all|main|free|test|to|the|a|my|these|them|this)\b)(.{1,300})$/i))&&!/\b(groups?|poster|picture|image)\b/i.test(m[1])&&!TIMED.test(t)&&!/3\d{2}[\s-]?\d{7}/.test(m[1])){
+ if((m=t.match(/^(?:send|bhejo)\s+(?!(?:all|main|free|test|to|the|a|my|these|them|this)\b)(.{1,300})$/i))&&!/\b(groups?|poster|picture|image)\b/i.test(m[1])&&!CMDWORD.test(m[1].trim())&&m[1].trim().split(/\s+/).length<=8&&!TIMED.test(t)&&!/3\d{2}[\s-]?\d{7}/.test(m[1])){
   return await sendTo('',m[1].replace(/^["“'](.*)["”']$/,'$1'))}
  const list=parseList(t);
  if(list.people.length>=2||(list.people.length===1&&/\b(send|bhejo|message|msg|dm)\b/i.test(t))){startList(list);return null}

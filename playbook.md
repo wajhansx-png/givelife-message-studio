@@ -97,3 +97,4 @@
 - "stop spamming", "too many messages", "mute" in a freelance group = complaint: Auto pauses that group 7 days and tells the owner.
 - While the owner's own DM list is sending, Auto does not send its own DMs.
 - Chat: small talk gets a short friendly answer in his language; no donation push unless he asks about work.
+- Screen: Settings has Appearance (Auto / Light / Dark). Auto follows the phone. The moon button on desktop switches quickly.

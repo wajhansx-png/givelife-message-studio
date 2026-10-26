@@ -315,6 +315,18 @@ $('suggDo').onclick=async()=>{if(!sug)return;const s=sug;dismiss(s.action==='own
 
 $('moreG').onclick=()=>{const c=$('chips'),open=c.hidden;c.hidden=!open;document.body.classList.toggle('more-open',open);$('moreG').setAttribute('aria-expanded',String(open));requestAnimationFrame(fit)};
 
+/* ---- theme: Auto follows the phone/PC setting; Light or Dark is remembered on this device ---- */
+function themeNow(){try{return localStorage.getItem('givelife-theme')||'system'}catch(e){return 'system'}}
+function isDark(){const t=document.documentElement.dataset.theme;return t?t==='dark':matchMedia('(prefers-color-scheme:dark)').matches}
+function applyTheme(t){const r=document.documentElement;if(t==='light'||t==='dark')r.dataset.theme=t;else delete r.dataset.theme;
+ try{localStorage.setItem('givelife-theme',t)}catch(e){}
+ document.querySelectorAll('#theme button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.t===t)));
+ const m=document.querySelector('meta[name=theme-color]');if(m)m.content=isDark()?'#1a1a18':'#f5f4ef'}
+document.querySelectorAll('#theme button').forEach(b=>b.onclick=()=>applyTheme(b.dataset.t));
+$('themeBtn').onclick=()=>applyTheme(isDark()?'light':'dark');
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(themeNow()==='system')applyTheme('system')});
+applyTheme(themeNow());
+
 /* ---- touch feel: tapping send/attach never opens or closes the keyboard; light haptic on every button ---- */
 document.querySelectorAll('.composer .go,.composer .clip').forEach(b=>b.addEventListener('pointerdown',e=>e.preventDefault()));
 document.addEventListener('pointerdown',e=>{if(e.target.closest('button')&&navigator.vibrate)try{navigator.vibrate(8)}catch(x){}},{passive:true});

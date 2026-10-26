@@ -48,7 +48,7 @@ def custom_recipient(body):
  phone=re.sub(r'[\s()+-]','',str(body.get('phone','')))
  if phone.startswith('00'):phone=phone[2:]
  if phone.startswith('03') and len(phone)==11:phone='92'+phone[1:]
- if not re.fullmatch(r'[1-9]\d{7,14}',phone):raise ValueError('Enter a valid phone number with country code, such as +92ΓÇª')
+ if not re.fullmatch(r'[1-9]\d{7,14}',phone):raise ValueError('Enter a valid phone number with country code, such as +92…')
  return phone,False
 
 def send_custom(body):
@@ -117,14 +117,14 @@ def build_group(n,left):
  pool=ALMOST if 0<left<=10000 else None
  hook=(pool[n%len(pool)][0] if pool else HOOKS[n%8][0]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
  push=(pool[(n+1)%len(pool)][1] if pool else HOOKS[(n*3+1)%8][1]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
- return (f'*{hook}*\n\nFluid in Yousuf\'s brain *can paralyse his body and damage his eyesight.* Both his kidneys are badly swollen. ≡ƒÆö\n\n'
-         f'*_Rs. {left:,} LEFT_*\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* ≡ƒñ▓\n{push}\n\n'
+ return (f'*{hook}*\n\nFluid in Yousuf\'s brain *can paralyse his body and damage his eyesight.* Both his kidneys are badly swollen. 💔\n\n'
+         f'*_Rs. {left:,} LEFT_*\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n{push}\n\n'
          '*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation')
 
 def build_dm(sel,left):
  p2,p1=math.ceil(left/2000),math.ceil(left/1000)
  T=[DP[i][sel[i]%len(DP[i])].replace('{L}',f'{left:,}').replace('{N}',str(p2)).replace('{M}',str(p1)) for i in range(len(DP))]
- return f'Brother, {T[0]}\n\n_{T[1]}_ ≡ƒÆö\n\nΓÜá∩╕Å *{T[2]}*\n\n≡ƒÜ¿ {T[3]}\n\nΓÇó *_{T[4]}_* ≡ƒñ▓\n\n≡ƒñ▓ {T[5]}\n\n≡ƒô▓ {T[6]}'
+ return f'Brother, {T[0]}\n\n_{T[1]}_ 💔\n\n⚠️ *{T[2]}*\n\n🚨 {T[3]}\n\n• *_{T[4]}_* 🤲\n\n🤲 {T[5]}\n\n📲 {T[6]}'
 
 def variant(advance):
  file=DATA/'variant-state.json';n=json.loads(file.read_text()).get('index',0) if file.exists() else 0
@@ -237,7 +237,7 @@ def start_send_job(keys,caption,manual=False,request_id=None):
    if not manual:return None
    cancel_jobs()
   ident=uuid.uuid4().hex
-  JOBS[ident]={'done':False,'results':[],'message':'Sending nowΓÇª','manual':bool(manual),'keys':keys,'caption':caption}
+  JOBS[ident]={'done':False,'results':[],'message':'Sending now…','manual':bool(manual),'keys':keys,'caption':caption}
   JOB_CANCEL[ident]=threading.Event();ACTIVE=ident;LAST_JOB['id']=ident
   if request_id:
    REQUEST_JOBS[request_id]=ident
@@ -271,7 +271,7 @@ def run_job(job_id,keys,caption,queue=False):
    job['next_caption']=next_message()
   job['message']=(job.get('cancel_reason','Stopped by owner.')+' ' if event.is_set() or on_hold() else '')+f'Confirmed sent to {sent}/{len(keys)} groups.'
   job['done']=True;save_job(job_id)
-  auto_log(job['message']+' '+', '.join(r['group']+(' Γ£ô' if r.get('code')=='SUCCESS' else ' Γ£ù '+str(r.get('message',''))[:100]) for r in job['results']),quiet=bool(job.get('manual')))
+  auto_log(job['message']+' '+', '.join(r['group']+(' ✓' if r.get('code')=='SUCCESS' else ' ✗ '+str(r.get('message',''))[:100]) for r in job['results']),quiet=bool(job.get('manual')))
  except Exception:
   job.update(done=True,message='Send not confirmed. Check WhatsApp before trying again.');save_job(job_id)
  finally:
@@ -479,7 +479,7 @@ def send_free(to,text,with_picture,literal=False):
    saved=STORE.get('last_sent',{});saved[target]=time.time();STORE.put('last_sent',saved)
  remember_recipient(to if key else target.split('@')[0],target)
  remember_manual({'kind':'text','to':target,'text':text,'with_picture':bool(with_picture)})
- auto_log('Confirmed message sent to '+(GROUPS[key][0] if key in GROUPS else 'Givelife test' if key=='test' else 'ΓÇª'+target.split('@')[0][-4:]),True)
+ auto_log('Confirmed message sent to '+(GROUPS[key][0] if key in GROUPS else 'Givelife test' if key=='test' else '…'+target.split('@')[0][-4:]),True)
  return 'Sent.'
 
 LAST_RECIPIENT={}
@@ -581,9 +581,9 @@ def clean_first_name(name):
 
 def dm_text(name,tier='member'):
  left=read_left();first=clean_first_name(re.sub(r'(?i)\bdonors?\b','',str(name or '')).strip());who=(first+' ' if first else '')+('Sister' if first.lower() in FEMALE else 'Brother')
- acct='≡ƒô▓ *03097458815* ΓÇö Easypaisa / JazzCash\nWajdan Khan (GiveLife Foundation account)'
- if tier=='repeat':return f'{who}, JazakAllah for helping Yousuf before. ≡ƒñ▓\n\nRs. {left:,} is still needed for his treatment. Could you help once more, or share his poster with family and friends today?\n\n{acct}'
- if tier=='reminder':return f'{who}, a gentle reminder about Yousuf. ≡ƒñ▓\n\nRs. {left:,} is still needed for his treatment. If you have already sent it, JazakAllah. If not, whenever you can:\n\n{acct}\n\nReply *Done* after you donate.'
+ acct='📲 *03097458815* — Easypaisa / JazzCash\nWajdan Khan (GiveLife Foundation account)'
+ if tier=='repeat':return f'{who}, JazakAllah for helping Yousuf before. 🤲\n\nRs. {left:,} is still needed for his treatment. Could you help once more, or share his poster with family and friends today?\n\n{acct}'
+ if tier=='reminder':return f'{who}, a gentle reminder about Yousuf. 🤲\n\nRs. {left:,} is still needed for his treatment. If you have already sent it, JazakAllah. If not, whenever you can:\n\n{acct}\n\nReply *Done* after you donate.'
  sel=[_random.randrange(len(a)) for a in DP];t=build_dm(sel,left)
  return t.replace('Brother, ',who+', ',1)
 
@@ -650,17 +650,17 @@ def dm_campaign(people,gap,image,vary,message,start_after,rest_every,rest_minute
    phone=norm_phone(p.get('phone',''));name=str(p.get('name','') or '').strip()[:30];gender=p.get('gender','Brother')
    if not phone:c['skipped']+=1;continue
    digest=hashlib.sha256((phone+'@s.whatsapp.net').encode()).hexdigest()
-   if digest in BLOCKED or (STORE and STORE.get('optout_'+digest)):c['skipped']+=1;c['log'].append(f'Skipped ΓÇª{phone[-4:]} (asked not to be messaged)');continue
-   if STORE and STORE.get('dm_recipient_'+digest) and not p.get('again'):c['skipped']+=1;c['log'].append(f'Skipped ΓÇª{phone[-4:]} (already messaged)');continue
+   if digest in BLOCKED or (STORE and STORE.get('optout_'+digest)):c['skipped']+=1;c['log'].append(f'Skipped …{phone[-4:]} (asked not to be messaged)');continue
+   if STORE and STORE.get('dm_recipient_'+digest) and not p.get('again'):c['skipped']+=1;c['log'].append(f'Skipped …{phone[-4:]} (already messaged)');continue
    if not wa_ok():c['log'].append('WhatsApp disconnected. Stopped.');return
    base=dm_text(name,p['tier']) if p.get('tier') else (build_dm([_random.randrange(len(a)) for a in DP],read_left()) if (vary or not message) else message)
-   text=greet_text(base,name,gender);c['current']=f'Sending to {(name+" ") if name else ""}{gender} ΓÇª{phone[-4:]}'
+   text=greet_text(base,name,gender);c['current']=f'Sending to {(name+" ") if name else ""}{gender} …{phone[-4:]}'
    if STORE:STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':time.time()})
    r=send_with_image(phone,text,img)
    if STORE:STORE.put('dm_recipient_'+digest,{'state':r.get('code','UNCERTAIN'),'time':time.time()})
    if r.get('code')!='SUCCESS':
-    c['failed']+=1;c['log'].append(f'Failed ΓÇª{phone[-4:]}: {str(r.get("message",""))[:80]}. Stopped to protect your number.');return
-   c['sent']+=1;note_dm(phone);c['log'].append(f'Γ£ô {(name+" ") if name else ""}{gender} ΓÇª{phone[-4:]}')
+    c['failed']+=1;c['log'].append(f'Failed …{phone[-4:]}: {str(r.get("message",""))[:80]}. Stopped to protect your number.');return
+   c['sent']+=1;note_dm(phone);c['log'].append(f'✓ {(name+" ") if name else ""}{gender} …{phone[-4:]}')
    if i<len(people)-1:
     wait=_random.uniform(gap,gap*1.25)
     if rest_every and c['sent']%rest_every==0:wait=max(wait,rest_minutes*60);c['log'].append(f'Resting {rest_minutes} min after {c["sent"]} messages')
@@ -688,18 +688,18 @@ if STORE:
 RECENT_LOCAL=[]
 
 def thank_text():
- return ('JazakAllah ≡ƒñ▓ May Allah reward you and your family.\n\n'
+ return ('JazakAllah 🤲 May Allah reward you and your family.\n\n'
   "One more favour: please share Yousuf's poster on your WhatsApp status and in your family groups. "
   'Every share reaches someone who can help.\n- GiveLife Foundation')
 
 def share_text():
  left=read_left()
- return (f"*Rs. {left:,} is still left for Yousuf.* ≡ƒÆö\n\nIf you cannot donate right now, you can still help: "
-  "*share this poster on your WhatsApp status* and send it to 3 friends today. Sharing costs nothing and reaches new donors. ≡ƒñ▓\n\n"
+ return (f"*Rs. {left:,} is still left for Yousuf.* 💔\n\nIf you cannot donate right now, you can still help: "
+  "*share this poster on your WhatsApp status* and send it to 3 friends today. Sharing costs nothing and reaches new donors. 🤲\n\n"
   "*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n- GiveLife Foundation")
 
 def done_text():
- return ('Alhamdulillah. The amount for Yousuf\'s treatment is complete. ≡ƒñ▓\n\n'
+ return ('Alhamdulillah. The amount for Yousuf\'s treatment is complete. 🤲\n\n'
   'JazakAllah to everyone who donated, shared and prayed. May Allah reward you all.\n- GiveLife Foundation')
 
 def sender_phone(m):
@@ -767,12 +767,12 @@ def goal_value():
 def update_text(came,left):
  """U1-STRESS from the message bank: money came, but no celebration."""
  p2=math.ceil(left/2000)
- return (f'≡ƒö┤ *Rs. {came:,} came in. It is NOT enough.*\n\nΓÜá∩╕Å Fluid in Yousuf\'s brain *can still paralyse his body and damage his eyesight.* Both his kidneys are still badly swollen.\n\n'
-  f'≡ƒÆ░ *Rs. {left:,} still LEFT*\n*{p2} people x Rs. 2,000 ΓÇö he needs you now*\n\n*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\nReply *Done* after you donate.\n- GiveLife Foundation')
+ return (f'🔴 *Rs. {came:,} came in. It is NOT enough.*\n\n⚠️ Fluid in Yousuf\'s brain *can still paralyse his body and damage his eyesight.* Both his kidneys are still badly swollen.\n\n'
+  f'💰 *Rs. {left:,} still LEFT*\n*{p2} people x Rs. 2,000 — he needs you now*\n\n*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\nReply *Done* after you donate.\n- GiveLife Foundation')
 
 def milestone_text(raised,left):
  p2,p1=math.ceil(left/2000),math.ceil(left/1000)
- return (f'*Rs. {raised:,} has been raised for Yousuf. Rs. {left:,} is still missing.* ≡ƒÆö\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* ≡ƒñ▓\n\n'
+ return (f'*Rs. {raised:,} has been raised for Yousuf. Rs. {left:,} is still missing.* 💔\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n\n'
   '*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation')
 
 def job_message():
@@ -1016,7 +1016,7 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
    try:
     if name=='send_appeal':result=send_appeal(args.get('target'),(task_id+'-'+hashlib.sha256(cache_key.encode()).hexdigest()[:16]) if task_id else None)
     elif name=='send_message':
-     literal=bool(re.search(r'["ΓÇ£\']'+re.escape(str(args.get('text','')))+r'["ΓÇ¥\']',prompt))
+     literal=bool(re.search(r'["“\']'+re.escape(str(args.get('text','')))+r'["”\']',prompt))
      target=resolve_person(args.get('to',''))
      # The model selects recipients; the stored template supplies fundraising captions.
      appeal=not literal and not str(target).endswith('@g.us') and target not in GROUPS and target not in ('test','all','free') and (args.get('with_picture') or re.search(r'(?i)\b(dm|appeal|donation|poster|structure)\b',prompt) or re.search(r'(?i)Yous[au]f|03097458815',str(args.get('text',''))))
@@ -1070,7 +1070,7 @@ def edit_donation_order():
   lines=text.split('\n');indices=[i for i,line in enumerate(lines) if re.search(r'(?i)people|donat|giving|give ',line) and re.search(r'(?:1[ ,]?000|2[ ,]?000)',line)]
   if indices:
    first,last=min(indices),max(indices)
-   replacement=[f'*_{math.ceil(left/2000)} people donating Rs. 2,000_*',f'*_OR {math.ceil(left/1000)} people donating Rs. 1,000_* ≡ƒñ▓']
+   replacement=[f'*_{math.ceil(left/2000)} people donating Rs. 2,000_*',f'*_OR {math.ceil(left/1000)} people donating Rs. 1,000_* 🤲']
    lines[first:last+1]=replacement;updated[kind]='\n'.join(lines)
   else:updated[kind]=text
  with LOCK:

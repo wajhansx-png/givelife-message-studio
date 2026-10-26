@@ -315,6 +315,11 @@ $('suggDo').onclick=async()=>{if(!sug)return;const s=sug;dismiss(s.action==='own
 
 $('moreG').onclick=()=>{const c=$('chips'),open=c.hidden;c.hidden=!open;document.body.classList.toggle('more-open',open);$('moreG').setAttribute('aria-expanded',String(open));requestAnimationFrame(fit)};
 
+/* ---- no internet: the page still opens, shows the last message, and says Auto keeps running on the server ---- */
+function netBanner(){const off=!navigator.onLine;$('offline').hidden=!off;document.body.classList.toggle('isoffline',off)}
+addEventListener('online',()=>{netBanner();pollAuto();syncChat()});addEventListener('offline',netBanner);netBanner();
+const cached=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('givelife-c-'+k)||'null');localStorage.setItem('givelife-c-'+k,JSON.stringify(v))}catch(e){return null}};
+
 /* ---- hide the message to work only with the buttons and chat ---- */
 function setNoMsg(on){if(editing)setEditing(false);document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;try{localStorage.setItem('givelife-nomsg',on?'1':'')}catch(e){}if(!on){requestAnimationFrame(fit);flip()}}
 $('hideMsg').onclick=e=>{e.stopPropagation();setNoMsg(true)};$('showMsg').onclick=()=>setNoMsg(false);
@@ -349,8 +354,8 @@ document.addEventListener('keydown',e=>{
 /* ---- start ---- */
 setView(localStorage.getItem('givelife-view')==='dm'?'dm':'group');
 seenAuto=Number(localStorage.getItem('givelife-seen-auto')||0);addEventListener('beforeunload',()=>localStorage.setItem('givelife-seen-auto',String(seenAuto)));
-fetch('/drafts').then(r=>r.json()).then(d=>{applyDrafts(d);status('✓ Ready')}).catch(()=>status('Could not load',1));
-fetch('/left').then(r=>r.json()).then(d=>{left=d.left;showLeft()}).catch(()=>{});
+fetch('/drafts').then(r=>r.json()).then(d=>{cached('drafts',d);applyDrafts(d);status('✓ Ready')}).catch(()=>{const d=cached('drafts');if(d){applyDrafts(d);status('Offline · showing the last saved message',1)}else status('Could not load',1)});
+fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false}}).catch(()=>{});
 pollAuto();setInterval(pollAuto,10000);pollSuggestions();setInterval(pollSuggestions,60000);pollCamp();
 

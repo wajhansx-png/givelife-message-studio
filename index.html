@@ -297,9 +297,12 @@ dialog.set{border-radius:var(--r3);width:min(460px,calc(100vw - 24px));padding:0
  .hidebtn{min-height:44px}
 }
 @media(max-width:899px) and (max-height:760px){.hidebtn{min-height:40px}}
+.offline{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:var(--r2);background:var(--wbg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);font-size:13.5px;line-height:1.35;animation:drop .25s var(--ease)}
+.isoffline .big,.isoffline .chips button,.isoffline #sendDm,.isoffline .composer .go{opacity:.5}
 </style></head>
 <body data-view="group">
 <div class="app">
+ <div class="offline" id="offline" role="status" hidden><b>No internet.</b> Auto keeps running on the server. Sending works again when you are back online.</div>
  <header class="brandbar">
   <div class="brand"><div class="mark" aria-hidden="true">♡</div><div class="bname">GiveLife<small>Foundation studio</small></div></div>
   <div class="seg" role="tablist" aria-label="Message type"><button data-view-button="group" aria-pressed="true" title="Group message (G)">Group</button><button data-view-button="dm" aria-pressed="false" title="Direct message (D)">DM</button></div>

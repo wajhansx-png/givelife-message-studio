@@ -98,3 +98,4 @@
 - While the owner's own DM list is sending, Auto does not send its own DMs.
 - Chat: small talk gets a short friendly answer in his language; no donation push unless he asks about work.
 - Screen: Settings has Appearance (Auto / Light / Dark). Auto follows the phone. The moon button on desktop switches quickly.
+- Unattended: Auto runs on the server, not on the owner's phone, so his internet does not matter. If WhatsApp drops, Auto tries to reconnect every 3 minutes and only alerts the owner after 15 minutes. Auto stays ON after a server restart. The server pings itself every 10 minutes so the free cloud does not sleep.

@@ -163,7 +163,22 @@ class Engine:
         elif self.level()[0] != 'L4':
             self.s['l4_told'] = False
         if not self.h['wa_ok']():
-            return self.notify('wa', 'WhatsApp is disconnected. Open the studio and link WhatsApp again. Nothing is being sent.', 3 * 3600)
+            # try to fix it alone first; only bother the owner if it stays down
+            if not self.s.get('wa_down_since'):
+                self.s['wa_down_since'] = now()
+            down = self.s['wa_down_since']
+            if now() - self.s.get('wa_try', 0) >= 180 and 'wa_reconnect' in self.h:
+                self.s['wa_try'] = now()
+                try:
+                    self.h['wa_reconnect']()
+                except Exception:
+                    pass
+            if not self.h['wa_ok']():
+                if now() - down >= 900:
+                    self.notify('wa', 'WhatsApp has been disconnected for 15 minutes and I could not reconnect it. Open the studio and link WhatsApp again. Nothing is being sent.', 3 * 3600)
+                return
+            self.log('WhatsApp was disconnected and I reconnected it myself.')
+        self.s['wa_down_since'] = 0
         if left <= 0:
             if not self.s.get('d1_done'):
                 self.s['d1_done'] = True

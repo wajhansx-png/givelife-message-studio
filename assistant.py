@@ -135,7 +135,12 @@ AUTO_TOOLS = SETTING_TOOLS + [
 
 
 def _system(memory):
-    rules = '\n'.join(f'- {m["rule"]}' for m in memory) or '- (none yet)'
+    lines = []
+    for m in memory if isinstance(memory, list) else []:
+        rule = m.get('rule') if isinstance(m, dict) else m
+        if rule:
+            lines.append(f'- {rule}')
+    rules = '\n'.join(lines) or '- (none yet)'
     return SYSTEM + '\n\nPLAYBOOK:\n' + playbook() + '\n\nSAVED RULES FROM THE OWNER:\n' + rules
 
 
@@ -152,16 +157,34 @@ def _chat_raw(key, system, tools, messages):
             data = json.load(r)
     except urllib.error.HTTPError as e:
         raise RuntimeError(f'DeepSeek returned {e.code}' + (' (check the API key)' if e.code in (401, 403) else ''))
-    return (data.get('choices') or [{}])[0].get('message') or {}
+    choices = data.get('choices') if isinstance(data, dict) else None
+    first = choices[0] if isinstance(choices, list) and choices else {}
+    msg = first.get('message') if isinstance(first, dict) else first
+    if isinstance(msg, dict):
+        return msg
+    if isinstance(msg, str):
+        return {'content': msg}
+    return {}
 
 
 def _parse_calls(msg):
     calls = []
-    for tc in msg.get('tool_calls') or []:
+    raw = msg.get('tool_calls') if isinstance(msg, dict) else None
+    if isinstance(raw, dict):
+        raw = list(raw.values())
+    for tc in raw if isinstance(raw, list) else []:
+        if not isinstance(tc, dict):
+            continue
         fn = tc.get('function') or {}
-        try:
-            args = json.loads(fn.get('arguments') or '{}')
-        except json.JSONDecodeError:
+        if not isinstance(fn, dict):
+            continue
+        args = fn.get('arguments') or '{}'
+        if isinstance(args, str):
+            try:
+                args = json.loads(args)
+            except json.JSONDecodeError:
+                continue
+        if not isinstance(args, dict):
             continue
         calls.append((tc.get('id'), fn.get('name'), args))
     return calls
@@ -178,10 +201,15 @@ SCREEN_ACTIONS = ('prepare_dm',)
 
 def _slim(state):
     """Only what the model needs to decide; keeps the prompt (and the bill) small."""
-    eng = state.get('engine') or {}
+    eng = state.get('engine') if isinstance(state, dict) else None
+    if not isinstance(eng, dict):
+        eng = {}
+    screen = state.get('screen') if isinstance(state, dict) else None
+    if not isinstance(screen, dict):
+        screen = {}
     out = {'left': state.get('left'), 'wa': state.get('whatsapp'), 'auto': state.get('autopilot'), 'to': state.get('last_recipient'),
-           'pace': eng.get('pace'), 'idle_min': eng.get('minutes_since_money'), 'view': (state.get('screen') or {}).get('view'),
-           'drafts': state.get('drafts'), 'dm_form': (state.get('screen') or {}).get('dm'), 'recipient_names': state.get('recipient_names')}
+           'pace': eng.get('pace'), 'idle_min': eng.get('minutes_since_money'), 'view': screen.get('view'),
+           'drafts': state.get('drafts'), 'dm_form': screen.get('dm'), 'recipient_names': state.get('recipient_names')}
     act = state.get('recent_activity')
     if act:
         out['recent'] = [str(a)[:80] for a in act[-2:]]
@@ -195,7 +223,11 @@ def chat(text, history, state, memory, do):
     if key is None:
         return None
     msgs = []
+    if not isinstance(history, list):
+        history = []
     for h in history[-32:]:
+        if not isinstance(h, dict):
+            continue
         role = 'user' if h.get('who') == 'you' else 'assistant'
         t = str(h.get('text', ''))[:2000]
         if not t:

@@ -320,6 +320,9 @@ def chat_add(who,text,err=False,turn_id=None):
 def mem_get():
  try:
   old=memories(MEMORY.read_text(encoding='utf-8')) if MEMORY.exists() else []
+  engine=globals().get('ENGINE')
+  if engine:
+   old.extend({'rule':r['text'],'time':0} for r in engine.rules() if r.get('kind')=='note' and isinstance(r.get('text'),str) and re.search(r'(?i)\b(always|never|remember|from now|in future)\b',r['text']))
   KNOWLEDGE.import_legacy(old)
   known={e.get('text') for e in KNOWLEDGE.data['entries']}
   active=[{'rule':e['text'],'time':e.get('time',0),'source':e.get('source')} for e in KNOWLEDGE.data['entries'] if e.get('active')]

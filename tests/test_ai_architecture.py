@@ -161,6 +161,12 @@ class ServerAuditTests(unittest.TestCase):
  def test_forgetting_memory_removes_it_from_preferences(self):
   app.mem_add('Always keep paragraphs.');entry=app.KNOWLEDGE.summary()['entries'][0]
   app.KNOWLEDGE.forget(entry['id']);self.assertFalse(any(m['rule']=='Always keep paragraphs.' for m in app.mem_get()))
+ def test_explicit_legacy_owner_notes_join_memory_but_current_edits_do_not(self):
+  before=copy.deepcopy(app.ENGINE.s.get('rules',[]))
+  try:
+   app.ENGINE.s['rules']=[{'kind':'note','text':'Always put 2000 before 1000.','id':1},{'kind':'note','text':'dont write this much came in delete','id':2}]
+   prefs=app.mem_get();self.assertTrue(any('2000' in x['rule'] for x in prefs));self.assertFalse(any('came in' in x['rule'] for x in prefs))
+  finally:app.ENGINE.s['rules']=before
  def test_pending_recipient_selection_survives_restore(self):
   candidates=[{'id':'923001234567@s.whatsapp.net','name':'Ali One','group':False},{'id':'923009876543@s.whatsapp.net','name':'Ali Two','group':False}]
   with patch.object(app,'find_data',return_value=(candidates,2)):

@@ -179,6 +179,10 @@ async function quick(t){const low=t.toLowerCase();let m;
  if(/^(normal|default) (pace|speed)$/.test(low)){const r=await post('/autopilot-settings',{action:'pace',main:0,freelance:0}),d=await r.json();return d.reply}
  if(/\b(make|use|set)\b.*\bposter\b|^poster$/i.test(t)&&attached){const r=await post('/upload-image',{data:attached.data,use:'poster'}),d=await r.json();if(!r.ok)throw Error(d.error);
   $('poster').src=attached.url;$('poster').hidden=false;clearAttachment();return 'Done. This picture is now the poster for group posts and DMs.'}
+ if(/^(hi+|hello|hey|salam|assalam[\w\s-]*|ok|okay|thanks|thank you|shukriya|jazakallah)\W*$/i.test(t))return /^(thanks|thank you|shukriya|jazakallah)/i.test(t)?'Anytime.':'Hi. What should I do?';
+ const BATCH=async b=>{const r=await post('/dm-batch',b),d=await r.json();if(!r.ok)throw Error(d.error||'Could not start');return d.reply};
+ if(m=t.match(/^(?:send\s+)?(?:(\d+)\s+)?(?:dms?|messages?)\s+(?:to\s+)?(?:(\d+)\s+)?(?:my\s+|our\s+|the\s+|past\s+|old\s+|existing\s+)*donors?$/i))return await BATCH({kind:'donors',count:+(m[1]||m[2]||10)});
+ if(m=t.match(/^(?:send\s+)?(?:(\d+)\s+)?(?:dms?|messages?)\s+(?:to\s+)?(?:(\d+)\s+)?(?:members?\s+|people\s+|persons\s+)?(?:of|from|in)\s+(?:the\s+)?(.+?)(?:\s+group)?$/i)){const g=GKEY(m[3]);if(g&&g!=='test')return await BATCH({kind:'group',group:g,count:+(m[1]||m[2]||10)})}
  const TIMED=/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\bat\s+\d{1,2}\b|\b(daily|every day|every \d+)\b/i;
  if((m=t.match(/^(?:send|bhejo|message|msg|text)\s+(.+?)\s+(?:to|ko)\s+(.+)$/i))&&!/^(all|main|free|test|these|them|this|it|the (?:appeal|poster|message))\b/i.test(m[1])&&!TIMED.test(t)){
   return await sendTo(m[2].trim(),m[1].replace(/^["“'](.*)["”']$/,'$1'))}
@@ -238,7 +242,7 @@ $('cmd').addEventListener('focus',()=>{if(isPhone()){$('cmd').blur();openChat()}
 let aiAvailable=false;
 function paintAuto(on){autoOn=!!on;$('auto').setAttribute('aria-pressed',String(autoOn));$('auto').querySelector('.lbl').textContent=autoOn?'ON':'OFF';$('live').dataset.on=autoOn?'1':'0';
  if(!autoOn){$('liveNow').textContent='Auto is off';$('liveMeta').textContent='Switch on: runs 24 hours';$('liveMore').hidden=true;$('liveBar').setAttribute('aria-expanded','false')}
- const ph=autoOn?'Auto is on · give me rules: "fiverr every 30 min"':'Reply to GiveLife… 34k left · came 2000';$('cmd').placeholder=ph;$('histCmd').placeholder=autoOn?'Auto is on · give me rules or tasks…':'Reply to GiveLife…'}
+ const ph=autoOn?'Auto is on · tell me rules…':'Message GiveLife…';$('cmd').placeholder=ph;$('histCmd').placeholder=autoOn?'Auto is on · tell me rules…':'Reply to GiveLife…'}
 async function toggleAuto(on){const r=await post('/autopilot',{on}),d=await r.json();paintAuto(d.on);say(d.on||!on?'auto':'app',d.reply,!d.on&&on);if(d.on)pollAuto()}
 $('auto').onclick=()=>toggleAuto(!autoOn).catch(e=>say('app',e.message,1));
 async function pollAuto(){try{const d=await (await fetch('/autopilot')).json();aiAvailable=!!d.ai;paintAuto(d.on);paintLive(d.status);for(const x of d.log||[]){if(x.time*1000>seenAuto){seenAuto=x.time*1000;if(!x.q&&x.time*1000>Date.now()-15*60000)say('auto',x.text)}}}catch(e){}}

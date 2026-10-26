@@ -90,3 +90,4 @@
 - Milestone posts at 25/50/75/90% raised, once each. Goal reached: sends the final thanks and stops.
 - The owner is messaged only when he must act (new poster, WhatsApp down, long drought, complaints), at most once a day for the same thing.
 - Screen: the live box under the top bar says what Auto is doing now and what is next. Settings (gear): Test AI, DM sources, Log out WhatsApp.
+- DM modes: 'DM donors' = contacts saved with 'donor' in the name plus past donors (JazakAllah + one more time). 'Send N to members of <group>' = N members of that group, new wording each. A pasted list of numbers = exactly those people. Never mix them.

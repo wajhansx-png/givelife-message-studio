@@ -225,6 +225,7 @@ def auto_on():
  return bool(json.loads(AUTO.read_text()).get('on')) if AUTO.exists() else False
 
 def set_auto(on):
+ if on and not auto_on():ENGINE.activated()
  AUTO.write_text(json.dumps({'on':bool(on),'since':time.time()}));persist_file('autopilot',AUTO)
  auto_log('Autopilot turned '+('ON' if on else 'OFF')+'.');return ('Autopilot is on. I will post on schedule, watch replies, DM donor contacts carefully and message you on WhatsApp when I need you.'+('' if assistant.client() else ' (AI key not set yet, so I follow the fixed playbook only.)')) if on else 'Autopilot is off.'
 
@@ -284,7 +285,7 @@ def start_group_job(key,caption):
  global ACTIVE
  with LOCK:
   if ACTIVE:return None
-  job_id=uuid.uuid4().hex;ACTIVE=job_id;JOBS[job_id]={'done':False,'results':[],'message':'Starting…'}
+  job_id=uuid.uuid4().hex;ACTIVE=job_id;LAST_JOB['id']=job_id;JOBS[job_id]={'done':False,'results':[],'message':'Starting…'}
  threading.Thread(target=run_job,args=(job_id,list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key],caption),daemon=True).start()
  return job_id
 
@@ -416,6 +417,7 @@ def chat_callbacks():
   'add_rule':lambda text:add_rule_text(text),
   'list_rules':lambda:'; '.join(f"#{r['id']} {r['text']}" for r in ENGINE.rule_list()) or 'No rules yet.',
   'delete_rule':lambda rule_id:('Rule removed.' if ENGINE.delete_rule(rule_id) else 'No such rule.'),
+  'dm_donors':lambda count=10:dm_batch_now('donors',count),'dm_group':lambda group,count=10:dm_batch_now('group',count,group),
   'dm_list':lambda people,gap_minutes,vary,start_after_minutes:start_campaign({'people':people,'gap_seconds':float(gap_minutes)*60,'vary':vary,'start_after_seconds':float(start_after_minutes)*60,'image':CHAT_IMAGE.get('id') or 'poster'})}
 
 
@@ -430,6 +432,13 @@ def last_sent_by_key():
  saved=dict(LAST_LOCAL)
  if STORE:saved.update(STORE.get('last_sent',{}))
  return {k:saved.get(v[1]) for k,v in GROUPS.items()}
+
+LAST_JOB={}
+def last_results():
+ j=JOBS.get(LAST_JOB.get('id'))
+ if not j or not j.get('done'):return []
+ names={v[0]:k for k,v in GROUPS.items()}
+ return [(names.get(r.get('group'),r.get('group')),r.get('code'),str(r.get('message',''))) for r in j['results']]
 
 def start_keys_job(keys,caption):
  global ACTIVE
@@ -455,7 +464,7 @@ def clean_first_name(name):
  return first.title() if re.fullmatch(r'[A-Za-z]{2,15}',first or '') else ''
 
 def dm_text(name,tier='member'):
- left=read_left();first=clean_first_name(name);who=(first+' ' if first else '')+('Sister' if first.lower() in FEMALE else 'Brother')
+ left=read_left();first=clean_first_name(re.sub(r'(?i)\bdonors?\b','',str(name or '')).strip());who=(first+' ' if first else '')+('Sister' if first.lower() in FEMALE else 'Brother')
  acct='📲 *03097458815* — Easypaisa / JazzCash\nWajdan Khan (GiveLife Foundation account)'
  if tier=='repeat':return f'{who}, JazakAllah for helping Yousuf before. 🤲\n\nRs. {left:,} is still needed for his treatment. Could you help once more, or share his poster with family and friends today?\n\n{acct}'
  if tier=='reminder':return f'{who}, a gentle reminder about Yousuf. 🤲\n\nRs. {left:,} is still needed for his treatment. If you have already sent it, JazakAllah. If not, whenever you can:\n\n{acct}\n\nReply *Done* after you donate.'
@@ -526,7 +535,7 @@ def dm_campaign(people,gap,image,vary,message,start_after,rest_every,rest_minute
    if digest in BLOCKED or (STORE and STORE.get('optout_'+digest)):c['skipped']+=1;c['log'].append(f'Skipped …{phone[-4:]} (asked not to be messaged)');continue
    if STORE and STORE.get('dm_recipient_'+digest) and not p.get('again'):c['skipped']+=1;c['log'].append(f'Skipped …{phone[-4:]} (already messaged)');continue
    if not wa_ok():c['log'].append('WhatsApp disconnected. Stopped.');return
-   base=build_dm([_random.randrange(len(a)) for a in DP],read_left()) if (vary or not message) else message
+   base=dm_text(name,p['tier']) if p.get('tier') else (build_dm([_random.randrange(len(a)) for a in DP],read_left()) if (vary or not message) else message)
    text=greet_text(base,name,gender);c['current']=f'Sending to {(name+" ") if name else ""}{gender} …{phone[-4:]}'
    if STORE:STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':time.time()})
    r=send_with_image(phone,text,img)
@@ -657,14 +666,62 @@ def recent_chats():
    if phone!=OWNER_PHONE and not PERSONAL.search(n['name']):out.append((phone,n['name']))
  return out[:40]
 
-def group_members():
- try:data=api('/group/participants?group_id='+urllib.parse.quote(GROUPS['main'][1],safe='')).get('results',{})
+def group_members(key='main'):
+ jid=GROUPS[key][1]
+ if jid in NEVER_GROUPS:return []
+ try:data=api('/group/participants?group_id='+urllib.parse.quote(jid,safe='')).get('results',{})
  except Exception:return []
  out=[]
  for p in (data.get('participants',[]) if isinstance(data,dict) else []):
   phone=str(p.get('phone_number') or '');name=str(p.get('display_name') or '')
   if phone.isdigit() and phone!=OWNER_PHONE and not PERSONAL.search(name):out.append((phone,name))
  return out
+
+DONOR_WORD=re.compile(r'(?i)\bdonors?\b')
+def donor_contacts():
+ """Existing donors: people saved in his phone with "donor" in the name, plus group members labelled donor."""
+ out=[];seen=set()
+ try:items=_items(api('/user/my/contacts'))
+ except Exception:items=[]
+ for it in items:
+  n=_norm_item(it)
+  if n and n['id'].endswith('@s.whatsapp.net') and DONOR_WORD.search(n['name']) and not PERSONAL.search(n['name']):
+   phone=n['id'].split('@')[0]
+   if phone!=OWNER_PHONE and phone not in seen:seen.add(phone);out.append((phone,n['name']))
+ for phone,name in group_members('main'):
+  if DONOR_WORD.search(name) and phone not in seen:seen.add(phone);out.append((phone,name))
+ return out
+
+def _batch_people(pairs,tier,count):
+ """Turn (phone,name) pairs into campaign people, skipping anyone who opted out or was messaged in the last 3 days."""
+ people=[]
+ for phone,name in pairs:
+  if len(people)>=count:break
+  d=hashlib.sha256((phone+'@s.whatsapp.net').encode()).hexdigest()
+  if d in BLOCKED or (STORE and STORE.get('optout_'+d)):continue
+  rec=STORE.get('dm_recipient_'+d) if STORE else None
+  again=False
+  if rec:
+   if tier=='repeat' and time.time()-float(rec.get('time',0))>3*86400:again=True
+   else:continue
+  first=clean_first_name(DONOR_WORD.sub('',str(name or '')).strip())
+  people.append({'phone':phone,'name':first,'gender':'Sister' if first.lower() in FEMALE else 'Brother','tier':tier,'again':again})
+ return people
+
+def dm_batch_now(kind,count=10,group='main'):
+ count=max(1,min(int(count or 10),50))
+ if kind=='donors':
+  pairs=donor_contacts()+learning_mod.repeat_donors(ENGINE.L)
+  pairs=list({p:(p,n) for p,n in pairs}.values());label='existing donors';tier='repeat'
+  if not pairs:return 'I found no contacts saved with "donor" in the name yet. Save donors like "Ali Donor" in your phone, or send me a list of numbers.'
+ else:
+  if group not in GROUPS:raise ValueError('Unknown group.')
+  pairs=group_members(group);_random.shuffle(pairs);label='members of '+GROUPS[group][0];tier='member'
+  if not pairs:return 'I could not read the members of '+GROUPS[group][0]+'. Check the linked WhatsApp number is in that group.'
+ people=_batch_people(pairs,tier,count)
+ if not people:return f'Everyone I found in {label} was already messaged recently or asked not to be.'
+ msg=start_campaign({'people':people,'gap_seconds':100,'vary':True,'image':'poster','rest_every':10,'rest_minutes':10})
+ return f'DMs to {len(people)} {label}. '+msg
 
 def outreach(caps):
  """Who to DM next, best first: past donors, donor-labelled contacts, group members, saved chats."""
@@ -679,8 +736,8 @@ def outreach(caps):
    seen.add(phone);picked.append((phone,name,tier));n+=1
  add('repeat',learning_mod.repeat_donors(ENGINE.L))
  members=group_members();_random.shuffle(members)
- add('donor',[(p,n) for p,n in members if 'donor' in n.lower()])
- add('member',[(p,n) for p,n in members if 'donor' not in n.lower()])
+ add('donor',donor_contacts())
+ add('member',[(p,n) for p,n in members if not DONOR_WORD.search(n)])
  chats=recent_chats();_random.shuffle(chats);add('saved',chats)
  return picked
 
@@ -697,7 +754,7 @@ def ai_test():
 ENGINE=autopilot.Engine({'DATA':DATA,'store_get':lambda k:STORE.get(k) if STORE else None,'persist':persist_file,'log':auto_log,
  'send_text':send_text,'owner_jid':lambda:OWNER_PHONE+'@s.whatsapp.net','enabled':auto_on,'read_left':read_left,'wa_ok':wa_ok,
  'busy':lambda:ACTIVE is not None,'last_sent':last_sent_by_key,'groups':lambda:list(GROUPS),'group_jids':lambda:{k:v[1] for k,v in GROUPS.items()},
- 'caption':lambda:json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),'start_job':start_keys_job,'messages':group_messages,
+ 'caption':lambda:json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),'start_job':start_keys_job,'last_results':last_results,'messages':group_messages,
  'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm,'caption_variant':caption_variant,'variant_count':variant_count,'variant_pool':variant_pool,'variant_names':variant_names,'goal':goal_value,'milestone_text':milestone_text,'job_message':job_message,'recent_chats':recent_chats,'outreach':outreach})
 
 def engine_do():
@@ -788,6 +845,9 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/next-message':self.reply({'message':next_message()})
   elif self.path=='/next-dm':self.reply({'message':next_dm()})
   elif self.path=='/memory':self.reply({'reply':mem_add(body.get('rule',''))})
+  elif self.path=='/dm-batch':
+   try:self.reply({'reply':dm_batch_now(body.get('kind','donors'),body.get('count',10),body.get('group','main'))})
+   except ValueError as e:self.reply({'error':str(e)},status=400)
   elif self.path=='/chat-log':chat_add(body.get('who'),body.get('text',''),body.get('err'));self.reply({'ok':True})
   elif self.path=='/autopilot':self.reply({'reply':set_auto(bool(body.get('on'))),'on':auto_on()})
   elif self.path=='/upload-image':

@@ -18,10 +18,10 @@ TIER_CAPS = {'repeat': 10, 'donor': 15, 'member': 10, 'saved': 8}  # DMs per day
 DM_QUIET = (23, 8)                                                    # no DMs at night
 MILESTONES = (0.25, 0.5, 0.75, 0.9)
 
-DONE = re.compile(r"\b(done|sent|send kar diya|bhej diya|kar diya|transferred|paid|donated|jazakallah)\b", re.I)
+DONE = re.compile(r"\b(done|sent|send kar diya|bhej diya|kar diya|transferred|paid|donated)\b", re.I)
 LATER = re.compile(r"\b(later|kal|tomorrow|baad mein|baad me|thori der|abhi nahi|not now|next week|salary|insha ?allah|will (?:try|do|send|donate))\b", re.I)
 PAPERS = re.compile(r"\b(real|fake|papers?|proof|reports?|documents?|verify|genuine|scam)\b", re.I)
-COMPLAINT = re.compile(r"\b(spam|stop posting|stop sending|remove (me|this)|not allowed|report(ed)?|admin|irrelevant|don'?t post)\b", re.I)
+COMPLAINT = re.compile(r"\b(spam\w*|stop (posting|sending|messaging|this)|too many (messages|posts)|remove (me|this)|not allowed|report(ed)?|admin|irrelevant|don'?t post|mute)\b", re.I)
 OPT_OUT = re.compile(r"\b(stop|unsubscribe|don'?t (message|msg|dm) me|not interested|block)\b", re.I)
 Q1 = 'Yes, medical papers are available. I will send them to you privately.'
 
@@ -87,6 +87,15 @@ class Engine:
     @property
     def L(self):
         return self.s.setdefault('learn', learning.new())
+
+    def activated(self):
+        """Auto was just switched on: start the clock fresh so old quiet time does not trigger the slowest pace."""
+        with self.lock:
+            self.s['started'] = now()
+            self.s['last_money'] = now()
+            self.s['l4_told'] = False
+            self.s['notified'] = {k: v for k, v in self.s['notified'].items() if now() - v < 3600}
+            self.save()
 
     def touch_owner(self):
         self.s['owner_seen'] = now()
@@ -210,9 +219,23 @@ class Engine:
         for r in reversed(self.rules()):
             if r['kind'] == 'gap' and self._matches(r['group'], key):
                 return r['minutes']
-        if pkt().hour in learning.hot_hours(self.L):
-            return max(15, int(default * 0.8))
-        return default
+        if self.s.get('pace_override'):
+            return default
+        mult = self.rhythm(key)[0]
+        if self.level()[0] == 'L4' and mult < 1:
+            mult = 1  # a long drought: never speed up, the groups are tired
+        return max(15 if key == 'main' else 30, int(default * mult))
+
+    def rhythm(self, key='main'):
+        """(gap multiplier, reason) for the hour of the day in Pakistan: people sleep at night, read most in the evening."""
+        hr = pkt().hour
+        if 1 <= hr < 7:
+            return (1.5 if key == 'main' else 2.0), 'Night: most people are asleep, so I post less often.'
+        if hr in learning.hot_hours(self.L):
+            return 0.8, 'Money usually comes around now, so I post a little more often.'
+        if 19 <= hr <= 22 or 12 <= hr <= 13:
+            return 0.85, 'Busy hour: many people are online, so I post a little more often.'
+        return 1.0, ''
 
     def blocked(self, key):
         hr = pkt().hour
@@ -245,9 +268,30 @@ class Engine:
         self.s['rules'] = [r for r in self.rules() if not r.get('done')]
 
     # ------------------------------------------------------------------ posting to the groups
+    def check_post_results(self):
+        """A group that keeps failing (not a member, removed) is paused instead of retried every minute."""
+        if not self.s.get('pending_post') or self.h['busy']():
+            return
+        self.s['pending_post'] = 0
+        fn = self.h.get('last_results')
+        fails = self.s.setdefault('post_fails', {})
+        for key, code, msg in (fn() if fn else []):
+            if code in ('SUCCESS', 'COOLDOWN'):
+                fails[key] = 0
+                continue
+            if 'disconnected' in str(msg).lower():
+                continue
+            fails[key] = fails.get(key, 0) + 1
+            if fails[key] >= 3:
+                fails[key] = 0
+                self.s['paused'][key] = now() + 6 * 3600
+                self.log(f'{key}: failed 3 times in a row ({str(msg)[:60]}). Paused for 6 hours.')
+                self.notify('fail-' + key, f'The {key} group keeps failing ({str(msg)[:90]}). I paused it for 6 hours and keep posting to the others. Check that the linked WhatsApp number is in that group.', 6 * 3600)
+
     def post_if_due(self):
         if self.quiet_now() or self.h['busy']():
             return
+        self.check_post_results()
         name, main_gap, free_gap, _ = self.level()
         last = self.h['last_sent']()
         keys = []
@@ -263,6 +307,7 @@ class Engine:
         variant = self._pick_variant()
         if self.h['start_job'](keys, self.h['caption_variant'](variant[1])):
             learning.record_post(self.L, variant[0])
+            self.s['pending_post'] = now()
             self.s['posts_today'] += len(keys)
             by = self.s.setdefault('posts_by', {})
             for k in keys:
@@ -522,14 +567,15 @@ class Engine:
         """What the owner would do next. With Auto on, the engine does the sending ones itself."""
         name, main_gap, free_gap, mins = self.level()
         out = []
+        ago = f'{round(mins)} min' if mins < 120 else f'{round(mins / 60)} h'
         last = self.h['last_sent']()
         due = [k for k in self.h['groups']() if not last.get(k) or (now() - last[k]) / 60 >= (main_gap if k == 'main' else free_gap)]
         if name != 'L1' and due:
-            out.append({'id': f'post-{int(mins // 30)}', 'level': name, 'action': 'send_all', 'short': f'Slow {round(mins)} min: post to groups',
-                        'text': f'No money for {round(mins)} min. Post a fresh message to the groups that are due ({len(due)}).'})
+            out.append({'id': f'post-{int(mins // 30)}', 'level': name, 'action': 'send_all', 'short': f'No money for {ago}: post now',
+                        'text': f'No money for {ago}. Post a fresh message to the groups that are due ({len(due)}).'})
         if name in VERY_SLOW and self.s.get('dm_enabled') and self.s['dms_today'] < self.s['dm_daily'] and not self.dm_running:
             out.append({'id': f'dm-{int(mins // 45)}', 'level': name, 'action': 'dm_batch', 'short': 'DM 5 people who may help',
-                        'text': f'Still slow ({round(mins)} min). DM 5 people (past donors first) with the poster, about 2 minutes apart.'})
+                        'text': f'Still slow ({ago}). DM 5 people (past donors first) with the poster, about 2 minutes apart.'})
         if name in VERY_SLOW and self.s['posts_today'] >= 3:
             out.append({'id': f'photo-{self.s["day"]}', 'level': name, 'action': 'owner', 'short': 'Ask the family for a new photo',
                         'text': 'Several posts and no money. A new photo or an update from the family usually helps. Ask them for one.'})
@@ -589,7 +635,7 @@ class Engine:
             left_min = 0 if not last.get(key) else max(0, round(gap - (now() - last[key]) / 60))
             nxt.append({'group': key, 'in': left_min})
         nxt.sort(key=lambda x: x['in'])
-        return {'now': now_text, 'pace': name, 'next': nxt[:3], 'away_hours': round(self.away_hours(), 1),
+        return {'now': now_text, 'pace': name, 'why': self.rhythm()[1], 'next': nxt[:3], 'away_hours': round(self.away_hours(), 1),
                 'today': {'posts': self.s['posts_today'], 'dms': self.s['dms_today'], 'signals': self.s['done_today']},
                 'learned': learning.insights(self.L, self.h.get('variant_names', lambda: {})())}
 

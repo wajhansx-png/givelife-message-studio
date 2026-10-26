@@ -27,6 +27,8 @@ When he says "hi" or chats casually, answer like a person in one friendly line a
 
 MEMORY: the conversation above is the whole record of everything he and you said and did, including sends the studio made for him ("Sent hi to Wifey"). Use it. Resolve "her", "him", "them", "that", "again", "the same" and names like "wife" from earlier turns, and screen_state.last_recipient. Never say you do not remember; read the earlier messages instead. If he says "Bot here" or similar right after you messaged someone, treat it as the next thing for that same conversation when it is clearly a message to send; otherwise answer him normally.
 
+DM ROUTING: "DM donors" / "send to donors" = dm_donors (only contacts saved as donors). "send 10/20 to members of <group>" = dm_group. A list of numbers he pastes = dm_list. Never mix these up.
+
 SENDING RULES (very important):
 - When he says "send", it sends NOW with send_message or send_appeal. Never ask him to tap Send, never say "ready on your screen", never use prepare_dm unless he says prepare/fill/check.
 - "send hi", "send ok", "send <text>" with no recipient means: send that text to screen_state.last_recipient (the person or group you just found or wrote to). Never use set_message for this. If there is no last_recipient, ask who. set_message is only for changing the stored appeal wording when he says "change the message to ...".
@@ -55,15 +57,8 @@ How the owner decides (act the same way):
 - "Real? / papers? / proof?": answer that medical papers are available privately, and tell the owner.
 - A complaint in a freelance group: stop posting there.
 - Any WhatsApp warning or failed send: stop sending and tell the owner.
-- Stay short. One or two sentences. Do the thing instead of describing it.
+- Stay short: one or two sentences, no lists. Greetings get a few words back, no status. Do the thing instead of describing it.
 - The screen state includes "suggestions" (what the engine thinks should happen next). If the owner asks "what now?", answer from them and offer to do it.
-
-Examples:
-Owner: "post in fiverr" -> call send(target="fiverr"), reply "Posting to Fiverr Course now."
-Owner: "35k" -> call set_left(35000), reply "Rs. 35,000 left. Messages updated."
-Owner: "donations slow, do something" -> call new_wording(kind="group") and send(target="all"), reply "Fresh message going to all 6 groups (3-second cancel on screen)."
-Owner: "never post in UET at night" -> call remember(...) and set_quiet_hours if it fits, reply "Saved. No UET posts at night."
-Owner: "stop fiverr for today" -> call pause_group(key="fiverr", hours=12), reply "Fiverr paused for 12 hours."
 
 The owner's playbook and saved rules follow. Treat them as the owner's standing instructions.
 """
@@ -109,6 +104,10 @@ CHAT_TOOLS += SETTING_TOOLS + [
           'gap_minutes': {'type': 'number'}, 'vary': {'type': 'boolean'}, 'start_after_minutes': {'type': 'number'}},
          ['people', 'gap_minutes', 'vary', 'start_after_minutes']),
 ]
+CHAT_TOOLS += [
+    tool('dm_donors', 'DM existing donors: contacts saved with "donor" in the name and past donors. Use when he says send DMs to donors (any count, default 10).', {'count': {'type': 'integer'}}, ['count']),
+    tool('dm_group', 'DM N members of one foundation group (poster + caption, new wording each). Use when he says "send 10 or 20 to members of <group>".', {'group': GROUP_ONLY, 'count': {'type': 'integer'}}, ['group', 'count']),
+]
 AUTO_TOOLS = SETTING_TOOLS + [
     tool('notify_owner', 'Send the owner a short WhatsApp note when he must act or decide.', {'text': {'type': 'string'}}, ['text']),
     tool('nothing', 'No change is needed.', {'reason': {'type': 'string'}}, ['reason']),
@@ -123,7 +122,7 @@ def _system(memory):
 def _chat_raw(key, system, tools, messages):
     """One call to DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
     body = {'model': MODEL, 'messages': [{'role': 'system', 'content': system}] + messages,
-            'max_tokens': 2000, 'temperature': 0.4}
+            'max_tokens': 500, 'temperature': 0.3}
     if tools:
         body.update(tools=tools, tool_choice='auto')
     req = urllib.request.Request(API_URL, data=json.dumps(body).encode('utf-8'), method='POST',
@@ -157,6 +156,17 @@ def _call(key, system, tools, messages):
 SCREEN_ACTIONS = ('prepare_dm',)
 
 
+def _slim(state):
+    """Only what the model needs to decide; keeps the prompt (and the bill) small."""
+    eng = state.get('engine') or {}
+    out = {'left': state.get('left'), 'wa': state.get('whatsapp'), 'auto': state.get('autopilot'), 'to': state.get('last_recipient'),
+           'pace': eng.get('pace'), 'idle_min': eng.get('minutes_since_money'), 'view': (state.get('screen') or {}).get('view')}
+    act = state.get('recent_activity')
+    if act:
+        out['recent'] = [str(a)[:80] for a in act[-2:]]
+    return {k: v for k, v in out.items() if v not in (None, '', [], {})}
+
+
 def chat(text, history, state, memory, do):
     """Tool loop: the model can look things up (contacts), act, see the result, and keep going.
     `do` maps tool names to server callbacks. prepare_dm and send are carried out on the owner's screen."""
@@ -164,9 +174,9 @@ def chat(text, history, state, memory, do):
     if key is None:
         return None
     msgs = []
-    for h in history[-40:]:
+    for h in history[-16:]:
         role = 'user' if h.get('who') == 'you' else 'assistant'
-        t = str(h.get('text', ''))[:1500]
+        t = str(h.get('text', ''))[:500]
         if not t:
             continue
         if msgs and msgs[-1]['role'] == role:
@@ -176,7 +186,7 @@ def chat(text, history, state, memory, do):
     while msgs and msgs[0]['role'] != 'user':
         msgs.pop(0)
     now = datetime.datetime.now(PKT).strftime('%Y-%m-%d %H:%M')
-    stamped = f'[Now {now} PKT. Screen state: {json.dumps(state)}]\n{text}'
+    stamped = f'[{now} PKT. State: {json.dumps(_slim(state), separators=(",", ":"), ensure_ascii=False)}]\n{text}'
     if msgs and msgs[-1]['role'] == 'user':
         msgs[-1]['content'] += '\n' + stamped
     else:
@@ -185,7 +195,7 @@ def chat(text, history, state, memory, do):
     actions, done, reply = [], [], ''
     searched = False
     nudged = False
-    for _ in range(6):
+    for _ in range(4):
         msg = _chat_raw(key, system, CHAT_TOOLS, msgs)
         calls = _parse_calls(msg)
         reply = (msg.get('content') or '').strip()
@@ -212,7 +222,7 @@ def chat(text, history, state, memory, do):
             except Exception as e:
                 result = f'Failed: {e}'
                 done.append(f'Could not {name}: {e}')
-            msgs.append({'role': 'tool', 'tool_call_id': call_id, 'content': result[:3000]})
+            msgs.append({'role': 'tool', 'tool_call_id': call_id, 'content': result[:700]})
     if not reply:
         reply = ' '.join(d for d in done[-3:] if d) or ('Started on your screen.' if actions else 'Done.')
     return {'reply': reply, 'actions': actions, 'done': done}
@@ -233,7 +243,7 @@ class Autopilot:
         while True:
             time.sleep(60)
             try:
-                if self.enabled_fn() and time.time() - self.last >= 1800:
+                if self.enabled_fn() and time.time() - self.last >= 10800:
                     self.last = time.time()
                     self.step()
             except Exception as e:
@@ -243,6 +253,8 @@ class Autopilot:
         key = client()
         if key is None:
             return  # without the AI, the engine follows the fixed playbook only
+        if not self.memory_fn():
+            return  # nothing saved to enforce, so no AI call is needed
         state = self.state_fn()
         now = datetime.datetime.now(PKT).strftime('%Y-%m-%d %H:%M')
         prompt = (f'[Autopilot review at {now} PKT]\nState: {json.dumps(state)}\n'

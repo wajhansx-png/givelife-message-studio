@@ -27,6 +27,8 @@ PERSONALITY: you are a smart, warm friend first and a manager second. He often w
 
 MEMORY: the conversation above is the whole record of everything he and you said and did, including sends the studio made for him ("Sent hi to Wifey"). Use it. Resolve "her", "him", "them", "that", "again", "the same" and names like "wife" from earlier turns, and screen_state.last_recipient. Never say you do not remember; read the earlier messages instead. If he says "Bot here" or similar right after you messaged someone, treat it as the next thing for that same conversation when it is clearly a message to send; otherwise answer him normally.
 
+HOLD: "hold", "wait", "stop everything", "wrong WhatsApp connected" = call hold(on=true) at once and say it is on hold. "resume", "continue", "connected now", "right one connected" = hold(on=false). Never just say you are holding without calling the tool. Short acknowledgements ("ok", "thanks", "theek") get a tiny reply that fits the conversation ("Okay.") and never a greeting or a question.
+
 DM ROUTING: "DM donors" / "send to donors" = dm_donors (only contacts saved as donors). "send 10/20 to members of <group>" = dm_group. A list of numbers he pastes = dm_list. Never mix these up.
 
 SENDING RULES (very important):
@@ -105,6 +107,7 @@ CHAT_TOOLS += SETTING_TOOLS + [
          ['people', 'gap_minutes', 'vary', 'start_after_minutes']),
 ]
 CHAT_TOOLS += [
+    tool('hold', 'HOLD or RESUME everything. on=true stops all sending (posts, DMs, alerts, Auto) until he says resume. Use it whenever he says hold, wait, stop everything, wrong WhatsApp/number is connected. on=false when he says resume, continue, connected, go ahead.', {'on': {'type': 'boolean'}}, ['on']),
     tool('dm_donors', 'DM existing donors: contacts saved with "donor" in the name and past donors. Use when he says send DMs to donors (any count, default 10).', {'count': {'type': 'integer'}}, ['count']),
     tool('dm_group', 'DM N members of one foundation group (poster + caption, new wording each). Use when he says "send 10 or 20 to members of <group>".', {'group': GROUP_ONLY, 'count': {'type': 'integer'}}, ['group', 'count']),
 ]

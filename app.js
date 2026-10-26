@@ -191,7 +191,9 @@ async function quick(t){const low=t.toLowerCase();let m;
  if(/^(normal|default) (pace|speed)$/.test(low)){const r=await post('/autopilot-settings',{action:'pace',main:0,freelance:0}),d=await r.json();return d.reply}
  if(/\b(make|use|set)\b.*\bposter\b|^poster$/i.test(t)&&attached){const r=await post('/upload-image',{data:attached.data,use:'poster'}),d=await r.json();if(!r.ok)throw Error(d.error);
   $('poster').src=attached.url;$('poster').hidden=false;clearAttachment();return 'Done. This picture is now the poster for group posts and DMs.'}
- if(/^(hi+|hello|hey|salam|assalam[\w\s-]*|ok|okay|thanks|thank you|shukriya|jazakallah)\W*$/i.test(t))return /^(thanks|thank you|shukriya|jazakallah)/i.test(t)?'Anytime.':'Hi. What should I do?';
+ if(/^(hi+|hello|hey|salam|assalam[\w\s-]*)\W*$/i.test(t)&&!/\b(on hold|hold)\b/i.test(history.slice(-3).map(h=>h.text).join(' ')))return 'Hi. What should I do?';
+ if(/^(hold|wait|hold on|hold everything|stop everything|pause everything)\W*$/i.test(t)){const r=await post('/hold',{on:true}),d=await r.json();return d.reply}
+ if(/^(resume|continue|go ahead|connected|release|unhold)\W*$/i.test(t)){const r=await post('/hold',{on:false}),d=await r.json();return d.reply}
  const BATCH=async b=>{const r=await post('/dm-batch',b),d=await r.json();if(!r.ok)throw Error(d.error||'Could not start');return d.reply};
  if(m=t.match(/^(?:send\s+)?(?:(\d+)\s+)?(?:dms?|messages?)\s+(?:to\s+)?(?:(\d+)\s+)?(?:my\s+|our\s+|the\s+|past\s+|old\s+|existing\s+)*donors?$/i))return await BATCH({kind:'donors',count:+(m[1]||m[2]||10)});
  if(m=t.match(/^(?:send\s+)?(?:(\d+)\s+)?(?:dms?|messages?)\s+(?:to\s+)?(?:(\d+)\s+)?(?:members?\s+|people\s+|persons\s+)?(?:of|from|in)\s+(?:the\s+)?(.+?)(?:\s+group)?$/i)){const g=GKEY(m[3]);if(g&&g!=='test')return await BATCH({kind:'group',group:g,count:+(m[1]||m[2]||10)})}

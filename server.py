@@ -138,6 +138,7 @@ def set_left(left):
   save_draft('group',g);save_draft('dm',d);return g,d
 
 def send_image(jid,caption,check_gap=False,_retry=True):
+ if on_hold():return {'code':'ERROR','message':'On hold: you told me to wait.'}
  if jid in NEVER_GROUPS:return {'code':'ERROR','message':'This group is never used.'}
  status=api('/devices/'+DEVICE+'/status').get('results',{})
  if not status.get('is_connected') or not status.get('is_logged_in'):return {'code':'ERROR','message':'WhatsApp disconnected. Log in again.'}
@@ -221,6 +222,34 @@ def mem_add(rule):
  if not rule:return 'Nothing to save.'
  m=mem_get();m.append({'rule':rule,'time':time.time()});MEMORY.write_text(json.dumps(m,ensure_ascii=False),encoding='utf-8');persist_file('memory',MEMORY)
  return 'Saved for the future: '+rule
+
+HOLD=DATA/'hold.json'
+if STORE:
+ _v=STORE.get('hold')
+ if _v:HOLD.write_text(_v if isinstance(_v,str) else json.dumps(_v),encoding='utf-8')
+
+def on_hold():
+ try:return bool(json.loads(HOLD.read_text(encoding='utf-8')).get('on')) if HOLD.exists() else False
+ except Exception:return False
+
+def check_hold():
+ if on_hold():raise ValueError('On hold: you told me to wait. Say "resume" when the right WhatsApp is connected.')
+
+def set_hold(on):
+ """Hold = nothing is sent anywhere (no posts, DMs, alerts) and Auto is paused until the owner says resume."""
+ on=bool(on);prev=json.loads(HOLD.read_text(encoding='utf-8')) if HOLD.exists() else {}
+ if on and not prev.get('on'):
+  was=auto_on();HOLD.write_text(json.dumps({'on':True,'was_auto':was,'since':time.time()}),encoding='utf-8')
+  CAMPAIGN['stop']=True
+  if was:AUTO.write_text(json.dumps({'on':False,'since':time.time()}));persist_file('autopilot',AUTO)
+  persist_file('hold',HOLD);auto_log('ON HOLD: all sending stopped until you say resume.')
+  return 'On hold. Nothing will be sent anywhere. Say "resume" when the right WhatsApp is connected.'
+ if not on and prev.get('on'):
+  HOLD.write_text(json.dumps({'on':False}),encoding='utf-8');persist_file('hold',HOLD)
+  if prev.get('was_auto'):set_auto(True)
+  auto_log('Hold released.')
+  return 'Hold released.'+(' Auto is back on.' if prev.get('was_auto') else '')
+ return 'Already on hold.' if on else 'Nothing was on hold.'
 
 def auto_on():
  return bool(json.loads(AUTO.read_text()).get('on')) if AUTO.exists() else False
@@ -336,6 +365,7 @@ def find_contacts(query):
 SEND_LOCK2=threading.Lock();LAST_FREE_SEND=[0]
 
 def send_free(to,text,with_picture):
+ check_hold()
  text=str(text).strip()
  if not text or len(text)>4000:raise ValueError('Message must be 1 to 4,000 characters.')
  to=str(to).strip()
@@ -418,7 +448,7 @@ def chat_callbacks():
   'add_rule':lambda text:add_rule_text(text),
   'list_rules':lambda:'; '.join(f"#{r['id']} {r['text']}" for r in ENGINE.rule_list()) or 'No rules yet.',
   'delete_rule':lambda rule_id:('Rule removed.' if ENGINE.delete_rule(rule_id) else 'No such rule.'),
-  'dm_donors':lambda count=10:dm_batch_now('donors',count),'dm_group':lambda group,count=10:dm_batch_now('group',count,group),
+  'hold':set_hold,'dm_donors':lambda count=10:dm_batch_now('donors',count),'dm_group':lambda group,count=10:dm_batch_now('group',count,group),
   'dm_list':lambda people,gap_minutes,vary,start_after_minutes:start_campaign({'people':people,'gap_seconds':float(gap_minutes)*60,'vary':vary,'start_after_seconds':float(start_after_minutes)*60,'image':CHAT_IMAGE.get('id') or 'poster'})}
 
 
@@ -426,6 +456,7 @@ import autopilot, learning as learning_mod, random as _random
 OWNER_PHONE=os.environ.get('OWNER_PHONE','923205069925')
 
 def send_text(jid,text):
+ check_hold()
  req=urllib.request.Request('http://127.0.0.1:3000/send/message',data=json.dumps({'phone':jid,'message':text}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
  with urllib.request.urlopen(req,timeout=40) as r:return json.load(r)
 
@@ -501,6 +532,7 @@ def image_path(image):
  p=ATT/(re.sub(r'[^a-f0-9]','',str(image))+'.jpg');return p if p.exists() else DATA/'poster.jpg'
 
 def send_with_image(jid,caption,img):
+ check_hold()
  if img is None:
   req=urllib.request.Request('http://127.0.0.1:3000/send/message',data=json.dumps({'phone':jid,'message':caption}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
   with urllib.request.urlopen(req,timeout=40) as r:return json.load(r)
@@ -763,7 +795,7 @@ ENGINE=autopilot.Engine({'DATA':DATA,'store_get':lambda k:STORE.get(k) if STORE 
  'send_text':send_text,'owner_jid':lambda:OWNER_PHONE+'@s.whatsapp.net','enabled':auto_on,'read_left':read_left,'wa_ok':wa_ok,
  'busy':lambda:ACTIVE is not None,'last_sent':last_sent_by_key,'groups':lambda:list(GROUPS),'group_jids':lambda:{k:v[1] for k,v in GROUPS.items()},
  'caption':lambda:json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),'start_job':start_keys_job,'last_results':last_results,'messages':group_messages,
- 'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm,'caption_variant':caption_variant,'variant_count':variant_count,'variant_pool':variant_pool,'variant_names':variant_names,'goal':goal_value,'milestone_text':milestone_text,'update_text':update_text,'wa_reconnect':lambda:api('/app/reconnect'),'dm_busy':lambda:bool(CAMPAIGN.get('running')),'job_message':job_message,'recent_chats':recent_chats,'outreach':outreach})
+ 'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm,'caption_variant':caption_variant,'variant_count':variant_count,'variant_pool':variant_pool,'variant_names':variant_names,'goal':goal_value,'milestone_text':milestone_text,'update_text':update_text,'wa_reconnect':lambda:api('/app/reconnect'),'on_hold':on_hold,'dm_busy':lambda:bool(CAMPAIGN.get('running')),'job_message':job_message,'recent_chats':recent_chats,'outreach':outreach})
 
 def engine_do():
  return {'set_pace':lambda main_minutes,freelance_minutes:ENGINE.set_pace(main_minutes,freelance_minutes),'pause_group':lambda key,hours:ENGINE.pause(key,hours),'resume_group':lambda key:ENGINE.resume(key),
@@ -801,7 +833,7 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/format.js':self.reply((ROOT/'format.js').read_bytes(),'application/javascript')
   elif self.path=='/app.js':self.reply((ROOT/'app.js').read_bytes(),'application/javascript')
   elif self.path=='/left':self.reply({'left':read_left()})
-  elif self.path.startswith('/autopilot'):self.reply({'on':auto_on(),'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':ENGINE.summary(),'status':ENGINE.status() if auto_on() else None})
+  elif self.path.startswith('/autopilot'):self.reply({'on':auto_on(),'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':ENGINE.summary(),'status':ENGINE.status() if auto_on() else None,'hold':on_hold()})
   elif self.path=='/memory':self.reply(mem_get())
   elif self.path=='/campaign':self.reply({**{k:v for k,v in CAMPAIGN.items() if k!='stop'},'log':CAMPAIGN['log'][-8:],'wait':max(0,round(CAMPAIGN['next_at']-time.time()))})
   elif self.path=='/rules':self.reply({'items':ENGINE.rule_list(),'autopilot':auto_on()})
@@ -853,6 +885,7 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/next-message':self.reply({'message':next_message()})
   elif self.path=='/next-dm':self.reply({'message':next_dm()})
   elif self.path=='/memory':self.reply({'reply':mem_add(body.get('rule',''))})
+  elif self.path=='/hold':self.reply({'reply':set_hold(body.get('on',True)),'hold':on_hold()})
   elif self.path=='/dm-batch':
    try:self.reply({'reply':dm_batch_now(body.get('kind','donors'),body.get('count',10),body.get('group','main'))})
    except ValueError as e:self.reply({'error':str(e)},status=400)

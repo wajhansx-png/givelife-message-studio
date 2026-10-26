@@ -142,6 +142,8 @@ class Engine:
                 return name, main_gap, free_gap, mins
 
     def tick(self):
+        if self.h.get('on_hold', lambda: False)():
+            return  # owner said hold: nothing is read, sent or alerted
         today = pkt().date().isoformat()
         if self.s['day'] != today:
             self.s.update(day=today, posts_today=0, dms_today=0, done_today=0, posts_by={}, dms_by_tier={})
@@ -664,7 +666,9 @@ class Engine:
     def status(self):
         """What the autopilot is doing right now and what comes next, for the live box on screen."""
         name, main_gap, free_gap, mins = self.level()
-        if not self.h['wa_ok']():
+        if self.h.get('on_hold', lambda: False)():
+            now_text = 'On hold: waiting for you to say resume'
+        elif not self.h['wa_ok']():
             now_text = 'Paused: WhatsApp is not connected'
         elif self.h['read_left']() <= 0:
             now_text = 'Goal complete. Nothing more to send'

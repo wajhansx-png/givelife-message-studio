@@ -22,6 +22,7 @@ DONE = re.compile(r"\b(done|sent|send kar diya|bhej diya|kar diya|transferred|pa
 LATER = re.compile(r"\b(later|kal|tomorrow|baad mein|baad me|thori der|abhi nahi|not now|next week|salary|insha ?allah|will (?:try|do|send|donate))\b", re.I)
 PAPERS = re.compile(r"\b(real|fake|papers?|proof|reports?|documents?|verify|genuine|scam)\b", re.I)
 COMPLAINT = re.compile(r"\b(spam\w*|stop (posting|sending|messaging|this)|too many (messages|posts)|remove (me|this)|not allowed|report(ed)?|admin|irrelevant|don'?t post|mute)\b", re.I)
+MONEY_HINT = re.compile(r"(?i)easypaisa|jazz ?cash|\brs\.?\s*\d|\d{3,}|donat|yousuf|givelife|03097458815")
 OPT_OUT = re.compile(r"\b(stop|unsubscribe|don'?t (message|msg|dm) me|not interested|block)\b", re.I)
 Q1 = 'Yes, medical papers are available. I will send them to you privately.'
 
@@ -94,6 +95,7 @@ class Engine:
             self.s['started'] = now()
             self.s['last_money'] = now()
             self.s['l4_told'] = False
+            self.s['last_scan'] = self.s['last_dm_scan'] = 0  # read replies on the first minute
             self.s['notified'] = {k: v for k, v in self.s['notified'].items() if now() - v < 3600}
             self.save()
 
@@ -148,6 +150,11 @@ class Engine:
         if prev is not None and left < prev:
             self.s['last_money'] = now()
             learning.credit_money(self.L)
+            came = prev - left
+            due = self.s.get('update_due') or {}
+            total = came + (due.get('came', 0) if due and now() - due.get('at', 0) < 5400 else 0)
+            if total >= 1500 and left > 0:  # owner's rule: money came -> stress update, never a celebration
+                self.s['update_due'] = {'came': total, 'at': now()}
             self.log(f'Money noticed: Rs. {prev - left:,}. Back to normal pace.')
         self.s['left_seen'] = left
         if self.level()[0] == 'L4' and not self.s.get('l4_told'):
@@ -172,6 +179,7 @@ class Engine:
         self.run_scheduled()
         self.run_followups()
         self.milestone_if_due(left)
+        self.update_if_due(left)
         self.post_if_due()
         self.share_if_due()
         self.dm_if_due()
@@ -335,6 +343,23 @@ class Engine:
             self.s['milestones'] = sorted(done | set(reached))
             self.log(f'Milestone: {int(top * 100)}% of the goal. Posted a progress update to the main group.')
 
+    def update_if_due(self, left):
+        """Post the U1-STRESS update in the main group once the 15-minute gap allows; drop it after 90 minutes."""
+        due = self.s.get('update_due')
+        if not due or 'update_text' not in self.h:
+            return
+        if now() - due['at'] > 5400:
+            self.s['update_due'] = None
+            return
+        if self.quiet_now() or self.h['busy']() or self.blocked('main'):
+            return
+        last = self.h['last_sent']().get('main')
+        if last and (now() - last) / 60 < 15:
+            return
+        if self.h['start_job'](['main'], self.h['update_text'](due['came'], left)):
+            self.s['update_due'] = None
+            self.log(f'Rs. {due["came"]:,} came: posted the update (not enough yet, Rs. {left:,} left) to the main group.')
+
     def share_if_due(self):
         if self.level()[0] not in VERY_SLOW or self.s.get('share_day') == self.s['day'] or self.quiet_now() or self.h['busy']():
             return
@@ -373,10 +398,17 @@ class Engine:
             sent = bool(phone) and self.h['send_papers'](phone)
             self._reply(jid, 'I have sent you the medical papers privately. 🤲' if sent else Q1)
             self.notify('papers-' + who, f'{who} asked "{text[:80]}" in {key}. ' + ('I sent the papers privately.' if sent else 'I said papers are available privately. Attach the papers in the studio ("these are the papers") so I can send them myself.'), 600)
-        elif DONE.search(text) or m.get('media_type') == 'image':
+        elif self._group_donation(key, text, m):
             self._donor_signal(phone, '', f'{who} posted "{text[:60] or "a picture"}" in {key}', m.get('id'))
         elif LATER.search(text) and phone:
             learning.add_followup(self.L, phone, '', learning.tomorrow_at(11))
+
+    @staticmethod
+    def _group_donation(key, text, m):
+        """Freelance groups are busy with other talk and pictures: there a donation needs a clear money word."""
+        if key == 'main':
+            return bool(DONE.search(text)) or m.get('media_type') == 'image'
+        return bool(DONE.search(text)) and bool(MONEY_HINT.search(text))
 
     def _donor_signal(self, phone, name, what, mid):
         """Someone says they donated: remember them, thank them privately, ask them to share, tell the owner."""
@@ -476,6 +508,8 @@ class Engine:
     def dm_if_due(self):
         if not self.s.get('dm_enabled') or self.dm_running or self._dm_quiet() or self.level()[0] not in VERY_SLOW:
             return
+        if self.h.get('dm_busy', lambda: False)():
+            return  # the owner's own DM list is sending; never double the rate
         if self.s['dms_today'] >= self.s['dm_daily'] or now() - self.s['last_dm_batch'] < 45 * 60:
             return
         self.s['last_dm_batch'] = now()

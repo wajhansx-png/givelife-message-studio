@@ -152,6 +152,7 @@ def send_image(jid,caption,check_gap=False,_retry=True):
    if age<900:return {'code':'COOLDOWN','message':f'Posted recently. Try in {math.ceil((900-age)/60)} min.'}
  cap=DATA/('caption-'+uuid.uuid4().hex+'.txt');cap.write_text(caption,encoding='utf-8')
  r=subprocess.run(['curl','-s','--max-time','40','-X','POST','http://127.0.0.1:3000/send/image','-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'image=@{DATA / "poster.jpg"};type=image/jpeg','-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
+ cap.unlink(missing_ok=True)
  try:result=json.loads(r.stdout)
  except Exception:result={'code':'ERROR','message':'Send not confirmed. Check WhatsApp before retrying.'}
  if STORE:
@@ -505,6 +506,7 @@ def send_with_image(jid,caption,img):
   with urllib.request.urlopen(req,timeout=40) as r:return json.load(r)
  cap=DATA/('caption-'+uuid.uuid4().hex+'.txt');cap.write_text(caption,encoding='utf-8')
  r=subprocess.run(['curl','-s','--max-time','60','-X','POST','http://127.0.0.1:3000/send/image','-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'image=@{img};type=image/jpeg','-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
+ cap.unlink(missing_ok=True)
  try:return json.loads(r.stdout)
  except Exception:return {'code':'ERROR','message':'Send not confirmed. Check WhatsApp before retrying.'}
 
@@ -646,6 +648,12 @@ def variant_names():
 def goal_value():
  m=re.search(r'^GOAL:\s*(\d+)',(DATA/'state.md').read_text(encoding='utf-8-sig'),re.M);return int(m[1]) if m else 0
 
+def update_text(came,left):
+ """U1-STRESS from the message bank: money came, but no celebration."""
+ p2=math.ceil(left/2000)
+ return (f'🔴 *Rs. {came:,} came in. It is NOT enough.*\n\n⚠️ Fluid in Yousuf\'s brain *can still paralyse his body and damage his eyesight.* Both his kidneys are still badly swollen.\n\n'
+  f'💰 *Rs. {left:,} still LEFT*\n*{p2} people x Rs. 2,000 — he needs you now*\n\n*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\nReply *Done* after you donate.\n- GiveLife Foundation')
+
 def milestone_text(raised,left):
  p2,p1=math.ceil(left/2000),math.ceil(left/1000)
  return (f'*Rs. {raised:,} has been raised for Yousuf. Rs. {left:,} is still missing.* 💔\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n\n'
@@ -755,7 +763,7 @@ ENGINE=autopilot.Engine({'DATA':DATA,'store_get':lambda k:STORE.get(k) if STORE 
  'send_text':send_text,'owner_jid':lambda:OWNER_PHONE+'@s.whatsapp.net','enabled':auto_on,'read_left':read_left,'wa_ok':wa_ok,
  'busy':lambda:ACTIVE is not None,'last_sent':last_sent_by_key,'groups':lambda:list(GROUPS),'group_jids':lambda:{k:v[1] for k,v in GROUPS.items()},
  'caption':lambda:json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),'start_job':start_keys_job,'last_results':last_results,'messages':group_messages,
- 'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm,'caption_variant':caption_variant,'variant_count':variant_count,'variant_pool':variant_pool,'variant_names':variant_names,'goal':goal_value,'milestone_text':milestone_text,'job_message':job_message,'recent_chats':recent_chats,'outreach':outreach})
+ 'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm,'caption_variant':caption_variant,'variant_count':variant_count,'variant_pool':variant_pool,'variant_names':variant_names,'goal':goal_value,'milestone_text':milestone_text,'update_text':update_text,'dm_busy':lambda:bool(CAMPAIGN.get('running')),'job_message':job_message,'recent_chats':recent_chats,'outreach':outreach})
 
 def engine_do():
  return {'set_pace':lambda main_minutes,freelance_minutes:ENGINE.set_pace(main_minutes,freelance_minutes),'pause_group':lambda key,hours:ENGINE.pause(key,hours),'resume_group':lambda key:ENGINE.resume(key),

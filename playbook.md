@@ -91,3 +91,9 @@
 - The owner is messaged only when he must act (new poster, WhatsApp down, long drought, complaints), at most once a day for the same thing.
 - Screen: the live box under the top bar says what Auto is doing now and what is next. Settings (gear): Test AI, DM sources, Log out WhatsApp.
 - DM modes: 'DM donors' = contacts saved with 'donor' in the name plus past donors (JazakAllah + one more time). 'Send N to members of <group>' = N members of that group, new wording each. A pasted list of numbers = exactly those people. Never mix them.
+- Money came (Rs. 1,500+): Auto posts the U1-STRESS update once in the main group ("Rs. X came in. It is NOT enough."), never a celebration. Several donations close together are added into one update.
+- Switching Auto on starts the clock fresh (normal pace), it does not jump to the slowest pace because Auto was off.
+- Freelance groups: a donation is only counted when the message has a money word (easypaisa, jazzcash, Rs, amount, donate); pictures there are ignored. Main group: "Done" or a picture counts.
+- "stop spamming", "too many messages", "mute" in a freelance group = complaint: Auto pauses that group 7 days and tells the owner.
+- While the owner's own DM list is sending, Auto does not send its own DMs.
+- Chat: small talk gets a short friendly answer in his language; no donation push unless he asks about work.

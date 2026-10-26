@@ -6,6 +6,9 @@ from state_shapes import mapping,memories,history as valid_history
 
 def context_messages(text,history,state,memory):
  import assistant
+ if chat_policy.smalltalk(text):
+  tone=[x for x in memories(memory) if re.search(r'(?i)language|english|urdu|natural|simple|short|friendly',x['rule'])][-5:]
+  return [{'role':'user','content':'Conversation data: '+json.dumps({'preferences':tone,'recent_smalltalk':[h for h in valid_history(history)[-12:] if chat_policy.smalltalk(h['text'])][-4:]},ensure_ascii=False)}, {'role':'user','content':safe_text(text,10000)}]
  state=mapping(state)
  # Historical instructions and retrieved material stay outside the system role.
  context={'state':assistant._slim(state),'preferences':memories(memory)[-20:],
@@ -34,7 +37,7 @@ def run_chat(text,history,state,memory,do):
  key=assistant.client()
  if key is None:return None
  msgs=context_messages(text,history,state,memory)
- tools=[t for t in assistant.CHAT_TOOLS if chat_policy.permitted(t['function']['name'],text)]
+ tools=[] if chat_policy.smalltalk(text) else [t for t in assistant.CHAT_TOOLS if chat_policy.permitted(t['function']['name'],text)]
  schemas={t['function']['name']:t['function']['parameters'] for t in tools}
  actions=[];done=[];jobs=[];outcomes=[];errors=[];cache={};started=time.monotonic();nudged=False;reply='';looked=False
  for iteration in range(8):

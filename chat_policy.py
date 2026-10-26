@@ -4,6 +4,9 @@ import manual_commands
 
 READ={'find_contact','recent_activity','list_rules','search_memory'}
 SEND={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
+def smalltalk(text):
+ t=re.sub(r'[^\w\s]','',str(text).casefold()).strip()
+ return bool(re.fullmatch(r'(?:hi+|hu|hey+|he+l+o+|yo+|salam|assalamualaikum|how (?:are|r) (?:you|u)|how are you doing|hows it going|everything good|good (?:morning|evening|night)|kya haal hai|kya hal hai|sab theek)',t))
 def owner_text(text):
  text=re.sub(r'```[\s\S]*?```',' [quoted data] ',str(text))
  text=re.sub(r'(?m)^\s*>.*$',' [quoted data] ',text)

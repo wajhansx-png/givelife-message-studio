@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-let draftSaved=null;
+let draftSaved=null,draftsReady=false,draftsLoad=null;
 let editing=false,left=null,timer,saveChain=Promise.resolve(),allT=null,autoOn=false,seenAuto=0;
 const view=()=>document.body.dataset.view,fmt=n=>Number(n).toLocaleString('en-US');
 const post=(url,body)=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
@@ -53,8 +53,10 @@ function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');
  for(let s=isPhone()?16:22;s>=11;s-=.5){m.style.fontSize=s+'px';if(m.scrollHeight<=chat.clientHeight-30)break}
  chat.style.overflowY=m.scrollHeight>chat.clientHeight-30?'auto':'hidden'}
 new ResizeObserver(()=>requestAnimationFrame(fit)).observe($('chat'));
-function save(){const data={group:$('group').value,dm:$('dm').value},payload=JSON.stringify(data);
+function save(){if(!draftsReady)return Promise.resolve();const data={group:$('group').value,dm:$('dm').value},payload=JSON.stringify(data);
  saveChain=saveChain.catch(()=>{}).then(async()=>{if(payload===draftSaved)return;const r=await post('/drafts',data);if(!r.ok)throw Error('Save failed');draftSaved=payload;status('✓ Saved')});return saveChain}
+async function ensureDrafts(){if(draftsReady)return;if(!draftsLoad)draftsLoad=fetch('/drafts').then(async r=>{if(!r.ok)throw Error('Could not load captions');const d=await r.json();if(typeof d.group!=='string'||typeof d.dm!=='string')throw Error('Saved captions are invalid');cached('drafts',d);applyDrafts(d)}).finally(()=>draftsLoad=null);return draftsLoad}
+async function ensureCaption(kind){await ensureDrafts();if(!$(kind)||!$(kind).value.trim())throw Error('The caption is empty. Use New or Edit to add it before sending.')}
 function saveSoon(){status('Saving…');clearTimeout(timer);timer=setTimeout(()=>save().catch(()=>status('Save failed',1)),300)}
 
 /* ---- edit in place ---- */
@@ -65,7 +67,7 @@ function ser(n){if(n.nodeType===3)return n.nodeValue;if(n.nodeName==='BR')return
  if(n.classList&&n.classList.contains('wa-list'))return '* '+inner.replace(/^•\s+/,'');
  if(t==='DIV'&&!(n.classList&&n.classList.contains('wa-line')))return '\n'+inner;return inner}
 function readPreview(k){return [...$(k+'Preview').children].map(d=>d.classList.contains('blank')&&!d.textContent.trim()?'':ser(d).replace(/\n$/,'')).join('\n').replace(/ /g,' ')}
-function setEditing(on,x,y){const k=view(),m=$(k+'Preview');if(on===editing)return;editing=on;
+function setEditing(on,x,y){if(on&&!draftsReady){status('Loading the saved captions…');return}const k=view(),m=$(k+'Preview');if(on===editing)return;editing=on;
  document.body.classList.toggle('editing',on);$('edit').textContent=on?'Done':'Edit';$('edit').classList.toggle('on',on);
  if(on){m.contentEditable='true';const r=x!=null&&document.caretRangeFromPoint?document.caretRangeFromPoint(x,y):null;m.focus();if(r){const s=getSelection();s.removeAllRanges();s.addRange(r)}status('Editing · Enter = done · Shift+Enter = new line')}
  else{m.contentEditable='false';$(k).value=readPreview(k);render();save().catch(()=>status('Save failed',1))}}
@@ -78,7 +80,7 @@ function setView(v){if(editing)setEditing(false);document.body.dataset.view=v;do
  $('ctx').textContent=v==='group'?'Group message · poster attached':'DM · poster attached';localStorage.setItem('givelife-view',v);requestAnimationFrame(fit);flip()}
 document.querySelectorAll('[data-view-button]').forEach(b=>b.onclick=()=>setView(b.dataset.viewButton));
 function showLeft(){const c=$('leftChip');c.textContent=left==null?'Rs. …':'Rs. '+fmt(left);const w=document.createElement('span');w.className='lw';w.textContent=' left';c.append(w)}
-function applyDrafts(d){if(d.dm_identity){$('dmName').value=d.dm_identity.name||'';$('dmPhone').value=d.dm_identity.phone||'';gender=d.dm_identity.gender==='Sister'?'Sister':'Brother';document.querySelectorAll('#gender button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===gender)))}if(d.group!=null||d.dm!=null)draftSaved=JSON.stringify({group:d.group??$('group').value,dm:d.dm??$('dm').value});if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
+function applyDrafts(d){if(typeof d.group==='string'&&typeof d.dm==='string')draftsReady=true;if(d.dm_identity){$('dmName').value=d.dm_identity.name||'';$('dmPhone').value=d.dm_identity.phone||'';gender=d.dm_identity.gender==='Sister'?'Sister':'Brother';document.querySelectorAll('#gender button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===gender)))}if(d.group!=null||d.dm!=null)draftSaved=JSON.stringify({group:d.group??$('group').value,dm:d.dm??$('dm').value});if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
 async function setLeft(n){if(editing)setEditing(false);const r=await post('/left',{left:n}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not update amount');applyDrafts(d);await save()}
 $('leftChip').onclick=()=>{const c=$('cmd');c.value='';c.placeholder='New amount left, e.g. 34000 or 34k';c.focus()};
 let gender='Brother';
@@ -92,7 +94,7 @@ document.querySelectorAll('#gender button').forEach(b=>b.onclick=()=>setGender(b
 $('dmName').addEventListener('input',()=>applyGreeting());
 
 /* ---- tools ---- */
-async function freshWording(){if(editing)setEditing(false);const k=view();clearTimeout(timer);await save();const r=await post(k==='group'?'/next-message':'/next-dm'),d=await r.json();$(k).value=d.message;if(k==='dm')applyGreeting(false);render();flip();await save()}
+async function freshWording(){await ensureDrafts();if(editing)setEditing(false);const k=view();clearTimeout(timer);await save();const r=await post(k==='group'?'/next-message':'/next-dm'),d=await r.json();$(k).value=d.message;if(k==='dm')applyGreeting(false);render();flip();await save()}
 $('fresh').onclick=async()=>{$('fresh').disabled=true;try{await freshWording();status('✓ New wording ready')}catch(e){status('Could not make new wording',1)}finally{$('fresh').disabled=false}};
 $('copy').onclick=async()=>{if(editing)setEditing(false);try{await navigator.clipboard.writeText($(view()).value);status('✓ Copied')}catch(e){status('Copy failed',1)}};
 
@@ -117,20 +119,20 @@ async function watchGroupJob(id,caption){
  }catch(e){say('app',e.message,1)}finally{watchingJobs.delete(id);busy(false);requestAnimationFrame(fit)}
 }
 async function sendGroup(key){if(editing)setEditing(false);if(!$('chips').hidden)$('moreG').click();busy(true);
- try{clearTimeout(timer);await save();const caption=$('group').value;$('groupStatus').textContent='Sending now…';
+ try{await ensureCaption('group');clearTimeout(timer);await save();const caption=$('group').value;$('groupStatus').textContent='Sending now…';
   const r=await post('/send-group',{group:key,message:caption,request_id:requestId()}),start=await r.json();if(!r.ok)throw Error(start.error||'Could not start');
   watchGroupJob(start.job_id,caption);
  }catch(e){$('groupStatus').textContent='✗ '+e.message;say('app',e.message,1)}finally{busy(false)}}
 document.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>sendGroup(b.dataset.group));
 function armAll(){return sendGroup('all')}
 $('sendAll').onclick=armAll;
-async function sendTest(kind){busy(true);try{clearTimeout(timer);await save();const r=await post('/test',{message:$(kind).value}),d=await r.json();say('app',d.code==='SUCCESS'?'✓ Sent to the test group.':'Test failed: '+(d.message||d.error||''),d.code!=='SUCCESS')}
+async function sendTest(kind){busy(true);try{await ensureCaption(kind);clearTimeout(timer);await save();const r=await post('/test',{message:$(kind).value}),d=await r.json();say('app',d.code==='SUCCESS'?'✓ Sent to the test group.':'Test failed: '+(d.message||d.error||''),d.code!=='SUCCESS')}
  catch(e){say('app',e.message||'Could not send',1)}finally{busy(false)}}
 document.querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>{if(editing)setEditing(false);sendTest(b.dataset.test)});
 function cleanPhone(p){p=p.replace(/[\s()+-]/g,'');if(p.startsWith('00'))p=p.slice(2);if(/^03\d{9}$/.test(p))p='92'+p.slice(1);return /^[1-9]\d{7,14}$/.test(p)?p:''}
 $('sendDm').onclick=async()=>{if(editing)setEditing(false);const phone=cleanPhone($('dmPhone').value);
  if(!phone){say('app','Enter a phone number first, e.g. 0300 1234567.',1);$('dmPhone').focus();return}
- busy(true);try{applyGreeting(false);clearTimeout(timer);await save();
+ busy(true);try{await ensureCaption('dm');applyGreeting(false);clearTimeout(timer);await save();
   const r=await post('/send-custom',{target:'phone',phone,message:$('dm').value,poster:true,kind:'dm_appeal',name:$('dmName').value,gender}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not send');
   if(d.code==='SUCCESS'){say('app','✓ DM sent to '+greet()+'. New wording is ready for the next person.');$('dmPhone').value='';$('dmName').value='';setGender('Brother');await freshWording()}
   else say('app','Not confirmed: '+(d.message||'')+' Check WhatsApp before retrying.',1)}
@@ -197,7 +199,7 @@ const num=(s,k)=>Math.round(parseFloat(s.replace(/,/g,''))*(k?1000:1));
 async function quick(t){const low=t.toLowerCase().trim();
  if(/^(hi+|hello|hey|salam)\W*$/i.test(t))return 'Hi!';
  if(/^(ok|okay|thanks|thank you|theek|done thanks)\W*$/i.test(t))return /thank/i.test(t)?'You’re welcome.':'Okay.';
- if(editing)setEditing(false);clearTimeout(timer);await save();
+ if(editing)setEditing(false);clearTimeout(timer);await ensureDrafts();await save();
  const response=await post('/command',{text:t,request_id:requestId()}),direct=await response.json();
  if(!response.ok)throw Error(direct.error||'Command failed. Nothing was retried.');
  if(direct.handled){applyDrafts(direct);if(direct.job_id)watchGroupJob(direct.job_id,direct.caption||$('group').value);return direct.reply}
@@ -339,7 +341,7 @@ document.addEventListener('keydown',e=>{
 /* ---- start ---- */
 setView(localStorage.getItem('givelife-view')==='dm'?'dm':'group');
 seenAuto=Number(localStorage.getItem('givelife-seen-auto')||0);addEventListener('beforeunload',()=>localStorage.setItem('givelife-seen-auto',String(seenAuto)));
-fetch('/drafts').then(r=>r.json()).then(d=>{cached('drafts',d);applyDrafts(d);status('✓ Ready')}).catch(()=>{const d=cached('drafts');if(d){applyDrafts(d);status('Offline · showing the last saved message',1)}else status('Could not load',1)});
+ensureDrafts().then(()=>status('✓ Ready')).catch(()=>{const d=cached('drafts');if(d){applyDrafts(d);status('Offline · showing the last saved message',1)}else status('Could not load',1)});
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false}}).catch(()=>{});
 pollAuto();setInterval(pollAuto,10000);pollSuggestions();setInterval(pollSuggestions,60000);pollCamp();

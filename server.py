@@ -320,6 +320,7 @@ def chat_add(who,text,err=False,turn_id=None):
 def mem_get():
  try:
   old=memories(MEMORY.read_text(encoding='utf-8')) if MEMORY.exists() else []
+  KNOWLEDGE.import_legacy(old)
   known={e.get('text') for e in KNOWLEDGE.data['entries']}
   active=[{'rule':e['text'],'time':e.get('time',0),'source':e.get('source')} for e in KNOWLEDGE.data['entries'] if e.get('active')]
   return [m for m in old if m.get('rule') not in known]+active
@@ -1129,7 +1130,8 @@ def assistant_task(body):
    text=str(body.get('text',''))[:10000];CHAT_IMAGE['id']=body.get('image');hist=chat_get(300)
    KNOWLEDGE.report_correction(text)
    if hist and hist[-1]['who']=='you' and hist[-1]['text'].strip()==text.strip():hist=hist[:-1]
-   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks(text,revision,ident))
+   preferences=mem_get()
+   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident))
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
    output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
    output['superseded']=revision!=OWNER_REVISION
@@ -1327,7 +1329,7 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/left':self.reply({'left':read_left()})
   elif self.path.startswith('/autopilot'):self.reply({'on':auto_on(),'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':ENGINE.summary(),'status':ENGINE.status() if auto_on() else None,'hold':on_hold()})
   elif self.path=='/memory':self.reply(mem_get())
-  elif self.path=='/knowledge':self.reply(KNOWLEDGE.summary())
+  elif self.path=='/knowledge':mem_get();self.reply(KNOWLEDGE.summary())
   elif self.path.startswith('/assistant-evaluate/'):
    result=EVAL_TASKS.get(self.path.split('/')[-1]);self.reply(result or {'error':'Unknown evaluation.'},status=200 if result else 404)
   elif self.path=='/campaign':self.reply({**{k:v for k,v in CAMPAIGN.items() if k!='stop'},'log':CAMPAIGN['log'][-8:],'wait':max(0,round(CAMPAIGN['next_at']-time.time()))})

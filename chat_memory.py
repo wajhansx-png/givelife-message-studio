@@ -14,6 +14,9 @@ def safe_text(text, limit=6000):
 def tokens(text):
  return set(re.findall(r'[\w\u0600-\u06ff]{2,}',str(text).casefold()))-set('the this that with from have your what when then send message please'.split())
 
+def preference_key(text):
+ return 'format:markup' if re.search(r'(?i)bold|italic',text) else 'format:spacing' if re.search(r'(?i)paragraph|spacing',text) else 'format:structure' if re.search(r'(?i)format|structure',text) else 'greeting' if re.search(r'(?i)logical name|unclear name|no name|brother|sister',text) else 'donation_order' if '2000' in text.replace(',','') and '1000' in text.replace(',','') and re.search(r'(?i)first|before|order',text) else None
+
 class Knowledge:
  def __init__(self,folder,store=None):
   self.file=Path(folder)/'assistant-knowledge.json';self.store=store;self.lock=threading.RLock()
@@ -45,7 +48,7 @@ class Knowledge:
  def remember(self,text,source='owner_preference',source_id=None):
   text=safe_text(text,1000).strip()
   if not text:raise ValueError('Write the preference or correction to remember.')
-  key='format:markup' if re.search(r'(?i)bold|italic',text) else 'format:spacing' if re.search(r'(?i)paragraph|spacing',text) else 'format:structure' if re.search(r'(?i)format|structure',text) else 'greeting' if re.search(r'(?i)logical name|unclear name|no name|brother|sister',text) else 'donation_order' if '2000' in text.replace(',','') and '1000' in text.replace(',','') and re.search(r'(?i)first|before|order',text) else None
+  key=preference_key(text)
   with self.lock:
    for e in self.data['entries']:
     if e.get('active') and e.get('text')==text:return e
@@ -54,6 +57,17 @@ class Knowledge:
     for e in self.data['entries']:
      if e.get('key')==key and e.get('active'):e['active']=False;e['superseded_by']=item['id']
    self.data['entries'].append(item);self.save();return item
+ def import_legacy(self,items):
+  with self.lock:
+   known={e.get('text') for e in self.data['entries']};added=False
+   for old in items:
+    text=safe_text(old.get('rule',''),1000).strip()
+    if not text or text in known:continue
+    key=preference_key(text)
+    # A newer, explicit current-format memory wins over an imported legacy rule.
+    active=not (key and any(e.get('active') and e.get('key')==key and e.get('source')!='legacy_owner_preference' for e in self.data['entries']))
+    self.data['entries'].append({'id':'legacy-'+hashlib.sha256(text.encode()).hexdigest()[:20],'text':text,'source':'legacy_owner_preference','time':old.get('time',0) if isinstance(old.get('time',0),(int,float)) else 0,'active':active,'key':key});known.add(text);added=True
+   if added:self.save()
  def forget(self,ident):
   with self.lock:
    found=False

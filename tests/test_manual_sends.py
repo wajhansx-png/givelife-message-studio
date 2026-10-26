@@ -43,6 +43,7 @@ class SendTests(unittest.TestCase):
   app.cancel_jobs('test reset')
   app.STORE=Store();app.KNOWLEDGE=app.Knowledge(app.DATA,app.STORE);app.KNOWLEDGE.data={'entries':[],'turns':[],'feedback':[],'traces':[],'pending':{}};app.JOBS.clear();app.JOB_CANCEL.clear();app.REQUEST_JOBS.clear();app.ACTIVE=None;app.LAST_LOCAL.clear();app.LAST_MANUAL.clear();app.DELIVERIES.clear();app.LAST_RECIPIENT.clear();app.LAST_JOB.clear();app.OWNER_REVISION=0
   app.HOLD.write_text('{"on":false}');app.AUTO.write_text('{"on":false}');app.CAMPAIGN.update(running=False,stop=False)
+  app.MEMORY.write_text('[]',encoding='utf-8')
   app.DM_NAMES.clear();app.CONTACT_CONTEXT.clear();app.set_left(25000)
   self.sent=[];self.status_connected=True;self.status_recent=False
   def api(path):

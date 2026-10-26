@@ -51,6 +51,14 @@ class MemoryTests(unittest.TestCase):
  def test_cloud_failure_preserves_local_copy_and_warns(self):
   with patch.object(self.store,'put',side_effect=RuntimeError('offline')):self.k.remember('Keep paragraphs.')
   self.assertTrue(self.k.file.exists());self.assertIn('pending',self.k.sync_error)
+ def test_legacy_preferences_are_reviewable_and_not_revived_after_forget(self):
+  old=[{'rule':'Always keep blank lines.','time':1}]
+  self.k.import_legacy(old);entry=self.k.summary()['entries'][0]
+  self.assertEqual(entry['source'],'legacy_owner_preference');self.k.forget(entry['id']);self.k.import_legacy(old)
+  self.assertEqual(self.k.summary()['entries'],[])
+ def test_legacy_preferences_do_not_override_current_corrections(self):
+  self.k.remember('Never use bold or italic.');self.k.import_legacy([{'rule':'Always use bold and italic.'}])
+  self.assertEqual([x['text'] for x in self.k.summary()['entries']],['Never use bold or italic.'])
 
 class PolicyTests(unittest.TestCase):
  def test_custom_rewrite_does_not_allow_template_rotation(self):

@@ -41,6 +41,9 @@ def parse(text):
   return {'kind':'stop_dms'}
  if low in ('hold','wait','hold on','hold everything','stop everything','pause everything') or re.search(r'wrong (?:whatsapp|number)',low):return {'kind':'hold'}
  if low in ('resume','continue','go ahead','connected','connected now','right one connected','release','unhold'):return {'kind':'resume'}
+ # A display-name correction changes the greeting, never the destination or whole caption.
+ rename=re.fullmatch(r"(?:(his|her|their)\s+name\s+is|(.+?)\s+name\s+is|(?:change|set)\s+(?:his |her |the )?name\s+to)\s+([A-Za-z][A-Za-z '-]{1,35}?)(?:\s+just\s+(?:in\s+(?:msg|message)\s+)?change\s+name)?[.!]?",t,re.I)
+ if rename:return {'kind':'dm_name','to':rename[2] or '', 'name':rename[3].strip()}
  if ('2000' in low.replace(' ','') or '2 000' in low) and ('1000' in low.replace(' ','') or '1 000' in low) and re.search(r'\b(first|before|then|order)\b',low) and re.search(r'\b(message|messages|caption|wording|write|show)\b',low):return {'kind':'donation_order'}
  if re.search(r'\b(don t|dont|do not|remove|delete)\b',low) and re.search(r'\b(write|line|wording|words|caption|this much)\b',low) and re.search(r'\b(came|received|arrived)\b',low):return {'kind':'remove_arrival_line'}
  arrival=re.fullmatch(r'(?:came|got|received|recieved|aya|aaya)\s*(?:rs\.?\s*)?(\d[\d,.]*)\s*(k)?|(?:rs\.?\s*)?(\d[\d,.]*)\s*(k)?\s+(?:came|arrived|received|aya)',t,re.I)
@@ -72,7 +75,7 @@ def parse(text):
  if amount is not None and not SEND.search(t):return {'kind':'amount','amount':amount}
  m=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
  if m:
-  if control_payload(m[1]):return {'kind':'appeal_to','to':m[2].strip()}
+  if control_payload(m[1]) or re.fullmatch(r'(?i)(?:(?:the|full|current|updated|proper|correct|dm|appeal|message|poster|and|with)\s*)+',m[1]):return {'kind':'appeal_to','to':m[2].strip()}
   return {'kind':'text','text':m[1].strip(),'to':m[2].strip(),'literal':True}
  m=re.match(r'^(?:please\s+)?send\s+(.{1,300})$',t,re.I|re.S)
  if m and not re.search(r'\b(dm|dms|donors?|members?|groups?|restart|gap|timer|poster|message|now|and)\b|^(?:to|in|on)\b',m[1],re.I):return {'kind':'text','text':m[1].strip(),'to':None,'literal':True}

@@ -14,6 +14,7 @@ class FakeWhatsApp(BaseHTTPRequestHandler):
  def do_GET(self):
   if '/status' in self.path:return self.response({'code':'SUCCESS','results':{'is_connected':True,'is_logged_in':True}})
   if '/messages' in self.path:return self.response({'results':{'data':[]}})
+  if '/chats' in self.path or '/contacts' in self.path:return self.response({'results':{'data':[{'id':'923001234567@s.whatsapp.net','name':'Jr Accounts','is_group':False}]}})
   return self.response({'results':[]})
  def do_POST(self):
   raw=self.rfile.read(int(self.headers.get('Content-Length',0)));fields={}

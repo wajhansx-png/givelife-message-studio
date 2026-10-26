@@ -21,6 +21,14 @@ def playbook():
 
 SYSTEM = """You are Wajdan's chief of staff inside the GiveLife Foundation studio: capable, quick, warm and decisive, like a trusted partner who runs the foundation with him. He types short, often misspelled messages (English, Urdu, mixed: "sebd man" means "send, man"). Read what he means from the conversation, do it with your tools, and reply in one or two natural sentences. Never reply with a menu of questions when you can find out yourself with a tool.
 
+DM COMPOSITION AND CORRECTIONS (current owner instruction):
+- Read State.drafts.dm and State.to before acting. A recipient, greeting, caption, and send instruction are different things.
+- "send to jr account" means find that contact, then send_dm_appeal with its id. This sends the COMPLETE saved formatted DM with poster. Never invent a one-paragraph replacement or send only a greeting. Use send_dm_appeal for donation DMs; send_message is for explicit custom text/personal conversation.
+- A saved chat label is not necessarily a real name. Jr Accounts, businesses, roles, usernames, numbers and unclear names get ONLY "Brother". A logical personal name gets "Name Brother", or "Name Sister" for clearly female names. An unclear name never gets "Brother/Sister".
+- "his name is Wajdan" or "jr account name is wajdan just in msg change name" means edit_dm_name(name="Wajdan", to=the SAME recipient id or the named contact). Do not find a different person called Wajdan, change the recipient, replace the caption, or send it unless the current instruction also says send/resend. A spelling correction is not a donation.
+- "wrong structure" means restore the full DM layout: greeting/opening, blank line, italic case details, blank line, risk/treatment line, blank line, remaining amount, blank line, bold-italic donation options with Rs. 2,000 BEFORE Rs. 1,000, blank line, appeal, blank line, payment details. Keep the owner's existing words and spacing wherever possible. Use the saved draft or prepare_dm to show it. Do not infer that the selected contact is wrong because it matches the payment number.
+- Use read tools and another reasoning pass when interpretation is uncertain. If a tool rejects malformed caption data, correct the inputs. Never retry an uncertain WhatsApp send. A successful lookup is not a successful send. Report only actions that tools actually confirmed.
+
 You are connected to his WhatsApp account. You CAN message anyone he names: use find_contact to look up a saved contact or chat by name (for example "jr account", "Ali", "my wife"), then send_message. You can also send to any phone number he gives you, to the foundation's groups, and attach the picture he attached. Never say "I can't see your chats" or "I can only send to groups": search first with find_contact, and only ask if nothing matches.
 
 PERSONALITY: you are a smart, warm friend first and a manager second. He often writes fast in Roman Urdu, Urdu, English or a mix, with typos and short forms ("jiw r u" = "jee, how are you", "kya hal hai", "sab theek?", "kar do", "bhej do", "abhi", "kitna reh gaya"). Work out what he means from the whole conversation. Answer small talk and personal questions naturally in the same language he used, in one short friendly line, like a person ("Main theek hoon, aap batao?" / "I'm good, you?"). NEVER bring up donations, the amount, quiet hours, or suggestions unless he asks about them or the question is about work. Do not end replies with an offer or a question about posting. Only mention money or next steps when he asks "status", "what now", "kya karun", or when you must warn him about something that blocks sending. When he says send a message to someone with some text, send exactly that text (clean up obvious typos only).
@@ -78,6 +86,8 @@ def tool(name, desc, props, required):
 
 
 CHAT_TOOLS = [
+    tool('send_dm_appeal', 'Send the complete saved DM caption plus poster to one verified contact. Preserves paragraphs, bold/italic and payment details. Use for send to <contact> without custom text. Never pass caption text here.', {'to':{'type':'string'},'name':{'type':'string'},'gender':{'type':'string','enum':['Brother','Sister']}}, ['to']),
+    tool('edit_dm_name', 'Change ONLY the greeting in the complete DM, keeping the recipient and all other paragraphs. Does not send. For his/her name is X, pass name=X and omit to to keep the current recipient. For a named saved contact, pass its id or saved label as to, never the new personal name as to.', {'name':{'type':'string'},'to':{'type':'string'}}, ['name']),
     tool('delete_last_message', 'Revoke the latest own message sent to a named foundation group, only when the owner asks to delete it. Reports WhatsApp confirmation or failure.', {'target': {'type':'string','enum':['main','community','fiverr','upwork','uet','toprated','test']}}, []),
     tool('set_left', 'Set the amount still needed (Rs.). Updates both messages.', {'left': {'type': 'integer'}}, ['left']),
     tool('money_came', 'Money arrived; subtract it from the amount left.', {'amount': {'type': 'integer'}}, ['amount']),
@@ -132,7 +142,7 @@ def _system(memory):
 def _chat_raw(key, system, tools, messages):
     """One call to DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
     body = {'model': MODEL, 'messages': [{'role': 'system', 'content': system}] + messages,
-            'max_tokens': 500, 'temperature': 0.3}
+            'max_tokens': 1800, 'temperature': 0.2}
     if tools:
         body.update(tools=tools, tool_choice='auto')
     req = urllib.request.Request(API_URL, data=json.dumps(body).encode('utf-8'), method='POST',
@@ -170,7 +180,8 @@ def _slim(state):
     """Only what the model needs to decide; keeps the prompt (and the bill) small."""
     eng = state.get('engine') or {}
     out = {'left': state.get('left'), 'wa': state.get('whatsapp'), 'auto': state.get('autopilot'), 'to': state.get('last_recipient'),
-           'pace': eng.get('pace'), 'idle_min': eng.get('minutes_since_money'), 'view': (state.get('screen') or {}).get('view')}
+           'pace': eng.get('pace'), 'idle_min': eng.get('minutes_since_money'), 'view': (state.get('screen') or {}).get('view'),
+           'drafts': state.get('drafts'), 'dm_form': (state.get('screen') or {}).get('dm'), 'recipient_names': state.get('recipient_names')}
     act = state.get('recent_activity')
     if act:
         out['recent'] = [str(a)[:80] for a in act[-2:]]
@@ -184,9 +195,9 @@ def chat(text, history, state, memory, do):
     if key is None:
         return None
     msgs = []
-    for h in history[-16:]:
+    for h in history[-32:]:
         role = 'user' if h.get('who') == 'you' else 'assistant'
-        t = str(h.get('text', ''))[:500]
+        t = str(h.get('text', ''))[:2000]
         if not t:
             continue
         if msgs and msgs[-1]['role'] == role:
@@ -206,7 +217,7 @@ def chat(text, history, state, memory, do):
     deadline=time.monotonic()+70
     searched = False
     nudged = False
-    for _ in range(4):
+    for _ in range(6):
         if time.monotonic()>deadline:break
         try:msg = _chat_raw(key, system, CHAT_TOOLS, msgs)
         except Exception:
@@ -240,8 +251,8 @@ def chat(text, history, state, memory, do):
             except Exception as e:
                 result = f'Failed: {e}'
                 done.append(f'Could not {name}: {e}')
-            msgs.append({'role': 'tool', 'tool_call_id': call_id, 'content': result[:700]})
-        terminal=any(name in ('send_message','send_appeal','dm_list','dm_donors','dm_group') for _,name,_ in calls)
+            msgs.append({'role': 'tool', 'tool_call_id': call_id, 'content': result[:5000]})
+        terminal=any(name in ('send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group') for _,name,_ in calls)
         asked_to_send=bool(re.search(r'(?i)\b(send|resend|post|bhejo)\b',text))
         if jobs or terminal or actions or (done and not asked_to_send):
             reply=' '.join(done[-3:]) or reply or 'Prepared on your screen.';break  # report actual tool outcomes; never ask the model to invent delivery status

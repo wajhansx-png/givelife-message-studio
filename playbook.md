@@ -1,4 +1,8 @@
 # Current manual-send contract (newest owner instruction)
+- Fundraising DMs use the COMPLETE saved DM with blank lines, bold/italic, Rs. 2,000 options before Rs. 1,000, current remaining amount and payment details, plus the poster. Never send only a salutation or a one-paragraph summary.
+- Chat labels such as Jr Accounts are not personal names: use Brother. Use a logical personal name when available and Sister only for a clearly female name. No logical name always means Brother.
+- "His name is Wajdan" and "jr account name is wajdan just in msg change name" edit only the greeting for the SAME recipient. Preserve every other paragraph. An edit does not send unless the current instruction also says send/resend.
+- Read the full saved caption and recipient context before interpreting a correction. Use contact lookup and reasoning when necessary; never infer that the chosen contact is wrong merely because its number matches an account number.
 - Explicit Send buttons and chat send commands send immediately, overriding only the app's automatic-post cooldown. A confirmed send restarts that group's automatic-post timer.
 - Manual sends are never queued for a 15-minute wait. An older waiting batch is cancelled when a new manual target is chosen. Actual in-flight delivery cannot be undone.
 - Automatic posting still respects its timer; all-group batches keep their recipient spacing. Genuine WhatsApp errors and a disconnected account are reported honestly.

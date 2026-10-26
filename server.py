@@ -3,6 +3,7 @@ from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store
 import manual_commands
+import dm_composer
 from functools import wraps
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get('DATA_DIR','/data/studio'))
@@ -52,6 +53,9 @@ def custom_recipient(body):
 
 def send_custom(body):
  jid,is_group=custom_recipient(body);message=str(body.get('message',''))
+ if not is_group and body.get('kind')=='dm_appeal':
+  message=greet_text(message,body.get('name',''),body.get('gender','Brother'))
+  if not dm_composer.complete(message):raise ValueError('The full DM is incomplete. Restore its paragraphs and payment details before sending.')
  if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
  if not STORE:raise ValueError('Persistent send records are unavailable. Try again later.')
  if not SEND_LOCK.acquire(blocking=False):raise ValueError('Another send is running. Please wait for it to finish.')
@@ -526,7 +530,7 @@ def base_chat_callbacks():
   'new_wording':lambda kind:(next_message() if kind=='group' else next_dm(),'New '+kind+' wording ready.')[1],
   'set_message':lambda kind,text:(save_draft(kind,text),'Message replaced.')[1],
   'remember':mem_add,'autopilot':set_auto,**engine_do(),
-  'find_contact':find_contacts,'send_message':send_free,'delete_last_message':delete_last_group,
+  'find_contact':find_contacts,'send_message':send_free,'send_dm_appeal':send_dm_appeal,'edit_dm_name':edit_dm_name,'delete_last_message':delete_last_group,
   'send_appeal':lambda target:send_appeal(target),
   'recent_activity':lambda:('Current send: '+JOBS.get(ACTIVE,{}).get('message','')+' | ' if ACTIVE else '')+(' | '.join(x['text'] for x in AUTOLOG[-8:]) or 'No confirmed send recorded this session.'),
   'add_rule':lambda text:add_rule_text(text),
@@ -573,8 +577,7 @@ PERSONAL=re.compile(r"(?i)(wife|wifey|\bmom\b|\bmum\b|mother|\bdad\b|father|baba
 
 def clean_first_name(name):
  if not name or NOT_NAME.search(name):return ''
- first=re.sub(r'[^A-Za-z ]','',str(name)).strip().split(' ')[0] if str(name).strip() else ''
- return first.title() if re.fullmatch(r'[A-Za-z]{2,15}',first or '') else ''
+ return dm_composer.first_name(name)
 
 def dm_text(name,tier='member'):
  left=read_left();first=clean_first_name(re.sub(r'(?i)\bdonors?\b','',str(name or '')).strip());who=(first+' ' if first else '')+('Sister' if first.lower() in FEMALE else 'Brother')
@@ -631,8 +634,7 @@ def norm_phone(p):
  return p if re.fullmatch(r'[1-9]\d{7,14}',p) else ''
 
 def greet_text(text,name,gender):
- g=((name+' ') if name else '')+(gender if gender in ('Brother','Sister') else 'Brother')+', '
- return re.sub(r'^(?:[^\n,]{0,40}\s)?(?:Brother|Sister),\s',g,text,count=1) if re.match(r'^(?:[^\n,]{0,40}\s)?(?:Brother|Sister),\s',text) else g+text
+ return dm_composer.personalize(text,clean_first_name(name),gender)
 
 def dm_campaign(people,gap,image,vary,message,start_after,rest_every,rest_minutes):
  c=CAMPAIGN;c.update(running=True,stop=False,total=len(people),sent=0,failed=0,skipped=0,log=[],current='')
@@ -892,6 +894,8 @@ if not LAST_MANUAL and MANUAL_STATE.exists():
  try:LAST_MANUAL=json.loads(MANUAL_STATE.read_text(encoding='utf-8'))
  except Exception:LAST_MANUAL={}
 DELIVERIES=STORE.get('last_deliveries',{}) if STORE else {}
+DM_NAMES=STORE.get('dm_names',{}) if STORE else {}
+CONTACT_CONTEXT={}
 if not LAST_MANUAL:
  for old in reversed(chat_get(300)):
   if old.get('who')!='you':continue
@@ -914,11 +918,48 @@ def resolve_person(to):
  if key:return key
  if norm_phone(to) or str(to).endswith(('@s.whatsapp.net','@g.us')):return str(to)
  found,checked=find_data(to)
+ for item in found:CONTACT_CONTEXT[item['id']]=item
  exact=[x for x in found if x['name'].casefold()==str(to).casefold()]
  if len(exact)==1:return exact[0]['id']
  if len(found)==1:return found[0]['id']
  if not found:raise ValueError('No matching contact. Give the phone number.')
  raise ValueError('More than one contact matches. Give the full name or number.')
+
+def dm_recipient(to=None):
+ target=resolve_person(to) if to else LAST_MANUAL.get('to')
+ if not target or target in GROUPS or target in ('all','free','test') or str(target).endswith('@g.us'):
+  raise ValueError('Which person should receive the DM? Give their contact name or number.')
+ phone=norm_phone(str(target).split('@')[0])
+ if not phone:raise ValueError('That is not a valid DM number.')
+ return phone+'@s.whatsapp.net'
+
+def current_dm_caption(name='',gender='Brother'):
+ text=json.loads(DRAFT.read_text(encoding='utf-8')).get('dm','')
+ # Repair old incomplete/flattened model output, keeping the structured saved draft otherwise.
+ if not dm_composer.complete(text):text=build_dm(dm_selection(False),read_left())
+ text=greet_text(text,name,gender)
+ if not dm_composer.complete(text):raise ValueError('The full DM caption is incomplete. Nothing was sent.')
+ return text
+
+def edit_dm_name(name,to=''):
+ jid=dm_recipient(to);first=clean_first_name(name)
+ gender='Sister' if first.lower() in FEMALE else 'Brother'
+ DM_NAMES[jid]={'name':first,'gender':gender}
+ if STORE:STORE.put('dm_names',DM_NAMES)
+ caption=current_dm_caption(first,gender)
+ save_draft('dm',caption)
+ remember_manual({'kind':'dm_appeal','to':jid,'name':first,'gender':gender,'text':caption,'with_picture':True})
+ return 'Greeting changed to '+dm_composer.greeting(first,gender)+'. The full DM and the same recipient are kept. Nothing was sent.'
+
+def send_dm_appeal(to='',name='',gender='Brother'):
+ jid=dm_recipient(to)
+ identity=DM_NAMES.get(jid) or {}
+ first=identity.get('name') if identity else clean_first_name(name or CONTACT_CONTEXT.get(jid,{}).get('name',''))
+ gender=identity.get('gender') if identity else ('Sister' if first.lower() in FEMALE or (first and gender=='Sister') else 'Brother')
+ caption=current_dm_caption(first,gender)
+ send_free(jid,caption,True)
+ remember_manual({'kind':'dm_appeal','to':jid,'name':first,'gender':gender,'text':caption,'with_picture':True})
+ return 'WhatsApp confirmed the full DM with poster to '+dm_composer.greeting(first,gender)+'.'
 
 def delete_last_group(target=None):
  key=manual_commands.group(target or '') or (LAST_MANUAL.get('target') if LAST_MANUAL.get('kind')=='appeal' else None)
@@ -950,7 +991,7 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
  negative=bool(re.search(r"(?i)\b(don'?t|do not|never|stop)\b.*\b(send|dm|post)\b",prompt))
  sending=bool(manual_commands.SEND.search(prompt)) and not negative and not re.search(r'(?i)^(?:did you|have you|was it|draft only|preview only)',prompt)
  dm_allowed=sending and bool(re.search(r'(?i)\b(dm|dms|donors?|members?|direct messages)\b',prompt))
- send_tools={'send_message','send_appeal','dm_list','dm_donors','dm_group'}
+ send_tools={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
  read_tools={'find_contact','recent_activity','list_rules'}
  def wrapped(name,fn):
   def call(**args):
@@ -970,7 +1011,20 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
     if name=='send_appeal':result=send_appeal(args.get('target'),(task_id+'-'+hashlib.sha256(cache_key.encode()).hexdigest()[:16]) if task_id else None)
     elif name=='send_message':
      literal=bool(re.search(r'["“\']'+re.escape(str(args.get('text','')))+r'["”\']',prompt))
-     result=send_free(args.get('to',''),args.get('text',''),args.get('with_picture',False),literal=literal)
+     target=resolve_person(args.get('to',''))
+     # The model selects recipients; the stored template supplies fundraising captions.
+     appeal=not literal and not str(target).endswith('@g.us') and target not in GROUPS and target not in ('test','all','free') and (args.get('with_picture') or re.search(r'(?i)\b(dm|appeal|donation|poster|structure)\b',prompt) or re.search(r'(?i)Yous[au]f|03097458815',str(args.get('text',''))))
+     if appeal:result=send_dm_appeal(target)
+     else:result=send_free(target,args.get('text',''),args.get('with_picture',False),literal=literal)
+    elif name=='find_contact':
+     result=fn(**args)
+     try:
+      for item in json.loads(result):CONTACT_CONTEXT[item['id']]=item
+     except (ValueError,TypeError,KeyError):pass
+    elif name=='set_message' and args.get('kind')=='dm':
+     if re.search(r'(?i)\bname\b.*\b(is|change|to)\b|\b(change|correct)\b.*\bname\b',prompt):raise ValueError('Use edit_dm_name to change only the greeting; keep the full message.')
+     if not dm_composer.complete(args.get('text','')):raise ValueError('Keep the full DM with blank lines, formatting, amount, donation options and payment details. Do not replace it with a name or one-paragraph summary.')
+     result=fn(**args)
     else:result=fn(**args)
    finally:OWNER_GUARD.revision=previous
    if name in send_tools|{'delete_last_message'}:cache[cache_key]=result
@@ -982,7 +1036,7 @@ def manual_recipient():
  if LAST_MANUAL.get('kind')=='appeal':
   key=LAST_MANUAL.get('target')
   return {'target':key,'name':'GiveLife main' if key=='main' else key,'id':GROUPS[key][1] if key in GROUPS else '', 'group':True}
- if LAST_MANUAL.get('kind')=='text':return {'id':LAST_MANUAL.get('to'),'group':str(LAST_MANUAL.get('to','')).endswith('@g.us')}
+ if LAST_MANUAL.get('kind') in ('text','dm_appeal'):return {'id':LAST_MANUAL.get('to'),'name':LAST_MANUAL.get('name') or CONTACT_CONTEXT.get(LAST_MANUAL.get('to'),{}).get('name',''),'group':str(LAST_MANUAL.get('to','')).endswith('@g.us'),'message_type':LAST_MANUAL.get('kind'),'last_caption':LAST_MANUAL.get('text','')}
  return None
 
 def assistant_task(body):
@@ -997,9 +1051,9 @@ def assistant_task(body):
   try:
    text=str(body.get('text',''))[:4000];CHAT_IMAGE['id']=body.get('image');hist=chat_get(60)
    if hist and hist[-1]['who']=='you' and hist[-1]['text'].strip()==text.strip():hist=hist[:-1]
-   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks(text,revision,ident))
+   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks(text,revision,ident))
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
-   output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on())
+   output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
    ASSIST_TASKS[ident].update(done=True,result=output)
   except Exception as e:ASSIST_TASKS[ident].update(done=True,error='The assistant could not complete this request: '+str(e)[:160]+'. It will not retry automatically.')
  threading.Thread(target=run,daemon=True).start();return ident
@@ -1049,6 +1103,7 @@ def execute_manual_command(text,request_id=None):
  elif kind=='resume':out['reply']=set_hold(False)
  elif kind=='donation_order':out['reply']=edit_donation_order()
  elif kind=='remove_arrival_line':out['reply']=remove_arrival_line()
+ elif kind=='dm_name':out['reply']=edit_dm_name(plan['name'],plan.get('to',''))
  elif kind=='money':
   if plan['amount']>read_left():raise ValueError('That donation is larger than the amount remaining. Tell me the correct remaining amount.')
   set_left(read_left()-plan['amount']);out['reply']=f"Recorded Rs. {plan['amount']:,} received. Rs. {read_left():,} left."
@@ -1061,6 +1116,7 @@ def execute_manual_command(text,request_id=None):
   if not LAST_MANUAL:raise ValueError('Who should receive it? Name a group or contact.')
   if LAST_MANUAL.get('kind')=='appeals':out.update(send_selected_groups(LAST_MANUAL['targets'],request_id))
   elif LAST_MANUAL.get('kind')=='appeal':out.update(send_appeal(LAST_MANUAL['target'],request_id))
+  elif LAST_MANUAL.get('kind')=='dm_appeal':out['reply']=send_dm_appeal(LAST_MANUAL['to'],LAST_MANUAL.get('name',''),LAST_MANUAL.get('gender','Brother'))
   elif LAST_MANUAL.get('kind')=='text':
    send_free(LAST_MANUAL['to'],LAST_MANUAL['text'],LAST_MANUAL.get('with_picture',False),literal=True);out['reply']='WhatsApp confirmed the repeated message.'
   else:raise ValueError('There is no previous manual send to repeat.')
@@ -1073,7 +1129,7 @@ def execute_manual_command(text,request_id=None):
  elif kind=='appeal_to':
   target=resolve_person(plan['to'])
   if target in GROUPS or target in ('all','free','test'):out.update(send_appeal(target,request_id))
-  else:raise ValueError('What exact message should I send to this person?')
+  else:out['reply']=send_dm_appeal(target)
  elif kind=='text':
   target=resolve_person(plan['to']) if plan.get('to') else (LAST_MANUAL.get('to') if LAST_MANUAL.get('kind')=='text' else LAST_MANUAL.get('target') if LAST_MANUAL.get('kind')=='appeal' else None)
   if not target:raise ValueError('Who should receive this text? Give a name, number or group.')
@@ -1083,8 +1139,15 @@ def execute_manual_command(text,request_id=None):
 
 def manual_command(text,request_id=None):
  previous=getattr(OWNER_GUARD,'revision',None)
- try:return execute_manual_command(text,request_id)
+ try:
+  result=execute_manual_command(text,request_id)
+  if result.get('handled'):result['dm_identity']=dm_identity()
+  return result
  finally:OWNER_GUARD.revision=previous
+
+def dm_identity():
+ if LAST_MANUAL.get('kind')=='dm_appeal':return {'name':LAST_MANUAL.get('name',''),'phone':LAST_MANUAL.get('to','').split('@')[0],'gender':LAST_MANUAL.get('gender','Brother')}
+ return None
 
 class Handler(BaseHTTPRequestHandler):
  def remote_config(self):

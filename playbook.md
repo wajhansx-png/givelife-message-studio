@@ -1,4 +1,7 @@
 # Current manual-send contract (newest owner instruction)
+- Auto posts to each freelance group every 30 minutes by default, independently of reply scans, AI responses, night pacing, and donation pace. Explicit owner intervals override that group's schedule. Auto sends due posts without asking for "go" or a button click.
+- "Send fast" sets automatic intervals to 15 minutes; "send slow" sets them to 60 minutes. Named groups change independently; numeric intervals take precedence. "Send fast now" remains an immediate manual send.
+- Status questions report confirmed sends and the actual per-group timer; they never dispatch a send or retry an uncertain send.
 - Fundraising DMs use the COMPLETE saved DM with blank lines, bold/italic, Rs. 2,000 options before Rs. 1,000, current remaining amount and payment details, plus the poster. Never send only a salutation or a one-paragraph summary.
 - Chat labels such as Jr Accounts are not personal names: use Brother. Use a logical personal name when available and Sister only for a clearly female name. No logical name always means Brother.
 - "His name is Wajdan" and "jr account name is wajdan just in msg change name" edit only the greeting for the SAME recipient. Preserve every other paragraph. An edit does not send unless the current instruction also says send/resend.
@@ -16,7 +19,7 @@
 
 ## A. WHEN DONATIONS ARE SLOW (no money for 40+ min) - what the owner does
 1. Makes the wording stronger and more psychological: new opening line every post, never the same hook twice, never the word "DANGER". Only confirmed facts.
-2. Posts more often: main group every 15-20 min, freelance groups every 30-60 min, all 5 freelance groups (incl. Upwork Community) with poster + caption.
+2. Posts more often: main group every 15-20 min; each of the 5 freelance groups (incl. Upwork Community) posts automatically every 30 minutes unless the owner changes its interval, with poster + caption.
 3. Posts by hand from the page to specific groups (one click) and to ALL groups when he wants maximum push.
 4. DMs warm people: past donors / contacts saved with "Donor", GiveLife main members, people who read a post (Message info list). Greeting "Name Brother" / "Name Sister" / "Brother" if no name. Poster image + caption. Every line re-worded per person (same concept). 1.5-2 min gaps, rests, stop on any warning.
 5. Asks "who else can we DM?" -> expects a ranked list from what is visible (donor-labelled contacts first, then main members, freelance groups last).
@@ -97,7 +100,7 @@
 - He can message any saved contact by name; search his chats first, never say you cannot see them.
 ## H. AUTO MODE BRAIN (owner 2026-10-26)
 - Owner may be away for days. Auto never stops on its own: it reads group and DM replies, spots "Done" donations, thanks once, asks for a share, and sends one reminder when someone says "later".
-- Pace ladder by minutes without money: L1 normal, L2 40+ min faster, L3 90+ min full effort, L4 360+ min eases off (main 30 / freelance 90 min) so groups do not get tired. Money resets to L1 and credits the wording that was posted.
+- Pace ladder by minutes without money adjusts the main group. Freelance groups keep the owner's 30-minute schedule unless he changes a group's interval. Money resets the main-group pace to L1 and credits the wording that was posted.
 - It learns: wordings that bring donations are used more, and posting speeds up in hours when money usually comes. Past donors get a repeat DM after a few days.
 - DM order when slow: past donors, donor-labelled contacts, group members, saved chats (new people can be switched off in Settings). Quiet hours 23:00-08:00 for DMs, max 5 per batch, 100-150 s apart.
 - Milestone posts at 25/50/75/90% raised, once each. Goal reached: sends the final thanks and stops.

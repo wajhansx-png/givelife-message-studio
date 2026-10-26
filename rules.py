@@ -35,6 +35,20 @@ def find_group(text):
                 best = (key, len(n))
     return best[0] if best else None
 
+def pace_rules(text):
+    """Explicit speed instructions can set several groups without resetting the others."""
+    low=text.casefold()
+    if re.search(r'\b(?:dm|dms|donors?|now|immediately|asap)\b',low):return []
+    if not re.search(r'\b(send|post|posting|sending|pace|speed)\b',low) or not re.search(r'\b(fast|faster|slow|slower)\b',low):return []
+    out=[]
+    for clause in re.split(r'\s+(?:and|but)\s+|[,;]',low):
+        speed=re.search(r'\b(fast|faster|slow|slower)\b',clause)
+        if not speed:continue
+        group=find_group(clause)
+        if not group and re.search(r'\b(one|other|that|this)\b',clause):return []
+        out.append({'kind':'gap','group':group or 'all','minutes':15 if speed[1].startswith('fast') else 60})
+    return out
+
 
 def _hour(h, ampm):
     h = int(h)
@@ -87,7 +101,7 @@ def parse(text, now=None):
             return r, f'{"Every day" if daily else "Once"} at {when}: send {"your text" if body else "the current appeal"} to {target}.'
 
     # every N minutes / hours
-    m = re.search(r'\bevery\s+(\d+(?:\.\d+)?)\s*(min(?:ute)?s?|mints?|h(?:ours?)?)\b', low)
+    m = re.search(r'\b(?:every|each|after)\s+(\d+(?:\.\d+)?)\s*(min(?:ute)?s?|mints?|mnts?|h(?:ours?)?)\b', low)
     if m and (group or re.search(r'\b(post|posting|send)\b', low)):
         mins = float(m.group(1)) * (60 if m.group(2).startswith('h') else 1)
         mins = max(15, int(mins))

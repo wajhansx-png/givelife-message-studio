@@ -6,12 +6,13 @@ Everything it needs from the outside world arrives through `h`, a dict of helper
 """
 import json, re, time, datetime, threading, random, hashlib, os, urllib.request
 import rules, learning
+from state_shapes import mapping, records
 
 PKT = datetime.timezone(datetime.timedelta(hours=5))
 ACCOUNT = '03097458815'
 
 # Minutes between posts by minutes since money last came: (from, name, main gap, freelance gap).
-LADDER = [(360, 'L4', 30, 90), (90, 'L3', 15, 30), (40, 'L2', 15, 45), (0, 'L1', 20, 60)]
+LADDER = [(360, 'L4', 30, 30), (90, 'L3', 15, 30), (40, 'L2', 15, 30), (0, 'L1', 20, 30)]
 # L4 = six hours without money: more posts stop helping and tire the groups, so the pace eases while DMs and shares carry on.
 VERY_SLOW = ('L3', 'L4')
 TIER_CAPS = {'repeat': 10, 'donor': 15, 'member': 10, 'saved': 8}  # DMs per day for each kind of person
@@ -46,7 +47,8 @@ class Engine:
     def __init__(self, h):
         self.h = h
         self.f = h['DATA'] / 'autopilot-state.json'
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
+        self.post_lock = threading.Lock()
         self.s = self._load()
         self.dm_running = False
 
@@ -60,16 +62,26 @@ class Engine:
         try:
             v = self.h['store_get']('autostate')
             if v:
-                base.update(json.loads(v) if isinstance(v, str) else v)
+                base.update(mapping(v))
             elif self.f.exists():
-                base.update(json.loads(self.f.read_text(encoding='utf-8')))
+                base.update(mapping(self.f.read_text(encoding='utf-8')))
         except Exception:
             pass
+        base['rules']=[r for r in records(base.get('rules')) if isinstance(r,dict) and isinstance(r.get('kind'),str)]
+        for key in ('paused','notified','posts_by','dms_by_tier','post_fails'):
+            base[key]=mapping(base.get(key))
+        # Newest owner instruction supersedes the old 45/60/90-minute freelance ladder.
+        if base.get('freelance_schedule_version',0)<1:
+            base['rules'].append({'kind':'gap','group':'free','minutes':30,'id':int(now()*1000)%10_000_000,'source':'owner-30-minute-schedule'})
+            base['freelance_schedule_version']=1
         return base
 
     def save(self):
-        self.f.write_text(json.dumps(self.s), encoding='utf-8')
-        self.h['persist']('autostate', self.f)
+        with self.lock:
+            temp=self.f.with_suffix('.tmp')
+            temp.write_text(json.dumps(self.s), encoding='utf-8')
+            os.replace(temp,self.f)
+            self.h['persist']('autostate', self.f)
 
     def log(self, text, quiet=False):
         self.h['log'](text)
@@ -108,6 +120,7 @@ class Engine:
     # ------------------------------------------------------------------ main loop
     def start(self):
         threading.Thread(target=self._loop, daemon=True).start()
+        threading.Thread(target=self._posting_loop, daemon=True).start()
         if os.environ.get('RENDER_EXTERNAL_URL'):
             threading.Thread(target=self._keepalive, daemon=True).start()
 
@@ -125,15 +138,28 @@ class Engine:
             time.sleep(60)
             try:
                 if self.h['enabled']():
-                    with self.lock:
-                        self.tick()
-                        self.save()
+                    self.tick()
+                    self.save()
             except Exception as e:
                 self.log('Autopilot error: ' + str(e)[:150])
 
+    def posting_step(self):
+        """Posting runs independently of slow reply scans and the AI advisor."""
+        if not self.h['enabled']() or self.h.get('on_hold',lambda:False)() or not self.h['wa_ok']():
+            return
+        self.post_if_due()
+
+    def _posting_loop(self):
+        while True:
+            time.sleep(15)
+            try:
+                self.posting_step()
+            except Exception as e:
+                self.log('Automatic posting check failed: '+str(e)[:150])
+
     def level(self):
         since = self.s['last_money'] or self.s['started']
-        mins = (now() - since) / 60
+        mins = max(0,(now() - since) / 60)
         for limit, name, main_gap, free_gap in LADDER:
             if mins >= limit:
                 po = self.s.get('pace_override')
@@ -246,6 +272,8 @@ class Engine:
                 return r['minutes']
         if self.s.get('pace_override'):
             return default
+        if key != 'main':
+            return 30 # owner's fixed freelance schedule; hour/learning never lengthens it
         mult = self.rhythm(key)[0]
         if self.level()[0] == 'L4' and mult < 1:
             mult = 1  # a long drought: never speed up, the groups are tired
@@ -314,6 +342,16 @@ class Engine:
                 self.notify('fail-' + key, f'The {key} group keeps failing ({str(msg)[:90]}). I paused it for 6 hours and keep posting to the others. Check that the linked WhatsApp number is in that group.', 6 * 3600)
 
     def post_if_due(self):
+        if not self.post_lock.acquire(blocking=False):
+            return
+        try:
+            return self._post_if_due()
+        finally:
+            self.post_lock.release()
+
+    def _post_if_due(self):
+        if self.h.get('on_hold',lambda:False)():
+            return
         if self.quiet_now() or self.h['busy']():
             return
         self.check_post_results()
@@ -338,6 +376,7 @@ class Engine:
             for k in keys:
                 by[k] = by.get(k, 0) + 1
             self.log(f'{name}: posting to {len(keys)} group(s): {", ".join(keys)}.')
+            self.save()
 
     def _pick_variant(self):
         """(learning id, index) of the next appeal wording: the one that brought most money, but varied."""
@@ -695,7 +734,8 @@ class Engine:
 
     def summary(self):
         name, main_gap, free_gap, mins = self.level()
-        return {'pace': name, 'main_every': main_gap, 'freelance_every': free_gap, 'minutes_since_money': round(mins),
+        return {'pace': name, 'main_every': self.gap_for('main',main_gap), 'freelance_every': self.gap_for('community',free_gap), 'minutes_since_money': round(mins),
+                'group_intervals':{k:self.gap_for(k,main_gap if k=='main' else free_gap) for k in self.h['groups']()},
                 'paused': {k: round((v - now()) / 3600, 1) for k, v in self.s['paused'].items() if v > now()},
                 'quiet': self.s['quiet'], 'pace_override': self.s.get('pace_override'), 'posts_today': self.s['posts_today'],
                 'dms_today': self.s['dms_today'], 'dm_daily': self.s['dm_daily'], 'dm_enabled': self.s['dm_enabled'],

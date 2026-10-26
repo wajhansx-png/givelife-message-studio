@@ -4,6 +4,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store
 import manual_commands
 import dm_composer
+from state_shapes import mapping, memories, history as valid_history
 from functools import wraps
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get('DATA_DIR','/data/studio'))
@@ -294,7 +295,7 @@ if STORE:
 CHAT_LOCK=threading.Lock()
 
 def chat_get(n=300):
- try:return json.loads(CHATLOG.read_text(encoding='utf-8'))[-n:] if CHATLOG.exists() else []
+ try:return valid_history(CHATLOG.read_text(encoding='utf-8'))[-n:] if CHATLOG.exists() else []
  except Exception:return []
 
 def chat_add(who,text,err=False):
@@ -305,7 +306,8 @@ def chat_add(who,text,err=False):
   CHATLOG.write_text(json.dumps(items[-300:],ensure_ascii=False),encoding='utf-8');persist_file('chat',CHATLOG)
 
 def mem_get():
- return json.loads(MEMORY.read_text(encoding='utf-8')) if MEMORY.exists() else []
+ try:return memories(MEMORY.read_text(encoding='utf-8')) if MEMORY.exists() else []
+ except (ValueError,OSError):return []
 
 def mem_add(rule):
  rule=str(rule).strip()[:300]
@@ -532,7 +534,7 @@ def base_chat_callbacks():
   'remember':mem_add,'autopilot':set_auto,**engine_do(),
   'find_contact':find_contacts,'send_message':send_free,'send_dm_appeal':send_dm_appeal,'edit_dm_name':edit_dm_name,'delete_last_message':delete_last_group,
   'send_appeal':lambda target:send_appeal(target),
-  'recent_activity':lambda:('Current send: '+JOBS.get(ACTIVE,{}).get('message','')+' | ' if ACTIVE else '')+(' | '.join(x['text'] for x in AUTOLOG[-8:]) or 'No confirmed send recorded this session.'),
+  'recent_activity':lambda:send_status_text()+'\nRecent activity: '+(' | '.join(x['text'] for x in AUTOLOG[-4:]) or 'No new receipt this session.'),
   'add_rule':lambda text:add_rule_text(text),
   'list_rules':lambda:'; '.join(f"#{r['id']} {r['text']}" for r in ENGINE.rule_list()) or 'No rules yet.',
   'delete_rule':lambda rule_id:('Rule removed.' if ENGINE.delete_rule(rule_id) else 'No such rule.'),
@@ -883,23 +885,19 @@ ENGINE=autopilot.Engine({'DATA':DATA,'store_get':lambda k:STORE.get(k) if STORE 
 
 def engine_do(auto_review=False):
  return {'set_pace':lambda main_minutes,freelance_minutes:ENGINE.set_pace(main_minutes,freelance_minutes),'pause_group':lambda key,hours:ENGINE.pause(key,hours),'resume_group':lambda key:ENGINE.resume(key),
+  'set_group_pace':lambda target,minutes:set_group_pace(target,minutes),
   'set_quiet_hours':lambda start,end:ENGINE.set_quiet(start,end),'set_dms':lambda enabled,daily:('DMs remain off by the owner instruction.' if auto_review and enabled and not ENGINE.s.get('dm_enabled') else ENGINE.set_dms(enabled,daily)),
   'notify_owner':lambda text:(ENGINE.notify('ai-'+str(int(time.time())),text,0),'Owner told.')[1]}
 
 PILOT=assistant.Autopilot(lambda:{**studio_state(),'autopilot':ENGINE.summary()},mem_get,lambda:engine_do(True),auto_log,auto_on)
 
 MANUAL_STATE=DATA/'manual-context.json'
-LAST_MANUAL=STORE.get('manual_context',{}) if STORE else {}
-if not isinstance(LAST_MANUAL,dict):
- try:
-  _saved_manual=json.loads(LAST_MANUAL) if isinstance(LAST_MANUAL,str) else {}
-  LAST_MANUAL=_saved_manual if isinstance(_saved_manual,dict) else {}
- except Exception:LAST_MANUAL={}
+LAST_MANUAL=mapping(STORE.get('manual_context',{})) if STORE else {}
 if not LAST_MANUAL and MANUAL_STATE.exists():
- try:LAST_MANUAL=json.loads(MANUAL_STATE.read_text(encoding='utf-8'))
+ try:LAST_MANUAL=mapping(MANUAL_STATE.read_text(encoding='utf-8'))
  except Exception:LAST_MANUAL={}
-DELIVERIES=STORE.get('last_deliveries',{}) if STORE else {}
-DM_NAMES=STORE.get('dm_names',{}) if STORE else {}
+DELIVERIES=mapping(STORE.get('last_deliveries',{})) if STORE else {}
+DM_NAMES=mapping(STORE.get('dm_names',{})) if STORE else {}
 CONTACT_CONTEXT={}
 if not LAST_MANUAL:
  for old in reversed(chat_get(300)):
@@ -910,8 +908,9 @@ if not LAST_MANUAL:
 
 def remember_manual(value):
  global LAST_MANUAL
- LAST_MANUAL=dict(value) if isinstance(value,dict) else {}
- MANUAL_STATE.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8');persist_file('manual_context',MANUAL_STATE)
+ value=mapping(value);LAST_MANUAL=dict(value)
+ MANUAL_STATE.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8')
+ if STORE:STORE.put('manual_context',dict(value))
 
 def record_delivery(jid,text,result):
  if result.get('code')!='SUCCESS':return
@@ -1039,6 +1038,8 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
  return {name:wrapped(name,fn) for name,fn in callbacks.items()}
 
 def manual_recipient():
+ global LAST_MANUAL
+ LAST_MANUAL=mapping(LAST_MANUAL)
  if LAST_MANUAL.get('kind')=='appeal':
   key=LAST_MANUAL.get('target')
   return {'target':key,'name':'GiveLife main' if key=='main' else key,'id':GROUPS[key][1] if key in GROUPS else '', 'group':True}
@@ -1057,7 +1058,7 @@ def assistant_task(body):
   try:
    text=str(body.get('text',''))[:4000];CHAT_IMAGE['id']=body.get('image');hist=chat_get(60)
    if hist and hist[-1]['who']=='you' and hist[-1]['text'].strip()==text.strip():hist=hist[:-1]
-   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks(text,revision,ident))
+   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks(text,revision,ident))
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
    output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
    ASSIST_TASKS[ident].update(done=True,result=output)
@@ -1097,6 +1098,14 @@ def send_selected_groups(targets,request_id=None):
 
 def execute_manual_command(text,request_id=None):
  global OWNER_REVISION
+ import rules
+ pace=rules.pace_rules(text)
+ rule,description=rules.parse(text)
+ if not pace and rule and rule.get('kind')=='gap':pace=[rule]
+ if pace:
+  with LOCK:OWNER_REVISION+=1
+  for item in pace:ENGINE.add_rule(item)
+  return {'handled':True,'reply':'; '.join(rules.describe(item) for item in pace)+('. Auto follows this schedule.' if auto_on() else '. Saved. Auto is currently off.')}
  plan=manual_commands.parse(text)
  if not plan:return {'handled':False}
  with LOCK:OWNER_REVISION+=1
@@ -1110,6 +1119,7 @@ def execute_manual_command(text,request_id=None):
  elif kind=='donation_order':out['reply']=edit_donation_order()
  elif kind=='remove_arrival_line':out['reply']=remove_arrival_line()
  elif kind=='dm_name':out['reply']=edit_dm_name(plan['name'],plan.get('to',''))
+ elif kind=='status':out['reply']=send_status_text(plan.get('freelance',False))
  elif kind=='money':
   if plan['amount']>read_left():raise ValueError('That donation is larger than the amount remaining. Tell me the correct remaining amount.')
   set_left(read_left()-plan['amount']);out['reply']=f"Recorded Rs. {plan['amount']:,} received. Rs. {read_left():,} left."
@@ -1154,6 +1164,25 @@ def manual_command(text,request_id=None):
 def dm_identity():
  if LAST_MANUAL.get('kind')=='dm_appeal':return {'name':LAST_MANUAL.get('name',''),'phone':LAST_MANUAL.get('to','').split('@')[0],'gender':LAST_MANUAL.get('gender','Brother')}
  return None
+
+def set_group_pace(target,minutes):
+ if target not in (*GROUPS,'free','all'):raise ValueError('Choose a known group or freelance/all.')
+ minutes=max(15,min(1440,int(minutes)))
+ ENGINE.add_rule({'kind':'gap','group':target,'minutes':minutes})
+ return f'Automatic posts in {target}: every {minutes} minutes. Other groups keep their settings.'
+
+def send_status_text(freelance=False):
+ summary=ENGINE.summary();last=last_sent_by_key();keys=FREELANCE if freelance else list(GROUPS)
+ lines=['Auto is '+('on' if auto_on() else 'off')+'.']
+ current=get_job(ACTIVE) if ACTIVE else None
+ if current:lines.append(current.get('message','A send is running.'))
+ for key in keys:
+  every=summary['group_intervals'][key];stamp=last.get(key)
+  elapsed=max(0,(time.time()-stamp)/60) if stamp else None
+  state='paused' if ENGINE.blocked(key) else ('due now' if elapsed is None or elapsed>=every else f'next in {math.ceil(every-elapsed)} min')
+  lines.append(f'{GROUPS[key][0]}: every {every} min, '+(f'last confirmed {int(elapsed)} min ago' if elapsed is not None else 'no confirmed send recorded')+', '+state+'.')
+ if auto_on():lines.append('Due groups send automatically while WhatsApp is connected and sending is not on hold; batch recipients stay 60 seconds apart.')
+ return '\n'.join(lines)
 
 class Handler(BaseHTTPRequestHandler):
  def remote_config(self):

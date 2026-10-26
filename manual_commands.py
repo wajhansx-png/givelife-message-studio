@@ -36,11 +36,14 @@ def control_payload(text):return bool(CONTROL.fullmatch(str(text).strip()))
 def parse(text):
  t=str(text).strip();t=re.sub(r'^(?:please|kindly|can you|could you|would you)\s+(?=send|resend|delete|remove|revoke|text|message)', '',t,flags=re.I);low=norm(t);low=re.sub(r'\s+',' ',low)
  if not t:return None
+ if low in ('update','status','report','whats update','what s update','whats upadte','what s upadte','what is the update','nothing sent yet man','nothing sent yet') or re.search(r'\b(freelance|freelamce)\b.*\b(update|rules)\b|\b(update|rules)\b.*\b(freelance|freelamce)\b',low):return {'kind':'status','freelance':bool(re.search(r'freela',low))}
+ if re.search(r'\b(fast|faster|slow|slower)\b',low) and re.search(r'\b(send|post|pace|speed|posting|sending)\b',low) and not re.search(r'\b(now|right away|immediately|asap)\b',low):return None # pace is a setting, not outgoing text
  if re.search(r'exclusive\s+upwork|37\s*(?:member|members)|120363432572916292|120363431093838536',low):return {'kind':'refuse_target'}
  if re.search(r'\b(don t|dont|do not|never|stop|disable|no)\b.*\b(dm|dms|direct messages)\b',low) or low in ('dm off','dms off','auto dms off'):
   return {'kind':'stop_dms'}
  if low in ('hold','wait','hold on','hold everything','stop everything','pause everything') or re.search(r'wrong (?:whatsapp|number)',low):return {'kind':'hold'}
  if low in ('resume','continue','go ahead','connected','connected now','right one connected','release','unhold'):return {'kind':'resume'}
+ if re.search(r'\b(?:every|each|after)\s+\d+\s*(?:min|mnt|mint|hour)',low):return None
  # A display-name correction changes the greeting, never the destination or whole caption.
  rename=re.fullmatch(r"(?:(his|her|their)\s+name\s+is|(.+?)\s+name\s+is|(?:change|set)\s+(?:his |her |the )?name\s+to)\s+([A-Za-z][A-Za-z '-]{1,35}?)(?:\s+just\s+(?:in\s+(?:msg|message)\s+)?change\s+name)?[.!]?",t,re.I)
  if rename:return {'kind':'dm_name','to':rename[2] or '', 'name':rename[3].strip()}
@@ -77,7 +80,7 @@ def parse(text):
  if m:
   if control_payload(m[1]) or re.fullmatch(r'(?i)(?:(?:the|full|current|updated|proper|correct|dm|appeal|message|poster|and|with)\s*)+',m[1]):return {'kind':'appeal_to','to':m[2].strip()}
   return {'kind':'text','text':m[1].strip(),'to':m[2].strip(),'literal':True}
- m=re.match(r'^(?:please\s+)?send\s+(.{1,300})$',t,re.I|re.S)
- if m and not re.search(r'\b(dm|dms|donors?|members?|groups?|restart|gap|timer|poster|message|now|and)\b|^(?:to|in|on)\b',m[1],re.I):return {'kind':'text','text':m[1].strip(),'to':None,'literal':True}
+ # Unqualified "send jr account" needs contact understanding, never send those words literally.
+ # Custom text remains explicit via send <text> to <recipient>, or the assistant with conversation context.
  if target and re.sub(r'\b(group|groups|in|to|on)\b','',low).strip() in [norm(a) for a in ALIASES[target]]:return {'kind':'select','target':target}
  return None

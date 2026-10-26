@@ -1,6 +1,7 @@
 """In-app assistant and autopilot for the GiveLife studio (DeepSeek API)."""
 import os, re, json, time, datetime, threading, urllib.request, urllib.error
 from pathlib import Path
+from state_shapes import mapping, memories, history as valid_history
 
 MODEL = os.environ.get('DEEPSEEK_MODEL', 'deepseek-chat')
 API_URL = os.environ.get('DEEPSEEK_URL', 'https://api.deepseek.com/chat/completions')
@@ -28,6 +29,9 @@ DM COMPOSITION AND CORRECTIONS (current owner instruction):
 - "his name is Wajdan" or "jr account name is wajdan just in msg change name" means edit_dm_name(name="Wajdan", to=the SAME recipient id or the named contact). Do not find a different person called Wajdan, change the recipient, replace the caption, or send it unless the current instruction also says send/resend. A spelling correction is not a donation.
 - "wrong structure" means restore the full DM layout: greeting/opening, blank line, italic case details, blank line, risk/treatment line, blank line, remaining amount, blank line, bold-italic donation options with Rs. 2,000 BEFORE Rs. 1,000, blank line, appeal, blank line, payment details. Keep the owner's existing words and spacing wherever possible. Use the saved draft or prepare_dm to show it. Do not infer that the selected contact is wrong because it matches the payment number.
 - Use read tools and another reasoning pass when interpretation is uncertain. If a tool rejects malformed caption data, correct the inputs. Never retry an uncertain WhatsApp send. A successful lookup is not a successful send. Report only actions that tools actually confirmed.
+- "send jr account" names a RECIPIENT. Search that contact, then send_dm_appeal. Never send the literal words "jr account" to the previous recipient.
+- Automatic freelance posts run every 30 minutes unless the owner sets a different group interval. Auto sends due posts itself; do not ask for "go" or a button click. Status questions only report confirmed sends, the active job and the EFFECTIVE per-group intervals. Do not attempt a send on "Update" or "Nothing sent yet".
+- Speed instructions are settings: fast means every 15 minutes and slow means every 60 minutes, unless he gives a number. Use set_group_pace for only the named group(s), preserving others. Never send those instruction words as message text.
 
 You are connected to his WhatsApp account. You CAN message anyone he names: use find_contact to look up a saved contact or chat by name (for example "jr account", "Ali", "my wife"), then send_message. You can also send to any phone number he gives you, to the foundation's groups, and attach the picture he attached. Never say "I can't see your chats" or "I can only send to groups": search first with find_contact, and only ask if nothing matches.
 
@@ -104,6 +108,7 @@ CHAT_TOOLS = [
 ]
 GROUP_ONLY = {'type': 'string', 'enum': ['main', 'community', 'fiverr', 'upwork', 'uet', 'toprated']}
 SETTING_TOOLS = [
+    tool('set_group_pace', 'Set the automatic post interval for just one group, free (all freelance), or all groups. Fast=15 min, slow=60 min unless the owner gives minutes. Does not send immediately or change other groups.', {'target':{'type':'string','enum':GROUP_KEYS[:-1]},'minutes':{'type':'integer'}}, ['target','minutes']),
     tool('pause_group', 'Stop autopilot posting in one group for some hours.', {'key': GROUP_ONLY, 'hours': {'type': 'number'}}, ['key', 'hours']),
     tool('resume_group', 'Let autopilot post in a paused group again.', {'key': GROUP_ONLY}, ['key']),
     tool('set_quiet_hours', 'Hours (0-23, Pakistan time) when autopilot sends nothing. Same start and end turns quiet hours off.', {'start': {'type': 'integer'}, 'end': {'type': 'integer'}}, ['start', 'end']),
@@ -135,7 +140,7 @@ AUTO_TOOLS = SETTING_TOOLS + [
 
 
 def _system(memory):
-    rules = '\n'.join(f'- {m["rule"]}' for m in memory) or '- (none yet)'
+    rules = '\n'.join(f'- {m["rule"]}' for m in memories(memory)) or '- (none yet)'
     return SYSTEM + '\n\nPLAYBOOK:\n' + playbook() + '\n\nSAVED RULES FROM THE OWNER:\n' + rules
 
 
@@ -149,18 +154,24 @@ def _chat_raw(key, system, tools, messages):
                                  headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key})
     try:
         with urllib.request.urlopen(req, timeout=25) as r:
-            data = json.load(r)
+            data = mapping(json.load(r))
     except urllib.error.HTTPError as e:
         raise RuntimeError(f'DeepSeek returned {e.code}' + (' (check the API key)' if e.code in (401, 403) else ''))
-    return (data.get('choices') or [{}])[0].get('message') or {}
+    choices=data.get('choices')
+    if not isinstance(choices,list) or not choices or not isinstance(choices[0],dict):
+        raise RuntimeError('DeepSeek returned an incomplete response. No action was confirmed.')
+    message=mapping(choices[0].get('message'))
+    if not message:raise RuntimeError('DeepSeek returned an empty message. No action was confirmed.')
+    return message
 
 
 def _parse_calls(msg):
     calls = []
-    for tc in msg.get('tool_calls') or []:
-        fn = tc.get('function') or {}
+    for tc in mapping(msg).get('tool_calls') or []:
+        if not isinstance(tc,dict):continue
+        fn = mapping(tc.get('function'))
         try:
-            args = json.loads(fn.get('arguments') or '{}')
+            args = mapping(fn.get('arguments'))
         except json.JSONDecodeError:
             continue
         calls.append((tc.get('id'), fn.get('name'), args))
@@ -169,7 +180,7 @@ def _parse_calls(msg):
 
 def _call(key, system, tools, messages):
     """Single-shot helper: returns (text, [(name, args), ...])."""
-    msg = _chat_raw(key, system, tools, messages)
+    msg = mapping(_chat_raw(key, system, tools, messages))
     return (msg.get('content') or '').strip(), [(n, a) for _, n, a in _parse_calls(msg)]
 
 
@@ -178,10 +189,14 @@ SCREEN_ACTIONS = ('prepare_dm',)
 
 def _slim(state):
     """Only what the model needs to decide; keeps the prompt (and the bill) small."""
-    eng = state.get('engine') or {}
+    state=mapping(state)
+    eng = mapping(state.get('engine'))
+    screen=mapping(state.get('screen'))
     out = {'left': state.get('left'), 'wa': state.get('whatsapp'), 'auto': state.get('autopilot'), 'to': state.get('last_recipient'),
-           'pace': eng.get('pace'), 'idle_min': eng.get('minutes_since_money'), 'view': (state.get('screen') or {}).get('view'),
-           'drafts': state.get('drafts'), 'dm_form': (state.get('screen') or {}).get('dm'), 'recipient_names': state.get('recipient_names')}
+           'pace': eng.get('pace'), 'idle_min': eng.get('minutes_since_money'), 'view': screen.get('view'),
+           'drafts': mapping(state.get('drafts')), 'dm_form': mapping(screen.get('dm')), 'recipient_names': mapping(state.get('recipient_names'))}
+    out['group_intervals']=mapping(eng.get('group_intervals'))
+    out['status']=state.get('send_status')
     act = state.get('recent_activity')
     if act:
         out['recent'] = [str(a)[:80] for a in act[-2:]]
@@ -195,7 +210,7 @@ def chat(text, history, state, memory, do):
     if key is None:
         return None
     msgs = []
-    for h in history[-32:]:
+    for h in valid_history(history)[-32:]:
         role = 'user' if h.get('who') == 'you' else 'assistant'
         t = str(h.get('text', ''))[:2000]
         if not t:
@@ -213,13 +228,16 @@ def chat(text, history, state, memory, do):
     else:
         msgs.append({'role': 'user', 'content': stamped})
     system = _system(memory)
+    send_names={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
+    asks_send=bool(re.search(r'(?i)\b(send|resend|post|bhejo|bhej|share)\b',text)) and not re.search(r"(?i)^(?:did you|have you|was it|what|how)|\b(?:dont|don t|don't|do not|never)\b",text)
+    available_tools=[t for t in CHAT_TOOLS if asks_send or t['function']['name'] not in send_names]
     actions, done, reply, jobs = [], [], '', []
     deadline=time.monotonic()+70
     searched = False
     nudged = False
     for _ in range(6):
         if time.monotonic()>deadline:break
-        try:msg = _chat_raw(key, system, CHAT_TOOLS, msgs)
+        try:msg = mapping(_chat_raw(key, system, available_tools, msgs))
         except Exception:
             if done or jobs:break
             raise

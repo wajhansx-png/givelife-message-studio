@@ -164,6 +164,25 @@ dialog.hist header .tool{flex:none!important;width:auto;padding:0 16px}
 .composer .go:hover{background:var(--cacc);filter:brightness(.92)}
 dialog.hist .composer{margin:0 12px calc(12px + env(safe-area-inset-bottom))}
 dialog.hist header{background:var(--cbg)}
+
+/* auto switch: the hero control */
+.live{min-height:48px}
+.livebar{padding-right:84px}
+.autosw{position:absolute;right:8px;top:50%;margin-top:-17px;width:68px;height:34px;border-radius:999px;background:var(--line);display:flex;align-items:center;justify-content:flex-start;padding:0 8px;font-weight:800;font-size:12px;letter-spacing:.06em;color:var(--mut);transition:background .25s,color .25s}
+.autosw .knob{position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 1px 4px #0005;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.autosw .lbl{margin-left:auto;margin-right:2px}
+.autosw[aria-pressed=true]{background:var(--g);color:#fff}
+.autosw[aria-pressed=true] .knob{transform:translateX(34px)}
+.autosw[aria-pressed=true] .lbl{margin-left:2px;margin-right:auto}
+.live[data-on="0"] .pulse{background:#9aa5a0;animation:none}
+.live[data-on="0"]{border-left-color:var(--line)}
+.autosw:active:not(:disabled){transform:none;filter:none}
+.moreg{min-height:40px;border-radius:12px;border:1.5px dashed var(--line);color:var(--mut);font-weight:600;font-size:14px;width:100%}
+.moreg em{font-style:normal;display:inline-block;transition:transform .2s}.moreg[aria-expanded=true] em{transform:rotate(180deg)}
+.chips[hidden]{display:none}
+@media(max-width:899px){.livebar{padding-right:80px}.autosw{margin-top:-16px;height:32px}.autosw .knob{width:26px;height:26px}.autosw[aria-pressed=true] .knob{transform:translateX(36px)}.moreg{min-height:38px}}
+@media(max-width:899px) and (max-height:640px){.moreg{min-height:34px}}
+@media(max-width:899px){.more-open .sugg,.more-open .camp,.more-open .talk .log{display:none}}
 /* touch feel */
 html{-webkit-text-size-adjust:100%;overscroll-behavior:none}
 button,.chat{-webkit-touch-callout:none;user-select:none}.chat.editing,.editing .chat,.message[contenteditable=true]{user-select:text}
@@ -261,7 +280,7 @@ dialog.set::backdrop{background:#0008}
   <span class="sp"></span>
   <span class="pace" id="pace" data-pace="L1" title="Donations normal"></span><button id="leftChip" class="leftchip" title="Change the amount left">Rs. …</button><button id="gear" class="gear" aria-label="Settings" title="Settings">&#9881;</button>
  </header>
- <section class="live" id="live" hidden aria-live="polite"><button type="button" class="livebar" id="liveBar" aria-expanded="false"><i class="pulse"></i><b id="liveNow">Auto is on</b><span id="liveMeta"></span><em>&#8964;</em></button><div class="livemore" id="liveMore" hidden></div></section>
+ <section class="live" id="live" data-on="0" aria-live="polite"><button type="button" class="livebar" id="liveBar" aria-expanded="false"><i class="pulse"></i><b id="liveNow">Auto is off</b><span id="liveMeta">Switch on: runs 24 hours</span><em>&#8964;</em></button><button type="button" class="autosw" id="auto" role="switch" aria-pressed="false" aria-label="Auto mode" title="Auto: posts, replies, thanks and DMs on its own"><span class="lbl">OFF</span><i class="knob"></i></button><div class="livemore" id="liveMore" hidden></div></section>
  <main class="layout">
   <section class="card msgcard" id="card" aria-label="Message">
    <div class="tools"><div class="ctx"><img id="poster" alt="" hidden><span id="ctx">Group message · poster attached</span></div><span class="sp"></span>
@@ -274,11 +293,12 @@ dialog.set::backdrop{background:#0008}
     <div class="sugg" id="sugg" hidden role="status"><span id="suggText"></span><div class="sbtns"><button id="suggDo" class="go">Do it</button><button id="suggNo" class="later">Not now</button></div></div>
     <div class="log" id="log" aria-live="polite"></div>
     <div class="att" id="att" hidden><img id="attImg" alt=""><span>Picture attached. It will be sent with the next DMs. Say "make it the poster" to use it for groups.</span><button type="button" class="later" id="attX" aria-label="Remove picture">✕</button></div>
-    <form id="cmdForm" class="cmd composer" autocomplete="off"><input id="cmd" enterkeyhint="send" aria-label="Tell the app what to do" placeholder="Reply to GiveLife… 34k left · came 2000 · Ali 0300"><div class="ctools"><button type="button" class="clip" data-clip title="Attach a picture" aria-label="Attach a picture">+</button><button type="button" class="auto" id="auto" aria-pressed="false" title="Autopilot: the app posts on its own, following your rules">Auto</button><span class="sp"></span><button class="go" type="submit" aria-label="Send">&#8593;</button></div></form>
+    <form id="cmdForm" class="cmd composer" autocomplete="off"><input id="cmd" enterkeyhint="send" aria-label="Tell the app what to do" placeholder="Reply to GiveLife… 34k left · came 2000 · Ali 0300"><div class="ctools"><button type="button" class="clip" data-clip title="Attach a picture" aria-label="Attach a picture">+</button><span class="sp"></span><button class="go" type="submit" aria-label="Send">&#8593;</button></div></form>
    </section>
    <section class="card send group-send" aria-label="Send group message">
     <div class="prim"><button class="big main" data-group="main"><span class="l">GiveLife main</span><span class="s">GiveLife</span></button><button class="big all" id="sendAll" title="GiveLife main + 5 freelance groups, 60 seconds apart"><span class="l">Send to ALL 6 groups</span><span class="s">ALL 6</span></button></div>
-    <div class="chips">
+    <button type="button" class="moreg" id="moreG" aria-expanded="false"><span class="l">More groups</span><span class="s">More groups</span> <em>&#8964;</em></button>
+    <div class="chips" id="chips" hidden>
      <button data-group="free"><span class="l">All 5 freelance</span><span class="s">Freelance</span></button>
      <button data-group="community"><span class="l">Upwork Community</span><span class="s">Community</span></button><button data-group="fiverr"><span class="l">Fiverr Course</span><span class="s">Fiverr</span></button>
      <button data-group="upwork"><span class="l">Upwork Course</span><span class="s">Upwork</span></button><button data-group="uet"><span class="l">Fiverr UET</span><span class="s">UET</span></button>

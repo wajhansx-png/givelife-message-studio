@@ -84,7 +84,7 @@ $('copy').onclick=async()=>{if(editing)setEditing(false);try{await navigator.cli
 
 /* ---- sending ---- */
 function busy(on){document.body.classList.toggle('sending',on);document.querySelectorAll('[data-group],#sendAll,[data-test],#sendDm,#fresh').forEach(b=>b.disabled=on)}
-async function sendGroup(key){if(editing)setEditing(false);busy(true);
+async function sendGroup(key){if(editing)setEditing(false);if(!$('chips').hidden)$('moreG').click();busy(true);
  try{clearTimeout(timer);await save();$('groupStatus').textContent='Starting…';
   const r=await post('/send-group',{group:key,message:$('group').value}),start=await r.json();if(!r.ok)throw Error(start.error||'Could not start');
   let done=false;while(!done){const j=await (await fetch('/send-status/'+start.job_id)).json();
@@ -236,7 +236,8 @@ $('cmd').addEventListener('focus',()=>{if(isPhone()){$('cmd').blur();openChat()}
 
 /* ---- autopilot ---- */
 let aiAvailable=false;
-function paintAuto(on){autoOn=!!on;if(!autoOn)$('live').hidden=true;$('auto').setAttribute('aria-pressed',String(autoOn));$('auto').textContent=autoOn?'Auto ON':'Auto';
+function paintAuto(on){autoOn=!!on;$('auto').setAttribute('aria-pressed',String(autoOn));$('auto').querySelector('.lbl').textContent=autoOn?'ON':'OFF';$('live').dataset.on=autoOn?'1':'0';
+ if(!autoOn){$('liveNow').textContent='Auto is off';$('liveMeta').textContent='Switch on: runs 24 hours';$('liveMore').hidden=true;$('liveBar').setAttribute('aria-expanded','false')}
  const ph=autoOn?'Auto is on · give me rules: "fiverr every 30 min"':'Reply to GiveLife… 34k left · came 2000';$('cmd').placeholder=ph;$('histCmd').placeholder=autoOn?'Auto is on · give me rules or tasks…':'Reply to GiveLife…'}
 async function toggleAuto(on){const r=await post('/autopilot',{on}),d=await r.json();paintAuto(d.on);say(d.on||!on?'auto':'app',d.reply,!d.on&&on);if(d.on)pollAuto()}
 $('auto').onclick=()=>toggleAuto(!autoOn).catch(e=>say('app',e.message,1));
@@ -245,13 +246,14 @@ async function pollAuto(){try{const d=await (await fetch('/autopilot')).json();a
 /* ---- live box: what Auto is doing right now ---- */
 const GN={main:'GiveLife',community:'Upwork Community',fiverr:'Fiverr',upwork:'Upwork',uet:'Fiverr UET',toprated:'Top Rated'};
 const PACE={L1:'Normal pace: donations are coming.',L2:'Donations slowed: posting faster.',L3:'Donations very slow: working at full effort.',L4:'Long quiet spell: easing off so the groups do not get tired.'};
-function paintLive(st){const box=$('live');if(!autoOn||!st){box.hidden=true;return}
- box.hidden=false;box.dataset.pace=st.pace;$('liveNow').textContent=st.now;
+function paintLive(st){const box=$('live');if(!autoOn||!st)return;
+ box.dataset.pace=st.pace;$('liveNow').textContent=st.now;
  const n=(st.next||[])[0],t=st.today||{};
  $('liveMeta').textContent=(n?`Next: ${GN[n.group]||n.group} ${n.in?'in '+n.in+' min':'now'} · `:'')+`${t.posts||0} posts · ${t.dms||0} DMs`;
  const more=$('liveMore');more.textContent='';
  const add=(k,v)=>{const d=document.createElement('div'),a=document.createElement('div');a.className='k';a.textContent=k;d.textContent=v;more.append(a,d)};
  add('Pace',PACE[st.pace]||st.pace);
+ if(st.why)add('Right now',st.why);
  if((st.next||[]).length)add('Next posts',st.next.map(x=>`${GN[x.group]||x.group} ${x.in?'in '+x.in+' min':'now'}`).join(' · '));
  add('Today',`${t.posts||0} group posts, ${t.dms||0} DMs, ${t.signals||0} people said they donated`);
  if(st.away_hours>=1)add('You',`Away for ${st.away_hours} h. I am running things; I will only message you if something needs you.`);
@@ -293,6 +295,8 @@ $('suggDo').onclick=async()=>{if(!sug)return;const s=sug;dismiss(s.action==='own
  if(s.action==='send_all'){setView('group');await freshWording();armAll();say('app','Fresh message going to all groups. Tap the orange button within 3 seconds to cancel.')}
  else if(s.action==='dm_batch'||s.action==='share'){const r=await post('/suggestion',{action:s.action}),d=await r.json();say('app',d.reply||d.error,!r.ok)}
  else say('app','Noted: '+s.text)};
+
+$('moreG').onclick=()=>{const c=$('chips'),open=c.hidden;c.hidden=!open;document.body.classList.toggle('more-open',open);$('moreG').setAttribute('aria-expanded',String(open));requestAnimationFrame(fit)};
 
 /* ---- touch feel: tapping send/attach never opens or closes the keyboard; light haptic on every button ---- */
 document.querySelectorAll('.composer .go,.composer .clip').forEach(b=>b.addEventListener('pointerdown',e=>e.preventDefault()));

@@ -92,7 +92,7 @@ def parse(text, now=None):
         mins = float(m.group(1)) * (60 if m.group(2).startswith('h') else 1)
         mins = max(15, int(mins))
         g = group or 'all'
-        return {'kind': 'gap', 'group': g, 'minutes': mins}, f'Post in {g} every {mins} minutes (15 is the minimum WhatsApp safely allows).'
+        return {'kind': 'gap', 'group': g, 'minutes': mins}, f'Post in {g} every {mins} minutes (15 is the automatic-posting minimum; manual sends override it).'
 
     # quiet hours: "no posting 2am to 7am", "quiet 2 to 7", "don't post at night"
     m = re.search(r'\b(?:between\s+)?(\d{1,2})\s*(am|pm)?\s*(?:to|-|till|until|se)\s*(\d{1,2})\s*(am|pm)?\b', low)
@@ -124,7 +124,7 @@ def parse(text, now=None):
         return {'kind': 'cap', 'group': group or 'all', 'per_day': int(m.group(1))}, f'At most {m.group(1)} posts a day in {group or "each group"}.'
 
     # anything else that sounds like a standing instruction is kept as a note
-    if STANDING.search(low) and len(t) >= 8 and '?' not in t:
+    if re.search(r'\b(always|never|remember|from now|in future|every day|daily|per day|each day)\b',low) and len(t) >= 8 and '?' not in t:
         return {'kind': 'note', 'text': t[:300]}, f'Saved as a standing rule: "{t[:120]}".'
     return None, ''
 
@@ -147,3 +147,4 @@ def describe(r):
 
 def in_quiet(start, end, hour):
     return start <= hour < end if start < end else (hour >= start or hour < end)
+

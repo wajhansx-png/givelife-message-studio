@@ -504,6 +504,7 @@ class Engine:
                     self.notify('dmq-' + str(mid), f'…{tail} replied: "{text[:120]}". Please answer them.', 0)
 
     def _reply(self, jid, text):
+        if not self.s.get('dm_enabled') or self.h.get('on_hold',lambda:False)():return
         try:
             self.h['send_text'](jid, text)
         except Exception:
@@ -511,7 +512,7 @@ class Engine:
 
     def run_followups(self):
         """Gentle reminders for people who said they would donate later."""
-        if self.quiet_now() or rules.in_quiet(DM_QUIET[0], DM_QUIET[1], pkt().hour):
+        if not self.s.get('dm_enabled') or self.quiet_now() or rules.in_quiet(DM_QUIET[0], DM_QUIET[1], pkt().hour):
             return
         for f in learning.followups_due(self.L)[:3]:
             digest = hashlib.sha256((f['phone'] + '@s.whatsapp.net').encode()).hexdigest()
@@ -542,7 +543,7 @@ class Engine:
                 caps['member'] = caps['saved'] = 0
             sent = 0
             for phone, name, tier in self.h['outreach'](caps):
-                if sent >= 5 or self.s['dms_today'] >= self.s['dm_daily'] or not self.h['enabled']() or caps.get(tier, 0) <= 0:
+                if sent >= 5 or self.s['dms_today'] >= self.s['dm_daily'] or not self.h['enabled']() or not self.s.get('dm_enabled') or self.h.get('on_hold',lambda:False)() or caps.get(tier, 0) <= 0:
                     continue
                 digest = hashlib.sha256((phone + '@s.whatsapp.net').encode()).hexdigest()
                 if tier != 'repeat' and self.h['already_dmed'](digest):
@@ -598,7 +599,7 @@ class Engine:
         m, f = max(15, int(main_minutes or 20)), max(15, int(freelance_minutes or 60))
         self.s['pace_override'] = [m, f]
         self.save()
-        note = ' (15 minutes is the fastest WhatsApp safely allows per group)' if min(int(main_minutes or 99), int(freelance_minutes or 99)) < 15 else ''
+        note = ' (automatic posting has a 15-minute minimum; manual Send overrides and resets it)' if min(int(main_minutes or 99), int(freelance_minutes or 99)) < 15 else ''
         return f'Pace set: main every {m} min, freelance every {f} min{note}.'
 
     def set_dms(self, enabled, daily, new_people=None):
@@ -699,3 +700,4 @@ class Engine:
                 'quiet': self.s['quiet'], 'pace_override': self.s.get('pace_override'), 'posts_today': self.s['posts_today'],
                 'dms_today': self.s['dms_today'], 'dm_daily': self.s['dm_daily'], 'dm_enabled': self.s['dm_enabled'],
                 'dm_new': self.s.get('dm_new', True), 'possible_donations_today': self.s['done_today']}
+

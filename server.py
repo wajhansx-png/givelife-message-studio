@@ -2,22 +2,41 @@ import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, da
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store
+import manual_commands
+from functools import wraps
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get('DATA_DIR','/data/studio'))
 DATA.mkdir(parents=True,exist_ok=True)
 DRAFT=DATA/'drafts.json'
 DEVICE=os.environ.get('WHATSAPP_DEVICE_ID','')
+GOWA_URL=os.environ.get('GOWA_URL','http://127.0.0.1:3000').rstrip('/')
 GROUPS={'main':('GiveLife Foundation','120363423121755785@g.us'),'community':('Upwork Community 2026','120363398623589385@g.us'),'fiverr':('Fiverr Course 2026','120363411617215937@g.us'),'upwork':('Upwork Course 2026','120363430624868021@g.us'),'uet':('Fiverr Course UET','120363412286860707@g.us'),'toprated':('Top Rated Upworkers','120363427826119453@g.us')}
 FREELANCE=['community','fiverr','upwork','uet','toprated']
 LAST_LOCAL={}
-JOBS={};LOCK=threading.Lock();SEND_LOCK=threading.Lock();ACTIVE=None
+JOBS={};JOB_CANCEL={};REQUEST_JOBS={};LOCK=threading.RLock();SEND_LOCK=threading.RLock();ACTIVE=None
+WIRE_LOCK=threading.RLock()
+OWNER_REVISION=0
+OWNER_GUARD=threading.local()
+ASSIST_TASKS={}
+
+def serialized_send(fn):
+ @wraps(fn)
+ def call(*args,**kwargs):
+  with WIRE_LOCK:
+   revision=getattr(OWNER_GUARD,'revision',None)
+   if revision is not None and revision!=OWNER_REVISION:raise ValueError('Superseded by your newer instruction. Nothing was sent.')
+   event=getattr(OWNER_GUARD,'cancel_event',None)
+   if event is not None and event.is_set():return {'code':'CANCELLED','message':'Stopped by the newer instruction.'}
+   return fn(*args,**kwargs)
+ return call
+
 STORE=configured_store()
 BLOCKED=set(json.loads((ROOT/'campaign-blocks.json').read_text())) if (ROOT/'campaign-blocks.json').exists() else set()
 def persist_file(key,path):
  if STORE:STORE.put(key,path.read_text(encoding='utf-8'))
 
 def api(path):
- req=urllib.request.Request('http://127.0.0.1:3000'+path,headers={'X-Device-Id':DEVICE})
+ req=urllib.request.Request(GOWA_URL+path,headers={'X-Device-Id':DEVICE})
  with urllib.request.urlopen(req,timeout=12) as r:return json.load(r)
 
 def custom_recipient(body):
@@ -40,7 +59,6 @@ def send_custom(body):
   status=api('/devices/'+DEVICE+'/status').get('results',{})
   if not status.get('is_connected') or not status.get('is_logged_in'):raise ValueError('WhatsApp is disconnected. Tap WhatsApp to reconnect.')
   now=time.time();saved=STORE.get('last_sent',{})
-  if is_group and now-saved.get(jid,0)<900:raise ValueError('This group was posted to recently. Wait 15 minutes between posts.')
   if not is_group:
    digest=hashlib.sha256(jid.encode()).hexdigest()
    if digest in BLOCKED or STORE.get('dm_recipient_'+digest):raise ValueError('This recipient was already contacted or has an uncertain send. Check WhatsApp before sending again.')
@@ -50,15 +68,17 @@ def send_custom(body):
    if now-ledger.get('last',0)<60:raise ValueError('Wait at least 60 seconds between DMs.')
    ledger.update(count=ledger['count']+1,last=now);STORE.put('dm_daily',ledger);STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':now})
   # Reserve before dispatch. A network failure must not silently allow duplicates.
-  if is_group:saved[jid]=now;STORE.put('last_sent',saved)
   try:
    if body.get('poster') is True:result=send_image(jid,message)
    else:
-    req=urllib.request.Request('http://127.0.0.1:3000/send/message',data=json.dumps({'phone':jid,'message':message}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
+    req=urllib.request.Request(GOWA_URL+'/send/message',data=json.dumps({'phone':jid,'message':message}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
     with urllib.request.urlopen(req,timeout=40) as response:result=json.load(response)
   except Exception:result={'code':'UNCERTAIN','message':'Send not confirmed. Check WhatsApp before retrying.'}
+  if is_group and result.get('code')=='SUCCESS':
+   saved[jid]=time.time();STORE.put('last_sent',saved);LAST_LOCAL[jid]=time.time();record_delivery(jid,message,result)
   STORE.put('custom_receipt_'+uuid.uuid4().hex,{'time':now,'jid':jid,'code':result.get('code'),'message_id':result.get('results',{}).get('message_id')})
   if not is_group:STORE.put('dm_recipient_'+digest,{'state':result.get('code','UNCERTAIN'),'time':now})
+  if result.get('code')=='SUCCESS':remember_manual({'kind':'text','to':jid,'text':message,'with_picture':body.get('poster') is True})
   return result
  finally:SEND_LOCK.release()
 
@@ -131,12 +151,15 @@ def next_dm():
 
 def set_left(left):
  with LOCK:
+  revision=getattr(OWNER_GUARD,'revision',None)
+  if revision is not None and revision!=OWNER_REVISION:raise ValueError('Superseded by your newer instruction. The amount was not changed.')
   write_left(left)
   try:ENGINE.amount_updated()
   except NameError:pass
   g=build_group(variant(False),left);d=build_dm(dm_selection(False),left)
   save_draft('group',g);save_draft('dm',d);return g,d
 
+@serialized_send
 def send_image(jid,caption,check_gap=False,_retry=True):
  if on_hold():return {'code':'ERROR','message':'On hold: you told me to wait.'}
  if jid in NEVER_GROUPS:return {'code':'ERROR','message':'This group is never used.'}
@@ -152,7 +175,7 @@ def send_image(jid,caption,check_gap=False,_retry=True):
    latest=max(datetime.datetime.fromisoformat(m['timestamp'].replace('Z','+00:00')) for m in outgoing);age=(datetime.datetime.now(datetime.timezone.utc)-latest).total_seconds()
    if age<900:return {'code':'COOLDOWN','message':f'Posted recently. Try in {math.ceil((900-age)/60)} min.'}
  cap=DATA/('caption-'+uuid.uuid4().hex+'.txt');cap.write_text(caption,encoding='utf-8')
- r=subprocess.run(['curl','-s','--max-time','40','-X','POST','http://127.0.0.1:3000/send/image','-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'image=@{DATA / "poster.jpg"};type=image/jpeg','-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
+ r=subprocess.run(['curl','-s','--max-time','40','-X','POST',GOWA_URL+'/send/image','-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'image=@{DATA / "poster.jpg"};type=image/jpeg','-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
  cap.unlink(missing_ok=True)
  try:result=json.loads(r.stdout)
  except Exception:result={'code':'ERROR','message':'Send not confirmed. Check WhatsApp before retrying.'}
@@ -161,7 +184,8 @@ def send_image(jid,caption,check_gap=False,_retry=True):
   STORE.put('receipt_'+uuid.uuid4().hex,receipt)
   if result.get('code')=='SUCCESS':
    saved=STORE.get('last_sent',{});saved[jid]=time.time();STORE.put('last_sent',saved)
- if result.get('code')=='SUCCESS':LAST_LOCAL[jid]=time.time()
+ if result.get('code')=='SUCCESS':
+  LAST_LOCAL[jid]=time.time();record_delivery(jid,caption,result)
  elif _retry and jid.endswith('@g.us') and NOT_MEMBER.search(str(result.get('message',''))):
   key=next((k for k,v in GROUPS.items() if v[1]==jid),None);chk=check_groups(True)
   if key and GROUPS[key][1]!=jid:return send_image(GROUPS[key][1],caption,check_gap,False)
@@ -169,55 +193,86 @@ def send_image(jid,caption,check_gap=False,_retry=True):
  with (DATA/'group-send-log.jsonl').open('a',encoding='utf-8') as f:f.write(json.dumps({'time':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jid':jid,'caption':caption,'response':result},ensure_ascii=False)+'\n')
  return result
 
-QUEUED={}
-def _hhmm(epoch):
- return (datetime.datetime.fromtimestamp(epoch,datetime.timezone.utc)+datetime.timedelta(hours=5)).strftime('%H:%M')
+QUEUED={}  # legacy timers are deliberately not resumed or recreated
 
-def queue_group(key,wait_s):
- """Owner asked to post but the group is cooling down: post by itself the moment WhatsApp's 15-minute gap opens."""
- at=time.time()+max(5,wait_s)
- if key in QUEUED:return QUEUED[key]['at']
- QUEUED[key]={'at':at}
- def runner():
-  try:
-   while True:
-    q=QUEUED.get(key)
-    if not q or on_hold():return
-    left=q['at']-time.time()
-    if left>0:time.sleep(min(left,15));continue
-    caption=json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')
-    if not start_keys_job([key],caption):time.sleep(10);continue
-    while ACTIVE:time.sleep(2)
-    res=last_results();r=res[0] if res else (key,'?','')
-    m=re.search(r'in (\d+) min',str(r[2]))
-    if r[1]=='COOLDOWN' and m:q['at']=time.time()+int(m.group(1))*60+20;continue
-    auto_log(f'Queued post to {key}: '+('sent.' if r[1]=='SUCCESS' else 'did not go: '+str(r[2])[:60]),False);return
-  finally:QUEUED.pop(key,None)
- threading.Thread(target=runner,daemon=True).start()
- return at
+def cancel_jobs(reason='Replaced by a new manual send.'):
+ with LOCK:
+  QUEUED.clear()
+  for ident,event in JOB_CANCEL.items():
+   if not JOBS.get(ident,{}).get('done'):
+    event.set();JOBS[ident]['cancel_reason']=reason
+
+def save_job(ident):
+ if STORE:STORE.put('send_job_'+ident,JOBS[ident])
+
+def get_job(ident):
+ job=JOBS.get(ident)
+ if job is not None:return job
+ job=STORE.get('send_job_'+ident) if STORE else None
+ if job and not job.get('done'):
+  job.update(done=True,message='The service restarted before this send was confirmed. Check WhatsApp; it will not retry automatically.')
+  if STORE:STORE.put('send_job_'+ident,job)
+ return job
+
+def start_send_job(keys,caption,manual=False,request_id=None):
+ global ACTIVE
+ check_hold()
+ keys=list(dict.fromkeys(keys))
+ if not caption.strip():raise ValueError('Message is empty.')
+ if not keys or any(k not in GROUPS and k!='test' for k in keys):raise ValueError('Unknown group.')
+ if request_id and not re.fullmatch(r'[A-Za-z0-9_-]{8,100}',str(request_id)):raise ValueError('Invalid send request id.')
+ with LOCK:
+  existing=REQUEST_JOBS.get(request_id) if request_id else None
+  if not existing and request_id and STORE:
+   old=STORE.get('manual_request_'+request_id);existing=old.get('job_id') if old else None
+  if existing:return existing
+  if ACTIVE:
+   current=JOBS.get(ACTIVE,{})
+   if manual and current.get('manual') and current.get('keys')==keys and current.get('caption')==caption:
+    return ACTIVE  # a double click observes the existing in-flight send; never duplicates it
+   if not manual:return None
+   cancel_jobs()
+  ident=uuid.uuid4().hex
+  JOBS[ident]={'done':False,'results':[],'message':'Sending now…','manual':bool(manual),'keys':keys,'caption':caption}
+  JOB_CANCEL[ident]=threading.Event();ACTIVE=ident;LAST_JOB['id']=ident
+  if request_id:
+   REQUEST_JOBS[request_id]=ident
+   if STORE:STORE.put('manual_request_'+request_id,{'job_id':ident})
+  save_job(ident)
+ threading.Thread(target=run_job,args=(ident,keys,caption),daemon=True).start()
+ return ident
+
 
 def run_job(job_id,keys,caption,queue=False):
  global ACTIVE
- job=JOBS[job_id];last_send=None
+ job=JOBS[job_id];event=JOB_CANCEL.setdefault(job_id,threading.Event());last_send=None
  try:
-  with SEND_LOCK:
-   for key in keys:
-    name,jid=GROUPS[key]
-    if last_send is not None:
-     job['message']='Waiting 60 seconds before '+name;time.sleep(max(0,60-(time.monotonic()-last_send)))
-    job['message']='Sending to '+name;result=send_image(jid,caption,True)
-    if queue and result.get('code')=='COOLDOWN':
-     m=re.search(r'in (\d+) min',str(result.get('message','')));at=queue_group(key,(int(m.group(1)) if m else 15)*60)
-     result={**result,'message':f'Posted recently (WhatsApp needs 15 minutes between posts). Queued: it goes by itself at {_hhmm(at)}.','queued':True}
-    job['results'].append({'group':name,**result})
-    if result.get('code')=='SUCCESS':last_send=time.monotonic()
-    elif 'disconnected' in str(result.get('message','')).lower():break
-   sent=sum(r.get('code')=='SUCCESS' for r in job['results'])
-   if sent:job['next_caption']=next_message()
-   job['message']=f'Sent to {sent}/{len(keys)} groups.';job['done']=True;auto_log(job['message']+' '+', '.join(r['group']+(' ✓' if r.get('code')=='SUCCESS' else ' ✗ '+str(r.get('message',''))[:40]) for r in job['results']))
- except Exception as e:job.update(done=True,message='Could not send: '+str(e))
+  for key in keys:
+   if event.is_set() or on_hold():break
+   name,jid=('Givelife test','120363431210327603@g.us') if key=='test' else GROUPS[key]
+   if last_send is not None:
+    job['message']='Waiting 60 seconds between recipients before '+name;save_job(job_id)
+    if event.wait(max(0,60-(time.monotonic()-last_send))):break
+   with SEND_LOCK:
+    if event.is_set() or on_hold():break
+    job['message']='Sending to '+name;save_job(job_id)
+    OWNER_GUARD.cancel_event=event
+    try:result=send_image(jid,caption,not job.get('manual',False))
+    finally:OWNER_GUARD.cancel_event=None
+   job['results'].append({'group':name,**result});save_job(job_id)
+   if result.get('code')=='SUCCESS':last_send=time.monotonic()
+   elif result.get('code')!='COOLDOWN':break  # never retry an uncertain/error result
+  sent=sum(r.get('code')=='SUCCESS' for r in job['results'])
+  if sent and not event.is_set() and ACTIVE==job_id and json.loads(DRAFT.read_text(encoding='utf-8')).get('group')==caption:
+   job['next_caption']=next_message()
+  job['message']=(job.get('cancel_reason','Stopped by owner.')+' ' if event.is_set() or on_hold() else '')+f'Confirmed sent to {sent}/{len(keys)} groups.'
+  job['done']=True;save_job(job_id)
+  auto_log(job['message']+' '+', '.join(r['group']+(' ✓' if r.get('code')=='SUCCESS' else ' ✗ '+str(r.get('message',''))[:100]) for r in job['results']),quiet=bool(job.get('manual')))
+ except Exception:
+  job.update(done=True,message='Send not confirmed. Check WhatsApp before trying again.');save_job(job_id)
  finally:
-  with LOCK:ACTIVE=None
+  with LOCK:
+   if ACTIVE==job_id:ACTIVE=None
 
 
 import assistant
@@ -271,7 +326,7 @@ def set_hold(on):
  on=bool(on);prev=json.loads(HOLD.read_text(encoding='utf-8')) if HOLD.exists() else {}
  if on and not prev.get('on'):
   was=auto_on();HOLD.write_text(json.dumps({'on':True,'was_auto':was,'since':time.time()}),encoding='utf-8')
-  CAMPAIGN['stop']=True
+  CAMPAIGN['stop']=True;cancel_jobs('Stopped by owner.')
   if was:AUTO.write_text(json.dumps({'on':False,'since':time.time()}));persist_file('autopilot',AUTO)
   persist_file('hold',HOLD);auto_log('ON HOLD: all sending stopped until you say resume.')
   return 'On hold. Nothing will be sent anywhere. Say "resume" when the right WhatsApp is connected.'
@@ -343,12 +398,8 @@ def studio_state():
  return {'left':read_left(),'whatsapp':wa_ok(),'minutes_since_post':since,'autopilot':auto_on()}
 
 def start_group_job(key,caption):
- global ACTIVE
- with LOCK:
-  if ACTIVE:return None
-  job_id=uuid.uuid4().hex;ACTIVE=job_id;LAST_JOB['id']=job_id;JOBS[job_id]={'done':False,'results':[],'message':'Starting…'}
- threading.Thread(target=run_job,args=(job_id,list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key],caption),daemon=True).start()
- return job_id
+ keys=list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key]
+ return start_send_job(keys,caption,manual=False)
 
 def auto_post(target):
  caption=json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')
@@ -385,7 +436,6 @@ def find_data(query):
   for jid,n in pool.items():
    if difflib.SequenceMatcher(None,q,n['name'].lower()).ratio()>=0.62:found[jid]=n
  out=sorted(found.values(),key=lambda n:(n['group'],len(n['name'])))[:8]
- if len(out)==1:remember_recipient(out[0]['name'],out[0]['id'])
  return out,checked
 
 def find_contacts(query):
@@ -395,34 +445,37 @@ def find_contacts(query):
 
 SEND_LOCK2=threading.Lock();LAST_FREE_SEND=[0]
 
-def send_free(to,text,with_picture):
+def send_free(to,text,with_picture,literal=False):
  check_hold()
  text=str(text).strip()
  if not text or len(text)>4000:raise ValueError('Message must be 1 to 4,000 characters.')
- to=str(to).strip()
+ if (manual_commands.control_payload(text) or (manual_commands.group(text) and re.search(r'(?i)\b(now|message|restart|gap|poster|send)\b',text))) and not literal:raise ValueError('That is a send instruction, not message text. Use send_appeal for the current group caption.')
+ to=str(to).strip();key=manual_commands.group(to)
  if not wa_ok():raise ValueError('WhatsApp is not connected. Link it first.')
- if to.lower() in GROUPS:
-  key=to.lower();jid=GROUPS[key][1]
-  last=last_sent_by_key().get(key)
-  if last and time.time()-last<900:raise ValueError('That group was posted to less than 15 minutes ago.')
-  target=jid
+ if key:
+  if key in ('all','free'):raise ValueError('Use the group appeal action for a broadcast.')
+  target='120363431210327603@g.us' if key=='test' else GROUPS[key][1]
  elif to.endswith('@g.us'):
   if to not in [v[1] for v in GROUPS.values()] and to!='120363431210327603@g.us':raise ValueError('That group is not one of the foundation groups.')
   target=to
  elif to.endswith('@s.whatsapp.net'):target=to
  else:
-  p=norm_phone(to)
-  if not p:raise ValueError('That is not a valid group, contact id or phone number.')
-  target=p+'@s.whatsapp.net'
- with SEND_LOCK2:
-  wait=LAST_FREE_SEND[0]+20-time.time()
-  if wait>0:time.sleep(wait)
+  phone=norm_phone(to)
+  if not phone:raise ValueError('That is not a valid group, contact id or phone number.')
+  target=phone+'@s.whatsapp.net'
+ with SEND_LOCK:
+  check_hold()
   img=image_path(CHAT_IMAGE.get('id') or 'poster') if with_picture else None
-  r=send_with_image(target,text,img);LAST_FREE_SEND[0]=time.time()
- if r.get('code')!='SUCCESS':raise ValueError('Not confirmed: '+str(r.get('message',''))[:100]+' Check WhatsApp before retrying.')
- if target.endswith('@g.us'):LAST_LOCAL[target]=time.time()
- remember_recipient(to if to.lower() in GROUPS else target.split('@')[0],target)
- auto_log('Sent a message from chat to '+(to if to.lower() in GROUPS else '…'+target.split('@')[0][-4:]),True)
+  result=send_with_image(target,text,img)
+ if result.get('code')!='SUCCESS':raise ValueError('Not confirmed: '+str(result.get('message',''))[:100]+' Check WhatsApp before retrying.')
+ record_delivery(target,text,result)
+ if target.endswith('@g.us'):
+  LAST_LOCAL[target]=time.time()
+  if STORE:
+   saved=STORE.get('last_sent',{});saved[target]=time.time();STORE.put('last_sent',saved)
+ remember_recipient(to if key else target.split('@')[0],target)
+ remember_manual({'kind':'text','to':target,'text':text,'with_picture':bool(with_picture)})
+ auto_log('Confirmed message sent to '+(GROUPS[key][0] if key in GROUPS else 'Givelife test' if key=='test' else '…'+target.split('@')[0][-4:]),True)
  return 'Sent.'
 
 LAST_RECIPIENT={}
@@ -448,25 +501,16 @@ def rule_from_text(text):
  rule,msg=R.parse(text)
  return rule,msg
 
-def send_appeal(target):
- t=str(target).lower()
- keys=list(GROUPS) if t=='all' else FREELANCE if t=='free' else [t] if t in GROUPS else None
- if t=='test':
-  r=send_with_image('120363431210327603@g.us',json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),image_path('poster'));return 'Sent to the test group.' if r.get('code')=='SUCCESS' else 'Test send failed: '+str(r.get('message',''))
- if not keys:raise ValueError('Unknown group.')
- if not wa_ok():raise ValueError('WhatsApp is not connected. Link it first.')
- check_hold()
- saved=last_sent_by_key();ready=[];waiting=[]
- for k in keys:
-  last=saved.get(k);left=900-(time.time()-last) if last else 0
-  (waiting if left>0 else ready).append((k,left))
- msg=[]
- if ready:
-  if not start_keys_job([k for k,_ in ready],json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),True):raise ValueError('Another send is already running. Try again in a minute.')
-  auto_log('Posting the appeal to '+', '.join(k for k,_ in ready)+' (started from chat).');msg.append('Posting now to '+', '.join(GROUPS[k][0] for k,_ in ready)+'.')
- for k,left in waiting:
-  at=queue_group(k,left);msg.append(f'{GROUPS[k][0]} was posted {round((900-left)/60)} min ago and WhatsApp needs 15 minutes between posts. Queued: it goes by itself at {_hhmm(at)}.')
- return ' '.join(msg)
+def send_appeal(target,request_id=None):
+ t=manual_commands.group(str(target)) or str(target).strip().lower()
+ keys=list(GROUPS) if t=='all' else FREELANCE if t=='free' else [t] if t in GROUPS or t=='test' else None
+ if not keys:raise ValueError('Unknown group. GiveLife main is the main foundation group.')
+ remember_manual({'kind':'appeal','target':t})
+ if not wa_ok():raise ValueError('WhatsApp is not connected. Link it from the WhatsApp button, then send again.')
+ caption=json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')
+ ident=start_send_job(keys,caption,manual=True,request_id=request_id)
+ name='GiveLife main' if t=='main' else 'all 6 groups' if t=='all' else 'all 5 freelance groups' if t=='free' else 'Givelife test' if t=='test' else GROUPS[t][0]
+ return {'reply':'Sending to '+name+' now. The automatic-post timer restarts after confirmation.','job_id':ident,'caption':caption}
 
 def add_rule_text(text):
  rule,msg=rule_from_text(text)
@@ -474,7 +518,7 @@ def add_rule_text(text):
  ENGINE.add_rule(rule);return 'Rule added: '+msg
 
 CHAT_IMAGE={}
-def chat_callbacks():
+def base_chat_callbacks():
  def came(amount):
   nl=max(0,read_left()-int(amount));set_left(nl);return f'Rs. {int(amount):,} came. Rs. {nl:,} left.'
  return {'set_left':lambda left:(set_left(int(left)),f'Rs. {int(left):,} left. Messages updated.')[1],
@@ -482,9 +526,9 @@ def chat_callbacks():
   'new_wording':lambda kind:(next_message() if kind=='group' else next_dm(),'New '+kind+' wording ready.')[1],
   'set_message':lambda kind,text:(save_draft(kind,text),'Message replaced.')[1],
   'remember':mem_add,'autopilot':set_auto,**engine_do(),
-  'find_contact':find_contacts,'send_message':send_free,
+  'find_contact':find_contacts,'send_message':send_free,'delete_last_message':delete_last_group,
   'send_appeal':lambda target:send_appeal(target),
-  'recent_activity':lambda:' | '.join(x['text'] for x in AUTOLOG[-8:]) or 'Nothing sent yet from the studio this session.',
+  'recent_activity':lambda:('Current send: '+JOBS.get(ACTIVE,{}).get('message','')+' | ' if ACTIVE else '')+(' | '.join(x['text'] for x in AUTOLOG[-8:]) or 'No confirmed send recorded this session.'),
   'add_rule':lambda text:add_rule_text(text),
   'list_rules':lambda:'; '.join(f"#{r['id']} {r['text']}" for r in ENGINE.rule_list()) or 'No rules yet.',
   'delete_rule':lambda rule_id:('Rule removed.' if ENGINE.delete_rule(rule_id) else 'No such rule.'),
@@ -495,14 +539,16 @@ def chat_callbacks():
 import autopilot, learning as learning_mod, random as _random
 OWNER_PHONE=os.environ.get('OWNER_PHONE','923205069925')
 
+@serialized_send
 def send_text(jid,text):
  check_hold()
- req=urllib.request.Request('http://127.0.0.1:3000/send/message',data=json.dumps({'phone':jid,'message':text}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
+ req=urllib.request.Request(GOWA_URL+'/send/message',data=json.dumps({'phone':jid,'message':text}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
  with urllib.request.urlopen(req,timeout=40) as r:return json.load(r)
 
 def last_sent_by_key():
  saved=dict(LAST_LOCAL)
- if STORE:saved.update(STORE.get('last_sent',{}))
+ if STORE:
+  for jid,stamp in STORE.get('last_sent',{}).items():saved[jid]=max(saved.get(jid,0),stamp)
  return {k:saved.get(v[1]) for k,v in GROUPS.items()}
 
 LAST_JOB={}
@@ -513,12 +559,7 @@ def last_results():
  return [(names.get(r.get('group'),r.get('group')),r.get('code'),str(r.get('message',''))) for r in j['results']]
 
 def start_keys_job(keys,caption,queue=False):
- global ACTIVE
- if not caption.strip():return False
- with LOCK:
-  if ACTIVE:return False
-  job_id=uuid.uuid4().hex;ACTIVE=job_id;JOBS[job_id]={'done':False,'results':[],'message':'Autopilot…'}
- threading.Thread(target=run_job,args=(job_id,[k for k in GROUPS if k in keys],caption,queue),daemon=True).start();return True
+ return bool(start_send_job([k for k in GROUPS if k in keys],caption,manual=False))
 
 def group_messages(jid):
  return api('/chat/'+urllib.parse.quote(jid,safe='')+'/messages?limit=20').get('results',{}).get('data',[]) or []
@@ -571,13 +612,14 @@ def image_path(image):
  if image=='poster':return DATA/'poster.jpg'
  p=ATT/(re.sub(r'[^a-f0-9]','',str(image))+'.jpg');return p if p.exists() else DATA/'poster.jpg'
 
+@serialized_send
 def send_with_image(jid,caption,img):
  check_hold()
  if img is None:
-  req=urllib.request.Request('http://127.0.0.1:3000/send/message',data=json.dumps({'phone':jid,'message':caption}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
+  req=urllib.request.Request(GOWA_URL+'/send/message',data=json.dumps({'phone':jid,'message':caption}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
   with urllib.request.urlopen(req,timeout=40) as r:return json.load(r)
  cap=DATA/('caption-'+uuid.uuid4().hex+'.txt');cap.write_text(caption,encoding='utf-8')
- r=subprocess.run(['curl','-s','--max-time','60','-X','POST','http://127.0.0.1:3000/send/image','-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'image=@{img};type=image/jpeg','-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
+ r=subprocess.run(['curl','-s','--max-time','60','-X','POST',GOWA_URL+'/send/image','-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'image=@{img};type=image/jpeg','-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
  cap.unlink(missing_ok=True)
  try:return json.loads(r.stdout)
  except Exception:return {'code':'ERROR','message':'Send not confirmed. Check WhatsApp before retrying.'}
@@ -837,12 +879,212 @@ ENGINE=autopilot.Engine({'DATA':DATA,'store_get':lambda k:STORE.get(k) if STORE 
  'caption':lambda:json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),'start_job':start_keys_job,'last_results':last_results,'messages':group_messages,
  'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm,'caption_variant':caption_variant,'variant_count':variant_count,'variant_pool':variant_pool,'variant_names':variant_names,'goal':goal_value,'milestone_text':milestone_text,'update_text':update_text,'wa_reconnect':lambda:api('/app/reconnect'),'on_hold':on_hold,'dm_busy':lambda:bool(CAMPAIGN.get('running')),'job_message':job_message,'recent_chats':recent_chats,'outreach':outreach})
 
-def engine_do():
+def engine_do(auto_review=False):
  return {'set_pace':lambda main_minutes,freelance_minutes:ENGINE.set_pace(main_minutes,freelance_minutes),'pause_group':lambda key,hours:ENGINE.pause(key,hours),'resume_group':lambda key:ENGINE.resume(key),
-  'set_quiet_hours':lambda start,end:ENGINE.set_quiet(start,end),'set_dms':lambda enabled,daily:ENGINE.set_dms(enabled,daily),
+  'set_quiet_hours':lambda start,end:ENGINE.set_quiet(start,end),'set_dms':lambda enabled,daily:('DMs remain off by the owner instruction.' if auto_review and enabled and not ENGINE.s.get('dm_enabled') else ENGINE.set_dms(enabled,daily)),
   'notify_owner':lambda text:(ENGINE.notify('ai-'+str(int(time.time())),text,0),'Owner told.')[1]}
 
-PILOT=assistant.Autopilot(lambda:{**studio_state(),'autopilot':ENGINE.summary()},mem_get,engine_do,auto_log,auto_on)
+PILOT=assistant.Autopilot(lambda:{**studio_state(),'autopilot':ENGINE.summary()},mem_get,lambda:engine_do(True),auto_log,auto_on)
+
+MANUAL_STATE=DATA/'manual-context.json'
+LAST_MANUAL=STORE.get('manual_context',{}) if STORE else {}
+if not LAST_MANUAL and MANUAL_STATE.exists():
+ try:LAST_MANUAL=json.loads(MANUAL_STATE.read_text(encoding='utf-8'))
+ except Exception:LAST_MANUAL={}
+DELIVERIES=STORE.get('last_deliveries',{}) if STORE else {}
+if not LAST_MANUAL:
+ for old in reversed(chat_get(300)):
+  if old.get('who')!='you':continue
+  plan=manual_commands.parse(old.get('text','')) or {}
+  if plan.get('kind') in ('appeal','select'):
+   LAST_MANUAL.update(kind='appeal',target=plan['target']);break
+
+def remember_manual(value):
+ LAST_MANUAL.clear();LAST_MANUAL.update(value)
+ MANUAL_STATE.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8');persist_file('manual_context',MANUAL_STATE)
+
+def record_delivery(jid,text,result):
+ if result.get('code')!='SUCCESS':return
+ ident=result.get('results',{}).get('message_id')
+ DELIVERIES[jid]={'message_id':ident,'text':text,'time':time.time()}
+ if STORE:STORE.put('last_deliveries',DELIVERIES)
+
+def resolve_person(to):
+ key=manual_commands.group(to)
+ if key:return key
+ if norm_phone(to) or str(to).endswith(('@s.whatsapp.net','@g.us')):return str(to)
+ found,checked=find_data(to)
+ exact=[x for x in found if x['name'].casefold()==str(to).casefold()]
+ if len(exact)==1:return exact[0]['id']
+ if len(found)==1:return found[0]['id']
+ if not found:raise ValueError('No matching contact. Give the phone number.')
+ raise ValueError('More than one contact matches. Give the full name or number.')
+
+def delete_last_group(target=None):
+ key=manual_commands.group(target or '') or (LAST_MANUAL.get('target') if LAST_MANUAL.get('kind')=='appeal' else None)
+ if key not in GROUPS and key!='test':raise ValueError('Which group? Name the group whose last sent message should be deleted.')
+ jid='120363431210327603@g.us' if key=='test' else GROUPS[key][1]
+ entry=DELIVERIES.get(jid,{})
+ ident=entry.get('message_id')
+ if not ident:
+  own=[m for m in group_messages(jid) if m.get('is_from_me') and m.get('id')]
+  own.sort(key=lambda m:str(m.get('timestamp','')),reverse=True)
+  if own:ident=own[0]['id']
+ if not ident:raise ValueError('I cannot identify an own sent message in that group. No message was deleted.')
+ check_hold()
+ req=urllib.request.Request(GOWA_URL+'/message/'+urllib.parse.quote(str(ident),safe='')+'/revoke',data=json.dumps({'phone':jid}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
+ try:
+  with WIRE_LOCK:
+   check_hold()
+   revision=getattr(OWNER_GUARD,'revision',None)
+   if revision is not None and revision!=OWNER_REVISION:raise ValueError('Superseded by a newer instruction.')
+   with urllib.request.urlopen(req,timeout=20) as response:result=json.load(response)
+ except Exception:raise ValueError('WhatsApp did not confirm deletion. Check the group on your phone.') from None
+ if result.get('code')!='SUCCESS':raise ValueError('WhatsApp refused deletion. Check the message on your phone.')
+ DELIVERIES.pop(jid,None)
+ if STORE:STORE.put('last_deliveries',DELIVERIES)
+ return 'WhatsApp confirmed deletion of the last own message in '+('Givelife test' if key=='test' else GROUPS[key][0])+'.'
+
+def chat_callbacks(prompt='',revision=None,task_id=None):
+ callbacks=base_chat_callbacks();cache={}
+ negative=bool(re.search(r"(?i)\b(don'?t|do not|never|stop)\b.*\b(send|dm|post)\b",prompt))
+ sending=bool(manual_commands.SEND.search(prompt)) and not negative and not re.search(r'(?i)^(?:did you|have you|was it|draft only|preview only)',prompt)
+ dm_allowed=sending and bool(re.search(r'(?i)\b(dm|dms|donors?|members?|direct messages)\b',prompt))
+ send_tools={'send_message','send_appeal','dm_list','dm_donors','dm_group'}
+ read_tools={'find_contact','recent_activity','list_rules'}
+ def wrapped(name,fn):
+  def call(**args):
+   if revision is not None and revision!=OWNER_REVISION and name not in read_tools:raise ValueError('Superseded by your newer instruction. No old action was sent.')
+   if name in send_tools and not sending:raise ValueError('The current instruction does not ask to send. Nothing was sent.')
+   if name in ('dm_list','dm_donors','dm_group') and not dm_allowed:raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
+   if name=='delete_last_message' and (not re.search(r'(?i)\b(delete|remove|revoke)\b',prompt) or re.search(r"(?i)\b(don'?t|do not|never)\b.*\b(delete|remove|revoke)\b",prompt)):raise ValueError('No deletion was requested. Nothing was deleted.')
+   if name=='money_came' and not (manual_commands.parse(prompt) or {}).get('kind')=='money':raise ValueError('This is not an explicit received-donation instruction. The amount was not changed.')
+   if name=='set_left' and not ((manual_commands.parse(prompt) or {}).get('kind')=='amount' or (manual_commands.parse(prompt) or {}).get('amount') is not None):raise ValueError('Only the owner can explicitly set the remaining amount. Wording edits do not change money.')
+   if name=='remember' and not re.search(r'(?i)\b(always|never|remember|from now|in future|yaad rakho)\b',prompt):raise ValueError('This is a current edit, not a request to save a future preference.')
+   if name=='set_dms' and args.get('enabled') and not re.search(r'(?i)\b(dm|dms)\b.*\b(on|enable|start)\b|\b(enable|start)\b.*\b(dm|dms)\b',prompt):raise ValueError('DMs cannot be enabled without your current instruction.')
+   if name=='autopilot' and not re.search(r'(?i)\b(auto|autopilot)\b',prompt):raise ValueError('This request does not change Auto mode.')
+   cache_key=name+json.dumps(args,sort_keys=True,ensure_ascii=False)
+   if name in send_tools|{'delete_last_message'} and cache_key in cache:return cache[cache_key]
+   previous=getattr(OWNER_GUARD,'revision',None);OWNER_GUARD.revision=revision
+   try:
+    if name=='send_appeal':result=send_appeal(args.get('target'),(task_id+'-'+hashlib.sha256(cache_key.encode()).hexdigest()[:16]) if task_id else None)
+    elif name=='send_message':
+     literal=bool(re.search(r'["“\']'+re.escape(str(args.get('text','')))+r'["”\']',prompt))
+     result=send_free(args.get('to',''),args.get('text',''),args.get('with_picture',False),literal=literal)
+    else:result=fn(**args)
+   finally:OWNER_GUARD.revision=previous
+   if name in send_tools|{'delete_last_message'}:cache[cache_key]=result
+   return result
+  return call
+ return {name:wrapped(name,fn) for name,fn in callbacks.items()}
+
+def manual_recipient():
+ if LAST_MANUAL.get('kind')=='appeal':
+  key=LAST_MANUAL.get('target')
+  return {'target':key,'name':'GiveLife main' if key=='main' else key,'id':GROUPS[key][1] if key in GROUPS else '', 'group':True}
+ if LAST_MANUAL.get('kind')=='text':return {'id':LAST_MANUAL.get('to'),'group':str(LAST_MANUAL.get('to','')).endswith('@g.us')}
+ return None
+
+def assistant_task(body):
+ global OWNER_REVISION
+ ident=str(body.get('request_id') or uuid.uuid4().hex)
+ if not re.fullmatch(r'[A-Za-z0-9_-]{8,100}',ident):raise ValueError('Invalid request id.')
+ with LOCK:
+  if ident in ASSIST_TASKS:return ident
+  OWNER_REVISION+=1;revision=OWNER_REVISION
+  ASSIST_TASKS[ident]={'done':False}
+ def run():
+  try:
+   text=str(body.get('text',''))[:4000];CHAT_IMAGE['id']=body.get('image');hist=chat_get(60)
+   if hist and hist[-1]['who']=='you' and hist[-1]['text'].strip()==text.strip():hist=hist[:-1]
+   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks(text,revision,ident))
+   if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
+   output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on())
+   ASSIST_TASKS[ident].update(done=True,result=output)
+  except Exception as e:ASSIST_TASKS[ident].update(done=True,error='The assistant could not complete this request: '+str(e)[:160]+'. It will not retry automatically.')
+ threading.Thread(target=run,daemon=True).start();return ident
+
+def edit_donation_order():
+ left=read_left();drafts=json.loads(DRAFT.read_text(encoding='utf-8'));updated={}
+ for kind,text in drafts.items():
+  lines=text.split('\n');indices=[i for i,line in enumerate(lines) if re.search(r'(?i)people|donat|giving|give ',line) and re.search(r'(?:1[ ,]?000|2[ ,]?000)',line)]
+  if indices:
+   first,last=min(indices),max(indices)
+   replacement=[f'*_{math.ceil(left/2000)} people donating Rs. 2,000_*',f'*_OR {math.ceil(left/1000)} people donating Rs. 1,000_* 🤲']
+   lines[first:last+1]=replacement;updated[kind]='\n'.join(lines)
+  else:updated[kind]=text
+ with LOCK:
+  DRAFT.write_text(json.dumps(updated,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
+ return f'Rs. 2,000 option first, then Rs. 1,000. The amount left stays Rs. {left:,}.'
+
+def remove_arrival_line():
+ drafts=json.loads(DRAFT.read_text(encoding='utf-8'))
+ for kind,text in drafts.items():
+  lines=[line for line in text.split('\n') if not re.search(r'(?i)\b(came(?: in)?|received|has arrived|arrived)\b',line)]
+  drafts[kind]=re.sub(r'\n{3,}','\n\n','\n'.join(lines)).strip()
+ with LOCK:
+  DRAFT.write_text(json.dumps(drafts,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
+ return f'Removed the money-arrival wording from the captions. Amount left is still Rs. {read_left():,}. No future rule was added.'
+
+def send_selected_groups(targets,request_id=None):
+ keys=[]
+ for target in targets:keys.extend(list(GROUPS) if target=='all' else FREELANCE if target=='free' else [target])
+ keys=list(dict.fromkeys(keys));remember_manual({'kind':'appeals','targets':targets})
+ if not wa_ok():raise ValueError('WhatsApp is not connected. Link it first.')
+ caption=json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')
+ ident=start_send_job(keys,caption,True,request_id)
+ return {'reply':f'Starting the manual send to {len(keys)} selected groups now.','job_id':ident,'caption':caption}
+
+def execute_manual_command(text,request_id=None):
+ global OWNER_REVISION
+ plan=manual_commands.parse(text)
+ if not plan:return {'handled':False}
+ with LOCK:OWNER_REVISION+=1
+ OWNER_GUARD.revision=OWNER_REVISION
+ kind=plan['kind'];out={'handled':True}
+ if kind=='refuse_target':raise ValueError('That group is excluded. Nothing was sent.')
+ if kind=='stop_dms':
+  CAMPAIGN['stop']=True;ENGINE.set_dms(False,ENGINE.s.get('dm_daily',30));out['reply']='DMs stopped. Automatic DMs stay off until you turn them on.'
+ elif kind=='hold':out['reply']=set_hold(True)
+ elif kind=='resume':out['reply']=set_hold(False)
+ elif kind=='donation_order':out['reply']=edit_donation_order()
+ elif kind=='remove_arrival_line':out['reply']=remove_arrival_line()
+ elif kind=='money':
+  if plan['amount']>read_left():raise ValueError('That donation is larger than the amount remaining. Tell me the correct remaining amount.')
+  set_left(read_left()-plan['amount']);out['reply']=f"Recorded Rs. {plan['amount']:,} received. Rs. {read_left():,} left."
+ elif kind=='amount':
+  set_left(plan['amount']);out['reply']=f"Rs. {plan['amount']:,} left. Captions updated."
+ elif kind=='delete':out['reply']=delete_last_group(plan.get('target'))
+ elif kind=='select':
+  remember_manual({'kind':'appeal','target':plan['target']});out['reply']='Selected '+('GiveLife main' if plan['target']=='main' else plan['target'])+'.'
+ elif kind=='repeat':
+  if not LAST_MANUAL:raise ValueError('Who should receive it? Name a group or contact.')
+  if LAST_MANUAL.get('kind')=='appeals':out.update(send_selected_groups(LAST_MANUAL['targets'],request_id))
+  elif LAST_MANUAL.get('kind')=='appeal':out.update(send_appeal(LAST_MANUAL['target'],request_id))
+  elif LAST_MANUAL.get('kind')=='text':
+   send_free(LAST_MANUAL['to'],LAST_MANUAL['text'],LAST_MANUAL.get('with_picture',False),literal=True);out['reply']='WhatsApp confirmed the repeated message.'
+  else:raise ValueError('There is no previous manual send to repeat.')
+ elif kind=='appeals':
+  if plan.get('amount') is not None:set_left(plan['amount'])
+  out.update(send_selected_groups(plan['targets'],request_id))
+ elif kind=='appeal':
+  if plan.get('amount') is not None:set_left(plan['amount'])
+  out.update(send_appeal(plan['target'],request_id))
+ elif kind=='appeal_to':
+  target=resolve_person(plan['to'])
+  if target in GROUPS or target in ('all','free','test'):out.update(send_appeal(target,request_id))
+  else:raise ValueError('What exact message should I send to this person?')
+ elif kind=='text':
+  target=resolve_person(plan['to']) if plan.get('to') else (LAST_MANUAL.get('to') if LAST_MANUAL.get('kind')=='text' else LAST_MANUAL.get('target') if LAST_MANUAL.get('kind')=='appeal' else None)
+  if not target:raise ValueError('Who should receive this text? Give a name, number or group.')
+  send_free(target,plan['text'],False,literal=True);out['reply']='WhatsApp confirmed the message.'
+ drafts=json.loads(DRAFT.read_text(encoding='utf-8'));out.update(group=drafts['group'],dm=drafts['dm'],left=read_left())
+ return out
+
+def manual_command(text,request_id=None):
+ previous=getattr(OWNER_GUARD,'revision',None)
+ try:return execute_manual_command(text,request_id)
+ finally:OWNER_GUARD.revision=previous
 
 class Handler(BaseHTTPRequestHandler):
  def remote_config(self):
@@ -883,14 +1125,19 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/chat':self.reply({'items':chat_get(200)})
   elif self.path=='/suggestions':self.reply({'items':ENGINE.suggestions(),'autopilot':auto_on(),'summary':ENGINE.summary()})
   elif self.path=='/groups':self.reply([{'key':k,'name':v[0]} for k,v in GROUPS.items()])
+  elif self.path.startswith('/assistant-status/'):
+   task=ASSIST_TASKS.get(self.path.split('/')[-1]);self.reply(task or {'error':'This request is no longer tracked after a service restart. Check recent activity before trying again.'},status=200 if task else 404)
   elif self.path.startswith('/send-status/'):
-   job=JOBS.get(self.path.split('/')[-1]);self.reply(job or {'error':'Unknown job'},status=200 if job else 404)
+   job=get_job(self.path.split('/')[-1]);self.reply(job or {'error':'Unknown job'},status=200 if job else 404)
   elif self.path=='/':self.reply((ROOT/'index.html').read_bytes(),'text/html')
   else:self.reply({},status=404)
  def do_POST(self):
-  global ACTIVE
+  global ACTIVE,OWNER_REVISION
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   ENGINE.touch_owner()
+  if self.path not in ('/chat-log','/rule-text'):
+   with LOCK:OWNER_REVISION+=1
+   OWNER_GUARD.revision=OWNER_REVISION
   origin=self.headers.get('Origin');same_origin=origin and urllib.parse.urlparse(origin).netloc==self.headers.get('Host')
   if origin and not same_origin and origin not in self.remote_config().get('origins',[]):return self.reply({},status=403)
   try:body=json.loads(self.rfile.read(int(self.headers.get('Content-Length',0))))
@@ -919,7 +1166,7 @@ class Handler(BaseHTTPRequestHandler):
    try:
     data=api('/devices/'+DEVICE+'/login');url=data.get('results',{}).get('qr_link','');path=urllib.parse.urlparse(url).path
     if not path.startswith('/statics/qrcode/'):return self.reply({'error':'QR not available; check connection.'},status=400)
-    with urllib.request.urlopen('http://127.0.0.1:3000'+path,timeout=10) as qr:encoded=base64.b64encode(qr.read()).decode()
+    with urllib.request.urlopen(GOWA_URL+path,timeout=10) as qr:encoded=base64.b64encode(qr.read()).decode()
     self.reply({'qr':'data:image/png;base64,'+encoded,'duration':data['results'].get('qr_duration',30)})
    except Exception as e:self.reply({'error':'Could not get QR: '+str(e)},status=502)
   elif self.path=='/next-message':self.reply({'message':next_message()})
@@ -940,10 +1187,13 @@ class Handler(BaseHTTPRequestHandler):
    except Exception as e:self.reply({'error':str(e)[:160]},status=400)
   elif self.path=='/find':
    out,checked=find_data(str(body.get('query','')));self.reply({'items':out,'checked':checked})
+  elif self.path=='/command':
+   try:self.reply(manual_command(str(body.get('text','')),body.get('request_id')))
+   except ValueError as e:self.reply({'error':str(e)},status=400)
   elif self.path=='/send-now':
    to=str(body.get('to','')).strip() or LAST_RECIPIENT.get('id','')
    if not to:return self.reply({'error':'Who should I send it to? Say: send hi to <name or number>.'},status=400)
-   try:send_free(to,body.get('text',''),bool(body.get('with_picture')));self.reply({'ok':True,'to':LAST_RECIPIENT.get('name','')})
+   try:send_free(to,body.get('text',''),bool(body.get('with_picture')),literal=body.get('literal') is True);self.reply({'ok':True,'to':LAST_RECIPIENT.get('name','')})
    except ValueError as e:self.reply({'error':str(e)},status=400)
    except Exception as e:self.reply({'error':'Could not send: '+str(e)[:100]},status=502)
   elif self.path=='/rule-text':
@@ -966,14 +1216,13 @@ class Handler(BaseHTTPRequestHandler):
    if msg is None:return self.reply({'error':'Unknown setting'},status=400)
    self.reply({'reply':msg,'summary':ENGINE.summary()})
   elif self.path=='/assistant':
-   text=str(body.get('text',''))[:4000];CHAT_IMAGE['id']=body.get('image')
+   text=str(body.get('text',''))[:4000]
    if not text.strip():return self.reply({'error':'Type something first.'},status=400)
-   hist=chat_get(60)
-   if hist and hist[-1]['who']=='you' and hist[-1]['text'].strip()==text.strip():hist=hist[:-1]
-   try:out=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':dict(LAST_RECIPIENT) or None,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks())
-   except Exception as e:return self.reply({'error':'The assistant could not answer: '+str(e)[:160]},status=502)
-   if out is None:return self.reply({'error':'ai-off'},status=503)
-   d=json.loads(DRAFT.read_text(encoding='utf-8'));out.update(group=d.get('group',''),dm=d.get('dm',''),left=read_left(),autopilot=auto_on());self.reply(out)
+   try:
+    direct=manual_command(text,body.get('request_id'))
+    if direct.get('handled'):return self.reply(direct)
+    ident=assistant_task(body);self.reply({'task_id':ident})
+   except ValueError as e:self.reply({'error':str(e)},status=400)
   elif self.path=='/left':
    try:left=int(body.get('left'))
    except Exception:return self.reply({'error':'Enter the amount as a number, like 34000.'},status=400)
@@ -982,11 +1231,12 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/send-group':
    key=body.get('group');caption=str(body.get('message',''))
    if key not in GROUPS and key not in ('all','free'):return self.reply({'error':'Unknown group'},status=400)
-   if not caption.strip():return self.reply({'error':'Message is empty'},status=400)
-   with LOCK:
-    if ACTIVE:return self.reply({'error':'A group send is already running.'},status=409)
-    job_id=uuid.uuid4().hex;ACTIVE=job_id;JOBS[job_id]={'done':False,'results':[],'message':'Starting…'}
-   threading.Thread(target=run_job,args=(job_id,list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key],caption,True),daemon=True).start();self.reply({'job_id':job_id})
+   try:
+    OWNER_REVISION+=1
+    remember_manual({'kind':'appeal','target':key})
+    ident=start_send_job(list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key],caption,True,body.get('request_id'))
+    self.reply({'job_id':ident})
+   except ValueError as e:self.reply({'error':str(e)},status=400)
   elif self.path=='/test':
    caption=str(body.get('message',''))
    if not caption.strip():return self.reply({'error':'Message is empty'},status=400)

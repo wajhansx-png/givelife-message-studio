@@ -1,4 +1,5 @@
 const $=id=>document.getElementById(id);
+let draftSaved=null;
 let editing=false,left=null,timer,saveChain=Promise.resolve(),allT=null,autoOn=false,seenAuto=0;
 const view=()=>document.body.dataset.view,fmt=n=>Number(n).toLocaleString('en-US');
 const post=(url,body)=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
@@ -52,8 +53,8 @@ function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');
  for(let s=isPhone()?16:22;s>=11;s-=.5){m.style.fontSize=s+'px';if(m.scrollHeight<=chat.clientHeight-30)break}
  chat.style.overflowY=m.scrollHeight>chat.clientHeight-30?'auto':'hidden'}
 new ResizeObserver(()=>requestAnimationFrame(fit)).observe($('chat'));
-function save(){const data={group:$('group').value,dm:$('dm').value};
- saveChain=saveChain.catch(()=>{}).then(async()=>{const r=await post('/drafts',data);if(!r.ok)throw Error('Save failed');status('✓ Saved')});return saveChain}
+function save(){const data={group:$('group').value,dm:$('dm').value},payload=JSON.stringify(data);
+ saveChain=saveChain.catch(()=>{}).then(async()=>{if(payload===draftSaved)return;const r=await post('/drafts',data);if(!r.ok)throw Error('Save failed');draftSaved=payload;status('✓ Saved')});return saveChain}
 function saveSoon(){status('Saving…');clearTimeout(timer);timer=setTimeout(()=>save().catch(()=>status('Save failed',1)),300)}
 
 /* ---- edit in place ---- */
@@ -77,7 +78,7 @@ function setView(v){if(editing)setEditing(false);document.body.dataset.view=v;do
  $('ctx').textContent=v==='group'?'Group message · poster attached':'DM · poster attached';localStorage.setItem('givelife-view',v);requestAnimationFrame(fit);flip()}
 document.querySelectorAll('[data-view-button]').forEach(b=>b.onclick=()=>setView(b.dataset.viewButton));
 function showLeft(){const c=$('leftChip');c.textContent=left==null?'Rs. …':'Rs. '+fmt(left);const w=document.createElement('span');w.className='lw';w.textContent=' left';c.append(w)}
-function applyDrafts(d){if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
+function applyDrafts(d){if(d.group!=null||d.dm!=null)draftSaved=JSON.stringify({group:d.group??$('group').value,dm:d.dm??$('dm').value});if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
 async function setLeft(n){if(editing)setEditing(false);const r=await post('/left',{left:n}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not update amount');applyDrafts(d);await save()}
 $('leftChip').onclick=()=>{const c=$('cmd');c.value='';c.placeholder='New amount left, e.g. 34000 or 34k';c.focus()};
 let gender='Brother';
@@ -95,21 +96,32 @@ $('fresh').onclick=async()=>{$('fresh').disabled=true;try{await freshWording();s
 $('copy').onclick=async()=>{if(editing)setEditing(false);try{await navigator.clipboard.writeText($(view()).value);status('✓ Copied')}catch(e){status('Copy failed',1)}};
 
 /* ---- sending ---- */
-function busy(on){document.body.classList.toggle('sending',on);document.querySelectorAll('[data-group],#sendAll,[data-test],#sendDm,#fresh').forEach(b=>b.disabled=on)}
-let lastTarget=null;
-async function sendGroup(key){lastTarget=key;if(editing)setEditing(false);if(!$('chips').hidden)$('moreG').click();busy(true);
- try{clearTimeout(timer);await save();$('groupStatus').textContent='Starting…';
-  const r=await post('/send-group',{group:key,message:$('group').value}),start=await r.json();if(!r.ok)throw Error(start.error||'Could not start');
-  let done=false;while(!done){const j=await (await fetch('/send-status/'+start.job_id)).json();
-   $('groupStatus').textContent=j.message+'\n'+j.results.map(x=>x.group+': '+(x.code==='SUCCESS'?'✓ Sent':x.message)).join('\n');done=j.done;
-   if(done){say('app',j.message+(j.results.length?' '+j.results.map(x=>x.group+(x.code==='SUCCESS'?' ✓':' ✗')).join(', '):''));if(j.next_caption){$('group').value=j.next_caption;render()}}
-   if(!done)await new Promise(res=>setTimeout(res,1500))}}
- catch(e){$('groupStatus').textContent='✗ '+e.message;say('app',e.message,1)}finally{busy(false);requestAnimationFrame(fit)}}
+let operationCount=0;
+function busy(on){operationCount=Math.max(0,operationCount+(on?1:-1));document.body.classList.toggle('sending',operationCount>0)}
+const watchingJobs=new Set();let displayJob=null;
+const requestId=()=>typeof crypto.randomUUID==='function'?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+async function watchGroupJob(id,caption){
+ if(watchingJobs.has(id))return;watchingJobs.add(id);displayJob=id;busy(true);
+ try{let done=false,failures=0;const until=Date.now()+12*60*1000;
+  while(!done&&Date.now()<until){let job;
+   try{const r=await fetch('/send-status/'+id);job=await r.json();if(!r.ok)throw Error(job.error||'Could not read the send result');failures=0}
+   catch(e){if(++failures>=3)throw Error('Could not confirm delivery. Check WhatsApp. No send was retried.');await new Promise(res=>setTimeout(res,2000));continue}
+   if(displayJob===id)$('groupStatus').textContent=job.message+'\n'+(job.results||[]).map(x=>x.group+': '+(x.code==='SUCCESS'?'✓ Confirmed sent':x.message)).join('\n');
+   done=job.done;
+   if(done){const bad=(job.results||[]).some(x=>x.code!=='SUCCESS');say('app',job.message+((job.results||[]).length?' '+job.results.map(x=>x.group+': '+(x.code==='SUCCESS'?'✓ Sent':x.message||'Not confirmed')).join(', '):''),bad);
+    if(job.next_caption&&$('group').value===caption&&!editing){$('group').value=job.next_caption;render()}}
+   if(!done)await new Promise(res=>setTimeout(res,1200));
+  }
+  if(!done)throw Error('This send is still unconfirmed. Check WhatsApp before sending again.');
+ }catch(e){say('app',e.message,1)}finally{watchingJobs.delete(id);busy(false);requestAnimationFrame(fit)}
+}
+async function sendGroup(key){if(editing)setEditing(false);if(!$('chips').hidden)$('moreG').click();busy(true);
+ try{clearTimeout(timer);await save();const caption=$('group').value;$('groupStatus').textContent='Sending now…';
+  const r=await post('/send-group',{group:key,message:caption,request_id:requestId()}),start=await r.json();if(!r.ok)throw Error(start.error||'Could not start');
+  watchGroupJob(start.job_id,caption);
+ }catch(e){$('groupStatus').textContent='✗ '+e.message;say('app',e.message,1)}finally{busy(false)}}
 document.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>sendGroup(b.dataset.group));
-function armAll(){const b=$('sendAll'),txt='Send to ALL 6 groups';
- if(allT){clearInterval(allT);allT=null;b.classList.remove('arm');b.textContent=txt;say('app','Cancelled. Nothing was sent.');return}
- let n=3;b.classList.add('arm');b.textContent=`Sending in ${n}… tap to cancel`;
- allT=setInterval(()=>{n--;if(n>0){b.textContent=`Sending in ${n}… tap to cancel`;return}clearInterval(allT);allT=null;b.classList.remove('arm');b.textContent=txt;sendGroup('all')},1000)}
+function armAll(){return sendGroup('all')}
 $('sendAll').onclick=armAll;
 async function sendTest(kind){busy(true);try{clearTimeout(timer);await save();const r=await post('/test',{message:$(kind).value}),d=await r.json();say('app',d.code==='SUCCESS'?'✓ Sent to the test group.':'Test failed: '+(d.message||d.error||''),d.code!=='SUCCESS')}
  catch(e){say('app',e.message||'Could not send',1)}finally{busy(false)}}
@@ -131,7 +143,7 @@ async function sendTo(who,text){
   if(!d.items.length)return `I checked your chats and contacts (${d.checked}) and found nobody called "${who}". Send me the number and I will message it.`;
   if(d.items.length>1&&!d.items.some(x=>x.name.toLowerCase()===who.toLowerCase()))return 'Which one?\n'+d.items.slice(0,5).map((x,i)=>`${i+1}. ${x.name}`).join('\n')+'\nSay: send '+text+' to <full name>.';
   const hit=d.items.find(x=>x.name.toLowerCase()===who.toLowerCase())||d.items[0];to=hit.id;who=hit.name}
- const r=await post('/send-now',{to,text,with_picture:false}),d=await r.json();
+ const r=await post('/send-now',{to,text,with_picture:false,literal:true}),d=await r.json();
  if(!r.ok)throw Error(d.error||'Could not send');return `Sent "${text.slice(0,60)}" to ${who||d.to||'the last person'}.`}
 const GKEY=w=>({main:'main',givelife:'main',community:'community','upwork community':'community',fiverr:'fiverr','fiverr course':'fiverr',upwork:'upwork','upwork course':'upwork',uet:'uet','fiverr uet':'uet',toprated:'toprated','top rated':'toprated',test:'test','test group':'test'})[String(w).toLowerCase().trim()];
 
@@ -182,6 +194,11 @@ $('campStop').onclick=async()=>{if(listT){clearTimeout(listT);listT=null;$('camp
 /* ---- the assistant: quick commands work instantly; anything else goes to the AI ---- */
 const num=(s,k)=>Math.round(parseFloat(s.replace(/,/g,''))*(k?1000:1));
 async function quick(t){const low=t.toLowerCase();let m;
+ if(/^(hi+|hello|hey|salam)\W*$/i.test(t))return 'Hi. What should I do?';
+ if(/^(ok|okay|thanks|thank you|theek|done thanks)\W*$/i.test(t))return /thank/i.test(t)?'You’re welcome.':'Okay.';
+ if(editing)setEditing(false);clearTimeout(timer);await save();
+ const command=await post('/command',{text:t,request_id:requestId()}),direct=await command.json();if(!command.ok)throw Error(direct.error||'Command failed. Nothing was retried.');
+ if(direct.handled){applyDrafts(direct);if(direct.job_id)watchGroupJob(direct.job_id,direct.caption||$('group').value);return direct.reply;}
  if(m=low.match(/^(?:came|got|received|recieved|aya|aaya|aye|aaye|\+)\s*(?:rs\.?\s*)?([\d,.]+)\s*(k)?\s*(?:came|aya|aaya)?$/)){
   if(left==null)throw Error('Amount left is not loaded yet.');const n=num(m[1],m[2]),nl=Math.max(0,left-n);await setLeft(nl);return `Rs. ${fmt(n)} came. Rs. ${fmt(nl)} left now; both messages updated.`}
  if(!/3\d{2}[\s-]?\d{7}/.test(t)&&(m=low.match(/^(?:left|remain(?:ing)?|baqi|need(?:ed)?)?\s*(?:rs\.?\s*)?([\d,.]+)\s*(k)?\s*(?:left|remain(?:ing)?|remains|baqi|reh gaye|needed)?$/))){
@@ -198,14 +215,6 @@ async function quick(t){const low=t.toLowerCase();let m;
  const BATCH=async b=>{const r=await post('/dm-batch',b),d=await r.json();if(!r.ok)throw Error(d.error||'Could not start');return d.reply};
  if(m=t.match(/^(?:send\s+)?(?:(\d+)\s+)?(?:dms?|messages?)\s+(?:to\s+)?(?:(\d+)\s+)?(?:my\s+|our\s+|the\s+|past\s+|old\s+|existing\s+)*donors?$/i))return await BATCH({kind:'donors',count:+(m[1]||m[2]||10)});
  if(m=t.match(/^(?:send\s+)?(?:(\d+)\s+)?(?:dms?|messages?)\s+(?:to\s+)?(?:(\d+)\s+)?(?:members?\s+|people\s+|persons\s+)?(?:of|from|in)\s+(?:the\s+)?(.+?)(?:\s+group)?$/i)){const g=GKEY(m[3]);if(g&&g!=='test')return await BATCH({kind:'group',group:g,count:+(m[1]||m[2]||10)})}
- if(m=low.match(/^(?:in|to|on)\s+(.+?)(?:\s+(?:group|groups|grp|froup|gruop|goup))?\s+(?:send|post|bhejo)(?:\s+(?:it|now))?$/)){const k=GKEY(m[1]);if(k&&k!=='test'){setView('group');sendGroup(k);return 'Sending to '+(GN[k]||k)+'. If it was posted less than 15 minutes ago it is queued and goes by itself.'}}
- const CMDWORD=/^(now|it|this|that|again|please|asap|immediately|right now|fast|quick|and\b.*|restart\b.*|gap\b.*|the (appeal|message|poster)|appeal|message|poster|post)$/i;
- if(/^(send|post|do it|go|send it|send now|post now|now|send again|post again|again|send it now|send right now)\W*$/i.test(t)&&lastTarget){sendGroup(lastTarget);return 'Sending to '+(GN[lastTarget]||lastTarget)+'. If it was posted less than 15 minutes ago it is queued and goes by itself.'}
- const TIMED=/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\bat\s+\d{1,2}\b|\b(daily|every day|every \d+)\b/i;
- if((m=t.match(/^(?:send|bhejo|message|msg|text)\s+(.+?)\s+(?:to|ko)\s+(.+)$/i))&&!/^(all|main|free|test|these|them|this|it|the (?:appeal|poster|message))\b/i.test(m[1])&&!TIMED.test(t)){
-  return await sendTo(m[2].trim(),m[1].replace(/^["“'](.*)["”']$/,'$1'))}
- if((m=t.match(/^(?:send|bhejo)\s+(?!(?:all|main|free|test|to|the|a|my|these|them|this)\b)(.{1,300})$/i))&&!/\b(groups?|poster|picture|image)\b/i.test(m[1])&&!CMDWORD.test(m[1].trim())&&m[1].trim().split(/\s+/).length<=8&&!TIMED.test(t)&&!/3\d{2}[\s-]?\d{7}/.test(m[1])){
-  return await sendTo('',m[1].replace(/^["“'](.*)["”']$/,'$1'))}
  const list=parseList(t);
  if(list.people.length>=2||(list.people.length===1&&/\b(send|bhejo|message|msg|dm)\b/i.test(t))){startList(list);return null}
  if(m=t.match(/(?:\+?92|0092|0)?[\s-]?3\d{2}[\s-]?\d{7}/)){
@@ -217,7 +226,7 @@ async function quick(t){const low=t.toLowerCase();let m;
   return `Ready: DM to ${greet()} (${phone}). Tap "Send DM with poster".`}
  if(m=low.match(/^(?:rules?|my rules|show rules|list rules)$/)){const d=await (await fetch('/rules')).json();return d.items.length?'Auto mode follows:\n'+d.items.map((x,i)=>`${i+1}. ${x.text}`).join('\n')+'\nSay "forget 2" to remove one.':'No rules yet. With Auto on, just tell me things like "post in fiverr every 30 min" or "no posting 2am to 7am".'}
  if(m=low.match(/^(?:forget|delete|remove)\s+(?:rule\s*)?#?(\d+)$/)){const d=await (await fetch('/rules')).json(),it=d.items[+m[1]-1];if(!it)return 'There is no rule '+m[1]+'.';await post('/rules',{delete:it.id});return 'Removed: '+it.text}
- if(/^(send )?(to )?all( groups)?$/.test(low)){setView('group');armAll();return 'Sending to all 6 groups in 3 seconds. Tap the orange button to cancel.'}
+ if(/^(send )?(to )?all( groups)?$/.test(low)){setView('group');armAll();return 'Starting the manual send to all 6 groups now.'}
  if(/^(new|regenerate|next|naya)$/.test(low)){await freshWording();return 'New wording ready.'}
  if(/^copy$/.test(low)){$('copy').click();return 'Copied.'}
  if(/^(dm|group)$/.test(low)){setView(low);return 'Switched to '+low.toUpperCase()+'.'}
@@ -229,7 +238,7 @@ async function quick(t){const low=t.toLowerCase();let m;
  if(m=low.match(/^(resume|start posting in|start)\s+([a-z ]+)$/)){const k=G[m[2].trim()];if(k)return setting({action:'resume',key:k})}
  if(m=low.match(/^(?:send|post|share|bhejo|daalo|dalo)(?:\s+(?:it|this|message|msg|post))?(?:\s+(?:in|to|on|mein|me|main))?\s+([a-z ]+?)(?:\s+(?:group|groups|mein|me))?$/)){
   const w=m[1].trim(),k=G[w]||({freelance:'free','all freelance':'free','5 freelance':'free',test:'test','test group':'test',all:'all','all groups':'all'})[w];
-  if(k){setView('group');if(k==='all'){armAll();return 'Sending to all 6 groups in 3 seconds. Tap the orange button to cancel.'}
+  if(k){setView('group');if(k==='all'){armAll();return 'Starting the manual send to all 6 groups now.'}
    if(k==='test'){sendTest('group');return 'Sending to the test group.'}sendGroup(k);return 'Sending to '+({main:'GiveLife main',free:'all 5 freelance groups',community:'Upwork Community',fiverr:'Fiverr Course',upwork:'Upwork Course',uet:'Fiverr UET',toprated:'Top Rated'}[k]||k)+' now.'}}
  if(m=low.match(/^quiet\s+(\d{1,2})\s*(?:-|to)?\s*(\d{1,2})$/))return setting({action:'quiet',start:+m[1],end:+m[2]});
  if(/^quiet off$/.test(low))return setting({action:'quiet',start:0,end:0});
@@ -244,10 +253,10 @@ async function act(text){const t=text.trim();if(!t)return;say('you',t);
  if(rd.rule){if(rd.saved){say('app','Rule saved: '+rd.summary+' Auto mode will follow it. Say "rules" to see them all.');return}
   if(!aiAvailable){say('app',rd.summary+' Auto mode is off, so I did not save it as a rule. Say "auto on" and tell me again.');return}}
  think(true);let r,d;
- try{await logChain;r=await post('/assistant',{text:t,image:attached?attached.id:null,history:history.slice(-13,-1),screen:{view:view(),dm:{name:$('dmName').value,phone:$('dmPhone').value,gender}}});d=await r.json().catch(()=>({}))}finally{think(false)}
+ try{await logChain;r=await post('/assistant',{text:t,request_id:requestId(),image:attached?attached.id:null,history:history.slice(-13,-1),screen:{view:view(),dm:{name:$('dmName').value,phone:$('dmPhone').value,gender}}});d=await r.json().catch(()=>({}));if(r.ok&&d.task_id){let finished=false;const until=Date.now()+4*60*1000;while(!finished&&Date.now()<until){await new Promise(res=>setTimeout(res,500));const check=await fetch('/assistant-status/'+d.task_id),task=await check.json();if(!check.ok)throw Error(task.error||'Request no longer tracked. Nothing was retried.');if(task.done){if(task.error)throw Error(task.error);d=task.result;finished=true}}if(!finished)throw Error('The assistant result is not confirmed. Check recent activity; I will not repeat the send.')}}finally{think(false)}
  if(r.status===503){say('app','I did not understand that, and the AI assistant is not connected, so only direct commands work. Try: "34k left", "came 2000", "send hi to Ali", "send main", "fiverr every 30 min", "rules".',1);return}
  if(!r.ok)throw Error(d.error||'The assistant could not answer.');
- applyDrafts(d);if(d.autopilot!=null)paintAuto(d.autopilot);say('app',d.reply);
+ applyDrafts(d);if(d.autopilot!=null)paintAuto(d.autopilot);say('app',d.reply);if(d.job_id)watchGroupJob(d.job_id,d.caption||$('group').value);for(const j of d.jobs||[])watchGroupJob(j.job_id,j.caption||$('group').value);
  for(const a of d.actions||[]){
   if(a.type==='prepare_dm'){setView('dm');$('dmPhone').value=a.phone||'';$('dmName').value=a.name||'';setGender(a.gender==='Sister'?'Sister':'Brother')}
   }}
@@ -364,4 +373,5 @@ fetch('/drafts').then(r=>r.json()).then(d=>{cached('drafts',d);applyDrafts(d);st
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false}}).catch(()=>{});
 pollAuto();setInterval(pollAuto,10000);pollSuggestions();setInterval(pollSuggestions,60000);pollCamp();
+
 

@@ -1,3 +1,12 @@
+# Current manual-send contract (newest owner instruction)
+- Explicit Send buttons and chat send commands send immediately, overriding only the app's automatic-post cooldown. A confirmed send restarts that group's automatic-post timer.
+- Manual sends are never queued for a 15-minute wait. An older waiting batch is cancelled when a new manual target is chosen. Actual in-flight delivery cannot be undone.
+- Automatic posting still respects its timer; all-group batches keep their recipient spacing. Genuine WhatsApp errors and a disconnected account are reported honestly.
+- Instruction words such as "now", "and restart gap", and "message in givelife now" are not message text. Repeat targets come from the owner's last manual send, not from unrelated personal chats or automatic activity.
+- Wording edits never record a donation or change the remaining amount. A request to put Rs. 2,000 first and Rs. 1,000 second only changes the caption layout. Current edits are not future rules unless the owner explicitly says remember/always/from now on.
+- "Don't send DMs" stops the current list and disables proactive DMs until the owner explicitly enables them. A group send never authorizes a DM batch.
+- Own sent group messages can be revoked through WhatsApp; claim deletion only after confirmation. Ask for the sender when another person's identity is unclear.
+
 # OWNER PLAYBOOK (Wajdan) - what he does in each situation
 # Purpose: so Claude can run the foundation alone exactly like him. Append EVERY owner action below (time, situation, what he did, why if said).
 
@@ -100,4 +109,5 @@
 - Screen: Settings has Appearance (Auto / Light / Dark). Auto follows the phone. The moon button on desktop switches quickly.
 - Unattended: Auto runs on the server, not on the owner's phone, so his internet does not matter. If WhatsApp drops, Auto tries to reconnect every 3 minutes and only alerts the owner after 15 minutes. Auto stays ON after a server restart. The server pings itself every 10 minutes so the free cloud does not sleep.
 - HOLD: 'hold / wait / wrong WhatsApp connected' stops everything (posts, DMs, alerts, Auto, reading) until he says 'resume / connected'. Auto comes back only if it was on. 'ok / thanks' get a tiny fitting reply, never a greeting.
-- FOLLOW AT ONCE, NO QUESTIONS: 'send now / send it / again' repeats the last send. Command words (now, it, again, and, restart, gap, please) are never sent as message text. If a group was posted less than 15 minutes ago, the post is queued and goes by itself when the gap opens, and the app says the exact time. Ask ONE short question only when it is truly unclear who/what.
+- FOLLOW AT ONCE, NO QUESTIONS: 'send now / send it / again' repeats the last send. Command words (now, it, again, and, restart, gap, please) are never sent as message text. The automatic group timer never blocks a manual send. Manual sends go now and restart the timer after confirmation. Ask ONE short question only when it is truly unclear who/what.
+

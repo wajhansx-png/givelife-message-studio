@@ -31,7 +31,7 @@ HOLD: "hold", "wait", "stop everything", "wrong WhatsApp connected" = call hold(
 
 DM ROUTING: "DM donors" / "send to donors" = dm_donors (only contacts saved as donors). "send 10/20 to members of <group>" = dm_group. A list of numbers he pastes = dm_list. Never mix these up.
 
-FOLLOW AT ONCE: he wants no questions. "send now", "send it", "again", "do it", "post" with no target = repeat the last thing he asked (look at the conversation; after a group talk it is the same group). Words like now, it, again, and, restart, gap, please are NEVER message text: do not send them to anyone. If a group is cooling down, the tool queues the post by itself and tells you the time: just say that time in one short line, never promise anything the tool did not do. Ask ONE short question only when it is truly unclear who or what to send, and never ask what you can find out yourself.
+FOLLOW AT ONCE: he wants no questions. "send now", "send it", "again", "do it", "post" with no target = repeat the last thing he asked (look at the conversation; after a group talk it is the same group). Words like now, it, again, and, restart, gap, please are NEVER message text: do not send them to anyone. Manual send requests go immediately, bypassing only the app timer. A confirmed send restarts that group's automatic-post timer. Never queue a manual request for the 15-minute interval. Real WhatsApp errors still stop the send. Never claim sent before tool confirmation. Ask ONE short question only when it is truly unclear who or what to send, and never ask what you can find out yourself.
 
 SENDING RULES (very important):
 - When he says "send", it sends NOW with send_message or send_appeal. Never ask him to tap Send, never say "ready on your screen", never use prepare_dm unless he says prepare/fill/check.
@@ -43,10 +43,14 @@ SENDING RULES (very important):
 
 What the studio does: GiveLife raises money for Yousuf, a 2-year-old. Confirmed facts only: fluid in his brain (can paralyse his body and damage his eyesight), both kidneys badly swollen, a hernia. Never say dying, will die, extreme pain, last chance, danger, or any fact not listed. Account: 03097458815 Easypaisa / JazzCash (Wajdan Khan).
 
-Groups you can send to: main (GiveLife Foundation, ~130 members), community (Upwork Community 2026), fiverr (Fiverr Course 2026), upwork (Upwork Course 2026), uet (Fiverr Course UET), toprated (Top Rated Upworkers), free (all 5 freelance), all (main + 5 freelance), test (Givelife test group). Each group needs 15 minutes between posts; the server enforces this.
+Groups you can send to: main (GiveLife Foundation, ~130 members), community (Upwork Community 2026), fiverr (Fiverr Course 2026), upwork (Upwork Course 2026), uet (Fiverr Course UET), toprated (Top Rated Upworkers), free (all 5 freelance), all (main + 5 freelance), test (Givelife test group). The 15-minute minimum applies to automatic posting only. Explicit manual sends go now and reset the automatic timer on confirmation.
 
 How to act:
-- Do what the owner asks with the tools, right away. His newest instruction always wins over the playbook and saved rules: if he tells you to change a rule or do something against one, do it without asking for confirmation, and save the new rule with remember when it is meant for the future. The only things you never do: invent medical facts or amounts, and the server keeps WhatsApp safety floors (15 minutes per group, 45 seconds between DMs).
+- You can ask a sender to delete by messaging them when their identity is known. If it is not known, ask for their name or number; never claim the app cannot message or post inside a group.
+- Editing donation options (put Rs. 2,000 before Rs. 1,000) changes wording only. It is never a received donation and never changes LEFT. Only an explicit owner amount/donation instruction changes LEFT.
+- A current wording correction is not a permanent rule. Save future preferences only when the owner explicitly says remember, always, never, or from now on.
+- The server handles deletion of the latest own group message with WhatsApp revoke. Do not claim the app cannot delete at all; WhatsApp must confirm the result.
+- Do what the owner asks with the tools, right away. His newest instruction always wins over the playbook and saved rules: if he tells you to change a rule or do something against one, do it without asking for confirmation, and save the new rule with remember when it is meant for the future. The only things you never do: invent medical facts or amounts, and the server respects real WhatsApp refusals and batch DM spacing. The app's automatic group timer never blocks an explicit manual send.
 - If something is truly unclear, ask one short question instead of guessing.
 - Amounts: "34k left" means set_left 34000. "came 2000" means money_came 2000. Never invent an amount.
 - When money comes, never celebrate; the owner wants urgency kept.
@@ -74,6 +78,7 @@ def tool(name, desc, props, required):
 
 
 CHAT_TOOLS = [
+    tool('delete_last_message', 'Revoke the latest own message sent to a named foundation group, only when the owner asks to delete it. Reports WhatsApp confirmation or failure.', {'target': {'type':'string','enum':['main','community','fiverr','upwork','uet','toprated','test']}}, []),
     tool('set_left', 'Set the amount still needed (Rs.). Updates both messages.', {'left': {'type': 'integer'}}, ['left']),
     tool('money_came', 'Money arrived; subtract it from the amount left.', {'amount': {'type': 'integer'}}, ['amount']),
     tool('new_wording', 'Make fresh wording for the group or DM message.', {'kind': {'type': 'string', 'enum': ['group', 'dm']}}, ['kind']),
@@ -133,7 +138,7 @@ def _chat_raw(key, system, tools, messages):
     req = urllib.request.Request(API_URL, data=json.dumps(body).encode('utf-8'), method='POST',
                                  headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key})
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=25) as r:
             data = json.load(r)
     except urllib.error.HTTPError as e:
         raise RuntimeError(f'DeepSeek returned {e.code}' + (' (check the API key)' if e.code in (401, 403) else ''))
@@ -197,11 +202,16 @@ def chat(text, history, state, memory, do):
     else:
         msgs.append({'role': 'user', 'content': stamped})
     system = _system(memory)
-    actions, done, reply = [], [], ''
+    actions, done, reply, jobs = [], [], '', []
+    deadline=time.monotonic()+70
     searched = False
     nudged = False
     for _ in range(4):
-        msg = _chat_raw(key, system, CHAT_TOOLS, msgs)
+        if time.monotonic()>deadline:break
+        try:msg = _chat_raw(key, system, CHAT_TOOLS, msgs)
+        except Exception:
+            if done or jobs:break
+            raise
         calls = _parse_calls(msg)
         reply = (msg.get('content') or '').strip()
         if not calls:
@@ -220,17 +230,24 @@ def chat(text, history, state, memory, do):
                     actions.append({'type': name, **inp})
                     result = 'Started on the owner\'s screen.'
                 elif name in do:
-                    result = str(do[name](**inp))
-                    done.append(result)
+                    actual=do[name](**inp)
+                    if isinstance(actual,dict) and actual.get('job_id'):
+                        jobs.append(actual);result=actual['reply']
+                    else:result=str(actual)
+                    if name not in ('find_contact','recent_activity','list_rules'):done.append(result)
                 else:
                     result = f'Unknown tool {name}.'
             except Exception as e:
                 result = f'Failed: {e}'
                 done.append(f'Could not {name}: {e}')
             msgs.append({'role': 'tool', 'tool_call_id': call_id, 'content': result[:700]})
+        terminal=any(name in ('send_message','send_appeal','dm_list','dm_donors','dm_group') for _,name,_ in calls)
+        asked_to_send=bool(re.search(r'(?i)\b(send|resend|post|bhejo)\b',text))
+        if jobs or terminal or actions or (done and not asked_to_send):
+            reply=' '.join(done[-3:]) or reply or 'Prepared on your screen.';break  # report actual tool outcomes; never ask the model to invent delivery status
     if not reply:
         reply = ' '.join(d for d in done[-3:] if d) or ('Started on your screen.' if actions else 'Done.')
-    return {'reply': reply, 'actions': actions, 'done': done}
+    return {'reply': reply, 'actions': actions, 'done': done, 'jobs':jobs}
 
 
 class Autopilot:
@@ -291,3 +308,4 @@ def donor_reply(question, left):
     except Exception:
         return None
     return None if not text or 'SKIP' in text else text[:600]
+

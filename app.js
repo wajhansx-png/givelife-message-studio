@@ -315,6 +315,11 @@ $('suggDo').onclick=async()=>{if(!sug)return;const s=sug;dismiss(s.action==='own
 
 $('moreG').onclick=()=>{const c=$('chips'),open=c.hidden;c.hidden=!open;document.body.classList.toggle('more-open',open);$('moreG').setAttribute('aria-expanded',String(open));requestAnimationFrame(fit)};
 
+/* ---- hide the message to work only with the buttons and chat ---- */
+function setNoMsg(on){if(editing)setEditing(false);document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;try{localStorage.setItem('givelife-nomsg',on?'1':'')}catch(e){}if(!on){requestAnimationFrame(fit);flip()}}
+$('hideMsg').onclick=e=>{e.stopPropagation();setNoMsg(true)};$('showMsg').onclick=()=>setNoMsg(false);
+try{if(localStorage.getItem('givelife-nomsg'))setNoMsg(true)}catch(e){}
+
 /* ---- theme: Auto follows the phone/PC setting; Light or Dark is remembered on this device ---- */
 function themeNow(){try{return localStorage.getItem('givelife-theme')||'system'}catch(e){return 'system'}}
 function isDark(){const t=document.documentElement.dataset.theme;return t?t==='dark':matchMedia('(prefers-color-scheme:dark)').matches}
@@ -338,7 +343,7 @@ document.addEventListener('keydown',e=>{
  const inField=['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
  if(e.key==='Escape'&&inField){document.activeElement.blur();return}
  if(inField||e.ctrlKey||e.metaKey||e.altKey)return;
- const a={'/':()=>$('cmd').focus(),g:()=>setView('group'),d:()=>setView('dm'),e:()=>setEditing(true),n:()=>$('fresh').click(),c:()=>$('copy').click()}[e.key.toLowerCase()];
+ const a={'/':()=>$('cmd').focus(),g:()=>setView('group'),d:()=>setView('dm'),e:()=>setEditing(true),n:()=>$('fresh').click(),c:()=>$('copy').click(),h:()=>setNoMsg(!document.body.classList.contains('nomsg'))}[e.key.toLowerCase()];
  if(a){e.preventDefault();a()}else if(e.key.length===1){$('cmd').focus()}});
 
 /* ---- start ---- */

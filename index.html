@@ -278,6 +278,25 @@ dialog.set{border-radius:var(--r3);width:min(460px,calc(100vw - 24px));padding:0
  .msgcard .tool{min-height:40px}.chat{margin:8px 10px 6px}
 }
 @media(max-width:899px) and (max-height:640px){.prim .big{min-height:50px;font-size:17px}.chips button{min-height:38px}.moreg{min-height:34px}.live{min-height:40px}.livebar{min-height:38px}}
+
+/* hide the message: buttons move to the centre (phone) / chat gets a focused centred column (desktop) */
+.hidebtn{width:40px;padding:0;display:grid;place-items:center;flex:none!important}
+.hidebtn svg,.showmsg svg{width:18px;height:18px}
+.showmsg{display:flex;align-items:center;justify-content:center;gap:8px;min-height:40px;border-radius:var(--r2);border:1px dashed var(--line2);color:var(--mut);font-weight:600;font-size:14px;width:100%;animation:drop .25s var(--ease)}
+.showmsg:hover{color:var(--ink);background:var(--surface2)}
+.nomsg .msgcard{display:none}
+.nomsg .layout{grid-template-columns:minmax(0,1fr)}
+.nomsg .side{width:100%;max-width:620px;margin:0 auto;animation:riseIn .35s var(--ease)}
+@media(max-width:899px){
+ .nomsg .layout{grid-template-rows:minmax(0,1fr)}
+ .nomsg .side{justify-content:center;gap:14px}
+ .nomsg .prim .big{min-height:72px;font-size:20px;border-radius:20px}
+ .nomsg .chips button{min-height:52px;font-size:13.5px}
+ .nomsg .moreg{min-height:48px}
+ .nomsg .talk .composer input{min-height:48px}.nomsg .talk .composer .go{width:46px;height:46px}
+ .hidebtn{min-height:44px}
+}
+@media(max-width:899px) and (max-height:760px){.hidebtn{min-height:40px}}
 </style></head>
 <body data-view="group">
 <div class="app">
@@ -288,10 +307,11 @@ dialog.set{border-radius:var(--r3);width:min(460px,calc(100vw - 24px));padding:0
   <span class="pace" id="pace" data-pace="L1" title="Donations normal"></span><button id="leftChip" class="leftchip" title="Change the amount left">Rs. …</button><button id="themeBtn" class="themebtn" aria-label="Switch light or dark" title="Light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button><button id="gear" class="gear" aria-label="Settings" title="Settings">&#9881;</button>
  </header>
  <section class="live" id="live" data-on="0" aria-live="polite"><button type="button" class="livebar" id="liveBar" aria-expanded="false"><i class="pulse"></i><b id="liveNow">Auto is off</b><span id="liveMeta">Switch on: runs 24 hours</span><em>&#8964;</em></button><button type="button" class="autosw" id="auto" role="switch" aria-pressed="false" aria-label="Auto mode" title="Auto: posts, replies, thanks and DMs on its own"><span class="lbl">OFF</span><i class="knob"></i></button><div class="livemore" id="liveMore" hidden></div></section>
+ <button type="button" class="showmsg" id="showMsg" hidden><span>Show message</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
  <main class="layout">
   <section class="card msgcard" id="card" aria-label="Message">
    <div class="tools"><div class="ctx"><img id="poster" alt="" hidden><span id="ctx">Group message · poster attached</span></div><span class="sp"></span>
-    <button class="tool" id="edit" title="Edit (E) · or tap the message">Edit</button><button class="tool" id="fresh" title="New wording (N)">New</button><button class="tool" id="copy" title="Copy (C)">Copy</button></div>
+    <button class="tool" id="edit" title="Edit (E) · or tap the message">Edit</button><button class="tool" id="fresh" title="New wording (N)">New</button><button class="tool" id="copy" title="Copy (C)">Copy</button><button class="tool hidebtn" id="hideMsg" aria-label="Hide the message" title="Hide the message (H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button></div>
    <div class="chat" id="chat" title="Tap to edit"><div class="message" id="groupPreview"></div><div class="message" id="dmPreview"></div></div>
   </section>
   <aside class="side">

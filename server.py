@@ -890,6 +890,11 @@ PILOT=assistant.Autopilot(lambda:{**studio_state(),'autopilot':ENGINE.summary()}
 
 MANUAL_STATE=DATA/'manual-context.json'
 LAST_MANUAL=STORE.get('manual_context',{}) if STORE else {}
+if not isinstance(LAST_MANUAL,dict):
+ try:
+  _saved_manual=json.loads(LAST_MANUAL) if isinstance(LAST_MANUAL,str) else {}
+  LAST_MANUAL=_saved_manual if isinstance(_saved_manual,dict) else {}
+ except Exception:LAST_MANUAL={}
 if not LAST_MANUAL and MANUAL_STATE.exists():
  try:LAST_MANUAL=json.loads(MANUAL_STATE.read_text(encoding='utf-8'))
  except Exception:LAST_MANUAL={}
@@ -904,7 +909,8 @@ if not LAST_MANUAL:
    LAST_MANUAL.update(kind='appeal',target=plan['target']);break
 
 def remember_manual(value):
- LAST_MANUAL.clear();LAST_MANUAL.update(value)
+ global LAST_MANUAL
+ LAST_MANUAL=dict(value) if isinstance(value,dict) else {}
  MANUAL_STATE.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8');persist_file('manual_context',MANUAL_STATE)
 
 def record_delivery(jid,text,result):
@@ -1055,9 +1061,7 @@ def assistant_task(body):
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
    output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
    ASSIST_TASKS[ident].update(done=True,result=output)
-  except Exception as e:
-   import traceback
-   ASSIST_TASKS[ident].update(done=True,error='The assistant could not complete this request: '+str(e)[:160]+'. It will not retry automatically. DEBUG '+traceback.format_exc()[-600:])
+  except Exception as e:ASSIST_TASKS[ident].update(done=True,error='The assistant could not complete this request: '+str(e)[:160]+'. It will not retry automatically.')
  threading.Thread(target=run,daemon=True).start();return ident
 
 def edit_donation_order():

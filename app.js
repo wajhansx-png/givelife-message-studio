@@ -62,7 +62,7 @@ for(const k of ['group','dm'])$(k+'Preview').addEventListener('paste',e=>{e.prev
 
 /* ---- views, amount, DM greeting ---- */
 function setView(v){if(editing)setEditing(false);document.body.dataset.view=v;document.querySelectorAll('[data-view-button]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.viewButton===v)));
- $('ctx').textContent=v==='group'?'Group message · poster attached':'DM · poster attached';localStorage.setItem('givelife-view',v);requestAnimationFrame(fit)}
+ $('ctx').textContent=v==='group'?'Group message · poster attached':'DM · poster attached';localStorage.setItem('givelife-view',v);requestAnimationFrame(fit);flip()}
 document.querySelectorAll('[data-view-button]').forEach(b=>b.onclick=()=>setView(b.dataset.viewButton));
 function showLeft(){const c=$('leftChip');c.textContent=left==null?'Rs. …':'Rs. '+fmt(left);const w=document.createElement('span');w.className='lw';w.textContent=' left';c.append(w)}
 function applyDrafts(d){if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
@@ -78,12 +78,12 @@ document.querySelectorAll('#gender button').forEach(b=>b.onclick=()=>setGender(b
 $('dmName').addEventListener('input',()=>applyGreeting());
 
 /* ---- tools ---- */
-async function freshWording(){if(editing)setEditing(false);const k=view();clearTimeout(timer);await save();const r=await post(k==='group'?'/next-message':'/next-dm'),d=await r.json();$(k).value=d.message;if(k==='dm')applyGreeting(false);render();await save()}
+async function freshWording(){if(editing)setEditing(false);const k=view();clearTimeout(timer);await save();const r=await post(k==='group'?'/next-message':'/next-dm'),d=await r.json();$(k).value=d.message;if(k==='dm')applyGreeting(false);render();flip();await save()}
 $('fresh').onclick=async()=>{$('fresh').disabled=true;try{await freshWording();status('✓ New wording ready')}catch(e){status('Could not make new wording',1)}finally{$('fresh').disabled=false}};
 $('copy').onclick=async()=>{if(editing)setEditing(false);try{await navigator.clipboard.writeText($(view()).value);status('✓ Copied')}catch(e){status('Copy failed',1)}};
 
 /* ---- sending ---- */
-function busy(on){document.querySelectorAll('[data-group],#sendAll,[data-test],#sendDm,#fresh').forEach(b=>b.disabled=on)}
+function busy(on){document.body.classList.toggle('sending',on);document.querySelectorAll('[data-group],#sendAll,[data-test],#sendDm,#fresh').forEach(b=>b.disabled=on)}
 async function sendGroup(key){if(editing)setEditing(false);busy(true);
  try{clearTimeout(timer);await save();$('groupStatus').textContent='Starting…';
   const r=await post('/send-group',{group:key,message:$('group').value}),start=await r.json();if(!r.ok)throw Error(start.error||'Could not start');
@@ -231,7 +231,7 @@ async function act(text){const t=text.trim();if(!t)return;say('you',t);
   }}
 $('cmdForm').onsubmit=async e=>{e.preventDefault();const c=$('cmd'),v=c.value;c.value='';
  try{await act(v)}catch(err){say('app',err.message,1)}paintAuto(autoOn)};
-$('histForm').onsubmit=async e=>{e.preventDefault();const c=$('histCmd'),v=c.value;c.value='';try{await act(v)}catch(err){say('app',err.message,1)}c.focus()};
+$('histForm').onsubmit=async e=>{e.preventDefault();const c=$('histCmd'),v=c.value;c.value='';try{await act(v)}catch(err){say('app',err.message,1)}};
 $('cmd').addEventListener('focus',()=>{if(isPhone()){$('cmd').blur();openChat()}else cf(true)});
 
 /* ---- autopilot ---- */
@@ -293,6 +293,11 @@ $('suggDo').onclick=async()=>{if(!sug)return;const s=sug;dismiss(s.action==='own
  if(s.action==='send_all'){setView('group');await freshWording();armAll();say('app','Fresh message going to all groups. Tap the orange button within 3 seconds to cancel.')}
  else if(s.action==='dm_batch'||s.action==='share'){const r=await post('/suggestion',{action:s.action}),d=await r.json();say('app',d.reply||d.error,!r.ok)}
  else say('app','Noted: '+s.text)};
+
+/* ---- touch feel: tapping send/attach never opens or closes the keyboard; light haptic on every button ---- */
+document.querySelectorAll('.composer .go,.composer .clip').forEach(b=>b.addEventListener('pointerdown',e=>e.preventDefault()));
+document.addEventListener('pointerdown',e=>{if(e.target.closest('button')&&navigator.vibrate)try{navigator.vibrate(8)}catch(x){}},{passive:true});
+function flip(){const m=$(view()+'Preview');m.classList.remove('flip');void m.offsetWidth;m.classList.add('flip')}
 
 /* ---- keyboard: the cursor lives in the chat box ---- */
 document.addEventListener('keydown',e=>{

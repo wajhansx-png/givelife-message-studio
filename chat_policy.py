@@ -18,13 +18,17 @@ def intent(text):
  t=owner_text(text);low=manual_commands.norm(t)
  query=bool(re.search(r'(?i)^(?:what|why|how|did you|have you|was it|when|show (?:me )?(?:what|status))\b',t.strip()))
  negative=bool(re.search(r"(?i)\b(?:don'?t|dont|do not|never|stop)\s+(?:ever\s+)?(?:send|sending|post|posting|share|sharing|dm)\b|\b(preview only|draft only)\b",t))
- sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t)) and not negative and not query
+ dm_verb=bool(re.match(r'(?i)^\s*dm\s+(?!(?:has|have|had|is|was|looks|needs|should|does|caption|format|structure|name|text|icons|remove|edit|change)\b)\S',t))
+ sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query
  return {'text':t,'send':sending,'query':query,'negative':negative,'batch':sending and bool(re.search(r'(?i)\b(dm|dms|donors?|members?|people|numbers|list)\b',t))}
 
 def permitted(name,text):
  if name in READ:return True
  i=intent(text);t=i['text']
- if name in SEND:return i['send'] and (name not in {'dm_list','dm_donors','dm_group'} or i['batch'])
+ if name=='dm_donors':return i['send'] and bool(re.search(r'(?i)\bdonors?\b',t))
+ if name=='dm_group':return i['send'] and bool(re.search(r'(?i)\b(members?|group)\b',t))
+ if name=='dm_list':return i['send'] and bool(re.search(r'(?i)\b(list|numbers?|phones?)\b|(?:\+?92|0)3\d{2}',t))
+ if name in SEND:return i['send']
  if i['query']:return False
  if name=='delete_last_message':return bool(re.search(r'(?i)\b(delete|remove|revoke)\b',t)) and not re.search(r"(?i)\b(dont|don't|do not|never)\b",t)
  if name=='hold':return bool(re.search(r'(?i)\b(hold|wait|pause|stop|resume|continue|unhold|wrong whatsapp|connected now)\b',t))

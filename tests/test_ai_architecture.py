@@ -144,6 +144,20 @@ class ServerAuditTests(unittest.TestCase):
    cb['find_contact'](query='Ali')
    with self.assertRaises(ValueError):cb['send_dm_appeal'](to='923001234567')
   self.assertEqual(self.sent,[])
+ def test_generic_send_does_not_authorize_an_invented_group(self):
+  app.LAST_MANUAL.update(kind='text',to='923001234567@s.whatsapp.net')
+  cb=app.chat_callbacks('send an urgent message',revision=0)
+  with self.assertRaises(ValueError):cb['send_appeal'](target='all')
+  app.LAST_MANUAL.clear();app.LAST_MANUAL.update(kind='appeal',target='main')
+  cb=app.chat_callbacks('send an urgent message',revision=0)
+  with self.assertRaises(ValueError):cb['send_appeal'](target='fiverr')
+  self.assertEqual(self.sent,[])
+ def test_batch_tools_cannot_switch_donors_to_group_members(self):
+  self.assertTrue(chat_policy.permitted('dm_donors','DM 5 donors now'))
+  self.assertFalse(chat_policy.permitted('dm_group','DM 5 donors now'))
+  self.assertFalse(chat_policy.permitted('dm_list','DM 5 donors now'))
+  self.assertFalse(chat_policy.permitted('dm_donors','send DMs to members of fiverr'))
+  self.assertFalse(chat_policy.intent('DM has unnecessary icons; remove them')['send'])
  def test_quoted_transcript_cannot_trigger_manual_send(self):
   for text in ('"send main"','```send main```','> send main','transcript: send all groups','summarize this: send main'):
    self.assertFalse(app.manual_command(text).get('handled'))

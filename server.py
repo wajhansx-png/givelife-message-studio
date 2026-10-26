@@ -1029,6 +1029,17 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
  sending=owner['send'];dm_allowed=owner['batch']
  send_tools={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
  read_tools=chat_policy.READ
+ def allowed_groups():
+  keys=set(manual_commands.groups(chat_policy.owner_text(prompt)))
+  if not keys:
+   if LAST_MANUAL.get('kind')=='appeal':keys.add(LAST_MANUAL.get('target'))
+   elif LAST_MANUAL.get('kind')=='appeals':keys.update(LAST_MANUAL.get('targets',[]))
+   else:keys.update(k for k,v in GROUPS.items() if v[1]==LAST_MANUAL.get('to'))
+   if LAST_MANUAL.get('to')=='120363431210327603@g.us':keys.add('test')
+  keys.update(k for k,v in GROUPS.items() if v[1] in verified or v[1] in prompt)
+  if 'all' in keys:keys.update(GROUPS)
+  if 'free' in keys:keys.update(FREELANCE)
+  return keys
  def wrapped(name,fn):
   def call(**args):
    if revision is not None and revision!=OWNER_REVISION and name not in read_tools:raise ValueError('Superseded by your newer instruction. No old action was sent.')
@@ -1054,8 +1065,7 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
     group_key=manual_commands.group(dest)
     requested=manual_commands.groups(chat_policy.owner_text(prompt))
     if group_key:
-     allowed={k for k in requested};allowed.update(GROUPS if 'all' in allowed else FREELANCE if 'free' in allowed else [])
-     if requested and group_key not in allowed:raise ValueError('This is a different group from the one requested.')
+     if group_key not in allowed_groups():raise ValueError('Name the intended group before sending. This group is not authorized by the current request or selected context.')
     else:
      phone=norm_phone(dest.split('@')[0]);jid=phone+'@s.whatsapp.net' if phone else dest
      explicit={norm_phone(x) for x in re.findall(r'(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}',chat_policy.owner_text(prompt))}
@@ -1064,11 +1074,8 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
      same=jid==LAST_MANUAL.get('to') and bool(re.search(r'(?i)\b(him|her|them|same|again|it|resend)\b|^send\s+(?:now|hi|ok)$',prompt.strip()))
      if jid not in verified and phone not in explicit and not same:raise ValueError('Recipient must be verified with find_contact from this instruction before sending or preparing.')
    if name=='send_appeal':
-    requested=manual_commands.groups(chat_policy.owner_text(prompt));target=args.get('target')
-    allowed=set(requested)
-    if 'all' in allowed:allowed.update(GROUPS)
-    if 'free' in allowed:allowed.update(FREELANCE)
-    if requested and target not in allowed:raise ValueError('This is a different group from the one requested.')
+    if args.get('target') not in allowed_groups():raise ValueError('Name the intended group before sending. This group is not authorized by the current request or selected context.')
+   if name=='dm_group' and args.get('group') not in allowed_groups():raise ValueError('DM members only of the group named in the owner request.')
    cache_key=name+json.dumps(args,sort_keys=True,ensure_ascii=False)
    if name in send_tools|{'delete_last_message'} and cache_key in cache:return cache[cache_key]
    previous=getattr(OWNER_GUARD,'revision',None);OWNER_GUARD.revision=revision

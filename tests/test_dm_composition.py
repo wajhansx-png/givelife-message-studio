@@ -43,7 +43,7 @@ class DMFlowTests(unittest.TestCase):
   self.assertLess(text.index('2,000'),text.index('1,000'))
  def test_ai_salutation_only_or_flat_caption_uses_full_saved_dm(self):
   for faulty in ('Wajdan Brother,','Jr Accounts Brother, Yousuf is 2. Rs. 25,000 left. Account 03097458815.'):
-   callbacks=app.chat_callbacks('send the dm to jr account',revision=app.OWNER_REVISION)
+   callbacks=app.chat_callbacks('send the dm to 923001234567',revision=app.OWNER_REVISION)
    callbacks['send_message'](to='923001234567',text=faulty,with_picture=True)
    self.assertTrue(dm_composer.complete(self.sent[-1]['text']));self.assertNotEqual(self.sent[-1]['text'],faulty)
  def test_caption_only_correction_cannot_send(self):

@@ -66,13 +66,16 @@ def parse(text):
  # A negative, a question about delivery, or a schedule must not dispatch now.
  if re.search(r'\b(don t|dont|do not|never|not now|did you|have you|was it|schedule|daily|every day|tomorrow)\b',low):return None
  if re.search(r'\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',t,re.I):return None
+ phone_text=re.fullmatch(r'((?:\+?92|0092|0)?3\d{2}[\s-]?\d{7})\s+(?:send|text|message)\s+(.+)',t,re.I|re.S)
+ if phone_text and not control_payload(phone_text[2]):return {'kind':'text','to':phone_text[1],'text':phone_text[2],'literal':True}
  targets=groups(t);target=targets[0] if len(targets)==1 else None
  if SEND.search(t) and len(targets)>1 and not re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return {'kind':'appeals','targets':targets,'amount':amount}
  if SEND.search(t) and target:
   if re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return None
   # Ordinary explicit text, e.g. send hi to GiveLife main, remains text.
-  m=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
-  if m and not control_payload(m[1]) and group(m[3]):return {'kind':'text','text':m[1].strip(),'to':group(m[3]),'literal':True}
+  m=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+(.+?)\s+(?:to|ko|in)\s+(.+)$',t,re.I|re.S)
+  if m and re.search(r'(?i)\s+only\s+',m[2]):m=re.match(r'^(?:send|text|message)\s+(.+?)\s+(?:to|in)\s+(.+?)\s+only\s+.+$',t,re.I|re.S)
+  if m and not control_payload(m[1]) and group(m[2]):return {'kind':'text','text':m[1].strip(),'to':group(m[2]),'literal':True}
   return {'kind':'appeal','target':target,'amount':amount}
  if (SEND.search(t) or low.startswith('now send') or low in ('again','do it','go','now')) and control_payload(t):return {'kind':'repeat'}
  if amount is not None and not SEND.search(t):return {'kind':'amount','amount':amount}

@@ -48,6 +48,11 @@ class Store:
 server.STORE=Store();server.set_left(25000);server.ENGINE.s['dm_enabled']=False
 # No engine/background AI loops are started. The only sends are explicit preview actions.
 server.Handler.log_message=lambda *a:None
+original_get=server.Handler.do_GET
+def preview_get(self):
+ if self.path=='/mobile-preview':return self.reply((ROOT/'tests/mobile_preview.html').read_bytes(),'text/html')
+ return original_get(self)
+server.Handler.do_GET=preview_get
 http=ThreadingHTTPServer(('127.0.0.1',3003),server.Handler)
 print('Local fake-WhatsApp preview: http://127.0.0.1:3003/ (no real messages possible)',flush=True)
 http.serve_forever()

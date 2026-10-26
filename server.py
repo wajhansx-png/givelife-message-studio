@@ -5,6 +5,8 @@ from persist import configured_store
 import manual_commands
 import dm_composer
 from state_shapes import mapping, memories, history as valid_history
+import chat_policy
+from chat_memory import Knowledge,safe_text
 from functools import wraps
 ROOT=Path(__file__).resolve().parent
 DATA=Path(os.environ.get('DATA_DIR','/data/studio'))
@@ -20,11 +22,15 @@ WIRE_LOCK=threading.RLock()
 OWNER_REVISION=0
 OWNER_GUARD=threading.local()
 ASSIST_TASKS={}
+EVAL_TASKS={}
 
 def serialized_send(fn):
  @wraps(fn)
  def call(*args,**kwargs):
   with WIRE_LOCK:
+   for secret_name in ('DEEPSEEK_API_KEY','UI_ACCESS_KEY','DB_URI'):
+    secret=os.environ.get(secret_name,'')
+    if len(secret)>8 and any(secret in str(value) for value in (*args,*kwargs.values())):raise ValueError('Private service credentials cannot be included in outgoing messages.')
    revision=getattr(OWNER_GUARD,'revision',None)
    if revision is not None and revision!=OWNER_REVISION:raise ValueError('Superseded by your newer instruction. Nothing was sent.')
    event=getattr(OWNER_GUARD,'cancel_event',None)
@@ -293,27 +299,41 @@ if STORE:
   v=STORE.get(key)
   if v:f.write_text(v if isinstance(v,str) else json.dumps(v),encoding='utf-8')
 CHAT_LOCK=threading.Lock()
+KNOWLEDGE=Knowledge(DATA,STORE)
 
 def chat_get(n=300):
  try:return valid_history(CHATLOG.read_text(encoding='utf-8'))[-n:] if CHATLOG.exists() else []
  except Exception:return []
 
-def chat_add(who,text,err=False):
+def chat_add(who,text,err=False,turn_id=None):
  who=who if who in ('you','app','auto') else 'app';text=str(text)[:4000]
  if not text.strip():return
  with CHAT_LOCK:
-  items=chat_get(300);items.append({'who':who,'text':text,'err':bool(err),'t':int(time.time()*1000)})
+  items=chat_get(300);ident=str(turn_id or uuid.uuid4().hex)
+  if any(x.get('id')==ident for x in items):return ident
+  items.append({'id':ident,'who':who,'text':text,'err':bool(err),'t':int(time.time()*1000)})
   CHATLOG.write_text(json.dumps(items[-300:],ensure_ascii=False),encoding='utf-8');persist_file('chat',CHATLOG)
+  KNOWLEDGE.archive(who,text,ident)
+  return ident
 
 def mem_get():
- try:return memories(MEMORY.read_text(encoding='utf-8')) if MEMORY.exists() else []
+ try:
+  old=memories(MEMORY.read_text(encoding='utf-8')) if MEMORY.exists() else []
+  known={e.get('text') for e in KNOWLEDGE.data['entries']}
+  active=[{'rule':e['text'],'time':e.get('time',0),'source':e.get('source')} for e in KNOWLEDGE.data['entries'] if e.get('active')]
+  return [m for m in old if m.get('rule') not in known]+active
  except (ValueError,OSError):return []
+
+if not KNOWLEDGE.data['turns']:
+ for item in chat_get(300):KNOWLEDGE.data['turns'].append({'id':item.get('id') or uuid.uuid4().hex,'who':item['who'],'text':item['text'],'time':item.get('t',0)/1000,'source':'owner_input' if item['who']=='you' else 'app_output'})
+ if KNOWLEDGE.data['turns']:KNOWLEDGE.save()
 
 def mem_add(rule):
  rule=str(rule).strip()[:300]
  if not rule:return 'Nothing to save.'
  m=mem_get();m.append({'rule':rule,'time':time.time()});MEMORY.write_text(json.dumps(m,ensure_ascii=False),encoding='utf-8');persist_file('memory',MEMORY)
- return 'Saved for the future: '+rule
+ KNOWLEDGE.remember(rule)
+ return (KNOWLEDGE.sync_error+' ' if KNOWLEDGE.sync_error else 'Saved for the future: ')+rule
 
 HOLD=DATA/'hold.json'
 if STORE:
@@ -532,7 +552,7 @@ def base_chat_callbacks():
   'new_wording':lambda kind:(next_message() if kind=='group' else next_dm(),'New '+kind+' wording ready.')[1],
   'set_message':lambda kind,text:(save_draft(kind,text),'Message replaced.')[1],
   'remember':mem_add,'autopilot':set_auto,**engine_do(),
-  'find_contact':find_contacts,'send_message':send_free,'send_dm_appeal':send_dm_appeal,'edit_dm_name':edit_dm_name,'delete_last_message':delete_last_group,
+  'find_contact':find_contacts,'search_memory':lambda query:KNOWLEDGE.retrieve(query),'send_message':send_free,'send_dm_appeal':send_dm_appeal,'edit_dm_name':edit_dm_name,'delete_last_message':delete_last_group,'prepare_dm':prepare_dm,
   'send_appeal':lambda target:send_appeal(target),
   'recent_activity':lambda:send_status_text()+'\nRecent activity: '+(' | '.join(x['text'] for x in AUTOLOG[-4:]) or 'No new receipt this session.'),
   'add_rule':lambda text:add_rule_text(text),
@@ -928,7 +948,8 @@ def resolve_person(to):
  if len(exact)==1:return exact[0]['id']
  if len(found)==1:return found[0]['id']
  if not found:raise ValueError('No matching contact. Give the phone number.')
- raise ValueError('More than one contact matches. Give the full name or number.')
+ KNOWLEDGE.data['pending']={'kind':'recipient','query':str(to),'candidates':found[:8],'created':time.time()};KNOWLEDGE.save()
+ raise ValueError('More than one contact matches: '+', '.join(x['name']+' (…'+x['id'].split('@')[0][-4:]+')' for x in found[:4])+'. Give the full name or last four digits.')
 
 def dm_recipient(to=None):
  target=resolve_person(to) if to else LAST_MANUAL.get('to')
@@ -966,6 +987,13 @@ def send_dm_appeal(to='',name='',gender='Brother'):
  remember_manual({'kind':'dm_appeal','to':jid,'name':first,'gender':gender,'text':caption,'with_picture':True})
  return 'WhatsApp confirmed the full DM with poster to '+dm_composer.greeting(first,gender)+'.'
 
+def prepare_dm(phone,name='',gender='Brother'):
+ phone=norm_phone(phone)
+ if not phone:raise ValueError('Provide a valid phone number before preparing the DM.')
+ name=clean_first_name(name);gender='Sister' if name and gender=='Sister' else 'Brother'
+ save_draft('dm',current_dm_caption(name,gender))
+ return {'reply':'Full DM prepared for '+dm_composer.greeting(name,gender)+'. Nothing was sent.', 'actions':[{'type':'prepare_dm','phone':phone,'name':name,'gender':gender}]}
+
 def delete_last_group(target=None):
  key=manual_commands.group(target or '') or (LAST_MANUAL.get('target') if LAST_MANUAL.get('kind')=='appeal' else None)
  if key not in GROUPS and key!='test':raise ValueError('Which group? Name the group whose last sent message should be deleted.')
@@ -992,23 +1020,50 @@ def delete_last_group(target=None):
  return 'WhatsApp confirmed deletion of the last own message in '+('Givelife test' if key=='test' else GROUPS[key][0])+'.'
 
 def chat_callbacks(prompt='',revision=None,task_id=None):
- callbacks=base_chat_callbacks();cache={}
- negative=bool(re.search(r"(?i)\b(don'?t|do not|never|stop)\b.*\b(send|dm|post)\b",prompt))
- sending=bool(manual_commands.SEND.search(prompt)) and not negative and not re.search(r'(?i)^(?:did you|have you|was it|draft only|preview only)',prompt)
- dm_allowed=sending and bool(re.search(r'(?i)\b(dm|dms|donors?|members?|direct messages)\b',prompt))
+ callbacks=base_chat_callbacks();cache={};verified=set();owner=chat_policy.intent(prompt)
+ sending=owner['send'];dm_allowed=owner['batch']
  send_tools={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
- read_tools={'find_contact','recent_activity','list_rules'}
+ read_tools=chat_policy.READ
  def wrapped(name,fn):
   def call(**args):
    if revision is not None and revision!=OWNER_REVISION and name not in read_tools:raise ValueError('Superseded by your newer instruction. No old action was sent.')
+   if not chat_policy.permitted(name,prompt):
+    if name in send_tools and not sending:raise ValueError('The current instruction does not ask to send. Nothing was sent.')
+    if name in ('dm_list','dm_donors','dm_group'):raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
+    raise ValueError('The current instruction does not authorize '+name+'. Nothing was changed or sent.')
    if name in send_tools and not sending:raise ValueError('The current instruction does not ask to send. Nothing was sent.')
    if name in ('dm_list','dm_donors','dm_group') and not dm_allowed:raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
    if name=='delete_last_message' and (not re.search(r'(?i)\b(delete|remove|revoke)\b',prompt) or re.search(r"(?i)\b(don'?t|do not|never)\b.*\b(delete|remove|revoke)\b",prompt)):raise ValueError('No deletion was requested. Nothing was deleted.')
-   if name=='money_came' and not (manual_commands.parse(prompt) or {}).get('kind')=='money':raise ValueError('This is not an explicit received-donation instruction. The amount was not changed.')
-   if name=='set_left' and not ((manual_commands.parse(prompt) or {}).get('kind')=='amount' or (manual_commands.parse(prompt) or {}).get('amount') is not None):raise ValueError('Only the owner can explicitly set the remaining amount. Wording edits do not change money.')
    if name=='remember' and not re.search(r'(?i)\b(always|never|remember|from now|in future|yaad rakho)\b',prompt):raise ValueError('This is a current edit, not a request to save a future preference.')
    if name=='set_dms' and args.get('enabled') and not re.search(r'(?i)\b(dm|dms)\b.*\b(on|enable|start)\b|\b(enable|start)\b.*\b(dm|dms)\b',prompt):raise ValueError('DMs cannot be enabled without your current instruction.')
    if name=='autopilot' and not re.search(r'(?i)\b(auto|autopilot)\b',prompt):raise ValueError('This request does not change Auto mode.')
+   if name=='dm_list':
+    explicit={norm_phone(x) for x in re.findall(r'(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}',chat_policy.owner_text(prompt))}
+    if any(norm_phone(p.get('phone','')) not in explicit and norm_phone(p.get('phone',''))+'@s.whatsapp.net' not in verified for p in args.get('people',[])):raise ValueError('Every DM-list recipient must come from this owner instruction or a verified lookup.')
+   if name in ('set_left','money_came'):
+    plans=chat_policy.financial_plans(prompt)
+    expected=[p.get('amount') for p in plans if (p.get('kind')=='money')==(name=='money_came')]
+    if args.get('left' if name=='set_left' else 'amount') not in expected:raise ValueError('That amount does not match the current owner instruction. No money was changed.')
+   if name in ('send_message','send_dm_appeal','prepare_dm'):
+    dest=str(args.get('to') or args.get('phone') or '')
+    group_key=manual_commands.group(dest)
+    requested=manual_commands.groups(chat_policy.owner_text(prompt))
+    if group_key:
+     allowed={k for k in requested};allowed.update(GROUPS if 'all' in allowed else FREELANCE if 'free' in allowed else [])
+     if requested and group_key not in allowed:raise ValueError('This is a different group from the one requested.')
+    else:
+     phone=norm_phone(dest.split('@')[0]);jid=phone+'@s.whatsapp.net' if phone else dest
+     explicit={norm_phone(x) for x in re.findall(r'(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}',chat_policy.owner_text(prompt))}
+     if not phone and not dest.endswith('@g.us'):
+      dest=resolve_person(dest);jid=dest
+     same=jid==LAST_MANUAL.get('to') and bool(re.search(r'(?i)\b(him|her|them|same|again|it|resend)\b|^send\s+(?:now|hi|ok)$',prompt.strip()))
+     if jid not in verified and phone not in explicit and not same:raise ValueError('Recipient must be verified with find_contact from this instruction before sending or preparing.')
+   if name=='send_appeal':
+    requested=manual_commands.groups(chat_policy.owner_text(prompt));target=args.get('target')
+    allowed=set(requested)
+    if 'all' in allowed:allowed.update(GROUPS)
+    if 'free' in allowed:allowed.update(FREELANCE)
+    if requested and target not in allowed:raise ValueError('This is a different group from the one requested.')
    cache_key=name+json.dumps(args,sort_keys=True,ensure_ascii=False)
    if name in send_tools|{'delete_last_message'} and cache_key in cache:return cache[cache_key]
    previous=getattr(OWNER_GUARD,'revision',None);OWNER_GUARD.revision=revision
@@ -1017,6 +1072,10 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
     elif name=='send_message':
      literal=bool(re.search(r'["“\']'+re.escape(str(args.get('text','')))+r'["”\']',prompt))
      target=resolve_person(args.get('to',''))
+     custom=manual_commands.parse(prompt) or {}
+     quoted=re.search(r'(?is)^(?:send|resend|text|message)\s+["“](.+?)["”]',prompt.strip())
+     if quoted:args['text']=quoted[1];literal=True
+     elif custom.get('kind')=='text' and not literal:args['text']=custom['text'];literal=True;args['with_picture']=bool(re.search(r'(?i)\b(poster|image|picture)\b',chat_policy.owner_text(prompt)))
      # The model selects recipients; the stored template supplies fundraising captions.
      appeal=not literal and not str(target).endswith('@g.us') and target not in GROUPS and target not in ('test','all','free') and (args.get('with_picture') or re.search(r'(?i)\b(dm|appeal|donation|poster|structure)\b',prompt) or re.search(r'(?i)Yous[au]f|03097458815',str(args.get('text',''))))
      if appeal:result=send_dm_appeal(target)
@@ -1024,12 +1083,17 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
     elif name=='find_contact':
      result=fn(**args)
      try:
-      for item in json.loads(result):CONTACT_CONTEXT[item['id']]=item
+      items=json.loads(result)
+      for item in items:CONTACT_CONTEXT[item['id']]=item
+      exact=[x for x in items if x.get('name','').casefold()==str(args.get('query','')).casefold()]
+      selected=exact if len(exact)==1 else items if len(items)==1 else []
+      if all(word in manual_commands.norm(prompt) for word in manual_commands.norm(args.get('query','')).split()):verified.update(x['id'] for x in selected)
      except (ValueError,TypeError,KeyError):pass
     elif name=='set_message' and args.get('kind')=='dm':
      if re.search(r'(?i)\bname\b.*\b(is|change|to)\b|\b(change|correct)\b.*\bname\b',prompt):raise ValueError('Use edit_dm_name to change only the greeting; keep the full message.')
      if not dm_composer.complete(args.get('text','')):raise ValueError('Keep the full DM with blank lines, formatting, amount, donation options and payment details. Do not replace it with a name or one-paragraph summary.')
      result=fn(**args)
+    elif name=='remember':result=mem_add(prompt)
     else:result=fn(**args)
    finally:OWNER_GUARD.revision=previous
    if name in send_tools|{'delete_last_message'}:cache[cache_key]=result
@@ -1052,17 +1116,32 @@ def assistant_task(body):
  if not re.fullmatch(r'[A-Za-z0-9_-]{8,100}',ident):raise ValueError('Invalid request id.')
  with LOCK:
   if ident in ASSIST_TASKS:return ident
+  saved=mapping(STORE.get('assistant_task_'+ident)) if STORE else {}
+  if saved:
+   ASSIST_TASKS[ident]=saved if saved.get('done') else {'done':True,'error':'This request was interrupted by a restart. Check confirmed activity; it will not be repeated automatically.'}
+   return ident
   OWNER_REVISION+=1;revision=OWNER_REVISION
   ASSIST_TASKS[ident]={'done':False}
+  if STORE:STORE.put('assistant_task_'+ident,{'done':False,'started':time.time()})
  def run():
   try:
-   text=str(body.get('text',''))[:4000];CHAT_IMAGE['id']=body.get('image');hist=chat_get(60)
+   text=str(body.get('text',''))[:10000];CHAT_IMAGE['id']=body.get('image');hist=chat_get(300)
+   KNOWLEDGE.report_correction(text)
    if hist and hist[-1]['who']=='you' and hist[-1]['text'].strip()==text.strip():hist=hist[:-1]
-   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks(text,revision,ident))
+   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},mem_get(),chat_callbacks(text,revision,ident))
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
    output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
+   output['superseded']=revision!=OWNER_REVISION
+   output['turn_id']=uuid.uuid4().hex
+   KNOWLEDGE.archive('app',output.get('reply',''),output['turn_id'])
+   KNOWLEDGE.trace({'request_id':ident,**output.get('diagnostics',{})})
    ASSIST_TASKS[ident].update(done=True,result=output)
-  except Exception as e:ASSIST_TASKS[ident].update(done=True,error='The assistant could not complete this request: '+str(e)[:160]+'. It will not retry automatically.')
+  except Exception as e:
+   ASSIST_TASKS[ident].update(done=True,error='The assistant could not complete this request: '+safe_text(e,160)+'. It will not retry automatically.')
+   try:KNOWLEDGE.trace({'request_id':ident,'error':safe_text(e,160)})
+   except Exception:pass
+  finally:
+   if STORE:STORE.put('assistant_task_'+ident,ASSIST_TASKS[ident])
  threading.Thread(target=run,daemon=True).start();return ident
 
 def edit_donation_order():
@@ -1098,6 +1177,7 @@ def send_selected_groups(targets,request_id=None):
 
 def execute_manual_command(text,request_id=None):
  global OWNER_REVISION
+ if not fast_command_eligible(text):return {'handled':False}
  import rules
  pace=rules.pace_rules(text)
  rule,description=rules.parse(text)
@@ -1156,7 +1236,28 @@ def execute_manual_command(text,request_id=None):
 def manual_command(text,request_id=None):
  previous=getattr(OWNER_GUARD,'revision',None)
  try:
-  result=execute_manual_command(text,request_id)
+  pending=KNOWLEDGE.data.get('pending',{})
+  if pending.get('created',0)<time.time()-600:pending={};KNOWLEDGE.data['pending']={}
+  if pending and str(text).strip().casefold() in ('cancel','forget it','stop','no'):
+   KNOWLEDGE.data['pending']={};KNOWLEDGE.save();return {'handled':True,'reply':'Cancelled the pending recipient selection. Nothing was sent.'}
+  matches=[x for x in pending.get('candidates',[]) if str(text).strip().casefold() in (x['name'].casefold(),x['id'].split('@')[0],x['id'].split('@')[0][-4:])]
+  if len(matches)==1 and pending.get('action'):
+   target=matches[0]['id'];action=pending['action'];KNOWLEDGE.data['pending']={};KNOWLEDGE.save()
+   with LOCK:
+    global OWNER_REVISION
+    OWNER_REVISION+=1;OWNER_GUARD.revision=OWNER_REVISION
+   send_free(target,action['text'],False,literal=True)
+   return {'handled':True,'reply':'WhatsApp confirmed your earlier message to '+matches[0]['name']+'.'}
+  if pending.get('action'):
+   fresh=manual_commands.parse(text) or {}
+   if fresh.get('kind') not in (None,'status'):
+    KNOWLEDGE.data['pending']={};KNOWLEDGE.save()
+  try:result=execute_manual_command(text,request_id)
+  except ValueError:
+   plan=manual_commands.parse(text) or {}
+   if plan.get('kind')=='text' and KNOWLEDGE.data.get('pending',{}).get('kind')=='recipient':
+    KNOWLEDGE.data['pending']['action']={'text':plan['text'],'to_query':plan.get('to')};KNOWLEDGE.save()
+   raise
   if result.get('handled'):result['dm_identity']=dm_identity()
   return result
  finally:OWNER_GUARD.revision=previous
@@ -1164,6 +1265,15 @@ def manual_command(text,request_id=None):
 def dm_identity():
  if LAST_MANUAL.get('kind')=='dm_appeal':return {'name':LAST_MANUAL.get('name',''),'phone':LAST_MANUAL.get('to','').split('@')[0],'gender':LAST_MANUAL.get('gender','Brother')}
  return None
+
+def fast_command_eligible(text):
+ text=str(text).strip()
+ if not text or len(text)>10000:return False
+ if re.match(r'(?i)^(summarize|analyse|analyze|explain|review|read|check)\b',text):return False
+ if text.startswith(('"','“',"'",'```','>')) or re.search(r'(?i)\b(transcript|message says|text says|summarize|analyse|analyze|see fn remove)\s*:',text):return False
+ if re.search(r'(?i);|\band then\b|\n(?:you|assistant|app):',text):return False
+ if re.search(r'(?i)\band\s+(?:set|change|write|delete|remove|remember|pause|enable|disable)\b',text):return False
+ return True
 
 def set_group_pace(target,minutes):
  if target not in (*GROUPS,'free','all'):raise ValueError('Choose a known group or freelance/all.')
@@ -1193,6 +1303,7 @@ class Handler(BaseHTTPRequestHandler):
  def do_OPTIONS(self):
   self.reply({})
  def reply(self,data,kind='application/json',status=200):
+  self.response_sent=True
   if not isinstance(data,(str,bytes)):data=json.dumps(data,ensure_ascii=False)
   self.send_response(status);self.send_header('Content-Type',kind+'; charset=utf-8');self.send_header('Cache-Control','no-store')
   origin=self.headers.get('Origin')
@@ -1215,6 +1326,9 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/left':self.reply({'left':read_left()})
   elif self.path.startswith('/autopilot'):self.reply({'on':auto_on(),'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':ENGINE.summary(),'status':ENGINE.status() if auto_on() else None,'hold':on_hold()})
   elif self.path=='/memory':self.reply(mem_get())
+  elif self.path=='/knowledge':self.reply(KNOWLEDGE.summary())
+  elif self.path.startswith('/assistant-evaluate/'):
+   result=EVAL_TASKS.get(self.path.split('/')[-1]);self.reply(result or {'error':'Unknown evaluation.'},status=200 if result else 404)
   elif self.path=='/campaign':self.reply({**{k:v for k,v in CAMPAIGN.items() if k!='stop'},'log':CAMPAIGN['log'][-8:],'wait':max(0,round(CAMPAIGN['next_at']-time.time()))})
   elif self.path=='/rules':self.reply({'items':ENGINE.rule_list(),'autopilot':auto_on()})
   elif self.path=='/ai-test':self.reply(ai_test())
@@ -1224,23 +1338,39 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/suggestions':self.reply({'items':ENGINE.suggestions(),'autopilot':auto_on(),'summary':ENGINE.summary()})
   elif self.path=='/groups':self.reply([{'key':k,'name':v[0]} for k,v in GROUPS.items()])
   elif self.path.startswith('/assistant-status/'):
-   task=ASSIST_TASKS.get(self.path.split('/')[-1]);self.reply(task or {'error':'This request is no longer tracked after a service restart. Check recent activity before trying again.'},status=200 if task else 404)
+   ident=self.path.split('/')[-1];task=ASSIST_TASKS.get(ident)
+   if task is None and STORE:
+    task=mapping(STORE.get('assistant_task_'+ident)) or None
+    if task and not task.get('done'):task={'done':True,'error':'The service restarted before completion. Check recent activity; this action will not repeat automatically.'}
+   self.reply(task or {'error':'This request is no longer tracked after a service restart. Check recent activity before trying again.'},status=200 if task else 404)
   elif self.path.startswith('/send-status/'):
    job=get_job(self.path.split('/')[-1]);self.reply(job or {'error':'Unknown job'},status=200 if job else 404)
   elif self.path=='/':self.reply((ROOT/'index.html').read_bytes(),'text/html')
   else:self.reply({},status=404)
  def do_POST(self):
+  self.response_sent=False
+  try:self._post()
+  except (ValueError,TypeError,KeyError):
+   if not self.response_sent:self.reply({'error':'The request data is invalid. Correct the fields and try again.'},status=400)
+  except Exception:
+   if not self.response_sent:self.reply({'error':'This request did not complete reliably. Check confirmed activity before repeating any send.'},status=502)
+ def _post(self):
   global ACTIVE,OWNER_REVISION
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   ENGINE.touch_owner()
-  if self.path not in ('/chat-log','/rule-text'):
+  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate'):
    with LOCK:OWNER_REVISION+=1
    OWNER_GUARD.revision=OWNER_REVISION
   origin=self.headers.get('Origin');same_origin=origin and urllib.parse.urlparse(origin).netloc==self.headers.get('Host')
   if origin and not same_origin and origin not in self.remote_config().get('origins',[]):return self.reply({},status=403)
-  try:body=json.loads(self.rfile.read(int(self.headers.get('Content-Length',0))))
+  try:
+   length=int(self.headers.get('Content-Length',0))
+   if not 0<length<=12_000_000:return self.reply({'error':'Request is empty or too large.'},status=400)
+   body=json.loads(self.rfile.read(length))
   except Exception:return self.reply({'error':'Invalid request'},status=400)
+  if not isinstance(body,dict):return self.reply({'error':'Request must be a JSON object.'},status=400)
   if self.path=='/drafts':
+   if any(not isinstance(body.get(k),str) or len(body[k])>10000 for k in ('group','dm')):return self.reply({'error':'Both captions must be text, at most 10,000 characters each.'},status=400)
    with LOCK:
     DRAFT.write_text(json.dumps({k:str(body[k]) for k in ('group','dm')},ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
    self.reply({'saved':True})
@@ -1274,7 +1404,27 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/dm-batch':
    try:self.reply({'reply':dm_batch_now(body.get('kind','donors'),body.get('count',10),body.get('group','main'))})
    except ValueError as e:self.reply({'error':str(e)},status=400)
-  elif self.path=='/chat-log':chat_add(body.get('who'),body.get('text',''),body.get('err'));self.reply({'ok':True})
+  elif self.path=='/chat-log':self.reply({'ok':True,'turn_id':chat_add(body.get('who'),body.get('text',''),body.get('err'),body.get('turn_id'))})
+  elif self.path=='/knowledge':
+   self.reply({'removed':KNOWLEDGE.forget(str(body.get('forget',''))),'memory':KNOWLEDGE.summary()})
+  elif self.path=='/feedback':
+   try:self.reply({'saved':KNOWLEDGE.feedback(str(body.get('turn_id','')),body.get('correction',''),body.get('remember') is True),'warning':KNOWLEDGE.sync_error})
+   except ValueError as e:self.reply({'error':str(e)},status=400)
+  elif self.path=='/assistant-evaluate':
+   import chat_eval
+   cases=body.get('cases',list(chat_eval.CASES))
+   if not isinstance(cases,list) or not 1<=len(cases)<=8 or any(x not in chat_eval.CASES for x in cases):return self.reply({'error':'Choose 1 to 8 known test cases.'},status=400)
+   running=next((k for k,v in EVAL_TASKS.items() if not v.get('done')),None)
+   if running:return self.reply({'eval_id':running})
+   ident=uuid.uuid4().hex;EVAL_TASKS[ident]={'done':False,'results':[],'total':len(cases)}
+   def evaluate():
+    for key in cases:
+     try:result=chat_eval.run_case(key)
+     except Exception as e:result={'case':key,'passed':False,'error':str(e)[:160],'sandbox':True}
+     EVAL_TASKS[ident]['results'].append(result)
+    EVAL_TASKS[ident]['done']=True
+    KNOWLEDGE.trace({'evaluation':ident,'passed':sum(x['passed'] for x in EVAL_TASKS[ident]['results']),'total':len(cases),'sandbox':True})
+   threading.Thread(target=evaluate,daemon=True).start();self.reply({'eval_id':ident})
   elif self.path=='/autopilot':self.reply({'reply':set_auto(bool(body.get('on'))),'on':auto_on()})
   elif self.path=='/upload-image':
    try:self.reply({'id':save_upload(str(body.get('data','')),body.get('use','attachment'))})
@@ -1314,7 +1464,8 @@ class Handler(BaseHTTPRequestHandler):
    if msg is None:return self.reply({'error':'Unknown setting'},status=400)
    self.reply({'reply':msg,'summary':ENGINE.summary()})
   elif self.path=='/assistant':
-   text=str(body.get('text',''))[:4000]
+   text=body.get('text','')
+   if not isinstance(text,str) or len(text)>10000:return self.reply({'error':'Use a text message of at most 10,000 characters.'},status=400)
    if not text.strip():return self.reply({'error':'Type something first.'},status=400)
    try:
     direct=manual_command(text,body.get('request_id'))

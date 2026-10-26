@@ -7,12 +7,12 @@ function status(t,bad){const s=$('status');s.textContent=t;s.classList.toggle('e
 
 /* ---- conversation log (kept on this device) ---- */
 let history=[];try{history=JSON.parse(localStorage.getItem('givelife-chat')||'[]')}catch(e){}
-let thinking=false;
+let thinking=false,pendingChats=0;
 let rev=null;
 function drawLog(anim){const items=history.slice(-40);
  for(const id of ['log','histLog']){const el=$(id),prev=el.scrollTop;el.textContent='';
   items.forEach((h,i)=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(anim&&i===items.length-1?' in':'');d.dataset.t=h.t;
-   d.textContent=rev&&rev.t===h.t?rev.words.slice(0,rev.n).join(''):h.text;el.append(d)});
+   d.textContent=rev&&rev.t===h.t?rev.words.slice(0,rev.n).join(''):h.text;el.append(d);if(h.who==='app'&&h.id){const f=document.createElement('button');f.className='reply-feedback';f.type='button';f.textContent='Correct this';f.setAttribute('aria-label','Correct this response');f.onclick=e=>{e.stopPropagation();openFeedback(h.id)};el.append(f)}});
   if(thinking){const d=document.createElement('div');d.className='e bot dots in';d.innerHTML='<span class="spark">✻</span><em>Thinking…</em>';el.append(d)}
   if(anim){el.scrollTop=prev;el.scrollTo({top:el.scrollHeight,behavior:'smooth'})}else el.scrollTop=el.scrollHeight}}
 /* a reply appears word by word, like Claude, then stays */
@@ -23,9 +23,9 @@ function runReveal(){const r=rev;if(!r)return;const step=Math.max(2,Math.ceil(r.
  r.timer=setInterval(()=>{r.n=Math.min(r.words.length,r.n+step);const txt=r.words.slice(0,r.n).join('');
   document.querySelectorAll('[data-t="'+r.t+'"]').forEach(d=>{d.textContent=txt;const l=d.parentElement;l.scrollTop=l.scrollHeight});
   if(r.n>=r.words.length){clearInterval(r.timer);if(rev===r)rev=null}},32)}
-function think(on){thinking=on;drawLog(false)}let logChain=Promise.resolve();
-function say(who,text,err){const item={who,text,err:!!err,t:Date.now()};history.push(item);prepareReveal(item);history=history.slice(-80);if(who!=='auto')logChain=logChain.then(()=>post('/chat-log',{who,text,err:!!err})).catch(()=>{});try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}drawLog(true);runReveal()}
-const GREETING='Hi. Tell me what changed or what to do: "34k left", "came 2000", "Ali 0300 1234567", "send all", or anything else. I remember everything we say here.';
+function think(on){pendingChats=Math.max(0,pendingChats+(on?1:-1));thinking=pendingChats>0;drawLog(false)}let logChain=Promise.resolve();
+function say(who,text,err,turnId){const item={id:turnId||(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()),who,text,err:!!err,t:Date.now()};history.push(item);prepareReveal(item);history=history.slice(-80);if(who!=='auto')logChain=logChain.then(()=>post('/chat-log',{who,text,err:!!err,turn_id:item.id})).catch(()=>{});try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}drawLog(true);runReveal()}
+const GREETING='Hi. Tell me what changed or what to do: "34k left", "came 2000", "Ali 0300 1234567", "send all", or anything else. I can use saved preferences and recent context.';
 async function syncChat(){try{await logChain;const d=await (await fetch('/chat')).json();
  if(d.items&&d.items.length){history=d.items.slice(-80).map(x=>({who:x.who,text:x.text,err:!!x.err,t:x.t}));try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}}
  else if(!history.length)say('app',GREETING);
@@ -194,77 +194,46 @@ $('campStop').onclick=async()=>{if(listT){clearTimeout(listT);listT=null;$('camp
 
 /* ---- the assistant: quick commands work instantly; anything else goes to the AI ---- */
 const num=(s,k)=>Math.round(parseFloat(s.replace(/,/g,''))*(k?1000:1));
-async function quick(t){const low=t.toLowerCase();let m;
- if(/^(hi+|hello|hey|salam)\W*$/i.test(t))return 'Hi. What should I do?';
+async function quick(t){const low=t.toLowerCase().trim();
+ if(/^(hi+|hello|hey|salam)\W*$/i.test(t))return 'Hi!';
  if(/^(ok|okay|thanks|thank you|theek|done thanks)\W*$/i.test(t))return /thank/i.test(t)?'You’re welcome.':'Okay.';
  if(editing)setEditing(false);clearTimeout(timer);await save();
- const command=await post('/command',{text:t,request_id:requestId()}),direct=await command.json();if(!command.ok)throw Error(direct.error||'Command failed. Nothing was retried.');
- if(direct.handled){applyDrafts(direct);if(direct.job_id)watchGroupJob(direct.job_id,direct.caption||$('group').value);return direct.reply;}
- if(m=low.match(/^(?:came|got|received|recieved|aya|aaya|aye|aaye|\+)\s*(?:rs\.?\s*)?([\d,.]+)\s*(k)?\s*(?:came|aya|aaya)?$/)){
-  if(left==null)throw Error('Amount left is not loaded yet.');const n=num(m[1],m[2]),nl=Math.max(0,left-n);await setLeft(nl);return `Rs. ${fmt(n)} came. Rs. ${fmt(nl)} left now; both messages updated.`}
- if(!/3\d{2}[\s-]?\d{7}/.test(t)&&(m=low.match(/^(?:left|remain(?:ing)?|baqi|need(?:ed)?)?\s*(?:rs\.?\s*)?([\d,.]+)\s*(k)?\s*(?:left|remain(?:ing)?|remains|baqi|reh gaye|needed)?$/))){
-  const n=num(m[1],m[2]);if(!(n>=0&&n<=10000000))throw Error('That amount looks wrong.');await setLeft(n);return `Rs. ${fmt(n)} left. Both messages updated.`}
- if(/\bpapers?\b|\breports?\b|\bdocuments?\b/i.test(t)&&attached&&/\b(these|this|is|are|save|use|add)\b/i.test(t)){const r=await post('/upload-image',{data:attached.data,use:'papers'}),d=await r.json();if(!r.ok)throw Error(d.error);
-  clearAttachment();return `Saved as medical papers (${String(d.id).replace('papers-','')} page${d.id==='papers-1'?'':'s'} so far). I will send them privately to anyone who asks. Attach more pages the same way.`}
- if(m=low.match(/^(?:pace|speed)\s+(\d+)\s*(?:\/|and|,|\s)\s*(\d+)$/)){const r=await post('/autopilot-settings',{action:'pace',main:+m[1],freelance:+m[2]}),d=await r.json();return d.reply||d.error}
- if(/^(normal|default) (pace|speed)$/.test(low)){const r=await post('/autopilot-settings',{action:'pace',main:0,freelance:0}),d=await r.json();return d.reply}
- if(/\b(make|use|set)\b.*\bposter\b|^poster$/i.test(t)&&attached){const r=await post('/upload-image',{data:attached.data,use:'poster'}),d=await r.json();if(!r.ok)throw Error(d.error);
-  $('poster').src=attached.url;$('poster').hidden=false;clearAttachment();return 'Done. This picture is now the poster for group posts and DMs.'}
- if(/^(hi+|hello|hey|salam|assalam[\w\s-]*)\W*$/i.test(t)&&!/\b(on hold|hold)\b/i.test(history.slice(-3).map(h=>h.text).join(' ')))return 'Hi. What should I do?';
- if(/^(hold|wait|hold on|hold everything|stop everything|pause everything)\W*$/i.test(t)){const r=await post('/hold',{on:true}),d=await r.json();return d.reply}
- if(/^(resume|continue|go ahead|connected|release|unhold)\W*$/i.test(t)){const r=await post('/hold',{on:false}),d=await r.json();return d.reply}
- const BATCH=async b=>{const r=await post('/dm-batch',b),d=await r.json();if(!r.ok)throw Error(d.error||'Could not start');return d.reply};
- if(m=t.match(/^(?:send\s+)?(?:(\d+)\s+)?(?:dms?|messages?)\s+(?:to\s+)?(?:(\d+)\s+)?(?:my\s+|our\s+|the\s+|past\s+|old\s+|existing\s+)*donors?$/i))return await BATCH({kind:'donors',count:+(m[1]||m[2]||10)});
- if(m=t.match(/^(?:send\s+)?(?:(\d+)\s+)?(?:dms?|messages?)\s+(?:to\s+)?(?:(\d+)\s+)?(?:members?\s+|people\s+|persons\s+)?(?:of|from|in)\s+(?:the\s+)?(.+?)(?:\s+group)?$/i)){const g=GKEY(m[3]);if(g&&g!=='test')return await BATCH({kind:'group',group:g,count:+(m[1]||m[2]||10)})}
- const list=parseList(t);
- if(list.people.length>=2||(list.people.length===1&&/\b(send|bhejo|message|msg|dm)\b/i.test(t))){startList(list);return null}
- if(m=t.match(/(?:\+?92|0092|0)?[\s-]?3\d{2}[\s-]?\d{7}/)){
-  const phone=m[0].trim();let rest=(t.slice(0,m.index)+' '+t.slice(m.index+m[0].length)).trim();
-  const sister=/\b(sister|sis|behen|behan|baji|madam|miss|mrs)\b/i.test(rest);
-  rest=rest.replace(/\b(sister|sis|behen|behan|baji|madam|miss|mrs|brother|bro|bhai|mr|dm|send|to)\b/gi,'').replace(/[^\p{L}\s.'-]/gu,'').replace(/\s+/g,' ').trim();
-  const name=rest&&/^\p{L}/u.test(rest)&&rest.length<=30?rest.replace(/\b\p{L}/gu,c=>c.toUpperCase()):'';
-  setView('dm');$('dmPhone').value=phone;$('dmName').value=name;setGender(sister?'Sister':'Brother');
-  return `Ready: DM to ${greet()} (${phone}). Tap "Send DM with poster".`}
- if(m=low.match(/^(?:rules?|my rules|show rules|list rules)$/)){const d=await (await fetch('/rules')).json();return d.items.length?'Auto mode follows:\n'+d.items.map((x,i)=>`${i+1}. ${x.text}`).join('\n')+'\nSay "forget 2" to remove one.':'No rules yet. With Auto on, just tell me things like "post in fiverr every 30 min" or "no posting 2am to 7am".'}
- if(m=low.match(/^(?:forget|delete|remove)\s+(?:rule\s*)?#?(\d+)$/)){const d=await (await fetch('/rules')).json(),it=d.items[+m[1]-1];if(!it)return 'There is no rule '+m[1]+'.';await post('/rules',{delete:it.id});return 'Removed: '+it.text}
- if(/^(send )?(to )?all( groups)?$/.test(low)){setView('group');armAll();return 'Starting the manual send to all 6 groups now.'}
- if(/^(new|regenerate|next|naya)$/.test(low)){await freshWording();return 'New wording ready.'}
- if(/^copy$/.test(low)){$('copy').click();return 'Copied.'}
+ const response=await post('/command',{text:t,request_id:requestId()}),direct=await response.json();
+ if(!response.ok)throw Error(direct.error||'Command failed. Nothing was retried.');
+ if(direct.handled){applyDrafts(direct);if(direct.job_id)watchGroupJob(direct.job_id,direct.caption||$('group').value);return direct.reply}
  if(/^(dm|group)$/.test(low)){setView(low);return 'Switched to '+low.toUpperCase()+'.'}
- if(m=t.match(/^(?:remember|yaad rakho|note)[:\s]+(.{3,})$/i)){const r=await post('/memory',{rule:m[1]}),d=await r.json();return d.reply}
+ if(/^(new|regenerate|next|naya)$/.test(low)){await freshWording();return 'New wording ready.'}
+ if(low==='copy'){$('copy').click();return 'Copied.'}
  if(/^auto(pilot)?\s+(on|off)$/.test(low)){await toggleAuto(/on$/.test(low));return null}
- const G={main:'main',givelife:'main',community:'community','upwork community':'community',fiverr:'fiverr','fiverr course':'fiverr',upwork:'upwork','upwork course':'upwork',uet:'uet','fiverr uet':'uet',toprated:'toprated','top rated':'toprated'};
- const setting=async b=>{const r=await post('/autopilot-settings',b),d=await r.json();if(!r.ok)throw Error(d.error);return d.reply};
- if(m=low.match(/^(pause|stop posting in|stop)\s+([a-z ]+?)(?:\s+for\s+(\d+)\s*(h|hours?|d|days?))?$/)){const k=G[m[2].trim()];if(k)return setting({action:'pause',key:k,hours:m[3]?(+m[3])*(/^d/.test(m[4])?24:1):24})}
- if(m=low.match(/^(resume|start posting in|start)\s+([a-z ]+)$/)){const k=G[m[2].trim()];if(k)return setting({action:'resume',key:k})}
- if(m=low.match(/^(?:send|post|share|bhejo|daalo|dalo)(?:\s+(?:it|this|message|msg|post))?(?:\s+(?:in|to|on|mein|me|main))?\s+([a-z ]+?)(?:\s+(?:group|groups|mein|me))?$/)){
-  const w=m[1].trim(),k=G[w]||({freelance:'free','all freelance':'free','5 freelance':'free',test:'test','test group':'test',all:'all','all groups':'all'})[w];
-  if(k){setView('group');if(k==='all'){armAll();return 'Starting the manual send to all 6 groups now.'}
-   if(k==='test'){sendTest('group');return 'Sending to the test group.'}sendGroup(k);return 'Sending to '+({main:'GiveLife main',free:'all 5 freelance groups',community:'Upwork Community',fiverr:'Fiverr Course',upwork:'Upwork Course',uet:'Fiverr UET',toprated:'Top Rated'}[k]||k)+' now.'}}
- if(m=low.match(/^quiet\s+(\d{1,2})\s*(?:-|to)?\s*(\d{1,2})$/))return setting({action:'quiet',start:+m[1],end:+m[2]});
- if(/^quiet off$/.test(low))return setting({action:'quiet',start:0,end:0});
- if(m=low.match(/^(?:auto )?dms?\s+(on|off)(?:\s+(\d+))?$/))return setting({action:'dms',enabled:m[1]==='on',daily:m[2]?+m[2]:30});
- if(/^(status|report|kya haal|halat)$/.test(low)){const d=await (await fetch('/autopilot')).json(),s=d.summary||{};
-  return `Autopilot ${d.on?'ON':'OFF'} · pace ${s.pace} (main every ${s.main_every} min, freelance every ${s.freelance_every} min) · ${s.minutes_since_money} min since money · today ${s.posts_today} posts, ${s.dms_today}/${s.dm_daily} DMs, ${s.possible_donations_today} possible donations`+(Object.keys(s.paused||{}).length?` · paused: ${Object.keys(s.paused).join(', ')}`:'')+(s.quiet?` · quiet ${s.quiet[0]}–${s.quiet[1]}h`:'')}
- if(t.length>=60&&t.includes('\n')){const k=view();$(k).value=t;if(k==='dm')applyGreeting(false);render();await save();return 'Your text is now the '+k.toUpperCase()+' message.'}
+ if(/^(rules?|my rules|show rules|list rules)$/.test(low)){const d=await(await fetch('/rules')).json();return d.items.length?d.items.map(x=>x.text).join('\n'):'No scheduling rules saved.'}
+ if(/^(?:\+?92|0)?3\d{9}$/.test(t.replace(/[ ()-]/g,''))){setView('dm');$('dmPhone').value=t;$('dmName').value='';setGender('Brother');return 'Full DM prepared for that number. Nothing was sent.'}
+ if(attached&&/\b(papers?|reports?|documents?)\b/i.test(t)&&/\b(this|these|save|use|add)\b/i.test(t)){const r=await post('/upload-image',{data:attached.data,use:'papers'}),d=await r.json();if(!r.ok)throw Error(d.error);clearAttachment();return 'Medical papers saved.'}
  return undefined}
+
 async function act(text){const t=text.trim();if(!t)return;say('you',t);
  const q=await quick(t);if(q!==undefined){if(q)say('app',q);return}
- const rr=await post('/rule-text',{text:t}),rd=await rr.json().catch(()=>({}));
- if(rd.rule){if(rd.saved){say('app','Rule saved: '+rd.summary+' Auto mode will follow it. Say "rules" to see them all.');return}
-  if(!aiAvailable){say('app',rd.summary+' Auto mode is off, so I did not save it as a rule. Say "auto on" and tell me again.');return}}
  think(true);let r,d;
  try{await logChain;r=await post('/assistant',{text:t,request_id:requestId(),image:attached?attached.id:null,history:history.slice(-13,-1),screen:{view:view(),dm:{name:$('dmName').value,phone:$('dmPhone').value,gender}}});d=await r.json().catch(()=>({}));if(r.ok&&d.task_id){let finished=false;const until=Date.now()+4*60*1000;while(!finished&&Date.now()<until){await new Promise(res=>setTimeout(res,500));const check=await fetch('/assistant-status/'+d.task_id),task=await check.json();if(!check.ok)throw Error(task.error||'Request no longer tracked. Nothing was retried.');if(task.done){if(task.error)throw Error(task.error);d=task.result;finished=true}}if(!finished)throw Error('The assistant result is not confirmed. Check recent activity; I will not repeat the send.')}}finally{think(false)}
  if(r.status===503){say('app','I did not understand that, and the AI assistant is not connected, so only direct commands work. Try: "34k left", "came 2000", "send hi to Ali", "send main", "fiverr every 30 min", "rules".',1);return}
  if(!r.ok)throw Error(d.error||'The assistant could not answer.');
- applyDrafts(d);if(d.autopilot!=null)paintAuto(d.autopilot);say('app',d.reply);if(d.job_id)watchGroupJob(d.job_id,d.caption||$('group').value);for(const j of d.jobs||[])watchGroupJob(j.job_id,j.caption||$('group').value);
+ if(!d.superseded){applyDrafts(d);if(d.autopilot!=null)paintAuto(d.autopilot)}say('app',d.reply,false,d.turn_id);if(d.job_id)watchGroupJob(d.job_id,d.caption||$('group').value);for(const j of d.jobs||[])watchGroupJob(j.job_id,j.caption||$('group').value);
  for(const a of d.actions||[]){
   if(a.type==='prepare_dm'){setView('dm');$('dmPhone').value=a.phone||'';$('dmName').value=a.name||'';setGender(a.gender==='Sister'?'Sister':'Brother')}
   }}
-const hideKeys=()=>{if(matchMedia('(pointer:coarse)').matches&&document.activeElement&&document.activeElement.blur)document.activeElement.blur()};
+const hideKeys=()=>{}; // Keep the keyboard and thumb target stable while submitting.
 $('cmdForm').onsubmit=async e=>{e.preventDefault();const c=$('cmd'),v=c.value;c.value='';hideKeys();
  try{await act(v)}catch(err){say('app',err.message,1)}paintAuto(autoOn)};
 $('histForm').onsubmit=async e=>{e.preventDefault();const c=$('histCmd'),v=c.value;c.value='';hideKeys();try{await act(v)}catch(err){say('app',err.message,1)}};
+for(const id of ['cmd','histCmd'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$(id).form.requestSubmit()}});
+function updateChatViewport(){const v=window.visualViewport;document.documentElement.style.setProperty('--chat-height',(v?v.height:innerHeight)+'px');document.documentElement.style.setProperty('--chat-top',(v?v.offsetTop:0)+'px')}
+if(window.visualViewport){visualViewport.addEventListener('resize',updateChatViewport);visualViewport.addEventListener('scroll',updateChatViewport)}updateChatViewport();
+let correctionTurn=null;
+function openFeedback(id){correctionTurn=id;$('feedbackText').value='';$('feedbackRemember').checked=false;$('feedbackStatus').textContent='';$('feedbackDialog').showModal();$('feedbackText').focus()}
+$('feedbackClose').onclick=()=>$('feedbackDialog').close();
+$('feedbackForm').onsubmit=async e=>{e.preventDefault();await logChain;const r=await post('/feedback',{turn_id:correctionTurn,correction:$('feedbackText').value,remember:$('feedbackRemember').checked}),d=await r.json();if(!r.ok){$('feedbackStatus').textContent=d.error;return}$('feedbackDialog').close();status(d.warning||('Correction saved'+($('feedbackRemember').checked?' to memory.':'.')),!!d.warning)};
+async function showMemory(){const r=await fetch('/knowledge'),d=await r.json(),box=$('memoryContent');box.textContent='';const stats=document.createElement('p');stats.textContent=d.feedback_count+' confirmed corrections · '+d.archived_turns+' archived turns. Patterns: '+(Object.entries(d.patterns||{}).map(([k,v])=>k+' '+v).join(', ')||'none yet');box.append(stats);for(const item of d.entries||[]){const row=document.createElement('div');row.className='memory-item';const label=document.createElement('p');label.textContent=item.text;const remove=document.createElement('button');remove.type='button';remove.textContent='Forget';remove.onclick=async()=>{await post('/knowledge',{forget:item.id});showMemory()};row.append(label,remove);box.append(row)}if(!$('memoryDialog').open)$('memoryDialog').showModal()}
+if($('openMemory'))$('openMemory').onclick=()=>showMemory().catch(e=>status(e.message,1));$('memoryClose').onclick=()=>$('memoryDialog').close();
+if($('runChatEval'))$('runChatEval').onclick=async()=>{const b=$('runChatEval'),label=$('chatEvalStatus');b.disabled=true;try{const r=await post('/assistant-evaluate',{}),start=await r.json();if(!r.ok)throw Error(start.error);for(let i=0;i<600;i++){const response=await fetch('/assistant-evaluate/'+start.eval_id),task=await response.json();if(!response.ok)throw Error(task.error||'Could not read evaluation.');label.textContent=(task.results||[]).map(x=>x.case+': '+(x.passed?'passed':'FAILED'+(x.error?' — '+x.error:''))).join('\n')+'\n'+(task.results||[]).length+'/'+task.total+' complete';if(task.done)break;await new Promise(resolve=>setTimeout(resolve,1000))}}catch(e){label.textContent=e.message}finally{b.disabled=false}};
 $('cmd').addEventListener('focus',()=>{if(isPhone()){$('cmd').blur();openChat()}else cf(true)});
 
 /* ---- autopilot ---- */

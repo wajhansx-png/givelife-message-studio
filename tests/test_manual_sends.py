@@ -41,7 +41,7 @@ class CommandTests(unittest.TestCase):
 class SendTests(unittest.TestCase):
  def setUp(self):
   app.cancel_jobs('test reset')
-  app.STORE=Store();app.JOBS.clear();app.JOB_CANCEL.clear();app.REQUEST_JOBS.clear();app.ACTIVE=None;app.LAST_LOCAL.clear();app.LAST_MANUAL.clear();app.DELIVERIES.clear();app.LAST_RECIPIENT.clear();app.LAST_JOB.clear();app.OWNER_REVISION=0
+  app.STORE=Store();app.KNOWLEDGE=app.Knowledge(app.DATA,app.STORE);app.KNOWLEDGE.data={'entries':[],'turns':[],'feedback':[],'traces':[],'pending':{}};app.JOBS.clear();app.JOB_CANCEL.clear();app.REQUEST_JOBS.clear();app.ACTIVE=None;app.LAST_LOCAL.clear();app.LAST_MANUAL.clear();app.DELIVERIES.clear();app.LAST_RECIPIENT.clear();app.LAST_JOB.clear();app.OWNER_REVISION=0
   app.HOLD.write_text('{"on":false}');app.AUTO.write_text('{"on":false}');app.CAMPAIGN.update(running=False,stop=False)
   app.DM_NAMES.clear();app.CONTACT_CONTEXT.clear();app.set_left(25000)
   self.sent=[];self.status_connected=True;self.status_recent=False
@@ -191,7 +191,7 @@ class SendTests(unittest.TestCase):
    result=assistant.chat('send main',[],{},[],{'send_appeal':lambda **kw:receipt})
   self.assertEqual(result['jobs'],[receipt]);self.assertEqual(result['reply'],receipt['reply'])
  def test_tools_are_not_repeated_within_one_ai_turn(self):
-  actual=[];callbacks=app.chat_callbacks('send hello to Ali',revision=0)
+  actual=[];callbacks=app.chat_callbacks('send hello to 923001234567',revision=0)
   with patch.object(app,'send_free',side_effect=lambda *a,**k:(actual.append(a) or 'Sent.')):
    callbacks['send_message'](to='923001234567',text='hello',with_picture=False)
    callbacks['send_message'](to='923001234567',text='hello',with_picture=False)
@@ -240,7 +240,7 @@ class SendTests(unittest.TestCase):
    self.assertEqual(app.ASSIST_TASKS[ident]['result']['reply'],'Answered.')
 
  def test_stale_ai_waiting_for_wire_cannot_send_after_stop(self):
-  errors=[];callbacks=app.chat_callbacks('send hello to Ali',revision=0)
+  errors=[];callbacks=app.chat_callbacks('send hello to 923001234567',revision=0)
   def worker():
    try:callbacks['send_message'](to='923001234567',text='hello',with_picture=True)
    except ValueError as e:errors.append(str(e))

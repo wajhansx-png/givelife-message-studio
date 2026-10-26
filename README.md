@@ -17,3 +17,21 @@ The cloud does not start the local campaign bot, periodic donor checking, or DM 
 ## Validation
 
 Python syntax, frontend syntax, authentication, caption preservation, and Render schema can be checked locally. An actual Docker build and live WhatsApp send must be verified after deployment; no paid resource is created just by committing these files.
+
+
+
+## Audited chat architecture
+
+The existing Python/DeepSeek/GoWA stack remains in place. `assistant_contract.md` defines the trust hierarchy. `chat_runtime.py` builds bounded conversation context and runs validated tool steps. `chat_policy.py` grants capabilities from current owner text. `chat_memory.py` persists source-labelled preferences, corrections, archived turns, feedback and diagnostic traces in the existing cloud store, with a local atomic copy. Retrieved text never enters the system role and cannot itself authorize sending.
+
+Actions require current owner intent, schema validation, verified recipients and matching financial values. Started jobs are distinct from confirmed receipts. Dependent actions stop after a failed step; uncertain WhatsApp sends are never automatically retried. Assistant request IDs survive restarts. The automatic scheduler remains deterministic; the background AI advisor cannot silently change sending settings.
+
+Use **Correct this** under a reply to report a mistake. Check **Remember this correction** only for a future preference. Settings → **Memory & feedback** lists active memories, supports forgetting, and shows recurring feedback categories. Current explicit instructions and current campaign state take precedence. This is retrieval and feedback, not retraining model weights.
+
+Retention is bounded: 2,000 archived turns, 1,000 memory entries (including superseded entries), 500 feedback records and 200 diagnostic traces. Search uses lexical relevance and recency; semantic retrieval is not guaranteed. Preferences and pending recipient clarifications survive restarts. Risky pending recipient actions expire after 10 minutes and never resume without a matching user clarification. Existing chat history and recipient name overrides are preserved.
+
+`DEEPSEEK_MODEL` keeps the existing model by default. Optional `DEEPSEEK_REASONING_MODEL`, `DEEPSEEK_THINKING=enabled`, and `DEEPSEEK_MAX_TOKENS` configure reasoning-capable deployments. Thinking-mode tool messages preserve `reasoning_content` between model calls, while private reasoning is excluded from UI, memory and diagnostics. The normal output budget is 4,096 tokens; thinking defaults to 8,192. HTTP 429/502/503/504 model requests get one bounded retry; WhatsApp side effects do not. Model quality, network availability and delivery time remain external limitations.
+
+Provider reference: [DeepSeek tool calls](https://api-docs.deepseek.com/guides/tool_calls/) and [thinking-mode context requirements](https://api-docs.deepseek.com/guides/thinking_mode/).
+
+Validation: `python -m unittest discover -s tests -v`, `node tests/test_connection.js`, and `node --check app.js`. `python tests/preview_fake.py` starts an isolated local UI at port 3003 with a fake WhatsApp transport. `/mobile-preview` provides phone-size and keyboard-space layout checks. Production Settings → **Run 8 checks** exercises the real configured model against isolated simulated tools; it never contacts WhatsApp recipients. Treat model-evaluation scores as bounded evidence, not a guarantee of general accuracy.

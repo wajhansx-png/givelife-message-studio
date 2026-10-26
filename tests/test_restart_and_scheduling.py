@@ -22,7 +22,7 @@ class RestartTests(unittest.TestCase):
    with patch.object(assistant,'client',return_value='fake'),patch.object(assistant,'_chat_raw',return_value={'content':"I'm good, you?"}) as model:
     result=assistant.chat('how r u',history,{'engine':engine,'screen':screen},memory,{})
    self.assertEqual(result['reply'],"I'm good, you?")
-   self.assertIn('use simple language',model.call_args.args[1])
+   self.assertNotIn('use simple language',model.call_args.args[1]);self.assertIn('use simple language',json.dumps(model.call_args.args[3]))
  def test_how_are_you_after_legacy_restore_uses_complete_request_path(self):
   app.LAST_MANUAL=json.dumps({'kind':'dm_appeal','to':'923001234567@s.whatsapp.net','name':'Wajdan'})
   app.MEMORY.write_text(json.dumps(['remember paragraphs',{'rule':'Use Brother when unclear'}]),encoding='utf-8')

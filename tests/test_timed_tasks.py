@@ -49,6 +49,8 @@ class TimedTests(unittest.TestCase):
   late=self.create('send main in 1 minute');self.now+=1000;self.s.tick();self.assertEqual(late['state'],'missed')
  def test_model_cannot_send_future_action_now(self):
   text='send main tomorrow at 9pm';self.assertTrue(chat_policy.permitted('schedule_task',text));self.assertFalse(chat_policy.permitted('send_appeal',text));self.assertFalse(chat_policy.permitted('autopilot','start auto at 9pm'));self.assertTrue(chat_policy.permitted('send_appeal','send main now today'))
+ def test_resume_parsing_does_not_unpause_unspecified_groups(self):
+  self.assertEqual(tt.parse('resume freelance at 11am',self.now)['targets'],['free']);self.assertEqual(tt.parse('resume at 11am',self.now)['targets'],[]);self.assertEqual(tt.parse('start sending in givelife at 11am',self.now)['action'],'resume');self.assertFalse(chat_policy.permitted('hold','resume auto at 11am'))
  def test_file_fallback_and_concurrent_ticks(self):
   s=tt.Scheduler(self.s.path,None,self.s.dispatch,self.s.receipt,self.s.ready,clock=lambda:self.now);s.command('send main in 1 minute');self.now+=60
   threads=[threading.Thread(target=s.tick) for _ in range(5)]
@@ -57,6 +59,17 @@ class TimedTests(unittest.TestCase):
   self.assertEqual(len(self.dispatched),1);self.assertTrue(json.loads(s.path.read_text()))
 
 class TimedIntegrationTests(unittest.TestCase):
+ def test_scheduled_resume_releases_hold_only_when_due(self):
+  from test_manual_sends import SendTests,app
+  from unittest.mock import patch
+  fixture=SendTests();fixture.setUp()
+  try:
+   app.set_hold(True)
+   with patch.object(app.ENGINE,'resume') as resume:
+    out=app.manual_command('resume freelance in 10 minutes','resume-test-123');scheduler=app.timed_scheduler();task=scheduler.tasks[-1]
+    self.assertIn('Scheduled',out['reply']);self.assertTrue(app.on_hold());self.assertFalse(app.auto_on());resume.assert_not_called()
+    scheduler.clock=lambda:task['due'];scheduler.tick();self.assertFalse(app.on_hold());self.assertTrue(app.auto_on());self.assertEqual({x.args[0] for x in resume.call_args_list},set(app.FREELANCE));self.assertEqual(fixture.sent,[])
+  finally:fixture.tearDown()
  def test_chat_commands_persist_without_sending_then_dispatch_full_caption(self):
   from test_manual_sends import SendTests,app
   fixture=SendTests();fixture.setUp()

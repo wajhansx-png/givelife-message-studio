@@ -27,7 +27,7 @@ def permitted(name,text):
  if name in READ:return True
  i=intent(text);t=i['text']
  if name=='schedule_task':return timed_tasks.requested(t) and not i['query'] and not i['negative']
- if name in SEND|{'autopilot'} and timed_tasks.requested(t):return False
+ if name in SEND|{'autopilot','hold','resume_group','pause_group'} and timed_tasks.requested(t):return False
  if name=='dm_donors':return i['send'] and bool(re.search(r'(?i)\bdonors?\b',t))
  if name=='dm_group':return i['send'] and bool(re.search(r'(?i)\b(members?|group)\b',t))
  if name=='dm_list':return i['send'] and bool(re.search(r'(?i)\b(list|numbers?|phones?)\b|(?:\+?92|0)3\d{2}',t))

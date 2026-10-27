@@ -560,6 +560,15 @@ def timed_scheduler():
  with _TIMED_LOCK:
   if _TIMED is None or _TIMED_STORE is not STORE:
    def dispatch(task):
+    if task['action']=='resume':
+     keys=[]
+     for key in task['targets']:keys.extend(list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key])
+     if any(k not in GROUPS for k in keys):raise ValueError('Choose production groups to resume, or Auto for global resume.')
+     for key in dict.fromkeys(keys):ENGINE.resume(key)
+     set_hold(False)
+     if not auto_on():set_auto(True)
+     if on_hold() or not auto_on():raise ValueError('Resume was not fully confirmed.')
+     return {'message':'Scheduled resume completed. Auto is ON; only named group pauses were lifted.'}
     if task['action']!='send':
      on=task['action']=='auto_on';reply=set_auto(on)
      if auto_on()!=on:raise ValueError('Auto mode could not be changed.')
@@ -574,7 +583,7 @@ def timed_scheduler():
      ident=start_send_job(keys,caption,manual=True,request_id='schedule-'+task['id']+'-'+str(int(task['due'])))
     return {'job_id':ident,'expected':len(keys)}
    def ready(task):
-    if task['action']=='auto_off':return True
+    if task['action'] in ('auto_off','resume'):return True
     if on_hold():return False
     return task['action']!='send' or (not ACTIVE and wa_ok())
    def cancel(ident):

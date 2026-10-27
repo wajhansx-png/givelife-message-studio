@@ -13,7 +13,7 @@ def requested(text):
 def parse(text,now=None):
  """Only owner-authored, explicit actions; no inferred recipient or LLM-selected clock."""
  now=time.time() if now is None else now
- t=str(text).strip();instruction=re.sub(r'"[^"\n]*"|“[^”\n]*”',' ',t);low=instruction.casefold()
+ t=str(text).strip();instruction=re.sub(r'"[^"\n]*"|“[^”\n]*”',' ',t);low=re.sub(r'\b(continye|contine|contiune)\b','continue',instruction.casefold())
  if re.fullmatch(r'(?:show|list|view|my)?\s*(?:scheduled?\s+(?:tasks|messages|sends)|schedules|scheduler)',low):return {'command':'list'}
  cancel=re.fullmatch(r'(?:cancel|delete|remove)\s+(?:schedule(?:d task)?|task)\s+#?([a-f0-9]{8})',low)
  if cancel:return {'command':'cancel','id':cancel[1]}
@@ -22,9 +22,13 @@ def parse(text,now=None):
  if (manual_commands.parse(instruction) or {}).get('kind')=='refuse_target':raise ValueError('That group is excluded. Nothing was scheduled.')
  if re.search(r'\b(utc|gmt|est|ist|pst)\b',low):raise ValueError('Use Pakistan time (PKT) for schedules. Convert the time and send it again.')
  auto=bool(re.search(r'\b(auto|autopilot)\b',low))
- if auto and manual_commands.SEND.search(instruction):raise ValueError('Schedule one action at a time: a group send or an Auto change.')
- if len(re.findall(r'(?:\bat\s*|@\s*)\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',low))>1:raise ValueError('Schedule one time at a time. Nothing was scheduled.')
- if auto:
+ resume=bool(re.search(r'\b(resume|continue|restart)\b|\bstart\s+(?:sending|posting)\b',low))
+ if resume:
+  action='resume';keys=manual_commands.groups(instruction)
+  if 'test' in keys:raise ValueError('The test group has no automatic posting. Schedule a single send to it instead.')
+  if not keys and not auto and not re.match(r'^(?:please\s+)?(?:resume|continue|restart)\s+(?:at|by|in|after)\b',low):raise ValueError('Which groups should resume? For example: resume freelance at 11am.')
+ elif auto:
+  if manual_commands.SEND.search(instruction):raise ValueError('Schedule one action at a time: a group send or an Auto change.')
   if not re.search(r'\b(start|turn|enable|disable|stop|on|off)\b',low):return None
   if re.search(r'\b(start|enable|on)\b',low) and re.search(r'\b(stop|disable|off)\b',low):raise ValueError('Schedule one Auto change at a time: ON or OFF.')
   action='auto_off' if re.search(r'\b(stop|disable|off)\b',low) else 'auto_on';keys=[]
@@ -32,6 +36,7 @@ def parse(text,now=None):
   if not re.search(r'\b(send|post|share|message|msg|schedule|schedul)\b',low):return None
   action='send';keys=manual_commands.groups(instruction)
   if not keys:raise ValueError('Which group should I schedule? For example: send to GiveLife main tomorrow at 9pm.')
+ if len(re.findall(r'(?:\bat\s*|@\s*)\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',low))>1:raise ValueError('Schedule one time at a time. Nothing was scheduled.')
  if re.search(r'\bevery\s+\d',low):raise ValueError('Use one timed send or daily at a clock time. Keep interval rules, such as every 30 minutes, separate.')
  quote=re.search(r'"([^"\n]+)"|“([^”\n]+)”',t)
  body=next((x for x in quote.groups() if x), '') if quote else ''
@@ -79,7 +84,7 @@ class Scheduler:
 
  def describe(self,task):
   at=dt.datetime.fromtimestamp(task['due'],PKT).strftime('%d %b %Y %I:%M:%S %p PKT')
-  action='poster + '+('your quoted caption' if task.get('text') else 'the saved caption at send time')+' to '+', '.join(task['targets']) if task['action']=='send' else 'Auto '+('ON' if task['action']=='auto_on' else 'OFF')
+  action='poster + '+('your quoted caption' if task.get('text') else 'the saved caption at send time')+' to '+', '.join(task['targets']) if task['action']=='send' else ('Resume '+(', '.join(task['targets']) or 'Auto')+'; release hold and turn Auto ON' if task['action']=='resume' else 'Auto '+('ON' if task['action']=='auto_on' else 'OFF'))
   return f"#{task['id']} · {task['state']} · {'Daily' if task.get('daily') else 'Once'} · {at} · {action}"+((' · '+task['result']) if task.get('result') else '')
 
  def list(self):

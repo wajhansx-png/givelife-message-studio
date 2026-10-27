@@ -7,6 +7,8 @@ Examples (all times are Pakistan time, PKT / UTC+5):
 - `send to Fiverr daily at 21:00`
 - `send "Your exact caption" to test group at 9pm`
 - `start Auto at 8am`
+- `resume freelance at 11am` (lift only those group pauses, release hold, and turn Auto on then)
+- `resume at 11am` (release global hold and turn Auto on; keep individual group pauses)
 - `turn Auto off at 11pm`
 - `show schedules`
 - `cancel schedule <8-character ID>`
@@ -19,4 +21,4 @@ The server parses the actual owner's instruction. AI tool arguments cannot subst
 
 Limitations: free Render hosting can sleep, restart or be unavailable, so precise-time execution is not guaranteed while the service is asleep. No extra paid service was added. This first scheduler supports known group sends and Auto ON/OFF, not arbitrary AI tasks or timed individual DMs. It is designed for the app's current single server instance, not multiple concurrent replicas.
 
-Validation: `python -m unittest discover -s tests -q` (120 tests, including 15 scheduler and integration cases). These use fake transport and fixed clocks, never real recipients. The integration test schedules through the real chat command path, verifies no early send, advances time, confirms the full caption and poster dispatch through the existing job system, and checks its final receipt while Auto remains off.
+Validation: `python -m unittest discover -s tests -q` (122 tests, including 17 scheduler and integration cases). These use fake transport and fixed clocks, never real recipients. Integration tests schedule through the real chat command path, verify no early action, advance time, confirm the full caption and poster dispatch through the existing job system, and check its final receipt while Auto remains off. Scheduled resume is tested separately, including global hold and preservation of unnamed group pauses.

@@ -1,6 +1,6 @@
 const $=id=>document.getElementById(id);
 let draftSaved=null,draftsReady=false,draftsLoad=null;
-let editing=false,left=null,timer,saveChain=Promise.resolve(),allT=null,autoOn=false,seenAuto=0;
+let editing=false,left=null,timer,saveChain=Promise.resolve(),allT=null,autoOn=false,autoKnown=false,seenAuto=0;
 const view=()=>document.body.dataset.view,fmt=n=>Number(n).toLocaleString('en-US');
 const post=(url,body)=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
 function status(t,bad){const s=$('status');s.textContent=t;s.classList.toggle('err',!!bad);if(bad)setLiveNotice(t,true)}
@@ -253,7 +253,7 @@ if($('runChatEval'))$('runChatEval').onclick=async()=>{const b=$('runChatEval'),
 
 /* ---- autopilot ---- */
 let aiAvailable=false;
-function paintAuto(on){autoOn=!!on;$('auto').setAttribute('aria-pressed',String(autoOn));$('auto').setAttribute('aria-checked',String(autoOn));$('auto').querySelector('.lbl').textContent=autoOn?'ON':'OFF';$('live').dataset.on=autoOn?'1':'0';paintStatusLine()}
+function paintAuto(on){autoKnown=true;autoOn=!!on;$('auto').setAttribute('aria-pressed',String(autoOn));$('auto').setAttribute('aria-checked',String(autoOn));$('auto').querySelector('.lbl').textContent=autoOn?'ON':'OFF';$('auto').disabled=false;$('live').dataset.on=autoOn?'1':'0';paintStatusLine()}
 async function toggleAuto(on){const r=await post('/autopilot',{on}),d=await r.json();paintAuto(d.on);say(d.on||!on?'auto':'app',d.reply,!d.on&&on);if(d.on)pollAuto()}
 $('auto').onclick=()=>toggleAuto(!autoOn).catch(e=>say('app',e.message,1));
 let liveSnapshot=null,checkedAt=0,pollError='',liveNotice=null,lastAnnouncedError='';
@@ -263,13 +263,20 @@ function paintStatusLine(){const box=$('live');if(!box)return;const offline=!nav
  const age=checkedAt?Math.max(0,Math.floor((Date.now()-checkedAt)/1000)):null;
  const recent=liveNotice&&Date.now()-liveNotice.at<90000;
  const serverActive=/^(Sending|Posting|Waiting|On hold|Paused:|Goal complete)/i.test(liveSnapshot?.now||'');
- const activity=error||((watchingJobs.size||operationCount>0)?liveNotice?.text||'Sending…':serverActive?liveSnapshot.now:recent?liveNotice.text:autoOn?(liveSnapshot?.now||'Loading activity…'):'Automatic actions off');
+ const activity=error||(!autoKnown?'Checking Auto status…':(watchingJobs.size||operationCount>0)?liveNotice?.text||'Sending…':serverActive?liveSnapshot.now:recent?liveNotice.text:autoOn?(liveSnapshot?.now||'Loading activity…'):'Automatic actions off');
  const text=activity+(age===null?'':` · Checked ${age<60?age+'s':Math.floor(age/60)+'m'} ago`);
  if(error!==lastAnnouncedError){lastAnnouncedError=error;$('liveAnnouncement').textContent=error}
- box.dataset.error=error?'1':'0';$('liveNow').textContent='Auto '+(autoOn?'ON':'OFF');$('liveMeta').textContent=text;$('liveBar').title='Auto '+(autoOn?'ON':'OFF')+' · '+text;$('liveBar').setAttribute('aria-label',$('liveBar').title+' · View details');
+ box.dataset.error=error?'1':'0';$('liveNow').textContent='Auto '+(!autoKnown?'…':autoOn?'ON':'OFF');$('liveMeta').textContent=text;$('liveBar').title=$('liveNow').textContent+' · '+text;$('liveBar').setAttribute('aria-label',$('liveBar').title+' · View details');
+}
+function refreshLiveDrafts(data,baseline){
+ if(data.left!=null&&left===baseline.left){left=data.left;showLeft()}
+ const payload=JSON.stringify({group:$('group').value,dm:$('dm').value});
+ if(!draftsReady||editing||pendingChats||operationCount||!baseline.wasSaved||payload!==baseline.payload||draftSaved!==baseline.payload)return false;
+ if(typeof data.drafts?.group!=='string'||typeof data.drafts?.dm!=='string')return false;
+ if(JSON.stringify(data.drafts)!==payload)applyDrafts({...data.drafts,left});return true;
 }
 let autoPolling=false;
-async function pollAuto(){if(autoPolling)return;autoPolling=true;try{const r=await fetch('/autopilot');if(!r.ok)throw Error('Status unavailable. Tap for details.');const d=await r.json();checkedAt=Date.now();pollError='';aiAvailable=!!d.ai;liveSnapshot=d.status||null;paintAuto(d.on);paintLive(d.status);for(const x of d.log||[]){if(x.time*1000>seenAuto){seenAuto=x.time*1000;if(!x.q&&x.time*1000>Date.now()-15*60000)say('auto',x.text)}}}catch(e){pollError='Cannot reach cloud. Status may be old.';paintStatusLine()}finally{autoPolling=false}}
+async function pollAuto(){if(autoPolling)return;autoPolling=true;const payload=JSON.stringify({group:$('group').value,dm:$('dm').value}),baseline={payload,wasSaved:payload===draftSaved,left};try{const r=await fetch('/autopilot');if(!r.ok)throw Error('Status unavailable. Tap for details.');const d=await r.json();checkedAt=Date.now();pollError='';aiAvailable=!!d.ai;liveSnapshot=d.status||null;paintAuto(d.on);paintLive(d.status);refreshLiveDrafts(d,baseline);for(const x of d.log||[]){if(x.time*1000>seenAuto){seenAuto=x.time*1000;if(!x.q&&x.time*1000>Date.now()-15*60000)say('auto',x.text)}}}catch(e){pollError='Cannot reach cloud. Status may be old.';paintStatusLine()}finally{autoPolling=false}}
 setInterval(paintStatusLine,1000);
 const waObserver=new MutationObserver(paintStatusLine);if($('whatsappConnection'))waObserver.observe($('whatsappConnection'),{attributes:true,attributeFilter:['data-state']});
 
@@ -343,9 +350,9 @@ function flip(){const m=$(view()+'Preview');m.classList.remove('flip');void m.of
 /* Desktop shortcuts do not move controls or steal focus from dialogs. */
 document.addEventListener('keydown',e=>{
  if(typeof e.key!=='string')return;
+ if(document.querySelector('dialog[open]'))return;
  if(e.key==='Escape'&&!$('chips').hidden){e.preventDefault();$('moreG').click();$('moreG').focus({preventScroll:true});return}
  if(editing){if(e.key==='Escape'||(e.key==='Enter'&&!e.shiftKey&&!e.isComposing)){e.preventDefault();setEditing(false)}return}
- if(document.querySelector('dialog[open]'))return;
  const inField=['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
  if(e.key==='Escape'&&inField){document.activeElement.blur();return}
  if(inField||e.ctrlKey||e.metaKey||e.altKey||isPhone())return;

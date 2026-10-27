@@ -34,7 +34,7 @@ async function main(){
  assert(html.includes('id="histMain"')&&html.indexOf('id="histMain"')<html.indexOf('id="histForm"'),'Main has a dedicated row above composer');
  assert(!source.includes('prepareReveal'),'Replies should appear immediately, without fake typing');
  ctx.navigator={onLine:true};node('whatsappConnection').dataset.state='online';
- vm.runInContext("let autoOn=false,liveNotice=null,liveSnapshot=null,checkedAt=Date.now()-10000,pollError='',operationCount=0,lastAnnouncedError='';"+part('function setLiveNotice(','let autoPolling='),ctx);
+ vm.runInContext("let autoOn=false,autoKnown=true,liveNotice=null,liveSnapshot=null,checkedAt=Date.now()-10000,pollError='',operationCount=0,lastAnnouncedError='';"+part('function setLiveNotice(','let autoPolling='),ctx);
  ctx.paintStatusLine();assert(node('liveMeta').textContent.includes('Automatic actions off'));assert(node('liveMeta').textContent.includes('Checked 10s ago'));
  ctx.setLiveNotice('Confirmed sent to test group');assert(node('liveMeta').textContent.includes('Confirmed sent'),'Last meaningful result must remain visible');
  ctx.setLiveNotice('Send was not confirmed',true);assert.equal(node('live').dataset.error,'1');assert(node('liveMeta').textContent.includes('not confirmed'));
@@ -42,6 +42,14 @@ async function main(){
  ctx.navigator.onLine=true;node('whatsappConnection').dataset.state='offline';ctx.paintStatusLine();assert(node('liveMeta').textContent.includes('WhatsApp disconnected'));
  vm.runInContext("pollError='Cannot reach cloud. Status may be old.'",ctx);ctx.paintStatusLine();assert(node('liveMeta').textContent.includes('Status may be old'));
  node('whatsappConnection').dataset.state='online';vm.runInContext("pollError='';liveNotice=null;liveSnapshot={now:'Sending to GiveLife Foundation'}",ctx);ctx.paintStatusLine();assert(node('liveMeta').textContent.includes('Sending to GiveLife'),'Cloud scheduled sends must appear even with Auto off');
+ vm.runInContext('autoKnown=false;liveSnapshot=null',ctx);ctx.paintStatusLine();assert(node('liveMeta').textContent.includes('Checking Auto status'),'Initial state must not falsely claim Auto is off');assert(html.includes('id="auto" disabled'));
+ const syncFields={group:{value:'Saved group'},dm:{value:'Saved DM'}},syncCtx={$:id=>syncFields[id],JSON,showLeft(){},applyDrafts:d=>{syncFields.group.value=d.group;syncFields.dm.value=d.dm}};
+ vm.createContext(syncCtx);vm.runInContext("let left=25000,draftsReady=true,editing=false,pendingChats=0,operationCount=0,draftSaved=JSON.stringify({group:'Saved group',dm:'Saved DM'});"+part('function refreshLiveDrafts(','let autoPolling='),syncCtx);
+ const baseline={left:25000,payload:JSON.stringify({group:'Saved group',dm:'Saved DM'}),wasSaved:true},remote={left:23000,drafts:{group:'Current group 23,000',dm:'Current DM 23,000'}};
+ assert(syncCtx.refreshLiveDrafts(remote,baseline));assert.equal(syncFields.group.value,remote.drafts.group,'Background donation should refresh the visible caption');assert.equal(vm.runInContext('left',syncCtx),23000);
+ syncFields.group.value='My new unsaved edit';assert.equal(syncCtx.refreshLiveDrafts(remote,baseline),false);assert.equal(syncFields.group.value,'My new unsaved edit');
+ syncFields.group.value='Saved group';syncFields.dm.value='Saved DM';vm.runInContext('editing=true',syncCtx);assert.equal(syncCtx.refreshLiveDrafts(remote,baseline),false,'Never replace an open edit');vm.runInContext('editing=false;left=31000',syncCtx);syncCtx.refreshLiveDrafts(remote,baseline);assert.equal(vm.runInContext('left',syncCtx),31000,'A late poll cannot undo a newer amount');
+ assert.equal(syncCtx.refreshLiveDrafts(remote,{...baseline,wasSaved:false}),false,'A draft that was unsaved when the poll began stays protected');
  let scheduled=0,campaign={running:false,log:[]},campaignReads=0;
  Object.assign(ctx,{setTimeout:(f,delay)=>{scheduled=delay;return 1},clearTimeout(){},fetch:async()=>{campaignReads++;return {ok:true,json:async()=>campaign}},showCamp:t=>{node('camp').hidden=false;node('campText').textContent=t}});
  vm.runInContext('let listT=null;'+part('let campTimer=','/* ---- the assistant:'),ctx);

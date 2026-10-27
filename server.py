@@ -1368,6 +1368,12 @@ def send_status_text(freelance=False):
  if auto_on():lines.append('Due groups send automatically while WhatsApp is connected and sending is not on hold; batch recipients stay 60 seconds apart.')
  return '\n'.join(lines)
 
+def live_snapshot():
+ on=auto_on();summary=ENGINE.summary();hold=on_hold();job=get_job(ACTIVE) if ACTIVE else None
+ status=ENGINE.status() if on else {'now':('On hold: waiting for resume' if hold else job.get('message','Sending…') if job and not job.get('done') else 'Automatic actions off'),'next':[],'today':{'posts':summary.get('posts_today',0),'dms':summary.get('dms_today',0)}}
+ with LOCK:current={'left':read_left(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8'))}
+ return {'on':on,'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':summary,'status':status,'hold':hold,**current}
+
 class Handler(BaseHTTPRequestHandler):
  def remote_config(self):
   return {'key':os.environ.get('UI_ACCESS_KEY',''),'origins':[x for x in os.environ.get('ALLOWED_ORIGINS','').split(',') if x]}
@@ -1398,7 +1404,7 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/format.js':self.reply((ROOT/'format.js').read_bytes(),'application/javascript')
   elif self.path=='/app.js':self.reply((ROOT/'app.js').read_bytes(),'application/javascript')
   elif self.path=='/left':self.reply({'left':read_left()})
-  elif self.path.startswith('/autopilot'):self.reply({'on':auto_on(),'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':ENGINE.summary(),'status':ENGINE.status() if auto_on() else None,'hold':on_hold()})
+  elif self.path.startswith('/autopilot'):self.reply(live_snapshot())
   elif self.path=='/memory':self.reply(mem_get())
   elif self.path=='/knowledge':mem_get();self.reply(KNOWLEDGE.summary())
   elif self.path.startswith('/assistant-evaluate/'):

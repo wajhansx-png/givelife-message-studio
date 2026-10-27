@@ -75,6 +75,18 @@ class TimedTests(unittest.TestCase):
   task=self.create();self.now+=600;self.store.claim(self.s.claim_key(task),{'state':'dispatching','claimed_at':self.now});self.s.tick();self.assertEqual(task['state'],'pending');self.assertEqual(self.dispatched,[])
 
 class TimedIntegrationTests(unittest.TestCase):
+ def test_live_snapshot_exposes_real_hold_with_auto_off(self):
+  from test_manual_sends import SendTests,app
+  fixture=SendTests();fixture.setUp()
+  try:
+   app.set_hold(True);snapshot=app.live_snapshot();self.assertFalse(snapshot['on']);self.assertIn('On hold',snapshot['status']['now']);self.assertEqual(snapshot['left'],25000)
+  finally:fixture.tearDown()
+ def test_live_amount_and_captions_are_updated_together(self):
+  from test_manual_sends import SendTests,app
+  fixture=SendTests();fixture.setUp()
+  try:
+   app.set_left(23000);snapshot=app.live_snapshot();self.assertEqual(snapshot['left'],23000);self.assertIn('23,000',snapshot['drafts']['group']);self.assertIn('23,000',snapshot['drafts']['dm'])
+  finally:fixture.tearDown()
  def test_scheduled_resume_releases_hold_only_when_due(self):
   from test_manual_sends import SendTests,app
   from unittest.mock import patch

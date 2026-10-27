@@ -13,6 +13,12 @@ def update_amount(text,old,left):
 def requirements(prompt):
  t=str(prompt);out={}
  groups=manual_commands.groups(t)
+ # Common writing words are not recipient choices: "main point", "all words",
+ # and "free of errors" must never switch the task to a group/broadcast.
+ n=manual_commands.norm(t)
+ if groups==['main'] and not re.search(r'\bgivelife\b|\bgive life\b|\bmain group\b|\b(?:for|to|in|on)\s+(?:the\s+)?main\b',n):groups=[]
+ if groups==['all'] and not re.search(r'\ball\s+(?:(?:six|6)\s+)?groups\b',n):groups=[]
+ if groups==['free'] and not re.search(r'\bfreelance\b',n):groups=[]
  if len(groups)==1 and groups[0]!='test':out['target']=groups[0]
  if re.search(r'(?i)\b(?:without|no|not)\s+(?:the\s+)?(?:poster|picture|image)\b|\b(?:text only|only text)\b',t):out['poster']=False
  elif re.search(r'(?i)\b(?:with|attach|include|add)\s+(?:the\s+)?(?:poster|picture|image)\b|\bposter\s*\+',t):out['poster']=True

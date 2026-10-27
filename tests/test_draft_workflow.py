@@ -68,5 +68,10 @@ class WorkflowTests(unittest.TestCase):
   for ident in ('forged','b'*32,None):
    with self.assertRaises(ValueError):app.execute_chat_action(ident)
   self.assertEqual(self.sent,[])
+ def test_writing_words_cannot_select_a_broadcast_or_main_recipient(self):
+  for text in ('Make all words shorter','Put this as the main point','Make it free of errors'):
+   self.assertNotIn('target',draft_workflow.requirements(text))
+  self.assertEqual(draft_workflow.requirements('Make a caption for all groups')['target'],'all')
+  self.assertEqual(draft_workflow.requirements('Make a caption for main')['target'],'main')
 
 if __name__=='__main__':unittest.main()

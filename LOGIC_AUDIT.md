@@ -21,7 +21,7 @@ This release fixes execution paths, permission checks, request context and tool 
 
 ## Verification
 
-- 219 Python tests passed, including 37 new deep-audit regression tests and concurrent-request tests.
+- 220 Python tests passed, including 38 new deep-audit regression tests and concurrent-request tests.
 - Seven existing Node UI suites passed; JavaScript syntax and Python compilation checks passed.
 - Fake transports only: no real WhatsApp messages were sent for testing.
 - Existing coverage includes restarts, scheduling, persisted memory/corrections, quotes and prompt injections, contact ambiguity, stale actions, duplicates, uncertain delivery, formatting, draft/test/send continuity and UI action locks.
@@ -30,3 +30,5 @@ This release fixes execution paths, permission checks, request context and tool 
 ## Limits
 
 Natural-language interpretation and newly generated prose can still be wrong. The checks prevent the reproduced failure classes, not every possible mistake. No physical model retraining happened. Clear short commands use deterministic routes; complex edits can require several model calls and cannot be guaranteed within one second. Network/provider failures, free-host sleeping and missing/uncertain delivery receipts remain external limits. One-time schedules remain subject to cloud availability. This release preserves the UI, stored captions, balance, credentials, recipient data and existing Auto settings during deployment.
+
+Follow-up verification also fixed the evaluation endpoint's obsolete eight-case limit. It validates distinct registered cases and the nine-case default suite through an HTTP integration test. WhatsApp connection status refreshes in the visible app without reopening the connection dialog, preventing a stale disconnected badge after restart.

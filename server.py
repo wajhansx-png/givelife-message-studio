@@ -1656,7 +1656,8 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/assistant-evaluate':
    import chat_eval
    cases=body.get('cases',chat_eval.DEFAULT_CASES)
-   if not isinstance(cases,list) or not 1<=len(cases)<=8 or any(x not in chat_eval.CASES for x in cases):return self.reply({'error':'Choose 1 to 8 known test cases.'},status=400)
+   try:cases=chat_eval.validate_cases(cases)
+   except ValueError as e:return self.reply({'error':str(e)},status=400)
    running=next((k for k,v in EVAL_TASKS.items() if not v.get('done')),None)
    if running:return self.reply({'eval_id':running})
    ident=uuid.uuid4().hex;EVAL_TASKS[ident]={'done':False,'results':[],'total':len(cases)}

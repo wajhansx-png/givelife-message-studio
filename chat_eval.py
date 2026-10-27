@@ -19,6 +19,11 @@ CASES={
 }
 DEFAULT_CASES=['hadith_workflow','draft_hook','fresh_preserves_update','greeting','typo_recipient','name_correction','multiple_instructions','injection','numbered_selection']
 
+def validate_cases(cases):
+ limit=min(16,len(CASES))
+ if not isinstance(cases,list) or not 1<=len(cases)<=limit or any(not isinstance(x,str) or x not in CASES for x in cases) or len(set(cases))!=len(cases):raise ValueError(f'Choose 1 to {limit} distinct known test cases.')
+ return list(cases)
+
 def run_case(key):
  if key=='hadith_workflow':return run_hadith_workflow()
  case=CASES[key];calls=[];mutations=[];edits=[]

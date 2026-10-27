@@ -162,3 +162,18 @@ class ServerAuditTests(unittest.TestCase):
   with self.assertRaises(ValueError):cb['set_left'](left=2)
   with self.assertRaises(ValueError):cb['set_message'](kind='dm',text='Wrong draft')
   cb['set_message'](kind='group',text='Second hook. Rs. 25,000 left.');self.assertEqual(app.read_left(),25000)
+ def test_live_evaluation_endpoint_accepts_all_default_cases(self):
+  import chat_eval,urllib.request
+  self.assertEqual(len(chat_eval.validate_cases(chat_eval.DEFAULT_CASES)),9)
+  for bad in ([],['unknown'],['greeting','greeting'],[{}],'greeting'):
+   with self.assertRaises(ValueError):chat_eval.validate_cases(bad)
+  app.EVAL_TASKS.clear();http=app.ThreadingHTTPServer(('127.0.0.1',0),app.Handler)
+  threading.Thread(target=http.serve_forever,daemon=True).start()
+  try:
+   with patch.object(chat_eval,'run_case',side_effect=lambda key:{'case':key,'passed':True,'sandbox':True}):
+    req=urllib.request.Request('http://127.0.0.1:'+str(http.server_port)+'/assistant-evaluate',data=b'{}',headers={'Content-Type':'application/json','Authorization':'Bearer test-only-studio-access-key'})
+    with urllib.request.urlopen(req,timeout=3) as r:result=json.load(r)
+    end=time.monotonic()+2;task=app.EVAL_TASKS[result['eval_id']]
+    while not task.get('done') and time.monotonic()<end:time.sleep(.005)
+    self.assertTrue(task.get('done'));self.assertEqual(task['total'],9);self.assertEqual(len(task['results']),9)
+  finally:http.shutdown();http.server_close()

@@ -72,7 +72,7 @@ function ser(n){if(n.nodeType===3)return n.nodeValue;if(n.nodeName==='BR')return
  if(n.classList&&n.classList.contains('wa-list'))return '* '+inner.replace(/^•\s+/,'');
  if(t==='DIV'&&!(n.classList&&n.classList.contains('wa-line')))return '\n'+inner;return inner}
 function readPreview(k){return [...$(k+'Preview').children].map(d=>d.classList.contains('blank')&&!d.textContent.trim()?'':ser(d).replace(/\n$/,'')).join('\n').replace(/ /g,' ')}
-function setEditing(on,x,y){if(on&&!draftsReady){status('Loading the saved captions…');return}const k=view(),m=$(k+'Preview');if(on===editing)return;editing=on;
+function setEditing(on,x,y){if(on&&!draftsReady){status('Loading the saved captions…');return}const k=view(),m=$(k+'Preview');if(on===editing)return;if(on&&document.body.classList.contains('nomsg'))setNoMsg(false);editing=on;
  document.body.classList.toggle('editing',on);$('edit').textContent=on?'Done':'Edit';$('edit').classList.toggle('on',on);
  if(on){m.contentEditable='true';m.style.fontSize=isPhone()?'16px':'17px';$('chat').style.overflowY='auto';const r=x!=null&&document.caretRangeFromPoint?document.caretRangeFromPoint(x,y):null;m.focus();if(r){const s=getSelection();s.removeAllRanges();s.addRange(r)}status('Editing · Enter = done · Shift+Enter = new line')}
  else{m.contentEditable='false';$(k).value=readPreview(k);render();save().catch(()=>status('Save failed',1))}}
@@ -128,7 +128,7 @@ async function watchGroupJob(id,caption){
   if(!done)throw Error('This send is still unconfirmed. Check WhatsApp before sending again.');
  }catch(e){say('app',e.message,1)}finally{watchingJobs.delete(id);releaseJob(id);busy(false);requestAnimationFrame(fit)}
 }
-async function sendGroup(key){if(!lockSend(key,true))return;let tracked=false;if(editing)setEditing(false);if(!$('chips').hidden)$('moreG').click();setLiveNotice('Sending to '+(GN[key]||key)+'…');busy(true);
+async function sendGroup(key){if(!lockSend(key,true))return;let tracked=false;if(editing)setEditing(false);setLiveNotice('Sending to '+(GN[key]||key)+'…');busy(true);
  try{await ensureCaption('group');clearTimeout(timer);await save();const caption=$('group').value;$('groupStatus').textContent='Sending now…';
   const r=await post('/send-group',{group:key,message:caption,request_id:requestId()}),start=await r.json();if(!r.ok)throw Error(start.error||'Could not start');
   if(!start.job_id)throw Error('No send receipt was returned. Check WhatsApp before trying again.');const keys=jobLocks.get(start.job_id)||new Set();keys.add(key);jobLocks.set(start.job_id,keys);tracked=true;watchGroupJob(start.job_id,caption);
@@ -345,8 +345,7 @@ $('waOut').onclick=async()=>{const b=$('waOut');
  try{const r=await post('/wa-logout',{confirm:true}),d=await r.json();if(!r.ok)throw Error(d.error);setNote('waRes','Logged out. Use the WhatsApp dot at the top to link again.','ok');say('app','WhatsApp was logged out. Link it again from the WhatsApp dot at the top.')}
  catch(e){setNote('waRes',e.message,'err')}finally{b.disabled=false}};
 
-$('moreG').onclick=()=>{const c=$('chips'),open=c.hidden;c.hidden=!open;document.body.classList.toggle('more-open',open);$('moreG').setAttribute('aria-expanded',String(open));requestAnimationFrame(fit)};
-document.addEventListener('pointerdown',e=>{if(!$('chips').hidden&&!e.target.closest('.group-send,#moreG'))$('moreG').click();const menu=document.querySelector('.overflow-tools');if(menu?.open&&!menu.contains(e.target))menu.open=false});
+document.addEventListener('pointerdown',e=>{const menu=document.querySelector('.overflow-tools');if(menu?.open&&!menu.contains(e.target))menu.open=false});
 
 /* ---- no internet: the page still opens, shows the last message, and says Auto keeps running on the server ---- */
 function netBanner(){const off=!navigator.onLine;$('offline').hidden=!off;document.body.classList.toggle('isoffline',off);paintStatusLine()}
@@ -354,9 +353,9 @@ addEventListener('online',()=>{netBanner();pollAuto();syncChat()});addEventListe
 const cached=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('givelife-c-'+k)||'null');localStorage.setItem('givelife-c-'+k,JSON.stringify(v))}catch(e){return null}};
 
 /* ---- hide the message to work only with the buttons and chat ---- */
-function setNoMsg(on){if(editing)setEditing(false);document.querySelector('.overflow-tools').open=false;document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;try{localStorage.setItem('givelife-nomsg',on?'1':'')}catch(e){}if(!on){requestAnimationFrame(fit);flip()}}
+function setNoMsg(on){if(editing)setEditing(false);document.querySelector('.overflow-tools').open=false;document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;$('showMsg').setAttribute('aria-expanded',String(!on));if(!on){requestAnimationFrame(fit);flip()}}
 $('hideMsg').onclick=e=>{e.stopPropagation();setNoMsg(true)};$('showMsg').onclick=()=>setNoMsg(false);
-try{if(localStorage.getItem('givelife-nomsg'))setNoMsg(true)}catch(e){}
+setNoMsg(true);
 
 /* ---- theme: Auto follows the phone/PC setting; Light or Dark is remembered on this device ---- */
 function themeNow(){try{return localStorage.getItem('givelife-theme')||'system'}catch(e){return 'system'}}
@@ -376,7 +375,6 @@ function flip(){const m=$(view()+'Preview');m.classList.remove('flip');void m.of
 document.addEventListener('keydown',e=>{
  if(typeof e.key!=='string')return;
  if(document.querySelector('dialog[open]'))return;
- if(e.key==='Escape'&&!$('chips').hidden){e.preventDefault();$('moreG').click();$('moreG').focus({preventScroll:true});return}
  if(editing){if(e.key==='Escape'||(e.key==='Enter'&&!e.shiftKey&&!e.isComposing)){e.preventDefault();setEditing(false)}return}
  const inField=['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
  if(e.key==='Escape'&&inField){document.activeElement.blur();return}

@@ -210,7 +210,7 @@ async function quick(t){const low=t.toLowerCase().trim();
  if(/^(hi+|hello|hey|salam)\W*$/i.test(t))return 'Hi!';
  if(/^(ok|okay|thanks|thank you|theek|done thanks)\W*$/i.test(t))return /thank/i.test(t)?'You’re welcome.':'Okay.';
  if(editing)setEditing(false);clearTimeout(timer);await ensureDrafts();await save();
- const response=await post('/command',{text:t,request_id:requestId()}),direct=await response.json();
+ const response=await post('/command',{text:t,request_id:requestId(),view:view()}),direct=await response.json();
  if(!response.ok)throw Error(direct.error||'Command failed. Nothing was retried.');
  if(direct.handled){applyDrafts(direct);if(direct.job_id)watchGroupJob(direct.job_id,direct.caption||$('group').value);return direct.reply}
  if(/^(dm|group)$/.test(low)){setView(low);return 'Switched to '+low.toUpperCase()+'.'}

@@ -2,8 +2,9 @@
 import re,math
 import manual_commands
 import timed_tasks
+import draft_flow
 
-READ={'find_contact','recent_activity','list_rules','search_memory','list_schedules'}
+READ={'find_contact','recent_activity','list_rules','search_memory','list_schedules','get_message'}
 SEND={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
 def smalltalk(text):
  t=re.sub(r'[^\w\s]','',str(text).casefold()).strip()
@@ -13,7 +14,7 @@ def owner_text(text):
  text=re.sub(r'(?m)^\s*>.*$',' [quoted data] ',text)
  text=re.sub(r'"[^"\n]*"|“[^”\n]*”',' [quoted data] ',text)
  text=re.sub(r"(?<!\w)'[^'\n]+'(?!\w)",' [quoted data] ',text)
- text=re.split(r'(?i)(?:message says|text says|transcript|see fn remove|summarize this|analyse this|analyze this)\s*:',text,maxsplit=1)[0]
+ text=re.split(r'(?i)(?:message says|text says|transcript|chat log|conversation log|see fixes in logic|see fn remove|summarize this|analyse this|analyze this)\s*:',text,maxsplit=1)[0]
  return text
 
 def intent(text):
@@ -45,6 +46,8 @@ def permitted(name,text):
   return any((p.get('kind')=='money')==(name=='money_came') for p in financial_plans(t))
  if name in ('set_group_pace','set_pace','pause_group','resume_group','set_quiet_hours','set_dms'):return bool(re.search(r'(?i)\b(every|after|pace|speed|slow|fast|pause|resume|quiet|enable|disable|start|stop|on|off)\b',t))
  if name=='edit_dm_name':return bool(re.search(r'(?i)\b(name|call him|call her|greeting)\b',t))
+ if name=='set_message' and draft_flow.editing_request(t):return True
+ if name=='new_wording' and draft_flow.editing_request(t):return False
  if name=='new_wording' and re.search(r'(?i)\b(rewrite|shorten|shorter|brief|bold|italic|remove|replace|edit|format)\b',t):return False
  if name=='new_wording':return bool(re.search(r'(?i)\b(fresh|hook|new|rotate|regenerate|next|wording|variant)\b',t)) or i['send']
  if name in ('set_message','new_wording','prepare_dm'):return bool(re.search(r'(?i)\b(edit|change|write|rewrite|draft|prepare|preview|fill|wording|message|caption|structure|format|bold|italic|shorten|improve|new|correct|remove)\b',t)) or i['send']

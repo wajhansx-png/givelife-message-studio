@@ -7,6 +7,7 @@ import dm_composer
 from state_shapes import mapping, memories, history as valid_history
 import chat_policy
 import timed_tasks
+import draft_flow
 from chat_memory import Knowledge,safe_text
 from functools import wraps
 ROOT=Path(__file__).resolve().parent
@@ -152,7 +153,14 @@ def dm_selection(new):
  return sel
 
 def save_draft(key,text):
- draft=json.loads(DRAFT.read_text(encoding='utf-8'));draft[key]=text;DRAFT.write_text(json.dumps(draft,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
+ with LOCK:
+  revision=getattr(OWNER_GUARD,'revision',None)
+  if revision is not None and revision!=OWNER_REVISION:raise ValueError('Superseded by your newer instruction. The old draft edit was not saved.')
+  draft=json.loads(DRAFT.read_text(encoding='utf-8'));draft[key]=text;DRAFT.write_text(json.dumps(draft,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
+
+def get_message(kind):
+ if kind not in ('group','dm'):raise ValueError('Choose group or DM.')
+ with LOCK:return {'kind':kind,'text':json.loads(DRAFT.read_text(encoding='utf-8'))[kind]}
 
 def next_message():
  with LOCK:
@@ -611,7 +619,8 @@ def base_chat_callbacks():
  return {'set_left':lambda left:(set_left(int(left)),f'Rs. {int(left):,} left. Messages updated.')[1],
   'money_came':came,
   'new_wording':lambda kind:(next_message() if kind=='group' else next_dm(),'New '+kind+' wording ready.')[1],
-  'set_message':lambda kind,text:(save_draft(kind,text),'Message replaced.')[1],
+  'set_message':lambda kind,text:(save_draft(kind,text),kind.upper()+' message saved.')[1],
+  'get_message':get_message,
   'remember':mem_add,'autopilot':set_auto,**engine_do(),
   'find_contact':find_contacts,'search_memory':lambda query:KNOWLEDGE.retrieve(query),'send_message':send_free,'send_dm_appeal':send_dm_appeal,'edit_dm_name':edit_dm_name,'delete_last_message':delete_last_group,'prepare_dm':prepare_dm,
   'send_appeal':lambda target:send_appeal(target),
@@ -1251,8 +1260,12 @@ def send_selected_groups(targets,request_id=None):
  ident=start_send_job(keys,caption,True,request_id)
  return {'reply':f'Starting the manual send to {len(keys)} selected groups now.','job_id':ident,'caption':caption}
 
-def execute_manual_command(text,request_id=None):
+def execute_manual_command(text,request_id=None,message_kind='group'):
  global OWNER_REVISION
+ preview=draft_flow.preview_request(text)
+ if preview:
+  kind=('dm' if message_kind=='dm' else 'group') if preview=='current' else preview
+  return {'handled':True,'reply':get_message(kind)['text']}
  if not fast_command_eligible(text):return {'handled':False}
  timed=timed_chat_command(text,request_id)
  if timed is not None:return {'handled':True,'reply':timed}
@@ -1312,9 +1325,10 @@ def execute_manual_command(text,request_id=None):
  drafts=json.loads(DRAFT.read_text(encoding='utf-8'));out.update(group=drafts['group'],dm=drafts['dm'],left=read_left())
  return out
 
-def manual_command(text,request_id=None):
+def manual_command(text,request_id=None,message_kind='group'):
  previous=getattr(OWNER_GUARD,'revision',None)
  try:
+  if draft_flow.preview_request(text):return execute_manual_command(text,request_id,message_kind)
   pending=KNOWLEDGE.data.get('pending',{})
   if pending.get('created',0)<time.time()-600:pending={};KNOWLEDGE.data['pending']={}
   if pending and str(text).strip().casefold() in ('cancel','forget it','stop','no'):
@@ -1331,7 +1345,7 @@ def manual_command(text,request_id=None):
    fresh=manual_commands.parse(text) or {}
    if fresh.get('kind') not in (None,'status'):
     KNOWLEDGE.data['pending']={};KNOWLEDGE.save()
-  try:result=execute_manual_command(text,request_id)
+  try:result=execute_manual_command(text,request_id,message_kind)
   except ValueError:
    plan=manual_commands.parse(text) or {}
    if plan.get('kind')=='text' and KNOWLEDGE.data.get('pending',{}).get('kind')=='recipient':
@@ -1505,7 +1519,7 @@ class Handler(BaseHTTPRequestHandler):
    except ValueError as e:self.reply({'error':str(e)},status=400)
   elif self.path=='/assistant-evaluate':
    import chat_eval
-   cases=body.get('cases',list(chat_eval.CASES))
+   cases=body.get('cases',list(chat_eval.CASES)[:8])
    if not isinstance(cases,list) or not 1<=len(cases)<=8 or any(x not in chat_eval.CASES for x in cases):return self.reply({'error':'Choose 1 to 8 known test cases.'},status=400)
    running=next((k for k,v in EVAL_TASKS.items() if not v.get('done')),None)
    if running:return self.reply({'eval_id':running})
@@ -1530,7 +1544,7 @@ class Handler(BaseHTTPRequestHandler):
    out,checked=find_data(str(body.get('query','')));self.reply({'items':out,'checked':checked})
   elif self.path=='/command':
    if not isinstance(body.get('text',''),str) or len(body.get('text',''))>10000:return self.reply({'error':'Command must be text of at most 10,000 characters.'},status=400)
-   try:self.reply(manual_command(str(body.get('text','')),body.get('request_id')))
+   try:self.reply(manual_command(str(body.get('text','')),body.get('request_id'),body.get('view','group')))
    except ValueError as e:self.reply({'error':str(e)},status=400)
   elif self.path=='/send-now':
    if not isinstance(body.get('text'),str) or not isinstance(body.get('to',''),str):return self.reply({'error':'Recipient and message must be text.'},status=400)
@@ -1563,7 +1577,7 @@ class Handler(BaseHTTPRequestHandler):
    if not isinstance(text,str) or len(text)>10000:return self.reply({'error':'Use a text message of at most 10,000 characters.'},status=400)
    if not text.strip():return self.reply({'error':'Type something first.'},status=400)
    try:
-    direct=manual_command(text,body.get('request_id'))
+    direct=manual_command(text,body.get('request_id'),mapping(body.get('screen')).get('view','group'))
     if direct.get('handled'):return self.reply(direct)
     ident=assistant_task(body);self.reply({'task_id':ident})
    except ValueError as e:self.reply({'error':str(e)},status=400)

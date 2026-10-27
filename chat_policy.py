@@ -25,6 +25,9 @@ def intent(text):
  negative=bool(re.search(r"(?i)\b(?:don'?t|dont|do not|never|stop)\s+(?:ever\s+)?(?:send|sending|post|posting|share|sharing|dm)\b|\b(preview only|draft only)\b",t))
  dm_verb=bool(re.match(r'(?i)^\s*dm\s+(?!(?:has|have|had|is|was|looks|needs|should|does|caption|format|structure|name|text|icons|remove|edit|change)\b)\S',t))
  sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query and not inspect
+ # "Send a more emotional message" can request wording. An explicit destination
+ # or immediate-send phrase disambiguates it; otherwise only prepare the rewrite.
+ if draft_flow.editing_request(t) and re.match(r'(?i)^\s*(?:send|sebd|semd|sned|snd)\s+(?:a\s+)?(?:more|less)\b',t) and not manual_commands.groups(t) and not re.search(r'(?i)\b(?:to|in|now|immediately|asap)\b|(?:\+?92|0)3\d{9}',t):sending=False
  return {'text':t,'send':sending,'query':query,'negative':negative,'batch':sending and bool(re.search(r'(?i)\b(dm|dms|donors?|members?|people|numbers|list)\b',t))}
 
 def permitted(name,text):

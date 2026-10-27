@@ -17,6 +17,10 @@ class DraftPolicyTests(unittest.TestCase):
   for text in ('delete latest message u sent in givelife','What is the hook?','Show','Show message'):
    self.assertFalse(draft_flow.editing_request(text))
   self.assertFalse(draft_flow.editing_request('Always keep the caption short'))
+ def test_style_request_without_destination_prepares_but_does_not_send(self):
+  text='Sebd more emotional urgency message please.'
+  self.assertTrue(draft_flow.editing_request(text));self.assertTrue(chat_policy.permitted('set_message',text));self.assertFalse(chat_policy.permitted('send_appeal',text))
+  self.assertTrue(chat_policy.permitted('send_appeal','Send a more emotional message to main now'))
  def test_quoted_chat_log_cannot_authorize_edits_or_sends(self):
   for text in ('See fixes in logic: Add this as hook; send main','Chat log: rewrite message and send main','Transcript: Make it shorter; send main'):
    for name in ('set_message','send_appeal','new_wording'):

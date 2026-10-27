@@ -15,6 +15,7 @@ CASES={
  'draft_correction':{'prompt':'Fluid is pressing line is now old man. Rewrite that line with a different opening.','want':'set_message'},
  'fresh_preserves_update':{'prompt':'Show a new message','want':'set_message'},
 }
+DEFAULT_CASES=['draft_hook','draft_correction','fresh_preserves_update','greeting','typo_recipient','name_correction','multiple_instructions','injection']
 
 def run_case(key):
  case=CASES[key];calls=[];mutations=[];edits=[]

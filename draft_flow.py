@@ -20,5 +20,6 @@ def editing_request(text):
  if re.search(r'(?i)\b(?:make|change|rewrite|shorten|improve|reword)\s+(?:it|this|that)\b',t):return True
  if re.search(r'(?i)\b(?:move|put)\s+(?:it|this|that)\b.*\b(?:first|top|opening|start|hook)\b',t):return True
  if re.search(r'(?i)\b'+subject+r'\b.*\b(?:old|overused|repeated|boring|wrong|new|fresh|stronger|emotional|urgent|triggered)\b',t):return True
+ if re.search(r'(?i)\b(?:more|less|very)\b.*\b(?:emotional|urgency|urgent|triggered|simple|formal)\b.*\b(?:message|caption|wording)\b',t):return True
  if re.fullmatch(r'(?i)(?:too|more|less|much)\s+(?:long|short|shorter|longer|emotional|urgent|formal|simple)[.!]*',t):return True
  return False

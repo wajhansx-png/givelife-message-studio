@@ -3,9 +3,13 @@ from pathlib import Path
 import timed_tasks as tt,chat_policy
 
 class Store:
- def __init__(self):self.data={}
+ def __init__(self):self.data={};self.lock=threading.RLock()
  def get(self,k,d=None):return copy.deepcopy(self.data.get(k,d))
  def put(self,k,v):self.data[k]=copy.deepcopy(v)
+ def claim(self,k,v):
+  with self.lock:
+   if k in self.data:return False
+   self.data[k]=copy.deepcopy(v);return True
 
 class TimedTests(unittest.TestCase):
  def setUp(self):
@@ -57,6 +61,18 @@ class TimedTests(unittest.TestCase):
   for th in threads:th.start()
   for th in threads:th.join()
   self.assertEqual(len(self.dispatched),1);self.assertTrue(json.loads(s.path.read_text()))
+ def test_overlapping_deploy_workers_do_not_dispatch_twice(self):
+  task=self.create();other=tt.Scheduler(self.s.path,self.store,self.s.dispatch,self.s.receipt,self.s.ready,clock=lambda:self.now);self.now+=600
+  threads=[threading.Thread(target=s.tick) for s in (self.s,other)]
+  for th in threads:th.start()
+  for th in threads:th.join()
+  self.assertEqual(len(self.dispatched),1)
+ def test_cancel_tombstone_stops_a_stale_worker(self):
+  task=self.create();other=tt.Scheduler(self.s.path,self.store,self.s.dispatch,self.s.receipt,self.s.ready,clock=lambda:self.now);self.s.command('cancel schedule '+task['id']);self.now+=600;other.tick();self.assertEqual(self.dispatched,[]);self.assertEqual(other.tasks[0]['state'],'cancelled')
+ def test_overlapping_daily_completion_keeps_next_occurrence(self):
+  task=self.create('start auto daily at 11am');other=tt.Scheduler(self.s.path,self.store,self.s.dispatch,self.s.receipt,self.s.ready,clock=lambda:self.now);self.now+=3600;self.s.tick();other.tick();self.assertEqual(len(self.dispatched),1);self.assertEqual(other.tasks[0]['due'],task['due']);self.assertEqual(other.tasks[0]['state'],'pending')
+ def test_live_reservation_waits_for_receipt_without_repeating(self):
+  task=self.create();self.now+=600;self.store.claim(self.s.claim_key(task),{'state':'dispatching','claimed_at':self.now});self.s.tick();self.assertEqual(task['state'],'pending');self.assertEqual(self.dispatched,[])
 
 class TimedIntegrationTests(unittest.TestCase):
  def test_scheduled_resume_releases_hold_only_when_due(self):

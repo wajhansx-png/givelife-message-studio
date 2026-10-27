@@ -47,7 +47,7 @@ node --check app.js
 git diff --check
 ```
 
-All 122 Python tests and all three Node test scripts pass. The new UI script covers synchronous blur, no automatic focus, draft persistence, blank input, desktop focus, viewport offsets, Main navigation, action locks, duplicate requests, receipt unlock, unchanged caption payload, truthful/stale/error status and campaign polling/Stop. Backend tests cover hold, cancellation, restart, scheduling, send uncertainty and integration boundaries.
+All 126 Python tests and all three Node test scripts pass. The new UI script covers synchronous blur, no automatic focus, draft persistence, blank input, desktop focus, viewport offsets, Main navigation, action locks, duplicate requests, receipt unlock, unchanged caption payload, truthful/stale/error status and campaign polling/Stop. Backend tests cover hold, cancellation, restart, scheduling, send uncertainty and integration boundaries.
 
 ## Limits
 

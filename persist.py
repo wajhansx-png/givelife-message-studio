@@ -18,6 +18,11 @@ class CloudStore:
   with self.connection() as db:db.execute('INSERT INTO givelife_studio_state (key,value) VALUES (%s,%s) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()',(key,Jsonb(value)))
  def seed(self,key,value):
   with self.connection() as db:db.execute('INSERT INTO givelife_studio_state (key,value) VALUES (%s,%s) ON CONFLICT(key) DO NOTHING',(key,Jsonb(value)))
+ def claim(self,key,value):
+  """Reserve one occurrence across overlapping deploy processes, without replacing its owner."""
+  with self.connection() as db:
+   row=db.execute('INSERT INTO givelife_studio_state (key,value) VALUES (%s,%s) ON CONFLICT(key) DO NOTHING RETURNING key',(key,Jsonb(value))).fetchone()
+  return row is not None
  def restore(self,data,root):
   self.initialize()
   for file,key in [('drafts.json','drafts'),('state.md','campaign'),('variant-state.json','variants')]:
@@ -27,3 +32,4 @@ class CloudStore:
 def configured_store():
  uri=os.environ.get('DB_URI')
  return CloudStore(uri) if uri else None
+

@@ -99,6 +99,7 @@ class Scheduler:
     task=next((x for x in self.tasks if x['id']==plan['id']),None)
     if not task:raise ValueError('No schedule with that ID. Say show schedules.')
     if task['state'] in ('completed','failed','uncertain','cancelled','missed'):return 'That task is already '+task['state']+'. Check its receipt before sending again.'
+    if self.store and hasattr(self.store,'claim'):self.store.claim(self.claim_key(task),{'state':'cancelled'})
     task.update(state='cancelled',result='Cancelled. Already dispatched messages cannot be undone.');self.save()
     if task.get('job_id'):self.cancel_job(task['job_id'])
     return self.describe(task)
@@ -112,12 +113,16 @@ class Scheduler:
    return 'Scheduled: '+self.describe(task)+'. Nothing sent now. Say show schedules or cancel schedule '+task['id']+'.'
 
  def finish(self,task,state,result):
+  occurrence=self.claim_key(task)
   task.update(state=state,result=result)
   if task.get('daily') and state in ('completed','missed'):
    date=dt.datetime.fromtimestamp(self.clock(),PKT);h,m=map(int,task['clock'].split(':'));nxt=date.replace(hour=h,minute=m,second=0,microsecond=0)
    if nxt.timestamp()<=self.clock():nxt+=dt.timedelta(days=1)
    task.update(state='pending',due=nxt.timestamp(),last_result=result)
   self.save()
+  if self.store and hasattr(self.store,'claim'):self.store.put(occurrence,{'state':'finished','task':dict(task)})
+
+ def claim_key(self,task):return 'timed_occurrence_'+task['id']+'_'+str(int(task['due']))
 
  def tick(self):
   if not self.tick_lock.acquire(blocking=False):return
@@ -136,6 +141,15 @@ class Scheduler:
     if not self.ready(task):continue
     with self.lock:
      if task['state']!='pending':continue
+     if self.store and hasattr(self.store,'claim'):
+      key=self.claim_key(task)
+      if not self.store.claim(key,{'state':'dispatching','claimed_at':self.clock()}):
+       claim=self.store.get(key,{})
+       if claim.get('state')=='finished' and isinstance(claim.get('task'),dict):task.update(claim['task']);self.save()
+       elif claim.get('job_id'):task.update(state='running',job_id=claim['job_id'],expected=claim['expected']);self.save()
+       elif claim.get('state')=='dispatching' and self.clock()-claim.get('claimed_at',0)<120:continue
+       else:self.finish(task,'cancelled' if claim.get('state')=='cancelled' else 'uncertain','This occurrence was already reserved. It will not be dispatched again.')
+       continue
      task['state']='dispatching';self.save()
     try:
      result=self.dispatch(dict(task))
@@ -143,7 +157,10 @@ class Scheduler:
       if task['state']=='cancelled':
        if result.get('job_id'):self.cancel_job(result['job_id'])
        continue
-      if result.get('job_id'):task.update(state='running',job_id=result['job_id'],expected=result['expected']);self.save()
+      if result.get('job_id'):
+       task.update(state='running',job_id=result['job_id'],expected=result['expected'])
+       if self.store and hasattr(self.store,'claim'):self.store.put(self.claim_key(task),{'state':'running','job_id':result['job_id'],'expected':result['expected']})
+       self.save()
       else:self.finish(task,'completed',str(result.get('message','Confirmed.')))
     except Exception:
      with self.lock:

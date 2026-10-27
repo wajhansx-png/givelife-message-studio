@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><meta name="theme-color" content="#f5f4ef"><script>try{var t=localStorage.getItem("givelife-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script><title>GiveLife · Message studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
 /* ===== design tokens: light is default; dark follows the system unless the owner picks a theme ===== */
 :root{color-scheme:light;
@@ -19,332 +19,75 @@
  --g:#3fb08d;--gd:#58c19f;--gs:#1e3329;--gink:#7fd3b6;--red:#e5626a;--rd:#f07a81;--warn:#e3a066;--wbg:#3a2c1f;--ok:#4cc38a;--amber:#e8b24a;
  --msg:#1f3529;--msgink:#e6efe9;--btn:#1d8566;--btnh:#22966f;--btnr:#c94148;--btnrh:#d4525a;--coral:#d97757;--pill:#33332f;--ring:#6aa9ee;--sh1:none;--sh2:0 1px 0 rgba(255,255,255,.02);--sh3:0 18px 48px rgba(0,0,0,.55)}
 
-/* ===== base ===== */
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-html{-webkit-text-size-adjust:100%;overscroll-behavior:none}
-body{background:var(--bg);color:var(--ink);font:16px/1.45 Inter,"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;letter-spacing:-.006em;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overflow:hidden;transition:background .3s,color .3s}
-button,input{font:inherit;color:inherit}
-button{cursor:pointer;touch-action:manipulation;border:0;background:none;-webkit-touch-callout:none;user-select:none;transition:background .18s,color .18s,border-color .18s,box-shadow .18s,opacity .18s,transform .12s,filter .12s}
-button:active:not(:disabled){transform:scale(.96);filter:brightness(.94);transition-duration:.05s}
-button:disabled{opacity:.5;cursor:wait}
-:focus-visible{outline:3px solid var(--ring);outline-offset:2px;border-radius:8px}
-.sp{flex:1}[hidden]{display:none!important}
-.l{display:inline}.s{display:none}
-
-/* ===== shell ===== */
-.app{height:100dvh;max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding:14px max(18px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
-.brandbar{display:flex;align-items:center;gap:10px;min-height:44px}
-.brandbar>*{min-width:0}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;letter-spacing:-.02em;margin-right:6px}
-.brand small{display:block;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);margin-top:1px}
-.mark{width:34px;height:34px;border-radius:10px;background:var(--btn);color:#fff;display:grid;place-items:center;font-size:17px;flex:none;box-shadow:var(--sh1)}
-.seg{display:flex;background:var(--surface2);border-radius:12px;padding:3px;gap:2px}
-.seg button{min-height:38px;padding:0 18px;border-radius:9px;font-weight:600;font-size:15px;color:var(--mut)}
-.seg button:hover{color:var(--ink)}
-.seg button[aria-pressed=true]{background:var(--surface);color:var(--gink);box-shadow:var(--sh2)}
-.pace{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none;box-shadow:0 0 0 4px var(--gs)}
-.pace[data-pace=L2]{background:var(--amber);box-shadow:0 0 0 4px var(--wbg)}.pace[data-pace=L3],.pace[data-pace=L4]{background:var(--red);box-shadow:0 0 0 4px var(--wbg)}
-.leftchip{min-height:40px;padding:0 14px;border-radius:12px;background:var(--gs);color:var(--gink);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
-.leftchip:hover{box-shadow:inset 0 0 0 1.5px var(--g)}
-.lw{display:inline;font-weight:600;opacity:.8}
-.gear,.themebtn{width:40px;height:40px;border-radius:12px;background:var(--surface2);font-size:18px;flex:none;display:grid;place-items:center;color:var(--mut)}
-.gear:hover,.themebtn:hover{background:var(--gs);color:var(--gink)}
-.themebtn svg{width:18px;height:18px}
-
-/* ===== live Auto bar ===== */
-.live{position:relative;min-height:48px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--g);border-radius:var(--r2);box-shadow:var(--sh1);transition:border-color .3s}
-.livebar{width:100%;display:flex;align-items:center;gap:10px;min-height:46px;padding:0 90px 0 14px;text-align:left;font-size:14px;border-radius:var(--r2)}
-.livebar:hover{background:var(--surface2)}
-.livebar:active:not(:disabled){transform:none}
-.livebar b{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
-.livebar span{color:var(--mut);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.livebar em{font-style:normal;color:var(--faint);transition:transform .25s var(--ease);flex:none}
-.livebar[aria-expanded=true] em{transform:rotate(180deg)}
-.pulse{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none;animation:pulse 1.8s infinite}
-@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
-.live[data-on="0"]{border-left-color:var(--line2)}.live[data-on="0"] .pulse{background:var(--faint);animation:none}
-.live[data-pace=L2]{border-left-color:var(--amber)}.live[data-pace=L2] .pulse{background:var(--amber)}
-.live[data-pace=L3],.live[data-pace=L4]{border-left-color:var(--red)}.live[data-pace=L3] .pulse,.live[data-pace=L4] .pulse{background:var(--red)}
-.autosw{position:absolute;right:9px;top:50%;margin-top:-17px;width:70px;height:34px;border-radius:999px;background:var(--line2);display:flex;align-items:center;padding:0 9px;font-weight:800;font-size:11.5px;letter-spacing:.07em;color:var(--mut);transition:background .3s var(--ease),color .3s}
-.autosw .knob{position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:transform .3s var(--ease)}
-.autosw .lbl{margin-left:auto}
-.autosw[aria-pressed=true]{background:var(--btn);color:#fff}
-.autosw[aria-pressed=true] .knob{transform:translateX(36px)}
-.autosw[aria-pressed=true] .lbl{margin-left:0;margin-right:auto}
-.autosw:active:not(:disabled){transform:none;filter:none}
-.livemore{position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);box-shadow:var(--sh3);padding:14px 16px;font-size:14px;display:grid;gap:4px;animation:drop .22s var(--ease)}
-.livemore div{line-height:1.45}.livemore .k{color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-top:6px}.livemore .k:first-child{margin-top:0}
-
-/* ===== layout ===== */
-.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:14px;transition:grid-template-columns .35s var(--ease)}
-.layout>*{min-width:0}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r3);box-shadow:var(--sh2);min-height:0;min-width:0}
-
-/* message */
-.msgcard{display:flex;flex-direction:column;overflow:hidden}
-.tools{display:flex;align-items:center;gap:6px;padding:12px 12px 0}
-.ctx{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--mut);min-width:0}
-.ctx img{width:34px;height:34px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex:none}
-.ctx span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tool{min-height:38px;padding:0 14px;border:1px solid var(--line);border-radius:var(--r1);background:var(--surface);font-size:14px;font-weight:600;white-space:nowrap;color:var(--ink)}
-.tool:hover{background:var(--surface2);border-color:var(--line2)}
-.tool.on{background:var(--btn);color:#fff;border-color:var(--btn)}
-.chat{flex:1;min-height:0;margin:12px;border-radius:var(--r2);background:var(--msg);color:var(--msgink);padding:18px 20px;overflow:hidden;cursor:text;transition:box-shadow .2s;-webkit-touch-callout:none;user-select:none}
-.chat:hover{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--g) 45%,transparent)}
-.editing .chat{box-shadow:inset 0 0 0 2px var(--g)!important;overflow:auto;cursor:auto;user-select:text}
-.message{line-height:1.45;max-width:720px;overflow-wrap:anywhere}.message:focus{outline:none}.message[contenteditable=true]{user-select:text}
-.message.flip{animation:flip .34s var(--ease)}
-.wa-line{white-space:break-spaces;min-height:1.45em}.wa-line.blank{height:.55em;min-height:.55em}
-.wa-list{display:inline-block;padding-left:12px;text-indent:-9px}.wa-quote{border-left:3px solid #849c83;padding-left:8px}
-body[data-view=group] #dmPreview,body[data-view=dm] #groupPreview,body[data-view=group] .dm-send,body[data-view=dm] .group-send{display:none}
-
-/* right column */
-.side{display:flex;flex-direction:column;gap:12px;min-height:0}
-.talk{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-.camp,.sugg{margin:12px 12px 0;border-radius:var(--r2);display:flex;align-items:center;gap:10px;font-size:14.5px;line-height:1.35;animation:drop .25s var(--ease)}
-.camp{padding:8px 8px 8px 14px;background:var(--gs);border-left:4px solid var(--g);font-weight:600}
-.camp span{flex:1;min-width:0}
-.sugg{padding:10px 10px 10px 14px;background:var(--wbg);border-left:4px solid var(--warn);flex-direction:column;align-items:stretch}
-.sugg[data-level=L1]{border-left-color:var(--g);background:var(--gs)}
-.sbtns{display:flex;gap:8px}.sbtns .go{flex:1;min-height:40px;border-radius:var(--r1);background:var(--btn);color:#fff;font-weight:700}
-.sbtns .go:hover{background:var(--btnh)}
-.later{min-height:40px;padding:0 14px;border-radius:var(--r1);border:1px solid var(--line2);font-weight:600;color:var(--mut);background:var(--surface)}
-.later:hover{color:var(--ink)}
-.att{margin:0 12px;padding:6px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut)}
-.att img{width:40px;height:40px;object-fit:cover;border-radius:8px}.att span{flex:1;min-width:0}
-
-/* chat, styled like Claude */
-.talk.card,dialog.hist{background:var(--surface)}
-.log{flex:1;min-height:0;overflow:auto;padding:18px 18px 10px;display:flex;flex-direction:column;gap:18px;font-size:15.5px;line-height:1.6;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
-.talk .log{cursor:pointer}
-.e{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;will-change:transform,opacity}
-.e.bot{align-self:stretch;font-family:ui-serif,Georgia,"Times New Roman",serif;font-size:16.5px;line-height:1.65;color:var(--ink)}
-.e.you{align-self:flex-end;max-width:85%;background:var(--pill);padding:9px 15px;border-radius:18px;font-size:15px;line-height:1.5}
-.e.sys{align-self:stretch;color:var(--mut);font-size:13px;line-height:1.5;padding-left:14px;position:relative}
-.e.sys::before{content:'';position:absolute;left:0;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--coral)}
-.e.err{color:var(--red)}
-.e.dots{display:flex;align-items:center;gap:8px;color:var(--coral);font-family:ui-serif,Georgia,serif;font-size:15px}
-.e.dots .spark{display:inline-block;font-size:18px;animation:spin 2.4s linear infinite}
-.e.dots em{font-style:normal;color:var(--mut);animation:breathe 1.6s infinite}
-.e.in{animation:riseIn .4s var(--ease)}
-.e.you.in{transform-origin:100% 100%;animation:popRight .34s cubic-bezier(.2,.9,.25,1.04)}
-.cmd{display:flex}
-.composer{flex-direction:column;gap:6px;margin:0 12px 12px;padding:10px 10px 8px 15px;border:1px solid var(--line2);border-radius:22px;background:var(--surface);box-shadow:0 2px 12px rgba(0,0,0,.05);transition:box-shadow .2s,border-color .2s}
-.composer:focus-within{border-color:var(--coral);box-shadow:0 0 0 3px color-mix(in srgb,var(--coral) 20%,transparent)}
-.composer input{min-height:34px;border:0;padding:0;background:none;font-size:16px;outline:none;width:100%;min-width:0}
-.composer input::placeholder{color:var(--faint)}
-.ctools{display:flex;align-items:center;gap:6px}
-.composer .clip{width:36px;height:36px;border-radius:50%;border:1px solid var(--line2);font-size:20px;line-height:1;color:var(--mut);flex:none}
-.composer .clip:hover{background:var(--surface2);color:var(--ink)}
-.composer .go{width:36px;height:36px;border-radius:50%;background:var(--coral);color:#fff;font-size:19px;line-height:1;flex:none;font-weight:700}
-.composer .go:hover{filter:brightness(.93)}
-.composer .go:active{transform:scale(.88)!important}
-
-/* send */
-.send{padding:12px;display:flex;flex-direction:column;gap:10px}
-.prim{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.big{min-height:52px;border-radius:var(--r2);font-size:16.5px;font-weight:700;color:#fff;background:var(--btn);width:100%;box-shadow:0 1px 0 rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.08)}
-.big:hover{background:var(--btnh)}.big.all{background:var(--btnr)}.big.all:hover{background:var(--btnrh)}.big.arm{background:var(--warn)!important}
-.moreg{min-height:40px;border-radius:12px;border:1px dashed var(--line2);color:var(--mut);font-weight:600;font-size:14px;width:100%}
-.moreg:hover{color:var(--ink);background:var(--surface2)}
-.moreg em{font-style:normal;display:inline-block;transition:transform .25s var(--ease)}.moreg[aria-expanded=true] em{transform:rotate(180deg)}
-.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;animation:drop .22s var(--ease)}
-.chips button{min-height:42px;padding:4px 6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;font-weight:600;line-height:1.15}
-.chips button:hover{border-color:var(--g);background:var(--gs);color:var(--gink)}
-.chips .muted{color:var(--mut);border-style:dashed}
-.sending .big,.sending .chips button{opacity:.85}
-.sending #groupStatus{animation:breathe 1.4s infinite}
-#groupStatus{font-size:13px;white-space:pre-line;color:var(--mut)}
-#groupStatus:empty{display:none}
-.dmrow{display:grid;grid-template-columns:1fr auto;gap:8px}
-.dmrow input{min-height:46px;padding:0 12px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);min-width:0}
-.dmrow input:focus{border-color:var(--g);outline:none;box-shadow:0 0 0 3px var(--gs)}.dmrow #dmPhone{grid-column:1/-1}
-.duo{display:grid;grid-template-columns:2fr 1fr;gap:8px}
-.ghost{min-height:52px;border:1px solid var(--line2);border-radius:var(--r2);font-weight:700;background:var(--surface)}
-.ghost:hover{background:var(--surface2)}
-.foot{display:flex;gap:10px;font-size:12.5px;color:var(--faint);min-height:18px}
-#status{font-weight:600;color:var(--gink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#status.err{color:var(--red)}
-kbd{font:inherit;font-weight:600;color:var(--mut)}
-
-/* desktop: typing in the chat gives it the room, the send buttons shrink */
-@media(min-width:900px){
- .cf .layout{grid-template-columns:minmax(0,1fr) 580px}
- .cf .send{padding:8px;gap:6px}.cf .big{min-height:36px;font-size:14px;border-radius:10px}
- .cf .chips{grid-template-columns:repeat(4,1fr);gap:6px}.cf .chips button{min-height:30px;font-size:12px;padding:2px;border-radius:9px}
- .cf .prim{gap:6px}.cf .moreg{min-height:30px;font-size:12.5px}.cf #groupStatus{max-height:3.2em;overflow:hidden}
- .cf .dmrow input{min-height:34px}.cf .ghost{min-height:36px}.cf .dmrow .seg button{min-height:30px}
- .cf .talk{box-shadow:0 0 0 2px color-mix(in srgb,var(--coral) 55%,transparent),var(--sh2)}
-}
-
-/* dialogs */
-dialog{border:0;color:var(--ink);background:var(--surface)}
-dialog::backdrop{background:rgba(10,10,9,.5);backdrop-filter:blur(3px)}
-dialog[open]{animation:dlg .26s var(--ease)}
-dialog[open]::backdrop{animation:fade .26s}
-dialog header{display:flex;align-items:center;gap:8px;padding:10px 12px 10px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:17px;background:var(--surface)}
-dialog header .tool{flex:none}
-dialog.hist{border-radius:var(--r3);width:min(680px,calc(100vw - 24px));height:min(88dvh,820px);padding:0;margin:auto;box-shadow:var(--sh3)}
-dialog.hist[open]{display:flex;flex-direction:column}
-dialog.hist .log{padding:22px 20px 40px;gap:24px;scroll-padding-bottom:40px}
-dialog.hist .log::after{content:'';flex:none;height:8px}
-dialog.hist .composer{margin:10px 14px calc(14px + env(safe-area-inset-bottom))}
-dialog.set{border-radius:var(--r3);width:min(460px,calc(100vw - 24px));padding:0;margin:auto;box-shadow:var(--sh3)}
-.set .body{padding:14px;display:grid;gap:10px}
-.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r2);background:var(--surface)}
-.row .t{flex:1;min-width:0}.row b{font-weight:650}.row small{display:block;color:var(--mut);font-size:13px;line-height:1.35;margin-top:2px}.row small.err{color:var(--red)}.row small.ok{color:var(--gink)}
-.row .tool{flex:none}
-.tool.danger{color:var(--red);border-color:color-mix(in srgb,var(--red) 50%,transparent)}.tool.danger.arm{background:var(--red);color:#fff}
-.sw{appearance:none;-webkit-appearance:none;width:48px;height:28px;border-radius:999px;background:var(--line2);position:relative;flex:none;cursor:pointer;transition:background .25s var(--ease)}
-.sw::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .25s var(--ease)}
-.sw:checked{background:var(--btn)}.sw:checked::after{transform:translateX(20px)}.sw:disabled{opacity:.4}
-.theme{display:flex;background:var(--surface2);border-radius:12px;padding:3px;gap:2px;flex:none}
-.theme button{min-height:34px;padding:0 12px;border-radius:9px;font-weight:600;font-size:13.5px;color:var(--mut)}
-.theme button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:var(--sh2)}
-
-/* WhatsApp link window from connection.js: follow the theme */
-.connect-dialog{background:var(--surface)!important;color:var(--ink)!important;border-color:var(--line)!important}
-.connect-dialog input{background:var(--surface2)!important;color:var(--ink)!important;border-color:var(--line2)!important}
-.connect-state,.connect-qr{background:var(--surface2)!important;border-color:var(--line)!important}
-.connect-muted,.connect-state span,.connect-note,.connect-steps{color:var(--mut)!important}
-.connect-badge{border-radius:999px!important;font-weight:600}
-.connect-badge[data-state=online]{color:var(--gink)!important;background:var(--gs)!important}
-.connect-badge[data-state=offline]{color:var(--warn)!important;background:var(--wbg)!important}
-
-/* motion */
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes breathe{0%,100%{opacity:.45}50%{opacity:1}}
-@keyframes riseIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@keyframes popRight{from{opacity:0;transform:translateY(12px) scale(.94)}to{opacity:1;transform:none}}
-@keyframes flip{from{opacity:0;transform:translateY(10px)}}
-@keyframes drop{from{opacity:0;transform:translateY(-6px)}}
-@keyframes dlg{from{opacity:0;transform:translateY(16px) scale(.985)}}
-@keyframes fade{from{opacity:0}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-
-/* ===== tablet & phone: one column, nothing scrolls, frequent buttons near the thumb ===== */
-@media(max-width:1100px){.bname{display:none}.brand{margin-right:0}}
+/* Stable layout. Native system fonts keep every screen consistent, including offline. */
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}html{-webkit-text-size-adjust:100%;overscroll-behavior:none}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,textarea{font:inherit;color:inherit}button{cursor:pointer;touch-action:manipulation;border:0;background:none;user-select:none}button:hover{filter:brightness(.97)}button:disabled{opacity:.55;cursor:wait}
+:focus-visible{outline:3px solid var(--ring);outline-offset:2px}button:focus-visible{border-radius:10px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.sp{flex:1}[hidden]{display:none!important}.s{display:none}
+.app{height:100dvh;max-width:1440px;margin:auto;display:flex;flex-direction:column;gap:10px;padding:12px max(16px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.brandbar{display:flex;align-items:center;gap:10px;min-height:48px}.brand{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700;margin-right:12px}.brand small{display:none}.mark{display:grid;place-items:center;width:32px;height:32px;background:var(--btn);color:white;border-radius:10px}
+.seg{display:flex;background:var(--surface2);padding:3px;border-radius:12px}.seg button{min-height:42px;padding:0 18px;border-radius:9px;font-weight:600;color:var(--mut)}.seg button[aria-pressed=true]{background:var(--surface);color:var(--gink);box-shadow:var(--sh1)}
+.leftchip{min-height:44px;font-weight:700;color:var(--gink);padding:0 10px;white-space:nowrap;font-variant-numeric:tabular-nums}.lw{font-weight:500}.gear{width:44px;height:44px;font-size:22px;color:var(--mut);border-radius:12px}.gear:hover{background:var(--surface2)}
+.live{position:relative;display:flex;align-items:center;gap:8px;min-height:44px;border-bottom:1px solid var(--line)}.livebar{display:flex;align-items:center;gap:7px;flex:1;min-width:0;min-height:44px;text-align:left;font-size:13px}.livebar b{display:none;white-space:nowrap;font-weight:600;flex:none}.livebar span{color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.livebar em{color:var(--mut);font-style:normal;margin-left:auto}.live[data-error="1"] .livebar span{color:var(--red)}.pulse{height:7px;width:7px;border-radius:50%;background:var(--mut);flex:none}.live[data-on="1"] .pulse{background:var(--g)}.live[data-error="1"] .pulse{background:var(--red)}
+.autosw{min-width:64px;min-height:44px;border-radius:10px;background:var(--surface2);font-size:12px;font-weight:700;color:var(--mut)}.autosw .lbl::before{content:'Auto '}.autosw[aria-pressed=true]{color:var(--gink);background:var(--gs)}.autosw .knob{display:none}
+.livemore{position:absolute;top:100%;left:0;right:0;z-index:40;padding:16px;background:var(--surface);border:1px solid var(--line2);border-radius:12px;box-shadow:var(--sh3);max-height:65dvh;overflow:auto;font-size:14px}.livemore .k{font-size:12px;font-weight:700;color:var(--mut);margin-top:10px}.livemore .k:first-child{margin-top:0}
+.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(370px,.9fr);gap:14px}.layout>*{min-width:0}.card{border:1px solid var(--line);background:var(--surface);border-radius:16px;min-width:0;min-height:0}.msgcard{display:flex;flex-direction:column;overflow:hidden}.tools{display:flex;align-items:center;gap:6px;padding:10px}.ctx{display:flex;align-items:center;gap:8px;min-width:0;color:var(--mut);font-size:13px}.ctx img{width:28px;height:28px;border-radius:6px;object-fit:cover}.ctx span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tool,.later,.ghost{min-height:44px;padding:0 14px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);font-weight:600}.tool:hover,.later:hover,.ghost:hover{background:var(--surface2)}.tool.on{background:var(--btn);color:#fff;border-color:var(--btn)}.overflow-tools{position:relative}.overflow-tools summary{display:grid;place-items:center;cursor:pointer;min-width:44px;min-height:44px;border-radius:10px;list-style:none;font-size:20px}.overflow-tools summary::-webkit-details-marker{display:none}.overflow-tools[open]>div{position:absolute;right:0;top:100%;z-index:20;display:grid;gap:5px;min-width:150px;padding:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh2)}
+.chat{flex:1;min-height:0;margin:0 10px 10px;padding:16px 18px;background:var(--msg);color:var(--msgink);border-radius:12px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}.message{max-width:720px;font-size:17px;line-height:1.5;overflow-wrap:anywhere}.message[contenteditable=true]{outline:0;min-height:100%}.editing .chat{box-shadow:inset 0 0 0 2px var(--g)}.wa-line{white-space:break-spaces;min-height:1.5em}.wa-line.blank{height:.8em;min-height:.8em}.wa-list{display:inline-block;padding-left:12px;text-indent:-9px}.wa-quote{border-left:3px solid #849c83;padding-left:8px}
+body[data-view=group] #dmPreview,body[data-view=dm] #groupPreview,body[data-view=group] .dm-send,body[data-view=dm] .group-send,body[data-view=dm] #moreG{display:none}
+.side{display:flex;flex-direction:column;gap:10px;min-height:0}.talk{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}.talk-title{display:flex;align-items:center;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600;color:var(--mut)}.talk-title button{margin-left:auto;min-width:44px;min-height:36px;font-size:13px}
+.log{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;overflow-anchor:none;padding:16px;display:flex;flex-direction:column;gap:18px;font-size:16px;line-height:1.55;scrollbar-width:thin}.e{flex:none;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}.e.bot{font:inherit}.e.you{align-self:flex-end;max-width:90%;background:var(--surface2);padding:8px 12px;border-radius:14px}.e.sys{font-size:13px;color:var(--mut);border-left:2px solid var(--line2);padding-left:10px}.e.err{color:var(--red)}.e.dots{color:var(--mut);font-size:14px}.dots em{font-style:normal}.spark{display:none}.reply-feedback{align-self:flex-start;font-size:12px;color:var(--mut);padding:8px;min-height:44px;margin-top:-16px;border-radius:8px}.reply-feedback:hover{background:var(--surface2)}
+.composer{flex:none;display:grid;grid-template-columns:44px minmax(0,1fr) 56px;align-items:end;gap:6px;margin:8px 12px 12px;padding:6px;border:1px solid var(--line2);border-radius:16px;background:var(--surface)}.composer:focus-within{border-color:var(--g)}.composer textarea{grid-column:2;grid-row:1;min-width:0;width:100%;height:44px;min-height:44px;max-height:120px;resize:none;overflow:auto;border:0;outline:0;background:transparent;color:var(--ink);font-size:16px;line-height:24px;padding:10px 2px}.composer textarea::placeholder{color:var(--mut)}.ctools{display:contents}.ctools .sp{display:none}.composer .clip{grid-column:1;grid-row:1;width:44px;height:48px;font-size:24px;color:var(--mut);border-radius:10px}.composer .go{grid-column:3;grid-row:1;width:56px;height:56px;background:var(--btn);color:white;font-size:26px;font-weight:700;border-radius:12px}
+.camp{display:flex;align-items:center;gap:6px;margin:8px 12px 0;font-size:13px;color:var(--gink)}.camp span{flex:1}.camp button{min-height:44px;padding:0 12px}.att{display:flex;align-items:center;gap:8px;margin:4px 12px;font-size:12px;color:var(--mut)}.att img{width:36px;height:36px;object-fit:cover;border-radius:6px}.att span{flex:1}.att button{min-width:44px}
+.send{position:relative;flex:none;padding:10px;display:flex;flex-direction:column;gap:8px}.prim,.duo{display:grid;grid-template-columns:1fr 1fr;gap:8px}.big{width:100%;min-height:48px;border-radius:12px;background:var(--btn);color:white;font-size:15px;font-weight:650;padding:6px 12px}.ghost{min-height:48px}.big.all{background:var(--surface2);color:var(--ink);border:1px solid var(--line2)}.navrow{display:flex;gap:8px;flex:none}.moreg,.chat-open{min-height:44px;border-radius:10px;font-size:14px;font-weight:600;padding:0 12px}.moreg{flex:1;border:1px solid var(--line2);background:var(--surface)}.moreg em{font-style:normal}.chat-open{margin-left:auto;display:none;background:var(--btn);color:white;min-width:112px}.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:absolute;bottom:100%;left:0;right:0;padding:12px;z-index:30;background:var(--surface);border:1px solid var(--line2);border-radius:14px;box-shadow:var(--sh3);max-height:65dvh;overflow:auto}.chips button{min-height:48px;padding:6px 8px;border-radius:10px;border:1px solid var(--line2);font-size:14px;font-weight:600}.chips button:hover{background:var(--gs)}.chips .all{grid-column:1/-1}.send button[aria-busy=true]{opacity:.65}#groupStatus{font-size:12px;color:var(--mut);max-height:3.2em;overflow:auto;white-space:pre-line}#groupStatus:empty{display:none}.dmrow{display:grid;grid-template-columns:1fr auto;gap:8px}.dmrow input{width:100%;min-width:0;min-height:46px;padding:0 10px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);font-size:16px}.dmrow #dmPhone{grid-column:1/-1}.dmrow .seg button{padding:0 10px;min-height:40px;font-size:13px}
+.foot{display:flex;gap:10px;min-height:18px;font-size:12px;color:var(--mut)}#status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#status.err{color:var(--red)}kbd{font:inherit}.showmsg{min-height:44px;color:var(--gink);font-weight:600}.showmsg svg{display:none}.nomsg .msgcard{display:none}.nomsg .layout{grid-template-columns:1fr}.nomsg .side{max-width:800px;width:100%;margin:auto;height:100%}.offline{display:none}
+dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:0;box-shadow:var(--sh3);border-radius:16px;margin:auto;max-height:90dvh}dialog::backdrop{background:#1118}dialog header{display:flex;align-items:center;gap:8px;min-height:60px;padding:8px 12px 8px 18px;border-bottom:1px solid var(--line);font-weight:650}.hist{width:min(720px,calc(100vw - 32px));height:min(88dvh,900px)}.hist[open]{display:flex;flex-direction:column}.hist .log{padding:18px 20px;scroll-padding:16px}.hist .composer{margin:0 16px max(20px,env(safe-area-inset-bottom))}.chat-return{display:flex;justify-content:flex-end;padding:0 16px 6px;min-height:44px;flex:none}.chat-return button{min-height:44px;padding:0 12px;color:var(--gink);font-weight:600;border-radius:10px}.hist .chat-return{display:none}.set{width:min(500px,calc(100vw - 24px))}.set .body{max-height:calc(90dvh - 70px);overflow:auto;padding:0 16px 12px}.row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.row .t{flex:1;min-width:0}.row b{font-weight:600}.row small{display:block;color:var(--mut);font-size:13px;margin-top:3px;line-height:1.4}.row small.err{color:var(--red)}.row small.ok{color:var(--gink)}.row .tool{flex:none}.tool.danger{color:var(--red)}.tool.danger.arm{background:var(--red);color:white}.sw{appearance:none;width:48px;height:44px;flex:none;border-radius:12px;background:var(--surface2);cursor:pointer;position:relative}.sw::after{content:'OFF';position:absolute;inset:0;display:grid;place-items:center;color:var(--mut);font-size:11px;font-weight:700}.sw:checked{background:var(--gs)}.sw:checked::after{content:'ON';color:var(--gink)}.sw:disabled{opacity:.4}.theme{display:flex;background:var(--surface2);border-radius:10px;padding:2px}.theme button{min-height:44px;padding:0 9px;border-radius:8px;font-size:13px}.theme button[aria-pressed=true]{background:var(--surface);box-shadow:var(--sh1)}.advanced summary{min-height:48px;display:flex;align-items:center;cursor:pointer;color:var(--mut);font-size:14px}.advanced summary::after{content:'⌄';margin-left:auto}#chatEvalStatus{white-space:pre-line;max-height:240px;overflow:auto}
+.memory-dialog{padding:20px;width:min(540px,calc(100vw - 24px));overflow:auto}.memory-dialog h2{font-size:20px;margin-bottom:10px}.memory-dialog p{font-size:14px;color:var(--mut);margin:8px 0}.memory-dialog textarea{width:100%;min-height:120px;padding:12px;font:inherit;background:var(--surface2);color:var(--ink);border:1px solid var(--line2);border-radius:12px}.memory-dialog button{min-height:48px;padding:10px 16px;border-radius:12px}.primary,.memory-dialog .primary{background:var(--btn);color:white;border-radius:10px;font-weight:600}.memory-item{padding:12px 0;border-bottom:1px solid var(--line);white-space:pre-wrap}.feedback-check{display:flex;gap:10px;align-items:center;margin:16px 0}.feedback-check input{width:24px;height:24px}
+.connect-dialog{background:var(--surface)!important;color:var(--ink)!important;border-color:var(--line)!important;font-family:inherit!important}.connect-dialog input{background:var(--surface2)!important;color:var(--ink)!important;border-color:var(--line2)!important}.connect-state{background:var(--surface2)!important}.connect-qr{background:white!important}.connect-muted,.connect-state span,.connect-note,.connect-steps{color:var(--mut)!important}.connect-badge{border-radius:10px!important;min-height:44px!important;font-size:13px!important;font-weight:600}.connect-badge[data-state=online]{color:var(--gink)!important;background:var(--gs)!important}.connect-badge[data-state=offline],.connect-badge[data-state=error]{color:var(--red)!important;background:var(--wbg)!important}
+@media(min-width:900px){.hist header #histClose{display:block}.navrow{padding:0 10px}.send{border:0;padding:0;background:none}.keys{opacity:.8}}
+@media(max-width:1100px){.brand .bname{display:none}.brand{margin-right:0}.ctx span{max-width:165px}}
 @media(max-width:899px){
- .app{gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
- .layout{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;gap:10px}
- .side{gap:10px}
- .l{display:none}.s{display:inline}
- .themebtn{display:none}
- .livebar{min-height:42px;font-size:13.5px;gap:8px;padding-right:86px}
- .live{min-height:44px}
- .autosw{margin-top:-16px;height:32px;width:68px}.autosw .knob{width:26px;height:26px}.autosw[aria-pressed=true] .knob{transform:translateX(36px)}
- .msgcard .tools{order:3;padding:0 10px 10px}.msgcard .chat{margin:10px 10px 8px;padding:14px 16px}
- .msgcard .tool{flex:1 1 0;min-height:44px}
- #copy{display:none}
- .chat:hover{box-shadow:none}
- .talk{flex:none}
- .talk.card{background:none;border:0;box-shadow:none}
- .talk .log{display:none}
- .camp{margin:0;font-size:14px}.att{margin:0}
- .sugg{margin:0;flex-direction:row;align-items:center;padding:6px 6px 6px 12px;font-size:14px}
- .sugg span{flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
- .sbtns .go{min-width:72px;flex:none}.sbtns .later{font-size:0;padding:0;width:40px}.sbtns .later::before{content:'✕';font-size:16px}
- .talk .composer{flex-direction:row;align-items:center;gap:6px;margin:0;padding:4px 5px 4px 16px;border-radius:26px;box-shadow:var(--sh2)}
- .talk .composer .ctools{display:contents}
- .talk .composer .clip,.talk .composer .sp{display:none}
- .talk .composer input{flex:1;min-height:42px}
- .talk .composer .go{width:42px;height:42px}
- .send{padding:0}.send.card{background:none;border:0;box-shadow:none}
- .prim .big{min-height:56px;font-size:18px;border-radius:16px}
- .chips{grid-template-columns:repeat(4,1fr);gap:6px}
- .chips button{min-height:44px;font-size:12.5px;padding:2px}
- .foot{display:none}
- .more-open .sugg,.more-open .camp{display:none}
- dialog.hist{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;margin:0}
- dialog.set{width:calc(100vw - 20px)}
+ .app{padding:6px 10px max(8px,env(safe-area-inset-bottom));gap:6px}.brandbar{gap:4px;min-height:44px}.brand{display:none}.seg button{padding:0 14px;min-height:40px}.leftchip{font-size:14px;padding:0 6px}.gear{width:44px}.lw{display:none}.live{min-height:44px}.livebar{font-size:12px;gap:5px}.livebar em{display:none}.autosw{min-width:58px}.livebar b{display:none}
+ .brandbar .connect-badge{font-size:0!important;width:44px;min-width:44px;padding:0!important;display:grid;place-items:center}.brandbar .connect-badge::before{font-size:12px;font-weight:700;content:'WA'}.brandbar .connect-badge[data-state=online]::before{content:'WA ✓'}.brandbar .connect-badge[data-state=offline]::before,.brandbar .connect-badge[data-state=error]::before{content:'WA !';font-weight:700}
+ .layout{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;gap:8px}.side{gap:6px}.talk.card{border:0;background:none;flex:none}.talk .log,.talk .composer,.talk-title{display:none}.camp,.att{margin:0;font-size:12px}.att span{max-height:3em;overflow:hidden}.msgcard .tools{padding:6px 8px}.ctx{font-size:12px}.ctx img{width:24px;height:24px}.ctx span{max-width:120px}.tools .tool{padding:0 12px}.chat{margin:0 8px 8px;padding:12px 14px}.message{font-size:16px}.send{padding:0;border:0;background:none;gap:6px}.big{min-height:48px}.prim .main{order:2}.navrow{gap:8px}.moreg{min-height:48px}.chat-open{display:block;min-height:48px}.chips{bottom:calc(100% + 6px);max-height:65dvh;grid-template-columns:1fr 1fr}.chips .s{display:none}.chips .l{display:inline}.foot{display:none}.dmrow{grid-template-columns:1fr 1fr}.dmrow .seg{grid-column:2;grid-row:1}.dmrow #dmPhone{grid-column:1/-1}.duo{grid-template-columns:1fr 2fr}.duo #sendDm{order:2}
+ dialog.hist{position:fixed;top:var(--chat-top,0px);left:0;right:0;bottom:auto;width:100%;max-width:100%;height:var(--chat-height,100dvh);max-height:var(--chat-height,100dvh);margin:0;border:0;border-radius:0}.hist header{min-height:44px;padding:6px 16px;font-size:14px;color:var(--mut)}.hist header #histClose{display:none}.hist .log{padding:16px;gap:18px}.hist .chat-return{display:flex}.hist .composer{margin:0 10px max(24px,env(safe-area-inset-bottom));grid-template-columns:40px minmax(0,1fr) 56px;padding:5px;gap:4px}.hist .composer .clip{width:40px}.chat-return{padding:0 10px 2px}.nomsg .side{justify-content:flex-end}.nomsg .layout{grid-template-rows:1fr}.nomsg .talk{display:none}
 }
-@media(max-width:560px){
- .app{padding:8px 10px calc(8px + env(safe-area-inset-bottom));gap:8px}
- .brandbar{gap:6px}.brand{display:none}.seg button{padding:0 14px}.leftchip{padding:0 11px;font-size:14.5px}
- .brandbar .connect-badge{font-size:0!important;width:40px;min-width:40px;min-height:40px!important;padding:0!important;display:grid;place-items:center;flex:none}
- .brandbar .connect-badge::before{font-size:16px;content:'◌'}.brandbar .connect-badge[data-state=online]::before{content:'●';color:var(--ok)}.brandbar .connect-badge[data-state=offline]::before{content:'●';color:var(--red)}
- .ctx{display:none}.msgcard .tools .sp{display:none}
- .layout,.side{gap:8px}
-}
-@media(max-width:420px){
- .pace{display:none}.lw{display:none}.seg button{padding:0 12px}.leftchip{padding:0 10px}
- .gear{width:38px}.brandbar{gap:5px}
-}
-@media(max-height:600px){.tools .ctx img{display:none}}
-@media(max-width:899px) and (max-height:760px){
- .dmrow{grid-template-columns:1fr 1.15fr auto}.dmrow #dmPhone{grid-column:auto;order:2}.dmrow #gender{order:3}
- .dmrow input{min-height:44px;padding:0 10px}.dmrow .seg button{min-height:38px;padding:0 10px}
- .sugg span{-webkit-line-clamp:1}.sugg{padding:4px 4px 4px 10px}.sbtns .go,.sbtns .later{min-height:38px}
- .msgcard .tool{min-height:40px}.chat{margin:8px 10px 6px}
-}
-@media(max-width:899px) and (max-height:640px){.prim .big{min-height:50px;font-size:17px}.chips button{min-height:38px}.moreg{min-height:34px}.live{min-height:40px}.livebar{min-height:38px}}
-
-/* hide the message: buttons move to the centre (phone) / chat gets a focused centred column (desktop) */
-.hidebtn{width:40px;padding:0;display:grid;place-items:center;flex:none!important}
-.hidebtn svg,.showmsg svg{width:18px;height:18px}
-.showmsg{display:flex;align-items:center;justify-content:center;gap:8px;min-height:40px;border-radius:var(--r2);border:1px dashed var(--line2);color:var(--mut);font-weight:600;font-size:14px;width:100%;animation:drop .25s var(--ease)}
-.showmsg:hover{color:var(--ink);background:var(--surface2)}
-.nomsg .msgcard{display:none}
-.nomsg .layout{grid-template-columns:minmax(0,1fr)}
-.nomsg .side{width:100%;max-width:620px;margin:0 auto;animation:riseIn .35s var(--ease)}
-@media(max-width:899px){
- .nomsg .layout{grid-template-rows:minmax(0,1fr)}
- .nomsg .side{justify-content:center;gap:14px}
- .nomsg .prim .big{min-height:72px;font-size:20px;border-radius:20px}
- .nomsg .chips button{min-height:52px;font-size:13.5px}
- .nomsg .moreg{min-height:48px}
- .nomsg .talk .composer input{min-height:48px}.nomsg .talk .composer .go{width:46px;height:46px}
- .hidebtn{min-height:44px}
-}
-@media(max-width:899px) and (max-height:760px){.hidebtn{min-height:40px}}
-.offline{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:var(--r2);background:var(--wbg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);font-size:13.5px;line-height:1.35;animation:drop .25s var(--ease)}
-.isoffline .big,.isoffline .chips button,.isoffline #sendDm,.isoffline .composer .go{opacity:.5}
-
-/* A stable, separate thumb target: never overlaps the text or responses. */
-.composer,.talk .composer{display:grid;grid-template-columns:40px minmax(0,1fr) 64px;align-items:center;gap:10px;padding:12px;border-radius:22px}
-.composer .ctools,.talk .composer .ctools{display:contents}.composer .sp{display:none!important}
-.composer textarea{grid-column:2;grid-row:1;width:100%;min-width:0;resize:none;min-height:54px;max-height:132px;line-height:1.45;padding:7px 0;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:16px}
-.composer .clip,.talk .composer .clip{display:block;grid-column:1;grid-row:1;min-width:40px;min-height:44px}
-.composer .go,.talk .composer .go{grid-column:3;grid-row:1;width:64px;height:64px;font-size:30px;border-radius:20px;touch-action:manipulation}
-.composer .go:focus-visible{outline:3px solid var(--gink);outline-offset:3px}
-.reply-feedback{align-self:flex-start;color:var(--mut);font-size:12px;padding:5px 9px;min-height:32px;border-radius:8px;margin-top:-14px}.reply-feedback:hover{background:var(--surface2)}
-#chatEvalStatus{white-space:pre-line;max-height:240px;overflow:auto}.memory-dialog{width:min(520px,calc(100vw - 24px));max-height:85dvh;overflow:auto;border-radius:20px;padding:20px}.memory-dialog textarea{width:100%;min-height:120px;padding:12px;font:inherit;background:var(--surface2);color:var(--ink);border:1px solid var(--line2);border-radius:12px}.memory-dialog button{min-height:48px;padding:10px 16px;border-radius:12px}.memory-dialog .primary{background:var(--btn);color:white}.memory-item{padding:12px 0;border-bottom:1px solid var(--line);white-space:pre-wrap}.feedback-check{display:flex;gap:10px;align-items:center;margin:16px 0}.feedback-check input{width:22px;height:22px}
-@media(max-width:899px){dialog.hist{position:fixed;top:var(--chat-top,0px);bottom:auto;height:var(--chat-height,100dvh);max-height:var(--chat-height,100dvh)}dialog.hist .composer{flex:none;margin:10px 14px max(36px,calc(24px + env(safe-area-inset-bottom)))}.talk .composer{grid-template-columns:minmax(0,1fr) 60px}.talk .composer textarea{grid-column:1}.talk .composer .clip{display:none}.talk .composer .go{grid-column:2;width:60px;height:60px}.composer textarea{min-height:56px}dialog.hist .log{padding-bottom:18px}}
-
+@media(max-width:380px){.ctx span{display:none}.tools{gap:4px}.seg button{padding:0 12px}.leftchip{font-size:13px}.brandbar{gap:2px}.theme button{padding:0 7px}}
+@media(max-width:899px) and (max-height:600px){.app{gap:4px}.live{min-height:40px}.livebar{min-height:40px}.hist header{min-height:36px}.hist .composer{margin-bottom:12px}.hist .log{padding-top:10px;padding-bottom:10px}}
+@media(max-width:899px) and (max-height:550px){body[data-view=dm]:has(.dmrow input:focus) .msgcard{display:none}body[data-view=dm]:has(.dmrow input:focus) .layout{display:flex;flex-direction:column}body[data-view=dm]:has(.dmrow input:focus) .side{flex:1;justify-content:flex-end;overflow:auto}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 </style></head>
 <body data-view="group">
-<div class="app">
+<div class="app"><span id="liveAnnouncement" class="sr-only" role="status" aria-live="polite"></span>
  <div class="offline" id="offline" role="status" hidden><b>No internet.</b> Auto keeps running on the server. Sending works again when you are back online.</div>
  <header class="brandbar">
   <div class="brand"><div class="mark" aria-hidden="true">♡</div><div class="bname">GiveLife<small>Foundation studio</small></div></div>
-  <div class="seg" role="tablist" aria-label="Message type"><button data-view-button="group" aria-pressed="true" title="Group message (G)">Group</button><button data-view-button="dm" aria-pressed="false" title="Direct message (D)">DM</button></div>
+  <div class="seg" role="group" aria-label="Message type"><button data-view-button="group" aria-pressed="true" title="Group message (G)">Group</button><button data-view-button="dm" aria-pressed="false" title="Direct message (D)">DM</button></div>
   <span class="sp"></span>
-  <span class="pace" id="pace" data-pace="L1" title="Donations normal"></span><button id="leftChip" class="leftchip" title="Change the amount left">Rs. …</button><button id="themeBtn" class="themebtn" aria-label="Switch light or dark" title="Light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button><button id="gear" class="gear" aria-label="Settings" title="Settings">&#9881;</button>
+  <button id="leftChip" class="leftchip" title="Change the amount left">Rs. …</button><button id="gear" class="gear" aria-label="Settings" title="Settings">&#9881;</button>
  </header>
- <section class="live" id="live" data-on="0" aria-live="polite"><button type="button" class="livebar" id="liveBar" aria-expanded="false"><i class="pulse"></i><b id="liveNow">Auto is off</b><span id="liveMeta">Switch on: runs 24 hours</span><em>&#8964;</em></button><button type="button" class="autosw" id="auto" role="switch" aria-pressed="false" aria-label="Auto mode" title="Auto: posts, replies, thanks and DMs on its own"><span class="lbl">OFF</span><i class="knob"></i></button><div class="livemore" id="liveMore" hidden></div></section>
+ <section class="live" id="live" data-on="0"><button type="button" class="livebar" id="liveBar" aria-expanded="false"><i class="pulse"></i><b id="liveNow">Auto OFF</b><span id="liveMeta">Checking status…</span><em>&#8964;</em></button><button type="button" class="autosw" id="auto" role="switch" aria-pressed="false" aria-checked="false" aria-label="Auto mode" title="Switch automatic actions on or off"><span class="lbl">OFF</span><i class="knob"></i></button><div class="livemore" id="liveMore" hidden></div></section>
  <button type="button" class="showmsg" id="showMsg" hidden><span>Show message</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
  <main class="layout">
   <section class="card msgcard" id="card" aria-label="Message">
    <div class="tools"><div class="ctx"><img id="poster" alt="" hidden><span id="ctx">Group message · poster attached</span></div><span class="sp"></span>
-    <button class="tool" id="edit" title="Edit (E) · or tap the message">Edit</button><button class="tool" id="fresh" title="New wording (N)">New</button><button class="tool" id="copy" title="Copy (C)">Copy</button><button class="tool hidebtn" id="hideMsg" aria-label="Hide the message" title="Hide the message (H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button></div>
-   <div class="chat" id="chat" title="Tap to edit"><div class="message" id="groupPreview"></div><div class="message" id="dmPreview"></div></div>
+    <button class="tool" id="edit" title="Edit message (E)">Edit</button><button class="tool" id="fresh" title="New wording (N)">New</button><details class="overflow-tools"><summary aria-label="More message actions" title="More message actions">⋯</summary><div><button class="tool" id="copy" title="Copy (C)">Copy message</button><button class="tool" id="hideMsg" title="Hide message (H)">Hide message</button></div></details></div>
+   <div class="chat" id="chat" tabindex="0" aria-label="WhatsApp caption preview. Use Edit to change it."><div class="message" id="groupPreview"></div><div class="message" id="dmPreview"></div></div>
   </section>
   <aside class="side">
    <section class="card talk" aria-label="Assistant">
-    <div class="camp" id="camp" hidden role="status"><span id="campText"></span><button type="button" id="campStop" class="later">Stop</button></div>
-    <div class="sugg" id="sugg" hidden role="status"><span id="suggText"></span><div class="sbtns"><button id="suggDo" class="go">Do it</button><button id="suggNo" class="later">Not now</button></div></div>
-    <div class="log" id="log" aria-live="polite"></div>
+    <div class="camp" id="camp" hidden><span id="campText"></span><button type="button" id="campStop" class="later">Stop</button></div>
+    <div class="talk-title">Assistant<button type="button" id="chatLatest" hidden>↓ Latest reply</button><button type="button" id="chatExpand" aria-label="Expand chat">Expand ↗</button></div>
+    <div class="log" id="log" role="log" aria-live="off" aria-label="Conversation"></div>
     <div class="att" id="att" hidden><img id="attImg" alt=""><span>Picture attached. It will be sent with the next DMs. Say "make it the poster" to use it for groups.</span><button type="button" class="later" id="attX" aria-label="Remove picture">✕</button></div>
-    <form id="cmdForm" class="cmd composer" autocomplete="off"><textarea id="cmd" rows="2" enterkeyhint="send" aria-label="Tell the app what to do" placeholder="Message GiveLife…"></textarea><div class="ctools"><button type="button" class="clip" data-clip title="Attach a picture" aria-label="Attach a picture">+</button><span class="sp"></span><button class="go" type="submit" aria-label="Send">&#8593;</button></div></form>
+    <span id="chatAnnouncement" class="sr-only" role="status" aria-live="polite"></span><form id="cmdForm" class="cmd composer" autocomplete="off"><textarea id="cmd" rows="1" enterkeyhint="send" aria-label="Tell the app what to do" placeholder="Message GiveLife…"></textarea><div class="ctools"><button type="button" class="clip" data-clip title="Attach a picture" aria-label="Attach a picture">+</button><span class="sp"></span><button class="go" type="submit" aria-label="Send">&#8593;</button></div></form>
    </section>
    <section class="card send group-send" aria-label="Send group message">
-    <div class="prim"><button class="big main" data-group="main"><span class="l">GiveLife main</span><span class="s">GiveLife</span></button><button class="big all" id="sendAll" title="GiveLife main + 5 freelance groups, 60 seconds apart"><span class="l">Send to ALL 6 groups</span><span class="s">ALL 6</span></button></div>
-    <button type="button" class="moreg" id="moreG" aria-expanded="false"><span class="l">More groups</span><span class="s">More groups</span> <em>&#8964;</em></button>
-    <div class="chips" id="chips" hidden>
-     <button data-group="free"><span class="l">All 5 freelance</span><span class="s">Freelance</span></button>
-     <button data-group="community"><span class="l">Upwork Community</span><span class="s">Community</span></button><button data-group="fiverr"><span class="l">Fiverr Course</span><span class="s">Fiverr</span></button>
-     <button data-group="upwork"><span class="l">Upwork Course</span><span class="s">Upwork</span></button><button data-group="uet"><span class="l">Fiverr UET</span><span class="s">UET</span></button>
-     <button data-group="toprated"><span class="l">Top Rated</span><span class="s">TopRated</span></button><button class="muted" data-test="group"><span class="l">Test group</span><span class="s">Test</span></button>
+    <div class="prim"><button class="big main" data-group="main">GiveLife main</button><button class="ghost" data-test="group">Test group</button></div>
+    <div class="chips" id="chips" hidden aria-label="Choose a group">
+     <button data-group="community">Upwork Community</button><button data-group="fiverr">Fiverr Course</button>
+     <button data-group="upwork">Upwork Course</button><button data-group="uet">Fiverr UET</button>
+     <button data-group="toprated">Top Rated</button><button data-group="free">All 5 freelance</button>
+     <button class="big all" id="sendAll" title="GiveLife and all 5 freelance groups">Send to all 6 groups</button>
     </div>
     <div id="groupStatus" role="status"></div>
    </section>
@@ -352,18 +95,20 @@ dialog.set{border-radius:var(--r3);width:min(460px,calc(100vw - 24px));padding:0
     <div class="dmrow"><input id="dmName" placeholder="Name" aria-label="Name (optional)" autocomplete="off"><div class="seg" id="gender"><button type="button" data-g="Brother" aria-pressed="true">Brother</button><button type="button" data-g="Sister" aria-pressed="false">Sister</button></div><input id="dmPhone" inputmode="tel" placeholder="Phone number" aria-label="Phone, for example 0300 1234567" autocomplete="off"></div>
     <div class="duo"><button class="big" id="sendDm">Send DM with poster</button><button class="ghost" data-test="dm">Test</button></div>
    </section>
+   <div class="navrow"><button type="button" class="moreg" id="moreG" aria-expanded="false" aria-controls="chips">Other groups ⌃</button><button type="button" class="chat-open" id="chatOpen">Chat ↗</button></div>
   </aside>
  </main>
  <footer class="foot"><span id="status" role="status">Loading…</span><span class="sp"></span><span class="keys"><kbd>/</kbd> talk · <kbd>E</kbd> edit · <kbd>N</kbd> new · <kbd>C</kbd> copy · <kbd>G</kbd>/<kbd>D</kbd> switch</span></footer>
 </div>
-<dialog class="hist" id="hist" aria-label="Chat with the GiveLife assistant"><header><span>Chat</span><span class="sp"></span><button type="button" class="tool" id="histClose">Close</button></header><div class="log" id="histLog"></div><form id="histForm" class="cmd composer" autocomplete="off"><textarea id="histCmd" rows="2" enterkeyhint="send" aria-label="Message the assistant" placeholder="Reply to GiveLife…"></textarea><div class="ctools"><button type="button" class="clip" data-clip title="Attach a picture" aria-label="Attach a picture">+</button><span class="sp"></span><button class="go" type="submit" aria-label="Send">&#8593;</button></div></form></dialog>
+<dialog class="hist" id="hist" aria-label="Chat with the GiveLife assistant"><header><span>Chat</span><span class="sp"></span><button type="button" class="tool" id="histClose" autofocus>← Main</button></header><div class="log" id="histLog" role="log" aria-live="off" aria-label="Conversation"></div><div class="chat-return"><button type="button" id="histLatest" hidden>↓ Latest reply</button><span class="sp"></span><button type="button" id="histMain">← Main</button></div><span id="histAnnouncement" class="sr-only" role="status" aria-live="polite"></span><form id="histForm" class="cmd composer" autocomplete="off"><textarea id="histCmd" rows="1" enterkeyhint="send" aria-label="Message the assistant" placeholder="Reply to GiveLife…"></textarea><div class="ctools"><button type="button" class="clip" data-clip title="Attach a picture" aria-label="Attach a picture">+</button><span class="sp"></span><button class="go" type="submit" aria-label="Send">&#8593;</button></div></form></dialog>
 <dialog class="set" id="set" aria-label="Settings"><header><span>Settings</span><span class="sp"></span><button type="button" class="tool" id="setClose">Done</button></header>
  <div class="body">
   <div class="row"><div class="t"><b>Appearance</b><small>Dark mode is easier on the eyes at night.</small></div><div class="theme" id="theme"><button type="button" data-t="system">Auto</button><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></div></div>
-  <div class="row"><div class="t"><b>Test AI</b><small id="aiRes">Checks that the assistant can answer.</small></div><button type="button" class="tool" id="aiTest">Test</button></div>
+  <details class="advanced"><summary>AI checks</summary><div class="row"><div class="t"><b>Test AI</b><small id="aiRes">Checks that the assistant can answer.</small></div><button type="button" class="tool" id="aiTest">Test</button></div>
+  <div class="row"><div class="t"><b>Chat checks</b><small id="chatEvalStatus">Uses DeepSeek with simulated tools; sends no WhatsApp messages.</small></div><button type="button" class="tool" id="runChatEval">Run 8 checks</button></div>
+  </details>
   <label class="row"><div class="t"><b>Auto may send DMs</b><small>Thanks, reminders and appeals to people</small></div><input type="checkbox" class="sw" id="swDm"></label>
   <label class="row"><div class="t"><b>Also DM new people</b><small>Group members and saved chats. Off = past donors only.</small></div><input type="checkbox" class="sw" id="swNew"></label>
-  <div class="row"><div class="t"><b>Chat checks</b><small id="chatEvalStatus">Uses DeepSeek with simulated tools; sends no WhatsApp messages.</small></div><button type="button" class="tool" id="runChatEval">Run 8 checks</button></div>
   <div class="row"><div class="t"><b>Memory &amp; feedback</b><small>Review saved preferences and corrections.</small></div><button type="button" class="tool" id="openMemory">Review</button></div>
   <div class="row"><div class="t"><b>WhatsApp</b><small id="waRes">Disconnect this number from the studio.</small></div><button type="button" class="tool danger" id="waOut">Log out</button></div>
  </div></dialog>

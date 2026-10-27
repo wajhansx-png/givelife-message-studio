@@ -1,0 +1,146 @@
+"""Explicit timed chat actions. Single-worker, persisted, and never retried after dispatch uncertainty."""
+import datetime as dt
+import hashlib,json,re,threading,time,uuid
+import manual_commands
+
+PKT=dt.timezone(dt.timedelta(hours=5))
+
+def requested(text):
+ text=str(text)
+ if re.search(r'(?i)\bevery\s+\d',text) and not re.search(r'(?i)\bat\s*\d|\d\s*(?:am|pm)\b',text):return False
+ return bool(re.search(r'(?i)\b(?:schedul\w*|at\s+\d{1,2}|tomorrow|daily|every day|(?:in|after)\s+\d+(?:\.\d+)?\s*(?:sec\w*|min\w*|hour\w*|hr\w*))\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',text))
+
+def parse(text,now=None):
+ """Only owner-authored, explicit actions; no inferred recipient or LLM-selected clock."""
+ now=time.time() if now is None else now
+ t=str(text).strip();instruction=re.sub(r'"[^"\n]*"|“[^”\n]*”',' ',t);low=instruction.casefold()
+ if re.fullmatch(r'(?:show|list|view|my)?\s*(?:scheduled?\s+(?:tasks|messages|sends)|schedules|scheduler)',low):return {'command':'list'}
+ cancel=re.fullmatch(r'(?:cancel|delete|remove)\s+(?:schedule(?:d task)?|task)\s+#?([a-f0-9]{8})',low)
+ if cancel:return {'command':'cancel','id':cancel[1]}
+ if not requested(instruction):return None
+ if re.match(r'^(?:what|how|when|why|did|can|could|explain|review|summarize|analyse|analyze)\b',low) or re.search(r"\b(?:don't|dont|do not|never)\b",low) or t.startswith(('>','```','"','“')):return None
+ if (manual_commands.parse(instruction) or {}).get('kind')=='refuse_target':raise ValueError('That group is excluded. Nothing was scheduled.')
+ if re.search(r'\b(utc|gmt|est|ist|pst)\b',low):raise ValueError('Use Pakistan time (PKT) for schedules. Convert the time and send it again.')
+ auto=bool(re.search(r'\b(auto|autopilot)\b',low))
+ if auto and manual_commands.SEND.search(instruction):raise ValueError('Schedule one action at a time: a group send or an Auto change.')
+ if len(re.findall(r'(?:\bat\s*|@\s*)\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',low))>1:raise ValueError('Schedule one time at a time. Nothing was scheduled.')
+ if auto:
+  if not re.search(r'\b(start|turn|enable|disable|stop|on|off)\b',low):return None
+  if re.search(r'\b(start|enable|on)\b',low) and re.search(r'\b(stop|disable|off)\b',low):raise ValueError('Schedule one Auto change at a time: ON or OFF.')
+  action='auto_off' if re.search(r'\b(stop|disable|off)\b',low) else 'auto_on';keys=[]
+ else:
+  if not re.search(r'\b(send|post|share|message|msg|schedule|schedul)\b',low):return None
+  action='send';keys=manual_commands.groups(instruction)
+  if not keys:raise ValueError('Which group should I schedule? For example: send to GiveLife main tomorrow at 9pm.')
+ if re.search(r'\bevery\s+\d',low):raise ValueError('Use one timed send or daily at a clock time. Keep interval rules, such as every 30 minutes, separate.')
+ quote=re.search(r'"([^"\n]+)"|“([^”\n]+)”',t)
+ body=next((x for x in quote.groups() if x), '') if quote else ''
+ daily=bool(re.search(r'\b(daily|every day|each day)\b',low))
+ current=dt.datetime.fromtimestamp(now,PKT)
+ relative=re.search(r'\b(?:in|after)\s+(\d+(?:\.\d+)?)\s*(seconds?|secs?|minutes?|mins?|mnts?|hours?|hrs?)\b',low)
+ if relative:
+  if daily:raise ValueError('For a daily task, give a clock time, for example daily at 9pm.')
+  seconds=float(relative[1])*(3600 if relative[2].startswith('h') else 60 if relative[2].startswith('m') else 1)
+  if not 1<=seconds<=366*86400:raise ValueError('Choose a delay from 1 second to 366 days.')
+  when=current+dt.timedelta(seconds=seconds)
+ else:
+  clock=re.search(r'\b(?:at\s*|@\s*)(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b',low) or re.search(r'\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b',low)
+  if not clock:raise ValueError('What time? For example: send to GiveLife main at 9pm, or in 10 minutes. Times use Pakistan time (PKT).')
+  hour,minute=int(clock[1]),int(clock[2] or 0);ampm=clock[3]
+  if minute>59 or (ampm and not 1<=hour<=12) or (not ampm and not 0<=hour<=23):raise ValueError('That clock time is invalid. Use 9pm or 21:00 (PKT).')
+  if ampm:hour=hour%12+(12 if ampm=='pm' else 0)
+  when=current.replace(hour=hour,minute=minute,second=0,microsecond=0)
+  date=re.search(r'\b(\d{4}-\d{2}-\d{2})\b',low)
+  if date:
+   try:date=dt.date.fromisoformat(date[1]);when=when.replace(year=date.year,month=date.month,day=date.day)
+   except ValueError:raise ValueError('That date is invalid. Use YYYY-MM-DD.') from None
+  elif 'tomorrow' in low:when+=dt.timedelta(days=1)
+  elif when.timestamp()<=now and 'today' not in low:when+=dt.timedelta(days=1)
+  if when.timestamp()<=now:raise ValueError('That time has passed. Choose a future time.')
+ return {'command':'create','action':action,'targets':list(dict.fromkeys(keys)),'text':body,'due':when.timestamp(),'daily':daily,'clock':when.strftime('%H:%M')}
+
+class Scheduler:
+ def __init__(self,path,store,dispatch,receipt,ready,cancel_job=lambda ident:None,clock=time.time):
+  self.path=path;self.store=store;self.dispatch=dispatch;self.receipt=receipt;self.ready=ready;self.cancel_job=cancel_job;self.clock=clock
+  self.lock=threading.RLock();self.tick_lock=threading.Lock()
+  saved=store.get('timed_tasks',None) if store else None
+  if saved is None:saved=json.loads(path.read_text(encoding='utf-8')) if path.exists() else []
+  if isinstance(saved,str):saved=json.loads(saved)
+  if not isinstance(saved,list) or any(not isinstance(x,dict) for x in saved):raise ValueError('Saved schedules need repair. No scheduled action was started.')
+  self.tasks=saved
+  for task in self.tasks:
+   if task.get('state')=='dispatching':task.update(state='uncertain',result='Restarted during dispatch. Check WhatsApp; this task will not repeat.')
+  self.save()
+
+ def save(self):
+  if self.store:self.store.put('timed_tasks',self.tasks)
+  else:
+   temp=self.path.with_suffix('.tmp');temp.write_text(json.dumps(self.tasks,ensure_ascii=False),encoding='utf-8');temp.replace(self.path)
+
+ def describe(self,task):
+  at=dt.datetime.fromtimestamp(task['due'],PKT).strftime('%d %b %Y %I:%M:%S %p PKT')
+  action='poster + '+('your quoted caption' if task.get('text') else 'the saved caption at send time')+' to '+', '.join(task['targets']) if task['action']=='send' else 'Auto '+('ON' if task['action']=='auto_on' else 'OFF')
+  return f"#{task['id']} · {task['state']} · {'Daily' if task.get('daily') else 'Once'} · {at} · {action}"+((' · '+task['result']) if task.get('result') else '')
+
+ def list(self):
+  with self.lock:return '\n'.join(self.describe(x) for x in self.tasks[-30:]) or 'No timed tasks. Try: send to GiveLife main tomorrow at 9pm.'
+
+ def command(self,text,request_id=None):
+  plan=parse(text,self.clock())
+  if plan is None:return None
+  with self.lock:
+   if plan['command']=='list':return self.list()
+   if plan['command']=='cancel':
+    task=next((x for x in self.tasks if x['id']==plan['id']),None)
+    if not task:raise ValueError('No schedule with that ID. Say show schedules.')
+    if task['state'] in ('completed','failed','uncertain','cancelled','missed'):return 'That task is already '+task['state']+'. Check its receipt before sending again.'
+    task.update(state='cancelled',result='Cancelled. Already dispatched messages cannot be undone.');self.save()
+    if task.get('job_id'):self.cancel_job(task['job_id'])
+    return self.describe(task)
+   sig=hashlib.sha256(re.sub(r'\s+',' ',text.strip().casefold()).encode()).hexdigest()
+   old=next((x for x in self.tasks if request_id and x.get('request_id')==request_id or x.get('signature')==sig and self.clock()-x.get('created',0)<30 and x['state']=='pending'),None)
+   if old:return 'Already scheduled: '+self.describe(old)
+   if sum(x['state'] in ('pending','running','dispatching') for x in self.tasks)>=100:raise ValueError('You have 100 active schedules. Cancel one first.')
+   task={**plan,'id':uuid.uuid4().hex[:8],'state':'pending','created':self.clock(),'request_id':request_id,'signature':sig};task.pop('command');self.tasks.append(task)
+   try:self.save()
+   except Exception:self.tasks.remove(task);raise
+   return 'Scheduled: '+self.describe(task)+'. Nothing sent now. Say show schedules or cancel schedule '+task['id']+'.'
+
+ def finish(self,task,state,result):
+  task.update(state=state,result=result)
+  if task.get('daily') and state in ('completed','missed'):
+   date=dt.datetime.fromtimestamp(self.clock(),PKT);h,m=map(int,task['clock'].split(':'));nxt=date.replace(hour=h,minute=m,second=0,microsecond=0)
+   if nxt.timestamp()<=self.clock():nxt+=dt.timedelta(days=1)
+   task.update(state='pending',due=nxt.timestamp(),last_result=result)
+  self.save()
+
+ def tick(self):
+  if not self.tick_lock.acquire(blocking=False):return
+  try:
+   for task in list(self.tasks):
+    with self.lock:
+     if task['state']=='running':
+      job=self.receipt(task['job_id'])
+      if not job:self.finish(task,'uncertain','Receipt unavailable. Check WhatsApp. No automatic retry.')
+      elif job.get('done'):
+       results=job.get('results') or [];ok=len(results)==task.get('expected',len(results)) and bool(results) and all(x.get('code')=='SUCCESS' for x in results)
+       self.finish(task,'completed' if ok else 'failed',job.get('message','Delivery was not fully confirmed.'))
+      continue
+     if task['state']!='pending' or task['due']>self.clock():continue
+     if self.clock()-task['due']>900:self.finish(task,'missed','Cloud was unavailable or sending was paused for over 15 minutes. No stale send was started.');continue
+    if not self.ready(task):continue
+    with self.lock:
+     if task['state']!='pending':continue
+     task['state']='dispatching';self.save()
+    try:
+     result=self.dispatch(dict(task))
+     with self.lock:
+      if task['state']=='cancelled':
+       if result.get('job_id'):self.cancel_job(result['job_id'])
+       continue
+      if result.get('job_id'):task.update(state='running',job_id=result['job_id'],expected=result['expected']);self.save()
+      else:self.finish(task,'completed',str(result.get('message','Confirmed.')))
+    except Exception:
+     with self.lock:
+      if task['state']!='cancelled':self.finish(task,'uncertain','Dispatch was not confirmed. Check activity before rescheduling. No automatic retry.')
+  finally:self.tick_lock.release()

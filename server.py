@@ -6,6 +6,7 @@ import manual_commands
 import dm_composer
 from state_shapes import mapping, memories, history as valid_history
 import chat_policy
+import timed_tasks
 from chat_memory import Knowledge,safe_text
 from functools import wraps
 ROOT=Path(__file__).resolve().parent
@@ -544,9 +545,55 @@ def send_appeal(target,request_id=None):
  return {'reply':'Sending to '+name+' now. The automatic-post timer restarts after confirmation.','job_id':ident,'caption':caption}
 
 def add_rule_text(text):
+ if timed_tasks.requested(text):
+  response=timed_chat_command(text)
+  if response is not None:return response
  rule,msg=rule_from_text(text)
  if not rule:return 'That did not look like a rule.'
  ENGINE.add_rule(rule);return 'Rule added: '+msg
+
+_TIMED=None
+_TIMED_STORE=None
+_TIMED_LOCK=threading.RLock()
+def timed_scheduler():
+ global _TIMED,_TIMED_STORE
+ with _TIMED_LOCK:
+  if _TIMED is None or _TIMED_STORE is not STORE:
+   def dispatch(task):
+    if task['action']!='send':
+     on=task['action']=='auto_on';reply=set_auto(on)
+     if auto_on()!=on:raise ValueError('Auto mode could not be changed.')
+     return {'message':reply}
+    keys=[]
+    for key in task['targets']:keys.extend(list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key])
+    keys=list(dict.fromkeys(keys))
+    caption=task.get('text') or json.loads(DRAFT.read_text(encoding='utf-8'))['group']
+    # A due scheduled send does not preempt the owner's current manual batch.
+    with LOCK:
+     if ACTIVE:raise ValueError('Another batch started. Check activity before rescheduling.')
+     ident=start_send_job(keys,caption,manual=True,request_id='schedule-'+task['id']+'-'+str(int(task['due'])))
+    return {'job_id':ident,'expected':len(keys)}
+   def ready(task):
+    if task['action']=='auto_off':return True
+    if on_hold():return False
+    return task['action']!='send' or (not ACTIVE and wa_ok())
+   def cancel(ident):
+    event=JOB_CANCEL.get(ident)
+    if event:event.set()
+   _TIMED=timed_tasks.Scheduler(DATA/'timed-tasks.json',STORE,dispatch,get_job,ready,cancel);_TIMED_STORE=STORE
+  return _TIMED
+
+def timed_chat_command(text,request_id=None):
+ if not fast_command_eligible(text):return None
+ if timed_tasks.parse(text) is None:return None
+ return timed_scheduler().command(text,request_id)
+
+def timed_loop():
+ while True:
+  try:timed_scheduler().tick()
+  except Exception:
+   auto_log('Timed scheduler could not read or save its records. No automatic retry of dispatched actions.');time.sleep(60)
+  time.sleep(1)
 
 CHAT_IMAGE={}
 def base_chat_callbacks():
@@ -560,7 +607,7 @@ def base_chat_callbacks():
   'find_contact':find_contacts,'search_memory':lambda query:KNOWLEDGE.retrieve(query),'send_message':send_free,'send_dm_appeal':send_dm_appeal,'edit_dm_name':edit_dm_name,'delete_last_message':delete_last_group,'prepare_dm':prepare_dm,
   'send_appeal':lambda target:send_appeal(target),
   'recent_activity':lambda:send_status_text()+'\nRecent activity: '+(' | '.join(x['text'] for x in AUTOLOG[-4:]) or 'No new receipt this session.'),
-  'add_rule':lambda text:add_rule_text(text),
+  'add_rule':lambda text:add_rule_text(text),'schedule_task':lambda:None,'list_schedules':lambda:timed_scheduler().list(),
   'list_rules':lambda:'; '.join(f"#{r['id']} {r['text']}" for r in ENGINE.rule_list()) or 'No rules yet.',
   'delete_rule':lambda rule_id:('Rule removed.' if ENGINE.delete_rule(rule_id) else 'No such rule.'),
   'hold':set_hold,'dm_donors':lambda count=10:dm_batch_now('donors',count),'dm_group':lambda group,count=10:dm_batch_now('group',count,group),
@@ -1080,7 +1127,10 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
    if name in send_tools|{'delete_last_message'} and cache_key in cache:return cache[cache_key]
    previous=getattr(OWNER_GUARD,'revision',None);OWNER_GUARD.revision=revision
    try:
-    if name=='send_appeal':result=send_appeal(args.get('target'),(task_id+'-'+hashlib.sha256(cache_key.encode()).hexdigest()[:16]) if task_id else None)
+    if name=='schedule_task' or name=='add_rule' and timed_tasks.requested(prompt):
+     result=timed_chat_command(prompt,task_id)
+     if result is None:raise ValueError('Give a group/action and a future time. Nothing was scheduled or sent.')
+    elif name=='send_appeal':result=send_appeal(args.get('target'),(task_id+'-'+hashlib.sha256(cache_key.encode()).hexdigest()[:16]) if task_id else None)
     elif name=='send_message':
      literal=bool(re.search(r'["“\']'+re.escape(str(args.get('text','')))+r'["”\']',prompt))
      target=resolve_person(args.get('to',''))
@@ -1191,6 +1241,8 @@ def send_selected_groups(targets,request_id=None):
 def execute_manual_command(text,request_id=None):
  global OWNER_REVISION
  if not fast_command_eligible(text):return {'handled':False}
+ timed=timed_chat_command(text,request_id)
+ if timed is not None:return {'handled':True,'reply':timed}
  import rules
  pace=rules.pace_rules(text)
  rule,description=rules.parse(text)
@@ -1515,4 +1567,5 @@ class Handler(BaseHTTPRequestHandler):
 if __name__=='__main__':
  PILOT.start()
  ENGINE.start()
+ threading.Thread(target=timed_loop,daemon=True).start()
  ThreadingHTTPServer(('0.0.0.0',int(os.environ.get('PORT','10000'))),Handler).serve_forever()

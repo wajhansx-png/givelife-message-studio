@@ -1,8 +1,9 @@
 """Tool permissions derive from current owner text, never retrieved/tool content."""
 import re,math
 import manual_commands
+import timed_tasks
 
-READ={'find_contact','recent_activity','list_rules','search_memory'}
+READ={'find_contact','recent_activity','list_rules','search_memory','list_schedules'}
 SEND={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
 def smalltalk(text):
  t=re.sub(r'[^\w\s]','',str(text).casefold()).strip()
@@ -25,6 +26,8 @@ def intent(text):
 def permitted(name,text):
  if name in READ:return True
  i=intent(text);t=i['text']
+ if name=='schedule_task':return timed_tasks.requested(t) and not i['query'] and not i['negative']
+ if name in SEND|{'autopilot'} and timed_tasks.requested(t):return False
  if name=='dm_donors':return i['send'] and bool(re.search(r'(?i)\bdonors?\b',t))
  if name=='dm_group':return i['send'] and bool(re.search(r'(?i)\b(members?|group)\b',t))
  if name=='dm_list':return i['send'] and bool(re.search(r'(?i)\b(list|numbers?|phones?)\b|(?:\+?92|0)3\d{2}',t))

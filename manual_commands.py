@@ -15,6 +15,7 @@ CONTROL=re.compile(r'^(?:(?:man|please|bhai|bro|yaar|now|abhi|send|resend|post|i
 
 def norm(text):
  t=str(text).casefold().replace('give-life','givelife')
+ t=re.sub(r'\b(?:guvelife|givelufe|givlife|giveilfe)\b','givelife',t)
  t=re.sub(r'\b(froup|gruo|gruop|goup|grp)\b','group',t)
  return re.sub(r'[^\w\s]',' ',t).strip()
 

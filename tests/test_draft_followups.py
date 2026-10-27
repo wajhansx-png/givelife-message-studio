@@ -8,7 +8,7 @@ import assistant,chat_runtime,chat_policy,draft_flow
 
 class DraftPolicyTests(unittest.TestCase):
  def test_supported_edit_families_have_save_permission(self):
-  for text in ('Add this as hook reath point','First 2 lines very much triggered and new','Fluid is pressing line is now old man','Make it shorter','Move the last paragraph to the top','Add a bullet about the parents report','Write as per latest parents report he is now short on breath','Remove the second sentence','Keep the caption simple and change the opening','Please make it shorter','Could you rewrite the first paragraph','Put this first'):
+  for text in ('Add this as hook reath point','First 2 lines very much triggered and new','Fluid is pressing line is now old man','Make it shorter','Move the last paragraph to the top','Add a bullet about the parents report','Write as per latest parents report he is now short on breath','Remove the second sentence','Keep the caption simple and change the opening','Please make it shorter','Could you rewrite the first paragraph','Put this first','Make short and very triggered','Make more short 3 lines','Only 3 lines man','Total msg of.3 lines','Add breaking heart icon','In message add hadith and ask 2000 not 1000 first'):
    with self.subTest(text=text):
     self.assertTrue(draft_flow.editing_request(text));self.assertTrue(chat_policy.permitted('set_message',text));self.assertFalse(chat_policy.permitted('new_wording',text))
  def test_show_new_message_and_real_deletions_are_separate(self):
@@ -21,6 +21,10 @@ class DraftPolicyTests(unittest.TestCase):
   text='Sebd more emotional urgency message please.'
   self.assertTrue(draft_flow.editing_request(text));self.assertTrue(chat_policy.permitted('set_message',text));self.assertFalse(chat_policy.permitted('send_appeal',text))
   self.assertTrue(chat_policy.permitted('send_appeal','Send a more emotional message to main now'))
+ def test_common_foundation_typos_resolve_only_known_alias(self):
+  import manual_commands
+  for name in ('guvelife','givelufe','givlife'):
+   self.assertEqual(manual_commands.parse('send in '+name+' group now')['target'],'main')
  def test_quoted_chat_log_cannot_authorize_edits_or_sends(self):
   for text in ('See fixes in logic: Add this as hook; send main','Chat log: rewrite message and send main','Transcript: Make it shorter; send main'):
    for name in ('set_message','send_appeal','new_wording'):

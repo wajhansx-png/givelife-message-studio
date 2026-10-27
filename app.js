@@ -82,7 +82,7 @@ function readPreview(k){return [...$(k+'Preview').children].map(d=>d.classList.c
 function setEditing(on,x,y){if(on&&!draftsReady){status('Loading the saved captions…');return}const k=view(),m=$(k+'Preview');if(on===editing)return;if(on&&document.body.classList.contains('nomsg'))setNoMsg(false);editing=on;
  document.body.classList.toggle('editing',on);$('edit').textContent=on?'Done':'Edit';$('edit').classList.toggle('on',on);
  if(on){m.contentEditable='true';m.style.fontSize=isPhone()?'16px':'17px';$('chat').style.overflowY='auto';const r=x!=null&&document.caretRangeFromPoint?document.caretRangeFromPoint(x,y):null;m.focus();if(r){const s=getSelection();s.removeAllRanges();s.addRange(r)}status('Editing · Enter = done · Shift+Enter = new line')}
- else{m.contentEditable='false';$(k).value=readPreview(k);render();save().catch(()=>status('Save failed',1))}}
+ else{m.contentEditable='false';$(k).value=readPreview(k);render();status('Ready');save().catch(()=>status('Save failed',1))}}
 $('edit').onclick=()=>setEditing(!editing);
 
 for(const k of ['group','dm'])$(k+'Preview').addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData.getData('text/plain')||'').replace(/\r/g,''))});

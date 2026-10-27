@@ -1,6 +1,6 @@
 """Real-model checks with isolated fake tools. Never sends WhatsApp messages."""
 import json,time,re
-import assistant
+import assistant,manual_commands,draft_workflow
 
 CASES={
  'greeting':{'prompt':'how r u','want':None},
@@ -60,7 +60,7 @@ def run_hadith_workflow():
    if name=='get_message':return {'kind':a['kind'],'text':state['drafts'][a['kind']]}
    if name=='set_message':
     if a['kind']!='group' or len(a['text'].strip().splitlines())>3 or '03097458815' not in a['text']:raise ValueError('Save the complete caption in at most 3 total lines, with the account number.')
-    state['drafts']['group']=a['text'];state['draft_task']['state']='ready';return 'Group caption saved.'
+    state['drafts']['group']=a['text'];state['draft_task'].update(state='ready',hash=draft_workflow.digest(a['text']));return 'Group caption saved.'
    if name=='send_appeal':
     if state['draft_task']['state']!='ready' or a['target'] not in ('main','test'):raise ValueError('Use the current task target main, or test first.')
     sent.append({'target':a['target'],'text':state['drafts']['group'],'poster':False});state['last_recipient']={'target':a['target'],'group':True}
@@ -69,8 +69,15 @@ def run_hadith_workflow():
    raise ValueError('This isolated task requires set_message or send_appeal.')
   return invoke
  prompts=['Make a very short hadith message for GiveLife without poster, only 3 total lines, ask to donate with the account number.','Add a breaking heart icon.','Send test first.','Send now.']
- for prompt in prompts:
-  result=assistant.chat(prompt,history,state,[],{t['function']['name']:call(t['function']['name']) for t in assistant.CHAT_TOOLS}) or {}
+ for index,prompt in enumerate(prompts):
+  if index>=2:
+   # Match the app's direct-command path. AI composes; it does not guess a
+   # recipient for Send now after a test. The same routing function runs in server.py.
+   plan=manual_commands.parse(prompt) or {}
+   target=plan.get('target') if plan.get('kind')=='appeal' else draft_workflow.repeat_target(state['draft_task'],state['drafts']['group'])
+   result={'reply':call('send_appeal')(target=target)}
+  else:result=assistant.chat(prompt,history,state,[],{t['function']['name']:call(t['function']['name']) for t in assistant.CHAT_TOOLS}) or {}
   reply=result.get('reply','');replies.append(reply);history.extend([{'who':'you','text':prompt},{'who':'app','text':reply}])
  ok=len(sent)==2 and [s['target'] for s in sent]==['test','main'] and sent[0]['text']==sent[1]['text'] and all(not s['poster'] for s in sent) and '💔' in sent[0]['text'] and len(sent[0]['text'].strip().splitlines())<=3
- return {'case':'hadith_workflow','passed':ok,'calls':calls,'reply':' | '.join(replies)[:1400],'sandbox':True}
+ details={'targets':[s['target'] for s in sent],'same_caption':len(sent)==2 and sent[0]['text']==sent[1]['text'],'lines':len(state['drafts']['group'].strip().splitlines()),'heart':'💔' in state['drafts']['group'],'model_turns':2,'direct_command_turns':2}
+ return {'case':'hadith_workflow','passed':ok,'calls':calls,'reply':(' | '.join(replies)+' | '+json.dumps(details))[:1800],'sandbox':True}

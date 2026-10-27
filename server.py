@@ -1362,10 +1362,9 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
   remember_manual({'kind':'appeal','target':plan['target']});out['reply']='Selected '+('GiveLife main' if plan['target']=='main' else plan['target'])+'.'
  elif kind=='repeat':
   task=workflow().data
-  if task.get('kind')=='group':
-   if not workflow().current('group',get_message('group')['text']):raise ValueError('The latest draft edit is not ready. Check it before sending.')
-   if not task.get('target'):raise ValueError('Choose the group for this draft. The previous recipient will not be reused.')
-   out.update(send_appeal(task['target'],request_id))
+  task_target=draft_workflow.repeat_target(task,get_message('group')['text'])
+  if task_target:
+   out.update(send_appeal(task_target,request_id))
    out.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left());return out
   if not LAST_MANUAL:raise ValueError('Who should receive it? Name a group or contact.')
   if LAST_MANUAL.get('kind')=='appeals':out.update(send_selected_groups(LAST_MANUAL['targets'],request_id))

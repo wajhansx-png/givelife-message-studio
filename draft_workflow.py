@@ -5,6 +5,13 @@ import manual_commands
 
 def digest(text):return hashlib.sha256(str(text).encode()).hexdigest()
 
+def repeat_target(task,text):
+ """The send-now route is deterministic; a test receipt cannot select its target."""
+ if task.get('kind')!='group':return None
+ if task.get('state')!='ready' or task.get('hash')!=digest(text):raise ValueError('The latest draft edit is not ready. Check it before sending.')
+ if not task.get('target'):raise ValueError('Choose the group for this draft. The previous recipient will not be reused.')
+ return task['target']
+
 def update_amount(text,old,left):
  text=re.sub(r'(?<!\d)(?:'+re.escape(f'{old:,}')+'|'+str(old)+r')(?!\d)',f'{left:,}',text)
  def option(m):return str(math.ceil(left/int(m['unit'].replace(',','').replace(' ',''))))+m['body']+m['unit']

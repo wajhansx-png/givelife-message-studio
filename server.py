@@ -1087,12 +1087,16 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
  read_tools=chat_policy.READ
  def allowed_groups():
   keys=set(manual_commands.groups(chat_policy.owner_text(prompt)))
+  if not keys and manual_commands.has_group_exclusion(chat_policy.owner_text(prompt)):
+   raise ValueError('No clear eligible groups remain after the exclusion. Name the groups to send to.')
   if not keys:
    if LAST_MANUAL.get('kind')=='appeal':keys.add(LAST_MANUAL.get('target'))
    elif LAST_MANUAL.get('kind')=='appeals':keys.update(LAST_MANUAL.get('targets',[]))
    else:keys.update(k for k,v in GROUPS.items() if v[1]==LAST_MANUAL.get('to'))
    if LAST_MANUAL.get('to')=='120363431210327603@g.us':keys.add('test')
-  keys.update(k for k,v in GROUPS.items() if v[1] in verified or v[1] in prompt)
+  # A contact lookup cannot re-authorize a group explicitly excluded by the owner.
+  if not manual_commands.groups(chat_policy.owner_text(prompt)):
+   keys.update(k for k,v in GROUPS.items() if v[1] in verified or v[1] in prompt)
   if 'all' in keys:keys.update(GROUPS)
   if 'free' in keys:keys.update(FREELANCE)
   return keys
@@ -1265,6 +1269,7 @@ def execute_manual_command(text,request_id=None):
  with LOCK:OWNER_REVISION+=1
  OWNER_GUARD.revision=OWNER_REVISION
  kind=plan['kind'];out={'handled':True}
+ if kind=='no_groups':raise ValueError('No clear eligible groups remain after the exclusion. Name the groups to send to.')
  if kind=='refuse_target':raise ValueError('That group is excluded. Nothing was sent.')
  if kind=='stop_dms':
   CAMPAIGN['stop']=True;ENGINE.set_dms(False,ENGINE.s.get('dm_daily',30));out['reply']='DMs stopped. Automatic DMs stay off until you turn them on.'
@@ -1343,7 +1348,8 @@ def dm_identity():
 def fast_command_eligible(text):
  text=str(text).strip()
  if not text or len(text)>10000:return False
- if re.match(r'(?i)^(summarize|analyse|analyze|explain|review|read|check)\b',text):return False
+ if re.fullmatch(r'(?i)(?:show|list|view|my)?\s*(?:scheduled?\s+(?:tasks|messages|sends)|schedules|scheduler)',text):return True
+ if re.match(r'(?i)^(?:please\s+)?(?:show|preview|draft|summarize|summarise|analyse|analyze|explain|review|read|check|tell me)\b',text):return False
  if text.startswith(('"','“',"'",'```','>')) or re.search(r'(?i)\b(transcript|message says|text says|summarize|analyse|analyze|see fn remove)\s*:',text):return False
  if re.search(r'(?i);|\band then\b|\n(?:you|assistant|app):',text):return False
  if re.search(r'(?i)\band\s+(?:set|change|write|delete|remove|remember|pause|enable|disable)\b',text):return False

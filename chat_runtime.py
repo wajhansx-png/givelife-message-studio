@@ -2,7 +2,10 @@
 import datetime,json,re,time
 import chat_policy
 from chat_memory import safe_text
-from state_shapes import mapping,memories,history as valid_history
+from state_shapes import mapping,records,memories,history as valid_history
+
+def claims_completion(reply):
+ return bool(re.search(r'(?i)^\s*(?:sent|posted|deleted|saved|queued|scheduled|updated|changed)\b|\b(?:i (?:have |just )?(?:sent|posted|deleted|saved|updated|changed|queued|scheduled)|successfully (?:sent|posted|deleted))\b',reply))
 
 def context_messages(text,history,state,memory):
  import assistant
@@ -12,7 +15,7 @@ def context_messages(text,history,state,memory):
  state=mapping(state)
  # Historical instructions and retrieved material stay outside the system role.
  context={'state':assistant._slim(state),'preferences':memories(memory)[-20:],
-  'retrieved':state.get('retrieved',[])[:8],'ongoing_task':mapping(state.get('pending_task')),
+  'retrieved':[dict(x) for x in records(state.get('retrieved')) if isinstance(x,dict)][:8],'ongoing_task':mapping(state.get('pending_task')),
   'playbook_notes':safe_text(assistant.playbook(),2500)}
  for item in context['preferences']:item['rule']=safe_text(item.get('rule'),500)
  for item in context['retrieved']:
@@ -44,20 +47,22 @@ def run_chat(text,history,state,memory,do):
   if time.monotonic()-started>150:errors.append('The reasoning time limit was reached.');break
   try:msg=mapping(assistant._chat_raw(key,assistant._system(memory),tools,msgs))
   except Exception as e:
-   if done or jobs:errors.append(str(e));break
-   raise
+   errors.append(safe_text(e,300));break
   content=msg.get('content')
   reply=content.strip() if isinstance(content,str) else ''
   raw_calls=msg.get('tool_calls')
-  calls=raw_calls if isinstance(raw_calls,list) else []
+  if raw_calls is not None and not isinstance(raw_calls,list):
+   errors.append('The model returned malformed tool calls. No partial action was executed.');break
+  calls=raw_calls or []
   if not calls:
-   claimed=bool(re.search(r'(?i)\b(sent|posted|deleted|saved|updated|changed|queued|scheduled)\b',reply))
-   if not done and (claimed and not outcomes or chat_policy.intent(text)['send']) and not nudged:
+   claimed=claims_completion(reply)
+   if not done and (claimed or chat_policy.intent(text)['send']) and not nudged:
     nudged=True;msgs.append({'role':'assistant','content':reply or 'I need to complete the action.'})
     msgs.append({'role':'user','content':'No action tool has confirmed this request. Use the appropriate available tool, or clearly ask for the missing information. Do not claim completion.'});continue
    break
-  valid_calls=[tc for tc in calls if isinstance(tc,dict) and isinstance(tc.get('id'),str) and isinstance(tc.get('function'),dict)]
-  if not valid_calls:errors.append('The model returned malformed tool calls.');break
+  valid_calls=[tc for tc in calls if isinstance(tc,dict) and isinstance(tc.get('id'),str) and tc['id'].strip() and isinstance(tc.get('function'),dict) and isinstance(tc['function'].get('name'),str)]
+  if len(valid_calls)!=len(calls) or len({tc['id'] for tc in valid_calls})!=len(calls):
+   errors.append('The model returned malformed or duplicate tool calls. No partial action was executed.');break
   envelope={'role':'assistant','content':reply,'tool_calls':valid_calls}
   if isinstance(msg.get('reasoning_content'),str):envelope['reasoning_content']=msg['reasoning_content']
   msgs.append(envelope);terminal=False;blocked=False
@@ -83,6 +88,7 @@ def run_chat(text,history,state,memory,do):
      actions.extend(actual['actions']);display=actual.get('reply','Prepared on your screen.')
     else:display=actual if isinstance(actual,str) else json.dumps(actual,ensure_ascii=False)
     if name not in chat_policy.READ and display not in done:done.append(str(display))
+    errors=[e for e in errors if not e.startswith(str(name)+': ')]
     result={'ok':True,'status':status,'result':actual}
     terminal=terminal or name in chat_policy.SEND
    except Exception as e:
@@ -105,6 +111,6 @@ def run_chat(text,history,state,memory,do):
  elif not reply:reply='I could not determine a reliable answer. Please tell me the missing recipient or detail.'
  elif chat_policy.intent(text)['send'] and not jobs and not actions:
   if re.search(r'(?i)\b(sent|posted|queued|delivered)\b',reply):reply='No send has been confirmed. I need the intended recipient or message to proceed.'
- elif not outcomes and re.search(r'(?i)\b(?:i (?:have |just )?(?:sent|posted|deleted|saved|updated)|successfully (?:sent|posted|deleted))\b',reply):reply='I do not have a confirmed tool result for that action.'
+ elif claims_completion(reply):reply='I do not have a confirmed tool result for that action.'
  return {'reply':safe_text(reply,10000),'actions':actions,'done':done,'jobs':jobs,
   'diagnostics':{'model':assistant.MODEL,'iterations':iteration+1,'duration_ms':round((time.monotonic()-started)*1000),'tools':outcomes,'errors':errors[-3:]}}

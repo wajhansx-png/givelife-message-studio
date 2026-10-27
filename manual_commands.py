@@ -18,7 +18,7 @@ def norm(text):
  t=re.sub(r'\b(froup|gruo|gruop|goup|grp)\b','group',t)
  return re.sub(r'[^\w\s]',' ',t).strip()
 
-def groups(text):
+def _group_mentions(text):
  t=re.sub(r'\s+',' ',norm(text));matches=[]
  for key,names in ALIASES.items():
   for name in names:
@@ -26,6 +26,26 @@ def groups(text):
  matches=[m for m in matches if not any(n[0]<=m[0] and n[1]>=m[1] and n[1]-n[0]>m[1]-m[0] for n in matches)]
  keys=list(dict.fromkeys(m[2] for m in matches))
  return keys
+
+GROUP_EXCLUSION=re.compile(r'(?i)\b(?:except(?: for)?|excluding|but not|not(?: to)?)\s+')
+
+def has_group_exclusion(text):
+ match=GROUP_EXCLUSION.search(str(text))
+ return bool(match and _group_mentions(str(text)[:match.start()]))
+
+def groups(text):
+ """Resolve explicit exclusions before any aggregate target is dispatched."""
+ t=str(text)
+ exclusion=GROUP_EXCLUSION.search(t)
+ if not exclusion:return _group_mentions(t)
+ included=_group_mentions(t[:exclusion.start()]);excluded=_group_mentions(t[exclusion.end():])
+ if not included:return _group_mentions(t)
+ if not excluded:return [] # Missing exclusion needs clarification, never an aggregate send.
+ production=['main','community','fiverr','upwork','uet','toprated']
+ def expand(keys):
+  return list(dict.fromkeys(k for key in keys for k in (production if key=='all' else production[1:] if key=='free' else [key])))
+ blocked=set(expand(excluded))
+ return [key for key in expand(included) if key not in blocked]
 
 def group(text):
  keys=groups(text)
@@ -69,6 +89,7 @@ def parse(text):
  phone_text=re.fullmatch(r'((?:\+?92|0092|0)?3\d{2}[\s-]?\d{7})\s+(?:send|text|message)\s+(.+)',t,re.I|re.S)
  if phone_text and not control_payload(phone_text[2]):return {'kind':'text','to':phone_text[1],'text':phone_text[2],'literal':True}
  targets=groups(t);target=targets[0] if len(targets)==1 else None
+ if SEND.search(t) and has_group_exclusion(t) and not targets:return {'kind':'no_groups'}
  if SEND.search(t) and len(targets)>1 and not re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return {'kind':'appeals','targets':targets,'amount':amount}
  if SEND.search(t) and target:
   if re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return None

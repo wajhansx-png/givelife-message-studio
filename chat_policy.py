@@ -12,15 +12,18 @@ def owner_text(text):
  text=re.sub(r'```[\s\S]*?```',' [quoted data] ',str(text))
  text=re.sub(r'(?m)^\s*>.*$',' [quoted data] ',text)
  text=re.sub(r'"[^"\n]*"|“[^”\n]*”',' [quoted data] ',text)
+ text=re.sub(r"(?<!\w)'[^'\n]+'(?!\w)",' [quoted data] ',text)
  text=re.split(r'(?i)(?:message says|text says|transcript|see fn remove|summarize this|analyse this|analyze this)\s*:',text,maxsplit=1)[0]
  return text
 
 def intent(text):
  t=owner_text(text);low=manual_commands.norm(t)
  query=bool(re.search(r'(?i)^(?:what|why|how|did you|have you|was it|when|show (?:me )?(?:what|status))\b',t.strip()))
+ # A request to inspect or draft a send is not itself permission to send.
+ inspect=bool(re.match(r'(?i)^\s*(?:please\s+)?(?:show|preview|draft|explain|review|summari[sz]e|analy[sz]e|tell me)\b',t))
  negative=bool(re.search(r"(?i)\b(?:don'?t|dont|do not|never|stop)\s+(?:ever\s+)?(?:send|sending|post|posting|share|sharing|dm)\b|\b(preview only|draft only)\b",t))
  dm_verb=bool(re.match(r'(?i)^\s*dm\s+(?!(?:has|have|had|is|was|looks|needs|should|does|caption|format|structure|name|text|icons|remove|edit|change)\b)\S',t))
- sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query
+ sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query and not inspect
  return {'text':t,'send':sending,'query':query,'negative':negative,'batch':sending and bool(re.search(r'(?i)\b(dm|dms|donors?|members?|people|numbers|list)\b',t))}
 
 def permitted(name,text):

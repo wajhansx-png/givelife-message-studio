@@ -40,6 +40,7 @@ class CommandTests(unittest.TestCase):
 
 class SendTests(unittest.TestCase):
  def setUp(self):
+  self.gowa=patch.object(app,'GOWA_URL','http://127.0.0.1:1');self.gowa.start()
   app.cancel_jobs('test reset')
   app.STORE=Store();app.KNOWLEDGE=app.Knowledge(app.DATA,app.STORE);app.KNOWLEDGE.data={'entries':[],'turns':[],'feedback':[],'traces':[],'pending':{}};app.JOBS.clear();app.JOB_CANCEL.clear();app.REQUEST_JOBS.clear();app.ACTIVE=None;app.LAST_LOCAL.clear();app.LAST_MANUAL.clear();app.DELIVERIES.clear();app.LAST_RECIPIENT.clear();app.LAST_JOB.clear();app.OWNER_REVISION=0
   app.HOLD.write_text('{"on":false}');app.AUTO.write_text('{"on":false}');app.CAMPAIGN.update(running=False,stop=False)
@@ -60,7 +61,7 @@ class SendTests(unittest.TestCase):
   app.cancel_jobs('test complete')
   deadline=time.monotonic()+2
   while any(not x.get('done') for x in app.JOBS.values()) and time.monotonic()<deadline:time.sleep(.005)
-  self.curl.stop();self.api.stop()
+  self.curl.stop();self.api.stop();self.gowa.stop()
  def wait(self,ident,seconds=2):
   end=time.monotonic()+seconds
   while not app.JOBS[ident]['done'] and time.monotonic()<end:time.sleep(.005)

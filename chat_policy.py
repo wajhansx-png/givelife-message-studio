@@ -6,6 +6,15 @@ import draft_flow
 
 READ={'find_contact','recent_activity','list_rules','search_memory','list_schedules','get_message'}
 SEND={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
+
+def switch_request(text,subject):
+ clauses=re.split(r';|\band(?: then)?\b|\bbut\b',owner_text(text),flags=re.I)
+ selected=[c for c in clauses if re.search(r'(?i)\b(?:auto|autopilot)\b' if subject=='auto' else r'(?i)\bdms?\b',c)]
+ states=set()
+ for clause in selected:
+  if re.search(r'(?i)\b(on|enable|start)\b',clause):states.add(True)
+  if re.search(r'(?i)\b(off|disable|stop)\b',clause):states.add(False)
+ return next(iter(states)) if len(states)==1 else None
 def smalltalk(text):
  t=re.sub(r'[^\w\s]','',str(text).casefold()).strip()
  return bool(re.fullmatch(r'(?:hi+|hu|hey+|he+l+o+|yo+|salam|assalamualaikum|how (?:are|r) (?:you|u)|how are you doing|hows it going|everything good|good (?:morning|evening|night)|kya haal hai|kya hal hai|sab theek)',t))
@@ -19,12 +28,12 @@ def owner_text(text):
 
 def intent(text):
  t=owner_text(text);low=manual_commands.norm(t)
- query=bool(re.search(r'(?i)^(?:what|why|how|did you|have you|was it|when|show (?:me )?(?:what|status))\b',t.strip()))
+ query=manual_commands.question_request(t) or bool(re.search(r'(?i)^show (?:me )?(?:what|status)\b',t.strip()))
  # A request to inspect or draft a send is not itself permission to send.
  inspect=bool(re.match(r'(?i)^\s*(?:please\s+)?(?:show|preview|draft|explain|review|summari[sz]e|analy[sz]e|tell me)\b',t))
  negative=bool(re.search(r"(?i)\b(?:don'?t|dont|do not|never|stop)\s+(?:ever\s+)?(?:send|sending|post|posting|share|sharing|dm)\b|\b(preview only|draft only)\b",t))
  dm_verb=bool(re.match(r'(?i)^\s*dm\s+(?!(?:has|have|had|is|was|looks|needs|should|does|caption|format|structure|name|text|icons|remove|edit|change)\b)\S',t))
- sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query and not inspect
+ sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query and not inspect and not manual_commands.deferred_request(t)
  # "Send a more emotional message" can request wording. An explicit destination
  # or immediate-send phrase disambiguates it; otherwise only prepare the rewrite.
  if draft_flow.editing_request(t) and re.match(r'(?i)^\s*(?:send|sebd|semd|sned|snd)\s+(?:a\s+)?(?:more|less)\b',t) and not manual_commands.groups(t) and not re.search(r'(?i)\b(?:to|in|now|immediately|asap)\b|(?:\+?92|0)3\d{9}',t):sending=False
@@ -34,12 +43,17 @@ def permitted(name,text):
  if name in READ:return True
  i=intent(text);t=i['text']
  if name=='schedule_task':return timed_tasks.requested(t) and not i['query'] and not i['negative']
+ if name in SEND|{'autopilot','hold','delete_last_message','set_left','money_came','set_dms','set_pace','set_group_pace','pause_group','resume_group','set_quiet_hours'} and manual_commands.deferred_request(t):return False
  if name in SEND|{'autopilot','hold','resume_group','pause_group'} and timed_tasks.requested(t):return False
  if name=='dm_donors':return i['send'] and bool(re.search(r'(?i)\bdonors?\b',t))
  if name=='dm_group':return i['send'] and bool(re.search(r'(?i)\b(members?|group)\b',t))
  if name=='dm_list':return i['send'] and bool(re.search(r'(?i)\b(list|numbers?|phones?)\b|(?:\+?92|0)3\d{2}',t))
  if name in SEND:return i['send']
  if i['query']:return False
+ verbs={'delete_last_message':'delete|remove|revoke','autopilot':'turn|start|stop|enable|disable|change','hold':'hold|pause|stop|resume|continue|unhold','set_dms':'start|stop|enable|disable|change|turn','set_left':'set|change|update|record','money_came':'record|subtract|deduct|change','set_group_pace':'set|change|speed|slow','set_pace':'set|change|speed|slow','pause_group':'pause|stop','resume_group':'resume|start','set_message':'edit|change|rewrite|remove|replace|save'}
+ if name in verbs and re.search(r"(?i)\b(?:don'?t|dont|do not|never)\s+(?:"+verbs[name]+r')\b',t):return False
+ inspect=bool(re.match(r'(?i)^\s*(?:please\s+)?(?:show|preview|explain|review|summari[sz]e|analy[sz]e|tell me)\b',t))
+ if inspect and name not in ('set_message','prepare_dm'):return False
  if name=='delete_last_message':return bool(re.search(r'(?i)\b(delete|remove|revoke)\b',t)) and not re.search(r"(?i)\b(dont|don't|do not|never)\b",t)
  if name=='hold':return bool(re.search(r'(?i)\b(hold|wait|pause|stop|resume|continue|unhold|wrong whatsapp|connected now)\b',t))
  if name=='autopilot':return bool(re.search(r'(?i)\b(auto|autopilot)\b.*\b(on|off|enable|disable|start|stop)\b|\b(enable|disable|start|stop)\b.*\b(auto|autopilot)\b',t))

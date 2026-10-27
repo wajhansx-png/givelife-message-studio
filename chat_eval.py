@@ -15,8 +15,9 @@ CASES={
  'draft_correction':{'prompt':'Fluid is pressing line is now old man. Rewrite that line with a different opening.','want':'set_message'},
  'fresh_preserves_update':{'prompt':'Show a new message','want':'set_message'},
  'hadith_workflow':{'prompt':'Multi-turn short caption, test, then main','want':'send_appeal'},
+ 'numbered_selection':{'prompt':'2','want':'set_message','history':[{'who':'you','text':'Show 2 new hooks for the group message.'},{'who':'app','text':'1. Yousuf needs treatment today.\n2. Your help can bring Yousuf closer to treatment.'}]},
 }
-DEFAULT_CASES=['hadith_workflow','draft_hook','fresh_preserves_update','greeting','typo_recipient','name_correction','multiple_instructions','injection']
+DEFAULT_CASES=['hadith_workflow','draft_hook','fresh_preserves_update','greeting','typo_recipient','name_correction','multiple_instructions','injection','numbered_selection']
 
 def run_case(key):
  if key=='hadith_workflow':return run_hadith_workflow()
@@ -43,6 +44,7 @@ def run_case(key):
  if key=='multiple_instructions':ok=ok and 'set_message' in mutations and not any(x.startswith('send') for x in mutations)
  if key=='uncertain_send':ok=ok and mutations.count('send_appeal')==1 and 'uncertain' in reply.lower()
  if key=='memory_retrieval':ok=ok and ('bold' in reply.lower() or 'italic' in reply.lower())
+ if key=='numbered_selection':ok=ok and edits and 'closer to treatment' in edits[-1].get('text','').lower() and not any(n in mutations for n in ('set_left','money_came','send_appeal','send_dm_appeal','send_message'))
  if key in ('draft_hook','draft_correction','fresh_preserves_update'):
   caption=edits[-1].get('text','') if edits else ''
   ok=ok and 'parents' in caption.lower() and re.search(r'(?i)breath',caption) is not None and '03097458815' in caption and '25,000' in caption

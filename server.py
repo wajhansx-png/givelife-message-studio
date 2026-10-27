@@ -48,7 +48,13 @@ def persist_file(key,path):
 
 def api(path):
  req=urllib.request.Request(GOWA_URL+path,headers={'X-Device-Id':DEVICE})
- with urllib.request.urlopen(req,timeout=12) as r:return json.load(r)
+ with urllib.request.urlopen(req,timeout=12) as r:return mapping(json.load(r))
+
+def api_result(path):return mapping(mapping(api(path)).get('results'))
+
+def api_messages(path):
+ data=api_result(path).get('data',[])
+ return [x for x in data if isinstance(x,dict)] if isinstance(data,list) else []
 
 def custom_recipient(body):
  target=str(body.get('target',''))
@@ -71,7 +77,7 @@ def send_custom(body):
  if not STORE:raise ValueError('Persistent send records are unavailable. Try again later.')
  if not SEND_LOCK.acquire(blocking=False):raise ValueError('Another send is running. Please wait for it to finish.')
  try:
-  status=api('/devices/'+DEVICE+'/status').get('results',{})
+  status=api_result('/devices/'+DEVICE+'/status')
   if not status.get('is_connected') or not status.get('is_logged_in'):raise ValueError('WhatsApp is disconnected. Tap WhatsApp to reconnect.')
   now=time.time();saved=STORE.get('last_sent',{})
   if not is_group:
@@ -87,11 +93,11 @@ def send_custom(body):
    if body.get('poster') is True:result=send_image(jid,message)
    else:
     req=urllib.request.Request(GOWA_URL+'/send/message',data=json.dumps({'phone':jid,'message':message}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
-    with urllib.request.urlopen(req,timeout=40) as response:result=json.load(response)
+    with urllib.request.urlopen(req,timeout=40) as response:result=mapping(json.load(response))
   except Exception:result={'code':'UNCERTAIN','message':'Send not confirmed. Check WhatsApp before retrying.'}
   if is_group and result.get('code')=='SUCCESS':
    saved[jid]=time.time();STORE.put('last_sent',saved);LAST_LOCAL[jid]=time.time();record_delivery(jid,message,result)
-  STORE.put('custom_receipt_'+uuid.uuid4().hex,{'time':now,'jid':jid,'code':result.get('code'),'message_id':result.get('results',{}).get('message_id')})
+  STORE.put('custom_receipt_'+uuid.uuid4().hex,{'time':now,'jid':jid,'code':result.get('code'),'message_id':mapping(result.get('results')).get('message_id')})
   if not is_group:STORE.put('dm_recipient_'+digest,{'state':result.get('code','UNCERTAIN'),'time':now})
   if result.get('code')=='SUCCESS':remember_manual({'kind':'text','to':jid,'text':message,'with_picture':body.get('poster') is True})
   return result
@@ -190,24 +196,24 @@ def set_left(left):
 def send_image(jid,caption,check_gap=False,_retry=True):
  if on_hold():return {'code':'ERROR','message':'On hold: you told me to wait.'}
  if jid in NEVER_GROUPS:return {'code':'ERROR','message':'This group is never used.'}
- status=api('/devices/'+DEVICE+'/status').get('results',{})
+ status=api_result('/devices/'+DEVICE+'/status')
  if not status.get('is_connected') or not status.get('is_logged_in'):return {'code':'ERROR','message':'WhatsApp disconnected. Log in again.'}
  if check_gap:
   saved=STORE.get('last_sent',{}) if STORE else {}
   if jid in saved:
    age=time.time()-saved[jid]
    if age<900:return {'code':'COOLDOWN','message':f'Posted recently. Try in {math.ceil((900-age)/60)} min.'}
-  messages=api('/chat/'+urllib.parse.quote(jid,safe='')+'/messages?limit=50').get('results',{}).get('data',[]);outgoing=[m for m in messages if m.get('is_from_me')]
+  messages=api_messages('/chat/'+urllib.parse.quote(jid,safe='')+'/messages?limit=50');outgoing=[m for m in messages if m.get('is_from_me') is True]
   if outgoing:
    latest=max(datetime.datetime.fromisoformat(m['timestamp'].replace('Z','+00:00')) for m in outgoing);age=(datetime.datetime.now(datetime.timezone.utc)-latest).total_seconds()
    if age<900:return {'code':'COOLDOWN','message':f'Posted recently. Try in {math.ceil((900-age)/60)} min.'}
  cap=DATA/('caption-'+uuid.uuid4().hex+'.txt');cap.write_text(caption,encoding='utf-8')
  r=subprocess.run(['curl','-s','--max-time','40','-X','POST',GOWA_URL+'/send/image','-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'image=@{DATA / "poster.jpg"};type=image/jpeg','-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
  cap.unlink(missing_ok=True)
- try:result=json.loads(r.stdout)
+ try:result=mapping(json.loads(r.stdout))
  except Exception:result={'code':'ERROR','message':'Send not confirmed. Check WhatsApp before retrying.'}
  if STORE:
-  receipt={'time':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jid':jid,'code':result.get('code'),'message_id':result.get('results',{}).get('message_id')}
+  receipt={'time':datetime.datetime.now(datetime.timezone.utc).isoformat(),'jid':jid,'code':result.get('code'),'message_id':mapping(result.get('results')).get('message_id')}
   STORE.put('receipt_'+uuid.uuid4().hex,receipt)
   if result.get('code')=='SUCCESS':
    saved=STORE.get('last_sent',{});saved[jid]=time.time();STORE.put('last_sent',saved)
@@ -395,7 +401,7 @@ if STORE:
 
 def on_hold():
  try:return bool(json.loads(HOLD.read_text(encoding='utf-8')).get('on')) if HOLD.exists() else False
- except Exception:return False
+ except Exception:return True
 
 def check_hold():
  if on_hold():raise ValueError('On hold: you told me to wait. Say "resume" when the right WhatsApp is connected.')
@@ -429,7 +435,7 @@ def auto_log(text,quiet=False):
 
 def wa_ok():
  try:
-  s=api('/devices/'+DEVICE+'/status').get('results',{});return bool(s.get('is_connected') and s.get('is_logged_in'))
+  s=api_result('/devices/'+DEVICE+'/status');return bool(s.get('is_connected') and s.get('is_logged_in'))
  except Exception:return False
 
 NEVER_GROUPS={'120363432572916292@g.us','120363431093838536@g.us'}  # 37-member GiveLife copy, Exclusive Upwork Course
@@ -528,7 +534,7 @@ def send_free(to,text,with_picture,literal=False):
  check_hold()
  text=str(text).strip()
  if not text or len(text)>4000:raise ValueError('Message must be 1 to 4,000 characters.')
- if (manual_commands.control_payload(text) or (manual_commands.group(text) and re.search(r'(?i)\b(now|message|restart|gap|poster|send)\b',text))) and not literal:raise ValueError('That is a send instruction, not message text. Use send_appeal for the current group caption.')
+ if not literal and (manual_commands.control_payload(text) or (manual_commands.group(text) and re.search(r'(?i)\b(now|message|restart|gap|poster|send)\b',text))):raise ValueError('That is a send instruction, not message text. Use send_appeal for the current group caption.')
  to=str(to).strip();key=manual_commands.group(to)
  if not wa_ok():raise ValueError('WhatsApp is not connected. Link it first.')
  if key:
@@ -544,7 +550,7 @@ def send_free(to,text,with_picture,literal=False):
   target=phone+'@s.whatsapp.net'
  with SEND_LOCK:
   check_hold()
-  img=image_path(CHAT_IMAGE.get('id') or 'poster') if with_picture else None
+  img=image_path(current_chat_image() or 'poster') if with_picture else None
   result=send_with_image(target,text,img)
  if result.get('code')!='SUCCESS':raise ValueError('Not confirmed: '+str(result.get('message',''))[:100]+' Check WhatsApp before retrying.')
  record_delivery(target,text,result)
@@ -655,8 +661,10 @@ def timed_loop():
   time.sleep(1)
 
 CHAT_IMAGE={}
+def current_chat_image():return getattr(OWNER_GUARD,'image',CHAT_IMAGE.get('id'))
 def base_chat_callbacks():
  def came(amount):
+  if int(amount)<0 or int(amount)>read_left():raise ValueError('That donation does not fit the remaining amount. Check the balance before recording it.')
   nl=max(0,read_left()-int(amount));set_left(nl);return f'Rs. {int(amount):,} came. Rs. {nl:,} left.'
  return {'set_left':lambda left:(set_left(int(left)),f'Rs. {int(left):,} left. Messages updated.')[1],
   'money_came':came,
@@ -671,7 +679,7 @@ def base_chat_callbacks():
   'list_rules':lambda:'; '.join(f"#{r['id']} {r['text']}" for r in ENGINE.rule_list()) or 'No rules yet.',
   'delete_rule':lambda rule_id:('Rule removed.' if ENGINE.delete_rule(rule_id) else 'No such rule.'),
   'hold':set_hold,'dm_donors':lambda count=10:dm_batch_now('donors',count),'dm_group':lambda group,count=10:dm_batch_now('group',count,group),
-  'dm_list':lambda people,gap_minutes,vary,start_after_minutes:start_campaign({'people':people,'gap_seconds':float(gap_minutes)*60,'vary':vary,'start_after_seconds':float(start_after_minutes)*60,'image':CHAT_IMAGE.get('id') or 'poster'})}
+  'dm_list':lambda people,gap_minutes,vary,start_after_minutes:start_campaign({'people':people,'gap_seconds':float(gap_minutes)*60,'vary':vary,'start_after_seconds':float(start_after_minutes)*60,'image':current_chat_image() or 'poster'})}
 
 
 import autopilot, learning as learning_mod, random as _random
@@ -681,7 +689,7 @@ OWNER_PHONE=os.environ.get('OWNER_PHONE','923205069925')
 def send_text(jid,text):
  check_hold()
  req=urllib.request.Request(GOWA_URL+'/send/message',data=json.dumps({'phone':jid,'message':text}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
- with urllib.request.urlopen(req,timeout=40) as r:return json.load(r)
+ with urllib.request.urlopen(req,timeout=40) as r:return mapping(json.load(r))
 
 def last_sent_by_key():
  saved=dict(LAST_LOCAL)
@@ -712,7 +720,7 @@ def start_keys_job(keys,caption,queue=False):
  return bool(start_send_job([k for k in GROUPS if k in keys],caption,manual=False))
 
 def group_messages(jid):
- return api('/chat/'+urllib.parse.quote(jid,safe='')+'/messages?limit=20').get('results',{}).get('data',[]) or []
+ return api_messages('/chat/'+urllib.parse.quote(jid,safe='')+'/messages?limit=20')
 
 def already_dmed(digest):
  return digest in BLOCKED or bool(STORE and (STORE.get('dm_recipient_'+digest) or STORE.get('optout_'+digest)))
@@ -766,7 +774,7 @@ def send_with_image(jid,caption,img):
  check_hold()
  if img is None:
   req=urllib.request.Request(GOWA_URL+'/send/message',data=json.dumps({'phone':jid,'message':caption}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
-  with urllib.request.urlopen(req,timeout=40) as r:return json.load(r)
+  with urllib.request.urlopen(req,timeout=40) as r:return mapping(json.load(r))
  cap=DATA/('caption-'+uuid.uuid4().hex+'.txt');cap.write_text(caption,encoding='utf-8')
  r=subprocess.run(['curl','-s','--max-time','60','-X','POST',GOWA_URL+'/send/image','-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'image=@{img};type=image/jpeg','-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
  cap.unlink(missing_ok=True)
@@ -1058,7 +1066,7 @@ def remember_manual(value):
 
 def record_delivery(jid,text,result):
  if result.get('code')!='SUCCESS':return
- ident=result.get('results',{}).get('message_id')
+ ident=mapping(result.get('results')).get('message_id')
  DELIVERIES[jid]={'message_id':ident,'text':text,'time':time.time()}
  if STORE:STORE.put('last_deliveries',DELIVERIES)
 
@@ -1125,7 +1133,7 @@ def delete_last_group(target=None):
  entry=DELIVERIES.get(jid,{})
  ident=entry.get('message_id')
  if not ident:
-  own=[m for m in group_messages(jid) if m.get('is_from_me') and m.get('id')]
+  own=[m for m in group_messages(jid) if m.get('is_from_me') is True and m.get('id')]
   own.sort(key=lambda m:str(m.get('timestamp','')),reverse=True)
   if own:ident=own[0]['id']
  if not ident:raise ValueError('I cannot identify an own sent message in that group. No message was deleted.')
@@ -1136,23 +1144,29 @@ def delete_last_group(target=None):
    check_hold()
    revision=getattr(OWNER_GUARD,'revision',None)
    if revision is not None and revision!=OWNER_REVISION:raise ValueError('Superseded by a newer instruction.')
-   with urllib.request.urlopen(req,timeout=20) as response:result=json.load(response)
+   with urllib.request.urlopen(req,timeout=20) as response:result=mapping(json.load(response))
  except Exception:raise ValueError('WhatsApp did not confirm deletion. Check the group on your phone.') from None
  if result.get('code')!='SUCCESS':raise ValueError('WhatsApp refused deletion. Check the message on your phone.')
  DELIVERIES.pop(jid,None)
  if STORE:STORE.put('last_deliveries',DELIVERIES)
  return 'WhatsApp confirmed deletion of the last own message in '+('Givelife test' if key=='test' else GROUPS[key][0])+'.'
 
-def chat_callbacks(prompt='',revision=None,task_id=None):
+def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection_kind='group'):
  callbacks=base_chat_callbacks();cache={};verified=set();owner=chat_policy.intent(prompt)
- if draft_flow.editing_request(owner['text']) and (revision is None or revision==OWNER_REVISION):
-  kind='dm' if re.search(r'(?i)\bdm\b',owner['text']) else 'group'
+ if (draft_flow.editing_request(owner['text']) or selection is not None) and (revision is None or revision==OWNER_REVISION):
+  kind=selection_kind if selection is not None else 'dm' if re.search(r'(?i)\bdm\b',owner['text']) else 'group'
   workflow().begin(owner['text'],kind,get_message(kind)['text'])
  sending=owner['send'];dm_allowed=owner['batch']
  send_tools={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
  read_tools=chat_policy.READ
  def allowed_groups():
+  destination=manual_commands.parse(prompt) or {}
+  if destination.get('kind') in ('text','appeal_to'):
+   selected=manual_commands.group(destination.get('to',''))
+   if not selected:return set()
+   return set(GROUPS) | {'all'} if selected=='all' else set(FREELANCE) | {'free'} if selected=='free' else {selected}
   keys=set(manual_commands.groups(chat_policy.owner_text(prompt)))
+  if not keys and re.search(r'(?i)\b(?:him|her|contact|phone|dms?)\b',owner['text']):return set()
   if not keys and manual_commands.has_group_exclusion(chat_policy.owner_text(prompt)):
    raise ValueError('No clear eligible groups remain after the exclusion. Name the groups to send to.')
   if not keys:
@@ -1173,7 +1187,7 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
  def wrapped(name,fn):
   def call(**args):
    if revision is not None and revision!=OWNER_REVISION and name not in read_tools:raise ValueError('Superseded by your newer instruction. No old action was sent.')
-   if not chat_policy.permitted(name,prompt):
+   if not chat_policy.permitted(name,prompt) and not (name=='set_message' and selection is not None):
     if name in send_tools and not sending:raise ValueError('The current instruction does not ask to send. Nothing was sent.')
     if name in ('dm_list','dm_donors','dm_group'):raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
     raise ValueError('The current instruction does not authorize '+name+'. Nothing was changed or sent.')
@@ -1183,6 +1197,25 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
    if name=='remember' and not re.search(r'(?i)\b(always|never|remember|from now|in future|yaad rakho)\b',prompt):raise ValueError('This is a current edit, not a request to save a future preference.')
    if name=='set_dms' and args.get('enabled') and not re.search(r'(?i)\b(dm|dms)\b.*\b(on|enable|start)\b|\b(enable|start)\b.*\b(dm|dms)\b',prompt):raise ValueError('DMs cannot be enabled without your current instruction.')
    if name=='autopilot' and not re.search(r'(?i)\b(auto|autopilot)\b',prompt):raise ValueError('This request does not change Auto mode.')
+   if name=='autopilot':
+    desired=chat_policy.switch_request(prompt,'auto')
+    if desired is None or args.get('on') is not desired:raise ValueError('The Auto switch does not match the current instruction. Nothing was changed.')
+   if name=='set_dms':
+    desired=chat_policy.switch_request(prompt,'dm')
+    if desired is not None and args.get('enabled') is not desired:raise ValueError('The DM switch does not match the current instruction. Nothing was changed.')
+   if name in ('pause_group','resume_group','set_group_pace'):
+    named=manual_commands.groups(owner['text']);target=args.get('key',args.get('target'))
+    expanded=set(k for key in named for k in (GROUPS if key=='all' else FREELANCE if key=='free' else [key]))
+    permitted_target=set(GROUPS) if target=='all' else set(FREELANCE) if target=='free' else {target}
+    if named and not permitted_target.issubset(expanded):raise ValueError('That group setting is outside the groups named in your instruction.')
+    if name=='set_group_pace':
+     import rules
+     expected=rules.pace_rules(owner['text']);single,_=rules.parse(owner['text'])
+     if not expected and single and single.get('kind')=='gap':expected=[single]
+     if expected and not any(r['group']==target and r['minutes']==args.get('minutes') for r in expected):raise ValueError('The interval does not match your instruction. Nothing was changed.')
+   if name=='delete_last_message':
+    named=manual_commands.groups(owner['text']);target=args.get('target') or (LAST_MANUAL.get('target') if LAST_MANUAL.get('kind')=='appeal' else None)
+    if (named and (len(named)!=1 or target not in named)) or (not named and args.get('target') and target!=LAST_MANUAL.get('target')):raise ValueError('The deletion target does not match your current group. Nothing was deleted.')
    if name=='dm_list':
     explicit={norm_phone(x) for x in re.findall(r'(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}',chat_policy.owner_text(prompt))}
     if any(norm_phone(p.get('phone','')) not in explicit and norm_phone(p.get('phone',''))+'@s.whatsapp.net' not in verified for p in args.get('people',[])):raise ValueError('Every DM-list recipient must come from this owner instruction or a verified lookup.')
@@ -1237,9 +1270,14 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
       for item in items:CONTACT_CONTEXT[item['id']]=item
       exact=[x for x in items if x.get('name','').casefold()==str(args.get('query','')).casefold()]
       selected=exact if len(exact)==1 else items if len(items)==1 else []
-      if all(word in manual_commands.norm(prompt) for word in manual_commands.norm(args.get('query','')).split()):verified.update(x['id'] for x in selected)
+      words=manual_commands.norm(args.get('query','')).split()
+      if words and all(word in manual_commands.norm(prompt) for word in words):verified.update(x['id'] for x in selected)
      except (ValueError,TypeError,KeyError):pass
     elif name=='set_message':
+     if selection is not None and args.get('kind')!=selection_kind:raise ValueError('Apply the chosen option to the same draft. The other message was kept.')
+     if not isinstance(args.get('text'),str) or not args['text'].strip():raise ValueError('The revised caption is empty. The saved message was kept.')
+     draft_amount=manual_commands.balance_amount(args['text'],allow_with=False)
+     if draft_amount is not None and draft_amount!=read_left():raise ValueError('The caption balance does not match the confirmed amount remaining. Use the current balance.')
      if args.get('kind')=='dm':
       if re.search(r'(?i)\bname\b.*\b(is|change|to)\b|\b(change|correct)\b.*\bname\b',prompt):raise ValueError('Use edit_dm_name to change only the greeting; keep the full message.')
       if not dm_composer.complete(args.get('text','')):raise ValueError('Keep the full DM with blank lines, formatting, amount, donation options and payment details. Do not replace it with a name or one-paragraph summary.')
@@ -1265,6 +1303,7 @@ def manual_recipient():
 
 def assistant_task(body):
  global OWNER_REVISION
+ text=str(body.get('text',''))[:10000]
  ident=str(body.get('request_id') or uuid.uuid4().hex)
  if not re.fullmatch(r'[A-Za-z0-9_-]{8,100}',ident):raise ValueError('Invalid request id.')
  with LOCK:
@@ -1273,16 +1312,18 @@ def assistant_task(body):
   if saved:
    ASSIST_TASKS[ident]=saved if saved.get('done') else {'done':True,'error':'This request was interrupted by a restart. Check confirmed activity; it will not be repeated automatically.'}
    return ident
-  OWNER_REVISION+=1;revision=OWNER_REVISION
+  if draft_flow.selected_option(text,chat_get(40)) is not None or chat_policy.intent(text)['negative'] or re.fullmatch(r'(?i)\s*(?:no|cancel|stop|wait)\s*',text) or any(chat_policy.permitted(name,text) for name in base_chat_callbacks() if name not in chat_policy.READ):OWNER_REVISION+=1
+  revision=OWNER_REVISION
   ASSIST_TASKS[ident]={'done':False}
   if STORE:STORE.put('assistant_task_'+ident,{'done':False,'started':time.time()})
  def run():
   try:
-   text=str(body.get('text',''))[:10000];CHAT_IMAGE['id']=body.get('image');hist=chat_get(300)
+   OWNER_GUARD.image=body.get('image');hist=chat_get(300)
    KNOWLEDGE.report_correction(text)
    if hist and hist[-1]['who']=='you' and hist[-1]['text'].strip()==text.strip():hist=hist[:-1]
    preferences=mem_get()
-   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident))
+   selection=draft_flow.selected_option(text,hist)
+   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident,selection,draft_flow.option_kind(hist,mapping(body.get('screen')).get('view'))))
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
    output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
    output['superseded']=revision!=OWNER_REVISION
@@ -1295,29 +1336,37 @@ def assistant_task(body):
    try:KNOWLEDGE.trace({'request_id':ident,'error':safe_text(e,160)})
    except Exception:pass
   finally:
+   if hasattr(OWNER_GUARD,'image'):del OWNER_GUARD.image
    if STORE:STORE.put('assistant_task_'+ident,ASSIST_TASKS[ident])
  threading.Thread(target=run,daemon=True).start();return ident
 
 def edit_donation_order():
  left=read_left();drafts=json.loads(DRAFT.read_text(encoding='utf-8'));updated={}
+ work=workflow();custom=next((k for k,v in drafts.items() if work.current(k,v)),None)
  for kind,text in drafts.items():
-  lines=text.split('\n');indices=[i for i,line in enumerate(lines) if re.search(r'(?i)people|donat|giving|give ',line) and re.search(r'(?:1[ ,]?000|2[ ,]?000)',line)]
+  lines=text.split('\n');indices=[i for i,line in enumerate(lines) if re.search(r'(?i)\d+\s+people\b',line) and re.search(r'(?:1[ ,]?000|2[ ,]?000)',line)]
   if indices:
    first,last=min(indices),max(indices)
    replacement=[f'*_{math.ceil(left/2000)} people donating Rs. 2,000_*',f'*_OR {math.ceil(left/1000)} people donating Rs. 1,000_* 🤲']
-   lines[first:last+1]=replacement;updated[kind]='\n'.join(lines)
+   if len(indices)==1:lines[first]=' '.join(replacement)
+   else:
+    lines[first]=replacement[0];lines[indices[1]]=replacement[1]
+   updated[kind]='\n'.join(lines)
   else:updated[kind]=text
  with LOCK:
   DRAFT.write_text(json.dumps(updated,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
+  if custom:work.revise(updated[custom])
  return f'Rs. 2,000 option first, then Rs. 1,000. The amount left stays Rs. {left:,}.'
 
 def remove_arrival_line():
  drafts=json.loads(DRAFT.read_text(encoding='utf-8'))
+ work=workflow();custom=next((k for k,v in drafts.items() if work.current(k,v)),None)
  for kind,text in drafts.items():
   lines=[line for line in text.split('\n') if not re.search(r'(?i)\b(came(?: in)?|received|has arrived|arrived)\b',line)]
   drafts[kind]=re.sub(r'\n{3,}','\n\n','\n'.join(lines)).strip()
  with LOCK:
   DRAFT.write_text(json.dumps(drafts,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
+  if custom:work.revise(drafts[custom])
  return f'Removed the money-arrival wording from the captions. Amount left is still Rs. {read_left():,}. No future rule was added.'
 
 def send_selected_groups(targets,request_id=None):
@@ -1349,8 +1398,9 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
   return {'handled':True,'reply':'; '.join(rules.describe(item) for item in pace)+('. Auto follows this schedule.' if auto_on() else '. Saved. Auto is currently off.')}
  plan=manual_commands.parse(text)
  if not plan:return {'handled':False}
- workflow().apply_options(chat_policy.owner_text(text),get_message('group')['text'])
- with LOCK:OWNER_REVISION+=1
+ if plan['kind'] in ('appeal','appeals','repeat'):workflow().apply_options(chat_policy.owner_text(text),get_message('group')['text'])
+ with LOCK:
+  if plan['kind']!='status':OWNER_REVISION+=1
  OWNER_GUARD.revision=OWNER_REVISION
  kind=plan['kind'];out={'handled':True}
  if kind=='no_groups':raise ValueError('No clear eligible groups remain after the exclusion. Name the groups to send to.')
@@ -1440,10 +1490,13 @@ def fast_command_eligible(text):
  text=str(text).strip()
  if not text or len(text)>10000:return False
  if re.fullmatch(r'(?i)(?:show|list|view|my)?\s*(?:scheduled?\s+(?:tasks|messages|sends)|schedules|scheduler)',text):return True
+ if manual_commands.question_request(text):return False
+ if draft_flow.editing_request(chat_policy.owner_text(text)) and (manual_commands.parse(text) or {}).get('kind') not in ('donation_order','remove_arrival_line'):return False
  if re.match(r'(?i)^(?:please\s+)?(?:show|preview|draft|summarize|summarise|analyse|analyze|explain|review|read|check|tell me)\b',text):return False
  if text.startswith(('"','“',"'",'```','>')) or re.search(r'(?i)\b(transcript|message says|text says|summarize|analyse|analyze|see fn remove)\s*:',text):return False
  if re.search(r'(?i);|\band then\b|\n(?:you|assistant|app):',text):return False
  if re.search(r'(?i)\band\s+(?:set|change|write|delete|remove|remember|pause|enable|disable)\b',text):return False
+ if re.search(r'(?i)\band\s+(?:then\s+)?(?:send|post|share)\b',text):return False
  return True
 
 def set_group_pace(target,minutes):
@@ -1582,7 +1635,7 @@ class Handler(BaseHTTPRequestHandler):
    except Exception:self.reply({'error':'Could not prepare this send. No automatic retry will occur.'},status=502)
   elif self.path=='/wa-login':
    try:
-    data=api('/devices/'+DEVICE+'/login');url=data.get('results',{}).get('qr_link','');path=urllib.parse.urlparse(url).path
+    data=api('/devices/'+DEVICE+'/login');url=mapping(data.get('results')).get('qr_link','');path=urllib.parse.urlparse(url).path
     if not path.startswith('/statics/qrcode/'):return self.reply({'error':'QR not available; check connection.'},status=400)
     with urllib.request.urlopen(GOWA_URL+path,timeout=10) as qr:encoded=base64.b64encode(qr.read()).decode()
     self.reply({'qr':'data:image/png;base64,'+encoded,'duration':data['results'].get('qr_duration',30)})

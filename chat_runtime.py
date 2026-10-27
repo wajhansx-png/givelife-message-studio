@@ -6,7 +6,7 @@ from chat_memory import safe_text
 from state_shapes import mapping,records,memories,history as valid_history
 
 def claims_completion(reply):
- return bool(re.search(r'(?i)^\s*(?:sent|posted|deleted|saved|queued|scheduled|updated|changed)\b|\b(?:i (?:have |just )?(?:sent|posted|deleted|saved|updated|changed|queued|scheduled)|successfully (?:sent|posted|deleted))\b',reply))
+ return bool(re.search(r'(?i)^\s*(?:sent|posted|deleted|saved|queued|scheduled|updated|changed)\b|\b(?:i (?:have |just )?(?:sent|posted|deleted|saved|updated|changed|queued|scheduled)|successfully (?:sent|posted|deleted))\b|\b(?:draft|caption|message|balance|rule)\s+(?:has been|is now|was|is)\s+(?:saved|updated|changed|sent|posted|deleted)\b',reply))
 
 def context_messages(text,history,state,memory):
  import assistant
@@ -18,10 +18,12 @@ def context_messages(text,history,state,memory):
  context={'state':assistant._slim(state),'preferences':memories(memory)[-20:],
   'retrieved':[dict(x) for x in records(state.get('retrieved')) if isinstance(x,dict)][:8],'ongoing_task':mapping(state.get('pending_task')),
   'playbook_notes':safe_text(assistant.playbook(),2500)}
- if draft_flow.editing_request(chat_policy.owner_text(text)):
+ selection=draft_flow.selected_option(text,valid_history(history))
+ if draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None:
   # A caption-edit turn should not be distracted by posting/rhythm summaries.
   for key in ('auto','pace','idle_min','group_intervals','status','recent'):context['state'].pop(key,None)
   context['turn_task']={'kind':'draft_edit','required_tool':'set_message','save_without_reconfirmation':True}
+  if selection is not None:context['turn_task'].update(selected_option=selection,draft_kind=draft_flow.option_kind(valid_history(history),mapping(state.get('screen')).get('view')),instruction='Apply only this owner-selected draft option to the saved caption. Preserve the rest. No send, money, rule or Auto change is authorized.')
   context['recent_owner_instructions']=[safe_text(h['text'],1000) for h in valid_history(history)[-16:] if h['who']=='you'][-6:]
  for item in context['preferences']:item['rule']=safe_text(item.get('rule'),500)
  for item in context['retrieved']:
@@ -51,15 +53,16 @@ def run_chat(text,history,state,memory,do):
   return {'reply':actual['text'],'actions':[],'done':[],'jobs':[],'diagnostics':{'model':None,'iterations':0,'tools':[{'tool':'get_message','status':'observed'}],'errors':[]}}
  if key is None:return None
  msgs=context_messages(text,history,state,memory)
- tools=[] if chat_policy.smalltalk(text) else [t for t in assistant.CHAT_TOOLS if chat_policy.permitted(t['function']['name'],text)]
+ selection=draft_flow.selected_option(text,valid_history(history))
+ tools=[] if chat_policy.smalltalk(text) else [t for t in assistant.CHAT_TOOLS if chat_policy.permitted(t['function']['name'],text) or selection is not None and t['function']['name']=='set_message']
  schemas={t['function']['name']:t['function']['parameters'] for t in tools}
  actions=[];done=[];jobs=[];outcomes=[];errors=[];cache={};started=time.monotonic();nudged=False;reply='';looked=False
- required_edit=draft_flow.editing_request(chat_policy.owner_text(text));saved_edit=False
+ required_edit=draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None;saved_edit=False
  for iteration in range(8):
   if time.monotonic()-started>150:errors.append('The reasoning time limit was reached.');break
   try:msg=mapping(assistant._chat_raw(key,assistant._system(memory),tools,msgs))
   except Exception as e:
-   errors.append(safe_text(e,300));break
+   errors.append(safe_text(e,300) or 'The model did not return a usable follow-up response.');break
   content=msg.get('content')
   reply=content.strip() if isinstance(content,str) else ''
   raw_calls=msg.get('tool_calls')
@@ -69,7 +72,7 @@ def run_chat(text,history,state,memory,do):
   if not calls:
    claimed=claims_completion(reply)
    missing_edit=required_edit and not saved_edit
-   if (missing_edit or not done and (claimed or chat_policy.intent(text)['send'])) and not nudged:
+   if (missing_edit and not errors or not done and not errors and (claimed or chat_policy.intent(text)['send'])) and not nudged:
     nudged=True;msgs.append({'role':'assistant','content':reply or 'I need to complete the action.'})
     msgs.append({'role':'user','content':('This current instruction requests a draft edit. Use set_message to save the complete revised caption now. Resolve this/it from the saved caption and recent owner instructions. Do not ask again unless the text or target remains genuinely ambiguous. Do not send.' if missing_edit else 'No action tool has confirmed this request. Use the appropriate available tool, or clearly ask for the missing information. Do not claim completion.')});continue
    break
@@ -79,8 +82,25 @@ def run_chat(text,history,state,memory,do):
   envelope={'role':'assistant','content':reply,'tool_calls':valid_calls}
   if isinstance(msg.get('reasoning_content'),str):envelope['reasoning_content']=msg['reasoning_content']
   msgs.append(envelope);terminal=False;blocked=False
+  # Validate the entire proposed tool batch before executing any part of it.
+  planned=[];invalid=[]
   for tc in valid_calls:
+   name=tc['function']['name']
+   try:
+    raw=tc['function'].get('arguments','{}');args=json.loads(raw) if isinstance(raw,str) else raw
+    if name not in schemas or name not in do:raise ValueError('That tool is not available for this instruction.')
+    chat_policy.validate_args(schemas[name],args);planned.append((tc,args))
+   except Exception as e:invalid.append((name,safe_text(e,300)))
+  if invalid:
+   for name,error in invalid:errors.append(name+': '+error)
+   for tc in valid_calls:
+    outcomes.append({'tool':tc['function']['name'],'status':'rejected'})
+    msgs.append({'role':'tool','tool_call_id':tc['id'],'content':json.dumps({'ok':False,'status':'rejected','error':'No part of this tool batch ran. Correct the invalid arguments before continuing. '+invalid[0][1]})})
+   if len(errors)>=3:break
+   continue
+  for tc,args in planned:
    fn=tc['function'];name=fn.get('name');actual=None;status='rejected'
+   invoked=False
    try:
     raw=fn.get('arguments','{}');args=json.loads(raw) if isinstance(raw,str) else raw
     if name not in schemas or name not in do:raise ValueError('That tool is not available for this instruction.')
@@ -90,7 +110,10 @@ def run_chat(text,history,state,memory,do):
     cachekey=str(name)+json.dumps(args,sort_keys=True,ensure_ascii=False)
     if cachekey in cache:actual=cache[cachekey]
     else:
-     actual=do[name](**args)
+     invoked=True;actual=do[name](**args)
+     if isinstance(actual,dict) and (actual.get('ok') is False or actual.get('error') or actual.get('code') not in (None,'SUCCESS')):raise ValueError(str(actual.get('error') or actual.get('message') or 'The action was not confirmed.'))
+     if name not in chat_policy.READ:
+      if actual is None or actual is False or actual=='':raise ValueError('No completion result was returned. Check the current state before trying again.')
      if name not in chat_policy.READ:cache[cachekey]=actual
     looked=looked or name=='find_contact'
     status='observed' if name in chat_policy.READ else 'completed'
@@ -110,7 +133,9 @@ def run_chat(text,history,state,memory,do):
     blocked=True
     message=safe_text(e,300);result={'ok':False,'status':'rejected','error':message};errors.append(str(name)+': '+message)
     # A send may have reached WhatsApp before a timeout. Never retry that action here.
-    if name in chat_policy.SEND:terminal=True;done.append('Could not '+str(name)+': '+message)
+    if name in chat_policy.SEND or invoked and name in ('money_came','delete_last_message'):
+     terminal=True;done.append('Could not '+str(name)+': '+message)
+     if name=='money_came':done.append('Check the current balance before recording it again; this action was not retried.')
    outcomes.append({'tool':name,'status':status})
    msgs.append({'role':'tool','tool_call_id':tc['id'],'content':safe_text(json.dumps(result,ensure_ascii=False),9000)})
   if terminal:

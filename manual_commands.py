@@ -52,11 +52,45 @@ def group(text):
  keys=groups(text)
  return keys[0] if len(keys)==1 else None
 
-def control_payload(text):return bool(CONTROL.fullmatch(str(text).strip()))
+def control_payload(text):
+ text=re.sub(r'(?i)\b(?:dm|a|an|donation|case|urgent)\b','message',str(text))
+ if balance_amount(text) is not None:text=re.sub(r'(?i)(?:rs\.?\s*)?\d[\d,]*(?:\.\d+)?\s*k?(?:\s*(?:left|remaining))?','updated amount',text)
+ return bool(CONTROL.fullmatch(text.strip()))
+
+def outside_literals(text):
+ return re.sub(r'"[^"\n]*"|“[^”\n]*”|(?<!\w)\'[^\'\n]+\'(?!\w)',' [text] ',str(text))
+
+def question_request(text):
+ if re.search(r'(?i)(?:[;!?]\s*|\band then\s+)(?:please\s+)?(?:send|resend|post|set|change|write|stop|pause|resume)\b',outside_literals(text)):return False
+ return bool(re.match(r'(?i)^\s*(?:what|why|how|when|where|who|did|have|has|was|were|is|are|should|can i|could i|would it|if i|suppose|imagine)\b',outside_literals(text)))
+
+def deferred_request(text):
+ return bool(re.search(r'(?i)\b(?:later|not now|tomorrow|tonight|next (?:day|week|month)|in\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?)|after\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?))\b|\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',outside_literals(text)))
+
+def balance_amount(text,allow_with=True):
+ """Use an amount bound to balance wording, never a year/group count/phone."""
+ t=outside_literals(text);number=r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*(k)?(?!\w)'
+ patterns=[number+r'\s*(?:is\s+)?(?:left|remaining|remain|baqi)\b',
+           r'\b(?:remaining(?:\s+amount)?|amount(?:\s+(?:left|remaining))?|balance|baqi)\s*(?:is|to|=|:)?\s*(?:rs\.?\s*)?'+number,
+           *([r'\bwith\s+(?:rs\.?\s*)?'+number+r'(?!\s*(?:people|groups?|members?|minutes?|hours?))'] if allow_with else [])]
+ candidates=[]
+ for pattern in patterns:
+  for m in re.finditer(pattern,t,re.I):
+   n=float(m[1].replace(',',''))*(1000 if m[2] else 1)
+   if n.is_integer() and 0<=n<=10000000:candidates.append(int(n))
+ raw=re.fullmatch(r'(?:rs\.?\s*)?(\d[\d,]*(?:\.\d+)?)\s*(k)?',t.strip(),re.I)
+ if raw:
+  n=float(raw[1].replace(',',''))*(1000 if raw[2] else 1)
+  if n.is_integer() and 0<=n<=10000000 and (n>=100 or raw[2] or re.match(r'(?i)rs\.?',t.strip())):candidates.append(int(n))
+ if len(set(candidates))>1:raise ValueError('More than one remaining amount was given. Tell me the single correct balance; nothing was changed or sent.')
+ return candidates[0] if candidates else None
 
 def parse(text):
  t=str(text).strip();t=re.sub(r'^(?:please|kindly|can you|could you|would you)\s+(?=send|resend|delete|remove|revoke|text|message)', '',t,flags=re.I);low=norm(t);low=re.sub(r'\s+',' ',low)
  if not t:return None
+ if re.search(r'exclusive\s+upwork|37\s*(?:member|members)|120363432572916292|120363431093838536',low):return {'kind':'refuse_target'}
+ if question_request(t) or deferred_request(t):return None
+ if re.search(r"(?i)\b(?:don'?t|dont|do not|never)\s+(?:stop|disable|pause|delete|remove|revoke|change|set|record)\b",t):return None
  if low in ('update','status','report','whats update','what s update','whats upadte','what s upadte','what is the update','nothing sent yet man','nothing sent yet') or re.search(r'\b(freelance|freelamce)\b.*\b(update|rules)\b|\b(update|rules)\b.*\b(freelance|freelamce)\b',low):return {'kind':'status','freelance':bool(re.search(r'freela',low))}
  if re.search(r'\b(fast|faster|slow|slower)\b',low) and re.search(r'\b(send|post|pace|speed|posting|sending)\b',low) and not re.search(r'\b(now|right away|immediately|asap)\b',low):return None # pace is a setting, not outgoing text
  if re.search(r'exclusive\s+upwork|37\s*(?:member|members)|120363432572916292|120363431093838536',low):return {'kind':'refuse_target'}
@@ -78,12 +112,12 @@ def parse(text):
  # Explicit quoted text is data, even if it contains a command word.
  q=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+["“\'](.+?)["”\']\s+(?:to|ko|in)\s+(.+)$',t,re.I|re.S)
  if q:return {'kind':'text','text':q[1],'to':q[2].strip(),'literal':True}
- money=re.search(r'(?<!\d)(\d[\d,]*(?:\.\d+)?)\s*(k)?\b',t,re.I)
- amount=None
- if money and not re.search(r'(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}',t):
-  if re.search(r'\b(left|remaining|remain|baqi|amount|updated|with)\b',low) or re.fullmatch(r'(?:rs\.?\s*)?\d[\d,.]*\s*k?',t,re.I):
-   n=float(money[1].replace(',',''))*(1000 if money[2] else 1)
-   if n.is_integer() and 0<=n<=10000000:amount=int(n)
+ amount=balance_amount(t)
+ # Resolve a literal payload and its destination before scanning aliases inside it.
+ explicit=re.match(r'^(?:please\s+)?(?:send|resend|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
+ payload=re.sub(r'(?i)(?:rs\.?\s*)?\d[\d,]*(?:\.\d+)?\s*k?','',explicit[1]) if explicit and amount is not None else explicit[1] if explicit else ''
+ if explicit and not control_payload(payload):
+  return {'kind':'text','text':explicit[1].strip(),'to':group(explicit[2]) or explicit[2].strip(),'literal':True}
  # A negative, a question about delivery, or a schedule must not dispatch now.
  if re.search(r'\b(don t|dont|do not|never|not now|did you|have you|was it|schedule|daily|every day|tomorrow)\b',low):return None
  if re.search(r'\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',t,re.I):return None

@@ -1,6 +1,25 @@
 """Draft-task boundaries shared by tool permissions, runtime and direct reads."""
 import re
 
+def selected_option(text,history):
+ """An owner-selected draft option authorizes editing only, never money/sends."""
+ match=re.fullmatch(r'(?i)\s*(?:(?:option|number|use|choose)\s*)?#?(\d{1,2})[.!]?\s*',str(text))
+ if not match:return None
+ items=[h for h in history if isinstance(h,dict) and h.get('who') in ('you','app') and isinstance(h.get('text'),str)]
+ if items and items[-1]['who']=='you' and items[-1]['text'].strip()==str(text).strip():items=items[:-1]
+ if len(items)<2 or items[-1]['who']!='app':return None
+ owner=next((h['text'] for h in reversed(items[:-1]) if h['who']=='you'),'')
+ if not re.search(r'(?i)\b(?:hooks?|openings?|versions?|alternatives?|options?)\b',owner) or not re.search(r'(?i)\b(?:show|give|make|write|suggest)\b',owner):return None
+ if not re.search(r'(?i)\b(?:hooks?|openings?|captions?|messages?|drafts?|wording)\b',owner):return None
+ numbers={int(n) for n in re.findall(r'(?m)^\s*(?:\*\*)?(\d{1,2})[.)](?:\*\*)?\s*',items[-1]['text'])}
+ return int(match[1]) if len(numbers)>=2 and int(match[1]) in numbers else None
+
+def option_kind(history,fallback='group'):
+ for h in reversed(history):
+  if isinstance(h,dict) and h.get('who')=='you' and re.search(r'(?i)\b(?:hooks?|openings?|versions?|alternatives?|options?)\b',str(h.get('text',''))):
+   return 'dm' if re.search(r'(?i)\bdm\b',h['text']) else 'group'
+ return 'dm' if fallback=='dm' else 'group'
+
 def preview_request(text):
  t=re.sub(r'[^\w\s]',' ',str(text).casefold());t=re.sub(r'\s+',' ',t).strip()
  t=re.sub(r'^(?:please|can you|could you|would you)\s+','',t)

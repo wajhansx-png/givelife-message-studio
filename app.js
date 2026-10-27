@@ -5,7 +5,8 @@ const view=()=>document.body.dataset.view,fmt=n=>Number(n).toLocaleString('en-US
 const post=(url,body)=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
 /* Server-issued next steps are tied to the exact saved draft, never AI-authored commands. */
 let nextActions=[],nextActionEpoch=0;const nextActionPending=new Set();
-function drawNextActions(){for(const id of ['chatNextActions','histNextActions']){const row=$(id);if(!row)continue;row.textContent='';row.hidden=!nextActions.length;for(const a of nextActions){const b=document.createElement('button');b.type='button';b.textContent=a.label;b.title=a.detail||'';b.disabled=!!a.disabled||nextActionPending.has(a.id);b.setAttribute('aria-label',a.label+(a.detail?' · '+a.detail:''));b.onclick=()=>runNextAction(a);row.append(b)}}}
+function drawNextActions(){renderSendMode();for(const id of ['chatNextActions','histNextActions']){const row=$(id);if(!row)continue;row.textContent='';row.hidden=!nextActions.length;for(const a of nextActions){const b=document.createElement('button');b.type='button';b.textContent=a.label;b.title=a.detail||'';b.disabled=!!a.disabled||nextActionPending.has(a.id);b.setAttribute('aria-label',a.label+(a.detail?' · '+a.detail:''));b.onclick=()=>runNextAction(a);row.append(b)}}}
+function renderSendMode(){const label=$('sendMode');if(!label)return;const mode=nextActions[0]?.detail||'Poster + caption';label.textContent=mode;if($('ctx'))$('ctx').textContent=view()==='group'?(mode==='Text only'?'Group · text only':'Group · poster'):'DM · poster';if($('poster')?.src)$('poster').hidden=view()==='group'&&mode==='Text only'}
 function clearNextActions(){nextActionEpoch++;nextActions=[];drawNextActions()}
 async function refreshNextActions(){const epoch=++nextActionEpoch;try{const r=await fetch('/chat-next-actions');if(!r.ok)return;const d=await r.json();if(epoch!==nextActionEpoch)return;nextActions=(Array.isArray(d.items)?d.items:[]).filter(a=>a&&/^[a-f0-9]{32}$/.test(a.id)&&typeof a.label==='string').slice(0,3);drawNextActions()}catch(e){}}
 async function runNextAction(a){if(a.disabled||nextActionPending.has(a.id))return;nextActionPending.add(a.id);drawNextActions();try{const r=await post('/chat-action',{action_id:a.id}),d=await r.json();if(!r.ok)throw Error(d.error||'This action is unavailable. Refresh the draft.');if(d.choose_group){closeChat();setView('group')}if(d.reply)say('app',d.reply);if(d.job_id){a.disabled=true;watchGroupJob(d.job_id,d.caption)}}catch(e){say('app',e.message,1)}finally{nextActionPending.delete(a.id);await refreshNextActions();drawNextActions()}}
@@ -44,10 +45,10 @@ async function syncChat(){try{await logChain;const d=await (await fetch('/chat')
 drawLog();syncChat();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!thinking)syncChat()});
 function isPhone(){return matchMedia('(max-width:899px)').matches}
-function openChat(){if($('hist').open)return;if(editing)setEditing(false);rememberScroll();$('hist').showModal();refreshNextActions();
+function openChat(){if($('hist').open)return;if(editing)setEditing(false);rememberScroll();$('hist')._returnFocus=document.activeElement;$('hist').showModal();refreshNextActions();
  // A navigation control receives focus. Opening chat never opens a soft keyboard.
  (isPhone()?$('histMain'):$('histClose')).focus({preventScroll:true});syncChat();requestAnimationFrame(drawLog)}
-function closeChat(){saveChatDraft($('histCmd').value);document.activeElement?.blur();rememberScroll();$('hist').close();if(isPhone())$('chatOpen').focus({preventScroll:true})}
+function closeChat(){saveChatDraft($('histCmd').value);document.activeElement?.blur();rememberScroll();const back=$('hist')._returnFocus;$('hist').close();if(isPhone())$('chatOpen').focus({preventScroll:true});else (back?.isConnected?back:$('chatExpand')).focus({preventScroll:true})}
 $('chatOpen').onclick=openChat;$('chatExpand').onclick=openChat;
 $('chatLatest').onclick=()=>showLatest('log');$('histLatest').onclick=()=>showLatest('histLog');
 $('histClose').onclick=closeChat;$('histMain').onclick=closeChat;
@@ -88,7 +89,7 @@ for(const k of ['group','dm'])$(k+'Preview').addEventListener('paste',e=>{e.prev
 
 /* ---- views, amount, DM greeting ---- */
 function setView(v){if(editing)setEditing(false);if(previewView)previewScroll[previewView]=$('chat').scrollTop;document.body.dataset.view=v;previewView=v;document.querySelectorAll('[data-view-button]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.viewButton===v)));
- $('ctx').textContent=v==='group'?'Group · poster':'DM · poster';localStorage.setItem('givelife-view',v);requestAnimationFrame(()=>{fit();$('chat').scrollTop=previewScroll[v]||0});flip()}
+ $('ctx').textContent=v==='group'?'Group · poster':'DM · poster';renderSendMode();localStorage.setItem('givelife-view',v);requestAnimationFrame(()=>{fit();$('chat').scrollTop=previewScroll[v]||0});flip()}
 document.querySelectorAll('[data-view-button]').forEach(b=>b.onclick=()=>setView(b.dataset.viewButton));
 function showLeft(){const c=$('leftChip');c.textContent=left==null?'Rs. …':'Rs. '+fmt(left);const w=document.createElement('span');w.className='lw';w.textContent=' left';c.append(w)}
 function applyDrafts(d){if(typeof d.group==='string'&&typeof d.dm==='string')draftsReady=true;if(d.dm_identity){$('dmName').value=d.dm_identity.name||'';$('dmPhone').value=d.dm_identity.phone||'';gender=d.dm_identity.gender==='Sister'?'Sister':'Brother';document.querySelectorAll('#gender button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===gender)))}if(d.group!=null||d.dm!=null)draftSaved=JSON.stringify({group:d.group??$('group').value,dm:d.dm??$('dm').value});if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
@@ -203,12 +204,12 @@ function startList(l){if(listT){clearTimeout(listT);listT=null}
  listT=setTimeout(async()=>{listT=null;try{const r=await post('/campaign',{people:l.people,gap_seconds:l.gap,vary:l.vary,start_after_seconds:l.start,image:attached?attached.id:'poster',rest_every:10,rest_minutes:10}),d=await r.json();
   if(!r.ok)throw Error(d.error);say('app',d.reply);pollCamp()}catch(e){say('app',e.message,1);$('camp').hidden=true}},5000)}
 function showCamp(t){$('campText').textContent=t;$('camp').hidden=false}
-let campTimer=null,campPolling=false,lastCampLog=localStorage.getItem('givelife-camp-last')||'';
+let campTimer=null,campPolling=false,campWasRunning=false,campStopping=false,lastCampLog=localStorage.getItem('givelife-camp-last')||'';
 async function pollCamp(){if(campPolling)return;campPolling=true;clearTimeout(campTimer);campTimer=null;try{const r=await fetch('/campaign');if(!r.ok)throw Error('Could not check DMs');const c=await r.json();
- if(c.running){const w=c.wait?` · next in ${Math.floor(c.wait/60)}:${String(c.wait%60).padStart(2,'0')}`:'';showCamp(`DMs ${c.sent}/${c.total} sent${c.skipped?`, ${c.skipped} skipped`:''}${w}${c.current&&c.current!=='Waiting'?' · '+c.current:''}`);setLiveNotice($('campText').textContent);campTimer=setTimeout(pollCamp,3000)}
- else if(!listT){$('camp').hidden=true;const last=(c.log||[]).slice(-1)[0];if(c.total&&last&&last!==lastCampLog){lastCampLog=last;try{localStorage.setItem('givelife-camp-last',last)}catch(e){}say('app',`DM list done: ${c.sent} sent, ${c.skipped} skipped, ${c.failed} failed.`)}}}catch(e){if(!$('camp').hidden)setLiveNotice('Cannot refresh DM progress. Check your connection.',true)}finally{campPolling=false;if(!campTimer)campTimer=setTimeout(pollCamp,10000)}}
+ if(c.running){campWasRunning=true;const w=c.wait?` · next in ${Math.floor(c.wait/60)}:${String(c.wait%60).padStart(2,'0')}`:'';showCamp(campStopping?`Stopping DM list · ${c.sent}/${c.total} sent`:`DMs ${c.sent}/${c.total} sent${c.skipped?`, ${c.skipped} skipped`:''}${w}${c.current&&c.current!=='Waiting'?' · '+c.current:''}`);setLiveNotice($('campText').textContent);campTimer=setTimeout(pollCamp,3000)}
+ else if(!listT){$('camp').hidden=true;if(campWasRunning){campWasRunning=false;campStopping=false;setLiveNotice(`DM list inactive · ${c.sent||0}/${c.total||0} sent`,!!c.failed)}const last=(c.log||[]).slice(-1)[0];if(c.total&&last&&last!==lastCampLog){lastCampLog=last;try{localStorage.setItem('givelife-camp-last',last)}catch(e){}say('app',`DM list done: ${c.sent} sent, ${c.skipped} skipped, ${c.failed} failed.`)}}}catch(e){if(!$('camp').hidden)setLiveNotice('Cannot refresh DM progress. Check your connection.',true)}finally{campPolling=false;if(!campTimer)campTimer=setTimeout(pollCamp,10000)}}
 $('campStop').onclick=async()=>{if(listT){clearTimeout(listT);listT=null;$('camp').hidden=true;say('app','Cancelled. Nothing was sent.');return}
- const b=$('campStop');b.disabled=true;try{const r=await post('/campaign',{stop:true}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not stop DMs');say('app',d.reply);setLiveNotice(d.reply);pollCamp()}catch(e){say('app',e.message,1)}finally{b.disabled=false}};
+ const b=$('campStop');b.disabled=true;try{const r=await post('/campaign',{stop:true}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not stop DMs');campStopping=true;say('app',d.reply);setLiveNotice(d.reply);pollCamp()}catch(e){say('app',e.message,1)}finally{b.disabled=false}};
 
 /* ---- the assistant: quick commands work instantly; anything else goes to the AI ---- */
 const num=(s,k)=>Math.round(parseFloat(s.replace(/,/g,''))*(k?1000:1));
@@ -359,7 +360,8 @@ addEventListener('online',()=>{netBanner();pollAuto();syncChat()});addEventListe
 const cached=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('givelife-c-'+k)||'null');localStorage.setItem('givelife-c-'+k,JSON.stringify(v))}catch(e){return null}};
 
 /* ---- hide the message to work only with the buttons and chat ---- */
-function setNoMsg(on){if(editing)setEditing(false);document.querySelector('.overflow-tools').open=false;document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;$('showMsg').setAttribute('aria-expanded',String(!on));if(!on){requestAnimationFrame(fit);flip()}}
+function setNoMsg(on){if(editing)setEditing(false);document.querySelector('.overflow-tools').open=false;document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;$('showMsg').setAttribute('aria-expanded',String(!on));const desktop=$('desktopPreview');if(desktop){desktop.setAttribute('aria-pressed',String(!on));desktop.textContent=on?'Message preview':'Back to chat'}if(!on){requestAnimationFrame(fit);flip()}}
+if($('desktopPreview'))$('desktopPreview').onclick=()=>setNoMsg(!document.body.classList.contains('nomsg'));
 $('hideMsg').onclick=e=>{e.stopPropagation();setNoMsg(true)};$('showMsg').onclick=()=>setNoMsg(false);
 setNoMsg(true);
 
@@ -377,15 +379,21 @@ applyTheme(themeNow());
 
 function flip(){const m=$(view()+'Preview');m.classList.remove('flip');void m.offsetWidth;m.classList.add('flip')}
 
+function focusChatInput(){if($('hist').open){$('histCmd').focus({preventScroll:true});return}if(isPhone()){openChat();$('histCmd').focus({preventScroll:true});return}if(!document.body.classList.contains('nomsg'))setNoMsg(true);$('cmd').focus({preventScroll:true})}
+function openKeyboardHelp(){$('keyboardDialog').showModal();$('keyboardClose').focus({preventScroll:true})}
+if($('keyboardHelp'))$('keyboardHelp').onclick=openKeyboardHelp;
+if($('keyboardClose'))$('keyboardClose').onclick=()=>$('keyboardDialog').close();
 /* Desktop shortcuts do not move controls or steal focus from dialogs. */
 document.addEventListener('keydown',e=>{
- if(typeof e.key!=='string')return;
- if(document.querySelector('dialog[open]'))return;
+ if(typeof e.key!=='string'||e.repeat)return;
+ const dialog=document.querySelector('dialog[open]');
+ if(!isPhone()&&(e.ctrlKey||e.metaKey)&&e.key==='/'&&(!dialog||dialog.id==='hist')){e.preventDefault();focusChatInput();return}
+ if(dialog)return;
  if(editing){if(e.key==='Escape'||(e.key==='Enter'&&!e.shiftKey&&!e.isComposing)){e.preventDefault();setEditing(false)}return}
  const inField=['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
  if(e.key==='Escape'&&inField){document.activeElement.blur();return}
  if(inField||e.ctrlKey||e.metaKey||e.altKey||isPhone())return;
- const a={'/':()=>$('cmd').focus(),g:()=>setView('group'),d:()=>setView('dm'),e:()=>setEditing(true),n:()=>$('fresh').click(),c:()=>$('copy').click(),h:()=>setNoMsg(!document.body.classList.contains('nomsg'))}[e.key.toLowerCase()];
+ const a={'/':focusChatInput,'?':openKeyboardHelp,g:()=>setView('group'),d:()=>setView('dm'),e:()=>setEditing(true),n:()=>$('fresh').click(),c:()=>$('copy').click(),h:()=>setNoMsg(!document.body.classList.contains('nomsg'))}[e.key.toLowerCase()];
  if(a){e.preventDefault();a()}});
 
 /* ---- start ---- */
@@ -393,7 +401,7 @@ setView(localStorage.getItem('givelife-view')==='dm'?'dm':'group');
 seenAuto=Number(localStorage.getItem('givelife-seen-auto')||0);addEventListener('beforeunload',()=>localStorage.setItem('givelife-seen-auto',String(seenAuto)));
 ensureDrafts().then(()=>status('✓ Ready')).catch(()=>{const d=cached('drafts');if(d){applyDrafts(d);status('Offline · showing the last saved message',1)}else status('Could not load',1)});
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
-fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false}}).catch(()=>{});
+fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false;renderSendMode()}}).catch(()=>{});
 pollAuto();setInterval(pollAuto,5000);pollCamp();refreshNextActions();
 
 

@@ -65,7 +65,7 @@ async function main(){
  vm.runInContext('let listT=null;'+part('let campTimer=','/* ---- the assistant:'),ctx);
  await ctx.pollCamp();assert.equal(scheduled,10000,'Keep checking even when idle, so campaigns started in chat appear');
  campaign={running:true,sent:3,total:5,skipped:0,wait:30,current:'Waiting'};await Promise.all([ctx.pollCamp(),ctx.pollCamp()]);assert.equal(campaignReads,2,'Campaign refreshes must coalesce');assert.equal(node('camp').hidden,false);assert(node('campText').textContent.includes('DMs 3/5'));assert.equal(scheduled,3000);
- let stopped=false;ctx.post=async(url,body)=>{assert.equal(url,'/campaign');stopped=body.stop;campaign={running:false,log:[]};return {ok:true,json:async()=>({reply:'DMs stopped'})}};await node('campStop').onclick();assert(stopped);assert.equal(node('campStop').disabled,false);
+ const campaignNotices=[];ctx.setLiveNotice=t=>campaignNotices.push(t);let stopped=false;ctx.post=async(url,body)=>{assert.equal(url,'/campaign');stopped=body.stop;campaign={running:false,log:[]};return {ok:true,json:async()=>({reply:'DMs stopped'})}};await node('campStop').onclick();assert(stopped);assert.equal(node('campStop').disabled,false);await new Promise(resolve=>setImmediate(resolve));assert(campaignNotices.at(-1).startsWith('DM list inactive'),'A stopped campaign cannot leave an old starting/countdown notice');
  console.log('UI behavior passed: blur before send, no autofocus, shared persistent draft, empty input, desktop focus, viewport, main navigation, action locks, duplicate requests, receipt unlock, unchanged caption.');
 }
 main().catch(e=>{console.error(e);process.exitCode=1});

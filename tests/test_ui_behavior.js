@@ -35,7 +35,7 @@ async function main(){
  assert(!source.includes('prepareReveal'),'Replies should appear immediately, without fake typing');
  ctx.navigator={onLine:true};node('whatsappConnection').dataset.state='online';
  vm.runInContext("let autoOn=false,autoKnown=true,liveNotice=null,liveSnapshot=null,checkedAt=Date.now()-10000,pollError='',operationCount=0,lastAnnouncedError='';"+part('function setLiveNotice(','let autoPolling='),ctx);
- ctx.paintStatusLine();assert(node('liveMeta').textContent.includes('Automatic actions off'));assert(node('liveMeta').textContent.includes('Checked 10s ago'));
+ ctx.paintStatusLine();assert(node('liveMeta').textContent.includes('Automatic actions off'));assert(node('liveDetail').textContent.includes('Synced 10s ago'));
  ctx.setLiveNotice('Confirmed sent to test group');assert(node('liveMeta').textContent.includes('Confirmed sent'),'Last meaningful result must remain visible');
  ctx.setLiveNotice('Send was not confirmed',true);assert.equal(node('live').dataset.error,'1');assert(node('liveMeta').textContent.includes('not confirmed'));
  ctx.navigator.onLine=false;ctx.paintStatusLine();assert(node('liveMeta').textContent.startsWith('No internet'),'Connection failures must take priority over old success');
@@ -43,6 +43,12 @@ async function main(){
  vm.runInContext("pollError='Cannot reach cloud. Status may be old.'",ctx);ctx.paintStatusLine();assert(node('liveMeta').textContent.includes('Status may be old'));
  node('whatsappConnection').dataset.state='online';vm.runInContext("pollError='';liveNotice=null;liveSnapshot={now:'Sending to GiveLife Foundation'}",ctx);ctx.paintStatusLine();assert(node('liveMeta').textContent.includes('Sending to GiveLife'),'Cloud scheduled sends must appear even with Auto off');
  vm.runInContext('autoKnown=false;liveSnapshot=null',ctx);ctx.paintStatusLine();assert(node('liveMeta').textContent.includes('Checking Auto status'),'Initial state must not falsely claim Auto is off');assert(html.includes('id="auto" disabled'));
+ const upcoming=ctx.statusView({state:'idle',next:[{group:'main',due_at:Date.now()/1000+600}]},true);assert(upcoming.text.includes('Auto: GiveLife in'));assert(!upcoming.text.includes('Reading'),'Idle must not claim an active read');
+ assert.equal(ctx.statusView({state:'reading',now:'Reading replies: GiveLife'},true).text,'Reading: GiveLife');
+ assert(ctx.statusView({state:'sending',job:{next_send_at:Date.now()/1000+45,next_target:'main'}},true).text.includes('Next: GiveLife in'));
+ assert(ctx.statusView({state:'off',scheduled:{due_at:Date.now()/1000+60,label:'main'}},false).text.includes('Scheduled: GiveLife'));
+ assert(ctx.statusView({state:'idle',next:[{group:'main',due_at:Date.now()/1000-1}]},true).text.includes('waiting for send check'));
+ assert.equal(ctx.sinceLabel('malformed'),'Not checked yet');
  const syncFields={group:{value:'Saved group'},dm:{value:'Saved DM'}},syncCtx={$:id=>syncFields[id],JSON,showLeft(){},applyDrafts:d=>{syncFields.group.value=d.group;syncFields.dm.value=d.dm}};
  vm.createContext(syncCtx);vm.runInContext("let left=25000,draftsReady=true,editing=false,pendingChats=0,operationCount=0,draftSaved=JSON.stringify({group:'Saved group',dm:'Saved DM'});"+part('function refreshLiveDrafts(','let autoPolling='),syncCtx);
  const baseline={left:25000,payload:JSON.stringify({group:'Saved group',dm:'Saved DM'}),wasSaved:true},remote={left:23000,drafts:{group:'Current group 23,000',dm:'Current DM 23,000'}};

@@ -264,11 +264,11 @@ def run_job(job_id,keys,caption,queue=False):
    if event.is_set() or on_hold():break
    name,jid=('Givelife test','120363431210327603@g.us') if key=='test' else GROUPS[key]
    if last_send is not None:
-    job['message']='Waiting 60 seconds between recipients before '+name;save_job(job_id)
+    job.update(message='Waiting 60 seconds between recipients before '+name,next_send_at=time.time()+max(0,60-(time.monotonic()-last_send)),next_target=key);save_job(job_id)
     if event.wait(max(0,60-(time.monotonic()-last_send))):break
    with SEND_LOCK:
     if event.is_set() or on_hold():break
-    job['message']='Sending to '+name;save_job(job_id)
+    job.update(message='Sending to '+name,next_send_at=None,next_target=key);save_job(job_id)
     OWNER_GUARD.cancel_event=event
     try:result=send_image(jid,caption,not job.get('manual',False))
     finally:OWNER_GUARD.cancel_event=None
@@ -1370,7 +1370,14 @@ def send_status_text(freelance=False):
 
 def live_snapshot():
  on=auto_on();summary=ENGINE.summary();hold=on_hold();job=get_job(ACTIVE) if ACTIVE else None
- status=ENGINE.status() if on else {'now':('On hold: waiting for resume' if hold else job.get('message','Sending…') if job and not job.get('done') else 'Automatic actions off'),'next':[],'today':{'posts':summary.get('posts_today',0),'dms':summary.get('dms_today',0)}}
+ status=ENGINE.status() if on else {'now':('On hold: waiting for resume' if hold else job.get('message','Sending…') if job and not job.get('done') else 'Automatic actions off'),'state':'paused' if hold else 'sending' if job and not job.get('done') else 'off','next':[],'last_reply_read':ENGINE.s.get('last_reply_read'),'today':{'posts':summary.get('posts_today',0),'dms':summary.get('dms_today',0)}}
+ if job and not job.get('done'):status['job']={k:job.get(k) for k in ('message','next_send_at','next_target')}
+ if AUTOLOG:status['last_event']={k:AUTOLOG[-1].get(k) for k in ('text','time')}
+ if _TIMED is not None and _TIMED_STORE is STORE:
+  with _TIMED.lock:upcoming=sorted((t for t in _TIMED.tasks if t['state']=='pending'),key=lambda t:t['due'])
+  if upcoming:
+   t=upcoming[0];label=', '.join(t.get('targets',[])) if t['action']=='send' else 'Auto ON' if t['action']=='auto_on' else 'Auto OFF' if t['action']=='auto_off' else 'Resume Auto'
+   status['scheduled']={'due_at':t['due'],'label':label}
  with LOCK:current={'left':read_left(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8'))}
  return {'on':on,'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':summary,'status':status,'hold':hold,**current}
 

@@ -48,8 +48,12 @@ node --check app.js
 git diff --check
 ```
 
-All 128 Python tests and all three Node test scripts pass. The new UI script covers synchronous blur, no automatic focus, draft persistence, blank input, desktop focus, viewport offsets, Main navigation, action locks, duplicate requests, receipt unlock, unchanged caption payload, truthful/stale/error status and campaign polling/Stop. Backend tests cover hold, cancellation, restart, scheduling, send uncertainty and integration boundaries.
+All 134 Python tests and all three Node test scripts pass. The new UI script covers synchronous blur, no automatic focus, draft persistence, blank input, desktop focus, viewport offsets, Main navigation, action locks, duplicate requests, receipt unlock, unchanged caption payload, truthful/stale/error status and campaign polling/Stop. Backend tests cover hold, cancellation, restart, scheduling, send uncertainty and integration boundaries.
 
 ## Limits
 
 Viewport resizing and focus behavior were tested in Chromium, including reduced-height keyboard simulations. A physical Android phone/IME, iOS keyboard, touch reach with a real hand and screen-reader hardware were not available. These results do not establish complete WCAG conformance or guarantee every device's keyboard animation. Long conversations and captions still require internal scrolling to stay readable; the dashboard itself fits the tested viewports. Existing free-cloud sleep/cold-start limits remain. No group or donor sends were triggered as test actions. Production Auto retained its existing settings and may continue its normal work.
+
+## Follow-up: highlighted and accurate activity strip
+
+The phone status strip now has a strong contrast background, a colored border and a bold current action. It separates actual reply-read timestamps from page synchronization age, shows the next automatic or scheduled action, and counts down between recipients using the real job deadline. Idle time is labelled as waiting, never active reading. Worker scan phases and failures are observed in the engine; successful reply fetches record their actual timestamps. Unrecorded checks remain explicitly unknown. The truncated caption label is shortened to Group · poster / DM · poster. No caption wording, posting intervals or donor rules changed. Six additional backend tests cover idle versus reading, clearing activity after failure, real read timestamps, malformed replies, hold priority and error recovery. Browser checks cover phone and desktop strip sizes.

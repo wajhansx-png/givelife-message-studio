@@ -51,6 +51,8 @@ class Engine:
         self.post_lock = threading.Lock()
         self.s = self._load()
         self.dm_running = False
+        self.activity = None
+        self.worker_errors = {}
 
     # ------------------------------------------------------------------ state
     def _load(self):
@@ -139,8 +141,11 @@ class Engine:
             try:
                 if self.h['enabled']():
                     self.tick()
+                    self.s['last_cycle_completed'] = now()
+                    self.worker_errors.pop('cycle', None)
                     self.save()
             except Exception as e:
+                self.worker_errors['cycle'] = {'text':'The Auto check failed', 'at':now()}
                 self.log('Autopilot error: ' + str(e)[:150])
 
     def posting_step(self):
@@ -154,7 +159,9 @@ class Engine:
             time.sleep(15)
             try:
                 self.posting_step()
+                self.worker_errors.pop('posting', None)
             except Exception as e:
+                self.worker_errors['posting'] = {'text':'The posting check failed', 'at':now()}
                 self.log('Automatic posting check failed: '+str(e)[:150])
 
     def level(self):
@@ -218,7 +225,11 @@ class Engine:
                                  ('last_chat_scan', 1200, self.scan_saved_chats)):
             if now() - self.s[key] >= every:
                 self.s[key] = now()
-                scan()
+                self.activity = {'label':{'last_scan':'Reading group replies','last_dm_scan':'Reading donor replies','last_chat_scan':'Checking saved chats'}[key], 'started':now()}
+                try:
+                    scan()
+                finally:
+                    self.activity = None
         self.run_scheduled()
         self.run_followups()
         self.milestone_if_due(left)
@@ -429,10 +440,17 @@ class Engine:
     # ------------------------------------------------------------------ reading chats
     def scan_group_replies(self):
         seen = set(self.s['seen'])
+        failures = 0
         for key, jid in self.h['group_jids']().items():
+            if getattr(self,'activity',None):
+                self.activity['label'] = 'Reading replies: '+{'main':'GiveLife','community':'Upwork Community','fiverr':'Fiverr Course','upwork':'Upwork Course','uet':'Fiverr UET','toprated':'Top Rated'}.get(key,key)
             try:
                 msgs = self.h['messages'](jid)
+                if not isinstance(msgs,list):
+                    raise ValueError('Unreadable reply data')
+                self.s['last_reply_read'] = now()
             except Exception:
+                failures += 1
                 continue
             for m in msgs:
                 mid = m.get('id')
@@ -443,6 +461,10 @@ class Engine:
                     continue
                 self._group_message(key, jid, m, str(m.get('content') or ''))
         self.s['seen'] = list(seen)[-1000:]
+        if failures:
+            self.worker_errors['replies'] = {'text':str(failures)+' group reply check(s) failed','at':now()}
+        else:
+            self.worker_errors.pop('replies', None)
 
     def _group_message(self, key, jid, m, text):
         who = str(m.get('sender_jid') or m.get('sender') or '').split('@')[0]
@@ -706,29 +728,44 @@ class Engine:
     def status(self):
         """What the autopilot is doing right now and what comes next, for the live box on screen."""
         name, main_gap, free_gap, mins = self.level()
+        state = 'idle'
+        activity = getattr(self,'activity',None)
+        errors = list(getattr(self,'worker_errors',{}).values())
         if self.h.get('on_hold', lambda: False)():
+            state = 'paused'
             now_text = 'On hold: waiting for you to say resume'
         elif not self.h['wa_ok']():
+            state = 'offline'
             now_text = 'Paused: WhatsApp is not connected'
         elif self.h['read_left']() <= 0:
+            state = 'done'
             now_text = 'Goal complete. Nothing more to send'
         elif self.h['busy']():
+            state = 'sending'
             now_text = self.h['job_message']() or 'Posting to the groups'
         elif self.dm_running:
+            state = 'sending'
             now_text = 'Sending DMs to people who may help'
+        elif activity:
+            state = 'reading'
+            now_text = activity['label']
+        elif errors:
+            state = 'error'
+            now_text = errors[-1]['text']
         elif self.quiet_now():
+            state = 'paused'
             now_text = f'Quiet hours until {self.s["quiet"][1]:02d}:00'
         else:
-            now_text = 'Watching replies and donations'
+            now_text = 'Waiting for next reply check'
         last, nxt = self.h['last_sent'](), []
         for key in self.h['groups']():
             if self.blocked(key):
                 continue
             gap = self.gap_for(key, main_gap if key == 'main' else free_gap)
             left_min = 0 if not last.get(key) else max(0, round(gap - (now() - last[key]) / 60))
-            nxt.append({'group': key, 'in': left_min})
-        nxt.sort(key=lambda x: x['in'])
-        return {'now': now_text, 'pace': name, 'why': self.rhythm()[1], 'next': nxt[:3], 'away_hours': round(self.away_hours(), 1),
+            nxt.append({'group': key, 'in': left_min, 'due_at':last[key]+gap*60 if last.get(key) else now()})
+        nxt.sort(key=lambda x: x['due_at'])
+        return {'now': now_text, 'state':state, 'last_reply_read':self.s.get('last_reply_read'), 'last_cycle_completed':self.s.get('last_cycle_completed'), 'errors':errors, 'pace': name, 'why': self.rhythm()[1], 'next': nxt[:3], 'away_hours': round(self.away_hours(), 1),
                 'today': {'posts': self.s['posts_today'], 'dms': self.s['dms_today'], 'signals': self.s['done_today']},
                 'learned': learning.insights(self.L, self.h.get('variant_names', lambda: {})())}
 

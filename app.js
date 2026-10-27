@@ -77,7 +77,7 @@ for(const k of ['group','dm'])$(k+'Preview').addEventListener('paste',e=>{e.prev
 
 /* ---- views, amount, DM greeting ---- */
 function setView(v){if(editing)setEditing(false);if(previewView)previewScroll[previewView]=$('chat').scrollTop;document.body.dataset.view=v;previewView=v;document.querySelectorAll('[data-view-button]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.viewButton===v)));
- $('ctx').textContent=v==='group'?'Group message · poster attached':'DM · poster attached';localStorage.setItem('givelife-view',v);requestAnimationFrame(()=>{fit();$('chat').scrollTop=previewScroll[v]||0});flip()}
+ $('ctx').textContent=v==='group'?'Group · poster':'DM · poster';localStorage.setItem('givelife-view',v);requestAnimationFrame(()=>{fit();$('chat').scrollTop=previewScroll[v]||0});flip()}
 document.querySelectorAll('[data-view-button]').forEach(b=>b.onclick=()=>setView(b.dataset.viewButton));
 function showLeft(){const c=$('leftChip');c.textContent=left==null?'Rs. …':'Rs. '+fmt(left);const w=document.createElement('span');w.className='lw';w.textContent=' left';c.append(w)}
 function applyDrafts(d){if(typeof d.group==='string'&&typeof d.dm==='string')draftsReady=true;if(d.dm_identity){$('dmName').value=d.dm_identity.name||'';$('dmPhone').value=d.dm_identity.phone||'';gender=d.dm_identity.gender==='Sister'?'Sister':'Brother';document.querySelectorAll('#gender button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===gender)))}if(d.group!=null||d.dm!=null)draftSaved=JSON.stringify({group:d.group??$('group').value,dm:d.dm??$('dm').value});if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
@@ -258,15 +258,32 @@ async function toggleAuto(on){const r=await post('/autopilot',{on}),d=await r.js
 $('auto').onclick=()=>toggleAuto(!autoOn).catch(e=>say('app',e.message,1));
 let liveSnapshot=null,checkedAt=0,pollError='',liveNotice=null,lastAnnouncedError='';
 function setLiveNotice(text,error=false){liveNotice={text:String(text||''),error,at:Date.now()};paintStatusLine()}
+function sinceLabel(timestamp){if(typeof timestamp!=='number'||!Number.isFinite(timestamp)||timestamp<=0)return 'Not checked yet';const s=Math.max(0,Math.floor(Date.now()/1000-timestamp));return s<60?s+'s ago':s<3600?Math.floor(s/60)+'m ago':Math.floor(s/3600)+'h ago'}
+function waitLabel(timestamp){const s=Math.max(0,Math.ceil(timestamp-Date.now()/1000));return s<60?s+'s':Math.ceil(s/60)+' min'}
+function statusView(st,on){
+ if(!st)return {text:on?'Waiting for bot status…':'Automatic actions off',state:on?'loading':'off'};
+ let state=st.state||(/^(Sending|Posting|Waiting 60)/i.test(st.now||'')?'sending':/^(On hold|Paused:|Quiet)/i.test(st.now||'')?'paused':on?'idle':'off');
+ if(state==='sending'&&st.job?.next_send_at)return {text:'Next: '+(GN[st.job.next_target]||st.job.next_target||'recipient')+' in '+waitLabel(st.job.next_send_at),state};
+ if(state==='idle'||state==='off'){
+  const candidates=[];if(on&&st.next?.length){const n=st.next[0];if(n.due_at)candidates.push({at:n.due_at,label:GN[n.group]||n.group,type:'Auto'})}
+  if(st.scheduled)candidates.push({at:st.scheduled.due_at,label:GN[st.scheduled.label]||st.scheduled.label,type:'Scheduled'});
+  candidates.sort((a,b)=>a.at-b.at);const next=candidates[0];
+  if(next)return {text:next.at<=Date.now()/1000?next.label+' due · waiting for send check':next.type+': '+next.label+' in '+waitLabel(next.at),state};
+  return {text:on?'Waiting for next reply check':'Automatic actions off',state};
+ }
+ let text=st.now||'Waiting for bot status…';if(state==='reading')text=text.replace(/^Reading replies:/,'Reading:');for(const [key,name] of Object.entries(GN)){if(st.job?.next_target===key&&/^Sending to /i.test(text))text='Sending: '+name}
+ return {text,state};
+}
 function paintStatusLine(){const box=$('live');if(!box)return;const offline=!navigator.onLine,wa=$('whatsappConnection')?.dataset.state;
- const error=offline?'No internet':pollError||((wa==='offline'||wa==='error')?'WhatsApp disconnected. Tap its status to reconnect.':'')||(liveNotice?.error&&Date.now()-liveNotice.at<120000?liveNotice.text:'');
- const age=checkedAt?Math.max(0,Math.floor((Date.now()-checkedAt)/1000)):null;
- const recent=liveNotice&&Date.now()-liveNotice.at<90000;
- const serverActive=/^(Sending|Posting|Waiting|On hold|Paused:|Goal complete)/i.test(liveSnapshot?.now||'');
- const activity=error||(!autoKnown?'Checking Auto status…':(watchingJobs.size||operationCount>0)?liveNotice?.text||'Sending…':serverActive?liveSnapshot.now:recent?liveNotice.text:autoOn?(liveSnapshot?.now||'Loading activity…'):'Automatic actions off');
- const text=activity+(age===null?'':` · Checked ${age<60?age+'s':Math.floor(age/60)+'m'} ago`);
+ const error=offline?'No internet':pollError||((wa==='offline'||wa==='error')?'WhatsApp disconnected. Tap WA to reconnect.':'')||(liveNotice?.error&&Date.now()-liveNotice.at<120000?liveNotice.text:'')||(['error','offline'].includes(liveSnapshot?.state)?liveSnapshot.now:'');
+ const recent=liveNotice&&Date.now()-liveNotice.at<90000,actual=statusView(liveSnapshot,autoOn);
+ const active=['sending','reading','paused','offline','done'].includes(actual.state);
+ const text=error||(!autoKnown?'Checking Auto status…':active?actual.text:(watchingJobs.size||operationCount>0)?liveNotice?.text||'Sending…':recent?liveNotice.text:actual.text);
+ const state=error?'error':!autoKnown?'loading':actual.state;
+ const detail=(!autoKnown?'Waiting for the server':Number.isFinite(liveSnapshot?.last_reply_read)&&liveSnapshot.last_reply_read>0?'Replies read '+sinceLabel(liveSnapshot.last_reply_read):'No reply check recorded')+(checkedAt?' · Synced '+sinceLabel(checkedAt/1000):'');
  if(error!==lastAnnouncedError){lastAnnouncedError=error;$('liveAnnouncement').textContent=error}
- box.dataset.error=error?'1':'0';$('liveNow').textContent='Auto '+(!autoKnown?'…':autoOn?'ON':'OFF');$('liveMeta').textContent=text;$('liveBar').title=$('liveNow').textContent+' · '+text;$('liveBar').setAttribute('aria-label',$('liveBar').title+' · View details');
+ box.dataset.error=error?'1':'0';box.dataset.state=state;$('liveNow').textContent='Auto '+(!autoKnown?'…':autoOn?'ON':'OFF');$('liveMeta').textContent=text;$('liveDetail').textContent=detail;
+ $('liveBar').title=$('liveNow').textContent+' · '+text+' · '+detail;$('liveBar').setAttribute('aria-label',$('liveBar').title+' · View details');
 }
 function refreshLiveDrafts(data,baseline){
  if(data.left!=null&&left===baseline.left){left=data.left;showLeft()}
@@ -281,7 +298,7 @@ setInterval(paintStatusLine,1000);
 const waObserver=new MutationObserver(paintStatusLine);if($('whatsappConnection'))waObserver.observe($('whatsappConnection'),{attributes:true,attributeFilter:['data-state']});
 
 /* ---- live box: what Auto is doing right now ---- */
-const GN={main:'GiveLife',community:'Upwork Community',fiverr:'Fiverr',upwork:'Upwork',uet:'Fiverr UET',toprated:'Top Rated'};
+const GN={all:'All 6 groups',free:'Freelance groups',main:'GiveLife',community:'Upwork Community',fiverr:'Fiverr',upwork:'Upwork',uet:'Fiverr UET',toprated:'Top Rated'};
 const PACE={L1:'Normal pace: donations are coming.',L2:'Donations slowed: posting faster.',L3:'Donations very slow: working at full effort.',L4:'Long quiet spell: easing off so the groups do not get tired.'};
 function paintLive(st){const box=$('live');if(!st){$('liveMore').textContent=$('liveMeta').textContent;return}
  box.dataset.pace=st.pace;paintStatusLine();
@@ -289,7 +306,10 @@ function paintLive(st){const box=$('live');if(!st){$('liveMore').textContent=$('
  const more=$('liveMore');more.textContent='';
  const add=(k,v)=>{const d=document.createElement('div'),a=document.createElement('div');a.className='k';a.textContent=k;d.textContent=v;more.append(a,d)};
  if(box.dataset.error==='1')add('Needs attention',$('liveMeta').textContent);
- add('Pace',PACE[st.pace]||st.pace);
+ add('Live activity',st.now||'Waiting for bot status');
+ if(st.last_reply_read)add('Last successful reply read',new Date(st.last_reply_read*1000).toLocaleString());
+ if(st.last_event?.text)add('Last recorded update',st.last_event.text);
+ if(st.pace)add('Pace',PACE[st.pace]||st.pace);
  if(st.why)add('Right now',st.why);
  if((st.next||[]).length)add('Next posts',st.next.map(x=>`${GN[x.group]||x.group} ${x.in?'in '+x.in+' min':'now'}`).join(' · '));
  add('Today',`${t.posts||0} group posts, ${t.dms||0} DMs, ${t.signals||0} people said they donated`);
@@ -365,6 +385,6 @@ seenAuto=Number(localStorage.getItem('givelife-seen-auto')||0);addEventListener(
 ensureDrafts().then(()=>status('✓ Ready')).catch(()=>{const d=cached('drafts');if(d){applyDrafts(d);status('Offline · showing the last saved message',1)}else status('Could not load',1)});
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false}}).catch(()=>{});
-pollAuto();setInterval(pollAuto,10000);pollCamp();
+pollAuto();setInterval(pollAuto,5000);pollCamp();
 
 

@@ -49,6 +49,13 @@ async function main(){
  assert(ctx.statusView({state:'off',scheduled:{due_at:Date.now()/1000+60,label:'main'}},false).text.includes('Scheduled: GiveLife'));
  assert(ctx.statusView({state:'idle',next:[{group:'main',due_at:Date.now()/1000-1}]},true).text.includes('waiting for send check'));
  assert.equal(ctx.sinceLabel('malformed'),'Not checked yet');
+ vm.runInContext("autoKnown=true;autoOn=true;liveNotice=null;liveSnapshot={state:'reading',now:'Reading replies: GiveLife',last_event:{text:'Confirmed sent to GiveLife',time:Date.now()/1000-45}}",ctx);ctx.paintStatusLine();
+ assert.equal(node('liveMeta').textContent,'Reading: GiveLife','Current activity must stay above the previous result');
+ assert(node('liveDetail').textContent.startsWith('Last update: Confirmed sent to GiveLife'),'Highlight the real last result with an explicit past-event label');
+ assert(node('liveDetail').textContent.includes('45s ago'));
+ vm.runInContext("liveSnapshot={state:'idle',next:[{group:'main',due_at:Date.now()/1000+600}],last_event:{text:{bad:true}}}",ctx);ctx.paintStatusLine();
+ assert(node('liveMeta').textContent.startsWith('Waiting'),'A future timer must never look like active sending');
+ assert(!node('liveDetail').textContent.includes('[object Object]'),'Malformed event data must not leak into the status');
  const syncFields={group:{value:'Saved group'},dm:{value:'Saved DM'}},syncCtx={$:id=>syncFields[id],JSON,showLeft(){},applyDrafts:d=>{syncFields.group.value=d.group;syncFields.dm.value=d.dm}};
  vm.createContext(syncCtx);vm.runInContext("let left=25000,draftsReady=true,editing=false,pendingChats=0,operationCount=0,draftSaved=JSON.stringify({group:'Saved group',dm:'Saved DM'});"+part('function refreshLiveDrafts(','let autoPolling='),syncCtx);
  const baseline={left:25000,payload:JSON.stringify({group:'Saved group',dm:'Saved DM'}),wasSaved:true},remote={left:23000,drafts:{group:'Current group 23,000',dm:'Current DM 23,000'}};

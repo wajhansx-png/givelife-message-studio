@@ -280,7 +280,7 @@ function statusView(st,on){
   const candidates=[];if(on&&st.next?.length){const n=st.next[0];if(n.due_at)candidates.push({at:n.due_at,label:GN[n.group]||n.group,type:'Auto'})}
   if(st.scheduled)candidates.push({at:st.scheduled.due_at,label:GN[st.scheduled.label]||st.scheduled.label,type:'Scheduled'});
   candidates.sort((a,b)=>a.at-b.at);const next=candidates[0];
-  if(next)return {text:next.at<=Date.now()/1000?next.label+' due · waiting for send check':next.type+': '+next.label+' in '+waitLabel(next.at),state};
+  if(next)return {text:next.at<=Date.now()/1000?next.label+' due · waiting for send check':'Waiting · '+next.type+': '+next.label+' in '+waitLabel(next.at),state};
   return {text:on?'Waiting for next reply check':'Automatic actions off',state};
  }
  let text=st.now||'Waiting for bot status…';if(state==='reading')text=text.replace(/^Reading replies:/,'Reading:');for(const [key,name] of Object.entries(GN)){if(st.job?.next_target===key&&/^Sending to /i.test(text))text='Sending: '+name}
@@ -292,7 +292,8 @@ function paintStatusLine(){const box=$('live');if(!box)return;const offline=!nav
  const active=['sending','reading','paused','offline','done'].includes(actual.state);
  const text=error||(!autoKnown?'Checking Auto status…':active?actual.text:(watchingJobs.size||operationCount>0)?liveNotice?.text||'Sending…':recent?liveNotice.text:actual.text);
  const state=error?'error':!autoKnown?'loading':actual.state;
- const detail=(!autoKnown?'Waiting for the server':Number.isFinite(liveSnapshot?.last_reply_read)&&liveSnapshot.last_reply_read>0?'Replies read '+sinceLabel(liveSnapshot.last_reply_read):'No reply check recorded')+(checkedAt?' · Synced '+sinceLabel(checkedAt/1000):'');
+ const event=liveSnapshot?.last_event;const eventText=typeof event?.text==='string'?event.text.replace(/\s+/g,' ').trim():'';
+ const detail=(eventText?'Last update: '+eventText.slice(0,130)+(eventText.length>130?'…':'')+(event.time?' · '+sinceLabel(event.time):'')+' · ':'')+(!autoKnown?'Waiting for the server':Number.isFinite(liveSnapshot?.last_reply_read)&&liveSnapshot.last_reply_read>0?'Replies read '+sinceLabel(liveSnapshot.last_reply_read):'No reply check recorded')+(checkedAt?' · Synced '+sinceLabel(checkedAt/1000):'');
  if(error!==lastAnnouncedError){lastAnnouncedError=error;$('liveAnnouncement').textContent=error}
  box.dataset.error=error?'1':'0';box.dataset.state=state;$('liveNow').textContent='Auto '+(!autoKnown?'…':autoOn?'ON':'OFF');$('liveMeta').textContent=text;$('liveDetail').textContent=detail;
  $('liveBar').title=$('liveNow').textContent+' · '+text+' · '+detail;$('liveBar').setAttribute('aria-label',$('liveBar').title+' · View details');

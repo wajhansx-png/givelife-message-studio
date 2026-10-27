@@ -14,10 +14,12 @@ CASES={
  'draft_hook':{'prompt':'Add this as hook reath point','want':'set_message','history':[{'who':'you','text':'His parents report he is now short of breath. Put that in the caption.'}]},
  'draft_correction':{'prompt':'Fluid is pressing line is now old man. Rewrite that line with a different opening.','want':'set_message'},
  'fresh_preserves_update':{'prompt':'Show a new message','want':'set_message'},
+ 'hadith_workflow':{'prompt':'Multi-turn short caption, test, then main','want':'send_appeal'},
 }
-DEFAULT_CASES=['draft_hook','draft_correction','fresh_preserves_update','greeting','typo_recipient','name_correction','multiple_instructions','injection']
+DEFAULT_CASES=['hadith_workflow','draft_hook','fresh_preserves_update','greeting','typo_recipient','name_correction','multiple_instructions','injection']
 
 def run_case(key):
+ if key=='hadith_workflow':return run_hadith_workflow()
  case=CASES[key];calls=[];mutations=[];edits=[]
  def call(name):
   def run(**args):
@@ -47,3 +49,28 @@ def run_case(key):
   ok=ok and not re.search(r'(?i)cannot speak|fluid.{0,25}(?:growing|increasing)',caption)
   if key=='draft_hook':ok=ok and 'breath' in caption.split('\n\n')[0].lower() and 'parents' in caption.split('\n\n')[0].lower()
  return {'case':key,'passed':ok,'calls':calls,'reply':reply[:1200],'sandbox':True}
+
+def run_hadith_workflow():
+ """Real model, isolated draft and simulated sends across four consecutive turns."""
+ state={'left':25000,'screen':{'view':'group'},'drafts':{'group':'Yousuf is 2 and needs treatment. Rs. 25,000 left. Account 03097458815.','dm':'Unrelated DM'},'draft_task':{'kind':'group','state':'editing','target':'main','poster':False,'max_lines':3}}
+ history=[];calls=[];sent=[];replies=[]
+ def call(name):
+  def invoke(**a):
+   calls.append(name)
+   if name=='get_message':return {'kind':a['kind'],'text':state['drafts'][a['kind']]}
+   if name=='set_message':
+    if a['kind']!='group' or len(a['text'].strip().splitlines())>3 or '03097458815' not in a['text']:raise ValueError('Save the complete caption in at most 3 total lines, with the account number.')
+    state['drafts']['group']=a['text'];state['draft_task']['state']='ready';return 'Group caption saved.'
+   if name=='send_appeal':
+    if state['draft_task']['state']!='ready' or a['target'] not in ('main','test'):raise ValueError('Use the current task target main, or test first.')
+    sent.append({'target':a['target'],'text':state['drafts']['group'],'poster':False});state['last_recipient']={'target':a['target'],'group':True}
+    return 'Confirmed simulated send. No WhatsApp message was sent.'
+   if name in ('recent_activity','search_memory','list_rules'):return []
+   raise ValueError('This isolated task requires set_message or send_appeal.')
+  return invoke
+ prompts=['Make a very short hadith message for GiveLife without poster, only 3 total lines, ask to donate with the account number.','Add a breaking heart icon.','Send test first.','Send now.']
+ for prompt in prompts:
+  result=assistant.chat(prompt,history,state,[],{t['function']['name']:call(t['function']['name']) for t in assistant.CHAT_TOOLS}) or {}
+  reply=result.get('reply','');replies.append(reply);history.extend([{'who':'you','text':prompt},{'who':'app','text':reply}])
+ ok=len(sent)==2 and [s['target'] for s in sent]==['test','main'] and sent[0]['text']==sent[1]['text'] and all(not s['poster'] for s in sent) and '💔' in sent[0]['text'] and len(sent[0]['text'].strip().splitlines())<=3
+ return {'case':'hadith_workflow','passed':ok,'calls':calls,'reply':' | '.join(replies)[:1400],'sandbox':True}

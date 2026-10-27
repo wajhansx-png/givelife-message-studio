@@ -3,6 +3,12 @@ let draftSaved=null,draftsReady=false,draftsLoad=null;
 let editing=false,left=null,timer,saveChain=Promise.resolve(),allT=null,autoOn=false,autoKnown=false,seenAuto=0;
 const view=()=>document.body.dataset.view,fmt=n=>Number(n).toLocaleString('en-US');
 const post=(url,body)=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+/* Server-issued next steps are tied to the exact saved draft, never AI-authored commands. */
+let nextActions=[],nextActionEpoch=0;const nextActionPending=new Set();
+function drawNextActions(){for(const id of ['chatNextActions','histNextActions']){const row=$(id);if(!row)continue;row.textContent='';row.hidden=!nextActions.length;for(const a of nextActions){const b=document.createElement('button');b.type='button';b.textContent=a.label;b.title=a.detail||'';b.disabled=!!a.disabled||nextActionPending.has(a.id);b.setAttribute('aria-label',a.label+(a.detail?' · '+a.detail:''));b.onclick=()=>runNextAction(a);row.append(b)}}}
+function clearNextActions(){nextActionEpoch++;nextActions=[];drawNextActions()}
+async function refreshNextActions(){const epoch=++nextActionEpoch;try{const r=await fetch('/chat-next-actions');if(!r.ok)return;const d=await r.json();if(epoch!==nextActionEpoch)return;nextActions=(Array.isArray(d.items)?d.items:[]).filter(a=>a&&/^[a-f0-9]{32}$/.test(a.id)&&typeof a.label==='string').slice(0,3);drawNextActions()}catch(e){}}
+async function runNextAction(a){if(a.disabled||nextActionPending.has(a.id))return;nextActionPending.add(a.id);drawNextActions();try{const r=await post('/chat-action',{action_id:a.id}),d=await r.json();if(!r.ok)throw Error(d.error||'This action is unavailable. Refresh the draft.');if(d.choose_group){closeChat();setView('group')}if(d.reply)say('app',d.reply);if(d.job_id){a.disabled=true;watchGroupJob(d.job_id,d.caption)}}catch(e){say('app',e.message,1)}finally{nextActionPending.delete(a.id);await refreshNextActions();drawNextActions()}}
 function status(t,bad){const s=$('status');s.textContent=t;s.classList.toggle('err',!!bad);if(bad)setLiveNotice(t,true)}
 
 /* ---- conversation log (kept on this device) ---- */
@@ -38,7 +44,7 @@ async function syncChat(){try{await logChain;const d=await (await fetch('/chat')
 drawLog();syncChat();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!thinking)syncChat()});
 function isPhone(){return matchMedia('(max-width:899px)').matches}
-function openChat(){if($('hist').open)return;if(editing)setEditing(false);rememberScroll();$('hist').showModal();
+function openChat(){if($('hist').open)return;if(editing)setEditing(false);rememberScroll();$('hist').showModal();refreshNextActions();
  // A navigation control receives focus. Opening chat never opens a soft keyboard.
  (isPhone()?$('histMain'):$('histClose')).focus({preventScroll:true});syncChat();requestAnimationFrame(drawLog)}
 function closeChat(){saveChatDraft($('histCmd').value);document.activeElement?.blur();rememberScroll();$('hist').close();if(isPhone())$('chatOpen').focus({preventScroll:true})}
@@ -223,13 +229,13 @@ async function quick(t){const low=t.toLowerCase().trim();
  return undefined}
 
 async function act(text){const t=text.trim();if(!t)return;say('you',t);
- const q=await quick(t);if(q!==undefined){if(q)say('app',q);return}
+ clearNextActions();const q=await quick(t);if(q!==undefined){if(q)say('app',q);refreshNextActions();return}
  think(true);let r,d;
  try{await logChain;r=await post('/assistant',{text:t,request_id:requestId(),image:attached?attached.id:null,history:history.slice(-13,-1),screen:{view:view(),dm:{name:$('dmName').value,phone:$('dmPhone').value,gender}}});d=await r.json().catch(()=>({}));if(r.ok&&d.task_id){let finished=false;const until=Date.now()+4*60*1000;while(!finished&&Date.now()<until){await new Promise(res=>setTimeout(res,500));const check=await fetch('/assistant-status/'+d.task_id),task=await check.json();if(!check.ok)throw Error(task.error||'Request no longer tracked. Nothing was retried.');if(task.done){if(task.error)throw Error(task.error);d=task.result;finished=true}}if(!finished)throw Error('The assistant result is not confirmed. Check recent activity; I will not repeat the send.')}}finally{think(false)}
  if(r.status===503){say('app','I did not understand that, and the AI assistant is not connected, so only direct commands work. Try: "34k left", "came 2000", "send hi to Ali", "send main", "fiverr every 30 min", "rules".',1);return}
  if(!r.ok)throw Error(d.error||'The assistant could not answer.');
  if(!d.superseded){applyDrafts(d);if(d.autopilot!=null)paintAuto(d.autopilot)}say('app',d.reply,false,d.turn_id);if(d.job_id)watchGroupJob(d.job_id,d.caption||$('group').value);for(const j of d.jobs||[])watchGroupJob(j.job_id,j.caption||$('group').value);
- for(const a of d.actions||[]){
+ refreshNextActions();for(const a of d.actions||[]){
   if(a.type==='prepare_dm'){setView('dm');$('dmPhone').value=a.phone||'';$('dmName').value=a.name||'';setGender(a.gender==='Sister'?'Sister':'Brother')}
   }}
 /* A draft is independent of the message caption, and shared between both chat views. */
@@ -388,6 +394,6 @@ seenAuto=Number(localStorage.getItem('givelife-seen-auto')||0);addEventListener(
 ensureDrafts().then(()=>status('✓ Ready')).catch(()=>{const d=cached('drafts');if(d){applyDrafts(d);status('Offline · showing the last saved message',1)}else status('Could not load',1)});
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false}}).catch(()=>{});
-pollAuto();setInterval(pollAuto,5000);pollCamp();
+pollAuto();setInterval(pollAuto,5000);pollCamp();refreshNextActions();
 
 

@@ -46,6 +46,9 @@ class Store:
   import copy
   with self.lock:self.data[k]=copy.deepcopy(v)
 server.STORE=Store();server.set_left(25000);server.ENGINE.s['dm_enabled']=False
+if '--draft-task' in sys.argv:
+ text='*A short charity reminder.*\nYousuf needs treatment. *Rs. 25,000 left.* 💔\n*03097458815* Easypaisa / JazzCash (Wajdan Khan)'
+ server.chat_callbacks('Make a message for givelife without poster only 3 lines',revision=server.OWNER_REVISION)['set_message'](kind='group',text=text)
 # No engine/background AI loops are started. The only sends are explicit preview actions.
 server.Handler.log_message=lambda *a:None
 original_get=server.Handler.do_GET

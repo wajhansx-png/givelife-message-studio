@@ -8,6 +8,7 @@ from state_shapes import mapping, memories, history as valid_history
 import chat_policy
 import timed_tasks
 import draft_flow
+import draft_workflow
 from chat_memory import Knowledge,safe_text
 from functools import wraps
 ROOT=Path(__file__).resolve().parent
@@ -174,11 +175,16 @@ def set_left(left):
  with LOCK:
   revision=getattr(OWNER_GUARD,'revision',None)
   if revision is not None and revision!=OWNER_REVISION:raise ValueError('Superseded by your newer instruction. The amount was not changed.')
+  old=read_left();before=json.loads(DRAFT.read_text(encoding='utf-8')) if DRAFT.exists() else {}
+  task=workflow();custom=next((k for k in ('group','dm') if task.current(k,before.get(k,''))),None)
   write_left(left)
   try:ENGINE.amount_updated()
   except NameError:pass
-  g=build_group(variant(False),left);d=build_dm(dm_selection(False),left)
-  save_draft('group',g);save_draft('dm',d);return g,d
+  g=draft_workflow.update_amount(before['group'],old,left) if custom=='group' else build_group(variant(False),left)
+  d=draft_workflow.update_amount(before['dm'],old,left) if custom=='dm' else build_dm(dm_selection(False),left)
+  save_draft('group',g);save_draft('dm',d)
+  if custom:task.commit(custom,g if custom=='group' else d)
+  return g,d
 
 @serialized_send
 def send_image(jid,caption,check_gap=False,_retry=True):
@@ -235,7 +241,7 @@ def get_job(ident):
   if STORE:STORE.put('send_job_'+ident,job)
  return job
 
-def start_send_job(keys,caption,manual=False,request_id=None):
+def start_send_job(keys,caption,manual=False,request_id=None,with_picture=True):
  global ACTIVE
  check_hold()
  keys=list(dict.fromkeys(keys))
@@ -249,12 +255,12 @@ def start_send_job(keys,caption,manual=False,request_id=None):
   if existing:return existing
   if ACTIVE:
    current=JOBS.get(ACTIVE,{})
-   if manual and current.get('manual') and current.get('keys')==keys and current.get('caption')==caption:
+   if manual and current.get('manual') and current.get('keys')==keys and current.get('caption')==caption and current.get('with_picture',True)==with_picture:
     return ACTIVE  # a double click observes the existing in-flight send; never duplicates it
    if not manual:return None
    cancel_jobs()
   ident=uuid.uuid4().hex
-  JOBS[ident]={'done':False,'results':[],'message':'Sending now…','manual':bool(manual),'keys':keys,'caption':caption}
+  JOBS[ident]={'done':False,'results':[],'message':'Sending now…','manual':bool(manual),'keys':keys,'caption':caption,'with_picture':bool(with_picture)}
   JOB_CANCEL[ident]=threading.Event();ACTIVE=ident;LAST_JOB['id']=ident
   if request_id:
    REQUEST_JOBS[request_id]=ident
@@ -278,13 +284,20 @@ def run_job(job_id,keys,caption,queue=False):
     if event.is_set() or on_hold():break
     job.update(message='Sending to '+name,next_send_at=None,next_target=key);save_job(job_id)
     OWNER_GUARD.cancel_event=event
-    try:result=send_image(jid,caption,not job.get('manual',False))
+    try:
+     if job.get('with_picture',True):result=send_image(jid,caption,not job.get('manual',False))
+     else:
+      result=send_text(jid,caption)
+      if result.get('code')=='SUCCESS':
+       record_delivery(jid,caption,result);LAST_LOCAL[jid]=time.time()
+       if STORE:
+        saved=STORE.get('last_sent',{});saved[jid]=time.time();STORE.put('last_sent',saved)
     finally:OWNER_GUARD.cancel_event=None
    job['results'].append({'group':name,**result});save_job(job_id)
    if result.get('code')=='SUCCESS':last_send=time.monotonic()
    elif result.get('code')!='COOLDOWN':break  # never retry an uncertain/error result
   sent=sum(r.get('code')=='SUCCESS' for r in job['results'])
-  if sent and not event.is_set() and ACTIVE==job_id and json.loads(DRAFT.read_text(encoding='utf-8')).get('group')==caption:
+  if sent and not job.get('manual') and not event.is_set() and ACTIVE==job_id and json.loads(DRAFT.read_text(encoding='utf-8')).get('group')==caption:
    job['next_caption']=next_message()
   job['message']=(job.get('cancel_reason','Stopped by owner.')+' ' if event.is_set() or on_hold() else '')+f'Confirmed sent to {sent}/{len(keys)} groups.'
   job['done']=True;save_job(job_id)
@@ -310,6 +323,32 @@ if STORE:
   if v:f.write_text(v if isinstance(v,str) else json.dumps(v),encoding='utf-8')
 CHAT_LOCK=threading.Lock()
 KNOWLEDGE=Knowledge(DATA,STORE)
+_WORKFLOW=None;_WORKFLOW_STORE=None
+def workflow():
+ global _WORKFLOW,_WORKFLOW_STORE
+ with LOCK:
+  if _WORKFLOW is None or _WORKFLOW_STORE is not STORE:
+   _WORKFLOW=draft_workflow.DraftWorkflow(DATA/'draft-workflow.json',STORE);_WORKFLOW_STORE=STORE
+  return _WORKFLOW
+
+def next_chat_actions():return workflow().suggest(get_message('group')['text'])
+
+def execute_chat_action(ident):
+ if not isinstance(ident,str):raise ValueError('Choose a current chat action.')
+ with LOCK:
+  caption=get_message('group')['text'];work=workflow();action=work.action(ident,caption)
+  if action['type']=='preview':return {'reply':caption}
+  if action['type']=='choose':return {'choose_group':True,'reply':'Choose a group on the main screen.'}
+  if action.get('job_id'):return {'job_id':action['job_id'],'caption':caption,'reply':'Showing the existing send status. Nothing was sent again.'}
+  if not wa_ok():raise ValueError('WhatsApp is disconnected. Reconnect before sending.')
+  key=action['target']
+  if key not in (*GROUPS,'test','all','free'):raise ValueError('Choose a known group.')
+  keys=list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key]
+  ident_job=start_send_job(keys,caption,manual=True,request_id='chat-action-'+ident,with_picture=action['poster'])
+  work.started(ident,ident_job)
+  if key!='test':remember_manual({'kind':'appeal','target':key})
+  label='Givelife test' if key=='test' else 'all 6 groups' if key=='all' else '5 freelance groups' if key=='free' else GROUPS[key][0]
+  return {'reply':'Sending the saved '+('poster + caption' if action['poster'] else 'text-only message')+' to '+label+'.','job_id':ident_job,'caption':caption}
 
 def chat_get(n=300):
  try:return valid_history(CHATLOG.read_text(encoding='utf-8'))[-n:] if CHATLOG.exists() else []
@@ -548,7 +587,10 @@ def send_appeal(target,request_id=None):
  remember_manual({'kind':'appeal','target':t})
  if not wa_ok():raise ValueError('WhatsApp is not connected. Link it from the WhatsApp button, then send again.')
  caption=json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')
- ident=start_send_job(keys,caption,manual=True,request_id=request_id)
+ work=workflow();options=work.options('group',caption)
+ if work.data.get('kind')=='group' and work.data.get('state')=='editing':raise ValueError('The requested draft edit is not saved yet. Nothing was sent.')
+ if t!='test':work.select(t,caption)
+ ident=start_send_job(keys,caption,manual=True,request_id=request_id,with_picture=options.get('poster',True) if options else True)
  name='GiveLife main' if t=='main' else 'all 6 groups' if t=='all' else 'all 5 freelance groups' if t=='free' else 'Givelife test' if t=='test' else GROUPS[t][0]
  return {'reply':'Sending to '+name+' now. The automatic-post timer restarts after confirmation.','job_id':ident,'caption':caption}
 
@@ -1091,6 +1133,9 @@ def delete_last_group(target=None):
 
 def chat_callbacks(prompt='',revision=None,task_id=None):
  callbacks=base_chat_callbacks();cache={};verified=set();owner=chat_policy.intent(prompt)
+ if draft_flow.editing_request(owner['text']) and (revision is None or revision==OWNER_REVISION):
+  kind='dm' if re.search(r'(?i)\bdm\b',owner['text']) else 'group'
+  workflow().begin(owner['text'],kind,get_message(kind)['text'])
  sending=owner['send'];dm_allowed=owner['batch']
  send_tools={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
  read_tools=chat_policy.READ
@@ -1099,7 +1144,11 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
   if not keys and manual_commands.has_group_exclusion(chat_policy.owner_text(prompt)):
    raise ValueError('No clear eligible groups remain after the exclusion. Name the groups to send to.')
   if not keys:
-   if LAST_MANUAL.get('kind')=='appeal':keys.add(LAST_MANUAL.get('target'))
+   task=workflow().data
+   if task.get('kind')=='group':
+    if task.get('target'):keys.add(task['target'])
+    else:raise ValueError('This draft has no selected group. Choose its recipient before sending.')
+   elif LAST_MANUAL.get('kind')=='appeal':keys.add(LAST_MANUAL.get('target'))
    elif LAST_MANUAL.get('kind')=='appeals':keys.update(LAST_MANUAL.get('targets',[]))
    else:keys.update(k for k,v in GROUPS.items() if v[1]==LAST_MANUAL.get('to'))
    if LAST_MANUAL.get('to')=='120363431210327603@g.us':keys.add('test')
@@ -1152,7 +1201,9 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
     if name=='schedule_task' or name=='add_rule' and timed_tasks.requested(prompt):
      result=timed_chat_command(prompt,task_id)
      if result is None:raise ValueError('Give a group/action and a future time. Nothing was scheduled or sent.')
-    elif name=='send_appeal':result=send_appeal(args.get('target'),(task_id+'-'+hashlib.sha256(cache_key.encode()).hexdigest()[:16]) if task_id else None)
+    elif name=='send_appeal':
+     workflow().apply_options(owner['text'],get_message('group')['text'])
+     result=send_appeal(args.get('target'),(task_id+'-'+hashlib.sha256(cache_key.encode()).hexdigest()[:16]) if task_id else None)
     elif name=='send_message':
      literal=bool(re.search(r'["“\']'+re.escape(str(args.get('text','')))+r'["”\']',prompt))
      target=resolve_person(args.get('to',''))
@@ -1162,7 +1213,10 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
      elif custom.get('kind')=='text' and not literal:args['text']=custom['text'];literal=True;args['with_picture']=bool(re.search(r'(?i)\b(poster|image|picture)\b',chat_policy.owner_text(prompt)))
      # The model selects recipients; the stored template supplies fundraising captions.
      appeal=not literal and not str(target).endswith('@g.us') and target not in GROUPS and target not in ('test','all','free') and (args.get('with_picture') or re.search(r'(?i)\b(dm|appeal|donation|poster|structure)\b',prompt) or re.search(r'(?i)Yous[au]f|03097458815',str(args.get('text',''))))
-     if appeal:result=send_dm_appeal(target)
+     group_target=target if target in GROUPS or target=='test' else next((k for k,v in GROUPS.items() if v[1]==target),None)
+     if not literal and group_target and workflow().options('group',get_message('group')['text']):
+      workflow().apply_options(owner['text'],get_message('group')['text']);result=send_appeal(group_target)
+     elif appeal:result=send_dm_appeal(target)
      else:result=send_free(target,args.get('text',''),args.get('with_picture',False),literal=literal)
     elif name=='find_contact':
      result=fn(**args)
@@ -1173,10 +1227,13 @@ def chat_callbacks(prompt='',revision=None,task_id=None):
       selected=exact if len(exact)==1 else items if len(items)==1 else []
       if all(word in manual_commands.norm(prompt) for word in manual_commands.norm(args.get('query','')).split()):verified.update(x['id'] for x in selected)
      except (ValueError,TypeError,KeyError):pass
-    elif name=='set_message' and args.get('kind')=='dm':
-     if re.search(r'(?i)\bname\b.*\b(is|change|to)\b|\b(change|correct)\b.*\bname\b',prompt):raise ValueError('Use edit_dm_name to change only the greeting; keep the full message.')
-     if not dm_composer.complete(args.get('text','')):raise ValueError('Keep the full DM with blank lines, formatting, amount, donation options and payment details. Do not replace it with a name or one-paragraph summary.')
-     result=fn(**args)
+    elif name=='set_message':
+     if args.get('kind')=='dm':
+      if re.search(r'(?i)\bname\b.*\b(is|change|to)\b|\b(change|correct)\b.*\bname\b',prompt):raise ValueError('Use edit_dm_name to change only the greeting; keep the full message.')
+      if not dm_composer.complete(args.get('text','')):raise ValueError('Keep the full DM with blank lines, formatting, amount, donation options and payment details. Do not replace it with a name or one-paragraph summary.')
+     work=workflow();work.begin(owner['text'],args['kind'],get_message(args['kind'])['text']);work.validate(args['text'])
+     result=fn(**args);work.commit(args['kind'],args['text'])
+     result=args['kind'].upper()+' message saved ('+('poster + caption' if work.data.get('poster',True) else 'text only')+').\n\n'+args['text']
     elif name=='remember':result=mem_add(prompt)
     else:result=fn(**args)
    finally:OWNER_GUARD.revision=previous
@@ -1213,7 +1270,7 @@ def assistant_task(body):
    KNOWLEDGE.report_correction(text)
    if hist and hist[-1]['who']=='you' and hist[-1]['text'].strip()==text.strip():hist=hist[:-1]
    preferences=mem_get()
-   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident))
+   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident))
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
    output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
    output['superseded']=revision!=OWNER_REVISION
@@ -1257,7 +1314,8 @@ def send_selected_groups(targets,request_id=None):
  keys=list(dict.fromkeys(keys));remember_manual({'kind':'appeals','targets':targets})
  if not wa_ok():raise ValueError('WhatsApp is not connected. Link it first.')
  caption=json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')
- ident=start_send_job(keys,caption,True,request_id)
+ options=workflow().options('group',caption)
+ ident=start_send_job(keys,caption,True,request_id,with_picture=options.get('poster',True) if options else True)
  return {'reply':f'Starting the manual send to {len(keys)} selected groups now.','job_id':ident,'caption':caption}
 
 def execute_manual_command(text,request_id=None,message_kind='group'):
@@ -1279,6 +1337,7 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
   return {'handled':True,'reply':'; '.join(rules.describe(item) for item in pace)+('. Auto follows this schedule.' if auto_on() else '. Saved. Auto is currently off.')}
  plan=manual_commands.parse(text)
  if not plan:return {'handled':False}
+ workflow().apply_options(chat_policy.owner_text(text),get_message('group')['text'])
  with LOCK:OWNER_REVISION+=1
  OWNER_GUARD.revision=OWNER_REVISION
  kind=plan['kind'];out={'handled':True}
@@ -1299,8 +1358,15 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
   set_left(plan['amount']);out['reply']=f"Rs. {plan['amount']:,} left. Captions updated."
  elif kind=='delete':out['reply']=delete_last_group(plan.get('target'))
  elif kind=='select':
+  workflow().select(plan['target'],get_message('group')['text'])
   remember_manual({'kind':'appeal','target':plan['target']});out['reply']='Selected '+('GiveLife main' if plan['target']=='main' else plan['target'])+'.'
  elif kind=='repeat':
+  task=workflow().data
+  if task.get('kind')=='group':
+   if not workflow().current('group',get_message('group')['text']):raise ValueError('The latest draft edit is not ready. Check it before sending.')
+   if not task.get('target'):raise ValueError('Choose the group for this draft. The previous recipient will not be reused.')
+   out.update(send_appeal(task['target'],request_id))
+   out.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left());return out
   if not LAST_MANUAL:raise ValueError('Who should receive it? Name a group or contact.')
   if LAST_MANUAL.get('kind')=='appeals':out.update(send_selected_groups(LAST_MANUAL['targets'],request_id))
   elif LAST_MANUAL.get('kind')=='appeal':out.update(send_appeal(LAST_MANUAL['target'],request_id))
@@ -1427,6 +1493,7 @@ class Handler(BaseHTTPRequestHandler):
    try:return self.reply(api('/devices/'+DEVICE+'/status'))
    except Exception:return self.reply({'error':'WhatsApp is restarting. Try again shortly.'},status=502)
   if self.path=='/drafts':self.reply(DRAFT.read_bytes())
+  elif self.path=='/chat-next-actions':self.reply({'items':next_chat_actions()})
   elif self.path=='/poster':self.reply((DATA/'poster.jpg').read_bytes(),'image/jpeg')
   elif self.path=='/format.js':self.reply((ROOT/'format.js').read_bytes(),'application/javascript')
   elif self.path=='/app.js':self.reply((ROOT/'app.js').read_bytes(),'application/javascript')
@@ -1479,8 +1546,13 @@ class Handler(BaseHTTPRequestHandler):
   if self.path=='/drafts':
    if any(not isinstance(body.get(k),str) or len(body[k])>10000 for k in ('group','dm')):return self.reply({'error':'Both captions must be text, at most 10,000 characters each.'},status=400)
    with LOCK:
+    old=get_message('group')['text'];work=workflow();active=work.current('group',old)
     DRAFT.write_text(json.dumps({k:str(body[k]) for k in ('group','dm')},ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
+    if active and body['group']!=old:work.revise(body['group'])
    self.reply({'saved':True})
+  elif self.path=='/chat-action':
+   try:self.reply(execute_chat_action(body.get('action_id')))
+   except ValueError as e:self.reply({'error':str(e)},status=409)
   elif self.path=='/wa-reconnect':
    try:
     api('/app/reconnect')
@@ -1594,14 +1666,17 @@ class Handler(BaseHTTPRequestHandler):
    try:
     OWNER_REVISION+=1
     remember_manual({'kind':'appeal','target':key})
-    ident=start_send_job(list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key],caption,True,body.get('request_id'))
+    options=workflow().options('group',caption)
+    workflow().select(key,caption)
+    ident=start_send_job(list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key],caption,True,body.get('request_id'),with_picture=options.get('poster',True) if options else True)
     self.reply({'job_id':ident})
    except ValueError as e:self.reply({'error':str(e)},status=400)
   elif self.path=='/test':
    caption=str(body.get('message',''))
    if not caption.strip():return self.reply({'error':'Message is empty'},status=400)
    try:
-    with SEND_LOCK:result=send_image('120363431210327603@g.us',caption)
+    options=workflow().options('group',caption)
+    with SEND_LOCK:result=send_image('120363431210327603@g.us',caption) if not options or options.get('poster',True) else send_text('120363431210327603@g.us',caption)
     self.reply(result)
    except Exception as e:self.reply({'code':'ERROR','message':str(e)})
   else:self.reply({},status=404)

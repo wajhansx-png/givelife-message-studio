@@ -57,7 +57,7 @@ class DraftFlowTests(unittest.TestCase):
   history=[{'who':'you','text':'Write as per latest parents report he is now short on breath.'}]
   with patch.object(assistant,'client',return_value='fake'),patch.object(assistant,'_chat_raw',side_effect=[{'content':'Before I save, did you mean the breathing point?'},msg(tc('set_message',{'kind':'group','text':updated})),{'content':'Want me to send it?'}]) as model:
    result=assistant.chat(prompt,history,state,[],app.chat_callbacks(prompt,revision=app.OWNER_REVISION))
-  self.assertEqual(result['reply'],'GROUP message saved.');self.assertEqual(app.manual_command('Show')['reply'],updated);self.assertEqual(self.sent,[])
+  self.assertTrue(result['reply'].startswith('GROUP message saved'));self.assertIn(updated,result['reply']);self.assertEqual(app.manual_command('Show')['reply'],updated);self.assertEqual(self.sent,[])
   self.assertIn('save the complete revised caption now',json.dumps(model.call_args.args[3]))
  def test_unexecuted_edit_is_never_presented_as_saved(self):
   prompt='Make it shorter';before=app.DRAFT.read_text(encoding='utf-8')

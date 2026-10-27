@@ -17,7 +17,7 @@ async function main(){
  node('histCmd').value='   ';events.length=0;await ctx.submitChat({preventDefault(){}},'histCmd');assert.equal(node('histCmd').value,'   ');assert(!events.some(x=>x.startsWith('act:')),'Blank input must not submit');
  phone=false;node('cmd').value='Desktop question';events.length=0;await ctx.submitChat({preventDefault(){}},'cmd');assert(!events.some(x=>x.startsWith('blur:')),'Desktop typing focus should stay available');phone=true;
  assert(events.includes('--chat-height:480px')&&events.includes('--chat-top:18px'),'Use the real visible viewport');
- Object.assign(ctx,{editing:false,rememberScroll(){events.push('remember')},syncChat(){},drawLog(){},setEditing(){}});
+ Object.assign(ctx,{editing:false,rememberScroll(){events.push('remember')},syncChat(){},drawLog(){},setEditing(){},refreshNextActions(){}});
  vm.runInContext(part('function openChat()','/* ---- message preview'),ctx);
  events.length=0;ctx.openChat();assert(node('hist').open);assert(events.includes('focus:histMain'));assert(!events.includes('focus:histCmd'),'Opening chat must not open keyboard');
  ctx.saveChatDraft('Keep this');ctx.closeChat();assert(!node('hist').open);assert.equal(storage.get('givelife-chat-draft'),'Keep this');assert(events.includes('focus:chatOpen'));

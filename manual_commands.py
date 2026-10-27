@@ -11,7 +11,7 @@ ALIASES={
  'all':('all 6 groups','all six groups','all groups','all'),
  'test':('givelife test','give life test','test group','test')}
 SEND=re.compile(r'\b(send|resend|post|share|bhejo|bhej|daalo|dalo|sebd|semd)\b|بھیج|ارسال',re.I)
-CONTROL=re.compile(r'^(?:(?:man|please|bhai|bro|yaar|now|abhi|send|resend|post|it|this|that|again|do|go|and|restart|reset|the|gap|timer|message|msg|poster|image|picture|appeal|with|updated|amount|right|away|asap|immediately|fast|quick|only|current|latest|sebd|semd|bhejo|abhi)\s*)+[.!?]*$',re.I)
+CONTROL=re.compile(r'^(?:(?:man|please|bhai|bro|yaar|now|abhi|send|resend|post|it|this|that|again|do|go|and|restart|reset|the|gap|timer|message|msg|poster|image|picture|appeal|with|updated|amount|right|away|asap|immediately|fast|quick|only|current|latest|hadith|hadees|haditg|caption|draft|full|proper|correct|sebd|semd|bhejo|abhi)\s*)+[.!?]*$',re.I)
 
 def norm(text):
  t=str(text).casefold().replace('give-life','givelife')

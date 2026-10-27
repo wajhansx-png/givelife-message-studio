@@ -10,6 +10,8 @@ def preview_request(text):
 
 def editing_request(text):
  t=re.sub(r'(?i)^(?:please|kindly|can you|could you|would you)\s+','',str(text).strip())
+ if re.search(r'(?i)^show\b.*\b(?:first|before)\b.*\b(?:make|write|prepare|draft|compose)\b',t):return True
+ if re.search(r"(?i)^(?:let s|lets|let's)\s+(?:send|post)\b.*\b(?:message|caption)\b",t):return True
  if re.fullmatch(r'(?i)(?:(?:show|write|make|give)(?: me)?\s+)?(?:a\s+)?(?:new|fresh)\s+(?:(?:group|dm)\s+)?(?:message|caption|draft|wording)[.!]*',t):return True
  if re.match(r'(?i)^(?:remember|always|never|from now|in future)\b',t) and not re.search(r'(?i)\band\s+(?:rewrite|change|edit|make)\b',t):return False
  if re.match(r'(?i)^(?:what|why|how|did|have|is|can|could|show|preview|explain|review|summari[sz]e|analy[sz]e)\b',t):return False

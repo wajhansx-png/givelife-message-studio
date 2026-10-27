@@ -689,6 +689,18 @@ def last_sent_by_key():
   for jid,stamp in STORE.get('last_sent',{}).items():saved[jid]=max(saved.get(jid,0),stamp)
  return {k:saved.get(v[1]) for k,v in GROUPS.items()}
 
+def dashboard_send_times():
+ """Receipt timestamps only; no WhatsApp reads or inferred sends."""
+ saved=dict(LAST_LOCAL)
+ remote=STORE.get('last_sent',{}) if STORE else {}
+ if isinstance(remote,dict):
+  for jid,stamp in remote.items():
+   if isinstance(stamp,(int,float)) and not isinstance(stamp,bool) and math.isfinite(stamp) and 0<stamp<=time.time()+60:
+    saved[jid]=max(saved.get(jid,0),stamp)
+ return {key:stamp if isinstance(stamp,(int,float)) and not isinstance(stamp,bool) and math.isfinite(stamp) and 0<stamp<=time.time()+60 else None
+         for key,jid in {**{k:v[1] for k,v in GROUPS.items()},'test':'120363431210327603@g.us'}.items()
+         for stamp in [saved.get(jid)]}
+
 LAST_JOB={}
 def last_results():
  j=JOBS.get(LAST_JOB.get('id'))
@@ -1464,7 +1476,7 @@ def live_snapshot():
    t=upcoming[0];label=', '.join(t.get('targets',[])) if t['action']=='send' else 'Auto ON' if t['action']=='auto_on' else 'Auto OFF' if t['action']=='auto_off' else 'Resume Auto'
    status['scheduled']={'due_at':t['due'],'label':label}
  with LOCK:current={'left':read_left(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8'))}
- return {'on':on,'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':summary,'status':status,'hold':hold,**current}
+ return {'on':on,'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':summary,'status':status,'hold':hold,'last_sent':dashboard_send_times(),**current}
 
 class Handler(BaseHTTPRequestHandler):
  def remote_config(self):
@@ -1675,7 +1687,13 @@ class Handler(BaseHTTPRequestHandler):
    if not caption.strip():return self.reply({'error':'Message is empty'},status=400)
    try:
     options=workflow().options('group',caption)
-    with SEND_LOCK:result=send_image('120363431210327603@g.us',caption) if not options or options.get('poster',True) else send_text('120363431210327603@g.us',caption)
+    with SEND_LOCK:
+     picture=not options or options.get('poster',True)
+     result=send_image('120363431210327603@g.us',caption) if picture else send_text('120363431210327603@g.us',caption)
+     if not picture and result.get('code')=='SUCCESS':
+      jid='120363431210327603@g.us';stamp=time.time();LAST_LOCAL[jid]=stamp;record_delivery(jid,caption,result)
+      if STORE:
+       saved=STORE.get('last_sent',{});saved[jid]=stamp;STORE.put('last_sent',saved)
     self.reply(result)
    except Exception as e:self.reply({'code':'ERROR','message':str(e)})
   else:self.reply({},status=404)

@@ -25,8 +25,9 @@ function followChat(el,reply=false){if(!el.clientHeight)return;const last=el.que
  const top=reply&&last&&last.classList.contains('bot')&&last.offsetHeight>el.clientHeight-32?el.scrollTop+last.getBoundingClientRect().top-el.getBoundingClientRect().top-16:el.scrollHeight;
  el.scrollTop=Math.max(0,top);scrollState[el.id].top=el.scrollTop;
 }
-function drawLog(){const items=history.slice(-40);
- for(const id of ['log','histLog']){const el=$(id),state=scrollState[id],prev=state.top;el.textContent='';
+function dashboardConversation(items){const lastUser=items.map(x=>x.who).lastIndexOf('you');return items.slice(lastUser<0?-3:lastUser)}
+function drawLog(){const allItems=history.slice(-40);
+ for(const id of ['log','histLog']){const items=id==='log'&&!isPhone()?dashboardConversation(allItems):allItems;const el=$(id),state=scrollState[id],prev=state.top;el.textContent='';
   items.forEach(h=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'');d.dataset.t=h.t;
    d.textContent=h.text;el.append(d);if(h.who==='app'&&h.id){const f=document.createElement('button');f.className='reply-feedback';f.type='button';f.textContent='Correct this';f.setAttribute('aria-label','Correct this response');f.onclick=e=>{e.stopPropagation();openFeedback(h.id)};el.append(f)}});
   if(thinking){const d=document.createElement('div');d.className='e bot dots';d.textContent='Thinking…';el.append(d)}
@@ -42,7 +43,7 @@ async function syncChat(){try{await logChain;const d=await (await fetch('/chat')
  else if(!history.length)say('app',GREETING);
  else for(const h of history.slice(-40))if(h.who!=='auto')logChain=logChain.then(()=>post('/chat-log',{who:h.who,text:h.text,err:h.err}));
  drawLog(false)}catch(e){if(!history.length)say('app',GREETING)}}
-drawLog();syncChat();
+drawLog();syncChat();matchMedia('(max-width:899px)').addEventListener('change',()=>drawLog());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!thinking)syncChat()});
 function isPhone(){return matchMedia('(max-width:899px)').matches}
 function openChat(){if($('hist').open)return;if(editing)setEditing(false);rememberScroll();$('hist')._returnFocus=document.activeElement;$('hist').showModal();refreshNextActions();
@@ -154,6 +155,18 @@ $('sendDm').onclick=async()=>{if(editing)setEditing(false);const phone=cleanPhon
   if(d.code==='SUCCESS'){const result='✓ DM sent to '+greet()+'.';say('app',result+' New wording is ready for the next person.');setLiveNotice(result);$('dmPhone').value='';$('dmName').value='';setGender('Brother');await freshWording()}
   else say('app','Not confirmed: '+(d.message||'')+' Check WhatsApp before retrying.',1)}
  catch(e){say('app',e.message,1)}finally{lockSend('dm',false);busy(false)}};
+
+/* Confirmed group-send times. Missing records never imply a successful send. */
+let groupSentTimes=null;
+function sentAge(stamp){const seconds=Math.max(0,Math.floor(Date.now()/1000-stamp));return seconds<60?'just now':seconds<3600?Math.floor(seconds/60)+' min ago':seconds<86400?Math.floor(seconds/3600)+' h ago':Math.floor(seconds/86400)+' d ago'}
+function paintGroupTimes(data){if(data&&typeof data==='object'&&!Array.isArray(data))groupSentTimes=data;
+ for(const el of document.querySelectorAll('[data-last-group]')){const key=el.dataset.lastGroup,keys=key==='all'?['main','community','fiverr','upwork','uet','toprated']:key==='free'?['community','fiverr','upwork','uet','toprated']:[key];
+  const valid=keys.map(k=>groupSentTimes?.[k]).filter(t=>typeof t==='number'&&Number.isFinite(t)&&t>0&&t<=Date.now()/1000+60);
+  el.textContent=!groupSentTimes?'Checking…':!valid.length?'No confirmed send':(keys.length>1?'Latest: ':'Sent ')+sentAge(Math.max(...valid));
+  el.title=keys.length>1?keys.map(k=>(GN[k]||k)+': '+(typeof groupSentTimes?.[k]==='number'&&groupSentTimes[k]>0&&groupSentTimes[k]<=Date.now()/1000+60?new Date(groupSentTimes[k]*1000).toLocaleString():'No confirmed send recorded')).join('\n'):valid.length?'Confirmed '+new Date(valid[0]*1000).toLocaleString():'No confirmed send recorded';
+ }
+}
+setInterval(paintGroupTimes,30000);
 
 /* ---- send a plain message to a contact, group or number: works without the AI ---- */
 async function sendTo(who,text){
@@ -306,7 +319,7 @@ function refreshLiveDrafts(data,baseline){
  if(JSON.stringify(data.drafts)!==payload)applyDrafts({...data.drafts,left});return true;
 }
 let autoPolling=false;
-async function pollAuto(){if(autoPolling)return;autoPolling=true;const payload=JSON.stringify({group:$('group').value,dm:$('dm').value}),baseline={payload,wasSaved:payload===draftSaved,left};try{const r=await fetch('/autopilot');if(!r.ok)throw Error('Status unavailable. Tap for details.');const d=await r.json();checkedAt=Date.now();pollError='';aiAvailable=!!d.ai;liveSnapshot=d.status||null;paintAuto(d.on);paintLive(d.status);refreshLiveDrafts(d,baseline);for(const x of d.log||[]){if(x.time*1000>seenAuto){seenAuto=x.time*1000;if(!x.q&&x.time*1000>Date.now()-15*60000)say('auto',x.text)}}}catch(e){pollError='Cannot reach cloud. Status may be old.';paintStatusLine()}finally{autoPolling=false}}
+async function pollAuto(){if(autoPolling)return;autoPolling=true;const payload=JSON.stringify({group:$('group').value,dm:$('dm').value}),baseline={payload,wasSaved:payload===draftSaved,left};try{const r=await fetch('/autopilot');if(!r.ok)throw Error('Status unavailable. Tap for details.');const d=await r.json();checkedAt=Date.now();paintGroupTimes(d.last_sent);pollError='';aiAvailable=!!d.ai;liveSnapshot=d.status||null;paintAuto(d.on);paintLive(d.status);refreshLiveDrafts(d,baseline);for(const x of d.log||[]){if(x.time*1000>seenAuto){seenAuto=x.time*1000;if(!x.q&&x.time*1000>Date.now()-15*60000)say('auto',x.text)}}}catch(e){pollError='Cannot reach cloud. Status may be old.';paintStatusLine()}finally{autoPolling=false}}
 setInterval(paintStatusLine,1000);
 const waObserver=new MutationObserver(paintStatusLine);if($('whatsappConnection'))waObserver.observe($('whatsappConnection'),{attributes:true,attributeFilter:['data-state']});
 

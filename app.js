@@ -51,7 +51,12 @@ let previewView=null,previewScroll={};try{previewScroll=JSON.parse(sessionStorag
 $('chat').addEventListener('scroll',()=>{if(!previewView)return;previewScroll[previewView]=$('chat').scrollTop;try{sessionStorage.setItem('givelife-preview-scroll',JSON.stringify(previewScroll))}catch(e){}},{passive:true});
 function paint(k){$(k+'Preview').innerHTML=waFormat($(k).value).split('\n').map(l=>'<div class="wa-line'+(l?'':' blank')+'">'+(l||'<br>')+'</div>').join('')}
 function render(){paint('group');paint('dm');requestAnimationFrame(()=>{fit();if(!editing)$('chat').scrollTop=previewScroll[view()]||0})}
-function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');m.style.fontSize=isPhone()?'16px':'17px';chat.style.overflowY='auto'}
+function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');if(!chat.clientHeight)return;
+ if(!isPhone()){m.style.fontSize='17px';chat.style.overflowY='auto';return}
+ const style=getComputedStyle(chat),available=chat.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);
+ chat.style.overflowY='hidden';
+ for(let size=14;size>=10;size-=.5){m.style.fontSize=size+'px';if(m.scrollHeight<=available)break}
+ if(m.scrollHeight>available)chat.style.overflowY='auto'}
 new ResizeObserver(()=>requestAnimationFrame(fit)).observe($('chat'));
 function save(){if(!draftsReady)return Promise.resolve();const data={group:$('group').value,dm:$('dm').value},payload=JSON.stringify(data);
  saveChain=saveChain.catch(()=>{}).then(async()=>{if(payload===draftSaved)return;const r=await post('/drafts',data);if(!r.ok)throw Error('Save failed');draftSaved=payload;status('✓ Saved')});return saveChain}
@@ -69,7 +74,7 @@ function ser(n){if(n.nodeType===3)return n.nodeValue;if(n.nodeName==='BR')return
 function readPreview(k){return [...$(k+'Preview').children].map(d=>d.classList.contains('blank')&&!d.textContent.trim()?'':ser(d).replace(/\n$/,'')).join('\n').replace(/ /g,' ')}
 function setEditing(on,x,y){if(on&&!draftsReady){status('Loading the saved captions…');return}const k=view(),m=$(k+'Preview');if(on===editing)return;editing=on;
  document.body.classList.toggle('editing',on);$('edit').textContent=on?'Done':'Edit';$('edit').classList.toggle('on',on);
- if(on){m.contentEditable='true';const r=x!=null&&document.caretRangeFromPoint?document.caretRangeFromPoint(x,y):null;m.focus();if(r){const s=getSelection();s.removeAllRanges();s.addRange(r)}status('Editing · Enter = done · Shift+Enter = new line')}
+ if(on){m.contentEditable='true';m.style.fontSize=isPhone()?'16px':'17px';$('chat').style.overflowY='auto';const r=x!=null&&document.caretRangeFromPoint?document.caretRangeFromPoint(x,y):null;m.focus();if(r){const s=getSelection();s.removeAllRanges();s.addRange(r)}status('Editing · Enter = done · Shift+Enter = new line')}
  else{m.contentEditable='false';$(k).value=readPreview(k);render();save().catch(()=>status('Save failed',1))}}
 $('edit').onclick=()=>setEditing(!editing);
 
@@ -349,7 +354,7 @@ addEventListener('online',()=>{netBanner();pollAuto();syncChat()});addEventListe
 const cached=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('givelife-c-'+k)||'null');localStorage.setItem('givelife-c-'+k,JSON.stringify(v))}catch(e){return null}};
 
 /* ---- hide the message to work only with the buttons and chat ---- */
-function setNoMsg(on){if(editing)setEditing(false);document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;try{localStorage.setItem('givelife-nomsg',on?'1':'')}catch(e){}if(!on){requestAnimationFrame(fit);flip()}}
+function setNoMsg(on){if(editing)setEditing(false);document.querySelector('.overflow-tools').open=false;document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;try{localStorage.setItem('givelife-nomsg',on?'1':'')}catch(e){}if(!on){requestAnimationFrame(fit);flip()}}
 $('hideMsg').onclick=e=>{e.stopPropagation();setNoMsg(true)};$('showMsg').onclick=()=>setNoMsg(false);
 try{if(localStorage.getItem('givelife-nomsg'))setNoMsg(true)}catch(e){}
 

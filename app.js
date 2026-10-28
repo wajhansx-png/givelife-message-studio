@@ -276,7 +276,7 @@ for(const id of ['cmd','histCmd'])$(id).addEventListener('input',()=>saveChatDra
 function hideKeys(){if(isPhone()){document.activeElement?.blur();$('cmd').blur();$('histCmd').blur()}}
 async function submitChat(e,id){e.preventDefault();const value=$(id).value;if(!value.trim())return;
  saveChatDraft('');hideKeys();followReplies();requestAnimationFrame(updateChatViewport);
- try{await act(value)}catch(err){say('app',err.message,1)}
+ try{await act(value)}catch(err){if(!$('cmd').value.trim()&&!$('histCmd').value.trim())saveChatDraft(value);say('app',err.message,1)}
 }
 $('cmdForm').onsubmit=e=>submitChat(e,'cmd');$('histForm').onsubmit=e=>submitChat(e,'histCmd');
 for(const id of ['cmd','histCmd'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();$(id).form.requestSubmit()}});
@@ -396,16 +396,17 @@ $('hideMsg').onclick=e=>{e.stopPropagation();setNoMsg(true)};$('previewBack').on
 setNoMsg(true);
 
 /* ---- theme: Auto follows the phone/PC setting; Light or Dark is remembered on this device ---- */
-function themeNow(){try{return localStorage.getItem('givelife-theme')||'system'}catch(e){return 'system'}}
+function themeNow(){try{const t=localStorage.getItem('givelife-theme');return ['dark','light','system'].includes(t)?t:'dark'}catch(e){return 'dark'}}
 function isDark(){const t=document.documentElement.dataset.theme;return t?t==='dark':matchMedia('(prefers-color-scheme:dark)').matches}
 function applyTheme(t){const r=document.documentElement;if(t==='light'||t==='dark')r.dataset.theme=t;else delete r.dataset.theme;
  try{localStorage.setItem('givelife-theme',t)}catch(e){}
  document.querySelectorAll('#theme button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.t===t)));
- const m=document.querySelector('meta[name=theme-color]');if(m)m.content=isDark()?'#171722':'#f5f5fa'}
+ const m=document.querySelector('meta[name=theme-color]');if(m)m.content=getComputedStyle(r).getPropertyValue('--bg').trim()}
 document.querySelectorAll('#theme button').forEach(b=>b.onclick=()=>applyTheme(b.dataset.t));
 
 matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(themeNow()==='system')applyTheme('system')});
 applyTheme(themeNow());
+document.fonts?.ready.then(()=>{fit();fitConversation()});
 
 function flip(){const m=$(view()+'Preview');m.classList.remove('flip');void m.offsetWidth;m.classList.add('flip')}
 
@@ -433,7 +434,6 @@ ensureDrafts().then(()=>status('✓ Ready')).catch(()=>{const d=cached('drafts')
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false;renderSendMode()}}).catch(()=>{});
 pollAuto();setInterval(pollAuto,5000);pollCamp();refreshNextActions();
-
 
 
 

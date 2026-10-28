@@ -38,11 +38,48 @@
  function openBatchPicker(scope){pickerScope=scope;const min=Number(el('donorGap').value)/60;el('batchGap').value=Math.max(1,Math.min(10,min||4));const available=scope==='important'?allDonors.filter(d=>d.important).length:allDonors.length;el('batchAudience').textContent=scope?Math.min(20,available)+' recipients available in this batch · previously sent donors included.':'Choose the gap used for your next batch.';el('batchStart').textContent=scope?'Start DMs now':'Save gap';picker.showModal();el('batchStart').focus({preventScroll:true})}
  el('donorPace').onclick=()=>openBatchPicker(null);el('batchCancel').onclick=()=>picker.close();for(const b of picker.querySelectorAll('[data-gap]'))b.onclick=()=>el('batchGap').value=b.dataset.gap;
  el('donorBatchForm').onsubmit=e=>{e.preventDefault();const mins=Number(el('batchGap').value),limit=Number(el('batchLimit').value);if(mins<1||mins>10||limit<1||limit>20)return;el('donorGap').value=mins*60;el('donorPace').textContent='Gap: '+mins+' min ▾';picker.close();if(pickerScope)send(pickerScope,undefined,limit)};
+ let bankRegenerating=false;const bankSaves=new Set();
  async function showMessages(force=false){
   if(!bankData||force){el('donorMessages').textContent='Loading saved message variants…';try{bankData=await api('/donor-messages')}catch(e){el('donorMessages').textContent=e.message;return}}
-  if(tab!=='messages')return;const box=el('donorMessages');box.textContent='';const head=make('div','bank-heading');head.append(make('span','',bankData.items.length+' wording variants · same facts · editable'));const regen=make('button','tool','Regenerate');regen.onclick=async()=>{if(bankEdits.size&&!confirm('Replace your unsaved message edits with new variants?'))return;regen.disabled=true;try{bankData=await api('/donor-messages',{action:'regenerate'});bankEdits.clear();keepBankEdits();showMessages()}catch(e){notice(e.message,true)}finally{regen.disabled=false}};head.append(regen);box.append(head);
-  const grid=make('div','bank-grid');for(const [i,item] of bankData.items.slice(0,bankPage).entries()){const card=make('article','bank-message');const title=make('header','');title.append(make('strong','','Message '+(i+1)));const preview=make('div','bank-preview');if(window.waFormat)preview.innerHTML=window.waFormat(item.text);else preview.textContent=item.text;const edit=make('textarea','');edit.value=bankEdits.get(item.id)??item.text;edit.hidden=!bankEdits.has(item.id);preview.hidden=!edit.hidden;edit.oninput=()=>{bankEdits.set(item.id,edit.value);keepBankEdits()};edit.setAttribute('aria-label','Edit message '+(i+1));edit.name='message_'+item.id;const button=make('button','tool',edit.hidden?'Edit':'Save');button.onclick=async()=>{if(edit.hidden){edit.hidden=false;preview.hidden=true;button.textContent='Save'}else{button.disabled=true;try{await api('/donor-messages',{id:item.id,text:edit.value});item.text=edit.value;bankEdits.delete(item.id);keepBankEdits();edit.hidden=true;preview.hidden=false;if(window.waFormat)preview.innerHTML=window.waFormat(item.text);else preview.textContent=item.text;button.textContent='Edit';notice('Message saved.')}catch(e){notice(e.message,true)}finally{button.disabled=false}}};title.append(button);card.append(title,preview,edit);grid.append(card)}box.append(grid);if(bankPage<bankData.items.length){const more=make('button','tool','Show 10 more messages');more.onclick=()=>{bankPage+=10;showMessages()};box.append(more)}
+  if(tab!=='messages')return;const box=el('donorMessages');box.textContent='';const head=make('div','bank-heading');head.append(make('span','',bankData.items.length+' wording variants · same facts · editable'));const regen=make('button','tool bank-regenerate','Regenerate');regen.onclick=async()=>{if(bankRegenerating||bankSaves.size)return;if(bankEdits.size&&!confirm('Replace your unsaved message edits with new variants?'))return;bankRegenerating=true;syncBankControls();try{bankData=await api('/donor-messages',{action:'regenerate'});bankEdits.clear();keepBankEdits();showMessages()}catch(e){notice(e.message,true)}finally{bankRegenerating=false;syncBankControls()}};head.append(regen);box.append(head);
+  let selected;try{selected=sessionStorage.getItem('givelife-bank-selected')}catch(e){}
+  const savedIndex=bankData.items.findIndex(item=>item.id===selected);if(savedIndex>=0)bankPage=Math.max(bankPage,savedIndex+1);
+  const items=bankData.items.slice(0,bankPage);
+  if(!items.some(item=>item.id===selected))selected=items[0]?.id;
+  const mobilePick=make('select','bank-mobile-picker');mobilePick.name='message_variant';mobilePick.setAttribute('aria-label','Choose saved DM message');
+  for(const [i,item] of bankData.items.entries()){const option=make('option','','Message '+(i+1));option.value=item.id;option.selected=item.id===selected;mobilePick.append(option)}
+  mobilePick.onchange=()=>{bankPage=Math.max(bankPage,bankData.items.findIndex(item=>item.id===mobilePick.value)+1);try{sessionStorage.setItem('givelife-bank-selected',mobilePick.value)}catch(e){}showMessages()};head.prepend(mobilePick);
+  const grid=make('div','bank-workspace'),picker=make('nav','bank-picker');picker.setAttribute('aria-label','Saved DM messages');
+  for(const [i,item] of items.entries()){
+   const pick=make('button','', 'Message '+(i+1));pick.type='button';pick.setAttribute('aria-pressed',String(item.id===selected));pick.dataset.bankId=item.id;
+   pick.onclick=()=>{try{sessionStorage.setItem('givelife-bank-selected',item.id)}catch(e){}showMessages()};
+   pick.onkeydown=e=>{const buttons=[...picker.querySelectorAll('[data-bank-id]')],index=buttons.indexOf(pick);let next;if(e.key==='ArrowDown'||e.key==='ArrowRight')next=(index+1)%buttons.length;else if(e.key==='ArrowUp'||e.key==='ArrowLeft')next=(index+buttons.length-1)%buttons.length;else if(e.key==='Home')next=0;else if(e.key==='End')next=buttons.length-1;if(next!==undefined){e.preventDefault();buttons[next].click();[...box.querySelectorAll('[data-bank-id]')].find(b=>b.dataset.bankId===buttons[next].dataset.bankId)?.focus({preventScroll:true})}};
+   picker.append(pick);
+  }
+  if(bankPage<bankData.items.length){const more=make('button','tool','Show 10 more');more.onclick=()=>{bankPage+=10;showMessages()};picker.append(more)}
+  grid.append(picker);const index=items.findIndex(item=>item.id===selected),item=items[index];
+  if(item){
+   const card=make('article','bank-message bank-detail'),title=make('header','');card.dataset.bankDetail=item.id;title.append(make('strong','','Message '+(index+1)));
+   const preview=make('div','bank-preview');paintBankPreview(preview,item.text);
+   const edit=make('textarea','');edit.value=bankEdits.get(item.id)??item.text;edit.hidden=!bankEdits.has(item.id);preview.hidden=!edit.hidden;
+   edit.oninput=()=>{bankEdits.set(item.id,edit.value);keepBankEdits()};edit.setAttribute('aria-label','Edit message '+(index+1));edit.name='message_'+item.id;
+   const button=make('button','tool',edit.hidden?'Edit':'Save');button.type='button';button.dataset.bankSaveId=item.id;button.onclick=async()=>{
+    if(bankRegenerating||bankSaves.has(item.id))return;
+    if(edit.hidden){edit.hidden=false;preview.hidden=true;button.textContent='Save';edit.focus({preventScroll:true})}
+    else{const submitted=edit.value;bankSaves.add(item.id);syncBankControls();try{await api('/donor-messages',{id:item.id,text:submitted});item.text=submitted;const latest=bankEdits.get(item.id)??edit.value;if(latest===submitted)bankEdits.delete(item.id);keepBankEdits();const active=[...box.querySelectorAll('[data-bank-detail]')].find(node=>node.dataset.bankDetail===item.id);if(active&&!bankEdits.has(item.id)){active.querySelector('textarea').hidden=true;const shown=active.querySelector('.bank-preview');shown.hidden=false;paintBankPreview(shown,submitted)}notice(bankEdits.has(item.id)?'Saved. Your newer edits are still unsaved.':'Message saved.')}catch(e){notice(e.message,true)}finally{bankSaves.delete(item.id);syncBankControls();fitBankPreview()}}
+   };
+   title.append(button);card.append(title,preview,edit);grid.append(card);
+  }
+  if(!item)grid.append(make('p','donor-empty','No saved messages yet. Use Regenerate to create them.'));
+  box.append(grid);syncBankControls();
+  if(typeof ResizeObserver!=='undefined'){bankFitObserver?.disconnect();bankFitObserver=new ResizeObserver(fitBankPreview);bankFitObserver.observe(grid)}
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(fitBankPreview);
  }
+ function syncBankControls(){const box=el('donorMessages');for(const b of box.querySelectorAll('.bank-regenerate'))b.disabled=bankRegenerating||bankSaves.size>0;for(const b of box.querySelectorAll('[data-bank-save-id]')){b.disabled=bankRegenerating||bankSaves.has(b.dataset.bankSaveId);const input=b.closest('.bank-detail').querySelector('textarea');input.disabled=bankRegenerating;b.textContent=bankSaves.has(b.dataset.bankSaveId)?'Saving…':input.hidden?'Edit':'Save'}}
+ let bankFitObserver;
+ function paintBankPreview(preview,text){if(window.waFormat)preview.innerHTML=window.waFormat(text).split('\n').map(line=>'<div class="bank-line'+(line?'':' blank')+'">'+(line||'<br>')+'</div>').join('');else preview.textContent=text}
+ function fitBankPreview(){const preview=el('donorMessages').querySelector('.bank-preview');if(!preview||!preview.clientHeight||preview.hidden)return;for(let size=15;size>=12;size-=.5){preview.style.fontSize=size+'px';if(preview.scrollHeight<=preview.clientHeight+1)break}}
+ document.fonts?.ready.then(fitBankPreview);
  async function api(path,body){const r=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error||'The request could not complete.');return d}
  function notice(text,error=false,undo){clearTimeout(noticeTimer);const n=el('donorNotice');n.textContent=text;n.dataset.error=error;if(undo){const b=make('button','','Undo');b.onclick=async()=>{try{await api('/donors',{action:'restore',id:undo});await refresh(true);notice('Donor restored.')}catch(e){notice(e.message,true)}};n.append(b)}else if(!error)noticeTimer=setTimeout(()=>{n.textContent=''},4000)}
  function when(t){if(!t)return 'Not contacted';const mins=Math.max(0,Math.floor((Date.now()/1000-t)/60));return mins<1?'Sent just now':mins<60?`Sent ${mins}m ago`:mins<1440?`Sent ${Math.floor(mins/60)}h ago`:`Sent ${Math.floor(mins/1440)}d ago`}
@@ -96,4 +133,3 @@ Ayesha, +92 301 1234567" aria-describedby="pasteResult"></textarea><div id="past
  window.DonorHub={open,refresh,openPoster,privateChatText:text=>/\bdonors?\b/i.test(text)?String(text).replace(/(?:\+|00)?\d[\d ()-]{6,23}\d/g,'[number hidden]'):text};
  document.addEventListener('donors-changed',()=>{bankData=null;if(page.open){refresh(true);poll()}});
 })();
-

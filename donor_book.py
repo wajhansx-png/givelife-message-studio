@@ -57,6 +57,7 @@ class DonorBook:
             records=[r for r in self._load()['records'] if not r.get('deleted')]
             counts={'all':len(records),'important':sum(bool(r['important']) for r in records),'donated':sum(bool(r['donated']) for r in records)}
             counts['not_donated']=counts['all']-counts['donated']
+            counts['donated_amount']=sum(float(r.get('amount',0) or 0) for r in records if r.get('donated'))
             q=str(query).strip().casefold(); digits=re.sub(r'\D','',q)
             rows=[r for r in records if (tab=='all' or tab=='important' and r['important'] or tab=='donated' and r['donated'] or tab=='not_donated' and not r['donated']) and (not q or q in r['name'].casefold() or q in r.get('notes','').casefold() or len(digits)>=4 and digits in r['phone'])]
             rows.sort(key=lambda r:(not r['important'],name_key(r['name']),r['id']))

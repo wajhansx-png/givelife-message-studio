@@ -31,6 +31,8 @@ class RegistryTests(unittest.TestCase):
  def test_status_tabs_and_important_sort(self):
   a=self.add('Zaid');b=self.add('Amina','03011234567');self.book.update(a['id'],important=True);self.book.update(b['id'],donated=True,amount=2000)
   self.assertEqual(self.book.list()['items'][0]['id'],a['id']);self.assertEqual(len(self.book.list('donated')['items']),1);self.assertEqual(self.book.list('not_donated')['items'][0]['id'],a['id'])
+  self.assertEqual(self.book.list('important','Zaid')['counts']['donated_amount'],2000)
+  self.book.delete(b['id']);self.assertEqual(self.book.list()['counts']['donated_amount'],0)
  def test_random_names_and_mixed_paste(self):
   for text in ('D25 / new label, 0300 1234567','+92 300 1234567\nD25 / new label'):
    name,phone=parse_contact(text);self.assertIn('D25',name);self.assertEqual(phone,'923001234567')
@@ -121,6 +123,22 @@ class IntegrationTests(unittest.TestCase):
   app=self.app;app.STORE.put('dm_recipient_'+hashlib.sha256(b'923001234567@s.whatsapp.net').hexdigest(),{'state':'uncertain'})
   self.assertFalse(app.donors().eligible('923001234567'))
   with self.assertRaisesRegex(ValueError,'already contacted'):app.send_custom({'target':'phone','phone':'03001234567','message':app.get_message('dm')['text'],'kind':'donor_registry','poster':True})
+ def test_explicit_manual_repeats_send_now_and_same_request_does_not_repeat(self):
+  app=self.app;registry=app.donors();d=registry.book.add('Ali','03001234567')['donor'];sent=[]
+  def image(jid,text):sent.append((jid,text));return {'code':'SUCCESS','results':{'message_id':'fake-'+str(len(sent))}}
+  with patch.object(app,'send_image',side_effect=image):
+   first=registry.send_one(d['id'],'click-one-test');again=registry.send_one(d['id'],'click-two-test');duplicate=registry.send_one(d['id'],'click-two-test')
+  self.assertEqual(len(sent),2);self.assertEqual(first['code'],'SUCCESS');self.assertEqual(again['code'],'SUCCESS');self.assertTrue(duplicate['repeated_request']);self.assertEqual(registry.book.resolve(d['id'])['delivery'],'Sent');self.assertEqual(sent[0][1],sent[1][1]);self.assertIn('03097458815',sent[0][1]);self.assertGreater(registry.jobs.manual_sent_at,0)
+ def test_explicit_repeat_still_respects_optout_and_daily_cap(self):
+  import hashlib
+  app=self.app;registry=app.donors();d=registry.book.add('Ali','03001234567')['donor'];app.STORE.put('optout_'+hashlib.sha256(b'923001234567').hexdigest(),True)
+  with patch.object(app,'send_image') as image:
+   with self.assertRaisesRegex(ValueError,'opted out'):registry.send_one(d['id'],'blocked-click-test')
+   image.assert_not_called()
+ def test_failed_manual_send_does_not_show_sent(self):
+  app=self.app;registry=app.donors();d=registry.book.add('Ali','03001234567')['donor']
+  with patch.object(app,'send_image',return_value={'code':'UNCERTAIN'}):result=registry.send_one(d['id'],'uncertain-click-test')
+  self.assertEqual(result['code'],'UNCERTAIN');self.assertEqual(registry.book.resolve(d['id'])['delivery'],'Uncertain')
 
 if __name__=='__main__':unittest.main()
 

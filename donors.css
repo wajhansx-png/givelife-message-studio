@@ -9,4 +9,5 @@
 @media(max-width:360px){.brandbar{flex-wrap:wrap}.donor-launch{margin-left:auto}.donor-name{font-size:11px}.donor-row{grid-template-columns:22px minmax(45px,1fr) 42px 80px 43px 22px;column-gap:2px}.donor-status{font-size:9px!important}}
 @media(prefers-reduced-motion:reduce){.donor-row{transition:none}}
 @media(min-width:900px){.donor-row{height:36px;min-height:36px}.donor-name{font-size:12px}.donor-star,.donor-more summary{height:34px}.donor-head{min-height:36px}.donor-shell{gap:6px}}
+.donor-total{font-size:12px;display:flex;align-items:baseline;gap:6px;padding:6px 10px;border-radius:7px;background:var(--gs);white-space:nowrap}.donor-total small{font-size:10px;color:var(--mut)}.donor-total strong{color:var(--gink);font-size:13px;font-variant-numeric:tabular-nums}@media(max-width:899px){.donor-total{gap:4px;padding:5px 7px;margin-left:auto}.donor-total small{font-size:9px}.donor-total strong{font-size:11px}.donor-add{margin-left:0}.donor-head{gap:6px}.donor-head h1{font-size:14px}.donor-count{font-size:10px}}@media(max-width:360px){.donor-total small{display:none}.donor-total{padding:4px}.donor-head h1{font-size:13px}.donor-add{padding-inline:8px}}
 

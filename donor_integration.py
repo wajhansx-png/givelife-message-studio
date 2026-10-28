@@ -1,5 +1,5 @@
 """Shared donor UI/chat commands and private delivery integration."""
-import re, time
+import re, time, hashlib, uuid, threading
 from donor_book import DonorBook, normalize_phone, parse_contact, hide_numbers, send_request, PHONE
 from donor_delivery import DonorDelivery
 
@@ -7,6 +7,35 @@ class DonorIntegration:
     def __init__(self,app):
         self.app=app;self.book=DonorBook(app.DATA,app.STORE)
         self.jobs=DonorDelivery(app.DATA,app.STORE,self.book,app.send_custom,lambda:app.get_message('dm')['text'],app.wa_ok,app.on_hold,self.eligible,self.personal_name)
+        self.manual_lock=threading.RLock()
+    def send_one(self,ident,request_id):
+        """Each explicit click is a new immediate send; repeated request IDs never resend."""
+        if not self.app.STORE:raise ValueError('Persistent sending records are unavailable.')
+        if not isinstance(request_id,str) or not re.fullmatch(r'[a-zA-Z0-9_-]{8,100}',request_id):raise ValueError('Invalid send request. Refresh the donor page.')
+        r=self.book.resolve(ident);key='donor_manual_'+hashlib.sha256(request_id.encode()).hexdigest()
+        with self.manual_lock:
+            old=self.app.STORE.get(key)
+            if old:
+                if old.get('id')!=r['id']:raise ValueError('This request belongs to another donor.')
+                return {**old,'repeated_request':True}
+            reservation={'id':r['id'],'code':'UNCERTAIN','reply':'This send is already tracked. Check WhatsApp before starting another send.'}
+            if hasattr(self.app.STORE,'claim'):
+                if not self.app.STORE.claim(key,reservation):return self.app.STORE.get(key,reservation)
+            else:self.app.STORE.put(key,reservation)
+            name,gender=self.personal_name(r['name']);self.jobs.manual_inflight.set()
+            try:
+                self.book.delivery(r['id'],'Sending')
+                result=self.app.send_custom({'target':'phone','phone':r['phone'],'message':self.app.get_message('dm')['text'],'poster':True,'kind':'donor_manual','name':name,'gender':gender})
+                confirmed=isinstance(result,dict) and result.get('code')=='SUCCESS'
+                if confirmed:self.jobs.manual_sent_at=time.time()
+                state='Sent' if confirmed else 'Uncertain';self.book.delivery(r['id'],state)
+                output={'id':r['id'],'code':'SUCCESS' if confirmed else 'UNCERTAIN','reply':'WhatsApp confirmed the DM.' if confirmed else 'Delivery not confirmed. Check WhatsApp before another manual send.'}
+                self.app.STORE.put(key,output);return output
+            except ValueError as e:
+                self.book.delivery(r['id'],'Not sent');self.app.STORE.put(key,{'id':r['id'],'code':'NOT_SENT','reply':str(e)});raise
+            except Exception:
+                self.book.delivery(r['id'],'Uncertain');raise
+            finally:self.jobs.manual_inflight.clear()
     def eligible(self,phone):
         a=self.app
         if phone==normalize_phone(a.OWNER_PHONE):return False

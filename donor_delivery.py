@@ -8,6 +8,7 @@ class DonorDelivery:
         self.path=Path(folder)/'donor-delivery.json';self.store=store;self.book=book
         self.send=send;self.caption=caption;self.connected=connected;self.held=held;self.eligible=eligible;self.name_for=name_for
         self.lock=threading.RLock();self.boot=uuid.uuid4().hex;self.stop=threading.Event();self.active=None
+        self.manual_sent_at=0;self.manual_inflight=threading.Event()
     def _load(self):
         raw=self.store.get('donor_delivery') if self.store else None
         if raw is None and self.path.exists():raw=json.loads(self.path.read_text(encoding='utf-8'))
@@ -70,10 +71,12 @@ class DonorDelivery:
                 except ValueError:skipped+=1;receipts.append({'id':ident,'name':'Removed donor','state':'Skipped'});continue
                 if not self.eligible(r['phone']):
                     skipped+=1;receipts.append({'id':ident,'name':hide_numbers(r['name']),'state':'Skipped: already contacted, blocked or uncertain'});continue
-                if last_completion is not None:
-                    due=last_completion+j['gap_seconds'];self._update(j['id'],state='Waiting',next_at=due,current='Waiting between DMs',sent=sent,skipped=skipped,receipts=receipts)
-                    while time.time()<due:
-                        if self.stop.wait(min(.5,max(0,due-time.time()))):break
+                if last_completion is not None or self.manual_inflight.is_set() or self.manual_sent_at>j['created_at']:
+                    due=max(last_completion or 0,self.manual_sent_at)+j['gap_seconds'];self._update(j['id'],state='Waiting',next_at=due,current='Waiting between DMs',sent=sent,skipped=skipped,receipts=receipts)
+                    while self.manual_inflight.is_set() or time.time()<due:
+                        if self.stop.wait(min(.5,max(.1,due-time.time()))):break
+                        new_due=max(last_completion or 0,self.manual_sent_at)+j['gap_seconds']
+                        if new_due!=due:due=new_due;self._update(j['id'],next_at=due)
                     if self.stop.is_set():state='Stopped';break
                 # Recheck deletion, hold and receipt at dispatch, not just selection time.
                 try:r=self.book.resolve(ident)

@@ -71,12 +71,13 @@ def custom_recipient(body):
 def send_custom(body):
  jid,is_group=custom_recipient(body);message=body.get('message','')
  if not isinstance(message,str):raise ValueError('Message must be text.')
- if not is_group and body.get('kind') in ('dm_appeal','donor_registry'):
+ if not is_group and body.get('kind') in ('dm_appeal','donor_registry','donor_manual'):
   message=greet_text(message,body.get('name',''),body.get('gender','Brother'))
   if not dm_composer.complete(message):raise ValueError('The full DM is incomplete. Restore its paragraphs and payment details before sending.')
  if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
  if not STORE:raise ValueError('Persistent send records are unavailable. Try again later.')
- if not SEND_LOCK.acquire(blocking=False):raise ValueError('Another send is running. Please wait for it to finish.')
+ manual=body.get('kind')=='donor_manual'
+ if not SEND_LOCK.acquire(blocking=manual):raise ValueError('Another send is running. Please wait for it to finish.')
  try:
   status=api_result('/devices/'+DEVICE+'/status')
   if not status.get('is_connected') or not status.get('is_logged_in'):raise ValueError('WhatsApp is disconnected. Tap WhatsApp to reconnect.')
@@ -85,12 +86,14 @@ def send_custom(body):
    digest=hashlib.sha256(jid.encode()).hexdigest()
    alternate=hashlib.sha256((jid+'@s.whatsapp.net').encode()).hexdigest()
    if jid==norm_phone(OWNER_PHONE):raise ValueError('Your own account is excluded from donor sending.')
-   if alternate in BLOCKED or STORE.get('dm_recipient_'+alternate) or STORE.get('optout_'+alternate) or STORE.get('optout_'+digest):raise ValueError('This recipient was already contacted, blocked or has an uncertain send.')
-   if digest in BLOCKED or STORE.get('dm_recipient_'+digest):raise ValueError('This recipient was already contacted or has an uncertain send. Check WhatsApp before sending again.')
+   if alternate in BLOCKED or STORE.get('optout_'+alternate) or STORE.get('optout_'+digest):raise ValueError('This recipient is blocked or opted out.')
+   if not manual and STORE.get('dm_recipient_'+alternate):raise ValueError('This recipient was already contacted or has an uncertain send.')
+   if digest in BLOCKED:raise ValueError('This recipient is blocked.')
+   if not manual and STORE.get('dm_recipient_'+digest):raise ValueError('This recipient was already contacted or has an uncertain send. Check WhatsApp before sending again.')
    ledger=STORE.get('dm_daily',{});day=datetime.datetime.fromtimestamp(now,datetime.timezone(datetime.timedelta(hours=5))).date().isoformat()
    if ledger.get('day')!=day:ledger={'day':day,'count':0,'last':ledger.get('last',0)}
    if ledger['count']>=50:raise ValueError('The 50-DM daily limit has been reached.')
-   if now-ledger.get('last',0)<60:raise ValueError('Wait at least 60 seconds between DMs.')
+   if not manual and now-ledger.get('last',0)<60:raise ValueError('Wait at least 60 seconds between DMs.')
    ledger.update(count=ledger['count']+1,last=now);STORE.put('dm_daily',ledger);STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':now})
   # Reserve before dispatch. A network failure must not silently allow duplicates.
   try:
@@ -1639,9 +1642,10 @@ class Handler(BaseHTTPRequestHandler):
    body=json.loads(self.rfile.read(length))
   except Exception:return self.reply({'error':'Invalid request'},status=400)
   if not isinstance(body,dict):return self.reply({'error':'Request must be a JSON object.'},status=400)
-  if self.path in ('/donors','/donor-delivery'):
+  if self.path in ('/donors','/donor-delivery','/donor-send'):
    try:
     if self.path=='/donors':return self.reply(donors().mutate(body))
+    if self.path=='/donor-send':return self.reply(donors().send_one(body.get('id'),body.get('request_id')))
     if body.get('stop'):return self.reply(donors().jobs.cancel())
     if CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it first.')
     return self.reply(donors().jobs.start(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster')}))

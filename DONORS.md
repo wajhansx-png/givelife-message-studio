@@ -21,4 +21,8 @@ Explicit donor batches snapshot the full saved DM and selected audience, put Imp
 Change the campaign image in **Settings → Change poster**, or the message tools menu. Image uploads are converted to JPEG, previewed, then saved to the existing private cloud store. Existing captions are preserved. Poster replacement is blocked during active sends to avoid mixed-image batches. No medical claims, poster text or remaining-amount text inside the image are automatically edited.
 
 Validation: 250 Python tests (30 new registry/delivery/integration checks, including inherited registry cases), seven existing Node UI suites, JavaScript/Python syntax checks, and desktop/mobile browser checks against fake WhatsApp. No real WhatsApp recipient was contacted for testing. The prior abandoned `reply_view` local experiment is not part of this release.
+# Individual manual sending
+
+Each donor-row DM click is an explicit immediate send, including previously sent or uncertain recipients. The button remains available after confirmation. This path bypasses the old-recipient check and the inter-DM cooldown only for that manual click, never for bulk/Auto jobs. It retains opt-outs, blocked numbers, the own-account exclusion, the daily cap and real connection checks. Identical request IDs never dispatch twice; a new deliberate click has a new request ID. An in-flight WhatsApp request must finish before another dispatch can use the transport. Network/provider time is not an artificial cooldown and success is never guaranteed or fabricated. A manual success restarts the active donor batch's gap. The header sums saved amounts of active records marked Donated, independently of search filters, and excludes deleted records; it does not infer receipts or alter the case balance.
+
 

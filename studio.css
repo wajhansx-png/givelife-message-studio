@@ -55,13 +55,13 @@ h1,h2,h3 {text-wrap:balance}
 .e.bot strong {font-weight:700}.e.you {border:0;background:var(--gs);padding:9px 14px;border-radius:12px 3px 12px 12px}
 .e.sys {border-radius:6px;padding:8px 12px;font-size:12px;background:var(--gs)}
 .e.bot.err {background:var(--wbg);border-color:var(--red);color:var(--red)}
-.reply-feedback {color:var(--mut);min-height:32px;font-size:11px;line-height:1.4;margin-top:-12px}
+.reply-feedback {color:var(--mut);min-height:32px;font-size:11px;line-height:1.4;margin-top:-12px;align-self:center}
 .composer {border-radius:13px;border-color:var(--line2);box-shadow:var(--sh1);background:var(--surface)}
 .composer:focus-within {outline:2px solid var(--g);outline-offset:1px}
 .composer .go {border-radius:10px;width:54px;height:54px;display:grid;place-items:center}
 .composer textarea {outline:0;line-height:24px}.composer textarea:focus-visible {outline:none}
 .composer .clip {border:1px solid transparent}.composer .clip:hover {background:var(--surface2)}
-.next-actions button {border-radius:7px;font-size:12px;min-height:36px;background:var(--gs)}
+.next-actions {justify-content:center}.next-actions button {border-radius:7px;font-size:12px;min-height:36px;background:var(--gs)}
 .send-title {gap:4px}.send-title h2 {font-size:14px;font-weight:700}.send-title span {font-size:12px;color:var(--mut)}
 .prim,.chips {gap:8px}.prim button,.chips button,.big.all {border-radius:9px;font-size:13px;font-weight:600;min-height:56px}
 .chips {padding-top:16px;margin-top:8px;gap:8px}.chips button {background:var(--surface);border-color:var(--line2)}

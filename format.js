@@ -29,5 +29,9 @@ function format(text){return text.replace(/\r\n/g,'\n').split('\n').map(line=>{
  return inline(line);
 }).join('\n');}
 root.waFormat=format;
+// Limited assistant Markdown: all text is escaped by the existing formatter. No raw HTML or links.
+root.chatFormat=text=>format(String(text).replace(/\*\*([^\n]+?)\*\*/g,'*$1*').replace(/^#{1,6} (.+)$/gm,'*$1*'));
 if(typeof module!=='undefined')module.exports=format;
 })(typeof window!=='undefined'?window:globalThis);
+
+

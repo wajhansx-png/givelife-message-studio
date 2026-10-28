@@ -1589,7 +1589,7 @@ class Handler(BaseHTTPRequestHandler):
   self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(data if isinstance(data,bytes) else data.encode())
  def do_GET(self):
   if self.path=='/health':return self.reply({'ok':True})
-  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/donors.css'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/donors.css','/studio.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)

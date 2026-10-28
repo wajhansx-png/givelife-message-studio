@@ -29,7 +29,7 @@ function dashboardConversation(items){const lastUser=items.map(x=>x.who).lastInd
 function drawLog(){const allItems=history.slice(-40);
  for(const id of ['log','histLog']){const items=id==='log'&&!isPhone()?dashboardConversation(allItems):allItems;const el=$(id),state=scrollState[id],prev=state.top;el.textContent='';
   items.forEach(h=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'');d.dataset.t=h.t;
-   d.textContent=h.text;el.append(d);if(h.who==='app'&&h.id){const f=document.createElement('button');f.className='reply-feedback';f.type='button';f.textContent='Correct this';f.setAttribute('aria-label','Correct this response');f.onclick=e=>{e.stopPropagation();openFeedback(h.id)};el.append(f)}});
+   if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=chatFormat(h.text);else d.textContent=h.text;el.append(d);if(h.who==='app'&&h.id){const f=document.createElement('button');f.className='reply-feedback';f.type='button';f.textContent='Correct this';f.setAttribute('aria-label','Correct this response');f.onclick=e=>{e.stopPropagation();openFeedback(h.id)};el.append(f)}});
   if(thinking){const d=document.createElement('div');d.className='e bot dots';d.textContent='Thinking…';el.append(d)}
   if(el.clientHeight){if(state.follow)followChat(el,items.at(-1)?.who==='app'&&!thinking);else el.scrollTop=prev}
  }}
@@ -385,7 +385,7 @@ function isDark(){const t=document.documentElement.dataset.theme;return t?t==='d
 function applyTheme(t){const r=document.documentElement;if(t==='light'||t==='dark')r.dataset.theme=t;else delete r.dataset.theme;
  try{localStorage.setItem('givelife-theme',t)}catch(e){}
  document.querySelectorAll('#theme button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.t===t)));
- const m=document.querySelector('meta[name=theme-color]');if(m)m.content=isDark()?'#1a1a18':'#f5f4ef'}
+ const m=document.querySelector('meta[name=theme-color]');if(m)m.content=isDark()?'#111e20':'#f3f6f6'}
 document.querySelectorAll('#theme button').forEach(b=>b.onclick=()=>applyTheme(b.dataset.t));
 
 matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(themeNow()==='system')applyTheme('system')});

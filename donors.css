@@ -14,3 +14,5 @@
 
 .donor-status{height:32px;min-height:32px;width:100%;min-width:0;padding:4px 7px;background:var(--surface2);border:1px solid var(--line2);border-radius:6px;font:inherit;font-size:11px;color:var(--ink);white-space:nowrap}@media(max-width:899px){.donor-status{height:36px;min-height:36px;padding:3px;font-size:10px}}
 
+.donor-progress[data-error=true]{background:var(--wbg);color:var(--warn)}
+

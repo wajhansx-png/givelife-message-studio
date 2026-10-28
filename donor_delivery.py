@@ -32,7 +32,10 @@ class DonorDelivery:
             if changed:self._save(data)
             return self._public(jobs[-1]) if jobs else {'state':'Idle','sent':0,'skipped':0,'failed':0,'total':0}
     def _public(self,j):
-        return {k:copy.deepcopy(v) for k,v in j.items() if k not in ('boot','caption','captions','ids','signature')}
+        result={k:copy.deepcopy(v) for k,v in j.items() if k not in ('boot','caption','captions','ids','signature')}
+        if result.get('state')=='Completed' and not result.get('sent') and result.get('skipped'):
+            result.update(state='Nothing sent',error='This earlier batch skipped its recipients. No DM was sent.')
+        return result
     def _update(self,ident,**fields):
         with self.lock:
             data=self._load();j=next(x for x in data['jobs'] if x['id']==ident);j.update(fields,updated_at=time.time());self._save(data)

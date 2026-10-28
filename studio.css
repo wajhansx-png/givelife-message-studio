@@ -182,4 +182,6 @@ body .connect-dialog h2 {font-size:24px;letter-spacing:-.5px;max-width:22ch}.con
  .message{line-height:1.4;padding:0}.chat{padding:10px 12px;overflow:hidden}
  .hist .log{gap:10px;padding:12px 10px}.hist .e.bot{padding:12px;font-size:14px}.hist .reply-feedback{min-height:32px;margin:0}
 }
+/* Keep the live status compact: the detailed update stays in the expandable activity panel. */
+.live{min-height:50px;padding-block:2px}.livebar{min-height:44px}.livebar small{display:none}
 

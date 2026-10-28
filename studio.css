@@ -184,4 +184,21 @@ body .connect-dialog h2 {font-size:24px;letter-spacing:-.5px;max-width:22ch}.con
 }
 /* Keep the live status compact: the detailed update stays in the expandable activity panel. */
 .live{min-height:50px;padding-block:2px}.livebar{min-height:44px}.livebar small{display:none}
+/* Center the assistant's written reply inside its bubble. */
+.talk .e.bot,.hist .e.bot{text-align:center}
+/* WhatsApp is one status dot: green when online, blinking red otherwise. */
+.brandbar .connect-badge{order:8;width:40px;min-width:40px;height:40px;min-height:40px!important;padding:0!important;border:0!important;border-radius:50%!important;background:transparent!important;box-shadow:none!important;font-size:0!important;display:grid;place-items:center}
+.brandbar .connect-badge::before{content:''!important;width:12px;height:12px;border-radius:50%;background:var(--red);box-shadow:0 0 0 4px color-mix(in srgb,var(--red) 14%,transparent);animation:wa-dot-blink 1.2s ease-in-out infinite}
+.brandbar .connect-badge[data-state=online]::before{background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 16%,transparent);animation:none}
+.brandbar .connect-badge:hover{background:var(--surface2)!important}
+@keyframes wa-dot-blink{0%,100%{opacity:1}50%{opacity:.25}}
+/* Donors is the last header action; settings sits in the footer's right corner. */
+.brandbar .donor-launch{order:10}
+@media(min-width:900px){
+ .app{position:relative}
+ .brandbar .gear{position:absolute;right:24px;bottom:8px;z-index:30;width:28px;height:28px;min-width:28px;min-height:28px;padding:0;font-size:17px;border:1px solid var(--line);border-radius:8px;background:var(--surface);display:grid;place-items:center}
+ .foot{padding-right:36px}
+}
+@media(min-width:900px) and (max-width:1100px){.brandbar .gear{right:16px}}
+@media(max-width:899px){.brandbar .connect-badge{width:44px;min-width:44px;height:44px;min-height:44px!important}}
 

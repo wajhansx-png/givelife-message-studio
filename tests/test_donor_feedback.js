@@ -13,6 +13,6 @@ context.paintDelivery(row,'Not sent');assert.equal(button.textContent,'Retry');a
 assert(!source.includes("make('input','donor-notes')"),'Notes are removed from the directory UI');
 assert(source.includes("api('/donor-send',{id:ids[0],request_id:requestId()})"),'Individual DM uses the immediate explicit-send endpoint');
 assert(source.includes('donorTotalAmount')&&source.includes('data.counts.donated_amount'),'Header displays the server-calculated donated total');
-assert(source.includes("if(!active&&j.state!=='Idle')await refresh()"),'Confirmed delivery must refresh persisted row state');
+assert(source.includes("if(!active&&j.state!=='Idle')await refresh(true)"),'Confirmed delivery must refresh persisted row state');
 console.log('Donor feedback passed: immediate action, pending/confirmed separation, uncertain protection, compact fields, persisted receipt refresh.');
 

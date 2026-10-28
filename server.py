@@ -43,7 +43,8 @@ def serialized_send(fn):
  return call
 
 STORE=configured_store()
-BLOCKED=set(json.loads((ROOT/'campaign-blocks.json').read_text())) if (ROOT/'campaign-blocks.json').exists() else set()
+CAMPAIGN_CONTACTED=set(json.loads((ROOT/'campaign-blocks.json').read_text())) if (ROOT/'campaign-blocks.json').exists() else set()
+BLOCKED=set(CAMPAIGN_CONTACTED)
 def persist_file(key,path):
  if STORE:STORE.put(key,path.read_text(encoding='utf-8'))
 
@@ -71,13 +72,14 @@ def custom_recipient(body):
 def send_custom(body):
  jid,is_group=custom_recipient(body);message=body.get('message','')
  if not isinstance(message,str):raise ValueError('Message must be text.')
- if not is_group and body.get('kind') in ('dm_appeal','donor_registry','donor_manual'):
+ if not is_group and body.get('kind') in ('dm_appeal','donor_registry','donor_manual','donor_batch'):
   message=greet_text(message,body.get('name',''),body.get('gender','Brother'))
   if not dm_composer.complete(message):raise ValueError('The full DM is incomplete. Restore its paragraphs and payment details before sending.')
  if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
  if not STORE:raise ValueError('Persistent send records are unavailable. Try again later.')
  manual=body.get('kind')=='donor_manual'
- if not SEND_LOCK.acquire(blocking=manual):raise ValueError('Another send is running. Please wait for it to finish.')
+ explicit_batch=body.get('kind')=='donor_batch'
+ if not SEND_LOCK.acquire(blocking=manual or explicit_batch):raise ValueError('Another send is running. Please wait for it to finish.')
  try:
   status=api_result('/devices/'+DEVICE+'/status')
   if not status.get('is_connected') or not status.get('is_logged_in'):raise ValueError('WhatsApp is disconnected. Tap WhatsApp to reconnect.')
@@ -85,15 +87,19 @@ def send_custom(body):
   if not is_group:
    digest=hashlib.sha256(jid.encode()).hexdigest()
    alternate=hashlib.sha256((jid+'@s.whatsapp.net').encode()).hexdigest()
+   explicit=manual or body.get('kind')=='donor_batch'
+   records={key:STORE.get(key) for key in ('optout_'+alternate,'optout_'+digest,'dm_recipient_'+alternate,'dm_recipient_'+digest)} if not hasattr(STORE,'get_many') else STORE.get_many(('optout_'+alternate,'optout_'+digest,'dm_recipient_'+alternate,'dm_recipient_'+digest))
    if jid==norm_phone(OWNER_PHONE):raise ValueError('Your own account is excluded from donor sending.')
-   if alternate in BLOCKED or STORE.get('optout_'+alternate) or STORE.get('optout_'+digest):raise ValueError('This recipient is blocked or opted out.')
-   if not manual and STORE.get('dm_recipient_'+alternate):raise ValueError('This recipient was already contacted or has an uncertain send.')
-   if digest in BLOCKED:raise ValueError('This recipient is blocked.')
-   if not manual and STORE.get('dm_recipient_'+digest):raise ValueError('This recipient was already contacted or has an uncertain send. Check WhatsApp before sending again.')
+   exclusions=BLOCKED-CAMPAIGN_CONTACTED if explicit else BLOCKED
+   if alternate in exclusions or digest in exclusions or records.get('optout_'+alternate) or records.get('optout_'+digest):raise ValueError('This recipient is blocked or opted out.')
+   if not manual:
+    for key in ('dm_recipient_'+alternate,'dm_recipient_'+digest):
+     previous=records.get(key)
+     if previous and (not explicit or mapping(previous).get('state') not in ('SUCCESS','Sent')):raise ValueError('This recipient has an uncertain send. Check WhatsApp before sending again.')
    ledger=STORE.get('dm_daily',{});day=datetime.datetime.fromtimestamp(now,datetime.timezone(datetime.timedelta(hours=5))).date().isoformat()
    if ledger.get('day')!=day:ledger={'day':day,'count':0,'last':ledger.get('last',0)}
    if ledger['count']>=50:raise ValueError('The 50-DM daily limit has been reached.')
-   if not manual and now-ledger.get('last',0)<60:raise ValueError('Wait at least 60 seconds between DMs.')
+   if not manual and not (explicit_batch and body.get('first_in_batch') is True) and now-ledger.get('last',0)<60:raise ValueError('Wait at least 60 seconds between DMs.')
    ledger.update(count=ledger['count']+1,last=now);STORE.put('dm_daily',ledger);STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':now})
   # Reserve before dispatch. A network failure must not silently allow duplicates.
   try:
@@ -419,6 +425,7 @@ def set_hold(on):
  if on and not prev.get('on'):
   was=auto_on();HOLD.write_text(json.dumps({'on':True,'was_auto':was,'since':time.time()}),encoding='utf-8')
   CAMPAIGN['stop']=True;cancel_jobs('Stopped by owner.')
+  if DONORS:DONORS.jobs.cancel()
   if was:AUTO.write_text(json.dumps({'on':False,'since':time.time()}));persist_file('autopilot',AUTO)
   persist_file('hold',HOLD);auto_log('ON HOLD: all sending stopped until you say resume.')
   return 'On hold. Nothing will be sent anywhere. Say "resume" when the right WhatsApp is connected.'
@@ -487,7 +494,8 @@ if STORE:
 def studio_state():
  saved=STORE.get('last_sent',{}) if STORE else {}
  since={k:(round((time.time()-saved[v[1]])/60) if v[1] in saved else None) for k,v in GROUPS.items()}
- return {'left':read_left(),'whatsapp':wa_ok(),'minutes_since_post':since,'autopilot':auto_on()}
+ dm_context={'paused':DONORS.paused,'counts':DONORS.book.list()['counts'],'batch':DONORS.jobs.status()} if DONORS else {'state':'Directory not opened yet'}
+ return {'left':read_left(),'whatsapp':wa_ok(),'minutes_since_post':since,'autopilot':auto_on(),'donor_context':dm_context}
 
 def start_group_job(key,caption):
  keys=list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key]
@@ -1164,6 +1172,7 @@ def delete_last_group(target=None):
 
 def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection_kind='group'):
  callbacks=base_chat_callbacks();cache={};verified=set();owner=chat_policy.intent(prompt)
+ dm_revision=donors().revision
  if (draft_flow.editing_request(owner['text']) or selection is not None) and (revision is None or revision==OWNER_REVISION):
   kind=selection_kind if selection is not None else 'dm' if re.search(r'(?i)\bdm\b',owner['text']) else 'group'
   workflow().begin(owner['text'],kind,get_message(kind)['text'])
@@ -1198,6 +1207,8 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
  def wrapped(name,fn):
   def call(**args):
    if revision is not None and revision!=OWNER_REVISION and name not in read_tools:raise ValueError('Superseded by your newer instruction. No old action was sent.')
+   private_send=name in ('send_dm_appeal','dm_list','dm_donors','dm_group') or name=='donor_action' and args.get('action')=='send' or name=='send_message' and not (manual_commands.group(str(args.get('to',''))) or str(args.get('to','')).endswith('@g.us'))
+   if private_send and dm_revision!=donors().revision:raise ValueError('Personal DMs were stopped by your newer instruction. No old DM request was sent.')
    if name=='donor_action':return donors().model_tool(prompt,task_id,**args)
    if name=='dm_donors':
     if not chat_policy.permitted(name,prompt):raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
@@ -1423,10 +1434,10 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
  if kind=='no_groups':raise ValueError('No clear eligible groups remain after the exclusion. Name the groups to send to.')
  if kind=='refuse_target':raise ValueError('That group is excluded. Nothing was sent.')
  if kind=='stop_dms':
-  if DONORS:DONORS.jobs.cancel()
-  CAMPAIGN['stop']=True;ENGINE.set_dms(False,ENGINE.s.get('dm_daily',30));out['reply']='DMs stopped. Automatic DMs stay off until you turn them on.'
+  out['reply']=donors().pause_personal()['reply']
  elif kind=='hold':out['reply']=set_hold(True)
  elif kind=='resume':out['reply']=set_hold(False)
+ elif kind=='resume_dms':out['reply']=donors().resume_personal()
  elif kind=='donation_order':out['reply']=edit_donation_order()
  elif kind=='remove_arrival_line':out['reply']=remove_arrival_line()
  elif kind=='dm_name':out['reply']=edit_dm_name(plan['name'],plan.get('to',''))
@@ -1588,6 +1599,7 @@ class Handler(BaseHTTPRequestHandler):
     return self.reply(donors().book.list(q.get('tab',['all'])[0],q.get('q',[''])[0]))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/donor-delivery':return self.reply(donors().jobs.status())
+  if self.path=='/donor-messages':return self.reply(donors().messages.get())
   if self.path=='/wa-status':
    try:return self.reply(api('/devices/'+DEVICE+'/status'))
    except Exception:return self.reply({'error':'WhatsApp is restarting. Try again shortly.'},status=502)
@@ -1642,13 +1654,14 @@ class Handler(BaseHTTPRequestHandler):
    body=json.loads(self.rfile.read(length))
   except Exception:return self.reply({'error':'Invalid request'},status=400)
   if not isinstance(body,dict):return self.reply({'error':'Request must be a JSON object.'},status=400)
-  if self.path in ('/donors','/donor-delivery','/donor-send'):
+  if self.path in ('/donors','/donor-delivery','/donor-send','/donor-messages'):
    try:
     if self.path=='/donors':return self.reply(donors().mutate(body))
     if self.path=='/donor-send':return self.reply(donors().send_one(body.get('id'),body.get('request_id')))
-    if body.get('stop'):return self.reply(donors().jobs.cancel())
+    if self.path=='/donor-messages':return self.reply(donors().messages.regenerate() if body.get('action')=='regenerate' else donors().messages.update(body.get('id'),body.get('text')))
+    if body.get('stop'):return self.reply(donors().pause_personal())
     if CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it first.')
-    return self.reply(donors().jobs.start(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster')}))
+    return self.reply(donors().start_batch(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster')}))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/drafts':
    if any(not isinstance(body.get(k),str) or len(body[k])>10000 for k in ('group','dm')):return self.reply({'error':'Both captions must be text, at most 10,000 characters each.'},status=400)

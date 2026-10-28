@@ -6,11 +6,29 @@ from donor_delivery import DonorDelivery
 class DonorIntegration:
     def __init__(self,app):
         self.app=app;self.book=DonorBook(app.DATA,app.STORE)
-        self.jobs=DonorDelivery(app.DATA,app.STORE,self.book,app.send_custom,lambda:app.get_message('dm')['text'],app.wa_ok,app.on_hold,self.eligible,self.personal_name)
+        from donor_messages import MessageBank
+        self.messages=MessageBank(app);self.paused=bool(app.STORE.get('donor_dm_pause',False)) if app.STORE else False
+        self.jobs=DonorDelivery(app.DATA,app.STORE,self.book,app.send_custom,lambda:app.get_message('dm')['text'],app.wa_ok,lambda:app.on_hold() or self.paused,self.eligible,self.personal_name,self.messages.captions)
         self.manual_lock=threading.RLock()
+        self.revision=0
+    def pause_personal(self):
+        self.revision+=1
+        self.paused=True
+        if self.app.STORE:self.app.STORE.put('donor_dm_pause',True)
+        self.jobs.cancel();self.app.CAMPAIGN['stop']=True;self.app.ENGINE.set_dms(False,self.app.ENGINE.s.get('dm_daily',30))
+        return {'reply':'Personal DMs stopped (paused). Group posting and its timers are unchanged.'}
+    def resume_personal(self):
+        was_paused=self.paused
+        self.paused=False
+        if self.app.STORE and was_paused:self.app.STORE.put('donor_dm_pause',False)
+        return 'Personal DM sending is available again. Group posting is unchanged.'
+    def start_batch(self,**body):
+        self.resume_personal();body.setdefault('gap_seconds',240);body.setdefault('limit',20)
+        return self.jobs.start(**body)
     def send_one(self,ident,request_id):
         """Each explicit click is a new immediate send; repeated request IDs never resend."""
         if not self.app.STORE:raise ValueError('Persistent sending records are unavailable.')
+        self.resume_personal()
         if not isinstance(request_id,str) or not re.fullmatch(r'[a-zA-Z0-9_-]{8,100}',request_id):raise ValueError('Invalid send request. Refresh the donor page.')
         r=self.book.resolve(ident);key='donor_manual_'+hashlib.sha256(request_id.encode()).hexdigest()
         with self.manual_lock:
@@ -40,9 +58,13 @@ class DonorIntegration:
         a=self.app
         if phone==normalize_phone(a.OWNER_PHONE):return False
         import hashlib
-        for jid in (phone,phone+'@s.whatsapp.net'):
-            digest=hashlib.sha256(jid.encode()).hexdigest()
-            if digest in a.BLOCKED or a.STORE and (a.STORE.get('dm_recipient_'+digest) or a.STORE.get('optout_'+digest)):return False
+        digests=[hashlib.sha256(jid.encode()).hexdigest() for jid in (phone,phone+'@s.whatsapp.net')]
+        keys=[prefix+d for d in digests for prefix in ('dm_recipient_','optout_')]
+        values=a.STORE.get_many(keys) if a.STORE and hasattr(a.STORE,'get_many') else {k:a.STORE.get(k) for k in keys} if a.STORE else {}
+        for digest in digests:
+            if digest in a.BLOCKED-getattr(a,'CAMPAIGN_CONTACTED',set()) or values.get('optout_'+digest):return False
+            prior=values.get('dm_recipient_'+digest)
+            if prior and (not isinstance(prior,dict) or prior.get('state') not in ('SUCCESS','Sent')):return False
         return True
     def personal_name(self,label):
         # Donor labels are metadata. Random/business labels fall back to Brother.
@@ -69,6 +91,8 @@ class DonorIntegration:
     def command(self,text,request_id=None):
         import chat_policy,manual_commands
         raw=str(text).strip();t=chat_policy.owner_text(raw).strip()
+        if t.casefold() in ('hold','pause','wait','stop') and self.jobs.active:return self.pause_personal()
+        if t.casefold() in ('resume','continue','unhold') and self.paused and not self.app.on_hold():return {'reply':self.resume_personal()}
         if re.search(r"(?i)\b(dont|don't|do not|never)\b",t) or manual_commands.question_request(t):return None
         if re.search(r'(?i)\band then\b|;|\badd\b.+\band\b',t):return None
         if re.match(r'(?i)^(?:please\s+)?(?:add|save|register|create)\s+(?:this\s+|new\s+)?donor\b',t) and PHONE.search(raw):
@@ -84,11 +108,13 @@ class DonorIntegration:
             what=mark[2].casefold();fields={'important':not what.startswith('not ')} if 'important' in what else {'donated':not what.startswith('not ')}
             if mark[3] and fields.get('donated'):fields['amount']=int(mark[3].replace(',',''))
             return self.book.update(mark[1],**fields)
-        if re.fullmatch(r'(?i)(?:stop|cancel) (?:the )?(?:donor (?:batch|dms?|messages)|dms? to donors)',t):return self.jobs.cancel()
+        control=manual_commands.dm_control(t)
+        if control=='stop_dms':return self.pause_personal()
+        if control=='resume_dms':return {'reply':self.resume_personal()}
         send=send_request(t)
         if send and chat_policy.intent(raw)['send']:
             if self.app.CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it before starting a donor batch.')
-            return self.jobs.start(**send,request_id=request_id)
+            return self.start_batch(**send,request_id=request_id)
         return None
     def model_tool(self,prompt,request_id,action,**args):
         import chat_policy
@@ -111,10 +137,10 @@ class DonorIntegration:
                 if segment:expected=send_request(segment[0])
             if not expected or not chat_policy.intent(prompt)['send']:raise ValueError('Name the donor audience and gap in a direct send request.')
             if args.get('scope',expected['scope'])!=expected['scope'] or float(args.get('gap_seconds',expected['gap_seconds']))!=expected['gap_seconds']:raise ValueError('Audience or gap differs from your instruction.')
-            return self.jobs.start(**expected,request_id=request_id)
+            return self.start_batch(**expected,request_id=request_id)
         if action=='stop':
             if not re.search(r'(?i)\b(stop|cancel|pause)\b',owner):raise ValueError('No cancellation was requested.')
-            return self.jobs.cancel()
+            return self.pause_personal()
         ident=args.get('id') or args.get('query');r=self.book.resolve(ident)
         # A retrieved ID is not permission to change a different donor.
         if r['id'] not in owner and not any(name and name.casefold() in low for name in (r['name'],args.get('query',''))):raise ValueError('Name the donor to change in your instruction.')

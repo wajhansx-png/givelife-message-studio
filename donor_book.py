@@ -37,16 +37,18 @@ def parse_contact(text, name=''):
 
 class DonorBook:
     def __init__(self, folder, store=None):
-        self.path=Path(folder)/'donor-book.json'; self.store=store; self.lock=threading.RLock()
+        self.path=Path(folder)/'donor-book.json'; self.store=store; self.lock=threading.RLock();self._cache=None
     def _load(self):
+        if self._cache is not None:return copy.deepcopy(self._cache)
         raw=self.store.get('donor_book') if self.store else None
         if raw is None and self.path.exists(): raw=json.loads(self.path.read_text(encoding='utf-8'))
-        if raw is None: return {'version':1,'records':[]}
+        if raw is None: raw={'version':1,'records':[]}
         if not isinstance(raw,dict) or not isinstance(raw.get('records'),list):
             raise ValueError('Donor records are unavailable. No changes were made.')
-        return raw
+        self._cache=copy.deepcopy(raw);return copy.deepcopy(raw)
     def _save(self,data):
         if self.store: self.store.put('donor_book',data)
+        self._cache=copy.deepcopy(data)
         tmp=self.path.with_suffix('.tmp'); tmp.write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8');tmp.replace(self.path)
     def _public(self,r):
         keys=('id','important','donated','amount','source','created_at','updated_at','last_sent_at','delivery','deleted')
@@ -147,7 +149,7 @@ def send_request(text):
     if re.search(r"(?i)\b(dont|don't|do not|never|tomorrow|schedule|at|every day|write|rewrite|make|create|draft|emotional|urgent|urgency|caption|say|saying)\b|[\"“]",t):return None
     scope='important' if re.search(r'(?i)\bimportant\b',t) else 'not_donated' if re.search(r'(?i)\b(?:not donated|undonated)\b',t) else 'donated' if re.search(r'(?i)\bdonated\b',t) else 'all'
     gap=re.search(r'(?i)(\d+(?:\.\d+)?)\s*(seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|h)\b',t)
-    seconds=float(gap[1])*(3600 if gap[2].lower().startswith('h') else 60 if gap[2].lower().startswith('m') else 1) if gap else 60
+    seconds=float(gap[1])*(3600 if gap[2].lower().startswith('h') else 60 if gap[2].lower().startswith('m') else 1) if gap else 240
     limit=re.search(r'(?i)\b(?:first|top|send(?: to)?|dm)\s+(\d+)\s+(?:important\s+)?donors?\b',t)
     return {'scope':scope,'gap_seconds':seconds,'limit':int(limit[1]) if limit else None,'poster':not bool(re.search(r'(?i)\b(?:without|no) (?:poster|picture|image)\b|\btext only\b',t))}
 

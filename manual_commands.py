@@ -85,11 +85,23 @@ def balance_amount(text,allow_with=True):
  if len(set(candidates))>1:raise ValueError('More than one remaining amount was given. Tell me the single correct balance; nothing was changed or sent.')
  return candidates[0] if candidates else None
 
+def dm_control(text):
+ t=norm(text);t=re.sub(r'\bdm\s+s\b','dms',t)
+ if not re.search(r'\b(dms?|direct messages|personal messages|private messages|donor messages)\b',t):return None
+ if re.search(r'\b(don t|dont|do not|never)\s+(stop|pause|hold|resume|start)\b',t):return None
+ if re.search(r'\b(and|plus|also|both)\b.*\b(groups?|posts?|everything)\b',t) and not re.search(r'\b(keep|continue|unchanged|running|unaffected)\b',t):return None
+ if re.search(r'\b(hold|pause|stop|disable|off|band)\b',t):return 'stop_dms'
+ if re.search(r'\b(resume|unhold|enable|restart)\b',t):return 'resume_dms'
+ return None
+
 def parse(text):
  t=str(text).strip();t=re.sub(r'^(?:please|kindly|can you|could you|would you)\s+(?=send|resend|delete|remove|revoke|text|message)', '',t,flags=re.I);low=norm(t);low=re.sub(r'\s+',' ',low)
  if not t:return None
  if re.search(r'exclusive\s+upwork|37\s*(?:member|members)|120363432572916292|120363431093838536',low):return {'kind':'refuse_target'}
  if question_request(t) or deferred_request(t):return None
+ control=dm_control(t)
+ if control:return {'kind':control}
+ if re.search(r'\b(hold|pause|stop)\b',low) and re.search(r'\bdms?\b',low) and re.search(r'\b(and|both|also|plus)\b.*\b(groups?|posts?)\b',low):return {'kind':'hold'}
  if re.search(r"(?i)\b(?:don'?t|dont|do not|never)\s+(?:stop|disable|pause|delete|remove|revoke|change|set|record)\b",t):return None
  if low in ('update','status','report','whats update','what s update','whats upadte','what s upadte','what is the update','nothing sent yet man','nothing sent yet') or re.search(r'\b(freelance|freelamce)\b.*\b(update|rules)\b|\b(update|rules)\b.*\b(freelance|freelamce)\b',low):return {'kind':'status','freelance':bool(re.search(r'freela',low))}
  if re.search(r'\b(fast|faster|slow|slower)\b',low) and re.search(r'\b(send|post|pace|speed|posting|sending)\b',low) and not re.search(r'\b(now|right away|immediately|asap)\b',low):return None # pace is a setting, not outgoing text
@@ -143,3 +155,4 @@ def parse(text):
  # Custom text remains explicit via send <text> to <recipient>, or the assistant with conversation context.
  if target and re.sub(r'\b(group|groups|in|to|on)\b','',low).strip() in [norm(a) for a in ALIASES[target]]:return {'kind':'select','target':target}
  return None
+

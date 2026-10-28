@@ -149,6 +149,7 @@ def _slim(state):
            'drafts': {k:safe_text(v,6000) for k,v in mapping(state.get('drafts')).items()}, 'dm_form': mapping(screen.get('dm')), 'recipient_names': dict(list(mapping(state.get('recipient_names')).items())[-20:])}
     out['group_intervals']=mapping(eng.get('group_intervals'))
     out['status']=state.get('send_status')
+    out['donor_context']=mapping(state.get('donor_context'))
     out['draft_task']={k:v for k,v in mapping(state.get('draft_task')).items() if k in ('kind','state','target','poster','max_lines','instruction')}
     act = state.get('recent_activity')
     if act:

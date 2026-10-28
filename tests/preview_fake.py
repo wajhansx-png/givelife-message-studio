@@ -46,6 +46,10 @@ class Store:
   import copy
   with self.lock:self.data[k]=copy.deepcopy(v)
 server.STORE=Store();server.set_left(25000);server.ENGINE.s['dm_enabled']=False
+if '--donors' in sys.argv:
+ for i in range(20):
+  row=server.donors().book.add('Demo donor '+str(i+1),'1555'+str(1230000+i))['donor']
+  if i<3:server.donors().book.update(row['id'],important=True)
 if '--draft-task' in sys.argv:
  text='*A short charity reminder.*\nYousuf needs treatment. *Rs. 25,000 left.* 💔\n*03097458815* Easypaisa / JazzCash (Wajdan Khan)'
  server.chat_callbacks('Make a message for givelife without poster only 3 lines',revision=server.OWNER_REVISION)['set_message'](kind='group',text=text)
@@ -59,3 +63,4 @@ server.Handler.do_GET=preview_get
 http=ThreadingHTTPServer(('127.0.0.1',3003),server.Handler)
 print('Local fake-WhatsApp preview: http://127.0.0.1:3003/ (no real messages possible)',flush=True)
 http.serve_forever()
+

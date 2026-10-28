@@ -14,8 +14,8 @@ Implemented against the existing Python/vanilla-JavaScript app. Visual reference
 - Empty library recovery, more room for donor overflow controls, consistent dialog exits, poster/settings/connection styling.
 
 ## Verification actually run
-- 25 Playwright tests against isolated temporary data and fake WhatsApp: reading/viewport fitting, centered copy and icon positions, responsive screens, settings, poster, memory, WhatsApp connection, donor creation dialog, history, keyboard blur, draft/selection persistence, empty library, delayed save, duplicate regeneration, pasted recipients and authorization failures.
-- Sizes include 1600×900, 1440×900, 1280×720, 1024×768, 768×1024, 390×844, 320×640, and an emulated 390×450 keyboard viewport.
+- 28 Playwright tests against isolated temporary data and fake WhatsApp: reading/viewport fitting, centered copy and icon positions, responsive screens, settings, poster, memory, WhatsApp connection, donor creation dialog, history, keyboard blur, draft/selection persistence, empty library, delayed save, duplicate regeneration, pasted recipients and authorization failures.
+- Sizes include 1600×900, 1440×900, 1280×720, 1024×768, 768×1024, 390×844, 320×640, and an emulated 390×450 keyboard viewport. A live 1280×720 check exposed a scrolling group rail; the final short-laptop layout switches to a compact target grid. Regression cases at 1280×720, 1024×768 and 1024×600 verify every group control and title fits without rail scrolling.
 - Four Vitest/fast-check property groups passed for monetary transformations, phone normalization, deduplication and safe message formatting.
 - Ten existing Node UI regression suites passed, including receipt truthfulness, duplicate locks, donor optimistic updates and unchanged WhatsApp formatting.
 - JavaScript syntax checks and frontend-only whitespace checks passed. Independent visual/code reviews completed; the two actionable code findings were fixed and verified with delayed-response regression tests.

@@ -407,3 +407,22 @@ dialog header{border-bottom:1px solid var(--line)}
  .donor-star,.donor-more summary{height:44px;min-height:44px}
 }
 @media(prefers-reduced-motion:reduce){.brandbar .connect-badge::before{animation:none!important}}
+/* Short laptops use a compact target grid instead of a scrolling destination list. */
+@media(min-width:900px) and (max-height:800px){
+ .action-rail{padding-block:10px;gap:0;justify-content:safe center}
+ .group-send{gap:0}
+ .send-title{margin-bottom:8px}.send-title h2{font-size:14px}
+ .prim{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .action-rail .prim button{min-height:56px;flex-direction:column;justify-content:center;text-align:center;padding:8px 4px;gap:4px;font-size:12px}
+ .group-section-title{padding-top:8px;margin-top:10px;font-size:11px}
+ .group-section-title span:last-child{display:none}
+ .chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .chips button{min-height:54px;flex-direction:column;justify-content:center;text-align:center;padding:6px 4px;gap:4px;font-size:12px}
+ .chips .all{grid-column:1/-1;min-height:46px;margin-top:0}
+ .group-label{max-width:100%}.last-sent{font-size:10px}
+}
+@media(min-width:900px) and (max-height:650px){
+ .action-rail{padding-block:6px}.send-title span{display:none}
+ .action-rail .prim button{min-height:48px}.chips button,.chips .all{min-height:44px}
+ .chips{gap:4px}.group-section-title{padding-top:6px;margin-top:6px}
+}

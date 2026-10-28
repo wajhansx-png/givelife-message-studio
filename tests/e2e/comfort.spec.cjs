@@ -105,3 +105,8 @@ test('an empty message library explains how to recover',async({page,request})=>{
  await open(page,request);await page.route('**/donor-messages',r=>r.fulfill({json:{items:[]}}));await page.locator('#openDonors').click();await page.locator('[data-tab=messages]').click();
  await expect(page.locator('#donorMessages')).toContainText('No saved messages yet');await expect(page.getByRole('button',{name:'Regenerate',exact:true})).toBeEnabled();
 });
+for(const [width,height] of [[1280,720],[1024,768],[1024,600]])test(`all group controls fit the laptop ${width}x${height}`,async({page,request})=>{
+ await open(page,request,width,height);for(const selector of ['.send-title h2','[data-group=main]','[data-test=group]','#sendAll'])await inside(page,page.locator(selector).first());
+ for(const button of await page.locator('#chips button').all())await inside(page,button);
+ expect(await page.locator('.action-rail').evaluate(el=>el.scrollHeight<=el.clientHeight+2)).toBe(true);
+});

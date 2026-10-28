@@ -156,7 +156,7 @@ body .connect-dialog h2 {font-size:24px;letter-spacing:-.5px;max-width:22ch}.con
 .preview-back{display:none}.reply-line{min-height:1.4em;white-space:pre-wrap}.reply-line.blank{height:.55em;min-height:.55em}.reply-line.blank br{display:none}
 .paste-launch{width:100%;margin-top:4px;color:var(--gink)}.paste-dialog textarea,.paste-dialog select{width:100%;padding:10px 12px;background:var(--surface2);color:var(--ink);border:1px solid var(--line2);border-radius:8px;font:16px/1.5 var(--font-ui)}.paste-dialog textarea{resize:vertical;min-height:112px;max-height:24dvh}.paste-result{font-size:12px;color:var(--gink);padding:10px 0;overflow-wrap:anywhere}.paste-dialog textarea[aria-invalid=true]{border-color:var(--red)}
 .wa-line{line-height:1.4;min-height:1.4em}.wa-line.blank{height:.55em;min-height:.55em}.wa-line.blank br{display:none}
-.talk .e.bot,.hist .e.bot{white-space:normal;line-height:1.4;max-width:100%;width:100%;padding:12px 14px}
+.talk .e.bot,.hist .e.bot{white-space:normal;line-height:1.4;max-width:100%;width:fit-content;padding:12px 14px;align-self:center}
 @media(min-width:900px){
  html,body{height:100%;min-height:0;overflow:hidden}.app{height:100dvh;min-height:0;gap:10px;padding-top:10px;padding-bottom:8px}
  body .layout,body.nomsg .layout{min-height:0;align-items:stretch;grid-template-columns:minmax(0,1fr) 280px;gap:14px}

@@ -426,3 +426,58 @@ dialog header{border-bottom:1px solid var(--line)}
  .action-rail .prim button{min-height:48px}.chips button,.chips .all{min-height:44px}
  .chips{gap:4px}.group-section-title{padding-top:6px;margin-top:6px}
 }
+/* Message reading gets the screen; donor-only controls return on the other tabs. */
+.donor-page[data-panel=messages] .donor-search,
+.donor-page[data-panel=messages] .donor-bottom,
+.donor-page[data-panel=messages] .donor-progress[data-active=false]{display:none}
+.bank-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none;padding-top:10px;border-top:1px solid var(--line)}
+.bank-pagination button{min-width:112px;min-height:46px;padding:8px 18px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);color:var(--ink);font-size:14px}
+.bank-pagination .primary{background:var(--btn);border-color:var(--btn);color:#fff}
+.bank-pagination span{color:var(--mut);font-size:13px;font-variant-numeric:tabular-nums}
+.bank-back,.bank-more,.bank-current{display:none}
+@media(max-width:899px){
+ .donor-shell{gap:6px;padding-top:6px;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+ .donor-head{gap:6px;padding-block:0 6px;min-height:48px;flex-wrap:nowrap}
+ .donor-head h1{display:flex;align-items:baseline;gap:4px;white-space:nowrap;font-size:15px;flex:1;min-width:0}
+ .donor-count{font-size:11px;margin:0}
+ .donor-head .donor-total{display:flex;flex-direction:column;align-items:flex-start;gap:0;line-height:1.2;padding:5px 8px;flex:none}
+ .donor-total small{font-size:9px;white-space:nowrap}.donor-total strong{font-size:13px;white-space:nowrap}
+ .donor-head .donor-add{min-height:44px;padding:6px 10px;font-size:12px;white-space:nowrap;margin-left:0}
+ .donor-head .donor-back{min-width:54px;padding-inline:8px}
+ .donor-toolbar{gap:6px}
+ .donor-row:not([data-donated=true]){grid-template-columns:24px minmax(72px,1fr) 48px 86px 32px;height:46px;min-height:46px;contain-intrinsic-size:auto 46px}
+ .donor-row:not([data-donated=true]) .donor-amount{display:none}
+ .donor-row:not([data-donated=true]) .donor-more{grid-column:5}
+ .donor-name{font-size:12px}.donor-page .donor-row .donor-dm{font-size:0}
+ .donor-dm::after{content:attr(data-mobile-label);font-size:11px;white-space:nowrap}
+ .donor-row .donor-status{font-size:11px}
+ .donor-progress[data-active=false]{min-height:28px;padding:5px 8px;font-size:11px;background:var(--surface2);color:var(--mut)}
+ .donor-page[data-panel=messages] .donor-toolbar{display:block}
+ .donor-page[data-panel=messages] .donor-tabs{width:100%;display:flex}
+ .donor-page[data-panel=messages] .donor-tabs button{flex:1;min-width:0}
+ .donor-page[data-panel=messages] .donor-notice:empty{display:none}
+ .bank-heading{padding-block:2px 6px;min-height:48px;gap:8px}
+ .bank-detail header{min-height:44px;padding:4px 10px}
+ .bank-detail header strong{display:none}
+ .bank-detail header .tool{margin-left:auto;min-height:36px;font-size:12px}
+ .bank-detail .bank-preview{padding:10px 12px;line-height:1.4;background:transparent}
+ .bank-line{line-height:1.4;min-height:1.4em}.bank-line.blank{height:.4em;min-height:.4em}
+ .bank-pagination{padding-top:6px;gap:8px}
+ .bank-pagination button{min-height:48px;min-width:100px;font-size:14px}
+ .donor-page[data-panel=messages] .donor-head,.donor-page[data-panel=messages] .donor-toolbar{display:none}
+ .bank-heading{padding:0 0 6px;gap:6px}
+ .bank-back{display:block;min-height:44px;min-width:78px;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);color:var(--ink);font-size:12px;white-space:nowrap}
+ .bank-heading>.bank-regenerate{display:none}
+ .bank-more{display:block;position:relative;flex:none}
+ .bank-more summary{min-width:44px;min-height:44px;display:grid;place-items:center;list-style:none;border:1px solid var(--line2);border-radius:8px;background:var(--surface);font-size:22px;cursor:pointer}
+ .bank-more summary::-webkit-details-marker{display:none}
+ .bank-more>div{position:absolute;right:0;top:calc(100% + 4px);z-index:30;padding:6px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);min-width:128px}
+ .bank-mobile-picker{font-size:15px;padding-inline:8px}
+ .bank-current{display:block;flex:1;min-width:0;font-size:15px;line-height:1.4;color:var(--ink);font-weight:600;padding-inline:4px}
+}
+@media(max-width:360px){
+ .donor-head{gap:4px}.donor-head h1{font-size:13px}.donor-head .donor-total{padding-inline:5px}
+ .donor-total strong{font-size:12px}.donor-total small{font-size:8px}.donor-head .donor-add{padding-inline:8px}
+ .donor-row:not([data-donated=true]){grid-template-columns:22px minmax(54px,1fr) 44px 74px 28px;gap:2px}
+ .donor-row .donor-status{font-size:10px}
+}

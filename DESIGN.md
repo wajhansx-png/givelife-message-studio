@@ -17,4 +17,6 @@ Keep all existing element IDs, endpoints and message text. Keep frequent groups 
 
 
 ## Interaction refinement
-Desktop group destinations form a compact action list with receipt ages aligned beside their names. Mobile retains all group buttons in a thumb-height grid. The donor message library uses a master/detail list on desktop and one native selector on mobile. Keep unsaved edits and selected variants across reloads. Snapshot saves, retain newer typing and share save/regeneration locks across rerenders. First use is dark even on a light operating system; explicit Light and Auto remain persistent options.
+Desktop group destinations form a compact action list with receipt ages aligned beside their names. Mobile retains all group buttons in a thumb-height grid. The donor message library uses a master/detail list on desktop and a dedicated Previous–Next reader on mobile. Keep unsaved edits and selected variants across reloads. Snapshot saves, retain newer typing and share save/regeneration locks across rerenders. First use is dark even on a light operating system; explicit Light and Auto remain persistent options.
+
+Mobile reader follow-up: show a plain message title with Previous/Next and a position count; no dropdown. Temporarily hide donor-only chrome while reading, retain a one-tap return, and keep active Stop controls available. Header, captions, dark theme and the owner’s main-screen icon positions stay consistent.

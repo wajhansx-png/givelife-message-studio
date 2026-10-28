@@ -32,7 +32,7 @@ class DonorDelivery:
             if changed:self._save(data)
             return self._public(jobs[-1]) if jobs else {'state':'Idle','sent':0,'skipped':0,'failed':0,'total':0}
     def _public(self,j):
-        result={k:copy.deepcopy(v) for k,v in j.items() if k not in ('boot','caption','captions','ids','signature')}
+        result={k:copy.deepcopy(v) for k,v in j.items() if k not in ('boot','caption','captions','ids','signature','personal_names')}
         if result.get('state')=='Completed' and not result.get('sent') and result.get('skipped'):
             result.update(state='Nothing sent',error='This earlier batch skipped its recipients. No DM was sent.')
         return result
@@ -40,7 +40,7 @@ class DonorDelivery:
         with self.lock:
             data=self._load();j=next(x for x in data['jobs'] if x['id']==ident);j.update(fields,updated_at=time.time());self._save(data)
             return copy.deepcopy(j)
-    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True):
+    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None):
         if type(gap_seconds) not in (float,int) or not math.isfinite(gap_seconds) or not 0<gap_seconds<=600:raise ValueError('Choose a gap from 1 to 10 minutes. Suggested: 3–5 minutes.')
         if limit is not None and (type(limit) is not int or not 1<=limit<=1000):raise ValueError('Choose a recipient count of 1–1,000.')
         if type(poster) is not bool:raise ValueError('Poster must be on or off.')
@@ -50,9 +50,16 @@ class DonorDelivery:
         gap=max(60,float(gap_seconds));rid=str(request_id or uuid.uuid4().hex)
         if not 1<=len(rid)<=100:raise ValueError('Invalid send request.')
         rows=self.book.recipients(scope,ids,min(limit or 20,20))
+        if personal_names is not None:
+            if scope!='selected' or not isinstance(personal_names,dict) or not isinstance(ids,list) or set(personal_names)!=set(ids):raise ValueError('Invalid pasted donor names. Preview the donors again.')
+            for value in personal_names.values():
+                if not isinstance(value,(tuple,list)) or len(value)!=2 or not isinstance(value[0],str) or value[1] not in ('Brother','Sister'):raise ValueError('Invalid pasted donor name.')
+            order={ident:index for index,ident in enumerate(ids)}
+            rows.sort(key=lambda row:order[row['id']])
         if not rows:raise ValueError('There are no donors in this audience.')
         captions=self.variants(len(rows)) if self.variants else [caption]*len(rows)
-        signature=hashlib.sha256(json.dumps([scope,gap,ids,limit,poster,captions],sort_keys=True).encode()).hexdigest()
+        if self.variants and (not isinstance(captions,list) or len(captions)!=len(rows) or any(not isinstance(text,str) or not text.strip() for text in captions) or len(set(captions))!=len(rows)):raise ValueError('Prepare enough different messages in Messages before starting this batch.')
+        signature=hashlib.sha256(json.dumps([scope,gap,ids,limit,poster,captions,personal_names],sort_keys=True).encode()).hexdigest()
         with self.lock:
             data=self._load();previous=next((j for j in data['jobs'] if j.get('request_id')==rid),None)
             if previous:
@@ -69,6 +76,7 @@ class DonorDelivery:
                 if existing.get('signature')!=signature:raise ValueError('This request was already used for another donor batch.')
                 return {'job':self._public(existing),'reply':'This donor batch is already tracked. It was not started again.'}
             job={'id':ident,'request_id':rid,'signature':signature,'boot':self.boot,'scope':scope,'gap_seconds':gap,'poster':poster,'ids':[r['id'] for r in rows],'caption':caption,'captions':captions,'state':'Starting','sent':0,'skipped':0,'failed':0,'total':len(rows),'current':'','receipts':[],'created_at':now,'updated_at':now,'next_at':None}
+            if personal_names is not None:job['personal_names']=copy.deepcopy(personal_names)
             data['jobs'].append(job);self._save(data);self.active=ident;self.stop.clear()
         if run:threading.Thread(target=self._run,args=(copy.deepcopy(job),),daemon=True).start()
         return {'job':self._public(job),'reply':f'Started {len(rows)} {scope.replace("_"," ")} donor DMs. First sends now; next DMs {gap/60:g} min apart, with different wording for each person. Prior confirmed sends do not prevent this explicit batch.'+(' The minimum gap is 1 minute.' if gap_seconds<60 else '')}
@@ -97,7 +105,7 @@ class DonorDelivery:
                 except ValueError:skipped+=1;continue
                 if self.held():state='Stopped';error='Sending is on hold.';break
                 if not self.eligible(r['phone']):skipped+=1;continue
-                name,gender=self.name_for(r['name'])
+                name,gender=j['personal_names'][ident] if 'personal_names' in j else self.name_for(r['name'])
                 self._update(j['id'],state='Sending',next_at=None,current=hide_numbers(r['name']),sent=sent,skipped=skipped,receipts=receipts)
                 self.book.delivery(ident,'Sending')
                 try:result=self.send({'target':'phone','phone':r['phone'],'message':j.get('captions',[j['caption']]*len(j['ids']))[index],'poster':j['poster'],'kind':'donor_batch','first_in_batch':sent==0,'name':name,'gender':gender})
@@ -114,6 +122,6 @@ class DonorDelivery:
             state='Stopped';error='The batch could not continue reliably. Check receipts before starting again.'
         finally:
             if not sent and skipped==len(j['ids']) and state=='Completed':state='Nothing sent';error='All selected recipients were excluded. See the recipient results; this batch did not send any DM.'
-            self._update(j['id'],state=state,error=error,sent=sent,skipped=skipped,failed=failed,receipts=receipts,next_at=None,current='',caption='',captions=[])
+            self._update(j['id'],state=state,error=error,sent=sent,skipped=skipped,failed=failed,receipts=receipts,next_at=None,current='',caption='',captions=[],personal_names={})
             with self.lock:self.active=None
 

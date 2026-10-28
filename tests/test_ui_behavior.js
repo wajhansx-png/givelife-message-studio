@@ -18,7 +18,7 @@ async function main(){
  phone=false;node('cmd').value='Desktop question';events.length=0;await ctx.submitChat({preventDefault(){}},'cmd');assert(!events.some(x=>x.startsWith('blur:')),'Desktop typing focus should stay available');phone=true;
  assert(events.includes('--chat-height:480px')&&events.includes('--chat-top:18px'),'Use the real visible viewport');
  Object.assign(ctx,{editing:false,rememberScroll(){events.push('remember')},syncChat(){},drawLog(){},setEditing(){},refreshNextActions(){}});
- vm.runInContext(part('function openChat()','/* ---- message preview'),ctx);
+ vm.runInContext(part('function openChat(','/* ---- message preview'),ctx);
  events.length=0;ctx.openChat();assert(node('hist').open);assert(events.includes('focus:histMain'));assert(!events.includes('focus:histCmd'),'Opening chat must not open keyboard');
  ctx.saveChatDraft('Keep this');ctx.closeChat();assert(!node('hist').open);assert.equal(storage.get('givelife-chat-draft'),'Keep this');assert(events.includes('focus:chatOpen'));
  // Pending locks cover the network round trip and the receipt, and are per action.
@@ -65,8 +65,8 @@ async function main(){
  assert.equal(syncCtx.refreshLiveDrafts(remote,{...baseline,wasSaved:false}),false,'A draft that was unsaved when the poll began stays protected');
  const preview={style:{fontSize:'17px'},textContent:'Exact *caption*'},box={clientHeight:364,style:{}};Object.defineProperty(preview,'scrollHeight',{get(){return 120+20*parseFloat(this.style.fontSize)}});
  const fitCtx={$:id=>id==='chat'?box:preview,view:()=> 'group',isPhone:()=>true,getComputedStyle:()=>({paddingTop:'12px',paddingBottom:'12px'})};vm.createContext(fitCtx);vm.runInContext('let editing=false;'+part('function fit(){','new ResizeObserver'),fitCtx);fitCtx.fit();assert.equal(preview.style.fontSize,'11px');assert.equal(box.style.overflowY,'hidden');assert.equal(preview.textContent,'Exact *caption*');
- box.clientHeight=0;preview.style.fontSize='14px';fitCtx.fit();assert.equal(preview.style.fontSize,'14px','A hidden preview must not shrink to minimum');box.clientHeight=100;fitCtx.fit();assert.equal(preview.style.fontSize,'10px');assert.equal(box.style.overflowY,'auto','Very long content still has a safe scroll fallback');
- fitCtx.isPhone=()=>false;fitCtx.fit();assert.equal(preview.style.fontSize,'17px','Desktop font remains unchanged');
+ box.clientHeight=0;preview.style.fontSize='14px';fitCtx.fit();assert.equal(preview.style.fontSize,'14px','A hidden preview must not shrink to minimum');box.clientHeight=100;fitCtx.fit();assert.equal(preview.style.fontSize,'11px');assert.equal(box.style.overflowY,'auto','Very long content still has a safe scroll fallback');
+ fitCtx.isPhone=()=>false;fitCtx.fit();assert.equal(preview.style.fontSize,'11px','Desktop fitting must also shrink to the readable minimum when space is limited');
  let scheduled=0,campaign={running:false,log:[]},campaignReads=0;
  Object.assign(ctx,{setTimeout:(f,delay)=>{scheduled=delay;return 1},clearTimeout(){},fetch:async()=>{campaignReads++;return {ok:true,json:async()=>campaign}},showCamp:t=>{node('camp').hidden=false;node('campText').textContent=t}});
  vm.runInContext('let listT=null;'+part('let campTimer=','/* ---- the assistant:'),ctx);
@@ -76,3 +76,4 @@ async function main(){
  console.log('UI behavior passed: blur before send, no autofocus, shared persistent draft, empty input, desktop focus, viewport, main navigation, action locks, duplicate requests, receipt unlock, unchanged caption.');
 }
 main().catch(e=>{console.error(e);process.exitCode=1});
+

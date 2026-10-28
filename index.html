@@ -82,7 +82,7 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
  <button type="button" class="showmsg" id="showMsg" aria-controls="card" aria-expanded="false"><span>Show message</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
  <main class="layout" id="main-workspace" tabindex="-1">
   <section class="card msgcard" id="card" aria-label="Message">
-   <div class="tools"><div class="ctx"><img id="poster" alt="" width="28" height="28" hidden><span id="ctx">Group message · poster attached</span></div><span class="sp"></span>
+   <div class="tools"><button type="button" id="previewBack" class="preview-back">← Main</button><div class="ctx"><img id="poster" alt="" width="28" height="28" hidden><span id="ctx">Group message · poster attached</span></div><span class="sp"></span>
     <button class="tool" id="edit" title="Edit message (E)">Edit</button><button class="tool" id="fresh" title="New wording (N)">New</button><details class="overflow-tools"><summary aria-label="More message actions" title="More message actions">⋯</summary><div><button class="tool" id="copy" title="Copy (C)">Copy message</button><button class="tool" id="hideMsg" title="Hide message (H)">Hide message</button></div></details></div>
    <div class="chat" id="chat" tabindex="0" aria-label="WhatsApp caption preview. Use Edit to change it."><div class="message" id="groupPreview"></div><div class="message" id="dmPreview"></div></div>
   </section>
@@ -108,7 +108,7 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
    </section>
    <section class="card send dm-send" aria-label="Send direct message">
     <div class="send-title"><h2>Send a direct message</h2><span>Poster + caption</span></div><div class="dmrow"><label class="dm-field" for="dmName">Name (optional)<input id="dmName" name="recipient_name" placeholder="e.g. Ali…" autocomplete="off"></label><div class="seg" id="gender"><button type="button" data-g="Brother" aria-pressed="true">Brother</button><button type="button" data-g="Sister" aria-pressed="false">Sister</button></div><label class="dm-field phone-field" for="dmPhone">Private number<input id="dmPhone" name="recipient_phone" type="tel" inputmode="tel" placeholder="e.g. 0300 1234567…" autocomplete="off" spellcheck="false"></label></div>
-    <div class="duo"><button class="big" id="sendDm">Send DM with poster</button><button class="ghost" data-test="dm">Test</button></div>
+    <div class="duo"><button class="big" id="sendDm">Send DM with poster</button><button class="ghost" data-test="dm">Test</button></div><button type="button" class="ghost paste-launch" id="sendMoreDonors">Send to more donors</button>
    </section>
    </div>
    <div class="navrow"><button type="button" class="chat-open" id="chatOpen">Chat ↗</button></div>

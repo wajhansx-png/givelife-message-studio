@@ -9,6 +9,8 @@ class DonorIntegration:
         from donor_messages import MessageBank
         self.messages=MessageBank(app);self.paused=bool(app.STORE.get('donor_dm_pause',False)) if app.STORE else False
         self.jobs=DonorDelivery(app.DATA,app.STORE,self.book,app.send_custom,lambda:app.get_message('dm')['text'],app.wa_ok,lambda:app.on_hold() or self.paused,self.eligible,self.personal_name,self.messages.captions)
+        from donor_paste import PastedDonors
+        self.pasted=PastedDonors(self.book,self.jobs,lambda:app.OWNER_PHONE,lambda label:self.personal_name(label,explicit=True),self._start_pasted_batch)
         self.manual_lock=threading.RLock()
         self.revision=0
     def pause_personal(self):
@@ -25,6 +27,9 @@ class DonorIntegration:
     def start_batch(self,**body):
         self.resume_personal();body.setdefault('gap_seconds',240);body.setdefault('limit',20)
         return self.jobs.start(**body)
+    def _start_pasted_batch(self,**body):
+        if self.app.CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it before starting a donor batch.')
+        return self.start_batch(**body)
     def send_one(self,ident,request_id):
         """Each explicit click is a new immediate send; repeated request IDs never resend."""
         if not self.app.STORE:raise ValueError('Persistent sending records are unavailable.')
@@ -66,13 +71,15 @@ class DonorIntegration:
             prior=values.get('dm_recipient_'+digest)
             if prior and (not isinstance(prior,dict) or prior.get('state') not in ('SUCCESS','Sent')):return False
         return True
-    def personal_name(self,label):
+    def personal_name(self,label,explicit=False):
         # Donor labels are metadata. Random/business labels fall back to Brother.
+        raw_label=str(label)
         label=re.sub(r'(?i)\b(?:donors?|donir|donkr|donoe|good|best|new|perm)\b',' ',str(label))
         label=re.sub(r'[^\w\s\'-]',' ',label).strip()
-        first=self.app.clean_first_name(label)
+        first=self.app.clean_first_name(raw_label if explicit else label)
+        if explicit and re.search(r'(?i)\b(?:preview|demo|sample|random)\b',raw_label):first=''
         known=set('abdul abdullah abdur abid abbas adil adnan aftab ahmad ahmed akhtar ali aman amaan amir ammar arman asad asif awais ayyan basit bilal danish fahad faisal farhan gul habib hafiz hajra hammad hamza haris hashim hashir hassan haseeb haider humza hussain hysam hidayat ibrahim ihtesham imran iqbal ishfaq jawad junaid kashif khurram moeed mohammad mohsin moiz mubeen mudassar muaz muhammad muhammed nadeem nabeel naseeb owais raza rao ramail saif sajid salman samad saqlain shaheer shahid shoaib siraj sohaib syed taha tanveer umair umar usman wajdan wajid waqar yasir yousuf yousaf zaid zain zaryab zeeshan'.split())|self.app.FEMALE
-        if first.casefold() not in known:first=''
+        if not explicit and first.casefold() not in known:first=''
         return first,('Sister' if first.casefold() in self.app.FEMALE else 'Brother')
     def mutate(self,body):
         action=body.get('action')
@@ -83,7 +90,7 @@ class DonorIntegration:
                 _,p=parse_contact(body['text'],body.get('name',''))
                 if p==normalize_phone(self.app.OWNER_PHONE):raise ValueError('Your own account is excluded.')
             return self.book.add(body.get('name',''),body.get('phone',''),body.get('text',''))
-        if action=='update':return self.book.update(body.get('id',''),**{k:v for k,v in body.items() if k in ('name','important','donated','amount','notes')})
+        if action=='update':return self.book.update(body.get('id',''),expected_updated_at=body.get('expected_updated_at'),**{k:v for k,v in body.items() if k in ('name','important','donated','amount','notes')})
         if action=='delete':return self.book.delete(body.get('id',''))
         if action=='restore':return self.book.restore(body.get('id',''))
         if action=='import':return self.book.import_contacts(body.get('records'),self.app.OWNER_PHONE)

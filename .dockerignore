@@ -1,10 +1,10 @@
+node_modules
 .git
+.agents
 .env*
+test-results
+playwright-report
+.test-data
 __pycache__
 *.pyc
-remote-access.json
-*.log
-*.zip
-ui
-seed
-check*.py
+

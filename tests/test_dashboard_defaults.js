@@ -2,7 +2,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8');
 let hidden=false,fits=0;
-const menu={open:true},show={hidden:false,attrs:{},setAttribute(k,v){this.attrs[k]=v}},nodes={showMsg:show,hideMsg:{}};
+const menu={open:true},show={hidden:false,attrs:{},setAttribute(k,v){this.attrs[k]=v}},nodes={showMsg:show,hideMsg:{},previewBack:{}};
 const ctx={$:id=>nodes[id],document:{querySelector:()=>menu,body:{classList:{toggle:(name,on)=>{assert.equal(name,'nomsg');hidden=on}}}},requestAnimationFrame:f=>f(),fit:()=>fits++,flip(){},setEditing(){throw Error('Not editing');}};
 vm.createContext(ctx);
 vm.runInContext('let editing=false;'+source.slice(source.indexOf('function setNoMsg('),source.indexOf('/* ---- theme:')),ctx);
@@ -15,3 +15,4 @@ assert(html.includes('id="chips" role="group"'),'Group actions remain visible in
 assert(!html.includes('id="chips" hidden'));assert(!html.includes('id="moreG"'));
 assert(!source.includes("$('moreG')"),'No obsolete menu handler should hide the visible send buttons');
 console.log('Dashboard defaults passed: hidden at startup, reveal/hide works, all group actions visible.');
+

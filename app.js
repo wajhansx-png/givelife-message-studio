@@ -25,14 +25,19 @@ function followChat(el,reply=false){if(!el.clientHeight)return;const last=el.que
  const top=reply&&last&&last.classList.contains('bot')&&last.offsetHeight>el.clientHeight-32?el.scrollTop+last.getBoundingClientRect().top-el.getBoundingClientRect().top-16:el.scrollHeight;
  el.scrollTop=Math.max(0,top);scrollState[el.id].top=el.scrollTop;
 }
-function dashboardConversation(items){const lastUser=items.map(x=>x.who).lastIndexOf('you');return items.slice(lastUser<0?-3:lastUser)}
+function dashboardConversation(items){
+ const lastUser=items.map(x=>x.who).lastIndexOf('you'),after=items.slice(lastUser+1),reply=after.filter(x=>x.who==='app').at(-1),event=after.filter(x=>x.who==='auto').at(-1);
+ return [lastUser>=0?items[lastUser]:null,reply,event].filter(Boolean)
+}
 function drawLog(){const allItems=history.slice(-40);
  for(const id of ['log','histLog']){const items=id==='log'&&!isPhone()?dashboardConversation(allItems):allItems;const el=$(id),state=scrollState[id],prev=state.top;el.textContent='';
   items.forEach(h=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'');d.dataset.t=h.t;
-   if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=chatFormat(h.text);else d.textContent=h.text;el.append(d);if(h.who==='app'&&h.id){const f=document.createElement('button');f.className='reply-feedback';f.type='button';f.textContent='Correct this';f.setAttribute('aria-label','Correct this response');f.onclick=e=>{e.stopPropagation();openFeedback(h.id)};el.append(f)}});
+   if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=chatFormat(h.text).split('\n').map(line=>'<div class="reply-line'+(line?'':' blank')+'">'+(line||'<br>')+'</div>').join('');else d.textContent=h.text;el.append(d);if(h.who==='app'&&h.id){const f=document.createElement('button');f.className='reply-feedback';f.type='button';f.textContent='Correct this';f.setAttribute('aria-label','Correct this response');f.onclick=e=>{e.stopPropagation();openFeedback(h.id)};el.append(f)}});
   if(thinking){const d=document.createElement('div');d.className='e bot dots';d.textContent='Thinking…';el.append(d)}
   if(el.clientHeight){if(state.follow)followChat(el,items.at(-1)?.who==='app'&&!thinking);else el.scrollTop=prev}
- }}
+ }
+ requestAnimationFrame(()=>{fitConversation();for(const id of Object.keys(scrollState))if(scrollState[id].follow)followChat($(id),true)})
+}
 for(const id of Object.keys(scrollState))$(id).addEventListener('scroll',()=>{const el=$(id);if(!el.clientHeight)return;scrollState[id]={top:el.scrollTop,follow:el.scrollHeight-el.clientHeight-el.scrollTop<64};if(scrollState[id].follow){unreadReplies[id]=false;paintUnread()}rememberScroll()},{passive:true});
 function followReplies(){for(const id of Object.keys(scrollState)){scrollState[id].follow=true;unreadReplies[id]=false}paintUnread()}
 function think(on){pendingChats=Math.max(0,pendingChats+(on?1:-1));thinking=pendingChats>0;drawLog()}let logChain=Promise.resolve();
@@ -60,12 +65,23 @@ $('chat').addEventListener('scroll',()=>{if(!previewView)return;previewScroll[pr
 function paint(k){$(k+'Preview').innerHTML=waFormat($(k).value).split('\n').map(l=>'<div class="wa-line'+(l?'':' blank')+'">'+(l||'<br>')+'</div>').join('')}
 function render(){paint('group');paint('dm');requestAnimationFrame(()=>{fit();if(!editing)$('chat').scrollTop=previewScroll[view()]||0})}
 function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');if(!chat.clientHeight)return;
- if(!isPhone()){m.style.fontSize='17px';chat.style.overflowY='auto';return}
  const style=getComputedStyle(chat),available=chat.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);
  chat.style.overflowY='hidden';
- for(let size=14;size>=10;size-=.5){m.style.fontSize=size+'px';if(m.scrollHeight<=available)break}
- if(m.scrollHeight>available)chat.style.overflowY='auto'}
+ for(let size=isPhone()?14:17;size>=11;size-=.5){m.style.fontSize=size+'px';if(m.scrollHeight<=available)break}
+ // Unusually long content stays accessible; ordinary saved captions fit in place.
+ if(m.scrollHeight>available)chat.style.overflowY='auto'
+}
+function fitConversation(){
+ for(const id of ['log','histLog']){const log=$(id);if(!log.clientHeight)continue;const reply=[...log.querySelectorAll('.e.bot:not(.dots)')].at(-1);if(!reply)continue;
+  const style=getComputedStyle(log),padding=parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
+  let reserve=44;
+  if(id==='log')reserve=[...log.children].filter(n=>n!==reply).reduce((n,node)=>n+node.offsetHeight+8,8);
+  const available=Math.max(80,log.clientHeight-padding-reserve);
+  for(let size=15;size>=12;size-=.5){reply.style.fontSize=size+'px';if(reply.scrollHeight<=available)break}
+ }
+}
 new ResizeObserver(()=>requestAnimationFrame(fit)).observe($('chat'));
+for(const id of ['log','histLog'])new ResizeObserver(()=>requestAnimationFrame(fitConversation)).observe($(id));
 function save(){if(!draftsReady)return Promise.resolve();const data={group:$('group').value,dm:$('dm').value},payload=JSON.stringify(data);
  saveChain=saveChain.catch(()=>{}).then(async()=>{if(payload===draftSaved)return;const r=await post('/drafts',data);if(!r.ok)throw Error('Save failed');draftSaved=payload;status('✓ Saved')});return saveChain}
 async function ensureDrafts(){if(draftsReady)return;if(!draftsLoad)draftsLoad=fetch('/drafts').then(async r=>{if(!r.ok)throw Error('Could not load captions');const d=await r.json();if(typeof d.group!=='string'||typeof d.dm!=='string')throw Error('Saved captions are invalid');cached('drafts',d);applyDrafts(d)}).finally(()=>draftsLoad=null);return draftsLoad}
@@ -376,7 +392,7 @@ const cached=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem
 /* ---- hide the message to work only with the buttons and chat ---- */
 function setNoMsg(on){if(editing)setEditing(false);document.querySelector('.overflow-tools').open=false;document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;$('showMsg').setAttribute('aria-expanded',String(!on));const desktop=$('desktopPreview');if(desktop){desktop.setAttribute('aria-pressed',String(!on));desktop.textContent=on?'Message preview':'Back to chat'}if(!on){requestAnimationFrame(fit);flip()}}
 if($('desktopPreview'))$('desktopPreview').onclick=()=>setNoMsg(!document.body.classList.contains('nomsg'));
-$('hideMsg').onclick=e=>{e.stopPropagation();setNoMsg(true)};$('showMsg').onclick=()=>setNoMsg(false);
+$('hideMsg').onclick=e=>{e.stopPropagation();setNoMsg(true)};$('previewBack').onclick=()=>setNoMsg(true);$('showMsg').onclick=()=>setNoMsg(false);
 setNoMsg(true);
 
 /* ---- theme: Auto follows the phone/PC setting; Light or Dark is remembered on this device ---- */
@@ -385,7 +401,7 @@ function isDark(){const t=document.documentElement.dataset.theme;return t?t==='d
 function applyTheme(t){const r=document.documentElement;if(t==='light'||t==='dark')r.dataset.theme=t;else delete r.dataset.theme;
  try{localStorage.setItem('givelife-theme',t)}catch(e){}
  document.querySelectorAll('#theme button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.t===t)));
- const m=document.querySelector('meta[name=theme-color]');if(m)m.content=isDark()?'#111e20':'#f3f6f6'}
+ const m=document.querySelector('meta[name=theme-color]');if(m)m.content=isDark()?'#171722':'#f5f5fa'}
 document.querySelectorAll('#theme button').forEach(b=>b.onclick=()=>applyTheme(b.dataset.t));
 
 matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(themeNow()==='system')applyTheme('system')});

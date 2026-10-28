@@ -1,5 +1,6 @@
 """Private donor registry. Public views use opaque IDs, never phone numbers."""
 import copy, datetime, hashlib, json, math, re, threading, time, unicodedata, uuid
+from decimal import Decimal
 from pathlib import Path
 
 PHONE = re.compile(r'(?<!\w)(?:\+|00)?\d[\d ()-]{6,23}\d(?!\w)')
@@ -59,7 +60,7 @@ class DonorBook:
             records=[r for r in self._load()['records'] if not r.get('deleted')]
             counts={'all':len(records),'important':sum(bool(r['important']) for r in records),'donated':sum(bool(r['donated']) for r in records)}
             counts['not_donated']=counts['all']-counts['donated']
-            counts['donated_amount']=sum(float(r.get('amount',0) or 0) for r in records if r.get('donated'))
+            counts['donated_amount']=float(sum((Decimal(str(r.get('amount',0) or 0)) for r in records if r.get('donated')),Decimal(0)))
             q=str(query).strip().casefold(); digits=re.sub(r'\D','',q)
             rows=[r for r in records if (tab=='all' or tab=='important' and r['important'] or tab=='donated' and r['donated'] or tab=='not_donated' and not r['donated']) and (not q or q in r['name'].casefold() or q in r.get('notes','').casefold() or len(digits)>=4 and digits in r['phone'])]
             rows.sort(key=lambda r:(not r['important'],name_key(r['name']),r['id']))
@@ -76,6 +77,32 @@ class DonorBook:
             now=time.time();r={'id':uuid.uuid4().hex,'name':name,'phone':phone,'important':False,'donated':False,'amount':0,'notes':'','source':source,'created_at':now,'updated_at':now,'deleted':False,'last_sent_at':None,'delivery':'Not contacted'}
             data['records'].append(r);self._save(data)
             return {'donor':self._public(r),'duplicate':False,'reply':'Added '+hide_numbers(name)+'. Number hidden.'}
+    def add_contacts(self,records,self_phone):
+        """Validate a pasted audience completely, then save its unique contacts once."""
+        if not isinstance(records,list) or not 1<=len(records)<=20:
+            raise ValueError('Paste a contact list with 1–20 records.')
+        own_phone=normalize_phone(self_phone);prepared=[];seen=set();duplicates=0
+        for record in records:
+            if not isinstance(record,dict):raise ValueError('Each pasted contact must be an object.')
+            name=record.get('name');phone=normalize_phone(record.get('phone',''))
+            if not isinstance(name,str) or not 1<=len(name.strip())<=120:
+                raise ValueError('Use a name or label of 1–120 characters for each pasted contact.')
+            if phone==own_phone:raise ValueError('Your own account is excluded from pasted donors.')
+            if phone in seen:duplicates+=1;continue
+            seen.add(phone);prepared.append((name.strip(),phone))
+        with self.lock:
+            data=self._load();known={r['phone']:r for r in data['records']};donors=[];added=0;changed=False;now=time.time()
+            for name,phone in prepared:
+                row=known.get(phone)
+                if row is not None:
+                    duplicates+=1
+                    if row.get('deleted'):row.update(deleted=False,updated_at=now);changed=True
+                else:
+                    row={'id':uuid.uuid4().hex,'name':name,'phone':phone,'important':False,'donated':False,'amount':0,'notes':'','source':'Pasted DM list','created_at':now,'updated_at':now,'deleted':False,'last_sent_at':None,'delivery':'Not contacted'}
+                    data['records'].append(row);known[phone]=row;added+=1;changed=True
+                donors.append(self._public(row))
+            if changed:self._save(data)
+            return {'donors':donors,'added':added,'duplicates':duplicates}
     def resolve(self,value):
         query=str(value or '').strip()
         if not query: raise ValueError('Name the donor to change.')
@@ -88,18 +115,23 @@ class DonorBook:
             if not exact: exact=[r for r in records if name_key(query) in name_key(r['name'])]
             if len(exact)!=1: raise ValueError('More than one donor matches. Use the donor page to select one.' if exact else 'No donor matches that name. Search the Donors page or add them first.')
             return copy.deepcopy(exact[0])
-    def update(self,donor,**changes):
-        r=self.resolve(donor)
+    def update(self,donor,expected_updated_at=None,**changes):
         allowed={'name','important','donated','amount','notes'}
         if not changes or set(changes)-allowed: raise ValueError('Choose a donor field to update.')
         if any(k in changes and not isinstance(changes[k],bool) for k in ('important','donated')): raise ValueError('Use true or false for donor status.')
         if 'amount' in changes and (type(changes['amount']) not in (int,float) or not math.isfinite(changes['amount']) or not 0<=changes['amount']<=100000000): raise ValueError('Enter a valid donated amount.')
         if 'name' in changes and (not isinstance(changes['name'],str) or not 1<=len(changes['name'].strip())<=120): raise ValueError('Use a name of 1–120 characters.')
         if 'notes' in changes and (not isinstance(changes['notes'],str) or len(changes['notes'])>2000): raise ValueError('Keep notes under 2,000 characters.')
+        if expected_updated_at is not None and (type(expected_updated_at) not in (int,float) or not math.isfinite(expected_updated_at) or expected_updated_at<0):
+            raise ValueError('Invalid donor update version. Refresh the donor page.')
         if changes.get('donated') is False: changes['amount']=0
         with self.lock:
-            data=self._load(); row=next(x for x in data['records'] if x['id']==r['id'])
-            row.update(changes,updated_at=time.time());self._save(data)
+            r=self.resolve(donor)
+            data=self._load(); row=next((x for x in data['records'] if x['id']==r['id'] and not x.get('deleted')),None)
+            if row is None:raise ValueError('This donor was removed. Refresh the donor page.')
+            if expected_updated_at is not None and expected_updated_at!=row.get('updated_at'):
+                raise ValueError('This donor changed since you opened it. Refresh before saving your edit.')
+            row.update(changes,updated_at=max(time.time(),math.nextafter(float(row.get('updated_at',0)),math.inf)));self._save(data)
             return {'donor':self._public(row),'reply':'Updated '+hide_numbers(row['name'])+'.'}
     def delete(self,donor):
         r=self.resolve(donor)

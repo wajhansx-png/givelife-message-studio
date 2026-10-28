@@ -1643,7 +1643,7 @@ class Handler(BaseHTTPRequestHandler):
   global ACTIVE,OWNER_REVISION
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   ENGINE.touch_owner()
-  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate'):
+  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/donor-messages','/donor-delivery','/donor-send','/donor-paste'):
    with LOCK:OWNER_REVISION+=1
    OWNER_GUARD.revision=OWNER_REVISION
   origin=self.headers.get('Origin');same_origin=origin and urllib.parse.urlparse(origin).netloc==self.headers.get('Host')
@@ -1654,8 +1654,12 @@ class Handler(BaseHTTPRequestHandler):
    body=json.loads(self.rfile.read(length))
   except Exception:return self.reply({'error':'Invalid request'},status=400)
   if not isinstance(body,dict):return self.reply({'error':'Request must be a JSON object.'},status=400)
-  if self.path in ('/donors','/donor-delivery','/donor-send','/donor-messages'):
+  if self.path in ('/donors','/donor-delivery','/donor-send','/donor-messages','/donor-paste'):
    try:
+    if self.path=='/donor-paste':
+     if body.get('action')=='preview':return self.reply(donors().pasted.preview(body.get('text')))
+     if body.get('action')=='start':return self.reply(donors().pasted.start(body.get('token'),body.get('gap_seconds',240),body.get('request_id'),body.get('poster',True)))
+     raise ValueError('Choose preview or start for the pasted donor list.')
     if self.path=='/donors':return self.reply(donors().mutate(body))
     if self.path=='/donor-send':return self.reply(donors().send_one(body.get('id'),body.get('request_id')))
     if self.path=='/donor-messages':return self.reply(donors().messages.regenerate() if body.get('action')=='regenerate' else donors().messages.update(body.get('id'),body.get('text')))

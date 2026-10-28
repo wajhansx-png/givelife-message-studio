@@ -56,11 +56,25 @@ if '--draft-task' in sys.argv:
 # No engine/background AI loops are started. The only sends are explicit preview actions.
 server.Handler.log_message=lambda *a:None
 original_get=server.Handler.do_GET
+original_post=server.Handler.do_POST
 def preview_get(self):
  if self.path=='/mobile-preview':return self.reply((ROOT/'tests/mobile_preview.html').read_bytes(),'text/html')
+ if '--test-api' in sys.argv and self.path=='/__test/events':
+  if not self.authorized():return self.reply({'error':'Access key required'},status=401)
+  return self.reply({'events':events})
  return original_get(self)
+def preview_post(self):
+ if '--test-api' in sys.argv and self.path=='/__test/seed':
+  if not self.authorized():return self.reply({'error':'Access key required'},status=401)
+  body=json.loads(self.rfile.read(int(self.headers.get('Content-Length',0))))
+  if 'reply' in body:server.chat_add('app',str(body['reply']),turn_id='test-reply-'+str(time.time()))
+  if 'group' in body:server.save_draft('group',str(body['group']))
+  return self.reply({'ok':True})
+ return original_post(self)
 server.Handler.do_GET=preview_get
-http=ThreadingHTTPServer(('127.0.0.1',3003),server.Handler)
-print('Local fake-WhatsApp preview: http://127.0.0.1:3003/ (no real messages possible)',flush=True)
+server.Handler.do_POST=preview_post
+port=int(sys.argv[sys.argv.index('--port')+1]) if '--port' in sys.argv else 3003
+http=ThreadingHTTPServer(('127.0.0.1',port),server.Handler)
+print(f'Local fake-WhatsApp preview: http://127.0.0.1:{port}/ (no real messages possible)',flush=True)
 http.serve_forever()
 

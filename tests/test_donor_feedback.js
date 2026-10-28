@@ -11,6 +11,7 @@ context.paintDelivery(row,'Uncertain');assert.equal(button.textContent,'Check');
 context.paintDelivery(row,'Skipped');assert.equal(button.textContent,'Check');assert.notEqual(row.dataset.delivery,'Sent');
 context.paintDelivery(row,'Not sent');assert.equal(button.textContent,'Retry');assert.equal(button.disabled,false);
 assert(!source.includes("make('input','donor-notes')"),'Notes are removed from the directory UI');
+assert(source.includes("make('button','donor-status'")&&source.includes('donated:!d.donated'),'Donation status toggles in one click');
 assert(source.includes("api('/donor-send',{id:ids[0],request_id:requestId()})"),'Individual DM uses the immediate explicit-send endpoint');
 assert(source.includes('donorTotalAmount')&&source.includes('data.counts.donated_amount'),'Header displays the server-calculated donated total');
 assert(source.includes("if(!active&&j.state!=='Idle')await refresh(true)"),'Confirmed delivery must refresh persisted row state');

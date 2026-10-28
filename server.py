@@ -9,6 +9,7 @@ import chat_policy
 import timed_tasks
 import draft_flow
 import draft_workflow
+import donor_book
 from chat_memory import Knowledge,safe_text
 from functools import wraps
 ROOT=Path(__file__).resolve().parent
@@ -70,7 +71,7 @@ def custom_recipient(body):
 def send_custom(body):
  jid,is_group=custom_recipient(body);message=body.get('message','')
  if not isinstance(message,str):raise ValueError('Message must be text.')
- if not is_group and body.get('kind')=='dm_appeal':
+ if not is_group and body.get('kind') in ('dm_appeal','donor_registry'):
   message=greet_text(message,body.get('name',''),body.get('gender','Brother'))
   if not dm_composer.complete(message):raise ValueError('The full DM is incomplete. Restore its paragraphs and payment details before sending.')
  if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
@@ -82,6 +83,9 @@ def send_custom(body):
   now=time.time();saved=STORE.get('last_sent',{})
   if not is_group:
    digest=hashlib.sha256(jid.encode()).hexdigest()
+   alternate=hashlib.sha256((jid+'@s.whatsapp.net').encode()).hexdigest()
+   if jid==norm_phone(OWNER_PHONE):raise ValueError('Your own account is excluded from donor sending.')
+   if alternate in BLOCKED or STORE.get('dm_recipient_'+alternate) or STORE.get('optout_'+alternate) or STORE.get('optout_'+digest):raise ValueError('This recipient was already contacted, blocked or has an uncertain send.')
    if digest in BLOCKED or STORE.get('dm_recipient_'+digest):raise ValueError('This recipient was already contacted or has an uncertain send. Check WhatsApp before sending again.')
    ledger=STORE.get('dm_daily',{});day=datetime.datetime.fromtimestamp(now,datetime.timezone(datetime.timedelta(hours=5))).date().isoformat()
    if ledger.get('day')!=day:ledger={'day':day,'count':0,'last':ledger.get('last',0)}
@@ -666,7 +670,7 @@ def base_chat_callbacks():
  def came(amount):
   if int(amount)<0 or int(amount)>read_left():raise ValueError('That donation does not fit the remaining amount. Check the balance before recording it.')
   nl=max(0,read_left()-int(amount));set_left(nl);return f'Rs. {int(amount):,} came. Rs. {nl:,} left.'
- return {'set_left':lambda left:(set_left(int(left)),f'Rs. {int(left):,} left. Messages updated.')[1],
+ return {'donor_action':lambda **args:None,'set_left':lambda left:(set_left(int(left)),f'Rs. {int(left):,} left. Messages updated.')[1],
   'money_came':came,
   'new_wording':lambda kind:(next_message() if kind=='group' else next_dm(),'New '+kind+' wording ready.')[1],
   'set_message':lambda kind,text:(save_draft(kind,text),kind.upper()+' message saved.')[1],
@@ -759,8 +763,10 @@ def save_upload(data_url,use):
  raw=base64.b64decode(data_url.split(',',1)[-1])
  if len(raw)>8_000_000:raise ValueError('Picture is too big (max 8 MB).')
  if use=='poster':
-  (DATA/'poster.jpg').write_bytes(raw)
+  if (DONORS and DONORS.jobs.active) or CAMPAIGN.get('running') or ACTIVE and not mapping(JOBS.get(ACTIVE)).get('done'):raise ValueError('Wait until the active send finishes before changing the poster.')
+  if not raw.startswith(b'\xff\xd8\xff'):raise ValueError('Choose a JPEG poster. The upload control converts your picture automatically.')
   if STORE:STORE.put('poster_b64',base64.b64encode(raw).decode())
+  (DATA/'poster.jpg').write_bytes(raw)
   return 'poster'
  aid=uuid.uuid4().hex[:12];(ATT/(aid+'.jpg')).write_bytes(raw);return aid
 
@@ -827,6 +833,7 @@ def dm_campaign(people,gap,image,vary,message,start_after,rest_every,rest_minute
   auto_log(f'DM list finished: {c["sent"]} sent, {c["skipped"]} skipped, {c["failed"]} failed.')
 
 def start_campaign(body):
+ if DONORS and DONORS.jobs.active:raise ValueError('A donor batch is already running. Stop it first or wait.')
  if CAMPAIGN['running']:raise ValueError('A DM list is already sending. Stop it first or wait.')
  people=[p for p in body.get('people',[]) if isinstance(p,dict)][:300]
  if not people:raise ValueError('No phone numbers found.')
@@ -987,6 +994,7 @@ def _batch_people(pairs,tier,count):
  return people
 
 def dm_batch_now(kind,count=10,group='main'):
+ if kind=='donors':return donors().jobs.start(scope='all',gap_seconds=60,limit=max(1,min(1000,int(count))))['reply']
  count=max(1,min(int(count or 10),50))
  if kind=='donors':
   pairs=donor_contacts()+learning_mod.repeat_donors(ENGINE.L)
@@ -1187,6 +1195,10 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
  def wrapped(name,fn):
   def call(**args):
    if revision is not None and revision!=OWNER_REVISION and name not in read_tools:raise ValueError('Superseded by your newer instruction. No old action was sent.')
+   if name=='donor_action':return donors().model_tool(prompt,task_id,**args)
+   if name=='dm_donors':
+    if not chat_policy.permitted(name,prompt):raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
+    return donors().model_tool(prompt,task_id,'send')
    if not chat_policy.permitted(name,prompt) and not (name=='set_message' and selection is not None):
     if name in send_tools and not sending:raise ValueError('The current instruction does not ask to send. Nothing was sent.')
     if name in ('dm_list','dm_donors','dm_group'):raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
@@ -1381,6 +1393,8 @@ def send_selected_groups(targets,request_id=None):
 
 def execute_manual_command(text,request_id=None,message_kind='group'):
  global OWNER_REVISION
+ donor_result=donors().command(text,request_id)
+ if donor_result is not None:return {'handled':True,**donor_result,'donors_changed':True}
  preview=draft_flow.preview_request(text)
  if preview:
   kind=('dm' if message_kind=='dm' else 'group') if preview=='current' else preview
@@ -1406,6 +1420,7 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
  if kind=='no_groups':raise ValueError('No clear eligible groups remain after the exclusion. Name the groups to send to.')
  if kind=='refuse_target':raise ValueError('That group is excluded. Nothing was sent.')
  if kind=='stop_dms':
+  if DONORS:DONORS.jobs.cancel()
   CAMPAIGN['stop']=True;ENGINE.set_dms(False,ENGINE.s.get('dm_daily',30));out['reply']='DMs stopped. Automatic DMs stay off until you turn them on.'
  elif kind=='hold':out['reply']=set_hold(True)
  elif kind=='resume':out['reply']=set_hold(False)
@@ -1478,7 +1493,7 @@ def manual_command(text,request_id=None,message_kind='group'):
    if plan.get('kind')=='text' and KNOWLEDGE.data.get('pending',{}).get('kind')=='recipient':
     KNOWLEDGE.data['pending']['action']={'text':plan['text'],'to_query':plan.get('to')};KNOWLEDGE.save()
    raise
-  if result.get('handled'):result['dm_identity']=dm_identity()
+  if result.get('handled') and not result.get('donors_changed'):result['dm_identity']=dm_identity()
   return result
  finally:OWNER_GUARD.revision=previous
 
@@ -1522,6 +1537,9 @@ def live_snapshot():
  on=auto_on();summary=ENGINE.summary();hold=on_hold();job=get_job(ACTIVE) if ACTIVE else None
  status=ENGINE.status() if on else {'now':('On hold: waiting for resume' if hold else job.get('message','Sending…') if job and not job.get('done') else 'Automatic actions off'),'state':'paused' if hold else 'sending' if job and not job.get('done') else 'off','next':[],'last_reply_read':ENGINE.s.get('last_reply_read'),'today':{'posts':summary.get('posts_today',0),'dms':summary.get('dms_today',0)}}
  if job and not job.get('done'):status['job']={k:job.get(k) for k in ('message','next_send_at','next_target')}
+ if DONORS and DONORS.jobs.active:
+  dj=DONORS.jobs.status()
+  status.update(state='sending',now='Donor DMs: '+str(dj.get('sent',0))+'/'+str(dj.get('total',0))+' sent · '+str(dj.get('current') or dj.get('state','Waiting')))
  if AUTOLOG:status['last_event']={k:AUTOLOG[-1].get(k) for k in ('text','time')}
  if _TIMED is not None and _TIMED_STORE is STORE:
   with _TIMED.lock:upcoming=sorted((t for t in _TIMED.tasks if t['state']=='pending'),key=lambda t:t['due'])
@@ -1530,6 +1548,14 @@ def live_snapshot():
    status['scheduled']={'due_at':t['due'],'label':label}
  with LOCK:current={'left':read_left(),'drafts':json.loads(DRAFT.read_text(encoding='utf-8'))}
  return {'on':on,'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':summary,'status':status,'hold':hold,'last_sent':dashboard_send_times(),**current}
+
+DONORS=None
+def donors():
+ global DONORS
+ if DONORS is None or DONORS.book.store is not STORE:
+  import donor_integration,sys
+  DONORS=donor_integration.DonorIntegration(sys.modules[__name__])
+ return DONORS
 
 class Handler(BaseHTTPRequestHandler):
  def remote_config(self):
@@ -1549,10 +1575,16 @@ class Handler(BaseHTTPRequestHandler):
   self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(data if isinstance(data,bytes) else data.encode())
  def do_GET(self):
   if self.path=='/health':return self.reply({'ok':True})
-  if self.path in ('/','/app.js','/format.js','/connection.js'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/donors.css'):
    name='index.html' if self.path=='/' else self.path[1:]
-   return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'application/javascript')
+   return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
+  if self.path.split('?')[0]=='/donors':
+   try:
+    q=urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+    return self.reply(donors().book.list(q.get('tab',['all'])[0],q.get('q',[''])[0]))
+   except ValueError as e:return self.reply({'error':str(e)},status=400)
+  if self.path=='/donor-delivery':return self.reply(donors().jobs.status())
   if self.path=='/wa-status':
    try:return self.reply(api('/devices/'+DEVICE+'/status'))
    except Exception:return self.reply({'error':'WhatsApp is restarting. Try again shortly.'},status=502)
@@ -1607,6 +1639,13 @@ class Handler(BaseHTTPRequestHandler):
    body=json.loads(self.rfile.read(length))
   except Exception:return self.reply({'error':'Invalid request'},status=400)
   if not isinstance(body,dict):return self.reply({'error':'Request must be a JSON object.'},status=400)
+  if self.path in ('/donors','/donor-delivery'):
+   try:
+    if self.path=='/donors':return self.reply(donors().mutate(body))
+    if body.get('stop'):return self.reply(donors().jobs.cancel())
+    if CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it first.')
+    return self.reply(donors().jobs.start(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster')}))
+   except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/drafts':
    if any(not isinstance(body.get(k),str) or len(body[k])>10000 for k in ('group','dm')):return self.reply({'error':'Both captions must be text, at most 10,000 characters each.'},status=400)
    with LOCK:
@@ -1757,3 +1796,5 @@ if __name__=='__main__':
  ENGINE.start()
  threading.Thread(target=timed_loop,daemon=True).start()
  ThreadingHTTPServer(('0.0.0.0',int(os.environ.get('PORT','10000'))),Handler).serve_forever()
+
+

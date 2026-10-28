@@ -41,6 +41,7 @@ def intent(text):
 
 def permitted(name,text):
  if name in READ:return True
+ if name=='donor_action':return bool(re.search(r'(?i)\b(donor|donors|important|donated)\b',owner_text(text)))
  i=intent(text);t=i['text']
  if name=='schedule_task':return timed_tasks.requested(t) and not i['query'] and not i['negative']
  if name in SEND|{'autopilot','hold','delete_last_message','set_left','money_came','set_dms','set_pace','set_group_pace','pause_group','resume_group','set_quiet_hours'} and manual_commands.deferred_request(t):return False
@@ -95,3 +96,5 @@ def validate_args(schema,args,path='arguments'):
    if len(v)>100:raise ValueError(p+' has too many items.')
    for j,x in enumerate(v):check(s.get('items',{}),x,p+'['+str(j)+']')
  check(schema,args,path)
+
+

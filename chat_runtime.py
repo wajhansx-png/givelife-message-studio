@@ -100,13 +100,15 @@ def run_chat(text,history,state,memory,do):
    continue
   for tc,args in planned:
    fn=tc['function'];name=fn.get('name');actual=None;status='rejected'
+   donor_read=name=='donor_action' and args.get('action')=='list'
+   donor_send=name=='donor_action' and args.get('action')=='send'
    invoked=False
    try:
     raw=fn.get('arguments','{}');args=json.loads(raw) if isinstance(raw,str) else raw
     if name not in schemas or name not in do:raise ValueError('That tool is not available for this instruction.')
     if blocked and name not in chat_policy.READ:raise ValueError('An earlier step failed; this dependent action was not executed.')
     chat_policy.validate_args(schemas[name],args)
-    if required_edit and name in chat_policy.SEND and not saved_edit:raise ValueError('The requested caption edit must be saved before sending. Nothing was sent.')
+    if required_edit and (name in chat_policy.SEND or donor_send) and not saved_edit:raise ValueError('The requested caption edit must be saved before sending. Nothing was sent.')
     cachekey=str(name)+json.dumps(args,sort_keys=True,ensure_ascii=False)
     if cachekey in cache:actual=cache[cachekey]
     else:
@@ -123,12 +125,12 @@ def run_chat(text,history,state,memory,do):
      status='started'
     elif isinstance(actual,dict) and actual.get('actions'):
      actions.extend(actual['actions']);display=actual.get('reply','Prepared on your screen.')
-    else:display=actual if isinstance(actual,str) else json.dumps(actual,ensure_ascii=False)
-    if name not in chat_policy.READ and display not in done:done.append(str(display))
+    else:display=actual if isinstance(actual,str) else actual.get('reply',json.dumps(actual,ensure_ascii=False)) if isinstance(actual,dict) else json.dumps(actual,ensure_ascii=False)
+    if name not in chat_policy.READ and not donor_read and display not in done:done.append(str(display))
     saved_edit=saved_edit or name=='set_message'
     errors=[e for e in errors if not e.startswith(str(name)+': ')]
     result={'ok':True,'status':status,'result':actual}
-    terminal=terminal or name in chat_policy.SEND
+    terminal=terminal or name in chat_policy.SEND or donor_send
    except Exception as e:
     blocked=True
     message=safe_text(e,300);result={'ok':False,'status':'rejected','error':message};errors.append(str(name)+': '+message)
@@ -156,3 +158,5 @@ def run_chat(text,history,state,memory,do):
   reply='The draft edit has not been saved. '+(reply if not claims_completion(reply) else 'I need the missing caption or target to finish it.')
  return {'reply':safe_text(reply,10000),'actions':actions,'done':done,'jobs':jobs,
   'diagnostics':{'model':assistant.MODEL,'iterations':iteration+1,'duration_ms':round((time.monotonic()-started)*1000),'tools':outcomes,'errors':errors[-3:]}}
+
+

@@ -232,7 +232,7 @@ async function quick(t){const low=t.toLowerCase().trim();
  if(editing)setEditing(false);clearTimeout(timer);await ensureDrafts();await save();
  const response=await post('/command',{text:t,request_id:requestId(),view:view()}),direct=await response.json();
  if(!response.ok)throw Error(direct.error||'Command failed. Nothing was retried.');
- if(direct.handled){applyDrafts(direct);if(direct.job_id)watchGroupJob(direct.job_id,direct.caption||$('group').value);return direct.reply}
+ if(direct.handled){applyDrafts(direct);if(direct.donors_changed)document.dispatchEvent(new Event('donors-changed'));if(direct.job_id)watchGroupJob(direct.job_id,direct.caption||$('group').value);return direct.reply}
  if(/^(dm|group)$/.test(low)){setView(low);return 'Switched to '+low.toUpperCase()+'.'}
  if(/^(new|regenerate|next|naya)$/.test(low)){await freshWording();return 'New wording ready.'}
  if(low==='copy'){$('copy').click();return 'Copied.'}
@@ -242,7 +242,7 @@ async function quick(t){const low=t.toLowerCase().trim();
  if(attached&&/\b(papers?|reports?|documents?)\b/i.test(t)&&/\b(this|these|save|use|add)\b/i.test(t)){const r=await post('/upload-image',{data:attached.data,use:'papers'}),d=await r.json();if(!r.ok)throw Error(d.error);clearAttachment();return 'Medical papers saved.'}
  return undefined}
 
-async function act(text){const t=text.trim();if(!t)return;say('you',t);
+async function act(text){const t=text.trim();if(!t)return;say('you',window.DonorHub?.privateChatText(t)||t);
  clearNextActions();const q=await quick(t);if(q!==undefined){if(q)say('app',q);refreshNextActions();return}
  think(true);let r,d;
  try{await logChain;r=await post('/assistant',{text:t,request_id:requestId(),image:attached?attached.id:null,history:history.slice(-13,-1),screen:{view:view(),dm:{name:$('dmName').value,phone:$('dmPhone').value,gender}}});d=await r.json().catch(()=>({}));if(r.ok&&d.task_id){let finished=false;const until=Date.now()+4*60*1000;while(!finished&&Date.now()<until){await new Promise(res=>setTimeout(res,500));const check=await fetch('/assistant-status/'+d.task_id),task=await check.json();if(!check.ok)throw Error(task.error||'Request no longer tracked. Nothing was retried.');if(task.done){if(task.error)throw Error(task.error);d=task.result;finished=true}}if(!finished)throw Error('The assistant result is not confirmed. Check recent activity; I will not repeat the send.')}}finally{think(false)}
@@ -417,5 +417,7 @@ ensureDrafts().then(()=>status('✓ Ready')).catch(()=>{const d=cached('drafts')
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false;renderSendMode()}}).catch(()=>{});
 pollAuto();setInterval(pollAuto,5000);pollCamp();refreshNextActions();
+
+
 
 

@@ -8,11 +8,10 @@ const Nav={rendering:false,
  path(){try{return decodeURIComponent((location.hash||'').replace(/^#\/?/,''))}catch(e){return ''}},
  top(){return Nav.path().split('/')[0]},
  /* The chat log below owns the name `history`, so the browser's is always reached as window.history. */
- /* A Back step is asynchronous; a new screen opened right after it waits until the step has landed. */
- pending:false,queued:null,
- settle(){Nav.pending=false;if(Nav.queued!==null){const q=Nav.queued;Nav.queued=null;Nav.go(q)}},
- go(path,{replace=false}={}){if(Nav.rendering)return;if(Nav.pending){Nav.queued=path;return}if(Nav.path()===path)return;const h=window.history;try{(replace?h.replaceState:h.pushState).call(h,{nav:1},'',path?'#/'+path:location.pathname+location.search)}catch(e){}},
- leave(name){if(Nav.rendering||Nav.top()!==name)return;const h=window.history;if(h.state&&h.state.nav&&h.length>1){Nav.pending=true;setTimeout(Nav.settle,400);h.back()}else Nav.go('',{replace:true})}};
+ valid(path){return /^(?:chat|settings|preview|whatsapp|donors\/(?:all|important|donated|not_donated|messages))$/.test(path)},
+ go(path,{replace=false}={}){if(Nav.rendering||Nav.path()===path)return;const h=window.history,from=replace?h.state?.from:Nav.path();try{(replace?h.replaceState:h.pushState).call(h,{nav:1,from:Nav.valid(from)?from:''},'',path?'#/'+path:location.pathname+location.search)}catch(e){}},
+ // Close synchronously. A delayed history.back() can undo the next tap or race a refresh.
+ leave(name){if(Nav.rendering||Nav.top()!==name)return;const from=window.history.state?.from;Nav.go(Nav.valid(from)&&from.split('/')[0]!==name?from:'',{replace:true});renderNav()}};
 /* Server-issued next steps are tied to the exact saved draft, never AI-authored commands. */
 let nextActions=[],nextActionEpoch=0;const nextActionPending=new Set();
 function drawNextActions(){renderSendMode();requestAnimationFrame(()=>fitConversation());for(const id of ['chatNextActions','histNextActions']){const row=$(id);if(!row)continue;row.textContent='';row.hidden=!nextActions.length;for(const a of nextActions){const b=document.createElement('button');b.type='button';b.textContent=a.label;b.title=a.detail||'';b.disabled=!!a.disabled||nextActionPending.has(a.id);b.setAttribute('aria-label',a.label+(a.detail?' · '+a.detail:''));b.onclick=()=>runNextAction(a);row.append(b)}}}
@@ -155,7 +154,11 @@ for(const k of ['group','dm'])$(k+'Preview').addEventListener('paste',e=>{e.prev
 function setView(v){if(editing)setEditing(false);if(previewView)previewScroll[previewView]=$('chat').scrollTop;document.body.dataset.view=v;previewView=v;document.querySelectorAll('[data-view-button]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.viewButton===v)));
  $('ctx').textContent=v==='group'?'Group · poster':'DM · poster';renderSendMode();localStorage.setItem('givelife-view',v);requestAnimationFrame(()=>{fit();$('chat').scrollTop=previewScroll[v]||0});flip()}
 /* Large screen changes cross-fade where the browser supports view transitions. */
-function smooth(change){if(!document.startViewTransition||matchMedia('(prefers-reduced-motion: reduce)').matches)return change();document.startViewTransition(change)}
+// Update immediately; animation never holds a click or waits for a network request.
+const surfaceAnimations=new WeakMap();
+function moveSurface(surface){if(!surface||!surface.getClientRects().length||!surface.animate||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ surfaceAnimations.get(surface)?.cancel();const animation=surface.animate([{opacity:.78},{opacity:1}],{duration:150,easing:'cubic-bezier(.2,.8,.2,1)'});surfaceAnimations.set(surface,animation)}
+function smooth(change){const result=change();moveSurface($('main-workspace'));return result}
 document.querySelectorAll('[data-view-button]').forEach(b=>b.onclick=()=>{if(b.dataset.viewButton!==view())smooth(()=>setView(b.dataset.viewButton))});
 let shownLeft=null,leftTween=0;
 function paintLeft(value){const c=$('leftChip');c.textContent=value==null?'Rs. …':'Rs. '+fmt(Math.round(value));const w=document.createElement('span');w.className='lw';w.textContent=' left';c.append(w)}
@@ -332,6 +335,7 @@ function hideKeys(){if(isPhone()){document.activeElement?.blur();$('cmd').blur()
 async function submitChat(e,id){e.preventDefault();const value=$(id).value;if(!value.trim())return;
  saveChatDraft('');hideKeys();followReplies();requestAnimationFrame(updateChatViewport);
  try{await act(value)}catch(err){if(!$('cmd').value.trim()&&!$('histCmd').value.trim())saveChatDraft(value);say('app',err.message,1)}
+ finally{followReplies();requestAnimationFrame(()=>{fitConversation();for(const pane of ['log','histLog'])followChat($(pane),true);rememberScroll()})}
 }
 $('cmdForm').onsubmit=e=>submitChat(e,'cmd');$('histForm').onsubmit=e=>submitChat(e,'histCmd');
 for(const id of ['cmd','histCmd'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();$(id).form.requestSubmit()}});
@@ -423,8 +427,10 @@ async function checkWa(){setNote('waRes','Checking the groups…');try{const d=a
  else if(d.missing&&d.missing.length)setNote('waRes','Connected, but this number is not in: '+d.missing.join(', ')+'. Link the number that is in the groups.','err');
  else setNote('waRes','Connected and in all 6 groups'+(d.fixed&&d.fixed.length?' (updated '+d.fixed.length+' group link'+(d.fixed.length>1?'s':'')+')':'')+'.','ok')}catch(e){setNote('waRes','Could not check.','err')}}
 $('gear').onclick=()=>{$('set').showModal();loadSet();checkWa();Nav.go('settings')};
-$('setClose').onclick=()=>$('set').close();
-if($('setCloseBottom'))$('setCloseBottom').onclick=()=>$('set').close();
+function closeSettings(){$('set').close();Nav.leave('settings')}
+$('setClose').onclick=closeSettings;
+if($('setCloseBottom'))$('setCloseBottom').onclick=closeSettings;
+$('set').addEventListener('cancel',e=>{e.preventDefault();closeSettings()});
 $('set').addEventListener('close',()=>Nav.leave('settings'));
 async function saveDms(){const on=$('swDm').checked;$('swNew').disabled=!on;
  try{const r=await post('/autopilot-settings',{action:'dms',enabled:on,daily:+($('set').dataset.daily||30),new_people:$('swNew').checked}),d=await r.json();if(!r.ok)throw Error(d.error);status('✓ '+d.reply)}catch(e){status(e.message||'Could not save',1);loadSet()}}
@@ -487,19 +493,35 @@ document.addEventListener('keydown',e=>{
  if(a){e.preventDefault();a()}});
 
 /* ---- show the screen the address names (refresh, Back and Forward all come here) ---- */
-function renderNav(){const parts=Nav.path().split('/'),top=parts[0];Nav.rendering=true;
+function renderNav(){if($('cloudLogin')?.closest('dialog')?.open)return;const parts=Nav.path().split('/'),top=parts[0];Nav.rendering=true;
  try{
   if(top!=='chat'&&$('hist').open)closeChat();
   if(top!=='settings'&&$('set').open)$('set').close();
   if(top!=='donors'&&window.DonorHub?.isOpen())window.DonorHub.hide();
+  if(top!=='whatsapp'&&$('whatsappDialog')?.open)$('whatsappDialog').close();
   if(top==='preview'&&document.body.classList.contains('nomsg'))setNoMsg(false);
   if(top===''&&!document.body.classList.contains('nomsg'))setNoMsg(true);
   if(top==='chat'&&!$('hist').open)openChat();
   if(top==='settings'&&!$('set').open){$('set').showModal();loadSet();checkWa()}
   if(top==='donors')window.DonorHub?.show(parts[1]||'all');
+  if(top==='whatsapp'&&!$('whatsappDialog')?.open)$('whatsappConnection').click();
  }finally{Nav.rendering=false}}
-addEventListener('popstate',()=>{if(Nav.queued!==null){Nav.settle();return}smooth(renderNav);Nav.settle()}); /* a screen opened right after Back is already on screen */
+addEventListener('popstate',()=>smooth(renderNav));
 addEventListener('load',()=>renderNav(),{once:true});
+addEventListener('hashchange',()=>smooth(renderNav));
+addEventListener('studio-unlocked',()=>renderNav());
+// Dialogs and Back/Forward use the same brief, interruptible entrance.
+let previousSurface=document.body.dataset.view+':'+document.body.classList.contains('nomsg');
+new MutationObserver(changes=>{
+ const surface=document.body.dataset.view+':'+document.body.classList.contains('nomsg');
+ if(surface!==previousSurface){previousSurface=surface;moveSurface($('main-workspace'))}
+ for(const change of changes)if(change.target.tagName==='DIALOG'&&change.attributeName==='open'){
+  surfaceAnimations.get(change.target)?.cancel();if(change.target.open)moveSurface(change.target);else moveSurface([...document.querySelectorAll('dialog[open]')].at(-1)||$('main-workspace'));
+ }
+}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['open','class','data-view']});
+document.addEventListener('click',event=>{
+ const tab=event.target.closest?.('[data-tab],[data-bank-nav]');if(tab)requestAnimationFrame(()=>moveSurface($('donorMessages')?.hidden?$('donorTable'):$('donorMessages')));
+});
 
 /* ---- start ---- */
 setView(localStorage.getItem('givelife-view')==='dm'?'dm':'group');
@@ -509,6 +531,7 @@ ensureDrafts().then(()=>status('✓ Ready')).catch(()=>{const d=cached('drafts')
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false;renderSendMode()}}).catch(()=>{});
 pollAuto();setInterval(pollAuto,5000);pollCamp();refreshNextActions();
+
 
 
 

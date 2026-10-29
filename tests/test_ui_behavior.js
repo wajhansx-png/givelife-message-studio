@@ -4,7 +4,7 @@ const source=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html',
 const part=(start,end)=>source.slice(source.indexOf(start),source.indexOf(end,source.indexOf(start)));
 const events=[],nodes=new Map(),storage=new Map();let phone=true;
 function node(id){if(!nodes.has(id))nodes.set(id,{id,value:'',style:{},dataset:{},scrollHeight:44,disabled:false,hidden:true,open:false,attrs:{},classList:{toggle(){}},setAttribute(k,v){this.attrs[k]=v},focus(){events.push('focus:'+id)},blur(){events.push('blur:'+id)},addEventListener(){},showModal(){this.open=true},close(){this.open=false}});return nodes.get(id)}
-const ctx={Nav:{go(){},leave(){},path(){return ''},top(){return ''}},console,Promise,JSON,Set,Map,Error,Date,Math,$:node,localStorage:{setItem:(k,v)=>storage.set(k,v),getItem:k=>storage.get(k)},document:{activeElement:{blur(){events.push('blur:active')}},documentElement:{style:{setProperty(k,v){events.push(k+':'+v)}}},body:{classList:{toggle(){}}},querySelectorAll(){return []}},window:{visualViewport:{height:480,offsetTop:18,addEventListener(){}}},innerHeight:844,isPhone:()=>phone,requestAnimationFrame:f=>{f();return 1},cancelAnimationFrame(){},addEventListener(){},followReplies(){events.push('follow')},act:async v=>events.push('act:'+v),say(){},setTimeout,clearTimeout};
+const ctx={Nav:{go(){},leave(){},path(){return ''},top(){return ''}},console,Promise,JSON,Set,Map,Error,Date,Math,$:node,localStorage:{setItem:(k,v)=>storage.set(k,v),getItem:k=>storage.get(k)},document:{activeElement:{blur(){events.push('blur:active')}},documentElement:{style:{setProperty(k,v){events.push(k+':'+v)}}},body:{classList:{toggle(){}}},querySelectorAll(){return []}},window:{visualViewport:{height:480,offsetTop:18,addEventListener(){}}},innerHeight:844,isPhone:()=>phone,requestAnimationFrame:f=>{f();return 1},cancelAnimationFrame(){},addEventListener(){},followReplies(){events.push('follow')},fitConversation(){},followChat(){events.push('reveal-answer')},rememberScroll(){},act:async v=>events.push('act:'+v),say(){},setTimeout,clearTimeout};
 ctx.visualViewport=ctx.window.visualViewport;vm.createContext(ctx);
 vm.runInContext(part('function saveChatDraft(','let correctionTurn='),ctx);
 async function main(){
@@ -12,7 +12,7 @@ async function main(){
  await ctx.submitChat({preventDefault(){}},'histCmd');
  assert.equal(node('histCmd').value,'');assert.equal(node('cmd').value,'');assert.equal(storage.get('givelife-chat-draft'),'');
  assert(events.indexOf('blur:active')<events.indexOf('act:A real instruction'),'Mobile must blur synchronously before the async action');
- assert(!events.some(x=>x.startsWith('focus:')),'Send must never focus an input again');
+ assert(!events.some(x=>x.startsWith('focus:')),'Send must never focus an input again');assert(events.indexOf('reveal-answer')>events.indexOf('act:A real instruction'),'After an explicit chat request, reveal the answer even if an older turn was being read');
  ctx.saveChatDraft('My unsent draft\nwith a second line');assert.equal(node('cmd').value,node('histCmd').value);assert.equal(storage.get('givelife-chat-draft'),node('cmd').value);
  node('histCmd').value='   ';events.length=0;await ctx.submitChat({preventDefault(){}},'histCmd');assert.equal(node('histCmd').value,'   ');assert(!events.some(x=>x.startsWith('act:')),'Blank input must not submit');
  phone=false;node('cmd').value='Desktop question';events.length=0;await ctx.submitChat({preventDefault(){}},'cmd');assert(!events.some(x=>x.startsWith('blur:')),'Desktop typing focus should stay available');phone=true;
@@ -76,4 +76,5 @@ async function main(){
  console.log('UI behavior passed: blur before send, no autofocus, shared persistent draft, empty input, desktop focus, viewport, main navigation, action locks, duplicate requests, receipt unlock, unchanged caption.');
 }
 main().catch(e=>{console.error(e);process.exitCode=1});
+
 

@@ -8,9 +8,11 @@ test('pasted DM modal validates, deduplicates and starts the first personalized 
  await page.getByLabel('Numbers and names',{exact:true}).fill('03001112222, Ali\nAyesha, 03012223333\n+923001112222, Ali duplicate');
  await expect(page.locator('#pasteResult')).toContainText('2 recipients');
  await expect(page.locator('#pasteResult')).not.toContainText('1112222');
- await expect(page.getByRole('button',{name:'Add & start DMs',exact:true})).toBeEnabled();
+ await expect(page.getByRole('button',{name:'DM all 2',exact:true})).toBeEnabled();
+ await page.getByRole('button',{name:'DM all 2',exact:true}).click();
  await page.getByLabel('Gap between DMs',{exact:true}).selectOption('3');
- await page.getByRole('button',{name:'Add & start DMs',exact:true}).dblclick();
+ await expect(page.getByRole('button',{name:'Start DMs now',exact:true})).toBeEnabled();
+ await page.getByRole('button',{name:'Start DMs now',exact:true}).dblclick();
  await expect(page.locator('#donorsPage')).toBeVisible();
  await expect.poll(async()=>{const r=await request.get('/donor-delivery',{headers:auth});return (await r.json()).sent}).toBe(1);
  const status=await (await request.get('/donor-delivery',{headers:auth})).json();expect(status.total).toBe(2);expect(status.gap_seconds).toBe(180);

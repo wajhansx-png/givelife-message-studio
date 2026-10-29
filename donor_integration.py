@@ -25,7 +25,8 @@ class DonorIntegration:
         if self.app.STORE and was_paused:self.app.STORE.put('donor_dm_pause',False)
         return 'Personal DM sending is available again. Group posting is unchanged.'
     def start_batch(self,**body):
-        self.resume_personal();body.setdefault('gap_seconds',240);body.setdefault('limit',20)
+        self.resume_personal();body.setdefault('gap_seconds',240)
+        if not body.get('chunk'):body.setdefault('limit',20)
         return self.jobs.start(**body)
     def _start_pasted_batch(self,**body):
         if self.app.CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it before starting a donor batch.')

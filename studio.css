@@ -1037,3 +1037,12 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
  .talk.long-reply:has(.next-actions:not([hidden])) .log{padding-left:24px;padding-right:128px}
  .talk.long-reply .next-actions{width:104px;right:12px}
 }
+
+/* DM in bulk: step 1 shows the numbered list, step 2 the gap and every send time. */
+.paste-dialog[data-step=list] .paste-step-time,.paste-dialog[data-step=time] .paste-step-list,.paste-dialog[data-step=time] #pastePeople,.paste-dialog[data-step=time] #pasteResult{display:none!important}
+.paste-dialog[data-step=list] .plan-when,.paste-dialog[data-step=list] .plan-total{display:none}
+.paste-dialog[data-step=list] .paste-plan li{grid-template-columns:28px minmax(0,1fr)}
+.donor-bulk{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1px solid color-mix(in srgb,var(--g) 45%,transparent);border-radius:12px;background:var(--gs);color:var(--gink);font-weight:700;font-size:14px;white-space:nowrap}
+.donor-bulk:hover{border-color:var(--g)}
+@media(min-width:900px){.donor-head{grid-template-columns:auto minmax(0,1fr) auto auto auto auto}}
+@media(max-width:899px){.donor-head{grid-template-columns:minmax(0,1fr) auto auto auto auto}.donor-bulk{padding:0 10px;font-size:12px}.donor-head .donor-total{display:none}}

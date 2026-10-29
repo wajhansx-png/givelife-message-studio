@@ -1672,7 +1672,7 @@ class Handler(BaseHTTPRequestHandler):
     if self.path=='/donor-messages':return self.reply(donors().messages.regenerate() if body.get('action')=='regenerate' else donors().messages.update(body.get('id'),body.get('text')))
     if body.get('stop'):return self.reply(donors().pause_personal())
     if CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it first.')
-    return self.reply(donors().start_batch(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster')}))
+    return self.reply(donors().start_batch(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster','chunk','rest_seconds')}))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/drafts':
    if any(not isinstance(body.get(k),str) or len(body[k])>10000 for k in ('group','dm')):return self.reply({'error':'Both captions must be text, at most 10,000 characters each.'},status=400)

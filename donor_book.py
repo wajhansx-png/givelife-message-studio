@@ -185,6 +185,10 @@ def send_request(text):
     scope='important' if re.search(r'(?i)\bimportant\b',t) else 'not_donated' if re.search(r'(?i)\b(?:not donated|undonated)\b',t) else 'donated' if re.search(r'(?i)\bdonated\b',t) else 'all'
     gap=re.search(r'(?i)(\d+(?:\.\d+)?)\s*(seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|h)\b',t)
     seconds=float(gap[1])*(3600 if gap[2].lower().startswith('h') else 60 if gap[2].lower().startswith('m') else 1) if gap else 240
-    limit=re.search(r'(?i)\b(?:first|top|send(?: to)?|dm)\s+(\d+)\s+(?:important\s+)?donors?\b',t)
-    return {'scope':scope,'gap_seconds':seconds,'limit':int(limit[1]) if limit else None,'poster':not bool(re.search(r'(?i)\b(?:without|no) (?:poster|picture|image)\b|\btext only\b',t))}
+    limit=re.search(r'(?i)\b(first|top|send(?: to)?|dm)\s+(\d+)\s+(?:(?:dms?|messages?)\s+(?:to\s+)?)?(?:important\s+)?donors?\b',t)
+    n=int(limit[2]) if limit else None
+    # "send 20 dms" is a round size: the rest of the audience follows by itself. "first 20" is an exact total.
+    exact=bool(limit) and limit[1].lower() in ('first','top')
+    rounds=20 if n and n>20 else None if exact else n
+    return {'scope':scope,'gap_seconds':seconds,'limit':n if exact or (n and n>20) else None,'chunk':rounds,'poster':not bool(re.search(r'(?i)\b(?:without|no) (?:poster|picture|image)\b|\btext only\b',t))}
 

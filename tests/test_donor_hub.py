@@ -67,6 +67,28 @@ class DeliveryTests(RegistryTests):
   result=self.jobs.start('all',120,run=False);self.run_job(result)
   self.assertEqual([b[0]['name'] for b in self.sent],['Important','First']);self.assertGreaterEqual(self.sent[1][1]-self.sent[0][1],120)
   self.assertEqual(self.sent[0][0]['message'],'saved **full**\n\nDM caption');self.assertTrue(self.sent[0][0]['poster']);self.assertEqual(self.jobs.status()['sent'],2)
+ def test_rounds_continue_by_themselves_with_same_gap_and_rest(self):
+  for i in range(5):self.book.update(self.add('P%d'%i,'030012345%02d'%i)['id'],important=True)
+  self.jobs.variants=lambda n:['w%d'%i for i in range(n)]
+  r=self.jobs.start('important',120,chunk=2,rest_seconds=1200,run=False);self.assertIn('automatically',r['reply']);self.run_job(r)
+  times=[t for _,t in self.sent];self.assertEqual(len(times),5)
+  self.assertGreaterEqual(times[1]-times[0],120);self.assertGreaterEqual(times[2]-times[1],1200);self.assertLess(times[2]-times[1],1300)
+  self.assertGreaterEqual(times[3]-times[2],120);self.assertLess(times[3]-times[2],200);self.assertGreaterEqual(times[4]-times[3],1200)
+  self.assertEqual([b['message'] for b,_ in self.sent],['w0','w1','w0','w1','w0']);self.assertEqual(self.jobs.status()['state'],'Completed')
+ def test_stop_during_rest_sends_nothing_more(self):
+  for i in range(3):self.add('P%d'%i,'030012345%02d'%i)
+  r=self.jobs.start('all',60,chunk=1,rest_seconds=600,run=False);job=self.jobs._load()['jobs'][-1]
+  def wait(seconds):self.clock+=seconds;self.jobs.stop.set();return True
+  with patch('donor_delivery.time.time',side_effect=lambda:self.clock),patch.object(self.jobs.stop,'wait',side_effect=wait):self.jobs._run(job)
+  self.assertEqual(len(self.sent),1);self.assertEqual(self.jobs.status()['state'],'Stopped')
+ def test_bad_round_settings_are_refused(self):
+  self.add()
+  for bad in ({'chunk':0},{'chunk':21},{'rest_seconds':5},{'rest_seconds':99999}):
+   with self.assertRaises(ValueError):self.jobs.start('all',60,run=False,**bad)
+ def test_chat_phrases_pick_round_size_or_exact_total(self):
+  r=send_request('send 20 dms to important donors');self.assertEqual((r['chunk'],r['limit']),(20,None))
+  r=send_request('send first 5 donors');self.assertEqual((r['chunk'],r['limit']),(None,5))
+  r=send_request('dm 40 important donors');self.assertEqual((r['chunk'],r['limit']),(20,40))
  def test_double_click_idempotency(self):
   self.add();a=self.jobs.start('all',60,request_id='same',run=False);b=self.jobs.start('all',60,request_id='same',run=False);self.assertEqual(a['job']['id'],b['job']['id']);self.assertEqual(len(self.jobs._load()['jobs']),1)
  def test_already_contacted_skips_and_deletion_skips(self):

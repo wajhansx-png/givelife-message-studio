@@ -42,7 +42,7 @@ test('mobile chat keeps draft, closes keyboard after send and has a reachable re
  await page.locator('#histForm .go').click();await expect(page.locator('#histCmd')).not.toBeFocused();
  const send=await page.locator('#histForm .go').boundingBox();expect(send.width).toBeGreaterThanOrEqual(48);expect(send.height).toBeGreaterThanOrEqual(48);
  await inside(page,page.locator('#histMain'));await shot(page,'mobile-chat');
- await page.setViewportSize({width:390,height:450});await inside(page,page.locator('#histForm .go'));await inside(page,page.locator('#histMain'));
+ await page.setViewportSize({width:390,height:450});await expect.poll(async()=>{const b=await page.locator('#histForm .go').boundingBox();return b&&b.y+b.height<=451}).toBe(true);await inside(page,page.locator('#histMain'));
 });
 test('mobile library selection beyond first ten survives reload',async({page,request})=>{
  await open(page,request,390,844);await page.locator('#openDonors').click();await page.locator('[data-tab=messages]').click();

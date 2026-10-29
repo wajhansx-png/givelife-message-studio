@@ -1287,3 +1287,32 @@ body .connect-badge,body button#whatsappConnection{border:1px solid var(--ctl)!i
 }
 @media(min-width:900px){.foot .gear{position:static;right:auto;bottom:auto}}
 @media(min-width:900px){.foot .gear{width:28px!important;height:24px!important;min-width:28px!important;min-height:24px!important;font-size:15px}}
+
+/* ===== UX pass: readable minimum type, thumb-sized targets, one primary colour per area, colour = meaning ===== */
+/* 1. Nothing readable below 12px (meta text was 11px). */
+small,.last-sent,.message-copy,.donor-columns,.build-tag,.keys,.brand small,.donor-sub,.batch-hint,.donor-normal-tag,.donor-normal-hint,.group-section-title{font-size:max(12px,1em)!important}
+.last-sent,.message-copy,.donor-columns,.keys,.build-tag{font-size:12px!important}
+/* 2. Phone: every tap target at least 44px (Apple HIG / WCAG 2.5.5). */
+@media(max-width:899px){
+ .seg button,#showMsg{min-height:44px!important}
+ .donor-row{height:45px!important;min-height:45px!important;box-sizing:border-box}
+ .donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-amount,.donor-star,.donor-more summary{min-height:44px!important;height:44px!important}
+ .donor-star,.donor-more summary{min-width:44px!important}
+ .batch-dialog input[type=checkbox]{width:22px;height:22px}
+}
+/* 3. Green fill is reserved for the main action. Information and navigation stay calm (tinted text, neutral surface). */
+.leftchip,#openDonors,.donor-launch,#desktopPreview[aria-pressed=true]{background:var(--surface2)!important;color:var(--gink)!important;border:1px solid color-mix(in srgb,var(--g) 55%,var(--ctl))!important;box-shadow:none!important}
+/* 4. Colour carries meaning, the same everywhere: green = done, amber = needs a look / waiting, red = failed or destructive. */
+.donor-row[data-delivery=Uncertain] .donor-dm,.donor-row[data-delivery=Skipped] .donor-dm{color:var(--warn)!important;border-color:var(--warn)!important;background:color-mix(in srgb,var(--warn) 10%,var(--surface2))!important}
+.donor-row[data-delivery="Not sent"] .donor-dm{color:var(--red)!important;border-color:var(--red)!important}
+.donor-progress[data-error=true]{border:1px solid var(--warn)}
+.remove,.danger{color:var(--red)!important}
+.donor-progress[data-active=true]{border:1px solid color-mix(in srgb,var(--g) 50%,transparent)}
+/* Calm motion for people who ask for it. */
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media(max-width:899px){.seg button{min-width:48px}}
+@media(max-width:899px){
+ .donor-star,.donor-more summary{min-width:40px!important;width:40px}
+ .donor-page .donor-row:not([data-donated=true]){grid-template-columns:40px minmax(90px,1fr) 52px 80px 40px!important;column-gap:4px!important}
+ .donor-page .donor-row[data-donated=true]{grid-template-columns:40px minmax(70px,1fr) 48px 72px 56px 40px!important;column-gap:4px!important}
+}

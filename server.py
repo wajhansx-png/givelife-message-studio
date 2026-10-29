@@ -1598,6 +1598,9 @@ def fast_command_eligible(text):
  text=str(text).strip()
  if not text or len(text)>10000:return False
  if re.fullmatch(r'(?i)(?:show|list|view|my)?\s*(?:scheduled?\s+(?:tasks|messages|sends)|schedules|scheduler)',text):return True
+ try:
+  if (timed_tasks.parse(text) or {}).get('command')=='list':return True
+ except ValueError:pass
  if manual_commands.question_request(text):return False
  if draft_flow.editing_request(chat_policy.owner_text(text)) and (manual_commands.parse(text) or {}).get('kind') not in ('donation_order','remove_arrival_line'):return False
  if re.match(r'(?i)^(?:please\s+)?(?:show|preview|draft|summarize|summarise|analyse|analyze|explain|review|read|check|tell me)\b',text):return False

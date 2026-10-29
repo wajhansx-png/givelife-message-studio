@@ -113,7 +113,7 @@ def parse(text):
  if re.search(r'exclusive\s+upwork|37\s*(?:member|members)|120363432572916292|120363431093838536',low):return {'kind':'refuse_target'}
  if re.search(r'\b(don t|dont|do not|never|stop|disable|no)\b.*\b(dm|dms|direct messages)\b',low) or low in ('dm off','dms off','auto dms off'):
   return {'kind':'stop_dms'}
- if low in ('hold','wait','hold on','hold everything','stop everything','pause everything') or re.search(r'wrong (?:whatsapp|number)',low):return {'kind':'hold'}
+ if low in ('hold','wait','hold on','hold everything','stop everything','pause everything','stop','stop it','stop all','stop now','stop please','pause','ruk','ruk jao','ruko','rok do','rok','band karo','band kar do','bas') or re.search(r'wrong (?:whatsapp|number)',low):return {'kind':'hold'}
  if low in ('resume','continue','go ahead','connected','connected now','right one connected','release','unhold'):return {'kind':'resume'}
  if re.search(r'\b(?:every|each|after)\s+\d+\s*(?:min|mnt|mint|hour)',low):return None
  # A display-name correction changes the greeting, never the destination or whole caption.
@@ -121,7 +121,7 @@ def parse(text):
  if rename:return {'kind':'dm_name','to':rename[2] or '', 'name':rename[3].strip()}
  if ('2000' in low.replace(' ','') or '2 000' in low) and ('1000' in low.replace(' ','') or '1 000' in low) and re.search(r'\b(first|before|then|order)\b',low) and re.search(r'\b(message|messages|caption|wording|write|show)\b',low):return {'kind':'donation_order'}
  if re.search(r'\b(don t|dont|do not|remove|delete)\b',low) and re.search(r'\b(write|line|wording|words|caption|this much)\b',low) and re.search(r'\b(came|received|arrived)\b',low):return {'kind':'remove_arrival_line'}
- arrival=re.fullmatch(r'(?:came|got|received|recieved|aya|aaya)\s*(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?|(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?\s+(?:came|arrived|received|aya|aaya|aye|aaye|ayi|aayi)',t,re.I)
+ arrival=re.fullmatch(r'(?:(?:someone|somebody|a donor|donor|he|she|they)\s+(?:sent|gave|paid|donated)|donation(?:\s+of)?|donated|came|got|received|recieved|aya|aaya|mila|mile)\s*(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?(?:\s+(?:came in|came|received|donated))?|(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?\s+(?:came in|came|arrived|received|donated|aya|aaya|aye|aaye|ayi|aayi|mila|mile|mil gaye|mil gaya)',t,re.I)
  if arrival:
   amount=float((arrival[1] or arrival[3]).replace(',',''))*_times(arrival[2] or arrival[4])
   if amount.is_integer() and amount>=0:return {'kind':'money','amount':int(amount)}
@@ -130,6 +130,8 @@ def parse(text):
  q=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+["“\'](.+?)["”\']\s+(?:to|ko|in)\s+(.+)$',t,re.I|re.S)
  if q:return {'kind':'text','text':q[1],'to':q[2].strip(),'literal':True}
  amount=balance_amount(t)
+ lead=re.fullmatch(r'(?:now|ab|abhi|only|just|total|so)\s+(.+)',t,re.I)
+ if amount is None and lead and not SEND.search(t):amount=balance_amount(lead[1])
  # Resolve a literal payload and its destination before scanning aliases inside it.
  explicit=re.match(r'^(?:please\s+)?(?:send|resend|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
  payload=re.sub(r'(?i)(?:rs\.?\s*)?\d[\d,]*(?:\.\d+)?\s*k?','',explicit[1]) if explicit and amount is not None else explicit[1] if explicit else ''
@@ -150,7 +152,7 @@ def parse(text):
   if m and re.search(r'(?i)\s+only\s+',m[2]):m=re.match(r'^(?:send|text|message)\s+(.+?)\s+(?:to|in)\s+(.+?)\s+only\s+.+$',t,re.I|re.S)
   if m and not control_payload(m[1]) and group(m[2]):return {'kind':'text','text':m[1].strip(),'to':group(m[2]),'literal':True}
   return {'kind':'appeal','target':target,'amount':amount}
- if (SEND.search(t) or low.startswith('now send') or low in ('again','do it','go','now')) and control_payload(t):return {'kind':'repeat'}
+ if (SEND.search(t) or low.startswith('now send') or low in ('again','do it','go','now','once more','one more time','do it again','repeat','repeat it','send once more','dobara','dubara','phir se','phir se bhejo','dobara bhejo','phir bhejo')) and control_payload(t) or low in ('once more','one more time','do it again','repeat','repeat it','dobara','dubara','phir se','phir bhejo','phir se bhejo','dobara bhejo'):return {'kind':'repeat'}
  if amount is not None and not SEND.search(t):return {'kind':'amount','amount':amount}
  m=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
  if m:

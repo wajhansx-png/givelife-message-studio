@@ -549,3 +549,7 @@ pollAuto();setInterval(pollAuto,5000);pollCamp();refreshNextActions();
 
 
 
+
+/* Most-used screens, one click from the groups box (near the mouse on desktop). */
+document.getElementById('railPreview')?.addEventListener('click',()=>document.getElementById('desktopPreview')?.click());
+document.getElementById('railDonors')?.addEventListener('click',()=>document.getElementById('openDonors')?.click());

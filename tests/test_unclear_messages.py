@@ -46,3 +46,37 @@ class Schedules(unittest.TestCase):
   for text in ('what next for Yousuf','tasks for today are long','cancel my subscription'):
    with self.subTest(text=text):self.assertNotIn((t.parse(text) or {}).get('command'),('list',) if 'cancel' not in text else ('cancel_by','cancel'))
 if __name__=='__main__':unittest.main()
+
+class LiteralText(unittest.TestCase):
+ def test_send_words_to_a_person_never_allows_the_appeal_tools(self):
+  for text in ('send hi to wajdan','send name hi to wajdan','send his name hi to wajdan','send hello there to ali'):
+   with self.subTest(text=text):
+    self.assertFalse(chat_policy.permitted('send_appeal',text));self.assertFalse(chat_policy.permitted('send_dm_appeal',text));self.assertTrue(chat_policy.permitted('send_message',text))
+ def test_real_appeal_requests_still_allowed(self):
+  for text in ('send to main','send dm to ali','send it'):self.assertTrue(chat_policy.permitted('send_appeal',text) or chat_policy.permitted('send_dm_appeal',text),text)
+
+class TextChatContext(unittest.TestCase):
+ def test_follow_ups_in_a_plain_text_chat(self):
+  self.assertEqual(m.parse('his name is wajdan say name hi bro'),{'kind':'say','name':'wajdan','text':'hi bro'})
+  self.assertEqual(m.parse('say hi bro'),{'kind':'say','name':'','text':'hi bro'})
+  self.assertEqual(m.parse('tell him come now')['kind'],'say')
+ def test_say_never_swallows_edit_requests(self):
+  for text in ('say it in a shorter caption','tell him the message is ready','write a stronger caption','say the dm needs a new hook'):self.assertNotEqual((m.parse(text) or {}).get('kind'),'say',text)
+ def test_name_alone_is_still_a_greeting_edit(self):self.assertEqual(m.parse('his name is wajdan')['kind'],'dm_name')
+
+class ExecutesInContext(unittest.TestCase):
+ def setUp(self):
+  import server;from unittest.mock import patch;self.server=server;self.sent=[]
+  self.patches=[patch.object(server,'send_free',side_effect=lambda to,text,pic,literal=False:self.sent.append((to,text))),patch.object(server,'remember_manual',side_effect=lambda v:server.LAST_MANUAL.update(v))]
+  for p in self.patches:p.start()
+  self.saved=dict(server.LAST_MANUAL)
+ def tearDown(self):
+  for p in self.patches:p.stop()
+  self.server.LAST_MANUAL.clear();self.server.LAST_MANUAL.update(self.saved)
+ def test_say_continues_the_text_chat_and_sends_no_poster(self):
+  self.server.LAST_MANUAL.clear();self.server.LAST_MANUAL.update(kind='text',to='jr account',text='hi')
+  out=self.server.execute_manual_command('his name is wajdan say name hi bro')
+  self.assertTrue(out['handled']);self.assertEqual(self.sent,[('jr account','Wajdan hi bro')])
+ def test_say_without_a_text_chat_goes_to_the_assistant(self):
+  self.server.LAST_MANUAL.clear();self.server.LAST_MANUAL.update(kind='appeal',target='main')
+  self.assertFalse(self.server.execute_manual_command('say hi bro')['handled']);self.assertEqual(self.sent,[])

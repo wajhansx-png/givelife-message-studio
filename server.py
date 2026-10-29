@@ -1505,6 +1505,16 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
   return {'handled':True,'reply':'; '.join(rules.describe(item) for item in pace)+('. Auto follows this schedule.' if auto_on() else '. Saved. Auto is currently off.')}
  plan=manual_commands.parse(text)
  if not plan:return {'handled':False}
+ if plan['kind']=='say':
+  # Only meaningful inside a plain-text chat; otherwise the assistant reads it with its context.
+  if LAST_MANUAL.get('kind')!='text' or not LAST_MANUAL.get('to'):return {'handled':False}
+  words=(plan['name'].strip().title()+' ' if plan['name'] else '')+plan['text']
+  with LOCK:
+   OWNER_REVISION+=1
+  OWNER_GUARD.revision=OWNER_REVISION
+  send_free(LAST_MANUAL['to'],words,False,literal=True)
+  remember_manual({**LAST_MANUAL,'kind':'text','text':words})
+  return {'handled':True,'reply':'Sent \u201c'+words+'\u201d to the same chat.'}
  if plan['kind'] in ('appeal','appeals','repeat'):workflow().apply_options(chat_policy.owner_text(text),get_message('group')['text'])
  with LOCK:
   if plan['kind']!='status':OWNER_REVISION+=1

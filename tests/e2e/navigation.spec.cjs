@@ -120,7 +120,7 @@ test('a stopped batch offers Continue and the dialog says already-sent people ar
  await page.route('**/donor-delivery',async r=>{if(r.request().method()==='POST'){posted=r.request().postDataJSON();return r.fulfill({json:{reply:'Continuing your stopped batch: 2 already handled are skipped, 3 left.',job:stopped}})}return r.fulfill({json:stopped})});
  await page.locator('#openDonors').click();
  await expect(page.locator('#donorContinue')).toBeVisible();await expect(page.locator('#donorContinue')).toContainText('3 left');
- await page.locator('#donorBatchSummary').click();
+ await page.locator('#donorProgress span').click();
  await expect(page.locator('#batchSent li').first()).toContainText('Ali');await expect(page.locator('#batchNext li')).toHaveText(['Sara','Omar','Zain']);await expect(page.locator('#batchOther')).toContainText('Bilal');
  await page.locator('#donorContinue').click();await expect.poll(()=>posted).not.toBeNull();
  expect(posted.scope).toBe('important');expect(posted.fresh).toBeUndefined();expect(posted.ids).toBeUndefined();
@@ -163,4 +163,17 @@ test('desktop preview: message centred with left-aligned text, actions at the bo
  const tools=await page.locator('#card .tools').boundingBox();expect(tools.y).toBeGreaterThan(msg.y+msg.height-1);
  const edit=await page.locator('#edit').boundingBox();expect(Math.abs((edit.x+edit.width/2)-(card.x+card.width/2))).toBeLessThan(160);
  await page.locator('#railDonors').click();await expect(page.locator('#donorsPage')).toBeVisible();
+});
+
+test('donor list is numbered, progress is one slim line, and tabs have a visible fill',async({page,request})=>{
+ await open(page,request,1440,800);
+ await page.route('**/donor-delivery',r=>r.request().method()==='POST'?r.continue():r.fulfill({json:{state:'Waiting',scope:'important',sent:1,skipped:0,failed:0,total:10,pending:9,gap_seconds:240,receipts:[],waiting:[],next_at:Date.now()/1000+60}}));
+ await page.locator('#openDonors').click();
+ const names=await page.locator('.donor-row .donor-name').evaluateAll(els=>els.slice(0,3).map(e=>getComputedStyle(e,'::before').content));
+ expect(names.every(c=>c.includes('counter(donor)'))).toBe(true);
+ await expect(page.locator('#donorProgress span')).toContainText('1 sent · 9 pending · 0 failed');
+ await expect(page.locator('#donorBatchList')).toBeHidden();
+ const h=(await page.locator('#donorProgress').boundingBox()).height;expect(h).toBeLessThan(50);
+ const bg=await page.locator('.donor-tabs button[aria-selected=false]').first().evaluate(e=>getComputedStyle(e).backgroundColor);expect(bg).not.toBe('rgba(0, 0, 0, 0)');
+ await expect(page.locator('#donorMain')).toBeHidden();
 });

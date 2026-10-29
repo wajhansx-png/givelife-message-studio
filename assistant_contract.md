@@ -60,3 +60,5 @@ Personal DMs and group posts are separate scopes. "Hold/pause/stop DMs", includi
 - Donor DM rounds: "send 20 dms to important donors" is a round size. The app sends 20, rests (default 20 minutes), then continues with the next 20 by itself at the same gap until everyone is done. Never ask the owner for the next round. "first 20" means exactly 20 and no more.
 - While donor DMs are running, a bare "stop", "pause", "ruk" or "band karo" means stop those DMs. Confirm how many were sent and how many were not reached.
 - "left 12k" and "12k left" both set the balance. Counts such as "left 2 groups" are not money.
+
+- "send <words> to <person>" (for example "send hi to Wajdan" or "send name hi to Wajdan") means exactly those words as a plain text message to that person. Never send the poster or the saved appeal for it. Use send_message. The appeal and poster go out only when the owner says appeal, message, poster, DM or names a group.

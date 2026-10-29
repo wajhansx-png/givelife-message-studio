@@ -28,6 +28,9 @@ OWNER_GUARD=threading.local()
 ASSIST_TASKS={}
 EVAL_TASKS={}
 
+SITE_ICONS={'/favicon.svg':('favicon.svg','image/svg+xml'),'/favicon.ico':('favicon.ico','image/png'),'/favicon-32.png':('favicon-32.png','image/png'),'/apple-touch-icon.png':('apple-touch-icon.png','image/png'),
+ '/icon-192.png':('icon-192.png','image/png'),'/icon-512.png':('icon-512.png','image/png'),'/manifest.webmanifest':('manifest.webmanifest','application/manifest+json')}
+
 def serialized_send(fn):
  @wraps(fn)
  def call(*args,**kwargs):
@@ -1591,6 +1594,8 @@ class Handler(BaseHTTPRequestHandler):
   self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(data if isinstance(data,bytes) else data.encode())
  def do_GET(self):
   if self.path=='/health':return self.reply({'ok':True})
+  icon=SITE_ICONS.get(self.path.split('?')[0])
+  if icon:return self.reply((ROOT/'icons'/icon[0]).read_bytes(),icon[1])
   if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/donors.css','/studio.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')

@@ -66,6 +66,8 @@ test('bulk paste shows when every number will be sent before anything starts',as
  await open(page,request,390,844);await page.locator('[data-view-button=dm]').click();await page.locator('#sendMoreDonors').click();
  await page.locator('#pastePeople').fill('Ali 03001234567\n03011234567\n1. Sara - 0302 1234567');
  await expect(page.locator('#pastePlan li')).toHaveCount(4);
+ await expect(page.locator('#pasteNext')).toHaveText('DM all 3');await expect(page.locator('#pastePlan li').nth(1)).toContainText('Donor 2');
+ await page.locator('#pasteNext').click();await expect(page.locator('#pastePeople')).toBeHidden();
  await expect(page.locator('#pastePlan li').first()).toContainText('Ali');await expect(page.locator('#pastePlan li').first()).toContainText('Now');
  await expect(page.locator('#pastePlan li').nth(1)).toContainText('Donor 2');await expect(page.locator('#pastePlan li').nth(2)).toContainText('Sara');
  await expect(page.locator('#pastePlan .plan-total')).toContainText('All 3 done by about');
@@ -73,4 +75,20 @@ test('bulk paste shows when every number will be sent before anything starts',as
  const gap2=await page.locator('#pastePlan li').nth(1).locator('.plan-when').innerText();
  await page.locator('#pasteGap').selectOption('8');await expect.poll(()=>page.locator('#pastePlan li').nth(1).locator('.plan-when').innerText()).not.toBe(gap2);
  await expect(page.locator('#pasteStart')).toBeEnabled();
+ await page.locator('#pasteBack').click();await expect(page.locator('#pastePeople')).toBeVisible();
+});
+test('DM in bulk button sits in the Donors header and opens the bulk modal',async({page,request})=>{
+ await open(page,request,1280,800);await page.locator('#openDonors').click();
+ await page.locator('#donorBulk').click();await expect(page.locator('.paste-dialog')).toBeVisible();
+ await page.locator('#pastePeople').fill('03001234567 03011234567 03021234567');
+ await expect(page.locator('#pasteNext')).toHaveText('DM all 3');
+ await expect(page.locator('#pastePlan li').nth(2)).toContainText('Donor 3');
+});
+
+test('the batch dialog explains that later rounds start by themselves',async({page,request})=>{
+ await open(page,request,1280,800);await page.locator('#openDonors').click();await page.locator('#donorSendAll').click();
+ await page.locator('#batchLimit').fill('1');
+ const text=await page.locator('#batchAudience').innerText();
+ expect(text).toMatch(/start by themselves|recipients in this batch/);
+ if(/start by themselves/.test(text))await expect(page.locator('#batchRest')).toBeVisible();else await expect(page.locator('#batchRestRow')).toBeHidden();
 });

@@ -503,6 +503,7 @@ addEventListener('load',()=>renderNav(),{once:true});
 /* ---- start ---- */
 setView(localStorage.getItem('givelife-view')==='dm'?'dm':'group');
 seenAuto=Number(localStorage.getItem('givelife-seen-auto')||0);addEventListener('beforeunload',()=>localStorage.setItem('givelife-seen-auto',String(seenAuto)));
+fetch('/health').then(r=>r.json()).then(d=>{if(d.version){const f=document.querySelector('.foot');if(f&&!$('buildTag')){const v=document.createElement('span');v.id='buildTag';v.className='build-tag';v.textContent='build '+d.version;v.title='The version of the app that is running. If it does not match the latest commit, Render is still deploying.';f.insertBefore(v,f.querySelector('.sp'))}}}).catch(()=>{});
 ensureDrafts().then(()=>status('✓ Ready')).catch(()=>{const d=cached('drafts');if(d){applyDrafts(d);status('Offline · showing the last saved message',1)}else status('Could not load',1)});
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false;renderSendMode()}}).catch(()=>{});

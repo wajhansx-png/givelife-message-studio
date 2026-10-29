@@ -871,3 +871,13 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
  .action-rail .prim button,.chips button,.chips .all{min-height:42px;padding:4px 6px;gap:2px}.action-rail .prim .main{min-height:46px}
  .group-section-title{display:none}.send-title{margin:0}.send-title h2{font-size:13px}.last-sent{font-size:11px}
 }
+
+/* Bigger answer box: no feedback row, tighter chrome, more height for the reply. */
+.reply-feedback{display:none!important}
+@media(min-width:900px){
+ .talk .log{padding-block:10px;gap:8px}
+ .talk .log .e.bot{padding:20px 30px;max-width:min(100%,1100px)}
+ .talk .log .e.bot.cols2{width:100%}
+ .talk .log .e.you{margin-bottom:2px}
+ .talk-title{min-height:34px}
+}

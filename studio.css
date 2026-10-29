@@ -1111,3 +1111,43 @@ body::before,body::after{animation:none;will-change:auto}
 .batch-foot{position:sticky;bottom:-1px;display:grid;gap:8px;padding:10px 0 2px;margin-top:2px;background:var(--surface,var(--bg))}
 .batch-dialog #batchRandomRow:not([hidden]){display:grid!important;grid-template-columns:1fr 1fr;gap:8px}
 .batch-dialog .donor-form-actions{margin:0}
+
+/* ===== More room, groups box nearer the centre, Back where the hand already is ===== */
+.donor-normal-tag{display:block;font-size:11px;line-height:1.2;color:var(--mut);margin-top:1px}
+.donor-more>div{min-width:min(280px,calc(100vw - 32px))}
+.donor-normal-box{display:grid;gap:8px;padding:10px;margin:4px 0;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
+.donor-normal-box label{display:grid;gap:6px;font-size:13px;font-weight:650}
+.donor-normal-box input{width:100%;min-height:44px;box-sizing:border-box;font-size:16px;padding:0 12px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);color:var(--ink)}
+.donor-normal-save{min-height:44px;border:1px solid var(--g);border-radius:10px;background:var(--gs);color:var(--gink);font-weight:700;cursor:pointer}
+.donor-normal-hint{font-size:11.5px;line-height:1.4;color:var(--mut)}
+.donor-more>div button{min-height:44px}
+.donor-row .donor-more summary{min-width:36px}
+
+@media(min-width:900px){
+ /* Groups box sits right beside the chat instead of at the far edge. */
+ .app{max-width:1300px}
+ .live{margin-block:2px}
+ /* Donors: roomier rows. */
+ .donor-shell{gap:14px}.donor-head{padding-bottom:16px}.donor-toolbar{margin-block:4px}
+ .donor-row{height:54px;min-height:54px;contain-intrinsic-size:auto 54px}.donor-columns{height:40px}
+ .donor-row .donor-status,.donor-row .donor-dm,.donor-row .donor-amount{min-height:42px;height:42px}
+ .donor-name{font-size:14px}.donor-bottom{padding-top:14px;gap:16px;position:relative}
+ /* Back, centred at the bottom: the mouse is usually in the middle of the screen. */
+ .donor-bottom .donor-back-bottom{display:inline-flex;position:absolute;left:50%;transform:translateX(-50%);min-height:48px;padding:0 28px}
+ .set .thumb-dock,.preview-dock{display:flex;justify-content:center;padding:14px 16px;border-top:1px solid var(--line);background:var(--surface)}
+ .thumb-dock .tool{width:auto;min-width:240px;min-height:48px;font-weight:650;border-radius:12px}
+ .hist .chat-return{justify-content:center}.hist #histMain{display:inline-flex;min-width:240px;min-height:48px;justify-content:center;align-items:center}
+ .bank-pagination{justify-content:center}.bank-back-bottom{display:inline-flex;min-height:48px}
+}
+@media(min-width:900px) and (min-height:860px){
+ .app{padding:16px 24px 14px;gap:16px}body .layout,body.nomsg .layout{gap:20px}
+ .action-rail{padding:20px}.send{gap:14px}.chips{gap:12px;padding-top:18px}.chips button{padding:12px 8px}.prim .big,.prim .ghost{min-height:52px}
+}
+@media(max-width:899px) and (min-height:780px){
+ /* Phone: roomier rows, thumb-height Back already at the bottom. */
+ .donor-shell{gap:10px}.donor-toolbar{margin-block:2px}.donor-bottom{padding-top:10px;gap:8px}
+ .donor-row{height:56px;min-height:56px;contain-intrinsic-size:auto 56px}
+ .donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-amount{min-height:46px;height:46px}
+ .donor-star,.donor-more summary{height:52px;min-height:52px}
+ .chips{gap:10px}
+}

@@ -838,11 +838,34 @@ def greet_text(text,name,gender,normal_amount=0):
  if normal_amount and normal_amount>0:
   try:left=read_left()
   except (OSError,ValueError):left=0
-  if left>0:
-   import math
-   people=math.ceil(left/normal_amount)
-   text=re.sub(r'(?m)^\*_[^\n]*donating[^\n]*_\*$',f'*_Just {people} people donating Rs. {int(normal_amount):,}_*',text,count=1)
+  if left>0:text=normal_donation_line(text,int(normal_amount),left)
  return text
+
+OPTION_LINE=re.compile(r'^(\*_)([^\n]*?(?:people|donors)[^\n]*?Rs\.?\s?([\d,]+)[^\n]*?)(_\*)([^\n]*)$')
+
+def normal_donation_line(text,normal,left):
+ """For a donor with a usual amount: first 'Just N people donating Rs. <usual> will save him', then the shared
+ 2,000 line follows as 'OR … as well'. Any option line with the same amount as the usual one is dropped."""
+ import math
+ lines=text.split('\n');first=None
+ for index,line in enumerate(lines):
+  m=OPTION_LINE.match(line)
+  if m:first=index;break
+ if first is None:return text
+ people=math.ceil(left/normal)
+ mine=f'*_Just {people:,} people donating Rs. {normal:,} will save him_*'
+ out=[];seen_first=False
+ for index,line in enumerate(lines):
+  m=OPTION_LINE.match(line)
+  if not m:out.append(line);continue
+  amount=int(m[3].replace(',','') or 0)
+  if index==first:
+   out.append(mine)
+   if amount!=normal:
+    body=re.sub(r'(?i)^(?:just|only|or)\s+','',m[2]).strip()
+    out.append(f'{m[1]}OR {body}{"" if body.lower().endswith("as well") else " as well"}{m[4]}{m[5]}')
+  elif amount!=normal:out.append(line)
+ return '\n'.join(out)
 
 def dm_campaign(people,gap,image,vary,message,start_after,rest_every,rest_minutes):
  c=CAMPAIGN;c.update(running=True,stop=False,total=len(people),sent=0,failed=0,skipped=0,log=[],current='')

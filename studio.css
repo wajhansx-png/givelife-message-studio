@@ -1472,7 +1472,7 @@ body::before,body::after{display:none!important}
 :root:not([data-theme=light]) body .donor-more>div>button{background:#2f2f2f!important;border:0!important}
 
 /* ChatGPT / Claude feel: assistant text is plain on the page, your message is a soft bubble, the input is a pill. */
-:root:not([data-theme=light]) body .e.bot{background:transparent!important;border:0!important;box-shadow:none!important;padding-left:0!important}
+:root:not([data-theme=light]) body .e.bot{box-shadow:none!important}
 :root:not([data-theme=light]) body .e.you{background:#2f2f2f!important;border-radius:18px!important}
 :root:not([data-theme=light]) body .composer{background:#2f2f2f!important;border:0!important;border-radius:28px!important;box-shadow:none!important}
 :root:not([data-theme=light]) body .composer:focus-within{box-shadow:0 0 0 1px #ffffff33!important;border:0!important}
@@ -1532,7 +1532,6 @@ body::before,body::after{display:none!important}
 :root:not([data-theme=light]) body .donor-page .donor-tabs .tab-count{background:transparent!important;color:#8e8e8e!important;padding:0 2px}
 :root:not([data-theme=light]) body .donor-page .donor-tabs button[aria-selected=true] .tab-count{background:transparent!important;color:#ececec!important}
 /* 7) Chat column reads like a document: roomy, centred, 16px */
-:root:not([data-theme=light]) body .e.bot{font-size:16px!important;line-height:1.7!important}
 :root:not([data-theme=light]) body .talk-title{background:transparent!important;border:0!important;color:#8e8e8e!important}
 /* 8) Live bar quieter */
 :root:not([data-theme=light]) body .live{background:#171717!important}
@@ -1557,8 +1556,7 @@ body::before,body::after{display:none!important}
  :root:not([data-theme=light]) body .action-rail .chips>button:not(#_x),:root:not([data-theme=light]) body .action-rail .prim>button:not(.main):not(#_x),:root:not([data-theme=light]) body .action-rail #sendAll:not(#_x){background:transparent!important}
  :root:not([data-theme=light]) body .action-rail .chips>button:not(#_x):hover,:root:not([data-theme=light]) body .action-rail .prim>button:not(.main):not(#_x):hover,:root:not([data-theme=light]) body .action-rail #sendAll:not(#_x):hover{background:#2a2a2a!important}
 }
-:root:not([data-theme=light]) body .action-rail .send-title{padding:8px 12px 0}
-:root:not([data-theme=light]) body .action-rail .send-title h2{font-size:15px}
+@media(min-height:840px){:root:not([data-theme=light]) body .action-rail .send-title{padding:8px 12px 0}:root:not([data-theme=light]) body .action-rail .send-title h2{font-size:15px}}
 :root:not([data-theme=light]) body .e.bot .message-copy{opacity:0;transition:opacity .15s}
 :root:not([data-theme=light]) body .e.bot:hover .message-copy{opacity:1}
 
@@ -1580,5 +1578,12 @@ body::before,body::after{display:none!important}
 :root[data-theme=light] .e.you{background:#f4f4f4!important;border:0!important;border-radius:18px!important}
 :root[data-theme=light] .composer{background:#f4f4f4!important;border:0!important;border-radius:28px!important;box-shadow:none!important}
 :root[data-theme=light] .e.bot .rn{background:#ececec!important;color:#0d0d0d!important}
-:root:not([data-theme=light]) body .action-rail .group-label{min-width:0;overflow:hidden;text-overflow:ellipsis}
-:root:not([data-theme=light]) body .action-rail .last-sent{flex:none;margin-left:10px!important;max-width:45%;overflow:hidden;text-overflow:ellipsis}
+@media(min-width:900px) and (min-height:840px){:root:not([data-theme=light]) body .action-rail .group-label{min-width:0;overflow:hidden;text-overflow:ellipsis}:root:not([data-theme=light]) body .action-rail .last-sent{flex:none;margin-left:10px!important;max-width:45%;overflow:hidden;text-overflow:ellipsis}}
+/* The answer keeps its own box (owner asked for it to stand out from the page): subtle, ChatGPT-calm. */
+:root:not([data-theme=light]) body .e.bot{background:#262626!important;border:1px solid #333333!important}
+:root[data-theme=light] .e.bot{background:#f7f7f7!important;border:1px solid #ececec!important}
+@media(min-width:900px) and (max-height:839px){:root:not([data-theme=light]) body .action-rail{border:0!important}:root:not([data-theme=light]) body .action-rail .chips{gap:6px!important;padding-top:8px!important}:root:not([data-theme=light]) body .action-rail .send{gap:6px!important}}
+@media(min-width:900px) and (max-height:839px){:root:not([data-theme=light]) body .action-rail :is(.chips,.prim)>button{min-height:0!important;padding:6px 8px!important;line-height:1.25!important}:root:not([data-theme=light]) body .action-rail .chips{padding-top:4px!important}}
+@media(min-width:900px) and (max-height:839px){:root:not([data-theme=light]) body .action-rail :is(.chips,.prim)>button *{line-height:1.2!important;margin:0!important}:root:not([data-theme=light]) body .action-rail :is(.chips,.prim)>button{gap:1px!important;padding:6px 6px!important;letter-spacing:-.01em}}
+@media(min-width:900px) and (max-height:839px){:root:not([data-theme=light]) body .action-rail .send-title span{display:none!important}:root:not([data-theme=light]) body .action-rail .send-title{margin:0!important;min-height:0!important}:root:not([data-theme=light]) body .action-rail .group-section-title{padding-top:2px!important;margin:0!important}}
+@media(min-width:900px) and (max-height:650px){:root:not([data-theme=light]) body .action-rail .send-title h2{font-size:13px!important;line-height:1.2!important;margin:0!important}:root:not([data-theme=light]) body .action-rail :is(.chips,.prim)>button{padding:4px 6px!important}:root:not([data-theme=light]) body .action-rail{padding-block:8px!important}:root:not([data-theme=light]) body .action-rail .chips{gap:4px!important}}

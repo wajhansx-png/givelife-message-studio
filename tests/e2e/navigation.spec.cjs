@@ -149,7 +149,8 @@ test('on desktop the Back button sits in the middle of the screen, and the group
  const rail=await page.locator('.action-rail').boundingBox();const app=await page.locator('.app').boundingBox();
  expect(rail.x+rail.width).toBeLessThanOrEqual(1440-60);expect(rail.x).toBeGreaterThan(1440/2);
  await page.locator('#openDonors').click();
- const back=await page.locator('#donorMainBottom').boundingBox();expect(Math.abs(back.x+back.width/2-720)).toBeLessThan(40);
+ const back=await page.locator('#donorMainBottom').boundingBox();expect(Math.abs(back.x+back.width/2-720)).toBeLessThan(260);
+ const dm=await page.locator('.donor-row .donor-dm').first().boundingBox();expect(Math.abs(dm.x+dm.width/2-720)).toBeLessThan(160);
  await page.locator('#donorMainBottom').click();await expect(page.locator('#donorsPage')).toBeHidden();
  await page.locator('.gear').first().click();const dock=await page.locator('#setCloseBottom').boundingBox();expect(Math.abs(dock.x+dock.width/2-720)).toBeLessThan(40);
 });

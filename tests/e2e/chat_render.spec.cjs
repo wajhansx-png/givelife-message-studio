@@ -39,6 +39,7 @@ test('a new assistant answer is boxed and fitted from its first painted frame',a
 
 for(const [width,height] of [[1280,720],[1024,600],[390,700],[320,568]])test(`copy full original chat messages at ${width}x${height}`,async({page,context})=>{
  await context.grantPermissions(['clipboard-read','clipboard-write']);await open(page,width,height);
+ if(width>=900){const gap=await page.locator('#log .e.bot').evaluate(el=>Math.min(...[...el.querySelectorAll('.reply-line')].map(line=>line.getBoundingClientRect().top))-el.querySelector('.message-copy').getBoundingClientRect().bottom);expect(gap,'Copy must have its own space above every reply column').toBeGreaterThanOrEqual(0)}
  await page.evaluate(()=>{const write=navigator.clipboard.writeText.bind(navigator.clipboard);navigator.clipboard.writeText=text=>{window.lastCopiedSource=text;return write(text)}});
  if(width<900)await page.locator('#chatOpen').click();else await page.locator('#chatExpand').click();
  const log=page.locator('#histLog');

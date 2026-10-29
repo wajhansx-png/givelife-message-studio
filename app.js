@@ -106,7 +106,7 @@ function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');if(!
 /* [font px, columns, tightness]. Short answers get a big font. Long ones use the width of a wide screen
    (two columns) before the text is ever made small, and scrolling is the very last resort. */
 const FIT_STEPS=[[17,1,0],[16,1,0],[15,1,0],[14,1,0],[13,1,0],[12,1,0],[12,1,1],[11.5,1,1],[11,1,2],[10.5,1,2],[10,1,2]];
-const FIT_STEPS_WIDE=[[18,1,0],[17,1,0],[16,1,0],[15,1,0],[18,2,0],[17,2,0],[16,2,0],[15,2,0],[14,2,0],[14,2,1],[13,2,1],[13,2,2],[13,3,1],[12.5,3,2],[12,3,2],[11.5,3,2],[11,3,2]];
+const FIT_STEPS_WIDE=[[18,1,0],[17,1,0],[16,1,0],[15,1,0],[18,2,0],[17,2,0],[16,2,0],[15,2,0],[14,2,0],[15,3,0],[14,3,0],[14,2,1],[13.5,3,1],[13,2,1],[13,3,1],[13,2,2],[12.5,3,2],[12.5,2,2],[12,3,2],[12,2,2],[11.5,3,2],[11.5,2,2],[11,3,2],[11,2,2],[10.5,2,2]];
 let fitGuard=false;
 function fitConversation(){
  for(const id of ['log','histLog']){const log=$(id);if(!log.clientHeight)continue;const reply=[...log.querySelectorAll('.e.bot:not(.dots)')].at(-1);if(!reply)continue;
@@ -116,7 +116,7 @@ function fitConversation(){
   const available=Math.max(80,log.clientHeight-padding-reserve);
   /* A long reply gets smaller and tighter, step by step, until all of it fits on this screen without scrolling. */
   const cs=getComputedStyle(log),room=log.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),wide=log.clientWidth>=760,biggest=log.clientWidth<500?15:18;
-  for(const [size,cols,tight] of (wide?FIT_STEPS_WIDE:FIT_STEPS)){if(size>biggest||cols>2&&room<960)continue;reply.style.fontSize=size+'px';reply.classList.toggle('cols3',cols>2);reply.classList.toggle('cols2',cols>1);reply.classList.toggle('tight',tight>=1);reply.classList.toggle('tighter',tight>=2);if(reply.scrollHeight<=available)break}
+  for(const [size,cols,tight] of (wide?FIT_STEPS_WIDE:FIT_STEPS)){if(size>biggest||cols>2&&room<780)continue;reply.style.fontSize=size+'px';reply.classList.toggle('cols3',cols>2);reply.classList.toggle('cols2',cols>1);reply.classList.toggle('tight',tight>=1);reply.classList.toggle('tighter',tight>=2);if(reply.scrollHeight<=available)break}
   /* A long answer takes the whole area: my own message hides and the action buttons move beside the box. */
   if(id==='log'&&!fitGuard){const talk=log.closest('.talk'),long=reply.classList.contains('cols2')||reply.classList.contains('cols3')||reply.classList.contains('tight');
    if(talk&&talk.classList.contains('long-reply')!==long&&matchMedia('(min-width:900px)').matches){talk.classList.toggle('long-reply',long);fitGuard=true;try{fitConversation()}finally{fitGuard=false}return}}

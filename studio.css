@@ -955,3 +955,9 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
 .e.bot .r-num .rt,.e.bot .r-num .rd{grid-column:2;display:block}
 .e.bot .r-num .rt{color:var(--title)}
 .e.bot .r-num .rd{color:var(--detail);margin-top:.08em}
+/* Long answer: the title row folds into the corner so the answer gets its height. */
+@media(min-width:900px){
+ .talk.long-reply .talk-title{position:absolute;top:6px;right:14px;left:auto;min-height:0;padding:0;border:0;background:none;z-index:3;font-size:0}
+ .talk.long-reply .talk-title button{font-size:12px;min-height:28px}
+ .talk.long-reply .log{padding-top:30px}
+}

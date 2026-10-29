@@ -1244,3 +1244,31 @@ body .connect-badge,body button#whatsappConnection{border:1px solid var(--ctl)!i
  html body .app{max-width:1180px;margin-inline:auto}
 }
 .livebar{border:0!important}
+
+/* ===== Less eye and hand travel (Fitts's law): the things clicked most sit near the centre ===== */
+@media(min-width:900px){
+ html body .donor-shell{max-width:1100px;margin-inline:auto}
+ /* Name then DM right beside it; the columns are centred, so DM lands near the middle of the screen. */
+ .donor-page .donor-row,.donor-page .donor-columns{grid-template-columns:36px minmax(160px,320px) 104px 124px 100px 40px!important;justify-content:center;column-gap:10px}
+ .donor-page .donor-row:not([data-donated=true]) .donor-amount{display:block}
+ /* Bottom bar: one centred group instead of controls pinned to both edges. */
+ .donor-page .donor-bottom{display:flex;justify-content:center;align-items:center;gap:10px;position:static}
+ .donor-page .donor-bottom .donor-back-bottom{position:static;transform:none;order:3}
+ .donor-page .donor-bottom .donor-gap{order:0}.donor-page .donor-bottom .send-important{order:1}.donor-page .donor-bottom .send-donors{order:2}
+ .donor-page .donor-bottom .donor-message-info{display:none}
+ /* Header actions next to the title, not at the far edge. */
+ .donor-page .donor-head{justify-content:center}
+}
+
+/* Modern star icon (rounded outline / solid), instead of the old text glyphs ★ ☆ */
+.donor-star{font-size:0!important;display:inline-grid;place-items:center;color:var(--mut)}
+.donor-star::before{content:"";width:18px;height:18px;background:currentColor;
+ -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M12 3.6l2.5 5.1 5.6.8-4.05 3.95.96 5.58L12 16.4l-5.01 2.63.96-5.58L3.9 9.5l5.6-.8z'/%3E%3C/svg%3E") center/contain no-repeat;
+ mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M12 3.6l2.5 5.1 5.6.8-4.05 3.95.96 5.58L12 16.4l-5.01 2.63.96-5.58L3.9 9.5l5.6-.8z'/%3E%3C/svg%3E") center/contain no-repeat}
+.donor-star[aria-pressed=true]{color:#f5b301}
+.donor-star[aria-pressed=true]::before{
+ -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black' stroke='black' stroke-width='1.6' stroke-linejoin='round'%3E%3Cpath d='M12 3.6l2.5 5.1 5.6.8-4.05 3.95.96 5.58L12 16.4l-5.01 2.63.96-5.58L3.9 9.5l5.6-.8z'/%3E%3C/svg%3E") center/contain no-repeat;
+ mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black' stroke='black' stroke-width='1.6' stroke-linejoin='round'%3E%3Cpath d='M12 3.6l2.5 5.1 5.6.8-4.05 3.95.96 5.58L12 16.4l-5.01 2.63.96-5.58L3.9 9.5l5.6-.8z'/%3E%3C/svg%3E") center/contain no-repeat}
+.donor-star:hover{color:#f5b301}
+.donor-star{background:transparent!important;border-color:transparent!important}
+.donor-star:hover,.donor-star:focus-visible{background:var(--surface2)!important;border-color:var(--ctl)!important}

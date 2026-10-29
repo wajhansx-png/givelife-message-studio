@@ -1032,3 +1032,8 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
  .hist .e.bot .r-blank{height:.5em!important;min-height:.5em!important}
 }
 .build-tag{margin-left:12px;font-size:11px;color:var(--faint);opacity:.8;font-variant-numeric:tabular-nums}
+
+@media(min-width:900px){
+ .talk.long-reply:has(.next-actions:not([hidden])) .log{padding-left:24px;padding-right:128px}
+ .talk.long-reply .next-actions{width:104px;right:12px}
+}

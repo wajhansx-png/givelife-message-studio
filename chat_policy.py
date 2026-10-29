@@ -54,15 +54,21 @@ def literal_text_to_person(text):
  return plan.get('kind')=='text' and bool(plan.get('to')) and not manual_commands.group(plan['to']) and len(words)<=120 and not re.search(r'(?i)\b(message|caption|dm|poster|wording|version|hook|appeal|emotional|stronger|shorter|longer|draft|format|paragraph)\b',words)
 
 APP_WORDS=re.compile(r"(?i)\b(donor|donors|dm|dms|group|groups|send|sent|post|posts|message|messages|caption|poster|left|came|donat\w*|schedul\w*|auto|autopilot|whatsapp|campaign|yousuf|givelife|main|fiverr|upwork|uet|freelance|hold|resume|stop|pause|batch|important|wording|draft|version|rule|rules|gap|pace|status|report|rs|pkr|amount|balance|money|number|numbers|contact|reply|test)\b|\d")
+QUESTION=re.compile(r"(?i)^\s*(?:what|why|how|when|where|who|which|is|are|was|were|do|does|did|can|could|should|would|will|tell me|explain|define|meaning of)\b|\?\s*$")
 def off_topic(text):
- """A message that is not about the foundation's work (no app words, no numbers): small talk or general knowledge."""
- return not APP_WORDS.search(owner_text(text))
+ """Clearly a general question (health, trivia, jokes): question-shaped, with no app words and no numbers.
+ Short follow-ups such as "give me suggestions" are about the work and are never shortened."""
+ t=owner_text(text)
+ return bool(QUESTION.search(t)) and not APP_WORDS.search(t)
+def about_the_work(reply):
+ """True when the answer itself talks about the campaign: then it must never be shortened."""
+ return bool(APP_WORDS.search(str(reply)))
 def brief(reply,limit=320):
  """Off-topic answers stay to one or two short sentences and never tack on campaign status."""
  text=re.split(r"(?im)^\s*(?:meanwhile|by the way|btw|also,? your campaign|your campaign)\b",str(reply))[0].strip()
  text=re.sub(r"(?m)^\s*(?:[-*•]|\d+[.)])\s+","",text)
  text=re.sub(r"\*\*|__|\*","",text)
- sentences=re.findall(r"[^.!?\n]+[.!?]?",re.sub(r"\s*\n+\s*"," ",text))
+ sentences=re.split(r"(?<=[.!?])\s+(?=[A-Z\"'(])",re.sub(r"\s*\n+\s*"," ",text))
  out=""
  for s_ in sentences:
   s_=s_.strip()

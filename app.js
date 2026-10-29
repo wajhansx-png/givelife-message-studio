@@ -554,3 +554,5 @@ pollAuto();setInterval(pollAuto,5000);pollCamp();refreshNextActions();
 /* Most-used screens, one click from the groups box (near the mouse on desktop). */
 document.getElementById('railPreview')?.addEventListener('click',()=>document.getElementById('desktopPreview')?.click());
 document.getElementById('railDonors')?.addEventListener('click',()=>document.getElementById('openDonors')?.click());
+/* Desktop: Settings sits in the centred footer beside Keyboard shortcuts instead of the far corner. */
+(()=>{const gear=document.getElementById('gear'),foot=document.querySelector('.foot'),bar=document.querySelector('.brandbar'),wide=matchMedia('(min-width:900px)');if(!gear||!foot||!bar)return;const place=()=>{(wide.matches?foot:bar).append(gear)};place();wide.addEventListener('change',place)})();

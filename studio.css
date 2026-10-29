@@ -1272,3 +1272,17 @@ body .connect-badge,body button#whatsappConnection{border:1px solid var(--ctl)!i
 .donor-star:hover{color:#f5b301}
 .donor-star{background:transparent!important;border-color:transparent!important}
 .donor-star:hover,.donor-star:focus-visible{background:var(--surface2)!important;border-color:var(--ctl)!important}
+
+/* ===== Desktop: bars are centred clusters, not controls pinned to the far edges (less mouse and eye travel) ===== */
+@media(min-width:900px){
+ .brandbar{justify-content:center;gap:12px}
+ .brandbar>.sp{display:none}
+ .brandbar .brand{margin-right:12px}
+ .live{max-width:820px;margin-inline:auto;width:100%}
+ .foot{justify-content:center;gap:16px}.foot>.sp{display:none}
+ .donor-page .donor-head{display:flex!important;flex-wrap:nowrap;justify-content:center;align-items:center;gap:10px}
+ .donor-page .donor-head .donor-title{margin-right:14px}
+ /* DM column starts under the "Donated" tab: name column takes the first third of the row. */
+ .donor-page .donor-row,.donor-page .donor-columns{grid-template-columns:36px calc(33.3% - 56px) 104px 124px 100px 40px!important;justify-content:start!important}
+}
+@media(min-width:900px){.foot .gear{position:static;right:auto;bottom:auto}}

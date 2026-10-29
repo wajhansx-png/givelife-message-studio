@@ -1290,7 +1290,8 @@ body .connect-badge,body button#whatsappConnection{border:1px solid var(--ctl)!i
 
 /* ===== UX pass: readable minimum type, thumb-sized targets, one primary colour per area, colour = meaning ===== */
 /* 1. Nothing readable below 12px (meta text was 11px). */
-small,.last-sent,.message-copy,.donor-columns,.build-tag,.keys,.brand small,.donor-sub,.batch-hint,.donor-normal-tag,.donor-normal-hint,.group-section-title{font-size:max(12px,1em)!important}
+small,.last-sent,.message-copy,.donor-columns,.build-tag,.keys,.brand small,.donor-sub,.batch-hint,.donor-normal-tag,.donor-normal-hint{font-size:12px!important}
+.group-section-title{font-size:12px!important}
 .last-sent,.message-copy,.donor-columns,.keys,.build-tag{font-size:12px!important}
 /* 2. Phone: every tap target at least 44px (Apple HIG / WCAG 2.5.5). */
 @media(max-width:899px){

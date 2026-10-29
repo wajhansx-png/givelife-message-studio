@@ -11,7 +11,10 @@ import assistant
 import dm_composer
 import dm_templates
 
-VERSION = 'dm-variants-2026-10-29'
+VERSION = 'dm-variants-2026-10-30'
+
+# Each version stays about as long as the message the owner gave (a few characters either way).
+LENGTH_TOLERANCE = 0.08
 
 SYSTEM = """You are a careful fundraising copy editor for GiveLife Foundation.
 You rewrite one WhatsApp direct message into new versions with the same concept,
@@ -32,6 +35,11 @@ def clean_source(source):
     while lines and instruction.search(lines[-1]) and len(lines[-1]) < 300:
         lines.pop()
     return '\n'.join(lines).strip()
+
+
+def length_range(source):
+    n = len(str(source or '').strip())
+    return int(n * (1 - LENGTH_TOLERANCE)), int(n * (1 + LENGTH_TOLERANCE)) + 1
 
 
 def _shape(text):
@@ -67,6 +75,9 @@ def validate(source, text, existing=()):
         return 'too long'
     if text == source:
         return 'same as the source'
+    low, high = length_range(source)
+    if not low <= len(text) <= high:
+        return f'length {len(text)} is outside {low}-{high} characters (the source has {len(source)})'
     if text in existing:
         return 'duplicate wording'
     if _shape(text) != _shape(source):
@@ -139,12 +150,20 @@ def _prompt(source, count, avoid):
                 '\nThese versions already exist. Do not reuse their openings or wording:\n'
                 + '\n'.join('- ' + opening for opening in openings)
             )
+    low, high = length_range(source)
+    size = len(source)
     return f"""Rewrite the source message below into exactly {count} new versions.
 
 The source has {len(lines)} lines and {blank} blank lines. Keep that exact line
 structure. Keep every blank line in the same place.
 
 NON-NEGOTIABLE:
+- Length: every version must be between {low} and {high} characters in total
+  (the source has {size}). Count it. Do not make versions shorter or longer.
+- Strong urgency and a sense of danger in every version, with a different angle
+  each time (time passing, the condition spreading, the family waiting). Use only
+  the facts already in the source. Never write "will die" or an invented deadline,
+  never the word DANGER, and never a begging closing line.
 - Keep the same meaning, facts, paragraph order and length of the appeal.
 - Change only the wording of the variable sentences. Do not change the concept.
 - Keep every emoji and every *, _ and *_ WhatsApp formatting marker in the same
@@ -182,7 +201,7 @@ def generate(source, count=10, avoid=None):
     if key is None:
         raise ValueError('The AI is not connected, so I cannot reword a custom message. The built-in structured DM still works.')
     last_error = ''
-    for _ in range(3):
+    for _ in range(4):
         need = count - len(out)
         if need <= 0:
             break

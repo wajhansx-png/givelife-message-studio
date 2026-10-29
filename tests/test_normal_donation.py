@@ -67,3 +67,31 @@ class ShortDonorPhrases(unittest.TestCase):
   self.say('ali normal 1k');self.assertEqual(self.row('Ali Khan')['normal_amount'],1000)
  def test_unknown_names_and_commands_fall_through(self):
   for text in ('zed important','send ali','dm ali','who donated','all important','nobody donated','what donated'):self.assertIsNone(self.say(text),text)
+
+class UsualWayOfSending(unittest.TestCase):
+ def setUp(self):
+  from test_donor_hub import IntegrationTests
+  from unittest.mock import patch
+  self.fixture=IntegrationTests();self.fixture.setUp();self.reg=self.fixture.app.donors()
+  for i in range(45):
+   d=self.reg.book.add('Donor %02d'%i,'0300%07d'%(1000000+i))['donor'];self.reg.book.update(d['id'],important=True)
+  self.thread=patch('donor_delivery.threading.Thread.start');self.thread.start()
+ def tearDown(self):self.thread.stop();self.fixture.tearDown()
+ def last(self):return self.reg.jobs._load()['jobs'][-1]
+ def test_first_time_uses_standard_batches_of_20(self):
+  out=self.reg.command('send dms','first');j=self.last();self.assertEqual((j['total'],j['chunk'],j['gap_seconds']),(45,20,240));self.assertIn('standard settings',out['reply'])
+ def test_it_learns_the_last_confirmed_settings_and_reuses_them_from_one_short_ask(self):
+  self.reg.start_batch(scope='important',chunk=10,limit=45,gap_seconds=180,rests=[1800,3600],jitter={'min':-5,'max':12},request_id='manual-config')
+  self.reg.jobs.active=None;data=self.reg.jobs._load();data['jobs'][-1].update(state='Completed');self.reg.jobs._save(data)
+  self.assertEqual(self.reg.prefs()['chunk'],10)
+  out=self.reg.command('send dms','second');j=self.last()
+  self.assertEqual((j['chunk'],j['gap_seconds'],j.get('rests'),j.get('jitter')),(10,180.0,[1800.0,3600.0],{'min':-5.0,'max':12.0}));self.assertIn('your usual way',out['reply'])
+ def test_people_already_contacted_are_skipped_unless_asked_again(self):
+  ids=[r['id'] for r in self.reg.book.recipients('important')]
+  for x in ids[:5]:self.reg.book.delivery(x,'Sent',50.0)
+  self.reg.command('start dms','a');self.assertEqual(self.last()['total'],40)
+  self.reg.jobs.active=None;data=self.reg.jobs._load();data['jobs'][-1].update(state='Completed');self.reg.jobs._save(data)
+  self.reg.command('dm important again','b');self.assertEqual(self.last()['total'],45)
+ def test_other_sentences_are_not_taken_for_the_short_ask(self):
+  for text in ('send dms tomorrow at 5','dont send dms','send hello to wajdan'):
+   before=len(self.reg.jobs._load().get('jobs',[]));self.reg.command(text,'x'+text);self.assertEqual(len(self.reg.jobs._load().get('jobs',[])),before,text)

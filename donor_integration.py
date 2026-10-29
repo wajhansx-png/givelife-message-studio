@@ -24,10 +24,33 @@ class DonorIntegration:
         self.paused=False
         if self.app.STORE and was_paused:self.app.STORE.put('donor_dm_pause',False)
         return 'Personal DM sending is available again. Group posting is unchanged.'
+    PREFS_KEY='donor_batch_prefs'
+    def prefs(self):
+        """How the owner usually runs a donor batch, learned from his last confirmed one."""
+        saved=self.app.STORE.get(self.PREFS_KEY) if self.app.STORE else None
+        return saved if isinstance(saved,dict) else {}
+    def _learn(self,body):
+        if not self.app.STORE or not body.get('chunk'):return
+        keep={k:body[k] for k in ('gap_seconds','chunk','rests','jitter','poster') if body.get(k) is not None}
+        keep['skip_contacted']=body.get('skip_contacted',True)
+        self.app.STORE.put(self.PREFS_KEY,keep)
     def start_batch(self,**body):
         self.resume_personal();body.setdefault('gap_seconds',240)
         if not body.get('chunk'):body.setdefault('limit',20)
-        return self.jobs.start(**body)
+        result=self.jobs.start(**body)
+        self._learn(body)
+        return result
+    def usual_batch(self,text,request_id,scope='important'):
+        """One short ask ("send dms") runs the whole Important list the way he usually does it. No dialog."""
+        saved=self.prefs();again=bool(re.search(r'(?i)\b(again|everyone|everybody|all of them)\b',text))
+        plan=dict(scope=scope,chunk=saved.get('chunk') or 20,gap_seconds=saved.get('gap_seconds') or 240,poster=saved.get('poster',True),skip_contacted=False if again else saved.get('skip_contacted',True))
+        for key in ('rests','jitter'):
+            if saved.get(key):plan[key]=saved[key]
+        result=self.start_batch(**plan,request_id=request_id)
+        pause=', '.join(f'{x/60:g}' for x in (plan.get('rests') or [1200]))
+        how=f"Using your usual way: {plan['chunk']} per batch, {plan['gap_seconds']/60:g} min between DMs, {pause} min pause between batches"+(', random gaps' if plan.get('jitter') else '')+('. ' if saved else ' (first time, standard settings). ')
+        result['reply']=how+result['reply']+' You do not need to do anything else. Say stop to pause; say \"dm important again\" to include people already contacted.'
+        return result
     def _start_pasted_batch(self,**body):
         if self.app.CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it before starting a donor batch.')
         return self.start_batch(**body)
@@ -166,6 +189,9 @@ class DonorIntegration:
         control=manual_commands.dm_control(t)
         if control=='stop_dms':return self.pause_personal()
         if control=='resume_dms':return {'reply':self.resume_personal()}
+        if re.fullmatch(r'(?i)(?:please\s+)?(?:(?:send|start|run|do)\s+(?:the\s+|my\s+)?(?:dms?|dm batch(?:es)?|batches|donor dms?)|dm\s+(?:the\s+)?(?:important|them)(?:\s+donors?)?)(?:\s+(?:to\s+)?(?:important(?:\s+donors?)?|them|now|please|again|everyone))*[.!]*',t):
+            if self.app.CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it before starting a donor batch.')
+            return self.usual_batch(t,request_id)
         send=send_request(t)
         if send and chat_policy.intent(raw)['send']:
             if self.app.CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it before starting a donor batch.')

@@ -270,10 +270,11 @@ const GKEY=w=>({main:'main',givelife:'main',community:'community','upwork commun
 
 /* ---- pictures in the chat ---- */
 let attached=null;
-function clearAttachment(){attached=null;$('att').hidden=true}
+function clearAttachment(){attached=null;$('att').hidden=true;$('attImg').hidden=false}
 $('attX').onclick=clearAttachment;
 document.querySelectorAll('[data-clip]').forEach(b=>b.onclick=()=>$('file').click());
 $('file').onchange=async()=>{const f=$('file').files[0];$('file').value='';if(!f)return;
+ if(f.type.startsWith('video/')){try{if(f.size>15000000||!/mp4|quicktime/.test(f.type))throw Error('Use an MP4 video under 15 MB.');const data=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>no(Error('Could not read the video.'));r.readAsDataURL(f)});const r=await post('/upload-image',{data,use:'attachment'}),d=await r.json();if(!r.ok)throw Error(d.error);attached={id:d.id,data,url:'',video:true};$('attImg').hidden=true;$('att').querySelector('span').textContent='Video attached. It will be sent with the next DMs and group messages instead of the poster.';$('att').hidden=false;say('app','Video attached. Paste numbers to send it, or say "make it the poster".')}catch(e){say('app','Could not attach: '+e.message,1)}return}
  const img=await createImageBitmap(f),k=Math.min(1,1600/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
  const data=c.toDataURL('image/jpeg',.85);try{const r=await post('/upload-image',{data,use:'attachment'}),d=await r.json();if(!r.ok)throw Error(d.error);
   attached={id:d.id,data,url:data};$('attImg').src=data;$('att').hidden=false;say('app','Picture attached. Paste numbers to send it, or say "make it the poster".')}catch(e){say('app','Could not attach: '+e.message,1)}};

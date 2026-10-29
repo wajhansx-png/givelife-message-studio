@@ -46,7 +46,7 @@ class WorkflowTests(unittest.TestCase):
    d=registry.book.add('Donor '+str(i),'92300'+str(1000000+i))['donor'];registry.book.update(d['id'],important=True)
   with patch('donor_delivery.threading.Thread'):
    result=registry.command('send 20 dms to important donors with 3 minutes gap',request_id='chat-rounds')
-  job=registry.jobs._load()['jobs'][-1];self.assertEqual((job['total'],job['chunk'],job['gap_seconds']),(45,20,180));self.assertIn('automatically',result['reply'])
+  job=registry.jobs._load()['jobs'][-1];self.assertEqual((job['total'],job['chunk'],job['gap_seconds']),(45,20,180));self.assertIn('by itself',result['reply'])
  def test_bare_stop_stops_a_running_donor_batch_and_does_nothing_otherwise(self):
   registry=self.app.donors();d=registry.book.add('Ali','923001234567')['donor']
   self.assertIsNone(registry.command('stop',request_id='nothing-running'))

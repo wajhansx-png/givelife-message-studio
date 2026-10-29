@@ -53,18 +53,20 @@ test('a long assistant reply stays readable: big text, starts at its first line,
   expect((await measure()).size,`${w}x${h} font`).toBeGreaterThanOrEqual(12.5);
  }
 });
-test('DM sent stays marked, the donor stays in Important and sinks so the next person is on top',async({page,request})=>{
+test('a contacted donor is hidden from Important, can be shown, and still shows DM sent at the bottom',async({page,request})=>{
  await open(page,request,1280,800);await page.locator('#openDonors').click();await page.locator('.donor-tabs [data-tab=important]').click();
  const rows=page.locator('.donor-row');const before=await rows.count();expect(before).toBeGreaterThan(1);
- const names=await rows.locator('.donor-name').allInnerTexts().catch(()=>null);
  const firstId=await rows.first().getAttribute('data-donor-id');const secondId=await rows.nth(1).getAttribute('data-donor-id');
+ await expect(page.locator('#donorHideRow')).toBeHidden();
  await rows.first().locator('.donor-dm').click();
- const sent=page.locator(`.donor-row[data-donor-id="${firstId}"]`);await expect(sent.locator('.donor-dm')).toContainText('DM sent');
- await expect(rows.first()).toHaveAttribute('data-donor-id',secondId);
- await expect(rows.last()).toHaveAttribute('data-donor-id',firstId);
- expect(await rows.count()).toBe(before);await expect(page.locator('.donor-tabs [data-tab=important]')).toHaveAttribute('aria-selected','true');
+ await expect(rows).toHaveCount(before-1);await expect(rows.first()).toHaveAttribute('data-donor-id',secondId);
+ await expect(page.locator('#donorHideSent')).toContainText('1 contacted hidden');
+ await page.locator('#donorHideSent').click();await expect(rows).toHaveCount(before);
+ const sent=page.locator(`.donor-row[data-donor-id="${firstId}"]`);await expect(sent.locator('.donor-dm')).toContainText('DM sent');await expect(rows.last()).toHaveAttribute('data-donor-id',firstId);
+ await expect(page.locator('.donor-tabs [data-tab=important]')).toHaveAttribute('aria-selected','true');
  await sent.locator('.donor-dm').click();await expect(sent.locator('.donor-dm')).toContainText(/×\d/);
- await page.reload();await expect(page.locator(`.donor-row[data-donor-id="${firstId}"] .donor-dm`)).toContainText(/DM sent|×\d/);
+ await page.reload();await expect(page.locator('#donorHideSent')).toContainText('Showing contacted');
+ await page.locator('#donorHideSent').click();await expect(page.locator(`.donor-row[data-donor-id="${firstId}"]`)).toHaveCount(0);
 });
 test('bulk paste shows when every number will be sent before anything starts',async({page,request})=>{
  await open(page,request,390,844);await page.locator('[data-view-button=dm]').click();await page.locator('#sendMoreDonors').click();
@@ -89,12 +91,26 @@ test('DM in bulk button sits in the Donors header and opens the bulk modal',asyn
  await expect(page.locator('#pastePlan li').nth(2)).toContainText('Donor 3');
 });
 
-test('the batch dialog explains that later rounds start by themselves',async({page,request})=>{
- await open(page,request,1280,800);await page.locator('#openDonors').click();await page.locator('#donorSendAll').click();
- await page.locator('#batchLimit').fill('1');
- const text=await page.locator('#batchAudience').innerText();
- expect(text).toMatch(/start by themselves|recipients in this batch/);
- if(/start by themselves/.test(text))await expect(page.locator('#batchRest')).toBeVisible();else await expect(page.locator('#batchRestRow')).toBeHidden();
+test('the batch dialog plans batches of 20, pauses, per-batch pauses and random gaps',async({page,request})=>{
+ await open(page,request,390,844);await page.locator('#openDonors').click();await page.locator('#donorSendAll').click();
+ await expect(page.locator('#batchCount')).toHaveValue(/\d+/);await page.locator('#batchCount').fill('100');
+ await expect(page.locator('#batchPlan')).toContainText('100 people · 5 batches of up to 20');
+ await page.locator('#batchPause').selectOption('custom');await expect(page.locator('#batchPauseCustom')).toBeVisible();await page.locator('#batchPauseCustom').fill('45');
+ await expect(page.locator('#batchPlan')).toContainText('5 batches');
+ await page.locator('.batch-more summary').click();await page.locator('#batchEach').fill('20, 30, 60');
+ await expect(page.locator('#batchRandomRow')).toBeHidden();await page.locator('#batchRandom').check();await expect(page.locator('#batchJMin')).toBeVisible();
+ await page.locator('#batchEach').fill('0');await expect(page.locator('#batchPlan')).toContainText('Check the pause');
+ const box=await page.locator('.batch-dialog').boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(391);
+});
+test('starting sends one confirmed request with batches, pauses and random gap',async({page,request})=>{
+ await open(page,request,390,844);let posted=null;
+ await page.route('**/donor-delivery',async r=>{if(r.request().method()==='POST'){posted=r.request().postDataJSON();return r.fulfill({json:{reply:'Started.',job:{state:'Starting'}}})}return r.fulfill({json:{state:'Idle',sent:0,skipped:0,failed:0,total:0}})});
+ await page.locator('#openDonors').click();await page.locator('#donorSendAll').click();
+ await page.locator('#batchCount').fill('45');await page.locator('#batchGap').fill('3');await page.locator('#batchPause').selectOption('30');
+ await page.locator('.batch-more summary').click();await page.locator('#batchEach').fill('20, 40');await page.locator('#batchRandom').check();await page.locator('#batchJMin').fill('5');await page.locator('#batchJMax').fill('12');
+ await page.locator('#batchStart').click();await expect.poll(()=>posted).not.toBeNull();
+ expect(posted).toMatchObject({scope:'all',chunk:20,limit:45,gap_seconds:180,rests:[1200,2400],jitter:{min:-5,max:12},skip_contacted:true});
+ expect(typeof posted.request_id).toBe('string');expect(posted.ids).toBeUndefined();
 });
 
 test('a stopped batch offers Continue and the dialog says already-sent people are skipped',async({page,request})=>{
@@ -111,7 +127,7 @@ test('a stopped batch offers Continue and the dialog says already-sent people ar
  await page.locator('#donorSendImportant:visible, #donorMain:visible').first().isVisible();
  await page.locator('#donorSendImportant').click();
  await expect(page.locator('#batchResume')).toBeVisible();await expect(page.locator('#batchResumeText')).toContainText('already sent will be skipped');
- await expect(page.locator('#batchStart')).toHaveText('Continue DMs');
+ await expect(page.locator('#batchStart')).toHaveText('Continue');
  await page.locator('#batchFresh').check();posted=null;await page.locator('#batchStart').click();
  await expect.poll(()=>posted).not.toBeNull();expect(posted.fresh).toBe(true);
 });

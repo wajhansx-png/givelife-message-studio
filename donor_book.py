@@ -57,6 +57,9 @@ class DonorBook:
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
         return {**{k:r.get(k) for k in keys},'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
     @staticmethod
+    def contacted(r):
+        return bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
+    @staticmethod
     def queue_key(r):
         """The one order used on screen and for sending: Important first, people not yet sent before people already sent,
         so the top of the list is always the next person; sent people sink in the order they were sent."""
@@ -197,12 +200,17 @@ def send_request(text):
     if not re.match(r'(?i)^(?:please\s+)?(?:send|dm|message|sned|sebd)\b',t) or not re.search(r'(?i)\bdonors?\b',t):return None
     if re.search(r"(?i)\b(dont|don't|do not|never|tomorrow|schedule|at|every day|write|rewrite|make|create|draft|emotional|urgent|urgency|caption|say|saying)\b|[\"“]",t):return None
     scope='important' if re.search(r'(?i)\bimportant\b',t) else 'not_donated' if re.search(r'(?i)\b(?:not donated|undonated)\b',t) else 'donated' if re.search(r'(?i)\bdonated\b',t) else 'all'
-    gap=re.search(r'(?i)(\d+(?:\.\d+)?)\s*(seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|h)\b',t)
+    unit=lambda n,u:float(n)*(3600 if u.lower().startswith('h') else 60)
+    pause=re.search(r'(?i)(\d+(?:\.\d+)?)\s*(minutes?|mins?|m|hours?|hrs?|h)\s*(?:break|pause|rest|gap|delay|wait)?\s*between\s+(?:the\s+)?batch(?:es)?|batch(?:es)?\s*(?:gap|pause|rest|delay)\s*(?:of\s*)?(\d+(?:\.\d+)?)\s*(minutes?|mins?|m|hours?|hrs?|h)',t)
+    rests=[unit(pause[1] or pause[3],pause[2] or pause[4])] if pause else None
+    t_gap=(t[:pause.start()]+' '+t[pause.end():]) if pause else t
+    jitter={'min':-10,'max':15} if re.search(r'(?i)\brandom(?:ly|ize|ise|ized|ised)?\b',t) else None
+    gap=re.search(r'(?i)(\d+(?:\.\d+)?)\s*(seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|h)\b',t_gap)
     seconds=float(gap[1])*(3600 if gap[2].lower().startswith('h') else 60 if gap[2].lower().startswith('m') else 1) if gap else 240
     limit=re.search(r'(?i)\b(first|top|send(?: to)?|dm)\s+(\d+)\s+(?:(?:dms?|messages?)\s+(?:to\s+)?)?(?:important\s+)?donors?\b',t)
     n=int(limit[2]) if limit else None
     # "send 20 dms" is a round size: the rest of the audience follows by itself. "first 20" is an exact total.
     exact=bool(limit) and limit[1].lower() in ('first','top')
     rounds=20 if n and n>20 else None if exact else n
-    return {'scope':scope,'gap_seconds':seconds,'limit':n if exact or (n and n>20) else None,'chunk':rounds,'poster':not bool(re.search(r'(?i)\b(?:without|no) (?:poster|picture|image)\b|\btext only\b',t))}
+    return {'scope':scope,'gap_seconds':seconds,'limit':n if exact or (n and n>20) else None,'chunk':rounds,'rests':rests,'jitter':jitter,'poster':not bool(re.search(r'(?i)\b(?:without|no) (?:poster|picture|image)\b|\btext only\b',t))}
 

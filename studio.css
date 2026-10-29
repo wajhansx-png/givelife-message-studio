@@ -1017,3 +1017,17 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
  #histForm{grid-column:1/-1;grid-row:4}
 }
 @media(max-width:899px){#histNextActions{gap:5px}#histNextActions button{padding:4px 9px;font-size:12px}}
+
+/* Phone reading: generous, even spacing so answers scan fast (no cramped "tight" mode on phones). */
+@media(max-width:899px){
+ .hist .log .e.bot{padding:14px 16px;line-height:1.5}
+ .hist .log .e.bot .reply-line{line-height:1.5}
+ .hist .e.bot .r-lead{margin-bottom:.5em}
+ .hist .e.bot .r-head{margin:1em 0 .45em}
+ .hist .e.bot .r-head:first-child{margin-top:0}
+ .hist .e.bot .r-bullet{margin-top:.35em}
+ .hist .e.bot .r-num{margin-top:.75em}
+ .hist .e.bot .r-num .rd{margin-top:.15em}
+ .hist .e.bot .r-ask{margin-top:1em}
+ .hist .e.bot .r-blank{height:.5em!important;min-height:.5em!important}
+}

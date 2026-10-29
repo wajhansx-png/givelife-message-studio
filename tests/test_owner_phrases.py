@@ -52,3 +52,15 @@ class ScriptedModel(unittest.TestCase):
   self.assertNotIn('schedule_task',seen['tools'][0]);self.assertNotIn('send_appeal',seen['tools'][0]);self.assertEqual(calls,[])
 
 if __name__=='__main__':unittest.main()
+
+class LongAnswersStayWhole(ScriptedModel):
+ """The reply boxes (2-3 columns, no scroll) need the full text with its line breaks; nothing may flatten or cut it."""
+ ANSWER="Here's the real picture and what I'd do.\n\nWhere it stands\nBalance: Rs. 3,000 left. Auto is on for GiveLife main.\nWhatsApp: disconnected.\n\nWhat I'd do, in order\n1. Reconnect WhatsApp first.\n2. Post to GiveLife main.\n3. Send the donor DMs in two batches of 20.\n\nSuggestions\n- Ask 2 important donors for Rs. 1,500 each.\n- Use a fresh poster."
+ def test_follow_up_requests_keep_the_whole_structured_answer(self):
+  for text in ('give me suggestions','suggest something','any ideas','what should I do'):
+   with self.subTest(text=text):
+    out,seen,calls=self.run_turn(text,[{'role':'assistant','content':self.ANSWER}])
+    self.assertEqual(out['reply'].strip(),self.ANSWER.strip());self.assertGreaterEqual(out['reply'].count('\n'),10)
+ def test_even_a_general_question_is_not_cut_when_the_answer_is_about_the_work(self):
+  out,seen,calls=self.run_turn('can you help me?',[{'role':'assistant','content':self.ANSWER}])
+  self.assertEqual(out['reply'].strip(),self.ANSWER.strip())

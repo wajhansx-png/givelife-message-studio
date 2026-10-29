@@ -172,7 +172,7 @@ def run_chat(text,history,state,memory,do):
   reply='The draft edit has not been saved. '+(reply if not claims_completion(reply) else 'I need the missing caption or target to finish it.')
  elif required_variants and not variants_done and not errors:
   reply='The versions have not been saved. '+(reply if not claims_completion(reply) else 'I need the exact message to finish it.')
- if not actions and not done and not jobs and chat_policy.off_topic(text):reply=chat_policy.brief(reply)
+ if not actions and not done and not jobs and chat_policy.off_topic(text) and not chat_policy.about_the_work(reply):reply=chat_policy.brief(reply)
  return {'reply':safe_text(reply,10000),'actions':actions,'done':done,'jobs':jobs,
   'diagnostics':{'model':assistant.MODEL,'iterations':iteration+1,'duration_ms':round((time.monotonic()-started)*1000),'tools':outcomes,'errors':errors[-3:]}}
 

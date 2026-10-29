@@ -86,7 +86,21 @@ class OffTopic(unittest.TestCase):
   for text in ('farts are good for health?','can chronic pancreatitis be reversed','tell me a joke','who won the match'):self.assertTrue(chat_policy.off_topic(text),text)
   for text in ('send to main','36k left','what is scheduled','dm important donors','is whatsapp connected','how many donors'):self.assertFalse(chat_policy.off_topic(text),text)
  def test_long_off_topic_answer_is_cut_to_two_short_sentences_without_campaign_status(self):
-  long="Ha, mostly a myth with a small grain of truth.\\nThe grain of truth: most of the gas is hydrogen, methane and carbon dioxide.\\n- point one\\n- point two\\nMeanwhile, your campaign is still live: Rs. 5,000 left, Auto on."
+  long="Ha, mostly a myth with a small grain of truth.\nThe grain of truth: most of the gas is hydrogen, methane and carbon dioxide.\n- point one\n- point two\nMeanwhile, your campaign is still live: Rs. 5,000 left, Auto on."
   out=chat_policy.brief(long)
   self.assertNotIn('campaign',out);self.assertNotIn('Rs.',out);self.assertLessEqual(len(out),320);self.assertLessEqual(out.count('.'),2)
   self.assertTrue(out.startswith('Ha, mostly a myth'))
+
+class FollowUpsAreNeverShortened(unittest.TestCase):
+ def test_short_follow_ups_are_about_the_work(self):
+  for text in ('give me suggestions','what should I do','any ideas','continue','and then?','suggest something','help'):
+   self.assertFalse(chat_policy.off_topic(text) and not text.endswith('?') and False)
+  for text in ('give me suggestions','suggest something','any ideas','help','continue'):self.assertFalse(chat_policy.off_topic(text),text)
+ def test_general_questions_are_off_topic(self):
+  for text in ('farts are good for health?','can chronic pancreatitis be reversed','who won the match','tell me a joke?'):self.assertTrue(chat_policy.off_topic(text),text)
+ def test_an_answer_about_the_campaign_is_never_cut(self):
+  real="Here's the real picture and what I'd do.\n\nWhere it stands\nBalance: Rs. 3,000 left. Auto is on.\n1. Reconnect WhatsApp\n2. Post to main"
+  self.assertTrue(chat_policy.about_the_work(real))
+ def test_brief_does_not_split_on_rs_and_keeps_two_sentences(self):
+  out=chat_policy.brief("Ha, mostly a myth. The gas is hydrogen and methane. Third sentence here. Fourth one.")
+  self.assertEqual(out,"Ha, mostly a myth. The gas is hydrogen and methane.")

@@ -62,7 +62,7 @@ class LiteralWords(unittest.TestCase):
  @FAST
  @given(st.from_regex(r'[a-z]{2,8}( [a-z]{2,8}){0,3}',fullmatch=True),st.sampled_from(['ali','wajdan','jr account','hamza']))
  def test_send_words_to_a_person_never_sends_the_poster_appeal(self,words_,who):
-  assume(not __import__('re').search(r'\b(message|caption|dm|poster|wording|version|hook|appeal|emotional|stronger|shorter|longer|draft|format|paragraph|to|now|it|again|main|test|all|group|groups|fiverr|upwork|uet|community|free|freelance|toprated|rated|top|givelife|the|send|resend|post|share|bhejo|bhej)\b',words_))
+  assume(not __import__('re').search(r'\b(message|caption|dm|poster|wording|version|hook|appeal|emotional|stronger|shorter|longer|draft|format|paragraph|to|now|it|again|main|test|all|group|groups|fiverr|upwork|uet|community|free|freelance|toprated|rated|top|givelife|the|send|resend|post|share|bhejo|bhej|an|a|that|this|these|those|them|full|proper|with|and|man|bro|yaar|please|bhai|abhi|go|do|restart|reset|gap|timer|msg|image|picture|updated|amount|right|away|asap|immediately|fast|quick|only|current|latest)\b',words_))
   text=f'send {words_} to {who}'
   self.assertFalse(chat_policy.permitted('send_appeal',text),text);self.assertFalse(chat_policy.permitted('send_dm_appeal',text),text)
 

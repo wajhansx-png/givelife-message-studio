@@ -77,7 +77,8 @@ def send_custom(body):
  jid,is_group=custom_recipient(body);message=body.get('message','')
  if not isinstance(message,str):raise ValueError('Message must be text.')
  if not is_group and body.get('kind') in ('dm_appeal','donor_registry','donor_manual','donor_batch'):
-  message=greet_text(message,body.get('name',''),body.get('gender','Brother'))
+  normal=donors().book.normal_amount_for_phone(body.get('phone','')) if body.get('phone') else 0
+  message=greet_text(message,body.get('name',''),body.get('gender','Brother'),normal)
   if not dm_composer.complete(message):raise ValueError('The full DM is incomplete. Restore its paragraphs and payment details before sending.')
  if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
  if not STORE:raise ValueError('Persistent send records are unavailable. Try again later.')
@@ -832,8 +833,16 @@ def norm_phone(p):
  if re.fullmatch(r'03\d{9}',p):p='92'+p[1:]
  return p if re.fullmatch(r'[1-9]\d{7,14}',p) else ''
 
-def greet_text(text,name,gender):
- return dm_composer.personalize(text,clean_first_name(name),gender)
+def greet_text(text,name,gender,normal_amount=0):
+ text=dm_composer.personalize(text,clean_first_name(name),gender)
+ if normal_amount and normal_amount>0:
+  try:left=read_left()
+  except (OSError,ValueError):left=0
+  if left>0:
+   import math
+   people=math.ceil(left/normal_amount)
+   text=re.sub(r'(?m)^\*_[^\n]*donating[^\n]*_\*$',f'*_Just {people} people donating Rs. {int(normal_amount):,}_*',text,count=1)
+ return text
 
 def dm_campaign(people,gap,image,vary,message,start_after,rest_every,rest_minutes):
  c=CAMPAIGN;c.update(running=True,stop=False,total=len(people),sent=0,failed=0,skipped=0,log=[],current='')
@@ -853,7 +862,8 @@ def dm_campaign(people,gap,image,vary,message,start_after,rest_every,rest_minute
    if STORE and STORE.get('dm_recipient_'+digest) and not p.get('again'):c['skipped']+=1;c['log'].append(f'Skipped …{phone[-4:]} (already messaged)');continue
    if not wa_ok():c['log'].append('WhatsApp disconnected. Stopped.');return
    base=dm_text(name,p['tier']) if p.get('tier') else (build_dm([_random.randrange(dm_templates.COUNT)],read_left()) if (vary or not message) else message)
-   text=greet_text(base,name,gender);c['current']=f'Sending to {(name+" ") if name else ""}{gender} …{phone[-4:]}'
+   normal=donors().book.normal_amount_for_phone(phone)
+   text=greet_text(base,name,gender,normal);c['current']=f'Sending to {(name+" ") if name else ""}{gender} …{phone[-4:]}'
    if STORE:STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':time.time()})
    r=send_with_image(phone,text,img)
    if STORE:STORE.put('dm_recipient_'+digest,{'state':r.get('code','UNCERTAIN'),'time':time.time()})

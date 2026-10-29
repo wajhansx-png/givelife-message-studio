@@ -80,3 +80,13 @@ class ExecutesInContext(unittest.TestCase):
  def test_say_without_a_text_chat_goes_to_the_assistant(self):
   self.server.LAST_MANUAL.clear();self.server.LAST_MANUAL.update(kind='appeal',target='main')
   self.assertFalse(self.server.execute_manual_command('say hi bro')['handled']);self.assertEqual(self.sent,[])
+
+class OffTopic(unittest.TestCase):
+ def test_detects_off_topic(self):
+  for text in ('farts are good for health?','can chronic pancreatitis be reversed','tell me a joke','who won the match'):self.assertTrue(chat_policy.off_topic(text),text)
+  for text in ('send to main','36k left','what is scheduled','dm important donors','is whatsapp connected','how many donors'):self.assertFalse(chat_policy.off_topic(text),text)
+ def test_long_off_topic_answer_is_cut_to_two_short_sentences_without_campaign_status(self):
+  long="Ha, mostly a myth with a small grain of truth.\\nThe grain of truth: most of the gas is hydrogen, methane and carbon dioxide.\\n- point one\\n- point two\\nMeanwhile, your campaign is still live: Rs. 5,000 left, Auto on."
+  out=chat_policy.brief(long)
+  self.assertNotIn('campaign',out);self.assertNotIn('Rs.',out);self.assertLessEqual(len(out),320);self.assertLessEqual(out.count('.'),2)
+  self.assertTrue(out.startswith('Ha, mostly a myth'))

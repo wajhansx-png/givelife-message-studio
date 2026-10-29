@@ -53,6 +53,24 @@ def literal_text_to_person(text):
  words=plan.get('text','')
  return plan.get('kind')=='text' and bool(plan.get('to')) and not manual_commands.group(plan['to']) and len(words)<=120 and not re.search(r'(?i)\b(message|caption|dm|poster|wording|version|hook|appeal|emotional|stronger|shorter|longer|draft|format|paragraph)\b',words)
 
+APP_WORDS=re.compile(r"(?i)\b(donor|donors|dm|dms|group|groups|send|sent|post|posts|message|messages|caption|poster|left|came|donat\w*|schedul\w*|auto|autopilot|whatsapp|campaign|yousuf|givelife|main|fiverr|upwork|uet|freelance|hold|resume|stop|pause|batch|important|wording|draft|version|rule|rules|gap|pace|status|report|rs|pkr|amount|balance|money|number|numbers|contact|reply|test)\b|\d")
+def off_topic(text):
+ """A message that is not about the foundation's work (no app words, no numbers): small talk or general knowledge."""
+ return not APP_WORDS.search(owner_text(text))
+def brief(reply,limit=320):
+ """Off-topic answers stay to one or two short sentences and never tack on campaign status."""
+ text=re.split(r"(?im)^\s*(?:meanwhile|by the way|btw|also,? your campaign|your campaign)\b",str(reply))[0].strip()
+ text=re.sub(r"(?m)^\s*(?:[-*•]|\d+[.)])\s+","",text)
+ text=re.sub(r"\*\*|__|\*","",text)
+ sentences=re.findall(r"[^.!?\n]+[.!?]?",re.sub(r"\s*\n+\s*"," ",text))
+ out=""
+ for s_ in sentences:
+  s_=s_.strip()
+  if not s_:continue
+  if out and (len(out)+len(s_)>limit or out.count(".")+out.count("!")+out.count("?")>=2):break
+  out=(out+" "+s_).strip()
+ return out or text[:limit]
+
 def permitted(name,text):
  if name in READ:return True
  if name=='donor_action':return bool(re.search(r'(?i)\b(donor|donors|important|donated)\b',owner_text(text)))

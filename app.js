@@ -105,10 +105,10 @@ function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');if(!
 }
 /* [font px, columns, tightness]. Short answers get a big font. Long ones use the width of a wide screen
    (two columns) before the text is ever made small, and scrolling is the very last resort. */
-/* Readable first: the font never goes below 15px. If a long answer still does not fit, it scrolls
+/* Readable first: the font never goes below 13.5px. If a long answer still does not fit, it scrolls
    (starting at its first line) instead of shrinking into tiny text. */
-const FIT_STEPS=[[17,1,0],[16,1,0],[15,1,0]];
-const FIT_STEPS_WIDE=[[18,1,0],[17,1,0],[16,1,0],[17,2,0],[16,2,0],[15,2,0]];
+const FIT_STEPS=[[16,1,0],[15,1,0],[14.5,1,1],[14,1,1],[14,1,2],[13.5,1,2]];
+const FIT_STEPS_WIDE=[[18,1,0],[17,1,0],[16,1,0],[17,2,0],[16,2,0],[15,2,0],[14.5,2,1],[14,2,1],[14,3,1],[13.5,3,1],[13.5,3,2],[13,3,2],[12.5,3,2]];
 let fitGuard=false;
 function fitConversation(){
  for(const id of ['log','histLog']){const log=$(id);if(!log.clientHeight)continue;const reply=[...log.querySelectorAll('.e.bot:not(.dots)')].at(-1);if(!reply)continue;

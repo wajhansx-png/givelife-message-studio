@@ -978,3 +978,13 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
  .hist .composer .clip{width:34px;height:44px}
  .hist .log{padding-bottom:8px}
 }
+/* Less scrolling: tighter rhythm inside long answers, everywhere. */
+.e.bot.tight .r-head,.e.bot.tighter .r-head{margin:.5em 0 .2em;padding-block:.05em}
+.e.bot.tight .r-num{margin-top:.28em}.e.bot.tight .r-bullet{margin-top:.12em}.e.bot.tight .r-lead,.e.bot.tight .r-ask{margin-block:.3em}
+.e.bot.tight .reply-line,.e.bot.tighter .reply-line{line-height:1.32}
+.e.bot.tight .r-num .rd{margin-top:0}
+@media(max-width:899px){
+ .hist .log{padding:10px 10px 6px;gap:10px}
+ .hist .log .e.bot{padding:12px 14px}
+ .hist .log .e.bot.tight{padding:9px 12px}
+}

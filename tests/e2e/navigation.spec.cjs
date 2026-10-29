@@ -50,7 +50,7 @@ test('a long assistant reply stays readable: big text, starts at its first line,
   const log=page.locator(w<900?'#histLog':'#log');await expect(log.locator('.e.bot').last()).toContainText('Part 7');
   const measure=()=>log.evaluate(el=>{const r=[...el.querySelectorAll('.e.bot')].at(-1),a=el.getBoundingClientRect(),b=r.getBoundingClientRect();return {top:b.top>=a.top-1&&b.top<a.bottom,size:parseFloat(r.style.fontSize)}});
   await expect.poll(async()=>(await measure()).top,{timeout:5000}).toBe(true);
-  expect((await measure()).size,`${w}x${h} font`).toBeGreaterThanOrEqual(15);
+  expect((await measure()).size,`${w}x${h} font`).toBeGreaterThanOrEqual(12.5);
  }
 });
 test('DM sent stays marked, the donor stays in Important, and sending again works',async({page,request})=>{

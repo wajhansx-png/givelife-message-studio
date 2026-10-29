@@ -56,6 +56,12 @@ class DonorBook:
         # A confirmed DM is never forgotten: a later failed or pending attempt cannot erase "DM sent".
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
         return {**{k:r.get(k) for k in keys},'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
+    @staticmethod
+    def queue_key(r):
+        """The one order used on screen and for sending: Important first, people not yet sent before people already sent,
+        so the top of the list is always the next person; sent people sink in the order they were sent."""
+        sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
+        return (not r['important'],sent,float(r.get('last_sent_at') or 0) if sent else 0.0,name_key(r['name']),r['id'])
     def list(self,tab='all',query=''):
         if tab not in ('all','important','donated','not_donated'): raise ValueError('Choose a donor tab.')
         with self.lock:
@@ -65,7 +71,7 @@ class DonorBook:
             counts['donated_amount']=float(sum((Decimal(str(r.get('amount',0) or 0)) for r in records if r.get('donated')),Decimal(0)))
             q=str(query).strip().casefold(); digits=re.sub(r'\D','',q)
             rows=[r for r in records if (tab=='all' or tab=='important' and r['important'] or tab=='donated' and r['donated'] or tab=='not_donated' and not r['donated']) and (not q or q in r['name'].casefold() or q in r.get('notes','').casefold() or len(digits)>=4 and digits in r['phone'])]
-            rows.sort(key=lambda r:(not r['important'],name_key(r['name']),r['id']))
+            rows.sort(key=self.queue_key)
             return {'items':[self._public(r) for r in rows],'counts':counts}
     def add(self,name='',phone='',text='',source='Added in studio'):
         if text: name,phone=parse_contact(text,name)
@@ -174,7 +180,7 @@ class DonorBook:
         if scope not in ('all','important','donated','not_donated','selected'):raise ValueError('Choose an audience.')
         with self.lock:
             rows=[r for r in self._load()['records'] if not r.get('deleted') and (scope=='all' or scope=='selected' and r['id'] in (ids or []) or scope=='important' and r['important'] or scope=='donated' and r['donated'] or scope=='not_donated' and not r['donated'])]
-            rows.sort(key=lambda r:(not r['important'],r['created_at'],r['id']))
+            rows.sort(key=self.queue_key)
             return copy.deepcopy(rows[:limit] if limit else rows)
     def delivery(self,ident,state,stamp=None):
         with self.lock:

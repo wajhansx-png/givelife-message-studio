@@ -185,3 +185,9 @@ test('the poster dialog and the chat clip accept an MP4 video as well as a pictu
  await page.evaluate(()=>document.getElementById('posterDialog')?.querySelector('input[type=file]')?.getAttribute('accept'));
  expect(await page.evaluate(()=>document.getElementById('posterFile').accept)).toContain('video/mp4');
 });
+
+test('on a very wide screen the groups box stays close to the centre of the screen',async({page,request})=>{
+ await open(page,request,1920,1000);
+ const rail=await page.locator('.action-rail').boundingBox();
+ expect(rail.x).toBeLessThan(960+300);expect(rail.x+rail.width).toBeLessThan(960+620);
+});

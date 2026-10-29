@@ -1238,3 +1238,9 @@ body .connect-badge,body button#whatsappConnection{border:1px solid var(--ctl)!i
 .donor-page .donor-tabs button:not([aria-selected=true]){border:1px solid var(--ctl)!important}
 .donor-normal,.donor-normal-save{border-color:var(--ctl)!important}
 .donor-more>div>button{border:1px solid var(--ctl);border-radius:10px;background:var(--surface2);margin-block:2px}
+
+/* Groups box close to the cursor: the whole workspace is a centred column, however wide the screen is. */
+@media(min-width:900px){
+ html body .app{max-width:1180px;margin-inline:auto}
+}
+.livebar{border:0!important}

@@ -988,3 +988,15 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
  .hist .log .e.bot{padding:12px 14px}
  .hist .log .e.bot.tight{padding:9px 12px}
 }
+
+/* Answer panel v3: calm solid card, high-contrast text (no dim grey). */
+:root[data-theme=dark]{--bubble:#1b2528;--bubble-line:#34454a}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bubble:#1b2528;--bubble-line:#34454a}}
+.talk .log .e.bot,.hist .log .e.bot{background:var(--bubble);border:1px solid var(--bubble-line);box-shadow:0 10px 28px -16px #000000b3;border-radius:16px}
+:root:not([data-theme=dark]) .talk .log .e.bot,:root:not([data-theme=dark]) .hist .log .e.bot{background:#fff;border-color:#c5d3cc;box-shadow:0 10px 28px -18px #0b231b55}
+.e.bot{--detail:#e6eeeb;--title:#ffffff;--head:#6fe0b8}
+:root:not([data-theme=dark]) .e.bot{--detail:#1f2e28;--title:#0d1612;--head:#0a6a50}
+.e.bot .reply-line,.e.bot .r-num .rd{color:var(--detail)}
+.e.bot .reply-line strong,.e.bot .r-num .rt{color:var(--title)}
+.e.bot .r-ask{background:color-mix(in srgb,var(--g) 22%,transparent)}
+.e.bot.cols2,.e.bot.cols3{column-rule-color:var(--bubble-line)!important}

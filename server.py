@@ -214,6 +214,18 @@ def set_left(left):
   if custom:task.commit(custom,g if custom=='group' else d)
   return g,d
 
+def poster_media():
+ """The saved poster: a video when the owner chose one (and it is still on disk), otherwise the picture."""
+ kind=DATA/'poster-kind.txt';video=DATA/'poster.mp4'
+ try:chosen=kind.read_text(encoding='utf-8').strip()=='video'
+ except OSError:chosen=False
+ return video if chosen and video.exists() else DATA/'poster.jpg'
+
+def post_media(jid,cap,path):
+ """Send one picture or MP4 video with its caption file through the WhatsApp gateway."""
+ video=str(path).endswith('.mp4')
+ return subprocess.run(['curl','-s','--max-time','150' if video else '60','-X','POST',GOWA_URL+('/send/video' if video else '/send/image'),'-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',(f'video=@{path};type=video/mp4' if video else f'image=@{path};type=image/jpeg'),'-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
+
 @serialized_send
 def send_image(jid,caption,check_gap=False,_retry=True):
  if on_hold():return {'code':'ERROR','message':'On hold: you told me to wait.'}
@@ -230,7 +242,7 @@ def send_image(jid,caption,check_gap=False,_retry=True):
    latest=max(datetime.datetime.fromisoformat(m['timestamp'].replace('Z','+00:00')) for m in outgoing);age=(datetime.datetime.now(datetime.timezone.utc)-latest).total_seconds()
    if age<900:return {'code':'COOLDOWN','message':f'Posted recently. Try in {math.ceil((900-age)/60)} min.'}
  cap=DATA/('caption-'+uuid.uuid4().hex+'.txt');cap.write_text(caption,encoding='utf-8')
- r=subprocess.run(['curl','-s','--max-time','40','-X','POST',GOWA_URL+'/send/image','-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'image=@{DATA / "poster.jpg"};type=image/jpeg','-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
+ r=post_media(jid,cap,poster_media())
  cap.unlink(missing_ok=True)
  try:result=mapping(json.loads(r.stdout))
  except Exception:result={'code':'ERROR','message':'Send not confirmed. Check WhatsApp before retrying.'}
@@ -796,24 +808,41 @@ ATT=DATA/'attachments';ATT.mkdir(exist_ok=True)
 if STORE:
  _p=STORE.get('poster_b64')
  if _p:(DATA/'poster.jpg').write_bytes(base64.b64decode(_p))
+ _v=STORE.get('poster_video_b64')
+ if _v:(DATA/'poster.mp4').write_bytes(base64.b64decode(_v))
+ if STORE.get('poster_kind')=='video' and _v:(DATA/'poster-kind.txt').write_text('video',encoding='utf-8')
+ elif STORE.get('poster_kind')=='video':(DATA/'poster-kind.txt').write_text('image',encoding='utf-8') # a large video is not kept across restarts; fall back to the picture
 CAMPAIGN={'running':False,'stop':False,'total':0,'sent':0,'failed':0,'skipped':0,'next_at':0,'current':'','log':[],'id':None}
 
 def save_upload(data_url,use):
  if use=='papers':return 'papers-'+str(save_papers(data_url))
  raw=base64.b64decode(data_url.split(',',1)[-1])
+ if data_url.startswith('data:video/'):
+  if len(raw)>15_000_000:raise ValueError('Video is too big (max 15 MB, the WhatsApp limit).')
+  if raw[4:8]!=b'ftyp':raise ValueError('Use an MP4 video (H.264). Other video types are not accepted.')
+  if use=='poster':
+   if (DONORS and DONORS.jobs.active) or CAMPAIGN.get('running') or ACTIVE and not mapping(JOBS.get(ACTIVE)).get('done'):raise ValueError('Wait until the active send finishes before changing the poster.')
+   (DATA/'poster.mp4').write_bytes(raw);(DATA/'poster-kind.txt').write_text('video',encoding='utf-8')
+   if STORE:STORE.put('poster_video_b64',base64.b64encode(raw).decode() if len(raw)<=3_000_000 else '');STORE.put('poster_kind','video')
+   return 'poster'
+  aid=uuid.uuid4().hex[:12];(ATT/(aid+'.mp4')).write_bytes(raw);return aid
  if len(raw)>8_000_000:raise ValueError('Picture is too big (max 8 MB).')
  if use=='poster':
   if (DONORS and DONORS.jobs.active) or CAMPAIGN.get('running') or ACTIVE and not mapping(JOBS.get(ACTIVE)).get('done'):raise ValueError('Wait until the active send finishes before changing the poster.')
   if not raw.startswith(b'\xff\xd8\xff'):raise ValueError('Choose a JPEG poster. The upload control converts your picture automatically.')
-  if STORE:STORE.put('poster_b64',base64.b64encode(raw).decode())
-  (DATA/'poster.jpg').write_bytes(raw)
+  if STORE:STORE.put('poster_b64',base64.b64encode(raw).decode());STORE.put('poster_kind','image')
+  (DATA/'poster.jpg').write_bytes(raw);(DATA/'poster-kind.txt').write_text('image',encoding='utf-8')
   return 'poster'
  aid=uuid.uuid4().hex[:12];(ATT/(aid+'.jpg')).write_bytes(raw);return aid
 
 def image_path(image):
  if image in (None,'','none'):return None
- if image=='poster':return DATA/'poster.jpg'
- p=ATT/(re.sub(r'[^a-f0-9]','',str(image))+'.jpg');return p if p.exists() else DATA/'poster.jpg'
+ if image=='poster':return poster_media()
+ stem=re.sub(r'[^a-f0-9]','',str(image))
+ for ext in ('.jpg','.mp4'):
+  p=ATT/(stem+ext)
+  if p.exists():return p
+ return poster_media()
 
 @serialized_send
 def send_with_image(jid,caption,img):
@@ -822,7 +851,7 @@ def send_with_image(jid,caption,img):
   req=urllib.request.Request(GOWA_URL+'/send/message',data=json.dumps({'phone':jid,'message':caption}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
   with urllib.request.urlopen(req,timeout=40) as r:return mapping(json.load(r))
  cap=DATA/('caption-'+uuid.uuid4().hex+'.txt');cap.write_text(caption,encoding='utf-8')
- r=subprocess.run(['curl','-s','--max-time','60','-X','POST',GOWA_URL+'/send/image','-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'image=@{img};type=image/jpeg','-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
+ r=post_media(jid,cap,img)
  cap.unlink(missing_ok=True)
  try:return json.loads(r.stdout)
  except Exception:return {'code':'ERROR','message':'Send not confirmed. Check WhatsApp before retrying.'}
@@ -1744,7 +1773,7 @@ class Handler(BaseHTTPRequestHandler):
   if origin and not same_origin and origin not in self.remote_config().get('origins',[]):return self.reply({},status=403)
   try:
    length=int(self.headers.get('Content-Length',0))
-   if not 0<length<=12_000_000:return self.reply({'error':'Request is empty or too large.'},status=400)
+   if not 0<length<=(22_000_000 if self.path=='/upload-image' else 12_000_000):return self.reply({'error':'Request is empty or too large.'},status=400)
    body=json.loads(self.rfile.read(length))
   except Exception:return self.reply({'error':'Invalid request'},status=400)
   if not isinstance(body,dict):return self.reply({'error':'Request must be a JSON object.'},status=400)

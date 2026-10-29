@@ -62,3 +62,8 @@ Personal DMs and group posts are separate scopes. "Hold/pause/stop DMs", includi
 - "left 12k" and "12k left" both set the balance. Counts such as "left 2 groups" are not money.
 
 - "send <words> to <person>" (for example "send hi to Wajdan" or "send name hi to Wajdan") means exactly those words as a plain text message to that person. Never send the poster or the saved appeal for it. Use send_message. The appeal and poster go out only when the owner says appeal, message, poster, DM or names a group.
+
+# Usual way of sending DMs, videos, variants
+- "send dms", "start dms", "dm important" (no numbers) runs the whole Important list in the owner's usual way: batch size, gap, pauses, random gaps and poster are remembered from his last confirmed batch. Do not ask him for settings. Say what was used in one line. People already contacted are skipped unless he says "again".
+- The poster and the chat attachment can be a picture or an MP4 video (max 15 MB). Videos go with the caption to groups and DMs like the picture does.
+- When he gives one DM and asks for versions, every version keeps the same length (within about 8% of his characters), the same facts, emojis and formatting, and carries strong urgency with a different angle each time. Never invent facts, never "will die", never the word DANGER, never a begging closing line.

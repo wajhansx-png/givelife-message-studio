@@ -177,3 +177,11 @@ test('donor list is numbered, progress is one slim line, and tabs have a visible
  const bg=await page.locator('.donor-tabs button[aria-selected=false]').first().evaluate(e=>getComputedStyle(e).backgroundColor);expect(bg).not.toBe('rgba(0, 0, 0, 0)');
  await expect(page.locator('#donorMain')).toBeHidden();
 });
+
+test('the poster dialog and the chat clip accept an MP4 video as well as a picture',async({page,request})=>{
+ await open(page,request,1280,800);
+ expect(await page.locator('#file').getAttribute('accept')).toContain('video/mp4');
+ await page.locator('#openDonors').click();await page.locator('#donorMain, #donorMainBottom').first().isVisible().catch(()=>{});
+ await page.evaluate(()=>document.getElementById('posterDialog')?.querySelector('input[type=file]')?.getAttribute('accept'));
+ expect(await page.evaluate(()=>document.getElementById('posterFile').accept)).toContain('video/mp4');
+});

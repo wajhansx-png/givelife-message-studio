@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><meta name="theme-color" content="#0e1213"><script>try{var t=localStorage.getItem("givelife-theme")||"dark";if(t==="system")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t==="light"?"light":"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script><title>GiveLife · Message studio</title>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><meta name="theme-color" content="#0e1213"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="alternate icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-title" content="GiveLife"><script>try{var t=localStorage.getItem("givelife-theme")||"dark";if(t==="system")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t==="light"?"light":"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script><title>GiveLife · Message studio</title>
 
 <style>
 /* Base tokens. studio.css supplies the final themes; first use defaults to dark. */
@@ -85,6 +85,7 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
    <div class="tools"><button type="button" id="previewBack" class="preview-back">← Main</button><div class="ctx"><img id="poster" alt="" width="28" height="28" hidden><span id="ctx">Group message · poster attached</span></div><span class="sp"></span>
     <button class="tool" id="edit" title="Edit message (E)">Edit</button><button class="tool" id="fresh" title="New wording (N)">New</button><details class="overflow-tools"><summary aria-label="More message actions" title="More message actions">⋯</summary><div><button class="tool" id="copy" title="Copy (C)">Copy message</button><button class="tool" id="hideMsg" title="Hide message (H)">Hide message</button></div></details></div>
    <div class="chat" id="chat" tabindex="0" aria-label="WhatsApp caption preview. Use Edit to change it."><div class="message" id="groupPreview"></div><div class="message" id="dmPreview"></div></div>
+   <div class="thumb-dock preview-dock"><button type="button" class="tool" id="previewBackBottom">← Back to buttons</button></div>
   </section>
   <aside class="side">
    <section class="card talk" aria-label="Assistant">
@@ -128,7 +129,7 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
   <label class="row"><div class="t"><b>Also DM new people</b><small>Group members and saved chats. Off = past donors only.</small></div><input type="checkbox" class="sw" id="swNew"></label>
   <div class="row"><div class="t"><b>Memory &amp; feedback</b><small>Review saved preferences and corrections.</small></div><button type="button" class="tool" id="openMemory">Review</button></div>
   <div class="row"><div class="t"><b>WhatsApp</b><small id="waRes">Disconnect this number from the studio.</small></div><button type="button" class="tool danger" id="waOut">Log out</button></div>
- </div></dialog>
+ </div><div class="thumb-dock"><button type="button" class="tool" id="setCloseBottom">← Back to main</button></div></dialog>
 <input type="file" id="file" accept="image/*" hidden><textarea id="group" hidden></textarea><textarea id="dm" hidden></textarea>
 <dialog id="feedbackDialog" class="memory-dialog" aria-label="Correct an assistant response"><h2>What should be different?</h2><form id="feedbackForm"><textarea id="feedbackText" name="feedbackText" aria-label="Your correction" placeholder="Describe the mistake and the correct behaviour…"></textarea><label class="feedback-check"><input type="checkbox" id="feedbackRemember">Remember this correction for future chats</label><p id="feedbackStatus" role="status"></p><button class="primary" type="submit">Save correction</button><button type="button" id="feedbackClose">Cancel</button></form></dialog>
 <dialog id="memoryDialog" class="memory-dialog" aria-label="Memory and feedback"><h2>Memory & feedback</h2><p>Saved preferences help future replies. They never authorize sending a new message.</p><div id="memoryContent"></div><button type="button" id="memoryClose">Close</button></dialog>

@@ -35,7 +35,7 @@ def editing_request(text):
  if re.match(r'(?i)^(?:remember|always|never|from now|in future)\b',t) and not re.search(r'(?i)\band\s+(?:rewrite|change|edit|make)\b',t):return False
  if re.match(r'(?i)^(?:what|why|how|did|have|is|can|could|show|preview|explain|review|summari[sz]e|analy[sz]e)\b',t):return False
  if re.match(r'(?i)^(?:delete|remove)\b',t) and re.search(r'(?i)\b(?:message|post)\b',t) and not re.search(r'(?i)\b(?:line|words?|paragraph|wording|caption)\b',t):return False
- subject=r'(?:message|caption|draft|hook|opening|lines?|paragraphs?|wording|phrase|sentence|bullet|format|bold|italic|report|icon|emoji|emojis)'
+ subject=r'(?:message|caption|draft|hook|opening|lines?|paragraphs?|wording|phrase|sentence|bullet|format|bold|italic|report|icon|emoji|emojis|end|ending|closing|beginning|dua|duas|signature|top|bottom|first line|last line|payment details|amount line)'
  operation=r'(?:write|rewrite|edit|change|replace|remove|delete|add|move|put|make|use|keep|lead|start|shorten|improve|reword)'
  if re.search(r'(?i)\b'+operation+r'\b.*\b'+subject+r'\b',t):return True
  if re.search(r'(?i)\b'+subject+r'\b.*\b'+operation+r'\b',t):return True

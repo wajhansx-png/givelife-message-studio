@@ -10,13 +10,43 @@ def requested(text):
  if re.search(r'(?i)\bevery\s+\d',text) and not re.search(r'(?i)\bat\s*\d|\d\s*(?:am|pm)\b',text):return False
  return bool(re.search(r'(?i)\b(?:schedul\w*|at\s+\d{1,2}|tomorrow|daily|every day|(?:in|after)\s+\d+(?:\.\d+)?\s*(?:sec\w*|min\w*|hour\w*|hr\w*))\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',text))
 
+ORDINALS={'first':0,'1st':0,'one':0,'second':1,'2nd':1,'two':1,'third':2,'3rd':2,'three':2,'fourth':3,'4th':3,'last':-1,'latest':-1,'newest':-1,'recent':-1}
+DUPLICATE=r'\b(?:duplicates?|duplicated|redundant|extra|twice|double|same (?:one|task|thing)|copy|copies)\b'
+
+def cancel_request(text):
+ """Owner text that asks to remove timed tasks, by id, position, duplicate or all."""
+ low=re.sub(r'"[^"\n]*"|“[^”\n]*”',' ',str(text)).casefold()
+ if re.search(r"\b(?:don'?t|dont|do not|never)\s+(?:cancel|delete|remove)\b",low):return False
+ if re.match(r'^(?:what|how|why|when|can|could|should|did|do|does|is|are)\b',low.strip()):return False
+ verb=re.search(r'\b(?:cancel|delete|remove|undo|clear)\b',low)
+ if not verb:return False
+ if re.search(r'\b(?:last|latest|recent)\s+(?:message|msg|post|dm)\b|\b(?:message|msg|post|dm)s?\b.*\b(?:from|in|on)\s+(?:the\s+)?(?:group|main|fiverr|upwork|community|uet|toprated)\b',low):return False
+ if re.search(PRONOUN_CANCEL,low.strip()):return True
+ about=re.search(r'\bschedul\w*|\btasks?\b|\b(?:resume|timer|timed)\b|#?\b[a-f0-9]{8}\b',low)
+ if about:return True
+ if re.search(DUPLICATE,low):return True
+ return bool(re.search(r'\bcancel\b',low) and re.search(r'\b(?:1st|2nd|3rd|4th|first|second|third|fourth|last|latest|newest)\b',low))
+
+PRONOUN_CANCEL=r'^(?:please\s+)?(?:ok\s+|okay\s+)?(?:cancel|remove|delete|undo)\s+(?:it|that|this|that one|this one|the other one|the other)(?:\s+please)?[.!]*$'
+
+def parse_cancel(text):
+ low=re.sub(r'"[^"\n]*"|“[^”\n]*”',' ',str(text)).casefold()
+ ident=re.search(r'#?\b([a-f0-9]{8})\b',low)
+ if ident and re.search(r'\d',ident[1]) or ident and re.search(r'#'+ident[1],low):return {'command':'cancel','id':ident[1]}
+ if re.search(PRONOUN_CANCEL,low.strip()):return {'command':'cancel_by','which':'only','soft':True}
+ if re.search(r'\b(?:all|every|everything)\b',low) and re.search(r'schedul|task|timer|resume',low):return {'command':'cancel_by','which':'all'}
+ if re.search(DUPLICATE,low):return {'command':'cancel_by','which':'duplicate'}
+ for word,index in ORDINALS.items():
+  if re.search(r'\b'+word+r'\b',low) and not (word in ('one','two','three') and not re.search(r'\b'+word+r'\s+(?:schedule|task)|(?:schedule|task)\s+'+word+r'\b',low)):return {'command':'cancel_by','which':'position','index':index}
+ return {'command':'cancel_by','which':'only'}
+
 def parse(text,now=None):
  """Only owner-authored, explicit actions; no inferred recipient or LLM-selected clock."""
  now=time.time() if now is None else now
  t=str(text).strip();instruction=re.sub(r'"[^"\n]*"|“[^”\n]*”',' ',t);low=re.sub(r'\b(continye|contine|contiune)\b','continue',instruction.casefold())
- if re.fullmatch(r'(?:show|list|view|my)?\s*(?:scheduled?\s+(?:tasks|messages|sends)|schedules|scheduler)',low):return {'command':'list'}
- cancel=re.fullmatch(r'(?:cancel|delete|remove)\s+(?:schedule(?:d task)?|task)\s+#?([a-f0-9]{8})',low)
- if cancel:return {'command':'cancel','id':cancel[1]}
+ if re.fullmatch(r'(?:please\s+)?(?:(?:show|list|view|see|check)\s+)?(?:me\s+)?(?:(?:my|the|all|our)\s+)?(?:scheduled?\s+(?:tasks|messages|sends)|schedules|scheduler)(?:\s+(?:please|now))?[?.!]*',low):return {'command':'list'}
+ if re.fullmatch(r"(?:what(?:'s| is| are)?\s+)?(?:my|the|our)\s+(?:schedules?|scheduled tasks?)[?.!]*",low):return {'command':'list'}
+ if cancel_request(instruction):return parse_cancel(instruction)
  if not requested(instruction):return None
  if re.match(r'^(?:what|how|when|why|did|can|could|explain|review|summarize|analyse|analyze)\b',low) or re.search(r"\b(?:don't|dont|do not|never)\b",low) or t.startswith(('>','```','"','“')):return None
  if (manual_commands.parse(instruction) or {}).get('kind')=='refuse_target':raise ValueError('That group is excluded. Nothing was scheduled.')
@@ -87,25 +117,65 @@ class Scheduler:
   action='poster + '+('your quoted caption' if task.get('text') else 'the saved caption at send time')+' to '+', '.join(task['targets']) if task['action']=='send' else ('Resume '+(', '.join(task['targets']) or 'Auto')+'; release hold and turn Auto ON' if task['action']=='resume' else 'Auto '+('ON' if task['action']=='auto_on' else 'OFF'))
   return f"#{task['id']} · {task['state']} · {'Daily' if task.get('daily') else 'Once'} · {at} · {action}"+((' · '+task['result']) if task.get('result') else '')
 
+ def active(self):
+  return [x for x in self.tasks if x['state'] in ('pending','running','dispatching')]
+
+ def summary(self):
+  """Short facts for the assistant's context: what is really queued, by position."""
+  with self.lock:return [{'position':i+1,'id':x['id'],'state':x['state'],'what':self.describe(x).split(' · ',2)[-1]} for i,x in enumerate(self.active())][:20]
+
  def list(self):
-  with self.lock:return '\n'.join(self.describe(x) for x in self.tasks[-30:]) or 'No timed tasks. Try: send to GiveLife main tomorrow at 9pm.'
+  with self.lock:
+   active=self.active();lines=[f'{i+1}. '+self.describe(x) for i,x in enumerate(active)]
+   lines+=[self.describe(x) for x in self.tasks[-30:] if x not in active][-10:]
+   return '\n'.join(lines) or 'No timed tasks. Try: send to GiveLife main tomorrow at 9pm.'
+
+ def same_job(self,a,b):
+  return a['action']==b['action'] and sorted(a['targets'])==sorted(b['targets']) and a.get('text','')==b.get('text','') and bool(a.get('daily'))==bool(b.get('daily')) and abs(a['due']-b['due'])<60
+
+ def cancel_task(self,task):
+  if self.store and hasattr(self.store,'claim'):self.store.claim(self.claim_key(task),{'state':'cancelled'})
+  task.update(state='cancelled',result='Cancelled. Already dispatched messages cannot be undone.');self.save()
+  if task.get('job_id'):self.cancel_job(task['job_id'])
+
+ def cancel_by(self,plan):
+  pending=[x for x in self.tasks if x['state']=='pending']
+  if not pending:return 'There is nothing to cancel. No schedule is pending.'
+  which=plan['which']
+  if which=='all':chosen=pending
+  elif which=='duplicate':
+   chosen=[x for i,x in enumerate(pending) if any(self.same_job(x,y) for y in pending[:i])]
+   if not chosen:return 'I found no duplicate schedules. Say show schedules to see them.'
+  elif which=='position':
+   index=plan['index']
+   if not -len(pending)<=index<len(pending):return f'There are only {len(pending)} pending schedule(s). Say show schedules.'
+   chosen=[pending[index]]
+  else:
+   if len(pending)>1:raise ValueError('Which one? '+str(len(pending))+' are pending:\n'+'\n'.join(f'{i+1}. '+self.describe(x) for i,x in enumerate(pending))+'\nSay cancel 1st, cancel 2nd, or cancel schedule <id>.')
+   chosen=pending
+  for task in chosen:self.cancel_task(task)
+  kept=[x for x in self.tasks if x['state']=='pending']
+  return 'Cancelled: '+'; '.join(self.describe(x) for x in chosen)+'. '+('Still pending: '+'; '.join(self.describe(x) for x in kept) if kept else 'Nothing else is pending.')
 
  def command(self,text,request_id=None):
   plan=parse(text,self.clock())
   if plan is None:return None
   with self.lock:
    if plan['command']=='list':return self.list()
+   if plan['command']=='cancel_by':
+    if plan.get('soft') and not any(x['state']=='pending' for x in self.tasks):return None
+    return self.cancel_by(plan)
    if plan['command']=='cancel':
     task=next((x for x in self.tasks if x['id']==plan['id']),None)
     if not task:raise ValueError('No schedule with that ID. Say show schedules.')
     if task['state'] in ('completed','failed','uncertain','cancelled','missed'):return 'That task is already '+task['state']+'. Check its receipt before sending again.'
-    if self.store and hasattr(self.store,'claim'):self.store.claim(self.claim_key(task),{'state':'cancelled'})
-    task.update(state='cancelled',result='Cancelled. Already dispatched messages cannot be undone.');self.save()
-    if task.get('job_id'):self.cancel_job(task['job_id'])
-    return self.describe(task)
+    self.cancel_task(task)
+    return 'Cancelled: '+self.describe(task)
    sig=hashlib.sha256(re.sub(r'\s+',' ',text.strip().casefold()).encode()).hexdigest()
    old=next((x for x in self.tasks if request_id and x.get('request_id')==request_id or x.get('signature')==sig and self.clock()-x.get('created',0)<30 and x['state']=='pending'),None)
    if old:return 'Already scheduled: '+self.describe(old)
+   twin=next((x for x in self.tasks if x['state']=='pending' and self.same_job(x,plan)),None)
+   if twin:return 'You already have this exact task, so I did not add a second copy: '+self.describe(twin)
    if sum(x['state'] in ('pending','running','dispatching') for x in self.tasks)>=100:raise ValueError('You have 100 active schedules. Cancel one first.')
    task={**plan,'id':uuid.uuid4().hex[:8],'state':'pending','created':self.clock(),'request_id':request_id,'signature':sig};task.pop('command');self.tasks.append(task)
    try:self.save()

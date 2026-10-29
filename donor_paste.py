@@ -29,39 +29,83 @@ class PastedDonors:
             if self.prepared[token]['expires'] <= now:
                 del self.prepared[token]
 
-    def preview(self, text):
+    @staticmethod
+    def _clean_name(raw):
+        name = re.sub(r'(?im)^\s*(?:\d{1,2}[.)]|[-\u2022*>])\s+', '', raw)
+        name = re.sub(r'(?i)\b(?:name|naam|number|no|phone|mobile|mob|cell|contact|whatsapp|wa|dm|to)\s*[:=#-]\s*', ' ', name)
+        return name.strip(' \t,;:|/\u2013\u2014-').strip()
+
+    @staticmethod
+    def _numbers(line):
+        """Phone matches in a line. Pakistani numbers separated only by spaces are split apart."""
+        found = []
+        for m in _PHONE.finditer(line):
+            try:
+                normalize_phone(m[0])
+                found.append((m.start(), m.end(), m[0], False))
+                continue
+            except ValueError:
+                pass
+            compact = re.sub(r'\D', '', m[0])
+            parts = re.findall(r'(?:0092|92|0)?3\d{9}', compact)
+            if len(parts) > 1 and ''.join(parts) == compact:
+                found.append((m.start(), m.end(), parts[0], False))
+                found.extend((m.end(), m.end(), part, True) for part in parts[1:])
+            else:
+                found.append((m.start(), m.end(), m[0], False))
+        return found
+
+    def preview(self, text, gap_seconds=240):
         if not isinstance(text, str) or not text.strip() or len(text) > 12000:
             raise ValueError('Paste a name and phone number per line, for up to 20 donors.')
+        if type(gap_seconds) not in (int, float) or not math.isfinite(gap_seconds) or not 60 <= gap_seconds <= 600:
+            raise ValueError('Choose a gap from 1 to 10 minutes.')
         lines = [line.strip() for line in text.splitlines() if line.strip()]
-        if not 1 <= len(lines) <= 20:
-            raise ValueError('Paste between 1 and 20 donor lines.')
+        if not 1 <= len(lines) <= 40:
+            raise ValueError('Paste up to 20 donors.')
         own = normalize_phone(self.self_phone())
         records = []
         known = set()
         duplicates = 0
+        counter = 0
         for index, line in enumerate(lines, 1):
-            matches = list(_PHONE.finditer(line))
-            if len(matches) != 1:
+            matches = self._numbers(line)
+            if not matches:
                 raise ValueError(f'Line {index}: use one name and one valid phone number.')
-            match = matches[0]
-            try:
-                phone = normalize_phone(match[0])
-            except ValueError:
-                raise ValueError(f'Line {index}: enter a valid phone number with its country code.') from None
-            if phone == own:
-                raise ValueError(f'Line {index}: your connected account is excluded from donor sending.')
-            name = (line[:match.start()] + ' ' + line[match.end():]).strip(' \t,;:|/–—-') or f'Donor {index}'
-            if not 1 <= len(name) <= 120 or re.search(r'[\x00-\x1f\x7f]', name):
-                raise ValueError(f'Line {index}: add a name or label of 1–120 characters.')
-            # Extra long digit sequences cannot become a public label, including
-            # malformed second numbers that the complete phone matcher rejected.
-            if re.search(r'\d(?:[\s().-]*\d){6}', name):
-                raise ValueError(f'Line {index}: use one name and one valid phone number.')
-            if phone in known:
-                duplicates += 1
-                continue
-            known.add(phone)
-            records.append({'name': name, 'phone': phone})
+            # Text before each number is its name. A single number may also have its name after it.
+            names, cursor = [], 0
+            for start, end, _, inner in matches:
+                names.append('' if inner else self._clean_name(line[cursor:start]))
+                cursor = max(cursor, end)
+            tail = self._clean_name(line[cursor:])
+            if len(matches) == 1:
+                names[0] = names[0] or tail
+            elif any(names) and not all(names):
+                raise ValueError(f'Line {index}: put a name before every number, or paste numbers only.')
+            for (_, _, number, _), name in zip(matches, names):
+                counter += 1
+                try:
+                    phone = normalize_phone(number)
+                except ValueError:
+                    raise ValueError(f'Line {index}: enter a valid phone number with its country code.') from None
+                if phone == own:
+                    raise ValueError(f'Line {index}: your connected account is excluded from donor sending.')
+                name = name or f'Donor {counter}'
+                if not 1 <= len(name) <= 120 or re.search(r'[\x00-\x1f\x7f]', name):
+                    raise ValueError(f'Line {index}: add a name or label of 1\u2013120 characters.')
+                # Extra long digit sequences cannot become a public label, including
+                # malformed second numbers that the complete phone matcher rejected.
+                if re.search(r'\d(?:[\s().-]*\d){6}', name):
+                    raise ValueError(f'Line {index}: use one name and one valid phone number.')
+                if phone in known:
+                    duplicates += 1
+                    continue
+                known.add(phone)
+                records.append({'name': name, 'phone': phone})
+        if len(records) > 20:
+            raise ValueError('Paste up to 20 different donors per batch.')
+        gap = float(gap_seconds)
+        plan = [{'position': i + 1, 'name': hide_numbers(r['name']), 'after_seconds': round(i * gap)} for i, r in enumerate(records)]
         token = secrets.token_urlsafe(32)
         with self.lock:
             self._prune()
@@ -71,6 +115,7 @@ class PastedDonors:
                                     'duplicates': duplicates, 'attempt': None}
         return {'token': token, 'names': [hide_numbers(r['name']) for r in records],
                 'count': len(records), 'duplicates': duplicates,
+                'gap_seconds': gap, 'plan': plan, 'total_seconds': plan[-1]['after_seconds'] if plan else 0,
                 'warnings': [f'{duplicates} repeated line(s) removed; the first name is used.'] if duplicates else [],
                 'expires_in': 600}
 

@@ -70,7 +70,7 @@ class PastedDonorTests(unittest.TestCase):
     def test_preview_rejects_invalid_ambiguous_self_and_oversized_without_saving(self):
         helper = self.helper()
         invalid = ['', None, 'Michael, invalid', 'Michael 03001234567 03011234567',
-            'Me +92 320 5069925', '03001234567', 'Michael ' + 'a' * 121 + ',03001234567',
+            'Me +92 320 5069925', 'Michael ' + 'a' * 121 + ',03001234567',
             '\n'.join('Person, 92300%07d' % i for i in range(21))]
         for text in invalid:
             with self.subTest(text=str(text)[:30]), self.assertRaises(ValueError): helper.preview(text)

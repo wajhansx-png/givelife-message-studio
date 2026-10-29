@@ -16,7 +16,7 @@ test('desktop reading column centers the reply and composer',async({page,request
  expect(Math.abs(box.x+box.width/2-(pane.x+pane.width/2))).toBeLessThan(3);
  expect(Math.abs(input.x+input.width/2-(box.x+box.width/2))).toBeLessThan(3);
  expect(box.width).toBeLessThanOrEqual(780);expect(box.width).toBeGreaterThan(200);
- expect(await page.locator('#log .bot').last().evaluate(el=>getComputedStyle(el).textAlign)).toBe('center');
+ expect(await page.locator('#log .bot').last().evaluate(el=>getComputedStyle(el).textAlign)).toBe('left');
  const gear=await page.locator('#gear').boundingBox(),dot=await page.locator('#whatsappConnection').boundingBox(),donors=await page.locator('#openDonors').boundingBox();
  expect(gear.y).toBeGreaterThan(840);expect(dot.x).toBeLessThan(donors.x);
 });
@@ -26,11 +26,11 @@ for(const [width,height,theme] of [[1440,900,'light'],[1024,768,'dark'],[768,102
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await shot(page,`${width}-${theme}-main`);
   await page.locator('#gear').click();await inside(page,page.locator('#set'));await shot(page,`${width}-${theme}-settings`);
-  await page.locator('#setClose').click();await page.locator('#openDonors').click();await expect(page.locator('.donor-row').first()).toBeVisible();
+  await page.locator('#setClose:visible, #setCloseBottom:visible').first().click();await page.locator('#openDonors').click();await expect(page.locator('.donor-row').first()).toBeVisible();
   await inside(page,page.locator('#donorsPage'));await shot(page,`${width}-${theme}-donors`);
   await page.locator('[data-tab=messages]').click();await expect(page.locator('#donorMessages')).toBeVisible();await shot(page,`${width}-${theme}-messages`);
   if(width>=390)await expect.poll(()=>page.locator('.bank-preview').evaluate(el=>el.scrollHeight<=el.clientHeight+2)).toBe(true);
-  if(width<900)await page.getByRole('button',{name:'Back to donors',exact:true}).click();await page.locator('#donorMain').click();await page.getByRole('button',{name:'DM',exact:true}).click();await page.locator('#sendMoreDonors').click();
+  if(width<900)await page.getByRole('button',{name:'Back to donors',exact:true}).click();await page.locator('#donorMain:visible, #donorMainBottom:visible').first().click();await page.getByRole('button',{name:'DM',exact:true}).click();await page.locator('#sendMoreDonors').click();
   await inside(page,page.getByRole('dialog',{name:'Send to more donors',exact:true}));
  });
 }
@@ -47,8 +47,9 @@ test('mobile chat keeps draft, closes keyboard after send and has a reachable re
 test('mobile library selection beyond first ten survives reload',async({page,request})=>{
  await open(page,request,390,844);await page.locator('#openDonors').click();await page.locator('[data-tab=messages]').click();
  for(let i=0;i<19;i++)await page.getByRole('button',{name:'Next message',exact:true}).click();
- await expect(page.locator('.bank-detail header')).toContainText('Message 20');await page.reload();await page.locator('#openDonors').click();await page.locator('[data-tab=messages]').click();
- await expect(page.locator('.bank-current')).toHaveText('Message 20');
+ await expect(page.locator('.bank-detail header')).toContainText('Message 20');await page.reload();
+ /* A refresh keeps the screen: Donors is still open on its Messages tab. */
+ await expect(page.locator('.bank-current')).toHaveText('Message 20 of 20');
 });
 test('donor tabs support arrow keys without retaining stale search',async({page,request})=>{
  await open(page,request);await page.locator('#openDonors').click();await page.locator('#donorSearch').fill('not-a-donor');
@@ -61,7 +62,7 @@ test('message library switches previews and preserves unsaved edits',async({page
  await page.locator('.bank-detail').getByRole('button',{name:'Edit',exact:true}).click();await page.getByLabel('Edit message 2',{exact:true}).fill('Synthetic edited caption.');
  await page.getByRole('button',{name:'Message 1',exact:true}).click();await page.getByRole('button',{name:'Message 2',exact:true}).click();
  await expect(page.getByLabel('Edit message 2',{exact:true})).toHaveValue('Synthetic edited caption.');
- await page.reload();await page.locator('#openDonors').click();await page.locator('[data-tab=messages]').click();
+ await page.reload();
  await expect(page.getByLabel('Edit message 2',{exact:true})).toHaveValue('Synthetic edited caption.');
 });
 test('failed chat requests keep the typed draft without retrying',async({page,request})=>{
@@ -72,7 +73,7 @@ test('failed chat requests keep the typed draft without retrying',async({page,re
 test('first use defaults to dark; light and device themes persist and update',async({page})=>{
  await page.emulateMedia({colorScheme:'light'});await page.addInitScript(()=>localStorage.setItem('givelife-cloud-key','manual-fix-preview-key'));await page.goto('/');
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');await page.locator('#gear').click();await page.locator('#theme [data-t=light]').click();
- await page.reload();await expect(page.locator('html')).toHaveAttribute('data-theme','light');await page.locator('#gear').click();await page.locator('#theme [data-t=system]').click();
+ await page.reload();await expect(page.locator('html')).toHaveAttribute('data-theme','light');await expect(page.locator('#set')).toBeVisible();await page.locator('#theme [data-t=system]').click();
  expect(await page.locator('html').evaluate(el=>getComputedStyle(el).colorScheme)).toBe('light');await page.emulateMedia({colorScheme:'dark'});
  await expect.poll(()=>page.locator('html').evaluate(el=>getComputedStyle(el).colorScheme)).toBe('dark');
 });
@@ -85,7 +86,7 @@ test('typing during a slow save keeps newer text as an unsaved draft',async({pag
  await expect(page.locator('#donorNotice')).toContainText('newer edits are still unsaved');
  await expect(editor).toHaveValue(newerText);
  const stored=await (await request.get('/donor-messages',{headers:auth})).json();expect(stored.items.find(item=>item.id===submitted.id).text).toBe(sentText);
- await page.reload();await page.locator('#openDonors').click();await page.locator('[data-tab=messages]').click();await expect(page.getByLabel('Edit message 1',{exact:true})).toHaveValue(newerText);
+ await page.reload();await expect(page.getByLabel('Edit message 1',{exact:true})).toHaveValue(newerText);
 });
 test('regeneration cannot be duplicated by switching message previews',async({page,request})=>{
  await open(page,request);await page.locator('#openDonors').click();await page.locator('[data-tab=messages]').click();
@@ -96,9 +97,9 @@ test('regeneration cannot be duplicated by switching message previews',async({pa
 for(const width of [1440,390])test(`secondary screens retain accessible exits at ${width}`,async({page,request})=>{
  await open(page,request,width,844);await page.locator('#gear').click();await page.getByRole('button',{name:'Change poster',exact:true}).click();
  await inside(page,page.locator('#posterDialog'));await shot(page,`${width}-poster`);await page.locator('#posterClose').click();
- await page.locator('#openMemory').click();await inside(page,page.locator('#memoryDialog'));await page.locator('#memoryClose').click();await page.locator('#setClose').click();
+ await page.locator('#openMemory').click();await inside(page,page.locator('#memoryDialog'));await page.locator('#memoryClose').click();await page.locator('#setClose:visible, #setCloseBottom:visible').first().click();
  await page.locator('#whatsappConnection').click();const wa=page.getByRole('dialog',{name:'WhatsApp connection',exact:true});await inside(page,wa);await shot(page,`${width}-whatsapp`);await page.locator('#waCloudClose').click();
- await page.locator('#openDonors').click();await page.locator('#donorAdd').click();await inside(page,page.locator('#donorAddDialog'));await shot(page,`${width}-add-donor`);await page.locator('#donorAddCancel').click();await page.locator('#donorMain').click();
+ await page.locator('#openDonors').click();await page.locator('#donorAdd').click();await inside(page,page.locator('#donorAddDialog'));await shot(page,`${width}-add-donor`);await page.locator('#donorAddCancel').click();await page.locator('#donorMain:visible, #donorMainBottom:visible').first().click();
  if(width>=900)await page.locator('#chatExpand').click();else await page.locator('#chatOpen').click();await inside(page,page.locator('#hist'));await shot(page,`${width}-history`);
 });
 test('an empty message library explains how to recover',async({page,request})=>{
@@ -117,21 +118,21 @@ for(const [width,height] of [[390,700],[360,640],[320,568]])test(`mobile Message
  const total=20;await expect(page.locator('.bank-mobile-picker')).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Previous message',exact:true})).toBeDisabled();
  for(let i=0;i<total;i++){
-  await expect(page.locator('.bank-current')).toHaveText('Message '+(i+1));
+  await expect(page.locator('.bank-current')).toHaveText('Message '+(i+1)+' of '+total);
   await expect.poll(()=>page.locator('.bank-preview').evaluate(el=>el.scrollHeight<=el.clientHeight+2)).toBe(true);
   await inside(page,page.getByRole('button',{name:'Next message',exact:true}));
   if(i===0||i===total-1)await shot(page,`${width}x${height}-reader-${i+1}`);
   if(i<total-1)await page.getByRole('button',{name:'Next message',exact:true}).click();
  }
  await expect(page.getByRole('button',{name:'Next message',exact:true})).toBeDisabled();
- await page.getByRole('button',{name:'Previous message',exact:true}).click();await expect(page.locator('.bank-current')).toHaveText('Message '+(total-1));
+ await page.getByRole('button',{name:'Previous message',exact:true}).click();await expect(page.locator('.bank-current')).toHaveText('Message '+(total-1)+' of '+total);
 });
 test('phone donor rows fit real-length names and confirmed DM labels',async({page,request})=>{
  const base=await (await request.get('/donors',{headers:auth})).json();const items=Array.from({length:189},(_,i)=>({...base.items[i%base.items.length],id:'synthetic-'+i,name:'Synthetic Community Donor '+(i+1),important:i<12,delivery:'Sent',donated:false,amount:0}));
  await page.route(/\/donors(\?.*)?$/,r=>r.fulfill({json:{...base,items,counts:{all:189,important:12,donated:0,not_donated:189,donated_amount:0}}}));
  await page.route('**/donor-delivery',r=>r.fulfill({json:{state:'Completed',sent:12,total:12,receipts:[]}}));
  await open(page,request,390,700);await page.locator('#openDonors').click();await expect(page.locator('#donorTotal')).toHaveText('189');
- expect((await page.locator('.donor-head').boundingBox()).height).toBeLessThanOrEqual(58);
+ expect((await page.locator('.donor-head').boundingBox()).height).toBeLessThanOrEqual(64);
  const row=page.locator('.donor-row').first();await expect(row.locator('.donor-amount')).not.toBeVisible();
  expect((await row.locator('.donor-name').boundingBox()).width).toBeGreaterThanOrEqual(110);
  expect(await row.locator('.donor-dm').evaluate(el=>el.scrollWidth<=el.clientWidth+2)).toBe(true);

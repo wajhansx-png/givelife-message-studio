@@ -44,7 +44,7 @@ def permitted(name,text):
  if name=='donor_action':return bool(re.search(r'(?i)\b(donor|donors|important|donated)\b',owner_text(text)))
  i=intent(text);t=i['text']
  if name=='hold' and manual_commands.dm_control(t):return False
- if name=='schedule_task':return timed_tasks.requested(t) and not i['query'] and not i['negative']
+ if name=='schedule_task':return (timed_tasks.requested(t) or timed_tasks.cancel_request(t)) and not i['query'] and not i['negative']
  if name in SEND|{'autopilot','hold','delete_last_message','set_left','money_came','set_dms','set_pace','set_group_pace','pause_group','resume_group','set_quiet_hours'} and manual_commands.deferred_request(t):return False
  if name in SEND|{'autopilot','hold','resume_group','pause_group'} and timed_tasks.requested(t):return False
  if name=='dm_donors':return i['send'] and bool(re.search(r'(?i)\bdonors?\b',t))

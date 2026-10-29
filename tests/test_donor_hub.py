@@ -121,8 +121,9 @@ class IntegrationTests(unittest.TestCase):
  def test_old_jid_receipt_blocks_new_send(self):
   import hashlib
   app=self.app;app.STORE.put('dm_recipient_'+hashlib.sha256(b'923001234567@s.whatsapp.net').hexdigest(),{'state':'uncertain'})
-  self.assertFalse(app.donors().eligible('923001234567'))
-  with self.assertRaisesRegex(ValueError,'uncertain'):app.send_custom({'target':'phone','phone':'03001234567','message':app.get_message('dm')['text'],'kind':'donor_registry','poster':True})
+  # A deliberate new send is allowed even after an old uncertain receipt; automatic sends are not.
+  self.assertTrue(app.donors().eligible('923001234567'))
+  with self.assertRaisesRegex(ValueError,'contacted before'):app.send_custom({'target':'phone','phone':'03001234567','message':app.get_message('dm')['text'],'kind':'donor_registry','poster':True})
  def test_explicit_manual_repeats_send_now_and_same_request_does_not_repeat(self):
   app=self.app;registry=app.donors();d=registry.book.add('Ali','03001234567')['donor'];sent=[]
   def image(jid,text):sent.append((jid,text));return {'code':'SUCCESS','results':{'message_id':'fake-'+str(len(sent))}}

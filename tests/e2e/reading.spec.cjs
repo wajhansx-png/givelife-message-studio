@@ -24,7 +24,9 @@ for(const [width,height] of [[1440,900],[1280,720],[1024,768],[390,844],[320,640
 test('latest desktop reply is fully visible above composer',async({page,request})=>{
  await page.setViewportSize({width:1280,height:720});await open(page,request);
  await expect(page.locator('#log .bot').last()).toContainText('GiveLife Foundation');
- const b=await page.locator('#log .bot').last().evaluate(el=>({top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,composer:document.querySelector('#cmdForm').getBoundingClientRect().top,height:innerHeight}));
+ const measure=()=>page.locator('#log .bot').last().evaluate(el=>({top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,composer:document.querySelector('#cmdForm').getBoundingClientRect().top,height:innerHeight}));
+ /* the answer finishes fitting a moment after it appears */
+ await expect.poll(async()=>{const m=await measure();return m.bottom<=m.composer},{timeout:5000}).toBe(true);const b=await measure();
  expect(b.bottom).toBeLessThanOrEqual(b.composer);expect(b.bottom).toBeLessThanOrEqual(b.height);
 });
 

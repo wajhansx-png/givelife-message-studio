@@ -28,6 +28,9 @@ OWNER_GUARD=threading.local()
 ASSIST_TASKS={}
 EVAL_TASKS={}
 
+SITE_ICONS={'/favicon.svg':('favicon.svg','image/svg+xml'),'/favicon.ico':('favicon.ico','image/png'),'/favicon-32.png':('favicon-32.png','image/png'),'/apple-touch-icon.png':('apple-touch-icon.png','image/png'),
+ '/icon-192.png':('icon-192.png','image/png'),'/icon-512.png':('icon-512.png','image/png'),'/manifest.webmanifest':('manifest.webmanifest','application/manifest+json')}
+
 def serialized_send(fn):
  @wraps(fn)
  def call(*args,**kwargs):
@@ -92,13 +95,13 @@ def send_custom(body):
    if jid==norm_phone(OWNER_PHONE):raise ValueError('Your own account is excluded from donor sending.')
    exclusions=BLOCKED-CAMPAIGN_CONTACTED if explicit else BLOCKED
    if alternate in exclusions or digest in exclusions or records.get('optout_'+alternate) or records.get('optout_'+digest):raise ValueError('This recipient is blocked or opted out.')
-   if not manual:
+   if not explicit:
     for key in ('dm_recipient_'+alternate,'dm_recipient_'+digest):
      previous=records.get(key)
-     if previous and (not explicit or mapping(previous).get('state') not in ('SUCCESS','Sent')):raise ValueError('This recipient has an uncertain send. Check WhatsApp before sending again.')
+     if previous:raise ValueError('This recipient was contacted before. Check WhatsApp before sending again.')
    ledger=STORE.get('dm_daily',{});day=datetime.datetime.fromtimestamp(now,datetime.timezone(datetime.timedelta(hours=5))).date().isoformat()
    if ledger.get('day')!=day:ledger={'day':day,'count':0,'last':ledger.get('last',0)}
-   if ledger['count']>=50:raise ValueError('The 50-DM daily limit has been reached.')
+   if ledger['count']>=50 and not manual:raise ValueError('The 50-DM daily limit has been reached.')
    if not manual and not (explicit_batch and body.get('first_in_batch') is True) and now-ledger.get('last',0)<60:raise ValueError('Wait at least 60 seconds between DMs.')
    ledger.update(count=ledger['count']+1,last=now);STORE.put('dm_daily',ledger);STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':now})
   # Reserve before dispatch. A network failure must not silently allow duplicates.
@@ -495,7 +498,9 @@ def studio_state():
  saved=STORE.get('last_sent',{}) if STORE else {}
  since={k:(round((time.time()-saved[v[1]])/60) if v[1] in saved else None) for k,v in GROUPS.items()}
  dm_context={'paused':DONORS.paused,'counts':DONORS.book.list()['counts'],'batch':DONORS.jobs.status()} if DONORS else {'state':'Directory not opened yet'}
- return {'left':read_left(),'whatsapp':wa_ok(),'minutes_since_post':since,'autopilot':auto_on(),'donor_context':dm_context}
+ try:schedules=timed_scheduler().summary()
+ except Exception:schedules=[]
+ return {'left':read_left(),'whatsapp':wa_ok(),'minutes_since_post':since,'autopilot':auto_on(),'donor_context':dm_context,'schedules':schedules}
 
 def start_group_job(key,caption):
  keys=list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key]
@@ -1589,6 +1594,8 @@ class Handler(BaseHTTPRequestHandler):
   self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(data if isinstance(data,bytes) else data.encode())
  def do_GET(self):
   if self.path=='/health':return self.reply({'ok':True})
+  icon=SITE_ICONS.get(self.path.split('?')[0])
+  if icon:return self.reply((ROOT/'icons'/icon[0]).read_bytes(),icon[1])
   if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/donors.css','/studio.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
@@ -1657,7 +1664,7 @@ class Handler(BaseHTTPRequestHandler):
   if self.path in ('/donors','/donor-delivery','/donor-send','/donor-messages','/donor-paste'):
    try:
     if self.path=='/donor-paste':
-     if body.get('action')=='preview':return self.reply(donors().pasted.preview(body.get('text')))
+     if body.get('action')=='preview':return self.reply(donors().pasted.preview(body.get('text'),body.get('gap_seconds',240)))
      if body.get('action')=='start':return self.reply(donors().pasted.start(body.get('token'),body.get('gap_seconds',240),body.get('request_id'),body.get('poster',True)))
      raise ValueError('Choose preview or start for the pasted donor list.')
     if self.path=='/donors':return self.reply(donors().mutate(body))

@@ -29,6 +29,18 @@ class CompositionTests(unittest.TestCase):
 class DMFlowTests(unittest.TestCase):
  setUp=fixture.SendTests.setUp
  tearDown=fixture.SendTests.tearDown
+ def test_saved_dm_screen_has_canonical_bold_italic_structure(self):
+  text=app.get_message('dm')['text']
+  self.assertIn('Brother, you can close this chat. Yousuf cannot close his pain.',text)
+  self.assertIn('💔 Days have passed. He is still at home.\n_Yousuf is 2.',text)
+  self.assertIn('⚠️ *The paralysing has started in his fingers.',text)
+  self.assertIn('💰 *_Rs. 25,000 still needed for treatment._*',text)
+  self.assertIn('*_Just 13 people donating Rs. 2,000_*',text)
+  self.assertIn('*_OR 25 people contributing Rs. 1,000 🤲_*',text)
+  self.assertIn("_If you are reading this, it's you._ Don't wait for someone else.",text)
+  self.assertIn('📲 *03097458815*',text)
+  self.assertIn('Reply *Done* after donating.',text)
+  self.assertTrue(dm_composer.complete(text));self.assertNotIn('Name Brother',text)
  def test_full_dm_name_edit_then_resend_same_person(self):
   jid='923001234567@s.whatsapp.net'
   with patch.object(app,'find_data',return_value=([{'id':jid,'name':'Jr Accounts','group':False}],1)):

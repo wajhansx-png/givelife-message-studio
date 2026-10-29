@@ -19,7 +19,14 @@ def context_messages(text,history,state,memory):
   'retrieved':[dict(x) for x in records(state.get('retrieved')) if isinstance(x,dict)][:8],'ongoing_task':mapping(state.get('pending_task')),
   'playbook_notes':safe_text(assistant.playbook(),2500)}
  selection=draft_flow.selected_option(text,valid_history(history))
- if draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None:
+ variants=chat_policy.variant_request(chat_policy.owner_text(text))
+ if variants:
+  # Keep the full current state for a multi-version rewrite; this is not a
+  # single-caption edit and must not be routed through set_message.
+  context['turn_task']={'kind':'dm_variants','required_tool':'generate_dm_variants','save_without_reconfirmation':True,
+   'instruction':'Rewrite the exact message the owner pasted into the requested number of versions. Preserve its line breaks, blank lines, emojis, bold/italic markers, numbers and payment details. Save them in Messages and put the first on the DM screen. Do not send. Omit source only when the owner clearly means the saved DM.'}
+  context['recent_owner_instructions']=[safe_text(h['text'],1000) for h in valid_history(history)[-16:] if h['who']=='you'][-6:]
+ elif draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None:
   # A caption-edit turn should not be distracted by posting/rhythm summaries.
   for key in ('auto','pace','idle_min','group_intervals','status','recent'):context['state'].pop(key,None)
   context['turn_task']={'kind':'draft_edit','required_tool':'set_message','save_without_reconfirmation':True}
@@ -57,7 +64,9 @@ def run_chat(text,history,state,memory,do):
  tools=[] if chat_policy.smalltalk(text) else [t for t in assistant.CHAT_TOOLS if chat_policy.permitted(t['function']['name'],text) or selection is not None and t['function']['name']=='set_message']
  schemas={t['function']['name']:t['function']['parameters'] for t in tools}
  actions=[];done=[];jobs=[];outcomes=[];errors=[];cache={};started=time.monotonic();nudged=False;reply='';looked=False
- required_edit=draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None;saved_edit=False
+ required_variants=chat_policy.variant_request(chat_policy.owner_text(text))
+ required_edit=(draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None) and not required_variants
+ saved_edit=False;variants_done=False
  for iteration in range(8):
   if time.monotonic()-started>150:errors.append('The reasoning time limit was reached.');break
   try:msg=mapping(assistant._chat_raw(key,assistant._system(memory),tools,msgs))
@@ -72,9 +81,13 @@ def run_chat(text,history,state,memory,do):
   if not calls:
    claimed=claims_completion(reply)
    missing_edit=required_edit and not saved_edit
-   if (missing_edit and not errors or not done and not errors and (claimed or chat_policy.intent(text)['send'])) and not nudged:
+   missing_variants=required_variants and not variants_done
+   if ((missing_edit or missing_variants) and not errors or not done and not errors and (claimed or chat_policy.intent(text)['send'])) and not nudged:
     nudged=True;msgs.append({'role':'assistant','content':reply or 'I need to complete the action.'})
-    msgs.append({'role':'user','content':('This current instruction requests a draft edit. Use set_message to save the complete revised caption now. Resolve this/it from the saved caption and recent owner instructions. Do not ask again unless the text or target remains genuinely ambiguous. Do not send.' if missing_edit else 'No action tool has confirmed this request. Use the appropriate available tool, or clearly ask for the missing information. Do not claim completion.')});continue
+    if missing_variants:instruction='This instruction asks for multiple versions of the supplied message. Call generate_dm_variants with the exact pasted message as source and the requested count. Save them in Messages and put the first on the DM screen. Do not send and do not answer with only a list in chat.'
+    elif missing_edit:instruction='This current instruction requests a draft edit. Use set_message to save the complete revised caption now. Resolve this/it from the saved caption and recent owner instructions. Do not ask again unless the text or target remains genuinely ambiguous. Do not send.'
+    else:instruction='No action tool has confirmed this request. Use the appropriate available tool, or clearly ask for the missing information. Do not claim completion.'
+    msgs.append({'role':'user','content':instruction});continue
    break
   valid_calls=[tc for tc in calls if isinstance(tc,dict) and isinstance(tc.get('id'),str) and tc['id'].strip() and isinstance(tc.get('function'),dict) and isinstance(tc['function'].get('name'),str)]
   if len(valid_calls)!=len(calls) or len({tc['id'] for tc in valid_calls})!=len(calls):
@@ -108,7 +121,7 @@ def run_chat(text,history,state,memory,do):
     if name not in schemas or name not in do:raise ValueError('That tool is not available for this instruction.')
     if blocked and name not in chat_policy.READ:raise ValueError('An earlier step failed; this dependent action was not executed.')
     chat_policy.validate_args(schemas[name],args)
-    if required_edit and (name in chat_policy.SEND or donor_send) and not saved_edit:raise ValueError('The requested caption edit must be saved before sending. Nothing was sent.')
+    if ((required_edit and not saved_edit) or (required_variants and not variants_done)) and (name in chat_policy.SEND or donor_send):raise ValueError('The requested versions or caption edit must be saved before sending. Nothing was sent.')
     cachekey=str(name)+json.dumps(args,sort_keys=True,ensure_ascii=False)
     if cachekey in cache:actual=cache[cachekey]
     else:
@@ -127,7 +140,8 @@ def run_chat(text,history,state,memory,do):
      actions.extend(actual['actions']);display=actual.get('reply','Prepared on your screen.')
     else:display=actual if isinstance(actual,str) else actual.get('reply',json.dumps(actual,ensure_ascii=False)) if isinstance(actual,dict) else json.dumps(actual,ensure_ascii=False)
     if name not in chat_policy.READ and not donor_read and display not in done:done.append(str(display))
-    saved_edit=saved_edit or name=='set_message'
+    saved_edit=saved_edit or name in ('set_message','generate_dm_variants')
+    variants_done=variants_done or name=='generate_dm_variants'
     errors=[e for e in errors if not e.startswith(str(name)+': ')]
     result={'ok':True,'status':status,'result':actual}
     terminal=terminal or name in chat_policy.SEND or donor_send
@@ -156,6 +170,8 @@ def run_chat(text,history,state,memory,do):
  elif claims_completion(reply):reply='I do not have a confirmed tool result for that action.'
  if required_edit and not saved_edit and not errors:
   reply='The draft edit has not been saved. '+(reply if not claims_completion(reply) else 'I need the missing caption or target to finish it.')
+ elif required_variants and not variants_done and not errors:
+  reply='The versions have not been saved. '+(reply if not claims_completion(reply) else 'I need the exact message to finish it.')
  return {'reply':safe_text(reply,10000),'actions':actions,'done':done,'jobs':jobs,
   'diagnostics':{'model':assistant.MODEL,'iterations':iteration+1,'duration_ms':round((time.monotonic()-started)*1000),'tools':outcomes,'errors':errors[-3:]}}
 

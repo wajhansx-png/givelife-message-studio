@@ -42,6 +42,7 @@ CHAT_TOOLS = [
     tool('money_came', 'Money arrived; subtract it from the amount left.', {'amount': {'type': 'integer'}}, ['amount']),
     tool('new_wording', 'Rotate to the next built-in template. This does NOT shorten, edit or rewrite custom text. For brief rewrites, wording corrections or formatting changes use set_message instead.', {'kind': {'type': 'string', 'enum': ['group', 'dm']}}, ['kind']),
     tool('set_message', 'Save the COMPLETE revised group or DM caption. Use for requested rewrites, follow-up corrections, moving a hook, adding owner-reported facts, or exact replacement text. Preserve unrelated paragraphs and formatting. Execute clear edits now, without asking again.', {'kind': {'type': 'string', 'enum': ['group', 'dm']}, 'text': {'type': 'string'}}, ['kind', 'text']),
+    tool('generate_dm_variants', 'Generate several reworded versions of the exact DM the owner pasted or attached. Keeps the same concept, line breaks, emojis, bold/italic formatting, amounts, payment details and reply instruction. Saves them in the donor Messages bank and puts the first on the DM screen. No send. Pass the exact pasted message as source; omit source only when the owner means the saved DM.', {'source': {'type': 'string'}, 'count': {'type': 'integer'}}, []),
     tool('get_message', 'Read the exact currently saved group or DM caption. A read never changes it or sends anything. Use when showing the message, and to verify a draft after editing.', {'kind': {'type': 'string', 'enum': ['group', 'dm']}}, ['kind']),
     tool('prepare_dm', 'ONLY when the owner says "prepare", "fill" or "let me check": fill the DM form for one person so he can review it. If he says send, use send_message instead.', {'phone': {'type': 'string'}, 'name': {'type': 'string'}, 'gender': {'type': 'string', 'enum': ['Brother', 'Sister']}}, ['phone', 'name', 'gender']),
     tool('send_appeal', 'Send the current group appeal (poster + caption) to a group target immediately. No confirmation needed: when the owner says send, it goes.', {'target': {'type': 'string', 'enum': GROUP_KEYS}}, ['target']),
@@ -89,12 +90,13 @@ def _system(memory):
     return SYSTEM
 
 
-def _chat_raw(key, system, tools, messages):
+def _chat_raw(key, system, tools, messages, max_tokens=None):
     """One call to DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
     model=os.environ.get('DEEPSEEK_REASONING_MODEL') or MODEL
     thinking=model in ('deepseek-reasoner','deepseek-flash','deepseek-v4-pro') or os.environ.get('DEEPSEEK_THINKING')=='enabled'
+    limit=int(max_tokens or os.environ.get('DEEPSEEK_MAX_TOKENS','8192' if thinking else '4096'))
     body = {'model': model, 'messages': [{'role': 'system', 'content': system}] + messages,
-            'max_tokens': max(2048,min(16384,int(os.environ.get('DEEPSEEK_MAX_TOKENS','8192' if thinking else '4096'))))}
+            'max_tokens': max(2048,min(16384,limit))}
     if thinking:body.update(thinking={'type':'enabled'},reasoning_effort='high')
     else:body['temperature']=0.2
     if tools:

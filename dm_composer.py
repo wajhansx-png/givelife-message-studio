@@ -32,8 +32,17 @@ def personalize(text, name='', gender='Brother'):
     return prefix + text
 
 def complete(text):
-    """A fundraising caption cannot consist of a salutation or a collapsed summary."""
+    """A fundraising caption cannot consist of a salutation or a collapsed summary.
+
+    The campaign is Yousuf-specific today, but the same guard is used for a
+    message the owner pastes in. Check the shape and the payment/ask facts
+    instead of hard-coding one name so a complete owner-supplied message can
+    be reworded without being mistaken for a one-line reply.
+    """
     text = str(text)
-    return (len(text.strip()) >= 180 and len(re.split(r'\n\s*\n', text.strip())) >= 4
-            and bool(re.search(r'Yous[au]f', text, re.I))
-            and '03097458815' in text and bool(re.search(r'\b(?:left|needed|remaining|remain)\b', text, re.I)))
+    body = text.strip()
+    if len(body) < 180 or len(re.split(r'\n\s*\n', body)) < 4:
+        return False
+    if not re.search(r'(?:\b\d{10,15}\b|Easypaisa|JazzCash|account)', text, re.I):
+        return False
+    return bool(re.search(r'\b(?:left|needed|need|remaining|remain|remains|required|stands|treatment|care|donat(?:e|ion|ions)?|help|goal|support)\b', text, re.I))

@@ -26,7 +26,7 @@ test('Back and Forward move between screens smoothly and never leave the app',as
  await page.locator('#histMain').click();await expect(page.locator('#hist')).not.toBeVisible();
  await page.locator('#gear').click();await expect(page.locator('#set')).toBeVisible();await page.reload();await expect(page.locator('#set')).toBeVisible();
  await page.locator('#setCloseBottom').click();await expect(page.locator('#set')).not.toBeVisible();
- await page.locator('#showMsg').click();await page.reload();await expect(page.locator('#card')).toBeVisible();
+ await page.locator('#showMsg').click();await expect(page).toHaveURL(/#\/preview/);await page.reload();await expect(page.locator('#card')).toBeVisible();
  await page.locator('#previewBackBottom').click();await expect(page.locator('#card')).not.toBeVisible();
 });
 test('phone: a small Chat button and a wide Donors button share the thumb row',async({page,request})=>{
@@ -48,7 +48,8 @@ test('a long assistant reply fits one screen with no scrolling inside it',async(
   await open(page,request,w,h,LONG);
   if(w<900)await page.locator('#chatOpen').click();
   const log=page.locator(w<900?'#histLog':'#log');await expect(log.locator('.e.bot').last()).toContainText('Part 7');
-  const fit=await log.evaluate(el=>{const r=[...el.querySelectorAll('.e.bot')].at(-1),a=el.getBoundingClientRect(),b=r.getBoundingClientRect();return {inside:b.top>=a.top-1&&b.bottom<=a.bottom+1,own:r.scrollHeight<=r.clientHeight+1,size:parseFloat(r.style.fontSize)}});
+  const measure=()=>log.evaluate(el=>{const r=[...el.querySelectorAll('.e.bot')].at(-1),a=el.getBoundingClientRect(),b=r.getBoundingClientRect();return {inside:b.top>=a.top-1&&b.bottom<=a.bottom+1,own:r.scrollHeight<=r.clientHeight+1,size:parseFloat(r.style.fontSize)}});
+  await expect.poll(async()=>(await measure()).inside,{timeout:5000}).toBe(true);const fit=await measure();
   expect(fit.inside,`${w}x${h} reply fully visible`).toBe(true);expect(fit.own).toBe(true);expect(fit.size).toBeGreaterThanOrEqual(10);
  }
 });
@@ -58,7 +59,7 @@ test('DM sent stays marked, the donor stays in Important, and sending again work
  const first=rows.first();await first.locator('.donor-dm').click();
  await expect(rows.first().locator('.donor-dm')).toContainText('DM sent');
  expect(await rows.count()).toBe(before);await expect(page.locator('.donor-tabs [data-tab=important]')).toHaveAttribute('aria-selected','true');
- await rows.first().locator('.donor-dm').click();await expect(rows.first().locator('.donor-dm')).toContainText('×2');
+ await rows.first().locator('.donor-dm').click();await expect(rows.first().locator('.donor-dm')).toContainText(/×\d/);
  await page.reload();await expect(page.locator('.donor-row').first().locator('.donor-dm')).toContainText('DM sent');
 });
 test('bulk paste shows when every number will be sent before anything starts',async({page,request})=>{

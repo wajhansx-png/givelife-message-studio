@@ -12,7 +12,7 @@ const Nav={rendering:false,
  pending:false,queued:null,
  settle(){Nav.pending=false;if(Nav.queued!==null){const q=Nav.queued;Nav.queued=null;Nav.go(q)}},
  go(path,{replace=false}={}){if(Nav.rendering)return;if(Nav.pending){Nav.queued=path;return}if(Nav.path()===path)return;const h=window.history;try{(replace?h.replaceState:h.pushState).call(h,{nav:1},'',path?'#/'+path:location.pathname+location.search)}catch(e){}},
- leave(name){if(Nav.rendering||Nav.top()!==name)return;const h=window.history;if(h.state&&h.state.nav){Nav.pending=true;setTimeout(Nav.settle,400);h.back()}else Nav.go('',{replace:true})}};
+ leave(name){if(Nav.rendering||Nav.top()!==name)return;const h=window.history;if(h.state&&h.state.nav&&h.length>1){Nav.pending=true;setTimeout(Nav.settle,400);h.back()}else Nav.go('',{replace:true})}};
 /* Server-issued next steps are tied to the exact saved draft, never AI-authored commands. */
 let nextActions=[],nextActionEpoch=0;const nextActionPending=new Set();
 function drawNextActions(){renderSendMode();for(const id of ['chatNextActions','histNextActions']){const row=$(id);if(!row)continue;row.textContent='';row.hidden=!nextActions.length;for(const a of nextActions){const b=document.createElement('button');b.type='button';b.textContent=a.label;b.title=a.detail||'';b.disabled=!!a.disabled||nextActionPending.has(a.id);b.setAttribute('aria-label',a.label+(a.detail?' · '+a.detail:''));b.onclick=()=>runNextAction(a);row.append(b)}}}

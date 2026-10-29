@@ -68,8 +68,7 @@ class DonorIntegration:
         values=a.STORE.get_many(keys) if a.STORE and hasattr(a.STORE,'get_many') else {k:a.STORE.get(k) for k in keys} if a.STORE else {}
         for digest in digests:
             if digest in a.BLOCKED-getattr(a,'CAMPAIGN_CONTACTED',set()) or values.get('optout_'+digest):return False
-            prior=values.get('dm_recipient_'+digest)
-            if prior and (not isinstance(prior,dict) or prior.get('state') not in ('SUCCESS','Sent')):return False
+        # An earlier send (even an uncertain one) never stops a deliberate new send.
         return True
     def personal_name(self,label,explicit=False):
         # Donor labels are metadata. Random/business labels fall back to Brother.

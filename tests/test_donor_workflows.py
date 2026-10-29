@@ -36,7 +36,7 @@ class WorkflowTests(unittest.TestCase):
    app.STORE.put('dm_recipient_'+jid,{'state':'SUCCESS'});self.assertTrue(app.donors().eligible(phone))
    app.STORE.put('optout_'+digest,True);self.assertFalse(app.donors().eligible(phone))
  def test_uncertain_is_not_automatically_retried(self):
-  digest=hashlib.sha256(b'923001234567').hexdigest();self.app.STORE.put('dm_recipient_'+digest,{'state':'UNCERTAIN'});self.assertFalse(self.app.donors().eligible('923001234567'))
+  digest=hashlib.sha256(b'923001234567').hexdigest();self.app.STORE.put('dm_recipient_'+digest,{'state':'UNCERTAIN'});self.assertTrue(self.app.donors().eligible('923001234567'),'an explicit new batch may send again; nothing retries by itself')
  def test_old_zero_send_batch_is_not_displayed_as_success(self):
   result=self.app.donors().jobs._public({'state':'Completed','sent':0,'skipped':3,'total':3})
   self.assertEqual(result['state'],'Nothing sent');self.assertIn('No DM was sent',result['error'])

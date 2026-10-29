@@ -53,7 +53,9 @@ class DonorBook:
         tmp=self.path.with_suffix('.tmp'); tmp.write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8');tmp.replace(self.path)
     def _public(self,r):
         keys=('id','important','donated','amount','source','created_at','updated_at','last_sent_at','delivery','deleted')
-        return {**{k:r.get(k) for k in keys},'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True}
+        # A confirmed DM is never forgotten: a later failed or pending attempt cannot erase "DM sent".
+        sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
+        return {**{k:r.get(k) for k in keys},'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
     def list(self,tab='all',query=''):
         if tab not in ('all','important','donated','not_donated'): raise ValueError('Choose a donor tab.')
         with self.lock:
@@ -171,7 +173,8 @@ class DonorBook:
             data=self._load();r=next((r for r in data['records'] if r['id']==ident),None)
             if not r:return
             r['delivery']=state
-            if state=='Sent':r['last_sent_at']=stamp or time.time()
+            if state=='Sent':
+                r['last_sent_at']=stamp or time.time();r['dm_sent']=True;r['sent_count']=int(r.get('sent_count') or 0)+1
             self._save(data)
 
 def send_request(text):

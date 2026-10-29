@@ -15,6 +15,8 @@ CASES={
  'draft_correction':{'prompt':'Fluid is pressing line is now old man. Rewrite that line with a different opening.','want':'set_message'},
  'fresh_preserves_update':{'prompt':'Show a new message','want':'set_message'},
  'hadith_workflow':{'prompt':'Multi-turn short caption, test, then main','want':'send_appeal'},
+ 'schedule_status':{'prompt':'what is your schedule i gave u task','want':None},
+ 'cancel_second':{'prompt':'Only 1 please cancel 2nd','want':'schedule_task','history':[{'who':'you','text':'Resume givelife main sending auto on by 10am today'},{'who':'app','text':'You already have it set twice: 1. #f2c3c664 10:00 AM resume main. 2. #30cdc6cc 10:00 AM resume main.'}]},
  'numbered_selection':{'prompt':'2','want':'set_message','history':[{'who':'you','text':'Show 2 new hooks for the group message.'},{'who':'app','text':'1. Yousuf needs treatment today.\n2. Your help can bring Yousuf closer to treatment.'}]},
 }
 DEFAULT_CASES=['hadith_workflow','draft_hook','fresh_preserves_update','greeting','typo_recipient','name_correction','multiple_instructions','injection','numbered_selection']
@@ -40,6 +42,7 @@ def run_case(key):
    return 'Confirmed simulated '+name+'. No real message was sent.'
   return run
  state={'left':25000,'autopilot':True,'whatsapp':True,'last_recipient':{'id':'923001234567@s.whatsapp.net','name':'Jr Accounts','message_type':'dm_appeal'},'retrieved':[{'text':'Keep bold and italic formatting and blank lines.','source':'owner_confirmed_correction'}], 'drafts':{'dm':'Brother, full formatted case caption with blank lines.','group':'Yousuf needs treatment. Rs. 25,000 left.'},'engine':{'group_intervals':{'main':15,'fiverr':30}}}
+ if key in ('schedule_status','cancel_second'):state['schedules']=[{'position':1,'id':'f2c3c664','state':'pending','what':'Once · 29 Oct 2026 10:00:00 AM PKT · Resume main; release hold and turn Auto ON'},{'position':2,'id':'30cdc6cc','state':'pending','what':'Once · 29 Oct 2026 10:00:00 AM PKT · Resume main; release hold and turn Auto ON'}]
  if key in ('draft_hook','draft_correction','fresh_preserves_update'):
   state['drafts']['group']='*Yousuf is 2 and needs treatment.*\n\nFluid in his brain can affect his sight and cause paralysis. His kidneys are swollen and he has a hernia.\n\n_His parents report that he is now short of breath._\n\n*_Rs. 25,000 LEFT_*\n\n*_13 people donating Rs. 2,000_*\n*_OR 25 people donating Rs. 1,000_*\n\n03097458815\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation'
  result=assistant.chat(case['prompt'],case.get('history',[]),state,[],{t['function']['name']:call(t['function']['name']) for t in assistant.CHAT_TOOLS})
@@ -49,6 +52,7 @@ def run_case(key):
  if key=='multiple_instructions':ok=ok and 'set_message' in mutations and not any(x.startswith('send') for x in mutations)
  if key=='uncertain_send':ok=ok and mutations.count('send_appeal')==1 and 'uncertain' in reply.lower()
  if key=='memory_retrieval':ok=ok and ('bold' in reply.lower() or 'italic' in reply.lower())
+ if key=='schedule_status':ok=ok and ('f2c3c664' in reply or '10' in reply) and 'no schedule' not in reply.lower()
  if key=='numbered_selection':ok=ok and edits and 'closer to treatment' in edits[-1].get('text','').lower() and not any(n in mutations for n in ('set_left','money_came','send_appeal','send_dm_appeal','send_message'))
  if key in ('draft_hook','draft_correction','fresh_preserves_update'):
   caption=edits[-1].get('text','') if edits else ''

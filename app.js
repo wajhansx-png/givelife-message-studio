@@ -3,6 +3,13 @@ let draftSaved=null,draftsReady=false,draftsLoad=null;
 let editing=false,left=null,timer,saveChain=Promise.resolve(),allT=null,autoOn=false,autoKnown=false,seenAuto=0;
 const view=()=>document.body.dataset.view,fmt=n=>Number(n).toLocaleString('en-US');
 const post=(url,body)=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+/* Where you are lives in the address (#/donors/important). A refresh stays put and the phone's Back button steps out one screen. */
+const Nav={rendering:false,
+ path(){try{return decodeURIComponent((location.hash||'').replace(/^#\/?/,''))}catch(e){return ''}},
+ top(){return Nav.path().split('/')[0]},
+ /* The chat log below owns the name `history`, so the browser's is always reached as window.history. */
+ go(path,{replace=false}={}){if(Nav.rendering||Nav.path()===path)return;const h=window.history;try{(replace?h.replaceState:h.pushState).call(h,{nav:1},'',path?'#/'+path:location.pathname+location.search)}catch(e){}},
+ leave(name){if(Nav.rendering||Nav.top()!==name)return;const h=window.history;if(h.state&&h.state.nav)h.back();else Nav.go('',{replace:true})}};
 /* Server-issued next steps are tied to the exact saved draft, never AI-authored commands. */
 let nextActions=[],nextActionEpoch=0;const nextActionPending=new Set();
 function drawNextActions(){renderSendMode();for(const id of ['chatNextActions','histNextActions']){const row=$(id);if(!row)continue;row.textContent='';row.hidden=!nextActions.length;for(const a of nextActions){const b=document.createElement('button');b.type='button';b.textContent=a.label;b.title=a.detail||'';b.disabled=!!a.disabled||nextActionPending.has(a.id);b.setAttribute('aria-label',a.label+(a.detail?' · '+a.detail:''));b.onclick=()=>runNextAction(a);row.append(b)}}}
@@ -54,10 +61,10 @@ async function syncChat(){try{await logChain;const d=await (await fetch('/chat')
 drawLog();syncChat();matchMedia('(max-width:899px)').addEventListener('change',()=>drawLog());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!thinking)syncChat()});
 function isPhone(){return matchMedia('(max-width:899px)').matches}
-function openChat(){if($('hist').open)return;if(editing)setEditing(false);rememberScroll();$('hist')._returnFocus=document.activeElement;$('hist').showModal();refreshNextActions();
+function openChat(){if($('hist').open)return;if(editing)setEditing(false);rememberScroll();$('hist')._returnFocus=document.activeElement;$('hist').showModal();refreshNextActions();Nav.go('chat');
  // A navigation control receives focus. Opening chat never opens a soft keyboard.
  (isPhone()?$('histMain'):$('histClose')).focus({preventScroll:true});syncChat();requestAnimationFrame(drawLog)}
-function closeChat(){saveChatDraft($('histCmd').value);document.activeElement?.blur();rememberScroll();const back=$('hist')._returnFocus;$('hist').close();if(isPhone())$('chatOpen').focus({preventScroll:true});else (back?.isConnected?back:$('chatExpand')).focus({preventScroll:true})}
+function closeChat(){if(!$('hist').open)return;saveChatDraft($('histCmd').value);document.activeElement?.blur();rememberScroll();const back=$('hist')._returnFocus;$('hist').close();if(isPhone())$('chatOpen').focus({preventScroll:true});else (back?.isConnected?back:$('chatExpand')).focus({preventScroll:true});Nav.leave('chat')}
 $('chatOpen').onclick=openChat;$('chatExpand').onclick=openChat;
 $('chatLatest').onclick=()=>showLatest('log');$('histLatest').onclick=()=>showLatest('histLog');
 $('histClose').onclick=closeChat;$('histMain').onclick=closeChat;
@@ -74,13 +81,15 @@ function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');if(!
  // Unusually long content stays accessible; ordinary saved captions fit in place.
  if(m.scrollHeight>available)chat.style.overflowY='auto'
 }
+const FIT_STEPS=[[15,0],[14,0],[13,0],[12,0],[12,1],[11.5,1],[11,1],[10.5,2],[10,2]];
 function fitConversation(){
  for(const id of ['log','histLog']){const log=$(id);if(!log.clientHeight)continue;const reply=[...log.querySelectorAll('.e.bot:not(.dots)')].at(-1);if(!reply)continue;
   const style=getComputedStyle(log),padding=parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
   let reserve=44;
   if(id==='log')reserve=[...log.children].filter(n=>n!==reply).reduce((n,node)=>n+node.offsetHeight+8,8);
   const available=Math.max(80,log.clientHeight-padding-reserve);
-  for(let size=15;size>=12;size-=.5){reply.style.fontSize=size+'px';if(reply.scrollHeight<=available)break}
+  /* A long reply gets smaller and tighter, step by step, until all of it fits on this screen without scrolling. */
+  for(const [size,tight] of FIT_STEPS){reply.style.fontSize=size+'px';reply.classList.toggle('tight',tight>=1);reply.classList.toggle('tighter',tight>=2);if(reply.scrollHeight<=available)break}
  }
 }
 new ResizeObserver(()=>requestAnimationFrame(fit)).observe($('chat'));
@@ -372,8 +381,10 @@ async function checkWa(){setNote('waRes','Checking the groups…');try{const d=a
  if(!d.whatsapp)setNote('waRes','Not connected. Use the WhatsApp button at the top.','err');
  else if(d.missing&&d.missing.length)setNote('waRes','Connected, but this number is not in: '+d.missing.join(', ')+'. Link the number that is in the groups.','err');
  else setNote('waRes','Connected and in all 6 groups'+(d.fixed&&d.fixed.length?' (updated '+d.fixed.length+' group link'+(d.fixed.length>1?'s':'')+')':'')+'.','ok')}catch(e){setNote('waRes','Could not check.','err')}}
-$('gear').onclick=()=>{$('set').showModal();loadSet();checkWa()};
+$('gear').onclick=()=>{$('set').showModal();loadSet();checkWa();Nav.go('settings')};
 $('setClose').onclick=()=>$('set').close();
+if($('setCloseBottom'))$('setCloseBottom').onclick=()=>$('set').close();
+$('set').addEventListener('close',()=>Nav.leave('settings'));
 async function saveDms(){const on=$('swDm').checked;$('swNew').disabled=!on;
  try{const r=await post('/autopilot-settings',{action:'dms',enabled:on,daily:+($('set').dataset.daily||30),new_people:$('swNew').checked}),d=await r.json();if(!r.ok)throw Error(d.error);status('✓ '+d.reply)}catch(e){status(e.message||'Could not save',1);loadSet()}}
 $('swDm').onchange=saveDms;$('swNew').onchange=saveDms;
@@ -395,10 +406,11 @@ addEventListener('online',()=>{netBanner();pollAuto();syncChat()});addEventListe
 const cached=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('givelife-c-'+k)||'null');localStorage.setItem('givelife-c-'+k,JSON.stringify(v))}catch(e){return null}};
 
 /* ---- hide the message to work only with the buttons and chat ---- */
-function setNoMsg(on){if(editing)setEditing(false);document.querySelector('.overflow-tools').open=false;document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;$('showMsg').setAttribute('aria-expanded',String(!on));const desktop=$('desktopPreview');if(desktop){desktop.setAttribute('aria-pressed',String(!on));desktop.textContent=on?'Message preview':'Back to chat'}if(!on){requestAnimationFrame(fit);flip()}}
+function setNoMsg(on){if(editing)setEditing(false);document.querySelector('.overflow-tools').open=false;if(on)Nav.leave('preview');else Nav.go('preview');document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;$('showMsg').setAttribute('aria-expanded',String(!on));const desktop=$('desktopPreview');if(desktop){desktop.setAttribute('aria-pressed',String(!on));desktop.textContent=on?'Message preview':'Back to chat'}if(!on){requestAnimationFrame(fit);flip()}}
 if($('desktopPreview'))$('desktopPreview').onclick=()=>smooth(()=>setNoMsg(!document.body.classList.contains('nomsg')));
+if($('previewBackBottom'))$('previewBackBottom').onclick=()=>smooth(()=>setNoMsg(true));
 $('hideMsg').onclick=e=>{e.stopPropagation();smooth(()=>setNoMsg(true))};$('previewBack').onclick=()=>smooth(()=>setNoMsg(true));$('showMsg').onclick=()=>smooth(()=>setNoMsg(false));
-setNoMsg(true);
+Nav.rendering=true;setNoMsg(true);Nav.rendering=false; /* the start state is not a navigation step */
 
 /* ---- theme: Auto follows the phone/PC setting; Light or Dark is remembered on this device ---- */
 function themeNow(){try{const t=localStorage.getItem('givelife-theme');return ['dark','light','system'].includes(t)?t:'dark'}catch(e){return 'dark'}}
@@ -432,6 +444,21 @@ document.addEventListener('keydown',e=>{
  if(inField||e.ctrlKey||e.metaKey||e.altKey||isPhone())return;
  const a={'/':focusChatInput,'?':openKeyboardHelp,g:()=>setView('group'),d:()=>setView('dm'),e:()=>setEditing(true),n:()=>$('fresh').click(),c:()=>$('copy').click(),h:()=>setNoMsg(!document.body.classList.contains('nomsg'))}[e.key.toLowerCase()];
  if(a){e.preventDefault();a()}});
+
+/* ---- show the screen the address names (refresh, Back and Forward all come here) ---- */
+function renderNav(){const parts=Nav.path().split('/'),top=parts[0];Nav.rendering=true;
+ try{
+  if(top!=='chat'&&$('hist').open)closeChat();
+  if(top!=='settings'&&$('set').open)$('set').close();
+  if(top!=='donors'&&window.DonorHub?.isOpen())window.DonorHub.hide();
+  if(top==='preview'&&document.body.classList.contains('nomsg'))setNoMsg(false);
+  if(top===''&&!document.body.classList.contains('nomsg'))setNoMsg(true);
+  if(top==='chat'&&!$('hist').open)openChat();
+  if(top==='settings'&&!$('set').open){$('set').showModal();loadSet();checkWa()}
+  if(top==='donors')window.DonorHub?.show(parts[1]||'all');
+ }finally{Nav.rendering=false}}
+addEventListener('popstate',()=>smooth(renderNav));
+addEventListener('load',()=>renderNav(),{once:true});
 
 /* ---- start ---- */
 setView(localStorage.getItem('givelife-view')==='dm'?'dm':'group');

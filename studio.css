@@ -881,3 +881,15 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
  .talk .log .e.you{margin-bottom:2px}
  .talk-title{min-height:34px}
 }
+
+/* The answer box stands out from the page: lighter panel, clear edge, soft lift. */
+:root[data-theme=dark]{--bubble:#243034;--bubble-line:#43565b}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bubble:#243034;--bubble-line:#43565b}}
+:root{--bubble:#ffffff;--bubble-line:#b9c8c1}
+:root[data-theme=dark]{--bubble:#243034;--bubble-line:#43565b}
+.talk .log .e.bot,.hist .log .e.bot{background:var(--bubble);border:1px solid var(--bubble-line);box-shadow:0 1px 0 #ffffff12 inset,0 14px 34px -14px #000000a6;color:var(--ink)}
+:root:not([data-theme=dark]) .talk .log .e.bot,:root:not([data-theme=dark]) .hist .log .e.bot{box-shadow:0 14px 34px -16px #0b231b55}
+.talk .log .e.bot.cols2,.hist .log .e.bot.cols2{column-rule-color:var(--bubble-line)}
+.talk .log .e.bot strong{color:#fff}
+:root:not([data-theme=dark]) .talk .log .e.bot strong{color:var(--ink)}
+.talk .log .e.you{background:color-mix(in srgb,var(--g) 22%,var(--surface));border-color:color-mix(in srgb,var(--g) 40%,transparent)}

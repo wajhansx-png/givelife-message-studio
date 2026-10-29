@@ -1286,3 +1286,4 @@ body .connect-badge,body button#whatsappConnection{border:1px solid var(--ctl)!i
  .donor-page .donor-row,.donor-page .donor-columns{grid-template-columns:36px calc(33.3% - 56px) 104px 124px 100px 40px!important;justify-content:start!important}
 }
 @media(min-width:900px){.foot .gear{position:static;right:auto;bottom:auto}}
+@media(min-width:900px){.foot .gear{width:28px!important;height:24px!important;min-width:28px!important;min-height:24px!important;font-size:15px}}

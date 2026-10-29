@@ -1347,3 +1347,17 @@ small,.last-sent,.message-copy,.donor-columns,.build-tag,.keys,.brand small,.don
 body::after{background:radial-gradient(circle,color-mix(in srgb,#b06bff 40%,transparent),transparent 66%)}
 .mark{background:linear-gradient(140deg,#9aa8ff 0%,#5b6cff 55%,#3a45c9 100%)!important;box-shadow:0 6px 18px -6px #5b6cffcc,inset 0 1px 0 #ffffff40!important}
 :root:not([data-theme=dark]){--chat-well:#eceef8}
+
+/* ===== Navbar: one tidy bar. Brand left, views next to it, status actions right, all the same height ===== */
+@media(min-width:900px){
+ html body .brandbar{display:flex;align-items:center;justify-content:flex-start;gap:10px;padding:8px 12px;min-height:60px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh1)}
+ html body .brandbar>.sp{display:block;flex:1}
+ html body .brandbar .brand{margin-right:10px;padding-right:14px;border-right:1px solid var(--line)}
+ html body .brandbar .seg{padding:3px;border-radius:12px;background:var(--surface2);border:1px solid var(--line)}
+ html body .brandbar .seg button{min-height:34px;padding:0 16px;border:0!important;border-radius:9px;background:transparent;color:var(--mut);font-weight:650}
+ html body .brandbar .seg button[aria-pressed=true]{background:var(--g);color:var(--on-accent)}
+ html body .brandbar .desktop-preview,html body .brandbar .leftchip,html body .brandbar .donor-launch,html body .brandbar .connect-badge{min-height:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;padding:0 14px}
+ html body .brandbar .connect-badge{width:40px;padding:0;justify-content:center}
+ html body .brandbar .donor-launch{margin-left:0}
+}
+@media(min-width:900px){html body .live{max-width:none}}

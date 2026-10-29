@@ -893,3 +893,12 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
 .talk .log .e.bot strong{color:#fff}
 :root:not([data-theme=dark]) .talk .log .e.bot strong{color:var(--ink)}
 .talk .log .e.you{background:color-mix(in srgb,var(--g) 22%,var(--surface));border-color:color-mix(in srgb,var(--g) 40%,transparent)}
+
+/* Chat highlight v2: a clearly brighter answer panel with a green edge on a darker chat area. */
+:root[data-theme=dark]{--bubble:#2f4247;--bubble-line:#5f8f86;--chat-well:#0f1517}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bubble:#2f4247;--bubble-line:#5f8f86;--chat-well:#0f1517}}
+:root{--chat-well:#e4ede8}
+.talk.card,.hist{background:var(--chat-well)}
+.talk .log .e.bot,.hist .log .e.bot{background:var(--bubble);border:1.5px solid var(--bubble-line);box-shadow:0 0 0 4px color-mix(in srgb,var(--g) 9%,transparent),0 18px 40px -14px #000000b3,inset 0 1px 0 #ffffff1a}
+:root:not([data-theme=dark]) .talk .log .e.bot,:root:not([data-theme=dark]) .hist .log .e.bot{background:#fff;border-color:#7fa896;box-shadow:0 0 0 4px #0b7a5c14,0 16px 34px -16px #0b231b66}
+.talk .log .e.bot.cols2,.hist .log .e.bot.cols2{column-rule:1px solid color-mix(in srgb,var(--bubble-line) 70%,transparent)}

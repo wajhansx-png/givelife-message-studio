@@ -43,14 +43,14 @@ test('phone: every full screen has a Back button in the lower half',async({page,
  await page.locator('#gear').click();expect((await page.locator('#setCloseBottom').boundingBox()).y).toBeGreaterThan(422);await page.locator('#setCloseBottom').click();
  await page.locator('#chatOpen').click();expect((await page.locator('#histMain').boundingBox()).y).toBeGreaterThan(422);
 });
-test('a long assistant reply fits one screen with no scrolling inside it',async({page,request})=>{
+test('a long assistant reply stays readable: big text, starts at its first line, scrolls instead of shrinking',async({page,request})=>{
  for(const [w,h] of [[390,844],[412,915],[1280,720],[1440,900]]){
   await open(page,request,w,h,LONG);
   if(w<900)await page.locator('#chatOpen').click();
   const log=page.locator(w<900?'#histLog':'#log');await expect(log.locator('.e.bot').last()).toContainText('Part 7');
-  const measure=()=>log.evaluate(el=>{const r=[...el.querySelectorAll('.e.bot')].at(-1),a=el.getBoundingClientRect(),b=r.getBoundingClientRect();return {inside:b.top>=a.top-1&&b.bottom<=a.bottom+1,own:r.scrollHeight<=r.clientHeight+1,size:parseFloat(r.style.fontSize)}});
-  await expect.poll(async()=>(await measure()).inside,{timeout:5000}).toBe(true);const fit=await measure();
-  expect(fit.inside,`${w}x${h} reply fully visible`).toBe(true);expect(fit.own).toBe(true);expect(fit.size).toBeGreaterThanOrEqual(10);
+  const measure=()=>log.evaluate(el=>{const r=[...el.querySelectorAll('.e.bot')].at(-1),a=el.getBoundingClientRect(),b=r.getBoundingClientRect();return {top:b.top>=a.top-1&&b.top<a.bottom,size:parseFloat(r.style.fontSize)}});
+  await expect.poll(async()=>(await measure()).top,{timeout:5000}).toBe(true);
+  expect((await measure()).size,`${w}x${h} font`).toBeGreaterThanOrEqual(15);
  }
 });
 test('DM sent stays marked, the donor stays in Important, and sending again works',async({page,request})=>{

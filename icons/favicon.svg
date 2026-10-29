@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
 <defs>
-<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fd9a6"/><stop offset=".55" stop-color="#0b8a67"/><stop offset="1" stop-color="#065240"/></linearGradient>
+<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9aa8ff"/><stop offset=".55" stop-color="#4c5ce0"/><stop offset="1" stop-color="#2a2f8f"/></linearGradient>
 <radialGradient id="s" cx=".3" cy=".18" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
 </defs>
 <rect width="512" height="512" rx="116" fill="url(#g)"/>
 <rect width="512" height="512" rx="116" fill="url(#s)"/>
 <path d="M256 396C130 308 92 250 92 196c0-48 36-82 80-82 32 0 62 18 84 50 22-32 52-50 84-50 44 0 80 34 80 82 0 54-38 112-164 200Z" fill="#fff"/>
-<path d="M256 342c-70-52-92-88-92-120 0-24 17-42 40-42 20 0 38 12 52 36 14-24 32-36 52-36 23 0 40 18 40 42 0 32-22 68-92 120Z" fill="#0b8a67" opacity=".16"/>
+<path d="M256 342c-70-52-92-88-92-120 0-24 17-42 40-42 20 0 38 12 52 36 14-24 32-36 52-36 23 0 40 18 40 42 0 32-22 68-92 120Z" fill="#4c5ce0" opacity=".16"/>
 </svg>

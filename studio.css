@@ -965,3 +965,16 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
 .talk .log,.hist .log{justify-content:flex-start!important}
 .talk .log>.e.bot:last-of-type{margin-block:auto}
 .talk .log>.e.bot:only-of-type{margin-block:auto}
+
+/* Phone chat: the footer (Back, quick actions, message bar) is slim so the answer gets the screen. */
+@media(max-width:899px){
+ .hist .chat-return{min-height:0;padding:2px 10px 4px;flex:none}
+ .hist .chat-return button{min-height:36px;padding:0 12px;font-size:13px}
+ .hist .next-actions{padding:0 10px 4px;gap:6px;max-height:none}
+ .hist .next-actions button{min-height:34px;padding:4px 12px;font-size:12.5px;border-radius:99px}
+ .hist .composer{margin:0 10px max(8px,env(safe-area-inset-bottom));padding:4px;grid-template-columns:34px minmax(0,1fr) 48px;border-radius:14px}
+ .hist .composer textarea{height:40px;min-height:40px;padding:8px 2px;font-size:15px;line-height:24px}
+ .hist .composer .go{width:48px;height:48px;font-size:22px;border-radius:12px}
+ .hist .composer .clip{width:34px;height:44px}
+ .hist .log{padding-bottom:8px}
+}

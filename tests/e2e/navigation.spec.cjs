@@ -131,3 +131,25 @@ test('a stopped batch offers Continue and the dialog says already-sent people ar
  await page.locator('#batchFresh').check();posted=null;await page.locator('#batchStart').click();
  await expect.poll(()=>posted).not.toBeNull();expect(posted.fresh).toBe(true);
 });
+
+test('the three dots menu has a usual-donation field that saves and shows under the name',async({page,request})=>{
+ await open(page,request,1280,800);await page.locator('#openDonors').click();
+ const row=page.locator('.donor-row').first();const id=await row.getAttribute('data-donor-id');
+ await expect(row.locator('input.donor-normal')).toBeHidden();
+ await row.locator('.donor-more summary').click();
+ const field=row.locator('.donor-normal-box input');await expect(field).toBeVisible();await field.fill('500');await row.locator('.donor-normal-save').click();
+ await expect(page.locator(`.donor-row[data-donor-id="${id}"] .donor-normal-tag`)).toContainText('Rs. 500');
+ await expect.poll(async()=>{const r=await request.get('/donors?tab=all',{headers:auth});return (await r.json()).items.find(d=>d.id===id).normal_amount}).toBe(500);
+ await page.locator(`.donor-row[data-donor-id="${id}"] .donor-more summary`).click();
+ await page.locator(`.donor-row[data-donor-id="${id}"] .donor-normal-box input`).fill('');await page.locator(`.donor-row[data-donor-id="${id}"] .donor-normal-save`).click();
+ await expect(page.locator(`.donor-row[data-donor-id="${id}"] .donor-normal-tag`)).toHaveCount(0);
+});
+test('on desktop the Back button sits in the middle of the screen, and the groups box is close to the chat',async({page,request})=>{
+ await open(page,request,1440,900);
+ const rail=await page.locator('.action-rail').boundingBox();const app=await page.locator('.app').boundingBox();
+ expect(rail.x+rail.width).toBeLessThanOrEqual(1440-60);expect(rail.x).toBeGreaterThan(1440/2);
+ await page.locator('#openDonors').click();
+ const back=await page.locator('#donorMainBottom').boundingBox();expect(Math.abs(back.x+back.width/2-720)).toBeLessThan(40);
+ await page.locator('#donorMainBottom').click();await expect(page.locator('#donorsPage')).toBeHidden();
+ await page.locator('.gear').first().click();const dock=await page.locator('#setCloseBottom').boundingBox();expect(Math.abs(dock.x+dock.width/2-720)).toBeLessThan(40);
+});

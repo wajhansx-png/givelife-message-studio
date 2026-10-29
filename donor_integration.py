@@ -90,7 +90,7 @@ class DonorIntegration:
                 _,p=parse_contact(body['text'],body.get('name',''))
                 if p==normalize_phone(self.app.OWNER_PHONE):raise ValueError('Your own account is excluded.')
             return self.book.add(body.get('name',''),body.get('phone',''),body.get('text',''))
-        if action=='update':return self.book.update(body.get('id',''),expected_updated_at=body.get('expected_updated_at'),**{k:v for k,v in body.items() if k in ('name','important','donated','amount','notes')})
+        if action=='update':return self.book.update(body.get('id',''),expected_updated_at=body.get('expected_updated_at'),**{k:v for k,v in body.items() if k in ('name','important','donated','amount','normal_amount','notes')})
         if action=='delete':return self.book.delete(body.get('id',''))
         if action=='restore':return self.book.restore(body.get('id',''))
         if action=='import':return self.book.import_contacts(body.get('records'),self.app.OWNER_PHONE)

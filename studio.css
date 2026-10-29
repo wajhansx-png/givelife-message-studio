@@ -1201,3 +1201,40 @@ button:not(:disabled):active,summary:active,.chips button:active,.big:active{tra
 button,summary,input,select,textarea{transition-duration:.12s}
 dialog[open]{animation-duration:.16s}
 .donor-row{content-visibility:visible!important;contain:none}
+
+/* ===== Easy on the eyes: every control has a visible edge (WCAG 1.4.11, 3:1), clear focus, calm text ===== */
+:root{--ctl:var(--line2)}
+:is(button,summary,select,input,textarea):not(.primary):not(.go):not([aria-selected=true]):not([aria-pressed=true]):not(:disabled){border-color:var(--ctl)}
+.leftchip,.connect-badge,.livebar,#chatExpand,.clip,.keys,.message-copy,.remove,#sendAll,.donor-bulk,.send-important,.bank-more summary,.donor-more summary,.donor-star,.chips button,.ghost,.tool,.donor-msgs{border:1px solid var(--ctl)}
+.donor-star,.donor-more summary{background:var(--surface2);border-radius:10px;min-width:36px}
+.donor-star[aria-pressed=true]{background:color-mix(in srgb,var(--warn) 18%,var(--surface2));border-color:var(--warn)}
+.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-amount{background:var(--surface2);border:1px solid var(--ctl)}
+.donor-row .donor-dm:hover,.donor-row .donor-status:hover{border-color:var(--g)}
+.donor-row[data-delivery=Sent] .donor-dm,.donor-row[data-donated=true] .donor-status{border-color:var(--ok)}
+.donor-normal,.donor-normal-box input{border:1px solid var(--ctl)}
+button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--g);outline-offset:2px}
+.build-tag{opacity:1;color:var(--mut)}.last-sent{opacity:1}
+/* Readable list text: no faint grey for names, numbers or counts */
+.donor-name{color:var(--ink)}.donor-name::before{color:var(--mut)}
+/* More donors per screen */
+@media(min-width:900px){
+ .donor-head{padding-bottom:4px;min-height:0}.donor-head h1{font-size:20px}.donor-sub{font-size:11px}
+ .donor-total{padding-block:4px}.donor-shell{gap:6px}
+ .donor-tabs{padding:4px}.donor-tabs button{min-height:38px}.donor-search{min-height:42px}
+ .donor-row{height:40px;min-height:40px;contain-intrinsic-size:auto 40px}.donor-columns{height:28px}
+ .donor-row .donor-status,.donor-row .donor-dm,.donor-row .donor-amount{min-height:32px;height:32px;font-size:12px}
+ .donor-star,.donor-more summary{height:32px;min-height:32px}
+ .donor-bottom{padding-top:6px}.donor-bottom .send-important,.donor-bottom .send-donors,.donor-gap#donorPace{min-height:44px}
+ .donor-progress{min-height:30px;padding:3px 10px}
+}
+@media(max-width:899px) and (min-height:780px){.donor-row{height:52px;min-height:52px}.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-amount{height:42px;min-height:42px}.donor-star,.donor-more summary{height:42px;min-height:42px}}
+:root[data-theme=dark]{--ctl:#7a8f91}
+.donor-page .donor-tabs button[aria-selected=true]{background:var(--g)!important;color:#06231b!important;border-color:var(--g)!important;font-weight:750}
+.donor-page .donor-tabs button[aria-selected=true] .donor-count,.donor-page .donor-tabs button[aria-selected=true] .count{background:#06231b;color:var(--g)}
+#sendAll,.send-important,.connect-badge,.donor-normal-save{border:1px solid var(--ctl)!important}
+.livebar,.autosw,.message-copy,#chatExpand{border-color:var(--ctl)!important}
+:root:not([data-theme=dark]){--ctl:#6f7f78}
+body .connect-badge,body button#whatsappConnection{border:1px solid var(--ctl)!important}
+.donor-page .donor-tabs button:not([aria-selected=true]){border:1px solid var(--ctl)!important}
+.donor-normal,.donor-normal-save{border-color:var(--ctl)!important}
+.donor-more>div>button{border:1px solid var(--ctl);border-radius:10px;background:var(--surface2);margin-block:2px}

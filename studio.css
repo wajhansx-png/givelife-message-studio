@@ -1000,3 +1000,7 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
 .e.bot .reply-line strong,.e.bot .r-num .rt{color:var(--title)}
 .e.bot .r-ask{background:color-mix(in srgb,var(--g) 22%,transparent)}
 .e.bot.cols2,.e.bot.cols3{column-rule-color:var(--bubble-line)!important}
+@media(min-width:900px){
+ .talk.long-reply .next-actions{width:100px;right:10px}
+ .talk.long-reply:has(.next-actions:not([hidden])) .log{padding-inline:118px}
+}

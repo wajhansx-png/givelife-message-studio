@@ -1086,3 +1086,12 @@ body::before,body::after{animation:none;will-change:auto}
 #donorContinue{min-height:36px;padding:0 12px;border:1px solid color-mix(in srgb,var(--g) 55%,transparent);border-radius:10px;background:var(--gs);color:var(--gink);font:inherit;font-weight:700;cursor:pointer}
 #batchResume{padding:10px 12px;border:1px solid color-mix(in srgb,var(--g) 40%,transparent);border-radius:12px;background:var(--gs);margin:4px 0}
 #batchResume p{margin:0 0 8px}.batch-fresh{display:flex;gap:8px;align-items:center;font-weight:600}.batch-fresh input{width:18px;height:18px;flex:none}
+/* Who was sent, who is next. */
+.batch-list{margin:6px 0 0;border:1px solid var(--line);border-radius:12px;background:var(--surface2);font-size:13px}
+.batch-list[hidden]{display:none!important}
+.batch-list summary{cursor:pointer;padding:10px 12px;font-weight:700;min-height:44px;display:flex;align-items:center}
+.batch-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 12px 10px}
+.batch-cols h3{margin:0 0 4px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;opacity:.75}
+.batch-cols ol{margin:0;padding-left:20px;max-height:180px;overflow:auto;line-height:1.6}
+.batch-cols li.none{list-style:none;margin-left:-20px;opacity:.6}
+.batch-list p{margin:0;padding:0 12px 10px;color:var(--warn)}

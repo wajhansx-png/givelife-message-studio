@@ -33,6 +33,7 @@ class DonorDelivery:
             if not jobs:return {'state':'Idle','sent':0,'skipped':0,'failed':0,'total':0}
             out=self._public(jobs[-1]);left=self._remaining(jobs[-1])
             if left is not None:out['resumable']=len(left)
+            out['waiting']=self._waiting(jobs[-1])
             return out
     RESUME_WINDOW=12*3600
     def _done(self,j):
@@ -48,6 +49,15 @@ class DonorDelivery:
         if j.get('state') not in ('Stopped','Interrupted') or time.time()-j.get('updated_at',0)>self.RESUME_WINDOW:return None
         done=self._done(j);left=[i for i in j.get('ids',[]) if i not in done]
         return left or None
+    def _waiting(self,j):
+        """Names still to come in this batch, in order (numbers hidden). Empty once it has finished."""
+        if j.get('state') not in ('Starting','Sending','Waiting','Stopped','Interrupted'):return []
+        seen={r.get('id') for r in j.get('receipts',[])};names=[]
+        for ident in j.get('ids',[]):
+            if ident in seen:continue
+            try:names.append(hide_numbers(self.book.resolve(ident)['name']))
+            except ValueError:pass
+        return names[:100]
     def _public(self,j):
         result={k:copy.deepcopy(v) for k,v in j.items() if k not in ('boot','caption','captions','ids','signature','personal_names')}
         if result.get('state')=='Completed' and not result.get('sent') and result.get('skipped'):

@@ -49,18 +49,22 @@ test('a long assistant reply stays readable: big text, starts at its first line,
   if(w<900)await page.locator('#chatOpen').click();
   const log=page.locator(w<900?'#histLog':'#log');await expect(log.locator('.e.bot').last()).toContainText('Part 7');
   const measure=()=>log.evaluate(el=>{const r=[...el.querySelectorAll('.e.bot')].at(-1),a=el.getBoundingClientRect(),b=r.getBoundingClientRect();return {top:b.top>=a.top-1&&b.top<a.bottom,size:parseFloat(r.style.fontSize)}});
-  await expect.poll(async()=>(await measure()).top,{timeout:5000}).toBe(true);
+  await expect.poll(async()=>(await measure()).top,{timeout:5000,message:`${w}x${h} first line of the reply must be visible`}).toBe(true);
   expect((await measure()).size,`${w}x${h} font`).toBeGreaterThanOrEqual(12.5);
  }
 });
-test('DM sent stays marked, the donor stays in Important, and sending again works',async({page,request})=>{
+test('DM sent stays marked, the donor stays in Important and sinks so the next person is on top',async({page,request})=>{
  await open(page,request,1280,800);await page.locator('#openDonors').click();await page.locator('.donor-tabs [data-tab=important]').click();
- const rows=page.locator('.donor-row');const before=await rows.count();expect(before).toBeGreaterThan(0);
- const first=rows.first();await first.locator('.donor-dm').click();
- await expect(rows.first().locator('.donor-dm')).toContainText('DM sent');
+ const rows=page.locator('.donor-row');const before=await rows.count();expect(before).toBeGreaterThan(1);
+ const names=await rows.locator('.donor-name').allInnerTexts().catch(()=>null);
+ const firstId=await rows.first().getAttribute('data-donor-id');const secondId=await rows.nth(1).getAttribute('data-donor-id');
+ await rows.first().locator('.donor-dm').click();
+ const sent=page.locator(`.donor-row[data-donor-id="${firstId}"]`);await expect(sent.locator('.donor-dm')).toContainText('DM sent');
+ await expect(rows.first()).toHaveAttribute('data-donor-id',secondId);
+ await expect(rows.last()).toHaveAttribute('data-donor-id',firstId);
  expect(await rows.count()).toBe(before);await expect(page.locator('.donor-tabs [data-tab=important]')).toHaveAttribute('aria-selected','true');
- await rows.first().locator('.donor-dm').click();await expect(rows.first().locator('.donor-dm')).toContainText(/×\d/);
- await page.reload();await expect(page.locator('.donor-row').first().locator('.donor-dm')).toContainText('DM sent');
+ await sent.locator('.donor-dm').click();await expect(sent.locator('.donor-dm')).toContainText(/×\d/);
+ await page.reload();await expect(page.locator(`.donor-row[data-donor-id="${firstId}"] .donor-dm`)).toContainText(/DM sent|×\d/);
 });
 test('bulk paste shows when every number will be sent before anything starts',async({page,request})=>{
  await open(page,request,390,844);await page.locator('[data-view-button=dm]').click();await page.locator('#sendMoreDonors').click();

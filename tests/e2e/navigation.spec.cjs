@@ -49,7 +49,7 @@ test('a long assistant reply stays readable: big text, starts at its first line,
   if(w<900)await page.locator('#chatOpen').click();
   const log=page.locator(w<900?'#histLog':'#log');await expect(log.locator('.e.bot').last()).toContainText('Part 7');
   const measure=()=>log.evaluate(el=>{const r=[...el.querySelectorAll('.e.bot')].at(-1),a=el.getBoundingClientRect(),b=r.getBoundingClientRect();return {top:b.top>=a.top-1&&b.top<a.bottom,size:parseFloat(r.style.fontSize)}});
-  await expect.poll(async()=>(await measure()).top,{timeout:5000}).toBe(true);
+  await expect.poll(async()=>(await measure()).top,{timeout:5000,message:`${w}x${h} first line of the reply must be visible`}).toBe(true);
   expect((await measure()).size,`${w}x${h} font`).toBeGreaterThanOrEqual(12.5);
  }
 });

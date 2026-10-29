@@ -8,7 +8,7 @@ async function open(page,request,width=1440,height=900,theme='dark'){
  await page.goto('/');await expect(page.locator('#leftChip')).toContainText('25,000');await page.evaluate(()=>document.fonts.ready);
 }
 async function shot(page,name){if(process.env.COMFORT_SHOTS)await page.screenshot({path:path.join(process.env.COMFORT_SHOTS,name+'.png'),fullPage:false})}
-async function inside(page,locator){const b=await locator.boundingBox();expect(b).not.toBeNull();expect(b.x).toBeGreaterThanOrEqual(-1);expect(b.y).toBeGreaterThanOrEqual(-1);expect(b.x+b.width).toBeLessThanOrEqual(page.viewportSize().width+1);expect(b.y+b.height).toBeLessThanOrEqual(page.viewportSize().height+1)}
+async function inside(page,locator){await expect(locator).toBeVisible();const b=await locator.boundingBox();expect(b).not.toBeNull();expect(b.x).toBeGreaterThanOrEqual(-1);expect(b.y).toBeGreaterThanOrEqual(-1);expect(b.x+b.width).toBeLessThanOrEqual(page.viewportSize().width+1);expect(b.y+b.height).toBeLessThanOrEqual(page.viewportSize().height+1)}
 test('desktop reading column centers the reply and composer',async({page,request})=>{
  await open(page,request,1600,900);await expect(page.locator('#log .bot').last()).toContainText('ready to review');
  await shot(page,'desktop-chat');

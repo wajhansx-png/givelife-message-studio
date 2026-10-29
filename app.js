@@ -29,9 +29,12 @@ function dashboardConversation(items){
  const lastUser=items.map(x=>x.who).lastIndexOf('you'),after=items.slice(lastUser+1),reply=after.filter(x=>x.who==='app').at(-1),event=after.filter(x=>x.who==='auto').at(-1);
  return [lastUser>=0?items[lastUser]:null,reply,event].filter(Boolean)
 }
+/* Only replies that are new since the last paint slide in; redraws stay still. */
+let shownTurns=null;const turnKey=h=>h.id||h.t+':'+h.text;
 function drawLog(){const allItems=history.slice(-40);
+ const fresh=new Set(shownTurns?allItems.map(turnKey).filter(k=>!shownTurns.has(k)):[]);shownTurns=new Set(allItems.map(turnKey));
  for(const id of ['log','histLog']){const items=id==='log'&&!isPhone()?dashboardConversation(allItems):allItems;const el=$(id),state=scrollState[id],prev=state.top;el.textContent='';
-  items.forEach(h=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'');d.dataset.t=h.t;
+  items.forEach(h=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(fresh.has(turnKey(h))?' enter':'');d.dataset.t=h.t;
    if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=chatFormat(h.text).split('\n').map(line=>'<div class="reply-line'+(line?'':' blank')+'">'+(line||'<br>')+'</div>').join('');else d.textContent=h.text;el.append(d);if(h.who==='app'&&h.id){const f=document.createElement('button');f.className='reply-feedback';f.type='button';f.textContent='Correct this';f.setAttribute('aria-label','Correct this response');f.onclick=e=>{e.stopPropagation();openFeedback(h.id)};el.append(f)}});
   if(thinking){const d=document.createElement('div');d.className='e bot dots';d.textContent='Thinking…';el.append(d)}
   if(el.clientHeight){if(state.follow)followChat(el,items.at(-1)?.who==='app'&&!thinking);else el.scrollTop=prev}
@@ -107,7 +110,9 @@ for(const k of ['group','dm'])$(k+'Preview').addEventListener('paste',e=>{e.prev
 /* ---- views, amount, DM greeting ---- */
 function setView(v){if(editing)setEditing(false);if(previewView)previewScroll[previewView]=$('chat').scrollTop;document.body.dataset.view=v;previewView=v;document.querySelectorAll('[data-view-button]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.viewButton===v)));
  $('ctx').textContent=v==='group'?'Group · poster':'DM · poster';renderSendMode();localStorage.setItem('givelife-view',v);requestAnimationFrame(()=>{fit();$('chat').scrollTop=previewScroll[v]||0});flip()}
-document.querySelectorAll('[data-view-button]').forEach(b=>b.onclick=()=>setView(b.dataset.viewButton));
+/* Large screen changes cross-fade where the browser supports view transitions. */
+function smooth(change){if(!document.startViewTransition||matchMedia('(prefers-reduced-motion: reduce)').matches)return change();document.startViewTransition(change)}
+document.querySelectorAll('[data-view-button]').forEach(b=>b.onclick=()=>{if(b.dataset.viewButton!==view())smooth(()=>setView(b.dataset.viewButton))});
 function showLeft(){const c=$('leftChip');c.textContent=left==null?'Rs. …':'Rs. '+fmt(left);const w=document.createElement('span');w.className='lw';w.textContent=' left';c.append(w)}
 function applyDrafts(d){if(typeof d.group==='string'&&typeof d.dm==='string')draftsReady=true;if(d.dm_identity){$('dmName').value=d.dm_identity.name||'';$('dmPhone').value=d.dm_identity.phone||'';gender=d.dm_identity.gender==='Sister'?'Sister':'Brother';document.querySelectorAll('#gender button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===gender)))}if(d.group!=null||d.dm!=null)draftSaved=JSON.stringify({group:d.group??$('group').value,dm:d.dm??$('dm').value});if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
 async function setLeft(n){if(editing)setEditing(false);const r=await post('/left',{left:n}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not update amount');applyDrafts(d);await save()}
@@ -391,8 +396,8 @@ const cached=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem
 
 /* ---- hide the message to work only with the buttons and chat ---- */
 function setNoMsg(on){if(editing)setEditing(false);document.querySelector('.overflow-tools').open=false;document.body.classList.toggle('nomsg',on);$('showMsg').hidden=!on;$('showMsg').setAttribute('aria-expanded',String(!on));const desktop=$('desktopPreview');if(desktop){desktop.setAttribute('aria-pressed',String(!on));desktop.textContent=on?'Message preview':'Back to chat'}if(!on){requestAnimationFrame(fit);flip()}}
-if($('desktopPreview'))$('desktopPreview').onclick=()=>setNoMsg(!document.body.classList.contains('nomsg'));
-$('hideMsg').onclick=e=>{e.stopPropagation();setNoMsg(true)};$('previewBack').onclick=()=>setNoMsg(true);$('showMsg').onclick=()=>setNoMsg(false);
+if($('desktopPreview'))$('desktopPreview').onclick=()=>smooth(()=>setNoMsg(!document.body.classList.contains('nomsg')));
+$('hideMsg').onclick=e=>{e.stopPropagation();smooth(()=>setNoMsg(true))};$('previewBack').onclick=()=>smooth(()=>setNoMsg(true));$('showMsg').onclick=()=>smooth(()=>setNoMsg(false));
 setNoMsg(true);
 
 /* ---- theme: Auto follows the phone/PC setting; Light or Dark is remembered on this device ---- */
@@ -402,7 +407,8 @@ function applyTheme(t){const r=document.documentElement;if(t==='light'||t==='dar
  try{localStorage.setItem('givelife-theme',t)}catch(e){}
  document.querySelectorAll('#theme button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.t===t)));
  const m=document.querySelector('meta[name=theme-color]');if(m)m.content=getComputedStyle(r).getPropertyValue('--bg').trim()}
-document.querySelectorAll('#theme button').forEach(b=>b.onclick=()=>applyTheme(b.dataset.t));
+/* The choice is stored at once; only the repaint is animated. */
+document.querySelectorAll('#theme button').forEach(b=>b.onclick=()=>{try{localStorage.setItem('givelife-theme',b.dataset.t)}catch(e){}smooth(()=>applyTheme(b.dataset.t))});
 
 matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(themeNow()==='system')applyTheme('system')});
 applyTheme(themeNow());

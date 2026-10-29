@@ -38,8 +38,8 @@ function dashboardConversation(items){
  const lastUser=items.map(x=>x.who).lastIndexOf('you'),after=items.slice(lastUser+1),reply=after.filter(x=>x.who==='app').at(-1),event=after.filter(x=>x.who==='auto').at(-1);
  return [lastUser>=0?items[lastUser]:null,reply,event].filter(Boolean)
 }
-/* Only replies that are new since the last paint slide in; redraws stay still. */
-let shownTurns=null;const turnKey=h=>h.id||h.t+':'+h.text;
+/* Existing turns retain their nodes; only fresh user messages slide in. */
+let shownTurns=null,conversationLayoutReady=false,conversationFrame=0;const turnKey=h=>h.id||h.t+':'+h.text;
 /* Reading layout only: the reply text is never changed. Each line gets a role (heading, numbered step,
    bullet, opening line, closing question) so the eye can scan titles first and details second. */
 function lineRole(raw,index,lines){const t=raw.trim();if(!t)return 'blank';
@@ -61,13 +61,20 @@ function replyHtml(text){const raw=String(text).replace(/\r\n/g,'\n').split('\n'
   return '<div class="reply-line r-'+role+(line?'':' blank')+'" style="--i:'+Math.min(i,16)+'">'+body+'</div>'}).join('')}
 function drawLog(){const allItems=history.slice(-40);
  const fresh=new Set(shownTurns?allItems.map(turnKey).filter(k=>!shownTurns.has(k)):[]);shownTurns=new Set(allItems.map(turnKey));
- for(const id of ['log','histLog']){const items=id==='log'&&!isPhone()?dashboardConversation(allItems):allItems;const el=$(id),state=scrollState[id],prev=state.top;el.textContent='';
-  items.forEach(h=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(fresh.has(turnKey(h))?' enter':'');d.dataset.t=h.t;
-   if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=replyHtml(h.text);else d.textContent=h.text;el.append(d);/* The "Correct this" button was removed from the chat; openFeedback() stays for later use. */});
-  if(thinking){const d=document.createElement('div');d.className='e bot dots';d.textContent='Thinking…';el.append(d)}
+ for(const id of ['log','histLog']){const items=id==='log'&&!isPhone()?dashboardConversation(allItems):allItems;const el=$(id),state=scrollState[id],prev=state.top,existing=new Map([...el.children].map(n=>[n._turnKey,n])),wanted=[];
+  items.forEach(h=>{const key=turnKey(h),signature=JSON.stringify([h.who,h.text,!!h.err]);let d=existing.get(key);
+   if(!d){d=document.createElement('div');d._turnKey=key}
+   if(d._messageSignature!==signature){d._messageSignature=signature;d._chatText=h.text;d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(fresh.has(key)?' enter':'');d.dataset.t=h.t;
+    if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=replyHtml(h.text);else d.textContent=h.text;
+    const copy=document.createElement('button');copy.type='button';copy.className='message-copy';copy.textContent='Copy';copy.setAttribute('aria-label',h.who==='you'?'Copy your message':h.who==='app'?'Copy assistant message':'Copy activity message');
+    copy.onclick=async()=>{try{await navigator.clipboard.writeText(d._chatText);copy.textContent='Copied';$($('hist').open?'histAnnouncement':'chatAnnouncement').textContent='Message copied.'}catch(e){copy.textContent='Retry';$($('hist').open?'histAnnouncement':'chatAnnouncement').textContent='Could not copy. Try again.'}};d.append(copy)}
+   wanted.push(d)});
+  if(thinking){let d=existing.get('thinking');if(!d){d=document.createElement('div');d._turnKey='thinking';d.className='e bot dots';d.textContent='Thinking…'}wanted.push(d)}
+  const keep=new Set(wanted);for(const child of [...el.children])if(!keep.has(child))child.remove();wanted.forEach((child,i)=>{if(el.children[i]!==child)el.insertBefore(child,el.children[i]||null)});
+  if(conversationLayoutReady)fitConversation();
   if(el.clientHeight){if(state.follow)followChat(el,items.at(-1)?.who==='app'&&!thinking);else el.scrollTop=prev}
  }
- requestAnimationFrame(()=>{fitConversation();for(const id of Object.keys(scrollState))if(scrollState[id].follow)followChat($(id),true)})
+ scheduleConversationFit()
 }
 for(const id of Object.keys(scrollState))$(id).addEventListener('scroll',()=>{const el=$(id);if(!el.clientHeight)return;scrollState[id]={top:el.scrollTop,follow:el.scrollHeight-el.clientHeight-el.scrollTop<64};if(scrollState[id].follow){unreadReplies[id]=false;paintUnread()}rememberScroll()},{passive:true});
 function followReplies(){for(const id of Object.keys(scrollState)){scrollState[id].follow=true;unreadReplies[id]=false}paintUnread()}
@@ -109,9 +116,17 @@ function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');if(!
 const FIT_STEPS=[[16,1,0],[15,1,0],[14.5,1,0]];
 /* Wide screens: one column for short answers, then two, then three, choosing the fewest columns that keep the text big. */
 const FIT_STEPS_WIDE=[[18,1,0],[17,1,0],[16,1,0],[17,2,0],[16,2,0],[15,2,0],[16,3,0],[15,3,0],[14.5,2,1],[14.5,3,1],[14,2,1],[14,3,1],[13.5,3,1],[13,3,2],[12.5,3,2],[12,3,2]];
-let fitGuard=false;
 function fitConversation(){
  for(const id of ['log','histLog']){const log=$(id);if(!log.clientHeight)continue;const reply=[...log.querySelectorAll('.e.bot:not(.dots)')].at(-1);if(!reply)continue;
+  /* Choose the mode from the normal layout every time. Measuring the already-expanded layout
+     used to hide the question, make the answer fit, and switch it back on the next resize. */
+  const talk=id==='log'&&matchMedia('(min-width:900px)').matches?log.closest('.talk'):null;
+  if(talk)talk.classList.remove('long-reply');
+  let fitted=fitReply(log,reply,id);
+  if(talk&&(reply.classList.contains('cols2')||!fitted)){talk.classList.add('long-reply');fitReply(log,reply,id)}
+ }
+}
+function fitReply(log,reply,id){
   const style=getComputedStyle(log),padding=parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
   let reserve=44;
   if(id==='log')reserve=[...log.children].filter(n=>n!==reply).reduce((n,node)=>n+node.offsetHeight+8,8);
@@ -121,13 +136,12 @@ function fitConversation(){
   for(const [size,cols,tight] of (wide?FIT_STEPS_WIDE:FIT_STEPS)){if(size>biggest||cols>2&&room<760)continue;reply.style.fontSize=size+'px';reply.classList.toggle('cols3',cols>2);reply.classList.toggle('cols2',cols>1);reply.classList.toggle('tight',tight>=1);reply.classList.toggle('tighter',tight>=2);if(reply.scrollHeight<=available){fitted=true;break}}
   /* If even the smallest step does not fit, keep the boxes (they scroll a little) rather than one long column. */
   if(!fitted){if(wide){const three=room>=760;reply.style.fontSize=(three?13.5:14)+'px';reply.classList.toggle('cols3',three);reply.classList.add('cols2');reply.classList.add('tight');reply.classList.remove('tighter')}else{reply.style.fontSize=(log.clientWidth<500?15:16)+'px';reply.classList.remove('cols2','cols3','tight','tighter')}}
-  /* A long answer takes the whole area: my own message hides and the action buttons move beside the box. */
-  if(id==='log'&&!fitGuard){const talk=log.closest('.talk'),long=reply.classList.contains('cols2')||!fitted;
-   if(talk&&talk.classList.contains('long-reply')!==long&&matchMedia('(min-width:900px)').matches){talk.classList.toggle('long-reply',long);fitGuard=true;try{fitConversation()}finally{fitGuard=false}return}}
- }
+  return fitted
 }
+function scheduleConversationFit(){if(conversationFrame)return;conversationFrame=requestAnimationFrame(()=>{conversationFrame=0;fitConversation();for(const id of Object.keys(scrollState))if(scrollState[id].follow)followChat($(id),true)})}
+conversationLayoutReady=true;
 new ResizeObserver(()=>requestAnimationFrame(fit)).observe($('chat'));
-for(const id of ['log','histLog'])new ResizeObserver(()=>requestAnimationFrame(fitConversation)).observe($(id));
+for(const id of ['log','histLog'])new ResizeObserver(scheduleConversationFit).observe($(id));
 function save(){if(!draftsReady)return Promise.resolve();const data={group:$('group').value,dm:$('dm').value},payload=JSON.stringify(data);
  saveChain=saveChain.catch(()=>{}).then(async()=>{if(payload===draftSaved)return;const r=await post('/drafts',data);if(!r.ok)throw Error('Save failed');draftSaved=payload;status('✓ Saved')});return saveChain}
 async function ensureDrafts(){if(draftsReady)return;if(!draftsLoad)draftsLoad=fetch('/drafts').then(async r=>{if(!r.ok)throw Error('Could not load captions');const d=await r.json();if(typeof d.group!=='string'||typeof d.dm!=='string')throw Error('Saved captions are invalid');cached('drafts',d);applyDrafts(d)}).finally(()=>draftsLoad=null);return draftsLoad}

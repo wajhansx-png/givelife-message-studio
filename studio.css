@@ -959,5 +959,9 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
 @media(min-width:900px){
  .talk.long-reply .talk-title{position:absolute;top:6px;right:14px;left:auto;min-height:0;padding:0;border:0;background:none;z-index:3;font-size:0}
  .talk.long-reply .talk-title button{font-size:12px;min-height:28px}
- .talk.long-reply .log{padding-top:30px}
+ .talk.long-reply .log{padding-top:42px}
 }
+/* A tall answer is never cut off at the top: centered when it fits, top-aligned and scrollable when not. */
+.talk .log,.hist .log{justify-content:flex-start!important}
+.talk .log>.e.bot:last-of-type{margin-block:auto}
+.talk .log>.e.bot:only-of-type{margin-block:auto}

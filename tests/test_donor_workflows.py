@@ -40,6 +40,20 @@ class WorkflowTests(unittest.TestCase):
  def test_old_zero_send_batch_is_not_displayed_as_success(self):
   result=self.app.donors().jobs._public({'state':'Completed','sent':0,'skipped':3,'total':3})
   self.assertEqual(result['state'],'Nothing sent');self.assertIn('No DM was sent',result['error'])
+ def test_chat_send_20_dms_continues_through_the_whole_audience(self):
+  registry=self.app.donors()
+  for i in range(45):
+   d=registry.book.add('Donor '+str(i),'92300'+str(1000000+i))['donor'];registry.book.update(d['id'],important=True)
+  with patch('donor_delivery.threading.Thread'):
+   result=registry.command('send 20 dms to important donors with 3 minutes gap',request_id='chat-rounds')
+  job=registry.jobs._load()['jobs'][-1];self.assertEqual((job['total'],job['chunk'],job['gap_seconds']),(45,20,180));self.assertIn('automatically',result['reply'])
+ def test_bare_stop_stops_a_running_donor_batch_and_does_nothing_otherwise(self):
+  registry=self.app.donors();d=registry.book.add('Ali','923001234567')['donor']
+  self.assertIsNone(registry.command('stop',request_id='nothing-running'))
+  registry.jobs.active='running'
+  for word in ('stop','Stop it','pause','ruk jao','band karo','stop all'):
+   registry.jobs.stop.clear();result=registry.command(word,request_id='x'+word);self.assertIn('stopped',result['reply'].lower(),word);self.assertTrue(registry.jobs.stop.is_set(),word)
+  registry.jobs.active=None
  def test_20_unique_messages_first_immediate_then_chosen_gap(self):
   registry=self.app.donors()
   for i in range(25):

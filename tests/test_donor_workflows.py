@@ -54,6 +54,15 @@ class WorkflowTests(unittest.TestCase):
   for word in ('stop','Stop it','pause','ruk jao','band karo','stop all'):
    registry.jobs.stop.clear();result=registry.command(word,request_id='x'+word);self.assertIn('stopped',result['reply'].lower(),word);self.assertTrue(registry.jobs.stop.is_set(),word)
   registry.jobs.active=None
+ def test_chat_continue_resumes_a_stopped_batch_without_resending(self):
+  registry=self.app.donors()
+  for i in range(6):
+   d=registry.book.add('Donor '+str(i),'92300'+str(1000000+i))['donor'];registry.book.update(d['id'],important=True)
+  with patch('donor_delivery.threading.Thread'):registry.command('send 3 dms to important donors',request_id='first-run')
+  job=registry.jobs._load()['jobs'][-1];first=job['ids'][:2]
+  data=registry.jobs._load();data['jobs'][-1].update(state='Stopped',receipts=[{'id':i,'name':'x','state':'Sent'} for i in first],boot=registry.jobs.boot);registry.jobs._save(data);registry.jobs.active=None
+  with patch('donor_delivery.threading.Thread'):result=registry.command('continue',request_id='second-run')
+  again=registry.jobs._load()['jobs'][-1];self.assertEqual(again['ids'],job['ids'][2:]);self.assertIn('Continuing',result['reply'])
  def test_20_unique_messages_first_immediate_then_chosen_gap(self):
   registry=self.app.donors()
   for i in range(25):

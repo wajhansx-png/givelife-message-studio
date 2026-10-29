@@ -99,6 +99,10 @@ class DonorIntegration:
         import chat_policy,manual_commands
         raw=str(text).strip();t=chat_policy.owner_text(raw).strip()
         if t.casefold() in ('hold','pause','wait','stop') and self.jobs.active:return self.pause_personal()
+        if re.fullmatch(r'(?i)(?:please\s+)?(?:continue|resume|carry on|go on|keep going|jari rakho|phir se shuru|start again|restart)(?:\s+(?:it|the batch|sending|dms?|donor dms?|donors?|from where (?:it )?stopped))?[.!]*',t) and not self.jobs.active:
+            last=self.jobs.status()
+            if last.get('resumable') and last.get('scope') in ('all','important','donated','not_donated'):
+                return self.start_batch(scope=last['scope'],gap_seconds=last.get('gap_seconds',240),poster=last.get('poster',True),chunk=last.get('chunk'),rest_seconds=last.get('rest_seconds',1200),request_id=request_id)
         if t.casefold() in ('resume','continue','unhold') and self.paused and not self.app.on_hold():return {'reply':self.resume_personal()}
         if re.search(r"(?i)\b(dont|don't|do not|never)\b",t) or manual_commands.question_request(t):return None
         if re.search(r'(?i)\band then\b|;|\badd\b.+\band\b',t):return None

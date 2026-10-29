@@ -893,3 +893,30 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
 .talk .log .e.bot strong{color:#fff}
 :root:not([data-theme=dark]) .talk .log .e.bot strong{color:var(--ink)}
 .talk .log .e.you{background:color-mix(in srgb,var(--g) 22%,var(--surface));border-color:color-mix(in srgb,var(--g) 40%,transparent)}
+
+/* Chat highlight v2: a clearly brighter answer panel with a green edge on a darker chat area. */
+:root[data-theme=dark]{--bubble:#2f4247;--bubble-line:#5f8f86;--chat-well:#0f1517}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bubble:#2f4247;--bubble-line:#5f8f86;--chat-well:#0f1517}}
+:root{--chat-well:#e4ede8}
+.talk.card,.hist{background:var(--chat-well)}
+.talk .log .e.bot,.hist .log .e.bot{background:var(--bubble);border:1.5px solid var(--bubble-line);box-shadow:0 0 0 4px color-mix(in srgb,var(--g) 9%,transparent),0 18px 40px -14px #000000b3,inset 0 1px 0 #ffffff1a}
+:root:not([data-theme=dark]) .talk .log .e.bot,:root:not([data-theme=dark]) .hist .log .e.bot{background:#fff;border-color:#7fa896;box-shadow:0 0 0 4px #0b7a5c14,0 16px 34px -16px #0b231b66}
+.talk .log .e.bot.cols2,.hist .log .e.bot.cols2{column-rule:1px solid color-mix(in srgb,var(--bubble-line) 70%,transparent)}
+.talk .log .e.bot.cols3,.hist .log .e.bot.cols3{columns:3;column-gap:34px;column-rule:1px solid color-mix(in srgb,var(--bubble-line) 70%,transparent);width:100%;max-width:none;padding:14px 20px}
+.talk .log .e.bot.cols3 .reply-line{break-inside:avoid}
+@media(min-width:900px){.talk .log{padding-inline:24px}}
+
+/* Smaller message bar on the desktop dashboard. */
+@media(min-width:900px){
+ .talk .composer{margin:4px auto 10px;padding:4px;border-radius:14px;grid-template-columns:32px minmax(0,1fr) 44px}
+ .talk .composer textarea{font-size:15px;height:40px;min-height:40px;padding:8px 2px;line-height:24px}
+ .talk .composer .go{width:44px;height:44px;border-radius:11px;font-size:22px}
+ .talk .composer .clip{width:32px;height:44px;font-size:22px}
+ /* Long answer: hide my own message, put the action buttons on the right of the box. */
+ .talk{position:relative}
+ .talk.long-reply .log .e.you{display:none}
+ .talk.long-reply .next-actions{position:absolute;right:16px;top:46px;bottom:70px;width:170px;max-width:none;margin:0;padding:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:10px;z-index:2}
+ .talk.long-reply .next-actions[hidden]{display:none}
+ .talk.long-reply .next-actions button{min-height:52px;white-space:normal;line-height:1.25;border-radius:14px;font-size:13px;padding:8px 10px}
+ .talk.long-reply:has(.next-actions:not([hidden])) .log{padding-right:200px}
+}

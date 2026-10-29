@@ -3,7 +3,7 @@ const source=fs.readFileSync('app.js','utf8'),slice=source.slice(source.indexOf(
 const row=()=>({hidden:true,children:[],set textContent(v){this.children=[]},append(b){this.children.push(b)}});
 const rows={chatNextActions:row(),histNextActions:row()};
 let gets=0,posts=0,watch=0,resolveSend;const id='a'.repeat(32),action={id,label:'Send to GiveLife main',detail:'Text only'};
-const ctx={$:id=>rows[id],document:{createElement:()=>({setAttribute(){}})},fetch:async()=>{gets++;return {ok:true,json:async()=>({items:[{...action,disabled:posts>0}]})}},post:async(url,body)=>{assert.equal(url,'/chat-action');assert.deepEqual(Object.keys(body),['action_id']);posts++;await new Promise(r=>resolveSend=r);return {ok:true,json:async()=>({reply:'Sending saved text.',job_id:'job-one',caption:'Exact draft'})}},say(){},watchGroupJob(){watch++},closeChat(){},setView(){},Set,Array,Error};
+const ctx={requestAnimationFrame:f=>f(),fitConversation(){},$:id=>rows[id],document:{createElement:()=>({setAttribute(){}})},fetch:async()=>{gets++;return {ok:true,json:async()=>({items:[{...action,disabled:posts>0}]})}},post:async(url,body)=>{assert.equal(url,'/chat-action');assert.deepEqual(Object.keys(body),['action_id']);posts++;await new Promise(r=>resolveSend=r);return {ok:true,json:async()=>({reply:'Sending saved text.',job_id:'job-one',caption:'Exact draft'})}},say(){},watchGroupJob(){watch++},closeChat(){},setView(){},Set,Array,Error};
 vm.createContext(ctx);vm.runInContext(slice,ctx);
 (async()=>{
  await ctx.refreshNextActions();assert.equal(posts,0,'Displaying suggested actions never executes them');assert.equal(rows.histNextActions.children[0].textContent,action.label);

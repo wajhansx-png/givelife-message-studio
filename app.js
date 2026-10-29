@@ -15,7 +15,7 @@ const Nav={rendering:false,
  leave(name){if(Nav.rendering||Nav.top()!==name)return;const h=window.history;if(h.state&&h.state.nav&&h.length>1){Nav.pending=true;setTimeout(Nav.settle,400);h.back()}else Nav.go('',{replace:true})}};
 /* Server-issued next steps are tied to the exact saved draft, never AI-authored commands. */
 let nextActions=[],nextActionEpoch=0;const nextActionPending=new Set();
-function drawNextActions(){renderSendMode();for(const id of ['chatNextActions','histNextActions']){const row=$(id);if(!row)continue;row.textContent='';row.hidden=!nextActions.length;for(const a of nextActions){const b=document.createElement('button');b.type='button';b.textContent=a.label;b.title=a.detail||'';b.disabled=!!a.disabled||nextActionPending.has(a.id);b.setAttribute('aria-label',a.label+(a.detail?' · '+a.detail:''));b.onclick=()=>runNextAction(a);row.append(b)}}}
+function drawNextActions(){renderSendMode();requestAnimationFrame(()=>fitConversation());for(const id of ['chatNextActions','histNextActions']){const row=$(id);if(!row)continue;row.textContent='';row.hidden=!nextActions.length;for(const a of nextActions){const b=document.createElement('button');b.type='button';b.textContent=a.label;b.title=a.detail||'';b.disabled=!!a.disabled||nextActionPending.has(a.id);b.setAttribute('aria-label',a.label+(a.detail?' · '+a.detail:''));b.onclick=()=>runNextAction(a);row.append(b)}}}
 function renderSendMode(){const label=$('sendMode');if(!label)return;const mode=nextActions[0]?.detail||'Poster + caption';label.textContent=mode;if($('ctx'))$('ctx').textContent=view()==='group'?(mode==='Text only'?'Group · text only':'Group · poster'):'DM · poster';if($('poster')?.src)$('poster').hidden=view()==='group'&&mode==='Text only'}
 function clearNextActions(){nextActionEpoch++;nextActions=[];drawNextActions()}
 async function refreshNextActions(){const epoch=++nextActionEpoch;try{const r=await fetch('/chat-next-actions');if(!r.ok)return;const d=await r.json();if(epoch!==nextActionEpoch)return;nextActions=(Array.isArray(d.items)?d.items:[]).filter(a=>a&&/^[a-f0-9]{32}$/.test(a.id)&&typeof a.label==='string').slice(0,3);drawNextActions()}catch(e){}}
@@ -87,7 +87,8 @@ function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');if(!
 /* [font px, columns, tightness]. Short answers get a big font. Long ones use the width of a wide screen
    (two columns) before the text is ever made small, and scrolling is the very last resort. */
 const FIT_STEPS=[[17,1,0],[16,1,0],[15,1,0],[14,1,0],[13,1,0],[12,1,0],[12,1,1],[11.5,1,1],[11,1,2],[10.5,1,2],[10,1,2]];
-const FIT_STEPS_WIDE=[[18,1,0],[17,1,0],[16,1,0],[15,1,0],[18,2,0],[17,2,0],[16,2,0],[15,2,0],[14,2,0],[14,2,1],[13,2,1],[13,2,2],[12.5,2,2],[12,2,2],[11.5,2,2]];
+const FIT_STEPS_WIDE=[[18,1,0],[17,1,0],[16,1,0],[15,1,0],[18,2,0],[17,2,0],[16,2,0],[15,2,0],[14,2,0],[14,2,1],[13,2,1],[13,2,2],[13,3,1],[12.5,3,2],[12,3,2],[11.5,3,2],[11,3,2]];
+let fitGuard=false;
 function fitConversation(){
  for(const id of ['log','histLog']){const log=$(id);if(!log.clientHeight)continue;const reply=[...log.querySelectorAll('.e.bot:not(.dots)')].at(-1);if(!reply)continue;
   const style=getComputedStyle(log),padding=parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
@@ -95,8 +96,11 @@ function fitConversation(){
   if(id==='log')reserve=[...log.children].filter(n=>n!==reply).reduce((n,node)=>n+node.offsetHeight+8,8);
   const available=Math.max(80,log.clientHeight-padding-reserve);
   /* A long reply gets smaller and tighter, step by step, until all of it fits on this screen without scrolling. */
-  const wide=log.clientWidth>=760,biggest=log.clientWidth<500?15:18;
-  for(const [size,cols,tight] of (wide?FIT_STEPS_WIDE:FIT_STEPS)){if(size>biggest)continue;reply.style.fontSize=size+'px';reply.classList.toggle('cols2',cols>1);reply.classList.toggle('tight',tight>=1);reply.classList.toggle('tighter',tight>=2);if(reply.scrollHeight<=available)break}
+  const cs=getComputedStyle(log),room=log.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),wide=log.clientWidth>=760,biggest=log.clientWidth<500?15:18;
+  for(const [size,cols,tight] of (wide?FIT_STEPS_WIDE:FIT_STEPS)){if(size>biggest||cols>2&&room<960)continue;reply.style.fontSize=size+'px';reply.classList.toggle('cols3',cols>2);reply.classList.toggle('cols2',cols>1);reply.classList.toggle('tight',tight>=1);reply.classList.toggle('tighter',tight>=2);if(reply.scrollHeight<=available)break}
+  /* A long answer takes the whole area: my own message hides and the action buttons move beside the box. */
+  if(id==='log'&&!fitGuard){const talk=log.closest('.talk'),long=reply.classList.contains('cols2')||reply.classList.contains('cols3')||reply.classList.contains('tight');
+   if(talk&&talk.classList.contains('long-reply')!==long&&matchMedia('(min-width:900px)').matches){talk.classList.toggle('long-reply',long);fitGuard=true;try{fitConversation()}finally{fitGuard=false}return}}
  }
 }
 new ResizeObserver(()=>requestAnimationFrame(fit)).observe($('chat'));
@@ -297,7 +301,7 @@ async function act(text){const t=text.trim();if(!t)return;say('you',window.Donor
   }}
 /* A draft is independent of the message caption, and shared between both chat views. */
 function saveChatDraft(value){for(const id of ['cmd','histCmd'])if($(id).value!==value)$(id).value=value;try{localStorage.setItem('givelife-chat-draft',value)}catch(e){}resizeComposer()}
-function resizeComposer(){for(const id of ['cmd','histCmd']){const input=$(id);input.style.height='44px';input.style.height=Math.min(120,Math.max(44,input.scrollHeight))+'px'}}
+function resizeComposer(){for(const id of ['cmd','histCmd']){const input=$(id);input.style.height='40px';input.style.height=Math.min(120,Math.max(40,input.scrollHeight))+'px'}}
 try{saveChatDraft(localStorage.getItem('givelife-chat-draft')||'')}catch(e){}
 for(const id of ['cmd','histCmd'])$(id).addEventListener('input',()=>saveChatDraft($(id).value));
 function hideKeys(){if(isPhone()){document.activeElement?.blur();$('cmd').blur();$('histCmd').blur()}}

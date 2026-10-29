@@ -197,7 +197,7 @@ class PastedNameIntegrationTests(unittest.TestCase):
         finally:
             fixture.tearDown()
 
-    def test_pasted_batch_preserves_daily_fifty_limit_without_outbound_calls(self):
+    def test_pasted_batch_is_not_stopped_by_the_old_daily_fifty_limit(self):
         from test_donor_hub import IntegrationTests
         fixture = IntegrationTests(); fixture.setUp()
         try:
@@ -206,14 +206,11 @@ class PastedNameIntegrationTests(unittest.TestCase):
             app.STORE.put('dm_daily', {'day': day, 'count': 50, 'last': 0})
             preview = registry.pasted.preview('Michael,03001234567')
             with patch('donor_delivery.threading.Thread.start'):
-                registry.pasted.start(preview['token'], request_id='daily-cap-pasted-test')
-            with patch.object(app, 'send_image') as outbound:
+                registry.pasted.start(preview['token'], request_id='no-daily-cap-pasted-test')
+            with patch.object(app, 'send_image', return_value={'code': 'SUCCESS'}) as outbound:
                 registry.jobs._run(registry.jobs._load()['jobs'][-1])
-                outbound.assert_not_called()
-            status = registry.jobs.status()
-            self.assertEqual(status['sent'], 0)
-            self.assertEqual(status['state'], 'Stopped')
-            self.assertIn('50-DM', status['error'])
+                outbound.assert_called_once()
+            self.assertEqual(registry.jobs.status()['sent'], 1)
         finally:
             fixture.tearDown()
 

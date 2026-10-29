@@ -103,7 +103,7 @@ def send_custom(body):
      if previous:raise ValueError('This recipient was contacted before. Check WhatsApp before sending again.')
    ledger=STORE.get('dm_daily',{});day=datetime.datetime.fromtimestamp(now,datetime.timezone(datetime.timedelta(hours=5))).date().isoformat()
    if ledger.get('day')!=day:ledger={'day':day,'count':0,'last':ledger.get('last',0)}
-   if ledger['count']>=50 and not manual:raise ValueError('The 50-DM daily limit has been reached.')
+   if ledger['count']>=50 and not manual and not explicit_batch:raise ValueError('The 50-DM daily limit has been reached.')
    if not manual and not (explicit_batch and body.get('first_in_batch') is True) and now-ledger.get('last',0)<60:raise ValueError('Wait at least 60 seconds between DMs.')
    ledger.update(count=ledger['count']+1,last=now);STORE.put('dm_daily',ledger);STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':now})
   # Reserve before dispatch. A network failure must not silently allow duplicates.

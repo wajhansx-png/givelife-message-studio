@@ -138,7 +138,7 @@ class DonorDelivery:
                 if existing.get('signature')!=signature:raise ValueError('This request was already used for another donor batch.')
                 return {'job':self._public(existing),'reply':'This donor batch is already tracked. It was not started again.'}
             job={'id':ident,'request_id':rid,'signature':signature,'boot':self.boot,'scope':scope,'gap_seconds':gap,'poster':poster,'ids':[r['id'] for r in rows],'caption':caption,'captions':captions,'state':'Starting','sent':0,'skipped':0,'failed':0,'total':len(rows),'current':'','receipts':[],'created_at':now,'updated_at':now,'next_at':None}
-            job.update(auto=True,batch=1,hold_until=hold_until,wait_daily=bool(chunk))
+            job.update(auto=True,batch=1,hold_until=hold_until)
             if chunk and len(rows)>chunk:job.update(chunk=chunk,rest_seconds=rests[0],rests=rests,batches=-(-len(rows)//chunk))
             if jitter:job['jitter']=jitter
             if personal_names is not None:job['personal_names']=copy.deepcopy(personal_names)
@@ -155,17 +155,13 @@ class DonorDelivery:
         return max(60.0,base+random.uniform(jit['min'],jit['max'])) if jit else base
     def _rest(self,j,batch):
         rests=j.get('rests') or [j.get('rest_seconds',1200)];return float(rests[min(max(batch,1),len(rests))-1])
-    @staticmethod
-    def _next_day(now):
-        pkt=datetime.timezone(datetime.timedelta(hours=5));day=datetime.datetime.fromtimestamp(now,pkt)
-        return (day+datetime.timedelta(days=1)).replace(hour=0,minute=2,second=0,microsecond=0).timestamp()
     def _sleep_until(self,due):
         """Wait in short steps so Stop answers fast. True when the owner stopped it."""
         while time.time()<due:
             if self.stop.wait(min(2,max(.1,due-time.time()))):return True
         return self.stop.is_set()
     def _dispatch(self,j,body,receipts,sent,skipped):
-        """Send one DM. Waits for WhatsApp to come back and for the daily limit to reset instead of giving up."""
+        """Send one DM. Waits for WhatsApp to come back instead of giving up."""
         while True:
             if not self.connected():
                 deadline=time.time()+1800
@@ -173,11 +169,7 @@ class DonorDelivery:
                 while not self.connected():
                     if time.time()>=deadline:raise ValueError('WhatsApp stayed disconnected for 30 minutes. Reconnect it, then press Continue.')
                     if self.stop.wait(15):return None
-            try:return self.send(body)
-            except ValueError as e:
-                if 'daily limit' not in str(e).lower() or not j.get('wait_daily'):raise
-                due=self._next_day(time.time());self._update(j['id'],state='Waiting',next_at=due,next_batch_at=due,current='Daily limit reached. Continues tomorrow by itself.',sent=sent,skipped=skipped,receipts=receipts)
-                if self._sleep_until(due):return None
+            return self.send(body)
     def _run(self,j):
         receipts=[];sent=skipped=failed=0;last_completion=None;state='Completed';error='';chunk=j.get('chunk');gap_next=float(j['gap_seconds']);done_here=set()
         try:

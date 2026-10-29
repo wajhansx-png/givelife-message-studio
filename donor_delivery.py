@@ -106,6 +106,12 @@ class DonorDelivery:
         with self.lock:
             jobs=self._load().get('jobs',[]);prev=jobs[-1] if jobs else None
         left=self._remaining(prev) if prev and not fresh and prev.get('scope')==scope and (scope!='selected' or set(prev.get('ids',[]))&set(ids or [])) else None
+        same_batch=prev and not fresh and prev.get('scope')==scope and (scope!='selected' or set(prev.get('ids',[]))&set(ids or []))
+        recent=prev and time.time()-prev.get('updated_at',0)<=(self.AUTO_WINDOW if prev.get('auto') else self.RESUME_WINDOW)
+        if left is None and same_batch and recent and prev.get('state') in ('Stopped','Interrupted'):
+            # The stopped batch already reached everyone (sent or unconfirmed). Starting a new one would DM them again.
+            done=self._done(prev);unsure=sum(1 for r in prev.get('receipts',[]) if r.get('state')=='Uncertain')
+            raise ValueError(f'Everyone in your last batch was already handled ({len(done)-unsure} sent'+(f', {unsure} not confirmed: check WhatsApp' if unsure else '')+'). Nothing was sent again. Choose "Start over" to send to everyone again.')
         if left is not None:
             by={r['id']:r for r in self.book.recipients(scope,ids,None)};mine=[by[i] for i in left if i in by]
             if not mine:raise ValueError('Everyone left in the stopped batch is gone or excluded. Choose Start over to send to the whole list again.')

@@ -41,11 +41,30 @@ function dashboardConversation(items){
 }
 /* Only replies that are new since the last paint slide in; redraws stay still. */
 let shownTurns=null;const turnKey=h=>h.id||h.t+':'+h.text;
+/* Reading layout only: the reply text is never changed. Each line gets a role (heading, numbered step,
+   bullet, opening line, closing question) so the eye can scan titles first and details second. */
+function lineRole(raw,index,lines){const t=raw.trim();if(!t)return 'blank';
+ /* A heading is a short bold label ("Where it stands"). Bold caption lines with amounts, numbers, italics or a full stop stay normal text. */
+ if(/^#{1,6}\s/.test(t)||/^\*{1,2}[^*_]+\*{1,2}:?$/.test(t)&&t.length<90&&!/\d/.test(t)&&!/[.!?](\*{1,2})$/.test(t))return 'head';
+ if(/^\d+[.)]\s/.test(t))return 'num';
+ if(/^[•▪◦·*-]\s/.test(t))return 'bullet';
+ const firstText=lines.findIndex(x=>x.trim()),lastText=lines.length-1-[...lines].reverse().findIndex(x=>x.trim());
+ if(index===lastText&&/\?\s*$/.test(t)&&index!==firstText)return 'ask';
+ if(index===firstText&&lines.filter(x=>x.trim()).length>3)return 'lead';
+ return 'text'}
+function replyHtml(text){const raw=String(text).replace(/\r\n/g,'\n').split('\n'),html=chatFormat(text).split('\n');
+ return html.map((line,i)=>{const role=lineRole(raw[i]||'',i,raw);let body=line||'<br>';
+  if(role==='num'){body=body.replace(/^<span class="wa-list">(\d+)[.)] /,'<span class="wa-list"><b class="rn">$1</b>');
+   /* Bold opening = the step's title; the rest is its detail on the next line. */
+   const m=body.match(/^(<span class="wa-list"><b class="rn">\d+<\/b>)(<strong>.*?<\/strong>)\s*([\s\S]*)<\/span>$/)||body.match(/^(<span class="wa-list"><b class="rn">\d+<\/b>)()([\s\S]*)<\/span>$/);
+   if(m)body=m[1]+(m[2]?'<span class="rt">'+m[2]+'</span>':'')+(m[3]?'<span class="rd">'+m[3]+'</span>':'')+'</span>'}
+  if(role==='bullet')body=body.replace(/^<span class="wa-list">•\s+/,'<span class="wa-list">').replace(/^[•▪◦·]\s+/,'');
+  return '<div class="reply-line r-'+role+(line?'':' blank')+'" style="--i:'+Math.min(i,16)+'">'+body+'</div>'}).join('')}
 function drawLog(){const allItems=history.slice(-40);
  const fresh=new Set(shownTurns?allItems.map(turnKey).filter(k=>!shownTurns.has(k)):[]);shownTurns=new Set(allItems.map(turnKey));
  for(const id of ['log','histLog']){const items=id==='log'&&!isPhone()?dashboardConversation(allItems):allItems;const el=$(id),state=scrollState[id],prev=state.top;el.textContent='';
   items.forEach(h=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(fresh.has(turnKey(h))?' enter':'');d.dataset.t=h.t;
-   if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=chatFormat(h.text).split('\n').map((line,i)=>'<div class="reply-line'+(line?'':' blank')+'" style="--i:'+Math.min(i,16)+'">'+(line||'<br>')+'</div>').join('');else d.textContent=h.text;el.append(d);/* The "Correct this" button was removed from the chat; openFeedback() stays for later use. */});
+   if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=replyHtml(h.text);else d.textContent=h.text;el.append(d);/* The "Correct this" button was removed from the chat; openFeedback() stays for later use. */});
   if(thinking){const d=document.createElement('div');d.className='e bot dots';d.textContent='Thinking…';el.append(d)}
   if(el.clientHeight){if(state.follow)followChat(el,items.at(-1)?.who==='app'&&!thinking);else el.scrollTop=prev}
  }

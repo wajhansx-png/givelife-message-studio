@@ -46,3 +46,24 @@ class SavingTheAmount(unittest.TestCase):
    with self.assertRaises(ValueError):registry.mutate({'action':'update','id':donor['id'],'normal_amount':-5})
   finally:fixture.tearDown()
 if __name__=='__main__':unittest.main()
+
+class ShortDonorPhrases(unittest.TestCase):
+ def setUp(self):
+  from test_donor_hub import IntegrationTests
+  self.fixture=IntegrationTests();self.fixture.setUp();self.reg=self.fixture.app.donors();self.reg.book.add('Ali Khan','03001234567');self.reg.book.add('Sara','03011234567')
+ def tearDown(self):self.fixture.tearDown()
+ def row(self,name):return next(r for r in self.reg.book.list('all')['items'] if r['name']==name)
+ def say(self,text):return self.reg.command(text,'req-'+text)
+ def test_important_without_a_verb(self):
+  self.assertIn('Important',self.say('ali important')['reply']);self.assertTrue(self.row('Ali Khan')['important'])
+  self.say('ali not important');self.assertFalse(self.row('Ali Khan')['important'])
+  self.say('star ali');self.assertTrue(self.row('Ali Khan')['important']);self.say('unmark ali');self.assertFalse(self.row('Ali Khan')['important'])
+ def test_donated_with_and_without_an_amount(self):
+  self.assertIn('Rs. 5,000',self.say('ali donated 5000')['reply']);r=self.row('Ali Khan');self.assertTrue(r['donated']);self.assertEqual(r['amount'],5000)
+  self.say('ali gave 2k');self.assertEqual(self.row('Ali Khan')['amount'],2000)
+  self.say('sara donated');self.assertTrue(self.row('Sara')['donated']);self.say('sara not donated');self.assertFalse(self.row('Sara')['donated'])
+ def test_usual_amount_in_few_words(self):
+  self.say('ali usually donates 750');self.assertEqual(self.row('Ali Khan')['normal_amount'],750)
+  self.say('ali normal 1k');self.assertEqual(self.row('Ali Khan')['normal_amount'],1000)
+ def test_unknown_names_and_commands_fall_through(self):
+  for text in ('zed important','send ali','dm ali','who donated','all important','nobody donated','what donated'):self.assertIsNone(self.say(text),text)

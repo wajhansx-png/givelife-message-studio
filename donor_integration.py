@@ -95,6 +95,46 @@ class DonorIntegration:
         if action=='restore':return self.book.restore(body.get('id',''))
         if action=='import':return self.book.import_contacts(body.get('records'),self.app.OWNER_PHONE)
         raise ValueError('Unknown donor action.')
+    NOT_A_NAME=r'(?!(?:send|dm|show|list|remove|delete|add|text|message|post|resend|stop|hold|resume|cancel|what|how|who|when|where|why|is|are|do|does|did|please|the|all|every|set|make|mark)\b)'
+    def _donor_named(self,name):
+        """The one donor this short phrase names, or None so the phrase falls through to the assistant."""
+        name=re.sub(r'(?i)^(?:donor|mr|brother|sister)\s+','',name.strip(' .'))
+        if not 1<=len(name)<=60:return None
+        try:return self.book.resolve(name)
+        except ValueError:return None
+    @staticmethod
+    def _said(result,donor,what):
+        result=dict(result);result['reply']=f"{donor['name']}: {what}.";return result
+    def _short_donor_edit(self,t):
+        """'ali important', 'star ali', 'ali donated 5000', 'sara not donated', 'ali usually 500' - no verb needed."""
+        from manual_commands import UNIT,_times
+        low=re.sub(r'\s+',' ',t.strip().rstrip('.!'))
+        amount=lambda n,u:int(float(n.replace(',',''))*_times(u))
+        flag=re.fullmatch(r'(?i)'+self.NOT_A_NAME+r'(.{1,60}?)\s+(not important|unimportant|important)',low)
+        star=re.fullmatch(r'(?i)(star|unstar|unmark)\s+(.{1,60})',low) or re.fullmatch(r'(?i)(important)\s+'+self.NOT_A_NAME+r'(.{1,60})',low)
+        paid=re.fullmatch(r'(?i)'+self.NOT_A_NAME+r'(.{1,60}?)\s+(?:donated|gave|paid|sent|donates|gives)\s*(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?',low)
+        status=re.fullmatch(r'(?i)'+self.NOT_A_NAME+r'(.{1,60}?)\s+(not donated|donated)',low)
+        usual=re.fullmatch(r'(?i)'+self.NOT_A_NAME+r'(.{1,60}?)\s+(?:normally|usually|normal|usual)(?:\s+(?:donates?|gives?|pays?|amount))?\s*(?:is\s*)?(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?',low)
+        if flag:
+            donor=self._donor_named(flag[1])
+            if donor:return self._said(self.book.update(donor['id'],important=flag[2].casefold()=='important'),donor,'marked Important' if flag[2].casefold()=='important' else 'removed from Important')
+        if star:
+            donor=self._donor_named(star[2])
+            if donor:
+                on=star[1].casefold() in ('star','important');return self._said(self.book.update(donor['id'],important=on),donor,'marked Important' if on else 'removed from Important')
+        if paid:
+            donor=self._donor_named(paid[1])
+            if donor:
+                value=amount(paid[2],paid[3]);return self._said(self.book.update(donor['id'],donated=True,amount=value),donor,f'marked Donated, Rs. {value:,}')
+        if status:
+            donor=self._donor_named(status[1])
+            if donor:
+                on=status[2].casefold()=='donated';return self._said(self.book.update(donor['id'],donated=on),donor,'marked Donated' if on else 'marked Not donated')
+        if usual:
+            donor=self._donor_named(usual[1])
+            if donor:
+                value=amount(usual[2],usual[3]);return self._said(self.book.update(donor['id'],normal_amount=value),donor,f'usual donation set to Rs. {value:,}' if value else 'usual donation cleared')
+        return None
     def command(self,text,request_id=None):
         import chat_policy,manual_commands
         raw=str(text).strip();t=chat_policy.owner_text(raw).strip()
@@ -119,6 +159,8 @@ class DonorIntegration:
             what=mark[2].casefold();fields={'important':not what.startswith('not ')} if 'important' in what else {'donated':not what.startswith('not ')}
             if mark[3] and fields.get('donated'):fields['amount']=int(mark[3].replace(',',''))
             return self.book.update(mark[1],**fields)
+        short=self._short_donor_edit(t)
+        if short is not None:return short
         # A bare "stop" while donor DMs are running can only mean those DMs.
         if self.jobs.active and re.fullmatch(r'(?i)(?:please\s+)?(?:stop|pause|cancel|ruk(?:\s+jao)?|band(?:\s+karo)?|bas)(?:\s+(?:it|this|now|all|sending|everything|the batch|batch|the rest|rest))?[.!]*',t):return self.pause_personal()
         control=manual_commands.dm_control(t)

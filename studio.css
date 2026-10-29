@@ -1151,3 +1151,21 @@ body::before,body::after{animation:none;will-change:auto}
  .donor-star,.donor-more summary{height:52px;min-height:52px}
  .chips{gap:10px}
 }
+
+/* ===== Message preview: centred reading column, left-aligned text; actions at the bottom, near the hand ===== */
+.msgcard .chat{order:1;flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;overflow:auto}
+.msgcard .chat .message{margin:auto;width:fit-content;max-width:min(100%,76ch);text-align:left}
+.msgcard .chat .message[contenteditable=true]{margin:0 auto;width:100%;max-width:76ch}
+.msgcard .tools{order:2;position:relative;border-top:1px solid var(--line);border-bottom:0;margin:0;justify-content:center;gap:12px}
+.msgcard .tools .sp{display:none}
+.msgcard .preview-dock{order:3}
+.rail-quick{display:none}
+@media(min-width:900px) and (min-height:820px){
+ .action-rail .rail-quick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto;padding-top:16px;border-top:1px solid var(--line)}
+}
+@media(min-width:900px){
+ .msgcard .tools .ctx{position:absolute;left:16px;top:50%;transform:translateY(-50%)}
+ .msgcard .tools .tool,.msgcard .tools summary{min-height:44px;min-width:76px}
+ .rail-quick button{min-height:46px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;font-weight:650;cursor:pointer}
+ .rail-quick button:hover{border-color:var(--g);background:var(--gs);color:var(--gink)}
+}

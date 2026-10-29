@@ -20,6 +20,7 @@ def cancel_request(text):
  if re.match(r'^(?:what|how|why|when|can|could|should|did|do|does|is|are)\b',low.strip()):return False
  verb=re.search(r'\b(?:cancel|delete|remove|undo|clear)\b',low)
  if not verb:return False
+ if re.search(ALL_CANCEL,low.strip()):return True
  if re.search(r'\b(?:last|latest|recent)\s+(?:message|msg|post|dm)\b|\b(?:message|msg|post|dm)s?\b.*\b(?:from|in|on)\s+(?:the\s+)?(?:group|main|fiverr|upwork|community|uet|toprated)\b',low):return False
  if re.search(PRONOUN_CANCEL,low.strip()):return True
  about=re.search(r'\bschedul\w*|\btasks?\b|\b(?:resume|timer|timed)\b|#?\b[a-f0-9]{8}\b',low)
@@ -27,6 +28,8 @@ def cancel_request(text):
  if re.search(DUPLICATE,low):return True
  return bool(re.search(r'\bcancel\b',low) and re.search(r'\b(?:1st|2nd|3rd|4th|first|second|third|fourth|last|latest|newest)\b',low))
 
+LIST_WORDS=r"(?:please\s+)?(?:(?:what(?:'s| is| are)?|whats|show|list|view|any|anything|do i have(?: any)?)\s+(?:is\s+)?(?:scheduled|pending|queued|upcoming|coming up)(?:\s+(?:tasks?|sends?|posts?|messages?))?|(?:my\s+|the\s+|all\s+)?(?:pending|queued|upcoming)\s+(?:tasks?|sends?|posts?|messages?)|(?:what(?:'s| is)?|whats)\s+next|(?:my\s+)?tasks|(?:any|anything)\s+(?:pending|scheduled|queued)|kya\s+scheduled\s+hai)(?:\s+(?:now|today|please))?[?.!]*"
+ALL_CANCEL=r'^(?:please\s+)?(?:cancel|clear|remove|delete)\s+(?:all|everything)(?:\s+(?:of\s+)?(?:them|these|it))?(?:\s+please)?[.!]*$'
 PRONOUN_CANCEL=r'^(?:please\s+)?(?:ok\s+|okay\s+)?(?:cancel|remove|delete|undo)\s+(?:it|that|this|that one|this one|the other one|the other)(?:\s+please)?[.!]*$'
 
 def parse_cancel(text):
@@ -34,6 +37,7 @@ def parse_cancel(text):
  ident=re.search(r'#?\b([a-f0-9]{8})\b',low)
  if ident and re.search(r'\d',ident[1]) or ident and re.search(r'#'+ident[1],low):return {'command':'cancel','id':ident[1]}
  if re.search(PRONOUN_CANCEL,low.strip()):return {'command':'cancel_by','which':'only','soft':True}
+ if re.search(ALL_CANCEL,low.strip()):return {'command':'cancel_by','which':'all'}
  if re.search(r'\b(?:all|every|everything)\b',low) and re.search(r'schedul|task|timer|resume',low):return {'command':'cancel_by','which':'all'}
  if re.search(DUPLICATE,low):return {'command':'cancel_by','which':'duplicate'}
  for word,index in ORDINALS.items():
@@ -46,6 +50,7 @@ def parse(text,now=None):
  t=str(text).strip();instruction=re.sub(r'"[^"\n]*"|“[^”\n]*”',' ',t);low=re.sub(r'\b(continye|contine|contiune)\b','continue',instruction.casefold())
  if re.fullmatch(r'(?:please\s+)?(?:(?:show|list|view|see|check)\s+)?(?:me\s+)?(?:(?:my|the|all|our)\s+)?(?:scheduled?\s+(?:tasks|messages|sends)|schedules|scheduler)(?:\s+(?:please|now))?[?.!]*',low):return {'command':'list'}
  if re.fullmatch(r"(?:what(?:'s| is| are)?\s+)?(?:my|the|our)\s+(?:schedules?|scheduled tasks?)[?.!]*",low):return {'command':'list'}
+ if re.fullmatch(LIST_WORDS,low.strip()):return {'command':'list'}
  if cancel_request(instruction):return parse_cancel(instruction)
  if not requested(instruction):return None
  if re.match(r'^(?:what|how|when|why|did|can|could|explain|review|summarize|analyse|analyze)\b',low) or re.search(r"\b(?:don't|dont|do not|never)\b",low) or t.startswith(('>','```','"','“')):return None

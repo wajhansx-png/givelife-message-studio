@@ -153,3 +153,14 @@ test('on desktop the Back button sits in the middle of the screen, and the group
  await page.locator('#donorMainBottom').click();await expect(page.locator('#donorsPage')).toBeHidden();
  await page.locator('.gear').first().click();const dock=await page.locator('#setCloseBottom').boundingBox();expect(Math.abs(dock.x+dock.width/2-720)).toBeLessThan(40);
 });
+
+test('desktop preview: message centred with left-aligned text, actions at the bottom, shortcuts in the groups box',async({page,request})=>{
+ await open(page,request,1440,900);
+ await page.locator('#railPreview').click();await expect(page.locator('#card')).toBeVisible();
+ const card=await page.locator('#card').boundingBox();const msg=await page.locator('#groupPreview').boundingBox();
+ expect(Math.abs((msg.x+msg.width/2)-(card.x+card.width/2))).toBeLessThan(30);
+ expect(await page.locator('#groupPreview').evaluate(el=>getComputedStyle(el).textAlign)).toMatch(/left|start/);
+ const tools=await page.locator('#card .tools').boundingBox();expect(tools.y).toBeGreaterThan(msg.y+msg.height-1);
+ const edit=await page.locator('#edit').boundingBox();expect(Math.abs((edit.x+edit.width/2)-(card.x+card.width/2))).toBeLessThan(160);
+ await page.locator('#railDonors').click();await expect(page.locator('#donorsPage')).toBeVisible();
+});

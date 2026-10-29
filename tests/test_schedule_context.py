@@ -86,4 +86,14 @@ class ScheduleContext(unittest.TestCase):
   slim=assistant._slim({'schedules':self.s.summary(),'left':15000})
   self.assertEqual(slim['schedules'][0]['position'],1);self.assertIn('ALL pending',slim['schedules_note'])
 
+class PronounCancel(ScheduleContext):
+ def test_cancel_it_cancels_the_only_pending_schedule(self):
+  self.add('send to main at 9pm');self.assertIn('Cancelled',self.add('cancel it'));self.assertEqual(len(self.pending()),0)
+ def test_cancel_it_with_several_pending_asks_which_instead_of_guessing(self):
+  self.add('send to main at 9pm');self.add('send to fiverr at 9pm')
+  with self.assertRaises(ValueError):self.add('cancel that')
+  self.assertEqual(len(self.pending()),2)
+ def test_cancel_it_with_nothing_pending_is_left_to_other_handlers(self):
+  self.assertIsNone(self.s.command('cancel it'))
+
 if __name__=='__main__':unittest.main()

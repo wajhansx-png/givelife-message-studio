@@ -8,8 +8,11 @@ const Nav={rendering:false,
  path(){try{return decodeURIComponent((location.hash||'').replace(/^#\/?/,''))}catch(e){return ''}},
  top(){return Nav.path().split('/')[0]},
  /* The chat log below owns the name `history`, so the browser's is always reached as window.history. */
- go(path,{replace=false}={}){if(Nav.rendering||Nav.path()===path)return;const h=window.history;try{(replace?h.replaceState:h.pushState).call(h,{nav:1},'',path?'#/'+path:location.pathname+location.search)}catch(e){}},
- leave(name){if(Nav.rendering||Nav.top()!==name)return;const h=window.history;if(h.state&&h.state.nav)h.back();else Nav.go('',{replace:true})}};
+ /* A Back step is asynchronous; a new screen opened right after it waits until the step has landed. */
+ pending:false,queued:null,
+ settle(){Nav.pending=false;if(Nav.queued!==null){const q=Nav.queued;Nav.queued=null;Nav.go(q)}},
+ go(path,{replace=false}={}){if(Nav.rendering)return;if(Nav.pending){Nav.queued=path;return}if(Nav.path()===path)return;const h=window.history;try{(replace?h.replaceState:h.pushState).call(h,{nav:1},'',path?'#/'+path:location.pathname+location.search)}catch(e){}},
+ leave(name){if(Nav.rendering||Nav.top()!==name)return;const h=window.history;if(h.state&&h.state.nav){Nav.pending=true;setTimeout(Nav.settle,400);h.back()}else Nav.go('',{replace:true})}};
 /* Server-issued next steps are tied to the exact saved draft, never AI-authored commands. */
 let nextActions=[],nextActionEpoch=0;const nextActionPending=new Set();
 function drawNextActions(){renderSendMode();for(const id of ['chatNextActions','histNextActions']){const row=$(id);if(!row)continue;row.textContent='';row.hidden=!nextActions.length;for(const a of nextActions){const b=document.createElement('button');b.type='button';b.textContent=a.label;b.title=a.detail||'';b.disabled=!!a.disabled||nextActionPending.has(a.id);b.setAttribute('aria-label',a.label+(a.detail?' · '+a.detail:''));b.onclick=()=>runNextAction(a);row.append(b)}}}
@@ -42,7 +45,7 @@ function drawLog(){const allItems=history.slice(-40);
  const fresh=new Set(shownTurns?allItems.map(turnKey).filter(k=>!shownTurns.has(k)):[]);shownTurns=new Set(allItems.map(turnKey));
  for(const id of ['log','histLog']){const items=id==='log'&&!isPhone()?dashboardConversation(allItems):allItems;const el=$(id),state=scrollState[id],prev=state.top;el.textContent='';
   items.forEach(h=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(fresh.has(turnKey(h))?' enter':'');d.dataset.t=h.t;
-   if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=chatFormat(h.text).split('\n').map(line=>'<div class="reply-line'+(line?'':' blank')+'">'+(line||'<br>')+'</div>').join('');else d.textContent=h.text;el.append(d);if(h.who==='app'&&h.id){const f=document.createElement('button');f.className='reply-feedback';f.type='button';f.textContent='Correct this';f.setAttribute('aria-label','Correct this response');f.onclick=e=>{e.stopPropagation();openFeedback(h.id)};el.append(f)}});
+   if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=chatFormat(h.text).split('\n').map((line,i)=>'<div class="reply-line'+(line?'':' blank')+'" style="--i:'+Math.min(i,16)+'">'+(line||'<br>')+'</div>').join('');else d.textContent=h.text;el.append(d);if(h.who==='app'&&h.id){const f=document.createElement('button');f.className='reply-feedback';f.type='button';f.textContent='Correct this';f.setAttribute('aria-label','Correct this response');f.onclick=e=>{e.stopPropagation();openFeedback(h.id)};el.append(f)}});
   if(thinking){const d=document.createElement('div');d.className='e bot dots';d.textContent='Thinking…';el.append(d)}
   if(el.clientHeight){if(state.follow)followChat(el,items.at(-1)?.who==='app'&&!thinking);else el.scrollTop=prev}
  }
@@ -81,7 +84,9 @@ function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');if(!
  // Unusually long content stays accessible; ordinary saved captions fit in place.
  if(m.scrollHeight>available)chat.style.overflowY='auto'
 }
-const FIT_STEPS=[[15,0],[14,0],[13,0],[12,0],[12,1],[11.5,1],[11,1],[10.5,2],[10,2]];
+/* [font px, columns, tightness]. Short answers get a big font. Long ones use the width of a wide screen
+   (two columns) before the text is ever made small, and scrolling is the very last resort. */
+const FIT_STEPS=[[17,1,0],[16,1,0],[15,1,0],[14,1,0],[16,2,0],[15,2,0],[14,2,0],[13,2,0],[13,1,1],[12,1,1],[11.5,1,1],[11,1,2],[10.5,1,2],[10,1,2]];
 function fitConversation(){
  for(const id of ['log','histLog']){const log=$(id);if(!log.clientHeight)continue;const reply=[...log.querySelectorAll('.e.bot:not(.dots)')].at(-1);if(!reply)continue;
   const style=getComputedStyle(log),padding=parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
@@ -89,7 +94,8 @@ function fitConversation(){
   if(id==='log')reserve=[...log.children].filter(n=>n!==reply).reduce((n,node)=>n+node.offsetHeight+8,8);
   const available=Math.max(80,log.clientHeight-padding-reserve);
   /* A long reply gets smaller and tighter, step by step, until all of it fits on this screen without scrolling. */
-  for(const [size,tight] of FIT_STEPS){reply.style.fontSize=size+'px';reply.classList.toggle('tight',tight>=1);reply.classList.toggle('tighter',tight>=2);if(reply.scrollHeight<=available)break}
+  const wide=log.clientWidth>=760,biggest=log.clientWidth<500?15:17;
+  for(const [size,cols,tight] of FIT_STEPS){if(cols>1&&!wide||size>biggest)continue;reply.style.fontSize=size+'px';reply.classList.toggle('cols2',cols>1);reply.classList.toggle('tight',tight>=1);reply.classList.toggle('tighter',tight>=2);if(reply.scrollHeight<=available)break}
  }
 }
 new ResizeObserver(()=>requestAnimationFrame(fit)).observe($('chat'));
@@ -122,7 +128,13 @@ function setView(v){if(editing)setEditing(false);if(previewView)previewScroll[pr
 /* Large screen changes cross-fade where the browser supports view transitions. */
 function smooth(change){if(!document.startViewTransition||matchMedia('(prefers-reduced-motion: reduce)').matches)return change();document.startViewTransition(change)}
 document.querySelectorAll('[data-view-button]').forEach(b=>b.onclick=()=>{if(b.dataset.viewButton!==view())smooth(()=>setView(b.dataset.viewButton))});
-function showLeft(){const c=$('leftChip');c.textContent=left==null?'Rs. …':'Rs. '+fmt(left);const w=document.createElement('span');w.className='lw';w.textContent=' left';c.append(w)}
+let shownLeft=null,leftTween=0;
+function paintLeft(value){const c=$('leftChip');c.textContent=value==null?'Rs. …':'Rs. '+fmt(Math.round(value));const w=document.createElement('span');w.className='lw';w.textContent=' left';c.append(w)}
+function showLeft(){cancelAnimationFrame(leftTween);const from=shownLeft,to=left;shownLeft=to;
+ if(from==null||to==null||from===to||matchMedia('(prefers-reduced-motion: reduce)').matches||document.hidden){paintLeft(to);return}
+ const start=performance.now(),span=Math.min(900,300+Math.abs(to-from)/60);
+ const tick=now=>{const t=Math.min(1,(now-start)/span),eased=1-Math.pow(1-t,3);paintLeft(from+(to-from)*eased);if(t<1)leftTween=requestAnimationFrame(tick);else{paintLeft(to);$('leftChip').classList.remove('bump')}};
+ $('leftChip').classList.add('bump');leftTween=requestAnimationFrame(tick)}
 function applyDrafts(d){if(typeof d.group==='string'&&typeof d.dm==='string')draftsReady=true;if(d.dm_identity){$('dmName').value=d.dm_identity.name||'';$('dmPhone').value=d.dm_identity.phone||'';gender=d.dm_identity.gender==='Sister'?'Sister':'Brother';document.querySelectorAll('#gender button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===gender)))}if(d.group!=null||d.dm!=null)draftSaved=JSON.stringify({group:d.group??$('group').value,dm:d.dm??$('dm').value});if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
 async function setLeft(n){if(editing)setEditing(false);const r=await post('/left',{left:n}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not update amount');applyDrafts(d);await save()}
 $('leftChip').onclick=()=>{openChat();$('histCmd').placeholder='Amount left, e.g. 25000 or 25k';$('histCmd').focus({preventScroll:true})};
@@ -457,7 +469,7 @@ function renderNav(){const parts=Nav.path().split('/'),top=parts[0];Nav.renderin
   if(top==='settings'&&!$('set').open){$('set').showModal();loadSet();checkWa()}
   if(top==='donors')window.DonorHub?.show(parts[1]||'all');
  }finally{Nav.rendering=false}}
-addEventListener('popstate',()=>smooth(renderNav));
+addEventListener('popstate',()=>{if(Nav.queued!==null){Nav.settle();return}smooth(renderNav);Nav.settle()}); /* a screen opened right after Back is already on screen */
 addEventListener('load',()=>renderNav(),{once:true});
 
 /* ---- start ---- */

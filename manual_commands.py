@@ -67,20 +67,24 @@ def question_request(text):
 def deferred_request(text):
  return bool(re.search(r'(?i)\b(?:later|not now|tomorrow|tonight|next (?:day|week|month)|in\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?)|after\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?))\b|\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',outside_literals(text)))
 
+MULT={'k':1000,'hazar':1000,'hazaar':1000,'hajar':1000,'hazr':1000,'thousand':1000,'lakh':100000,'lac':100000,'lakhs':100000}
+UNIT=r'(k|hazar|hazaar|hajar|hazr|thousand|lakhs?|lac)'
+def _times(unit):return MULT.get((unit or '').casefold(),1)
+
 def balance_amount(text,allow_with=True):
  """Use an amount bound to balance wording, never a year/group count/phone."""
- t=outside_literals(text);number=r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*(k)?(?!\w)'
- patterns=[number+r'\s*(?:is\s+)?(?:left|remaining|remain|baqi)\b',
+ t=outside_literals(text);number=r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*'+UNIT+r'?(?!\w)'
+ patterns=[number+r'\s*(?:is\s+)?(?:left|remaining|remain|baqi|baki|bacha|bachay|bacha hai|rehte|reh gaye)\b',
            r'\b(?:remaining(?:\s+amount)?|amount(?:\s+(?:left|remaining))?|balance|baqi)\s*(?:is|to|=|:)?\s*(?:rs\.?\s*)?'+number,
            *([r'\bwith\s+(?:rs\.?\s*)?'+number+r'(?!\s*(?:people|groups?|members?|minutes?|hours?))'] if allow_with else [])]
  candidates=[]
  for pattern in patterns:
   for m in re.finditer(pattern,t,re.I):
-   n=float(m[1].replace(',',''))*(1000 if m[2] else 1)
+   n=float(m[1].replace(',',''))*_times(m[2])
    if n.is_integer() and 0<=n<=10000000:candidates.append(int(n))
- raw=re.fullmatch(r'(?:rs\.?\s*)?(\d[\d,]*(?:\.\d+)?)\s*(k)?',t.strip(),re.I)
+ raw=re.fullmatch(r'(?:rs\.?\s*)?(\d[\d,]*(?:\.\d+)?)\s*'+UNIT+r'?',t.strip(),re.I)
  if raw:
-  n=float(raw[1].replace(',',''))*(1000 if raw[2] else 1)
+  n=float(raw[1].replace(',',''))*_times(raw[2])
   if n.is_integer() and 0<=n<=10000000 and (n>=100 or raw[2] or re.match(r'(?i)rs\.?',t.strip())):candidates.append(int(n))
  if len(set(candidates))>1:raise ValueError('More than one remaining amount was given. Tell me the single correct balance; nothing was changed or sent.')
  return candidates[0] if candidates else None
@@ -116,9 +120,9 @@ def parse(text):
  if rename:return {'kind':'dm_name','to':rename[2] or '', 'name':rename[3].strip()}
  if ('2000' in low.replace(' ','') or '2 000' in low) and ('1000' in low.replace(' ','') or '1 000' in low) and re.search(r'\b(first|before|then|order)\b',low) and re.search(r'\b(message|messages|caption|wording|write|show)\b',low):return {'kind':'donation_order'}
  if re.search(r'\b(don t|dont|do not|remove|delete)\b',low) and re.search(r'\b(write|line|wording|words|caption|this much)\b',low) and re.search(r'\b(came|received|arrived)\b',low):return {'kind':'remove_arrival_line'}
- arrival=re.fullmatch(r'(?:came|got|received|recieved|aya|aaya)\s*(?:rs\.?\s*)?(\d[\d,.]*)\s*(k)?|(?:rs\.?\s*)?(\d[\d,.]*)\s*(k)?\s+(?:came|arrived|received|aya)',t,re.I)
+ arrival=re.fullmatch(r'(?:came|got|received|recieved|aya|aaya)\s*(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?|(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?\s+(?:came|arrived|received|aya|aaya|aye|aaye|ayi|aayi)',t,re.I)
  if arrival:
-  amount=float((arrival[1] or arrival[3]).replace(',',''))*(1000 if arrival[2] or arrival[4] else 1)
+  amount=float((arrival[1] or arrival[3]).replace(',',''))*_times(arrival[2] or arrival[4])
   if amount.is_integer() and amount>=0:return {'kind':'money','amount':int(amount)}
  if re.match(r'^(delete|remove|revoke)\b',low) and re.search(r'\b(message|messages|msg|post|group)\b',low):return {'kind':'delete','target':group(t)}
  # Explicit quoted text is data, even if it contains a command word.

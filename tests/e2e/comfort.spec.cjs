@@ -16,7 +16,7 @@ test('desktop reading column centers the reply and composer',async({page,request
  expect(Math.abs(box.x+box.width/2-(pane.x+pane.width/2))).toBeLessThan(3);
  expect(Math.abs(input.x+input.width/2-(box.x+box.width/2))).toBeLessThan(3);
  expect(box.width).toBeLessThanOrEqual(780);expect(box.width).toBeGreaterThan(200);
- expect(await page.locator('#log .bot').last().evaluate(el=>getComputedStyle(el).textAlign)).toBe('center');
+ expect(await page.locator('#log .bot').last().evaluate(el=>getComputedStyle(el).textAlign)).toBe('left');
  const gear=await page.locator('#gear').boundingBox(),dot=await page.locator('#whatsappConnection').boundingBox(),donors=await page.locator('#openDonors').boundingBox();
  expect(gear.y).toBeGreaterThan(840);expect(dot.x).toBeLessThan(donors.x);
 });

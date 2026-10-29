@@ -21,15 +21,19 @@ def cancel_request(text):
  verb=re.search(r'\b(?:cancel|delete|remove|undo|clear)\b',low)
  if not verb:return False
  if re.search(r'\b(?:last|latest|recent)\s+(?:message|msg|post|dm)\b|\b(?:message|msg|post|dm)s?\b.*\b(?:from|in|on)\s+(?:the\s+)?(?:group|main|fiverr|upwork|community|uet|toprated)\b',low):return False
+ if re.search(PRONOUN_CANCEL,low.strip()):return True
  about=re.search(r'\bschedul\w*|\btasks?\b|\b(?:resume|timer|timed)\b|#?\b[a-f0-9]{8}\b',low)
  if about:return True
  if re.search(DUPLICATE,low):return True
  return bool(re.search(r'\bcancel\b',low) and re.search(r'\b(?:1st|2nd|3rd|4th|first|second|third|fourth|last|latest|newest)\b',low))
 
+PRONOUN_CANCEL=r'^(?:please\s+)?(?:ok\s+|okay\s+)?(?:cancel|remove|delete|undo)\s+(?:it|that|this|that one|this one|the other one|the other)(?:\s+please)?[.!]*$'
+
 def parse_cancel(text):
  low=re.sub(r'"[^"\n]*"|“[^”\n]*”',' ',str(text)).casefold()
  ident=re.search(r'#?\b([a-f0-9]{8})\b',low)
  if ident and re.search(r'\d',ident[1]) or ident and re.search(r'#'+ident[1],low):return {'command':'cancel','id':ident[1]}
+ if re.search(PRONOUN_CANCEL,low.strip()):return {'command':'cancel_by','which':'only','soft':True}
  if re.search(r'\b(?:all|every|everything)\b',low) and re.search(r'schedul|task|timer|resume',low):return {'command':'cancel_by','which':'all'}
  if re.search(DUPLICATE,low):return {'command':'cancel_by','which':'duplicate'}
  for word,index in ORDINALS.items():
@@ -158,7 +162,9 @@ class Scheduler:
   if plan is None:return None
   with self.lock:
    if plan['command']=='list':return self.list()
-   if plan['command']=='cancel_by':return self.cancel_by(plan)
+   if plan['command']=='cancel_by':
+    if plan.get('soft') and not any(x['state']=='pending' for x in self.tasks):return None
+    return self.cancel_by(plan)
    if plan['command']=='cancel':
     task=next((x for x in self.tasks if x['id']==plan['id']),None)
     if not task:raise ValueError('No schedule with that ID. Say show schedules.')

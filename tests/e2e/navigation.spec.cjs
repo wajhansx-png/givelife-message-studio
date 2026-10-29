@@ -95,11 +95,13 @@ test('the batch dialog explains that later rounds start by themselves',async({pa
 
 test('a stopped batch offers Continue and the dialog says already-sent people are skipped',async({page,request})=>{
  await open(page,request,390,844);
- const stopped={state:'Stopped',scope:'important',sent:2,skipped:0,failed:0,total:5,resumable:3,gap_seconds:240,poster:true,error:'WhatsApp is disconnected.',receipts:[]};
+ const stopped={state:'Stopped',scope:'important',sent:2,skipped:0,failed:0,total:5,resumable:3,gap_seconds:240,poster:true,error:'WhatsApp is disconnected.',receipts:[{id:'a',name:'Ali',state:'Sent',time:1700000000},{id:'b',name:'Bilal',state:'Uncertain'}],waiting:['Sara','Omar','Zain']};
  let posted=null;
  await page.route('**/donor-delivery',async r=>{if(r.request().method()==='POST'){posted=r.request().postDataJSON();return r.fulfill({json:{reply:'Continuing your stopped batch: 2 already handled are skipped, 3 left.',job:stopped}})}return r.fulfill({json:stopped})});
  await page.locator('#openDonors').click();
  await expect(page.locator('#donorContinue')).toBeVisible();await expect(page.locator('#donorContinue')).toContainText('3 left');
+ await page.locator('#donorBatchSummary').click();
+ await expect(page.locator('#batchSent li').first()).toContainText('Ali');await expect(page.locator('#batchNext li')).toHaveText(['Sara','Omar','Zain']);await expect(page.locator('#batchOther')).toContainText('Bilal');
  await page.locator('#donorContinue').click();await expect.poll(()=>posted).not.toBeNull();
  expect(posted.scope).toBe('important');expect(posted.fresh).toBeUndefined();expect(posted.ids).toBeUndefined();
  await page.locator('#donorSendImportant:visible, #donorMain:visible').first().isVisible();

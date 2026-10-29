@@ -120,6 +120,19 @@ class DeliveryTests(RegistryTests):
   self.jobs.send=send;self.run_job(self.jobs.start('important',60,run=False));self.assertEqual(self.jobs.status()['state'],'Stopped')
   self.jobs.send=lambda b:(calls.append(b['name']),{'code':'SUCCESS'})[1];self.run_job(self.jobs.start('important',60,run=False))
   self.assertEqual(calls,['P0','P1','P2','P3','P4'])
+ def test_stop_button_then_continue_resumes_after_the_last_sent_and_lists_names(self):
+  self._five();job=self.jobs.start('important',60,run=False)['job'];stored=self.jobs._load()['jobs'][-1]
+  real=self.send
+  def send(body):
+   out=real(body)
+   if len(self.sent)==2:self.jobs.stop.set()
+   return out
+  self.jobs.send=send;self.run_job(job)
+  st=self.jobs.status();self.assertEqual(st['state'],'Stopped')
+  self.assertEqual([r['name'] for r in st['receipts'] if r['state']=='Sent'],['P0','P1']);self.assertEqual(st['waiting'],['P2','P3','P4']);self.assertEqual(st['resumable'],3)
+  self.assertTrue(all('0300' not in n for n in st['waiting']))
+  self.jobs.send=real;self.jobs.stop.clear();r=self.jobs.start('important',60,run=False);self.run_job(r)
+  self.assertEqual([b['name'] for b,_ in self.sent],['P0','P1','P2','P3','P4']);self.assertEqual(self.jobs.status()['waiting'],[])
  def test_double_click_idempotency(self):
   self.add();a=self.jobs.start('all',60,request_id='same',run=False);b=self.jobs.start('all',60,request_id='same',run=False);self.assertEqual(a['job']['id'],b['job']['id']);self.assertEqual(len(self.jobs._load()['jobs']),1)
  def test_already_contacted_skips_and_deletion_skips(self):

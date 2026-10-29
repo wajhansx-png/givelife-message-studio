@@ -1349,7 +1349,7 @@ body::after{background:radial-gradient(circle,color-mix(in srgb,#b06bff 40%,tran
 :root:not([data-theme=dark]){--chat-well:#eceef8}
 
 /* ===== Navbar: one tidy bar. Brand left, views next to it, status actions right, all the same height ===== */
-@media(min-width:900px){
+@media(min-width:900px) and (min-height:760px){
  html body .brandbar{display:flex;align-items:center;justify-content:flex-start;gap:10px;padding:8px 12px;min-height:60px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh1)}
  html body .brandbar>.sp{display:block;flex:1}
  html body .brandbar .brand{margin-right:10px;padding-right:14px;border-right:1px solid var(--line)}
@@ -1361,3 +1361,18 @@ body::after{background:radial-gradient(circle,color-mix(in srgb,#b06bff 40%,tran
  html body .brandbar .donor-launch{margin-left:0}
 }
 @media(min-width:900px){html body .live{max-width:none}}
+
+/* ===== Lighter Midnight Indigo (a notch brighter surfaces, softer accent) ===== */
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){
+ --bg:#171b33;--surface:#1f2445;--surface2:#282e56;--line:#323a68;--line2:#6a73a2;--ctl:#8790ba;
+ --g:#a9b4ff;--gd:#c4ccff;--gs:#2a3263;--gink:#c9d0ff;--btn:#6f7fff;--btnh:#5f70f2;--ring:#a9b4ff;--pill:#2a3263;
+ --msg:#232950;--bubble:#2a3159;--bubble-line:#5b66a8;--chat-well:#1a1e3a;--mut:#b4bbd6;--faint:#a0a8c6;
+}}
+:root[data-theme=dark]{
+ --bg:#171b33;--surface:#1f2445;--surface2:#282e56;--line:#323a68;--line2:#6a73a2;--ctl:#8790ba;
+ --g:#a9b4ff;--gd:#c4ccff;--gs:#2a3263;--gink:#c9d0ff;--btn:#6f7fff;--btnh:#5f70f2;--ring:#a9b4ff;--pill:#2a3263;
+ --msg:#232950;--bubble:#2a3159;--bubble-line:#5b66a8;--chat-well:#1a1e3a;--mut:#b4bbd6;--faint:#a0a8c6;
+}
+:root:not([data-theme=dark]){--bg:#f7f8fd;--surface2:#f0f2fb;--g:#5a69ec;--btn:#5a69ec;--gs:#eceeff;--chat-well:#f1f3fc}
+body{background:var(--bg)!important}
+.mark{background:linear-gradient(140deg,#b4beff 0%,#7685ff 55%,#5563e6 100%)!important}

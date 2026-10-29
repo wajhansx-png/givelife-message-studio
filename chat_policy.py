@@ -47,6 +47,12 @@ def intent(text):
  if draft_flow.editing_request(t) and re.match(r'(?i)^\s*(?:send|sebd|semd|sned|snd)\s+(?:a\s+)?(?:more|less)\b',t) and not manual_commands.groups(t) and not re.search(r'(?i)\b(?:to|in|now|immediately|asap)\b|(?:\+?92|0)3\d{9}',t):sending=False
  return {'text':t,'send':sending,'query':query,'negative':negative,'batch':sending and bool(re.search(r'(?i)\b(dm|dms|donors?|members?|people|numbers|list)\b',t))}
 
+def literal_text_to_person(text):
+ """'send hi to wajdan': those words, to a person (not a group), and not a request to write or style a message."""
+ plan=manual_commands.parse(text) or {}
+ words=plan.get('text','')
+ return plan.get('kind')=='text' and bool(plan.get('to')) and not manual_commands.group(plan['to']) and len(words)<=120 and not re.search(r'(?i)\b(message|caption|dm|poster|wording|version|hook|appeal|emotional|stronger|shorter|longer|draft|format|paragraph)\b',words)
+
 def permitted(name,text):
  if name in READ:return True
  if name=='donor_action':return bool(re.search(r'(?i)\b(donor|donors|important|donated)\b',owner_text(text)))
@@ -57,6 +63,7 @@ def permitted(name,text):
  if name=='schedule_task':return (timed_tasks.requested(t) or timed_tasks.cancel_request(t)) and not i['query'] and not i['negative']
  if name in SEND|{'autopilot','hold','delete_last_message','set_left','money_came','set_dms','set_pace','set_group_pace','pause_group','resume_group','set_quiet_hours'} and manual_commands.deferred_request(t):return False
  if name in SEND|{'autopilot','hold','resume_group','pause_group'} and timed_tasks.requested(t):return False
+ if name in ('send_appeal','send_dm_appeal') and literal_text_to_person(t):return False # "send hi to Ali" is those words only, never the poster and saved appeal
  if name=='dm_donors':return i['send'] and bool(re.search(r'(?i)\bdonors?\b',t))
  if name=='dm_group':return i['send'] and bool(re.search(r'(?i)\b(members?|group)\b',t))
  if name=='dm_list':return i['send'] and bool(re.search(r'(?i)\b(list|numbers?|phones?)\b|(?:\+?92|0)3\d{2}',t))

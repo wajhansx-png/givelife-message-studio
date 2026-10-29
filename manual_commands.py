@@ -116,6 +116,9 @@ def parse(text):
  if low in ('hold','wait','hold on','hold everything','stop everything','pause everything','stop','stop it','stop all','stop now','stop please','pause','ruk','ruk jao','ruko','rok do','rok','band karo','band kar do','bas') or re.search(r'wrong (?:whatsapp|number)',low):return {'kind':'hold'}
  if low in ('resume','continue','go ahead','connected','connected now','right one connected','release','unhold'):return {'kind':'resume'}
  if re.search(r'\b(?:every|each|after)\s+\d+\s*(?:min|mnt|mint|hour)',low):return None
+ # While chatting by plain text: "his name is Wajdan say name hi bro" / "say hi bro" continue that chat.
+ say=re.fullmatch(r"(?:(?:his|her|their)\s+name\s+is\s+([A-Za-z][A-Za-z'-]{1,25})\s*[,.]?\s*(?:and\s+|then\s+)?)?(?:say|tell\s+(?:him|her|them))\s+(?:name\s+)?(.{1,160})",t,re.I|re.S)
+ if say and not re.search(r'(?i)\b(message|caption|dm|poster|wording|line|lines|version|variant|hook|post|appeal|paragraph|greeting|draft|format)\b',say[2]):return {'kind':'say','name':say[1] or '','text':say[2].strip()}
  # A display-name correction changes the greeting, never the destination or whole caption.
  rename=re.fullmatch(r"(?:(his|her|their)\s+name\s+is|(.+?)\s+name\s+is|(?:change|set)\s+(?:his |her |the )?name\s+to)\s+([A-Za-z][A-Za-z '-]{1,35}?)(?:\s+just\s+(?:in\s+(?:msg|message)\s+)?change\s+name)?[.!]?",t,re.I)
  if rename:return {'kind':'dm_name','to':rename[2] or '', 'name':rename[3].strip()}

@@ -709,7 +709,7 @@ dialog:not([open]),dialog:not([open])::backdrop{pointer-events:none}
 @media(max-width:899px){
  /* Donors screen: everything you press is at the bottom. */
  .donor-head{grid-template-columns:minmax(0,1fr) auto auto;gap:8px;padding-bottom:8px}
- .donor-head .donor-back{display:none}
+ .donor-page:not([data-panel=messages]) .donor-head .donor-back{display:none}
  .donor-title{grid-column:1}.donor-head .donor-total{grid-column:auto;padding:4px 10px}
  .donor-head h1{font-size:18px}.donor-sub{display:none}
  .donor-total small{font-size:10px}.donor-total strong{font-size:14px}
@@ -1169,3 +1169,35 @@ body::before,body::after{animation:none;will-change:auto}
  .rail-quick button{min-height:46px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;font-weight:650;cursor:pointer}
  .rail-quick button:hover{border-color:var(--g);background:var(--gs);color:var(--gink)}
 }
+
+/* ===== One slim progress line, numbered list, taller list, clear tabs, instant press feedback ===== */
+#donorRows{counter-reset:donor}
+.donor-row .donor-name::before{counter-increment:donor;content:counter(donor) ". ";color:var(--mut);font-weight:600;font-variant-numeric:tabular-nums;margin-right:2px}
+.donor-progress{min-height:32px;padding:4px 10px;font-size:12px}
+.donor-progress span{cursor:pointer}
+#donorBatchSummary{display:none}
+#donorBatchList:not([open]){display:none}
+#donorBatchList[open]{margin:4px 0 0}
+#donorBatchList[open] .batch-cols ol{max-height:120px}
+/* Donors page: more of the list, less chrome */
+@media(min-width:900px){
+ .donor-head{padding-bottom:8px}.donor-shell{gap:8px}.donor-toolbar{margin-block:0}.donor-bottom{padding-top:8px}
+ .donor-row{height:46px;min-height:46px;contain-intrinsic-size:auto 46px}.donor-columns{height:32px}
+ .donor-row .donor-status,.donor-row .donor-dm,.donor-row .donor-amount{min-height:36px;height:36px}
+ .donor-name{font-size:14px}
+ .donor-page:not([data-panel=messages]) .donor-head .donor-back{display:none}
+ .donor-head{grid-template-columns:minmax(0,1fr) auto auto auto auto auto!important}
+}
+/* Tabs and segmented choices always show a filled button */
+.donor-tabs button,.seg button,.bank-pages button,.segmented button{background:var(--surface2);border:1px solid var(--line2);color:var(--ink)}
+.donor-tabs{gap:6px;padding:6px;background:var(--surface);border:1px solid var(--line)}
+.donor-tabs button{border-radius:10px;min-height:44px;font-weight:650}
+.donor-tabs button:hover,.seg button:hover{border-color:var(--g)}
+.donor-tabs button[aria-selected=true],.seg button[aria-pressed=true],.seg button[aria-selected=true],.seg button.on{background:var(--g);color:#fff;border-color:var(--g)}
+.donor-tabs button[aria-selected=true] .donor-count,.donor-tabs button[aria-selected=true] .count{color:inherit}
+/* Instant feedback on every press, no 300 ms wait */
+button,summary,select,.donor-row,[role=button]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:not(:disabled):active,summary:active,.chips button:active,.big:active{transform:scale(.97);transition-duration:.05s}
+button,summary,input,select,textarea{transition-duration:.12s}
+dialog[open]{animation-duration:.16s}
+.donor-row{content-visibility:visible!important;contain:none}

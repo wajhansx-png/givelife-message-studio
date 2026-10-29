@@ -1,5 +1,5 @@
 """Explicit donor batches, saved receipts and no automatic replay after restart."""
-import copy, hashlib, json, math, threading, time, uuid
+import copy, datetime, hashlib, json, math, random, threading, time, uuid
 from pathlib import Path
 from donor_book import hide_numbers
 
@@ -27,13 +27,18 @@ class DonorDelivery:
             changed=False
             for j in jobs:
                 if j.get('state') in ('Sending','Waiting','Starting') and j.get('boot')!=self.boot:
-                    j.update(state='Interrupted',error='The service restarted. No automatic retry. Check receipts before starting again.',next_at=None)
+                    j.update(state='Interrupted',error='The service restarted. Starting again by itself; nobody already sent is repeated.' if j.get('auto') else 'The service restarted. No automatic retry. Check receipts before starting again.',next_at=None)
                     changed=True
             if changed:self._save(data)
             if not jobs:return {'state':'Idle','sent':0,'skipped':0,'failed':0,'total':0}
             out=self._public(jobs[-1]);left=self._remaining(jobs[-1])
             if left is not None:out['resumable']=len(left)
             out['waiting']=self._waiting(jobs[-1])
+            j=jobs[-1];seen={r.get('id') for r in j.get('receipts',[])}
+            out['pending']=len([i for i in j.get('ids',[]) if i not in seen]) if j.get('state') in ('Starting','Sending','Waiting','Stopped','Interrupted') else 0
+            if j.get('chunk'):
+                out['batches']=j.get('batches') or -(-j['total']//j['chunk']);out['batch']=j.get('batch',1)
+                out['next_batch_size']=min(j['chunk'],out['pending']) if j.get('next_batch_at') else None
             return out
     RESUME_WINDOW=12*3600
     def _done(self,j):
@@ -46,7 +51,7 @@ class DonorDelivery:
         return done
     def _remaining(self,j):
         """Who is still waiting in a recently stopped batch, or None when it cannot be continued."""
-        if j.get('state') not in ('Stopped','Interrupted') or time.time()-j.get('updated_at',0)>self.RESUME_WINDOW:return None
+        if j.get('state') not in ('Stopped','Interrupted') or time.time()-j.get('updated_at',0)>(self.AUTO_WINDOW if j.get('auto') else self.RESUME_WINDOW):return None
         done=self._done(j);left=[i for i in j.get('ids',[]) if i not in done]
         return left or None
     def _waiting(self,j):
@@ -67,18 +72,30 @@ class DonorDelivery:
         with self.lock:
             data=self._load();j=next(x for x in data['jobs'] if x['id']==ident);j.update(fields,updated_at=time.time());self._save(data)
             return copy.deepcopy(j)
-    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None,chunk=None,rest_seconds=1200,fresh=False):
+    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None,chunk=None,rest_seconds=1200,fresh=False,rests=None,jitter=None,skip_contacted=None,hold_until=None):
         if type(gap_seconds) not in (float,int) or not math.isfinite(gap_seconds) or not 0<gap_seconds<=600:raise ValueError('Choose a gap from 1 to 10 minutes. Suggested: 3–5 minutes.')
         if limit is not None and (type(limit) is not int or not 1<=limit<=1000):raise ValueError('Choose a recipient count of 1–1,000.')
         if type(poster) is not bool:raise ValueError('Poster must be on or off.')
         if chunk is not None and (type(chunk) is not int or not 1<=chunk<=20):raise ValueError('Choose 1–20 DMs per round.')
         if type(rest_seconds) not in (float,int) or not math.isfinite(rest_seconds) or not 60<=rest_seconds<=7200:raise ValueError('Choose a rest between rounds from 1 to 120 minutes.')
+        if rests is not None:
+            if not isinstance(rests,list) or not 1<=len(rests)<=50 or any(type(x) not in (float,int) or not math.isfinite(x) or not 60<=x<=86400 for x in rests):raise ValueError('Choose each pause between batches from 1 minute to 24 hours.')
+            rests=[float(x) for x in rests]
+        elif chunk:rests=[float(rest_seconds)]
+        if jitter is not None:
+            if not isinstance(jitter,dict) or any(type(jitter.get(k)) not in (float,int) or not -300<=jitter[k]<=600 for k in ('min','max')) or jitter['min']>jitter['max']:raise ValueError('Random gap: choose a minimum and maximum change in seconds, minimum first.')
+            jitter={'min':float(jitter['min']),'max':float(jitter['max'])}
         if self.held():raise ValueError('Sending is on hold. Resume it before starting DMs.')
         caption=self.caption()
         if not isinstance(caption,str) or not caption.strip():raise ValueError('The saved DM message is empty. Edit it first.')
         gap=max(60,float(gap_seconds));rid=str(request_id or uuid.uuid4().hex)
         if not 1<=len(rid)<=100:raise ValueError('Invalid send request.')
-        rows=self.book.recipients(scope,ids,min(limit or 1000,1000) if chunk else min(limit or 20,20))
+        cap=min(limit or 1000,1000) if chunk else min(limit or 20,20)
+        skip=bool(chunk) if skip_contacted is None else bool(skip_contacted)
+        rows=self.book.recipients(scope,ids,None);already=0
+        if skip and scope!='selected':
+            fresh_rows=[r for r in rows if not self.book.contacted(r)];already=len(rows)-len(fresh_rows);rows=fresh_rows
+        rows=rows[:cap]
         if personal_names is not None:
             if scope!='selected' or not isinstance(personal_names,dict) or not isinstance(ids,list) or set(personal_names)!=set(ids):raise ValueError('Invalid pasted donor names. Preview the donors again.')
             for value in personal_names.values():
@@ -96,7 +113,7 @@ class DonorDelivery:
             if personal_names is not None:
                 keep={r['id'] for r in rows};personal_names={k:v for k,v in personal_names.items() if k in keep};ids=[i for i in (ids or []) if i in keep]
             resumed=f'Continuing your stopped batch: {skipped} already handled (sent or unconfirmed) are skipped, {len(rows)} left. '
-        if not rows:raise ValueError('There are no donors in this audience.')
+        if not rows:raise ValueError('Everyone in this audience was already contacted. Tick "include people already contacted" to send again.' if already else 'There are no donors in this audience.')
         # Each round of up to `chunk` people gets its own different wordings; rounds may reuse them.
         size=chunk or len(rows);captions=[]
         for start in range(0,len(rows),size):
@@ -104,7 +121,7 @@ class DonorDelivery:
             texts=self.variants(part) if self.variants else [caption]*part
             if self.variants and (not isinstance(texts,list) or len(texts)!=part or any(not isinstance(text,str) or not text.strip() for text in texts) or len(set(texts))!=part):raise ValueError('Prepare enough different messages in Messages before starting this batch.')
             captions+=texts
-        signature=hashlib.sha256(json.dumps([scope,gap,ids,limit,poster,captions,personal_names,chunk,rest_seconds,[r['id'] for r in rows]],sort_keys=True).encode()).hexdigest()
+        signature=hashlib.sha256(json.dumps([scope,gap,ids,limit,poster,captions,personal_names,chunk,rests,jitter,hold_until,[r['id'] for r in rows]],sort_keys=True).encode()).hexdigest()
         with self.lock:
             data=self._load();previous=next((j for j in data['jobs'] if j.get('request_id')==rid),None)
             if previous:
@@ -121,35 +138,72 @@ class DonorDelivery:
                 if existing.get('signature')!=signature:raise ValueError('This request was already used for another donor batch.')
                 return {'job':self._public(existing),'reply':'This donor batch is already tracked. It was not started again.'}
             job={'id':ident,'request_id':rid,'signature':signature,'boot':self.boot,'scope':scope,'gap_seconds':gap,'poster':poster,'ids':[r['id'] for r in rows],'caption':caption,'captions':captions,'state':'Starting','sent':0,'skipped':0,'failed':0,'total':len(rows),'current':'','receipts':[],'created_at':now,'updated_at':now,'next_at':None}
-            if chunk and len(rows)>chunk:job.update(chunk=chunk,rest_seconds=float(rest_seconds))
+            job.update(auto=True,batch=1,hold_until=hold_until,wait_daily=bool(chunk))
+            if chunk and len(rows)>chunk:job.update(chunk=chunk,rest_seconds=rests[0],rests=rests,batches=-(-len(rows)//chunk))
+            if jitter:job['jitter']=jitter
             if personal_names is not None:job['personal_names']=copy.deepcopy(personal_names)
             data['jobs'].append(job);self._save(data);self.active=ident;self.stop.clear()
         if run:threading.Thread(target=self._run,args=(copy.deepcopy(job),),daemon=True).start()
-        rounds=f' Then the next {chunk} start automatically {rest_seconds/60:g} min after each round, same gap, until all {len(rows)} are done. Say stop any time.' if job.get('chunk') else ''
+        pauses=', '.join(f'{x/60:g}' for x in (job.get('rests') or []));rounds=(f" {job['batches']} batches of up to {chunk}. Pause between batches: {pauses} min. Everything continues by itself, even with the app closed. Say stop any time." if job.get('chunk') else '')+(f" Gap between DMs varies by {jitter['min']:g} to {jitter['max']:+g} seconds." if jitter else '')+(f" {already} already contacted were left out." if already else '')
         return {'job':self._public(job),'reply':resumed+f'Started {len(rows)} {scope.replace("_"," ")} donor DMs. First sends now; next DMs {gap/60:g} min apart, with different wording for each person. Prior confirmed sends do not prevent this explicit batch.'+rounds+(' The minimum gap is 1 minute.' if gap_seconds<60 else '')}
     def cancel(self):
         self.stop.set()
         return {'reply':'Stopping the donor batch. Any message already in flight may still complete.','job':self.status()}
+    def _gap(self,j):
+        """The wait before the next DM: the chosen gap, varied a little when random gaps are on. Never under 60 s."""
+        base=float(j['gap_seconds']);jit=j.get('jitter')
+        return max(60.0,base+random.uniform(jit['min'],jit['max'])) if jit else base
+    def _rest(self,j,batch):
+        rests=j.get('rests') or [j.get('rest_seconds',1200)];return float(rests[min(max(batch,1),len(rests))-1])
+    @staticmethod
+    def _next_day(now):
+        pkt=datetime.timezone(datetime.timedelta(hours=5));day=datetime.datetime.fromtimestamp(now,pkt)
+        return (day+datetime.timedelta(days=1)).replace(hour=0,minute=2,second=0,microsecond=0).timestamp()
+    def _sleep_until(self,due):
+        """Wait in short steps so Stop answers fast. True when the owner stopped it."""
+        while time.time()<due:
+            if self.stop.wait(min(2,max(.1,due-time.time()))):return True
+        return self.stop.is_set()
+    def _dispatch(self,j,body,receipts,sent,skipped):
+        """Send one DM. Waits for WhatsApp to come back and for the daily limit to reset instead of giving up."""
+        while True:
+            if not self.connected():
+                deadline=time.time()+1800
+                self._update(j['id'],state='Waiting',next_at=None,current='Waiting for WhatsApp to reconnect',sent=sent,skipped=skipped,receipts=receipts)
+                while not self.connected():
+                    if time.time()>=deadline:raise ValueError('WhatsApp stayed disconnected for 30 minutes. Reconnect it, then press Continue.')
+                    if self.stop.wait(15):return None
+            try:return self.send(body)
+            except ValueError as e:
+                if 'daily limit' not in str(e).lower() or not j.get('wait_daily'):raise
+                due=self._next_day(time.time());self._update(j['id'],state='Waiting',next_at=due,next_batch_at=due,current='Daily limit reached. Continues tomorrow by itself.',sent=sent,skipped=skipped,receipts=receipts)
+                if self._sleep_until(due):return None
     def _run(self,j):
-        receipts=[];sent=skipped=failed=0;last_completion=None;state='Completed';error=''
+        receipts=[];sent=skipped=failed=0;last_completion=None;state='Completed';error='';chunk=j.get('chunk');gap_next=float(j['gap_seconds']);done_here=set()
         try:
+            hold=j.get('hold_until')
+            if hold and hold>time.time():
+                self._update(j['id'],state='Waiting',next_at=hold,next_batch_at=hold,current='Waiting for the next batch time')
+                if self._sleep_until(hold):
+                    self._update(j['id'],state='Stopped',next_at=None,next_batch_at=None,current='');self.active=None;return
             for index,ident in enumerate(j['ids']):
                 if self.stop.is_set():state='Stopped';break
                 if self.held():state='Stopped';error='Sending is on hold.';break
-                if j.get('chunk') and index and index%j['chunk']==0 and last_completion is not None:
-                    rest=last_completion+j['rest_seconds'];self._update(j['id'],state='Waiting',next_at=rest,current=f"Resting before the next {j['chunk']}",sent=sent,skipped=skipped,receipts=receipts)
-                    while time.time()<rest:
-                        if self.stop.wait(min(.5,max(.1,rest-time.time()))):break
-                    if self.stop.is_set():state='Stopped';break
+                if ident in done_here:continue
+                if chunk and index and index%chunk==0 and last_completion is not None:
+                    rest=last_completion+self._rest(j,index//chunk)
+                    self._update(j['id'],state='Waiting',next_at=rest,next_batch_at=rest,batch=index//chunk+1,current=f"Resting before batch {index//chunk+1}",sent=sent,skipped=skipped,receipts=receipts)
+                    if self._sleep_until(rest):state='Stopped';break
+                    self._update(j['id'],next_batch_at=None)
                 try:r=self.book.resolve(ident)
                 except ValueError:skipped+=1;receipts.append({'id':ident,'name':'Removed donor','state':'Skipped'});continue
                 if not self.eligible(r['phone']):
                     skipped+=1;receipts.append({'id':ident,'name':hide_numbers(r['name']),'state':'Skipped: opted out or blocked'});continue
                 if last_completion is not None or self.manual_inflight.is_set() or self.manual_sent_at>j['created_at']:
-                    due=max(last_completion or 0,self.manual_sent_at)+j['gap_seconds'];self._update(j['id'],state='Waiting',next_at=due,current='Waiting between DMs',sent=sent,skipped=skipped,receipts=receipts)
+                    due=max(last_completion or 0,self.manual_sent_at)+gap_next;self._update(j['id'],state='Waiting',next_at=due,current='Waiting between DMs',sent=sent,skipped=skipped,receipts=receipts)
                     while self.manual_inflight.is_set() or time.time()<due:
                         if self.stop.wait(min(.5,max(.1,due-time.time()))):break
-                        new_due=max(last_completion or 0,self.manual_sent_at)+j['gap_seconds']
+                        new_due=max(last_completion or 0,self.manual_sent_at)+gap_next
                         if new_due!=due:due=new_due;self._update(j['id'],next_at=due)
                     if self.stop.is_set():state='Stopped';break
                 # Recheck deletion, hold and receipt at dispatch, not just selection time.
@@ -158,14 +212,15 @@ class DonorDelivery:
                 if self.held():state='Stopped';error='Sending is on hold.';break
                 if not self.eligible(r['phone']):skipped+=1;continue
                 name,gender=j['personal_names'][ident] if 'personal_names' in j else self.name_for(r['name'])
-                self._update(j['id'],state='Sending',next_at=None,current=hide_numbers(r['name']),sent=sent,skipped=skipped,receipts=receipts)
+                self._update(j['id'],state='Sending',next_at=None,current=hide_numbers(r['name']),batch=(index//chunk+1) if chunk else 1,sent=sent,skipped=skipped,receipts=receipts)
                 self.book.delivery(ident,'Sending')
-                try:result=self.send({'target':'phone','phone':r['phone'],'message':j.get('captions',[j['caption']]*len(j['ids']))[index],'poster':j['poster'],'kind':'donor_batch','first_in_batch':sent==0,'name':name,'gender':gender})
+                try:result=self._dispatch(j,{'target':'phone','phone':r['phone'],'message':j.get('captions',[j['caption']]*len(j['ids']))[index],'poster':j['poster'],'kind':'donor_batch','first_in_batch':sent==0,'name':name,'gender':gender},receipts,sent,skipped)
                 except ValueError as e:
                     self.book.delivery(ident,'Not sent');state='Stopped';error=hide_numbers(e);break
                 except Exception:
                     self.book.delivery(ident,'Uncertain');failed+=1;receipts.append({'id':ident,'name':hide_numbers(r['name']),'state':'Uncertain'});state='Stopped';error='Delivery was not confirmed. Check WhatsApp. No automatic retry.';break
-                last_completion=time.time()
+                if result is None:self.book.delivery(ident,'Not sent');state='Stopped';break
+                last_completion=time.time();done_here.add(ident);gap_next=self._gap(j)
                 if not isinstance(result,dict) or result.get('code')!='SUCCESS':
                     self.book.delivery(ident,'Uncertain');failed+=1;receipts.append({'id':ident,'name':hide_numbers(r['name']),'state':'Uncertain'});state='Stopped';error='Delivery was not confirmed. Check WhatsApp. No automatic retry.';break
                 sent+=1;self.book.delivery(ident,'Sent',last_completion);receipts.append({'id':ident,'name':hide_numbers(r['name']),'state':'Sent','time':last_completion})
@@ -174,6 +229,20 @@ class DonorDelivery:
             state='Stopped';error='The batch could not continue reliably. Check receipts before starting again.'
         finally:
             if not sent and skipped==len(j['ids']) and state=='Completed':state='Nothing sent';error='All selected recipients were excluded. See the recipient results; this batch did not send any DM.'
-            self._update(j['id'],state=state,error=error,sent=sent,skipped=skipped,failed=failed,receipts=receipts,next_at=None,current='',caption='',captions=[],personal_names={})
+            self._update(j['id'],state=state,error=error,sent=sent,skipped=skipped,failed=failed,receipts=receipts,next_at=None,next_batch_at=None,current='',caption='',captions=[],personal_names={})
             with self.lock:self.active=None
-
+    def recover(self):
+        """After a restart, carry on with a batch the owner already confirmed. People sent, unconfirmed or caught
+        mid-send are skipped, so nobody gets a second DM. Returns the started job or None."""
+        with self.lock:
+            self.status();jobs=self._load().get('jobs',[]);j=jobs[-1] if jobs else None
+        if not j or not j.get('auto') or j.get('state')!='Interrupted' or not self._remaining(j) or j.get('boot')==self.boot or self.active or time.time()-j.get('updated_at',0)>self.AUTO_WINDOW:return None
+        hold=j.get('next_batch_at') or j.get('next_at')
+        args=dict(scope=j['scope'],gap_seconds=j['gap_seconds'],poster=j.get('poster',True),hold_until=hold if hold and hold>time.time() else None,skip_contacted=False)
+        if j.get('chunk'):args.update(chunk=j['chunk'],rests=j.get('rests'))
+        if j.get('jitter'):args['jitter']=j['jitter']
+        if j['scope']=='selected':
+            if not j.get('personal_names'):return None
+            args.update(ids=j['ids'],personal_names=j['personal_names'],limit=len(j['ids']))
+        return self.start(**args,request_id='auto-'+uuid.uuid4().hex)
+    AUTO_WINDOW=36*3600

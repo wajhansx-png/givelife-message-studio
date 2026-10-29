@@ -1729,7 +1729,7 @@ class Handler(BaseHTTPRequestHandler):
      return self.reply(donors().messages.update(body.get('id'),body.get('text')))
     if body.get('stop'):return self.reply(donors().pause_personal())
     if CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it first.')
-    return self.reply(donors().start_batch(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster','chunk','rest_seconds','fresh')}))
+    return self.reply(donors().start_batch(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster','chunk','rest_seconds','fresh','rests','jitter','skip_contacted')}))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/drafts':
    if any(not isinstance(body.get(k),str) or len(body[k])>10000 for k in ('group','dm')):return self.reply({'error':'Both captions must be text, at most 10,000 characters each.'},status=400)
@@ -1876,8 +1876,23 @@ class Handler(BaseHTTPRequestHandler):
    except Exception as e:self.reply({'code':'ERROR','message':str(e)})
   else:self.reply({},status=404)
  def log_message(self,*args):pass
+def donor_autopilot():
+ """Keeps confirmed donor batches going: resumes one after a restart, and keeps a free host awake while one runs."""
+ import urllib.request
+ time.sleep(20)
+ for _ in range(20):
+  try:donors().jobs.recover();break
+  except Exception:time.sleep(30)
+ url=os.environ.get('RENDER_EXTERNAL_URL','').rstrip('/')
+ while True:
+  time.sleep(540)
+  try:
+   if url and donors().jobs.active:urllib.request.urlopen(url+'/health',timeout=20).read()
+  except Exception:pass
+
 ensure_dm_structure()
 if __name__=='__main__':
+ threading.Thread(target=donor_autopilot,daemon=True).start()
  PILOT.start()
  ENGINE.start()
  threading.Thread(target=timed_loop,daemon=True).start()

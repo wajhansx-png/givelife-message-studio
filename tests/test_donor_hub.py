@@ -70,7 +70,7 @@ class DeliveryTests(RegistryTests):
  def test_rounds_continue_by_themselves_with_same_gap_and_rest(self):
   for i in range(5):self.book.update(self.add('P%d'%i,'030012345%02d'%i)['id'],important=True)
   self.jobs.variants=lambda n:['w%d'%i for i in range(n)]
-  r=self.jobs.start('important',120,chunk=2,rest_seconds=1200,run=False);self.assertIn('automatically',r['reply']);self.run_job(r)
+  r=self.jobs.start('important',120,chunk=2,rest_seconds=1200,run=False);self.assertIn('by itself',r['reply']);self.run_job(r)
   times=[t for _,t in self.sent];self.assertEqual(len(times),5)
   self.assertGreaterEqual(times[1]-times[0],120);self.assertGreaterEqual(times[2]-times[1],1200);self.assertLess(times[2]-times[1],1300)
   self.assertGreaterEqual(times[3]-times[2],120);self.assertLess(times[3]-times[2],200);self.assertGreaterEqual(times[4]-times[3],1200)
@@ -89,6 +89,8 @@ class DeliveryTests(RegistryTests):
   r=send_request('send 20 dms to important donors');self.assertEqual((r['chunk'],r['limit']),(20,None))
   r=send_request('send first 5 donors');self.assertEqual((r['chunk'],r['limit']),(None,5))
   r=send_request('dm 40 important donors');self.assertEqual((r['chunk'],r['limit']),(20,40))
+  r=send_request('send 100 dms to important donors 3 min gap, 30 min between batches, random delays');self.assertEqual((r['chunk'],r['limit'],r['gap_seconds'],r['rests']),(20,100,180.0,[1800.0]));self.assertEqual(r['jitter'],{'min':-10,'max':15})
+  r=send_request('send 20 dms to important donors with 3 minutes gap');self.assertEqual((r['gap_seconds'],r['rests'],r['jitter']),(180.0,None,None))
  def _five(self):
   for i in range(5):self.book.update(self.add('P%d'%i,'030012345%02d'%i)['id'],important=True)
  def _drop_whatsapp_after(self,n):
@@ -133,6 +135,88 @@ class DeliveryTests(RegistryTests):
   self.assertTrue(all('0300' not in n for n in st['waiting']))
   self.jobs.send=real;self.jobs.stop.clear();r=self.jobs.start('important',60,run=False);self.run_job(r)
   self.assertEqual([b['name'] for b,_ in self.sent],['P0','P1','P2','P3','P4']);self.assertEqual(self.jobs.status()['waiting'],[])
+ def _many(self,n):
+  for i in range(n):self.book.update(self.add('P%02d'%i,'0300%07d'%(1000000+i))['id'],important=True)
+ def test_100_contacts_split_into_batches_of_20_with_different_pauses(self):
+  self._many(45);r=self.jobs.start('important',120,chunk=20,limit=45,rests=[1200,1800],run=False)
+  self.assertEqual((r['job']['total'],r['job']['batches']),(45,3));self.run_job(r)
+  t=[x for _,x in self.sent];self.assertEqual(len(t),45)
+  self.assertTrue(1200<=t[20]-t[19]<1300,t[20]-t[19]);self.assertTrue(1800<=t[40]-t[39]<1900,t[40]-t[39])
+  self.assertTrue(all(120<=t[i+1]-t[i]<130 for i in list(range(19))+list(range(21,39))))
+  self.assertEqual(len({b['phone'] for b,_ in self.sent}),45,'nobody twice');self.assertEqual(self.jobs.status()['state'],'Completed')
+ def test_last_pause_repeats_for_later_batches(self):
+  self._many(61);r=self.jobs.start('important',60,chunk=20,limit=61,rests=[600,900],run=False);self.run_job(r)
+  t=[x for _,x in self.sent];self.assertTrue(600<=t[20]-t[19]<700);self.assertTrue(900<=t[40]-t[39]<1000);self.assertTrue(900<=t[60]-t[59]<1000)
+ def test_random_gap_varies_inside_the_chosen_range_and_never_below_60s(self):
+  self._many(6);steps=iter([-5,12,4,-300,9])
+  with patch('donor_delivery.random.uniform',side_effect=lambda lo,hi:next(steps)):
+   r=self.jobs.start('important',180,jitter={'min':-5,'max':15},run=False);self.run_job(r)
+  gaps=[round(self.sent[i+1][1]-self.sent[i][1]) for i in range(5)]
+  self.assertEqual(gaps,[175,192,184,60,189])
+ def test_random_gap_off_keeps_the_exact_gap(self):
+  self._many(3);self.run_job(self.jobs.start('important',180,run=False))
+  self.assertEqual([round(self.sent[i+1][1]-self.sent[i][1]) for i in range(2)],[180,180])
+ def test_bad_random_gap_is_refused(self):
+  self._many(2)
+  for bad in ({'min':10,'max':5},{'min':-999,'max':5},{'min':0},{'min':0,'max':9999},'x'):
+   with self.assertRaises(ValueError):self.jobs.start('important',180,run=False,jitter=bad)
+ def test_contacted_people_are_left_out_of_automatic_batches(self):
+  self._many(5);ids=[r['id'] for r in self.book.recipients('important')]
+  self.book.delivery(ids[0],'Sent',50.0);self.book.delivery(ids[1],'Sent',60.0)
+  r=self.jobs.start('important',60,chunk=20,run=False);self.assertEqual(r['job']['total'],3);self.assertIn('2 already contacted',r['reply'])
+ def test_include_contacted_on_purpose(self):
+  self._many(3);ids=[r['id'] for r in self.book.recipients('important')];self.book.delivery(ids[0],'Sent',50.0)
+  r=self.jobs.start('important',60,chunk=20,skip_contacted=False,run=False);self.assertEqual(r['job']['total'],3)
+ def test_everyone_already_contacted_gives_a_clear_answer(self):
+  self._many(2)
+  for x in self.book.recipients('important'):self.book.delivery(x['id'],'Sent',50.0)
+  with self.assertRaisesRegex(ValueError,'already contacted'):self.jobs.start('important',60,chunk=20,run=False)
+ def test_daily_limit_waits_for_tomorrow_then_continues_without_repeating(self):
+  self._many(3);real=self.send;state={'hit':False}
+  def send(body):
+   if len(self.sent)==1 and not state['hit']:state['hit']=True;raise ValueError('The 50-DM daily limit has been reached.')
+   return real(body)
+  self.jobs.send=send;r=self.jobs.start('important',60,chunk=20,run=False);start=self.clock;self.run_job(r)
+  self.assertEqual([b['name'] for b,_ in self.sent],['P00','P01','P02']);self.assertGreater(self.sent[1][1]-start,60,'waited for the next day')
+  self.assertEqual(self.jobs.status()['state'],'Completed')
+ def test_whatsapp_disconnect_waits_and_carries_on(self):
+  self._many(3);checks={'n':0}
+  def connected():
+   checks['n']+=1;return not 3<=checks['n']<=6
+  self.jobs.connected=connected;self.run_job(self.jobs.start('important',60,chunk=20,run=False))
+  self.assertEqual(len(self.sent),3);self.assertEqual(self.jobs.status()['state'],'Completed')
+ def test_whatsapp_gone_for_good_stops_and_can_continue(self):
+  self._many(3);up={'ok':True};real=self.send
+  def send(body):
+   out=real(body)
+   if len(self.sent)==1:up['ok']=False
+   return out
+  self.jobs.send=send;self.jobs.connected=lambda:up['ok']
+  r=self.jobs.start('important',60,chunk=20,run=False);self.run_job(r)
+  st=self.jobs.status();self.assertEqual(st['state'],'Stopped');self.assertEqual(st['resumable'],2);self.assertIn('30 minutes',st['error'])
+ def test_live_progress_during_a_pause_shows_next_batch(self):
+  self._many(25);seen={}
+  r=self.jobs.start('important',60,chunk=20,rests=[1500],run=False);job=self.jobs._load()['jobs'][-1]
+  def wait(seconds):
+   self.clock+=seconds;st=self.jobs.status()
+   if st.get('next_batch_at') and not seen:seen.update(st);self.jobs.stop.set();return True
+   return False
+  with patch('donor_delivery.time.time',side_effect=lambda:self.clock),patch.object(self.jobs.stop,'wait',side_effect=wait):self.jobs._run(job)
+  self.assertEqual((seen['sent'],seen['pending'],seen['batch'],seen['batches'],seen['next_batch_size']),(20,5,2,2,5));self.assertGreater(seen['next_batch_at'],self.clock-1)
+ def test_after_a_restart_a_confirmed_batch_carries_on_without_repeats(self):
+  self._many(6);real=self.send
+  def send(body):
+   out=real(body)
+   if len(self.sent)==2:self.jobs.stop.set()
+   return out
+  self.jobs.send=send;self.run_job(self.jobs.start('important',60,chunk=20,run=False))
+  data=self.jobs._load();j=data['jobs'][-1];j.update(state='Waiting',boot='old-process',next_batch_at=self.clock+500,updated_at=self.clock);self.jobs._save(data)
+  later=DonorDelivery(self.folder.name,self.store,self.book,real,lambda:'saved **full**\n\nDM caption',lambda:True,lambda:False,lambda p:True,lambda n:(n,'Brother'))
+  with patch('donor_delivery.threading.Thread.start'):new=later.recover()
+  self.assertEqual(new['job']['total'],4);self.assertTrue(later._load()['jobs'][-1]['hold_until']>time.time()-1)
+  self.assertIsNone(later.recover(),'a second recover does nothing while one is active')
+ def test_recover_ignores_old_manual_jobs_and_finished_ones(self):
+  self._many(3);self.run_job(self.jobs.start('important',60,chunk=20,run=False));self.assertIsNone(self.jobs.recover())
  def test_double_click_idempotency(self):
   self.add();a=self.jobs.start('all',60,request_id='same',run=False);b=self.jobs.start('all',60,request_id='same',run=False);self.assertEqual(a['job']['id'],b['job']['id']);self.assertEqual(len(self.jobs._load()['jobs']),1)
  def test_already_contacted_skips_and_deletion_skips(self):

@@ -1095,3 +1095,19 @@ body::before,body::after{animation:none;will-change:auto}
 .batch-cols ol{margin:0;padding-left:20px;max-height:180px;overflow:auto;line-height:1.6}
 .batch-cols li.none{list-style:none;margin-left:-20px;opacity:.6}
 .batch-list p{margin:0;padding:0 12px 10px;color:var(--warn)}
+/* Batch dialog: compact, phone first. */
+.batch-dialog form{display:grid;gap:8px}
+.batch-dialog label{font-weight:600;font-size:13px}
+.batch-dialog input[type=number],.batch-dialog input[type=text],.batch-dialog select{min-height:44px;width:100%;box-sizing:border-box;font-size:16px}
+.batch-dialog .batch-hint{margin:-4px 0 0;font-size:12px;opacity:.8}
+.batch-dialog .batch-plan{margin:0;padding:10px 12px;border-radius:12px;background:var(--gs);color:var(--gink);font-weight:600;font-size:13px;line-height:1.45}
+.batch-more{border:1px solid var(--line);border-radius:12px;padding:0 12px}
+.batch-more summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:700}
+.batch-more[open]{padding-bottom:12px;display:grid;gap:8px}.batch-more[open] summary{margin-bottom:0}
+.batch-dialog [hidden]{display:none!important}
+.hide-row{display:flex;margin:6px 0 0}.hide-row[hidden]{display:none!important}
+.hide-chip{min-height:36px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:var(--surface2);color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.batch-dialog{max-height:94dvh;overflow:auto;overscroll-behavior:contain}
+.batch-foot{position:sticky;bottom:-1px;display:grid;gap:8px;padding:10px 0 2px;margin-top:2px;background:var(--surface,var(--bg))}
+.batch-dialog #batchRandomRow:not([hidden]){display:grid!important;grid-template-columns:1fr 1fr;gap:8px}
+.batch-dialog .donor-form-actions{margin:0}

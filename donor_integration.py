@@ -115,6 +115,8 @@ class DonorIntegration:
             what=mark[2].casefold();fields={'important':not what.startswith('not ')} if 'important' in what else {'donated':not what.startswith('not ')}
             if mark[3] and fields.get('donated'):fields['amount']=int(mark[3].replace(',',''))
             return self.book.update(mark[1],**fields)
+        # A bare "stop" while donor DMs are running can only mean those DMs.
+        if self.jobs.active and re.fullmatch(r'(?i)(?:please\s+)?(?:stop|pause|cancel|ruk(?:\s+jao)?|band(?:\s+karo)?|bas)(?:\s+(?:it|this|now|all|sending|everything|the batch|batch|the rest|rest))?[.!]*',t):return self.pause_personal()
         control=manual_commands.dm_control(t)
         if control=='stop_dms':return self.pause_personal()
         if control=='resume_dms':return {'reply':self.resume_personal()}

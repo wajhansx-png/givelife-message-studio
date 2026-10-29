@@ -76,6 +76,7 @@ def balance_amount(text,allow_with=True):
  t=outside_literals(text);number=r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*'+UNIT+r'?(?!\w)'
  patterns=[number+r'\s*(?:is\s+)?(?:left|remaining|remain|baqi|baki|bacha|bachay|bacha hai|rehte|reh gaye)\b',
            r'\b(?:remaining(?:\s+amount)?|amount(?:\s+(?:left|remaining))?|balance|baqi)\s*(?:is|to|=|:)?\s*(?:rs\.?\s*)?'+number,
+           r'\bleft\s*(?:is|=|:)?\s*(?:rs\.?\s*)?(?=\d[\d,]*\s*(?:k|hazar|hazaar|thousand|lakh|lac)\b|\d{3,})'+number+r'(?!\s*(?:people|groups?|members?|minutes?|hours?|messages?|dms?|donors?|times?))',
            *([r'\bwith\s+(?:rs\.?\s*)?'+number+r'(?!\s*(?:people|groups?|members?|minutes?|hours?))'] if allow_with else [])]
  candidates=[]
  for pattern in patterns:

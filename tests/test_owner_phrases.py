@@ -10,6 +10,9 @@ class Phrases(unittest.TestCase):
    ('came 2000','money',2000),('2000 came','money',2000),('5 hazar aaye','money',5000),('5000 aye','money',5000),('came 5 hazar','money',5000)]:
    with self.subTest(text=text):
     plan=m.parse(text);self.assertEqual((plan['kind'],plan['amount']),(kind,amount))
+ def test_left_before_the_number_is_a_balance_but_counts_are_not(self):
+  for text,amount in [('left 12k',12000),('left: 15000',15000),('left 2 lakh',200000)]:self.assertEqual(m.parse(text)['amount'],amount,text)
+  for text in ('left 2 groups','left 5','left 300 people','how much left'):self.assertNotIn((m.parse(text) or {}).get('kind'),('amount','money'),text)
  def test_amount_words_do_not_turn_other_numbers_into_money(self):
   for text in ('send to 5 groups','every 30 min','fiverr every 15 minutes','send 2 messages'):
    with self.subTest(text=text):self.assertNotIn((m.parse(text) or {}).get('kind'),('amount','money'))

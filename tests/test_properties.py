@@ -124,3 +124,80 @@ class NobodyTwice(unittest.TestCase):
    if jobs[0].status()['state']=='Completed' and not jobs[0].status().get('resumable'):break
   self.assertEqual(len(delivered),len(set(delivered)),f'someone got two DMs: {delivered}')
   self.assertFalse(set(delivered)&uncertain,'an unconfirmed person was sent again')
+
+class Schedules(unittest.TestCase):
+ @FAST
+ @given(st.sampled_from(['send to main','post in test group','send all','send to fiverr','send it']),st.sampled_from(['at {h}pm','at {h}am','tomorrow at {h}pm','in {m} min','in {m} minutes','after {m} min','at {h}:30pm']),st.integers(min_value=1,max_value=11),st.integers(min_value=1,max_value=120))
+ def test_a_message_with_a_time_never_sends_right_now(self,cmd,when,h,mins):
+  text=f"{cmd} {when.format(h=h,m=mins)}"
+  self.assertNotIn((m.parse(text) or {}).get('kind'),SEND_KINDS,text)
+  for tool in ('send_appeal','send_message','send_dm_appeal'):self.assertFalse(chat_policy.permitted(tool,text),(tool,text))
+ @FAST
+ @given(st.integers(min_value=1,max_value=12),st.sampled_from(['am','pm']))
+ def test_the_clock_is_read_exactly(self,h,ampm):
+  plan=timed_tasks.parse(f'send to main at {h}{ampm}')
+  self.assertEqual(plan['command'],'create')
+  expect=(h%12)+(12 if ampm=='pm' else 0)
+  self.assertEqual(plan['clock'],f'{expect:02d}:00')
+  self.assertGreater(plan['due'],time.time()-60);self.assertLess(plan['due'],time.time()+86400+60)
+ @FAST
+ @given(st.sampled_from(['cancel it','cancel all','cancel 2nd','cancel last','remove all of them','clear all','delete all schedules','cancel the duplicate','undo it']))
+ def test_cancel_words_never_create_or_send(self,text):
+  self.assertNotEqual((timed_tasks.parse(text) or {}).get('command'),'create',text)
+  self.assertNotIn((m.parse(text) or {}).get('kind'),SEND_KINDS,text)
+ @FAST
+ @given(st.integers(min_value=1,max_value=4))
+ def test_ordinals(self,n):
+  word={1:'1st',2:'2nd',3:'3rd',4:'4th'}[n]
+  self.assertEqual(timed_tasks.parse(f'cancel {word}').get('index'),n-1)
+
+class PastedLists(unittest.TestCase):
+ def helper(self):
+  import copy
+  from donor_book import DonorBook
+  from donor_paste import PastedDonors
+  class Store:
+   def __init__(self):self.data={}
+   def get(self,k,d=None):return copy.deepcopy(self.data.get(k,d))
+   def put(self,k,v):self.data[k]=copy.deepcopy(v)
+  folder=tempfile.TemporaryDirectory();self.addCleanup(folder.cleanup)
+  return PastedDonors(DonorBook(folder.name,Store()),None,lambda:'923205069925',lambda label:(label.split()[0] if label else '','Brother'))
+ @FAST
+ @given(st.text(max_size=300))
+ def test_any_paste_either_previews_or_says_why(self,text):
+  try:out=self.helper().preview(text)
+  except ValueError:return
+  self.assertLessEqual(out['count'],20)
+ @FAST
+ @given(st.lists(st.integers(min_value=0,max_value=9_999_999),min_size=1,max_size=20,unique=True),st.sampled_from(['\n',' ',', ','; ']),st.booleans())
+ def test_numbers_are_counted_once_and_never_shown(self,tails,sep,dup):
+  phones=['0300'+str(t).zfill(7) for t in tails]
+  text=sep.join(phones+([phones[0]] if dup else []))
+  try:out=self.helper().preview(text)
+  except ValueError:return
+  self.assertEqual(out['count'],len(phones))
+  shown=__import__('json').dumps({k:v for k,v in out.items() if k!='token'})
+  for p in phones:self.assertNotIn(p[-7:],shown)
+
+class OneBatchAtATime(unittest.TestCase):
+ def test_two_simultaneous_starts_make_one_batch(self):
+  import copy,threading
+  from donor_book import DonorBook
+  from donor_delivery import DonorDelivery
+  class Store:
+   def __init__(self):self.data={};self.lock=threading.Lock()
+   def get(self,k,d=None):return copy.deepcopy(self.data.get(k,d))
+   def put(self,k,v):self.data[k]=copy.deepcopy(v)
+  folder=tempfile.TemporaryDirectory();self.addCleanup(folder.cleanup);store=Store();book=DonorBook(folder.name,store)
+  for i in range(5):book.add('P%d'%i,'0300%07d'%(1000000+i))
+  jobs=DonorDelivery(folder.name,store,book,lambda b:{'code':'SUCCESS'},lambda:'saved **full**\n\nDM caption',lambda:True,lambda:False,lambda p:True,lambda n:(n,'Brother'))
+  results=[];gate=threading.Barrier(8)
+  def go(i):
+   gate.wait()
+   try:results.append(jobs.start('all',60,run=False,request_id='r%d'%i)['job']['id'])
+   except ValueError as e:results.append('refused')
+  threads=[threading.Thread(target=go,args=(i,)) for i in range(8)]
+  for t in threads:t.start()
+  for t in threads:t.join()
+  started=[r for r in results if r!='refused']
+  self.assertEqual(len(started),1,results);self.assertEqual(len(jobs._load()['jobs']),1)

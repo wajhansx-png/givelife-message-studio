@@ -92,3 +92,20 @@ test('the batch dialog explains that later rounds start by themselves',async({pa
  expect(text).toMatch(/start by themselves|recipients in this batch/);
  if(/start by themselves/.test(text))await expect(page.locator('#batchRest')).toBeVisible();else await expect(page.locator('#batchRestRow')).toBeHidden();
 });
+
+test('a stopped batch offers Continue and the dialog says already-sent people are skipped',async({page,request})=>{
+ await open(page,request,390,844);
+ const stopped={state:'Stopped',scope:'important',sent:2,skipped:0,failed:0,total:5,resumable:3,gap_seconds:240,poster:true,error:'WhatsApp is disconnected.',receipts:[]};
+ let posted=null;
+ await page.route('**/donor-delivery',async r=>{if(r.request().method()==='POST'){posted=r.request().postDataJSON();return r.fulfill({json:{reply:'Continuing your stopped batch: 2 already handled are skipped, 3 left.',job:stopped}})}return r.fulfill({json:stopped})});
+ await page.locator('#openDonors').click();
+ await expect(page.locator('#donorContinue')).toBeVisible();await expect(page.locator('#donorContinue')).toContainText('3 left');
+ await page.locator('#donorContinue').click();await expect.poll(()=>posted).not.toBeNull();
+ expect(posted.scope).toBe('important');expect(posted.fresh).toBeUndefined();expect(posted.ids).toBeUndefined();
+ await page.locator('#donorSendImportant:visible, #donorMain:visible').first().isVisible();
+ await page.locator('#donorSendImportant').click();
+ await expect(page.locator('#batchResume')).toBeVisible();await expect(page.locator('#batchResumeText')).toContainText('already sent will be skipped');
+ await expect(page.locator('#batchStart')).toHaveText('Continue DMs');
+ await page.locator('#batchFresh').check();posted=null;await page.locator('#batchStart').click();
+ await expect.poll(()=>posted).not.toBeNull();expect(posted.fresh).toBe(true);
+});

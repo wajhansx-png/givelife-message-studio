@@ -1081,3 +1081,8 @@ body::before,body::after{animation:none;will-change:auto}
 .donor-bulk:hover{border-color:var(--g)}
 @media(min-width:900px){.donor-head{grid-template-columns:auto minmax(0,1fr) auto auto auto auto auto}}
 @media(max-width:899px){.donor-head{grid-template-columns:minmax(0,1fr) auto auto auto auto}.donor-bulk{padding:0 10px;font-size:12px}.donor-head .donor-total{display:none}}
+/* Continue a stopped batch, and the start-over choice. */
+#donorContinue[hidden],#batchResume[hidden]{display:none!important}
+#donorContinue{min-height:36px;padding:0 12px;border:1px solid color-mix(in srgb,var(--g) 55%,transparent);border-radius:10px;background:var(--gs);color:var(--gink);font:inherit;font-weight:700;cursor:pointer}
+#batchResume{padding:10px 12px;border:1px solid color-mix(in srgb,var(--g) 40%,transparent);border-radius:12px;background:var(--gs);margin:4px 0}
+#batchResume p{margin:0 0 8px}.batch-fresh{display:flex;gap:8px;align-items:center;font-weight:600}.batch-fresh input{width:18px;height:18px;flex:none}

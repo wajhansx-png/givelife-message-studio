@@ -55,7 +55,7 @@ class RegistryTests(unittest.TestCase):
 
 class DeliveryTests(RegistryTests):
  def setUp(self):
-  super().setUp();self.sent=[];self.clock=1000.;self.contacted=set()
+  super().setUp();self.sent=[];self.clock=time.time();self.contacted=set()
   self.jobs=DonorDelivery(self.folder.name,self.store,self.book,self.send,lambda:'saved **full**\n\nDM caption',lambda:True,lambda:False,lambda p:p not in self.contacted,lambda n:(n,'Brother'))
  def send(self,body):self.sent.append((body,self.clock));self.contacted.add(body['phone']);return {'code':'SUCCESS'}
  def run_job(self,result):
@@ -89,6 +89,37 @@ class DeliveryTests(RegistryTests):
   r=send_request('send 20 dms to important donors');self.assertEqual((r['chunk'],r['limit']),(20,None))
   r=send_request('send first 5 donors');self.assertEqual((r['chunk'],r['limit']),(None,5))
   r=send_request('dm 40 important donors');self.assertEqual((r['chunk'],r['limit']),(20,40))
+ def _five(self):
+  for i in range(5):self.book.update(self.add('P%d'%i,'030012345%02d'%i)['id'],important=True)
+ def _drop_whatsapp_after(self,n):
+  real=self.send
+  def send(body):
+   if len(self.sent)>=n:raise ValueError('WhatsApp is disconnected.')
+   return real(body)
+  self.jobs.send=send;return real
+ def test_after_a_disconnect_continue_skips_people_already_sent(self):
+  self._five();real=self._drop_whatsapp_after(2)
+  self.run_job(self.jobs.start('important',60,run=False));self.assertEqual(self.jobs.status()['state'],'Stopped');self.assertEqual(self.jobs.status()['resumable'],3)
+  self.jobs.send=real;r=self.jobs.start('important',60,run=False);self.assertIn('2 already handled',r['reply']);self.run_job(r)
+  names=[b['name'] for b,_ in self.sent];self.assertEqual(names,['P0','P1','P2','P3','P4'],'nobody got a second DM')
+ def test_continue_also_works_after_a_restart_and_after_pressing_stop(self):
+  self._five();real=self._drop_whatsapp_after(2);self.run_job(self.jobs.start('important',60,run=False))
+  later=DonorDelivery(self.folder.name,self.store,self.book,real,lambda:'saved **full**\n\nDM caption',lambda:True,lambda:False,lambda p:True,lambda n:(n,'Brother'))
+  job=later._load()['jobs'][-1];job['state']='Sending';job['boot']='old';later._save({'jobs':[job]});self.assertEqual(later.status()['state'],'Interrupted');self.assertEqual(later.status()['resumable'],3)
+  r=later.start('important',60,run=False);self.assertEqual(r['job']['total'],3)
+ def test_start_over_sends_to_everyone_again_on_purpose(self):
+  self._five();self._drop_whatsapp_after(2);self.run_job(self.jobs.start('important',60,run=False))
+  r=self.jobs.start('important',60,run=False,fresh=True);self.assertEqual(r['job']['total'],5);self.assertNotIn('Continuing',r['reply'])
+ def test_a_finished_batch_is_never_resumed_so_repeat_sends_still_work(self):
+  self._five();self.run_job(self.jobs.start('important',60,run=False));self.assertNotIn('resumable',self.jobs.status())
+  r=self.jobs.start('important',60,run=False);self.assertEqual(r['job']['total'],5)
+ def test_unconfirmed_delivery_is_not_sent_again_on_continue(self):
+  self._five();calls=[]
+  def send(body):
+   calls.append(body['name']);return {'code':'UNCERTAIN'} if body['name']=='P1' else {'code':'SUCCESS'}
+  self.jobs.send=send;self.run_job(self.jobs.start('important',60,run=False));self.assertEqual(self.jobs.status()['state'],'Stopped')
+  self.jobs.send=lambda b:(calls.append(b['name']),{'code':'SUCCESS'})[1];self.run_job(self.jobs.start('important',60,run=False))
+  self.assertEqual(calls,['P0','P1','P2','P3','P4'])
  def test_double_click_idempotency(self):
   self.add();a=self.jobs.start('all',60,request_id='same',run=False);b=self.jobs.start('all',60,request_id='same',run=False);self.assertEqual(a['job']['id'],b['job']['id']);self.assertEqual(len(self.jobs._load()['jobs']),1)
  def test_already_contacted_skips_and_deletion_skips(self):

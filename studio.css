@@ -1440,3 +1440,14 @@ dialog::backdrop{background:#000000b3!important}
 .donor-star[aria-pressed=true]{color:var(--important)!important}
 .donor-row[data-important=true]{background:color-mix(in srgb,var(--important) 7%,var(--surface))!important}
 .donor-row[data-delivery=Sent] .donor-dm,.donor-row[data-donated=true] .donor-status{color:var(--ok)!important;border-color:var(--ok)!important}
+
+/* ===== Premium finish (colours and surface only, no layout change) ===== */
+:root[data-theme=dark]{--btn:#f1f1f3;--btnh:#ffffff;--on-accent:#131316;--bubble:#1d1d21;--bubble-line:#2c2c32}
+:root:not([data-theme=dark]){--btn:#15151a;--btnh:#2a2a31;--on-accent:#ffffff;--bubble:#fbfbfc;--bubble-line:#e4e5ea}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--btn:#f1f1f3;--btnh:#ffffff;--on-accent:#131316;--bubble:#1d1d21;--bubble-line:#2c2c32}}
+:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart){background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 55%),var(--btn)!important;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 1px 2px rgba(0,0,0,.25),0 6px 16px -8px rgba(0,0,0,.45)!important;border:1px solid rgba(0,0,0,.08)!important;border-radius:11px!important;font-weight:620!important;letter-spacing:-.01em;transition:transform .12s ease,box-shadow .2s ease,background .2s ease}
+:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart):active{transform:translateY(1px) scale(.99)}
+:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart):focus-visible{outline:2px solid var(--g)!important;outline-offset:3px}
+.donor-page .donor-tabs button[aria-selected=true],.seg button[aria-pressed=true]{background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,0)),var(--g)!important;box-shadow:0 1px 2px rgba(0,0,0,.3),0 0 0 1px rgba(0,0,0,.06)!important;border-radius:9px!important}
+.e.bot{background:var(--bubble)!important;border:1px solid var(--bubble-line)!important;border-radius:16px!important;box-shadow:0 1px 2px rgba(0,0,0,.06),0 10px 28px -18px rgba(0,0,0,.35)!important}
+:root[data-theme=dark] .e.bot,@media(prefers-color-scheme:dark){.e.bot{box-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 14px 34px -18px rgba(0,0,0,.7)!important}}

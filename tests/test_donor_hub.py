@@ -171,14 +171,9 @@ class DeliveryTests(RegistryTests):
   self._many(2)
   for x in self.book.recipients('important'):self.book.delivery(x['id'],'Sent',50.0)
   with self.assertRaisesRegex(ValueError,'already contacted'):self.jobs.start('important',60,chunk=20,run=False)
- def test_daily_limit_waits_for_tomorrow_then_continues_without_repeating(self):
-  self._many(3);real=self.send;state={'hit':False}
-  def send(body):
-   if len(self.sent)==1 and not state['hit']:state['hit']=True;raise ValueError('The 50-DM daily limit has been reached.')
-   return real(body)
-  self.jobs.send=send;r=self.jobs.start('important',60,chunk=20,run=False);start=self.clock;self.run_job(r)
-  self.assertEqual([b['name'] for b,_ in self.sent],['P00','P01','P02']);self.assertGreater(self.sent[1][1]-start,60,'waited for the next day')
-  self.assertEqual(self.jobs.status()['state'],'Completed')
+ def test_there_is_no_daily_cap_on_donor_batches(self):
+  self._many(3);day=time.strftime('%Y-%m-%d');self.store.put('dm_daily',{'day':day,'count':500,'last':0})
+  self.run_job(self.jobs.start('important',60,chunk=20,run=False));self.assertEqual(len(self.sent),3)
  def test_whatsapp_disconnect_waits_and_carries_on(self):
   self._many(3);checks={'n':0}
   def connected():

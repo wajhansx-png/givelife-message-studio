@@ -8,7 +8,7 @@ Start atomically adds valid contacts through `DonorBook.add_contacts`, then star
 
 Pasted order is restored after registry selection. Batch-specific personal names are snapshotted privately, excluded from public job/status responses, and cleared from the stored job after completion. Existing donor names and metadata remain intact. Public receipt names use registry labels. Clean explicitly supplied personal names may personalize this batch; account/business/random labels retain the Brother fallback, and recognized female names use Sister.
 
-Existing dispatch checks remain active: own account, opt-outs, blocked or uncertain recipients, deletion, hold, daily 50-DM limit, first immediate send, chosen spacing, cancellation, and no automatic replay after an uncertain send or restart. Distinct saved wording is required per recipient. Donor edits forward optional `expected_updated_at` while preserving the editable-field whitelist.
+Existing dispatch checks remain active: own account, opt-outs, blocked or uncertain recipients, deletion, hold, first immediate send, chosen spacing, cancellation, and no automatic replay after an uncertain send or restart. Distinct saved wording is required per recipient. Donor edits forward optional `expected_updated_at` while preserving the editable-field whitelist.
 
 Verification: 13 focused pasted-donor tests pass with fake delivery callbacks and mocked outbound calls. No live WhatsApp messages were sent. Earlier full-suite audit failures were reported separately while server audit fixes were still being integrated.
 

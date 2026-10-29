@@ -8,11 +8,10 @@ const Nav={rendering:false,
  path(){try{return decodeURIComponent((location.hash||'').replace(/^#\/?/,''))}catch(e){return ''}},
  top(){return Nav.path().split('/')[0]},
  /* The chat log below owns the name `history`, so the browser's is always reached as window.history. */
- /* A Back step is asynchronous; a new screen opened right after it waits until the step has landed. */
- pending:false,queued:null,
- settle(){Nav.pending=false;if(Nav.queued!==null){const q=Nav.queued;Nav.queued=null;Nav.go(q)}},
- go(path,{replace=false}={}){if(Nav.rendering)return;if(Nav.pending){Nav.queued=path;return}if(Nav.path()===path)return;const h=window.history;try{(replace?h.replaceState:h.pushState).call(h,{nav:1},'',path?'#/'+path:location.pathname+location.search)}catch(e){}},
- leave(name){if(Nav.rendering||Nav.top()!==name)return;const h=window.history;if(h.state&&h.state.nav&&h.length>1){Nav.pending=true;setTimeout(Nav.settle,400);h.back()}else Nav.go('',{replace:true})}};
+ valid(path){return /^(?:chat|settings|preview|whatsapp|donors\/(?:all|important|donated|not_donated|messages))$/.test(path)},
+ go(path,{replace=false}={}){if(Nav.rendering||Nav.path()===path)return;const h=window.history,from=replace?h.state?.from:Nav.path();try{(replace?h.replaceState:h.pushState).call(h,{nav:1,from:Nav.valid(from)?from:''},'',path?'#/'+path:location.pathname+location.search)}catch(e){}},
+ // Close synchronously. A delayed history.back() can undo the next tap or race a refresh.
+ leave(name){if(Nav.rendering||Nav.top()!==name)return;const from=window.history.state?.from;Nav.go(Nav.valid(from)&&from.split('/')[0]!==name?from:'',{replace:true});renderNav()}};
 /* Server-issued next steps are tied to the exact saved draft, never AI-authored commands. */
 let nextActions=[],nextActionEpoch=0;const nextActionPending=new Set();
 function drawNextActions(){renderSendMode();requestAnimationFrame(()=>fitConversation());for(const id of ['chatNextActions','histNextActions']){const row=$(id);if(!row)continue;row.textContent='';row.hidden=!nextActions.length;for(const a of nextActions){const b=document.createElement('button');b.type='button';b.textContent=a.label;b.title=a.detail||'';b.disabled=!!a.disabled||nextActionPending.has(a.id);b.setAttribute('aria-label',a.label+(a.detail?' · '+a.detail:''));b.onclick=()=>runNextAction(a);row.append(b)}}}
@@ -39,8 +38,8 @@ function dashboardConversation(items){
  const lastUser=items.map(x=>x.who).lastIndexOf('you'),after=items.slice(lastUser+1),reply=after.filter(x=>x.who==='app').at(-1),event=after.filter(x=>x.who==='auto').at(-1);
  return [lastUser>=0?items[lastUser]:null,reply,event].filter(Boolean)
 }
-/* Only replies that are new since the last paint slide in; redraws stay still. */
-let shownTurns=null;const turnKey=h=>h.id||h.t+':'+h.text;
+/* Existing turns retain their nodes; only fresh user messages slide in. */
+let shownTurns=null,conversationLayoutReady=false,conversationFrame=0;const turnKey=h=>h.id||h.t+':'+h.text;
 /* Reading layout only: the reply text is never changed. Each line gets a role (heading, numbered step,
    bullet, opening line, closing question) so the eye can scan titles first and details second. */
 function lineRole(raw,index,lines){const t=raw.trim();if(!t)return 'blank';
@@ -62,13 +61,20 @@ function replyHtml(text){const raw=String(text).replace(/\r\n/g,'\n').split('\n'
   return '<div class="reply-line r-'+role+(line?'':' blank')+'" style="--i:'+Math.min(i,16)+'">'+body+'</div>'}).join('')}
 function drawLog(){const allItems=history.slice(-40);
  const fresh=new Set(shownTurns?allItems.map(turnKey).filter(k=>!shownTurns.has(k)):[]);shownTurns=new Set(allItems.map(turnKey));
- for(const id of ['log','histLog']){const items=id==='log'&&!isPhone()?dashboardConversation(allItems):allItems;const el=$(id),state=scrollState[id],prev=state.top;el.textContent='';
-  items.forEach(h=>{const d=document.createElement('div');d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(fresh.has(turnKey(h))?' enter':'');d.dataset.t=h.t;
-   if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=replyHtml(h.text);else d.textContent=h.text;el.append(d);/* The "Correct this" button was removed from the chat; openFeedback() stays for later use. */});
-  if(thinking){const d=document.createElement('div');d.className='e bot dots';d.textContent='Thinking…';el.append(d)}
+ for(const id of ['log','histLog']){const items=id==='log'&&!isPhone()?dashboardConversation(allItems):allItems;const el=$(id),state=scrollState[id],prev=state.top,existing=new Map([...el.children].map(n=>[n._turnKey,n])),wanted=[];
+  items.forEach(h=>{const key=turnKey(h),signature=JSON.stringify([h.who,h.text,!!h.err]);let d=existing.get(key);
+   if(!d){d=document.createElement('div');d._turnKey=key}
+   if(d._messageSignature!==signature){d._messageSignature=signature;d._chatText=h.text;d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(fresh.has(key)?' enter':'');d.dataset.t=h.t;
+    if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=replyHtml(h.text);else d.textContent=h.text;
+    const copy=document.createElement('button');copy.type='button';copy.className='message-copy';copy.textContent='Copy';copy.setAttribute('aria-label',h.who==='you'?'Copy your message':h.who==='app'?'Copy assistant message':'Copy activity message');
+    copy.onclick=async()=>{try{await navigator.clipboard.writeText(d._chatText);copy.textContent='Copied';$($('hist').open?'histAnnouncement':'chatAnnouncement').textContent='Message copied.'}catch(e){copy.textContent='Retry';$($('hist').open?'histAnnouncement':'chatAnnouncement').textContent='Could not copy. Try again.'}};d.append(copy)}
+   wanted.push(d)});
+  if(thinking){let d=existing.get('thinking');if(!d){d=document.createElement('div');d._turnKey='thinking';d.className='e bot dots';d.textContent='Thinking…'}wanted.push(d)}
+  const keep=new Set(wanted);for(const child of [...el.children])if(!keep.has(child))child.remove();wanted.forEach((child,i)=>{if(el.children[i]!==child)el.insertBefore(child,el.children[i]||null)});
+  if(conversationLayoutReady)fitConversation();
   if(el.clientHeight){if(state.follow)followChat(el,items.at(-1)?.who==='app'&&!thinking);else el.scrollTop=prev}
  }
- requestAnimationFrame(()=>{fitConversation();for(const id of Object.keys(scrollState))if(scrollState[id].follow)followChat($(id),true)})
+ scheduleConversationFit()
 }
 for(const id of Object.keys(scrollState))$(id).addEventListener('scroll',()=>{const el=$(id);if(!el.clientHeight)return;scrollState[id]={top:el.scrollTop,follow:el.scrollHeight-el.clientHeight-el.scrollTop<64};if(scrollState[id].follow){unreadReplies[id]=false;paintUnread()}rememberScroll()},{passive:true});
 function followReplies(){for(const id of Object.keys(scrollState)){scrollState[id].follow=true;unreadReplies[id]=false}paintUnread()}
@@ -110,9 +116,17 @@ function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');if(!
 const FIT_STEPS=[[16,1,0],[15,1,0],[14.5,1,0]];
 /* Wide screens: one column for short answers, then two, then three, choosing the fewest columns that keep the text big. */
 const FIT_STEPS_WIDE=[[18,1,0],[17,1,0],[16,1,0],[17,2,0],[16,2,0],[15,2,0],[16,3,0],[15,3,0],[14.5,2,1],[14.5,3,1],[14,2,1],[14,3,1],[13.5,3,1],[13,3,2],[12.5,3,2],[12,3,2]];
-let fitGuard=false;
 function fitConversation(){
  for(const id of ['log','histLog']){const log=$(id);if(!log.clientHeight)continue;const reply=[...log.querySelectorAll('.e.bot:not(.dots)')].at(-1);if(!reply)continue;
+  /* Choose the mode from the normal layout every time. Measuring the already-expanded layout
+     used to hide the question, make the answer fit, and switch it back on the next resize. */
+  const talk=id==='log'&&matchMedia('(min-width:900px)').matches?log.closest('.talk'):null;
+  if(talk)talk.classList.remove('long-reply');
+  let fitted=fitReply(log,reply,id);
+  if(talk&&(reply.classList.contains('cols2')||!fitted)){talk.classList.add('long-reply');fitReply(log,reply,id)}
+ }
+}
+function fitReply(log,reply,id){
   const style=getComputedStyle(log),padding=parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
   let reserve=44;
   if(id==='log')reserve=[...log.children].filter(n=>n!==reply).reduce((n,node)=>n+node.offsetHeight+8,8);
@@ -122,13 +136,12 @@ function fitConversation(){
   for(const [size,cols,tight] of (wide?FIT_STEPS_WIDE:FIT_STEPS)){if(size>biggest||cols>2&&room<760)continue;reply.style.fontSize=size+'px';reply.classList.toggle('cols3',cols>2);reply.classList.toggle('cols2',cols>1);reply.classList.toggle('tight',tight>=1);reply.classList.toggle('tighter',tight>=2);if(reply.scrollHeight<=available){fitted=true;break}}
   /* If even the smallest step does not fit, keep the boxes (they scroll a little) rather than one long column. */
   if(!fitted){if(wide){const three=room>=760;reply.style.fontSize=(three?13.5:14)+'px';reply.classList.toggle('cols3',three);reply.classList.add('cols2');reply.classList.add('tight');reply.classList.remove('tighter')}else{reply.style.fontSize=(log.clientWidth<500?15:16)+'px';reply.classList.remove('cols2','cols3','tight','tighter')}}
-  /* A long answer takes the whole area: my own message hides and the action buttons move beside the box. */
-  if(id==='log'&&!fitGuard){const talk=log.closest('.talk'),long=reply.classList.contains('cols2')||!fitted;
-   if(talk&&talk.classList.contains('long-reply')!==long&&matchMedia('(min-width:900px)').matches){talk.classList.toggle('long-reply',long);fitGuard=true;try{fitConversation()}finally{fitGuard=false}return}}
- }
+  return fitted
 }
+function scheduleConversationFit(){if(conversationFrame)return;conversationFrame=requestAnimationFrame(()=>{conversationFrame=0;fitConversation();for(const id of Object.keys(scrollState))if(scrollState[id].follow)followChat($(id),true)})}
+conversationLayoutReady=true;
 new ResizeObserver(()=>requestAnimationFrame(fit)).observe($('chat'));
-for(const id of ['log','histLog'])new ResizeObserver(()=>requestAnimationFrame(fitConversation)).observe($(id));
+for(const id of ['log','histLog'])new ResizeObserver(scheduleConversationFit).observe($(id));
 function save(){if(!draftsReady)return Promise.resolve();const data={group:$('group').value,dm:$('dm').value},payload=JSON.stringify(data);
  saveChain=saveChain.catch(()=>{}).then(async()=>{if(payload===draftSaved)return;const r=await post('/drafts',data);if(!r.ok)throw Error('Save failed');draftSaved=payload;status('✓ Saved')});return saveChain}
 async function ensureDrafts(){if(draftsReady)return;if(!draftsLoad)draftsLoad=fetch('/drafts').then(async r=>{if(!r.ok)throw Error('Could not load captions');const d=await r.json();if(typeof d.group!=='string'||typeof d.dm!=='string')throw Error('Saved captions are invalid');cached('drafts',d);applyDrafts(d)}).finally(()=>draftsLoad=null);return draftsLoad}
@@ -155,7 +168,11 @@ for(const k of ['group','dm'])$(k+'Preview').addEventListener('paste',e=>{e.prev
 function setView(v){if(editing)setEditing(false);if(previewView)previewScroll[previewView]=$('chat').scrollTop;document.body.dataset.view=v;previewView=v;document.querySelectorAll('[data-view-button]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.viewButton===v)));
  $('ctx').textContent=v==='group'?'Group · poster':'DM · poster';renderSendMode();localStorage.setItem('givelife-view',v);requestAnimationFrame(()=>{fit();$('chat').scrollTop=previewScroll[v]||0});flip()}
 /* Large screen changes cross-fade where the browser supports view transitions. */
-function smooth(change){if(!document.startViewTransition||matchMedia('(prefers-reduced-motion: reduce)').matches)return change();document.startViewTransition(change)}
+// Update immediately; animation never holds a click or waits for a network request.
+const surfaceAnimations=new WeakMap();
+function moveSurface(surface){if(!surface||!surface.getClientRects().length||!surface.animate||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ surfaceAnimations.get(surface)?.cancel();const animation=surface.animate([{opacity:.78},{opacity:1}],{duration:150,easing:'cubic-bezier(.2,.8,.2,1)'});surfaceAnimations.set(surface,animation)}
+function smooth(change){const result=change();moveSurface($('main-workspace'));return result}
 document.querySelectorAll('[data-view-button]').forEach(b=>b.onclick=()=>{if(b.dataset.viewButton!==view())smooth(()=>setView(b.dataset.viewButton))});
 let shownLeft=null,leftTween=0;
 function paintLeft(value){const c=$('leftChip');c.textContent=value==null?'Rs. …':'Rs. '+fmt(Math.round(value));const w=document.createElement('span');w.className='lw';w.textContent=' left';c.append(w)}
@@ -319,7 +336,7 @@ async function act(text){const t=text.trim();if(!t)return;say('you',window.Donor
  try{await logChain;r=await post('/assistant',{text:t,request_id:requestId(),image:attached?attached.id:null,history:history.slice(-13,-1),screen:{view:view(),dm:{name:$('dmName').value,phone:$('dmPhone').value,gender}}});d=await r.json().catch(()=>({}));if(r.ok&&d.task_id){let finished=false;const until=Date.now()+4*60*1000;while(!finished&&Date.now()<until){await new Promise(res=>setTimeout(res,500));const check=await fetch('/assistant-status/'+d.task_id),task=await check.json();if(!check.ok)throw Error(task.error||'Request no longer tracked. Nothing was retried.');if(task.done){if(task.error)throw Error(task.error);d=task.result;finished=true}}if(!finished)throw Error('The assistant result is not confirmed. Check recent activity; I will not repeat the send.')}}finally{think(false)}
  if(r.status===503){say('app','I did not understand that, and the AI assistant is not connected, so only direct commands work. Try: "34k left", "came 2000", "send hi to Ali", "send main", "fiverr every 30 min", "rules".',1);return}
  if(!r.ok)throw Error(d.error||'The assistant could not answer.');
- if(!d.superseded){applyDrafts(d);if(d.autopilot!=null)paintAuto(d.autopilot)}say('app',d.reply,false,d.turn_id);if(d.job_id)watchGroupJob(d.job_id,d.caption||$('group').value);for(const j of d.jobs||[])watchGroupJob(j.job_id,j.caption||$('group').value);
+ if(!d.superseded){applyDrafts(d);if(d.autopilot!=null)paintAuto(d.autopilot);if(d.donors_changed)document.dispatchEvent(new Event('donors-changed'))}say('app',d.reply,false,d.turn_id);if(d.job_id)watchGroupJob(d.job_id,d.caption||$('group').value);for(const j of d.jobs||[])watchGroupJob(j.job_id,j.caption||$('group').value);
  refreshNextActions();for(const a of d.actions||[]){
   if(a.type==='prepare_dm'){setView('dm');$('dmPhone').value=a.phone||'';$('dmName').value=a.name||'';setGender(a.gender==='Sister'?'Sister':'Brother')}
   }}
@@ -332,6 +349,7 @@ function hideKeys(){if(isPhone()){document.activeElement?.blur();$('cmd').blur()
 async function submitChat(e,id){e.preventDefault();const value=$(id).value;if(!value.trim())return;
  saveChatDraft('');hideKeys();followReplies();requestAnimationFrame(updateChatViewport);
  try{await act(value)}catch(err){if(!$('cmd').value.trim()&&!$('histCmd').value.trim())saveChatDraft(value);say('app',err.message,1)}
+ finally{followReplies();requestAnimationFrame(()=>{fitConversation();for(const pane of ['log','histLog'])followChat($(pane),true);rememberScroll()})}
 }
 $('cmdForm').onsubmit=e=>submitChat(e,'cmd');$('histForm').onsubmit=e=>submitChat(e,'histCmd');
 for(const id of ['cmd','histCmd'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();$(id).form.requestSubmit()}});
@@ -423,8 +441,10 @@ async function checkWa(){setNote('waRes','Checking the groups…');try{const d=a
  else if(d.missing&&d.missing.length)setNote('waRes','Connected, but this number is not in: '+d.missing.join(', ')+'. Link the number that is in the groups.','err');
  else setNote('waRes','Connected and in all 6 groups'+(d.fixed&&d.fixed.length?' (updated '+d.fixed.length+' group link'+(d.fixed.length>1?'s':'')+')':'')+'.','ok')}catch(e){setNote('waRes','Could not check.','err')}}
 $('gear').onclick=()=>{$('set').showModal();loadSet();checkWa();Nav.go('settings')};
-$('setClose').onclick=()=>$('set').close();
-if($('setCloseBottom'))$('setCloseBottom').onclick=()=>$('set').close();
+function closeSettings(){$('set').close();Nav.leave('settings')}
+$('setClose').onclick=closeSettings;
+if($('setCloseBottom'))$('setCloseBottom').onclick=closeSettings;
+$('set').addEventListener('cancel',e=>{e.preventDefault();closeSettings()});
 $('set').addEventListener('close',()=>Nav.leave('settings'));
 async function saveDms(){const on=$('swDm').checked;$('swNew').disabled=!on;
  try{const r=await post('/autopilot-settings',{action:'dms',enabled:on,daily:+($('set').dataset.daily||30),new_people:$('swNew').checked}),d=await r.json();if(!r.ok)throw Error(d.error);status('✓ '+d.reply)}catch(e){status(e.message||'Could not save',1);loadSet()}}
@@ -487,19 +507,35 @@ document.addEventListener('keydown',e=>{
  if(a){e.preventDefault();a()}});
 
 /* ---- show the screen the address names (refresh, Back and Forward all come here) ---- */
-function renderNav(){const parts=Nav.path().split('/'),top=parts[0];Nav.rendering=true;
+function renderNav(){if($('cloudLogin')?.closest('dialog')?.open)return;const parts=Nav.path().split('/'),top=parts[0];Nav.rendering=true;
  try{
   if(top!=='chat'&&$('hist').open)closeChat();
   if(top!=='settings'&&$('set').open)$('set').close();
   if(top!=='donors'&&window.DonorHub?.isOpen())window.DonorHub.hide();
+  if(top!=='whatsapp'&&$('whatsappDialog')?.open)$('whatsappDialog').close();
   if(top==='preview'&&document.body.classList.contains('nomsg'))setNoMsg(false);
   if(top===''&&!document.body.classList.contains('nomsg'))setNoMsg(true);
   if(top==='chat'&&!$('hist').open)openChat();
   if(top==='settings'&&!$('set').open){$('set').showModal();loadSet();checkWa()}
   if(top==='donors')window.DonorHub?.show(parts[1]||'all');
+  if(top==='whatsapp'&&!$('whatsappDialog')?.open)$('whatsappConnection').click();
  }finally{Nav.rendering=false}}
-addEventListener('popstate',()=>{if(Nav.queued!==null){Nav.settle();return}smooth(renderNav);Nav.settle()}); /* a screen opened right after Back is already on screen */
+addEventListener('popstate',()=>smooth(renderNav));
 addEventListener('load',()=>renderNav(),{once:true});
+addEventListener('hashchange',()=>smooth(renderNav));
+addEventListener('studio-unlocked',()=>renderNav());
+// Dialogs and Back/Forward use the same brief, interruptible entrance.
+let previousSurface=document.body.dataset.view+':'+document.body.classList.contains('nomsg');
+new MutationObserver(changes=>{
+ const surface=document.body.dataset.view+':'+document.body.classList.contains('nomsg');
+ if(surface!==previousSurface){previousSurface=surface;moveSurface($('main-workspace'))}
+ for(const change of changes)if(change.target.tagName==='DIALOG'&&change.attributeName==='open'){
+  surfaceAnimations.get(change.target)?.cancel();if(change.target.open)moveSurface(change.target);else moveSurface([...document.querySelectorAll('dialog[open]')].at(-1)||$('main-workspace'));
+ }
+}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['open','class','data-view']});
+document.addEventListener('click',event=>{
+ const tab=event.target.closest?.('[data-tab],[data-bank-nav]');if(tab)requestAnimationFrame(()=>moveSurface($('donorMessages')?.hidden?$('donorTable'):$('donorMessages')));
+});
 
 /* ---- start ---- */
 setView(localStorage.getItem('givelife-view')==='dm'?'dm':'group');
@@ -509,6 +545,7 @@ ensureDrafts().then(()=>status('✓ Ready')).catch(()=>{const d=cached('drafts')
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false;renderSendMode()}}).catch(()=>{});
 pollAuto();setInterval(pollAuto,5000);pollCamp();refreshNextActions();
+
 
 
 

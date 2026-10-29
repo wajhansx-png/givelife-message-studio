@@ -56,8 +56,12 @@ class WorkflowTests(unittest.TestCase):
   import dm_composer
   registry=self.app.donors();bank=registry.messages.get();self.assertEqual(len(bank['items']),20);self.assertEqual(len({r['text'] for r in bank['items']}),20)
   for r in bank['items']:
-   self.assertTrue(dm_composer.complete(r['text']));self.assertLess(r['text'].index('2,000'),r['text'].index('1,000'));self.assertNotIn('short of breath',r['text'])
-  row=bank['items'][0];edited=row['text'].replace('could you help','please help');registry.messages.update(row['id'],edited);restored=MessageBank(self.app);self.assertEqual(restored.get()['items'][0]['text'],edited)
+   self.assertTrue(dm_composer.complete(r['text']));self.assertLess(r['text'].index('2,000'),r['text'].index('1,000'))
+   self.assertIn('💔 ',r['text']);self.assertIn('⚠️ *',r['text']);self.assertIn('💰 *_Rs. ',r['text'])
+   self.assertRegex(r['text'],r'\n_[^\n]+_ ');self.assertIn('📲 *03097458815*',r['text'])
+   self.assertIn('Reply *Done* after donating.',r['text']);self.assertIn('short of breath',r['text'])
+   self.assertNotIn('Name Brother',r['text'])
+  row=bank['items'][0];edited=row['text'].replace('you can close this chat','you can close this message');registry.messages.update(row['id'],edited);restored=MessageBank(self.app);self.assertEqual(restored.get()['items'][0]['text'],edited)
  def test_batch_default_four_minutes_and_max_ten(self):
   registry=self.app.donors();d=registry.book.add('Ali','03001234567')['donor'];registry.book.update(d['id'],important=True)
   result=registry.start_batch(scope='important',run=False,request_id='default-gap');self.assertEqual(result['job']['gap_seconds'],240)

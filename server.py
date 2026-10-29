@@ -4,6 +4,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store
 import manual_commands
 import dm_composer
+import dm_templates
 from state_shapes import mapping, memories, history as valid_history
 import chat_policy
 import timed_tasks
@@ -76,7 +77,8 @@ def send_custom(body):
  jid,is_group=custom_recipient(body);message=body.get('message','')
  if not isinstance(message,str):raise ValueError('Message must be text.')
  if not is_group and body.get('kind') in ('dm_appeal','donor_registry','donor_manual','donor_batch'):
-  message=greet_text(message,body.get('name',''),body.get('gender','Brother'))
+  normal=donors().book.normal_amount_for_phone(body.get('phone','')) if body.get('phone') else 0
+  message=greet_text(message,body.get('name',''),body.get('gender','Brother'),normal)
   if not dm_composer.complete(message):raise ValueError('The full DM is incomplete. Restore its paragraphs and payment details before sending.')
  if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
  if not STORE:raise ValueError('Persistent send records are unavailable. Try again later.')
@@ -155,9 +157,8 @@ def build_group(n,left):
          '*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation')
 
 def build_dm(sel,left):
- p2,p1=math.ceil(left/2000),math.ceil(left/1000)
- T=[DP[i][sel[i]%len(DP[i])].replace('{L}',f'{left:,}').replace('{N}',str(p2)).replace('{M}',str(p1)) for i in range(len(DP))]
- return f'Brother, {T[0]}\n\n_{T[1]}_ 💔\n\n⚠️ *{T[2]}*\n\n🚨 {T[3]}\n\n• *_{T[4]}_* 🤲\n\n🤲 {T[5]}\n\n📲 {T[6]}'
+ index=sel[0] if isinstance(sel,(list,tuple)) and sel else sel if isinstance(sel,int) else 0
+ return dm_templates.build(index,left)
 
 def variant(advance):
  file=DATA/'variant-state.json';n=json.loads(file.read_text()).get('index',0) if file.exists() else 0
@@ -165,15 +166,20 @@ def variant(advance):
  return n
 
 def dm_selection(new):
- file=DATA/'dm-state.json';sel=json.loads(file.read_text()) if file.exists() else [0]*len(DP)
+ file=DATA/'dm-state.json'
+ try:raw=json.loads(file.read_text())
+ except (OSError,ValueError):raw=[0]
+ if isinstance(raw,int):raw=[raw]
+ if not isinstance(raw,list) or not raw or not isinstance(raw[0],int):raw=[0]
+ index=raw[0]%dm_templates.COUNT
  if new:
   import random
-  old=sel
+  old=index
   while True:
-   sel=[random.randrange(len(a)) for a in DP]
-   if sel[0]!=old[0]:break
-  file.write_text(json.dumps(sel))
- return sel
+   index=random.randrange(dm_templates.COUNT)
+   if index!=old:break
+  file.write_text(json.dumps([index]))
+ return [index]
 
 def save_draft(key,text):
  with LOCK:
@@ -682,6 +688,23 @@ def timed_loop():
 
 CHAT_IMAGE={}
 def current_chat_image():return getattr(OWNER_GUARD,'image',CHAT_IMAGE.get('id'))
+
+def generate_dm_variants(source='',count=10):
+ """Generate reworded versions of the exact message supplied, save them in Messages and show the first on the DM screen."""
+ source=str(source or '').strip()
+ if not source:source=get_message('dm')['text']
+ try:count=max(1,min(20,int(count or 10)))
+ except (TypeError,ValueError):raise ValueError('Choose a number of versions from 1 to 20.')
+ bank=donors().messages.generate(source,count)
+ first=bank['items'][0]['text']
+ save_draft('dm',first)
+ total=len(bank['items']);requested=int(bank.get('requested') or count)
+ extra=''
+ if total>requested:extra=f' {total-requested} more were added so 20-person batches still have unique wording.'
+ if bank.get('warning'):extra+=' '+str(bank['warning'])
+ return {'reply':f'Prepared {requested} versions from your message. The first is on the DM screen; open Donors → Messages to see all {total}. Nothing was sent.'+extra,
+         'generated':requested,'bank_count':total,'first':first[:240]}
+
 def base_chat_callbacks():
  def came(amount):
   if int(amount)<0 or int(amount)>read_left():raise ValueError('That donation does not fit the remaining amount. Check the balance before recording it.')
@@ -690,6 +713,7 @@ def base_chat_callbacks():
   'money_came':came,
   'new_wording':lambda kind:(next_message() if kind=='group' else next_dm(),'New '+kind+' wording ready.')[1],
   'set_message':lambda kind,text:(save_draft(kind,text),kind.upper()+' message saved.')[1],
+  'generate_dm_variants':generate_dm_variants,
   'get_message':get_message,
   'remember':mem_add,'autopilot':set_auto,**engine_do(),
   'find_contact':find_contacts,'search_memory':lambda query:KNOWLEDGE.retrieve(query),'send_message':send_free,'send_dm_appeal':send_dm_appeal,'edit_dm_name':edit_dm_name,'delete_last_message':delete_last_group,'prepare_dm':prepare_dm,
@@ -758,7 +782,7 @@ def dm_text(name,tier='member'):
  acct='📲 *03097458815* — Easypaisa / JazzCash\nWajdan Khan (GiveLife Foundation account)'
  if tier=='repeat':return f'{who}, JazakAllah for helping Yousuf before. 🤲\n\nRs. {left:,} is still needed for his treatment. Could you help once more, or share his poster with family and friends today?\n\n{acct}'
  if tier=='reminder':return f'{who}, a gentle reminder about Yousuf. 🤲\n\nRs. {left:,} is still needed for his treatment. If you have already sent it, JazakAllah. If not, whenever you can:\n\n{acct}\n\nReply *Done* after you donate.'
- sel=[_random.randrange(len(a)) for a in DP];t=build_dm(sel,left)
+ t=build_dm([_random.randrange(dm_templates.COUNT)],left)
  return t.replace('Brother, ',who+', ',1)
 
 def send_dm(phone,text,digest):
@@ -809,8 +833,16 @@ def norm_phone(p):
  if re.fullmatch(r'03\d{9}',p):p='92'+p[1:]
  return p if re.fullmatch(r'[1-9]\d{7,14}',p) else ''
 
-def greet_text(text,name,gender):
- return dm_composer.personalize(text,clean_first_name(name),gender)
+def greet_text(text,name,gender,normal_amount=0):
+ text=dm_composer.personalize(text,clean_first_name(name),gender)
+ if normal_amount and normal_amount>0:
+  try:left=read_left()
+  except (OSError,ValueError):left=0
+  if left>0:
+   import math
+   people=math.ceil(left/normal_amount)
+   text=re.sub(r'(?m)^\*_[^\n]*donating[^\n]*_\*$',f'*_Just {people} people donating Rs. {int(normal_amount):,}_*',text,count=1)
+ return text
 
 def dm_campaign(people,gap,image,vary,message,start_after,rest_every,rest_minutes):
  c=CAMPAIGN;c.update(running=True,stop=False,total=len(people),sent=0,failed=0,skipped=0,log=[],current='')
@@ -829,8 +861,9 @@ def dm_campaign(people,gap,image,vary,message,start_after,rest_every,rest_minute
    if digest in BLOCKED or (STORE and STORE.get('optout_'+digest)):c['skipped']+=1;c['log'].append(f'Skipped …{phone[-4:]} (asked not to be messaged)');continue
    if STORE and STORE.get('dm_recipient_'+digest) and not p.get('again'):c['skipped']+=1;c['log'].append(f'Skipped …{phone[-4:]} (already messaged)');continue
    if not wa_ok():c['log'].append('WhatsApp disconnected. Stopped.');return
-   base=dm_text(name,p['tier']) if p.get('tier') else (build_dm([_random.randrange(len(a)) for a in DP],read_left()) if (vary or not message) else message)
-   text=greet_text(base,name,gender);c['current']=f'Sending to {(name+" ") if name else ""}{gender} …{phone[-4:]}'
+   base=dm_text(name,p['tier']) if p.get('tier') else (build_dm([_random.randrange(dm_templates.COUNT)],read_left()) if (vary or not message) else message)
+   normal=donors().book.normal_amount_for_phone(phone)
+   text=greet_text(base,name,gender,normal);c['current']=f'Sending to {(name+" ") if name else ""}{gender} …{phone[-4:]}'
    if STORE:STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':time.time()})
    r=send_with_image(phone,text,img)
    if STORE:STORE.put('dm_recipient_'+digest,{'state':r.get('code','UNCERTAIN'),'time':time.time()})
@@ -1115,6 +1148,22 @@ def dm_recipient(to=None):
  if not phone:raise ValueError('That is not a valid DM number.')
  return phone+'@s.whatsapp.net'
 
+LEGACY_DM=re.compile(r"(?i)(?:\bname\s+(?:brother|sister)\b|we picked you because|you were the first person we thought of|🚨|•\s*\*_|could you be one of them today to start his treatment\?|dY[\W_]|\ufffd)")
+
+def ensure_dm_structure():
+ """Put the canonical structured DM on the screen once, without replacing a custom complete draft."""
+ try:
+  with LOCK:
+   draft=json.loads(DRAFT.read_text(encoding='utf-8'))
+   dm=draft.get('dm','')
+   if isinstance(dm,str) and dm.strip() and dm_composer.complete(dm) and not LEGACY_DM.search(dm):return
+   try:left=read_left()
+   except (OSError,ValueError):left=39000
+   draft['dm']=build_dm([0],left)
+   DRAFT.write_text(json.dumps(draft,ensure_ascii=False),encoding='utf-8')
+   persist_file('drafts',DRAFT)
+ except (OSError,ValueError,TypeError,KeyError):pass
+
 def current_dm_caption(name='',gender='Brother'):
  text=json.loads(DRAFT.read_text(encoding='utf-8')).get('dm','')
  # Repair old incomplete/flattened model output, keeping the structured saved draft otherwise.
@@ -1178,7 +1227,8 @@ def delete_last_group(target=None):
 def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection_kind='group'):
  callbacks=base_chat_callbacks();cache={};verified=set();owner=chat_policy.intent(prompt)
  dm_revision=donors().revision
- if (draft_flow.editing_request(owner['text']) or selection is not None) and (revision is None or revision==OWNER_REVISION):
+ variant=chat_policy.variant_request(owner['text'])
+ if (draft_flow.editing_request(owner['text']) and not variant or selection is not None) and (revision is None or revision==OWNER_REVISION):
   kind=selection_kind if selection is not None else 'dm' if re.search(r'(?i)\bdm\b',owner['text']) else 'group'
   workflow().begin(owner['text'],kind,get_message(kind)['text'])
  sending=owner['send'];dm_allowed=owner['batch']
@@ -1358,6 +1408,7 @@ def assistant_task(body):
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
    output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
    output['superseded']=revision!=OWNER_REVISION
+   if any(isinstance(t,dict) and t.get('tool')=='generate_dm_variants' and t.get('status')=='completed' for t in mapping(output.get('diagnostics')).get('tools',[])):output['donors_changed']=True
    output['turn_id']=uuid.uuid4().hex
    KNOWLEDGE.archive('app',output.get('reply',''),output['turn_id'])
    KNOWLEDGE.trace({'request_id':ident,**output.get('diagnostics',{})})
@@ -1669,7 +1720,13 @@ class Handler(BaseHTTPRequestHandler):
      raise ValueError('Choose preview or start for the pasted donor list.')
     if self.path=='/donors':return self.reply(donors().mutate(body))
     if self.path=='/donor-send':return self.reply(donors().send_one(body.get('id'),body.get('request_id')))
-    if self.path=='/donor-messages':return self.reply(donors().messages.regenerate() if body.get('action')=='regenerate' else donors().messages.update(body.get('id'),body.get('text')))
+    if self.path=='/donor-messages':
+     if body.get('action')=='regenerate':return self.reply(donors().messages.regenerate())
+     if body.get('action')=='generate':
+      source=str(body.get('source','') or '')
+      if not source.strip():raise ValueError('Paste the complete message you want versions of.')
+      return self.reply(donors().messages.generate(source,body.get('count',10)))
+     return self.reply(donors().messages.update(body.get('id'),body.get('text')))
     if body.get('stop'):return self.reply(donors().pause_personal())
     if CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it first.')
     return self.reply(donors().start_batch(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster','chunk','rest_seconds')}))
@@ -1819,6 +1876,7 @@ class Handler(BaseHTTPRequestHandler):
    except Exception as e:self.reply({'code':'ERROR','message':str(e)})
   else:self.reply({},status=404)
  def log_message(self,*args):pass
+ensure_dm_structure()
 if __name__=='__main__':
  PILOT.start()
  ENGINE.start()

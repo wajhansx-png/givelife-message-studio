@@ -1038,11 +1038,46 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
  .talk.long-reply .next-actions{width:104px;right:12px}
 }
 
+/* Keep actions near the composer; give the answer its entire reading width. */
+@media(min-width:900px){
+ body .layout,body.nomsg .layout{grid-template-columns:minmax(0,1fr) clamp(248px,20vw,288px);gap:18px}
+ .action-rail{padding:12px;gap:8px}
+ .action-rail .prim,.action-rail .chips{gap:7px}
+ .action-rail .prim button,.action-rail .prim .main,.action-rail .chips button,.action-rail .chips .all{min-height:52px;padding:7px 6px;gap:3px;font-size:14px}
+ .action-rail .group-label{font-size:13px;line-height:1.25}
+ .action-rail .last-sent{font-size:11px;line-height:1.25}
+ .action-rail .group-section-title{margin-top:2px;padding:8px 2px 2px}
+ .action-rail .send-title h2{font-size:15px}
+ .talk.long-reply .next-actions{position:static;width:calc(100% - 48px);max-width:78ch;margin:0 auto;padding:3px 0 5px;flex-direction:row;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex:none}
+ .talk.long-reply .next-actions button{min-height:36px;width:auto;padding:6px 12px;font-size:12px;white-space:normal}
+ .talk.long-reply:has(.next-actions:not([hidden])) .log{padding-inline:24px}
+ .talk.long-reply .log .e.bot{width:100%;max-width:1100px}
+}
+@media(min-width:900px) and (max-height:650px){
+ .action-rail .prim button,.action-rail .prim .main,.action-rail .chips button,.action-rail .chips .all{min-height:42px;padding:4px 6px}
+}
+/* Feedback stays fast and does not animate layout dimensions. */
+button,a,input,select,textarea{touch-action:manipulation}
+body::before,body::after{animation:none;will-change:auto}
+.prim .main,.live::after{animation:none}
+.e.bot.enter .reply-line{animation:none;opacity:1;filter:none}
+.log>.e{position:relative}
+.talk .log>.e.bot:has(>.message-copy),.hist .log>.e.bot:has(>.message-copy){padding-top:38px}
+.log>.e.you:has(>.message-copy),.log>.e.sys:has(>.message-copy){padding-inline-end:70px}
+.message-copy{position:absolute;top:6px;right:8px;min-width:46px;min-height:24px;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--mut);font-size:11px;font-weight:500;line-height:18px;box-shadow:none;white-space:nowrap}
+.message-copy:hover{color:var(--ink);border-color:var(--line2)}
+.log>.e.bot.enter{animation:none}
+@media(prefers-reduced-motion:no-preference){
+ .bank-detail{animation:fade-in 150ms ease-out}
+ .e.enter{animation:fade-up 160ms ease-out}
+ dialog[open]::backdrop{animation:fade-in 140ms ease-out}
+}
+
 /* DM in bulk: step 1 shows the numbered list, step 2 the gap and every send time. */
 .paste-dialog[data-step=list] .paste-step-time,.paste-dialog[data-step=time] .paste-step-list,.paste-dialog[data-step=time] #pastePeople,.paste-dialog[data-step=time] #pasteResult{display:none!important}
 .paste-dialog[data-step=list] .plan-when,.paste-dialog[data-step=list] .plan-total{display:none}
 .paste-dialog[data-step=list] .paste-plan li{grid-template-columns:28px minmax(0,1fr)}
 .donor-bulk{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1px solid color-mix(in srgb,var(--g) 45%,transparent);border-radius:12px;background:var(--gs);color:var(--gink);font-weight:700;font-size:14px;white-space:nowrap}
 .donor-bulk:hover{border-color:var(--g)}
-@media(min-width:900px){.donor-head{grid-template-columns:auto minmax(0,1fr) auto auto auto auto}}
+@media(min-width:900px){.donor-head{grid-template-columns:auto minmax(0,1fr) auto auto auto auto auto}}
 @media(max-width:899px){.donor-head{grid-template-columns:minmax(0,1fr) auto auto auto auto}.donor-bulk{padding:0 10px;font-size:12px}.donor-head .donor-total{display:none}}

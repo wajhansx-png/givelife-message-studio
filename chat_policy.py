@@ -18,6 +18,13 @@ def switch_request(text,subject):
 def smalltalk(text):
  t=re.sub(r'[^\w\s]','',str(text).casefold()).strip()
  return bool(re.fullmatch(r'(?:hi+|hu|hey+|he+l+o+|yo+|salam|assalamualaikum|how (?:are|r) (?:you|u)|how are you doing|hows it going|everything good|good (?:morning|evening|night)|kya haal hai|kya hal hai|sab theek)',t))
+def variant_request(text):
+ """A request to rewrite a pasted message into several versions, not a single draft edit."""
+ t=owner_text(text)
+ if re.search(r'(?i)\b(?:send|post|dm)\b',t) and not re.search(r'(?i)\bsend\s+(?:me|us)\b',t) and not re.search(r'(?i)\b(?:generate|make|create|write|rewrite|give|show|prepare|produce)\b',t):return False
+ return bool(
+  re.search(r'(?i)\b(?:generate|make|create|write|rewrite|give|show|prepare|produce)\b.{0,120}\b(?:10|ten|\d{1,2})\b.{0,50}\b(?:versions?|variants?|wordings?|rewrites?)\b',t)
+  or re.search(r'(?i)\b(?:10|ten|\d{1,2})\b.{0,40}\b(?:versions?|variants?|wordings?|rewrites?)\b',t))
 def owner_text(text):
  text=re.sub(r'```[\s\S]*?```',' [quoted data] ',str(text))
  text=re.sub(r'(?m)^\s*>.*$',' [quoted data] ',text)
@@ -34,6 +41,7 @@ def intent(text):
  negative=bool(re.search(r"(?i)\b(?:don'?t|dont|do not|never|stop)\s+(?:ever\s+)?(?:send|sending|post|posting|share|sharing|dm)\b|\b(preview only|draft only)\b",t))
  dm_verb=bool(re.match(r'(?i)^\s*dm\s+(?!(?:has|have|had|is|was|looks|needs|should|does|caption|format|structure|name|text|icons|remove|edit|change)\b)\S',t))
  sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query and not inspect and not manual_commands.deferred_request(t)
+ if re.search(r'(?i)\bsend\s+(?:me|us)\b.{0,50}\b(?:10|ten|\d{1,2})\b.{0,40}\b(?:versions?|variants?|wordings?)\b',t):sending=False
  # "Send a more emotional message" can request wording. An explicit destination
  # or immediate-send phrase disambiguates it; otherwise only prepare the rewrite.
  if draft_flow.editing_request(t) and re.match(r'(?i)^\s*(?:send|sebd|semd|sned|snd)\s+(?:a\s+)?(?:more|less)\b',t) and not manual_commands.groups(t) and not re.search(r'(?i)\b(?:to|in|now|immediately|asap)\b|(?:\+?92|0)3\d{9}',t):sending=False
@@ -42,7 +50,9 @@ def intent(text):
 def permitted(name,text):
  if name in READ:return True
  if name=='donor_action':return bool(re.search(r'(?i)\b(donor|donors|important|donated)\b',owner_text(text)))
- i=intent(text);t=i['text']
+ i=intent(text);t=i['text'];variants=variant_request(t)
+ if name=='generate_dm_variants':return variants
+ if name in ('set_message','new_wording') and variants:return False
  if name=='hold' and manual_commands.dm_control(t):return False
  if name=='schedule_task':return (timed_tasks.requested(t) or timed_tasks.cancel_request(t)) and not i['query'] and not i['negative']
  if name in SEND|{'autopilot','hold','delete_last_message','set_left','money_came','set_dms','set_pace','set_group_pace','pause_group','resume_group','set_quiet_hours'} and manual_commands.deferred_request(t):return False

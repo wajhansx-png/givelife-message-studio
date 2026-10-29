@@ -52,7 +52,7 @@ class DonorBook:
         self._cache=copy.deepcopy(data)
         tmp=self.path.with_suffix('.tmp'); tmp.write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8');tmp.replace(self.path)
     def _public(self,r):
-        keys=('id','important','donated','amount','source','created_at','updated_at','last_sent_at','delivery','deleted')
+        keys=('id','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted')
         # A confirmed DM is never forgotten: a later failed or pending attempt cannot erase "DM sent".
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
         return {**{k:r.get(k) for k in keys},'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
@@ -76,7 +76,7 @@ class DonorBook:
             if old:
                 if old.get('deleted'): old['deleted']=False;old['updated_at']=time.time();self._save(data)
                 return {'donor':self._public(old),'duplicate':True,'reply':'This donor is already in your list.'}
-            now=time.time();r={'id':uuid.uuid4().hex,'name':name,'phone':phone,'important':False,'donated':False,'amount':0,'notes':'','source':source,'created_at':now,'updated_at':now,'deleted':False,'last_sent_at':None,'delivery':'Not contacted'}
+            now=time.time();r={'id':uuid.uuid4().hex,'name':name,'phone':phone,'important':False,'donated':False,'amount':0,'normal_amount':0,'notes':'','source':source,'created_at':now,'updated_at':now,'deleted':False,'last_sent_at':None,'delivery':'Not contacted'}
             data['records'].append(r);self._save(data)
             return {'donor':self._public(r),'duplicate':False,'reply':'Added '+hide_numbers(name)+'. Number hidden.'}
     def add_contacts(self,records,self_phone):
@@ -100,7 +100,7 @@ class DonorBook:
                     duplicates+=1
                     if row.get('deleted'):row.update(deleted=False,updated_at=now);changed=True
                 else:
-                    row={'id':uuid.uuid4().hex,'name':name,'phone':phone,'important':False,'donated':False,'amount':0,'notes':'','source':'Pasted DM list','created_at':now,'updated_at':now,'deleted':False,'last_sent_at':None,'delivery':'Not contacted'}
+                    row={'id':uuid.uuid4().hex,'name':name,'phone':phone,'important':False,'donated':False,'amount':0,'normal_amount':0,'notes':'','source':'Pasted DM list','created_at':now,'updated_at':now,'deleted':False,'last_sent_at':None,'delivery':'Not contacted'}
                     data['records'].append(row);known[phone]=row;added+=1;changed=True
                 donors.append(self._public(row))
             if changed:self._save(data)
@@ -118,10 +118,11 @@ class DonorBook:
             if len(exact)!=1: raise ValueError('More than one donor matches. Use the donor page to select one.' if exact else 'No donor matches that name. Search the Donors page or add them first.')
             return copy.deepcopy(exact[0])
     def update(self,donor,expected_updated_at=None,**changes):
-        allowed={'name','important','donated','amount','notes'}
+        allowed={'name','important','donated','amount','normal_amount','notes'}
         if not changes or set(changes)-allowed: raise ValueError('Choose a donor field to update.')
         if any(k in changes and not isinstance(changes[k],bool) for k in ('important','donated')): raise ValueError('Use true or false for donor status.')
         if 'amount' in changes and (type(changes['amount']) not in (int,float) or not math.isfinite(changes['amount']) or not 0<=changes['amount']<=100000000): raise ValueError('Enter a valid donated amount.')
+        if 'normal_amount' in changes and (type(changes['normal_amount']) not in (int,float) or not math.isfinite(changes['normal_amount']) or not 0<=changes['normal_amount']<=100000000): raise ValueError('Enter a valid normal donation amount.')
         if 'name' in changes and (not isinstance(changes['name'],str) or not 1<=len(changes['name'].strip())<=120): raise ValueError('Use a name of 1–120 characters.')
         if 'notes' in changes and (not isinstance(changes['notes'],str) or len(changes['notes'])>2000): raise ValueError('Keep notes under 2,000 characters.')
         if expected_updated_at is not None and (type(expected_updated_at) not in (int,float) or not math.isfinite(expected_updated_at) or expected_updated_at<0):
@@ -140,6 +141,13 @@ class DonorBook:
         with self.lock:
             data=self._load();row=next(x for x in data['records'] if x['id']==r['id']);row.update(deleted=True,updated_at=time.time());self._save(data)
         return {'id':r['id'],'reply':'Removed '+hide_numbers(r['name'])+' from the active donor list.','undo_available':True}
+    def normal_amount_for_phone(self,phone):
+        if not phone:return 0
+        try:phone=normalize_phone(phone)
+        except ValueError:return 0
+        with self.lock:
+            data=self._load();row=next((r for r in data['records'] if r.get('phone')==phone and not r.get('deleted')),None)
+        return int(row.get('normal_amount') or 0) if row else 0
     def restore(self,ident):
         with self.lock:
             data=self._load();r=next((r for r in data['records'] if r['id']==ident),None)
@@ -159,7 +167,7 @@ class DonorBook:
             data=self._load();known={r['phone'] for r in data['records']};now=time.time()
             for name,phone,source in prepared:
                 if phone in known:continue
-                known.add(phone);data['records'].append({'id':uuid.uuid4().hex,'name':name,'phone':phone,'important':False,'donated':False,'amount':0,'notes':'','source':source,'created_at':now,'updated_at':now,'deleted':False,'last_sent_at':None,'delivery':'Not contacted'});added+=1
+                known.add(phone);data['records'].append({'id':uuid.uuid4().hex,'name':name,'phone':phone,'important':False,'donated':False,'amount':0,'normal_amount':0,'notes':'','source':source,'created_at':now,'updated_at':now,'deleted':False,'last_sent_at':None,'delivery':'Not contacted'});added+=1
             self._save(data)
         return {'added':added,'reply':f'Imported {added} contacts. Existing statuses and notes were preserved.'}
     def recipients(self,scope='important',ids=None,limit=None):

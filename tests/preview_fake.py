@@ -29,7 +29,9 @@ class FakeWhatsApp(BaseHTTPRequestHandler):
   record({'path':self.path,'fields':fields,'time':time.time()})
   self.response({'code':'SUCCESS','results':{'message_id':'fake-message-'+str(len(events))}})
  def log_message(self,*args):pass
-fake=ThreadingHTTPServer(('127.0.0.1',0),FakeWhatsApp);threading.Thread(target=fake.serve_forever,daemon=True).start()
+class PreviewHTTPServer(ThreadingHTTPServer):
+ request_queue_size=128
+fake=PreviewHTTPServer(('127.0.0.1',0),FakeWhatsApp);threading.Thread(target=fake.serve_forever,daemon=True).start()
 os.environ.pop('DB_URI',None);os.environ.pop('RENDER_EXTERNAL_URL',None);os.environ.pop('DEEPSEEK_API_KEY',None)
 os.environ.update(GOWA_URL='http://127.0.0.1:'+str(fake.server_port),UI_ACCESS_KEY='manual-fix-preview-key',WHATSAPP_DEVICE_ID='fake-device')
 folder=tempfile.TemporaryDirectory();os.environ['DATA_DIR']=folder.name
@@ -74,7 +76,6 @@ def preview_post(self):
 server.Handler.do_GET=preview_get
 server.Handler.do_POST=preview_post
 port=int(sys.argv[sys.argv.index('--port')+1]) if '--port' in sys.argv else 3003
-http=ThreadingHTTPServer(('127.0.0.1',port),server.Handler)
+http=PreviewHTTPServer(('127.0.0.1',port),server.Handler)
 print(f'Local fake-WhatsApp preview: http://127.0.0.1:{port}/ (no real messages possible)',flush=True)
 http.serve_forever()
-

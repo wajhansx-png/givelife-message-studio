@@ -904,3 +904,4 @@ body::after{width:46vmax;height:46vmax;right:-18vmax;bottom:-22vmax;opacity:.3;b
 .talk .log .e.bot.cols2,.hist .log .e.bot.cols2{column-rule:1px solid color-mix(in srgb,var(--bubble-line) 70%,transparent)}
 .talk .log .e.bot.cols3,.hist .log .e.bot.cols3{columns:3;column-gap:34px;column-rule:1px solid color-mix(in srgb,var(--bubble-line) 70%,transparent);width:100%;max-width:none;padding:14px 20px}
 .talk .log .e.bot.cols3 .reply-line{break-inside:avoid}
+@media(min-width:900px){.talk .log{padding-inline:24px}}

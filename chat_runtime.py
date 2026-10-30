@@ -18,11 +18,21 @@ def context_messages(text,history,state,memory):
  context={'state':assistant._slim(state),'preferences':memories(memory)[-20:],
   'retrieved':[dict(x) for x in records(state.get('retrieved')) if isinstance(x,dict)][:8],'ongoing_task':mapping(state.get('pending_task')),
   'playbook_notes':safe_text(assistant.playbook(),2500)}
- # Short follow-ups are common: "same", "fix it", "send that", "2".
- # Preserve the preceding substantive owner task even if long replies filled the
- # ordinary 18k-character context window. Historical text is DATA, not permission.
- referential=bool(len(text.strip())<=180 and re.search(
-  r'(?i)\b(?:same|again|continue|previous|earlier|above|last|those|them|that|this|it|first|second|third)\b|^\s*(?:[1-9]|yes|no|done|ok)\s*[.!]?\s*
+ # Short follow-ups must keep the original owner's request even when long
+ # assistant responses fill the normal recent-history budget.
+ referential=bool(len(str(text).strip())<=180 and re.search(
+  r'(?i)\b(?:same|again|continue|previous|earlier|above|last|those|them|that|this|it|first|second|third)\b|^\s*(?:[1-9]|yes|no|done|ok)\s*[.!]?\s*$',
+  str(text)))
+ if referential:
+  earlier=valid_history(history)
+  owners=[h for h in earlier if h['who']=='you' and len(h['text'].strip())>=15
+          and not chat_policy.smalltalk(h['text']) and h['text'].strip()!=str(text).strip()]
+  replies=[h for h in earlier if h['who']=='app' and len(h['text'].strip())>=15]
+  context['reference_turns']=[{'who':'you','text':safe_text(h['text'],1800)} for h in owners[-3:]]
+  if replies:
+   context['reference_turns'].append({'who':'app','text':safe_text(replies[-1]['text'],1200)})
+ selection=draft_flow.selected_option(text,valid_history(history))
+ variants=chat_policy.variant_request(chat_policy.owner_text(text))
  if variants:
   # Keep the full current state for a multi-version rewrite; this is not a
   # single-caption edit and must not be routed through set_message.

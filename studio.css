@@ -8602,3 +8602,51 @@ html body .donor-page .bank-message.bank-detail > header .tool {
     background-image: none !important;
   }
 }
+
+/* ===== 18d. Team screen: his latest reply in the middle, big and plain; Ask-update buttons on every ongoing task ===== */
+.team-latest {
+  text-align: center;
+  align-items: stretch;
+}
+.team-latest .team-ev {
+  display: block;
+  padding: 2px 0;
+}
+.team-latest .team-ev time {
+  display: block;
+  font-size: 12px;
+  color: var(--mut);
+}
+.team-latest .team-ev-main .team-ev-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.team-latest .team-ev:not(.team-ev-main) .team-ev-text {
+  font-size: 13px;
+  color: var(--mut);
+}
+.team-nothing {
+  margin: 0;
+  font-size: 15px;
+  color: var(--mut);
+}
+.team-lefthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.team-ask {
+  flex: none;
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.team-lefthead .team-link { min-height: 44px; }

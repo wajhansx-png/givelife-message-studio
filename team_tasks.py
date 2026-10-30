@@ -193,7 +193,7 @@ class TeamTasks:
             if not isinstance(raw, dict):
                 raw = {}
             for k, v in (('member', None), ('tasks', []), ('feed', []), ('plan', None), ('seen', []), ('counter', 0), ('paused', False), ('unread', 0),
-                         ('last_sent', 0), ('pending_notes', []), ('last_note', 0), ('outbox', []), ('greeted', ''), ('last_clarify', 0), ('quiet', None)):
+                         ('last_sent', 0), ('pending_notes', []), ('last_note', 0), ('outbox', []), ('greeted', ''), ('last_clarify', 0), ('quiet', None), ('force', False)):
                 raw.setdefault(k, v)
             self._cache = raw
         return self._cache
@@ -341,6 +341,40 @@ class TeamTasks:
             self._queue(body + (' ' + note if note else '') + (f' Can you finish by {fmt_time(t["due_at"], now)}?' if moved else ''), t, 'rejected')
             self._event('rejected', f'You sent back: {t["text"]}', t);self._save();return self.view()
 
+    def ask_update(self, ident=None):
+        """Owner button: ask for an update right now, in the same natural voice. One task, or all ongoing ones when no task is named."""
+        with self.lock:
+            d = self._load();now = self.now()
+            if not d['member']:
+                raise ValueError('Add your teammate first.')
+            ongoing = [t for t in d['tasks'] if t['status'] in ('Asked', 'Late')]
+            waiting = [t for t in d['tasks'] if t['status'] == 'Waiting']
+            if ident:
+                t = self._find(ident)
+                if t['status'] == 'Waiting':
+                    t.update(start_at=now, jit=0, next_try=0)   # not asked yet: ask now
+                    d['force'] = True;self._save();return self.view()
+                if t['status'] not in ('Asked', 'Late', 'Reported'):
+                    raise ValueError('That task is not ongoing.')
+                text = self._text_for('proof' if t['status'] == 'Reported' else 'remind', t, now) if t['status'] != 'Reported' else self._text_for('proof', t, now)
+                t['reminded'] = True
+                self._queue(text, t, 'manual_update')
+            else:
+                if not ongoing and not waiting:
+                    raise ValueError('There is no ongoing task to ask about.')
+                if not ongoing:
+                    for t in waiting:
+                        t.update(start_at=now, jit=0, next_try=0)
+                    d['force'] = True;self._save();return self.view()
+                first = self._first()
+                if len(ongoing) == 1:
+                    return self.ask_update(ongoing[0]['id'])
+                lines = '\n'.join('- ' + short(t['text'], 60) for t in ongoing[:6])
+                self._queue(pick((f'{first}, quick update please on these:\n{lines}', f'{first}, where are we on these?\n{lines}'), now // 60), None, 'manual_update')
+                for t in ongoing:
+                    t['reminded'] = True
+            d['force'] = True;self._event('asked', 'You asked for an update.');self._save();return self.view()
+
     def cancel(self, ident):
         with self.lock:
             t = self._find(ident);name = self._first()
@@ -405,12 +439,15 @@ class TeamTasks:
 
     def _can_send(self, now):
         d = self._load()
+        if d['force']:   # the owner pressed "ask for update": send now, ignoring pause, quiet hours and the one-a-minute gap
+            return bool(d['member']) and not self.app.on_hold() and self.app.wa_ok()
         return bool(d['member']) and not d['paused'] and not self._quiet(now) and now - d['last_sent'] >= 60 and not self.app.on_hold() and self.app.wa_ok()
 
     def _next_job(self, now):
         d = self._load()
         if not self._can_send(now):
             return None
+        forced = d['force'];d['force'] = False
         if d['outbox']:
             m = d['outbox'].pop(0);d['last_sent'] = now
             return {'kind': 'say', 'text': m['text'], 'tasks': [], 'sub': m['kind']}
@@ -435,6 +472,10 @@ class TeamTasks:
                 d['last_sent'] = now
                 return {'kind': kind, 'text': self._text_for(kind, t, now), 'tasks': [t['id']]}
         return None
+
+    def _pump(self):
+        """Run the clock once in the background so an owner request goes out now, not at the next 20-second tick."""
+        threading.Thread(target=self.tick, daemon=True, name='team-pump').start()
 
     def _deliver(self, text, phone):
         """True=confirmed sent; False=definitely unsent; None=uncertain, never retry."""
@@ -649,6 +690,9 @@ class TeamTasks:
         m = re.fullmatch(r"(?i)(?:please\s+)?cancel\s+task\s+#?(\d{1,2})", low)
         if m:
             self.cancel(m[1]);return {'reply': f'Task #{m[1]} cancelled.', 'team_changed': True}
+        m = re.fullmatch(r"(?i)(?:please\s+)?(?:ask|check with|ping|message)\s+(?:him|her|them|\w+)\s+(?:for\s+)?(?:an?\s+)?(?:update|status|progress)(?:\s+(?:on|about|for)\s+(.+))?", low)
+        if m:
+            self.ask_update(self.match_task(m[1]) if m[1] else None);self._pump();return {'reply': 'Asked him for an update on WhatsApp.', 'team_changed': True}
         if low in ('pause team', 'pause tasks', 'pause team follow-up'):
             self.pause(True);return {'reply': 'Team follow-up paused. No messages will go to him until you resume.', 'team_changed': True}
         m = re.fullmatch(r"(?i)(?:team\s+)?quiet hours\s+(?:from\s+)?(\d{1,2})\s*(?:to|-|till|until)\s*(\d{1,2})", low)

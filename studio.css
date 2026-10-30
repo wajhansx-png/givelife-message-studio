@@ -1476,3 +1476,14 @@ dialog::backdrop{background:#00000080!important}
 .mark{box-shadow:var(--lift-hi)!important}
 .action-rail :is(.card,.live,.talk,.brandbar){box-shadow:none!important;background:transparent!important;border-color:transparent!important}
 .composer :is(#msg,textarea,input,.field,.in){background:transparent!important;box-shadow:none!important;border-color:transparent!important}
+/* ===== Premium v2: fewer outlines, more depth. Controls are filled and lifted instead of boxed. ===== */
+:root[data-theme=dark]{--fill:linear-gradient(180deg,#2b2b2e,#202023);--fill-h:linear-gradient(180deg,#35353a,#28282c)}
+:root:not([data-theme=dark]){--fill:linear-gradient(180deg,#ffffff,#f1f1f3);--fill-h:linear-gradient(180deg,#ffffff,#e9e9ec)}
+:is(.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-more,.big:not(.all):not(.primary):not(.main),.big.all,.copy,.menu button){background:var(--fill)!important;border-color:transparent!important;border-radius:12px!important}
+:is(.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-more,.big:not(.all):not(.primary):not(.main),.big.all,.copy,.menu button):hover{background:var(--fill-h)!important}
+:root[data-theme=dark] :is(.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-more,.big:not(.all):not(.primary):not(.main),.big.all,.copy,.menu button){background:var(--fill)!important}
+:is(.prim .main,.composer .go,.send-donors,.donor-add,.primary,.go,#batchStart){border-color:transparent!important;border-radius:12px!important}
+:is(input,textarea,select):not([type=checkbox]):not([type=radio]){border-radius:12px!important;border-color:var(--line)!important}
+:root[data-theme=dark] :is(input,textarea,select):not([type=checkbox]):not([type=radio]){border-color:#ffffff1f!important}
+.composer{border-radius:20px!important}
+.composer .go{border-radius:14px!important}

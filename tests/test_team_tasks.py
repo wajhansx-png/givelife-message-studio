@@ -117,10 +117,37 @@ class Sending(Base):
   self.clock[0]=datetime.datetime(2026,10,31,7,10,tzinfo=T.PKT).timestamp();self.wa[0]=False;self.t.tick();self.assertEqual(self.sent,[]);self.wa[0]=True;self.hold[0]=True;self.t.tick();self.assertEqual(self.sent,[])
   self.hold[0]=False;self.t.pause(True);self.t.tick();self.assertEqual(self.sent,[]);self.t.pause(False);self.t.tick();self.assertEqual(len(self.sent),1)
  def test_a_failed_ask_goes_back_to_waiting_retries_after_five_minutes_and_tells_the_owner_on_the_third_failure(self):
-  self.start('a deadline 6pm');self.down[0]=True;self.tick(1);self.assertEqual(self.status('a'),'Waiting');self.tick(3);self.assertEqual(self.sent,[])
-  self.tick(7);self.assertEqual(self.status('a'),'Waiting');self.tick(14);self.assertFalse(self.owner==[] and False)
-  self.tick(20);self.tick(27);self.assertTrue(any('Could not reach' in x for x in self.owner),self.owner)
-  self.down[0]=False;self.tick(100);self.assertEqual(self.status('a'),'Asked');self.assertEqual(len(self.sent),1)
+  self.start('a deadline 6pm')
+  self.app.send_custom=lambda body:{'code':'NOT_SENT'}
+  self.tick(1);self.assertEqual(self.status('a'),'Waiting');self.tick(3);self.assertEqual(self.sent,[])
+  self.tick(7);self.assertEqual(self.status('a'),'Waiting')
+  self.tick(14);self.tick(20);self.tick(27)
+  self.assertTrue(any('Could not reach' in x for x in self.owner),self.owner)
+  self.app.send_custom=self.send;self.tick(100)
+  self.assertEqual(self.status('a'),'Asked');self.assertEqual(len(self.sent),1)
+ def test_unknown_send_result_is_not_automatically_retried_even_after_restart(self):
+  self.start('a deadline 6pm');attempts=[]
+  def uncertain(body):
+   attempts.append(body);raise TimeoutError('Gateway timeout AFTER dispatch')
+  self.app.send_custom=uncertain;self.tick(1)
+  self.assertEqual(len(attempts),1)
+  self.assertEqual(self.status('a'),'Asked')
+  self.assertTrue(self.t.view()['tasks'][0]['delivery_uncertain'])
+  self.assertTrue(any('Check WhatsApp' in n for n in self.owner))
+  self.app.send_custom=self.send
+  for minute in (7,15,45,120,241):self.tick(minute)
+  self.assertEqual(self.sent,[])
+  restarted=T.TeamTasks(self.app,clock=lambda:self.clock[0]);restarted.tick()
+  self.assertEqual(self.sent,[])
+ def test_new_teammate_cannot_inherit_unfinished_tasks(self):
+  self.start('a deadline 6pm')
+  with self.assertRaisesRegex(ValueError,'unfinished tasks'):
+   self.t.set_member('New Teammate','03009876543')
+  self.assertEqual(self.t._load()['member']['phone'],'923001234567')
+  for task in self.t.view()['tasks']:self.t.cancel(task['id'])
+  self.t.set_member('New Teammate','03009876543')
+  self.assertEqual(self.t.view()['tasks'],[])
+  self.assertEqual(self.t._load()['member']['phone'],'923009876543')
  def test_a_slow_whatsapp_never_freezes_the_owners_screen(self):
   self.start('a deadline 6pm');result=[]
   def slow(body):

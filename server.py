@@ -174,7 +174,7 @@ def build_group(n,left,case_name=None):
  p2,p1=math.ceil(left/2000),math.ceil(left/1000)
  if left<=0:
   return f'*{name}: Case complete.*\n\nThank you to everyone who supported this case. There is Rs. 0 left to raise.\n\n- GiveLife Foundation'
- if name.casefold()!='yousuf':
+ if name.casefold() not in ('yousuf','current case'):
   # Details are intentionally generic until the owner supplies verified facts.
   return (f'*GiveLife Foundation: Support needed for {name}*\n\n'
           'Please review the case details and help if you can.\n\n'
@@ -194,7 +194,7 @@ def build_dm(sel,left,case_name=None):
  name=_case_title(case_name if case_name is not None else active_case_name())
  if left<=0:
   return f'Assalam o alaikum Brother,\n\nThe case for {name} has been completed. Thank you to everyone who helped.\n\n- GiveLife Foundation'
- if name.casefold()!='yousuf':
+ if name.casefold() not in ('yousuf','current case'):
   p2,p1=math.ceil(left/2000),math.ceil(left/1000)
   return (f'Assalam o alaikum Brother,\n\nGiveLife Foundation is collecting support for {name}. '
           'Please review the case details before donating.\n\n'

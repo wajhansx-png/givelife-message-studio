@@ -58,6 +58,7 @@ function replyHtml(text){const raw=String(text).replace(/\r\n/g,'\n').split('\n'
    const m=body.match(/^(<span class="wa-list"><b class="rn">\d+<\/b>)(<strong>.*?<\/strong>)\s*([\s\S]*)<\/span>$/)||body.match(/^(<span class="wa-list"><b class="rn">\d+<\/b>)()([\s\S]*)<\/span>$/);
    if(m)body=m[1]+(m[2]?'<span class="rt">'+m[2]+'</span>':'')+(m[3]?'<span class="rd">'+m[3]+'</span>':'')+'</span>'}
   if(role==='bullet')body=body.replace(/^<span class="wa-list">•\s+/,'<span class="wa-list">').replace(/^[•▪◦·]\s+/,'');
+  body=body.replace(/\bRs\.?\s?\d[\d,]*(?:\.\d+)?/g,'<span class="amt">$&</span>');
   return '<div class="reply-line r-'+role+(line?'':' blank')+'" style="--i:'+Math.min(i,16)+'">'+body+'</div>'}).join('')}
 function drawLog(){const allItems=history.slice(-40);
  const fresh=new Set(shownTurns?allItems.map(turnKey).filter(k=>!shownTurns.has(k)):[]);shownTurns=new Set(allItems.map(turnKey));

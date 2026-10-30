@@ -79,12 +79,19 @@ class Knowledge:
   with self.lock:
    entries=[dict(x) for x in self.data['entries'] if isinstance(x,dict) and x.get('active')]
    turns=[dict(x) for x in self.data['turns'] if isinstance(x,dict)]
+  broad=bool(re.search(r'(?i)\b(?:preferences?|rules?|memories|remember|corrections?)\b',str(query)))
   for item in entries:
    overlap=len(query_tokens & tokens(item.get('text','')))
+   # Unrelated memories must not crowd out a correction about the current topic.
+   # General preference requests deliberately retrieve every active preference.
+   if not overlap and not broad: continue
    item['score']=4+overlap*3+(2 if item.get('key') else 0);out.append(item)
   for item in turns:
    overlap=len(query_tokens & tokens(item.get('text','')))
-   if overlap>=2:out.append({**item,'score':overlap*2,'source':'historical_'+item.get('source','app_output')})
+   if overlap>=2:
+    # The owner's account of events has precedence over old assistant guesses.
+    source=item.get('source','app_output')
+    out.append({**item,'score':overlap*2+(2 if source=='owner_input' else 0),'source':'historical_'+source})
   for item in self.data['feedback'][-30:]:
    correction=item.get('correction','')
    if correction and query_tokens & tokens(correction):out.append({'id':item['id'],'text':correction,'time':item.get('time',0),'source':'owner_reported_issue','score':5+len(query_tokens & tokens(correction))})

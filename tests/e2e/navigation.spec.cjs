@@ -45,6 +45,8 @@ test('phone: every full screen has a Back button in the lower half',async({page,
 });
 test('a long assistant reply stays readable: big text, starts at its first line, scrolls instead of shrinking',async({page,request})=>{
  for(const [w,h] of [[390,844],[412,915],[1280,720],[1440,900]]){
+  /* each size starts like a first visit: scroll positions remembered from the previous size would not apply */
+  await page.evaluate(()=>{try{sessionStorage.clear()}catch(e){}}).catch(()=>{});
   await open(page,request,w,h,LONG);
   if(w<900)await page.locator('#chatOpen').click();
   const log=page.locator(w<900?'#histLog':'#log');await expect(log.locator('.e.bot').last()).toContainText('Part 7');

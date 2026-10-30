@@ -10,6 +10,7 @@
   "scripts": {
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:groups": "playwright test -c playwright.group-finder.config.cjs",
     "test:python": "python -m unittest discover -s tests -q"
   },
   "devDependencies": {

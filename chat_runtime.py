@@ -92,6 +92,14 @@ def run_chat(text,history,state,memory,do):
    errors.append('The model returned malformed tool calls. No partial action was executed.');break
   calls=raw_calls or []
   if not calls:
+   remaining=requested_kinds.difference(mutation_completed|{'status'})
+   if send_completed and needs_multi and remaining and not nudged and not errors:
+    # One-prompt compound actions must not stop after the first send. Resume
+    # only the *other* explicitly requested actions, never repeat WhatsApp.
+    nudged=True
+    msgs.append({'role':'assistant','content':reply or 'The first action completed.'})
+    msgs.append({'role':'user','content':'The outgoing send already dispatched; NEVER send again. Finish only the remaining CURRENT-owner-requested action(s): '+', '.join(sorted(remaining))+'. If any cannot be completed, report that explicitly. Use tools and verify receipts.'})
+    continue
    claimed=claims_completion(reply)
    missing_edit=required_edit and not saved_edit
    missing_variants=required_variants and not variants_done

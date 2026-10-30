@@ -1377,95 +1377,102 @@ body::after{background:radial-gradient(circle,color-mix(in srgb,#b06bff 40%,tran
 body{background:var(--bg)!important}
 .mark{background:linear-gradient(140deg,#b4beff 0%,#7685ff 55%,#5563e6 100%)!important}
 
-/* ===== ChatGPT-style black & white: COLOURS ONLY. No size, spacing or layout rule lives here. ===== */
+/* ===== shadcn/ui theme (neutral, new-york-v4). Tokens, radii, shadows and focus ring are taken from shadcn-ui/ui source.
+   Colours and surface finish only: no size, spacing or layout rule lives here. ===== */
 :root[data-theme=dark]{
- --bg:#212121;--surface:#171717;--surface2:#2f2f2f;--surface3:#383838;
- --ink:#ececec;--mut:#b4b4b4;--faint:#9b9b9b;
- --line:#303030;--line2:#4a4a4a;--ctl:#6b6b6b;
- --g:#ececec;--gd:#ffffff;--gs:#2f2f2f;--gink:#ececec;--ring:#9b9b9b;--pill:#2f2f2f;
- --btn:#ececec;--btnh:#ffffff;--on-accent:#171717;
- --ok:#3dd68c;--warn:#f2c14e;--red:#ff8f8f;--important:#f2c14e;--on-important:#2a1f00;--wbg:#2e2a1c;
- --msg:#262626;--msgink:#ececec;--bubble:#262626;--bubble-line:#3a3a3a;--chat-well:#1c1c1c;
- --sh1:none;--sh2:none;--sh3:0 24px 64px -16px #000;
+ --background:#0a0a0a;--foreground:#fafafa;--card:#171717;--secondary:#262626;--muted-fg:#a1a1a1;--accent:#404040;--primary:#e5e5e5;--primary-fg:#171717;--border:#ffffff1a;--input:#ffffff26;--ring:#737373;
+ --bg:#0a0a0a;--surface:#171717;--surface2:#262626;--surface3:#303030;
+ --ink:#fafafa;--mut:#a1a1a1;--faint:#8a8a8a;
+ --line:#ffffff1a;--line2:#666666;--ctl:#666666;
+ --g:#e5e5e5;--gd:#fafafa;--gs:#262626;--gink:#fafafa;--pill:#262626;
+ --btn:#e5e5e5;--btnh:#d4d4d4;--on-accent:#171717;
+ --ok:#4ade80;--warn:#fbbf24;--red:#f87171;--important:#fbbf24;--on-important:#2a1f00;--wbg:#2e2a1c;
+ --msg:#171717;--msgink:#fafafa;--bubble:#171717;--bubble-line:#ffffff1a;--chat-well:#0f0f0f;
+ --sh1:0 1px 2px #0000000d;--sh2:0 1px 3px #0000001a,0 1px 2px -1px #0000001a;--sh3:0 24px 64px -16px #000;
 }
 @media(prefers-color-scheme:dark){:root:not([data-theme=light]){
- --bg:#212121;--surface:#171717;--surface2:#2f2f2f;--surface3:#383838;
- --ink:#ececec;--mut:#b4b4b4;--faint:#9b9b9b;
- --line:#303030;--line2:#4a4a4a;--ctl:#6b6b6b;
- --g:#ececec;--gd:#ffffff;--gs:#2f2f2f;--gink:#ececec;--ring:#9b9b9b;--pill:#2f2f2f;
- --btn:#ececec;--btnh:#ffffff;--on-accent:#171717;
- --ok:#3dd68c;--warn:#f2c14e;--red:#ff8f8f;--important:#f2c14e;--on-important:#2a1f00;--wbg:#2e2a1c;
- --msg:#262626;--msgink:#ececec;--bubble:#262626;--bubble-line:#3a3a3a;--chat-well:#1c1c1c;
- --sh1:none;--sh2:none;--sh3:0 24px 64px -16px #000;
+ --background:#0a0a0a;--foreground:#fafafa;--card:#171717;--secondary:#262626;--muted-fg:#a1a1a1;--accent:#404040;--primary:#e5e5e5;--primary-fg:#171717;--border:#ffffff1a;--input:#ffffff26;--ring:#737373;
+ --bg:#0a0a0a;--surface:#171717;--surface2:#262626;--surface3:#303030;
+ --ink:#fafafa;--mut:#a1a1a1;--faint:#8a8a8a;
+ --line:#ffffff1a;--line2:#666666;--ctl:#666666;
+ --g:#e5e5e5;--gd:#fafafa;--gs:#262626;--gink:#fafafa;--pill:#262626;
+ --btn:#e5e5e5;--btnh:#d4d4d4;--on-accent:#171717;
+ --ok:#4ade80;--warn:#fbbf24;--red:#f87171;--important:#fbbf24;--on-important:#2a1f00;--wbg:#2e2a1c;
+ --msg:#171717;--msgink:#fafafa;--bubble:#171717;--bubble-line:#ffffff1a;--chat-well:#0f0f0f;
+ --sh1:0 1px 2px #0000000d;--sh2:0 1px 3px #0000001a,0 1px 2px -1px #0000001a;--sh3:0 24px 64px -16px #000;
 }}
 :root[data-theme=light],:root:not([data-theme=dark]){
- --bg:#ffffff;--surface:#f9f9f9;--surface2:#f4f4f4;--surface3:#ececec;
- --ink:#0d0d0d;--mut:#525252;--faint:#666666;
- --line:#e5e5e5;--line2:#cfcfcf;--ctl:#767676;
- --g:#0d0d0d;--gd:#000000;--gs:#f4f4f4;--gink:#0d0d0d;--ring:#0d0d0d;--pill:#f4f4f4;
- --btn:#0d0d0d;--btnh:#2a2a2a;--on-accent:#ffffff;
- --ok:#0f8a5f;--warn:#9a6700;--red:#cf2e2e;--important:#f2c14e;--on-important:#3a2a00;--wbg:#fff3d6;
- --msg:#f7f7f7;--msgink:#0d0d0d;--bubble:#f7f7f7;--bubble-line:#e5e5e5;--chat-well:#fafafa;
- --sh1:0 1px 2px #0000000d;--sh2:0 8px 24px -8px #00000022;--sh3:0 30px 80px -20px #00000044;
+ --background:#ffffff;--foreground:#000000;--card:#ffffff;--secondary:#f5f5f5;--muted-fg:#737373;--accent:#f5f5f5;--primary:#000000;--primary-fg:#fafafa;--border:#e5e5e5;--input:#e5e5e5;--ring:#a1a1a1;
+ --bg:#ffffff;--surface:#ffffff;--surface2:#f5f5f5;--surface3:#e5e5e5;
+ --ink:#0a0a0a;--mut:#525252;--faint:#666666;
+ --line:#e5e5e5;--line2:#767676;--ctl:#767676;
+ --g:#000000;--gd:#000000;--gs:#f5f5f5;--gink:#0a0a0a;--pill:#f5f5f5;
+ --btn:#171717;--btnh:#262626;--on-accent:#fafafa;
+ --ok:#0f7a4f;--warn:#92400e;--red:#c62828;--important:#f59e0b;--on-important:#3a2a00;--wbg:#fff3d6;
+ --msg:#fafafa;--msgink:#0a0a0a;--bubble:#fafafa;--bubble-line:#e5e5e5;--chat-well:#fafafa;
+ --sh1:0 1px 2px #0000000d;--sh2:0 1px 3px #0000001a,0 1px 2px -1px #0000001a;--sh3:0 20px 50px -12px #00000040;
 }
-/* no glows or tinted backgrounds: flat page colour */
-body{background:var(--bg)!important}
+body{background:var(--bg)!important;color:var(--ink)}
 body::before,body::after{display:none!important}
 .donor-page,.hist{background:var(--bg)!important}
-/* logo tile */
-.mark{background:var(--btn)!important;color:var(--on-accent)!important;box-shadow:none!important}
-.mark svg{stroke:var(--on-accent)!important}
-/* the main buttons fill with var(--btn): their text must follow the theme instead of fixed white */
-:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.bank-pagination .primary,.donor-form-actions .primary,#sendDm,.go,#batchStart){background:var(--btn)!important;color:var(--on-accent)!important;border-color:var(--btn)!important;box-shadow:none!important;background-image:none!important}
-:is(.prim .main,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart) *{color:var(--on-accent)!important}
-:is(.prim .main,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart):hover{background:var(--btnh)!important}
-/* selected tab / segment: filled with the accent (white in dark mode), dark text */
-.donor-page .donor-tabs button[aria-selected=true],.seg button[aria-pressed=true],html body .brandbar .seg button[aria-pressed=true]{background:var(--g)!important;color:var(--on-accent)!important;border-color:var(--g)!important;box-shadow:none!important}
-.donor-page .donor-tabs button[aria-selected=true] .tab-name,.donor-page .donor-tabs button[aria-selected=true] .tab-word{color:var(--on-accent)!important;background:transparent!important}
-.donor-page .donor-tabs button[aria-selected=true] .tab-count{background:#00000026!important;color:var(--on-accent)!important}
-/* numbers in the reply */
-.e.bot .rn,.num .rn{background:var(--surface3)!important;color:var(--ink)!important}
-:root[data-theme=light] .e.bot .rn{background:#e5e5e5!important}
-/* assistant answer box keeps its box (no-scroll fit depends on it) */
-.e.bot{background:var(--bubble)!important;border-color:var(--bubble-line)!important;box-shadow:none!important}
+::selection{background:var(--primary);color:var(--primary-fg)}
+/* Card: rounded-xl border bg-card shadow-sm */
+:is(.card,.action-rail,.talk,.live,.brandbar,dialog){background:var(--surface)!important;border-color:var(--line)!important;box-shadow:var(--sh2)!important}
+dialog{color:var(--ink)!important;border-radius:14px!important}
+dialog::backdrop{background:#00000080!important}
+.mark{background:var(--primary)!important;color:var(--primary-fg)!important;box-shadow:none!important}
+.mark svg{stroke:var(--primary-fg)!important}
+/* Button, variant outline (default for every control): border input, bg-input/30 in dark, shadow-xs, hover bg-accent */
+:is(.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-more,.big:not(.all):not(.primary):not(.main),.big.all,.copy,.menu button){background:var(--bg)!important;color:var(--ink)!important;border-color:var(--ctl)!important;border-radius:8px!important;box-shadow:0 1px 2px #0000000d!important;transition:background-color .15s,color .15s,border-color .15s,box-shadow .15s}
+:root[data-theme=dark] :is(.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-more,.big:not(.all):not(.primary):not(.main),.big.all,.copy,.menu button){background:#ffffff0d!important}
+:is(.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-more,.big:not(.all):not(.primary):not(.main),.big.all,.copy,.menu button):hover{background:var(--accent)!important;color:var(--ink)!important}
+:is(.big:not(.all):not(.primary):not(.main),.big.all) *{color:inherit!important}
+/* Button, variant default: bg-primary text-primary-foreground hover:bg-primary/90 */
+:is(.prim .main,.composer .go,.send-donors,.donor-add,.primary,.go,#batchStart,.bank-pagination .primary,.donor-form-actions .primary,#sendDm){background:var(--primary)!important;color:var(--primary-fg)!important;border-color:var(--primary)!important;border-radius:8px!important;box-shadow:var(--sh1)!important}
+:is(.prim .main,.composer .go,.send-donors,.donor-add,.primary,.go,#batchStart) *{color:var(--primary-fg)!important}
+:is(.prim .main,.composer .go,.send-donors,.donor-add,.primary,.go,#batchStart):hover{background:color-mix(in srgb,var(--primary) 90%,transparent)!important}
+:is(.prim .main,.composer .go,.send-donors,.donor-add,.primary,.go,#batchStart):active,:is(.ghost,.tool,.big,.dm):active{transform:translateY(1px)}
+/* Tabs: muted list, active trigger = bg-background + border (light shadow-sm) */
+.donor-page .donor-tabs,.brandbar .seg{background:var(--surface2)!important;border-color:var(--line)!important;border-radius:10px!important}
+.donor-page .donor-tabs button,.seg button{border-color:transparent!important;background:transparent!important;box-shadow:none!important;color:var(--mut)!important}
+.donor-page .donor-tabs button[aria-selected=true],.seg button[aria-pressed=true],html body .brandbar .seg button[aria-pressed=true]{background:var(--primary)!important;color:var(--primary-fg)!important;border-color:var(--primary)!important;box-shadow:var(--sh2)!important}
+.donor-page .donor-tabs button[aria-selected=true] :is(.tab-name,.tab-word){color:var(--primary-fg)!important;background:transparent!important}
+.donor-page .donor-tabs button[aria-selected=true] .tab-count{background:#00000026!important;color:var(--primary-fg)!important}
+/* Input / textarea: rounded-md border input, bg-transparent (dark input/30), shadow-xs, focus ring 3px ring/50 */
+:is(input,textarea,select):not([type=checkbox]):not([type=radio]){background:var(--bg)!important;color:var(--ink)!important;border-color:var(--ctl)!important;border-radius:8px!important;box-shadow:0 1px 2px #0000000d}
+:root[data-theme=dark] :is(input,textarea,select):not([type=checkbox]):not([type=radio]){background:#ffffff0d!important}
+:is(input,textarea,select,button,summary,[tabindex]):focus-visible{outline:none!important;border-color:var(--ring)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--ring) 50%,transparent)!important}
+::placeholder{color:var(--muted-fg)}
+/* Badge / pills */
+.tab-count,.badge,.pill{background:var(--surface3)!important;color:var(--ink)!important}
+/* Chat */
+.e.bot{background:var(--bubble)!important;border-color:var(--bubble-line)!important;box-shadow:var(--sh1)!important;border-radius:14px!important}
 .e.you{background:var(--surface2)!important}
-/* the Auto bar and cards */
-.live{background:var(--surface)!important}
-:is(.card,.action-rail){background:var(--surface)!important}
-.talk .log,.talk{background:var(--surface)}
-dialog{background:var(--surface)!important;color:var(--ink)!important}
-dialog::backdrop{background:#000000b3!important}
+.e.bot .rn,.num .rn{background:var(--surface3)!important;color:var(--ink)!important}
+.talk .log{background:var(--surface)}
 .batch-plan{background:var(--surface2)!important;color:var(--ink)!important}
+/* meaning colours */
 .donor-progress[data-active=true]{background:var(--surface2)!important;color:var(--ok)!important}
 .donor-star[aria-pressed=true]{color:var(--important)!important}
-.donor-row[data-important=true]{background:color-mix(in srgb,var(--important) 7%,var(--surface))!important}
+.donor-row[data-important=true]{background:color-mix(in srgb,var(--important) 8%,var(--surface))!important}
 .donor-row[data-delivery=Sent] .donor-dm,.donor-row[data-donated=true] .donor-status{color:var(--ok)!important;border-color:var(--ok)!important}
-
-/* ===== Premium finish (colours and surface only, no layout change) ===== */
-:root[data-theme=dark]{--btn:#f1f1f3;--btnh:#ffffff;--on-accent:#131316;--bubble:#1d1d21;--bubble-line:#2c2c32}
-:root:not([data-theme=dark]){--btn:#15151a;--btnh:#2a2a31;--on-accent:#ffffff;--bubble:#fbfbfc;--bubble-line:#e4e5ea}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--btn:#f1f1f3;--btnh:#ffffff;--on-accent:#131316;--bubble:#1d1d21;--bubble-line:#2c2c32}}
-:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart){background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 55%),var(--btn)!important;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 1px 2px rgba(0,0,0,.25),0 6px 16px -8px rgba(0,0,0,.45)!important;border:1px solid rgba(0,0,0,.08)!important;border-radius:11px!important;font-weight:620!important;letter-spacing:-.01em;transition:transform .12s ease,box-shadow .2s ease,background .2s ease}
-:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart):active{transform:translateY(1px) scale(.99)}
-:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart):focus-visible{outline:2px solid var(--g)!important;outline-offset:3px}
-.donor-page .donor-tabs button[aria-selected=true],.seg button[aria-pressed=true]{background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,0)),var(--g)!important;box-shadow:0 1px 2px rgba(0,0,0,.3),0 0 0 1px rgba(0,0,0,.06)!important;border-radius:9px!important}
-.e.bot{background:var(--bubble)!important;border:1px solid var(--bubble-line)!important;border-radius:16px!important;box-shadow:0 1px 2px rgba(0,0,0,.06),0 10px 28px -18px rgba(0,0,0,.35)!important}
-:root[data-theme=dark] .e.bot,@media(prefers-color-scheme:dark){.e.bot{box-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 14px 34px -18px rgba(0,0,0,.7)!important}}
-
-/* ===== Frosted Glass buttons (chosen style B). Colour, blur and inner rim only: no border, no size change. ===== */
-:root[data-theme=dark]{--glass:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.05));--glass-rim:rgba(255,255,255,.16);--glass-ink:#f4f4f6}
-:root:not([data-theme=dark]){--glass:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.62));--glass-rim:rgba(0,0,0,.10);--glass-ink:#15151a}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--glass:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.05));--glass-rim:rgba(255,255,255,.16);--glass-ink:#f4f4f6}}
-:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart,.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status),
-:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart,.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status) *{color:var(--glass-ink)!important}
-:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart,.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status){background:var(--glass)!important;color:var(--glass-ink)!important;-webkit-backdrop-filter:blur(10px) saturate(140%);backdrop-filter:blur(10px) saturate(140%);box-shadow:inset 0 0 0 1px var(--glass-rim),inset 0 1px 0 rgba(255,255,255,.22),0 10px 24px -14px rgba(0,0,0,.55)!important;background-image:none!important}
-:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart,.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status):hover{filter:brightness(1.12)}
-:is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart,.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status):active{transform:translateY(1px) scale(.99)}
-/* the selected tab stays solid so "which one is on" is never ambiguous */
-.donor-page .donor-tabs button[aria-selected=true],.seg button[aria-pressed=true]{background:var(--g)!important;color:var(--on-accent)!important;box-shadow:none!important}
-/* ===== Rework: one clear primary tier. Colour only. Send actions glow brighter than the rest; everything else stays calm glass. ===== */
-:root[data-theme=dark]{--glass-hi:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.74));--glass-hi-ink:#111114;--glass-hi-rim:rgba(255,255,255,.55)}
-:root:not([data-theme=dark]){--glass-hi:linear-gradient(180deg,rgba(38,38,44,.96),rgba(13,13,16,.98));--glass-hi-ink:#f7f7f8;--glass-hi-rim:rgba(0,0,0,.55)}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--glass-hi:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.74));--glass-hi-ink:#111114;--glass-hi-rim:rgba(255,255,255,.55)}}
-:is(.composer .go,.prim .main,#batchStart,.send-donors,.primary){background:var(--glass-hi)!important;color:var(--glass-hi-ink)!important;box-shadow:inset 0 0 0 1px var(--glass-hi-rim),inset 0 1px 0 rgba(255,255,255,.35),0 12px 26px -14px rgba(0,0,0,.6)!important}
-:is(.composer .go,.prim .main,#batchStart,.send-donors,.primary) *{color:var(--glass-hi-ink)!important}
+.composer :is(textarea,input){background:transparent!important;box-shadow:none!important}
+/* unselected tabs keep a visible fill (eyes never read bare text) */
+.donor-page .donor-tabs button:not([aria-selected=true]){background:var(--surface3)!important;color:var(--ink)!important}
+:root[data-theme=dark] .donor-page .donor-tabs button:not([aria-selected=true]){background:#ffffff14!important}
+/* ===== Premium black & white finish: soft top light, deep contact shadow, quiet hairlines. Colour and surface only. ===== */
+:root[data-theme=dark]{--lift:inset 0 1px 0 #ffffff1f,inset 0 0 0 1px #ffffff0f,0 1px 2px #00000080,0 6px 16px -8px #000000b3;--lift-hi:inset 0 1px 0 #ffffffcc,0 1px 2px #00000080,0 8px 20px -8px #000000cc;--card-sh:inset 0 1px 0 #ffffff0d,0 0 0 1px #ffffff0f,0 20px 40px -24px #000}
+:root:not([data-theme=dark]){--lift:inset 0 1px 0 #ffffff,0 1px 2px #0000001a,0 6px 14px -8px #00000026;--lift-hi:inset 0 1px 0 #ffffff33,0 1px 2px #00000040,0 8px 18px -8px #00000066;--card-sh:0 0 0 1px #0000000d,0 1px 2px #0000000d,0 18px 36px -24px #0000004d}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--lift:inset 0 1px 0 #ffffff1f,inset 0 0 0 1px #ffffff0f,0 1px 2px #00000080,0 6px 16px -8px #000000b3;--lift-hi:inset 0 1px 0 #ffffffcc,0 1px 2px #00000080,0 8px 20px -8px #000000cc;--card-sh:inset 0 1px 0 #ffffff0d,0 0 0 1px #ffffff0f,0 20px 40px -24px #000}}
+:is(.card,.action-rail,.talk,.live,.brandbar){box-shadow:var(--card-sh)!important;border-radius:16px!important}
+:is(.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-more,.big:not(.all):not(.primary):not(.main),.big.all,.copy,.menu button){box-shadow:var(--lift)!important}
+:is(.prim .main,.composer .go,.send-donors,.donor-add,.primary,.go,#batchStart){box-shadow:var(--lift-hi)!important;background-image:linear-gradient(180deg,#ffffff26,#00000000 55%)!important}
+:root:not([data-theme=dark]) :is(.prim .main,.composer .go,.send-donors,.donor-add,.primary,.go,#batchStart){background-image:linear-gradient(180deg,#ffffff2e,#00000000 55%)!important}
+:is(.ghost,.tool,.chips button,.rail-quick button,.donor-bulk,.big:not(.all):not(.primary):not(.main)):hover{transform:translateY(-1px);box-shadow:var(--lift),0 10px 20px -10px #00000066!important}
+.e.bot{box-shadow:var(--card-sh)!important;border-radius:16px!important;background-image:linear-gradient(180deg,#ffffff08,#00000000 40%)!important}
+:root:not([data-theme=dark]) .e.bot{background-image:none!important;background:#fff!important}
+.composer{background:var(--surface2)!important;border-radius:16px!important;box-shadow:var(--card-sh)!important}
+.donor-page .donor-tabs button[aria-selected=true],.seg button[aria-pressed=true]{box-shadow:var(--lift-hi)!important}
+.mark{box-shadow:var(--lift-hi)!important}
+.action-rail :is(.card,.live,.talk,.brandbar){box-shadow:none!important;background:transparent!important;border-color:transparent!important}
+.composer :is(#msg,textarea,input,.field,.in){background:transparent!important;box-shadow:none!important;border-color:transparent!important}

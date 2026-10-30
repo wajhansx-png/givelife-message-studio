@@ -511,7 +511,7 @@ class TeamTasks:
         d = self._load()
         if not d['pending_notes'] or now - d['last_note'] < 120:
             return None
-        notes = d['pending_notes'][:5];rest = len(d['pending_notes']) - len(notes);d['pending_notes'] = [];d['last_note'] = now
+        notes = d['pending_notes'][:5];rest = len(d['pending_notes']) - len(notes);d['pending_notes'] = d['pending_notes'][5:];d['last_note'] = now
         return ('Team: ' + ' | '.join(n['text'] for n in notes) + (f' (+{rest} more)' if rest > 0 else ''))[:900]
 
     # ---- reading his replies

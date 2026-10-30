@@ -1571,10 +1571,20 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
     elif name=='send_message':
      literal=bool(re.search(r'["“\']'+re.escape(str(args.get('text','')))+r'["”\']',prompt))
      target=resolve_person(args.get('to',''))
-     custom=manual_commands.parse(prompt) or {}
-     quoted=re.search(r'(?is)^(?:send|resend|text|message)\s+["“](.+?)["”]',prompt.strip())
-     if quoted:args['text']=quoted[1];literal=True
-     elif custom.get('kind')=='text' and not literal:args['text']=custom['text'];literal=True;args['with_picture']=bool(re.search(r'(?i)\b(poster|image|picture)\b',chat_policy.owner_text(prompt)))
+     import task_intent
+     quoted_steps=task_intent.quoted_sends(prompt)
+     if len(quoted_steps)>1:
+      # Each contact gets the exact text from THEIR clause, never the first
+      # quoted message copied into every later send.
+      match_key=lambda value:(norm_phone(str(value).split('@')[0]) or str(value).casefold())
+      intended=[row for row in quoted_steps if match_key(resolve_person(row['to']))==match_key(target)]
+      if len(intended)!=1:raise ValueError('The exact text for this recipient is ambiguous. Nothing was sent.')
+      args['text']=intended[0]['text'];literal=True
+     else:
+      custom=manual_commands.parse(prompt) or {}
+      quoted=re.search(r'(?is)^(?:send|resend|text|message)\s+["“](.+?)["”]',prompt.strip())
+      if quoted:args['text']=quoted[1];literal=True
+      elif custom.get('kind')=='text' and not literal:args['text']=custom['text'];literal=True;args['with_picture']=bool(re.search(r'(?i)\b(poster|image|picture)\b',chat_policy.owner_text(prompt)))
      # The model selects recipients; the stored template supplies fundraising captions.
      appeal=not literal and not str(target).endswith('@g.us') and target not in GROUPS and target not in ('test','all','free') and (args.get('with_picture') or re.search(r'(?i)\b(dm|appeal|donation|poster|structure)\b',prompt) or re.search(r'(?i)Yous[au]f|03097458815',str(args.get('text',''))))
      group_target=target if target in GROUPS or target=='test' else next((k for k,v in GROUPS.items() if v[1]==target),None)

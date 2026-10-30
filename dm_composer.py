@@ -31,6 +31,15 @@ def personalize(text, name='', gender='Brother'):
         return prefix + text[match.end():]
     return prefix + text
 
+UNVERIFIED_MEDICAL = re.compile(
+    r'(?i)(?:paralys\w*|numbness|numb)\b[^\n.]{0,100}\b(?:fingers?|spread\w*|mov\w*)\b'
+    r'|\b(?:fingers?|spread\w*|mov\w*)\b[^\n.]{0,100}\b(?:paralys\w*|numbness)\b'
+)
+
+def unverified_medical_claim(text):
+    """Block disproven template claims; does not guess any clinical fact."""
+    return bool(UNVERIFIED_MEDICAL.search(str(text or '')))
+
 def complete(text):
     """A fundraising caption cannot consist of a salutation or a collapsed summary.
 
@@ -41,6 +50,7 @@ def complete(text):
     """
     text = str(text)
     body = text.strip()
+    if unverified_medical_claim(body):return False
     if len(body) < 180 or len(re.split(r'\n\s*\n', body)) < 4:
         return False
     if not re.search(r'(?:\b\d{10,15}\b|Easypaisa|JazzCash|account)', text, re.I):

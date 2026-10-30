@@ -7253,3 +7253,66 @@ html:root:not(.no-theme) body :is(.talk, .hist) .e.bot {
   background: linear-gradient(180deg, #0e7490, #2f6fe8 55%, #6d4ef0) left top / 3px 100% no-repeat, var(--sheet) !important;
   color: var(--sheet-ink) !important;
 }
+
+/* ===== 11. Dark mode in depth (used most): status colour means something again, switches read clearly ON,
+   no stray grey tabs, links inside buttons look like buttons. Colour only, no size change. ===== */
+:root {
+  --ok-ink: #4ade80;
+  --warn-ink: #fbbf24;
+  --bad-ink: #f87171;
+}
+:root:not([data-theme=dark]) {
+  --ok-ink: #0f7a4f;
+  --warn-ink: #92400e;
+  --bad-ink: #c62828;
+}
+@media(prefers-color-scheme:dark) {
+  :root:not([data-theme=light]) {
+    --ok-ink: #4ade80;
+    --warn-ink: #fbbf24;
+    --bad-ink: #f87171;
+  }
+}
+/* sent and donated: green; needs a check: amber; failed: red */
+#donorRows#donorRows .donor-row[data-delivery=Sent] .donor-dm,
+#donorRows#donorRows .donor-row[data-donated=true] .donor-status {
+  color: var(--ok-ink) !important;
+  background: color-mix(in srgb, var(--ok-ink) 10%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok-ink) 38%, transparent) !important;
+}
+#donorRows#donorRows .donor-row:is([data-delivery=Uncertain], [data-delivery=Skipped]) .donor-dm {
+  color: var(--warn-ink) !important;
+  background: color-mix(in srgb, var(--warn-ink) 10%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn-ink) 40%, transparent) !important;
+}
+#donorRows#donorRows .donor-row[data-delivery="Not sent"] .donor-dm {
+  color: var(--bad-ink) !important;
+  background: color-mix(in srgb, var(--bad-ink) 10%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad-ink) 40%, transparent) !important;
+}
+#donorRows#donorRows .donor-row[data-donated=true] .donor-amount {
+  color: var(--ok-ink) !important;
+}
+/* switches: OFF is a quiet track, ON is the gradient with a white knob */
+html body input.sw:checked, #settings input.sw:checked, dialog input.sw:checked,
+html body .autosw[aria-checked=true],
+html body .autosw[aria-pressed=true] {
+  background: var(--grad) !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 16px -8px #2f6fe8cc !important;
+}
+html body input.sw:checked::before, html body input.sw:checked::after,
+html body .autosw[aria-checked=true]::before, html body .autosw[aria-checked=true]::after,
+html body .autosw[aria-pressed=true] :is(i, span, b) {
+  background: #fff !important;
+}
+/* the Messages panel tabs match the donor tabs */
+html body .donor-page[data-panel=messages] .donor-tabs button:not([aria-selected=true]) {
+  background: transparent !important;
+  color: var(--mut) !important;
+  box-shadow: none !important;
+}
+/* a link styled as a button looks like a button */
+html body a.tool, html body a.ghost {
+  text-decoration: none !important;
+}

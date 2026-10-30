@@ -9,6 +9,9 @@ on:
       - 'tests/**'
       - 'assistant_contract.md'
   workflow_dispatch:
+concurrency:
+  group: givelife-v1-qa-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

@@ -1,8 +1,13 @@
 name: Isolated GiveLife V1 QA
 on:
   push:
+    branches: [main]
     paths:
       - '.github/workflows/isolated-qa.yml'
+      - '*.py'
+      - '*.js'
+      - 'tests/**'
+      - 'assistant_contract.md'
   workflow_dispatch:
 permissions:
   contents: read

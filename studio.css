@@ -8557,3 +8557,30 @@ html body .donor-page .bank-message.bank-detail > header .tool {
     max-width: 100% !important;
   }
 }
+
+
+/* Team task overflow: only the explicitly expanded view scrolls. */
+.team-page .team-more {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.team-page.team-expanded .team-body {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.team-page.team-expanded .team-text strong,
+.team-page.team-expanded .team-due,
+.team-page.team-expanded .team-say,
+.team-page.team-expanded .team-ev-text,
+.team-page.team-expanded .team-donelist {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}

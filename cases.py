@@ -23,10 +23,10 @@ class Cases:
                 'donors':h.book.export_case_fields(),'volunteers':h.volunteers.book.export_case_fields(),
                 'jobs':h.jobs.export_jobs(),'vjobs':h.volunteers.jobs.export_jobs(),
                 'bank':a.STORE.get('donor_messages') if a.STORE else None,
-                'poster_b64':a.STORE.get('poster_b64') if a.STORE else (base64.b64encode((a.DATA/'poster.jpg').read_bytes()).decode() if (a.DATA/'poster.jpg').exists() else ''),
+                'poster_b64':(a.STORE.get('poster_b64') if a.STORE else None) or (base64.b64encode((a.DATA/'poster.jpg').read_bytes()).decode() if (a.DATA/'poster.jpg').exists() else ''),
                 'poster_video_b64':a.STORE.get('poster_video_b64') if a.STORE else '',
                 'poster_kind':a.STORE.get('poster_kind') if a.STORE else 'image',
-                'papers_b64':a.STORE.get('papers_b64',[]) if a.STORE else [base64.b64encode(p.read_bytes()).decode() for p in sorted((a.DATA/'papers').glob('*.jpg'))],
+                'papers_b64':(a.STORE.get('papers_b64',[]) if a.STORE else None) or [base64.b64encode(p.read_bytes()).decode() for p in sorted((a.DATA/'papers').glob('*.jpg'))],
                 'saved_at':time.time()}
     def _summary(self,snap):
         m=re.search(r'^LEFT:\s*(\d+)',snap.get('state',''),re.M);donors=snap.get('donors',{})

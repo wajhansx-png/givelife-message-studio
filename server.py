@@ -156,7 +156,15 @@ def active_case_name():
   try:raw=json.loads((DATA/'cases.json').read_text(encoding='utf-8'))
   except (OSError,ValueError):raw={}
  if not isinstance(raw,dict):return 'Current case'
- return next((c.get('name','Current case') for c in raw.get('cases',[]) if isinstance(c,dict) and c.get('id')==raw.get('current')),'Current case')
+ name=next((c.get('name','Current case') for c in raw.get('cases',[]) if isinstance(c,dict) and c.get('id')==raw.get('current')),'Current case')
+ if name=='Current case' and DRAFT.exists():
+  # A legacy case had no title. Preserve its saved Yousuf draft instead of
+  # unexpectedly replacing that existing message during a balance update.
+  try:
+   saved=json.loads(DRAFT.read_text(encoding='utf-8'))
+   if re.search(r'(?i)\bYousuf\b',str(saved.get('group',''))):return 'Yousuf'
+  except (OSError,ValueError,TypeError):pass
+ return name
 
 def _case_title(name):
  return ' '.join(str(name or 'Current case').replace('*',' ').split())[:60] or 'Current case'

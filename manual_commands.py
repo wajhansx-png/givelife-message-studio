@@ -17,6 +17,7 @@ def norm(text):
  t=str(text).casefold().replace('give-life','givelife')
  t=re.sub(r'\b(?:guvelife|givelufe|givlife|giveilfe)\b','givelife',t)
  t=re.sub(r'\b(froup|gruo|gruop|goup|grp)\b','group',t)
+ t=re.sub(r'\b(evv?erything|evrything|everythng|everthing)\b','everything',t)
  return re.sub(r'[^\w\s]',' ',t).strip()
 
 def _group_mentions(text):
@@ -107,7 +108,7 @@ def parse(text):
  control=dm_control(t)
  if control:return {'kind':control}
  if re.search(r'\b(hold|pause|stop)\b',low) and re.search(r'\bdms?\b',low) and re.search(r'\b(and|both|also|plus)\b.*\b(groups?|posts?)\b',low):return {'kind':'hold'}
- if re.search(r"(?i)\b(?:don'?t|dont|do not|never)\s+(?:stop|disable|pause|delete|remove|revoke|change|set|record)\b",t):return None
+ if re.search(r"(?i)\b(?:don'?t|dont|do not|never)\s+(?:stop|hold|disable|pause|delete|remove|revoke|change|set|record)\b",t):return None
  if low in ('update','status','report','whats update','what s update','whats upadte','what s upadte','what is the update','nothing sent yet man','nothing sent yet') or re.search(r'\b(freelance|freelamce)\b.*\b(update|rules)\b|\b(update|rules)\b.*\b(freelance|freelamce)\b',low):return {'kind':'status','freelance':bool(re.search(r'freela',low))}
  if re.search(r'\b(fast|faster|slow|slower)\b',low) and re.search(r'\b(send|post|pace|speed|posting|sending)\b',low) and not re.search(r'\b(now|right away|immediately|asap)\b',low):return None # pace is a setting, not outgoing text
  if re.search(r'exclusive\s+upwork|37\s*(?:member|members)|120363432572916292|120363431093838536',low):return {'kind':'refuse_target'}
@@ -131,10 +132,115 @@ def parse(text):
  if re.match(r'^(delete|remove|revoke)\b',low) and re.search(r'\b(message|messages|msg|post|group)\b',low):return {'kind':'delete','target':group(t)}
  # Explicit quoted text is data, even if it contains a command word.
  q=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+["“\'](.+?)["”\']\s+(?:to|ko|in)\s+(.+)$',t,re.I|re.S)
- if q:return {'kind':'text','text':q[1],'to':q[2].strip(),'literal':True}
+ if q:return {'kind':'text','text':q[1],'to':re.sub(r'(?i)\s+(?:fast|quickly|asap|immediately|right now)\s*[!.]*
  amount=balance_amount(t)
  lead=re.fullmatch(r'(?:now|ab|abhi|only|just|total|so)\s+(.+)',t,re.I)
  if amount is None and lead and not SEND.search(t):amount=balance_amount(lead[1])
+ # A trailing speed word modifies the action, not the recipient's name.
+ # E.g. "send thanks akhtar to Akhtar fast" targets Akhtar, not "Akhtar fast".
+ def recipient(v):
+  return re.sub(r'(?i)\\s+(?:fast|quickly|asap|immediately|right now)\\s*[!.]*
+ explicit=re.match(r'^(?:please\s+)?(?:send|resend|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
+ payload=re.sub(r'(?i)(?:rs\.?\s*)?\d[\d,]*(?:\.\d+)?\s*k?','',explicit[1]) if explicit and amount is not None else explicit[1] if explicit else ''
+ if explicit and not control_payload(payload):
+  return {'kind':'text','text':explicit[1].strip(),'to':group(recipient(explicit[2])) or recipient(explicit[2]),'literal':True}
+ # A negative, a question about delivery, or a schedule must not dispatch now.
+ if re.search(r'\b(don t|dont|do not|never|not now|did you|have you|was it|schedule|daily|every day|tomorrow)\b',low):return None
+ if re.search(r'\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',t,re.I):return None
+ phone_text=re.fullmatch(r'((?:\+?92|0092|0)?3\d{2}[\s-]?\d{7})\s+(?:send|text|message)\s+(.+)',t,re.I|re.S)
+ if phone_text and not control_payload(phone_text[2]):return {'kind':'text','to':phone_text[1],'text':phone_text[2],'literal':True}
+ targets=groups(t);target=targets[0] if len(targets)==1 else None
+ if SEND.search(t) and has_group_exclusion(t) and not targets:return {'kind':'no_groups'}
+ if SEND.search(t) and len(targets)>1 and not re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return {'kind':'appeals','targets':targets,'amount':amount}
+ if SEND.search(t) and target:
+  if re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return None
+  # Ordinary explicit text, e.g. send hi to GiveLife main, remains text.
+  m=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+(.+?)\s+(?:to|ko|in)\s+(.+)$',t,re.I|re.S)
+  if m and re.search(r'(?i)\s+only\s+',m[2]):m=re.match(r'^(?:send|text|message)\s+(.+?)\s+(?:to|in)\s+(.+?)\s+only\s+.+$',t,re.I|re.S)
+  if m and not control_payload(m[1]) and group(m[2]):return {'kind':'text','text':m[1].strip(),'to':group(m[2]),'literal':True}
+  return {'kind':'appeal','target':target,'amount':amount}
+ if (SEND.search(t) or low.startswith('now send') or low in ('again','do it','go','now','once more','one more time','do it again','repeat','repeat it','send once more','dobara','dubara','phir se','phir se bhejo','dobara bhejo','phir bhejo')) and control_payload(t) or low in ('once more','one more time','do it again','repeat','repeat it','dobara','dubara','phir se','phir bhejo','phir se bhejo','dobara bhejo'):return {'kind':'repeat'}
+ if amount is not None and not SEND.search(t):return {'kind':'amount','amount':amount}
+ m=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
+ if m:
+  if control_payload(m[1]) or re.fullmatch(r'(?i)(?:(?:the|full|current|updated|proper|correct|dm|appeal|message|poster|and|with)\s*)+',m[1]):return {'kind':'appeal_to','to':m[2].strip()}
+  return {'kind':'text','text':m[1].strip(),'to':m[2].strip(),'literal':True}
+ # Unqualified "send jr account" needs contact understanding, never send those words literally.
+ # Custom text remains explicit via send <text> to <recipient>, or the assistant with conversation context.
+ if target and re.sub(r'\b(group|groups|in|to|on)\b','',low).strip() in [norm(a) for a in ALIASES[target]]:return {'kind':'select','target':target}
+ return None
+
+, '', str(v).strip()).strip()
+ # Resolve a literal payload and its destination before scanning aliases inside it.
+ explicit=re.match(r'^(?:please\s+)?(?:send|resend|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
+ payload=re.sub(r'(?i)(?:rs\.?\s*)?\d[\d,]*(?:\.\d+)?\s*k?','',explicit[1]) if explicit and amount is not None else explicit[1] if explicit else ''
+ if explicit and not control_payload(payload):
+  return {'kind':'text','text':explicit[1].strip(),'to':group(explicit[2]) or explicit[2].strip(),'literal':True}
+ # A negative, a question about delivery, or a schedule must not dispatch now.
+ if re.search(r'\b(don t|dont|do not|never|not now|did you|have you|was it|schedule|daily|every day|tomorrow)\b',low):return None
+ if re.search(r'\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',t,re.I):return None
+ phone_text=re.fullmatch(r'((?:\+?92|0092|0)?3\d{2}[\s-]?\d{7})\s+(?:send|text|message)\s+(.+)',t,re.I|re.S)
+ if phone_text and not control_payload(phone_text[2]):return {'kind':'text','to':phone_text[1],'text':phone_text[2],'literal':True}
+ targets=groups(t);target=targets[0] if len(targets)==1 else None
+ if SEND.search(t) and has_group_exclusion(t) and not targets:return {'kind':'no_groups'}
+ if SEND.search(t) and len(targets)>1 and not re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return {'kind':'appeals','targets':targets,'amount':amount}
+ if SEND.search(t) and target:
+  if re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return None
+  # Ordinary explicit text, e.g. send hi to GiveLife main, remains text.
+  m=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+(.+?)\s+(?:to|ko|in)\s+(.+)$',t,re.I|re.S)
+  if m and re.search(r'(?i)\s+only\s+',m[2]):m=re.match(r'^(?:send|text|message)\s+(.+?)\s+(?:to|in)\s+(.+?)\s+only\s+.+$',t,re.I|re.S)
+  if m and not control_payload(m[1]) and group(m[2]):return {'kind':'text','text':m[1].strip(),'to':group(m[2]),'literal':True}
+  return {'kind':'appeal','target':target,'amount':amount}
+ if (SEND.search(t) or low.startswith('now send') or low in ('again','do it','go','now','once more','one more time','do it again','repeat','repeat it','send once more','dobara','dubara','phir se','phir se bhejo','dobara bhejo','phir bhejo')) and control_payload(t) or low in ('once more','one more time','do it again','repeat','repeat it','dobara','dubara','phir se','phir bhejo','phir se bhejo','dobara bhejo'):return {'kind':'repeat'}
+ if amount is not None and not SEND.search(t):return {'kind':'amount','amount':amount}
+ m=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
+ if m:
+  if control_payload(m[1]) or re.fullmatch(r'(?i)(?:(?:the|full|current|updated|proper|correct|dm|appeal|message|poster|and|with)\s*)+',m[1]):return {'kind':'appeal_to','to':m[2].strip()}
+  return {'kind':'text','text':m[1].strip(),'to':m[2].strip(),'literal':True}
+ # Unqualified "send jr account" needs contact understanding, never send those words literally.
+ # Custom text remains explicit via send <text> to <recipient>, or the assistant with conversation context.
+ if target and re.sub(r'\b(group|groups|in|to|on)\b','',low).strip() in [norm(a) for a in ALIASES[target]]:return {'kind':'select','target':target}
+ return None
+
+, '', q[2].strip()).strip(),'literal':True}
+ amount=balance_amount(t)
+ lead=re.fullmatch(r'(?:now|ab|abhi|only|just|total|so)\s+(.+)',t,re.I)
+ if amount is None and lead and not SEND.search(t):amount=balance_amount(lead[1])
+ # A trailing speed word modifies the action, not the recipient's name.
+ # E.g. "send thanks akhtar to Akhtar fast" targets Akhtar, not "Akhtar fast".
+ def recipient(v):
+  return re.sub(r'(?i)\\s+(?:fast|quickly|asap|immediately|right now)\\s*[!.]*
+ explicit=re.match(r'^(?:please\s+)?(?:send|resend|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
+ payload=re.sub(r'(?i)(?:rs\.?\s*)?\d[\d,]*(?:\.\d+)?\s*k?','',explicit[1]) if explicit and amount is not None else explicit[1] if explicit else ''
+ if explicit and not control_payload(payload):
+  return {'kind':'text','text':explicit[1].strip(),'to':group(recipient(explicit[2])) or recipient(explicit[2]),'literal':True}
+ # A negative, a question about delivery, or a schedule must not dispatch now.
+ if re.search(r'\b(don t|dont|do not|never|not now|did you|have you|was it|schedule|daily|every day|tomorrow)\b',low):return None
+ if re.search(r'\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',t,re.I):return None
+ phone_text=re.fullmatch(r'((?:\+?92|0092|0)?3\d{2}[\s-]?\d{7})\s+(?:send|text|message)\s+(.+)',t,re.I|re.S)
+ if phone_text and not control_payload(phone_text[2]):return {'kind':'text','to':phone_text[1],'text':phone_text[2],'literal':True}
+ targets=groups(t);target=targets[0] if len(targets)==1 else None
+ if SEND.search(t) and has_group_exclusion(t) and not targets:return {'kind':'no_groups'}
+ if SEND.search(t) and len(targets)>1 and not re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return {'kind':'appeals','targets':targets,'amount':amount}
+ if SEND.search(t) and target:
+  if re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return None
+  # Ordinary explicit text, e.g. send hi to GiveLife main, remains text.
+  m=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+(.+?)\s+(?:to|ko|in)\s+(.+)$',t,re.I|re.S)
+  if m and re.search(r'(?i)\s+only\s+',m[2]):m=re.match(r'^(?:send|text|message)\s+(.+?)\s+(?:to|in)\s+(.+?)\s+only\s+.+$',t,re.I|re.S)
+  if m and not control_payload(m[1]) and group(m[2]):return {'kind':'text','text':m[1].strip(),'to':group(m[2]),'literal':True}
+  return {'kind':'appeal','target':target,'amount':amount}
+ if (SEND.search(t) or low.startswith('now send') or low in ('again','do it','go','now','once more','one more time','do it again','repeat','repeat it','send once more','dobara','dubara','phir se','phir se bhejo','dobara bhejo','phir bhejo')) and control_payload(t) or low in ('once more','one more time','do it again','repeat','repeat it','dobara','dubara','phir se','phir bhejo','phir se bhejo','dobara bhejo'):return {'kind':'repeat'}
+ if amount is not None and not SEND.search(t):return {'kind':'amount','amount':amount}
+ m=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
+ if m:
+  if control_payload(m[1]) or re.fullmatch(r'(?i)(?:(?:the|full|current|updated|proper|correct|dm|appeal|message|poster|and|with)\s*)+',m[1]):return {'kind':'appeal_to','to':m[2].strip()}
+  return {'kind':'text','text':m[1].strip(),'to':m[2].strip(),'literal':True}
+ # Unqualified "send jr account" needs contact understanding, never send those words literally.
+ # Custom text remains explicit via send <text> to <recipient>, or the assistant with conversation context.
+ if target and re.sub(r'\b(group|groups|in|to|on)\b','',low).strip() in [norm(a) for a in ALIASES[target]]:return {'kind':'select','target':target}
+ return None
+
+, '', str(v).strip()).strip()
  # Resolve a literal payload and its destination before scanning aliases inside it.
  explicit=re.match(r'^(?:please\s+)?(?:send|resend|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
  payload=re.sub(r'(?i)(?:rs\.?\s*)?\d[\d,]*(?:\.\d+)?\s*k?','',explicit[1]) if explicit and amount is not None else explicit[1] if explicit else ''

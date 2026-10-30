@@ -7376,3 +7376,264 @@ html body .live .autosw .lbl {
   background: transparent !important;
   color: var(--ink) !important;
 }
+
+/* ===== 13. Responsive icons and small phones: dots and chevrons are centred and never touch an edge; donor tabs and rows
+   fit from 320px up. ===== */
+html body .brandbar .connect-badge {
+  display: grid !important;
+  place-items: center;
+  padding: 0 !important;
+}
+html body .brandbar .connect-badge::before {
+  position: static !important;
+  margin: 0 !important;
+  inset: auto !important;
+}
+html body .live .livebar {
+  padding-inline: 14px !important;
+  gap: 10px;
+  align-items: center;
+  box-shadow: none !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+html body .live .livebar .pulse {
+  flex: none;
+  margin: 0;
+}
+html body .live .livebar em {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+}
+html body .live .autosw .knob {
+  flex: none;
+}
+@media(max-width:430px) {
+  html body .donor-page .donor-tabs {
+    gap: 4px;
+  }
+  html body .donor-page .donor-tabs button {
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 2px;
+    min-width: 0;
+    line-height: 1.15;
+  }
+  html body .donor-page .donor-tabs button .tab-count {
+    min-width: 0;
+    padding-inline: 6px;
+  }
+  html body .donor-page .donor-row {
+    grid-template-columns: 34px minmax(0, 1fr) 52px 70px 60px 36px;
+    column-gap: 6px;
+  }
+  html body .donor-page .donor-row :is(.donor-dm, .donor-status, .donor-amount, .donor-more > summary) {
+    min-width: 0;
+    width: 100%;
+    padding-inline: 4px;
+  }
+}
+@media(max-width:359px) {
+  html body .donor-page .donor-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  html body .donor-page .donor-tabs button {
+    flex-direction: row;
+    gap: 6px;
+  }
+  html body .donor-page .donor-row {
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 38px;
+    row-gap: 4px;
+  }
+  html body .donor-page .donor-row .donor-star { grid-area: 1 / 1; }
+  html body .donor-page .donor-row .donor-identity { grid-area: 1 / 2 / 2 / 5; }
+  html body .donor-page .donor-row .donor-more { grid-area: 1 / 5; }
+  html body .donor-page .donor-row .donor-dm { grid-area: 2 / 2; }
+  html body .donor-page .donor-row .donor-status { grid-area: 2 / 3; }
+  html body .donor-page .donor-row .donor-amount { grid-area: 2 / 4; }
+}
+html body .brandbar .connect-badge {
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+@media(max-width:359px) {
+  html body .donor-page .donor-row {
+    height: auto !important;
+    min-height: 96px;
+    padding-block: 8px;
+    align-items: center;
+    contain-intrinsic-size: auto 96px;
+  }
+}
+html body .brandbar .connect-badge {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== 14. Easy-on-the-eyes long replies: a lighter solid sheet, softer off-white text, blocks never split across columns
+   (a heading always stays with its text), clear column rules. ===== */
+:root[data-theme=dark] {
+  --sheet: #232839;
+  --sheet-ink: #eceff6;
+}
+@media(prefers-color-scheme:dark) {
+  :root:not([data-theme=light]) {
+    --sheet: #232839;
+    --sheet-ink: #eceff6;
+  }
+}
+html body :is(.talk, .hist) .e.bot.cols2,
+html body :is(.talk, .hist) .e.bot.cols3 {
+  column-gap: 40px;
+  column-rule: 1px solid color-mix(in srgb, var(--sheet-ink) 16%, transparent);
+}
+html body :is(.talk, .hist) .e.bot :is(.r-num .rd, .r-lead, .r-bullet, p) {
+  color: color-mix(in srgb, var(--sheet-ink) 88%, transparent);
+}
+html body :is(.talk, .hist) .e.bot :is(.r-num .rt, .r-head, strong) {
+  color: var(--sheet-ink);
+}
+
+/* The WhatsApp status dot sits exactly in the middle of its circle at every size */
+html body .brandbar .connect-badge {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  padding: 0 !important;
+}
+html body .brandbar .connect-badge::before {
+  position: static !important;
+  inset: auto !important;
+  margin: 0 !important;
+  transform: none !important;
+  flex: none;
+}
+/* "tight" replies keep a readable line height (1.42); the fitter picks a smaller size or another column count instead */
+html body :is(.talk, .hist) .e.bot.tight,
+html body :is(.talk, .hist) .e.bot.tight .reply-line {
+  line-height: 1.42;
+}
+
+/* ===== 14b. Scannable replies: the eye lands on colour first (headings, number badges), then bold titles, then softer detail.
+   Contrast stays above 7:1 on the sheet. ===== */
+:root {
+  --r-head: #0e7490;
+  --r-em: #4b4fb8;
+  --r-key: #0a0c14;
+}
+:root[data-theme=dark] {
+  --r-head: #7dd3fc;
+  --r-em: #c7d2fe;
+  --r-key: #ffffff;
+  --r-amt: #fcd34d;
+}
+@media(prefers-color-scheme:dark) {
+  :root:not([data-theme=light]) {
+    --r-head: #7dd3fc;
+    --r-em: #c7d2fe;
+    --r-key: #ffffff;
+    --r-amt: #fcd34d;
+  }
+}
+:root:not([data-theme=dark]) {
+  --r-amt: #92400e;
+}
+html body :is(.talk, .hist) .e.bot .r-head,
+html body :is(.talk, .hist) .e.bot .r-head strong {
+  color: var(--r-head) !important;
+  letter-spacing: 0.01em;
+}
+html body :is(.talk, .hist) .e.bot .r-head {
+  border-left-color: var(--r-head) !important;
+  border-image: linear-gradient(180deg, #0e7490, #6d4ef0) 1 !important;
+}
+html body :is(.talk, .hist) .e.bot .rn {
+  background: linear-gradient(135deg, #0e7490, #2f6fe8 55%, #6d4ef0) !important;
+  color: #fff !important;
+  font-weight: 700;
+  box-shadow: 0 4px 10px -4px #2f6fe899;
+}
+html body :is(.talk, .hist) .e.bot .rt {
+  color: var(--r-key) !important;
+  font-weight: 700;
+}
+html body :is(.talk, .hist) .e.bot .rd {
+  color: color-mix(in srgb, var(--sheet-ink) 82%, transparent) !important;
+}
+html body :is(.talk, .hist) .e.bot strong {
+  color: var(--r-key);
+  font-weight: 700;
+}
+html body :is(.talk, .hist) .e.bot em {
+  color: var(--r-em);
+}
+html body :is(.talk, .hist) .e.bot .r-bullet::before {
+  background: var(--r-head) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--r-head) 22%, transparent);
+}
+html body :is(.talk, .hist) .e.bot .r-ask {
+  color: var(--r-key) !important;
+  font-weight: 650;
+}
+/* money amounts (Rs. 15,000) are the first thing a reader looks for: warm colour */
+html body :is(.talk, .hist) .e.bot .amt {
+  color: var(--r-amt);
+  font-weight: 700;
+}
+/* the donors page screen at 320px: nothing sticks out of the right edge */
+@media(max-width:359px) {
+  html body .donor-page .donor-bottom {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  html body .donor-page .donor-bottom #donorMainBottom {
+    min-width: 0;
+    flex: 1 1 96px;
+    margin-left: 0;
+  }
+  html body .donor-page .donor-row {
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 38px;
+    padding-inline: 6px;
+  }
+  html body .donor-page .donor-row .donor-more {
+    min-width: 0;
+    width: 36px;
+    justify-self: end;
+  }
+}
+@media(max-width:359px) {
+  html body .donor-page .donor-row .donor-more {
+    grid-column: 5;
+    width: 100%;
+    min-width: 0;
+    max-width: 38px;
+  }
+  html body .donor-page .donor-row .donor-more > summary {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 0;
+  }
+  html body .donor-page .donor-row[data-donated=true] {
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 38px;
+  }
+}
+@media(max-width:359px) {
+  html body .donor-page .donor-row,
+  html body .donor-page .donor-row[data-donated=true] {
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 38px !important;
+    grid-auto-rows: auto;
+  }
+}
+@media(max-width:359px) {
+  html body .donor-page .donor-row:not([data-donated=true]) {
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 38px !important;
+  }
+}

@@ -79,6 +79,7 @@ def send_custom(body):
   if read_left()<=0:raise ValueError('Not sent: the case is complete (Rs. 0 left). Set a new amount left before sending an appeal.')
   normal=donors().book.normal_amount_for_phone(body.get('phone','')) if body.get('phone') else 0
   message=greet_text(message,body.get('name',''),body.get('gender','Brother'),normal)
+  if dm_composer.unverified_medical_claim(message):raise ValueError('Not sent: the saved DM contains an unverified claim about spreading paralysis or finger numbness. Correct the caption first.')
   if not dm_composer.complete(message):raise ValueError('The full DM is incomplete. Restore its paragraphs and payment details before sending.')
  if not is_group and body.get('kind') in ('volunteer_batch','volunteer_manual'):
   message=message.replace('{name}',str(body.get('name') or '').strip() or 'friend')

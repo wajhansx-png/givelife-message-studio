@@ -59,7 +59,7 @@
      const acts=make('div','team-actions');acts.append(ok,no);row.append(txt,acts);c.append(row)}
     const m=more(review.length-lim.check);if(m)c.append(m);body.append(c)}
    if(left.length&&lim.left>0){const c=make('section','team-card');c.append(make('h2','','Left'));
-    for(const t of left.slice(0,lim.left)){const row=make('div','team-task');row.dataset.s=t.status;const txt=make('div','team-text');txt.append(make('strong','',t.text),make('span','team-due',(t.status==='Late'?'Late · was due ':'Due ')+t.due_label));row.append(txt,chip(t.status));
+    for(const t of left.slice(0,lim.left)){const row=make('div','team-task');row.dataset.s=t.status;const txt=make('div','team-text');txt.append(make('strong','',t.text),make('span','team-due',t.delivery_uncertain?'WhatsApp send unconfirmed · check before retrying':(t.status==='Late'?'Late · was due ':'Due ')+t.due_label));row.append(txt,chip(t.delivery_uncertain?'Check send':t.status));
      const x=make('button','team-x','✕');x.type='button';x.setAttribute('aria-label','Cancel '+t.text);x.onclick=()=>{if(confirm('Cancel this task?'))act({action:'cancel',id:t.id},'Cancelled.')};row.append(x);c.append(row)}
     const m=more(left.length-lim.left);if(m)c.append(m);body.append(c)}
    if(lim.done&&done.length){const c=make('p','team-donelist','Done ✓  '+done.map(t=>t.text).join(' · '));body.append(c)}

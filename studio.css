@@ -8584,3 +8584,21 @@ html body .donor-page .bank-message.bank-detail > header .tool {
   text-overflow: clip;
   overflow-wrap: anywhere;
 }
+
+
+/* Mobile chat canvas: remove visible color seam between conversation and bottom controls. */
+@media (max-width: 899px) {
+  :root { --mobile-chat-canvas: #f7f8fb; }
+  :root[data-theme="dark"] { --mobile-chat-canvas: #171a25; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --mobile-chat-canvas: #171a25; }
+  }
+  html body dialog#hist[open],
+  html body dialog#hist[open] > header,
+  html body dialog#hist[open] #histLog,
+  html body dialog#hist[open] .chat-return,
+  html body dialog#hist[open] #histNextActions {
+    background: var(--mobile-chat-canvas) !important;
+    background-image: none !important;
+  }
+}

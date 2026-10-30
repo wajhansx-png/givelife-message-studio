@@ -84,8 +84,11 @@ class Knowledge:
    overlap=len(query_tokens & tokens(item.get('text','')))
    # Unrelated memories must not crowd out a correction about the current topic.
    # General preference requests deliberately retrieve every active preference.
-   if not overlap and not broad: continue
-   item['score']=4+overlap*3+(2 if item.get('key') else 0);out.append(item)
+   topic=item.get('key') or ''
+   format_query=bool(re.search(r'(?i)\b(?:caption|format(?:ting)?|markup|bold|italic|paragraphs?|spacing)\b',str(query)))
+   related_format=format_query and topic.startswith('format:')
+   if not overlap and not broad and not related_format: continue
+   item['score']=4+overlap*3+(2 if item.get('key') else 0)+(3 if related_format else 0);out.append(item)
   for item in turns:
    overlap=len(query_tokens & tokens(item.get('text','')))
    if overlap>=2:

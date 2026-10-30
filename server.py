@@ -1231,6 +1231,18 @@ def record_delivery(jid,text,result):
  if STORE:STORE.put('last_deliveries',DELIVERIES)
 
 def resolve_person(to):
+ # The registered teammate is a verified app contact even when WhatsApp's
+ # contact search does not contain their display name.
+ candidate=str(to or '').strip()
+ if candidate and re.fullmatch(r'[A-Za-z][A-Za-z\s._-]{0,60}',candidate):
+  try:
+   teammate=donors().team._load().get('member') or {}
+   name=str(teammate.get('name') or '').strip()
+   if name and candidate.casefold() in (name.casefold(),name.split()[0].casefold()):
+    number=norm_phone(str(teammate.get('phone') or ''))
+    if number:return number+'@s.whatsapp.net'
+  except (AttributeError,KeyError,TypeError,ValueError):
+   pass
  key=manual_commands.group(to)
  if key:return key
  if norm_phone(to) or str(to).endswith(('@s.whatsapp.net','@g.us')):return str(to)

@@ -17,13 +17,16 @@
  const STEPS=['done','plan','left','check','latest2','say','latest'];
  function draw(force){
   if(!force&&typing())return; /* never rebuild the screen while a field has focus: it would close the phone keyboard */
+  const priorScroll=page.querySelector('.team-body')?.scrollTop||0;
   const typed=page.querySelector('#teamText')?.value;if(typed!==undefined)planText=typed;
+  page.classList.toggle('team-expanded',expanded);
+  if(expanded){build({done:1,plan:Infinity,left:Infinity,check:Infinity,latest2:1,say:1,latest:1});const body=page.querySelector('.team-body');if(body)body.scrollTop=priorScroll;return}
   const lim={done:1,plan:20,left:8,check:4,latest2:1,say:1,latest:1};
   let guard=60;
   while(guard--){build(lim);const body=page.querySelector('.team-body');if(!body||body.scrollHeight<=body.clientHeight+1)break;
    let reduced=false;for(const k of STEPS){if(k==='done'?lim.done>0:lim[k]>(k==='plan'?1:0)){if(k==='done')lim.done=0;else lim[k]--;reduced=true;break}}if(!reduced)break}
  }
- function more(n){return n>0?make('p','team-more','+'+n+' more'):null}
+ function more(n){if(n<=0)return null;const b=make('button','team-more','+'+n+' more · Show all');b.type='button';b.setAttribute('aria-label','Show all '+n+' hidden Team entries');b.onclick=()=>{expanded=true;draw(true)};return b}
  function build(lim){
   page.textContent='';const shell=make('div','team-shell');
   const head=make('header','team-head');const title=make('div','team-title');title.append(make('h1','','Team'));title.append(make('span','team-sub',data?.member?data.member.name+(data.paused?' · paused':''):'Add your teammate to start'));head.append(title);

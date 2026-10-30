@@ -26,7 +26,7 @@ class Cases:
     def _summary(self,snap):
         m=re.search(r'^LEFT:\s*(\d+)',snap.get('state',''),re.M);donors=snap.get('donors',{})
         return {'left':int(m[1]) if m else None,'donors':len(donors),'donated':sum(1 for d in donors.values() if d.get('donated')),'donated_amount':sum(float(d.get('amount') or 0) for d in donors.values() if d.get('donated')),'sent':sum(1 for d in donors.values() if d.get('dm_sent') or d.get('delivery')=='Sent'),'important':sum(1 for d in donors.values() if d.get('important'))}
-    def _apply(self,snap,left=None):
+    def _apply(self,snap,left=None,case_name=None):
         h=self.hub;a=self.app
         if snap:
             (a.DATA/'state.md').write_text(snap['state'],encoding='utf-8');a.persist_file('campaign',a.DATA/'state.md')
@@ -39,7 +39,7 @@ class Cases:
             for key in ('LEFT','POSTER_LEFT'):state=re.sub(r'^'+key+r':.*$',key+': '+str(left),state,flags=re.M) if re.search(r'^'+key+':',state,re.M) else key+': '+str(left)+'\n'+state
             (a.DATA/'state.md').write_text(state,encoding='utf-8');a.persist_file('campaign',a.DATA/'state.md')
             h.book.import_case_fields(None);h.volunteers.book.import_case_fields(None);h.jobs.import_jobs(None);h.volunteers.jobs.import_jobs(None);bank=None
-            a.regenerate_drafts(left)
+            a.regenerate_drafts(left,case_name)
         if a.STORE:a.STORE.put('donor_messages',bank if isinstance(bank,dict) else {})
         h.messages.cache=None
         try:(a.DATA/'donor-messages.json').unlink()
@@ -70,7 +70,7 @@ class Cases:
             self._busy();d=self._load()
             cur=next(c for c in d['cases'] if c['id']==d['current']);cur['snapshot']=self._capture()
             cid=uuid.uuid4().hex;d['cases'].append({'id':cid,'name':name,'created_at':time.time(),'snapshot':None});d['current']=cid
-            self._apply(None,int(left));self._save(d)
+            self._apply(None,int(left),name);self._save(d)
             return {**self.view(),'reply':f'Saved "{cur["name"]}" and started "{name}" from zero. Names and numbers are kept; stars, donated and DM-sent marks start fresh.'}
     def switch(self,cid):
         with self.lock:
@@ -79,6 +79,6 @@ class Cases:
             target=next((c for c in d['cases'] if c['id']==cid),None)
             if not target:raise ValueError('That case was not found.')
             cur=next(c for c in d['cases'] if c['id']==d['current']);cur['snapshot']=self._capture()
-            self._apply(target.get('snapshot'),None) if target.get('snapshot') else self._apply(None,self._summary(cur['snapshot'])['left'] or 0)
+            self._apply(target.get('snapshot'),None) if target.get('snapshot') else self._apply(None,self._summary(cur['snapshot'])['left'] or 0,target['name'])
             d['current']=cid;self._save(d)
             return {**self.view(),'reply':f'Opened "{target["name"]}". "{cur["name"]}" is saved.'}

@@ -11,7 +11,7 @@ SEND = re.compile(r"\b(?:send|resend|text|dm|message|post|share|bhejo|bhej)\b", 
 NEG_SEND = re.compile(r"(?i)\b(?:don't|dont|do not|never|without|no more|not now)\s+(?:\w+\s+){0,3}(?:send|sending|post|posting|dm|dming|message|share)\b")
 COMMAND = re.compile(r"(?i)\b(?:send|post|share|change|edit|rewrite|correct|update|add|remove|delete|set|start|stop|pause|hold|resume|open|create|record|schedule|assign|cancel)\b")
 REF = re.compile(r"(?i)\b(?:it|that|those|this|them|same|again|continue|previous|earlier|above|last|first|second|third|do it)\b|^\s*(?:[1-9]|yes|no|done|ok)\s*[.!]?\s*$")
-DIVIDER = re.compile(r"(?i)\s*(?:;|\n|(?:\b(?:and then|then|also|plus)\s+(?=(?:please\s+)?(?:send|post|start|stop|pause|hold|change|edit|rewrite|update|set|add|delete|create|schedule|cancel)\b)))\s*")
+DIVIDER = re.compile(r"(?i)\s*(?:;|\n|(?:\b(?:and then|and|then|also|plus)\s+(?=(?:please\s+)?(?:send|post|start|stop|pause|hold|change|edit|rewrite|update|set|add|delete|create|schedule|cancel)\b)))\s*")
 CASE_WORDS = re.compile(r"(?i)\b(?:case|patient|child|medical|caption|appeal|amount|remaining|balance)\b")
 STEP_PATTERNS = (
  ('hold',r"\b(?:hold|stop everything|pause everything|stop all|stop sending)\b"),
@@ -78,3 +78,11 @@ def reference_history(text,hist,active_case=''):
  threshold=max(0,scored[0][0]-1.25)
  selected=sorted([x for x in scored if x[0]>=threshold][:2],key=lambda t:t[1])
  return [{'who':'you','text':h['text'][:1400]} for _,_,h in selected]
+
+def compound(text):
+ """True for two independent imperative clauses, not a single post/pace rule."""
+ value=str(text or '').strip()
+ if not value or value[0] in ('"', "'", '>'):return False
+ clauses=[c.strip() for c in DIVIDER.split(value) if c.strip()]
+ if len(clauses)<2:return False
+ return sum(bool(re.search(r"(?i)^\s*(?:please\s+)?(?:send|post|set|update|edit|rewrite|change|start|stop|pause|hold|schedule|create|add|remove|delete|record|assign|open|cancel)\b",c)) for c in clauses)>=2

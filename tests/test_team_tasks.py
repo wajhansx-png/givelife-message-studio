@@ -53,6 +53,14 @@ class Planning(Base):
  def test_nothing_is_sent_until_confirmed_and_plans_expire(self):
   self.t.plan('a\nb deadline 6pm');self.tick(1);self.assertEqual(self.sent,[]);self.at(20)
   with self.assertRaisesRegex(ValueError,'no task plan'):self.t.confirm_plan()
+ def test_a_sentence_is_split_into_tasks_and_night_mode_allows_night_work(self):
+  self.clock[0]=datetime.datetime(2026,10,31,3,13,tzinfo=T.PKT).timestamp()
+  text='Send messages to donors till 4am and also send updates in group by 5am and also more'
+  with self.assertRaisesRegex(ValueError,'night messages'):self.t.plan(text)
+  self.t.night(True);items=self.t.plan(text)['plan']['items']
+  self.assertEqual([(i['text'],i['due_label']) for i in items],[('Send messages to donors','4:00 AM'),('send updates in group','5:00 AM')],'"and also more" is not a task')
+  self.t.confirm_plan();self.t.tick();self.clock[0]+=120;self.t.tick();self.assertTrue(self.sent,'night mode sends at 3 am')
+  self.assertIn('off',self.t.command('team night mode off','team night mode off')['reply'].lower());self.assertTrue(self.t._quiet(self.clock[0]))
  def test_bare_hour_means_the_next_such_hour(self):
   self.assertEqual(self.t.plan('a deadline 6')['plan']['items'][0]['due_label'],'6:00 PM')
  def test_deadline_can_be_a_length_of_time_in_any_common_wording(self):

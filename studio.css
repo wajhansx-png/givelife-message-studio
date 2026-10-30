@@ -8434,3 +8434,10 @@ html body .donor-page .bank-message.bank-detail > header .tool {
     white-space: nowrap;
   }
 }
+
+.team-error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--bad-ink, #f87171);
+  font-weight: 600;
+}

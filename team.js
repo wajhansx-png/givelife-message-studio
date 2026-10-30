@@ -6,10 +6,11 @@
  const badge=make('span','team-badge');badge.hidden=true;launch.append(badge);document.querySelector('.brandbar')?.append(launch);
  let data=null,timer=0,lastUnread=0,planText='',toastTimer=0,addOpen=false;
  const api=async(body)=>{const r=await fetch('/team',body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d};
- function toast(text,bad){let t=document.getElementById('teamToast');if(!t){t=make('div','team-toast');t.id='teamToast';t.setAttribute('role','status');document.body.append(t)}t.textContent=text;t.dataset.bad=String(!!bad);t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.hidden=true},6000)}
+ function toast(text,bad){let t=document.getElementById('teamToast');if(!t){t=make('div','team-toast');t.id='teamToast';t.setAttribute('role','status')}(page.open?page:document.body).append(t);t.textContent=text;t.dataset.bad=String(!!bad);t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.hidden=true},6000)}
  function paintBadge(){const n=data?.unread||0;badge.hidden=!n;badge.textContent=n>9?'9+':String(n);launch.setAttribute('aria-label','Team'+(n?', '+n+' new update'+(n===1?'':'s'):''))}
  async function refresh(quiet){try{const d=await api();const first=data===null;data=d;if(!first&&d.unread>lastUnread){const e=(d.latest||[])[0];toast(e?e.text:'New update from your teammate')}lastUnread=d.unread;paintBadge();if(page.open)draw()}catch(e){console.error('team refresh',e);if(!quiet&&page.open)toast(e.message,true)}}
- async function act(body,ok){try{data={...data,...await api(body)};if(ok)toast(ok);lastUnread=data.unread;paintBadge();draw(true)}catch(e){toast(e.message,true)}}
+ let lastError='';
+ async function act(body,ok){lastError='';try{data={...data,...await api(body)};if(ok)toast(ok);lastUnread=data.unread;paintBadge();draw(true)}catch(e){lastError=e.message;toast(e.message,true);if(page.open)draw(true)}}
  const chip=(s)=>{const c=make('span','team-chip',s==='Reported'?'Needs your check':s);c.dataset.s=s;return c};
  /* One screen, no scrolling. The summary and the add button always show; rows are trimmed from the least important up until everything fits. */
  const STEPS=['latest','done','left','check','plan'];
@@ -39,7 +40,7 @@
     const m=more(data.plan.items.length-lim.plan);if(m)add.append(m);
     const go=make('button','primary','Start tasks');go.type='button';go.onclick=()=>{planText='';addOpen=false;act({action:'confirm'},'Tasks started.')};const ds=make('button','tool','Discard');ds.type='button';ds.onclick=()=>{addOpen=false;act({action:'discard'})};const ar=make('div','team-actions');ar.append(go,ds);add.append(ar)}
    else{add.append(make('h2','','Write today\'s tasks'));const ta=make('textarea','');ta.id='teamText';ta.name='team_tasks';ta.rows=4;ta.maxLength=3000;ta.value=planText;ta.placeholder='One task per line, then a deadline:\n1) Post in the 3 groups\n2) Update the sheet\nDeadline 6pm';ta.setAttribute('aria-label','Today\'s tasks');
-    const go=make('button','primary','Plan the tasks');go.type='button';go.onclick=()=>act({action:'plan',text:ta.value});const x=make('button','tool','Cancel');x.type='button';x.onclick=()=>{planText='';addOpen=false;draw(true)};const ar=make('div','team-actions');ar.append(go,x);add.append(ta,ar)}
+    const go=make('button','primary','Plan the tasks');go.type='button';go.onclick=()=>act({action:'plan',text:ta.value});if(lastError)add.append(make('p','team-error',lastError));if(/night|quiet/i.test(lastError)){const nb=make('button','tool','Send at night too');nb.type='button';nb.onclick=()=>act({action:'night',on:true},'Night messages are on. Plan again.');add.append(nb)}const x=make('button','tool','Cancel');x.type='button';x.onclick=()=>{planText='';addOpen=false;draw(true)};const ar=make('div','team-actions');ar.append(go,x);add.append(ta,ar)}
    body.append(add)}
   else{
    const all=data.tasks,done=all.filter(t=>t.status==='Done'),review=all.filter(t=>t.status==='Reported'),left=all.filter(t=>['Waiting','Asked','Late'].includes(t.status)).sort((a,b)=>(b.status==='Late')-(a.status==='Late')||a.due_at-b.due_at);

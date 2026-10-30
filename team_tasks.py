@@ -29,7 +29,7 @@ ALL_WORDS = re.compile(r"(?i)\b(?:all|everything|both|sab|sub|saare|sare)\b")
 STOP = {'done', 'fini', 'comp', 'with', 'that', 'this', 'have', 'been', 'will', 'from', 'task', 'what', 'your', 'they', 'them', 'then', 'just', 'also', 'here', 'there', 'okay', 'sure', 'thanks', 'thank', 'sent', 'shar', 'subm', 'uplo', 'read', 'when', 'about', 'abou', 'later', 'soon', 'bhai', 'sir', 'brot', 'much', 'many', 'some', 'more', 'only', 'it', 'was', 'were'}
 MIN_SLOT = 10 * 60
 CLOCK = r"(?:\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)|\d{1,2}:\d{2})"
-DEADLINE = re.compile(r"(?i)\b(?:(?:deadline|due|latest|all by|everything by|finish(?:ed)? by|complete(?:d)? by|till|until|tak)\s*(?:is\s*)?(?:(tomorrow|tmrw|kal)\s+)?(?:at\s+)?(" + CLOCK + r"|\d{1,2}(?!\d|\s*(?:hours?|hrs?|h\b|minutes?|mins?|m\b)))(?![\d:])|(?:(?:deadline|due)\s*(?:is\s*)?(?:in\s+)?|in\s+|within\s+)(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)\b)")
+DEADLINE = re.compile(r"(?i)\b(?:(?:deadline|due|latest|all by|everything by|finish(?:ed)? by|complete(?:d)? by)\s*(?:is\s*)?(?:(tomorrow|tmrw|kal)\s+)?(?:at\s+)?(" + CLOCK + r"|\d{1,2}(?!\d|\s*(?:hours?|hrs?|h\b|minutes?|mins?|m\b)))(?![\d:])|(?:(?:deadline|due)\s*(?:is\s*)?(?:in\s+)?|in\s+|within\s+)(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)\b)")
 
 
 def fmt_time(ts, now=None):
@@ -83,7 +83,7 @@ def parse_deadline(text, now):
 def split_items(text):
     """One task per line, per number (1) 2.), per bullet or per semicolon."""
     text = text.replace('\r', '\n')
-    parts = re.split(r"\n+|;|(?:(?<=\s)|^)\(?\d{1,2}[.)]\s+|(?:(?<=\s)|^)[-•*▪]\s+", text)
+    parts = re.split(r"\n+|;|(?:(?<=\s)|^)\(?\d{1,2}[.)]\s+|(?:(?<=\s)|^)[-•*▪]\s+|\s+(?:and also|also|then|after that|plus|aur phir|phir)\s+", text)
     out = []
     for p in parts:
         p = re.sub(r"^\s*(?:\d{1,2}[.)]\s*)", '', (p or '').strip(' ,-•*▪\t'))
@@ -92,7 +92,7 @@ def split_items(text):
     return out
 
 
-def plan_tasks(text, now, quiet=(23, 7)):
+def plan_tasks(text, now, quiet=(23, 7)):   # quiet=None sends at any hour
     """Turn the owner's text into timed tasks. Raises ValueError with a clear reason. Nothing is saved or sent."""
     text = str(text or '').strip()
     if not text:
@@ -101,11 +101,11 @@ def plan_tasks(text, now, quiet=(23, 7)):
     items = []
     for raw in split_items(body):
         own, clean = None, raw
-        m = re.search(r"(?i)\s*(?:\(|\b)(?:by|at|before)\s+(" + CLOCK + r")\)?\s*$", raw)
+        m = re.search(r"(?i)\s*(?:\(|\b)(?:by|at|before|till|until|tak)\s+(" + CLOCK + r")\)?[\s.!]*$", raw)
         if m:
             own = _clock(m[1], now);clean = raw[:m.start()].strip(' ,-')
         clean = clean.strip()
-        if clean:
+        if clean and clean.casefold().strip(' .') not in ('more', 'etc', 'others', 'other things', 'and more', 'some more', 'baqi', 'aur'):
             items.append({'text': clean[:300], 'own_due': own})
     if not items:
         raise ValueError('I found no tasks in that text.')
@@ -133,7 +133,7 @@ def plan_tasks(text, now, quiet=(23, 7)):
             start = now + k * slot;due = start + slot;k += 1
         out.append({'text': i['text'], 'start_at': start, 'due_at': due})
     # nothing is sent at night: a task that would start in quiet hours starts when they end, and must still leave time to do it
-    for t in out:
+    for t in (out if quiet else []):
         h = datetime.datetime.fromtimestamp(t['start_at'], PKT)
         if h.hour >= quiet[0] or h.hour < quiet[1]:
             morning = h.replace(hour=quiet[1], minute=5, second=0, microsecond=0)
@@ -141,7 +141,7 @@ def plan_tasks(text, now, quiet=(23, 7)):
                 morning += datetime.timedelta(days=1)
             t['start_at'] = morning.timestamp()
             if t['due_at'] < t['start_at'] + MIN_SLOT:
-                raise ValueError(f'"{t["text"][:40]}" would start in quiet hours ({quiet[0] - 12} pm to {quiet[1]} am), when no messages go out. Give it a deadline after {quiet[1]} am or earlier than {quiet[0] - 12} pm.')
+                raise ValueError(f'"{t["text"][:40]}" would start at night (quiet hours {quiet[0] - 12} pm to {quiet[1]} am, no messages go out), but its deadline is before the morning. Give it a later deadline, or turn on night messages (quiet hours).')
     return out
 
 
@@ -186,7 +186,7 @@ class TeamTasks:
             if not isinstance(raw, dict):
                 raw = {}
             for k, v in (('member', None), ('tasks', []), ('feed', []), ('plan', None), ('seen', []), ('counter', 0), ('paused', False), ('unread', 0),
-                         ('last_sent', 0), ('pending_notes', []), ('last_note', 0), ('outbox', []), ('greeted', ''), ('last_clarify', 0)):
+                         ('last_sent', 0), ('pending_notes', []), ('last_note', 0), ('outbox', []), ('greeted', ''), ('last_clarify', 0), ('night', False)):
                 raw.setdefault(k, v)
             self._cache = raw
         return self._cache
@@ -226,7 +226,7 @@ class TeamTasks:
             if d['plan'] and d['plan']['created'] > now - 900:
                 plan = {'items': [{**i, 'due_label': fmt_time(i['due_at'], now), 'start_label': fmt_time(i['start_at'], now)} for i in d['plan']['items']]}
             return {'member': {'name': d['member']['name']} if d['member'] else None, 'tasks': [self._public_task(t, now) for t in d['tasks'] if t['status'] != 'Cancelled'],
-                    'unread': d['unread'], 'plan': plan, 'paused': d['paused'], 'now_label': fmt_time(now),
+                    'unread': d['unread'], 'plan': plan, 'paused': d['paused'], 'night': d['night'], 'now_label': fmt_time(now),
                     'counts': {s: sum(1 for t in d['tasks'] if t['status'] == s) for s in ('Waiting', 'Asked', 'Reported', 'Late', 'Done')},
                     'latest': [{'label': fmt_time(e['at'], now), 'text': e['text']} for e in d['feed'] if e['kind'] in ('update', 'report', 'blocked', 'proof')][-3:][::-1]}
 
@@ -247,7 +247,7 @@ class TeamTasks:
             d = self._load()
             if not d['member']:
                 raise ValueError('Add your teammate first (name and WhatsApp number).')
-            items = plan_tasks(text, self.now(), self.QUIET)
+            items = plan_tasks(text, self.now(), None if d['night'] else self.QUIET)
             d['plan'] = {'created': self.now(), 'items': items};self._save()
             return self.view()
 
@@ -335,6 +335,10 @@ class TeamTasks:
         with self.lock:
             self._load()['paused'] = bool(on);self._save();return self.view()
 
+    def night(self, on):
+        with self.lock:
+            self._load()['night'] = bool(on);self._save();return self.view()
+
     def mark_read(self):
         with self.lock:
             self._load()['unread'] = 0;self._save();return self.view()
@@ -372,6 +376,8 @@ class TeamTasks:
 
     # ---- sending: reserve under the lock, talk to WhatsApp outside it, then record the result
     def _quiet(self, now):
+        if self._load()['night']:
+            return False
         h = datetime.datetime.fromtimestamp(now, PKT).hour
         a, b = self.QUIET
         return h >= a or h < b
@@ -612,6 +618,10 @@ class TeamTasks:
             self.cancel(m[1]);return {'reply': f'Task #{m[1]} cancelled.', 'team_changed': True}
         if low in ('pause team', 'pause tasks', 'pause team follow-up'):
             self.pause(True);return {'reply': 'Team follow-up paused. No messages will go to him until you resume.', 'team_changed': True}
+        if low in ('team night mode on', 'night mode on', 'send at night', 'allow night messages'):
+            self.night(True);return {'reply': 'Night messages are on. The app may message him at any hour.', 'team_changed': True}
+        if low in ('team night mode off', 'night mode off', 'no night messages'):
+            self.night(False);return {'reply': 'Night messages are off. Nothing goes out from 11 pm to 7 am.', 'team_changed': True}
         if low in ('resume team', 'resume tasks'):
             self.pause(False);return {'reply': 'Team follow-up resumed.', 'team_changed': True}
         return None

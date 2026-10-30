@@ -269,3 +269,11 @@ test('team screen keeps the focused field (and the phone keyboard) when the wind
  await page.waitForTimeout(9500);   // past one automatic refresh
  expect(await page.evaluate(()=>document.activeElement?.id)).toBe('teamText');expect(await box.inputValue()).toBe('Post in groups');
 });
+
+test('team: a planning error is visible inside the Team screen (not hidden behind it) and night messages can be switched on',async({page,request})=>{
+ await open(page,request,390,700);await request.post('/__test/seed',{headers:auth,data:{team_demo:[[1,'Asked']]}});
+ await page.locator('#openTeam').click();await page.getByRole('button',{name:'+ Add tasks'}).click();
+ await page.locator('#teamText').fill('Do the thing');await page.getByRole('button',{name:'Plan the tasks'}).click();
+ const err=page.locator('.team-page .team-error');await expect(err).toBeVisible();await expect(err).toContainText('deadline');
+ const box=await err.boundingBox();expect(box.y).toBeGreaterThan(0);expect(box.y+box.height).toBeLessThan(700);
+});

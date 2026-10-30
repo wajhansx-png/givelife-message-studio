@@ -72,5 +72,9 @@ def reference_history(text,hist,active_case=''):
   score=2.5*overlap+recency+2*case_match-(7 if other_case else 0)
   scored.append((score,i,h))
  scored.sort(key=lambda t:(t[0],t[1]),reverse=True)
- selected=sorted(scored[:3],key=lambda t:t[1])
+ if not scored:return []
+ # Avoid smuggling an unrelated older case into "fix that"; only include
+ # context whose topic is close to the most relevant owner instruction.
+ threshold=max(0,scored[0][0]-1.25)
+ selected=sorted([x for x in scored if x[0]>=threshold][:2],key=lambda t:t[1])
  return [{'who':'you','text':h['text'][:1400]} for _,_,h in selected]

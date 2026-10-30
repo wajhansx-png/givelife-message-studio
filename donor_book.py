@@ -37,18 +37,19 @@ def parse_contact(text, name=''):
     return label or 'Donor', phone
 
 class DonorBook:
+    KEY='donor_book';FILE='donor-book.json'
     def __init__(self, folder, store=None):
-        self.path=Path(folder)/'donor-book.json'; self.store=store; self.lock=threading.RLock();self._cache=None
+        self.path=Path(folder)/self.FILE; self.store=store; self.lock=threading.RLock();self._cache=None
     def _load(self):
         if self._cache is not None:return copy.deepcopy(self._cache)
-        raw=self.store.get('donor_book') if self.store else None
+        raw=self.store.get(self.KEY) if self.store else None
         if raw is None and self.path.exists(): raw=json.loads(self.path.read_text(encoding='utf-8'))
         if raw is None: raw={'version':1,'records':[]}
         if not isinstance(raw,dict) or not isinstance(raw.get('records'),list):
             raise ValueError('Donor records are unavailable. No changes were made.')
         self._cache=copy.deepcopy(raw);return copy.deepcopy(raw)
     def _save(self,data):
-        if self.store: self.store.put('donor_book',data)
+        if self.store: self.store.put(self.KEY,data)
         self._cache=copy.deepcopy(data)
         tmp=self.path.with_suffix('.tmp'); tmp.write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8');tmp.replace(self.path)
     def _public(self,r):

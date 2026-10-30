@@ -7060,3 +7060,196 @@ html body .donor-page .donor-search {
   border-color: transparent !important;
   box-shadow: none !important;
 }
+
+/* ===== 10b. Secondary controls are ghost buttons: no grey fill, a fine light edge, a soft glow on hover.
+   Group destinations sit in darker wells. Colour and shadow only. ===== */
+:root[data-theme=dark] {
+  --fill: #ffffff05;
+  --fill-h: #ffffff0f;
+  --lift: inset 0 0 0 1px #ffffff17;
+  --well: #1b1c23;
+}
+@media(prefers-color-scheme:dark) {
+  :root:not([data-theme=light]) {
+    --fill: #ffffff05;
+    --fill-h: #ffffff0f;
+    --lift: inset 0 0 0 1px #ffffff17;
+    --well: #1b1c23;
+  }
+}
+:root:not([data-theme=dark]) {
+  --fill: #ffffff;
+  --fill-h: #f4f6fa;
+  --lift: inset 0 0 0 1px #0000001a;
+  --well: #f5f6f9;
+}
+:is(.ghost, .tool, .chips button, #sendAll, .rail-quick button, .donor-back-bottom, .donor-bulk, .leftchip, #donorPace, .donor-back, .dm, .donor-row .donor-dm, .donor-row .donor-status, .donor-more > summary, .big:not(.all):not(.primary):not(.main), .big.all, .copy, .message-copy, .clip, .keys, #gear, #openDonors, .donor-launch, .desktop-preview, .connect-badge, #auto, .autosw, #chatExpand, #showMsg, .chat-open, .donor-msgs, .send-important, .donor-total) {
+  background: var(--fill) !important;
+  box-shadow: var(--lift) !important;
+}
+:is(.ghost, .tool, .chips button, #sendAll, .rail-quick button, .donor-back-bottom, .donor-bulk, .leftchip, #donorPace, .donor-back, .dm, .donor-row .donor-dm, .donor-row .donor-status, .donor-more > summary, .big:not(.all):not(.primary):not(.main), .big.all, .copy, .message-copy, .clip, .keys, #gear, #openDonors, .donor-launch, .desktop-preview, .connect-badge, .donor-msgs, .send-important):hover {
+  background: var(--fill-h) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 22%, transparent) !important;
+}
+/* group destinations: darker wells inside the lighter card */
+:is(.chips button, .big:not(.primary):not(.main), #sendAll) {
+  background: var(--well) !important;
+}
+:is(.donor-row .donor-amount, .donor-search) {
+  background: var(--well) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent) !important;
+}
+.donor-page .donor-tabs, .brandbar .seg {
+  background: var(--well) !important;
+}
+.donor-row .donor-status, .donor-row .donor-dm {
+  color: var(--ink) !important;
+}
+
+/* ===== 10c. Gradient: deep navy page with soft teal and violet glows, glassy cards, and one teal-blue-violet gradient
+   for main actions and the selected tab (white text stays above 4.5:1 on every stop). Colour only. ===== */
+:root {
+  --grad: linear-gradient(135deg, #0e7490 0%, #2f6fe8 52%, #6d4ef0 100%);
+  --grad-h: linear-gradient(135deg, #0b7285 0%, #2a63d6 52%, #5b3fd6 100%);
+}
+:root[data-theme=dark] {
+  --page: radial-gradient(1100px 700px at 8% -12%, #0e749040, transparent 62%), radial-gradient(900px 640px at 105% 0%, #6d4ef038, transparent 60%), radial-gradient(1200px 800px at 50% 125%, #2f6fe82e, transparent 62%), #14151c;
+  --card-bg: linear-gradient(165deg, #262836e6 0%, #1c1d27e6 100%);
+  --well: #15161dcc;
+}
+@media(prefers-color-scheme:dark) {
+  :root:not([data-theme=light]) {
+    --page: radial-gradient(1100px 700px at 8% -12%, #0e749040, transparent 62%), radial-gradient(900px 640px at 105% 0%, #6d4ef038, transparent 60%), radial-gradient(1200px 800px at 50% 125%, #2f6fe82e, transparent 62%), #14151c;
+    --card-bg: linear-gradient(165deg, #262836e6 0%, #1c1d27e6 100%);
+    --well: #15161dcc;
+  }
+}
+:root:not([data-theme=dark]) {
+  --page: radial-gradient(1100px 700px at 8% -12%, #cdeff4, transparent 62%), radial-gradient(900px 640px at 105% 0%, #e4dcff, transparent 60%), radial-gradient(1200px 800px at 50% 125%, #dbe7ff, transparent 62%), #f3f5fa;
+  --card-bg: linear-gradient(165deg, #ffffffeb 0%, #fbfcffeb 100%);
+  --well: #f4f6fb;
+}
+html body, html body .donor-page, html body .hist {
+  background: var(--page) !important;
+  background-attachment: fixed !important;
+}
+:is(.card, .action-rail, .talk, .live, .brandbar, .donor-table, dialog:not(.donor-page)) {
+  background: var(--card-bg) !important;
+  box-shadow: inset 0 1px 0 #ffffff12, 0 24px 48px -28px #00000080 !important;
+}
+:root:not([data-theme=dark]) :is(.card, .action-rail, .talk, .live, .brandbar, .donor-table, dialog:not(.donor-page)) {
+  box-shadow: inset 0 0 0 1px #0000000d, 0 18px 40px -26px #1d2a5a40 !important;
+}
+.action-rail :is(.card, .live, .talk, .brandbar) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.e.bot {
+  background: #ffffff06 !important;
+  box-shadow: inset 0 0 0 1px #ffffff10 !important;
+}
+:root:not([data-theme=dark]) .e.bot {
+  background: #ffffff !important;
+  box-shadow: inset 0 0 0 1px #0000000f, 0 10px 30px -22px #1d2a5a40 !important;
+}
+:is(.prim .main, .composer .go, .send-donors, .donor-add, .primary, .go, #batchStart, .donor-page .donor-tabs button[aria-selected=true], .seg button[aria-pressed=true], html body .brandbar .seg button[aria-pressed=true], .mark) {
+  background: var(--grad) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 #ffffff33, 0 10px 24px -12px #2f6fe8aa !important;
+}
+:is(.prim .main, .composer .go, .send-donors, .donor-add, .primary, .go, #batchStart):hover {
+  background: var(--grad-h) !important;
+}
+.donor-row[data-important=true] {
+  background: linear-gradient(90deg, #0e749022, #6d4ef00f 60%, transparent) !important;
+}
+:root:not([data-theme=dark]) .donor-row[data-important=true] {
+  background: linear-gradient(90deg, #0e749014, #6d4ef00a 60%, transparent) !important;
+}
+.donor-row {
+  background: transparent;
+}
+html body .talk .log, html body .talk .log-wrap, html body .talk footer, html body .talk .compose-row {
+  background: transparent !important;
+}
+html body :is(.prim .main, .composer .go, .send-donors, .donor-add, .primary, .go, #batchStart, .donor-page .donor-tabs button[aria-selected=true], .brandbar .seg button[aria-pressed=true], .seg button[aria-pressed=true], .mark) {
+  background: var(--grad) !important;
+  color: #fff !important;
+}
+html body :is(.prim .main, .composer .go, .send-donors, .donor-add, .primary, .go, #batchStart, .mark) * {
+  color: #fff !important;
+}
+html body .composer .go svg, html body .mark svg {
+  stroke: #fff !important;
+}
+html body .action-rail :is(.card, .live, .talk, .brandbar) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html:root:not(.no-theme) body :is(.prim .main, .composer .go, .send-donors, .donor-add, .primary, .go, #batchStart, .donor-page .donor-tabs button[aria-selected=true], .brandbar .seg button[aria-pressed=true], .seg button[aria-pressed=true], .mark) {
+  background-color: #2f6fe8 !important;
+  background-image: var(--grad) !important;
+  color: #fff !important;
+}
+
+/* ===== 10d. Chat reading comfort: a calm, nearly flat ink-navy behind the text (no busy gradient where you read),
+   soft off-white text instead of pure white (less glare), and the reply sits on a barely lighter sheet. ===== */
+:root[data-theme=dark] {
+  --read-bg: radial-gradient(120% 70% at 50% 0%, #1b2133 0%, transparent 70%), linear-gradient(180deg, #171a25 0%, #14161f 100%);
+  --read-sheet: #ffffff07;
+  --read-ink: #e4e7ef;
+}
+@media(prefers-color-scheme:dark) {
+  :root:not([data-theme=light]) {
+    --read-bg: radial-gradient(120% 70% at 50% 0%, #1b2133 0%, transparent 70%), linear-gradient(180deg, #171a25 0%, #14161f 100%);
+    --read-sheet: #ffffff07;
+    --read-ink: #e4e7ef;
+  }
+}
+:root:not([data-theme=dark]) {
+  --read-bg: linear-gradient(180deg, #fbfbfd 0%, #f6f7fb 100%);
+  --read-sheet: #ffffff;
+  --read-ink: #1f2230;
+}
+html body .talk, html body .hist .log {
+  background: var(--read-bg) !important;
+}
+html body :is(.talk, .hist) .e.bot {
+  background: var(--read-sheet) !important;
+  color: var(--read-ink) !important;
+}
+html body :is(.talk, .hist) .e.bot :is(strong, b, em) {
+  color: inherit;
+}
+
+/* ===== 10e. The reply sheet: one solid, slightly raised surface (constant contrast on every line), soft off-white text,
+   and a thin teal-to-violet line on the left edge as the only colour. No size change. ===== */
+:root[data-theme=dark] {
+  --sheet: #1e2230;
+  --sheet-ink: #e6e8ee;
+  --sheet-edge: #ffffff0f;
+}
+@media(prefers-color-scheme:dark) {
+  :root:not([data-theme=light]) {
+    --sheet: #1e2230;
+    --sheet-ink: #e6e8ee;
+    --sheet-edge: #ffffff0f;
+  }
+}
+:root:not([data-theme=dark]) {
+  --sheet: #ffffff;
+  --sheet-ink: #1f2230;
+  --sheet-edge: #0000000f;
+}
+html body :is(.talk, .hist) .e.bot {
+  background: linear-gradient(180deg, #0e7490, #2f6fe8 55%, #6d4ef0) left top / 3px 100% no-repeat, var(--sheet) !important;
+  color: var(--sheet-ink) !important;
+  box-shadow: inset 0 0 0 1px var(--sheet-edge), 0 18px 40px -26px #000000a0 !important;
+}
+:root:not([data-theme=dark]) body :is(.talk, .hist) .e.bot {
+  box-shadow: inset 0 0 0 1px var(--sheet-edge), 0 14px 34px -24px #1d2a5a40 !important;
+}
+html:root:not(.no-theme) body :is(.talk, .hist) .e.bot {
+  background: linear-gradient(180deg, #0e7490, #2f6fe8 55%, #6d4ef0) left top / 3px 100% no-repeat, var(--sheet) !important;
+  color: var(--sheet-ink) !important;
+}

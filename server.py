@@ -1683,9 +1683,21 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
  rule,description=rules.parse(text)
  if not pace and rule and rule.get('kind')=='gap':pace=[rule]
  if pace:
+  # "Post in all every 15 min" is an execution request, not merely an
+  # interval-setting request. A closed case or global hold must never restart it.
+  start_posting=bool(re.match(r'(?i)^\s*(?:please\s+)?(?:post|send|start\s+(?:posting|sending))\b',text))
+  if start_posting:
+   if on_hold():raise ValueError('Everything is on hold. Nothing was scheduled or sent. Say resume explicitly first.')
+   if read_left()<=0:raise ValueError('The current case is complete (Rs. 0 left). Nothing was scheduled or sent. Start a new case before fundraising posts.')
+   if not wa_ok():raise ValueError('WhatsApp is disconnected. Nothing was scheduled or sent. Connect WhatsApp and repeat the instruction.')
   with LOCK:OWNER_REVISION+=1
   for item in pace:ENGINE.add_rule(item)
-  return {'handled':True,'reply':'; '.join(rules.describe(item) for item in pace)+('. Auto follows this schedule.' if auto_on() else '. Saved. Auto is currently off.')}
+  if start_posting:
+   targets=[key for item in pace for key in (list(GROUPS) if item['group']=='all' else FREELANCE if item['group']=='free' else [item['group']])]
+   for key in dict.fromkeys(targets):ENGINE.resume(key)
+   set_auto(True)
+  return {'handled':True,'reply':'; '.join(rules.describe(item) for item in pace)+
+          ('. Auto ON; scheduled posting is active. No send is confirmed yet.' if start_posting else '. Interval saved. Auto '+('ON.' if auto_on() else 'OFF; nothing will post until enabled.'))}
  plan=manual_commands.parse(text)
  if not plan:return {'handled':False}
  if plan['kind']=='say':

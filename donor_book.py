@@ -187,6 +187,17 @@ class DonorBook:
             rows=[r for r in self._load()['records'] if not r.get('deleted') and (scope=='all' or scope=='selected' and r['id'] in (ids or []) or scope=='important' and r['important'] or scope=='donated' and r['donated'] or scope=='not_donated' and not r['donated'])]
             rows.sort(key=self.queue_key)
             return copy.deepcopy(rows[:limit] if limit else rows)
+    CASE_FIELDS={'important':False,'donated':False,'amount':0,'delivery':'Not contacted','last_sent_at':None,'sent_count':0,'dm_sent':False}
+    def export_case_fields(self):
+        with self.lock:return {r['id']:{k:copy.deepcopy(r.get(k,d)) for k,d in self.CASE_FIELDS.items()} for r in self._load()['records']}
+    def import_case_fields(self,fields=None):
+        """Put every person's case-specific marks back (stars, donated, DM sent). Without a saved set they start from zero."""
+        with self.lock:
+            data=self._load();fields=fields or {}
+            for r in data['records']:
+                for k,d in self.CASE_FIELDS.items():r[k]=copy.deepcopy(fields.get(r['id'],{}).get(k,d))
+                r['updated_at']=time.time()
+            self._save(data)
     def delivery(self,ident,state,stamp=None):
         with self.lock:
             data=self._load();r=next((r for r in data['records'] if r['id']==ident),None)

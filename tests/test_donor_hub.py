@@ -264,6 +264,19 @@ class IntegrationTests(unittest.TestCase):
   r=app.manual_command('set volunteer message: Please share this case {name}','vol-msg-1');self.assertEqual(v.message(),'Please share this case {name}')
   app.manual_command('remove volunteer Sara Khan','vol-del-1');self.assertEqual(v.book.list('all')['items'],[])
   with self.assertRaises(ValueError):app.manual_command('add volunteer Sara','vol-add-2')
+ def test_cases_save_switch_and_start_from_zero(self):
+  app=self.app;hub=app.donors();d=hub.book.add('Ali','03001234567')['donor'];v=hub.volunteers.book.add('Sara','03007654321')['donor']
+  hub.book.update(d['id'],important=True,donated=True,amount=5000);hub.book.delivery(d['id'],'Sent')
+  app.set_left(0);first=hub.cases.view()['current']
+  out=hub.cases.new('Maria',30000)
+  self.assertEqual(app.read_left(),30000);row=hub.book.list()['items'][0];self.assertEqual((row['important'],row['donated'],row['amount'],row['dm_sent']),(False,False,0,False))
+  self.assertEqual(len(hub.book.list()['items']),1,'the donor is kept, only the case marks reset');self.assertEqual(len(hub.volunteers.book.list()['items']),1)
+  self.assertEqual(sorted(c['name'] for c in out['cases']),['Current case','Maria'])
+  hub.cases.rename(first,'Yousuf')
+  hub.cases.switch(first)
+  row=hub.book.list()['items'][0];self.assertEqual((row['important'],row['donated'],row['amount'],row['dm_sent']),(True,True,5000,True));self.assertEqual(app.read_left(),0)
+  back=hub.cases.view();self.assertEqual({c['name']:c['current'] for c in back['cases']},{'Yousuf':True,'Maria':False})
+  with self.assertRaises(ValueError):hub.cases.new('',1000)
  def test_chat_add_mark_donate_remove(self):
   app=self.app;r=app.manual_command('add donor Random23 0300 1234567','add-test');self.assertTrue(r['handled']);self.assertNotIn('1234567',json.dumps(r))
   app.manual_command('make Random23 important');self.assertEqual(app.donors().book.list('important')['counts']['important'],1)

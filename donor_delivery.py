@@ -157,6 +157,11 @@ class DonorDelivery:
     def cancel(self):
         self.stop.set()
         return {'reply':'Stopping the donor batch. Any message already in flight may still complete.','job':self.status()}
+    def export_jobs(self):
+        with self.lock:return self._load()
+    def import_jobs(self,data=None):
+        with self.lock:
+            data=data if isinstance(data,dict) and isinstance(data.get('jobs'),list) else {'jobs':[]};self._save(copy.deepcopy(data))
     def _gap(self,j):
         """The wait before the next DM: the chosen gap, varied a little when random gaps are on. Never under 60 s."""
         base=float(j['gap_seconds']);jit=j.get('jitter')

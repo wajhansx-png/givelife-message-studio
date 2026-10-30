@@ -66,6 +66,41 @@ class SendTests(unittest.TestCase):
   end=time.monotonic()+seconds
   while not app.JOBS[ident]['done'] and time.monotonic()<end:time.sleep(.005)
   self.assertTrue(app.JOBS[ident]['done'],app.JOBS[ident]);return app.JOBS[ident]
+ def test_send_exact_thanks_to_registered_teammate_by_name(self):
+  teammate={'member':{'name':'Akhtar','phone':'923001234567'}}
+  with patch.object(app.donors().team,'_load',return_value=teammate):
+   self.assertEqual(app.resolve_person('Akhtar'),'923001234567@s.whatsapp.net')
+   self.assertEqual(app.manual_command('Send thanks akhtar to Akhtar fast')['reply'],'WhatsApp confirmed the message.')
+  self.assertEqual(len(self.sent),1)
+  self.assertEqual(self.sent[0]['phone'],'923001234567@s.whatsapp.net')
+  self.assertEqual(self.sent[0]['text'],'thanks akhtar')
+ def test_emergency_hold_typo_works_without_ai(self):
+  result=app.manual_command('Hold evverything')
+  self.assertTrue(app.on_hold())
+  self.assertIn('On hold',result['reply'])
+  self.assertEqual(self.sent,[])
+ def test_post_in_all_every_15_min_enables_auto_for_open_case(self):
+  app.set_left(25000)
+  with patch.object(app,'wa_ok',return_value=True):
+   result=app.manual_command('Post in all every 15 min')
+  self.assertTrue(app.auto_on(),result)
+  self.assertIn('Auto ON',result['reply'])
+  self.assertTrue(any(r.get('kind')=='gap' and r.get('group')=='all' and r.get('minutes')==15 for r in app.ENGINE.rules()))
+  self.assertEqual(self.sent,[],'A recurring-post command must not claim a manual send')
+ def test_closed_case_refuses_recurring_appeal_and_preserves_auto_state(self):
+  app.set_left(0)
+  before=len(app.ENGINE.rules())
+  with patch.object(app,'wa_ok',return_value=True):
+   with self.assertRaisesRegex(ValueError,'case is complete'):
+    app.manual_command('Post in all every 15 min')
+  self.assertEqual(len(app.ENGINE.rules()),before)
+  self.assertFalse(app.auto_on())
+  self.assertEqual(self.sent,[])
+ def test_schedule_setting_only_does_not_start_auto(self):
+  app.set_left(25000)
+  app.manual_command('all groups every 15 min')
+  self.assertFalse(app.auto_on())
+  self.assertEqual(self.sent,[])
  def test_manual_bypasses_recent_group_and_resets_auto_timer(self):
   jid=app.GROUPS['main'][1];old=time.time()-10;app.STORE.put('last_sent',{jid:old});self.status_recent=True
   response=app.manual_command('send now to givelife main','manual-send-001');job=self.wait(response['job_id'])

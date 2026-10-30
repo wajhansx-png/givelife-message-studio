@@ -43,6 +43,13 @@ class DMFlowTests(unittest.TestCase):
   self.assertTrue(dm_composer.complete(text));self.assertNotIn('Name Brother',text)
   self.assertNotIn('paralysing has started',text.lower())
   self.assertNotIn('he is still at home',text.lower())
+ def test_outdated_unverified_paralysis_claim_cannot_be_sent(self):
+  old='The paralysing has started in his fingers. It is slowly moving to his whole body.'
+  message=app.get_message('dm')['text'].replace('His parents reported that he was short of breath.',old)
+  self.assertTrue(dm_composer.unverified_medical_claim(message))
+  with self.assertRaisesRegex(ValueError,'unverified claim'):
+   app.send_custom({'target':'phone','phone':'03001234567','message':message,'kind':'dm_appeal','poster':True})
+  self.assertEqual(self.sent,[])
  def test_full_dm_name_edit_then_resend_same_person(self):
   jid='923001234567@s.whatsapp.net'
   with patch.object(app,'find_data',return_value=([{'id':jid,'name':'Jr Accounts','group':False}],1)):

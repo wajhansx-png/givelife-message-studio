@@ -47,7 +47,7 @@ class Store:
  def put(self,k,v):
   import copy
   with self.lock:self.data[k]=copy.deepcopy(v)
-server.STORE=Store();server.set_left(25000);server.ENGINE.s['dm_enabled']=False;type(server.donors().team).QUIET=(24,-1);type(server.donors().team).JITTER=(0,0)
+server.STORE=Store();server.set_left(25000);server.ENGINE.s['dm_enabled']=False;type(server.donors().team).JITTER=(0,0)
 if '--donors' in sys.argv:
  for i in range(20):
   row=server.donors().book.add('Demo donor '+str(i+1),'1555'+str(1230000+i))['donor']

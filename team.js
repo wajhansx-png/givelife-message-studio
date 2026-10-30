@@ -43,7 +43,7 @@
     const m=more(data.plan.items.length-lim.plan);if(m)add.append(m);
     const go=make('button','primary','Start tasks');go.type='button';go.onclick=()=>{planText='';addOpen=false;act({action:'confirm'},'Tasks started.')};const ds=make('button','tool','Discard');ds.type='button';ds.onclick=()=>{addOpen=false;act({action:'discard'})};const ar=make('div','team-actions');ar.append(go,ds);add.append(ar)}
    else{add.append(make('h2','','Write today\'s tasks'));const ta=make('textarea','');ta.id='teamText';ta.name='team_tasks';ta.rows=4;ta.maxLength=3000;ta.value=planText;ta.placeholder='One task per line, then a deadline:\n1) Post in the 3 groups\n2) Update the sheet\nDeadline 6pm';ta.setAttribute('aria-label','Today\'s tasks');
-    const go=make('button','primary','Plan the tasks');go.type='button';go.onclick=()=>act({action:'plan',text:ta.value});if(lastError)add.append(make('p','team-error',lastError));if(/night|quiet/i.test(lastError)){const nb=make('button','tool','Send at night too');nb.type='button';nb.onclick=()=>act({action:'night',on:true},'Night messages are on. Plan again.');add.append(nb)}const x=make('button','tool','Cancel');x.type='button';x.onclick=()=>{planText='';addOpen=false;draw(true)};const ar=make('div','team-actions');ar.append(go,x);add.append(ta,ar)}
+    const go=make('button','primary','Plan the tasks');go.type='button';go.onclick=()=>act({action:'plan',text:ta.value});if(lastError)add.append(make('p','team-error',lastError));const x=make('button','tool','Cancel');x.type='button';x.onclick=()=>{planText='';addOpen=false;draw(true)};const ar=make('div','team-actions');ar.append(go,x);add.append(ta,ar)}
    body.append(add)}
   else{
    const all=data.tasks,done=all.filter(t=>t.status==='Done'),review=all.filter(t=>t.status==='Reported'),left=all.filter(t=>['Waiting','Asked','Late'].includes(t.status)).sort((a,b)=>(b.status==='Late')-(a.status==='Late')||a.due_at-b.due_at);
@@ -75,4 +75,17 @@
  launch.onclick=open;
  document.addEventListener('donors-changed',()=>refresh(true));
  refresh(true);timer=setInterval(()=>refresh(true),45000);
+
+ /* Settings: optional quiet hours for team messages. Off unless the owner switches them on. */
+ function quietRow(){const set=document.getElementById('set');if(!set||set.querySelector('#teamQuiet'))return;
+  const row=make('label','row');row.id='teamQuiet';const t=make('div','t');t.append(make('b','','Team quiet hours'),make('small','','Off by default. When on, no messages go to your teammate in these hours (Pakistan time).'));
+  const on=make('input','sw');on.type='checkbox';on.id='teamQuietOn';on.setAttribute('aria-label','Team quiet hours');
+  const from=make('input','');from.type='number';from.min='0';from.max='23';from.value='23';from.id='teamQuietFrom';from.setAttribute('aria-label','From hour');from.style.width='64px';
+  const to=make('input','');to.type='number';to.min='0';to.max='23';to.value='7';to.id='teamQuietTo';to.setAttribute('aria-label','To hour');to.style.width='64px';
+  const hrs=make('span','');hrs.append(from,document.createTextNode(' to '),to);hrs.hidden=true;
+  const save=async()=>{hrs.hidden=!on.checked;try{await api(on.checked?{action:'quiet',start:Number(from.value),end:Number(to.value)}:{action:'quiet'});await refresh(true)}catch(e){toast(e.message,true)}};
+  on.onchange=save;from.onchange=save;to.onchange=save;row.append(t,hrs,on);
+  const anchor=[...set.querySelectorAll('.row')].pop();(anchor?anchor.parentElement:set).insertBefore(row,anchor||null);
+  api().then(d=>{const q=d.quiet;on.checked=!!q;hrs.hidden=!q;if(q){from.value=q[0];to.value=q[1]}}).catch(()=>{})}
+ document.getElementById('gear')?.addEventListener('click',()=>setTimeout(quietRow,50));
 })();

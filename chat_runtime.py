@@ -72,9 +72,15 @@ def run_chat(text,history,state,memory,do):
  tools=[] if chat_policy.smalltalk(text) else [t for t in assistant.CHAT_TOOLS if chat_policy.permitted(t['function']['name'],text) or selection is not None and t['function']['name']=='set_message']
  request_steps=task_intent.steps(chat_policy.owner_text(text))
  requested_kinds={x['kind'] for x in request_steps}
- needs_multi=bool('send' in requested_kinds and len(requested_kinds-{'send','status'})>=1)
- send_completed=False
+ expected_sends=max(1,len(task_intent.send_clauses(chat_policy.owner_text(text))))
+ needs_multi=bool('send' in requested_kinds and (len(requested_kinds-{'send','status'})>=1 or expected_sends>1))
+ send_completed=False;send_signatures=set()
  mutation_completed=set()
+ def remaining_actions():
+  remaining=requested_kinds.difference(mutation_completed|{'status'})
+  if 'send' in requested_kinds and len(send_signatures)<expected_sends:
+   remaining.add('send '+str(len(send_signatures)+1)+' of '+str(expected_sends))
+  return remaining
  schemas={t['function']['name']:t['function']['parameters'] for t in tools}
  actions=[];done=[];jobs=[];outcomes=[];errors=[];cache={};started=time.monotonic();nudged=False;reply='';looked=False
  required_variants=chat_policy.variant_request(chat_policy.owner_text(text))
@@ -92,13 +98,13 @@ def run_chat(text,history,state,memory,do):
    errors.append('The model returned malformed tool calls. No partial action was executed.');break
   calls=raw_calls or []
   if not calls:
-   remaining=requested_kinds.difference(mutation_completed|{'status'})
+   remaining=remaining_actions()
    if send_completed and needs_multi and remaining and not nudged and not errors:
     # One-prompt compound actions must not stop after the first send. Resume
     # only the *other* explicitly requested actions, never repeat WhatsApp.
     nudged=True
     msgs.append({'role':'assistant','content':reply or 'The first action completed.'})
-    msgs.append({'role':'user','content':'The outgoing send already dispatched; NEVER send again. Finish only the remaining CURRENT-owner-requested action(s): '+', '.join(sorted(remaining))+'. If any cannot be completed, report that explicitly. Use tools and verify receipts.'})
+    msgs.append({'role':'user','content':'Some outgoing actions have already dispatched; NEVER repeat an identical send. Finish only the remaining CURRENT-owner-requested action(s): '+', '.join(sorted(remaining))+'. A separate send is allowed only for a DISTINCT recipient/message explicitly named in the current instruction. Verify results; report blockers.'})
     continue
    claimed=claims_completion(reply)
    missing_edit=required_edit and not saved_edit
@@ -136,13 +142,17 @@ def run_chat(text,history,state,memory,do):
    fn=tc['function'];name=fn.get('name');actual=None;status='rejected'
    donor_read=name=='donor_action' and args.get('action')=='list'
    donor_send=name=='donor_action' and args.get('action')=='send'
+   volunteer_send=name=='volunteer_action' and args.get('action') in ('send_all','send_one')
+   outgoing=name in chat_policy.SEND or name=='send_text_list' or donor_send or volunteer_send
    invoked=False
    try:
     raw=fn.get('arguments','{}');args=json.loads(raw) if isinstance(raw,str) else raw
     if name not in schemas or name not in do:raise ValueError('That tool is not available for this instruction.')
     if blocked and name not in chat_policy.READ:raise ValueError('An earlier step failed; this dependent action was not executed.')
     # A completed outgoing send is never repeated by later AI reasoning rounds.
-    if send_completed and (name in chat_policy.SEND or donor_send):raise ValueError('This request already dispatched a send. Check its receipt before requesting another.')
+    signature=name+json.dumps(args,sort_keys=True,ensure_ascii=False)
+    if outgoing and send_completed and signature not in cache and len(send_signatures)>=expected_sends:
+     raise ValueError('This prompt has already dispatched its requested sends. No additional recipient can be contacted without a new instruction.')
     chat_policy.validate_args(schemas[name],args)
     if ((required_edit and not saved_edit) or (required_variants and not variants_done)) and (name in chat_policy.SEND or donor_send):raise ValueError('The requested versions or caption edit must be saved before sending. Nothing was sent.')
     cachekey=str(name)+json.dumps(args,sort_keys=True,ensure_ascii=False)
@@ -168,25 +178,26 @@ def run_chat(text,history,state,memory,do):
     errors=[e for e in errors if not e.startswith(str(name)+': ')]
     result={'ok':True,'status':status,'result':actual}
     if status in ('completed','started'):
-     if name in chat_policy.SEND or donor_send:
+     if outgoing:
       send_completed=True
-      mutation_completed.add('send')
+      if signature not in send_signatures:send_signatures.add(signature)
+      if len(send_signatures)>=expected_sends:mutation_completed.add('send')
      elif name in ('set_message','generate_dm_variants','new_wording'):mutation_completed.add('edit')
      elif name in ('money_came','set_left'):mutation_completed.add('balance')
      elif name in ('set_group_pace','set_pace','schedule_task','set_quiet_hours'):mutation_completed.add('schedule')
      elif name in ('case_action',):mutation_completed.add('case')
      elif name in ('hold','pause_group','autopilot'):mutation_completed.add('hold')
-    terminal=terminal or ((name in chat_policy.SEND or donor_send) and not needs_multi)
+    terminal=terminal or (outgoing and not needs_multi)
    except Exception as e:
     blocked=True
     message=safe_text(e,300);result={'ok':False,'status':'rejected','error':message};errors.append(str(name)+': '+message)
     # A send may have reached WhatsApp before a timeout. Never retry that action here.
-    if name in chat_policy.SEND or invoked and name in ('money_came','delete_last_message'):
+    if outgoing or invoked and name in ('money_came','delete_last_message'):
      terminal=True;done.append('Could not '+str(name)+': '+message)
      if name=='money_came':done.append('Check the current balance before recording it again; this action was not retried.')
    outcomes.append({'tool':name,'status':status})
    msgs.append({'role':'tool','tool_call_id':tc['id'],'content':safe_text(json.dumps(result,ensure_ascii=False),9000)})
-  if send_completed and needs_multi and not requested_kinds.difference(mutation_completed|{'status'}):
+  if send_completed and needs_multi and not remaining_actions():
    terminal=True
   if terminal:
    # Receipts, not a new model-generated delivery claim, determine action results.
@@ -207,7 +218,7 @@ def run_chat(text,history,state,memory,do):
  elif required_variants and not variants_done and not errors:
   reply='The versions have not been saved. '+(reply if not claims_completion(reply) else 'I need the exact message to finish it.')
  if send_completed and needs_multi:
-  outstanding=requested_kinds.difference(mutation_completed|{'status'})
+  outstanding=remaining_actions()
   if outstanding:
    reply+=' Not completed or verified from this request: '+', '.join(sorted(outstanding))+'.'
  if not actions and not done and not jobs and chat_policy.off_topic(text) and not chat_policy.about_the_work(reply):reply=chat_policy.brief(reply)

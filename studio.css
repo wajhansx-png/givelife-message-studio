@@ -6828,3 +6828,37 @@ button.livebar,
   background: transparent!important;
   box-shadow: none!important;
 }
+
+/* ===== 9d. Very short phones (about 568px tall): the Edit button floats in the corner so the whole message fits without scrolling ===== */
+@media(max-height:600px) and (max-width:899px) {
+  .bank-message.bank-detail {
+    position: relative;
+    padding: 4px 8px;
+  }
+  .bank-message.bank-detail > header {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    z-index: 1;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+  }
+  .bank-message.bank-detail > header strong {
+    display: none;
+  }
+  .bank-message.bank-detail > header .tool {
+    min-height: 30px;
+    height: 30px;
+    padding: 0 10px;
+  }
+  .bank-message.bank-detail .bank-preview {
+    padding: 6px 8px;
+  }
+  .bank-message.bank-detail .bank-preview::before {
+    content: "";
+    float: right;
+    width: 52px;
+    height: 24px;
+  }
+}

@@ -2356,7 +2356,12 @@ dialog header {
 /* Message reading gets the screen; donor-only controls return on the other tabs. */
 .donor-page[data-panel=messages] .donor-search,
 .donor-page[data-panel=messages] .donor-bottom,
-.donor-page[data-panel=messages] .donor-progress[data-active=false] {
+.donor-page[data-panel=messages] .donor-progress[data-active=false],
+.donor-page[data-panel=volunteers] .donor-search,
+.donor-page[data-panel=volunteers] .donor-bottom,
+.donor-page[data-panel=volunteers] #donorProgress,
+.donor-page[data-panel=volunteers] #donorHideRow,
+.donor-page[data-panel=volunteers] #donorBatchList {
   display: none;
 }
 .bank-pagination {
@@ -7724,4 +7729,184 @@ button:disabled, [aria-disabled=true] {
 html body :is(button, summary, [role=tab], a):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+
+/* ===== 16. Volunteers panel: add form, numbered list, the message to send, one DM-all button ===== */
+.donor-volunteers {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 2px 8px;
+}
+.donor-volunteers[hidden] {
+  display: none;
+}
+.vol-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.vol-add input,
+.vol-msg textarea {
+  min-height: 46px;
+  padding: 10px 14px;
+  font-size: 15px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.vol-list {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.vol-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 88px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  min-height: 56px;
+}
+.vol-row:first-child {
+  border-top: 0;
+}
+.vol-name {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vol-row .tool {
+  min-height: 44px;
+  width: 100%;
+}
+.vol-row[data-sent=true] .vol-dm {
+  color: var(--ok-ink, #4ade80) !important;
+}
+.vol-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vol-msg label {
+  font-size: 13px;
+  color: var(--mut);
+}
+.vol-msg textarea {
+  min-height: 130px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.vol-msg-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.vol-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink) !important;
+  font-size: 14px !important;
+}
+.vol-progress {
+  margin: 0;
+}
+.vol-foot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  position: sticky;
+  bottom: 0;
+  padding-top: 8px;
+  background: var(--bg);
+}
+.vol-foot button {
+  min-height: 46px;
+  min-width: 112px;
+}
+.vol-foot .primary {
+  min-width: 170px;
+}
+@media(max-width:560px) {
+  .vol-add {
+    grid-template-columns: 1fr 1fr;
+  }
+  .vol-add .primary {
+    grid-column: 1 / -1;
+  }
+  .vol-row {
+    grid-template-columns: minmax(0, 1fr) 84px 78px;
+  }
+  .vol-foot {
+    flex-wrap: wrap;
+  }
+  .vol-foot .primary {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .vol-foot .vol-back {
+    flex: 0 0 104px;
+    min-width: 0;
+  }
+  .vol-foot .tool:not(.vol-back) {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+}
+
+html body .donor-page[data-panel=volunteers] :is(.donor-bottom, #donorProgress, #donorHideRow, #donorBatchList, .donor-search) {
+  display: none !important;
+}
+html body .donor-page .donor-tabs {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+html body .donor-page .donor-tabs:has([data-tab=volunteers]) {
+  display: grid;
+}
+.vol-list,
+.vol-msg,
+.vol-add,
+.vol-progress {
+  flex: none;
+}
+.vol-add .primary {
+  white-space: nowrap;
+  padding-inline: 18px;
+  min-height: 46px;
+}
+.vol-foot .vol-back {
+  min-width: 112px;
+}
+@media(max-width:560px) {
+  html body .donor-page .donor-tabs button {
+    font-size: 12px;
+  }
+}
+
+/* one line of tabs on every phone, down to 320px */
+@media(max-width:359px) {
+  html body .donor-page .donor-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+  }
+  html body .donor-page .donor-tabs button {
+    font-size: 10.5px;
+    padding: 4px 1px;
+    flex-direction: column;
+  }
+  html body .donor-page .donor-tabs button .tab-count {
+    font-size: 10px;
+    padding-inline: 4px;
+  }
 }

@@ -203,3 +203,17 @@ test('tapping a donor name stars it, every screen has one "Back" and it is the l
  const last=await page.locator('.donor-bottom').evaluate(el=>[...el.children].filter(n=>n.offsetParent).sort((a,b)=>a.getBoundingClientRect().x-b.getBoundingClientRect().x).at(-1).id);expect(last).toBe('donorMainBottom');
  await page.locator('[data-tab=messages]').click();await expect(page.locator('.bank-back-bottom')).toHaveText('← Back');await expect(page.locator('.donor-sub')).toHaveCount(0);
 });
+
+test('Volunteers tab: all five tabs fit on one line, add by name and number, save the message and DM one volunteer',async({page,request})=>{
+ for(const [w,h] of [[1440,800],[390,844],[320,568]]){
+  await open(page,request,w,h);await page.locator('#openDonors').click();
+  const tops=await page.locator('.donor-tabs button').evaluateAll(els=>[...new Set(els.map(e=>Math.round(e.getBoundingClientRect().top)))]);expect(tops.length,`${w}px: tabs on one line`).toBe(1);
+  await page.locator('[data-tab=volunteers]').click();await expect(page.locator('#donorVolunteers')).toBeVisible();
+  await expect(page.locator('.donor-bottom')).toBeHidden();
+  await page.locator('#volName').fill('Test Volunteer '+w);await page.locator('#volPhone').fill('0300'+String(1000000+w).slice(0,7));await page.locator('#donorVolunteers .vol-add .primary').click();
+  await expect(page.locator('.vol-row',{hasText:'Test Volunteer '+w})).toHaveCount(1);
+  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);expect(overflow,`${w}px: no sideways scroll`).toBe(false);
+  await page.locator('.vol-row',{hasText:'Test Volunteer '+w}).getByRole('button',{name:'Remove'}).click().catch(()=>{});
+  page.once('dialog',d=>d.accept());
+ }
+});

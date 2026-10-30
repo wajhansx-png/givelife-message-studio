@@ -80,10 +80,12 @@ def send_custom(body):
   normal=donors().book.normal_amount_for_phone(body.get('phone','')) if body.get('phone') else 0
   message=greet_text(message,body.get('name',''),body.get('gender','Brother'),normal)
   if not dm_composer.complete(message):raise ValueError('The full DM is incomplete. Restore its paragraphs and payment details before sending.')
+ if not is_group and body.get('kind') in ('volunteer_batch','volunteer_manual'):
+  message=message.replace('{name}',str(body.get('name') or '').strip() or 'friend')
  if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
  if not STORE:raise ValueError('Persistent send records are unavailable. Try again later.')
  manual=body.get('kind')=='donor_manual'
- explicit_batch=body.get('kind')=='donor_batch'
+ explicit_batch=body.get('kind') in ('donor_batch','volunteer_batch')
  if not SEND_LOCK.acquire(blocking=manual or explicit_batch):raise ValueError('Another send is running. Please wait for it to finish.')
  try:
   status=api_result('/devices/'+DEVICE+'/status')
@@ -92,7 +94,7 @@ def send_custom(body):
   if not is_group:
    digest=hashlib.sha256(jid.encode()).hexdigest()
    alternate=hashlib.sha256((jid+'@s.whatsapp.net').encode()).hexdigest()
-   explicit=manual or body.get('kind')=='donor_batch'
+   explicit=manual or explicit_batch
    records={key:STORE.get(key) for key in ('optout_'+alternate,'optout_'+digest,'dm_recipient_'+alternate,'dm_recipient_'+digest)} if not hasattr(STORE,'get_many') else STORE.get_many(('optout_'+alternate,'optout_'+digest,'dm_recipient_'+alternate,'dm_recipient_'+digest))
    if jid==norm_phone(OWNER_PHONE):raise ValueError('Your own account is excluded from donor sending.')
    exclusions=BLOCKED-CAMPAIGN_CONTACTED if explicit else BLOCKED
@@ -1743,6 +1745,9 @@ class Handler(BaseHTTPRequestHandler):
     return self.reply(donors().book.list(q.get('tab',['all'])[0],q.get('q',[''])[0]))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/donor-delivery':return self.reply(donors().jobs.status())
+  if self.path.split('?')[0]=='/volunteers':
+   try:return self.reply(donors().volunteers.view(urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get('q',[''])[0]))
+   except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/donor-messages':return self.reply(donors().messages.get())
   if self.path=='/wa-status':
    try:return self.reply(api('/devices/'+DEVICE+'/status'))
@@ -1787,7 +1792,7 @@ class Handler(BaseHTTPRequestHandler):
   global ACTIVE,OWNER_REVISION
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   if self.path!='/api/group-finder':ENGINE.touch_owner()
-  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
+  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
    with LOCK:OWNER_REVISION+=1
    OWNER_GUARD.revision=OWNER_REVISION
   origin=self.headers.get('Origin');same_origin=origin and urllib.parse.urlparse(origin).netloc==self.headers.get('Host')
@@ -1805,6 +1810,9 @@ class Handler(BaseHTTPRequestHandler):
    except Conflict as e:return self.reply({'error':str(e)},status=409)
    except ResearchError as e:return self.reply({'error':str(e),'code':e.code},status=502)
    except (ValueError,TypeError,KeyError) as e:return self.reply({'error':str(e)},status=400)
+  if self.path=='/volunteers':
+   try:return self.reply(donors().volunteers.mutate(body))
+   except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path in ('/donors','/donor-delivery','/donor-send','/donor-messages','/donor-paste'):
    try:
     if self.path=='/donor-paste':

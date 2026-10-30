@@ -4,8 +4,9 @@ from pathlib import Path
 from donor_book import hide_numbers
 
 class DonorDelivery:
+    KEY='donor_delivery';FILE='donor-delivery.json';KIND='donor_batch';CLAIM='donor_batch_request_'
     def __init__(self,folder,store,book,send,caption,connected,held,eligible,name_for,variants=None,case_closed=None):
-        self.path=Path(folder)/'donor-delivery.json';self.store=store;self.book=book
+        self.path=Path(folder)/self.FILE;self.store=store;self.book=book
         self.send=send;self.caption=caption;self.connected=connected;self.held=held;self.eligible=eligible;self.name_for=name_for
         self.lock=threading.RLock();self.boot=uuid.uuid4().hex;self.stop=threading.Event();self.active=None
         self.manual_sent_at=0;self.manual_inflight=threading.Event()
@@ -13,12 +14,12 @@ class DonorDelivery:
         self._cache=None
     def _load(self):
         if self._cache is not None:return copy.deepcopy(self._cache)
-        raw=self.store.get('donor_delivery') if self.store else None
+        raw=self.store.get(self.KEY) if self.store else None
         if raw is None and self.path.exists():raw=json.loads(self.path.read_text(encoding='utf-8'))
         self._cache=raw if isinstance(raw,dict) else {'jobs':[]};return copy.deepcopy(self._cache)
     def _save(self,data):
         data['jobs']=data['jobs'][-100:]
-        if self.store:self.store.put('donor_delivery',data)
+        if self.store:self.store.put(self.KEY,data)
         self._cache=copy.deepcopy(data)
         tmp=self.path.with_suffix('.tmp');tmp.write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8');tmp.replace(self.path)
     def status(self):
@@ -138,7 +139,7 @@ class DonorDelivery:
             if not self.store:raise ValueError('Persistent sending records are unavailable. Nothing was sent.')
             if not self.connected():raise ValueError('WhatsApp is disconnected. Link it before sending.')
             ident=uuid.uuid4().hex;now=time.time()
-            claim_key='donor_batch_request_'+hashlib.sha256(rid.encode()).hexdigest()
+            claim_key=self.CLAIM+hashlib.sha256(rid.encode()).hexdigest()
             reservation={'id':ident,'signature':signature,'state':'Starting','total':len(rows),'sent':0,'skipped':0,'failed':0}
             if hasattr(self.store,'claim') and not self.store.claim(claim_key,reservation):
                 existing=self.store.get(claim_key,reservation)
@@ -224,7 +225,7 @@ class DonorDelivery:
                 name,gender=j['personal_names'][ident] if 'personal_names' in j else self.name_for(r['name'])
                 self._update(j['id'],state='Sending',next_at=None,current=hide_numbers(r['name']),batch=(index//chunk+1) if chunk else 1,sent=sent,skipped=skipped,receipts=receipts)
                 self.book.delivery(ident,'Sending')
-                try:result=self._dispatch(j,{'target':'phone','phone':r['phone'],'message':self._fresh_caption(j,index),'poster':j['poster'],'kind':'donor_batch','first_in_batch':sent==0,'name':name,'gender':gender},receipts,sent,skipped)
+                try:result=self._dispatch(j,{'target':'phone','phone':r['phone'],'message':self._fresh_caption(j,index),'poster':j['poster'],'kind':self.KIND,'first_in_batch':sent==0,'name':name,'gender':gender},receipts,sent,skipped)
                 except ValueError as e:
                     self.book.delivery(ident,'Not sent');state='Stopped';error=hide_numbers(e);break
                 except Exception:

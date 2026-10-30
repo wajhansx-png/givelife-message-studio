@@ -257,6 +257,13 @@ class IntegrationTests(unittest.TestCase):
   self.app=app;app.STORE=AppStore();app.DONORS=None;app.CAMPAIGN.update(running=False,stop=False);app.HOLD.write_text('{"on":false}')
   self.scope=tempfile.TemporaryDirectory();(Path(self.scope.name)/'state.md').write_text('LEFT: 25000\n');self.data=patch.object(app,'DATA',Path(self.scope.name));self.data.start();self.api=patch.object(app,'api',return_value={'results':{'is_connected':True,'is_logged_in':True}});self.api.start()
  def tearDown(self):self.api.stop();self.data.stop();self.scope.cleanup();self.app.DONORS=None
+ def test_chat_adds_and_lists_volunteers_without_touching_donors(self):
+  app=self.app;r=app.manual_command('add volunteer Sara Khan 0300 1234567','vol-add-1');self.assertTrue(r['handled']);self.assertNotIn('1234567',json.dumps(r))
+  v=app.donors().volunteers;self.assertEqual([x['name'] for x in v.book.list('all')['items']],['Sara Khan']);self.assertEqual(app.donors().book.list()['counts']['all'],0)
+  r=app.manual_command('show volunteers','vol-list-1');self.assertIn('Sara Khan',r['reply'])
+  r=app.manual_command('set volunteer message: Please share this case {name}','vol-msg-1');self.assertEqual(v.message(),'Please share this case {name}')
+  app.manual_command('remove volunteer Sara Khan','vol-del-1');self.assertEqual(v.book.list('all')['items'],[])
+  with self.assertRaises(ValueError):app.manual_command('add volunteer Sara','vol-add-2')
  def test_chat_add_mark_donate_remove(self):
   app=self.app;r=app.manual_command('add donor Random23 0300 1234567','add-test');self.assertTrue(r['handled']);self.assertNotIn('1234567',json.dumps(r))
   app.manual_command('make Random23 important');self.assertEqual(app.donors().book.list('important')['counts']['important'],1)

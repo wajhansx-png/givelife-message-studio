@@ -1,5 +1,5 @@
 """Shared donor UI/chat commands and private delivery integration."""
-import re, time, hashlib, threading
+import re, time, hashlib, threading, uuid
 from donor_book import DonorBook, normalize_phone, parse_contact, send_request, PHONE
 from donor_delivery import DonorDelivery
 
@@ -12,6 +12,8 @@ class DonorIntegration:
         from donor_paste import PastedDonors
         self.pasted=PastedDonors(self.book,self.jobs,lambda:app.OWNER_PHONE,lambda label:self.personal_name(label,explicit=True),self._start_pasted_batch)
         self.manual_lock=threading.RLock()
+        from volunteers import Volunteers
+        self.volunteers=Volunteers(app,self.eligible)
         self.revision=0
     def pause_personal(self):
         self.revision+=1
@@ -158,6 +160,28 @@ class DonorIntegration:
             if donor:
                 value=amount(usual[2],usual[3]);return self._said(self.book.update(donor['id'],normal_amount=value),donor,f'usual donation set to Rs. {value:,}' if value else 'usual donation cleared')
         return None
+    def _volunteer_command(self,raw,t):
+        """Chat shortcuts for volunteers: add / remove / show / set the message / DM them. None when the text is about something else."""
+        v=self.volunteers
+        add=re.match(r'(?i)^(?:please\s+)?(?:add|save|register|create)\s+(?:this\s+|new\s+)?volunteers?\s*[:=-]?\s*(.*)$',raw.strip(),re.S)
+        if add:
+            body=add[1].strip()
+            if not PHONE.search(body):raise ValueError('Add a volunteer with a name and a WhatsApp number, for example: add volunteer Sara 0300 1234567.')
+            label,phone=parse_contact(body,'')
+            if label=='Donor':raise ValueError('Write the volunteer\'s name together with the number.')
+            out=v.mutate({'action':'add','name':label,'phone':phone});out['reply']=f'Added {label} to volunteers.';out['volunteers_changed']=True;out['donors_changed']=True;return out
+        remove=re.fullmatch(r'(?i)(?:please\s+)?(?:remove|delete)\s+(?:volunteer\s+(.+)|(.+?)\s+from (?:the )?volunteers?(?: list)?)',t)
+        if remove:
+            out=v.mutate({'action':'delete','id':(remove[1] or remove[2]).strip()});out['reply']='Removed from volunteers.';out['volunteers_changed']=True;out['donors_changed']=True;return out
+        if re.fullmatch(r'(?i)(?:show|list|view)(?: me)?(?: the| all| my)* volunteers?',t):
+            names=[r['name'] for r in v.book.list('all')['items']]
+            return {'reply':f'{len(names)} volunteer'+('' if len(names)==1 else 's')+'. '+(', '.join(names[:15])+('…' if len(names)>15 else '') if names else 'Add one with: add volunteer Name 0300 1234567.')}
+        msg=re.match(r'(?i)^(?:please\s+)?(?:set|save|change|update)\s+(?:the\s+)?volunteers?\s+message\s*[:=-]\s*(.+)$',raw.strip(),re.S)
+        if msg:
+            v.set_message(msg[1].strip());return {'reply':'Saved the volunteer message. Say "dm volunteers" to send it.','volunteers_changed':True}
+        if re.fullmatch(r'(?i)(?:please\s+)?(?:dm|send|message|text)\s+(?:to\s+)?(?:all\s+|the\s+|my\s+)*volunteers?',t):
+            r=v.mutate({'action':'send_all','request_id':'chat-'+uuid.uuid4().hex,'gap_seconds':180});r['reply']=r.get('reply') or 'Sending the volunteer message, a few minutes apart.';return r
+        return None
     def command(self,text,request_id=None):
         import chat_policy,manual_commands
         raw=str(text).strip();t=chat_policy.owner_text(raw).strip()
@@ -169,6 +193,8 @@ class DonorIntegration:
         if t.casefold() in ('resume','continue','unhold') and self.paused and not self.app.on_hold():return {'reply':self.resume_personal()}
         if re.search(r"(?i)\b(dont|don't|do not|never)\b",t) or manual_commands.question_request(t):return None
         if re.search(r'(?i)\band then\b|;|\badd\b.+\band\b',t):return None
+        volunteer=self._volunteer_command(raw,t)
+        if volunteer is not None:return volunteer
         if re.match(r'(?i)^(?:please\s+)?(?:add|save|register|create)\s+(?:this\s+|new\s+)?donor\b',t) and PHONE.search(raw):
             return self.mutate({'action':'add','text':raw})
         if re.fullmatch(r'(?i)(?:show|list|view)(?: me)?(?: the)?(?: all| important| donated| not donated)? donors?',t):

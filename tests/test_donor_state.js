@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');const source=fs.readFileSync('donors.js','utf8');
 const part=(a,b)=>source.slice(source.indexOf(a),source.indexOf(b,source.indexOf(a)));
 async function main(){
- const calls=[],nodes={donorSearch:{value:'Ali'},donorTable:{hidden:false},donorMessages:{hidden:true}};
+ const calls=[],nodes={donorSearch:{value:'Ali'},donorTable:{hidden:false},donorMessages:{hidden:true},donorVolunteers:{hidden:true}};
  const ctx={Nav:{go(){},leave(){},path(){return ''},top(){return ''}},console,Promise,Map,Number,Object,String,setTimeout,clearTimeout,searchTimer:null,filterEpoch:0,tab:'all',allDonors:[{id:'a',name:'Ali',donated:false,amount:0,important:true},{id:'b',name:'Zaid',donated:false,amount:0,important:false}],data:{items:[]},rowQueues:new Map(),rowVersions:new Map(),confirmedRows:new Map(),amountTimers:new Map(),el:id=>nodes[id],page:{dataset:{},querySelectorAll:()=>[]},updateCounts(){},paintRow(){},notice(){},showMessages(){},draw(){},api:(url,body)=>new Promise((resolve,reject)=>calls.push({url,body,resolve,reject}))};vm.createContext(ctx);
  vm.runInContext(part('function applyFilters(',' const picker='),ctx);vm.runInContext(part('function selectDonorTab(',' launch.onclick=open'),ctx);vm.runInContext(part('async function change(',' function paintDelivery('),ctx);
  ctx.cancelAmount=id=>{clearTimeout(ctx.amountTimers.get(id));ctx.amountTimers.delete(id)};

@@ -157,7 +157,7 @@ def _slim(state):
     state=mapping(state)
     eng = mapping(state.get('engine'))
     screen=mapping(state.get('screen'))
-    out = {'left': state.get('left'), 'wa': state.get('whatsapp'), 'auto': state.get('autopilot'), 'to': state.get('last_recipient'),
+    out = {'left': state.get('left'), 'active_case': state.get('case_name'), 'case_closed': state.get('case_closed'), 'wa': state.get('whatsapp'), 'auto': state.get('autopilot'), 'to': state.get('last_recipient'),
            'pace': eng.get('pace'), 'idle_min': eng.get('minutes_since_money'), 'view': screen.get('view'),
            'drafts': {k:safe_text(v,6000) for k,v in mapping(state.get('drafts')).items()}, 'dm_form': mapping(screen.get('dm')), 'recipient_names': dict(list(mapping(state.get('recipient_names')).items())[-20:])}
     out['group_intervals']=mapping(eng.get('group_intervals'))

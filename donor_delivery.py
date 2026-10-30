@@ -4,12 +4,12 @@ from pathlib import Path
 from donor_book import hide_numbers
 
 class DonorDelivery:
-    def __init__(self,folder,store,book,send,caption,connected,held,eligible,name_for,variants=None):
+    def __init__(self,folder,store,book,send,caption,connected,held,eligible,name_for,variants=None,case_closed=None):
         self.path=Path(folder)/'donor-delivery.json';self.store=store;self.book=book
         self.send=send;self.caption=caption;self.connected=connected;self.held=held;self.eligible=eligible;self.name_for=name_for
         self.lock=threading.RLock();self.boot=uuid.uuid4().hex;self.stop=threading.Event();self.active=None
         self.manual_sent_at=0;self.manual_inflight=threading.Event()
-        self.variants=variants
+        self.variants=variants;self.case_closed=case_closed or (lambda:False)
         self._cache=None
     def _load(self):
         if self._cache is not None:return copy.deepcopy(self._cache)
@@ -73,6 +73,7 @@ class DonorDelivery:
             data=self._load();j=next(x for x in data['jobs'] if x['id']==ident);j.update(fields,updated_at=time.time());self._save(data)
             return copy.deepcopy(j)
     def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None,chunk=None,rest_seconds=1200,fresh=False,rests=None,jitter=None,skip_contacted=None,hold_until=None):
+        if self.case_closed():raise ValueError('The case is complete (Rs. 0 left), so no donor DMs were started. Set a new amount left first if you need to ask again.')
         if type(gap_seconds) not in (float,int) or not math.isfinite(gap_seconds) or not 0<gap_seconds<=600:raise ValueError('Choose a gap from 1 to 10 minutes. Suggested: 3–5 minutes.')
         if limit is not None and (type(limit) is not int or not 1<=limit<=1000):raise ValueError('Choose a recipient count of 1–1,000.')
         if type(poster) is not bool:raise ValueError('Poster must be on or off.')
@@ -166,6 +167,15 @@ class DonorDelivery:
         while time.time()<due:
             if self.stop.wait(min(2,max(.1,due-time.time()))):return True
         return self.stop.is_set()
+    def _fresh_caption(self,j,index):
+        """The wording saved when the batch started, but with today's amount: donations that arrive while a long batch waits
+        between DMs must not be sent as an old balance."""
+        captions=j.get('captions',[j['caption']]*len(j['ids']));saved=captions[index]
+        if not self.variants:return saved
+        try:
+            size=j.get('chunk') or len(j['ids']);fresh=self.variants(min(size,len(j['ids'])))
+            return fresh[index%size] if isinstance(fresh,list) and index%size<len(fresh) and isinstance(fresh[index%size],str) and fresh[index%size].strip() else saved
+        except Exception:return saved
     def _dispatch(self,j,body,receipts,sent,skipped):
         """Send one DM. Waits for WhatsApp to come back instead of giving up."""
         while True:
@@ -187,6 +197,7 @@ class DonorDelivery:
             for index,ident in enumerate(j['ids']):
                 if self.stop.is_set():state='Stopped';break
                 if self.held():state='Stopped';error='Sending is on hold.';break
+                if self.case_closed():state='Stopped';error='The case is complete (Rs. 0 left), so the rest of this batch was stopped before sending.';break
                 if ident in done_here:continue
                 if chunk and index and index%chunk==0 and last_completion is not None:
                     rest=last_completion+self._rest(j,index//chunk)
@@ -208,11 +219,12 @@ class DonorDelivery:
                 try:r=self.book.resolve(ident)
                 except ValueError:skipped+=1;continue
                 if self.held():state='Stopped';error='Sending is on hold.';break
+                if self.case_closed():state='Stopped';error='The case is complete (Rs. 0 left), so the rest of this batch was stopped before sending.';break
                 if not self.eligible(r['phone']):skipped+=1;continue
                 name,gender=j['personal_names'][ident] if 'personal_names' in j else self.name_for(r['name'])
                 self._update(j['id'],state='Sending',next_at=None,current=hide_numbers(r['name']),batch=(index//chunk+1) if chunk else 1,sent=sent,skipped=skipped,receipts=receipts)
                 self.book.delivery(ident,'Sending')
-                try:result=self._dispatch(j,{'target':'phone','phone':r['phone'],'message':j.get('captions',[j['caption']]*len(j['ids']))[index],'poster':j['poster'],'kind':'donor_batch','first_in_batch':sent==0,'name':name,'gender':gender},receipts,sent,skipped)
+                try:result=self._dispatch(j,{'target':'phone','phone':r['phone'],'message':self._fresh_caption(j,index),'poster':j['poster'],'kind':'donor_batch','first_in_batch':sent==0,'name':name,'gender':gender},receipts,sent,skipped)
                 except ValueError as e:
                     self.book.delivery(ident,'Not sent');state='Stopped';error=hide_numbers(e);break
                 except Exception:

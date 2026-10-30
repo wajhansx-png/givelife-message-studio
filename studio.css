@@ -7637,3 +7637,91 @@ html body :is(.talk, .hist) .e.bot .amt {
     grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 38px !important;
   }
 }
+
+/* ===== 15. Hover and pointer feedback (mouse devices only, so phones never show a stuck highlight).
+   Everything clickable answers the cursor: surfaces brighten, the gradient lifts, rows highlight, cursor is a hand. ===== */
+button, summary, [role=tab], [role=switch], select, label:has(input[type=checkbox]), .donor-identity, .donor-star, a.tool, a.ghost {
+  cursor: pointer;
+}
+button:disabled, [aria-disabled=true] {
+  cursor: not-allowed;
+}
+@media(hover:hover) and (pointer:fine) {
+  /* main actions: gradient brightens and rises a little */
+  html body :is(.prim .main, .composer .go, .send-donors, .donor-add, .primary, .go, #batchStart):not(:disabled):hover {
+    filter: brightness(1.12) saturate(1.1);
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 #ffffff40, 0 14px 28px -12px #2f6fe8cc !important;
+  }
+  /* secondary buttons: lighter fill and a clear edge */
+  html body :is(.ghost, .tool, .chips button, #sendAll, .rail-quick button, .donor-back-bottom, .donor-bulk, .leftchip, #donorPace, .donor-back, .dm, .copy, .message-copy, .clip, .keys, #gear, #showMsg, .desktop-preview, .donor-msgs, .send-important, .bank-pagination button, .bank-regenerate, .big):not(:disabled):hover {
+    background: color-mix(in srgb, var(--ink) 9%, transparent) !important;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 30%, transparent), 0 8px 18px -10px #00000099 !important;
+    transform: translateY(-1px);
+  }
+  /* the blue group tile keeps its gradient when hovered */
+  html body .prim .main:hover, html body .big.main:hover {
+    background: var(--grad-h) !important;
+  }
+  /* tabs and view switch */
+  html body .donor-page .donor-tabs button:not([aria-selected=true]):hover,
+  html body .seg button:not([aria-pressed=true]):hover {
+    background: color-mix(in srgb, var(--ink) 10%, transparent) !important;
+    color: var(--ink) !important;
+  }
+  /* donor rows: the whole row lights up, the star and name respond */
+  html body .donor-page .donor-row:hover {
+    background: color-mix(in srgb, var(--primary) 16%, transparent) !important;
+    box-shadow: inset 3px 0 0 var(--primary);
+  }
+  html body .donor-page .donor-row:hover .donor-name {
+    color: var(--r-head, var(--ink));
+  }
+  html body .donor-page .donor-star:hover {
+    transform: scale(1.18);
+    filter: drop-shadow(0 0 6px #f2c14e99);
+  }
+  html body .donor-page .donor-row .donor-status:not(:disabled):hover,
+  html body .donor-page .donor-row .donor-dm:not(:disabled):hover {
+    background: color-mix(in srgb, var(--ink) 12%, transparent) !important;
+  }
+  html body .donor-page .donor-row .donor-more > summary:hover {
+    background: color-mix(in srgb, var(--ink) 12%, transparent) !important;
+  }
+  /* inputs */
+  html body :is(input, textarea, select):not([type=checkbox]):not([type=radio]):not(:disabled):hover {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 28%, transparent) !important;
+  }
+  /* messages list and pagination */
+  html body .bank-picker button:not([aria-current=true]):not([aria-pressed=true]):hover,
+  html body .bank-picker .tool:hover {
+    background: color-mix(in srgb, var(--ink) 10%, transparent) !important;
+  }
+  /* switches */
+  html body .autosw:not(:disabled):hover, html body input.sw:not(:disabled):hover {
+    filter: brightness(1.15);
+  }
+  /* status bar, links, dialog rows */
+  html body .live .livebar:hover {
+    background: color-mix(in srgb, var(--ink) 6%, transparent) !important;
+  }
+  html body .set .row:hover {
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+  }
+  html body a:hover {
+    text-decoration-color: currentColor;
+  }
+  /* chat message actions fade in on the reply that is hovered */
+  html body .e.bot .message-copy {
+    opacity: 0.72;
+    transition: opacity 0.15s;
+  }
+  html body .e.bot:hover .message-copy, html body .e.bot .message-copy:hover, html body .e.bot .message-copy:focus-visible {
+    opacity: 1;
+  }
+}
+/* keyboard users get the same feedback as the mouse */
+html body :is(button, summary, [role=tab], a):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

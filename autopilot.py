@@ -576,6 +576,8 @@ class Engine:
         if not self.s.get('dm_enabled') or self.quiet_now() or rules.in_quiet(DM_QUIET[0], DM_QUIET[1], pkt().hour):
             return
         for f in learning.followups_due(self.L)[:3]:
+            if self.h['read_left']() <= 0:
+                return
             self._reply(f['phone'] + '@s.whatsapp.net', self.h['dm_text'](f['name'], 'reminder'))
             self.log(f'Gentle reminder sent to …{f["phone"][-4:]}.')
 
@@ -603,6 +605,9 @@ class Engine:
                 caps['member'] = caps['saved'] = 0
             sent = 0
             for phone, name, tier in self.h['outreach'](caps):
+                if self.h['read_left']() <= 0:
+                    self.log('Goal complete during a DM batch: stopped before the next DM.')
+                    break
                 if sent >= 5 or self.s['dms_today'] >= self.s['dm_daily'] or not self.h['enabled']() or not self.s.get('dm_enabled') or self.h.get('on_hold',lambda:False)() or caps.get(tier, 0) <= 0:
                     continue
                 digest = hashlib.sha256((phone + '@s.whatsapp.net').encode()).hexdigest()

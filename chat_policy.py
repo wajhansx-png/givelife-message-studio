@@ -53,7 +53,7 @@ def literal_text_to_person(text):
  words=plan.get('text','')
  return plan.get('kind')=='text' and bool(plan.get('to')) and not manual_commands.group(plan['to']) and len(words)<=120 and not re.search(r'(?i)\b(message|caption|dm|poster|wording|version|hook|appeal|emotional|stronger|shorter|longer|draft|format|paragraph)\b',words)
 
-APP_WORDS=re.compile(r"(?i)\b(donor|donors|dm|dms|group|groups|send|sent|post|posts|message|messages|caption|poster|left|came|donat\w*|schedul\w*|auto|autopilot|whatsapp|campaign|yousuf|givelife|main|fiverr|upwork|uet|freelance|hold|resume|stop|pause|batch|important|wording|draft|version|rule|rules|gap|pace|status|report|rs|pkr|amount|balance|money|number|numbers|contact|reply|test)\b|\d")
+APP_WORDS=re.compile(r"(?i)\b(donor|donors|dm|dms|group|groups|send|sent|post|posts|message|messages|caption|poster|left|came|donat\w*|schedul\w*|auto|autopilot|whatsapp|campaign|yousuf|givelife|main|fiverr|upwork|uet|freelance|hold|resume|stop|pause|batch|important|wording|draft|version|rule|rules|gap|pace|status|report|rs|pkr|amount|balance|money|number|numbers|contact|reply|test)\b")
 QUESTION=re.compile(r"(?i)^\s*(?:what|why|how|when|where|who|which|is|are|was|were|do|does|did|can|could|should|would|will|tell me|explain|define|meaning of)\b|\?\s*$")
 def off_topic(text):
  """Clearly a general question (health, trivia, jokes): question-shaped, with no app words and no numbers.
@@ -65,7 +65,7 @@ def about_the_work(reply):
  return bool(APP_WORDS.search(str(reply)))
 def brief(reply,limit=320):
  """Off-topic answers stay to one or two short sentences and never tack on campaign status."""
- text=re.split(r"(?im)^\s*(?:meanwhile|by the way|btw|also,? your campaign|your campaign)\b",str(reply))[0].strip()
+ text=re.split(r"(?im)^\s*(?:meanwhile|by the way|btw|also,? your campaign|your campaign|where things stand|current case|campaign status)\b",str(reply))[0].strip()
  text=re.sub(r"(?m)^\s*(?:[-*•]|\d+[.)])\s+","",text)
  text=re.sub(r"\*\*|__|\*","",text)
  sentences=re.split(r"(?<=[.!?])\s+(?=[A-Z\"'(])",re.sub(r"\s*\n+\s*"," ",text))

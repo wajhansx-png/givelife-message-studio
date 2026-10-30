@@ -102,6 +102,20 @@ class SendTests(unittest.TestCase):
   app.manual_command('all groups every 15 min')
   self.assertFalse(app.auto_on())
   self.assertEqual(self.sent,[])
+ def test_compound_explicit_commands_are_not_truncated_to_one_fast_action(self):
+  text='send "Hello" to 03001234567 and then send "Thanks" to 03007654321'
+  result=app.manual_command(text)
+  self.assertFalse(result.get('handled'),result)
+  self.assertEqual(self.sent,[])
+ def test_two_separate_quoted_texts_keep_correct_phone_and_payload(self):
+  text='send "Hello" to 03001234567 and then send "Thanks" to 03007654321'
+  sent=[]
+  with patch.object(app,'send_free',side_effect=lambda to,message,pic,literal=False:sent.append((to,message)) or 'Sent.'):
+   cb=app.chat_callbacks(text,revision=app.OWNER_REVISION)
+   cb['send_message'](to='03001234567',text='wrong')
+   cb['send_message'](to='03007654321',text='wrong')
+  self.assertEqual([x[1] for x in sent],['Hello','Thanks'])
+  self.assertEqual(len(sent),2)
  def test_manual_bypasses_recent_group_and_resets_auto_timer(self):
   jid=app.GROUPS['main'][1];old=time.time()-10;app.STORE.put('last_sent',{jid:old});self.status_recent=True
   response=app.manual_command('send now to givelife main','manual-send-001');job=self.wait(response['job_id'])

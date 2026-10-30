@@ -56,7 +56,7 @@ class DonorBook:
         keys=('id','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted')
         # A confirmed DM is never forgotten: a later failed or pending attempt cannot erase "DM sent".
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
-        return {**{k:r.get(k) for k in keys},'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
+        return {**{k:r.get(k) for k in keys},'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'has_number':bool(r.get('phone')),'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
     @staticmethod
     def contacted(r):
         return bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
@@ -80,10 +80,10 @@ class DonorBook:
             return {'items':[self._public(r) for r in rows],'counts':counts}
     def add(self,name='',phone='',text='',source='Added in studio'):
         if text: name,phone=parse_contact(text,name)
-        phone=normalize_phone(phone);name=str(name or 'Donor').strip()
+        phone=normalize_phone(phone) if str(phone or '').strip() else '';name=str(name or 'Donor').strip()
         if len(name)>120 or len(name)<1: raise ValueError('Use a name or label of 1–120 characters.')
         with self.lock:
-            data=self._load(); old=next((r for r in data['records'] if r['phone']==phone),None)
+            data=self._load(); old=next((r for r in data['records'] if (r['phone']==phone if phone else (not r['phone'] and name_key(r['name'])==name_key(name)))),None)
             if old:
                 if old.get('deleted'): old['deleted']=False;old['updated_at']=time.time();self._save(data)
                 return {'donor':self._public(old),'duplicate':True,'reply':'This donor is already in your list.'}
@@ -129,7 +129,7 @@ class DonorBook:
             if len(exact)!=1: raise ValueError('More than one donor matches. Use the donor page to select one.' if exact else 'No donor matches that name. Search the Donors page or add them first.')
             return copy.deepcopy(exact[0])
     def update(self,donor,expected_updated_at=None,**changes):
-        allowed={'name','important','donated','amount','normal_amount','notes'}
+        allowed={'name','important','donated','amount','normal_amount','notes','phone'}
         if not changes or set(changes)-allowed: raise ValueError('Choose a donor field to update.')
         if any(k in changes and not isinstance(changes[k],bool) for k in ('important','donated')): raise ValueError('Use true or false for donor status.')
         if 'amount' in changes and (type(changes['amount']) not in (int,float) or not math.isfinite(changes['amount']) or not 0<=changes['amount']<=100000000): raise ValueError('Enter a valid donated amount.')
@@ -138,11 +138,14 @@ class DonorBook:
         if 'notes' in changes and (not isinstance(changes['notes'],str) or len(changes['notes'])>2000): raise ValueError('Keep notes under 2,000 characters.')
         if expected_updated_at is not None and (type(expected_updated_at) not in (int,float) or not math.isfinite(expected_updated_at) or expected_updated_at<0):
             raise ValueError('Invalid donor update version. Refresh the donor page.')
+        if 'phone' in changes: changes['phone']=normalize_phone(changes['phone'])
         if changes.get('donated') is False: changes['amount']=0
         with self.lock:
             r=self.resolve(donor)
             data=self._load(); row=next((x for x in data['records'] if x['id']==r['id'] and not x.get('deleted')),None)
             if row is None:raise ValueError('This donor was removed. Refresh the donor page.')
+            if 'phone' in changes and row.get('phone'):raise ValueError('This donor already has a number. It cannot be changed here.')
+            if changes.get('phone') and any(x['id']!=row['id'] and x.get('phone')==changes['phone'] and not x.get('deleted') for x in data['records']):raise ValueError('Another donor already has this number.')
             if expected_updated_at is not None and expected_updated_at!=row.get('updated_at'):
                 raise ValueError('This donor changed since you opened it. Refresh before saving your edit.')
             row.update(changes,updated_at=max(time.time(),math.nextafter(float(row.get('updated_at',0)),math.inf)));self._save(data)
@@ -184,7 +187,7 @@ class DonorBook:
     def recipients(self,scope='important',ids=None,limit=None):
         if scope not in ('all','important','donated','not_donated','selected'):raise ValueError('Choose an audience.')
         with self.lock:
-            rows=[r for r in self._load()['records'] if not r.get('deleted') and (scope=='all' or scope=='selected' and r['id'] in (ids or []) or scope=='important' and r['important'] or scope=='donated' and r['donated'] or scope=='not_donated' and not r['donated'])]
+            rows=[r for r in self._load()['records'] if not r.get('deleted') and r.get('phone') and (scope=='all' or scope=='selected' and r['id'] in (ids or []) or scope=='important' and r['important'] or scope=='donated' and r['donated'] or scope=='not_donated' and not r['donated'])]
             rows.sort(key=self.queue_key)
             return copy.deepcopy(rows[:limit] if limit else rows)
     CASE_FIELDS={'important':False,'donated':False,'amount':0,'delivery':'Not contacted','last_sent_at':None,'sent_count':0,'dm_sent':False}

@@ -8232,3 +8232,65 @@ html body .donor-page .donor-tabs:has([data-tab=volunteers]) {
   white-space: nowrap;
   padding-inline: 18px;
 }
+
+
+/* ===== 18b. Team screen v2: one big line (3 of 5 done), then only what needs you ===== */
+.team-sum {
+  align-items: stretch;
+  gap: 8px;
+}
+.team-big {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.team-sum[data-late=true] .team-big {
+  color: var(--bad-ink, #f87171);
+}
+.team-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  overflow: hidden;
+}
+.team-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--grad, var(--primary));
+  transition: width 0.4s ease;
+}
+.team-line {
+  font-size: 15px;
+  color: var(--mut);
+}
+.team-donelist {
+  margin: 0;
+  font-size: 14px;
+  color: var(--mut);
+  overflow-wrap: anywhere;
+}
+.team-done h2 {
+  color: var(--ok-ink, #4ade80);
+}
+.team-x {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--mut);
+}
+.team-link {
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 0 4px;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--r-head, #7dd3fc);
+  text-decoration: underline;
+}
+.team-add {
+  width: 100%;
+}

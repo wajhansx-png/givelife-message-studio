@@ -1751,7 +1751,16 @@ class Handler(BaseHTTPRequestHandler):
   if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/team.js','/donors.css','/studio.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
+  mt=re.fullmatch(r'/t/([\w-]{10,60})(/state)?',self.path.split('?')[0])
+  if mt:
+   if not mt[2]:return self.reply((ROOT/'team-chat.html').read_bytes(),'text/html')
+   try:return self.reply(donors().team.chat_state(mt[1]))
+   except ValueError as e:return self.reply({'error':str(e)},status=404)
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
+  if self.path.split('?')[0]=='/team-proof':
+   try:
+    data,ctype=donors().team.proof_file(urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get('id',[''])[0]);return self.reply(data,ctype)
+   except ValueError as e:return self.reply({'error':str(e)},status=404)
   if self.path.split('?')[0]=='/api/group-finder':
    try:return self.reply(group_research().snapshot(self.path))
    except (ValueError,TypeError):return self.reply({'error':'Choose valid research filters.'},status=400)
@@ -1809,8 +1818,21 @@ class Handler(BaseHTTPRequestHandler):
    if not self.response_sent:self.reply({'error':'The request data is invalid. Correct the fields and try again.'},status=400)
   except Exception:
    if not self.response_sent:self.reply({'error':'This request did not complete reliably. Check confirmed activity before repeating any send.'},status=502)
+ def teammate_say(self,token):
+  """The teammate's chat page posts here with his private link (no owner key). Same-origin only, 6 MB at most."""
+  origin=self.headers.get('Origin')
+  if origin and urllib.parse.urlparse(origin).netloc!=self.headers.get('Host'):return self.reply({},status=403)
+  try:
+   length=int(self.headers.get('Content-Length',0))
+   if not 0<length<=6*1024*1024:return self.reply({'error':'That message is too large.'},status=413)
+   body=json.loads(self.rfile.read(length))
+   return self.reply(donors().team.chat_say(token,body.get('text',''),body.get('image',''),body.get('name','')))
+  except ValueError as e:return self.reply({'error':str(e)},status=400)
+
  def _post(self):
   global ACTIVE,OWNER_REVISION
+  mt=re.fullmatch(r'/t/([\w-]{10,60})/say',self.path)
+  if mt:return self.teammate_say(mt[1])
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   if self.path!='/api/group-finder':ENGINE.touch_owner()
   if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/cases','/team','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
@@ -1843,6 +1865,7 @@ class Handler(BaseHTTPRequestHandler):
     if act=='cancel':return self.reply(t.cancel(body.get('id')))
     if act=='pause':return self.reply(t.pause(body.get('on')))
     if act=='read':return self.reply(t.mark_read())
+    if act=='send_link':return self.reply(t.send_link())
     raise ValueError('Unknown team action.')
    except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/cases':

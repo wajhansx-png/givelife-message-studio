@@ -3,6 +3,7 @@ Uses the existing fake WhatsApp fixture; no donor receives messages.
 """
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 import test_donor_hub as hub
 
 class CaseIsolation(unittest.TestCase):
@@ -10,7 +11,15 @@ class CaseIsolation(unittest.TestCase):
   self.fixture=hub.IntegrationTests()
   self.fixture.setUp()
   self.app=self.fixture.app
+  # Case creation rewrites captions. Keep this test's drafts isolated so it
+  # cannot corrupt other tests or the fixture's saved baseline messages.
+  original=self.app.DRAFT
+  draft=Path(self.fixture.scope.name)/'isolated-drafts.json'
+  draft.write_bytes(original.read_bytes())
+  self.draft_patch=patch.object(self.app,'DRAFT',draft)
+  self.draft_patch.start()
  def tearDown(self):
+  self.draft_patch.stop()
   self.fixture.tearDown()
  def drafts(self):
   return self.app.get_message('group')['text'],self.app.get_message('dm')['text']

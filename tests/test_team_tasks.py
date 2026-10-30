@@ -262,4 +262,20 @@ class Chat(Base):
   self.assertIn('Sara',self.t.command('set teammate Sara 0300 7654321','set teammate Sara 0300 7654321')['reply'])
   with self.assertRaises(ValueError):self.t.set_member('Me','923000000000')
 
+class AskUpdate(Base):
+ def test_ask_one_task_sends_one_natural_message_even_when_paused_and_never_twice_for_one_click(self):
+  self.start();self.tick(1);self.tick(2);self.sent.clear();self.t.pause(True)
+  tid=[x for x in self.t.view()['tasks'] if x['status']=='Asked'][0]['id']
+  self.t.ask_update(tid);self.tick(3);self.tick(4)
+  self.assertEqual(len(self.sent),1);self.assertFalse(any(w in self.sent[0] for w in ROBOT))
+ def test_ask_with_no_name_sends_one_message_for_the_ongoing_task(self):
+  self.start();self.tick(1);self.tick(2);self.sent.clear()
+  self.t.ask_update();self.tick(3)
+  self.assertEqual(len(self.sent),1);self.assertIn('post in groups',self.sent[0])
+ def test_ask_on_a_task_not_asked_yet_asks_it_now(self):
+  self.start();tid=self.t.view()['tasks'][0]['id'];self.t.ask_update(tid);self.tick(0.5)
+  self.assertTrue(self.sent)
+ def test_ask_with_nothing_to_ask_is_a_clear_error(self):
+  with self.assertRaises(ValueError):self.t.ask_update()
+
 if __name__=='__main__':unittest.main()

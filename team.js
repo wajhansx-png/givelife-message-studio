@@ -13,16 +13,16 @@
  async function act(body,ok){lastError='';try{data={...data,...await api(body)};if(ok)toast(ok);lastUnread=data.unread;paintBadge();draw(true)}catch(e){lastError=e.message;toast(e.message,true);if(page.open)draw(true)}}
  const chip=(s)=>{const c=make('span','team-chip',s==='Reported'?'Needs your check':s);c.dataset.s=s;return c};
  /* One screen, no scrolling. The summary and the add button always show; rows are trimmed from the least important up until everything fits. */
- const STEPS=['latest','done','left','check','plan'];
- const typing=()=>{const a=document.activeElement;return !!a&&page.contains(a)&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
+ const typing=()=>{const a=document.activeElement;return !!(a&&page.contains(a)&&(a.tagName==='TEXTAREA'||a.tagName==='INPUT'))};
+ const STEPS=['done','plan','left','check','latest2','say','latest'];
  function draw(force){
   if(!force&&typing())return; /* never rebuild the screen while a field has focus: it would close the phone keyboard */
   const priorScroll=page.querySelector('.team-body')?.scrollTop||0;
   const typed=page.querySelector('#teamText')?.value;if(typed!==undefined)planText=typed;
   page.classList.toggle('team-expanded',expanded);
-  if(expanded){build({latest:Infinity,done:1,left:Infinity,check:Infinity,plan:Infinity});const body=page.querySelector('.team-body');if(body)body.scrollTop=priorScroll;return}
-  const lim={latest:3,done:1,left:8,check:4,plan:20};
-  let guard=40;
+  if(expanded){build({done:1,plan:Infinity,left:Infinity,check:Infinity,latest2:1,say:1,latest:1});const body=page.querySelector('.team-body');if(body)body.scrollTop=priorScroll;return}
+  const lim={done:1,plan:20,left:8,check:4,latest2:1,say:1,latest:1};
+  let guard=60;
   while(guard--){build(lim);const body=page.querySelector('.team-body');if(!body||body.scrollHeight<=body.clientHeight+1)break;
    let reduced=false;for(const k of STEPS){if(k==='done'?lim.done>0:lim[k]>(k==='plan'?1:0)){if(k==='done')lim.done=0;else lim[k]--;reduced=true;break}}if(!reduced)break}
  }
@@ -36,36 +36,44 @@
    const f=make('form','team-card team-setup');f.append(make('h2','','Who is your teammate?'),make('p','team-hint','Their WhatsApp number stays hidden.'));
    const n=make('input','');n.name='team_name';n.placeholder='Name';n.autocomplete='off';n.setAttribute('aria-label','Teammate name');const ph=make('input','');ph.name='team_phone';ph.type='tel';ph.placeholder='WhatsApp number';ph.setAttribute('aria-label','Teammate WhatsApp number');
    const b=make('button','primary','Save teammate');b.type='submit';f.append(n,ph,b);f.onsubmit=e=>{e.preventDefault();act({action:'member',name:n.value,phone:ph.value},'Teammate saved.')};body.append(f)}
-  else if(data.plan||addOpen||planText){
-   const add=make('section','team-card team-addbox');
-   if(data.plan){add.append(make('h2','','Check the plan'),make('p','team-hint','Nothing is sent until you press Start.'));
-    data.plan.items.slice(0,lim.plan).forEach((i,k)=>{const r=make('div','team-task');const txt=make('div','team-text');txt.append(make('strong','',(k+1)+'. '+i.text),make('span','team-due','Ask '+i.start_label+' · due '+i.due_label));r.append(txt);add.append(r)});
-    const m=more(data.plan.items.length-lim.plan);if(m)add.append(m);
-    const go=make('button','primary','Start tasks');go.type='button';go.onclick=()=>{planText='';addOpen=false;act({action:'confirm'},'Tasks started.')};const ds=make('button','tool','Discard');ds.type='button';ds.onclick=()=>{addOpen=false;act({action:'discard'})};const ar=make('div','team-actions');ar.append(go,ds);add.append(ar)}
-   else{add.append(make('h2','','Write today\'s tasks'));const ta=make('textarea','');ta.id='teamText';ta.name='team_tasks';ta.rows=4;ta.maxLength=3000;ta.value=planText;ta.placeholder='One task per line, then a deadline:\n1) Post in the 3 groups\n2) Update the sheet\nDeadline 6pm';ta.setAttribute('aria-label','Today\'s tasks');
-    const go=make('button','primary','Plan the tasks');go.type='button';go.onclick=()=>act({action:'plan',text:ta.value});if(lastError)add.append(make('p','team-error',lastError));const x=make('button','tool','Cancel');x.type='button';x.onclick=()=>{planText='';addOpen=false;draw(true)};const ar=make('div','team-actions');ar.append(go,x);add.append(ta,ar)}
-   body.append(add)}
   else{
    const all=data.tasks,done=all.filter(t=>t.status==='Done'),review=all.filter(t=>t.status==='Reported'),left=all.filter(t=>['Waiting','Asked','Late'].includes(t.status)).sort((a,b)=>(b.status==='Late')-(a.status==='Late')||a.due_at-b.due_at);
+   const first=data.member.name.split(' ')[0];
+   /* 1. one line: how far along */
    const sum=make('section','team-card team-sum');sum.append(make('div','team-big',all.length?done.length+' of '+all.length+' done':'No tasks yet'));
    const bar=make('div','team-bar');const fill=make('i','');fill.style.width=(all.length?Math.round(100*done.length/all.length):0)+'%';bar.append(fill);sum.append(bar);
    const late=left.filter(t=>t.status==='Late').length;const next=left.filter(t=>t.status!=='Late')[0];
    const bits=[];if(left.length)bits.push(left.length+' left');if(late)bits.push(late+' late');if(review.length)bits.push(review.length+' to check');if(next)bits.push('next due '+next.due_label);
    sum.append(make('div','team-line',bits.join(' · ')||(all.length?'All done ✓':'Add tasks below')));if(late)sum.dataset.late='true';body.append(sum);
+   /* 2. his latest reply, in the middle, in plain words */
+   if(lim.latest>0){const c=make('section','team-card team-latest');c.append(make('h2','',first+"'s latest update"));
+    const items=(data.latest||[]).slice(0,lim.latest+Math.max(0,lim.latest2));
+    if(!items.length)c.append(make('p','team-nothing','No reply yet.'));
+    items.forEach((e,k)=>{const r=make('div','team-ev'+(k===0?' team-ev-main':''));r.append(make('time','',e.label),make('span','team-ev-text',e.text));c.append(r)});body.append(c)}
+   /* 3. what needs a decision */
    if(review.length){const c=make('section','team-card team-review');c.append(make('h2','','Check these'));
-    for(const t of review.slice(0,lim.check)){const row=make('div','team-item');const txt=make('div','team-text');txt.append(make('strong','',t.text),make('span','team-say',(t.proof?'Proof ✓ · ':'No proof yet · ')+'"'+(t.report_text||'done')+'"'));
+    for(const t of review.slice(0,lim.check)){const row=make('div','team-item');const txt=make('div','team-text');txt.append(make('strong','',t.text),lim.say?make('span','team-say',(t.proof?'Proof ✓ · ':'No proof yet · ')+'"'+(t.report_text||'done')+'"'):'');
      const ok=make('button','primary','Verified ✓');ok.type='button';ok.onclick=()=>act({action:'verify',id:t.id},'Verified.');
      const no=make('button','tool','Not done');no.type='button';no.onclick=()=>{const note=prompt('What should '+data.member.name+' fix? (optional)','');if(note!==null)act({action:'reject',id:t.id,note},'Sent back.')};
      const acts=make('div','team-actions');acts.append(ok,no);row.append(txt,acts);c.append(row)}
     const m=more(review.length-lim.check);if(m)c.append(m);body.append(c)}
-   if(left.length&&lim.left>0){const c=make('section','team-card');c.append(make('h2','','Left'));
-    for(const t of left.slice(0,lim.left)){const row=make('div','team-task');row.dataset.s=t.status;const txt=make('div','team-text');txt.append(make('strong','',t.text),make('span','team-due',t.delivery_uncertain?'WhatsApp send unconfirmed · check before retrying':(t.status==='Late'?'Late · was due ':'Due ')+t.due_label));row.append(txt,chip(t.delivery_uncertain?'Check send':t.status));
+   /* 4. what is left, each with a button that asks him for an update right now */
+   if(left.length&&lim.left>0){const c=make('section','team-card');const h=make('div','team-lefthead');h.append(make('h2','','Left'));
+    if(left.length>1){const all2=make('button','team-link','Ask all for an update');all2.type='button';all2.onclick=()=>act({action:'ask'},'Asked '+first+' for an update.');h.append(all2)}c.append(h);
+    for(const t of left.slice(0,lim.left)){const row=make('div','team-task');row.dataset.s=t.status;const txt=make('div','team-text');txt.append(make('strong','',t.text),make('span','team-due',(t.status==='Late'?'Late · was due ':t.status==='Waiting'?'Not asked yet · due ':'Asked · due ')+t.due_label));row.append(txt);
+     const ask=make('button','tool team-ask',t.status==='Waiting'?'Ask now':'Ask update');ask.type='button';ask.setAttribute('aria-label','Ask '+first+' for an update on '+t.text);ask.onclick=()=>act({action:'ask',id:t.id},'Asked '+first+' on WhatsApp.');row.append(ask);
      const x=make('button','team-x','✕');x.type='button';x.setAttribute('aria-label','Cancel '+t.text);x.onclick=()=>{if(confirm('Cancel this task?'))act({action:'cancel',id:t.id},'Cancelled.')};row.append(x);c.append(row)}
     const m=more(left.length-lim.left);if(m)c.append(m);body.append(c)}
-   if(lim.done&&done.length){const c=make('p','team-donelist','Done ✓  '+done.map(t=>t.text).join(' · '));body.append(c)}
-   if(lim.latest&&data.latest?.length){const c=make('section','team-card team-latest');
-    for(const e of data.latest.slice(0,lim.latest)){const r=make('div','team-ev');r.append(make('time','',e.label),make('span','team-ev-text',e.text));c.append(r)}body.append(c)}
-   const b=make('button','primary team-add','+ Add tasks');b.type='button';b.onclick=()=>{addOpen=true;draw(true);page.querySelector('#teamText')?.focus()};body.append(b)}
+   if(lim.done&&done.length){body.append(make('p','team-donelist','Done ✓  '+done.map(t=>t.text).join(' · ')))}
+   /* 5. new tasks: the plan or the box sits at the bottom, under everything above */
+   const add=make('section','team-card team-addbox');
+   if(data.plan){add.append(make('h2','','Check the plan · nothing is sent until you press Start'));
+    data.plan.items.slice(0,lim.plan).forEach((i,k)=>{const r=make('div','team-task');const txt=make('div','team-text');txt.append(make('strong','',(k+1)+'. '+i.text),make('span','team-due','Ask '+i.start_label+' · due '+i.due_label));r.append(txt);add.append(r)});
+    const m=more(data.plan.items.length-lim.plan);if(m)add.append(m);
+    const go=make('button','primary','Start tasks');go.type='button';go.onclick=()=>{planText='';addOpen=false;act({action:'confirm'},'Tasks started.')};const ds=make('button','tool','Discard');ds.type='button';ds.onclick=()=>{addOpen=false;act({action:'discard'})};const ar=make('div','team-actions');ar.append(go,ds);add.append(ar);body.append(add)}
+   else if(addOpen||planText){add.append(make('h2','','Write today\'s tasks'));const ta=make('textarea','');ta.id='teamText';ta.name='team_tasks';ta.rows=3;ta.maxLength=3000;ta.value=planText;ta.placeholder='One task per line, then a deadline:\n1) Post in the 3 groups\n2) Update the sheet\nDeadline 6pm';ta.setAttribute('aria-label','Today\'s tasks');
+    const go=make('button','primary','Plan the tasks');go.type='button';go.onclick=()=>act({action:'plan',text:ta.value});if(lastError)add.append(make('p','team-error',lastError));const x=make('button','tool','Cancel');x.type='button';x.onclick=()=>{planText='';addOpen=false;draw(true)};const ar=make('div','team-actions');ar.append(go,x);add.append(ta,ar);body.append(add)}
+   else{const b=make('button','primary team-add','+ Add tasks');b.type='button';b.onclick=()=>{addOpen=true;draw(true);page.querySelector('#teamText')?.focus()};body.append(b)}}
   shell.append(body);const foot=make('footer','team-foot');const back=make('button','tool team-back','← Back');back.type='button';back.onclick=()=>page.close();foot.append(back);shell.append(foot);page.append(shell);
  }
  async function open(){await refresh(true);if(!data){toast('Could not load the team screen.',true);return}if(!page.open)page.showModal();draw(true);if(data.unread)try{data={...data,...await api({action:'read'})};lastUnread=0;paintBadge()}catch(e){}clearInterval(timer);timer=setInterval(()=>refresh(true),8000)}

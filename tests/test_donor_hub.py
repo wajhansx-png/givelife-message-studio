@@ -28,6 +28,12 @@ class RegistryTests(unittest.TestCase):
   self.assertEqual(self.book.import_contacts(rows,'923205069925')['added'],1)
   with self.assertRaises(ValueError):self.book.import_contacts([{'phone':'+923331234567'},{'phone':'bad'}],'923205069925')
   self.assertEqual(self.book.list()['counts']['all'],1)
+ def test_not_contacted_tab_lists_donors_with_no_dm_and_no_donation(self):
+  a=self.add('Ali','03001234567');b=self.add('Bilal','03007654321');c=self.add('Chand','03001112233')
+  self.book.update(b['id'],donated=True,amount=500)
+  self.book.delivery(c['id'],'Sent')
+  listed=self.book.list('not_contacted');self.assertIn(a['id'],[x['id'] for x in listed['items']]);self.assertNotIn(b['id'],[x['id'] for x in listed['items']]);self.assertNotIn(c['id'],[x['id'] for x in listed['items']])
+  self.assertEqual(listed['counts']['not_contacted'],len(listed['items']))
  def test_status_tabs_and_important_sort(self):
   a=self.add('Zaid');b=self.add('Amina','03011234567');self.book.update(a['id'],important=True);self.book.update(b['id'],donated=True,amount=2000)
   self.assertEqual(self.book.list()['items'][0]['id'],a['id']);self.assertEqual(len(self.book.list('donated')['items']),1);self.assertEqual(self.book.list('not_donated')['items'][0]['id'],a['id'])

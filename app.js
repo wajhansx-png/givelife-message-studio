@@ -8,7 +8,7 @@ const Nav={rendering:false,
  path(){try{return decodeURIComponent((location.hash||'').replace(/^#\/?/,''))}catch(e){return ''}},
  top(){return Nav.path().split('/')[0]},
  /* The chat log below owns the name `history`, so the browser's is always reached as window.history. */
- valid(path){return /^(?:chat|settings|preview|whatsapp|donors\/(?:all|important|donated|not_donated|messages))$/.test(path)},
+ valid(path){return /^(?:chat|settings|preview|whatsapp|donors\/(?:all|important|donated|not_donated|not_contacted|messages))$/.test(path)},
  go(path,{replace=false}={}){if(Nav.rendering||Nav.path()===path)return;const h=window.history,from=replace?h.state?.from:Nav.path();try{(replace?h.replaceState:h.pushState).call(h,{nav:1,from:Nav.valid(from)?from:''},'',path?'#/'+path:location.pathname+location.search)}catch(e){}},
  // Close synchronously. A delayed history.back() can undo the next tap or race a refresh.
  leave(name){if(Nav.rendering||Nav.top()!==name)return;const from=window.history.state?.from;Nav.go(Nav.valid(from)&&from.split('/')[0]!==name?from:'',{replace:true});renderNav()}};

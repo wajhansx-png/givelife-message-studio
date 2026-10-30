@@ -283,6 +283,13 @@ $('campStop').onclick=async()=>{if(listT){clearTimeout(listT);listT=null;$('camp
 async function quick(t){const low=t.toLowerCase().trim();
  if(/^(hi+|hello|hey|salam)\W*$/i.test(t))return 'Hi!';
  if(/^(ok|okay|thanks|thank you|theek|done thanks)\W*$/i.test(t))return /thank/i.test(t)?'You’re welcome.':'Okay.';
+ // Emergency global hold must bypass AI, draft loading and draft-save failures.
+ // It never matches a DM-only pause or a negative request.
+ if(/^(?:hold|pause|stop)(?:\s+(?:evv?erything|evrything|everything|all|all\s+sending))?\s*[.!]*$/i.test(t)){
+  const response=await post('/hold',{on:true}),data=await response.json();
+  if(!response.ok)throw Error(data.error||'Could not confirm the global hold.');
+  return data.reply||'Everything is on hold.';
+ }
  if(editing)setEditing(false);clearTimeout(timer);await ensureDrafts();await save();
  const response=await post('/command',{text:t,request_id:requestId(),view:view()}),direct=await response.json();
  if(!response.ok)throw Error(direct.error||'Command failed. Nothing was retried.');

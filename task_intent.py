@@ -86,3 +86,16 @@ def compound(text):
  clauses=[c.strip() for c in DIVIDER.split(value) if c.strip()]
  if len(clauses)<2:return False
  return sum(bool(re.search(r"(?i)^\s*(?:please\s+)?(?:send|post|set|update|edit|rewrite|change|start|stop|pause|hold|schedule|create|add|remove|delete|record|assign|open|cancel)\b",c)) for c in clauses)>=2
+
+def send_clauses(text):
+ """Independent explicit sends, used to prevent a one-prompt job stopping early."""
+ parts=[c.strip() for c in DIVIDER.split(str(text or '')) if c.strip()]
+ return [part for part in parts if re.match(r'(?i)^(?:please\s+)?(?:send|resend|text|post|share|dm)\b',part)]
+
+def quoted_sends(text):
+ """Extract exact per-recipient texts; do not confuse one person's quote with another."""
+ result=[]
+ for part in send_clauses(text):
+  match=re.match(r'(?is)^(?:please\s+)?(?:send|resend|text|message)\s+["“]([^"”]+)["”]\s+(?:to|ko)\s+(.+)$',part)
+  if match:result.append({'text':match[1].strip(),'to':match[2].strip()})
+ return result

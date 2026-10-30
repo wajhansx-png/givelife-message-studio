@@ -126,6 +126,34 @@ class RuntimeTests(unittest.TestCase):
   hist=[{'who':'you','text':'x'*4000+str(n)} for n in range(200)]
   messages=chat_runtime.context_messages('latest critical instruction',hist,{'retrieved':[{'text':'old relevant fact'}]},[])
   self.assertLess(len(json.dumps(messages)),50000);self.assertEqual(messages[-1]['content'],'latest critical instruction');self.assertIn('old relevant fact',json.dumps(messages))
+ def test_short_followup_keeps_last_real_owner_task_even_when_chat_is_noisy(self):
+  prior='Update the current saved Yousuf DM. Keep the new medical note but do not send it.'
+  hist=[{'who':'you','text':prior}]
+  hist.extend({'who':'app','text':'Large unrelated reply '+str(i)+' '+('x'*2000)} for i in range(18))
+  msgs=chat_runtime.context_messages('Fix that last line',hist,{},[])
+  context=next(m['content'] for m in msgs if 'APP_CONTEXT_JSON' in m['content'])
+  self.assertIn(prior,context)
+  self.assertEqual(msgs[-1]['content'],'Fix that last line')
+ def test_historical_owner_task_cannot_authorize_send_again(self):
+  hist=[{'who':'you','text':'Send to main NOW'},{'who':'app','text':'Sent to main after your request.'}]
+  msgs=chat_runtime.context_messages('Do the same',hist,{},[])
+  context=next(m['content'] for m in msgs if 'APP_CONTEXT_JSON' in m['content'])
+  self.assertIn('Send to main NOW',context)
+  self.assertFalse(chat_policy.intent('Do the same')['send'])
+ def test_memory_retrieval_ignores_unrelated_preferences_but_keeps_format_corrections(self):
+  with tempfile.TemporaryDirectory() as folder:
+   k=chat_memory.Knowledge(folder)
+   for i in range(20):k.remember('Always label category '+str(i)+' with x')
+   k.remember('Always keep bold and italic in the caption.')
+   hits=k.retrieve('caption formatting')
+   self.assertTrue(any('bold' in h['text'] for h in hits))
+   self.assertFalse(any('category' in h['text'] for h in hits))
+ def test_memory_broad_lookup_still_lists_active_preferences(self):
+  with tempfile.TemporaryDirectory() as folder:
+   k=chat_memory.Knowledge(folder)
+   k.remember('Start replies with the child.')
+   self.assertTrue(k.retrieve('Show my preferences'))
+
  def test_greeting_does_not_receive_campaign_state_or_action_tools(self):
   result,model=self.run_model('Everything good?',[{'content':'Yes, how are you?'}],{},state={'left':25000,'send_status':'Post to all donors now','drafts':{'group':'fundraising'}})
   self.assertEqual(model.call_args.args[2],[]);self.assertNotIn('25000',json.dumps(model.call_args.args[3]));self.assertNotIn('Post to all donors',json.dumps(model.call_args.args[3]))

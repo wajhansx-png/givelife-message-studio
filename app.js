@@ -182,7 +182,6 @@ function showLeft(){cancelAnimationFrame(leftTween);const from=shownLeft,to=left
  const tick=now=>{const t=Math.min(1,(now-start)/span),eased=1-Math.pow(1-t,3);paintLeft(from+(to-from)*eased);if(t<1)leftTween=requestAnimationFrame(tick);else{paintLeft(to);$('leftChip').classList.remove('bump')}};
  $('leftChip').classList.add('bump');leftTween=requestAnimationFrame(tick)}
 function applyDrafts(d){if(typeof d.group==='string'&&typeof d.dm==='string')draftsReady=true;if(d.dm_identity){$('dmName').value=d.dm_identity.name||'';$('dmPhone').value=d.dm_identity.phone||'';gender=d.dm_identity.gender==='Sister'?'Sister':'Brother';document.querySelectorAll('#gender button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===gender)))}if(d.group!=null||d.dm!=null)draftSaved=JSON.stringify({group:d.group??$('group').value,dm:d.dm??$('dm').value});if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
-async function setLeft(n){if(editing)setEditing(false);const r=await post('/left',{left:n}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not update amount');applyDrafts(d);await save()}
 $('leftChip').onclick=()=>{openChat();$('histCmd').placeholder='Amount left, e.g. 25000 or 25k';$('histCmd').focus({preventScroll:true})};
 let gender='Brother';
 function logicalName(value){if(/acc+ount|\d|@|https?:\/\/|[_/\\]|\b(jr|junior|sr|senior|accounts?|accts?|admin|team|group|member|donors?|business|company|shop|store|services?|official|office|unknown|unnamed|name|contact|number|test|user|brother|sister|friend|wife|wifey|boss|customer|client|support|sales|marketing|web|developer|designer|agency|digital|seo|upwork|fiverr|foundation|givelife)\b/i.test(value))return '';const words=value.replace(/[^A-Za-z\s'-]/g,'').trim().split(/\s+/),n=words[0];return words.length<=4&&words.every(w=>w.length>=2)&&/^[A-Za-z][A-Za-z'-]{1,19}$/.test(n)&&/[aeiouy]/i.test(n)?n[0].toUpperCase()+n.slice(1).toLowerCase():''}
@@ -257,15 +256,6 @@ function paintGroupTimes(data){if(data&&typeof data==='object'&&!Array.isArray(d
 setInterval(paintGroupTimes,30000);
 
 /* ---- send a plain message to a contact, group or number: works without the AI ---- */
-async function sendTo(who,text){
- let to=who;const g=GKEY(who);
- if(g)to=g;else if(who&&!/^\+?\d[\d\s-]{6,}$/.test(who)){
-  const r=await post('/find',{query:who}),d=await r.json();
-  if(!d.items.length)return `I checked your chats and contacts (${d.checked}) and found nobody called "${who}". Send me the number and I will message it.`;
-  if(d.items.length>1&&!d.items.some(x=>x.name.toLowerCase()===who.toLowerCase()))return 'Which one?\n'+d.items.slice(0,5).map((x,i)=>`${i+1}. ${x.name}`).join('\n')+'\nSay: send '+text+' to <full name>.';
-  const hit=d.items.find(x=>x.name.toLowerCase()===who.toLowerCase())||d.items[0];to=hit.id;who=hit.name}
- const r=await post('/send-now',{to,text,with_picture:false,literal:true}),d=await r.json();
- if(!r.ok)throw Error(d.error||'Could not send');return `Sent "${text.slice(0,60)}" to ${who||d.to||'the last person'}.`}
 const GKEY=w=>({main:'main',givelife:'main',community:'community','upwork community':'community',fiverr:'fiverr','fiverr course':'fiverr',upwork:'upwork','upwork course':'upwork',uet:'uet','fiverr uet':'uet',toprated:'toprated','top rated':'toprated',test:'test','test group':'test'})[String(w).toLowerCase().trim()];
 
 /* ---- pictures in the chat ---- */
@@ -287,24 +277,7 @@ function nameFrom(s){
  if(words.some(x=>/\d|…|\.\.\.|[\p{Extended_Pictographic}]/u.test(x))||/\b(develop|graphic|entrepreneur|design|market|official)/i.test(s))return '';
  s=words.join(' ').replace(/[^\p{L}\s.'-]/gu,' ').replace(/\s+/g,' ').trim();if(!s)return '';const w=s.split(' ');
  if(!w.length||w.length>3)return '';const n=w.slice(0,2).join(' ');return /^[A-Za-z][A-Za-z.'-]{1,19}(?: [A-Za-z][A-Za-z.'-]{1,19})?$/.test(n)?n.replace(/\b\w/g,c=>c.toUpperCase()):''}
-function parseList(t){const people=[],re=/(?:\+?92|0092|0)[\s-]?3\d{2}[\s-]?\d{7}/g,lines=t.split(/\n|;/);
- for(const line of lines){let m;const found=[...line.matchAll(re)];for(let i=0;i<found.length;i++){m=found[i];
-  const before=line.slice(i?found[i-1].index+found[i-1][0].length:0,m.index),after=found.length===1?line.slice(m.index+m[0].length):'';
-  const raw=(before+' '+after).replace(/[~|•,:]/g,' ');const name=nameFrom(raw);
-  const sister=/\b(sister|sis|behen|baji|madam|miss|mrs)\b/i.test(raw)||(name&&FEMALE.has(name.split(' ')[0].toLowerCase()));
-  people.push({phone:m[0].replace(/[\s-]/g,''),name,gender:sister?'Sister':'Brother'})}}
- const g=t.match(/(\d+(?:\.\d+)?)\s*(m(?:in(?:ute)?s?|ints?)?|s(?:ec(?:ond)?s?)?|h(?:ours?)?)\b\s*(?:ka\s*)?gap|gap\s*(?:of\s*)?(\d+(?:\.\d+)?)\s*(m(?:in(?:ute)?s?|ints?)?|s(?:ec(?:ond)?s?)?)?/i);
- let gap=90;if(g){const v=parseFloat(g[1]||g[3]),u=(g[2]||g[4]||'m').toLowerCase();gap=u.startsWith('s')?v:u.startsWith('h')?v*3600:v*60}
- const st=t.match(/start\s*(?:after|in)\s*(\d+(?:\.\d+)?)\s*(m|min|mint|minutes?|h|hours?)?/i);const start=st?parseFloat(st[1])*(/^h/i.test(st[2]||'')?3600:60):0;
- const vary=!/\bsame (message|wording|text)\b/i.test(t);
- const seen=new Set();return {people:people.filter(p=>!seen.has(p.phone)&&seen.add(p.phone)),gap:Math.max(45,gap),start,vary}}
 let listT=null;
-function startList(l){if(listT){clearTimeout(listT);listT=null}
- const names=l.people.slice(0,4).map(p=>(p.name?p.name+' ':'')+p.gender).join(', ')+(l.people.length>4?` +${l.people.length-4} more`:'');
- say('app',`Sending to ${l.people.length} ${l.people.length===1?'person':'people'}: ${names}. Gap about ${Math.round(l.gap/6)/10} min, ${l.vary?'new wording for each person':'same message'}, ${attached?'your picture':'the poster'}${l.start?`, starting in ${Math.round(l.start/6)/10} min`:''}. Starting in 5 seconds — tap Stop to cancel.`);
- showCamp('Starting in 5 seconds…');
- listT=setTimeout(async()=>{listT=null;try{const r=await post('/campaign',{people:l.people,gap_seconds:l.gap,vary:l.vary,start_after_seconds:l.start,image:attached?attached.id:'poster',rest_every:10,rest_minutes:10}),d=await r.json();
-  if(!r.ok)throw Error(d.error);say('app',d.reply);pollCamp()}catch(e){say('app',e.message,1);$('camp').hidden=true}},5000)}
 function showCamp(t){$('campText').textContent=t;$('camp').hidden=false}
 let campTimer=null,campPolling=false,campWasRunning=false,campStopping=false,lastCampLog=localStorage.getItem('givelife-camp-last')||'';
 async function pollCamp(){if(campPolling)return;campPolling=true;clearTimeout(campTimer);campTimer=null;try{const r=await fetch('/campaign');if(!r.ok)throw Error('Could not check DMs');const c=await r.json();
@@ -358,7 +331,6 @@ let viewportFrame=0;
 function updateChatViewport(){cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{const v=window.visualViewport;document.documentElement.style.setProperty('--chat-height',Math.round(v?v.height:innerHeight)+'px');document.documentElement.style.setProperty('--chat-top',Math.round(v?v.offsetTop:0)+'px');if($('hist').open){const el=$('histLog');if(scrollState.histLog.follow)followChat(el,history.at(-1)?.who==='app');else el.scrollTop=scrollState.histLog.top}})}
 if(window.visualViewport){visualViewport.addEventListener('resize',updateChatViewport);visualViewport.addEventListener('scroll',updateChatViewport)}addEventListener('resize',updateChatViewport);updateChatViewport();
 let correctionTurn=null;
-function openFeedback(id){correctionTurn=id;$('feedbackText').value='';$('feedbackRemember').checked=false;$('feedbackStatus').textContent='';$('feedbackDialog').showModal();$('feedbackText').focus()}
 $('feedbackClose').onclick=()=>$('feedbackDialog').close();
 $('feedbackForm').onsubmit=async e=>{e.preventDefault();await logChain;const r=await post('/feedback',{turn_id:correctionTurn,correction:$('feedbackText').value,remember:$('feedbackRemember').checked}),d=await r.json();if(!r.ok){$('feedbackStatus').textContent=d.error;return}$('feedbackDialog').close();status(d.warning||('Correction saved'+($('feedbackRemember').checked?' to memory.':'.')),!!d.warning)};
 async function showMemory(){const r=await fetch('/knowledge'),d=await r.json(),box=$('memoryContent');box.textContent='';const stats=document.createElement('p');stats.textContent=d.feedback_count+' confirmed corrections · '+d.archived_turns+' archived turns. Patterns: '+(Object.entries(d.patterns||{}).map(([k,v])=>k+' '+v).join(', ')||'none yet');box.append(stats);for(const item of d.entries||[]){const row=document.createElement('div');row.className='memory-item';const label=document.createElement('p');label.textContent=item.text;const remove=document.createElement('button');remove.type='button';remove.textContent='Forget';remove.onclick=async()=>{await post('/knowledge',{forget:item.id});showMemory()};row.append(label,remove);box.append(row)}if(!$('memoryDialog').open)$('memoryDialog').showModal()}
@@ -476,7 +448,6 @@ Nav.rendering=true;setNoMsg(true);Nav.rendering=false; /* the start state is not
 
 /* ---- theme: Auto follows the phone/PC setting; Light or Dark is remembered on this device ---- */
 function themeNow(){try{const t=localStorage.getItem('givelife-theme');return ['dark','light','system'].includes(t)?t:'dark'}catch(e){return 'dark'}}
-function isDark(){const t=document.documentElement.dataset.theme;return t?t==='dark':matchMedia('(prefers-color-scheme:dark)').matches}
 function applyTheme(t){const r=document.documentElement;if(t==='light'||t==='dark')r.dataset.theme=t;else delete r.dataset.theme;
  try{localStorage.setItem('givelife-theme',t)}catch(e){}
  document.querySelectorAll('#theme button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.t===t)));

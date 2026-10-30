@@ -1318,36 +1318,6 @@ small,.last-sent,.message-copy,.donor-columns,.build-tag,.keys,.brand small,.don
  .donor-page .donor-row[data-donated=true]{grid-template-columns:40px minmax(70px,1fr) 48px 72px 56px 40px!important;column-gap:4px!important}
 }
 
-/* ===== Theme: Midnight Indigo. Blue-violet reads as trust and calm and is easy on the eyes for long sessions.
-   Green is kept only for "done / sent" (--ok), amber for "needs a look", red for "failed / delete". ===== */
-:root{
- --bg:#f5f6fb;--surface:#ffffff;--surface2:#eef0f8;--ink:#141833;--mut:#4f5675;--faint:#5b6282;
- --line:#dfe2ef;--line2:#7d84a3;--g:#4c5ce0;--gd:#3f4ec9;--gs:#e8ebff;--gink:#3340b0;
- --btn:#4c5ce0;--btnh:#3f4ec9;--ok:#12805a;--ring:#4c5ce0;--msg:#f7f8fd;--msgink:#141833;--pill:#e8ebff;
- --sh1:0 1px 2px #1b1f4a12;--sh2:0 1px 2px #1b1f4a0f,0 8px 24px -8px #1b1f4a26;--sh3:0 30px 80px -20px #12163a55;
- --bubble:#ffffff;--bubble-line:#c7cbe3;--ctl:#6c7393;--on-accent:#ffffff;
-}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){
- --bg:#0d1020;--surface:#141830;--surface2:#1b2040;--ink:#e7e9f5;--mut:#a4abc8;--faint:#8f97b8;
- --line:#262c4d;--line2:#59618a;--g:#8b9bff;--gd:#b3bdff;--gs:#1e2450;--gink:#b6c0ff;
- --btn:#5b6cff;--btnh:#4c5cf0;--ok:#5fd39b;--ring:#8b9bff;--msg:#171c38;--msgink:#e7e9f5;--pill:#1e2450;
- --sh1:0 1px 0 #ffffff08 inset;--sh2:0 1px 0 #ffffff08 inset,0 10px 30px -12px #000000a0;--sh3:0 40px 100px -20px #000000d0;
- --bubble:#1f2546;--bubble-line:#4a5390;--chat-well:#0f1226;--ctl:#7880a8;--on-accent:#0b1030;
-}}
-:root[data-theme=dark]{
- --bg:#0d1020;--surface:#141830;--surface2:#1b2040;--ink:#e7e9f5;--mut:#a4abc8;--faint:#8f97b8;
- --line:#262c4d;--line2:#59618a;--g:#8b9bff;--gd:#b3bdff;--gs:#1e2450;--gink:#b6c0ff;
- --btn:#5b6cff;--btnh:#4c5cf0;--ok:#5fd39b;--ring:#8b9bff;--msg:#171c38;--msgink:#e7e9f5;--pill:#1e2450;
- --sh1:0 1px 0 #ffffff08 inset;--sh2:0 1px 0 #ffffff08 inset,0 10px 30px -12px #000000a0;--sh3:0 40px 100px -20px #000000d0;
- --bubble:#1f2546;--bubble-line:#4a5390;--chat-well:#0f1226;--ctl:#7880a8;--on-accent:#0b1030;
-}
-.donor-page .donor-tabs button[aria-selected=true]{color:var(--on-accent)!important}
-.donor-page .donor-tabs button[aria-selected=true] .donor-count,.donor-page .donor-tabs button[aria-selected=true] .count{background:var(--on-accent)!important;color:var(--g)!important}
-:root:not([data-theme=dark]) .talk .log .e.bot,:root:not([data-theme=dark]) .hist .log .e.bot{border-color:var(--bubble-line);box-shadow:0 0 0 4px #4c5ce012,0 16px 34px -16px #12163a55}
-body::after{background:radial-gradient(circle,color-mix(in srgb,#b06bff 40%,transparent),transparent 66%)}
-.mark{background:linear-gradient(140deg,#9aa8ff 0%,#5b6cff 55%,#3a45c9 100%)!important;box-shadow:0 6px 18px -6px #5b6cffcc,inset 0 1px 0 #ffffff40!important}
-:root:not([data-theme=dark]){--chat-well:#eceef8}
-
 /* ===== Navbar: one tidy bar. Brand left, views next to it, status actions right, all the same height ===== */
 @media(min-width:900px) and (min-height:760px){
  html body .brandbar{display:flex;align-items:center;justify-content:flex-start;gap:10px;padding:8px 12px;min-height:60px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh1)}
@@ -1361,21 +1331,6 @@ body::after{background:radial-gradient(circle,color-mix(in srgb,#b06bff 40%,tran
  html body .brandbar .donor-launch{margin-left:0}
 }
 @media(min-width:900px){html body .live{max-width:none}}
-
-/* ===== Lighter Midnight Indigo (a notch brighter surfaces, softer accent) ===== */
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){
- --bg:#171b33;--surface:#1f2445;--surface2:#282e56;--line:#323a68;--line2:#6a73a2;--ctl:#8790ba;
- --g:#a9b4ff;--gd:#c4ccff;--gs:#2a3263;--gink:#c9d0ff;--btn:#6f7fff;--btnh:#5f70f2;--ring:#a9b4ff;--pill:#2a3263;
- --msg:#232950;--bubble:#2a3159;--bubble-line:#5b66a8;--chat-well:#1a1e3a;--mut:#b4bbd6;--faint:#a0a8c6;
-}}
-:root[data-theme=dark]{
- --bg:#171b33;--surface:#1f2445;--surface2:#282e56;--line:#323a68;--line2:#6a73a2;--ctl:#8790ba;
- --g:#a9b4ff;--gd:#c4ccff;--gs:#2a3263;--gink:#c9d0ff;--btn:#6f7fff;--btnh:#5f70f2;--ring:#a9b4ff;--pill:#2a3263;
- --msg:#232950;--bubble:#2a3159;--bubble-line:#5b66a8;--chat-well:#1a1e3a;--mut:#b4bbd6;--faint:#a0a8c6;
-}
-:root:not([data-theme=dark]){--bg:#f7f8fd;--surface2:#f0f2fb;--g:#5a69ec;--btn:#5a69ec;--gs:#eceeff;--chat-well:#f1f3fc}
-body{background:var(--bg)!important}
-.mark{background:linear-gradient(140deg,#b4beff 0%,#7685ff 55%,#5563e6 100%)!important}
 
 /* ===== shadcn/ui theme (neutral, new-york-v4). Tokens, radii, shadows and focus ring are taken from shadcn-ui/ui source.
    Colours and surface finish only: no size, spacing or layout rule lives here. ===== */

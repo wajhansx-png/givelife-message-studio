@@ -1,6 +1,6 @@
 """Shared donor UI/chat commands and private delivery integration."""
-import re, time, hashlib, uuid, threading
-from donor_book import DonorBook, normalize_phone, parse_contact, hide_numbers, send_request, PHONE
+import re, time, hashlib, threading
+from donor_book import DonorBook, normalize_phone, parse_contact, send_request, PHONE
 from donor_delivery import DonorDelivery
 
 class DonorIntegration:

@@ -1,8 +1,7 @@
 """In-app assistant and autopilot for the GiveLife studio (DeepSeek API)."""
-import os, re, json, time, datetime, threading, urllib.request, urllib.error
+import os, json, time, datetime, threading, urllib.request, urllib.error
 from pathlib import Path
-from state_shapes import mapping, memories, history as valid_history
-import chat_policy
+from state_shapes import mapping, memories
 from chat_memory import safe_text
 
 MODEL = os.environ.get('DEEPSEEK_MODEL', 'deepseek-chat')

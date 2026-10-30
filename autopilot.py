@@ -576,7 +576,6 @@ class Engine:
         if not self.s.get('dm_enabled') or self.quiet_now() or rules.in_quiet(DM_QUIET[0], DM_QUIET[1], pkt().hour):
             return
         for f in learning.followups_due(self.L)[:3]:
-            digest = hashlib.sha256((f['phone'] + '@s.whatsapp.net').encode()).hexdigest()
             self._reply(f['phone'] + '@s.whatsapp.net', self.h['dm_text'](f['name'], 'reminder'))
             self.log(f'Gentle reminder sent to …{f["phone"][-4:]}.')
 

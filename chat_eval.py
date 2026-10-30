@@ -1,5 +1,5 @@
 """Real-model checks with isolated fake tools. Never sends WhatsApp messages."""
-import json,time,re
+import json,re
 import assistant,manual_commands,draft_workflow
 
 CASES={

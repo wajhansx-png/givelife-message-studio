@@ -1,5 +1,5 @@
 """Private donor registry. Public views use opaque IDs, never phone numbers."""
-import copy, datetime, hashlib, json, math, re, threading, time, unicodedata, uuid
+import copy, json, math, re, threading, time, unicodedata, uuid
 from decimal import Decimal
 from pathlib import Path
 

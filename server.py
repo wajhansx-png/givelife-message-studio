@@ -84,7 +84,7 @@ def send_custom(body):
   message=message.replace('{name}',str(body.get('name') or '').strip() or 'friend')
  if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
  if not STORE:raise ValueError('Persistent send records are unavailable. Try again later.')
- manual=body.get('kind') in ('donor_manual','team_msg')
+ manual=body.get('kind') in ('donor_manual','team_msg','owner_text')
  explicit_batch=body.get('kind') in ('donor_batch','volunteer_batch')
  if not SEND_LOCK.acquire(blocking=manual or explicit_batch):raise ValueError('Another send is running. Please wait for it to finish.')
  try:
@@ -730,7 +730,7 @@ def base_chat_callbacks():
  def came(amount):
   if int(amount)<0 or int(amount)>read_left():raise ValueError('That donation does not fit the remaining amount. Check the balance before recording it.')
   nl=max(0,read_left()-int(amount));set_left(nl);return f'Rs. {int(amount):,} came. Rs. {nl:,} left.'
- return {'donor_action':lambda **args:None,'set_left':lambda left:(set_left(int(left)),f'Rs. {int(left):,} left. Messages updated.')[1],
+ return {'donor_action':lambda **args:None,'team_action':lambda **args:None,'volunteer_action':lambda **args:None,'case_action':lambda **args:None,'send_text_list':lambda **args:None,'set_left':lambda left:(set_left(int(left)),f'Rs. {int(left):,} left. Messages updated.')[1],
   'money_came':came,
   'new_wording':lambda kind:(next_message() if kind=='group' else next_dm(),'New '+kind+' wording ready.')[1],
   'set_message':lambda kind,text:(save_draft(kind,text),kind.upper()+' message saved.')[1],
@@ -1285,6 +1285,97 @@ def delete_last_group(target=None):
  if STORE:STORE.put('last_deliveries',DELIVERIES)
  return 'WhatsApp confirmed deletion of the last own message in '+('Givelife test' if key=='test' else GROUPS[key][0])+'.'
 
+TEXT_LIST_JOBS={}
+def _owner_words(prompt):
+ return re.sub(r'\s+',' ',chat_policy.owner_text(prompt)).casefold()
+def _owner_quotes(prompt):
+ """Text the owner put in quotes in this message (the app hides quoted text from instruction parsing, so it is checked here)."""
+ return [re.sub(r'\s+',' ',q).strip().casefold() for q in re.findall(r'["\u201c\u201d]([^"\u201c\u201d]{1,4000})["\u201c\u201d]',str(prompt))]
+def _owner_wrote(prompt,text):
+ t=re.sub(r'\s+',' ',str(text)).strip().casefold()
+ return bool(t) and (t in _owner_words(prompt) or any(t==q or t in q for q in _owner_quotes(prompt)))
+def agent_action(name,prompt,args,owner):
+ """Chat actions for team tasks, volunteers, cases and owner-written text to a list. Every change is checked against the owner's own words."""
+ own=_owner_words(prompt);act=str(args.get('action',''))
+ says=lambda pattern:bool(re.search(pattern,own))
+ if name=='team_action':
+  t=donors().team
+  if act=='status':return t.summary()
+  if act=='plan':
+   v=t.plan(args.get('text') or chat_policy.owner_text(prompt))
+   return 'Plan (nothing sent yet):\n'+'\n'.join(f'{i+1}. {x["text"]} (ask {x["start_label"]}, due {x["due_label"]})' for i,x in enumerate(v['plan']['items']))+'\nSay "confirm tasks" to start.'
+  if act=='confirm':
+   if not says(r'\b(confirm|start|yes|go ahead|haan|theek)\b'):raise ValueError('Starting tasks needs your clear "confirm". Nothing was sent.')
+   return t.confirm_plan()['reply']
+  if act in ('verify','reject','cancel'):
+   if not says({'verify':r'\b(verif|approve|done|ok|correct|good)','reject':r'\b(reject|not done|redo|again|wrong|send back)','cancel':r'\b(cancel|remove|drop|no need)'}[act]):raise ValueError('That does not match your instruction. Nothing was changed.')
+   ident=t.match_task(args.get('task',''))
+   return {'verify':lambda:(t.verify(ident),'Verified.')[1],'reject':lambda:(t.reject(ident,args.get('note','')),'Sent back to him.')[1],'cancel':lambda:(t.cancel(ident),'Cancelled.')[1]}[act]()
+  if act in ('pause','resume'):
+   if not says(r'\b(pause|stop|hold|resume|continue|start)\b'):raise ValueError('That does not match your instruction.')
+   t.pause(act=='pause');return 'Team follow-up '+('paused.' if act=='pause' else 'resumed.')
+  if act=='set_member':
+   phone=norm_phone(str(args.get('phone','')))
+   if phone not in {norm_phone(x) for x in re.findall(r'(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}',chat_policy.owner_text(prompt))}:raise ValueError('Give the teammate\'s number in your message.')
+   t.set_member(args.get('name',''),phone);return 'Teammate saved.'
+ if name=='volunteer_action':
+  v=donors().volunteers
+  if act=='list':
+   names=[r['name'] for r in v.book.list('all')['items']];return f'{len(names)} volunteers: '+', '.join(names[:20]) if names else 'No volunteers yet.'
+  if act=='add':
+   phone=str(args.get('phone',''))
+   if norm_phone(phone) not in {norm_phone(x) for x in re.findall(r'(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}',chat_policy.owner_text(prompt))}:raise ValueError('Give the volunteer\'s number in your message.')
+   v.mutate({'action':'add','name':args.get('name',''),'phone':phone});return 'Volunteer added.'
+  if act=='remove':v.mutate({'action':'delete','id':args.get('name','')});return 'Volunteer removed.'
+  if act=='set_message':
+   text=str(args.get('text',''))
+   if not _owner_wrote(prompt,text):raise ValueError('The volunteer message must be your exact words. Put it in quotes.')
+   v.set_message(text);return 'Volunteer message saved.'
+  if act in ('send_all','send_one'):
+   if not owner['send']:raise ValueError('Sending needs your clear "send". Nothing was sent.')
+   body={'action':act,'request_id':'chat-'+uuid.uuid4().hex,'gap_seconds':180}
+   if act=='send_one':body['id']=v.book.resolve(args.get('name',''))['id']
+   r=v.mutate(body);return r.get('reply') or 'Volunteer sending started. Each person gets it once, a few minutes apart.'
+ if name=='case_action':
+  c=donors().cases
+  if act=='list':return '; '.join(f'{x["name"]}'+(' (open)' if x['current'] else '')+('' if x.get('left') is None else f' Rs. {x["left"]:,} left') for x in c.view()['cases'])
+  if act=='new':
+   if not says(r'\b(new|start|begin|naya|nayi)\b'):raise ValueError('Starting a new case needs your clear request.')
+   left=args.get('left')
+   if left not in [int(x.replace(',','')) for x in re.findall(r'\d[\d,]{2,}',chat_policy.owner_text(prompt))]+[int(float(m)*1000) for m in re.findall(r'(\d+(?:\.\d+)?)\s*k\b',own)]:raise ValueError('Say the amount needed for the new case in your message.')
+   return c.new(args.get('name',''),left)['reply']
+  if act in ('switch','rename'):
+   target=str(args.get('name','')).strip()
+   if act=='rename':return (c.rename(c.view()['current'],target),'Case renamed.')[1]
+   match=[x for x in c.view()['cases'] if x['name'].casefold()==target.casefold()]
+   if len(match)!=1:raise ValueError('No saved case has that name.')
+   return c.switch(match[0]['id'])['reply']
+ if name=='send_text_list':
+  text=str(args.get('text','')).strip()
+  if not _owner_wrote(prompt,text):raise ValueError('I only send your exact words. Put the message in quotes and try again. Nothing was sent.')
+  allowed={norm_phone(x) for x in re.findall(r'(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}',chat_policy.owner_text(prompt))}
+  phones=list(dict.fromkeys(norm_phone(str(p)) for p in args.get('phones',[])))
+  if not phones or any(p not in allowed for p in phones):raise ValueError('Every number must be written in your message. Nothing was sent.')
+  if norm_phone(OWNER_PHONE) in phones:raise ValueError('Your own number cannot be in the list.')
+  if len(phones)>25:raise ValueError('Send to at most 25 numbers at a time.')
+  check_hold()
+  jid=uuid.uuid4().hex[:8];TEXT_LIST_JOBS[jid]={'total':len(phones),'sent':0,'failed':[]}
+  def run():
+   job=TEXT_LIST_JOBS[jid]
+   for i,p in enumerate(phones):
+    if i:time.sleep(__import__('random').uniform(60,90))
+    if on_hold():job['failed']+=phones[i:];break
+    try:
+     r=send_custom({'kind':'owner_text','target':'phone','phone':p,'message':text,'poster':False})
+     if isinstance(r,dict) and r.get('code')=='SUCCESS':job['sent']+=1
+     else:job['failed'].append(p)
+    except Exception:job['failed'].append(p)
+   tail=('Not delivered to: '+', '.join('…'+x[-4:] for x in job['failed'])+'. Check WhatsApp before trying again.') if job['failed'] else 'All delivered.'
+   chat_add('app',f"Your message went to {job['sent']} of {job['total']} numbers. "+tail,turn_id='textlist-'+jid)
+  threading.Thread(target=run,daemon=True,name='text-list-'+jid).start()
+  return f'Sending your message to {len(phones)} numbers, about one a minute. I will post the result here when it finishes.'
+ raise ValueError('Unknown action.')
+
 def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection_kind='group'):
  callbacks=base_chat_callbacks();cache={};verified=set();owner=chat_policy.intent(prompt)
  dm_revision=donors().revision
@@ -1326,6 +1417,9 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
    private_send=name in ('send_dm_appeal','dm_list','dm_donors','dm_group') or name=='donor_action' and args.get('action')=='send' or name=='send_message' and not (manual_commands.group(str(args.get('to',''))) or str(args.get('to','')).endswith('@g.us'))
    if private_send and dm_revision!=donors().revision:raise ValueError('Personal DMs were stopped by your newer instruction. No old DM request was sent.')
    if name=='donor_action':return donors().model_tool(prompt,task_id,**args)
+   if name in ('team_action','volunteer_action','case_action','send_text_list'):
+    if not chat_policy.permitted(name,prompt):raise ValueError('The current instruction does not ask for this. Nothing was changed or sent.')
+    return agent_action(name,prompt,args,owner)
    if name=='dm_donors':
     if not chat_policy.permitted(name,prompt):raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
     return donors().model_tool(prompt,task_id,'send')

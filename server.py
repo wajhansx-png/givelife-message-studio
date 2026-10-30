@@ -152,7 +152,7 @@ ALMOST=[("We are almost there. Only Rs. {L} left for Yousuf.","Just {P2} people 
 def active_case_name():
  """Use the actual selected case rather than an older hard-coded patient's story."""
  raw=STORE.get('cases',{}) if STORE else {}
- if not isinstance(raw,dict) and (DATA/'cases.json').exists():
+ if (not isinstance(raw,dict) or not raw) and (DATA/'cases.json').exists():
   try:raw=json.loads((DATA/'cases.json').read_text(encoding='utf-8'))
   except (OSError,ValueError):raw={}
  if not isinstance(raw,dict):return 'Current case'
@@ -564,7 +564,7 @@ def studio_state():
  dm_context={'paused':DONORS.paused,'counts':DONORS.book.list()['counts'],'batch':DONORS.jobs.status()} if DONORS else {'state':'Directory not opened yet'}
  try:schedules=timed_scheduler().summary()
  except Exception:schedules=[]
- return {'left':read_left(),'whatsapp':wa_ok(),'minutes_since_post':since,'autopilot':auto_on(),'donor_context':dm_context,'schedules':schedules}
+ return {'left':read_left(),'case_name':active_case_name(),'case_closed':read_left()<=0,'whatsapp':wa_ok(),'minutes_since_post':since,'autopilot':auto_on(),'donor_context':dm_context,'schedules':schedules}
 
 def start_group_job(key,caption):
  keys=list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key]

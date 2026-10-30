@@ -149,8 +149,32 @@ ALMOST=[("We are almost there. Only Rs. {L} left for Yousuf.","Just {P2} people 
  ("Rs. {L} is all that stands between Yousuf and his treatment.","Be one of the last {P2}. Today."),
  ("The last few people decide it. Rs. {L} left.","If {P2} people send Rs. 2,000 now, it is done.")]
 
-def build_group(n,left):
+def active_case_name():
+ """Use the actual selected case rather than an older hard-coded patient's story."""
+ raw=STORE.get('cases',{}) if STORE else {}
+ if not isinstance(raw,dict) and (DATA/'cases.json').exists():
+  try:raw=json.loads((DATA/'cases.json').read_text(encoding='utf-8'))
+  except (OSError,ValueError):raw={}
+ if not isinstance(raw,dict):return 'Current case'
+ return next((c.get('name','Current case') for c in raw.get('cases',[]) if isinstance(c,dict) and c.get('id')==raw.get('current')),'Current case')
+
+def _case_title(name):
+ return ' '.join(str(name or 'Current case').replace('*',' ').split())[:60] or 'Current case'
+
+def build_group(n,left,case_name=None):
+ name=_case_title(case_name if case_name is not None else active_case_name())
  p2,p1=math.ceil(left/2000),math.ceil(left/1000)
+ if left<=0:
+  return f'*{name}: Case complete.*\n\nThank you to everyone who supported this case. There is Rs. 0 left to raise.\n\n- GiveLife Foundation'
+ if name.casefold()!='yousuf':
+  # Details are intentionally generic until the owner supplies verified facts.
+  return (f'*GiveLife Foundation: Support needed for {name}*\n\n'
+          'Please review the case details and help if you can.\n\n'
+          f'*_Rs. {left:,} LEFT_*\n\n'
+          f'*_{p2} people donating Rs. 2,000_*\n'
+          f'*_OR {p1} people donating Rs. 1,000_* 🤲\n\n'
+          '*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n'
+          '- GiveLife Foundation')
  pool=ALMOST if 0<left<=10000 else None
  hook=(pool[n%len(pool)][0] if pool else HOOKS[n%8][0]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
  push=(pool[(n+1)%len(pool)][1] if pool else HOOKS[(n*3+1)%8][1]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
@@ -158,7 +182,17 @@ def build_group(n,left):
          f'*_Rs. {left:,} LEFT_*\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n{push}\n\n'
          '*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation')
 
-def build_dm(sel,left):
+def build_dm(sel,left,case_name=None):
+ name=_case_title(case_name if case_name is not None else active_case_name())
+ if left<=0:
+  return f'Assalam o alaikum Brother,\n\nThe case for {name} has been completed. Thank you to everyone who helped.\n\n- GiveLife Foundation'
+ if name.casefold()!='yousuf':
+  p2,p1=math.ceil(left/2000),math.ceil(left/1000)
+  return (f'Assalam o alaikum Brother,\n\nGiveLife Foundation is collecting support for {name}. '
+          'Please review the case details before donating.\n\n'
+          f'*Rs. {left:,} left*\n'
+          f'{p2} people giving Rs. 2,000 or {p1} giving Rs. 1,000 can help complete the amount.\n\n'
+          '*03097458815* Easypaisa / JazzCash (Wajdan Khan)\n\n- GiveLife Foundation')
  index=sel[0] if isinstance(sel,(list,tuple)) and sel else sel if isinstance(sel,int) else 0
  return dm_templates.build(index,left)
 
@@ -201,11 +235,11 @@ def next_dm():
  with LOCK:
   text=build_dm(dm_selection(True),read_left());save_draft('dm',text);return text
 
-def regenerate_drafts(left):
- """Fresh group and DM captions for a new case's amount."""
+def regenerate_drafts(left,case_name=None):
+ """Fresh captions for this case only; do not inherit another patient's medical facts."""
  with LOCK:
   draft=json.loads(DRAFT.read_text(encoding='utf-8')) if DRAFT.exists() else {}
-  draft['group']=build_group(variant(False),left);draft['dm']=build_dm(dm_selection(False),left)
+  draft['group']=build_group(variant(False),left,case_name);draft['dm']=build_dm(dm_selection(False),left,case_name)
   DRAFT.write_text(json.dumps(draft,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
 
 def set_left(left):

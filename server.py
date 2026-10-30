@@ -258,13 +258,22 @@ def set_left(left):
   old=read_left();before=json.loads(DRAFT.read_text(encoding='utf-8')) if DRAFT.exists() else {}
   task=workflow();custom=next((k for k in ('group','dm') if task.current(k,before.get(k,''))),None)
   write_left(left)
-  if int(left)<=0 and DONORS is not None and DONORS.jobs.active:
-   try:DONORS.jobs.cancel();auto_log('Case complete (Rs. 0 left): the running donor DM batch was stopped.')
-   except Exception:pass
+  if int(left)<=0:
+   CAMPAIGN['stop']=True
+   if DONORS is not None and DONORS.jobs.active:
+    try:DONORS.jobs.cancel();auto_log('Case complete (Rs. 0 left): the running donor DM batch was stopped.')
+    except Exception:pass
+   if auto_on():set_auto(False)
   try:ENGINE.amount_updated()
   except NameError:pass
-  g=draft_workflow.update_amount(before['group'],old,left) if custom=='group' else build_group(variant(False),left)
-  d=draft_workflow.update_amount(before['dm'],old,left) if custom=='dm' else build_dm(dm_selection(False),left)
+  if int(left)<=0:
+   # Never keep fundraising wording such as "0 people donating" in a closed case,
+   # even when the owner previously saved a custom caption.
+   g=build_group(variant(False),0)
+   d=build_dm(dm_selection(False),0)
+  else:
+   g=draft_workflow.update_amount(before['group'],old,left) if custom=='group' else build_group(variant(False),left)
+   d=draft_workflow.update_amount(before['dm'],old,left) if custom=='dm' else build_dm(dm_selection(False),left)
   save_draft('group',g);save_draft('dm',d)
   if custom:task.commit(custom,g if custom=='group' else d)
   return g,d

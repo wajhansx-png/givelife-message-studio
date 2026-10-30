@@ -66,7 +66,7 @@ function drawLog(){const allItems=history.slice(-40);
   items.forEach(h=>{const key=turnKey(h),signature=JSON.stringify([h.who,h.text,!!h.err]);let d=existing.get(key);
    if(!d){d=document.createElement('div');d._turnKey=key}
    if(d._messageSignature!==signature){d._messageSignature=signature;d._chatText=h.text;d.className='e '+(h.who==='auto'?'sys':h.who==='app'?'bot':h.who)+(h.err?' err':'')+(fresh.has(key)?' enter':'');d.dataset.t=h.t;
-    if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=replyHtml(h.text);else d.textContent=h.text;
+    if(h.who==='app'&&typeof chatFormat==='function')d.innerHTML=replyHtml(h.text);else if(h.who==='you'){d.textContent='';const bubble=document.createElement('span');bubble.className='message-text';bubble.textContent=h.text;d.append(bubble)}else d.textContent=h.text;
     const copy=document.createElement('button');copy.type='button';copy.className='message-copy';copy.textContent='Copy';copy.setAttribute('aria-label',h.who==='you'?'Copy your message':h.who==='app'?'Copy assistant message':'Copy activity message');
     copy.onclick=async()=>{try{await navigator.clipboard.writeText(d._chatText);copy.textContent='Copied';$($('hist').open?'histAnnouncement':'chatAnnouncement').textContent='Message copied.'}catch(e){copy.textContent='Retry';$($('hist').open?'histAnnouncement':'chatAnnouncement').textContent='Could not copy. Try again.'}};d.append(copy)}
    wanted.push(d)});

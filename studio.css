@@ -8294,3 +8294,143 @@ html body .donor-page .donor-tabs:has([data-tab=volunteers]) {
 .team-add {
   width: 100%;
 }
+
+
+/* ===== 18c. Team screen: strictly one screen, no scrolling. Long text is cut with "…", extra rows become "+N more" ===== */
+.team-page {
+  overflow: hidden;
+}
+.team-shell {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  width: min(100%, 560px);
+}
+.team-body {
+  overflow: hidden !important;
+  flex: 1 1 0;
+  min-height: 0;
+  gap: 8px;
+}
+.team-card {
+  padding: 10px 12px;
+  gap: 6px;
+}
+.team-card h2 {
+  font-size: 14px;
+  color: var(--mut);
+  font-weight: 600;
+}
+.team-big {
+  font-size: 26px;
+}
+.team-text strong,
+.team-due,
+.team-say,
+.team-ev-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-item,
+.team-task {
+  padding: 6px 0;
+  gap: 8px;
+  flex-wrap: nowrap !important;
+}
+.team-actions {
+  flex-wrap: nowrap !important;
+  width: auto !important;
+}
+.team-actions button {
+  flex: none !important;
+  min-height: 44px;
+}
+.team-more {
+  margin: 0;
+  font-size: 13px;
+  color: var(--mut);
+}
+.team-latest {
+  gap: 2px;
+}
+.team-latest .team-ev {
+  padding: 3px 0;
+  border: 0;
+}
+.team-donelist {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 13px;
+  color: var(--ok-ink, #4ade80);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-addbox textarea {
+  min-height: 0;
+  height: min(30dvh, 140px);
+}
+.team-add {
+  flex: none;
+  width: 100%;
+  min-height: 48px;
+}
+@media(max-width:420px) {
+  .team-item {
+    flex-wrap: wrap !important;
+  }
+  .team-item .team-actions {
+    width: 100% !important;
+  }
+  .team-item .team-actions button {
+    flex: 1 1 0 !important;
+  }
+}
+
+
+/* ===== 19. Phone donor tabs: long names wrap onto two short lines instead of running into the next tab ===== */
+@media(max-width:560px) {
+  html body .donor-page .donor-tabs button {
+    min-width: 0;
+    overflow: hidden;
+  }
+  html body .donor-page .donor-tabs button .tab-name,
+  html body .donor-page .donor-tabs button .tab-word {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+    line-height: 1.1;
+    font-size: 11.5px;
+  }
+}
+/* tab names wrap inside their own tab at every width, never into the next one */
+html body .donor-page .donor-tabs button {
+  min-width: 0;
+}
+html body .donor-page .donor-tabs button .tab-name,
+html body .donor-page .donor-tabs button .tab-word {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  line-height: 1.15;
+}
+/* the Edit button in the message reader is a full thumb target */
+html body .donor-page .bank-message header .tool,
+html body .donor-page .bank-message.bank-detail > header .tool {
+  min-height: 44px !important;
+  height: 44px !important;
+}
+@media(max-height:600px) and (max-width:899px) {
+  html body .donor-page .bank-message.bank-detail > header .tool {
+    min-height: 40px !important;
+    height: 40px !important;
+  }
+}
+
+@media(max-width:560px) {
+  html body .donor-page .donor-tabs button .tab-name,
+  html body .donor-page .donor-tabs button .tab-word {
+    white-space: nowrap;
+  }
+}

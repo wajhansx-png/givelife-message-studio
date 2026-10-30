@@ -1,20 +1,32 @@
-"""Team tasks: the owner writes today's tasks and a deadline, the app splits them into timed tasks (after a preview the owner
-confirms), asks the teammate on WhatsApp, reads his replies, reminds once, marks late tasks, and shows updates in one simple screen.
+"""Team tasks over WhatsApp. The owner writes today's tasks and a deadline; the app splits them into timed tasks (after a preview the
+owner confirms) and then talks to the teammate on WhatsApp like the owner would: short, casual, no task numbers, no robot phrases.
+It asks once, nudges once, checks before the deadline, notices lateness, reads his replies, and shows the owner one tiny screen.
 
 Rules that keep it honest:
-- All times are Pakistan time (UTC+5).
+- All times are Pakistan time (UTC+5). Nothing goes out 11 pm to 7 am, while paused, or while sending is on hold.
 - Nothing is sent until the owner confirms the plan.
-- Every WhatsApp message is reserved before it is sent, so a crash or restart can never send the same message twice.
-- "Done" from the teammate is only a report. The owner verifies it (or sends it back).
-- Quiet hours (23:00-07:00) and the global hold are respected. One message per minute at most."""
-import base64, copy, datetime, hmac, os, re, secrets, threading, time, uuid
+- A message is reserved before it is sent, so a crash can never send the same message twice. A send that fails is retried
+  (asks only), then the owner is told.
+- "Done" from the teammate is only a report. "Not done", "almost done", "will be done by 5" are NOT reports.
+- Network calls never run while the lock is held, so the owner's screen never waits on WhatsApp."""
+import copy, datetime, hashlib, os, re, threading, time, uuid
 from donor_book import normalize_phone
 
 PKT = datetime.timezone(datetime.timedelta(hours=5))
 OPEN = ('Waiting', 'Asked', 'Late', 'Reported')
-DONE_WORDS = re.compile(r"(?i)\b(?:done|finished|completed?|ho\s*gaya|ho\s*gya|hogaya|kar\s*diya|kardiya|ready)\b")
-BLOCK_WORDS = re.compile(r"(?i)\b(?:stuck|problem|issue|cannot|can't|cant|unable|need help|help me|delay(?:ed)?|late|not possible|nahi ho|nahi hua|error)\b")
+LEFT = ('Waiting', 'Asked', 'Late')
+DONE_CORE = r"(?:done|finished|completed?|posted|sent|submitted|uploaded|shared|ready|ho\s*gaya|ho\s*gya|hogaya|ho\s*gai|kar\s*diya|kar\s*di|kardiya|kr\s*diya)"
+DONE_WORDS = re.compile(r"(?i)\b" + DONE_CORE + r"\b")
+NOT_DONE = re.compile(r"(?i)(?:\b(?:not|isn'?t|wasn'?t|haven'?t|hasn'?t|didn'?t|never|nahi|nhi|nai|na)\s+(?:[\w']+\s+){0,2}" + DONE_CORE + r"\b"
+                      r"|\b" + DONE_CORE + r"\s+(?:nahi|nhi|nai)\b|\bnot\s+yet\b|\b(?:almost|nearly|half|partly|partially|about to be)\s+" + DONE_CORE + r"\b"
+                      r"|(?<![\d])(?:[1-9]?\d)\s*(?:%|percent|pct)\s*(?:[\w']+\s+)?" + DONE_CORE + r"\b"
+                      r"|\b(?:will|shall|gonna|going to|i'?ll|it'?ll)\s+(?:be\s+)?(?:[\w']+\s+){0,2}" + DONE_CORE + r"\b"
+                      r"|\b(?:once|when|after|before|until|till|if|as soon as)\s+(?:[\w']+\s+){0,3}" + DONE_CORE + r"\b"
+                      r"|\b" + DONE_CORE + r"\s+(?:by|within|before|after|tomorrow|tonight|later|soon)\b|\b" + DONE_CORE + r"\s+(?:in|at)\s+\d|\b" + DONE_CORE + r"\s*\?)")
+BLOCK_WORDS = re.compile(r"(?i)\b(?:stuck|problem|issue|cannot|can'?t|cant|unable|need help|help me|not possible|nahi ho|nahi hua|error|blocked|not working|doesn'?t work|login)\b")
 URL = re.compile(r"(?i)https?://\S+|\bwww\.\S+")
+ALL_WORDS = re.compile(r"(?i)\b(?:all|everything|both|sab|sub|saare|sare)\b")
+STOP = {'done', 'fini', 'comp', 'with', 'that', 'this', 'have', 'been', 'will', 'from', 'task', 'what', 'your', 'they', 'them', 'then', 'just', 'also', 'here', 'there', 'okay', 'sure', 'thanks', 'thank', 'sent', 'shar', 'subm', 'uplo', 'read', 'when', 'about', 'abou', 'later', 'soon', 'bhai', 'sir', 'brot', 'much', 'many', 'some', 'more', 'only', 'it', 'was', 'were'}
 MIN_SLOT = 10 * 60
 CLOCK = r"(?:\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)|\d{1,2}:\d{2})"
 DEADLINE = re.compile(r"(?i)\b(?:(?:deadline|due|latest|all by|everything by|finish(?:ed)? by|complete(?:d)? by|till|until|tak)\s*(?:is\s*)?(?:(tomorrow|tmrw|kal)\s+)?(?:at\s+)?(" + CLOCK + r"|\d{1,2}(?!\d|\s*(?:hours?|hrs?|h\b|minutes?|mins?|m\b)))(?![\d:])|(?:(?:deadline|due)\s*(?:is\s*)?(?:in\s+)?|in\s+|within\s+)(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)\b)")
@@ -80,7 +92,7 @@ def split_items(text):
     return out
 
 
-def plan_tasks(text, now):
+def plan_tasks(text, now, quiet=(23, 7)):
     """Turn the owner's text into timed tasks. Raises ValueError with a clear reason. Nothing is saved or sent."""
     text = str(text or '').strip()
     if not text:
@@ -120,15 +132,49 @@ def plan_tasks(text, now):
         else:
             start = now + k * slot;due = start + slot;k += 1
         out.append({'text': i['text'], 'start_at': start, 'due_at': due})
+    # nothing is sent at night: a task that would start in quiet hours starts when they end, and must still leave time to do it
+    for t in out:
+        h = datetime.datetime.fromtimestamp(t['start_at'], PKT)
+        if h.hour >= quiet[0] or h.hour < quiet[1]:
+            morning = h.replace(hour=quiet[1], minute=5, second=0, microsecond=0)
+            if h.hour >= quiet[0]:
+                morning += datetime.timedelta(days=1)
+            t['start_at'] = morning.timestamp()
+            if t['due_at'] < t['start_at'] + MIN_SLOT:
+                raise ValueError(f'"{t["text"][:40]}" would start in quiet hours ({quiet[0] - 12} pm to {quiet[1]} am), when no messages go out. Give it a deadline after {quiet[1]} am or earlier than {quiet[0] - 12} pm.')
     return out
+
+
+def words(text):
+    """Four-letter word stems, so 'posted' and 'post' or 'groups' and 'group' match when he names a task in his own words."""
+    return {w[:4] for w in re.findall(r"[a-z]{4,}", str(text).lower())} - STOP
+
+
+def short(text, limit=48):
+    text = re.sub(r"\s+", ' ', str(text)).strip(' .,:;-')
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(' ', 1)[0]
+    return (cut or text[:limit]).strip(' .,:;-')
+
+
+def said_done(text):
+    """True only for a real "it is finished". 'not done', 'almost done', 'will be done by 5', 'done?' are not."""
+    return bool(DONE_WORDS.search(text)) and not NOT_DONE.search(text)
+
+
+def pick(options, seed):
+    return options[int(hashlib.md5(str(seed).encode()).hexdigest(), 16) % len(options)]
 
 
 class TeamTasks:
     KEY = 'team'
     QUIET = (23, 7)
+    RETRY_AFTER = 300
+    JITTER = (5, 45)   # seconds after the start time before the first message goes out, so it does not arrive on the dot
 
     def __init__(self, app, clock=time.time):
-        self.app = app;self.now = clock;self.lock = threading.RLock();self._cache = None
+        self.app = app;self.now = clock;self.lock = threading.RLock();self.tick_lock = threading.Lock();self._cache = None
 
     # ---- storage
     def _load(self):
@@ -139,9 +185,9 @@ class TeamTasks:
                 raw = json.loads((self.app.DATA / 'team.json').read_text(encoding='utf-8'))
             if not isinstance(raw, dict):
                 raw = {}
-            raw.setdefault('member', None);raw.setdefault('tasks', []);raw.setdefault('feed', []);raw.setdefault('plan', None)
-            raw.setdefault('seen', []);raw.setdefault('counter', 0);raw.setdefault('paused', False);raw.setdefault('unread', 0)
-            raw.setdefault('last_sent', 0);raw.setdefault('pending_notes', []);raw.setdefault('last_note', 0)
+            for k, v in (('member', None), ('tasks', []), ('feed', []), ('plan', None), ('seen', []), ('counter', 0), ('paused', False), ('unread', 0),
+                         ('last_sent', 0), ('pending_notes', []), ('last_note', 0), ('outbox', []), ('greeted', ''), ('last_clarify', 0)):
+                raw.setdefault(k, v)
             self._cache = raw
         return self._cache
 
@@ -166,9 +212,12 @@ class TeamTasks:
             d['pending_notes'].append({'text': text[:300], 'at': ev['at']})
         return ev
 
+    def _first(self):
+        return self._load()['member']['name'].split()[0]
+
     # ---- views
     def _public_task(self, t, now):
-        return {k: t.get(k) for k in ('id', 'no', 'text', 'start_at', 'due_at', 'status', 'report_text', 'proof', 'proof_ids', 'reported_at', 'verified_at', 'asked_at')} | {'due_label': fmt_time(t['due_at'], now), 'start_label': fmt_time(t['start_at'], now)}
+        return {k: t.get(k) for k in ('id', 'no', 'text', 'start_at', 'due_at', 'status', 'report_text', 'proof', 'reported_at', 'verified_at', 'asked_at')} | {'due_label': fmt_time(t['due_at'], now), 'start_label': fmt_time(t['start_at'], now)}
 
     def view(self):
         with self.lock:
@@ -177,9 +226,8 @@ class TeamTasks:
             if d['plan'] and d['plan']['created'] > now - 900:
                 plan = {'items': [{**i, 'due_label': fmt_time(i['due_at'], now), 'start_label': fmt_time(i['start_at'], now)} for i in d['plan']['items']]}
             return {'member': {'name': d['member']['name']} if d['member'] else None, 'tasks': [self._public_task(t, now) for t in d['tasks'] if t['status'] != 'Cancelled'],
-                    'feed': [{**e, 'label': fmt_time(e['at'], now)} for e in d['feed'][-80:]][::-1], 'unread': d['unread'], 'plan': plan, 'paused': d['paused'], 'now_label': fmt_time(now),
+                    'unread': d['unread'], 'plan': plan, 'paused': d['paused'], 'now_label': fmt_time(now),
                     'counts': {s: sum(1 for t in d['tasks'] if t['status'] == s) for s in ('Waiting', 'Asked', 'Reported', 'Late', 'Done')},
-                    'chat_path': '/t/' + d['member']['token'] if d['member'] and d['member'].get('token') else '',
                     'latest': [{'label': fmt_time(e['at'], now), 'text': e['text']} for e in d['feed'] if e['kind'] in ('update', 'report', 'blocked', 'proof')][-3:][::-1]}
 
     # ---- owner actions
@@ -191,8 +239,7 @@ class TeamTasks:
         if phone == normalize_phone(self.app.OWNER_PHONE):
             raise ValueError('That is your own number.')
         with self.lock:
-            d = self._load();old = d['member'] or {}
-            d['member'] = {'name': name, 'phone': phone, 'since': self.now(), 'token': old.get('token') if old.get('phone') == phone and old.get('token') else secrets.token_urlsafe(18)};self._save()
+            d = self._load();d['member'] = {'name': name, 'phone': phone, 'since': self.now()};self._save()
             return self.view()
 
     def plan(self, text):
@@ -200,7 +247,7 @@ class TeamTasks:
             d = self._load()
             if not d['member']:
                 raise ValueError('Add your teammate first (name and WhatsApp number).')
-            items = plan_tasks(text, self.now())
+            items = plan_tasks(text, self.now(), self.QUIET)
             d['plan'] = {'created': self.now(), 'items': items};self._save()
             return self.view()
 
@@ -223,11 +270,11 @@ class TeamTasks:
                 if i['due_at'] <= now:
                     raise ValueError('The deadline passed while the plan was waiting. Plan it again.')
                 d['counter'] += 1
-                t = {'id': uuid.uuid4().hex, 'no': d['counter'], 'text': i['text'], 'start_at': i['start_at'], 'due_at': i['due_at'], 'status': 'Waiting', 'created_at': now,
-                     'attempts': 0, 'next_try': 0, 'asked_at': None, 'reminded': False, 'checked': False, 'final_sent': False, 'acked': False, 'proof': False,
-                     'proof_asked': False, 'report_text': '', 'reported_at': None, 'verified_at': None}
-                d['tasks'].append(t);made.append(t)
-            d['plan'] = None
+                tid = uuid.uuid4().hex
+                made.append({'id': tid, 'no': d['counter'], 'text': i['text'], 'start_at': i['start_at'], 'due_at': i['due_at'], 'status': 'Waiting', 'created_at': now, 'attempts': 0,
+                             'next_try': 0, 'asked_at': None, 'reminded': False, 'checked': False, 'final_sent': False, 'acked': False, 'proof': False, 'proof_asked': False,
+                             'blocked_replied': False, 'report_text': '', 'reported_at': None, 'verified_at': None, 'jit': self.JITTER[0] + int(tid[:6], 16) % (self.JITTER[1] - self.JITTER[0] + 1)})
+            d['tasks'].extend(made);d['plan'] = None
             self._event('plan', f'{len(made)} task{"s" if len(made) != 1 else ""} started for {d["member"]["name"]}.')
             self._save()
             return {**self.view(), 'reply': f'{len(made)} task{"s" if len(made) != 1 else ""} started. The first message goes out at {fmt_time(min(t["start_at"] for t in made), now)}.'}
@@ -241,25 +288,34 @@ class TeamTasks:
 
     def verify(self, ident):
         with self.lock:
-            t = self._find(ident)
+            t = self._find(ident);now = self.now();name = self._first()
             if t['status'] not in ('Reported', 'Late', 'Asked', 'Waiting'):
                 raise ValueError('This task is not waiting for you.')
-            t['status'] = 'Done';t['verified_at'] = self.now();self._event('verified', f'You verified task #{t["no"]}: {t["text"]}', t);self._save();return self.view()
+            was = t['status'];t['status'] = 'Done';t['verified_at'] = now
+            if was == 'Reported':
+                self._queue(pick((f'Looks good, thanks {name}. ({short(t["text"])})', f'Perfect, thanks {name}. ({short(t["text"])})', f'Great, that is fine. Thanks. ({short(t["text"])})'), t['id']), t, 'verified')
+            self._event('verified', f'You verified: {t["text"]}', t);self._save();return self.view()
 
     def reject(self, ident, note=''):
         with self.lock:
-            t = self._find(ident);now = self.now()
+            t = self._find(ident);now = self.now();name = self._first()
             if t['status'] != 'Reported':
                 raise ValueError('Only a reported task can be sent back.')
-            t.update(status='Asked', reminded=False, checked=False, final_sent=False, acked=False, report_text='', reported_at=None, proof_asked=False)
-            if t['due_at'] < now + 1800:
+            t.update(status='Asked', reminded=False, checked=False, final_sent=False, acked=False, report_text='', reported_at=None, proof_asked=False, proof=False, asked_at=now)
+            moved = t['due_at'] < now + 1800
+            if moved:
                 t['due_at'] = now + 1800
-            self._queue(f'Task #{t["no"]} needs another look' + (f': {str(note).strip()[:200]}' if str(note).strip() else '.') + f' New deadline {fmt_time(t["due_at"], now)}. Reply "{t["no"]} done" when ready.', t, 'rejected')
-            self._event('rejected', f'You sent task #{t["no"]} back.', t);self._save();return self.view()
+            note = str(note).strip()[:200]
+            body = pick((f'{name}, can you look at this again? {short(t["text"])}.', f'{name}, this still is not right: {short(t["text"])}.'), t['id'])
+            self._queue(body + (' ' + note if note else '') + (f' Can you finish by {fmt_time(t["due_at"], now)}?' if moved else ''), t, 'rejected')
+            self._event('rejected', f'You sent back: {t["text"]}', t);self._save();return self.view()
 
     def cancel(self, ident):
         with self.lock:
-            t = self._find(ident);t['status'] = 'Cancelled';self._event('cancel', f'Task #{t["no"]} cancelled.', t);self._save();return self.view()
+            t = self._find(ident);name = self._first()
+            if t['status'] in ('Asked', 'Late'):
+                self._queue(pick((f'{name}, leave this for now, no need anymore: {short(t["text"])}.', f'Forget this one, I do not need it anymore: {short(t["text"])}.'), t['id']), t, 'cancel')
+            t['status'] = 'Cancelled';self._event('cancel', f'Cancelled: {t["text"]}', t);self._save();return self.view()
 
     def pause(self, on):
         with self.lock:
@@ -269,118 +325,158 @@ class TeamTasks:
         with self.lock:
             self._load()['unread'] = 0;self._save();return self.view()
 
-    # ---- sending (reserve first, then send: at most once)
+    # ---- how the owner sounds on WhatsApp (short, casual, no task numbers)
+    def _queue(self, text, task, kind):
+        self._load()['outbox'].append({'text': text, 'task': task['id'] if task else None, 'kind': kind, 'at': self.now()})
+
+    def _prefix(self, now):
+        d = self._load();day = datetime.datetime.fromtimestamp(now, PKT).date().isoformat();name = self._first()
+        if d['greeted'] != day:
+            d['greeted'] = day;return f'Assalam o alaikum {name}, '
+        return f'{name}, '
+
+    def _ask_text(self, tasks, now):
+        due = lambda t: fmt_time(t['due_at'], now)
+        p = self._prefix(now)
+        if len(tasks) == 1:
+            t = tasks[0]
+            return p + pick((f"here's one for you: {t['text']}. Need it by {due(t)}.", f"can you do this one: {t['text']}? Deadline is {due(t)}.",
+                             f"next thing: {t['text']}. Please get it done by {due(t)} and let me know.", f"I need this by {due(t)}: {t['text']}. Tell me once it's done."), t['id'])
+        lead = pick(('a few things for you:', "here's what I need from you:"), tasks[0]['id'])
+        return p + lead + '\n' + '\n'.join(f'- {t["text"]} (by {due(t)})' for t in tasks) + '\nLet me know as each one is done.'
+
+    def _text_for(self, kind, t, now):
+        """The task text is an instruction ("update the sheet"), so it is quoted after a colon instead of being forced into a sentence."""
+        name = self._first();s = short(t['text']);due = fmt_time(t['due_at'], now)
+        options = {
+            'remind': (f'{name}, any update on this? {s}', f"How's this coming along? {s}", f'Checking in on this one, {name}: {s}. How far along are you?'),
+            'check': (f'{s} - will that be ready by {due}?', f'Quick one, {name}: {s}. Are you on track for {due}?', f'Still waiting on this: {s}. It is due at {due}, are you close?'),
+            'final': (f'{name}, this was due at {due}: {s}. Where are we on it?', f"It's past {due} and I haven't heard back on this: {s}. What's the status?", f'I was expecting this by {due}: {s}. Can you update me?'),
+            'proof': (f'Can you send a screenshot or a photo so I can check it? ({s})', f'{name}, send me a quick screenshot of it so I can verify? ({s})'),
+        }[kind]
+        return pick(options, t['id'] + kind)
+
+    # ---- sending: reserve under the lock, talk to WhatsApp outside it, then record the result
     def _quiet(self, now):
         h = datetime.datetime.fromtimestamp(now, PKT).hour
         a, b = self.QUIET
         return h >= a or h < b
 
-    def _queue(self, text, task, kind):
-        d = self._load();d.setdefault('outbox', []).append({'text': text, 'task': task['no'] if task else None, 'kind': kind, 'at': self.now()})
-
-    def _send(self, text):
-        d = self._load()
-        r = self.app.send_custom({'kind': 'team_msg', 'target': 'phone', 'phone': d['member']['phone'], 'message': text, 'poster': False})
-        if not isinstance(r, dict) or r.get('code') != 'SUCCESS':
-            raise ValueError('not delivered')
-
     def _can_send(self, now):
         d = self._load()
-        return bool(d['member']) and not d['paused'] and not self._quiet(now) and now - d['last_sent'] >= 60 and not self.app.on_hold()
+        return bool(d['member']) and not d['paused'] and not self._quiet(now) and now - d['last_sent'] >= 60 and not self.app.on_hold() and self.app.wa_ok()
 
-    def _chat(self, who, text, at=None, **extra):
-        d = self._load();m = {'id': uuid.uuid4().hex[:10], 'from': who, 'text': str(text)[:1500], 'at': at or self.now(), **extra}
-        d.setdefault('chat', []).append(m);d['chat'] = d['chat'][-200:];return m
+    def _next_job(self, now):
+        d = self._load()
+        if not self._can_send(now):
+            return None
+        if d['outbox']:
+            m = d['outbox'].pop(0);d['last_sent'] = now
+            return {'kind': 'say', 'text': m['text'], 'tasks': [], 'sub': m['kind']}
+        ready = sorted((t for t in d['tasks'] if t['status'] == 'Waiting' and now >= t['start_at'] + t['jit'] and now >= t['next_try']), key=lambda x: x['start_at'])[:4]
+        if ready:
+            for t in ready:
+                t['status'] = 'Asked';t['asked_at'] = now;t['attempts'] += 1
+            d['last_sent'] = now
+            return {'kind': 'ask', 'text': self._ask_text(ready, now), 'tasks': [t['id'] for t in ready]}
+        for t in sorted(d['tasks'], key=lambda x: x['start_at']):
+            kind = None
+            if t['status'] == 'Asked' and not t['acked'] and not t['reminded'] and now >= (t['asked_at'] or now) + 30 * 60 + t['jit'] * 10 and now < t['due_at'] - 15 * 60:
+                kind = 'remind';t['reminded'] = True
+            elif t['status'] == 'Asked' and not t['checked'] and t['due_at'] - 15 * 60 <= now < t['due_at'] and (t['asked_at'] or 0) < t['due_at'] - 15 * 60:
+                kind = 'check';t['checked'] = True
+            elif t['status'] == 'Late' and t.get('asked_at') and not t['final_sent']:
+                kind = 'final';t['final_sent'] = True
+            elif t['status'] == 'Reported' and not t['proof'] and not t['proof_asked'] and now >= (t['reported_at'] or now) + 90:
+                kind = 'proof';t['proof_asked'] = True
+            if kind:
+                d['last_sent'] = now
+                return {'kind': kind, 'text': self._text_for(kind, t, now), 'tasks': [t['id']]}
+        return None
 
-    def _base_url(self):
-        return os.environ.get('RENDER_EXTERNAL_URL', '').rstrip('/')
+    def _deliver(self, text, phone):
+        """Outside every lock. True only when WhatsApp confirms."""
+        try:
+            r = self.app.send_custom({'kind': 'team_msg', 'target': 'phone', 'phone': phone, 'message': text, 'poster': False})
+            return isinstance(r, dict) and r.get('code') == 'SUCCESS'
+        except Exception:
+            return False
 
-    def _transmit(self, text, now):
-        """The chat page is the main channel and always gets the message. WhatsApp is a best-effort ping to his phone.
-        The slot is reserved first, so nothing is ever sent twice."""
-        d = self._load();d['last_sent'] = now
-        link = ''
-        if not d.get('link_sent') and self._base_url() and d['member'].get('token'):
-            link = '\nYour task chat: ' + self._base_url() + '/t/' + d['member']['token'];d['link_sent'] = True
-        self._chat('bot', text, now);self._save()
-        if self.app.wa_ok():
-            try:
-                self._send(text + link)
-            except Exception:
-                self._event('send_failed', 'The WhatsApp ping to ' + d['member']['name'] + ' did not go through. He can still read it in his task chat.', None)
+    def _finish(self, job, ok, now):
+        d = self._load();tasks = [t for t in d['tasks'] if t['id'] in job['tasks']]
+        if ok:
+            self._event('sent', job['text'], tasks[0] if tasks else None)
+            return
+        if job['kind'] == 'ask':
+            for t in tasks:
+                t['status'] = 'Waiting';t['asked_at'] = None;t['next_try'] = now + (3600 if t['attempts'] >= 3 else self.RETRY_AFTER)
+                if t['attempts'] == 3:
+                    self._event('send_failed', f'Could not reach {d["member"]["name"]} on WhatsApp about: {t["text"][:60]}. Check WhatsApp.', t, notify=True)
+        else:
+            self._event('send_failed', f'A message to {d["member"]["name"]} did not go through ({job["kind"]}).', tasks[0] if tasks else None)
 
     # ---- the clock: called every ~20 seconds
     def tick(self):
-        with self.lock:
-            d = self._load();now = self.now()
+        if not self.tick_lock.acquire(blocking=False):
+            return
+        try:
+            d = self._load()
             if not d['member']:
                 return
-            self._poll(now)
-            self._deadlines(now)
-            self._outbound(now)
-            self._notify_owner(now)
-            self._save()
+            phone = d['member']['phone']
+            try:
+                msgs = self.app.group_messages(phone + '@s.whatsapp.net')
+            except Exception:
+                msgs = None
+            with self.lock:
+                now = self.now()
+                if msgs:
+                    self.handle_messages(msgs)
+                self._deadlines(now)
+                job = self._next_job(now);self._save()
+            ok = self._deliver(job['text'], phone) if job else None
+            with self.lock:
+                now = self.now()
+                if job:
+                    self._finish(job, ok, now)
+                note = self._take_note(now);self._save()
+            if note:
+                try:
+                    self.app.send_text(self.app.OWNER_PHONE + '@s.whatsapp.net', note)
+                except Exception:
+                    pass
+        finally:
+            self.tick_lock.release()
 
     def _deadlines(self, now):
-        d = self._load();name = d['member']['name']
-        for t in d['tasks']:
+        for t in self._load()['tasks']:
             if t['status'] in ('Waiting', 'Asked') and now > t['due_at']:
                 was = t['status'];t['status'] = 'Late';t['late_at'] = now
-                self._event('late', f'Task #{t["no"]} is late: {t["text"]}' + ('' if was == 'Asked' else ' (it was never sent)'), t, notify=True)
+                self._event('late', f'Late: {t["text"]}' + ('' if was == 'Asked' else ' (it was never sent to him)'), t, notify=True)
 
-    def _outbound(self, now):
+    def _take_note(self, now):
         d = self._load()
-        if not self._can_send(now):
-            return
-        name = d['member']['name'].split()[0]
-        if d.get('outbox'):
-            m = d['outbox'].pop(0)
-            self._transmit(m['text'], now);self._event('sent', m['text'], None, to_task=m['task'])
-            return
-        for t in sorted(d['tasks'], key=lambda x: x['start_at']):
-            text = kind = None
-            if t['status'] == 'Waiting' and now >= t['start_at'] and now >= t['next_try']:
-                text = f'Assalam o alaikum {name}. Task #{t["no"]}: {t["text"]}\nDeadline: {fmt_time(t["due_at"], now)}.\nReply "{t["no"]} done" when finished (send a photo or link as proof), or tell me if you are stuck.'
-                kind = 'ask'
-            elif t['status'] == 'Asked' and not t['acked'] and not t['reminded'] and now >= (t['asked_at'] or now) + 30 * 60 and now < t['due_at'] - 15 * 60:
-                text = f'Reminder: task #{t["no"]} - {t["text"]}. Deadline {fmt_time(t["due_at"], now)}. Any update?';kind = 'remind'
-            elif t['status'] == 'Asked' and not t['checked'] and t['due_at'] - 15 * 60 <= now < t['due_at'] and (t['asked_at'] or 0) < t['due_at'] - 15 * 60:
-                text = f'Quick check: is task #{t["no"]} done? Deadline {fmt_time(t["due_at"], now)}. Reply "{t["no"]} done" or tell me what is left.';kind = 'check'
-            elif t['status'] == 'Late' and t.get('asked_at') and not t['final_sent']:
-                text = f'The deadline for task #{t["no"]} has passed. Please send an update now.';kind = 'final'
-            elif t['status'] == 'Reported' and not t['proof'] and not t['proof_asked']:
-                text = f'Thanks. For task #{t["no"]}, please send a screenshot, photo or link as proof.';kind = 'proof'
-            if not text:
-                continue
-            # reserve before sending: a crash can never produce a second copy
-            if kind == 'ask':
-                t['status'] = 'Asked';t['asked_at'] = now;t['attempts'] += 1
-            elif kind == 'remind':
-                t['reminded'] = True
-            elif kind == 'check':
-                t['checked'] = True
-            elif kind == 'final':
-                t['final_sent'] = True
-            elif kind == 'proof':
-                t['proof_asked'] = True
-            self._transmit(text, now);self._event('sent', text, t)
-            return  # one message per tick
+        if not d['pending_notes'] or now - d['last_note'] < 120:
+            return None
+        notes = d['pending_notes'][:5];rest = len(d['pending_notes']) - len(notes);d['pending_notes'] = [];d['last_note'] = now
+        return ('Team: ' + ' | '.join(n['text'] for n in notes) + (f' (+{rest} more)' if rest > 0 else ''))[:900]
 
     # ---- reading his replies
-    def _poll(self, now):
-        d = self._load();m = d['member']
-        try:
-            msgs = self.app.group_messages(m['phone'] + '@s.whatsapp.net')
-        except Exception:
-            return
-        self.handle_messages(msgs)
-
     @staticmethod
     def _stamp(m):
         try:
             return datetime.datetime.fromisoformat(str(m.get('timestamp', '')).replace('Z', '+00:00')).timestamp()
         except Exception:
             return 0.0
+
+    @staticmethod
+    def _media(m):
+        kind = ' '.join(str(m.get(k) or '') for k in ('media_type', 'type', 'message_type', 'mimetype')).lower()
+        if any(w in kind for w in ('audio', 'ptt', 'voice')):
+            return 'audio'
+        if any(w in kind for w in ('image', 'photo', 'video', 'sticker', 'document', 'pdf')) or m.get('image') or m.get('url') or m.get('filename'):
+            return 'image'
+        return None
 
     def handle_messages(self, msgs):
         d = self._load();seen = set(d['seen']);changed = False
@@ -391,134 +487,70 @@ class TeamTasks:
             if self._stamp(m) and self._stamp(m) < d['member']['since']:
                 continue
             seen.add(mid);changed = True
-            self.handle_reply(str(m.get('content') or m.get('caption') or ''), bool(m.get('media_type') or m.get('filename') or m.get('image') or m.get('url') or str(m.get('type', '')).lower() in ('image', 'video', 'document')))
+            self.handle_reply(str(m.get('content') or m.get('caption') or ''), self._media(m))
         if changed:
-            d['seen'] = list(seen)[-500:];self._save()
+            d['seen'] = list(seen)[-500:]
 
-    def handle_reply(self, text, media=False, proof_id=None):
-        """One message from the teammate. Matches it to tasks by number; never guesses between several."""
-        d = self._load();now = self.now();text = text.strip()
-        proof = media or bool(URL.search(text))
-        asked = [t for t in d['tasks'] if t['status'] in ('Asked', 'Late')]
-        nums = [int(n) for n in re.findall(r"(?<![\d:/.])#?(\d{1,2})(?![\d:/.]|\s*(?:am|pm|min|hour|hr))", text)]
-        by_no = {t['no']: t for t in asked}
-        said_done = bool(DONE_WORDS.search(text))
-        shown = text or '(sent a photo or file)'
-        if said_done:
-            if re.search(r"(?i)\ball\b", text):
-                targets = asked
-            elif nums:
-                targets = [by_no[n] for n in dict.fromkeys(nums) if n in by_no]
-                if not targets:
-                    self._event('update', f'{d["member"]["name"]}: {shown}', notify=True)
-                    self._queue('I could not match that to an open task. Open tasks: ' + (', '.join('#' + str(t['no']) for t in asked) or 'none') + '. Reply like "2 done".', None, 'clarify')
-                    return
-            elif len(asked) == 1:
-                targets = asked
-            else:
-                self._event('update', f'{d["member"]["name"]}: {shown}  (which task?)', notify=True)
-                if asked:
-                    self._queue('Which task is done? Open: ' + ', '.join('#' + str(t['no']) for t in asked) + '. Reply like "2 done".', None, 'clarify')
+    def _targets(self, text, pool):
+        """Which of the open tasks does this message mean? Never guesses between several."""
+        if not pool:
+            return []
+        if ALL_WORDS.search(text):
+            return list(pool)
+        nums = [int(n) for n in re.findall(r"(?<![\d:/.])#?(\d{1,2})(?![\d:/.]|\s*(?:am|pm|min|hour|hr|baje))", text)]
+        byno = [t for t in pool if t['no'] in nums]
+        if nums and byno:
+            return byno
+        w = words(text)
+        scored = [(len(w & words(t['text'])), t) for t in pool]
+        best = max((s for s, _ in scored), default=0)
+        if best > 0:
+            top = [t for s, t in scored if s == best]
+            return top if len(top) == 1 else []
+        return list(pool) if len(pool) == 1 else []
+
+    def _clarify(self, pool, now):
+        d = self._load()
+        if len(pool) < 2 or now - d['last_clarify'] < 600:
+            return
+        d['last_clarify'] = now
+        names = [short(t['text'], 28) for t in pool[:4]]
+        self._queue('Which one do you mean, ' + ', '.join(names[:-1]) + ' or ' + names[-1] + '?', None, 'clarify')
+
+    def handle_reply(self, text, media=None):
+        d = self._load();now = self.now();text = str(text or '').strip();first = self._first()
+        proof = media == 'image' or bool(URL.search(text))
+        shown = text or ('(voice note)' if media == 'audio' else '(sent a photo or file)')
+        pool = [t for t in d['tasks'] if t['status'] in ('Asked', 'Late')] or [t for t in d['tasks'] if t['status'] == 'Waiting']
+        if said_done(text):
+            targets = self._targets(text, pool)
+            if not targets:
+                self._event('update', f'{first}: {shown}' + ('  (which task?)' if len(pool) > 1 else ''), notify=True);self._clarify(pool, now)
                 return
             for t in targets:
-                t['status'] = 'Reported';t['report_text'] = shown[:400];t['reported_at'] = now;t['acked'] = True
+                t.update(status='Reported', report_text=shown[:400], reported_at=now, acked=True)
                 t['proof'] = t['proof'] or proof
-                if proof_id:t.setdefault('proof_ids', []).append(proof_id)
-                self._event('report', f'{d["member"]["name"]} says task #{t["no"]} is done: {shown}', t, notify=True, proof=t['proof'])
-            self._queue('Thanks. Noted as done: ' + ', '.join('#' + str(t['no']) for t in targets) + '. I will confirm after checking.', None, 'ack')
+                self._event('report', f'{first} says it is done: {short(t["text"], 70)}' + (f' ("{shown[:80]}")' if text else ''), t, notify=True)
+            if all(t['proof'] for t in targets):
+                self._queue(pick((f'Nice, thanks {first}.', 'Great, thank you.', f'Perfect, thanks {first}.'), targets[0]['id']), None, 'ack')
+            else:
+                for t in targets:
+                    t['proof_asked'] = True
+                self._queue(pick((f'Thanks {first}. Can you send a screenshot or photo so I can check it?', 'Okay good. Send me a quick screenshot or photo so I can check?'), targets[0]['id']), None, 'ack')
             return
-        target = by_no.get(nums[0]) if nums and nums[0] in by_no else (asked[-1] if len(asked) == 1 else None)
         waiting_proof = [t for t in d['tasks'] if t['status'] == 'Reported' and not t['proof']]
-        if proof and not text.strip(' .') and len(waiting_proof) == 1 or proof and target is None and len(waiting_proof) == 1:
-            target = waiting_proof[0]   # proof for a task he already reported
+        candidates = self._targets(text, pool + waiting_proof) if (text or proof) else []
+        target = candidates[0] if len(candidates) == 1 else None
+        if target is None and proof and not text and len(waiting_proof) == 1:
+            target = waiting_proof[0]
         if target:
             target['acked'] = True
-            if proof:
-                target['proof'] = True
-                if proof_id:target.setdefault('proof_ids', []).append(proof_id)
+            target['proof'] = target['proof'] or proof
         kind = 'blocked' if BLOCK_WORDS.search(text) else ('proof' if proof and not text else 'update')
-        self._event(kind, f'{d["member"]["name"]}: {shown}', target, notify=True)
-
-    def _notify_owner(self, now):
-        d = self._load()
-        if not d['pending_notes'] or now - d['last_note'] < 120:
-            return
-        notes = d['pending_notes'][:5];rest = len(d['pending_notes']) - len(notes);d['pending_notes'] = []
-        text = 'GiveLife team: ' + ' | '.join(n['text'] for n in notes) + (f' (+{rest} more)' if rest > 0 else '')
-        d['last_note'] = now
-        try:
-            self.app.send_text(self.app.OWNER_PHONE + '@s.whatsapp.net', text[:900])
-        except Exception:
-            pass
-
-    # ---- the teammate's own chat page (opened with a private link, no owner key)
-    PROOF_MAX = 3 * 1024 * 1024
-    MAGIC = ((b'\xff\xd8\xff', 'jpg', 'image/jpeg'), (b'\x89PNG\r\n\x1a\n', 'png', 'image/png'), (b'RIFF', 'webp', 'image/webp'))
-
-    def _member_for(self, token):
-        d = self._load();m = d['member']
-        if not m or not m.get('token') or not isinstance(token, str) or not hmac.compare_digest(token.encode(), m['token'].encode()):
-            raise ValueError('This link is not valid. Ask for a new one.')
-        return d
-
-    def chat_state(self, token):
-        with self.lock:
-            d = self._member_for(token);now = self.now()
-            tasks = [{'no': t['no'], 'text': t['text'], 'status': t['status'], 'due_label': fmt_time(t['due_at'], now), 'due_in_min': int((t['due_at'] - now) / 60)} for t in d['tasks'] if t['status'] in ('Waiting', 'Asked', 'Late', 'Reported')]
-            chat = [{**m, 'label': fmt_time(m['at'], now)} for m in d.get('chat', [])[-80:]]
-            return {'name': d['member']['name'].split()[0], 'tasks': tasks, 'chat': chat, 'now_label': fmt_time(now), 'paused': d['paused']}
-
-    def chat_say(self, token, text='', image_b64='', image_name=''):
-        with self.lock:
-            d = self._member_for(token);now = self.now();text = str(text or '').strip()
-            if len(text) > 1000:
-                raise ValueError('Keep the message under 1,000 characters.')
-            last = [m for m in d.get('chat', []) if m['from'] == 'him']
-            if last and now - last[-1]['at'] < 1:
-                raise ValueError('One moment, then send again.')
-            proof_id = None;img = None
-            if image_b64:
-                try:
-                    raw = base64.b64decode(image_b64, validate=True)
-                except Exception:
-                    raise ValueError('That picture could not be read.')
-                if len(raw) > self.PROOF_MAX:
-                    raise ValueError('The picture is too big. Use one under 3 MB.')
-                kind = next(((e, c) for sig, e, c in self.MAGIC if raw.startswith(sig) and (sig != b'RIFF' or raw[8:12] == b'WEBP')), None)
-                if not kind:
-                    raise ValueError('Send a photo (JPG, PNG or WebP).')
-                proof_id = uuid.uuid4().hex
-                folder = self.app.DATA / 'team-proof';folder.mkdir(exist_ok=True);(folder / (proof_id + '.' + kind[0])).write_bytes(raw);img = proof_id
-            if not text and not img:
-                raise ValueError('Write a message or add a photo.')
-            self._chat('him', text, now, **({'img': img} if img else {}))
-            before = len(d.get('outbox', []))
-            self.handle_reply(text, media=bool(img), proof_id=proof_id)
-            # answers to what he just wrote appear in the chat at once (he is already looking at it)
-            for m in d.get('outbox', [])[before:]:
-                self._chat('bot', m['text'], now);self._event('sent', m['text'], None, to_task=m['task'])
-            if 'outbox' in d:
-                del d['outbox'][before:]
-            self._save();return self.chat_state(token)
-
-    def proof_file(self, proof_id):
-        if not re.fullmatch(r'[0-9a-f]{32}', str(proof_id)):
-            raise ValueError('Not found.')
-        for sig, ext, ctype in self.MAGIC:
-            f = self.app.DATA / 'team-proof' / (proof_id + '.' + ext)
-            if f.exists():
-                return f.read_bytes(), ctype
-        raise ValueError('Not found.')
-
-    def send_link(self):
-        """The owner asks the bot to give him the chat link on WhatsApp."""
-        with self.lock:
-            d = self._load()
-            if not d['member']:
-                raise ValueError('Add your teammate first.')
-            if not self._base_url():
-                raise ValueError('The public address is not set on the server, so copy the link and send it yourself.')
-            self._queue('Your task chat (tasks, deadlines and updates): ' + self._base_url() + '/t/' + d['member']['token'], None, 'link');d['link_sent'] = True;self._save();return self.view()
+        self._event(kind, f'{first}: {shown}', target, notify=True)
+        if kind == 'blocked' and target and not target['blocked_replied']:
+            target['blocked_replied'] = True
+            self._queue(pick((f'Okay {first}, what exactly is stopping you?', "Alright, what's the problem? Tell me what's blocking you."), target['id']), target, 'blocked')
 
     # ---- chat
     def summary(self):
@@ -528,8 +560,9 @@ class TeamTasks:
                 return 'No teammate set yet. Say: set teammate Bilal 0300 1234567'
             if not v['tasks']:
                 return f'No tasks for {v["member"]["name"]} right now.'
-            lines = [f'#{t["no"]} {t["text"][:60]} - {t["status"]} (due {t["due_label"]})' for t in v['tasks']]
-            return f'{v["member"]["name"]}: ' + '; '.join(lines)
+            done = sum(1 for t in v['tasks'] if t['status'] == 'Done')
+            left = [f'{t["text"][:50]} ({t["status"].lower()}, due {t["due_label"]})' for t in v['tasks'] if t['status'] != 'Done']
+            return f'{done} of {len(v["tasks"])} done. ' + ('Left: ' + '; '.join(left) if left else 'All done.')
 
     def command(self, raw, t):
         """Chat shortcuts. Returns a result dict, or None when the text is about something else."""
@@ -554,7 +587,7 @@ class TeamTasks:
             self.discard_plan();return {'reply': 'Plan discarded. Nothing was sent.', 'team_changed': True}
         if low in ('team status', 'task status', 'tasks status', 'show tasks', 'show team', 'team update', 'team updates', 'what are the tasks'):
             return {'reply': self.summary()}
-        m = re.fullmatch(r"(?i)(?:please\s+)?(?:verify|approve|confirm)\s+task\s+#?(\d{1,2})", low)
+        m = re.fullmatch(r"(?i)(?:please\s+)?(?:verify|approve|confirm|mark)\s+task\s+#?(\d{1,2})(?:\s+(?:as\s+)?(?:done|verified))?", low)
         if m:
             self.verify(m[1]);return {'reply': f'Task #{m[1]} verified.', 'team_changed': True}
         m = re.fullmatch(r"(?is)task\s+#?(\d{1,2})\s+(?:not done|redo|send back|rejected?)\s*[:\-]?\s*(.*)", raw.strip())

@@ -218,10 +218,10 @@ test('Volunteers tab: all five tabs fit on one line, add by name and number, sav
  }
 });
 
-test('team: owner writes tasks, the teammate gets them in his own chat page, answers there, and the owner verifies',async({page,request,browser})=>{
+test('team over WhatsApp: tasks in the screen, a natural first message, his reply shows up to check, verified',async({page,request})=>{
  const auth={Authorization:'Bearer manual-fix-preview-key'};
- const cmd=async text=>(await request.post('/command',{headers:auth,data:{text}})).json();
- const tick=()=>request.post('/__test/seed',{headers:auth,data:{team_tick:true}});
+ const post=(data)=>request.post('/__test/seed',{headers:auth,data});
+ const events=async()=>(await (await request.get('/__test/events',{headers:auth})).json()).events.filter(e=>e.path==='/send/message');
  await open(page,request,1440,800);
  await page.locator('#openTeam').click();await expect(page.locator('.team-setup')).toBeVisible();
  await page.locator('.team-setup input[name=team_name]').fill('Bilal Ahmed');await page.locator('.team-setup input[name=team_phone]').fill('03001234567');await page.locator('.team-setup .primary').click();
@@ -230,18 +230,31 @@ test('team: owner writes tasks, the teammate gets them in his own chat page, ans
  await page.locator('#teamText').fill("1) Post in the 3 groups\n2) Update the sheet\nDeadline in 4 hours");await page.getByRole('button',{name:'Plan the tasks'}).click();
  await expect(page.locator('.team-page').getByText('Nothing is sent until you press Start')).toBeVisible();
  await page.getByRole('button',{name:'Start tasks'}).click();await expect(page.locator('.team-big')).toContainText('0 of 2 done');
- await tick();await tick();
- const sent=(await (await request.get('/__test/events',{headers:auth})).json()).events.filter(e=>e.path==='/send/message'&&/Task #1/.test(e.fields.message||''));
- expect(sent.length,'task 1 is pinged on WhatsApp exactly once').toBe(1);expect(sent[0].fields.phone).toBe('923001234567');
- const chatPath=(await (await request.get('/team',{headers:auth})).json()).chat_path;expect(chatPath).toMatch(/^\/t\/[\w-]{20,}$/);
- const mate=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const mp=await mate.newPage();
- await mp.goto(chatPath);await expect(mp.locator('#title')).toContainText('Bilal');await expect(mp.locator('#log .m.bot').first()).toContainText('Task #1');await expect(mp.locator('#tasks')).toContainText('Post in the 3 groups');
- await mp.locator('#tasks .task').first().getByRole('button',{name:'Done'}).click();await expect(mp.locator('#log .m.him').last()).toContainText('1 done');await expect(mp.locator('#log .m.bot').last()).toContainText('Noted as done');
- const overflow=await mp.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);expect(overflow).toBe(false);
- await page.evaluate(()=>document.getElementById('teamPage').dispatchEvent(new Event('close')));await page.locator('#teamPage .team-back').click().catch(()=>{});await page.locator('#openTeam').click();
- await expect(page.locator('.team-review')).toContainText('Post in the 3 groups',{timeout:12000});
- await page.locator('.team-review').getByRole('button',{name:/Verified/}).click();await expect(page.locator('.team-big')).toContainText('1 of 2 done');await expect(page.locator('.team-done')).toContainText('Post in the 3 groups');
- expect((await cmd('team status')).reply).toContain('#1');expect((await cmd('hello how are you')).reply||'').not.toContain('#1');
- const bad=await mp.request.get('/t/not-a-real-token-123456/state');expect(bad.status()).toBe(404);
- await mate.close();
+ const before=(await events()).length;await page.waitForTimeout(1500);await post({team_tick:true});await post({team_tick:true});
+ const sent=(await events()).slice(before);expect(sent.length,'the first message goes once, even after two ticks').toBe(1);
+ expect(sent[0].fields.phone).toBe('923001234567');expect(sent[0].fields.message).toContain('Post in the 3 groups');expect(sent[0].fields.message).not.toMatch(/Task #|Reply "|bot/i);expect(sent[0].fields.message).toMatch(/^Assalam o alaikum Bilal,/);
+ await post({incoming:'posted in the groups, done https://example.com/p',team_tick:true});
+ await expect(page.locator('.team-review')).toContainText('Post in the 3 groups',{timeout:12000});await expect(page.locator('.team-review')).toContainText('Proof');
+ await page.locator('.team-review').getByRole('button',{name:/Verified/}).click();await expect(page.locator('.team-big')).toContainText('1 of 2 done');
+ const cmd=async text=>(await request.post('/command',{headers:auth,data:{text}})).json();
+ expect((await cmd('team status')).reply).toContain('1 of 2 done');expect((await cmd('hello how are you')).reply||'').not.toContain('of 2 done');
+});
+
+test('team screen is one screen with no scrolling at every size, even with a lot of data',async({page,request})=>{
+ const auth={Authorization:'Bearer manual-fix-preview-key'};
+ const sizes=[[1920,900],[1440,800],[1280,720],[1024,600],[768,1024],[412,915],[390,844],[360,640],[320,568]];
+ for(const demo of [[[0,'Waiting']],[[1,'Reported'],[2,'Asked'],[1,'Done']],[[8,'Reported'],[14,'Asked'],[3,'Late'],[5,'Done']]]){
+  for(const [w,h] of sizes){
+   await open(page,request,w,h);await request.post('/__test/seed',{headers:auth,data:{team_demo:demo}});
+   await page.locator('#openTeam').click();await expect(page.locator('.team-page')).toBeVisible();await page.waitForTimeout(350);
+   const m=await page.evaluate(()=>{const b=document.querySelector('.team-body'),s=document.querySelector('.team-shell'),f=document.querySelector('.team-foot');const r=f.getBoundingClientRect();
+    const bad=[...document.querySelectorAll('.team-page button')].filter(x=>x.offsetParent&&(x.getBoundingClientRect().height<43||x.getBoundingClientRect().right>innerWidth+1||x.getBoundingClientRect().left<-1)).map(x=>x.textContent.trim()+':'+Math.round(x.getBoundingClientRect().height));
+    return {fit:b.scrollHeight<=b.clientHeight+1,x:document.documentElement.scrollWidth>innerWidth+1||s.scrollWidth>s.clientWidth+1,footIn:r.bottom<=innerHeight+1&&r.top>=0,bad,add:!!document.querySelector('.team-add')||!!document.querySelector('#teamText')}});
+   expect(m.fit,`${w}x${h} ${JSON.stringify(demo)}: nothing to scroll`).toBe(true);expect(m.x,`${w}x${h}: no sideways scroll`).toBe(false);expect(m.footIn,`${w}x${h}: Back is on screen`).toBe(true);expect(m.bad,`${w}x${h}: every button is 44px tall and inside`).toEqual([]);expect(m.add,`${w}x${h}: the add button stays`).toBe(true);
+   await page.locator('.team-back').click();
+  }
+ }
+ await open(page,request,390,700);await request.post('/__test/seed',{headers:auth,data:{team_demo:[[2,'Asked']]}});await page.locator('#openTeam').click();await page.getByRole('button',{name:'+ Add tasks'}).click();
+ await page.locator('#teamText').fill(Array.from({length:20},(_,i)=>'Task number '+(i+1)+' with some words').join('\n')+'\ndeadline tomorrow 9pm');await page.getByRole('button',{name:'Plan the tasks'}).click();await expect(page.getByRole('button',{name:'Start tasks'})).toBeVisible();
+ const fit=await page.evaluate(()=>{const b=document.querySelector('.team-body');return b.scrollHeight<=b.clientHeight+1});expect(fit,'a 20-task plan preview also fits one screen').toBe(true);
 });

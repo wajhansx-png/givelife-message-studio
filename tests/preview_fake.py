@@ -47,7 +47,7 @@ class Store:
  def put(self,k,v):
   import copy
   with self.lock:self.data[k]=copy.deepcopy(v)
-server.STORE=Store();server.set_left(25000);server.ENGINE.s['dm_enabled']=False;type(server.donors().team).QUIET=(24,-1)
+server.STORE=Store();server.set_left(25000);server.ENGINE.s['dm_enabled']=False;type(server.donors().team).QUIET=(24,-1);type(server.donors().team).JITTER=(0,0)
 if '--donors' in sys.argv:
  for i in range(20):
   row=server.donors().book.add('Demo donor '+str(i+1),'1555'+str(1230000+i))['donor']
@@ -73,6 +73,15 @@ def preview_post(self):
   if 'group' in body:server.save_draft('group',str(body['group']))
   if 'incoming' in body:incoming.append({'id':'in-'+str(len(incoming)+1),'content':str(body['incoming']),'is_from_me':False,'timestamp':__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()})
   if body.get('team_tick'):server.donors().team.tick()
+  if body.get('team_demo'):
+   import uuid as _u
+   t=server.donors().team;d=t._load();now=time.time();d['member']={'name':'Bilal Ahmed','phone':'923001234567','since':now};d['tasks']=[];d['feed']=[];d['plan']=None
+   long='Update the donors sheet with every confirmed donation, check the totals twice and message the owner a photo of the final page'
+   for i,(n,st) in enumerate(body['team_demo']):
+    for k in range(n):
+     tid=_u.uuid4().hex;d['tasks'].append({'id':tid,'no':len(d['tasks'])+1,'text':(long if k%2 else 'Post the caption in group %d'%(k+1)),'start_at':now-3600,'due_at':now+3600*(k+1),'status':st,'created_at':now,'attempts':1,'next_try':0,'asked_at':now-3000,'reminded':False,'checked':False,'final_sent':False,'acked':True,'proof':k%2==0,'proof_asked':False,'blocked_replied':False,'report_text':'done, please check it','reported_at':now-60,'verified_at':None,'jit':9})
+   for k in range(6):d['feed'].append({'id':'e%d'%k,'at':now-k*60,'kind':'update','text':'Bilal: working on the sheet now, almost there, will send a photo soon %d'%k,'task':None})
+   t._save()
   return self.reply({'ok':True})
  return original_post(self)
 server.Handler.do_GET=preview_get

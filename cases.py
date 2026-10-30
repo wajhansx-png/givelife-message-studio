@@ -1,6 +1,6 @@
 """Cases: each case (for example "Yousuf") keeps its own amount, captions, stars, donated marks, DM-sent marks and batch history.
 Closing one saves it; a new case starts from zero; any saved case can be opened again. Donor and volunteer names and numbers are shared."""
-import copy, json, re, threading, time, uuid
+import base64, copy, json, re, threading, time, uuid
 
 class Cases:
     KEY='cases'
@@ -22,7 +22,12 @@ class Cases:
         return {'state':(a.DATA/'state.md').read_text(encoding='utf-8-sig'),'drafts':a.DRAFT.read_text(encoding='utf-8') if a.DRAFT.exists() else '',
                 'donors':h.book.export_case_fields(),'volunteers':h.volunteers.book.export_case_fields(),
                 'jobs':h.jobs.export_jobs(),'vjobs':h.volunteers.jobs.export_jobs(),
-                'bank':a.STORE.get('donor_messages') if a.STORE else None,'saved_at':time.time()}
+                'bank':a.STORE.get('donor_messages') if a.STORE else None,
+                'poster_b64':a.STORE.get('poster_b64') if a.STORE else (base64.b64encode((a.DATA/'poster.jpg').read_bytes()).decode() if (a.DATA/'poster.jpg').exists() else ''),
+                'poster_video_b64':a.STORE.get('poster_video_b64') if a.STORE else '',
+                'poster_kind':a.STORE.get('poster_kind') if a.STORE else 'image',
+                'papers_b64':a.STORE.get('papers_b64',[]) if a.STORE else [base64.b64encode(p.read_bytes()).decode() for p in sorted((a.DATA/'papers').glob('*.jpg'))],
+                'saved_at':time.time()}
     def _summary(self,snap):
         m=re.search(r'^LEFT:\s*(\d+)',snap.get('state',''),re.M);donors=snap.get('donors',{})
         return {'left':int(m[1]) if m else None,'donors':len(donors),'donated':sum(1 for d in donors.values() if d.get('donated')),'donated_amount':sum(float(d.get('amount') or 0) for d in donors.values() if d.get('donated')),'sent':sum(1 for d in donors.values() if d.get('dm_sent') or d.get('delivery')=='Sent'),'important':sum(1 for d in donors.values() if d.get('important'))}
@@ -33,13 +38,32 @@ class Cases:
             if snap.get('drafts'):a.DRAFT.write_text(snap['drafts'],encoding='utf-8');a.persist_file('drafts',a.DRAFT)
             h.book.import_case_fields(snap.get('donors'));h.volunteers.book.import_case_fields(snap.get('volunteers'))
             h.jobs.import_jobs(snap.get('jobs'));h.volunteers.jobs.import_jobs(snap.get('vjobs'))
-            bank=snap.get('bank')
+            bank=snap.get('bank');media=snap
         else:
             state=(a.DATA/'state.md').read_text(encoding='utf-8-sig')
             for key in ('LEFT','POSTER_LEFT'):state=re.sub(r'^'+key+r':.*$',key+': '+str(left),state,flags=re.M) if re.search(r'^'+key+':',state,re.M) else key+': '+str(left)+'\n'+state
             (a.DATA/'state.md').write_text(state,encoding='utf-8');a.persist_file('campaign',a.DATA/'state.md')
-            h.book.import_case_fields(None);h.volunteers.book.import_case_fields(None);h.jobs.import_jobs(None);h.volunteers.jobs.import_jobs(None);bank=None
+            h.book.import_case_fields(None);h.volunteers.book.import_case_fields(None);h.jobs.import_jobs(None);h.volunteers.jobs.import_jobs(None);bank=None;media={}
             a.regenerate_drafts(left,case_name)
+        # Every case owns its poster and medical papers. Never show or send an
+        # old child's images or reports when opening a different case.
+        picture=media.get('poster_b64') if isinstance(media,dict) else None
+        video=media.get('poster_video_b64') if isinstance(media,dict) else None
+        papers=media.get('papers_b64',[]) if isinstance(media,dict) else []
+        kind=media.get('poster_kind','image') if isinstance(media,dict) else 'image'
+        if not isinstance(papers,list):papers=[]
+        for old in (a.DATA/'poster.jpg',a.DATA/'poster.mp4',a.DATA/'poster-kind.txt'):
+            old.unlink(missing_ok=True)
+        paper_dir=a.DATA/'papers';paper_dir.mkdir(exist_ok=True)
+        for old in paper_dir.glob('*.jpg'):old.unlink(missing_ok=True)
+        if picture:(a.DATA/'poster.jpg').write_bytes(base64.b64decode(picture))
+        if video:(a.DATA/'poster.mp4').write_bytes(base64.b64decode(video))
+        (a.DATA/'poster-kind.txt').write_text('video' if kind=='video' and video else 'image',encoding='utf-8')
+        for i,encoded in enumerate(papers[:6]):
+            if isinstance(encoded,str): (paper_dir/f'paper-{i}.jpg').write_bytes(base64.b64decode(encoded))
+        if a.STORE:
+            for key,value in (('poster_b64',picture or ''),('poster_video_b64',video or ''),('poster_kind',kind if video or picture else 'image'),('papers_b64',papers[:6])):
+                a.STORE.put(key,value)
         if a.STORE:a.STORE.put('donor_messages',bank if isinstance(bank,dict) else {})
         h.messages.cache=None
         try:(a.DATA/'donor-messages.json').unlink()

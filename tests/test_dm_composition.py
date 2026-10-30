@@ -31,9 +31,9 @@ class DMFlowTests(unittest.TestCase):
  tearDown=fixture.SendTests.tearDown
  def test_saved_dm_screen_has_canonical_bold_italic_structure(self):
   text=app.get_message('dm')['text']
-  self.assertIn('Brother, you can close this chat. Yousuf cannot close his pain.',text)
-  self.assertIn('💔 Days have passed. He is still at home.\n_Yousuf is 2.',text)
-  self.assertIn('⚠️ *The paralysing has started in his fingers.',text)
+  self.assertIn('Brother, please read about Yousuf and the support his family requested.',text)
+  self.assertIn('💔 His parents reported that he was admitted to hospital for treatment.\n_Yousuf is 2.',text)
+  self.assertIn('⚠️ *His parents reported that he was short of breath.',text)
   self.assertIn('💰 *_Rs. 25,000 still needed for treatment._*',text)
   self.assertIn('*_Just 13 people donating Rs. 2,000_*',text)
   self.assertIn('*_OR 25 people contributing Rs. 1,000 🤲_*',text)
@@ -41,6 +41,8 @@ class DMFlowTests(unittest.TestCase):
   self.assertIn('📲 *03097458815*',text)
   self.assertIn('Reply *Done* after donating.',text)
   self.assertTrue(dm_composer.complete(text));self.assertNotIn('Name Brother',text)
+  self.assertNotIn('paralysing has started',text.lower())
+  self.assertNotIn('he is still at home',text.lower())
  def test_full_dm_name_edit_then_resend_same_person(self):
   jid='923001234567@s.whatsapp.net'
   with patch.object(app,'find_data',return_value=([{'id':jid,'name':'Jr Accounts','group':False}],1)):

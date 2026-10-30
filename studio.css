@@ -7316,3 +7316,58 @@ html body .donor-page[data-panel=messages] .donor-tabs button:not([aria-selected
 html body a.tool, html body a.ghost {
   text-decoration: none !important;
 }
+
+/* ===== 12. One Back button everywhere: "← Back", always at the far right (the thumb side on phones).
+   Regenerate sits in the middle next to its caption; the Messages reader uses the whole panel. ===== */
+#donorMain {
+  display: none !important;
+}
+.thumb-dock {
+  display: flex;
+  justify-content: flex-end;
+}
+/* Back is the last item of the same centred cluster: right next to Next / DM all */
+html body .donor-page .donor-bottom #donorMainBottom,
+html body .donor-page .bank-pagination .bank-back-bottom {
+  order: 99;
+  position: static;
+  margin-left: 8px;
+  min-width: 112px;
+  flex: none;
+}
+html body .donor-page .bank-pagination {
+  justify-content: center;
+}
+/* Regenerate: next to its caption, in the middle of the row (short mouse and eye travel) */
+.bank-heading {
+  justify-content: center !important;
+  gap: 18px !important;
+  min-height: 0 !important;
+  padding-block: 4px !important;
+}
+.bank-heading > .bank-regenerate {
+  margin: 0 !important;
+}
+/* Messages reader: less blank space above the text, the text itself grows to fill the card */
+.bank-message.bank-detail > header {
+  min-height: 0 !important;
+  padding-block: 0 !important;
+  margin-bottom: 4px !important;
+}
+.bank-message.bank-detail .bank-preview {
+  padding-top: 4px !important;
+}
+.donor-identity {
+  cursor: pointer;
+}
+html body .donor-page .bank-heading {
+  justify-content: center !important;
+}
+html body .donor-page .bank-heading > span {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+html body .donor-page .bank-heading > .bank-regenerate {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}

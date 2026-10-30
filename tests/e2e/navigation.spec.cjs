@@ -194,3 +194,12 @@ test('on a very wide screen the groups box stays close to the centre of the scre
  const rail=await page.locator('.action-rail').boundingBox();
  expect(rail.x).toBeLessThan(960+300);expect(rail.x+rail.width).toBeLessThan(960+620);
 });
+
+test('tapping a donor name stars it, every screen has one "Back" and it is the last button next to the main action',async({page,request})=>{
+ await open(page,request,1440,800);await page.locator('#openDonors').click();
+ const row=page.locator('.donor-row').nth(5),star=row.locator('.donor-star');const before=await star.getAttribute('aria-pressed');
+ await row.locator('.donor-name').click();await expect(star).not.toHaveAttribute('aria-pressed',before);
+ await expect(page.locator('#donorMainBottom')).toHaveText('← Back');
+ const last=await page.locator('.donor-bottom').evaluate(el=>[...el.children].filter(n=>n.offsetParent).sort((a,b)=>a.getBoundingClientRect().x-b.getBoundingClientRect().x).at(-1).id);expect(last).toBe('donorMainBottom');
+ await page.locator('[data-tab=messages]').click();await expect(page.locator('.bank-back-bottom')).toHaveText('← Back');await expect(page.locator('.donor-sub')).toHaveCount(0);
+});

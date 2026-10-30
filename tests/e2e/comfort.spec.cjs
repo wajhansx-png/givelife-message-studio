@@ -30,7 +30,7 @@ for(const [width,height,theme] of [[1440,900,'light'],[1024,768,'dark'],[768,102
   await inside(page,page.locator('#donorsPage'));await shot(page,`${width}-${theme}-donors`);
   await page.locator('[data-tab=messages]').click();await expect(page.locator('#donorMessages')).toBeVisible();await shot(page,`${width}-${theme}-messages`);
   if(width>=390)await expect.poll(()=>page.locator('.bank-preview').evaluate(el=>el.scrollHeight<=el.clientHeight+2)).toBe(true);
-  if(width<900)await page.getByRole('button',{name:'Back to donors',exact:true}).click();await page.locator('#donorMain:visible, #donorMainBottom:visible').first().click();await page.getByRole('button',{name:'DM',exact:true}).click();await page.locator('#sendMoreDonors').click();
+  await page.getByRole('button',{name:'Back to donors',exact:true}).click();await page.locator('#donorMainBottom').click();await page.getByRole('button',{name:'DM',exact:true}).click();await page.locator('#sendMoreDonors').click();
   await inside(page,page.getByRole('dialog',{name:'Send to more donors',exact:true}));
  });
 }

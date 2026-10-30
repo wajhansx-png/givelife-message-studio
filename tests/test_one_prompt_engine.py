@@ -31,6 +31,12 @@ class IntentFrame(unittest.TestCase):
   selected=task_intent.reference_history('Fix that',history,'Another Child')
   self.assertIn('Another Child',' '.join(x['text'] for x in selected))
   self.assertNotIn('kidneys',' '.join(x['text'] for x in selected))
+ def test_two_distinct_quoted_sends_are_parsed_per_recipient(self):
+  prompt='send "Hello" to 03001234567 and then send "Thanks" to 03007654321'
+  expected=task_intent.quoted_sends(prompt)
+  self.assertEqual(len(expected),2)
+  self.assertEqual([x['text'] for x in expected],['Hello','Thanks'])
+  self.assertTrue(task_intent.compound(prompt))
  def test_single_step_and_no_context_not_overplanned(self):
   self.assertEqual(task_intent.steps('hello'),[])
   self.assertNotIn('send',[x['kind'] for x in task_intent.steps('did you send main?')])
@@ -52,6 +58,15 @@ class OnePromptExecution(unittest.TestCase):
   self.assertEqual(actions,['send','pace'])
   self.assertIn('WhatsApp confirmed',result['reply'])
   self.assertIn('Pace saved',result['reply'])
+  self.assertNotIn('Not completed',result['reply'])
+ def test_two_requested_sends_are_separate_actions_without_duplicate(self):
+  calls=[]
+  responses=[call('send_message',{'to':'923001234567','text':'Hello'}),
+             call('send_message',{'to':'923007654321','text':'Thanks'}),
+             {'content':'All done.'}]
+  result,_=self.run_script('send "Hello" to 03001234567 and then send "Thanks" to 03007654321',
+    responses,{'send_message':lambda **kwargs:(calls.append((kwargs['to'],kwargs['text'])) or 'Confirmed delivery.')})
+  self.assertEqual(calls,[('923001234567','Hello'),('923007654321','Thanks')])
   self.assertNotIn('Not completed',result['reply'])
  def test_when_second_step_not_executed_report_partial_not_complete(self):
   script=[call('send_message',{'to':'923001234567','text':'hi'}),

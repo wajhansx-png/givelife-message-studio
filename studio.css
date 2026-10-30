@@ -8435,6 +8435,12 @@ html body .donor-page .bank-message.bank-detail > header .tool {
   }
 }
 
+.team-error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--bad-ink, #f87171);
+  font-weight: 600;
+}
 /* ===== Mobile chat bubble regression fix: readable short replies and non-overlapping Copy ===== */
 /* A short AI response must not collapse into a one-word vertical strip. Keep the
    mobile conversation in normal left/right reading order and let text wrap naturally.

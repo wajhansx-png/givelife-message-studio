@@ -853,9 +853,9 @@ def clean_first_name(name):
 def dm_text(name,tier='member'):
  left=read_left();first=clean_first_name(re.sub(r'(?i)\bdonors?\b','',str(name or '')).strip());who=(first+' ' if first else '')+('Sister' if first.lower() in FEMALE else 'Brother')
  acct='📲 *03097458815* — Easypaisa / JazzCash\nWajdan Khan (GiveLife Foundation account)'
- if tier=='repeat':return f'{who}, JazakAllah for helping Yousuf before. 🤲\n\nRs. {left:,} is still needed for his treatment. Could you help once more, or share his poster with family and friends today?\n\n{acct}'
- if tier=='reminder':return f'{who}, a gentle reminder about Yousuf. 🤲\n\nRs. {left:,} is still needed for his treatment. If you have already sent it, JazakAllah. If not, whenever you can:\n\n{acct}\n\nReply *Done* after you donate.'
- t=build_dm([_random.randrange(dm_templates.COUNT)],left)
+ if tier=='repeat':return f'{who}, JazakAllah for supporting GiveLife before. 🤲\n\nRs. {left:,} is still needed for {active_case_name()}. Could you help once more, or share this case with family and friends?\n\n{acct}'
+ if tier=='reminder':return f'{who}, a gentle reminder about {active_case_name()}. 🤲\n\nRs. {left:,} is still needed. If you have already donated, JazakAllah. If not, whenever you can:\n\n{acct}\n\nReply *Done* after you donate.'
+ t=build_dm([_random.randrange(dm_templates.COUNT)],left,active_case_name())
  return t.replace('Brother, ',who+', ',1)
 
 def send_dm(phone,text,digest):
@@ -1012,17 +1012,17 @@ RECENT_LOCAL=[]
 
 def thank_text():
  return ('JazakAllah 🤲 May Allah reward you and your family.\n\n'
-  "One more favour: please share Yousuf's poster on your WhatsApp status and in your family groups. "
+  f"One more favour: please share the poster for {active_case_name()} on your WhatsApp status and in your family groups. "
   'Every share reaches someone who can help.\n- GiveLife Foundation')
 
 def share_text():
  left=read_left()
- return (f"*Rs. {left:,} is still left for Yousuf.* 💔\n\nIf you cannot donate right now, you can still help: "
+ return (f"*Rs. {left:,} is still left for {active_case_name()}.* 💔\n\nIf you cannot donate right now, you can still help: "
   "*share this poster on your WhatsApp status* and send it to 3 friends today. Sharing costs nothing and reaches new donors. 🤲\n\n"
   "*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n- GiveLife Foundation")
 
 def done_text():
- return ('Alhamdulillah. The amount for Yousuf\'s treatment is complete. 🤲\n\n'
+ return (f'Alhamdulillah. The amount for {active_case_name()} is complete. 🤲\n\n'
   'JazakAllah to everyone who donated, shared and prayed. May Allah reward you all.\n- GiveLife Foundation')
 
 def sender_phone(m):
@@ -1037,7 +1037,7 @@ def send_papers(phone):
  files=sorted(PAPERS.glob('*.jpg'))[:6]
  if not files:return False
  for i,f in enumerate(files):
-  send_with_image(phone+'@s.whatsapp.net','Medical papers for Yousuf (GiveLife Foundation).' if i==0 else '',f);time.sleep(3)
+  send_with_image(phone+'@s.whatsapp.net',f'Medical papers for {active_case_name()} (GiveLife Foundation).' if i==0 else '',f);time.sleep(3)
  return True
 
 def save_papers(data_url):
@@ -1088,14 +1088,18 @@ def goal_value():
  m=re.search(r'^GOAL:\s*(\d+)',(DATA/'state.md').read_text(encoding='utf-8-sig'),re.M);return int(m[1]) if m else 0
 
 def update_text(came,left):
- """U1-STRESS from the message bank: money came, but no celebration."""
+ """Use verified active-case wording; never reuse another patient's diagnosis."""
+ if active_case_name().casefold()!='yousuf':
+  return (f'Rs. {came:,} came in for {active_case_name()}. Rs. {left:,} is still needed. '
+          'We need your help to complete the amount.\n\n'
+          '*03097458815* Easypaisa / JazzCash (Wajdan Khan)\n- GiveLife Foundation')
  p2=math.ceil(left/2000)
  return (f'🔴 *Rs. {came:,} came in. It is NOT enough.*\n\n⚠️ Fluid in Yousuf\'s brain *can still paralyse his body and damage his eyesight.* Both his kidneys are still badly swollen.\n\n'
   f'💰 *Rs. {left:,} still LEFT*\n*{p2} people x Rs. 2,000 — he needs you now*\n\n*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\nReply *Done* after you donate.\n- GiveLife Foundation')
 
 def milestone_text(raised,left):
  p2,p1=math.ceil(left/2000),math.ceil(left/1000)
- return (f'*Rs. {raised:,} has been raised for Yousuf. Rs. {left:,} is still missing.* 💔\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n\n'
+ return (f'*Rs. {raised:,} has been raised for {active_case_name()}. Rs. {left:,} is still missing.* 💔\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n\n'
   '*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation')
 
 def job_message():

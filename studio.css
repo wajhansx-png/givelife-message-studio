@@ -1463,3 +1463,9 @@ dialog::backdrop{background:#000000b3!important}
 :is(.prim .main,.composer .go,.big:not(.all),.primary,.send-donors,.donor-add,.go,#batchStart,.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status):active{transform:translateY(1px) scale(.99)}
 /* the selected tab stays solid so "which one is on" is never ambiguous */
 .donor-page .donor-tabs button[aria-selected=true],.seg button[aria-pressed=true]{background:var(--g)!important;color:var(--on-accent)!important;box-shadow:none!important}
+/* ===== Rework: one clear primary tier. Colour only. Send actions glow brighter than the rest; everything else stays calm glass. ===== */
+:root[data-theme=dark]{--glass-hi:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.74));--glass-hi-ink:#111114;--glass-hi-rim:rgba(255,255,255,.55)}
+:root:not([data-theme=dark]){--glass-hi:linear-gradient(180deg,rgba(38,38,44,.96),rgba(13,13,16,.98));--glass-hi-ink:#f7f7f8;--glass-hi-rim:rgba(0,0,0,.55)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--glass-hi:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.74));--glass-hi-ink:#111114;--glass-hi-rim:rgba(255,255,255,.55)}}
+:is(.composer .go,.prim .main,#batchStart,.send-donors,.primary){background:var(--glass-hi)!important;color:var(--glass-hi-ink)!important;box-shadow:inset 0 0 0 1px var(--glass-hi-rim),inset 0 1px 0 rgba(255,255,255,.35),0 12px 26px -14px rgba(0,0,0,.6)!important}
+:is(.composer .go,.prim .main,#batchStart,.send-donors,.primary) *{color:var(--glass-hi-ink)!important}

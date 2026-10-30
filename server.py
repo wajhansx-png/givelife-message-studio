@@ -1685,6 +1685,21 @@ def live_snapshot():
  return {'on':on,'ai':bool(assistant.client()),'log':AUTOLOG[-20:],'summary':summary,'status':status,'hold':hold,'last_sent':dashboard_send_times(),**current}
 
 DONORS=None
+GROUP_RESEARCH=None
+
+def group_research():
+ global GROUP_RESEARCH
+ with LOCK:
+  if GROUP_RESEARCH is None or GROUP_RESEARCH.store is not STORE:
+   from group_finder_integration import GroupFinder
+   GROUP_RESEARCH=GroupFinder(__import__(__name__))
+  return GROUP_RESEARCH
+
+def recover_group_research():
+ # A research-record or database failure must not prevent the rest of the studio starting.
+ while True:
+  try:group_research().service.start_worker();return
+  except Exception:time.sleep(30)
 def donors():
  global DONORS
  if DONORS is None or DONORS.book.store is not STORE:
@@ -1712,10 +1727,17 @@ class Handler(BaseHTTPRequestHandler):
   if self.path=='/health':return self.reply({'ok':True,'version':(os.environ.get('RENDER_GIT_COMMIT') or 'local')[:7]})
   icon=SITE_ICONS.get(self.path.split('?')[0])
   if icon:return self.reply((ROOT/'icons'/icon[0]).read_bytes(),icon[1])
+  if self.path.split('?')[0] in ('/group-finder','/group-finder.js','/group-finder.css'):
+   name=self.path.split('?')[0][1:];name='group-finder.html' if name=='group-finder' else name
+   return self.reply((ROOT/name).read_bytes(),'text/html' if name.endswith('.html') else 'text/css' if name.endswith('.css') else 'application/javascript')
   if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/donors.css','/studio.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
+  if self.path.split('?')[0]=='/api/group-finder':
+   try:return self.reply(group_research().snapshot(self.path))
+   except (ValueError,TypeError):return self.reply({'error':'Choose valid research filters.'},status=400)
+   except Exception:return self.reply({'error':'Research records could not be loaded. Existing records were preserved.'},status=502)
   if self.path.split('?')[0]=='/donors':
    try:
     q=urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
@@ -1765,8 +1787,8 @@ class Handler(BaseHTTPRequestHandler):
  def _post(self):
   global ACTIVE,OWNER_REVISION
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
-  ENGINE.touch_owner()
-  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/donor-messages','/donor-delivery','/donor-send','/donor-paste'):
+  if self.path!='/api/group-finder':ENGINE.touch_owner()
+  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
    with LOCK:OWNER_REVISION+=1
    OWNER_GUARD.revision=OWNER_REVISION
   origin=self.headers.get('Origin');same_origin=origin and urllib.parse.urlparse(origin).netloc==self.headers.get('Host')
@@ -1777,6 +1799,13 @@ class Handler(BaseHTTPRequestHandler):
    body=json.loads(self.rfile.read(length))
   except Exception:return self.reply({'error':'Invalid request'},status=400)
   if not isinstance(body,dict):return self.reply({'error':'Request must be a JSON object.'},status=400)
+  if self.path=='/api/group-finder':
+   from group_finder import Conflict
+   from group_research import ResearchError
+   try:return self.reply(group_research().mutate(body))
+   except Conflict as e:return self.reply({'error':str(e)},status=409)
+   except ResearchError as e:return self.reply({'error':str(e),'code':e.code},status=502)
+   except (ValueError,TypeError,KeyError) as e:return self.reply({'error':str(e)},status=400)
   if self.path in ('/donors','/donor-delivery','/donor-send','/donor-messages','/donor-paste'):
    try:
     if self.path=='/donor-paste':
@@ -1957,10 +1986,12 @@ def donor_autopilot():
 
 ensure_dm_structure()
 if __name__=='__main__':
+ threading.Thread(target=recover_group_research,daemon=True,name='research-recovery').start()
  threading.Thread(target=donor_autopilot,daemon=True).start()
  PILOT.start()
  ENGINE.start()
  threading.Thread(target=timed_loop,daemon=True).start()
  ThreadingHTTPServer(('0.0.0.0',int(os.environ.get('PORT','10000'))),Handler).serve_forever()
+
 
 

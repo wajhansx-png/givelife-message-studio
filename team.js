@@ -4,7 +4,7 @@
  const page=make('dialog','team-page');page.id='teamPage';page.setAttribute('aria-label','Team tasks');document.body.append(page);
  const launch=make('button','donor-launch team-launch','Team');launch.type='button';launch.id='openTeam';
  const badge=make('span','team-badge');badge.hidden=true;launch.append(badge);document.querySelector('.brandbar')?.append(launch);
- let data=null,timer=0,lastUnread=0,planText='',toastTimer=0,addOpen=false;
+ let data=null,timer=0,lastUnread=0,planText='',toastTimer=0,addOpen=false,expanded=false;
  const api=async(body)=>{const r=await fetch('/team',body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d};
  function toast(text,bad){let t=document.getElementById('teamToast');if(!t){t=make('div','team-toast');t.id='teamToast';t.setAttribute('role','status')}(page.open?page:document.body).append(t);t.textContent=text;t.dataset.bad=String(!!bad);t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.hidden=true},6000)}
  function paintBadge(){const n=data?.unread||0;badge.hidden=!n;badge.textContent=n>9?'9+':String(n);launch.setAttribute('aria-label','Team'+(n?', '+n+' new update'+(n===1?'':'s'):''))}
@@ -17,13 +17,16 @@
  const typing=()=>{const a=document.activeElement;return !!a&&page.contains(a)&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
  function draw(force){
   if(!force&&typing())return; /* never rebuild the screen while a field has focus: it would close the phone keyboard */
+  const priorScroll=page.querySelector('.team-body')?.scrollTop||0;
   const typed=page.querySelector('#teamText')?.value;if(typed!==undefined)planText=typed;
+  page.classList.toggle('team-expanded',expanded);
+  if(expanded){build({latest:Infinity,done:1,left:Infinity,check:Infinity,plan:Infinity});const body=page.querySelector('.team-body');if(body)body.scrollTop=priorScroll;return}
   const lim={latest:3,done:1,left:8,check:4,plan:20};
   let guard=40;
   while(guard--){build(lim);const body=page.querySelector('.team-body');if(!body||body.scrollHeight<=body.clientHeight+1)break;
    let reduced=false;for(const k of STEPS){if(k==='done'?lim.done>0:lim[k]>(k==='plan'||k==='check'?1:0)){if(k==='done')lim.done=0;else lim[k]--;reduced=true;break}}if(!reduced)break}
  }
- function more(n){return n>0?make('p','team-more','+'+n+' more'):null}
+ function more(n){if(n<=0)return null;const b=make('button','team-more','+'+n+' more · Show all');b.type='button';b.setAttribute('aria-label','Show all '+n+' hidden Team entries');b.onclick=()=>{expanded=true;draw(true)};return b}
  function build(lim){
   page.textContent='';const shell=make('div','team-shell');
   const head=make('header','team-head');const title=make('div','team-title');title.append(make('h1','','Team'));title.append(make('span','team-sub',data?.member?data.member.name+(data.paused?' · paused':''):'Add your teammate to start'));head.append(title);
@@ -66,7 +69,7 @@
   shell.append(body);const foot=make('footer','team-foot');const back=make('button','tool team-back','← Back');back.type='button';back.onclick=()=>page.close();foot.append(back);shell.append(foot);page.append(shell);
  }
  async function open(){await refresh(true);if(!data){toast('Could not load the team screen.',true);return}if(!page.open)page.showModal();draw(true);if(data.unread)try{data={...data,...await api({action:'read'})};lastUnread=0;paintBadge()}catch(e){}clearInterval(timer);timer=setInterval(()=>refresh(true),8000)}
- page.addEventListener('close',()=>{clearInterval(timer);timer=setInterval(()=>refresh(true),45000)});
+ page.addEventListener('close',()=>{expanded=false;clearInterval(timer);timer=setInterval(()=>refresh(true),45000)});
  page.addEventListener('cancel',e=>{e.preventDefault();page.close()});
  let rz=0;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(page.open)draw()},120)});
  launch.onclick=open;

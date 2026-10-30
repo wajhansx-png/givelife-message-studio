@@ -1,5 +1,5 @@
 """Bounded, persistent, source-labelled memory and feedback. No model training."""
-import collections, hashlib, json, math, os, re, threading, time, uuid
+import collections, hashlib, json, os, re, threading, time, uuid
 from pathlib import Path
 from state_shapes import mapping, records
 

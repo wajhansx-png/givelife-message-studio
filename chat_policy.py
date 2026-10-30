@@ -34,7 +34,7 @@ def owner_text(text):
  return text
 
 def intent(text):
- t=owner_text(text);low=manual_commands.norm(t)
+ t=owner_text(text)
  query=manual_commands.question_request(t) or bool(re.search(r'(?i)^show (?:me )?(?:what|status)\b',t.strip()))
  # A request to inspect or draft a send is not itself permission to send.
  inspect=bool(re.match(r'(?i)^\s*(?:please\s+)?(?:show|preview|draft|explain|review|summari[sz]e|analy[sz]e|tell me)\b',t))

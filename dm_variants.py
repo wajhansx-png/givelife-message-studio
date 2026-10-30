@@ -9,7 +9,6 @@ import json, re
 
 import assistant
 import dm_composer
-import dm_templates
 
 VERSION = 'dm-variants-2026-10-30'
 

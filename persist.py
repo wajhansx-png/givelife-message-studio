@@ -1,4 +1,4 @@
-import os,json,queue,threading
+import os,queue,threading
 from contextlib import contextmanager
 try:
  import psycopg

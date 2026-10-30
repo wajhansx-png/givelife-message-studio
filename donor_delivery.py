@@ -1,5 +1,5 @@
 """Explicit donor batches, saved receipts and no automatic replay after restart."""
-import copy, datetime, hashlib, json, math, random, threading, time, uuid
+import copy, hashlib, json, math, random, threading, time, uuid
 from pathlib import Path
 from donor_book import hide_numbers
 

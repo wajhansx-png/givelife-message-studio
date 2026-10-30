@@ -10,7 +10,6 @@ import chat_policy
 import timed_tasks
 import draft_flow
 import draft_workflow
-import donor_book
 from chat_memory import Knowledge,safe_text
 from functools import wraps
 ROOT=Path(__file__).resolve().parent
@@ -524,10 +523,6 @@ def start_group_job(key,caption):
  keys=list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key]
  return start_send_job(keys,caption,manual=False)
 
-def auto_post(target):
- caption=json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')
- if not caption.strip() or not start_group_job(target,caption):auto_log('Autopilot skipped: another send is running.')
-
 
 def _items(resp):
  r=resp.get('results',resp) if isinstance(resp,dict) else resp
@@ -883,7 +878,7 @@ def normal_donation_line(text,normal,left):
  if first is None:return text
  people=math.ceil(left/normal)
  mine=f'*_Just {people:,} people donating Rs. {normal:,} will save him_*'
- out=[];seen_first=False
+ out=[]
  for index,line in enumerate(lines):
   m=OPTION_LINE.match(line)
   if not m:out.append(line);continue
@@ -1359,7 +1354,6 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
    if name in ('send_message','send_dm_appeal','prepare_dm'):
     dest=str(args.get('to') or args.get('phone') or '')
     group_key=manual_commands.group(dest)
-    requested=manual_commands.groups(chat_policy.owner_text(prompt))
     if group_key:
      if group_key not in allowed_groups():raise ValueError('Name the intended group before sending. This group is not authorized by the current request or selected context.')
     else:
@@ -1480,7 +1474,7 @@ def edit_donation_order():
  for kind,text in drafts.items():
   lines=text.split('\n');indices=[i for i,line in enumerate(lines) if re.search(r'(?i)\d+\s+people\b',line) and re.search(r'(?:1[ ,]?000|2[ ,]?000)',line)]
   if indices:
-   first,last=min(indices),max(indices)
+   first=min(indices)
    replacement=[f'*_{math.ceil(left/2000)} people donating Rs. 2,000_*',f'*_OR {math.ceil(left/1000)} people donating Rs. 1,000_* 🤲']
    if len(indices)==1:lines[first]=' '.join(replacement)
    else:

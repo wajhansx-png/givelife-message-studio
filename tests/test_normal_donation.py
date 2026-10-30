@@ -95,3 +95,12 @@ class UsualWayOfSending(unittest.TestCase):
  def test_other_sentences_are_not_taken_for_the_short_ask(self):
   for text in ('send dms tomorrow at 5','dont send dms','send hello to wajdan'):
    before=len(self.reg.jobs._load().get('jobs',[]));self.reg.command(text,'x'+text);self.assertEqual(len(self.reg.jobs._load().get('jobs',[])),before,text)
+
+
+class ClosedCase(unittest.TestCase):
+ """A finished case (Rs. 0 left) never sends an appeal, by any route."""
+ def test_appeal_dms_are_refused_when_nothing_is_left(self):
+  with patch.object(server,'read_left',return_value=0):
+   for kind in ('dm_appeal','donor_batch','donor_manual','donor_registry'):
+    with self.subTest(kind=kind),self.assertRaisesRegex(ValueError,'case is complete'):
+     server.send_custom({'kind':kind,'target':'phone','phone':'923001234567','message':'Brother, please donate. Rs. 0 left.','name':'Ali','gender':'Brother'})

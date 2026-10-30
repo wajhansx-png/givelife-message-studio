@@ -81,6 +81,25 @@ class DeliveryTests(RegistryTests):
   self.assertGreaterEqual(times[1]-times[0],120);self.assertGreaterEqual(times[2]-times[1],1200);self.assertLess(times[2]-times[1],1300)
   self.assertGreaterEqual(times[3]-times[2],120);self.assertLess(times[3]-times[2],200);self.assertGreaterEqual(times[4]-times[3],1200)
   self.assertEqual([b['message'] for b,_ in self.sent],['w0','w1','w0','w1','w0']);self.assertEqual(self.jobs.status()['state'],'Completed')
+ def test_closed_case_starts_nothing_and_stops_a_running_batch(self):
+  for i in range(4):self.book.update(self.add('C%d'%i,'030012346%02d'%i)['id'],important=True)
+  closed=[False];self.jobs.case_closed=lambda:closed[0]
+  closed[0]=True
+  with self.assertRaisesRegex(ValueError,'case is complete'):self.jobs.start('important',120,run=False)
+  closed[0]=False;r=self.jobs.start('important',120,run=False)
+  real=self.send
+  def send_then_close(body):
+   out=real(body)
+   if len(self.sent)==2:closed[0]=True
+   return out
+  self.jobs.send=send_then_close;self.run_job(r)
+  self.assertEqual(len(self.sent),2,'no DM is sent after the amount reaches 0');st=self.jobs.status();self.assertEqual(st['state'],'Stopped');self.assertIn('Rs. 0 left',st['error'])
+ def test_queued_dms_use_the_amount_left_at_send_time(self):
+  for i in range(3):self.book.update(self.add('F%d'%i,'030012347%02d'%i)['id'],important=True)
+  amount=[25000]
+  self.jobs.variants=lambda n:['need Rs. %d now %d'%(amount[0],i) for i in range(n)]
+  r=self.jobs.start('important',120,chunk=3,run=False);amount[0]=9000;self.run_job(r)
+  self.assertTrue(all('Rs. 9000' in b['message'] for b,_ in self.sent),[b['message'] for b,_ in self.sent])
  def test_stop_during_rest_sends_nothing_more(self):
   for i in range(3):self.add('P%d'%i,'030012345%02d'%i)
   r=self.jobs.start('all',60,chunk=1,rest_seconds=600,run=False);job=self.jobs._load()['jobs'][-1]

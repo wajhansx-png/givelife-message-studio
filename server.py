@@ -76,6 +76,7 @@ def send_custom(body):
  jid,is_group=custom_recipient(body);message=body.get('message','')
  if not isinstance(message,str):raise ValueError('Message must be text.')
  if not is_group and body.get('kind') in ('dm_appeal','donor_registry','donor_manual','donor_batch'):
+  if read_left()<=0:raise ValueError('Not sent: the case is complete (Rs. 0 left). Set a new amount left before sending an appeal.')
   normal=donors().book.normal_amount_for_phone(body.get('phone','')) if body.get('phone') else 0
   message=greet_text(message,body.get('name',''),body.get('gender','Brother'),normal)
   if not dm_composer.complete(message):raise ValueError('The full DM is incomplete. Restore its paragraphs and payment details before sending.')
@@ -205,6 +206,9 @@ def set_left(left):
   old=read_left();before=json.loads(DRAFT.read_text(encoding='utf-8')) if DRAFT.exists() else {}
   task=workflow();custom=next((k for k in ('group','dm') if task.current(k,before.get(k,''))),None)
   write_left(left)
+  if int(left)<=0 and DONORS is not None and DONORS.jobs.active:
+   try:DONORS.jobs.cancel();auto_log('Case complete (Rs. 0 left): the running donor DM batch was stopped.')
+   except Exception:pass
   try:ENGINE.amount_updated()
   except NameError:pass
   g=draft_workflow.update_amount(before['group'],old,left) if custom=='group' else build_group(variant(False),left)
@@ -665,6 +669,7 @@ def timed_scheduler():
     keys=[]
     for key in task['targets']:keys.extend(list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key])
     keys=list(dict.fromkeys(keys))
+    if read_left()<=0 and not task.get('text'):raise ValueError('Not sent: the case is complete (Rs. 0 left). Set a new amount left first.')
     caption=task.get('text') or json.loads(DRAFT.read_text(encoding='utf-8'))['group']
     # A due scheduled send does not preempt the owner's current manual batch.
     with LOCK:

@@ -45,22 +45,14 @@ class Planning(Base):
   v=self.t.plan('call Ali by 3pm\nupdate sheet by 5:30 pm');self.assertEqual([i['due_label'] for i in v['plan']['items']],['3:00 PM','5:30 PM'])
   v=self.t.plan('a by 4pm\nb deadline 7pm');self.assertEqual([i['due_label'] for i in v['plan']['items']],['4:00 PM','7:00 PM'])
  def test_bad_input_is_refused_with_a_reason(self):
-  for text,word in (('','Write'),('post\nupdate','deadline'),('post deadline 1pm','too soon'),('post deadline 2:05 pm','too soon'),('post by 2:05pm','too soon')):
+  for text,word in (('','Write'),('post\nupdate','deadline'),('post deadline 1pm','too soon'),('post by 1:30pm','too soon')):
    with self.subTest(text=text),self.assertRaisesRegex(ValueError,word):self.t.plan(text)
-  with self.assertRaisesRegex(ValueError,'Not enough time'):self.t.plan('\n'.join('task %d'%i for i in range(8))+'\ndeadline 3pm')
+  with self.assertRaisesRegex(ValueError,'Not enough time'):self.t.plan('\n'.join('task %d'%i for i in range(12))+'\ndeadline in 10 minutes')
   with self.assertRaisesRegex(ValueError,'at most 20'):self.t.plan('\n'.join('task %d'%i for i in range(21))+'\ndeadline tomorrow 11pm')
   with self.assertRaisesRegex(ValueError,'valid time|read the time'):self.t.plan('a deadline 25:99')
  def test_nothing_is_sent_until_confirmed_and_plans_expire(self):
   self.t.plan('a\nb deadline 6pm');self.tick(1);self.assertEqual(self.sent,[]);self.at(20)
   with self.assertRaisesRegex(ValueError,'no task plan'):self.t.confirm_plan()
- def test_a_sentence_is_split_into_tasks_and_night_mode_allows_night_work(self):
-  self.clock[0]=datetime.datetime(2026,10,31,3,13,tzinfo=T.PKT).timestamp()
-  text='Send messages to donors till 4am and also send updates in group by 5am and also more'
-  with self.assertRaisesRegex(ValueError,'night messages'):self.t.plan(text)
-  self.t.night(True);items=self.t.plan(text)['plan']['items']
-  self.assertEqual([(i['text'],i['due_label']) for i in items],[('Send messages to donors','4:00 AM'),('send updates in group','5:00 AM')],'"and also more" is not a task')
-  self.t.confirm_plan();self.t.tick();self.clock[0]+=120;self.t.tick();self.assertTrue(self.sent,'night mode sends at 3 am')
-  self.assertIn('off',self.t.command('team night mode off','team night mode off')['reply'].lower());self.assertTrue(self.t._quiet(self.clock[0]))
  def test_bare_hour_means_the_next_such_hour(self):
   self.assertEqual(self.t.plan('a deadline 6')['plan']['items'][0]['due_label'],'6:00 PM')
  def test_deadline_can_be_a_length_of_time_in_any_common_wording(self):
@@ -69,11 +61,20 @@ class Planning(Base):
     items=self.t.plan(text)['plan']['items'];self.assertEqual([i['text'] for i in items],['a','b']);self.assertEqual(items[-1]['due_label'],last)
  def test_tomorrow_deadline_shows_the_day(self):
   v=self.t.plan('a deadline tomorrow 10am');self.assertIn('31 Oct',v['plan']['items'][0]['due_label'])
- def test_a_task_that_would_start_at_night_waits_for_the_morning_and_must_still_fit(self):
+ def test_there_are_no_quiet_hours_unless_the_owner_sets_them(self):
+  self.clock[0]=datetime.datetime(2026,10,31,3,13,tzinfo=T.PKT).timestamp()
+  text='Send messages to donors till 4am and also send updates in group by 5am and also more'
+  items=self.t.plan(text)['plan']['items']
+  self.assertEqual([(i['text'],i['start_label'],i['due_label']) for i in items],[('Send messages to donors','3:13 AM','4:00 AM'),('send updates in group','3:13 AM','5:00 AM')],'"and also more" is not a task, and 3 am is fine')
+  self.assertIsNone(self.t.view()['quiet']);self.t.confirm_plan();self.t.tick();self.clock[0]+=120;self.t.tick();self.assertTrue(self.sent,'sends at 3 am with no setting')
+ def test_quiet_hours_are_the_owners_choice_and_then_planning_respects_them(self):
   self.clock[0]=datetime.datetime(2026,10,30,22,0,tzinfo=T.PKT).timestamp()
-  items=self.t.plan('a\nb deadline tomorrow 11am')['plan']['items']
-  self.assertTrue(all(datetime.datetime.fromtimestamp(i['start_at'],T.PKT).hour>=7 or datetime.datetime.fromtimestamp(i['start_at'],T.PKT).day==30 and datetime.datetime.fromtimestamp(i['start_at'],T.PKT).hour<23 for i in items))
+  self.t.set_quiet(23,7);self.assertEqual(self.t.view()['quiet'],[23,7])
+  items=self.t.plan('a\nb deadline tomorrow 11am')['plan']['items'];self.assertTrue(all(i['due_at']>i['start_at'] for i in items))
   with self.assertRaisesRegex(ValueError,'quiet hours'):self.t.plan('a\nb\nc deadline tomorrow 7:30am')
+  with self.assertRaises(ValueError):self.t.set_quiet(5,5)
+  self.t.set_quiet();self.assertIsNone(self.t.view()['quiet']);self.t.plan('a\nb\nc deadline tomorrow 7:30am')
+  self.assertIn('23:00 to 7:00',self.t.command('team quiet hours 23 to 7','team quiet hours 23 to 7')['reply']);self.assertIn('off',self.t.command('team quiet hours off','team quiet hours off')['reply'])
 
 class HumanWords(Base):
  def scenario(self):
@@ -112,7 +113,7 @@ class Sending(Base):
  def test_one_message_a_minute_at_most(self):
   self.start('a\nb\nc\nd deadline 9pm');self.tick(1);self.assertEqual(len(self.sent),1);self.tick(1.4);self.assertEqual(len(self.sent),1)
  def test_quiet_hours_pause_hold_and_a_disconnected_whatsapp_send_nothing(self):
-  self.t.plan('a deadline tomorrow 9am');self.t.confirm_plan();self.clock[0]=datetime.datetime(2026,10,30,23,30,tzinfo=T.PKT).timestamp();self.t.tick();self.assertEqual(self.sent,[])
+  self.t.set_quiet(23,7);self.t.plan('a deadline tomorrow 9am');self.t.confirm_plan();self.clock[0]=datetime.datetime(2026,10,30,23,30,tzinfo=T.PKT).timestamp();self.t.tick();self.assertEqual(self.sent,[])
   self.clock[0]=datetime.datetime(2026,10,31,7,10,tzinfo=T.PKT).timestamp();self.wa[0]=False;self.t.tick();self.assertEqual(self.sent,[]);self.wa[0]=True;self.hold[0]=True;self.t.tick();self.assertEqual(self.sent,[])
   self.hold[0]=False;self.t.pause(True);self.t.tick();self.assertEqual(self.sent,[]);self.t.pause(False);self.t.tick();self.assertEqual(len(self.sent),1)
  def test_a_failed_ask_goes_back_to_waiting_retries_after_five_minutes_and_tells_the_owner_on_the_third_failure(self):

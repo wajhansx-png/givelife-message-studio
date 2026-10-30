@@ -1937,7 +1937,7 @@ class Handler(BaseHTTPRequestHandler):
     if act=='cancel':return self.reply(t.cancel(body.get('id')))
     if act=='pause':return self.reply(t.pause(body.get('on')))
     if act=='read':return self.reply(t.mark_read())
-    if act=='night':return self.reply(t.night(body.get('on')))
+    if act=='quiet':return self.reply(t.set_quiet(body.get('start'),body.get('end')))
     raise ValueError('Unknown team action.')
    except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/cases':

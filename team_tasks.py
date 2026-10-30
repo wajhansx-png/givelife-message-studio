@@ -444,10 +444,9 @@ class TeamTasks:
             if code == 'SUCCESS': return True
             if code in ('NOT_SENT', 'CANCELLED', 'SKIPPED', 'COOLDOWN'): return False
             return None
-        except ValueError:
-            # send_custom validates destination, hold and connection before dispatch.
-            return False
         except Exception:
+            # Exceptions, including ValueError, can happen AFTER gateway dispatch.
+            # Unless preflight proved no send, delivery must remain uncertain.
             return None
 
     def _finish(self, job, ok, now):

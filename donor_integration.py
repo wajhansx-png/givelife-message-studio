@@ -65,7 +65,9 @@ class DonorIntegration:
         if not self.app.STORE:raise ValueError('Persistent sending records are unavailable.')
         self.resume_personal()
         if not isinstance(request_id,str) or not re.fullmatch(r'[a-zA-Z0-9_-]{8,100}',request_id):raise ValueError('Invalid send request. Refresh the donor page.')
-        r=self.book.resolve(ident);key='donor_manual_'+hashlib.sha256(request_id.encode()).hexdigest()
+        r=self.book.resolve(ident)
+        if not r.get('phone'):raise ValueError('This donor has no number yet. Open the ··· menu and add one.')
+        key='donor_manual_'+hashlib.sha256(request_id.encode()).hexdigest()
         with self.manual_lock:
             old=self.app.STORE.get(key)
             if old:
@@ -114,12 +116,15 @@ class DonorIntegration:
         action=body.get('action')
         if action=='add':
             p=body.get('phone','')
-            if p and normalize_phone(p)==normalize_phone(self.app.OWNER_PHONE):raise ValueError('This is your connected account. It is excluded from donor sending.')
+            if p and str(p).strip() and normalize_phone(p)==normalize_phone(self.app.OWNER_PHONE):raise ValueError('This is your connected account. It is excluded from donor sending.')
             if body.get('text'):
                 _,p=parse_contact(body['text'],body.get('name',''))
                 if p==normalize_phone(self.app.OWNER_PHONE):raise ValueError('Your own account is excluded.')
             return self.book.add(body.get('name',''),body.get('phone',''),body.get('text',''))
-        if action=='update':return self.book.update(body.get('id',''),expected_updated_at=body.get('expected_updated_at'),**{k:v for k,v in body.items() if k in ('name','important','donated','amount','normal_amount','notes')})
+        if action=='update':
+            fields={k:v for k,v in body.items() if k in ('name','important','donated','amount','normal_amount','notes','phone')}
+            if 'phone' in fields and self.book.resolve(body.get('id','')).get('phone'):del fields['phone']   # a saved number is never replaced from here
+            return self.book.update(body.get('id',''),expected_updated_at=body.get('expected_updated_at'),**fields)
         if action=='delete':return self.book.delete(body.get('id',''))
         if action=='restore':return self.book.restore(body.get('id',''))
         if action=='import':return self.book.import_contacts(body.get('records'),self.app.OWNER_PHONE)
@@ -201,6 +206,8 @@ class DonorIntegration:
         if volunteer is not None:return volunteer
         if re.match(r'(?i)^(?:please\s+)?(?:add|save|register|create)\s+(?:this\s+|new\s+)?donor\b',t) and PHONE.search(raw):
             return self.mutate({'action':'add','text':raw})
+        only=re.fullmatch(r"(?i)(?:please\s+)?(?:add|save|register|create)\s+(?:this\s+|new\s+)?donor\s*[:=-]?\s*([^\d\n]{2,60}?)\s*(?:\(no number\)|without (?:a )?number)?",raw.strip())
+        if only:return self.mutate({'action':'add','name':only[1].strip(' .'),'phone':''})
         if re.fullmatch(r'(?i)(?:show|list|view)(?: me)?(?: the)?(?: all| important| donated| not donated)? donors?',t):
             scope='important' if 'important' in t.casefold() else 'not_donated' if 'not donated' in t.casefold() else 'donated' if 'donated' in t.casefold() else 'all'
             data=self.book.list(scope);names=[r['name'] for r in data['items']]

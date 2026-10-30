@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>My tasks</title>
+<style>
+:root{--bg:#f3f5fa;--card:#fff;--ink:#14161d;--mut:#5b5f6e;--line:#0000001a;--bot:#fff;--me:#2563eb;--me-ink:#fff;--ok:#0f7a4f;--bad:#c62828;--warn:#92400e}
+@media(prefers-color-scheme:dark){:root{--bg:#14151c;--card:#1d1f29;--ink:#f1f2f5;--mut:#a3a6b5;--line:#ffffff1a;--bot:#262836;--me:#2f6fe8;--ok:#4ade80;--bad:#f87171;--warn:#fbbf24}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;display:flex;flex-direction:column;max-width:720px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px 8px}
+h1{font-size:18px;margin:0}
+small{color:var(--mut)}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;min-height:44px;padding:0 14px;background:var(--card);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--me);outline-offset:2px}
+button.primary{background:var(--me);color:var(--me-ink);box-shadow:none;font-weight:600}
+#tasks{margin:0 14px;background:var(--card);border-radius:16px;padding:6px 12px;max-height:34vh;overflow:auto}
+.task{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.task:first-child{border-top:0}
+.task .t{flex:1;min-width:0}
+.task b{display:block;overflow-wrap:anywhere}
+.task .due{font-size:13px;color:var(--mut)}
+.task .due.late{color:var(--bad);font-weight:700}
+.task .done{color:var(--ok);font-weight:700;font-size:13px}
+.task button{min-height:40px;padding:0 12px;font-size:14px}
+#empty{color:var(--mut);padding:10px 0;margin:0}
+#log{flex:1;min-height:0;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.m{max-width:86%;padding:10px 13px;border-radius:18px;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:inset 0 0 0 1px var(--line)}
+.m.bot{align-self:flex-start;background:var(--bot);border-bottom-left-radius:6px}
+.m.him{align-self:flex-end;background:var(--me);color:var(--me-ink);border-bottom-right-radius:6px;box-shadow:none}
+.m time{display:block;font-size:11px;opacity:.65;margin-top:3px}
+form{display:flex;gap:8px;align-items:flex-end;padding:8px 14px calc(10px + env(safe-area-inset-bottom));background:var(--bg)}
+textarea{flex:1;min-height:46px;max-height:120px;resize:none;border:0;border-radius:14px;padding:11px 14px;font:inherit;background:var(--card);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+#err{color:var(--bad);font-size:14px;padding:0 14px;min-height:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<header>
+  <div><h1 id="title">My tasks</h1><small id="sub">Loading…</small></div>
+  <button id="alerts" type="button" hidden>Turn on alerts</button>
+</header>
+<section id="tasks" aria-label="My tasks"><p id="empty">No tasks right now.</p></section>
+<div id="log" role="log" aria-live="polite" aria-label="Chat"></div>
+<div id="err" role="alert"></div>
+<form id="f" autocomplete="off">
+  <button type="button" id="attach" aria-label="Attach a photo" title="Attach a photo">📎</button>
+  <input type="file" id="file" accept="image/*" class="sr" tabindex="-1">
+  <label class="sr" for="msg">Message</label>
+  <textarea id="msg" rows="1" maxlength="1000" placeholder="Write an update…"></textarea>
+  <button class="primary" type="submit" id="send">Send</button>
+</form>
+<script>
+(()=>{
+ const base=location.pathname.replace(/\/$/,''),$=id=>document.getElementById(id);
+ let seen=null,busy=false,unread=0;const baseTitle='My tasks';
+ const mk=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e};
+ const say=async(body)=>{const r=await fetch(base+'/say',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error||'Could not send.');return d};
+ function draw(d){
+  $('title').textContent='Hi '+d.name;$('sub').textContent=d.paused?'Updates are paused':'Now '+d.now_label;
+  const box=$('tasks');box.textContent='';
+  if(!d.tasks.length){const p=mk('p','',"No tasks right now.");p.id='empty';box.append(p)}
+  for(const t of d.tasks){const row=mk('div','task');const txt=mk('div','t');txt.append(mk('b','','#'+t.no+' '+t.text));
+   const late=t.status==='Late'||t.due_in_min<0;const due=mk('span','due'+(late?' late':''),t.status==='Reported'?'Reported done. Waiting for a check':(late?'Late · was due ':'Due ')+t.due_label+(!late&&t.due_in_min<=90?' · in '+(t.due_in_min<60?t.due_in_min+' min':Math.round(t.due_in_min/6)/10+' h'):''));txt.append(due);row.append(txt);
+   if(t.status!=='Reported'){const ok=mk('button','primary','Done');ok.type='button';ok.onclick=()=>send(t.no+' done');const st=mk('button','','Stuck');st.type='button';st.onclick=()=>{$('msg').value=t.no+' stuck: ';$('msg').focus()};row.append(ok,st)}
+   box.append(row)}
+  const log=$('log'),atEnd=log.scrollHeight-log.clientHeight-log.scrollTop<80;log.textContent='';
+  for(const m of d.chat){const b=mk('div','m '+(m.from==='bot'?'bot':'him'));b.append(document.createTextNode(m.img&&!m.text?'📷 Photo sent':(m.img?'📷 ':'')+m.text));b.append(mk('time','',m.label));log.append(b)}
+  if(atEnd||seen===null)log.scrollTop=log.scrollHeight;
+  const lastBot=d.chat.filter(m=>m.from==='bot').map(m=>m.id).pop();
+  if(seen!==null&&lastBot&&lastBot!==seen){alertNew(d.chat.filter(m=>m.from==='bot').pop().text)}
+  seen=lastBot||seen||'';
+ }
+ function alertNew(text){if(document.hidden){unread++;document.title='('+unread+') New message';try{if(Notification.permission==='granted')new Notification('New message about your tasks',{body:text.slice(0,140),tag:'tasks'});if(navigator.vibrate)navigator.vibrate(120)}catch(e){}}}
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){unread=0;document.title=baseTitle;poll()}});
+ async function poll(){try{const r=await fetch(base+'/state');const d=await r.json();if(!r.ok){$('sub').textContent='';$('err').textContent=d.error||'This link is not valid.';return}$('err').textContent='';draw(d)}catch(e){$('sub').textContent='Offline. Trying again…'}}
+ async function send(text,image){if(busy)return;busy=true;$('send').disabled=true;$('err').textContent='';try{draw(await say({text,image:image||'',name:''}));$('msg').value='';grow()}catch(e){$('err').textContent=e.message}finally{busy=false;$('send').disabled=false}}
+ function grow(){const t=$('msg');t.style.height='auto';t.style.height=Math.min(120,t.scrollHeight)+'px'}
+ $('msg').addEventListener('input',grow);
+ $('msg').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('f').requestSubmit()}});
+ $('f').addEventListener('submit',e=>{e.preventDefault();const t=$('msg').value.trim();if(t)send(t)});
+ $('attach').onclick=()=>$('file').click();
+ $('file').onchange=async()=>{const f=$('file').files[0];$('file').value='';if(!f)return;try{const b=await shrink(f);await send($('msg').value.trim(),b)}catch(e){$('err').textContent=e.message}};
+ function shrink(file){return new Promise((res,rej)=>{if(!/^image\//.test(file.type))return rej(Error('Choose a photo.'));const img=new Image(),u=URL.createObjectURL(file);img.onload=()=>{const s=Math.min(1,1600/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',.82).split(',')[1])};img.onerror=()=>rej(Error('That photo could not be read.'));img.src=u})}
+ if('Notification' in window&&Notification.permission==='default'){$('alerts').hidden=false;$('alerts').onclick=async()=>{try{await Notification.requestPermission()}catch(e){}$('alerts').hidden=Notification.permission!=='default'}}
+ poll();setInterval(poll,4000);
+})();
+</script>
+</body>
+</html>

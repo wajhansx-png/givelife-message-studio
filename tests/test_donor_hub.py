@@ -34,6 +34,15 @@ class RegistryTests(unittest.TestCase):
   self.book.delivery(c['id'],'Sent')
   listed=self.book.list('not_contacted');self.assertIn(a['id'],[x['id'] for x in listed['items']]);self.assertNotIn(b['id'],[x['id'] for x in listed['items']]);self.assertNotIn(c['id'],[x['id'] for x in listed['items']])
   self.assertEqual(listed['counts']['not_contacted'],len(listed['items']))
+ def test_a_donor_can_be_saved_with_only_a_name_and_gets_a_number_later(self):
+  r=self.book.add('Haji Sahab','');d=r['donor'];self.assertFalse(d['has_number']);self.assertFalse(r['duplicate'])
+  self.assertTrue(self.book.add('haji  sahab','')['duplicate'],'the same name is not added twice')
+  self.assertEqual(self.book.recipients('all'),[],'a donor without a number is never a DM recipient')
+  self.book.update(d['id'],important=True);self.assertEqual(self.book.list('important')['items'][0]['name'],'Haji Sahab')
+  self.book.update(d['id'],phone='03001234567');self.assertEqual(len(self.book.recipients('all')),1);self.assertTrue(self.book.list()['items'][0]['has_number'])
+  other=self.book.add('Ali','')['donor']
+  with self.assertRaisesRegex(ValueError,'already has this number'):self.book.update(other['id'],phone='03001234567')
+  with self.assertRaisesRegex(ValueError,'cannot be changed'):self.book.update(d['id'],phone='03339999999')
  def test_status_tabs_and_important_sort(self):
   a=self.add('Zaid');b=self.add('Amina','03011234567');self.book.update(a['id'],important=True);self.book.update(b['id'],donated=True,amount=2000)
   self.assertEqual(self.book.list()['items'][0]['id'],a['id']);self.assertEqual(len(self.book.list('donated')['items']),1);self.assertEqual(self.book.list('not_donated')['items'][0]['id'],a['id'])
@@ -277,6 +286,8 @@ class IntegrationTests(unittest.TestCase):
   row=hub.book.list()['items'][0];self.assertEqual((row['important'],row['donated'],row['amount'],row['dm_sent']),(True,True,5000,True));self.assertEqual(app.read_left(),0)
   back=hub.cases.view();self.assertEqual({c['name']:c['current'] for c in back['cases']},{'Yousuf':True,'Maria':False})
   with self.assertRaises(ValueError):hub.cases.new('',1000)
+ def test_chat_adds_a_donor_by_name_only(self):
+  app=self.app;r=app.manual_command('add donor Haji Sahab','name-only-1');self.assertTrue(r['handled']);self.assertEqual([x['name'] for x in app.donors().book.list()['items']],['Haji Sahab'])
  def test_chat_add_mark_donate_remove(self):
   app=self.app;r=app.manual_command('add donor Random23 0300 1234567','add-test');self.assertTrue(r['handled']);self.assertNotIn('1234567',json.dumps(r))
   app.manual_command('make Random23 important');self.assertEqual(app.donors().book.list('important')['counts']['important'],1)

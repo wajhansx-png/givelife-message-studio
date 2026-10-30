@@ -23,6 +23,7 @@ class Base(unittest.TestCase):
   if self.down[0]:raise RuntimeError('down')
   self.sent.append(body['message']);return {'code':'SUCCESS'}
  def at(self,minutes):self.clock[0]=BASE+minutes*60
+ def token(self):return self.t._load()['member']['token']
  def tick(self,minutes=None):
   if minutes is not None:self.at(minutes)
   self.t.tick()
@@ -48,6 +49,10 @@ class Planning(Base):
  def test_nothing_is_sent_until_confirmed_and_plans_expire(self):
   self.t.plan('a\nb deadline 6pm');self.tick(1);self.assertEqual(self.sent,[]);self.at(20)
   with self.assertRaisesRegex(ValueError,'no task plan'):self.t.confirm_plan()
+ def test_deadline_can_be_a_length_of_time_in_any_common_wording(self):
+  for text,last in (('a\nb Deadline 9 hours','11:00 PM'),('a\nb deadline in 3 hours','5:00 PM'),('a\nb due 90 minutes','3:30 PM'),('a\nb within 2 hrs','4:00 PM'),('a\nb deadline 6:30 pm','6:30 PM')):
+   with self.subTest(text=text):
+    items=self.t.plan(text)['plan']['items'];self.assertEqual([i['text'] for i in items],['a','b']);self.assertEqual(items[-1]['due_label'],last)
  def test_bare_hour_means_the_next_such_hour(self):
   self.assertEqual(self.t.plan('a deadline 6')['plan']['items'][0]['due_label'],'6:00 PM')
 
@@ -66,13 +71,16 @@ class Sending(Base):
   self.t.pause(True)
  def test_paused_sends_nothing(self):
   self.start();self.t.pause(True);self.tick(0);self.assertEqual(self.sent,[]);self.t.pause(False);self.tick(1.2);self.assertEqual(len(self.sent),1)
- def test_a_failed_send_goes_back_to_waiting_and_retries_later_then_is_reported(self):
-  self.start('a deadline 6pm');self.down[0]=True;self.tick(0);self.assertEqual(self.status(),{1:'Waiting'});self.tick(2);self.assertEqual(self.sent,[])
-  self.down[0]=False;self.tick(6);self.assertEqual(self.status(),{1:'Asked'});self.assertEqual(len(self.sent),1)
- def test_the_owner_is_told_when_a_send_keeps_failing(self):
-  self.start('a deadline 6pm');self.down[0]=True
-  for m in (0,6,12,18):self.tick(m)
-  self.tick(25);self.assertTrue(any('could not be sent' in x for x in self.owner))
+ def test_whatsapp_failure_never_blocks_the_chat_and_is_not_retried(self):
+  self.start('a deadline 6pm');self.down[0]=True;self.tick(0);self.assertEqual(self.status(),{1:'Asked'})
+  chat=self.t.chat_state(self.token())['chat'];self.assertEqual(len(chat),1);self.assertIn('Task #1',chat[0]['text'])
+  self.assertEqual(sum(e['kind']=='send_failed' for e in self.t.view()['feed']),1);self.down[0]=False;self.tick(5);self.assertEqual(self.sent,[],'the same ask is never sent again')
+ def test_the_chat_link_goes_with_the_first_message_only(self):
+  import os;os.environ['RENDER_EXTERNAL_URL']='https://studio.example'
+  try:
+   self.start('a by 4pm\nb by 5pm');self.tick(0);self.tick(2)
+  finally:os.environ.pop('RENDER_EXTERNAL_URL')
+  self.assertIn('/t/'+self.token(),self.sent[0]);self.assertNotIn('/t/',self.sent[1])
 
 class Chasing(Base):
  def test_reminder_once_then_check_then_late_then_one_final_message(self):
@@ -84,9 +92,9 @@ class Chasing(Base):
  def test_no_reminder_after_he_replied(self):
   self.start('post groups deadline 6pm');self.tick(0);self.reply('working on it',"m1",minutes=5);self.tick(40);self.assertEqual(sum(s.startswith('Reminder') for s in self.sent),0)
  def test_a_task_never_sent_before_its_deadline_is_late_and_not_asked_afterwards(self):
-  self.start('a deadline 6pm');self.down[0]=True
+  self.start('a deadline 6pm');self.t.pause(True)
   for m in range(0,239,6):self.tick(m)
-  self.down[0]=False;self.tick(241);self.assertEqual(self.status(),{1:'Late'});self.assertEqual(self.sent,[])
+  self.t.pause(False);self.tick(241);self.assertEqual(self.status(),{1:'Late'});self.assertEqual(self.sent,[])
 
 class Replies(Base):
  def two(self):
@@ -146,5 +154,33 @@ class Chat(Base):
  def test_chat_sets_the_teammate_and_refuses_the_owner_number(self):
   self.assertIn('Sara',self.t.command('set teammate Sara 0300 7654321','set teammate Sara 0300 7654321')['reply'])
   with self.assertRaises(ValueError):self.t.set_member('Me','923000000000')
+
+class TeammateChat(Base):
+ def test_only_the_private_link_opens_the_chat(self):
+  self.assertEqual(self.t.chat_state(self.token())['name'],'Bilal')
+  for bad in ('',None,'x'*24,self.token()[:-1]):
+   with self.subTest(bad=bad),self.assertRaisesRegex(ValueError,'not valid'):self.t.chat_state(bad)
+  self.t.set_member('Bilal Ahmed','03001234567');self.assertEqual(self.t.chat_state(self.token())['name'],'Bilal','the same person keeps the same link')
+  old=self.token();self.t.set_member('Other','03007654321');self.assertNotEqual(self.token(),old)
+  with self.assertRaises(ValueError):self.t.chat_state(old)
+ def test_the_bot_asks_in_the_chat_and_his_answer_is_handled_at_once(self):
+  self.start('a deadline 6pm');self.tick(0);st=self.t.chat_state(self.token());self.assertEqual([t['no'] for t in st['tasks']],[1]);self.assertEqual(st['chat'][0]['from'],'bot')
+  before=len(self.sent);st=self.t.chat_say(self.token(),'1 done');self.assertEqual(self.status(),{1:'Reported'})
+  self.assertEqual(st['chat'][-2]['from'],'him');self.assertEqual(st['chat'][-1]['from'],'bot');self.assertIn('Noted as done',st['chat'][-1]['text'])
+  self.assertEqual(len(self.sent),before,'answers inside the chat are not repeated on WhatsApp')
+ def test_a_photo_is_stored_checked_and_counts_as_proof_for_a_reported_task(self):
+  import base64;self.start('a deadline 6pm');self.tick(0);self.t.chat_say(self.token(),'done')
+  self.assertFalse(self.t.view()['tasks'][0]['proof']);self.clock[0]+=2
+  png=base64.b64encode(b'\x89PNG\r\n\x1a\n'+b'0'*50).decode();st=self.t.chat_say(self.token(),'',png,'p.png')
+  task=self.t.view()['tasks'][0];self.assertTrue(task['proof']);self.assertEqual(len(task['proof_ids']),1);data,ctype=self.t.proof_file(task['proof_ids'][0]);self.assertEqual(ctype,'image/png');self.assertTrue(data.startswith(b'\x89PNG'))
+ def test_bad_uploads_and_messages_are_refused(self):
+  import base64;self.start('a deadline 6pm');self.tick(0)
+  with self.assertRaisesRegex(ValueError,'photo'):self.t.chat_say(self.token(),'x',base64.b64encode(b'<script>alert(1)</script>').decode())
+  with self.assertRaisesRegex(ValueError,'too big'):self.t.chat_say(self.token(),'x',base64.b64encode(b'\xff\xd8\xff'+b'0'*(3*1024*1024)).decode())
+  with self.assertRaisesRegex(ValueError,'Write'):self.t.chat_say(self.token(),'  ')
+  with self.assertRaisesRegex(ValueError,'1,000'):self.t.chat_say(self.token(),'x'*1001)
+  with self.assertRaises(ValueError):self.t.proof_file('../../etc/passwd')
+ def test_his_chat_message_notifies_the_owner_and_shows_in_the_feed(self):
+  self.start('a deadline 6pm');self.tick(0);self.t.chat_say(self.token(),'working on it');self.t.tick();self.assertTrue(any('working on it' in n for n in self.owner));self.assertEqual(self.t.view()['latest'][0]['text'].split(': ')[-1],'working on it')
 
 if __name__=='__main__':unittest.main()

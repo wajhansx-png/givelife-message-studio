@@ -7,7 +7,7 @@ Rules that keep it honest:
 - Every WhatsApp message is reserved before it is sent, so a crash or restart can never send the same message twice.
 - "Done" from the teammate is only a report. The owner verifies it (or sends it back).
 - Quiet hours (23:00-07:00) and the global hold are respected. One message per minute at most."""
-import copy, datetime, re, threading, time, uuid
+import base64, copy, datetime, hmac, os, re, secrets, threading, time, uuid
 from donor_book import normalize_phone
 
 PKT = datetime.timezone(datetime.timedelta(hours=5))
@@ -17,7 +17,7 @@ BLOCK_WORDS = re.compile(r"(?i)\b(?:stuck|problem|issue|cannot|can't|cant|unable
 URL = re.compile(r"(?i)https?://\S+|\bwww\.\S+")
 MIN_SLOT = 10 * 60
 CLOCK = r"(?:\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)|\d{1,2}:\d{2})"
-DEADLINE = re.compile(r"(?i)\b(?:(?:deadline|due|latest|all by|everything by|finish(?:ed)? by|complete(?:d)? by|till|until|tak)\s*(?:is\s*)?(?:(tomorrow|tmrw|kal)\s+)?(?:at\s+)?(" + CLOCK + r"|\d{1,2})\b|(?:in|within)\s+(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)\b)")
+DEADLINE = re.compile(r"(?i)\b(?:(?:deadline|due|latest|all by|everything by|finish(?:ed)? by|complete(?:d)? by|till|until|tak)\s*(?:is\s*)?(?:(tomorrow|tmrw|kal)\s+)?(?:at\s+)?(" + CLOCK + r"|\d{1,2}(?!\d|\s*(?:hours?|hrs?|h\b|minutes?|mins?|m\b)))(?![\d:])|(?:(?:deadline|due)\s*(?:is\s*)?(?:in\s+)?|in\s+|within\s+)(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)\b)")
 
 
 def fmt_time(ts, now=None):
@@ -168,7 +168,7 @@ class TeamTasks:
 
     # ---- views
     def _public_task(self, t, now):
-        return {k: t.get(k) for k in ('id', 'no', 'text', 'start_at', 'due_at', 'status', 'report_text', 'proof', 'reported_at', 'verified_at', 'asked_at')} | {'due_label': fmt_time(t['due_at'], now), 'start_label': fmt_time(t['start_at'], now)}
+        return {k: t.get(k) for k in ('id', 'no', 'text', 'start_at', 'due_at', 'status', 'report_text', 'proof', 'proof_ids', 'reported_at', 'verified_at', 'asked_at')} | {'due_label': fmt_time(t['due_at'], now), 'start_label': fmt_time(t['start_at'], now)}
 
     def view(self):
         with self.lock:
@@ -178,7 +178,9 @@ class TeamTasks:
                 plan = {'items': [{**i, 'due_label': fmt_time(i['due_at'], now), 'start_label': fmt_time(i['start_at'], now)} for i in d['plan']['items']]}
             return {'member': {'name': d['member']['name']} if d['member'] else None, 'tasks': [self._public_task(t, now) for t in d['tasks'] if t['status'] != 'Cancelled'],
                     'feed': [{**e, 'label': fmt_time(e['at'], now)} for e in d['feed'][-80:]][::-1], 'unread': d['unread'], 'plan': plan, 'paused': d['paused'], 'now_label': fmt_time(now),
-                    'counts': {s: sum(1 for t in d['tasks'] if t['status'] == s) for s in ('Waiting', 'Asked', 'Reported', 'Late', 'Done')}}
+                    'counts': {s: sum(1 for t in d['tasks'] if t['status'] == s) for s in ('Waiting', 'Asked', 'Reported', 'Late', 'Done')},
+                    'chat_path': '/t/' + d['member']['token'] if d['member'] and d['member'].get('token') else '',
+                    'latest': [{'label': fmt_time(e['at'], now), 'text': e['text']} for e in d['feed'] if e['kind'] in ('update', 'report', 'blocked', 'proof')][-3:][::-1]}
 
     # ---- owner actions
     def set_member(self, name, phone):
@@ -189,7 +191,8 @@ class TeamTasks:
         if phone == normalize_phone(self.app.OWNER_PHONE):
             raise ValueError('That is your own number.')
         with self.lock:
-            d = self._load();d['member'] = {'name': name, 'phone': phone, 'since': self.now()};self._save()
+            d = self._load();old = d['member'] or {}
+            d['member'] = {'name': name, 'phone': phone, 'since': self.now(), 'token': old.get('token') if old.get('phone') == phone and old.get('token') else secrets.token_urlsafe(18)};self._save()
             return self.view()
 
     def plan(self, text):
@@ -283,12 +286,28 @@ class TeamTasks:
 
     def _can_send(self, now):
         d = self._load()
-        return bool(d['member']) and not d['paused'] and not self._quiet(now) and now - d['last_sent'] >= 60 and not self.app.on_hold() and self.app.wa_ok()
+        return bool(d['member']) and not d['paused'] and not self._quiet(now) and now - d['last_sent'] >= 60 and not self.app.on_hold()
+
+    def _chat(self, who, text, at=None, **extra):
+        d = self._load();m = {'id': uuid.uuid4().hex[:10], 'from': who, 'text': str(text)[:1500], 'at': at or self.now(), **extra}
+        d.setdefault('chat', []).append(m);d['chat'] = d['chat'][-200:];return m
+
+    def _base_url(self):
+        return os.environ.get('RENDER_EXTERNAL_URL', '').rstrip('/')
 
     def _transmit(self, text, now):
-        """Reserve the time slot first; a failure is reported, never retried blindly."""
-        d = self._load();d['last_sent'] = now;self._save()
-        self._send(text)
+        """The chat page is the main channel and always gets the message. WhatsApp is a best-effort ping to his phone.
+        The slot is reserved first, so nothing is ever sent twice."""
+        d = self._load();d['last_sent'] = now
+        link = ''
+        if not d.get('link_sent') and self._base_url() and d['member'].get('token'):
+            link = '\nYour task chat: ' + self._base_url() + '/t/' + d['member']['token'];d['link_sent'] = True
+        self._chat('bot', text, now);self._save()
+        if self.app.wa_ok():
+            try:
+                self._send(text + link)
+            except Exception:
+                self._event('send_failed', 'The WhatsApp ping to ' + d['member']['name'] + ' did not go through. He can still read it in his task chat.', None)
 
     # ---- the clock: called every ~20 seconds
     def tick(self):
@@ -316,10 +335,7 @@ class TeamTasks:
         name = d['member']['name'].split()[0]
         if d.get('outbox'):
             m = d['outbox'].pop(0)
-            try:
-                self._transmit(m['text'], now);self._event('sent', m['text'], None, to_task=m['task'])
-            except Exception:
-                self._event('send_failed', 'A message to ' + name + ' could not be sent.', None, notify=True)
+            self._transmit(m['text'], now);self._event('sent', m['text'], None, to_task=m['task'])
             return
         for t in sorted(d['tasks'], key=lambda x: x['start_at']):
             text = kind = None
@@ -347,17 +363,7 @@ class TeamTasks:
                 t['final_sent'] = True
             elif kind == 'proof':
                 t['proof_asked'] = True
-            try:
-                self._transmit(text, now);self._event('sent', text, t)
-            except Exception:
-                if kind == 'ask':
-                    t['status'] = 'Waiting';t['asked_at'] = None
-                    t['next_try'] = now + 300
-                    if t['attempts'] >= 3:
-                        t['next_try'] = now + 3600
-                        self._event('send_failed', f'Task #{t["no"]} could not be sent to {d["member"]["name"]} ({t["attempts"]} tries). Check WhatsApp.', t, notify=True)
-                else:
-                    self._event('send_failed', f'A {kind} message for task #{t["no"]} could not be sent.', t)
+            self._transmit(text, now);self._event('sent', text, t)
             return  # one message per tick
 
     # ---- reading his replies
@@ -389,7 +395,7 @@ class TeamTasks:
         if changed:
             d['seen'] = list(seen)[-500:];self._save()
 
-    def handle_reply(self, text, media=False):
+    def handle_reply(self, text, media=False, proof_id=None):
         """One message from the teammate. Matches it to tasks by number; never guesses between several."""
         d = self._load();now = self.now();text = text.strip()
         proof = media or bool(URL.search(text))
@@ -417,14 +423,19 @@ class TeamTasks:
             for t in targets:
                 t['status'] = 'Reported';t['report_text'] = shown[:400];t['reported_at'] = now;t['acked'] = True
                 t['proof'] = t['proof'] or proof
+                if proof_id:t.setdefault('proof_ids', []).append(proof_id)
                 self._event('report', f'{d["member"]["name"]} says task #{t["no"]} is done: {shown}', t, notify=True, proof=t['proof'])
             self._queue('Thanks. Noted as done: ' + ', '.join('#' + str(t['no']) for t in targets) + '. I will confirm after checking.', None, 'ack')
             return
         target = by_no.get(nums[0]) if nums and nums[0] in by_no else (asked[-1] if len(asked) == 1 else None)
+        waiting_proof = [t for t in d['tasks'] if t['status'] == 'Reported' and not t['proof']]
+        if proof and not text.strip(' .') and len(waiting_proof) == 1 or proof and target is None and len(waiting_proof) == 1:
+            target = waiting_proof[0]   # proof for a task he already reported
         if target:
             target['acked'] = True
             if proof:
                 target['proof'] = True
+                if proof_id:target.setdefault('proof_ids', []).append(proof_id)
         kind = 'blocked' if BLOCK_WORDS.search(text) else ('proof' if proof and not text else 'update')
         self._event(kind, f'{d["member"]["name"]}: {shown}', target, notify=True)
 
@@ -439,6 +450,75 @@ class TeamTasks:
             self.app.send_text(self.app.OWNER_PHONE + '@s.whatsapp.net', text[:900])
         except Exception:
             pass
+
+    # ---- the teammate's own chat page (opened with a private link, no owner key)
+    PROOF_MAX = 3 * 1024 * 1024
+    MAGIC = ((b'\xff\xd8\xff', 'jpg', 'image/jpeg'), (b'\x89PNG\r\n\x1a\n', 'png', 'image/png'), (b'RIFF', 'webp', 'image/webp'))
+
+    def _member_for(self, token):
+        d = self._load();m = d['member']
+        if not m or not m.get('token') or not isinstance(token, str) or not hmac.compare_digest(token.encode(), m['token'].encode()):
+            raise ValueError('This link is not valid. Ask for a new one.')
+        return d
+
+    def chat_state(self, token):
+        with self.lock:
+            d = self._member_for(token);now = self.now()
+            tasks = [{'no': t['no'], 'text': t['text'], 'status': t['status'], 'due_label': fmt_time(t['due_at'], now), 'due_in_min': int((t['due_at'] - now) / 60)} for t in d['tasks'] if t['status'] in ('Waiting', 'Asked', 'Late', 'Reported')]
+            chat = [{**m, 'label': fmt_time(m['at'], now)} for m in d.get('chat', [])[-80:]]
+            return {'name': d['member']['name'].split()[0], 'tasks': tasks, 'chat': chat, 'now_label': fmt_time(now), 'paused': d['paused']}
+
+    def chat_say(self, token, text='', image_b64='', image_name=''):
+        with self.lock:
+            d = self._member_for(token);now = self.now();text = str(text or '').strip()
+            if len(text) > 1000:
+                raise ValueError('Keep the message under 1,000 characters.')
+            last = [m for m in d.get('chat', []) if m['from'] == 'him']
+            if last and now - last[-1]['at'] < 1:
+                raise ValueError('One moment, then send again.')
+            proof_id = None;img = None
+            if image_b64:
+                try:
+                    raw = base64.b64decode(image_b64, validate=True)
+                except Exception:
+                    raise ValueError('That picture could not be read.')
+                if len(raw) > self.PROOF_MAX:
+                    raise ValueError('The picture is too big. Use one under 3 MB.')
+                kind = next(((e, c) for sig, e, c in self.MAGIC if raw.startswith(sig) and (sig != b'RIFF' or raw[8:12] == b'WEBP')), None)
+                if not kind:
+                    raise ValueError('Send a photo (JPG, PNG or WebP).')
+                proof_id = uuid.uuid4().hex
+                folder = self.app.DATA / 'team-proof';folder.mkdir(exist_ok=True);(folder / (proof_id + '.' + kind[0])).write_bytes(raw);img = proof_id
+            if not text and not img:
+                raise ValueError('Write a message or add a photo.')
+            self._chat('him', text, now, **({'img': img} if img else {}))
+            before = len(d.get('outbox', []))
+            self.handle_reply(text, media=bool(img), proof_id=proof_id)
+            # answers to what he just wrote appear in the chat at once (he is already looking at it)
+            for m in d.get('outbox', [])[before:]:
+                self._chat('bot', m['text'], now);self._event('sent', m['text'], None, to_task=m['task'])
+            if 'outbox' in d:
+                del d['outbox'][before:]
+            self._save();return self.chat_state(token)
+
+    def proof_file(self, proof_id):
+        if not re.fullmatch(r'[0-9a-f]{32}', str(proof_id)):
+            raise ValueError('Not found.')
+        for sig, ext, ctype in self.MAGIC:
+            f = self.app.DATA / 'team-proof' / (proof_id + '.' + ext)
+            if f.exists():
+                return f.read_bytes(), ctype
+        raise ValueError('Not found.')
+
+    def send_link(self):
+        """The owner asks the bot to give him the chat link on WhatsApp."""
+        with self.lock:
+            d = self._load()
+            if not d['member']:
+                raise ValueError('Add your teammate first.')
+            if not self._base_url():
+                raise ValueError('The public address is not set on the server, so copy the link and send it yourself.')
+            self._queue('Your task chat (tasks, deadlines and updates): ' + self._base_url() + '/t/' + d['member']['token'], None, 'link');d['link_sent'] = True;self._save();return self.view()
 
     # ---- chat
     def summary(self):

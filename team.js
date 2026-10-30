@@ -4,7 +4,7 @@
  const page=make('dialog','team-page');page.id='teamPage';page.setAttribute('aria-label','Team tasks');document.body.append(page);
  const launch=make('button','donor-launch team-launch','Team');launch.type='button';launch.id='openTeam';
  const badge=make('span','team-badge');badge.hidden=true;launch.append(badge);document.querySelector('.brandbar')?.append(launch);
- let data=null,timer=0,lastUnread=0,planText='',toastTimer=0;
+ let data=null,timer=0,lastUnread=0,planText='',toastTimer=0,addOpen=false;
  const api=async(body)=>{const r=await fetch('/team',body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d};
  function toast(text,bad){let t=document.getElementById('teamToast');if(!t){t=make('div','team-toast');t.id='teamToast';t.setAttribute('role','status');document.body.append(t)}t.textContent=text;t.dataset.bad=String(!!bad);t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.hidden=true},6000)}
  function paintBadge(){const n=data?.unread||0;badge.hidden=!n;badge.textContent=n>9?'9+':String(n);launch.setAttribute('aria-label','Team'+(n?', '+n+' new update'+(n===1?'':'s'):''))}
@@ -14,40 +14,48 @@
  function draw(){
   const scroll=page.querySelector('.team-body')?.scrollTop||0;const typed=page.querySelector('#teamText')?.value;if(typed!==undefined)planText=typed;
   page.textContent='';const shell=make('div','team-shell');
-  const head=make('header','team-head');const title=make('div','team-title');title.append(make('h1','','Team'));title.append(make('span','team-sub',data?.member?data.member.name+' · '+(data.paused?'follow-up paused':'follow-up on'):'Add your teammate to start'));
-  head.append(title);
-  if(data?.member){const p=make('button','tool team-pause',data.paused?'Resume':'Pause');p.type='button';p.onclick=()=>act({action:'pause',on:!data.paused},data.paused?'Follow-up resumed.':'Follow-up paused. Nothing will be sent.');head.append(p)}
+  const head=make('header','team-head');const title=make('div','team-title');title.append(make('h1','','Team'));title.append(make('span','team-sub',data?.member?data.member.name+(data.paused?' · paused':''):'Add your teammate to start'));head.append(title);
+  if(data?.member){const p=make('button','tool team-pause',data.paused?'Resume':'Pause');p.type='button';p.onclick=()=>act({action:'pause',on:!data.paused},data.paused?'Resumed.':'Paused. Nothing will be sent.');head.append(p)}
   shell.append(head);const body=make('div','team-body');
   if(!data?.member){
-   const f=make('form','team-card team-setup');f.append(make('h2','','Who is your teammate?'),make('p','team-hint','Their WhatsApp number stays hidden. The app messages them only about the tasks you confirm.'));
+   const f=make('form','team-card team-setup');f.append(make('h2','','Who is your teammate?'),make('p','team-hint','Their WhatsApp number stays hidden.'));
    const n=make('input','');n.name='team_name';n.placeholder='Name';n.autocomplete='off';n.setAttribute('aria-label','Teammate name');const ph=make('input','');ph.name='team_phone';ph.type='tel';ph.placeholder='WhatsApp number';ph.setAttribute('aria-label','Teammate WhatsApp number');
    const b=make('button','primary','Save teammate');b.type='submit';f.append(n,ph,b);f.onsubmit=e=>{e.preventDefault();act({action:'member',name:n.value,phone:ph.value},'Teammate saved.')};body.append(f)}
   else{
-   const review=data.tasks.filter(t=>t.status==='Reported');
-   if(review.length){const c=make('section','team-card team-review');c.append(make('h2','','Waiting for your check'));
-    for(const t of review){const row=make('div','team-item');const txt=make('div','team-text');txt.append(make('strong','','#'+t.no+' '+t.text),make('span','team-say','"'+(t.report_text||'done')+'"'));const pr=make('span','team-proof',t.proof?'Proof ✓':'No proof yet');pr.dataset.ok=String(!!t.proof);txt.append(pr);
+   const all=data.tasks,done=all.filter(t=>t.status==='Done'),review=all.filter(t=>t.status==='Reported'),left=all.filter(t=>['Waiting','Asked','Late'].includes(t.status));
+   const sum=make('section','team-card team-sum');const big=make('div','team-big',all.length?done.length+' of '+all.length+' done':'No tasks yet');sum.append(big);
+   const bar=make('div','team-bar');const fill=make('i','');fill.style.width=(all.length?Math.round(100*done.length/all.length):0)+'%';bar.append(fill);sum.append(bar);
+   const late=left.filter(t=>t.status==='Late').length;const next=left.filter(t=>t.status!=='Late').sort((a,b)=>a.due_at-b.due_at)[0];
+   const bits=[];if(left.length)bits.push(left.length+' left');if(late)bits.push(late+' late');if(review.length)bits.push(review.length+' to check');if(next)bits.push('next due '+next.due_label);
+   sum.append(make('div','team-line',bits.join(' · ')||(all.length?'All done ✓':'Add tasks below')));if(late)sum.dataset.late='true';body.append(sum);
+   if(review.length){const c=make('section','team-card team-review');c.append(make('h2','','Check these'));
+    for(const t of review){const row=make('div','team-item');const txt=make('div','team-text');txt.append(make('strong','','#'+t.no+' '+t.text),make('span','team-say','"'+(t.report_text||'done')+'"'));
+     const pr=make('span','team-proof',t.proof?'Proof ✓':'No proof yet');pr.dataset.ok=String(!!t.proof);txt.append(pr);
+     if((t.proof_ids||[]).length){const v=make('button','team-link','View photo');v.type='button';v.onclick=()=>viewProof(t.proof_ids[t.proof_ids.length-1]);txt.append(v)}
      const ok=make('button','primary','Verified ✓');ok.type='button';ok.onclick=()=>act({action:'verify',id:t.id},'Task #'+t.no+' verified.');
-     const no=make('button','tool','Not done');no.type='button';no.onclick=()=>{const note=prompt('What should '+data.member.name+' fix? (optional)','');if(note!==null)act({action:'reject',id:t.id,note},'Sent back to '+data.member.name+'.')};
+     const no=make('button','tool','Not done');no.type='button';no.onclick=()=>{const note=prompt('What should '+data.member.name+' fix? (optional)','');if(note!==null)act({action:'reject',id:t.id,note},'Sent back.')};
      const acts=make('div','team-actions');acts.append(ok,no);row.append(txt,acts);c.append(row)}body.append(c)}
-   const upd=make('section','team-card');upd.append(make('h2','','Updates from '+data.member.name));
-   const list=make('div','team-feed');const shown=data.feed.filter(e=>e.kind!=='plan').slice(0,40);
-   if(!shown.length)list.append(make('p','team-empty','No updates yet. When '+data.member.name+' replies on WhatsApp, it shows here.'));
-   for(const e of shown){const r=make('div','team-ev');r.dataset.kind=e.kind;r.append(make('time','',e.label),make('span','team-ev-text',e.text));list.append(r)}upd.append(list);body.append(upd);
-   const tasks=make('section','team-card');tasks.append(make('h2','',"Today's tasks"));
-   if(!data.tasks.length)tasks.append(make('p','team-empty','No tasks yet. Write them below.'));
-   for(const t of data.tasks){const row=make('div','team-task');row.dataset.s=t.status;const txt=make('div','team-text');txt.append(make('strong','','#'+t.no+' '+t.text),make('span','team-due','Ask '+t.start_label+' · due '+t.due_label));row.append(txt,chip(t.status));
-    if(['Waiting','Asked','Late'].includes(t.status)){const c=make('button','tool','Cancel');c.type='button';c.onclick=()=>{if(confirm('Cancel task #'+t.no+'?'))act({action:'cancel',id:t.id},'Task cancelled.')};row.append(c)}tasks.append(row)}
-   body.append(tasks);
-   const add=make('section','team-card');add.append(make('h2','','Write today\'s tasks'));
-   if(data.plan){add.append(make('p','team-hint','Check the plan. Nothing is sent until you press Start.'));
+   if(left.length){const c=make('section','team-card');c.append(make('h2','','Left'));
+    for(const t of left){const row=make('div','team-task');row.dataset.s=t.status;const txt=make('div','team-text');txt.append(make('strong','','#'+t.no+' '+t.text),make('span','team-due',(t.status==='Late'?'Late · was due ':'Due ')+t.due_label));row.append(txt,chip(t.status));
+     const x=make('button','team-x','✕');x.type='button';x.setAttribute('aria-label','Cancel task '+t.no);x.onclick=()=>{if(confirm('Cancel task #'+t.no+'?'))act({action:'cancel',id:t.id},'Cancelled.')};row.append(x);c.append(row)}body.append(c)}
+   if(done.length){const c=make('section','team-card team-done');c.append(make('h2','','Done ✓'),make('p','team-donelist',done.map(t=>'#'+t.no+' '+t.text).join(' · ')));body.append(c)}
+   if(data.latest?.length){const c=make('section','team-card');c.append(make('h2','','Latest from '+data.member.name));
+    for(const e of data.latest){const r=make('div','team-ev');r.append(make('time','',e.label),make('span','team-ev-text',e.text.replace(/^[^:]+: /,'')));c.append(r)}body.append(c)}
+   const add=make('section','team-card');
+   if(data.plan){add.append(make('h2','','Check the plan'),make('p','team-hint','Nothing is sent until you press Start.'));
     data.plan.items.forEach((i,k)=>{const r=make('div','team-task');const txt=make('div','team-text');txt.append(make('strong','',(k+1)+'. '+i.text),make('span','team-due','Ask '+i.start_label+' · due '+i.due_label));r.append(txt);add.append(r)});
     const go=make('button','primary','Start tasks');go.type='button';go.onclick=()=>{planText='';act({action:'confirm'},'Tasks started.')};const ds=make('button','tool','Discard');ds.type='button';ds.onclick=()=>act({action:'discard'});const ar=make('div','team-actions');ar.append(go,ds);add.append(ar)}
-   else{const ta=make('textarea','');ta.id='teamText';ta.name='team_tasks';ta.rows=5;ta.maxLength=3000;ta.value=planText;ta.placeholder='One task per line, then a deadline. Example:\n1) Post in the 3 groups\n2) Update the sheet\n3) Message the donors\nDeadline 6pm';ta.setAttribute('aria-label','Today\'s tasks');
+   else if(addOpen||planText){add.append(make('h2','','Write today\'s tasks'));const ta=make('textarea','');ta.id='teamText';ta.name='team_tasks';ta.rows=5;ta.maxLength=3000;ta.value=planText;ta.placeholder='One task per line, then a deadline:\n1) Post in the 3 groups\n2) Update the sheet\nDeadline 6pm';ta.setAttribute('aria-label','Today\'s tasks');
     const go=make('button','primary','Plan the tasks');go.type='button';go.onclick=()=>act({action:'plan',text:ta.value});add.append(ta,go)}
-   body.append(add)}
+   else{const b=make('button','primary team-add','+ Add tasks');b.type='button';b.onclick=()=>{addOpen=true;draw();page.querySelector('#teamText')?.focus()};add.append(b)}
+   body.append(add);
+   if(data.chat_path){const c=make('section','team-card team-linkcard');c.append(make('h2','',data.member.name.split(' ')[0]+'\'s chat page'),make('p','team-hint','He sees his tasks and deadlines here and answers the bot. Send him the link once.'));
+    const row=make('div','team-actions');const cp=make('button','tool','Copy link');cp.type='button';cp.onclick=async()=>{const url=location.origin+data.chat_path;try{await navigator.clipboard.writeText(url);toast('Link copied.')}catch(e){prompt('Copy this link:',url)}};
+    const wa=make('button','tool','Send on WhatsApp');wa.type='button';wa.onclick=()=>act({action:'send_link'},'The link will be sent on WhatsApp.');row.append(cp,wa);c.append(row);body.append(c)}}
   shell.append(body);const foot=make('footer','team-foot');const back=make('button','tool team-back','← Back');back.type='button';back.onclick=()=>page.close();foot.append(back);shell.append(foot);page.append(shell);
   const nb=page.querySelector('.team-body');if(nb)nb.scrollTop=scroll;
  }
+ async function viewProof(id){try{const r=await fetch('/team-proof?id='+encodeURIComponent(id));if(!r.ok)throw Error('The photo is not available.');const u=URL.createObjectURL(await r.blob());window.open(u,'_blank','noopener')}catch(e){toast(e.message,true)}}
  async function open(){await refresh(true);if(!data){toast('Could not load the team screen.',true);return}draw();if(!page.open)page.showModal();if(data.unread)try{data={...data,...await api({action:'read'})};lastUnread=0;paintBadge()}catch(e){}clearInterval(timer);timer=setInterval(()=>refresh(true),8000)}
  page.addEventListener('close',()=>{clearInterval(timer);timer=setInterval(()=>refresh(true),45000)});
  page.addEventListener('cancel',e=>{e.preventDefault();page.close()});

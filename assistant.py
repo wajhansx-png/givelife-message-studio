@@ -67,6 +67,18 @@ CHAT_TOOLS += SETTING_TOOLS + [
     tool('send_message', 'Send a message now to one chat: an id returned by find_contact, a phone number, or a foundation group key (main, community, fiverr, upwork, uet, toprated, test). '
          'Sends exactly the text given. Set with_picture true to attach the picture the owner attached (or the poster if none).',
          {'to': {'type': 'string'}, 'text': {'type': 'string'}, 'with_picture': {'type': 'boolean'}}, ['to', 'text', 'with_picture']),
+    tool('team_action', 'The teammate and his tasks (talked to on WhatsApp by the app). status: progress. plan: split the owner\'s task text and deadline into timed tasks and show the plan (nothing is sent). confirm: start the waiting plan (ONLY when the owner says confirm/start/yes). verify/reject/cancel: one task, by its number or a word from it. pause/resume: follow-up. set_member: name and number the owner gave.',
+         {'action': {'type': 'string', 'enum': ['status', 'plan', 'confirm', 'verify', 'reject', 'cancel', 'pause', 'resume', 'set_member']}, 'text': {'type': 'string'}, 'task': {'type': 'string'}, 'note': {'type': 'string'}, 'name': {'type': 'string'}, 'phone': {'type': 'string'}},
+         ['action']),
+    tool('volunteer_action', 'Volunteers list (people who share the case). list; add (name + number the owner gave); remove (name); set_message (exact text the owner wrote, {name} becomes their first name); send_all or send_one (name) ONLY when the owner asks to send.',
+         {'action': {'type': 'string', 'enum': ['list', 'add', 'remove', 'set_message', 'send_all', 'send_one']}, 'name': {'type': 'string'}, 'phone': {'type': 'string'}, 'text': {'type': 'string'}},
+         ['action']),
+    tool('case_action', 'Cases (each keeps its own amount, captions, stars and DM marks). list; new (name + amount needed: saves the current case and starts this one from zero); switch (name of a saved case); rename (new name for the current case). Only when the owner asks.',
+         {'action': {'type': 'string', 'enum': ['list', 'new', 'switch', 'rename']}, 'name': {'type': 'string'}, 'left': {'type': 'number'}},
+         ['action']),
+    tool('send_text_list', 'Send the owner\'s OWN words (exact text, not the appeal) to a list of phone numbers the owner wrote, one about every minute. Use for "send this message to these numbers".',
+         {'text': {'type': 'string'}, 'phones': {'type': 'array', 'items': {'type': 'string'}}},
+         ['text', 'phones']),
     tool('dm_list', 'Send the DM (poster or the attached picture, plus caption) to a list of people, one by one with a gap. '
          'Use when the owner gives numbers. Name: first name if it is a real name, otherwise empty (greeting becomes Brother). '
          'Gender Sister only for clearly female names or when he says sister.',

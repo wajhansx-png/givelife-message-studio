@@ -286,6 +286,20 @@ class TeamTasks:
                 return t
         raise ValueError('That task was not found, or it is already finished.')
 
+    def match_task(self, ref):
+        """A task the owner names by number or by a word from it. Only open tasks; never guesses between several."""
+        with self.lock:
+            open_ = [t for t in self._load()['tasks'] if t['status'] in OPEN]
+            ref = str(ref or '').strip()
+            if re.fullmatch(r'#?\d{1,2}', ref):
+                hit = [t for t in open_ if str(t['no']) == ref.lstrip('#')]
+            else:
+                w = words(ref);scored = [(len(w & words(t['text'])), t) for t in open_];best = max((s for s, _ in scored), default=0)
+                hit = [t for s, t in scored if s == best and best > 0]
+            if len(hit) != 1:
+                raise ValueError('Name the task more clearly (its number or a word from it).' if hit else 'No open task matches that.')
+            return hit[0]['id']
+
     def verify(self, ident):
         with self.lock:
             t = self._find(ident);now = self.now();name = self._first()

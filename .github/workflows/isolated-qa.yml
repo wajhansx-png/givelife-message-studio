@@ -1,0 +1,49 @@
+name: Isolated GiveLife V1 QA
+on:
+  push:
+    paths:
+      - '.github/workflows/isolated-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fake-transport-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Python dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Python logic and failure-simulation tests
+        run: python -m unittest discover -s tests -v
+      - name: Frontend JavaScript syntax
+        run: |
+          node --check app.js
+          node --check team.js
+          node --check donors.js
+          node --check connection.js
+      - name: Frontend dependencies
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+      - name: JS unit tests
+        run: corepack pnpm test
+      - name: Browser dependencies
+        run: corepack pnpm exec playwright install --with-deps chromium
+      - name: Mobile and desktop E2E tests (fake WhatsApp only)
+        run: corepack pnpm test:e2e
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: givelife-isolated-qa-traces
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 5

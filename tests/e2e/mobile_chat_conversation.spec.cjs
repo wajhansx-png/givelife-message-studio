@@ -70,3 +70,28 @@ for(const [w,h] of [[320,568],[360,640],[390,844],[412,915],[768,900]]){
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  });
 }
+
+for(const [width,height] of [[320,568],[390,844],[768,900]]){
+ for(const theme of ['dark','light']){
+  test('mobile chat canvas keeps the same color '+theme+' '+width+'x'+height,async({page})=>{
+   await page.setViewportSize({width,height});
+   await page.addInitScript(theme=>{
+    localStorage.setItem('givelife-cloud-key','manual-fix-preview-key');
+    localStorage.setItem('givelife-theme',theme);
+   },theme);
+   await page.route('**/chat',route=>route.fulfill({json:{items:turns}}));
+   await page.goto('/');
+   await expect(page.locator('#chatOpen')).toBeVisible();
+   await page.locator('#chatOpen').click();
+   const colors=await page.evaluate(()=>{
+    const selectors=['#hist','#hist > header','#histLog','#hist .chat-return','#histNextActions'];
+    return selectors.map(selector=>{
+     const element=document.querySelector(selector),style=getComputedStyle(element);
+     return {selector,color:style.backgroundColor,image:style.backgroundImage};
+    });
+   });
+   expect(new Set(colors.map(item=>item.color)).size,'Each chat section must be one color').toBe(1);
+   expect(colors.every(item=>item.image==='none'),'No separate gradient should interrupt the chat').toBe(true);
+  });
+ }
+}

@@ -258,3 +258,14 @@ test('team screen is one screen with no scrolling at every size, even with a lot
  await page.locator('#teamText').fill(Array.from({length:20},(_,i)=>'Task number '+(i+1)+' with some words').join('\n')+'\ndeadline tomorrow 9pm');await page.getByRole('button',{name:'Plan the tasks'}).click();await expect(page.getByRole('button',{name:'Start tasks'})).toBeVisible();
  const fit=await page.evaluate(()=>{const b=document.querySelector('.team-body');return b.scrollHeight<=b.clientHeight+1});expect(fit,'a 20-task plan preview also fits one screen').toBe(true);
 });
+
+test('team screen keeps the focused field (and the phone keyboard) when the window resizes or refreshes',async({page,request})=>{
+ await open(page,request,390,700);await request.post('/__test/seed',{headers:auth,data:{team_demo:[[1,'Asked']]}});
+ await page.locator('#openTeam').click();await page.getByRole('button',{name:'+ Add tasks'}).click();
+ const box=page.locator('#teamText');await box.click();await box.fill('Post in groups');
+ await page.setViewportSize({width:390,height:380});await page.waitForTimeout(400);   // what the keyboard does
+ await page.evaluate(()=>window.dispatchEvent(new Event('resize')));await page.waitForTimeout(400);
+ expect(await page.evaluate(()=>document.activeElement?.id)).toBe('teamText');expect(await box.inputValue()).toBe('Post in groups');
+ await page.waitForTimeout(9500);   // past one automatic refresh
+ expect(await page.evaluate(()=>document.activeElement?.id)).toBe('teamText');expect(await box.inputValue()).toBe('Post in groups');
+});

@@ -201,6 +201,13 @@ def next_dm():
  with LOCK:
   text=build_dm(dm_selection(True),read_left());save_draft('dm',text);return text
 
+def regenerate_drafts(left):
+ """Fresh group and DM captions for a new case's amount."""
+ with LOCK:
+  draft=json.loads(DRAFT.read_text(encoding='utf-8')) if DRAFT.exists() else {}
+  draft['group']=build_group(variant(False),left);draft['dm']=build_dm(dm_selection(False),left)
+  DRAFT.write_text(json.dumps(draft,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
+
 def set_left(left):
  with LOCK:
   revision=getattr(OWNER_GUARD,'revision',None)
@@ -1745,6 +1752,9 @@ class Handler(BaseHTTPRequestHandler):
     return self.reply(donors().book.list(q.get('tab',['all'])[0],q.get('q',[''])[0]))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/donor-delivery':return self.reply(donors().jobs.status())
+  if self.path=='/cases':
+   try:return self.reply(donors().cases.view())
+   except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path.split('?')[0]=='/volunteers':
    try:return self.reply(donors().volunteers.view(urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get('q',[''])[0]))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
@@ -1792,7 +1802,7 @@ class Handler(BaseHTTPRequestHandler):
   global ACTIVE,OWNER_REVISION
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   if self.path!='/api/group-finder':ENGINE.touch_owner()
-  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
+  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/cases','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
    with LOCK:OWNER_REVISION+=1
    OWNER_GUARD.revision=OWNER_REVISION
   origin=self.headers.get('Origin');same_origin=origin and urllib.parse.urlparse(origin).netloc==self.headers.get('Host')
@@ -1810,6 +1820,14 @@ class Handler(BaseHTTPRequestHandler):
    except Conflict as e:return self.reply({'error':str(e)},status=409)
    except ResearchError as e:return self.reply({'error':str(e),'code':e.code},status=502)
    except (ValueError,TypeError,KeyError) as e:return self.reply({'error':str(e)},status=400)
+  if self.path=='/cases':
+   try:
+    c=donors().cases;act=body.get('action')
+    if act=='new':return self.reply(c.new(body.get('name'),body.get('left')))
+    if act=='switch':return self.reply(c.switch(body.get('id')))
+    if act=='rename':return self.reply(c.rename(body.get('id'),body.get('name')))
+    raise ValueError('Unknown case action.')
+   except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/volunteers':
    try:return self.reply(donors().volunteers.mutate(body))
    except ValueError as e:return self.reply({'error':str(e)},status=400)

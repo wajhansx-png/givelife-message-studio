@@ -519,3 +519,19 @@ document.getElementById('railPreview')?.addEventListener('click',()=>document.ge
 document.getElementById('railDonors')?.addEventListener('click',()=>document.getElementById('openDonors')?.click());
 /* Desktop: Settings sits in the centred footer beside Keyboard shortcuts instead of the far corner. */
 (()=>{const gear=document.getElementById('gear'),foot=document.querySelector('.foot'),bar=document.querySelector('.brandbar'),wide=matchMedia('(min-width:900px)');if(!gear||!foot||!bar)return;const place=()=>{(wide.matches?foot:bar).append(gear)};place();wide.addEventListener('change',place)})();
+
+/* ---- Cases: save a finished case, open an old one, start a new one from zero ---- */
+async function loadCases(){try{const r=await fetch('/cases');if(!r.ok)return;const d=await r.json(),sel=$('caseSelect');if(!sel)return;sel.textContent='';
+ for(const c of d.cases){const o=document.createElement('option');o.value=c.id;const done=c.left===0;o.textContent=c.name+(c.left==null?'':done?' · done ✓':' · Rs. '+Number(c.left).toLocaleString('en-PK')+' left');o.selected=c.current;sel.append(o)}
+ for(const [v,t] of [['__rename','✎ Rename this case…'],['__new','＋ New case from zero…']]){const o=document.createElement('option');o.value=v;o.textContent=t;sel.append(o)}
+ const cur=d.cases.find(c=>c.current);sel.dataset.done=String(!!cur&&cur.left===0);sel.title=cur&&cur.left===0?'This case is complete. Start a new case here; this one stays saved.':'Cases'}catch(e){}}
+async function caseAct(body){const r=await post('/cases',body),d=await r.json();if(!r.ok)throw Error(d.error||'Could not change the case.');return d}
+$('caseSelect')?.addEventListener('change',async e=>{const sel=e.target,v=sel.value;
+ try{
+  if(v==='__new'){const name=prompt('Name the new case (for example the child\'s name):');if(!name){await loadCases();return}
+   const left=prompt('How much is needed for "'+name.trim()+'" (Rs.)?');if(!left){await loadCases();return}
+   const n=Number(String(left).replace(/[^\d.]/g,''));await caseAct({action:'new',name,left:n});location.reload();return}
+  if(v==='__rename'){const cur=(await (await fetch('/cases')).json()).current,name=prompt('New name for this case:');if(name)await caseAct({action:'rename',id:cur,name});await loadCases();return}
+  if(confirm('Open this case? The current one is saved first.')){await caseAct({action:'switch',id:v});location.reload()}else await loadCases()
+ }catch(err){alert(err.message);await loadCases()}});
+loadCases();

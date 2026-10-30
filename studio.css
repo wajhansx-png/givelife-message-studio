@@ -7910,3 +7910,55 @@ html body .donor-page .donor-tabs:has([data-tab=volunteers]) {
     padding-inline: 4px;
   }
 }
+
+
+/* ===== 17. Case picker (top bar): a compact dropdown; it glows when the case is complete ===== */
+.case-pick {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+#caseSelect {
+  min-height: 40px;
+  max-width: 220px;
+  padding: 0 28px 0 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+#caseSelect[data-done=true] {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ok-ink, #4ade80) 70%, transparent) !important;
+  animation: case-glow 2.4s ease-in-out infinite;
+}
+@keyframes case-glow {
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--ok-ink, #4ade80) 25%, transparent);
+  }
+}
+@media(max-width:700px) {
+  html body .brandbar .leftchip {
+    display: none !important;
+  }
+  html body .brandbar .case-pick {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+  #caseSelect {
+    width: 100%;
+    max-width: none;
+    min-height: 44px;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  #caseSelect[data-done=true] {
+    animation: none;
+  }
+}

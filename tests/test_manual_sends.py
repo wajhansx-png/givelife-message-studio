@@ -68,12 +68,13 @@ class SendTests(unittest.TestCase):
   self.assertTrue(app.JOBS[ident]['done'],app.JOBS[ident]);return app.JOBS[ident]
  def test_send_exact_thanks_to_registered_teammate_by_name(self):
   teammate={'member':{'name':'Akhtar','phone':'923001234567'}}
-  with patch.object(app.donors().team,'_load',return_value=teammate):
+  with patch.object(app.donors().team,'_load',return_value=teammate),patch.object(app,'send_with_image',return_value={'code':'SUCCESS','results':{'message_id':'fake'}}) as wire:
    self.assertEqual(app.resolve_person('Akhtar'),'923001234567@s.whatsapp.net')
    self.assertEqual(app.manual_command('Send thanks akhtar to Akhtar fast')['reply'],'WhatsApp confirmed the message.')
-  self.assertEqual(len(self.sent),1)
-  self.assertEqual(self.sent[0]['phone'],'923001234567@s.whatsapp.net')
-  self.assertEqual(self.sent[0]['text'],'thanks akhtar')
+  self.assertEqual(wire.call_count,1)
+  self.assertEqual(wire.call_args.args[0],'923001234567@s.whatsapp.net')
+  self.assertEqual(wire.call_args.args[1],'thanks akhtar')
+  self.assertIsNone(wire.call_args.args[2])
  def test_emergency_hold_typo_works_without_ai(self):
   result=app.manual_command('Hold evverything')
   self.assertTrue(app.on_hold())

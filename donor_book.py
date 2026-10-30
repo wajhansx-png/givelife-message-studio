@@ -66,14 +66,15 @@ class DonorBook:
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
         return (not r['important'],sent,float(r.get('last_sent_at') or 0) if sent else 0.0,name_key(r['name']),r['id'])
     def list(self,tab='all',query=''):
-        if tab not in ('all','important','donated','not_donated'): raise ValueError('Choose a donor tab.')
+        if tab not in ('all','important','donated','not_donated','not_contacted'): raise ValueError('Choose a donor tab.')
         with self.lock:
             records=[r for r in self._load()['records'] if not r.get('deleted')]
             counts={'all':len(records),'important':sum(bool(r['important']) for r in records),'donated':sum(bool(r['donated']) for r in records)}
             counts['not_donated']=counts['all']-counts['donated']
+            counts['not_contacted']=sum(not r['donated'] and not self.contacted(r) for r in records)
             counts['donated_amount']=float(sum((Decimal(str(r.get('amount',0) or 0)) for r in records if r.get('donated')),Decimal(0)))
             q=str(query).strip().casefold(); digits=re.sub(r'\D','',q)
-            rows=[r for r in records if (tab=='all' or tab=='important' and r['important'] or tab=='donated' and r['donated'] or tab=='not_donated' and not r['donated']) and (not q or q in r['name'].casefold() or q in r.get('notes','').casefold() or len(digits)>=4 and digits in r['phone'])]
+            rows=[r for r in records if (tab=='all' or tab=='important' and r['important'] or tab=='donated' and r['donated'] or tab=='not_donated' and not r['donated'] or tab=='not_contacted' and not r['donated'] and not self.contacted(r)) and (not q or q in r['name'].casefold() or q in r.get('notes','').casefold() or len(digits)>=4 and digits in r['phone'])]
             rows.sort(key=self.queue_key)
             return {'items':[self._public(r) for r in rows],'counts':counts}
     def add(self,name='',phone='',text='',source='Added in studio'):

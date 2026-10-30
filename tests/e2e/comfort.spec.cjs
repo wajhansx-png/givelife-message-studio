@@ -129,7 +129,7 @@ for(const [width,height] of [[390,700],[360,640],[320,568]])test(`mobile Message
 });
 test('phone donor rows fit real-length names and confirmed DM labels',async({page,request})=>{
  const base=await (await request.get('/donors',{headers:auth})).json();const items=Array.from({length:189},(_,i)=>({...base.items[i%base.items.length],id:'synthetic-'+i,name:'Synthetic Community Donor '+(i+1),important:i<12,delivery:'Sent',donated:false,amount:0}));
- await page.route(/\/donors(\?.*)?$/,r=>r.fulfill({json:{...base,items,counts:{all:189,important:12,donated:0,not_donated:189,donated_amount:0}}}));
+ await page.route(/\/donors(\?.*)?$/,r=>r.fulfill({json:{...base,items,counts:{all:189,important:12,donated:0,not_donated:189,not_contacted:189,donated_amount:0}}}));
  await page.route('**/donor-delivery',r=>r.fulfill({json:{state:'Completed',sent:12,total:12,receipts:[]}}));
  await open(page,request,390,700);await page.locator('#openDonors').click();await expect(page.locator('#donorTotal')).toHaveText('189');
  expect((await page.locator('.donor-head').boundingBox()).height).toBeLessThanOrEqual(64);

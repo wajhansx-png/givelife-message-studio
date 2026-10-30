@@ -43,11 +43,11 @@ for(const [width,height] of [[1280,720],[1024,600],[390,700],[320,568]])test(`sc
  test.setTimeout(90000);
  // Keep this navigation check independent of shared fake-server record mutations.
  const items=Array.from({length:3},(_,i)=>({id:String(i+1).repeat(32),name:'Synthetic donor '+(i+1),important:i===0,donated:false,amount:0,delivery:'Not contacted'}));
- await page.route('**/donors?tab=all',r=>r.fulfill({json:{items,counts:{all:3,important:1,donated:0,not_donated:3,donated_amount:0}}}));
+ await page.route('**/donors?tab=all',r=>r.fulfill({json:{items,counts:{all:3,important:1,donated:0,not_donated:3,not_contacted:3,donated_amount:0}}}));
  await page.route('**/donor-delivery',r=>r.fulfill({json:{state:'Idle',sent:0,total:0,receipts:[]}}));
  await page.route('**/donor-messages',r=>r.fulfill({json:{items:[{id:'a'.repeat(32),text:'Brother, this is the complete synthetic caption.\n\nPlease review the current appeal.\n\nNo real message is sent during this test.'}]}}));
  await open(page,request,width,height);
- for(const tab of ['all','important','donated','not_donated','messages']){
+ for(const tab of ['all','important','donated','not_contacted','messages']){
   await page.locator('#openDonors').click();await page.locator(`[data-tab=${tab}]`).click();await page.reload();await expect(page.locator(`[data-tab=${tab}]`)).toHaveAttribute('aria-selected','true');
   if(tab==='messages')await page.locator(width<900?'.bank-back-bottom':'[data-tab=all]').click();await page.locator('#donorMainBottom').click();await page.locator(width<900?'#chatOpen':'#chatExpand').click();await expect(page.locator('#hist')).toBeVisible();await page.locator('#histClose').isVisible().then(visible=>page.locator(visible?'#histClose':'#histMain').click());
  }

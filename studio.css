@@ -6862,3 +6862,9 @@ button.livebar,
     height: 24px;
   }
 }
+
+/* ===== 9e. Speed: rows outside the screen are not laid out or painted until scrolled near ===== */
+.donor-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 54px;
+}

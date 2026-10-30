@@ -782,7 +782,7 @@ def base_chat_callbacks():
  def came(amount):
   if int(amount)<0 or int(amount)>read_left():raise ValueError('That donation does not fit the remaining amount. Check the balance before recording it.')
   nl=max(0,read_left()-int(amount));set_left(nl);return f'Rs. {int(amount):,} came. Rs. {nl:,} left.'
- return {'donor_action':lambda **args:None,'team_action':lambda **args:None,'volunteer_action':lambda **args:None,'case_action':lambda **args:None,'send_text_list':lambda **args:None,'set_left':lambda left:(set_left(int(left)),f'Rs. {int(left):,} left. Messages updated.')[1],
+ return {'shortcut_action':lambda **args:None,'app_status':app_status,'donor_action':lambda **args:None,'team_action':lambda **args:None,'volunteer_action':lambda **args:None,'case_action':lambda **args:None,'send_text_list':lambda **args:None,'set_left':lambda left:(set_left(int(left)),f'Rs. {int(left):,} left. Messages updated.')[1],
   'money_came':came,
   'new_wording':lambda kind:(next_message() if kind=='group' else next_dm(),'New '+kind+' wording ready.')[1],
   'set_message':lambda kind,text:(save_draft(kind,text),kind.upper()+' message saved.')[1],
@@ -1362,10 +1362,26 @@ def _owner_quotes(prompt):
 def _owner_wrote(prompt,text):
  t=re.sub(r'\s+',' ',str(text)).strip().casefold()
  return bool(t) and (t in _owner_words(prompt) or any(t==q or t in q for q in _owner_quotes(prompt)))
+def app_status():
+ """One read of everything current, so a multi-step job starts from facts, not guesses."""
+ out={k:v for k,v in studio_state().items() if k in ('left','case_name','case_closed','whatsapp','autopilot','minutes_since_post','donor_context','schedules')}
+ try:out['team']=donors().team.summary()
+ except Exception as e:out['team']='unavailable: '+safe_text(e,80)
+ out['shortcuts']=[x['name'] for x in KNOWLEDGE.shortcut_list()]
+ out['past_problems']=[x['text'] for x in KNOWLEDGE.lessons_for('',4)] or [x['error'] for x in KNOWLEDGE.data.get('lessons',[])[-3:]]
+ return out
+
 def agent_action(name,prompt,args,owner):
  """Chat actions for team tasks, volunteers, cases and owner-written text to a list. Every change is checked against the owner's own words."""
  own=_owner_words(prompt);act=str(args.get('action',''))
  says=lambda pattern:bool(re.search(pattern,own))
+ if name=='shortcut_action':
+  if act=='list':return '; '.join(f"{x['name']} → {x['steps']}" for x in KNOWLEDGE.shortcut_list()) or 'No shortcuts yet.'
+  if act=='save':
+   if not says(r'\b(save|make|create|add|when i say)\b'):raise ValueError('Saving a shortcut needs your clear request. Nothing was saved.')
+   return 'Shortcut saved: '+KNOWLEDGE.shortcut_save(args.get('name'),args.get('steps'))+'. Send just that name to run it.'
+  if act=='delete':return 'Shortcut removed.' if KNOWLEDGE.shortcut_delete(args.get('name')) else 'No such shortcut.'
+  raise ValueError('Unknown shortcut action.')
  if name=='team_action':
   t=donors().team
   if act=='status':return t.summary()
@@ -1485,7 +1501,7 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
    private_send=name in ('send_dm_appeal','dm_list','dm_donors','dm_group') or name=='donor_action' and args.get('action')=='send' or name=='send_message' and not (manual_commands.group(str(args.get('to',''))) or str(args.get('to','')).endswith('@g.us'))
    if private_send and dm_revision!=donors().revision:raise ValueError('Personal DMs were stopped by your newer instruction. No old DM request was sent.')
    if name=='donor_action':return donors().model_tool(prompt,task_id,**args)
-   if name in ('team_action','volunteer_action','case_action','send_text_list'):
+   if name in ('team_action','volunteer_action','case_action','send_text_list','shortcut_action'):
     if not chat_policy.permitted(name,prompt):raise ValueError('The current instruction does not ask for this. Nothing was changed or sent.')
     return agent_action(name,prompt,args,owner)
    if name=='dm_donors':
@@ -1606,7 +1622,7 @@ def manual_recipient():
 
 def assistant_task(body):
  global OWNER_REVISION
- text=str(body.get('text',''))[:10000]
+ text=KNOWLEDGE.expand(str(body.get('text',''))[:10000])
  ident=str(body.get('request_id') or uuid.uuid4().hex)
  if not re.fullmatch(r'[A-Za-z0-9_-]{8,100}',ident):raise ValueError('Invalid request id.')
  with LOCK:
@@ -1626,12 +1642,19 @@ def assistant_task(body):
    if hist and hist[-1]['who']=='you' and hist[-1]['text'].strip()==text.strip():hist=hist[:-1]
    preferences=mem_get()
    selection=draft_flow.selected_option(text,hist)
-   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident,selection,draft_flow.option_kind(hist,mapping(body.get('screen')).get('view'))))
+   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text)+KNOWLEDGE.lessons_for(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident,selection,draft_flow.option_kind(hist,mapping(body.get('screen')).get('view'))))
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
    output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
    output['superseded']=revision!=OWNER_REVISION
    if any(isinstance(t,dict) and t.get('tool')=='generate_dm_variants' and t.get('status')=='completed' for t in mapping(output.get('diagnostics')).get('tools',[])):output['donors_changed']=True
    output['turn_id']=uuid.uuid4().hex
+   diag=mapping(output.get('diagnostics'))
+   for t in diag.get('tools',[]):
+    if isinstance(t,dict) and t.get('status') in ('rejected','failed','error'):KNOWLEDGE.learn_failure(t.get('tool'),t.get('error') or 'was '+str(t.get('status')),text)
+   for e in diag.get('errors',[]):KNOWLEDGE.learn_failure('chat',e,text)
+   if output.get('done') or output.get('jobs'):
+    tip=KNOWLEDGE.count_habit(text)
+    if tip:output['reply']=(output.get('reply','')+'\n\n'+tip).strip()
    KNOWLEDGE.archive('app',output.get('reply',''),output['turn_id'])
    KNOWLEDGE.trace({'request_id':ident,**output.get('diagnostics',{})})
    ASSIST_TASKS[ident].update(done=True,result=output)

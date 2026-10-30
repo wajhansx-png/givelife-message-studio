@@ -25,13 +25,15 @@ class Knowledge:
    try:saved=self.file.read_text(encoding='utf-8')
    except OSError:pass
   saved=mapping(saved)
-  self.data={k:[x for x in records(saved.get(k)) if isinstance(x,dict)] for k in ('entries','turns','feedback','traces')}
+  self.data={k:[x for x in records(saved.get(k)) if isinstance(x,dict)] for k in ('entries','turns','feedback','traces','lessons','shortcuts')}
+  self.data['habits']=mapping(saved.get('habits'))
   self.data['pending']=mapping(saved.get('pending'))
   self.sync_error=None
  def save(self):
   with self.lock:
    self.data['entries']=self.data['entries'][-1000:];self.data['turns']=self.data['turns'][-2000:]
-   self.data['feedback']=self.data['feedback'][-500:];self.data['traces']=self.data['traces'][-200:]
+   self.data['feedback']=self.data['feedback'][-500:];self.data['traces']=self.data['traces'][-200:];self.data['lessons']=self.data.get('lessons',[])[-100:];self.data['shortcuts']=self.data.get('shortcuts',[])[-50:]
+   if len(self.data.get('habits',{}))>300:self.data['habits']=dict(list(self.data['habits'].items())[-200:])
    raw=json.dumps(self.data,ensure_ascii=False);temp=self.file.with_suffix('.tmp')
    temp.write_text(raw,encoding='utf-8');os.replace(temp,self.file)
    if self.store:
@@ -121,3 +123,58 @@ class Knowledge:
    return {'entries':[e for e in self.data['entries'] if e.get('active')], 'feedback_count':sum(x.get('status')=='confirmed_by_owner' for x in self.data['feedback']),'reported_count':sum(x.get('status')=='reported_needs_review' for x in self.data['feedback']),'sync_warning':self.sync_error,
      'patterns':dict(collections.Counter(x.get('category','response') for x in self.data['feedback'])),
      'archived_turns':len(self.data['turns']),'pending':self.data['pending'],'retention':{'turns':2000,'memories':1000,'feedback':500}}
+
+ # ---- learning from failures, habits and owner shortcuts (no model training; plain stored facts)
+ @staticmethod
+ def _norm(text):
+  return ' '.join(sorted(tokens(re.sub(r'\d+','#',str(text)))))[:160]
+ def learn_failure(self,tool,error,request=''):
+  """Remember that a tool refused or failed, so the next similar request starts with the lesson."""
+  error=safe_text(error,300).strip()
+  if not error or re.search(r'(?i)superseded|newer instruction|does not ask|not authori[sz]e|reasoning time|not connected',error):return None   # owner decisions and outages are not lessons
+  key=hashlib.sha256((str(tool)+'|'+self._norm(error)).encode()).hexdigest()[:16]
+  with self.lock:
+   for x in self.data.setdefault('lessons',[]):
+    if x.get('key')==key:x['count']=x.get('count',1)+1;x['last']=time.time();self.save();return x
+   item={'key':key,'tool':str(tool)[:60],'error':error,'request':safe_text(request,200),'count':1,'last':time.time()}
+   self.data.setdefault('lessons',[]).append(item);self.save();return item
+ def lessons_for(self,query,limit=4):
+  q=tokens(query)
+  with self.lock:rows=[dict(x) for x in self.data.setdefault('lessons',[])]
+  rows=[x for x in rows if q&tokens(x['tool']+' '+x['request']+' '+x['error'])]
+  rows.sort(key=lambda x:(x.get('count',1),x.get('last',0)),reverse=True)
+  return [{'id':x['key'],'text':'Past problem with '+x['tool']+' (seen '+str(x.get('count',1))+'x): '+x['error']+' Do not repeat the same call; fix the cause first.','source':'past_failure'} for x in rows[:limit]]
+ def count_habit(self,text):
+  """Returns a suggestion the third time the owner asks the same thing, once."""
+  key=self._norm(text)
+  if len(key)<8:return ''
+  with self.lock:
+   h=self.data.setdefault('habits',{});row=h.get(key) or {'n':0,'offered':False,'sample':safe_text(text,120)}
+   row['n']+=1;h.pop(key,None);h[key]=row
+   if row['n']>=3 and not row['offered']:
+    row['offered']=True;self.save()
+    return 'You have asked this '+str(row['n'])+' times. Say: save shortcut <short name>: '+row['sample']+' and then one word will do it.'
+   self.save();return ''
+ def shortcut_list(self):
+  with self.lock:return [dict(x) for x in self.data.setdefault('shortcuts',[])]
+ def shortcut_save(self,name,steps):
+  name=re.sub(r'\s+',' ',str(name)).strip().casefold()[:40];steps=safe_text(steps,1500).strip()
+  if not name or not steps:raise ValueError('A shortcut needs a short name and what it should do.')
+  if len(name.split())>4:raise ValueError('Use a name of up to 4 words.')
+  with self.lock:
+   self.data['shortcuts']=[x for x in self.data.setdefault('shortcuts',[]) if x['name']!=name]
+   self.data.setdefault('shortcuts',[]).append({'name':name,'steps':steps,'time':time.time()});self.save()
+  return name
+ def shortcut_delete(self,name):
+  name=re.sub(r'\s+',' ',str(name)).strip().casefold()
+  with self.lock:
+   before=len(self.data.setdefault('shortcuts',[]));self.data['shortcuts']=[x for x in self.data.setdefault('shortcuts',[]) if x['name']!=name]
+   if len(self.data.setdefault('shortcuts',[]))!=before:self.save();return True
+  return False
+ def expand(self,text):
+  """If the owner's whole message is exactly a shortcut name, it becomes the full instruction he saved. Anything else is untouched."""
+  key=re.sub(r'[\s.!]+$','',re.sub(r'\s+',' ',str(text)).strip().casefold())
+  with self.lock:
+   for x in self.data.setdefault('shortcuts',[]):
+    if x['name']==key:return x['steps']
+  return text

@@ -21,8 +21,12 @@ jobs:
       - name: Python dependencies
         run: python -m pip install -r requirements.txt
       - name: Python logic and failure-simulation tests
+        id: python
+        continue-on-error: true
         run: python -m unittest discover -s tests -v
       - name: Frontend JavaScript syntax
+        id: syntax
+        continue-on-error: true
         run: |
           node --check app.js
           node --check team.js
@@ -33,13 +37,17 @@ jobs:
           corepack enable
           corepack pnpm install --frozen-lockfile
       - name: JS unit tests
+        id: jsunit
+        continue-on-error: true
         run: corepack pnpm test
       - name: Browser dependencies
         run: corepack pnpm exec playwright install --with-deps chromium
       - name: Mobile and desktop E2E tests (fake WhatsApp only)
+        id: browser
+        continue-on-error: true
         run: corepack pnpm test:e2e
       - name: Upload failure traces
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: givelife-isolated-qa-traces
@@ -47,3 +55,13 @@ jobs:
             test-results/
             playwright-report/
           retention-days: 5
+      - name: Enforce full QA pass
+        if: always()
+        env:
+          PY_STATUS: ${{ steps.python.outcome }}
+          SYNTAX_STATUS: ${{ steps.syntax.outcome }}
+          JS_STATUS: ${{ steps.jsunit.outcome }}
+          BROWSER_STATUS: ${{ steps.browser.outcome }}
+        run: |
+          echo "Python: $PY_STATUS; JS syntax: $SYNTAX_STATUS; JS unit: $JS_STATUS; Browser: $BROWSER_STATUS"
+          test "$PY_STATUS" = success && test "$SYNTAX_STATUS" = success && test "$JS_STATUS" = success && test "$BROWSER_STATUS" = success

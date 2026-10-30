@@ -4,7 +4,7 @@ import manual_commands
 import timed_tasks
 import draft_flow
 
-READ={'find_contact','recent_activity','list_rules','search_memory','list_schedules','get_message'}
+READ={'find_contact','recent_activity','list_rules','search_memory','list_schedules','get_message','app_status'}
 SEND={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
 
 def switch_request(text,subject):
@@ -80,6 +80,7 @@ def brief(reply,limit=320):
 def permitted(name,text):
  if name in READ:return True
  if name=='donor_action':return bool(re.search(r'(?i)\b(donor|donors|important|donated)\b',owner_text(text)))
+ if name=='shortcut_action':return bool(re.search(r'(?i)\b(shortcuts?|when i say|macro)\b',owner_text(text)))
  if name=='team_action':return bool(re.search(r'(?i)\b(team|teammate|team mate|tasks?|kaam)\b',owner_text(text)))
  if name=='volunteer_action':return bool(re.search(r'(?i)\bvolunteers?\b',owner_text(text)))
  if name=='case_action':return bool(re.search(r'(?i)\bcases?\b',owner_text(text)))

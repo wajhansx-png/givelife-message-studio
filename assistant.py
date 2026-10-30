@@ -49,6 +49,9 @@ CHAT_TOOLS = [
     tool('add_rule', 'Save a standing rule for Auto mode (pace, quiet hours, pauses, caps, scheduled sends, or a note). Pass the owner\'s instruction in plain words, for example "post in fiverr every 30 min" or "no posting 2am to 7am".', {'text': {'type': 'string'}}, ['text']),
     tool('list_rules', 'List the standing rules Auto mode follows.', {}, []),
     tool('delete_rule', 'Remove a rule by its number.', {'rule_id': {'type': 'string'}}, ['rule_id']),
+    tool('app_status', 'One read that returns everything current: money left, WhatsApp, autopilot, posting, donors, schedules, the teammate and his tasks, saved shortcuts and past problems. Use it first for any "what is going on" or before a multi-step job.', {}, []),
+    tool('shortcut_action', 'Owner shortcuts: one short name that runs a saved instruction. list; save (name up to 4 words + steps = the exact instruction in the owner words) ONLY when he says save shortcut / when I say X do Y; delete (name). When the owner later sends just the name, the app replaces it with the saved steps.',
+         {'action': {'type': 'string', 'enum': ['list', 'save', 'delete']}, 'name': {'type': 'string'}, 'steps': {'type': 'string'}}, ['action']),
     tool('remember', 'Save a rule or preference the owner wants followed from now on.', {'rule': {'type': 'string'}}, ['rule']),
     tool('autopilot', 'Turn autopilot on or off.', {'on': {'type': 'boolean'}}, ['on']),
 ]

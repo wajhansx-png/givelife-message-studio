@@ -9,11 +9,13 @@
  function toast(text,bad){let t=document.getElementById('teamToast');if(!t){t=make('div','team-toast');t.id='teamToast';t.setAttribute('role','status');document.body.append(t)}t.textContent=text;t.dataset.bad=String(!!bad);t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.hidden=true},6000)}
  function paintBadge(){const n=data?.unread||0;badge.hidden=!n;badge.textContent=n>9?'9+':String(n);launch.setAttribute('aria-label','Team'+(n?', '+n+' new update'+(n===1?'':'s'):''))}
  async function refresh(quiet){try{const d=await api();const first=data===null;data=d;if(!first&&d.unread>lastUnread){const e=(d.latest||[])[0];toast(e?e.text:'New update from your teammate')}lastUnread=d.unread;paintBadge();if(page.open)draw()}catch(e){console.error('team refresh',e);if(!quiet&&page.open)toast(e.message,true)}}
- async function act(body,ok){try{data={...data,...await api(body)};if(ok)toast(ok);lastUnread=data.unread;paintBadge();draw()}catch(e){toast(e.message,true)}}
+ async function act(body,ok){try{data={...data,...await api(body)};if(ok)toast(ok);lastUnread=data.unread;paintBadge();draw(true)}catch(e){toast(e.message,true)}}
  const chip=(s)=>{const c=make('span','team-chip',s==='Reported'?'Needs your check':s);c.dataset.s=s;return c};
  /* One screen, no scrolling. The summary and the add button always show; rows are trimmed from the least important up until everything fits. */
  const STEPS=['latest','done','left','check','plan'];
- function draw(){
+ const typing=()=>{const a=document.activeElement;return !!a&&page.contains(a)&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
+ function draw(force){
+  if(!force&&typing())return; /* never rebuild the screen while a field has focus: it would close the phone keyboard */
   const typed=page.querySelector('#teamText')?.value;if(typed!==undefined)planText=typed;
   const lim={latest:3,done:1,left:8,check:4,plan:20};
   let guard=40;
@@ -37,7 +39,7 @@
     const m=more(data.plan.items.length-lim.plan);if(m)add.append(m);
     const go=make('button','primary','Start tasks');go.type='button';go.onclick=()=>{planText='';addOpen=false;act({action:'confirm'},'Tasks started.')};const ds=make('button','tool','Discard');ds.type='button';ds.onclick=()=>{addOpen=false;act({action:'discard'})};const ar=make('div','team-actions');ar.append(go,ds);add.append(ar)}
    else{add.append(make('h2','','Write today\'s tasks'));const ta=make('textarea','');ta.id='teamText';ta.name='team_tasks';ta.rows=4;ta.maxLength=3000;ta.value=planText;ta.placeholder='One task per line, then a deadline:\n1) Post in the 3 groups\n2) Update the sheet\nDeadline 6pm';ta.setAttribute('aria-label','Today\'s tasks');
-    const go=make('button','primary','Plan the tasks');go.type='button';go.onclick=()=>act({action:'plan',text:ta.value});const x=make('button','tool','Cancel');x.type='button';x.onclick=()=>{planText='';addOpen=false;draw()};const ar=make('div','team-actions');ar.append(go,x);add.append(ta,ar)}
+    const go=make('button','primary','Plan the tasks');go.type='button';go.onclick=()=>act({action:'plan',text:ta.value});const x=make('button','tool','Cancel');x.type='button';x.onclick=()=>{planText='';addOpen=false;draw(true)};const ar=make('div','team-actions');ar.append(go,x);add.append(ta,ar)}
    body.append(add)}
   else{
    const all=data.tasks,done=all.filter(t=>t.status==='Done'),review=all.filter(t=>t.status==='Reported'),left=all.filter(t=>['Waiting','Asked','Late'].includes(t.status)).sort((a,b)=>(b.status==='Late')-(a.status==='Late')||a.due_at-b.due_at);
@@ -59,10 +61,10 @@
    if(lim.done&&done.length){const c=make('p','team-donelist','Done ✓  '+done.map(t=>t.text).join(' · '));body.append(c)}
    if(lim.latest&&data.latest?.length){const c=make('section','team-card team-latest');
     for(const e of data.latest.slice(0,lim.latest)){const r=make('div','team-ev');r.append(make('time','',e.label),make('span','team-ev-text',e.text));c.append(r)}body.append(c)}
-   const b=make('button','primary team-add','+ Add tasks');b.type='button';b.onclick=()=>{addOpen=true;draw();page.querySelector('#teamText')?.focus()};body.append(b)}
+   const b=make('button','primary team-add','+ Add tasks');b.type='button';b.onclick=()=>{addOpen=true;draw(true);page.querySelector('#teamText')?.focus()};body.append(b)}
   shell.append(body);const foot=make('footer','team-foot');const back=make('button','tool team-back','← Back');back.type='button';back.onclick=()=>page.close();foot.append(back);shell.append(foot);page.append(shell);
  }
- async function open(){await refresh(true);if(!data){toast('Could not load the team screen.',true);return}if(!page.open)page.showModal();draw();if(data.unread)try{data={...data,...await api({action:'read'})};lastUnread=0;paintBadge()}catch(e){}clearInterval(timer);timer=setInterval(()=>refresh(true),8000)}
+ async function open(){await refresh(true);if(!data){toast('Could not load the team screen.',true);return}if(!page.open)page.showModal();draw(true);if(data.unread)try{data={...data,...await api({action:'read'})};lastUnread=0;paintBadge()}catch(e){}clearInterval(timer);timer=setInterval(()=>refresh(true),8000)}
  page.addEventListener('close',()=>{clearInterval(timer);timer=setInterval(()=>refresh(true),45000)});
  page.addEventListener('cancel',e=>{e.preventDefault();page.close()});
  let rz=0;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(page.open)draw()},120)});

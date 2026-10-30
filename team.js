@@ -24,7 +24,7 @@
   const lim={latest:3,done:1,left:8,check:4,plan:20};
   let guard=40;
   while(guard--){build(lim);const body=page.querySelector('.team-body');if(!body||body.scrollHeight<=body.clientHeight+1)break;
-   let reduced=false;for(const k of STEPS){if(k==='done'?lim.done>0:lim[k]>(k==='plan'||k==='check'?1:0)){if(k==='done')lim.done=0;else lim[k]--;reduced=true;break}}if(!reduced)break}
+   let reduced=false;for(const k of STEPS){if(k==='done'?lim.done>0:lim[k]>(k==='plan'?1:0)){if(k==='done')lim.done=0;else lim[k]--;reduced=true;break}}if(!reduced)break}
  }
  function more(n){if(n<=0)return null;const b=make('button','team-more','+'+n+' more · Show all');b.type='button';b.setAttribute('aria-label','Show all '+n+' hidden Team entries');b.onclick=()=>{expanded=true;draw(true)};return b}
  function build(lim){

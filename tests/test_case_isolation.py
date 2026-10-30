@@ -59,6 +59,36 @@ class CaseIsolation(unittest.TestCase):
    self.assertNotIn('0 people',text.lower())
    self.assertNotIn('Rs. 0 still needed',text)
   self.assertFalse(self.app.auto_on())
+ def test_new_case_never_inherits_old_patient_poster_or_medical_documents(self):
+  import base64
+  cases=self.app.donors().cases
+  original=cases.view()['current']
+  picture=b'old-case-image'
+  paper=b'old-case-medical-paper'
+  self.app.STORE.put('poster_b64',base64.b64encode(picture).decode())
+  self.app.STORE.put('papers_b64',[base64.b64encode(paper).decode()])
+  (self.app.DATA/'poster.jpg').write_bytes(picture)
+  papers=self.app.DATA/'papers';papers.mkdir(exist_ok=True)
+  (papers/'paper-0.jpg').write_bytes(paper)
+  cases.new('Another child',28000)
+  self.assertFalse((self.app.DATA/'poster.jpg').exists())
+  self.assertEqual(list(papers.glob('*.jpg')),[])
+  self.assertEqual(self.app.STORE.get('papers_b64'),[])
+  cases.switch(original)
+  self.assertEqual((self.app.DATA/'poster.jpg').read_bytes(),picture)
+  self.assertEqual((papers/'paper-0.jpg').read_bytes(),paper)
+ def test_donor_bank_and_auto_messages_never_contain_old_patient_name(self):
+  self.app.donors().cases.new('Another child',32000)
+  bank=self.app.donors().messages.get()
+  self.assertEqual(len(bank['items']),20)
+  for row in bank['items']:
+   self.assertIn('Another child',row['text'])
+   self.assertNotIn('Yousuf',row['text'])
+  for text in (self.app.caption_variant(0),self.app.dm_text('Ali','repeat'),
+               self.app.dm_text('Ali','reminder'),self.app.update_text(2000,30000),
+               self.app.milestone_text(2000,30000),self.app.thank_text(),
+               self.app.share_text(),self.app.done_text()):
+   self.assertNotIn('Yousuf',text)
  def test_switch_back_restores_original_drafts_and_case_identity(self):
   cases=self.app.donors().cases
   previous=cases.view()['current']

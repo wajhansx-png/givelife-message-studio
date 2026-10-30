@@ -256,7 +256,6 @@ function paintGroupTimes(data){if(data&&typeof data==='object'&&!Array.isArray(d
 setInterval(paintGroupTimes,30000);
 
 /* ---- send a plain message to a contact, group or number: works without the AI ---- */
-const GKEY=w=>({main:'main',givelife:'main',community:'community','upwork community':'community',fiverr:'fiverr','fiverr course':'fiverr',upwork:'upwork','upwork course':'upwork',uet:'uet','fiverr uet':'uet',toprated:'toprated','top rated':'toprated',test:'test','test group':'test'})[String(w).toLowerCase().trim()];
 
 /* ---- pictures in the chat ---- */
 let attached=null;
@@ -270,13 +269,6 @@ $('file').onchange=async()=>{const f=$('file').files[0];$('file').value='';if(!f
   attached={id:d.id,data,url:data};$('attImg').src=data;$('att').hidden=false;say('app','Picture attached. Paste numbers to send it, or say "make it the poster".')}catch(e){say('app','Could not attach: '+e.message,1)}};
 
 /* ---- lists of people: "send these with 2 min gap", numbers with names, one per line or separated ---- */
-const FEMALE=new Set('ayesha aisha fatima zainab maryam mariam laiba sana hira iqra amna sawaira yusra areeba mahnoor noor kiran sadia saba rabia hina nida mehwish sidra anam anum bushra khadija asma uzma sara sarah zoya alina hajra dania rimsha mehak esha ifra aleena maham momina tehreem eman iman aiman kinza fiza javeria sobia shazia nadia farah rida ramsha warda wajeeha hafsa sumaira tayyaba uswa zara zahra nimra minahil bisma'.split(' '));
-const NOTNAME=/\b(web|developer|development|graphics?|entrepreneur|official|store|shop|studio|agency|design(er)?|marketing|services?|tech|digital|freelancer|admin|group|team|pakistan|seo|business|mw|brother|sister|send|bhejo|gap|min|mint|minute|minutes|sec|seconds|hours?|after|start|with|and|the|these|people|numbers?|message|msg|dm|each|change|wording|same|picture|image|poster)\b/i;
-function nameFrom(s){
- const words=s.replace(/^\W+/u,'').split(/\s+/).filter(Boolean).filter(x=>!NOTNAME.test(x));
- if(words.some(x=>/\d|…|\.\.\.|[\p{Extended_Pictographic}]/u.test(x))||/\b(develop|graphic|entrepreneur|design|market|official)/i.test(s))return '';
- s=words.join(' ').replace(/[^\p{L}\s.'-]/gu,' ').replace(/\s+/g,' ').trim();if(!s)return '';const w=s.split(' ');
- if(!w.length||w.length>3)return '';const n=w.slice(0,2).join(' ');return /^[A-Za-z][A-Za-z.'-]{1,19}(?: [A-Za-z][A-Za-z.'-]{1,19})?$/.test(n)?n.replace(/\b\w/g,c=>c.toUpperCase()):''}
 let listT=null;
 function showCamp(t){$('campText').textContent=t;$('camp').hidden=false}
 let campTimer=null,campPolling=false,campWasRunning=false,campStopping=false,lastCampLog=localStorage.getItem('givelife-camp-last')||'';
@@ -287,7 +279,6 @@ $('campStop').onclick=async()=>{if(listT){clearTimeout(listT);listT=null;$('camp
  const b=$('campStop');b.disabled=true;try{const r=await post('/campaign',{stop:true}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not stop DMs');campStopping=true;say('app',d.reply);setLiveNotice(d.reply);pollCamp()}catch(e){say('app',e.message,1)}finally{b.disabled=false}};
 
 /* ---- the assistant: quick commands work instantly; anything else goes to the AI ---- */
-const num=(s,k)=>Math.round(parseFloat(s.replace(/,/g,''))*(k?1000:1));
 async function quick(t){const low=t.toLowerCase().trim();
  if(/^(hi+|hello|hey|salam)\W*$/i.test(t))return 'Hi!';
  if(/^(ok|okay|thanks|thank you|theek|done thanks)\W*$/i.test(t))return /thank/i.test(t)?'You’re welcome.':'Okay.';

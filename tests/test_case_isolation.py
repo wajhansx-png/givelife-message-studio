@@ -49,6 +49,16 @@ class CaseIsolation(unittest.TestCase):
    self.assertNotIn('people donating',text.lower())
    self.assertNotIn('12,000 left',text.lower())
   self.assertTrue(self.app.studio_state()['case_closed'])
+ def test_closing_custom_appeal_replaces_zero_people_with_completion(self):
+  self.app.donors().cases.new('Another family',24000)
+  self.app.save_draft('group','Urgent family case\n\n*Rs. 24,000 LEFT*\n\n12 people donating Rs. 2,000\n\nGiveLife Foundation')
+  self.app.save_draft('dm','Brother,\n\nNeed urgent help.\n\nRs. 24,000 left\n\n12 people donating Rs. 2,000\n\n03097458815')
+  self.app.set_left(0)
+  for text in self.drafts():
+   self.assertIn('complete',text.lower())
+   self.assertNotIn('0 people',text.lower())
+   self.assertNotIn('Rs. 0 still needed',text)
+  self.assertFalse(self.app.auto_on())
  def test_switch_back_restores_original_drafts_and_case_identity(self):
   cases=self.app.donors().cases
   previous=cases.view()['current']

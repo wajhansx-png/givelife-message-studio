@@ -153,6 +153,17 @@ class Sending(Base):
   def slow(body):
    th=threading.Thread(target=lambda:result.append(self.t.view()));th.start();th.join(2);result.append(th.is_alive());self.sent.append(body['message']);return {'code':'SUCCESS'}
   self.app.send_custom=slow;self.tick(1);self.assertEqual(result[-1],False,'view() ran while the message was being sent');self.assertEqual(len(self.sent),1)
+ def test_team_alerts_beyond_first_five_are_preserved(self):
+  d=self.t._load()
+  d['pending_notes']=[{'text':'alert %d'%i,'at':BASE} for i in range(8)]
+  d['last_note']=0
+  first=self.t._take_note(BASE)
+  self.assertIn('alert 0',first)
+  self.assertEqual(len(d['pending_notes']),3)
+  self.assertIsNone(self.t._take_note(BASE+60))
+  second=self.t._take_note(BASE+121)
+  self.assertIn('alert 7',second)
+  self.assertEqual(d['pending_notes'],[])
  def test_two_clock_ticks_at_once_do_not_double_send(self):
   self.start('a deadline 6pm');self.at(1);a=threading.Thread(target=self.t.tick);b=threading.Thread(target=self.t.tick);a.start();b.start();a.join();b.join();self.assertEqual(len(self.sent),1)
 

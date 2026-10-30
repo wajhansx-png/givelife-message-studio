@@ -18,20 +18,19 @@ def context_messages(text,history,state,memory):
  context={'state':assistant._slim(state),'preferences':memories(memory)[-20:],
   'retrieved':[dict(x) for x in records(state.get('retrieved')) if isinstance(x,dict)][:8],'ongoing_task':mapping(state.get('pending_task')),
   'playbook_notes':safe_text(assistant.playbook(),2500)}
- referential=bool(len(text.strip())<=180 and re.search(
+ # Short follow-ups must keep the original owner's request even when long
+ # assistant responses fill the normal recent-history budget.
+ referential=bool(len(str(text).strip())<=180 and re.search(
   r'(?i)\b(?:same|again|continue|previous|earlier|above|last|those|them|that|this|it|first|second|third)\b|^\s*(?:[1-9]|yes|no|done|ok)\s*[.!]?\s*$',
-  text))
+  str(text)))
  if referential:
   earlier=valid_history(history)
-  owner=[h for h in earlier if h['who']=='you' and
-         len(h['text'].strip())>=15 and
-         not chat_policy.smalltalk(h['text']) and
-         h['text'].strip()!=text.strip()]
-  assistant_replies=[h for h in earlier if h['who']=='app' and len(h['text'].strip())>=15]
-  context['reference_turns']=[{'who':'you','text':safe_text(h['text'],1800)}
-                              for h in owner[-3:]]
-  if assistant_replies:
-   context['reference_turns'].append({'who':'app','text':safe_text(assistant_replies[-1]['text'],1200)})
+  owners=[h for h in earlier if h['who']=='you' and len(h['text'].strip())>=15
+          and not chat_policy.smalltalk(h['text']) and h['text'].strip()!=str(text).strip()]
+  replies=[h for h in earlier if h['who']=='app' and len(h['text'].strip())>=15]
+  context['reference_turns']=[{'who':'you','text':safe_text(h['text'],1800)} for h in owners[-3:]]
+  if replies:
+   context['reference_turns'].append({'who':'app','text':safe_text(replies[-1]['text'],1200)})
  selection=draft_flow.selected_option(text,valid_history(history))
  variants=chat_policy.variant_request(chat_policy.owner_text(text))
  if variants:
@@ -189,5 +188,4 @@ def run_chat(text,history,state,memory,do):
  if not actions and not done and not jobs and chat_policy.off_topic(text) and not chat_policy.about_the_work(reply):reply=chat_policy.brief(reply)
  return {'reply':safe_text(reply,10000),'actions':actions,'done':done,'jobs':jobs,
   'diagnostics':{'model':assistant.MODEL,'iterations':iteration+1,'duration_ms':round((time.monotonic()-started)*1000),'tools':outcomes,'errors':errors[-3:]}}
-
 

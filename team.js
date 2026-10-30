@@ -21,7 +21,7 @@
   const lim={done:1,plan:20,left:8,check:4,latest2:1,say:1,latest:1};
   let guard=60;
   while(guard--){build(lim);const body=page.querySelector('.team-body');if(!body||body.scrollHeight<=body.clientHeight+1)break;
-   let reduced=false;for(const k of STEPS){const min=k==='plan'||k==='check'?1:0;if(k==='done'?lim.done>0:lim[k]>min){if(k==='done')lim.done=0;else lim[k]--;reduced=true;break}}if(!reduced)break}
+   let reduced=false;for(const k of STEPS){if(k==='done'?lim.done>0:lim[k]>(k==='plan'?1:0)){if(k==='done')lim.done=0;else lim[k]--;reduced=true;break}}if(!reduced)break}
  }
  function more(n){return n>0?make('p','team-more','+'+n+' more'):null}
  function build(lim){

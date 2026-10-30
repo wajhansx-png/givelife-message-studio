@@ -156,7 +156,15 @@ def active_case_name():
   try:raw=json.loads((DATA/'cases.json').read_text(encoding='utf-8'))
   except (OSError,ValueError):raw={}
  if not isinstance(raw,dict):return 'Current case'
- return next((c.get('name','Current case') for c in raw.get('cases',[]) if isinstance(c,dict) and c.get('id')==raw.get('current')),'Current case')
+ name=next((c.get('name','Current case') for c in raw.get('cases',[]) if isinstance(c,dict) and c.get('id')==raw.get('current')),'Current case')
+ if name=='Current case' and DRAFT.exists():
+  # A legacy case had no title. Preserve its saved Yousuf draft instead of
+  # unexpectedly replacing that existing message during a balance update.
+  try:
+   saved=json.loads(DRAFT.read_text(encoding='utf-8'))
+   if re.search(r'(?i)\bYousuf\b',str(saved.get('group',''))):return 'Yousuf'
+  except (OSError,ValueError,TypeError):pass
+ return name
 
 def _case_title(name):
  return ' '.join(str(name or 'Current case').replace('*',' ').split())[:60] or 'Current case'
@@ -166,7 +174,7 @@ def build_group(n,left,case_name=None):
  p2,p1=math.ceil(left/2000),math.ceil(left/1000)
  if left<=0:
   return f'*{name}: Case complete.*\n\nThank you to everyone who supported this case. There is Rs. 0 left to raise.\n\n- GiveLife Foundation'
- if name.casefold()!='yousuf':
+ if name.casefold() not in ('yousuf','current case'):
   # Details are intentionally generic until the owner supplies verified facts.
   return (f'*GiveLife Foundation: Support needed for {name}*\n\n'
           'Please review the case details and help if you can.\n\n'
@@ -186,7 +194,7 @@ def build_dm(sel,left,case_name=None):
  name=_case_title(case_name if case_name is not None else active_case_name())
  if left<=0:
   return f'Assalam o alaikum Brother,\n\nThe case for {name} has been completed. Thank you to everyone who helped.\n\n- GiveLife Foundation'
- if name.casefold()!='yousuf':
+ if name.casefold() not in ('yousuf','current case'):
   p2,p1=math.ceil(left/2000),math.ceil(left/1000)
   return (f'Assalam o alaikum Brother,\n\nGiveLife Foundation is collecting support for {name}. '
           'Please review the case details before donating.\n\n'

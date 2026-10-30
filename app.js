@@ -51,7 +51,14 @@ function lineRole(raw,index,lines){const t=raw.trim();if(!t)return 'blank';
  if(index===lastText&&/\?\s*$/.test(t)&&index!==firstText)return 'ask';
  if(index===firstText&&lines.filter(x=>x.trim()).length>3)return 'lead';
  return 'text'}
-function replyHtml(text){const raw=String(text).replace(/\r\n/g,'\n').split('\n'),html=chatFormat(text).split('\n');
+function replyHtml(text){
+ // Correct malformed AI numbering for display only; Copy still uses original text.
+ // No changes to actual message content or chat storage.
+ const normalized=String(text).replace(/\r\n/g,'\n')
+  .replace(/(^|\n)\s*\*\*([1-9])([A-Z])/g,'$1$2. **$3')
+  .replace(/(^|\n)\s*([1-9])\*{3,4}(?=[A-Z])/g,'$1$2. **')
+  .replace(/(^|\n)([1-9]\. \*\*[^\n*]+\*\*)(?=[A-Za-z])/g,'$1$2 ');
+ const raw=normalized.split('\n'),html=chatFormat(normalized).split('\n');
  return html.map((line,i)=>{const role=lineRole(raw[i]||'',i,raw);let body=line||'<br>';
   if(role==='num'){body=body.replace(/^<span class="wa-list">(\d+)[.)] /,'<span class="wa-list"><b class="rn">$1</b>');
    /* Bold opening = the step's title; the rest is its detail on the next line. */

@@ -6868,3 +6868,195 @@ button.livebar,
   content-visibility: auto;
   contain-intrinsic-size: auto 54px;
 }
+
+/* ===== 10. Slate look (chosen reference: deep slate, borderless soft cards, flat controls, one calm blue for main actions).
+   Colour, radius and surface only: no size or layout rule lives here. ===== */
+:root[data-theme=dark] {
+  --bg: #1d1e25;
+  --surface: #25262e;
+  --surface2: #2c2d36;
+  --surface3: #34353f;
+  --ink: #f1f2f5;
+  --mut: #9a9caa;
+  --faint: #8a8c99;
+  --line: #ffffff0f;
+  --line2: #6e7180;
+  --ctl: #6e7180;
+  --primary: #2f6fe8;
+  --primary-fg: #ffffff;
+  --btn: #2f6fe8;
+  --btnh: #3a7bf2;
+  --on-accent: #ffffff;
+  --g: #2f6fe8;
+  --gs: #2c2d36;
+  --gink: #f1f2f5;
+  --pill: #2c2d36;
+  --accent: #363844;
+  --ring: #6aa1ff;
+  --msg: #25262e;
+  --msgink: #f1f2f5;
+  --bubble: #25262e;
+  --bubble-line: #ffffff0f;
+  --chat-well: #1d1e25;
+  --fill: #2e3039;
+  --fill-h: #373945;
+  --lift: none;
+  --lift-hi: none;
+  --card-sh: none;
+}
+@media(prefers-color-scheme:dark) {
+  :root:not([data-theme=light]) {
+    --bg: #1d1e25;
+    --surface: #25262e;
+    --surface2: #2c2d36;
+    --surface3: #34353f;
+    --ink: #f1f2f5;
+    --mut: #9a9caa;
+    --faint: #8a8c99;
+    --line: #ffffff0f;
+    --line2: #6e7180;
+    --ctl: #6e7180;
+    --primary: #2f6fe8;
+    --primary-fg: #ffffff;
+    --btn: #2f6fe8;
+    --btnh: #3a7bf2;
+    --on-accent: #ffffff;
+    --g: #2f6fe8;
+    --gs: #2c2d36;
+    --gink: #f1f2f5;
+    --pill: #2c2d36;
+    --accent: #363844;
+    --ring: #6aa1ff;
+    --msg: #25262e;
+    --msgink: #f1f2f5;
+    --bubble: #25262e;
+    --bubble-line: #ffffff0f;
+    --chat-well: #1d1e25;
+    --fill: #2e3039;
+    --fill-h: #373945;
+    --lift: none;
+    --lift-hi: none;
+    --card-sh: none;
+  }
+}
+:root:not([data-theme=dark]) {
+  --bg: #eef0f4;
+  --surface: #ffffff;
+  --surface2: #f4f5f8;
+  --surface3: #e8eaef;
+  --ink: #16171d;
+  --mut: #5b5e6b;
+  --faint: #6b6e7b;
+  --line: #00000012;
+  --line2: #8a8d99;
+  --ctl: #8a8d99;
+  --primary: #2563eb;
+  --primary-fg: #ffffff;
+  --btn: #2563eb;
+  --btnh: #1f57d6;
+  --on-accent: #ffffff;
+  --g: #2563eb;
+  --gs: #f4f5f8;
+  --gink: #16171d;
+  --pill: #eef0f4;
+  --accent: #e8eaef;
+  --ring: #2563eb;
+  --msg: #ffffff;
+  --msgink: #16171d;
+  --bubble: #ffffff;
+  --bubble-line: #00000012;
+  --chat-well: #f7f8fa;
+  --fill: #f1f2f6;
+  --fill-h: #e6e8ee;
+  --lift: none;
+  --lift-hi: none;
+  --card-sh: 0 1px 2px #0000000a, 0 12px 32px -18px #1b1e2a33;
+}
+/* Cards: one soft surface, no outline, generous corners */
+:is(.card, .action-rail, .talk, .live, .brandbar, .donor-table, dialog) {
+  border-color: transparent !important;
+  border-radius: 22px !important;
+}
+.e.bot {
+  border-color: transparent !important;
+  border-radius: 20px !important;
+  background-image: none !important;
+}
+/* Controls: flat fills, no gradients, no glow */
+button, summary, .donor-launch, #openDonors {
+  background-image: none !important;
+}
+:is(.prim .main, .composer .go, .send-donors, .donor-add, .primary, .go, #batchStart, .donor-page .donor-tabs button[aria-selected=true], .seg button[aria-pressed=true]) {
+  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--primary) 70%, transparent) !important;
+}
+:is(.prim .main, .composer .go, .send-donors, .donor-add, .primary, .go, #batchStart):hover {
+  background: var(--btnh) !important;
+}
+:is(.big, .chips button, .rail-quick button, .donor-row .donor-dm, .donor-row .donor-status, .donor-more > summary, .donor-bulk, #donorPace, .donor-back-bottom, .donor-back, .ghost, .tool) {
+  border-radius: 14px !important;
+}
+:is(input, textarea, select):not([type=checkbox]):not([type=radio]) {
+  background: var(--fill) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  border-radius: 14px !important;
+}
+.composer {
+  background: var(--surface2) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.composer :is(#msg, textarea, input) {
+  background: transparent !important;
+}
+.donor-tabs, .brandbar .seg {
+  background: var(--surface2) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.donor-page .donor-tabs button:not([aria-selected=true]) {
+  background: transparent !important;
+  color: var(--mut) !important;
+}
+.donor-row {
+  border-color: var(--line) !important;
+}
+.donor-row[data-important=true] {
+  background: color-mix(in srgb, var(--primary) 7%, var(--surface)) !important;
+}
+.donor-star[aria-pressed=true] {
+  color: #f2c14e !important;
+}
+.mark {
+  background: var(--primary) !important;
+  color: #fff !important;
+}
+.mark svg {
+  stroke: #fff !important;
+}
+.donor-page .donor-tabs button,
+.donor-total,
+.donor-more,
+#liveBar, .livebar {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.donor-total {
+  background: var(--surface2) !important;
+  border-radius: 14px !important;
+}
+:is(.donor-search, .donor-amount, .donor-normal) {
+  background: var(--fill) !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+.donor-page .donor-tabs button[aria-selected=true] .tab-count {
+  background: #ffffff33 !important;
+  color: #fff !important;
+}
+html body .donor-page .donor-tabs button:not([aria-selected=true]),
+html body .donor-page .donor-row :is(.donor-amount, .donor-more > summary),
+html body .donor-page .donor-search {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}

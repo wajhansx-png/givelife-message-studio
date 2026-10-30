@@ -7303,7 +7303,7 @@ html body .autosw[aria-pressed=true] {
 }
 html body input.sw:checked::before, html body input.sw:checked::after,
 html body .autosw[aria-checked=true]::before, html body .autosw[aria-checked=true]::after,
-html body .autosw[aria-pressed=true] :is(i, span, b) {
+html body .autosw[aria-pressed=true] .knob::after {
   background: #fff !important;
 }
 /* the Messages panel tabs match the donor tabs */
@@ -7370,4 +7370,9 @@ html body .donor-page .bank-heading > span {
 html body .donor-page .bank-heading > .bank-regenerate {
   flex: 0 0 auto !important;
   margin: 0 !important;
+}
+
+html body .live .autosw .lbl {
+  background: transparent !important;
+  color: var(--ink) !important;
 }

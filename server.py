@@ -1716,6 +1716,10 @@ def team_chat(text):
 
 def execute_manual_command(text,request_id=None,message_kind='group'):
  global OWNER_REVISION
+ # Do not let a one-action fast-path silently swallow half a compound request.
+ # The full owner instruction goes to the tool agent; historical data cannot authorize it.
+ import task_intent
+ if task_intent.compound(text):return {'handled':False}
  team_result=team_chat(text)
  if team_result is not None:return {'handled':True,**team_result}
  donor_result=donors().command(text,request_id)

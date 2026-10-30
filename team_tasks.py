@@ -206,7 +206,7 @@ class TeamTasks:
         d = self._load()
         ev = {'id': uuid.uuid4().hex[:10], 'at': self.now(), 'kind': kind, 'text': text[:600], 'task': task['no'] if task else None, **extra}
         d['feed'].append(ev)
-        if kind in ('update', 'report', 'blocked', 'proof', 'late'):
+        if kind in ('update', 'report', 'blocked', 'proof', 'late', 'send_uncertain'):
             d['unread'] += 1
         if notify:
             d['pending_notes'].append({'text': text[:300], 'at': ev['at']})
@@ -217,7 +217,7 @@ class TeamTasks:
 
     # ---- views
     def _public_task(self, t, now):
-        return {k: t.get(k) for k in ('id', 'no', 'text', 'start_at', 'due_at', 'status', 'report_text', 'proof', 'reported_at', 'verified_at', 'asked_at')} | {'due_label': fmt_time(t['due_at'], now), 'start_label': fmt_time(t['start_at'], now)}
+        return {k: t.get(k) for k in ('id', 'no', 'text', 'start_at', 'due_at', 'status', 'report_text', 'proof', 'reported_at', 'verified_at', 'asked_at', 'delivery_uncertain')} | {'due_label': fmt_time(t['due_at'], now), 'start_label': fmt_time(t['start_at'], now)}
 
     def view(self):
         with self.lock:
@@ -228,7 +228,7 @@ class TeamTasks:
             return {'member': {'name': d['member']['name']} if d['member'] else None, 'tasks': [self._public_task(t, now) for t in d['tasks'] if t['status'] != 'Cancelled'],
                     'unread': d['unread'], 'plan': plan, 'paused': d['paused'], 'night': d['night'], 'now_label': fmt_time(now),
                     'counts': {s: sum(1 for t in d['tasks'] if t['status'] == s) for s in ('Waiting', 'Asked', 'Reported', 'Late', 'Done')},
-                    'latest': [{'label': fmt_time(e['at'], now), 'text': e['text']} for e in d['feed'] if e['kind'] in ('update', 'report', 'blocked', 'proof')][-3:][::-1]}
+                    'latest': [{'label': fmt_time(e['at'], now), 'text': e['text']} for e in d['feed'] if e['kind'] in ('update', 'report', 'blocked', 'proof', 'send_uncertain')][-3:][::-1]}
 
     # ---- owner actions
     def set_member(self, name, phone):
@@ -239,7 +239,17 @@ class TeamTasks:
         if phone == normalize_phone(self.app.OWNER_PHONE):
             raise ValueError('That is your own number.')
         with self.lock:
-            d = self._load();d['member'] = {'name': name, 'phone': phone, 'since': self.now()};self._save()
+            d = self._load();old = d.get('member')
+            if old and old['phone'] != phone:
+                if d.get('plan') or d.get('outbox') or any(t['status'] in OPEN for t in d['tasks']):
+                    raise ValueError('This teammate has unfinished tasks or pending messages. Finish/cancel them before changing the number.')
+                archive = d.setdefault('history', [])
+                archive.append({'member': old, 'tasks': d['tasks'], 'feed': d['feed']})
+                d['history'] = archive[-10:]
+                d.update(tasks=[], feed=[], plan=None, seen=[], counter=0, paused=False, unread=0,
+                         last_sent=0, pending_notes=[], last_note=0, outbox=[], greeted='', last_clarify=0, night=False)
+            d['member'] = {'name': name, 'phone': phone, 'since': old['since'] if old and old['phone']==phone else self.now()}
+            self._save()
             return self.view()
 
     def plan(self, text):
@@ -393,13 +403,14 @@ class TeamTasks:
         if d['outbox']:
             m = d['outbox'].pop(0);d['last_sent'] = now
             return {'kind': 'say', 'text': m['text'], 'tasks': [], 'sub': m['kind']}
-        ready = sorted((t for t in d['tasks'] if t['status'] == 'Waiting' and now >= t['start_at'] + t['jit'] and now >= t['next_try']), key=lambda x: x['start_at'])[:4]
+        ready = sorted((t for t in d['tasks'] if t['status'] == 'Waiting' and not t.get('delivery_uncertain') and now >= t['start_at'] + t['jit'] and now >= t['next_try']), key=lambda x: x['start_at'])[:4]
         if ready:
             for t in ready:
                 t['status'] = 'Asked';t['asked_at'] = now;t['attempts'] += 1
             d['last_sent'] = now
             return {'kind': 'ask', 'text': self._ask_text(ready, now), 'tasks': [t['id'] for t in ready]}
         for t in sorted(d['tasks'], key=lambda x: x['start_at']):
+            if t.get('delivery_uncertain'): continue
             kind = None
             if t['status'] == 'Asked' and not t['acked'] and not t['reminded'] and now >= (t['asked_at'] or now) + 30 * 60 + t['jit'] * 10 and now < t['due_at'] - 15 * 60:
                 kind = 'remind';t['reminded'] = True
@@ -415,17 +426,29 @@ class TeamTasks:
         return None
 
     def _deliver(self, text, phone):
-        """Outside every lock. True only when WhatsApp confirms."""
+        """True=confirmed sent; False=definitely unsent; None=uncertain, never retry."""
         try:
             r = self.app.send_custom({'kind': 'team_msg', 'target': 'phone', 'phone': phone, 'message': text, 'poster': False})
-            return isinstance(r, dict) and r.get('code') == 'SUCCESS'
-        except Exception:
+            code = r.get('code') if isinstance(r, dict) else None
+            if code == 'SUCCESS': return True
+            if code in ('NOT_SENT', 'CANCELLED', 'SKIPPED', 'COOLDOWN'): return False
+            return None
+        except ValueError:
+            # send_custom validates destination, hold and connection before dispatch.
             return False
+        except Exception:
+            return None
 
     def _finish(self, job, ok, now):
         d = self._load();tasks = [t for t in d['tasks'] if t['id'] in job['tasks']]
-        if ok:
+        if ok is True:
             self._event('sent', job['text'], tasks[0] if tasks else None)
+            return
+        if ok is None:
+            for t in tasks:
+                t.update(delivery_uncertain=True, reminded=True, checked=True, final_sent=True)
+            self._event('send_uncertain', 'WhatsApp could not confirm a Team message to '+d['member']['name']+
+                        '. Check WhatsApp before manually retrying; no automatic repeat.', tasks[0] if tasks else None, notify=True)
             return
         if job['kind'] == 'ask':
             for t in tasks:
@@ -472,7 +495,7 @@ class TeamTasks:
         for t in self._load()['tasks']:
             if t['status'] in ('Waiting', 'Asked') and now > t['due_at']:
                 was = t['status'];t['status'] = 'Late';t['late_at'] = now
-                self._event('late', f'Late: {t["text"]}' + ('' if was == 'Asked' else ' (it was never sent to him)'), t, notify=True)
+                self._event('late', f'Late: {t["text"]}' + (' (delivery unconfirmed)' if t.get('delivery_uncertain') else '' if was == 'Asked' else ' (it was never sent to him)'), t, notify=True)
 
     def _take_note(self, now):
         d = self._load()

@@ -14,6 +14,8 @@ class DonorIntegration:
         self.manual_lock=threading.RLock()
         from volunteers import Volunteers
         self.volunteers=Volunteers(app,self.eligible)
+        from team_tasks import TeamTasks
+        self.team=TeamTasks(app)
         from cases import Cases
         self.cases=Cases(app,self)
         self.revision=0

@@ -5,7 +5,7 @@ from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from email.parser import BytesParser
 from email.policy import default
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
-EVENTS=ROOT.parent/'manual-preview-events.json';events=[]
+EVENTS=ROOT.parent/'manual-preview-events.json';events=[];incoming=[]
 def record(item):
  events.append(item);EVENTS.write_text(json.dumps(events,ensure_ascii=False),encoding='utf-8')
 class FakeWhatsApp(BaseHTTPRequestHandler):
@@ -13,7 +13,7 @@ class FakeWhatsApp(BaseHTTPRequestHandler):
   body=json.dumps(data).encode();self.send_response(200);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
  def do_GET(self):
   if '/status' in self.path:return self.response({'code':'SUCCESS','results':{'is_connected':True,'is_logged_in':True}})
-  if '/messages' in self.path:return self.response({'results':{'data':[]}})
+  if '/messages' in self.path:return self.response({'results':{'data':list(incoming)}})
   if '/chats' in self.path or '/contacts' in self.path:return self.response({'results':{'data':[{'id':'923001234567@s.whatsapp.net','name':'Jr Accounts','is_group':False}]}})
   return self.response({'results':[]})
  def do_POST(self):
@@ -47,7 +47,7 @@ class Store:
  def put(self,k,v):
   import copy
   with self.lock:self.data[k]=copy.deepcopy(v)
-server.STORE=Store();server.set_left(25000);server.ENGINE.s['dm_enabled']=False
+server.STORE=Store();server.set_left(25000);server.ENGINE.s['dm_enabled']=False;type(server.donors().team).QUIET=(24,-1)
 if '--donors' in sys.argv:
  for i in range(20):
   row=server.donors().book.add('Demo donor '+str(i+1),'1555'+str(1230000+i))['donor']
@@ -71,6 +71,8 @@ def preview_post(self):
   body=json.loads(self.rfile.read(int(self.headers.get('Content-Length',0))))
   if 'reply' in body:server.chat_add('app',str(body['reply']),turn_id='test-reply-'+str(time.time()))
   if 'group' in body:server.save_draft('group',str(body['group']))
+  if 'incoming' in body:incoming.append({'id':'in-'+str(len(incoming)+1),'content':str(body['incoming']),'is_from_me':False,'timestamp':__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()})
+  if body.get('team_tick'):server.donors().team.tick()
   return self.reply({'ok':True})
  return original_post(self)
 server.Handler.do_GET=preview_get

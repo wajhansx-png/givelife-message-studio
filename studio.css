@@ -7962,3 +7962,273 @@ html body .donor-page .donor-tabs:has([data-tab=volunteers]) {
     animation: none;
   }
 }
+
+
+/* ===== 18. Team screen: one centred column. What needs your check first, then his updates, tasks, and the box for new tasks ===== */
+.team-page {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--page, var(--bg)) !important;
+  color: var(--ink);
+}
+.team-page:not([open]) {
+  display: none;
+}
+.team-page::backdrop {
+  background: #000000a0;
+}
+.team-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  gap: 10px;
+}
+.team-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.team-title h1 {
+  margin: 0;
+  font-size: 22px;
+}
+.team-sub {
+  display: block;
+  font-size: 13px;
+  color: var(--mut);
+}
+.team-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+.team-card {
+  flex: none;
+  background: var(--card-bg, var(--surface)) !important;
+  border-radius: 18px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.team-card h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.team-review {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--warn-ink, #fbbf24) 70%, transparent) !important;
+}
+.team-hint,
+.team-empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--mut);
+}
+.team-item,
+.team-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.team-item:first-of-type,
+.team-task:first-of-type {
+  border-top: 0;
+}
+.team-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.team-text strong {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.team-due,
+.team-say {
+  font-size: 13px;
+  color: var(--mut);
+  overflow-wrap: anywhere;
+}
+.team-proof {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bad-ink, #f87171);
+}
+.team-proof[data-ok=true] {
+  color: var(--ok-ink, #4ade80);
+}
+.team-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.team-actions button,
+.team-task .tool,
+.team-card .primary,
+.team-setup input,
+.team-card textarea {
+  min-height: 44px;
+}
+.team-card textarea,
+.team-setup input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  font-size: 15px;
+}
+.team-card textarea {
+  line-height: 1.5;
+  resize: vertical;
+}
+.team-chip {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+.team-chip[data-s=Done] {
+  color: var(--ok-ink, #4ade80);
+  background: color-mix(in srgb, var(--ok-ink, #4ade80) 14%, transparent);
+}
+.team-chip[data-s=Late] {
+  color: var(--bad-ink, #f87171);
+  background: color-mix(in srgb, var(--bad-ink, #f87171) 14%, transparent);
+}
+.team-chip[data-s=Reported],
+.team-chip[data-s=Asked] {
+  color: var(--warn-ink, #fbbf24);
+  background: color-mix(in srgb, var(--warn-ink, #fbbf24) 14%, transparent);
+}
+.team-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.team-ev {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.team-ev:first-child {
+  border-top: 0;
+}
+.team-ev time {
+  color: var(--mut);
+  font-size: 12px;
+  padding-top: 2px;
+}
+.team-ev-text {
+  overflow-wrap: anywhere;
+}
+.team-ev[data-kind=report] .team-ev-text,
+.team-ev[data-kind=verified] .team-ev-text {
+  color: var(--ok-ink, #4ade80);
+  font-weight: 600;
+}
+.team-ev[data-kind=blocked] .team-ev-text,
+.team-ev[data-kind=late] .team-ev-text,
+.team-ev[data-kind=send_failed] .team-ev-text {
+  color: var(--bad-ink, #f87171);
+  font-weight: 600;
+}
+.team-ev[data-kind=sent] .team-ev-text {
+  color: var(--mut);
+}
+.team-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 6px;
+}
+.team-foot .tool {
+  min-height: 46px;
+  min-width: 112px;
+}
+.team-launch {
+  position: relative;
+}
+.team-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--bad-ink, #f87171);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  box-sizing: border-box;
+}
+.team-badge[hidden] {
+  display: none;
+}
+.team-toast {
+  position: fixed;
+  z-index: 100000;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  max-width: min(92vw, 520px);
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: var(--surface2);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 16px 40px -12px #000000cc, inset 0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.team-toast[data-bad=true] {
+  box-shadow: 0 16px 40px -12px #000000cc, inset 0 0 0 2px var(--bad-ink, #f87171);
+}
+.team-toast[hidden] {
+  display: none;
+}
+@media(max-width:560px) {
+  .team-item,
+  .team-task {
+    flex-wrap: wrap;
+  }
+  .team-actions {
+    width: 100%;
+  }
+  .team-actions button {
+    flex: 1;
+  }
+  .team-launch {
+    margin-left: 0;
+  }
+}
+
+.team-card .primary {
+  white-space: nowrap;
+  padding-inline: 18px;
+}

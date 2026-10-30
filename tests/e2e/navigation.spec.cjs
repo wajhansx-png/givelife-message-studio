@@ -217,3 +217,25 @@ test('Volunteers tab: all five tabs fit on one line, add by name and number, sav
   page.once('dialog',d=>d.accept());
  }
 });
+
+test('team: write tasks in chat, confirm, the teammate is asked once on WhatsApp, his reply shows in the Team screen and can be verified',async({page,request})=>{
+ const auth={Authorization:'Bearer manual-fix-preview-key'};
+ const cmd=async text=>(await request.post('/command',{headers:auth,data:{text}})).json();
+ const tick=()=>request.post('/__test/seed',{headers:auth,data:{team_tick:true}});
+ await open(page,request,1440,800);
+ await page.locator('#openTeam').click();await expect(page.locator('.team-setup')).toBeVisible();
+ await page.locator('.team-setup input[name=team_name]').fill('Bilal Ahmed');await page.locator('.team-setup input[name=team_phone]').fill('03001234567');await page.locator('.team-setup .primary').click();
+ await expect(page.locator('#teamText')).toBeVisible();
+ await page.locator('#teamText').fill("1) Post in the 3 groups\n2) Update the sheet\nDeadline in 4 hours");await page.getByRole('button',{name:'Plan the tasks'}).click();
+ await expect(page.locator('.team-page').getByText('Check the plan')).toBeVisible();
+ const events0=(await (await request.get('/__test/events',{headers:auth})).json()).events.filter(e=>e.path==='/send/message').length;
+ await page.getByRole('button',{name:'Start tasks'}).click();await expect(page.locator('.team-task').first()).toBeVisible();
+ await tick();await tick();
+ const sent=(await (await request.get('/__test/events',{headers:auth})).json()).events.filter(e=>e.path==='/send/message'&&/Task #1/.test(e.fields.message||''));
+ expect(sent.length,'task 1 is asked exactly once even after two ticks').toBe(1);expect(sent[0].fields.phone).toBe('923001234567');
+ await request.post('/__test/seed',{headers:auth,data:{incoming:'1 done https://example.com/proof'}});await tick();
+ await expect(page.locator('.team-review')).toContainText('Post in the 3 groups',{timeout:9000});await expect(page.locator('.team-review')).toContainText('Proof');
+ await page.locator('.team-review').getByRole('button',{name:/Verified/}).click();await expect(page.locator('.team-chip[data-s=Done]')).toHaveCount(1);
+ const chat=await cmd('team status');expect(chat.reply).toContain('#1');
+ expect((await cmd('hello how are you')).reply||'').not.toContain('#1');
+});

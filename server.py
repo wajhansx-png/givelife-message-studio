@@ -84,7 +84,7 @@ def send_custom(body):
   message=message.replace('{name}',str(body.get('name') or '').strip() or 'friend')
  if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
  if not STORE:raise ValueError('Persistent send records are unavailable. Try again later.')
- manual=body.get('kind')=='donor_manual'
+ manual=body.get('kind') in ('donor_manual','team_msg')
  explicit_batch=body.get('kind') in ('donor_batch','volunteer_batch')
  if not SEND_LOCK.acquire(blocking=manual or explicit_batch):raise ValueError('Another send is running. Please wait for it to finish.')
  try:
@@ -1521,8 +1521,18 @@ def send_selected_groups(targets,request_id=None):
  ident=start_send_job(keys,caption,True,request_id,with_picture=options.get('poster',True) if options else True)
  return {'reply':f'Starting the manual send to {len(keys)} selected groups now.','job_id':ident,'caption':caption}
 
+def team_chat(text):
+ """Chat shortcuts for the teammate's tasks; errors become a plain reply so the owner sees why."""
+ raw=str(text).strip()
+ if not re.match(r"(?i)^(?:please\s+)?(?:(?:give|set|assign|add)\s+)?(?:(?:today'?s|todays|these|new)\s+)?(?:tasks?|todo|team|confirm tasks?|cancel tasks?|start tasks?|yes tasks?|send tasks?|verify task|cancel task|pause team|resume team|pause tasks|resume tasks|set\s+(?:my\s+)?(?:team\s*mate|teammate|team member))\b",raw) and not re.match(r"(?i)^task\s+#?\d",raw):return None
+ import chat_policy
+ try:return donors().team.command(raw,chat_policy.owner_text(raw).strip())
+ except ValueError as e:return {'reply':str(e)}
+
 def execute_manual_command(text,request_id=None,message_kind='group'):
  global OWNER_REVISION
+ team_result=team_chat(text)
+ if team_result is not None:return {'handled':True,**team_result}
  donor_result=donors().command(text,request_id)
  if donor_result is not None:return {'handled':True,**donor_result,'donors_changed':True}
  preview=draft_flow.preview_request(text)
@@ -1738,7 +1748,7 @@ class Handler(BaseHTTPRequestHandler):
   if self.path.split('?')[0] in ('/group-finder','/group-finder.js','/group-finder.css'):
    name=self.path.split('?')[0][1:];name='group-finder.html' if name=='group-finder' else name
    return self.reply((ROOT/name).read_bytes(),'text/html' if name.endswith('.html') else 'text/css' if name.endswith('.css') else 'application/javascript')
-  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/donors.css','/studio.css'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/team.js','/donors.css','/studio.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
@@ -1752,6 +1762,7 @@ class Handler(BaseHTTPRequestHandler):
     return self.reply(donors().book.list(q.get('tab',['all'])[0],q.get('q',[''])[0]))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/donor-delivery':return self.reply(donors().jobs.status())
+  if self.path=='/team':return self.reply(donors().team.view())
   if self.path=='/cases':
    try:return self.reply(donors().cases.view())
    except ValueError as e:return self.reply({'error':str(e)},status=400)
@@ -1802,7 +1813,7 @@ class Handler(BaseHTTPRequestHandler):
   global ACTIVE,OWNER_REVISION
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   if self.path!='/api/group-finder':ENGINE.touch_owner()
-  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/cases','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
+  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/cases','/team','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
    with LOCK:OWNER_REVISION+=1
    OWNER_GUARD.revision=OWNER_REVISION
   origin=self.headers.get('Origin');same_origin=origin and urllib.parse.urlparse(origin).netloc==self.headers.get('Host')
@@ -1820,6 +1831,20 @@ class Handler(BaseHTTPRequestHandler):
    except Conflict as e:return self.reply({'error':str(e)},status=409)
    except ResearchError as e:return self.reply({'error':str(e),'code':e.code},status=502)
    except (ValueError,TypeError,KeyError) as e:return self.reply({'error':str(e)},status=400)
+  if self.path=='/team':
+   try:
+    t=donors().team;act=body.get('action')
+    if act=='member':return self.reply(t.set_member(body.get('name'),body.get('phone')))
+    if act=='plan':return self.reply(t.plan(body.get('text')))
+    if act=='confirm':return self.reply(t.confirm_plan())
+    if act=='discard':return self.reply(t.discard_plan())
+    if act=='verify':return self.reply(t.verify(body.get('id')))
+    if act=='reject':return self.reply(t.reject(body.get('id'),body.get('note','')))
+    if act=='cancel':return self.reply(t.cancel(body.get('id')))
+    if act=='pause':return self.reply(t.pause(body.get('on')))
+    if act=='read':return self.reply(t.mark_read())
+    raise ValueError('Unknown team action.')
+   except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/cases':
    try:
     c=donors().cases;act=body.get('action')
@@ -1995,6 +2020,14 @@ class Handler(BaseHTTPRequestHandler):
    except Exception as e:self.reply({'code':'ERROR','message':str(e)})
   else:self.reply({},status=404)
  def log_message(self,*args):pass
+def team_loop():
+ """Every 20 seconds: read the teammate's replies, mark late tasks, send the next due message."""
+ time.sleep(15)
+ while True:
+  try:donors().team.tick()
+  except Exception:pass
+  time.sleep(20)
+
 def donor_autopilot():
  """Keeps confirmed donor batches going: resumes one after a restart, and keeps a free host awake while one runs."""
  import urllib.request
@@ -2013,6 +2046,7 @@ ensure_dm_structure()
 if __name__=='__main__':
  threading.Thread(target=recover_group_research,daemon=True,name='research-recovery').start()
  threading.Thread(target=donor_autopilot,daemon=True).start()
+ threading.Thread(target=team_loop,daemon=True,name='team-loop').start()
  PILOT.start()
  ENGINE.start()
  threading.Thread(target=timed_loop,daemon=True).start()

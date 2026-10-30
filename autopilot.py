@@ -149,8 +149,10 @@ class Engine:
                 self.log('Autopilot error: ' + str(e)[:150])
 
     def posting_step(self):
-        """Posting runs independently of slow reply scans and the AI advisor."""
+        """Never broadcast a fundraising appeal after its amount reaches zero."""
         if not self.h['enabled']() or self.h.get('on_hold',lambda:False)() or not self.h['wa_ok']():
+            return
+        if self.h['read_left']() <= 0:
             return
         self.post_if_due()
 
@@ -177,6 +179,8 @@ class Engine:
     def tick(self):
         if self.h.get('on_hold', lambda: False)():
             return  # owner said hold: nothing is read, sent or alerted
+        if self.h['read_left']() <= 0:
+            return  # completed case: no more automatic appeals or donor outreach
         today = pkt().date().isoformat()
         if self.s['day'] != today:
             self.s.update(day=today, posts_today=0, dms_today=0, done_today=0, posts_by={}, dms_by_tier={})

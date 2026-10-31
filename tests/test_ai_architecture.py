@@ -77,6 +77,14 @@ class MemoryTests(unittest.TestCase):
   self.assertEqual([x['text'] for x in self.k.summary()['entries']],['Never use bold or italic.'])
 
 class PolicyTests(unittest.TestCase):
+ def test_new_volunteers_task_does_not_authorize_a_group_caption(self):
+  phrase='In tasks give task to find new volunteers'
+  for name in ('set_message','new_wording','prepare_dm','send_message','send_appeal'):
+   with self.subTest(name=name):
+    self.assertFalse(chat_policy.permitted(name,phrase))
+  self.assertTrue(chat_policy.permitted('team_action',phrase))
+  self.assertTrue(chat_policy.permitted('set_message','Write a new group caption for the open case.'))
+  self.assertTrue(chat_policy.permitted('set_message','Fix the last paragraph in the DM.'))
  def test_smalltalk_router_does_not_hide_mixed_work_instructions(self):
   for text in ('Hu','how r u','helllooo','Everything good?'):self.assertTrue(chat_policy.smalltalk(text))
   self.assertFalse(chat_policy.smalltalk('how r u; send main now'))

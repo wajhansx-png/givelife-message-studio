@@ -26,6 +26,15 @@ class MemoryTests(unittest.TestCase):
   self.k.feedback('reply','Keep bold and italic, with blank lines.',True)
   self.assertEqual(self.k.summary()['feedback_count'],1);self.assertEqual(self.k.summary()['entries'][0]['source'],'owner_confirmed_correction')
   self.assertIn('bold',self.k.retrieve('caption formatting')[0]['text'])
+ def test_old_assistant_medical_guess_is_not_promoted_to_fact(self):
+  self.k.archive('app','The child has paralysis spreading in his fingers.','ai_guess')
+  self.k.archive('you','His parents report shortness of breath, not spreading paralysis.','owner_fact')
+  retrieved=self.k.retrieve('What did we say about paralysis and breathing?')
+  self.assertTrue(any('parents report' in row['text'] for row in retrieved))
+  self.assertFalse(any(row.get('id')=='ai_guess' for row in retrieved))
+  # Explicitly reviewing previous AI output is different from trusting it.
+  old=self.k.retrieve('What did the assistant previously say about paralysis?')
+  self.assertTrue(any(row.get('id')=='ai_guess' for row in old))
  def test_reported_issue_is_not_silently_a_preference(self):
   self.k.report_correction('That is wrong; I meant the other contact.')
   self.assertEqual(self.k.summary()['entries'],[]);self.assertEqual(self.k.summary()['feedback_count'],0);self.assertEqual(self.k.summary()['reported_count'],1)

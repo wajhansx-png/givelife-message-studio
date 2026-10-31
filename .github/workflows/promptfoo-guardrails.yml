@@ -13,6 +13,11 @@ on:
       - 'chat_memory.py'
       - 'chat_runtime.py'
       - 'tests/test_ai_architecture.py'
+      - 'tests/test_team_tasks.py'
+      - 'tests/test_case_isolation.py'
+      - 'team_tasks.py'
+      - 'team.js'
+      - 'server.py'
 concurrency:
   group: givelife-policy-${{ github.ref }}
   cancel-in-progress: true
@@ -35,6 +40,10 @@ jobs:
         run: python -m unittest discover -s tests -p test_policy_goldens.py -v
       - name: AI and memory regression tests
         run: python -m unittest discover -s tests -p test_ai_architecture.py -v
+      - name: Team deadlines and closed-case caption regressions (fake transport)
+        run: |
+          python -m unittest discover -s tests -p test_team_tasks.py -v
+          python -m unittest discover -s tests -p test_case_isolation.py -v
       - name: Promptfoo offline provider and custom assertions
         env:
           PROMPTFOO_DISABLE_TELEMETRY: '1'

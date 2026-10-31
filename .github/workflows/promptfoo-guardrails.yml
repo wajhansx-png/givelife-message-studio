@@ -13,6 +13,9 @@ on:
       - 'chat_memory.py'
       - 'chat_runtime.py'
       - 'tests/test_ai_architecture.py'
+concurrency:
+  group: givelife-policy-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

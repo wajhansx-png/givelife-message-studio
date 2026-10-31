@@ -110,6 +110,19 @@ class RuntimeTests(unittest.TestCase):
   with patch.object(assistant,'client',return_value='fake'),patch.object(assistant,'_chat_raw',side_effect=responses) as model:
    result=assistant.chat(text,history or [],state or {},memory or [],do)
   return result,model
+ def test_fix_that_last_line_uses_active_draft_not_send_tool(self):
+  prior=[{'who':'you','text':'Put the family confirmed update in the group caption.'}]
+  state={'draft_task':{'kind':'group','state':'editing'}}
+  with patch.object(assistant,'client',return_value='fake'),patch.object(assistant,'_chat_raw',return_value={'content':'Here is the revised line.'}) as model:
+   assistant.chat('Fix that last line',prior,state,[],{'set_message':lambda **a:'Draft changed.'})
+  tools={t['function']['name'] for t in model.call_args.args[2]}
+  self.assertIn('set_message',tools)
+  self.assertNotIn('send_message',tools)
+  self.assertNotIn('send_appeal',tools)
+ def test_fix_that_ui_is_not_a_draft_edit(self):
+  history=[{'who':'you','text':'Please revise the case caption.'}]
+  self.assertFalse(chat_runtime.contextual_draft_fix('Fix that dropdown UI',history,{'draft_task':{'kind':'group','state':'editing'}}))
+  self.assertFalse(chat_runtime.contextual_draft_fix('Fix that',[],{}))
  def test_multiple_edits_complete_in_order(self):
   calls=[]
   result,_=self.run_model('Rewrite the group caption and set Fiverr pace to 45 minutes.',[msg(tc('set_message',{'kind':'group','text':'correct draft'})),msg(tc('set_group_pace',{'target':'fiverr','minutes':45})),{'content':'Done.'}],{'set_message':lambda **a:(calls.append('draft') or 'Draft changed.'),'set_group_pace':lambda **a:(calls.append('pace') or 'Fiverr every 45 minutes.')})

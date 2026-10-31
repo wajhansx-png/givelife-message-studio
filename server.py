@@ -2036,7 +2036,7 @@ class Handler(BaseHTTPRequestHandler):
   if self.path.split('?')[0] in ('/group-finder','/group-finder.js','/group-finder.css'):
    name=self.path.split('?')[0][1:];name='group-finder.html' if name=='group-finder' else name
    return self.reply((ROOT/name).read_bytes(),'text/html' if name.endswith('.html') else 'text/css' if name.endswith('.css') else 'application/javascript')
-  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/team.js','/donors.css','/studio.css'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/team.js','/notes.js','/donors.css','/notes.css','/studio.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
@@ -2051,6 +2051,11 @@ class Handler(BaseHTTPRequestHandler):
    except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/donor-delivery':return self.reply(donors().jobs.status())
   if self.path=='/team':return self.reply(donors().team.view())
+  if self.path=='/notes':
+   from private_notes import PrivateNotes
+   try:return self.reply(PrivateNotes(STORE).read(self.headers.get('X-Notes-Token','')))
+   except PermissionError as exc:return self.reply({'error':str(exc),'locked':True},status=403)
+   except Exception:return self.reply({'error':'Notes database could not be read. No notes were changed.'},status=503)
   if self.path=='/cases':
    try:return self.reply(donors().cases.view())
    except ValueError as e:return self.reply({'error':str(e)},status=400)
@@ -2103,7 +2108,7 @@ class Handler(BaseHTTPRequestHandler):
   global ACTIVE,OWNER_REVISION
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   if self.path!='/api/group-finder':ENGINE.touch_owner()
-  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/cases','/team','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
+  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/cases','/team','/notes','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
    with LOCK:OWNER_REVISION+=1
    OWNER_GUARD.revision=OWNER_REVISION
   origin=self.headers.get('Origin');same_origin=origin and urllib.parse.urlparse(origin).netloc==self.headers.get('Host')
@@ -2121,6 +2126,18 @@ class Handler(BaseHTTPRequestHandler):
    except Conflict as e:return self.reply({'error':str(e)},status=409)
    except ResearchError as e:return self.reply({'error':str(e),'code':e.code},status=502)
    except (ValueError,TypeError,KeyError) as e:return self.reply({'error':str(e)},status=400)
+  if self.path=='/notes':
+   from private_notes import PrivateNotes
+   try:
+    notes=PrivateNotes(STORE);action=body.get('action')
+    token=self.headers.get('X-Notes-Token','')
+    if action=='unlock':return self.reply(notes.unlock(body.get('password',''), self.client_address[0]))
+    if action=='save':return self.reply(notes.save(token,body.get('html',''),body.get('revision')))
+    if action=='lock':return self.reply(notes.lock_device(token))
+    raise ValueError('Unknown Notes action.')
+   except PermissionError as exc:return self.reply({'error':str(exc),'locked':True},status=403)
+   except ValueError as exc:return self.reply({'error':str(exc)},status=409 if 'changed on another device' in str(exc) else 400)
+   except Exception:return self.reply({'error':'Notes could not be saved. Existing content was preserved.'},status=503)
   if self.path=='/team':
    try:
     t=donors().team;act=body.get('action')

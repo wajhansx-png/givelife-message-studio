@@ -7766,26 +7766,33 @@ html body :is(button, summary, [role=tab], a):focus-visible {
 }
 .vol-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px 88px;
+  grid-template-columns: minmax(0, 1fr) 80px 36px;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 0 10px;
   border-top: 1px solid var(--line);
-  min-height: 56px;
+  min-height: 40px;
 }
 .vol-row:first-child {
   border-top: 0;
 }
 .vol-name {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .vol-row .tool {
-  min-height: 44px;
+  min-height: 32px;
   width: 100%;
+  font-size: 12px;
+}
+.vol-row .donor-more {
+  width: 100%;
+}
+.vol-row .donor-more > summary {
+  min-height: 32px;
 }
 .vol-row[data-sent=true] .vol-dm {
   color: var(--ok-ink, #4ade80) !important;
@@ -7845,7 +7852,7 @@ html body :is(button, summary, [role=tab], a):focus-visible {
     grid-column: 1 / -1;
   }
   .vol-row {
-    grid-template-columns: minmax(0, 1fr) 84px 78px;
+    grid-template-columns: minmax(0, 1fr) 72px 36px;
   }
   .vol-foot {
     flex-wrap: wrap;

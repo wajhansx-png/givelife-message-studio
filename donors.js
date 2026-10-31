@@ -166,8 +166,13 @@ el('donorTotal').textContent=data.counts.all??'';el('donorTotalAmount').textCont
    const nameEl=make('div','vol-name',(i+1)+'. '+d.name);
    const dm=make('button','tool vol-dm',volState(d));dm.type='button';dm.setAttribute('aria-label','Send the volunteer message to '+d.name);
    dm.onclick=()=>{if(!vols.message.trim()){notice('Write the message for volunteers first (the box below).',true);el('donorVolunteers').querySelector('#volMessage')?.focus();return}volAct({action:'send_one',id:d.id,request_id:'v'+crypto.randomUUID().replace(/-/g,''),poster:el('volPoster').checked},'Sending to '+d.name+'…')};
-   const del=make('button','tool vol-del','Remove');del.type='button';del.setAttribute('aria-label','Remove '+d.name);del.onclick=()=>{if(confirm('Remove '+d.name+' from volunteers?'))volAct({action:'delete',id:d.id},'Removed '+d.name+'.')};
-   row.append(nameEl,dm,del);list.append(row)});
+   const more=make('details','donor-more');const summary=make('summary','','···');summary.setAttribute('aria-label','Manage '+d.name);let menuBuilt=false;
+   const buildMenu=()=>{if(menuBuilt)return;menuBuilt=true;const menu=make('div','');
+    const rename=make('button','','Rename');rename.type='button';rename.onclick=()=>{const n=prompt('Volunteer name',d.name);if(n?.trim())volAct({action:'update',id:d.id,name:n.trim()});more.open=false};
+    const del=make('button','remove','Remove');del.type='button';del.onclick=()=>{if(confirm('Remove '+d.name+' from volunteers?'))volAct({action:'delete',id:d.id},'Removed '+d.name+'.');more.open=false};
+    menu.append(rename,del);more.append(menu)};
+   more.ontoggle=()=>{if(more.open)buildMenu()};more.append(summary);
+   row.append(nameEl,dm,more);list.append(row)});
   const msg=make('div','vol-msg');const label=make('label','','Message to volunteers (they get it exactly like this)');label.htmlFor='volMessage';
   const ta=make('textarea','');ta.id='volMessage';ta.name='volunteer_message';ta.rows=6;ta.maxLength=4000;ta.placeholder='Assalam o alaikum {name}, please share this case in your groups…  ({name} becomes their name)';ta.value=draft??vols.message??'';
   const poster=make('label','vol-check');const pc=make('input','');pc.type='checkbox';pc.id='volPoster';pc.checked=true;poster.append(pc,' Send the poster with it');

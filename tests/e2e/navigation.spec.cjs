@@ -213,8 +213,9 @@ test('Volunteers tab: all five tabs fit on one line, add by name and number, sav
   await page.locator('#volName').fill('Test Volunteer '+w);await page.locator('#volPhone').fill('0300'+String(1000000+w).slice(0,7));await page.locator('#donorVolunteers .vol-add .primary').click();
   await expect(page.locator('.vol-row',{hasText:'Test Volunteer '+w})).toHaveCount(1);
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);expect(overflow,`${w}px: no sideways scroll`).toBe(false);
-  await page.locator('.vol-row',{hasText:'Test Volunteer '+w}).getByRole('button',{name:'Remove'}).click().catch(()=>{});
   page.once('dialog',d=>d.accept());
+  const row=page.locator('.vol-row',{hasText:'Test Volunteer '+w});
+  await row.locator('.donor-more summary').click();await row.getByRole('button',{name:'Remove'}).click();
  }
 });
 

@@ -237,6 +237,14 @@ def run_chat(text,history,state,memory,do):
   outstanding=remaining_actions()
   if outstanding:
    reply+=' Not completed or verified from this request: '+', '.join(sorted(outstanding))+'.'
+ if reviewing:
+  review=mapping(mapping(state).get('history_review'))
+  if conversation_insights.generic_status_answer(reply,review):
+   # A second model attempt could simply repeat the same shallow recap.
+   # The evidence-based deterministic fallback is reliable and read-only.
+   reply=conversation_insights.evidence_fallback(review)
+  elif review.get('owner_turns_examined',0)<5 and not review.get('themes'):
+   reply=conversation_insights.evidence_fallback(review)
  if not actions and not done and not jobs and chat_policy.off_topic(text) and not chat_policy.about_the_work(reply):reply=chat_policy.brief(reply)
  return {'reply':safe_text(reply,10000),'actions':actions,'done':done,'jobs':jobs,
   'diagnostics':{'model':assistant.MODEL,'iterations':iteration+1,'duration_ms':round((time.monotonic()-started)*1000),'tools':outcomes,'errors':errors[-3:]}}

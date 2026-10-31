@@ -17,6 +17,7 @@ class TeamMessageLedger(unittest.TestCase):
         app = self.app
         app.STORE.put('dm_daily', {'day':'2026-10-31','count':49,'last':123})
         fake = {'code':'SUCCESS','results':{'message_id':'team-test'}}
+        previous_manual = dict(app.LAST_MANUAL)
         with patch.object(app, 'send_image', return_value=fake) as wire:
             for i in range(2):
                 result = app.send_custom({
@@ -26,6 +27,7 @@ class TeamMessageLedger(unittest.TestCase):
                 self.assertEqual(result['code'],'SUCCESS')
             self.assertEqual(wire.call_count,2)
         self.assertEqual(app.STORE.get('dm_daily')['count'],49)
+        self.assertEqual(app.LAST_MANUAL, previous_manual, 'Team messages must not replace last manual send')
         digest = hashlib.sha256(b'923001234567').hexdigest()
         self.assertIsNone(app.STORE.get('dm_recipient_'+digest))
 

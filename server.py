@@ -193,7 +193,7 @@ def build_group(n,left,case_name=None):
  pool=ALMOST if 0<left<=10000 else None
  hook=(pool[n%len(pool)][0] if pool else HOOKS[n%8][0]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
  push=(pool[(n+1)%len(pool)][1] if pool else HOOKS[(n*3+1)%8][1]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
- return (f'*{hook}*\n\nYousuf's family reported fluid collecting in his brain, swollen kidneys and a hernia. Please refer to the latest medical documents for details. 💔\n\n'
+ return (f'*{hook}*\n\nThe family reported fluid collecting in the brain, swollen kidneys and a hernia. Please refer to the latest medical documents for details. 💔\n\n'
          f'*_Rs. {left:,} LEFT_*\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n{push}\n\n'
          '*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation')
 

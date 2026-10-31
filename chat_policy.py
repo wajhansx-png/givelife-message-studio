@@ -125,8 +125,9 @@ def permitted(name,text):
  # A general adjective like "new" in "find new volunteers" cannot authorize
  # a caption edit. Require a genuinely message-directed drafting instruction.
  if name=='set_message':
-  return bool(draft_flow.editing_request(t) or re.search(
-   r'(?i)\b(?:save|write|create|make|prepare|draft|compose)\b.{0,100}\b(?:caption|message|draft|wording|appeal)\b',t))
+  return bool(draft_flow.editing_request(t)
+   or re.search(r'(?i)\b(?:fix|correct|adjust)\b.{0,70}\b(?:paragraph|line|dm|group|caption|draft|message|wording)\b',t)
+   or re.search(r'(?i)\b(?:save|write|create|make|prepare|draft|compose)\b.{0,100}\b(?:caption|message|draft|wording|appeal)\b',t))
  if name=='new_wording':
   if draft_flow.editing_request(t) or re.search(r'(?i)\b(rewrite|shorten|shorter|brief|bold|italic|remove|replace|edit|format)\b',t):return False
   return bool(re.search(r'(?i)\b(?:fresh|new|next|rotate|regenerate|another|different)\b.{0,55}\b(?:caption|message|draft|hook|wording|variant)\b',t)

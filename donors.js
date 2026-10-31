@@ -10,9 +10,9 @@
  const poster=make('dialog','poster-dialog');poster.id='posterDialog';poster.setAttribute('aria-label','Change campaign poster');
  poster.innerHTML=`<h2>Campaign poster</h2><p>The saved poster is used for group messages and donor DMs. Captions stay unchanged.</p><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status"></p><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
  document.body.append(poster);
- const launch=make('button','donor-launch','Donors');launch.type='button';launch.id='openDonors';document.querySelector('.brandbar').append(launch);
- /* On a phone the Donors button sits in the thumb row beside a smaller Chat button. */
- const phoneRow=document.querySelector('.navrow'),phone=matchMedia('(max-width:899px)'),placeLauncher=()=>{if(phone.matches&&phoneRow){phoneRow.append(launch);launch.classList.add('in-thumb-row')}else{document.querySelector('.brandbar').append(launch);launch.classList.remove('in-thumb-row')}};
+ const launch=make('button','primary donor-launch donor-launch-foot','Donors');launch.type='button';launch.id='openDonors';launch.setAttribute('aria-label','Open Donors');
+ /* On a phone the Donors button sits in the thumb row beside a smaller Chat button; otherwise it is the big footer shortcut. */
+ const phoneRow=document.querySelector('.navrow'),phone=matchMedia('(max-width:899px)'),placeLauncher=()=>{if(phone.matches&&phoneRow){phoneRow.append(launch);launch.classList.add('in-thumb-row')}else{document.querySelector('.foot')?.insertBefore(launch,document.getElementById('keyboardHelp'));launch.classList.remove('in-thumb-row')}};
  placeLauncher();phone.addEventListener('change',placeLauncher);
  const settings=document.querySelector('#set .body');if(settings){const row=make('div','row');const text=make('div','t');text.append(make('b','','Campaign poster'),make('small','','Replace the poster used by groups and DMs.'));const b=make('button','tool','Change poster');b.type='button';b.onclick=openPoster;row.append(text,b);settings.prepend(row)}
  const tools=document.querySelector('.overflow-tools>div');if(tools){const b=make('button','tool','Change poster');b.type='button';b.onclick=openPoster;tools.append(b)}

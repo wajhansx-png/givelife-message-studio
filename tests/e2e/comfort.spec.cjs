@@ -17,8 +17,8 @@ test('desktop reading column centers the reply and composer',async({page,request
  expect(Math.abs(input.x+input.width/2-(box.x+box.width/2))).toBeLessThan(3);
  expect(box.width).toBeLessThanOrEqual(780);expect(box.width).toBeGreaterThan(200);
  expect(await page.locator('#log .bot').last().evaluate(el=>getComputedStyle(el).textAlign)).toBe('left');
- const gear=await page.locator('#gear').boundingBox(),dot=await page.locator('#whatsappConnection').boundingBox(),donors=await page.locator('#openDonors').boundingBox();
- expect(gear.y).toBeGreaterThan(840);expect(dot.x).toBeLessThan(donors.x);
+ const gear=await page.locator('#gear').boundingBox();
+ expect(gear.y).toBeGreaterThan(840);
 });
 for(const [width,height,theme] of [[1440,900,'light'],[1024,768,'dark'],[768,1024,'light'],[390,844,'dark'],[320,640,'light']]){
  test(`all workspaces remain usable ${width} ${theme}`,async({page,request})=>{

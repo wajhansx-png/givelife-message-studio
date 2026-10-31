@@ -140,7 +140,9 @@ HOOKS=[
 DP=json.loads((ROOT/'dm_pools.json').read_text(encoding='utf-8'))
 
 def read_left():
- state=(DATA/'state.md').read_text(encoding='utf-8-sig');m=re.search(r'^LEFT:\s*(\d+)',state,re.M);return int(m[1]) if m else 39000
+ state=(DATA/'state.md').read_text(encoding='utf-8-sig');m=re.search(r'^LEFT:\s*(\d+)\s*$',state,re.M)
+ if not m:raise ValueError('Campaign balance is missing or invalid. Verify the amount before drafting or sending; no default amount will be invented.')
+ return int(m[1])
 
 def poster_left():
  m=re.search(r'^POSTER_LEFT:\s*(\d+)',(DATA/'state.md').read_text(encoding='utf-8-sig'),re.M);return int(m[1]) if m else None
@@ -179,7 +181,7 @@ def build_group(n,left,case_name=None):
  p2,p1=math.ceil(left/2000),math.ceil(left/1000)
  if left<=0:
   return f'*{name}: Case complete.*\n\nThank you to everyone who supported this case. There is Rs. 0 left to raise.\n\n- GiveLife Foundation'
- if name.casefold() not in ('yousuf','current case'):
+ if name.casefold() != 'yousuf':
   # Details are intentionally generic until the owner supplies verified facts.
   return (f'*GiveLife Foundation: Support needed for {name}*\n\n'
           'Please review the case details and help if you can.\n\n'
@@ -191,7 +193,7 @@ def build_group(n,left,case_name=None):
  pool=ALMOST if 0<left<=10000 else None
  hook=(pool[n%len(pool)][0] if pool else HOOKS[n%8][0]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
  push=(pool[(n+1)%len(pool)][1] if pool else HOOKS[(n*3+1)%8][1]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
- return (f'*{hook}*\n\nFluid in Yousuf\'s brain *can paralyse his body and damage his eyesight.* Both his kidneys are badly swollen. 💔\n\n'
+ return (f'*{hook}*\n\nYousuf's family reported fluid collecting in his brain, swollen kidneys and a hernia. Please refer to the latest medical documents for details. 💔\n\n'
          f'*_Rs. {left:,} LEFT_*\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n{push}\n\n'
          '*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation')
 
@@ -199,7 +201,7 @@ def build_dm(sel,left,case_name=None):
  name=_case_title(case_name if case_name is not None else active_case_name())
  if left<=0:
   return f'Assalam o alaikum Brother,\n\nThe case for {name} has been completed. Thank you to everyone who helped.\n\n- GiveLife Foundation'
- if name.casefold() not in ('yousuf','current case'):
+ if name.casefold() != 'yousuf':
   p2,p1=math.ceil(left/2000),math.ceil(left/1000)
   return (f'Assalam o alaikum Brother,\n\nGiveLife Foundation is collecting support for {name}. '
           'Please review the case details before donating.\n\n'

@@ -66,7 +66,7 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
 @media(max-width:899px) and (max-height:600px){.app{gap:4px}.live{min-height:56px}.livebar{min-height:44px}.hist header{min-height:36px}.hist .composer{margin-bottom:12px}.hist .log{padding-top:10px;padding-bottom:10px}}
 @media(max-width:899px) and (max-height:550px){body[data-view=dm]:has(.dmrow input:focus) .msgcard{display:none}body[data-view=dm]:has(.dmrow input:focus) .layout{display:flex;flex-direction:column}body[data-view=dm]:has(.dmrow input:focus) .side{flex:1;justify-content:flex-end;overflow:auto}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
-</style><link rel="stylesheet" href="/donors.css"><link rel="stylesheet" href="/studio.css"></head>
+</style><link rel="stylesheet" href="/donors.css"><link rel="stylesheet" href="/notes.css"><link rel="stylesheet" href="/studio.css"></head>
 <body class="nomsg" data-view="group">
 <a class="skip-link" href="#main-workspace">Skip to workspace</a>
 <div class="app"><span id="liveAnnouncement" class="sr-only" role="status" aria-live="polite"></span>
@@ -136,7 +136,7 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
 <input type="file" id="file" accept="image/*,video/mp4,video/quicktime" hidden><textarea id="group" hidden></textarea><textarea id="dm" hidden></textarea>
 <dialog id="feedbackDialog" class="memory-dialog" aria-label="Correct an assistant response"><h2>What should be different?</h2><form id="feedbackForm"><textarea id="feedbackText" name="feedbackText" aria-label="Your correction" placeholder="Describe the mistake and the correct behaviour…"></textarea><label class="feedback-check"><input type="checkbox" id="feedbackRemember">Remember this correction for future chats</label><p id="feedbackStatus" role="status"></p><button class="primary" type="submit">Save correction</button><button type="button" id="feedbackClose">Cancel</button></form></dialog>
 <dialog id="memoryDialog" class="memory-dialog" aria-label="Memory and feedback"><h2>Memory & feedback</h2><p>Saved preferences help future replies. They never authorize sending a new message.</p><div id="memoryContent"></div><button type="button" id="memoryClose">Close</button></dialog>
-<script src="/connection.js"></script><script src="/format.js"></script><script src="/app.js"></script><script src="/donors.js"></script><script src="/team.js"></script></body></html>
+<script src="/connection.js"></script><script src="/format.js"></script><script src="/app.js"></script><script src="/donors.js"></script><script src="/notes.js"></script><script src="/team.js"></script></body></html>
 
 
 

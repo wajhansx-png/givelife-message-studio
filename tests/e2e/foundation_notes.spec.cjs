@@ -1,0 +1,57 @@
+const {test,expect}=require('@playwright/test');
+const auth={Authorization:'Bearer manual-fix-preview-key'};
+async function open(page,request,width=1280,height=800){
+ await page.setViewportSize({width,height});
+ await page.addInitScript(()=>localStorage.setItem('givelife-cloud-key','manual-fix-preview-key'));
+ await request.post('/__test/seed',{headers:auth,data:{reply:'Ready.'}});
+ await page.goto('/');
+ await page.locator('#openDonors').click();
+ await page.locator('#donorNotesShortcut').click();
+ await expect(page.locator('#foundationNotes')).toBeVisible();
+}
+test('private notes: password, autosave, reload, desktop remembrance and lock',async({page,request})=>{
+ await open(page,request);
+ await expect(page.locator('#notesLocked')).toBeVisible();
+ await page.locator('#notesPassword').fill('wrong');
+ await page.locator('#notesUnlockButton').click();
+ await expect(page.locator('#notesError')).toContainText('Incorrect');
+ await page.locator('#notesPassword').fill('test-preview-only-pin');
+ await page.locator('#notesUnlockButton').click();
+ const editor=page.locator('#notesEditor');
+ await expect(editor).toBeVisible();
+ await editor.fill('Plan student volunteer outreach');
+ await expect(page.locator('#notesSync')).toHaveText('Saved',{timeout:10000});
+ await page.locator('#notesBack').click();
+ await page.locator('#donorNotesShortcut').click();
+ await expect(editor).toContainText('Plan student volunteer outreach');
+ await expect(page.locator('#notesLocked')).toBeHidden();
+ await page.reload();
+ if(!(await page.locator('#donorsPage').isVisible()))await page.locator('#openDonors').click();
+ await page.locator('#donorNotesShortcut').click();
+ await expect(page.locator('#notesLocked')).toBeHidden();
+ await expect(editor).toContainText('Plan student volunteer outreach');
+ await page.locator('#notesLock').click();
+ await expect(page.locator('#notesLocked')).toBeVisible();
+ await page.locator('#notesBack').click();
+ await page.locator('#donorNotesShortcut').click();
+ await expect(page.locator('#notesLocked')).toBeVisible();
+ expect(await page.evaluate(()=>localStorage.getItem('givelife-notes-password'))).toBeNull();
+});
+test('phone notes: readable editing surface, toolbar and no sideways scrolling',async({page,request})=>{
+ await open(page,request,390,844);
+ await page.locator('#notesPassword').fill('test-preview-only-pin');
+ await page.locator('#notesUnlockButton').click();
+ const editor=page.locator('#notesEditor');
+ await expect(editor).toBeVisible();
+ await editor.fill('Find university representatives');
+ await editor.press('ControlOrMeta+A');
+ await page.getByRole('button',{name:'Bold',exact:true}).click();
+ await expect(editor.locator('b,strong')).toContainText('Find university representatives');
+ await page.locator('#notesStyle').selectOption('h2');
+ await expect(editor.locator('h2')).toHaveCount(1);
+ await expect(page.locator('#notesSync')).toHaveText('Saved',{timeout:10000});
+ const wide=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);
+ expect(wide).toBe(false);
+ const bar=await page.locator('.notes-toolbar').boundingBox();
+ expect(bar.x+bar.width).toBeLessThanOrEqual(391);
+});

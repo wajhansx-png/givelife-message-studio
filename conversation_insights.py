@@ -153,3 +153,19 @@ def evidence_fallback(review):
   lines.append(f'{n}. **{title}.** {explanation}\n   **Change:** {action}\n   **Measure:** {measure}')
  lines.append('These are suggestions, not actions taken. Only conversations retained in the app were reviewed.')
  return '\n\n'.join(lines)
+
+def summarize_failures(lessons):
+ """Aggregate saved tool failures by operation without exposing request/phone text.
+
+ These are historical tool errors, not verified root causes or model scores.
+ """
+ counts={}
+ for item in lessons if isinstance(lessons,list) else []:
+  if not isinstance(item,dict):continue
+  name=re.sub(r'[^a-z0-9_]', '', str(item.get('tool','unknown')).lower())[:45] or 'unknown'
+  count=item.get('count',1)
+  if not isinstance(count,int) or count<1:count=1
+  counts[name]=counts.get(name,0)+min(count,10000)
+ return [{'operation':name,'reported_failures':count}
+         for name,count in sorted(counts.items(),key=lambda kv:(-kv[1],kv[0]))[:12]]
+

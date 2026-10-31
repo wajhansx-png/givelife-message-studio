@@ -8698,17 +8698,31 @@ html body .donor-page .bank-message.bank-detail > header .tool {
   }
 }
 
-/* The footer already crowds build + status + keyboard-shortcuts + gear on a phone; the AI model stays in Settings there. */
-/* Footer: a quick Donors shortcut sits centred where the status text used to be. */
-.foot-donors {
-  min-height: 32px;
-  padding: 0 14px;
-  font-size: 12.5px;
-  font-weight: 650;
+/* Footer: Donors is the one prominent, colourful shortcut, centred where the status text used to be. */
+.donor-launch-foot {
+  min-height: 44px;
+  padding: 0 28px;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: .01em;
 }
 @media (max-width: 899px) {
-  .foot-donors {
-    min-height: 36px;
+  .donor-launch-foot {
+    min-height: 46px;
+    padding: 0 24px;
+  }
+}
+#openDonors.donor-launch-foot {
+  background: linear-gradient(180deg,#ffffff1f,#ffffff00 60%),var(--btn) !important;
+  border: 0 !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 #ffffff2e,0 8px 20px -10px color-mix(in srgb,var(--btn) 90%,transparent) !important;
+}
+@media(hover:hover) and (pointer:fine) {
+  #openDonors.donor-launch-foot:hover {
+    background-color: var(--btnh) !important;
+    box-shadow: inset 0 1px 0 #ffffff2e,0 12px 26px -10px color-mix(in srgb,var(--btn) 95%,transparent) !important;
+    transform: translateY(-1px);
   }
 }
 /* The "···" row menu is a plain icon button, not a second pill matching the PKR box. */

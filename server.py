@@ -1195,13 +1195,13 @@ def outreach(caps):
 
 def ai_test():
  key=assistant.client()
- if not key:return {'ok':False,'error':'No DeepSeek key yet. Add DEEPSEEK_API_KEY in Render, then deploy.'}
+ if not key:return {'ok':False,'error':'No AI key yet. Add CEREBRAS_API_KEY or DEEPSEEK_API_KEY in Render, then deploy.'}
  t0=time.time()
  try:text,_=assistant._call(key,'Reply with one word only.',[],[{'role':'user','content':'Reply with exactly: OK'}])
  except Exception as e:
-  m=str(e);hint=' The key looks wrong or revoked.' if '401' in m or '403' in m else ' The DeepSeek balance may be empty.' if '402' in m else ' Check the internet or try again.'
+  m=str(e);hint=' The key looks wrong or revoked.' if '401' in m or '403' in m else ' The balance may be empty.' if '402' in m else ' Check the internet or try again.'
   return {'ok':False,'error':m[:120]+hint}
- return {'ok':True,'ms':round((time.time()-t0)*1000),'reply':text[:40]}
+ return {'ok':True,'ms':round((time.time()-t0)*1000),'reply':text[:40],'provider':'DeepSeek' if assistant.fallback_used() else ('Cerebras' if os.environ.get('CEREBRAS_API_KEY') else 'DeepSeek')}
 
 ENGINE=autopilot.Engine({'DATA':DATA,'store_get':lambda k:STORE.get(k) if STORE else None,'persist':persist_file,'log':auto_log,
  'send_text':send_text,'owner_jid':lambda:OWNER_PHONE+'@s.whatsapp.net','enabled':auto_on,'read_left':read_left,'wa_ok':wa_ok,

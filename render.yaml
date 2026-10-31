@@ -19,5 +19,7 @@ services:
         sync: false
       - key: DEEPSEEK_API_KEY
         sync: false
+      - key: CEREBRAS_API_KEY
+        sync: false
       - key: PORT
         value: '10000'

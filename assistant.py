@@ -6,14 +6,25 @@ from chat_memory import safe_text
 
 MODEL = os.environ.get('DEEPSEEK_MODEL', 'deepseek-chat')
 API_URL = os.environ.get('DEEPSEEK_URL', 'https://api.deepseek.com/chat/completions')
+# Primary provider: Cerebras (fast). DeepSeek is the fallback when Cerebras is unset, fails, or is rate-limited.
+CEREBRAS_MODEL = os.environ.get('CEREBRAS_MODEL', 'gpt-oss-120b')
+CEREBRAS_URL = os.environ.get('CEREBRAS_URL', 'https://api.cerebras.ai/v1/chat/completions')
+_FALLBACK = threading.local()
 ROOT = Path(__file__).resolve().parent
 PKT = datetime.timezone(datetime.timedelta(hours=5))
 GROUP_KEYS = ['main', 'community', 'fiverr', 'upwork', 'uet', 'toprated', 'free', 'all', 'test']
 
 
 def client():
-    """Returns the API key when the assistant is configured, else None."""
-    return os.environ.get('DEEPSEEK_API_KEY') or None
+    """Returns a usable key when either provider is configured, else None. Cerebras is tried first."""
+    return os.environ.get('CEREBRAS_API_KEY') or os.environ.get('DEEPSEEK_API_KEY') or None
+
+
+def fallback_used():
+    """True once this turn actually switched from Cerebras to DeepSeek. Clears itself on read."""
+    used = getattr(_FALLBACK, 'used', False)
+    _FALLBACK.used = False
+    return used
 
 
 def playbook():
@@ -104,10 +115,8 @@ def _system(memory):
     return SYSTEM
 
 
-def _chat_raw(key, system, tools, messages, max_tokens=None):
-    """One call to DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
-    model=os.environ.get('DEEPSEEK_REASONING_MODEL') or MODEL
-    thinking=model in ('deepseek-reasoner','deepseek-flash','deepseek-v4-pro') or os.environ.get('DEEPSEEK_THINKING')=='enabled'
+def _one_call(url, key, model, label, system, tools, messages, max_tokens, thinking):
+    """One HTTP call to one provider. Raises on any problem; never returns a partial message."""
     limit=int(max_tokens or os.environ.get('DEEPSEEK_MAX_TOKENS','8192' if thinking else '4096'))
     body = {'model': model, 'messages': [{'role': 'system', 'content': system}] + messages,
             'max_tokens': max(2048,min(16384,limit))}
@@ -115,7 +124,7 @@ def _chat_raw(key, system, tools, messages, max_tokens=None):
     else:body['temperature']=0.2
     if tools:
         body.update(tools=tools, tool_choice='auto')
-    req = urllib.request.Request(API_URL, data=json.dumps(body).encode('utf-8'), method='POST',
+    req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), method='POST',
                                  headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key})
     for attempt in range(2):
         try:
@@ -123,14 +132,34 @@ def _chat_raw(key, system, tools, messages, max_tokens=None):
             break
         except urllib.error.HTTPError as e:
             if e.code in (429,502,503,504) and attempt==0:time.sleep(.5);continue
-            raise RuntimeError(f'DeepSeek returned {e.code}' + (' (check the API key)' if e.code in (401,403) else '')) from None
+            raise RuntimeError(f'{label} returned {e.code}' + (' (check the API key)' if e.code in (401,403) else '')) from None
+        except (urllib.error.URLError,TimeoutError,OSError) as e:
+            raise RuntimeError(f'{label} did not respond: {e}') from None
     choices=data.get('choices')
     if not isinstance(choices,list) or not choices or not isinstance(choices[0],dict):
-        raise RuntimeError('DeepSeek returned an incomplete response. No action was confirmed.')
+        raise RuntimeError(f'{label} returned an incomplete response. No action was confirmed.')
     message=mapping(choices[0].get('message'))
     if choices[0].get('finish_reason')=='length':raise RuntimeError('The model response reached its limit before completion. No partial tool call was executed.')
-    if not message:raise RuntimeError('DeepSeek returned an empty message. No action was confirmed.')
+    if not message:raise RuntimeError(f'{label} returned an empty message. No action was confirmed.')
     return message
+
+
+def _chat_raw(key, system, tools, messages, max_tokens=None):
+    """One model call. Tries Cerebras first (fast, primary); only moves to DeepSeek when Cerebras
+    is unset, errors, or is rate-limited. Never shifts providers more than needed for one call."""
+    cerebras_key = os.environ.get('CEREBRAS_API_KEY')
+    deepseek_key = os.environ.get('DEEPSEEK_API_KEY')
+    deepseek_model = os.environ.get('DEEPSEEK_REASONING_MODEL') or MODEL
+    deepseek_thinking = deepseek_model in ('deepseek-reasoner','deepseek-flash','deepseek-v4-pro') or os.environ.get('DEEPSEEK_THINKING')=='enabled'
+    if cerebras_key:
+        try:
+            return _one_call(CEREBRAS_URL, cerebras_key, CEREBRAS_MODEL, 'Cerebras', system, tools, messages, max_tokens, False)
+        except Exception:
+            if not deepseek_key:raise
+            _FALLBACK.used = True
+    key = deepseek_key or key
+    if not key:raise RuntimeError('No model is configured.')
+    return _one_call(API_URL, key, deepseek_model, 'DeepSeek', system, tools, messages, max_tokens, deepseek_thinking)
 
 
 def _parse_calls(msg):

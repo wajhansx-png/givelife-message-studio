@@ -48,9 +48,16 @@ class Cleaner(HTMLParser):
         if tag == 'li' and at.get('data-checked') in ('true','false'):
             allowed = ' data-checked="' + at['data-checked'] + '"'
         if tag == 'span':
-            color = re.fullmatch(r'\s*color\s*:\s*(#[0-9a-fA-F]{6})\s*;?\s*', at.get('style') or '')
-            if color and color[1].lower() in COLORS:
-                allowed = ' style="color:' + color[1].lower() + '"'
+            raw_style = at.get('style') or ''
+            color = re.fullmatch(r'\s*color\s*:\s*(#[0-9a-fA-F]{6}|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\))\s*;?\s*', raw_style, re.I)
+            if color:
+                value = color[1].lower()
+                if value.startswith('rgb'):
+                    values = [int(n) for n in re.findall(r'\d+', value)]
+                    if len(values) == 3 and all(n <= 255 for n in values):
+                        value = '#' + ''.join(format(n, '02x') for n in values)
+                if value in COLORS:
+                    allowed = ' style="color:' + value + '"'
         self.parts.append('<' + tag + allowed + '>')
         if tag not in VOID:
             self.stack.append(tag)

@@ -200,6 +200,16 @@ class RuntimeTests(unittest.TestCase):
 class ServerAuditTests(unittest.TestCase):
  setUp=fixture.SendTests.setUp
  tearDown=fixture.SendTests.tearDown
+ def test_team_plan_cannot_invent_due_nine_pm_from_ai_args(self):
+  source='In tasks give task to find new volunteers'
+  suggested='Give a report on finding new volunteers. today. deadline 9pm'
+  plan={'plan':{'items':[{'text':'find new volunteers','due_at':None,
+                          'start_label':'No deadline','due_label':'No deadline'}]}}
+  with patch.object(app.donors().team,'plan',return_value=plan) as planner:
+   reply=app.agent_action('team_action',source,{'action':'plan','text':suggested},{'text':source})
+  self.assertEqual(planner.call_args.args[0],'find new volunteers')
+  self.assertIn('no deadline; no automatic send',reply)
+  self.assertNotIn('9:00 PM',reply)
  def test_wrong_model_amount_is_rejected(self):
   cb=app.chat_callbacks('25k left',revision=0)
   with self.assertRaises(ValueError):cb['set_left'](left=22000)

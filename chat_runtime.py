@@ -58,6 +58,7 @@ def context_messages(text,history,state,memory):
  msgs=[];budget=18000
  selected=[]
  for h in reversed(valid_history(history)):
+  if reviewing and h['who']!='you':continue
   if reviewing and len(selected)>=6:break
   content=safe_text(h['text'],4000)
   if len(content)>budget:continue

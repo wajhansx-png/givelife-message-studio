@@ -41,6 +41,21 @@ class CaseIsolation(unittest.TestCase):
    self.assertNotIn('Yousuf',text)
    self.assertNotIn('brain',text.lower())
    self.assertIn('12,000',text)
+ def test_new_case_has_twenty_distinct_complete_dms_without_old_facts(self):
+  import dm_composer
+  self.app.donors().cases.new('Another child',28000)
+  bank=self.app.donors().messages.get()
+  texts=[row['text'] for row in bank['items']]
+  self.assertEqual(len(texts),20)
+  self.assertEqual(len(set(texts)),20)
+  self.assertEqual(len(self.app.donors().messages.captions(20)),20)
+  for text in texts:
+   self.assertTrue(dm_composer.complete(text))
+   self.assertIn('Another child',text)
+   self.assertIn('28,000',text)
+   self.assertNotIn('Yousuf',text)
+   self.assertNotIn('brain',text.lower())
+
  def test_completed_case_does_not_solicit_new_donations(self):
   self.app.donors().cases.new('Food aid family',12000)
   self.app.set_left(0)

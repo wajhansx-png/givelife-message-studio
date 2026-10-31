@@ -303,12 +303,12 @@ class TeamTasks:
             d['tasks'].extend(made);d['plan'] = None
             self._event('plan', f'{len(made)} task{"s" if len(made) != 1 else ""} started for {d["member"]["name"]}.')
             self._save()
-            timed=[t for t in made if t['start_at'] is not None]
+            timed=[t for t in made if t['due_at'] is not None]
             if not timed:
                 reply=f'{len(made)} task{"s" if len(made)!=1 else ""} confirmed without a deadline. WhatsApp will ask for updates, then follow up after 2 and 6 hours if still open; no due time was invented.'
             else:
                 reply=f'{len(made)} task{"s" if len(made)!=1 else ""} started. First scheduled WhatsApp message: {fmt_time(min(t["start_at"] for t in timed), now)}.'
-                if len(timed)<len(made):reply+=f' {len(made)-len(timed)} task(s) have no deadline and will not be auto-sent.'
+                if len(timed)<len(made):reply+=f' {len(made)-len(timed)} task(s) have no deadline; tracking starts automatically after confirmation.'
             return {**self.view(),'reply':reply}
 
     def _find(self, ident):

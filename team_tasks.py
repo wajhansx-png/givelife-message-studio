@@ -13,7 +13,7 @@ import copy, datetime, hashlib, os, re, threading, time, uuid
 from donor_book import normalize_phone
 
 PKT = datetime.timezone(datetime.timedelta(hours=5))
-OPEN = ('Waiting', 'Asked', 'Late', 'Reported')
+OPEN = ('Waiting', 'Asked', 'Late', 'Reported', 'Unscheduled')
 LEFT = ('Waiting', 'Asked', 'Late')
 DONE_CORE = r"(?:done|finished|completed?|posted|sent|submitted|uploaded|shared|ready|ho\s*gaya|ho\s*gya|hogaya|ho\s*gai|kar\s*diya|kar\s*di|kardiya|kr\s*diya)"
 DONE_WORDS = re.compile(r"(?i)\b" + DONE_CORE + r"\b")
@@ -33,6 +33,7 @@ DEADLINE = re.compile(r"(?i)\b(?:(?:deadline|due|latest|all by|everything by|fin
 
 
 def fmt_time(ts, now=None):
+    if ts is None:return 'No deadline'
     d = datetime.datetime.fromtimestamp(ts, PKT)
     out = d.strftime('%I:%M %p').lstrip('0')
     if now is not None and d.date() != datetime.datetime.fromtimestamp(now, PKT).date():
@@ -120,15 +121,14 @@ def plan_tasks(text, now, quiet=None):   # quiet=None: no restriction on the hou
     if len(items) > 20:
         raise ValueError('Give at most 20 tasks at a time.')
     untimed = [i for i in items if i['own_due'] is None]
-    if untimed and overall is None:
-        raise ValueError('Give a deadline for the tasks, for example "deadline 6pm" or "in 3 hours".')
+    # No explicit due time means a visible, unscheduled task. NEVER invent 9 PM.
     if overall is not None and overall <= now + MIN_SLOT:
         raise ValueError('That deadline is too soon or already passed. Give a time at least 10 minutes from now.')
     for i in items:
         if i['own_due'] is not None and i['own_due'] <= now + MIN_SLOT:
             raise ValueError(f'"{i["text"][:40]}" has a time that is too soon or already passed.')
     out = []
-    if untimed:
+    if untimed and overall is not None:
         slot = (overall - now) / len(untimed)
         if slot < MIN_SLOT:
             need = int(len(untimed) * MIN_SLOT / 60)
@@ -137,11 +137,14 @@ def plan_tasks(text, now, quiet=None):   # quiet=None: no restriction on the hou
     for i in items:
         if i['own_due'] is not None:
             start = max(now, i['own_due'] - 3 * 3600);due = i['own_due']
+        elif overall is None:
+            start = due = None
         else:
             start = now + k * slot;due = start + slot;k += 1
         out.append({'text': i['text'], 'start_at': start, 'due_at': due})
     # nothing is sent at night: a task that would start in quiet hours starts when they end, and must still leave time to do it
     for t in (out if quiet else []):
+        if t['start_at'] is None:continue
         h = datetime.datetime.fromtimestamp(t['start_at'], PKT)
         if in_quiet(h.hour, quiet):
             morning = h.replace(hour=quiet[1], minute=5, second=0, microsecond=0)
@@ -234,7 +237,7 @@ class TeamTasks:
                 plan = {'items': [{**i, 'due_label': fmt_time(i['due_at'], now), 'start_label': fmt_time(i['start_at'], now)} for i in d['plan']['items']]}
             return {'member': {'name': d['member']['name']} if d['member'] else None, 'tasks': [self._public_task(t, now) for t in d['tasks'] if t['status'] != 'Cancelled'],
                     'unread': d['unread'], 'plan': plan, 'paused': d['paused'], 'quiet': d['quiet'], 'now_label': fmt_time(now),
-                    'counts': {s: sum(1 for t in d['tasks'] if t['status'] == s) for s in ('Waiting', 'Asked', 'Reported', 'Late', 'Done')},
+                    'counts': {s: sum(1 for t in d['tasks'] if t['status'] == s) for s in ('Waiting', 'Asked', 'Reported', 'Late', 'Done', 'Unscheduled')},
                     'latest': [{'label': fmt_time(e['at'], now), 'text': e['text']} for e in d['feed'] if e['kind'] in ('update', 'report', 'blocked', 'proof', 'send_uncertain')][-3:][::-1]}
 
     # ---- owner actions
@@ -284,17 +287,23 @@ class TeamTasks:
                 d['counter'] = 0
             made = []
             for i in d['plan']['items']:
-                if i['due_at'] <= now:
+                if i['due_at'] is not None and i['due_at'] <= now:
                     raise ValueError('The deadline passed while the plan was waiting. Plan it again.')
                 d['counter'] += 1
                 tid = uuid.uuid4().hex
-                made.append({'id': tid, 'no': d['counter'], 'text': i['text'], 'start_at': i['start_at'], 'due_at': i['due_at'], 'status': 'Waiting', 'created_at': now, 'attempts': 0,
+                made.append({'id': tid, 'no': d['counter'], 'text': i['text'], 'start_at': i['start_at'], 'due_at': i['due_at'], 'status': 'Unscheduled' if i['due_at'] is None else 'Waiting', 'created_at': now, 'attempts': 0,
                              'next_try': 0, 'asked_at': None, 'reminded': False, 'checked': False, 'final_sent': False, 'acked': False, 'proof': False, 'proof_asked': False,
                              'blocked_replied': False, 'report_text': '', 'reported_at': None, 'verified_at': None, 'jit': self.JITTER[0] + int(tid[:6], 16) % (self.JITTER[1] - self.JITTER[0] + 1)})
             d['tasks'].extend(made);d['plan'] = None
             self._event('plan', f'{len(made)} task{"s" if len(made) != 1 else ""} started for {d["member"]["name"]}.')
             self._save()
-            return {**self.view(), 'reply': f'{len(made)} task{"s" if len(made) != 1 else ""} started. The first message goes out at {fmt_time(min(t["start_at"] for t in made), now)}.'}
+            timed=[t for t in made if t['start_at'] is not None]
+            if not timed:
+                reply=f'{len(made)} task{"s" if len(made)!=1 else ""} saved without a deadline. No WhatsApp messages scheduled.'
+            else:
+                reply=f'{len(made)} task{"s" if len(made)!=1 else ""} saved. First scheduled WhatsApp message: {fmt_time(min(t["start_at"] for t in timed), now)}.'
+                if len(timed)<len(made):reply+=f' {len(made)-len(timed)} task(s) have no deadline and will not be auto-sent.'
+            return {**self.view(),'reply':reply}
 
     def _find(self, ident):
         d = self._load()
@@ -320,7 +329,7 @@ class TeamTasks:
     def verify(self, ident):
         with self.lock:
             t = self._find(ident);now = self.now();name = self._first()
-            if t['status'] not in ('Reported', 'Late', 'Asked', 'Waiting'):
+            if t['status'] not in ('Reported', 'Late', 'Asked', 'Waiting', 'Unscheduled'):
                 raise ValueError('This task is not waiting for you.')
             was = t['status'];t['status'] = 'Done';t['verified_at'] = now
             if was == 'Reported':
@@ -457,7 +466,7 @@ class TeamTasks:
                 t['status'] = 'Asked';t['asked_at'] = now;t['attempts'] += 1
             d['last_sent'] = now
             return {'kind': 'ask', 'text': self._ask_text(ready, now), 'tasks': [t['id'] for t in ready]}
-        for t in sorted(d['tasks'], key=lambda x: x['start_at']):
+        for t in sorted(d['tasks'], key=lambda x: x['start_at'] if x['start_at'] is not None else float('inf')):
             if t.get('delivery_uncertain'): continue
             kind = None
             if t['status'] == 'Asked' and not t['acked'] and not t['reminded'] and now >= (t['asked_at'] or now) + 30 * 60 + t['jit'] * 10 and now < t['due_at'] - 15 * 60:
@@ -655,7 +664,7 @@ class TeamTasks:
             if not v['tasks']:
                 return f'No tasks for {v["member"]["name"]} right now.'
             done = sum(1 for t in v['tasks'] if t['status'] == 'Done')
-            left = [f'{t["text"][:50]} ({t["status"].lower()}, due {t["due_label"]})' for t in v['tasks'] if t['status'] != 'Done']
+            left = [f'{t["text"][:50]} ({t["status"].lower()}, '+('no deadline' if t['due_at'] is None else 'due '+t['due_label'])+')' for t in v['tasks'] if t['status'] != 'Done']
             return f'{done} of {len(v["tasks"])} done. ' + ('Left: ' + '; '.join(left) if left else 'All done.')
 
     def command(self, raw, t):

@@ -242,8 +242,12 @@ def run_chat(text,history,state,memory,do):
  elif errors:reply='I could not complete this request. '+errors[-1]+' No action was confirmed.'
  elif not reply:reply='I could not determine a reliable answer. Please tell me the missing recipient or detail.'
  elif chat_policy.intent(text)['send'] and not jobs and not actions:
-  if re.search(r'(?i)\b(sent|posted|queued|delivered)\b',reply):reply='No send has been confirmed. I need the intended recipient or message to proceed.'
- elif claims_completion(reply):reply='I do not have a confirmed tool result for that action.'
+  # Never accept prose as a WhatsApp receipt, including "WhatsApp confirmed",
+  # "batch completed", and other claims without an actual tool result.
+  if claims_completion(reply):
+   reply='No send has been confirmed. Check the intended recipient and message before trying again.'
+ elif claims_completion(reply):
+  reply='I do not have a confirmed tool result for that action.'
  if required_edit and not saved_edit and not errors:
   reply='The draft edit has not been saved. '+(reply if not claims_completion(reply) else 'I need the missing caption or target to finish it.')
  elif required_variants and not variants_done and not errors:

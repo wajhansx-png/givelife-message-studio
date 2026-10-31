@@ -1564,7 +1564,7 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
    if name=='dm_donors':
     if not chat_policy.permitted(name,prompt):raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
     return donors().model_tool(prompt,task_id,'send')
-   if not chat_policy.permitted(name,prompt) and not (name=='set_message' and selection is not None):
+   if not chat_policy.permitted(name,prompt) and not (name=='set_message' and selection is not None and not chat_policy.task_assignment_only(prompt)):
     if name in send_tools and not sending:raise ValueError('The current instruction does not ask to send. Nothing was sent.')
     if name in ('dm_list','dm_donors','dm_group'):raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
     raise ValueError('The current instruction does not authorize '+name+'. Nothing was changed or sent.')

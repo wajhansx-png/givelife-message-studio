@@ -6,7 +6,14 @@ payment details, reply instruction.
 """
 import math, re
 
-VERSION = 'dm-structure-2026-10-31-verified-facts'
+VERSION = 'dm-structure-2026-10-31-reported-facts'
+# The old variants contain unsupported predictions that paralysis would start
+# or spread. Preserve their layout but use a single, carefully attributed
+# summary. New case details must never be inferred from old AI-generated text.
+REPORTED_CONDITION = (
+    'Yousuf is 2. His family reported fluid collecting in his brain, swollen '
+    'kidneys and a hernia. Please check the latest medical documents for details.'
+)
 
 STRUCTURE = (
     '{greeting}, {opening}\n\n'
@@ -256,6 +263,7 @@ def build(index, left, greeting='Brother'):
     p2 = math.ceil(left / 2000)
     p1 = math.ceil(left / 1000)
     item = {key: value.format(left=f'{left:,}', p2=p2, p1=p1) for key, value in VARIANTS[int(index) % COUNT].items()}
+    item['condition'] = REPORTED_CONDITION  # never reuse the unsupported medical predictions above
     return STRUCTURE.format(
         greeting=greeting,
         left=f'{left:,}',

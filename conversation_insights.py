@@ -9,8 +9,8 @@ from state_shapes import history as valid_history
 
 HISTORY_RE = re.compile(
  r'(?is)\b(?:read|review|analy[sz]e|study|inspect|go through|look (?:through|at)|learn from|based on|from)\b'
- r'.{0,120}\b(?:chats?|conversation|history|past messages?|old messages?|past prompts?|previous requests?|past mistakes?)\b'
- r'|\b(?:chats?|conversation|history|past prompts?|previous requests?|past mistakes?)\b'
+ r'.{0,120}\b(?:chats?|conversations?|history|past messages?|old messages?|past prompts?|previous requests?|past mistakes?)\b'
+ r'|\b(?:chats?|conversations?|history|past prompts?|previous requests?|past mistakes?)\b'
  r'.{0,120}\b(?:suggest|recommend|improv|learn|analy[sz]e|review|future|next)\b'
  r'|\b(?:future|next[- ]case|long[- ]term)\s+(?:suggestions?|recommendations?|improvements?|strategy|ideas?)\b'
  r'|\b(?:suggestions?|recommendations?|improvements?)\b.{0,40}\b(?:future|from (?:our|my) chats?|past chats?|old chats?)\b')

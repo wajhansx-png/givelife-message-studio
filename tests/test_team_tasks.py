@@ -38,6 +38,33 @@ class Base(unittest.TestCase):
  def status(self,text):return self.tasks()[text]
 
 class Planning(Base):
+ def test_no_deadline_never_becomes_nine_pm_or_an_automatic_message(self):
+  v=self.t.plan('find new volunteers')
+  self.assertEqual(len(v['plan']['items']),1)
+  item=v['plan']['items'][0]
+  self.assertEqual(item['text'],'find new volunteers')
+  self.assertIsNone(item['due_at'])
+  self.assertIsNone(item['start_at'])
+  self.assertEqual(item['due_label'],'No deadline')
+  self.assertEqual(self.sent,[])
+  r=self.t.confirm_plan()
+  self.assertIn('No WhatsApp messages scheduled',r['reply'])
+  self.assertEqual(self.status('find new volunteers'),'Unscheduled')
+  self.tick(1);self.tick(120);self.tick(1440)
+  self.assertEqual(self.sent,[])
+  self.assertEqual(self.status('find new volunteers'),'Unscheduled')
+  self.assertIn('no deadline',self.t.summary().lower())
+  ref=self.t.match_task('volunteers')
+  self.t.verify(ref)
+  self.assertEqual(self.status('find new volunteers'),'Done')
+ def test_timed_and_untimed_tasks_do_not_share_a_guessed_deadline(self):
+  v=self.t.plan('find new volunteers\\nupdate sheet by 6pm'.replace('\\\\n','\\n'))
+  by_text={x['text']:x for x in v['plan']['items']}
+  self.assertIsNone(by_text['find new volunteers']['due_at'])
+  self.assertEqual(by_text['update sheet']['due_label'],'6:00 PM')
+  self.t.confirm_plan()
+  self.assertEqual(self.status('find new volunteers'),'Unscheduled')
+  self.assertEqual(self.status('update sheet'),'Waiting')
  def test_splits_and_spreads_the_time_evenly(self):
   v=self.t.plan('1) post in 3 groups 2) update the sheet 3) message donors deadline 6pm')
   self.assertEqual([(i['text'],i['start_label'],i['due_label']) for i in v['plan']['items']],[('post in 3 groups','2:00 PM','3:20 PM'),('update the sheet','3:20 PM','4:40 PM'),('message donors','4:40 PM','6:00 PM')])
@@ -45,7 +72,7 @@ class Planning(Base):
   v=self.t.plan('call Ali by 3pm\nupdate sheet by 5:30 pm');self.assertEqual([i['due_label'] for i in v['plan']['items']],['3:00 PM','5:30 PM'])
   v=self.t.plan('a by 4pm\nb deadline 7pm');self.assertEqual([i['due_label'] for i in v['plan']['items']],['4:00 PM','7:00 PM'])
  def test_bad_input_is_refused_with_a_reason(self):
-  for text,word in (('','Write'),('post\nupdate','deadline'),('post deadline 1pm','too soon'),('post by 1:30pm','too soon')):
+  for text,word in (('','Write'),('post deadline 1pm','too soon'),('post by 1:30pm','too soon')):
    with self.subTest(text=text),self.assertRaisesRegex(ValueError,word):self.t.plan(text)
   with self.assertRaisesRegex(ValueError,'Not enough time'):self.t.plan('\n'.join('task %d'%i for i in range(12))+'\ndeadline in 10 minutes')
   with self.assertRaisesRegex(ValueError,'at most 20'):self.t.plan('\n'.join('task %d'%i for i in range(21))+'\ndeadline tomorrow 11pm')

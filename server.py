@@ -140,7 +140,9 @@ HOOKS=[
 DP=json.loads((ROOT/'dm_pools.json').read_text(encoding='utf-8'))
 
 def read_left():
- state=(DATA/'state.md').read_text(encoding='utf-8-sig');m=re.search(r'^LEFT:\s*(\d+)',state,re.M);return int(m[1]) if m else 39000
+ state=(DATA/'state.md').read_text(encoding='utf-8-sig');m=re.search(r'^LEFT:\s*(\d+)\s*$',state,re.M)
+ if not m:raise ValueError('Campaign balance is missing or invalid. Verify the amount before drafting or sending; no default amount will be invented.')
+ return int(m[1])
 
 def poster_left():
  m=re.search(r'^POSTER_LEFT:\s*(\d+)',(DATA/'state.md').read_text(encoding='utf-8-sig'),re.M);return int(m[1]) if m else None
@@ -162,13 +164,9 @@ def active_case_name():
   except (OSError,ValueError):raw={}
  if not isinstance(raw,dict):return 'Current case'
  name=next((c.get('name','Current case') for c in raw.get('cases',[]) if isinstance(c,dict) and c.get('id')==raw.get('current')),'Current case')
- if name=='Current case' and DRAFT.exists():
-  # A legacy case had no title. Preserve its saved Yousuf draft instead of
-  # unexpectedly replacing that existing message during a balance update.
-  try:
-   saved=json.loads(DRAFT.read_text(encoding='utf-8'))
-   if re.search(r'(?i)\bYousuf\b',str(saved.get('group',''))):return 'Yousuf'
-  except (OSError,ValueError,TypeError):pass
+ # Never infer a patient's identity from an older saved caption. The case
+ # registry is authoritative; unnamed legacy cases must be renamed explicitly.
+
  return name
 
 def _case_title(name):
@@ -179,7 +177,7 @@ def build_group(n,left,case_name=None):
  p2,p1=math.ceil(left/2000),math.ceil(left/1000)
  if left<=0:
   return f'*{name}: Case complete.*\n\nThank you to everyone who supported this case. There is Rs. 0 left to raise.\n\n- GiveLife Foundation'
- if name.casefold() not in ('yousuf','current case'):
+ if name.casefold() != 'yousuf':
   # Details are intentionally generic until the owner supplies verified facts.
   return (f'*GiveLife Foundation: Support needed for {name}*\n\n'
           'Please review the case details and help if you can.\n\n'
@@ -191,7 +189,7 @@ def build_group(n,left,case_name=None):
  pool=ALMOST if 0<left<=10000 else None
  hook=(pool[n%len(pool)][0] if pool else HOOKS[n%8][0]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
  push=(pool[(n+1)%len(pool)][1] if pool else HOOKS[(n*3+1)%8][1]).replace('{P2}',str(p2)).replace('{L}',f'{left:,}')
- return (f'*{hook}*\n\nFluid in Yousuf\'s brain *can paralyse his body and damage his eyesight.* Both his kidneys are badly swollen. 💔\n\n'
+ return (f'*{hook}*\n\nThe family reported fluid collecting in the brain, swollen kidneys and a hernia. Please refer to the latest medical documents for details. 💔\n\n'
          f'*_Rs. {left:,} LEFT_*\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n{push}\n\n'
          '*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation')
 
@@ -199,14 +197,29 @@ def build_dm(sel,left,case_name=None):
  name=_case_title(case_name if case_name is not None else active_case_name())
  if left<=0:
   return f'Assalam o alaikum Brother,\n\nThe case for {name} has been completed. Thank you to everyone who helped.\n\n- GiveLife Foundation'
- if name.casefold() not in ('yousuf','current case'):
+ index=sel[0] if isinstance(sel,(list,tuple)) and sel else sel if isinstance(sel,int) else 0
+ if name.casefold() != 'yousuf':
+  # Twenty distinct, non-speculative captions for any new case. The previous
+  # single generic copy made 20-person batches fail for every new patient.
+  openings=(
+   'GiveLife Foundation is collecting support for',
+   'We are sharing a GiveLife Foundation case for',
+   'Please consider the GiveLife Foundation case for',
+   'Our current GiveLife Foundation case is for',
+   'Community support is being collected for',
+  )
+  reviews=(
+   'Please review the case details before donating.',
+   'You can review the evidence and contribute if comfortable.',
+   'Please check the supplied documents before deciding.',
+   'Consider helping after reviewing the verified information.',
+  )
+  opener=openings[int(index)%5];review=reviews[(int(index)//5)%4]
   p2,p1=math.ceil(left/2000),math.ceil(left/1000)
-  return (f'Assalam o alaikum Brother,\n\nGiveLife Foundation is collecting support for {name}. '
-          'Please review the case details before donating.\n\n'
+  return (f'Assalam o alaikum Brother,\n\n{opener} {name}. {review}\n\n'
           f'*Rs. {left:,} left*\n'
           f'{p2} people giving Rs. 2,000 or {p1} giving Rs. 1,000 can help complete the amount.\n\n'
           '*03097458815* Easypaisa / JazzCash (Wajdan Khan)\n\n- GiveLife Foundation')
- index=sel[0] if isinstance(sel,(list,tuple)) and sel else sel if isinstance(sel,int) else 0
  return dm_templates.build(index,left)
 
 def variant(advance):

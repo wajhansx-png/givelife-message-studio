@@ -63,7 +63,7 @@ class MessageBank:
         case_name = self.app.active_case_name()
         # A new case must never inherit Yousuf's medical symptoms or name from
         # the legacy message bank; generic drafts are used until facts are entered.
-        if case_name.casefold() in ('yousuf','current case'):
+        if case_name.casefold() == 'yousuf':
             messages=[dm_templates.build(i, left) for i in range(dm_templates.COUNT)]
         else:
             messages=[self.app.build_dm(i, left, case_name) for i in range(dm_templates.COUNT)]

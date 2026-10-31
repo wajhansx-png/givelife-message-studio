@@ -41,6 +41,21 @@ class CaseIsolation(unittest.TestCase):
    self.assertNotIn('Yousuf',text)
    self.assertNotIn('brain',text.lower())
    self.assertIn('12,000',text)
+ def test_new_case_has_twenty_distinct_complete_dms_without_old_facts(self):
+  import dm_composer
+  self.app.donors().cases.new('Another child',28000)
+  bank=self.app.donors().messages.get()
+  texts=[row['text'] for row in bank['items']]
+  self.assertEqual(len(texts),20)
+  self.assertEqual(len(set(texts)),20)
+  self.assertEqual(len(self.app.donors().messages.captions(20)),20)
+  for text in texts:
+   self.assertTrue(dm_composer.complete(text))
+   self.assertIn('Another child',text)
+   self.assertIn('28,000',text)
+   self.assertNotIn('Yousuf',text)
+   self.assertNotIn('brain',text.lower())
+
  def test_completed_case_does_not_solicit_new_donations(self):
   self.app.donors().cases.new('Food aid family',12000)
   self.app.set_left(0)
@@ -128,6 +143,38 @@ class CaseIsolation(unittest.TestCase):
                self.app.milestone_text(2000,30000),self.app.thank_text(),
                self.app.share_text(),self.app.done_text()):
    self.assertNotIn('Yousuf',text)
+ def test_templates_never_invent_medical_outcomes(self):
+  import dm_templates
+  for index in range(dm_templates.COUNT):
+   caption=dm_templates.build(index,25000)
+   self.assertIn('family reported',caption)
+   self.assertNotRegex(caption.lower(),r'(?:will|can|may|threatening to)\\s+paraly[sz]e|paralys')
+  self.assertNotRegex(self.app.build_group(0,25000,'Yousuf').lower(),r'paraly[sz]|damage his eyesight')
+
+ def test_legacy_case_name_does_not_come_from_saved_medical_caption(self):
+  import json
+  self.app.STORE.put('cases',{'current':'legacy','cases':[{'id':'legacy','name':'Current case','created_at':0,'snapshot':None}]})
+  existing=json.loads(self.app.DRAFT.read_text(encoding='utf-8'))
+  existing['group']='Yousuf has a brain condition; please help.'
+  self.app.DRAFT.write_text(json.dumps(existing),encoding='utf-8')
+  self.assertEqual(self.app.active_case_name(),'Current case')
+  self.assertNotIn('Yousuf',self.app.build_group(0,25000))
+
+ def test_unnamed_case_does_not_assume_yousuf_story(self):
+  for caption in (self.app.build_group(0,25000,'Current case'),self.app.build_dm(0,25000,'Current case')):
+   self.assertIn('Current case',caption)
+   self.assertNotIn('Yousuf',caption)
+   self.assertNotIn('brain',caption.lower())
+
+ def test_corrupt_balance_never_uses_a_guessed_amount_or_sends(self):
+  (self.app.DATA/'state.md').write_text('LEFT: unknown\\n',encoding='utf-8')
+  with self.assertRaisesRegex(ValueError,'balance is missing or invalid'):
+   self.app.read_left()
+  with self.assertRaisesRegex(ValueError,'balance is missing or invalid'):
+   self.app.start_send_job(['main'],'Test appeal',manual=True)
+  with self.assertRaisesRegex(ValueError,'balance is missing or invalid'):
+   self.app.send_custom({'target':'main','message':'Test appeal','poster':False})
+
  def test_switch_back_restores_original_drafts_and_case_identity(self):
   cases=self.app.donors().cases
   previous=cases.view()['current']

@@ -26,7 +26,7 @@ test('private notes: password, autosave, reload, desktop remembrance and lock',a
  await expect(editor).toContainText('Plan student volunteer outreach');
  await expect(page.locator('#notesLocked')).toBeHidden();
  await page.reload();
- await page.locator('#openDonors').click();
+ if(!(await page.locator('#donorsPage').isVisible()))await page.locator('#openDonors').click();
  await page.locator('#donorNotesShortcut').click();
  await expect(page.locator('#notesLocked')).toBeHidden();
  await expect(editor).toContainText('Plan student volunteer outreach');

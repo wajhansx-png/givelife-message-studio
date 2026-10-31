@@ -104,7 +104,7 @@ class Knowledge:
   # Old assistant answers often contain invented or superseded case details.
   # Do not retrieve them as facts for new work unless the owner explicitly asks
   # what the assistant previously said. Owner instructions remain retrievable.
-  asks_ai=bool(re.search(r'(?i)\b(?:assistant|ai|deepseek|bot)\b.{0,50}\b(?:said|wrote|replied|answered)\b|\b(?:last|previous)\s+(?:ai\s+)?(?:reply|answer)\b',str(query)))
+  asks_ai=bool(re.search(r'(?i)\b(?:assistant|ai|deepseek|bot)\b.{0,50}\b(?:say|says|said|write|wrote|reply|replied|answer|answered)\b|\b(?:last|previous)\s+(?:ai\s+)?(?:reply|answer)\b',str(query)))
   for item in turns:
    source=item.get('source','app_output')
    if source!='owner_input' and not asks_ai:continue

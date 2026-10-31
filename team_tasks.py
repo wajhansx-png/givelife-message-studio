@@ -260,7 +260,7 @@ class TeamTasks:
                 archive.append({'member': old, 'tasks': d['tasks'], 'feed': d['feed']})
                 d['history'] = archive[-10:]
                 d.update(tasks=[], feed=[], plan=None, seen=[], counter=0, paused=False, unread=0,
-                         last_sent=0, pending_notes=[], last_note=0, outbox=[], greeted='', last_clarify=0, night=False)
+                         last_sent=0, pending_notes=[], last_note=0, outbox=[], greeted='', last_clarify=0, last_send_error='', night=False)
             d['member'] = {'name': name, 'phone': phone, 'since': old['since'] if old and old['phone']==phone else self.now()}
             self._save()
             return self.view()

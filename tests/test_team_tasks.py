@@ -57,6 +57,16 @@ class Planning(Base):
   ref=self.t.match_task('volunteers')
   self.t.verify(ref)
   self.assertEqual(self.status('find new volunteers'),'Done')
+ def test_legacy_unverified_nine_pm_plan_cannot_be_confirmed(self):
+  old_due=self.clock[0]+7*3600
+  self.t._load()['plan']={'created':self.clock[0],
+                         'items':[{'text':'find new volunteers','start_at':self.clock[0],
+                                   'due_at':old_due}]}
+  self.assertIsNone(self.t.view()['plan'])
+  with self.assertRaisesRegex(ValueError,'unverified deadline'):
+   self.t.confirm_plan()
+  self.assertEqual(self.t.view()['tasks'],[])
+  self.tick(1);self.assertEqual(self.sent,[])
  def test_timed_and_untimed_tasks_do_not_share_a_guessed_deadline(self):
   v=self.t.plan('find new volunteers\nupdate sheet by 6pm')
   by_text={x['text']:x for x in v['plan']['items']}

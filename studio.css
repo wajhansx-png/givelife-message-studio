@@ -8692,8 +8692,17 @@ html body .donor-page .bank-message.bank-detail > header .tool {
 }
 
 /* The footer already crowds build + status + keyboard-shortcuts + gear on a phone; the AI model stays in Settings there. */
-@media (max-width: 560px) {
-  #aiTag { display: none; }
+/* Footer: a quick Donors shortcut sits centred where the status text used to be. */
+.foot-donors {
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 12.5px;
+  font-weight: 650;
+}
+@media (max-width: 899px) {
+  .foot-donors {
+    min-height: 36px;
+  }
 }
 /* The "···" row menu is a plain icon button, not a second pill matching the PKR box. */
 html body .donor-page .donor-row .donor-more > summary {

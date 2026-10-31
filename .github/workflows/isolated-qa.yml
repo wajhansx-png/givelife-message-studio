@@ -1,5 +1,14 @@
 name: Isolated GiveLife V1 QA
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '*.py'
+      - '*.js'
+      - '*.css'
+      - '*.html'
+      - 'tests/**'
+      - '.github/workflows/isolated-qa.yml'
   push:
     branches: [main]
     paths:
@@ -41,6 +50,7 @@ jobs:
           node --check app.js
           node --check team.js
           node --check donors.js
+          node --check notes.js
           node --check connection.js
       - name: Frontend dependencies
         run: |

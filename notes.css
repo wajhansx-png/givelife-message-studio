@@ -49,3 +49,10 @@
 .notes-foot{min-height:42px;padding:7px max(18px,calc((100vw - 890px)/2));display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--mut);background:var(--bg)}
 #notesRetry{border:1px solid var(--line2);border-radius:7px;background:var(--surface);color:var(--ink);padding:7px 12px}
 @media(max-width:720px){.notes-head{gap:10px;min-height:64px;padding:8px 12px}.notes-headline h1{font-size:17px}.notes-kicker{font-size:8px}.notes-back,.notes-lock{min-height:42px;padding:8px 10px}.notes-sync{font-size:11px}.notes-toolbar{padding:8px 11px;gap:3px}.notes-toolbar button{min-width:38px}.notes-toolbar select{min-width:94px;max-width:112px;font-size:12px}.notes-separator{margin:0 1px}.notes-paper-scroll{padding:8px 5px 22px}.notes-paper{border:0;border-radius:0;box-shadow:none}.notes-editor{font-size:16px;padding:23px 21px;min-height:65vh}.notes-foot{padding:7px 17px}.notes-unlock{padding:25px 20px}.notes-password-row{flex-wrap:wrap}.notes-password-row input{min-width:175px}}
+
+@media(max-width:899px){
+ .donor-page .donor-head{flex-wrap:wrap;justify-content:flex-start;row-gap:5px}
+ .donor-page .donor-head .donor-add{margin-left:0}
+ .donor-page .donor-notes-shortcut{min-height:44px;white-space:nowrap;padding:7px 12px;flex:none}
+ .donor-page .donor-head .donor-total{margin-left:0}
+}

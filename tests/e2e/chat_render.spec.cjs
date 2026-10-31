@@ -53,3 +53,28 @@ for(const [width,height] of [[1280,720],[1024,600],[390,700],[320,568]])test(`co
  }
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
+
+
+for(const [width,height] of [[1440,900],[1280,720],[1024,768],[390,844],[320,640]]){
+ test('one-column reply never clips content at '+width+'x'+height,async({page})=>{
+  await open(page,width,height);
+  const selector=width>=900?'#log .e.bot:not(.dots)':'#histLog .e.bot:not(.dots)';
+  if(width<900)await page.locator('#chatOpen').click();
+  const bubble=page.locator(selector).last();
+  await expect(bubble).toContainText('Review step 8');
+  const metrics=await bubble.evaluate(el=>{
+   const cs=getComputedStyle(el),r=el.getBoundingClientRect(),copy=el.querySelector('.message-copy');
+   return {columns:cs.columnCount,width:r.width,scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,
+      scrollHeight:el.scrollHeight,clientHeight:el.clientHeight,
+      fontSize:parseFloat(cs.fontSize),rule:cs.columnRuleStyle,
+      copyVisible:!!copy&&getComputedStyle(copy).visibility!=='hidden'};
+  });
+  expect(metrics.columns).toBe('1');
+  expect(metrics.rule).toBe('none');
+  expect(metrics.fontSize).toBeGreaterThanOrEqual(15);
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth+2);
+  expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight+2);
+  expect(metrics.copyVisible).toBe(true);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ });
+}

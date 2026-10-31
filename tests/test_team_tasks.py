@@ -38,7 +38,7 @@ class Base(unittest.TestCase):
  def status(self,text):return self.tasks()[text]
 
 class Planning(Base):
- def test_no_deadline_never_becomes_nine_pm_or_an_automatic_message(self):
+ def test_untimed_task_only_starts_after_confirmation_without_inventing_deadline(self):
   v=self.t.plan('find new volunteers')
   self.assertEqual(len(v['plan']['items']),1)
   item=v['plan']['items'][0]
@@ -46,16 +46,23 @@ class Planning(Base):
   self.assertIsNone(item['due_at'])
   self.assertIsNone(item['start_at'])
   self.assertEqual(item['due_label'],'No deadline')
-  self.assertEqual(self.sent,[])
+  self.tick(1);self.assertEqual(self.sent,[],'a draft task must never send')
   r=self.t.confirm_plan()
-  self.assertIn('No WhatsApp messages scheduled',r['reply'])
-  self.assertEqual(self.status('find new volunteers'),'Unscheduled')
-  self.tick(1);self.tick(120);self.tick(1440)
-  self.assertEqual(self.sent,[])
-  self.assertEqual(self.status('find new volunteers'),'Unscheduled')
+  self.assertIn('without a deadline',r['reply'])
+  self.assertEqual(self.status('find new volunteers'),'Waiting')
+  self.tick(2)
+  self.assertEqual(len(self.sent),1)
+  self.assertIn('find new volunteers',self.sent[0])
+  self.assertNotIn('No deadline',self.sent[0])
+  self.assertIsNone(self.t.view()['tasks'][0]['due_at'])
+  self.assertEqual(self.status('find new volunteers'),'Asked')
+  self.tick(140);self.assertEqual(len(self.sent),2,'one gentle follow-up after two hours')
+  self.tick(380);self.assertEqual(len(self.sent),3,'one further follow-up after six hours')
+  self.tick(1440);self.assertEqual(len(self.sent),3,'no daily spam or guessed overdue status')
+  self.assertEqual(self.status('find new volunteers'),'Asked')
   self.assertIn('no deadline',self.t.summary().lower())
-  ref=self.t.match_task('volunteers')
-  self.t.verify(ref)
+  self.t.verify(self.t.match_task('volunteers'))
+  self.tick(1600);self.assertEqual(len(self.sent),3)
   self.assertEqual(self.status('find new volunteers'),'Done')
  def test_legacy_unverified_nine_pm_plan_cannot_be_confirmed(self):
   old_due=self.clock[0]+7*3600
@@ -73,8 +80,9 @@ class Planning(Base):
   self.assertIsNone(by_text['find new volunteers']['due_at'])
   self.assertEqual(by_text['update sheet']['due_label'],'6:00 PM')
   self.t.confirm_plan()
-  self.assertEqual(self.status('find new volunteers'),'Unscheduled')
+  self.assertEqual(self.status('find new volunteers'),'Waiting')
   self.assertEqual(self.status('update sheet'),'Waiting')
+  self.assertIsNone(next(t for t in self.t.view()['tasks'] if t['text']=='find new volunteers')['due_at'])
  def test_splits_and_spreads_the_time_evenly(self):
   v=self.t.plan('1) post in 3 groups 2) update the sheet 3) message donors deadline 6pm')
   self.assertEqual([(i['text'],i['start_label'],i['due_label']) for i in v['plan']['items']],[('post in 3 groups','2:00 PM','3:20 PM'),('update the sheet','3:20 PM','4:40 PM'),('message donors','4:40 PM','6:00 PM')])
@@ -176,6 +184,30 @@ class Sending(Base):
   self.assertEqual(self.sent,[])
   restarted=T.TeamTasks(self.app,clock=lambda:self.clock[0]);restarted.tick()
   self.assertEqual(self.sent,[])
+ def test_untimed_task_paused_and_disconnected_do_not_send(self):
+  self.t.pause(True);self.start('find volunteers')
+  self.tick(1);self.assertEqual(self.sent,[])
+  self.t.pause(False);self.wa[0]=False;self.tick(2);self.assertEqual(self.sent,[])
+  self.wa[0]=True;self.tick(3);self.assertEqual(len(self.sent),1)
+  self.assertNotIn('No deadline',self.sent[0])
+
+ def test_untimed_task_survives_restart_with_no_duplicate_ask(self):
+  self.start('find volunteers');self.tick(1)
+  restarted=T.TeamTasks(self.app,clock=lambda:self.clock[0])
+  for minute in (2,3,15,60):
+   self.at(minute);restarted.tick()
+  self.assertEqual(len(self.sent),1)
+  self.assertEqual(restarted.view()['tasks'][0]['status'],'Asked')
+
+ def test_legacy_untimed_task_can_be_started_by_ask_now(self):
+  self.start('a deadline 6pm')
+  task=self.t._load()['tasks'][0]
+  task.update(status='Unscheduled',start_at=None,due_at=None)
+  self.t._save()
+  self.t.ask_update(task['id']);self.tick(1)
+  self.assertEqual(len(self.sent),1)
+  self.assertEqual(self.status('a'),'Asked')
+
  def test_new_teammate_cannot_inherit_unfinished_tasks(self):
   self.start('a deadline 6pm')
   with self.assertRaisesRegex(ValueError,'unfinished tasks'):

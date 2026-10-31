@@ -38,6 +38,13 @@ class MemoryTests(unittest.TestCase):
  def test_reported_issue_is_not_silently_a_preference(self):
   self.k.report_correction('That is wrong; I meant the other contact.')
   self.assertEqual(self.k.summary()['entries'],[]);self.assertEqual(self.k.summary()['feedback_count'],0);self.assertEqual(self.k.summary()['reported_count'],1)
+ def test_natural_owner_bug_reports_are_logged_for_review_not_applied_as_memory(self):
+  for phrase in ('The chat has so many errors.',
+                 'This dropdown is broken.',
+                 'You are not understanding my instruction.'):
+   self.k.report_correction(phrase)
+  self.assertEqual(self.k.summary()['reported_count'],3)
+  self.assertEqual(self.k.summary()['entries'],[])
  def test_new_preference_supersedes_only_same_subject(self):
   a=self.k.remember('Always use bold and italic.');self.k.remember('Always keep blank lines between paragraphs.');self.k.remember('Never use bold or italic.')
   self.assertEqual(len(self.k.summary()['entries']),2);self.assertFalse(next(e for e in self.k.data['entries'] if e['id']==a['id'])['active'])

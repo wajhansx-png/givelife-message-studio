@@ -159,9 +159,10 @@ structure. Keep every blank line in the same place.
 NON-NEGOTIABLE:
 - Length: every version must be between {low} and {high} characters in total
   (the source has {size}). Count it. Do not make versions shorter or longer.
-- Strong urgency and a sense of danger in every version, with a different angle
-  each time (time passing, the condition spreading, the family waiting). Use only
-  the facts already in the source. Never write "will die" or an invented deadline,
+- Use factual urgency only. Rotate the documented need, current confirmed
+  amount and clear ways to help, not invented symptoms or disease progression.
+  Never imply a condition is spreading or worsening without verified source facts.
+  Never write "will die" or an invented deadline,
   never the word DANGER, and never a begging closing line.
 - Keep the same meaning, facts, paragraph order and length of the appeal.
 - Change only the wording of the variable sentences. Do not change the concept.

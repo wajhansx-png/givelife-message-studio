@@ -5384,12 +5384,12 @@ body::after {
   margin-top: 1px;
 }
 .donor-more>div {
-  min-width: min(280px,calc(100vw - 32px));
+  min-width: min(230px,calc(100vw - 32px));
 }
 .donor-normal-box {
   display: grid;
   gap: 8px;
-  padding: 10px;
+  padding: 8px;
   margin: 4px 0;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -5397,7 +5397,7 @@ body::after {
 }
 .donor-normal-box label {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   font-size: 13px;
   font-weight: 650;
 }
@@ -8694,4 +8694,13 @@ html body .donor-page .bank-message.bank-detail > header .tool {
 /* The footer already crowds build + status + keyboard-shortcuts + gear on a phone; the AI model stays in Settings there. */
 @media (max-width: 560px) {
   #aiTag { display: none; }
+}
+/* The "···" row menu is a plain icon button, not a second pill matching the PKR box. */
+html body .donor-page .donor-row .donor-more > summary {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html body .donor-page .donor-row .donor-more > summary:hover,
+html body .donor-page .donor-row .donor-more[open] > summary {
+  background: color-mix(in srgb, var(--ink) 10%, transparent) !important;
 }

@@ -56,7 +56,7 @@ for(const [width,height] of [[1280,720],[1024,600],[390,700],[320,568]])test(`co
 
 
 for(const [width,height] of [[1440,900],[1280,720],[1024,768],[390,844],[320,640]]){
- test('one-column reply never clips content at '+width+'x'+height,async({page})=>{
+ test('reply shows whole without scrolling (boxes on desktop, one column on phones) at '+width+'x'+height,async({page})=>{
   await open(page,width,height);
   const selector=width>=900?'#log .e.bot:not(.dots)':'#histLog .e.bot:not(.dots)';
   if(width<900)await page.locator('#chatOpen').click();
@@ -69,9 +69,13 @@ for(const [width,height] of [[1440,900],[1280,720],[1024,768],[390,844],[320,640
       fontSize:parseFloat(cs.fontSize),rule:cs.columnRuleStyle,
       copyVisible:!!copy&&getComputedStyle(copy).visibility!=='hidden'};
   });
-  expect(metrics.columns).toBe('1');
-  expect(metrics.rule).toBe('none');
-  expect(metrics.fontSize).toBeGreaterThanOrEqual(15);
+  if(width>=1280){
+   expect(metrics.fontSize,'desktop text stays readable even in boxes').toBeGreaterThanOrEqual(13);
+   const gap=await page.evaluate(()=>({b:document.querySelector('#log .e.bot:not(.dots)').getBoundingClientRect().bottom,c:document.querySelector('#cmdForm').getBoundingClientRect().top}));
+   expect(gap.b,'the whole answer ends above the message bar').toBeLessThanOrEqual(gap.c+1);
+  }else if(width<900){
+   expect(['1','auto']).toContain(metrics.columns);expect(metrics.rule).toBe('none');expect(metrics.fontSize).toBeGreaterThanOrEqual(15);
+  }
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth+2);
   expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight+2);
   expect(metrics.copyVisible).toBe(true);

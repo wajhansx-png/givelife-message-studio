@@ -2195,6 +2195,7 @@ class Handler(BaseHTTPRequestHandler):
    except Exception:self.reply({'error':'Disconnect was not confirmed. Check the connection status.'},status=502)
    finally:SEND_LOCK.release()
   elif self.path=='/send-custom':
+   if body.get('kind')=='team_msg':return self.reply({'error':'Team updates can only be sent through confirmed Team tasks.'},status=403)
    try:self.reply(send_custom(body))
    except ValueError as e:self.reply({'error':str(e)},status=400)
    except Exception:self.reply({'error':'Could not prepare this send. No automatic retry will occur.'},status=502)

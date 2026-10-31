@@ -89,6 +89,7 @@ def send_custom(body):
   message=message.replace('{name}',str(body.get('name') or '').strip() or 'friend')
  if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
  if not STORE:raise ValueError('Persistent send records are unavailable. Try again later.')
+ team_message=body.get('kind')=='team_msg'
  manual=body.get('kind') in ('donor_manual','team_msg','owner_text')
  explicit_batch=body.get('kind') in ('donor_batch','volunteer_batch')
  if not SEND_LOCK.acquire(blocking=manual or explicit_batch):raise ValueError('Another send is running. Please wait for it to finish.')
@@ -104,15 +105,18 @@ def send_custom(body):
    if jid==norm_phone(OWNER_PHONE):raise ValueError('Your own account is excluded from donor sending.')
    exclusions=BLOCKED-CAMPAIGN_CONTACTED if explicit else BLOCKED
    if alternate in exclusions or digest in exclusions or records.get('optout_'+alternate) or records.get('optout_'+digest):raise ValueError('This recipient is blocked or opted out.')
-   if not explicit:
-    for key in ('dm_recipient_'+alternate,'dm_recipient_'+digest):
-     previous=records.get(key)
-     if previous:raise ValueError('This recipient was contacted before. Check WhatsApp before sending again.')
-   ledger=STORE.get('dm_daily',{});day=datetime.datetime.fromtimestamp(now,datetime.timezone(datetime.timedelta(hours=5))).date().isoformat()
-   if ledger.get('day')!=day:ledger={'day':day,'count':0,'last':ledger.get('last',0)}
-   if ledger['count']>=50 and not manual and not explicit_batch:raise ValueError('The 50-DM daily limit has been reached.')
-   if not manual and not (explicit_batch and body.get('first_in_batch') is True) and now-ledger.get('last',0)<60:raise ValueError('Wait at least 60 seconds between DMs.')
-   ledger.update(count=ledger['count']+1,last=now);STORE.put('dm_daily',ledger);STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':now})
+   if not team_message:
+    # Team tracking is a separate, owner-authorized workflow. Its sends must
+    # never consume donor DM quota or mark a teammate as a donor recipient.
+    if not explicit:
+     for key in ('dm_recipient_'+alternate,'dm_recipient_'+digest):
+      previous=records.get(key)
+      if previous:raise ValueError('This recipient was contacted before. Check WhatsApp before sending again.')
+    ledger=STORE.get('dm_daily',{});day=datetime.datetime.fromtimestamp(now,datetime.timezone(datetime.timedelta(hours=5))).date().isoformat()
+    if ledger.get('day')!=day:ledger={'day':day,'count':0,'last':ledger.get('last',0)}
+    if ledger['count']>=50 and not manual and not explicit_batch:raise ValueError('The 50-DM daily limit has been reached.')
+    if not manual and not (explicit_batch and body.get('first_in_batch') is True) and now-ledger.get('last',0)<60:raise ValueError('Wait at least 60 seconds between DMs.')
+    ledger.update(count=ledger['count']+1,last=now);STORE.put('dm_daily',ledger);STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':now})
   # Reserve before dispatch. A network failure must not silently allow duplicates.
   try:
    if body.get('poster') is True:result=send_image(jid,message)
@@ -123,7 +127,7 @@ def send_custom(body):
   if is_group and result.get('code')=='SUCCESS':
    saved[jid]=time.time();STORE.put('last_sent',saved);LAST_LOCAL[jid]=time.time();record_delivery(jid,message,result)
   STORE.put('custom_receipt_'+uuid.uuid4().hex,{'time':now,'jid':jid,'code':result.get('code'),'message_id':mapping(result.get('results')).get('message_id')})
-  if not is_group:STORE.put('dm_recipient_'+digest,{'state':result.get('code','UNCERTAIN'),'time':now})
+  if not is_group and not team_message:STORE.put('dm_recipient_'+digest,{'state':result.get('code','UNCERTAIN'),'time':now})
   if result.get('code')=='SUCCESS':remember_manual({'kind':'text','to':jid,'text':message,'with_picture':body.get('poster') is True})
   return result
  finally:SEND_LOCK.release()

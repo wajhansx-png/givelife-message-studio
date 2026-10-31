@@ -128,7 +128,7 @@ def send_custom(body):
    saved[jid]=time.time();STORE.put('last_sent',saved);LAST_LOCAL[jid]=time.time();record_delivery(jid,message,result)
   STORE.put('custom_receipt_'+uuid.uuid4().hex,{'time':now,'jid':jid,'code':result.get('code'),'message_id':mapping(result.get('results')).get('message_id')})
   if not is_group and not team_message:STORE.put('dm_recipient_'+digest,{'state':result.get('code','UNCERTAIN'),'time':now})
-  if result.get('code')=='SUCCESS':remember_manual({'kind':'text','to':jid,'text':message,'with_picture':body.get('poster') is True})
+  if result.get('code')=='SUCCESS' and not team_message:remember_manual({'kind':'text','to':jid,'text':message,'with_picture':body.get('poster') is True})
   return result
  finally:SEND_LOCK.release()
 

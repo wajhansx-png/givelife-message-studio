@@ -38,6 +38,8 @@ class HistoricalAnalysisTests(unittest.TestCase):
   self.assertTrue(ci.wants_review('Read our chat and suggest future improvements.'))
   self.assertTrue(ci.wants_review('Case is ended. Future suggestions'))
   self.assertTrue(ci.wants_review('Analyze past conversations and recommend improvements'))
+  self.assertTrue(ci.wants_review('Case is ended now. Futurr suggestioons'))
+  self.assertTrue(ci.wants_review('Read our chats and give sugestions for future'))
   self.assertFalse(ci.wants_review('What is the status of the current case?'))
   self.assertFalse(ci.wants_review('Send hi to the volunteer'))
   self.assertFalse(ci.wants_review('Review our chats and then send this to Ali'))

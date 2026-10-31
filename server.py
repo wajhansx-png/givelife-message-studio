@@ -226,15 +226,46 @@ def dm_selection(new):
   file.write_text(json.dumps([index]))
  return [index]
 
+def completed_case_appeal(text):
+ """A closed case may be thanked or reported, never solicited again."""
+ value=str(text or '')
+ return bool(re.search(
+  r'(?i)\b(?:rs\.?\s*0\s*(?:left|still\s+needed|needed|remaining)|'
+  r'0\s+people\s+(?:donating|giving)|'
+  r'people\s+(?:donating|giving)\s+rs\.?\s*[\d,]+|'
+  r'(?:donate|donation|donating|contribute)\s+(?:now|today|to|rs\.?|for|here|via)|'
+  r'help\s+(?:him|her|them|this\s+child)\s+(?:get|pay\s+for)\s+treatment|'
+  r'reply\s+\*?done\*?\s+after\s+you\s+donate|'
+  r'easypaisa|jazzcash|\d+\s+people\s+can\s+(?:finish|complete))\b',
+  value))
+
+def ensure_completed_drafts():
+ """Repair legacy mixed completion/appeal drafts once, before showing them."""
+ if read_left()>0 or not DRAFT.exists():return
+ with LOCK:
+  drafts=json.loads(DRAFT.read_text(encoding='utf-8'))
+  changed=False
+  for kind in ('group','dm'):
+   if completed_case_appeal(drafts.get(kind,'')):
+    drafts[kind]=build_group(variant(False),0) if kind=='group' else build_dm(dm_selection(False),0)
+    changed=True
+  if changed:
+   DRAFT.write_text(json.dumps(drafts,ensure_ascii=False),encoding='utf-8')
+   persist_file('drafts',DRAFT)
+
 def save_draft(key,text):
  with LOCK:
   revision=getattr(OWNER_GUARD,'revision',None)
   if revision is not None and revision!=OWNER_REVISION:raise ValueError('Superseded by your newer instruction. The old draft edit was not saved.')
+  if key in ('group','dm') and read_left()<=0 and completed_case_appeal(text):
+   raise ValueError('This case is completed. A saved caption cannot request new donations or show Rs. 0 LEFT. Use a completion or thank-you message instead. Nothing was saved.')
   draft=json.loads(DRAFT.read_text(encoding='utf-8'));draft[key]=text;DRAFT.write_text(json.dumps(draft,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
 
 def get_message(kind):
  if kind not in ('group','dm'):raise ValueError('Choose group or DM.')
- with LOCK:return {'kind':kind,'text':json.loads(DRAFT.read_text(encoding='utf-8'))[kind]}
+ with LOCK:
+  ensure_completed_drafts()
+  return {'kind':kind,'text':json.loads(DRAFT.read_text(encoding='utf-8'))[kind]}
 
 def next_message():
  with LOCK:
@@ -1615,7 +1646,7 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
      if not isinstance(args.get('text'),str) or not args['text'].strip():raise ValueError('The revised caption is empty. The saved message was kept.')
      draft_amount=manual_commands.balance_amount(args['text'],allow_with=False)
      if draft_amount is not None and draft_amount!=read_left():raise ValueError('The caption balance does not match the confirmed amount remaining. Use the current balance.')
-     if args.get('kind')=='dm':
+     if args.get('kind')=='dm' and read_left()>0:
       if re.search(r'(?i)\bname\b.*\b(is|change|to)\b|\b(change|correct)\b.*\bname\b',prompt):raise ValueError('Use edit_dm_name to change only the greeting; keep the full message.')
       if not dm_composer.complete(args.get('text','')):raise ValueError('Keep the full DM with blank lines, formatting, amount, donation options and payment details. Do not replace it with a name or one-paragraph summary.')
      work=workflow();work.begin(owner['text'],args['kind'],get_message(args['kind'])['text']);work.validate(args['text'])
@@ -2005,7 +2036,9 @@ class Handler(BaseHTTPRequestHandler):
   if self.path=='/wa-status':
    try:return self.reply(api('/devices/'+DEVICE+'/status'))
    except Exception:return self.reply({'error':'WhatsApp is restarting. Try again shortly.'},status=502)
-  if self.path=='/drafts':self.reply(DRAFT.read_bytes())
+  if self.path=='/drafts':
+   ensure_completed_drafts()
+   self.reply(DRAFT.read_bytes())
   elif self.path=='/chat-next-actions':self.reply({'items':next_chat_actions()})
   elif self.path=='/poster':self.reply((DATA/'poster.jpg').read_bytes(),'image/jpeg')
   elif self.path=='/format.js':self.reply((ROOT/'format.js').read_bytes(),'application/javascript')

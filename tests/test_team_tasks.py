@@ -58,7 +58,7 @@ class Planning(Base):
   self.t.verify(ref)
   self.assertEqual(self.status('find new volunteers'),'Done')
  def test_timed_and_untimed_tasks_do_not_share_a_guessed_deadline(self):
-  v=self.t.plan('find new volunteers\\nupdate sheet by 6pm'.replace('\\\\n','\\n'))
+  v=self.t.plan('find new volunteers\nupdate sheet by 6pm')
   by_text={x['text']:x for x in v['plan']['items']}
   self.assertIsNone(by_text['find new volunteers']['due_at'])
   self.assertEqual(by_text['update sheet']['due_label'],'6:00 PM')

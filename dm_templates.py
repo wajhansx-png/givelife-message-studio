@@ -7,9 +7,8 @@ payment details, reply instruction.
 import math, re
 
 VERSION = 'dm-structure-2026-10-31-reported-facts'
-# The old variants contain unsupported predictions that paralysis would start
-# or spread. Preserve their layout but use a single, carefully attributed
-# summary. New case details must never be inferred from old AI-generated text.
+# Centralized, attributed clinical wording. Variants must not invent or predict
+# symptoms, and old assistant replies cannot supply clinical facts.
 REPORTED_CONDITION = (
     'Yousuf is 2. His family reported fluid collecting in his brain, swollen '
     'kidneys and a hernia. Please check the latest medical documents for details.'
@@ -34,7 +33,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is 2. Fluid is filling his brain, which will paralyze his body. Both kidneys are badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} still needed for treatment.',
         'option2': 'Just {p2} people donating Rs. 2,000',
@@ -45,7 +44,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is only 2. Fluid is building in his brain and can paralyze his body. Both kidneys are badly swollen, and he also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for his treatment.',
         'option2': 'Only {p2} people giving Rs. 2,000',
@@ -56,7 +55,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is 2 years old. Fluid is collecting in his brain and may paralyse his body. His kidneys are both badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} remains for his treatment.',
         'option2': 'Just {p2} donors of Rs. 2,000',
@@ -67,7 +66,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is just 2. Fluid is filling his brain and threatening to paralyze his body. Both kidneys are badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for his treatment.',
         'option2': 'Only {p2} people at Rs. 2,000',
@@ -78,7 +77,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is 2. Fluid is filling his brain, which can paralyze his body. Both kidneys are badly swollen, and he has a hernia too.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still required for treatment.',
         'option2': 'Just {p2} people contributing Rs. 2,000',
@@ -89,7 +88,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is only 2. Fluid is building in his brain and can paralyse his body. Both of his kidneys are badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for his care.',
         'option2': 'Only {p2} people donating Rs. 2,000',
@@ -100,7 +99,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is 2 years old. Fluid is filling his brain and may paralyze his body. Both kidneys are badly swollen, and he also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} still stands between him and treatment.',
         'option2': 'Just {p2} people giving Rs. 2,000',
@@ -111,7 +110,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is just 2. Fluid is filling his brain, which can affect his body. Both kidneys are badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for his treatment.',
         'option2': 'Only {p2} people contributing Rs. 2,000',
@@ -122,7 +121,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is 2. Fluid is collecting in his brain and can paralyze his body. Both kidneys are badly swollen, and he has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for treatment.',
         'option2': 'Just {p2} people donating Rs. 2,000',
@@ -133,7 +132,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is only 2. Fluid is filling his brain and threatening to paralyze his body. Both kidneys are badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for his treatment.',
         'option2': 'Only {p2} people giving Rs. 2,000',
@@ -144,7 +143,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is 2. Fluid is filling his brain, which will paralyze his body. Both kidneys are badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} still needed for treatment.',
         'option2': 'Just {p2} people donating Rs. 2,000',
@@ -155,7 +154,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is only 2. Fluid is building in his brain and can paralyze his body. Both kidneys are badly swollen, and he also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for his treatment.',
         'option2': 'Only {p2} people giving Rs. 2,000',
@@ -166,7 +165,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is 2 years old. Fluid is collecting in his brain and may paralyse his body. His kidneys are both badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} remains for his treatment.',
         'option2': 'Just {p2} donors of Rs. 2,000',
@@ -177,7 +176,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is just 2. Fluid is filling his brain and threatening to paralyze his body. Both kidneys are badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for his treatment.',
         'option2': 'Only {p2} people at Rs. 2,000',
@@ -188,7 +187,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is 2. Fluid is filling his brain, which can paralyze his body. Both kidneys are badly swollen, and he has a hernia too.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still required for treatment.',
         'option2': 'Just {p2} people contributing Rs. 2,000',
@@ -199,7 +198,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is only 2. Fluid is building in his brain and can paralyse his body. Both of his kidneys are badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for his care.',
         'option2': 'Only {p2} people donating Rs. 2,000',
@@ -210,7 +209,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is 2 years old. Fluid is filling his brain and may paralyze his body. Both kidneys are badly swollen, and he also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} still stands between him and treatment.',
         'option2': 'Just {p2} people giving Rs. 2,000',
@@ -221,7 +220,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is just 2. Fluid is filling his brain, which can affect his body. Both kidneys are badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for his treatment.',
         'option2': 'Only {p2} people contributing Rs. 2,000',
@@ -232,7 +231,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is 2. Fluid is collecting in his brain and can paralyze his body. Both kidneys are badly swollen, and he has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for treatment.',
         'option2': 'Just {p2} people donating Rs. 2,000',
@@ -243,7 +242,7 @@ VARIANTS = [
     {
         'opening': 'please read about Yousuf and the support his family requested.',
         'days': 'His parents reported that he was admitted to hospital for treatment.',
-        'condition': 'Yousuf is only 2. Fluid is filling his brain and threatening to paralyze his body. Both kidneys are badly swollen. He also has a hernia.',
+        'condition': REPORTED_CONDITION,
         'risk': 'His parents reported that he was short of breath. Please rely on verified medical information for further details.',
         'amount': 'Rs. {left} is still needed for his treatment.',
         'option2': 'Only {p2} people giving Rs. 2,000',
@@ -263,7 +262,6 @@ def build(index, left, greeting='Brother'):
     p2 = math.ceil(left / 2000)
     p1 = math.ceil(left / 1000)
     item = {key: value.format(left=f'{left:,}', p2=p2, p1=p1) for key, value in VARIANTS[int(index) % COUNT].items()}
-    item['condition'] = REPORTED_CONDITION  # never reuse the unsupported medical predictions above
     return STRUCTURE.format(
         greeting=greeting,
         left=f'{left:,}',

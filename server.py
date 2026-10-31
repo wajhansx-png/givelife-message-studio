@@ -2020,14 +2020,16 @@ class Handler(BaseHTTPRequestHandler):
   return bool(key) and secrets.compare_digest(self.headers.get('Authorization',''),'Bearer '+key)
  def do_OPTIONS(self):
   self.reply({})
- def reply(self,data,kind='application/json',status=200):
+ def reply(self,data,kind='application/json',status=200,extra_headers=None):
   self.response_sent=True
   if not isinstance(data,(str,bytes)):data=json.dumps(data,ensure_ascii=False)
   self.send_response(status);self.send_header('Content-Type',kind+'; charset=utf-8');self.send_header('Cache-Control','no-store')
   origin=self.headers.get('Origin')
   if origin in self.remote_config().get('origins',[]):
    self.send_header('Access-Control-Allow-Origin',origin);self.send_header('Vary','Origin');self.send_header('Access-Control-Allow-Headers','Authorization, Content-Type');self.send_header('Access-Control-Allow-Methods','GET, POST, OPTIONS')
-  self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(data if isinstance(data,bytes) else data.encode())
+  self.send_header('X-Content-Type-Options','nosniff')
+  for name,value in (extra_headers or {}).items():self.send_header(name,value)
+  self.end_headers();self.wfile.write(data if isinstance(data,bytes) else data.encode())
  def do_GET(self):
   if self.path=='/health':return self.reply({'ok':True,'version':(os.environ.get('RENDER_GIT_COMMIT') or 'local')[:7],
    'ai_provider':('DeepSeek ('+(os.environ.get('DEEPSEEK_REASONING_MODEL') or assistant.MODEL)+')') if assistant.client() else 'Not connected'})
@@ -2049,6 +2051,14 @@ class Handler(BaseHTTPRequestHandler):
     q=urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
     return self.reply(donors().book.list(q.get('tab',['all'])[0],q.get('q',[''])[0]))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
+  if self.path=='/notes':
+   import notes_store
+   try:
+    unlocked=notes_store.allowed(STORE,self.headers.get('Cookie'))
+    if not unlocked:return self.reply({'locked':True},extra_headers={'Cache-Control':'no-store'})
+    token=notes_store.cookie_token(self.headers.get('Cookie'))
+    return self.reply({'locked':False,**notes_store.load(STORE)},extra_headers={'Set-Cookie':notes_store.device_cookie(token,https=self.headers.get('X-Forwarded-Proto','https')!='http')})
+   except Exception:return self.reply({'error':'Notes are temporarily unavailable. Your saved notes were not changed.'},status=503)
   if self.path=='/donor-delivery':return self.reply(donors().jobs.status())
   if self.path=='/team':return self.reply(donors().team.view())
   if self.path=='/cases':
@@ -2121,6 +2131,28 @@ class Handler(BaseHTTPRequestHandler):
    except Conflict as e:return self.reply({'error':str(e)},status=409)
    except ResearchError as e:return self.reply({'error':str(e),'code':e.code},status=502)
    except (ValueError,TypeError,KeyError) as e:return self.reply({'error':str(e)},status=400)
+  if self.path=='/notes':
+   import notes_store
+   action=body.get('action')
+   if action=='unlock':
+    try:
+     token=notes_store.unlock(STORE,body.get('password'),self.client_address[0])
+     return self.reply({'locked':False,**notes_store.load(STORE)},extra_headers={'Set-Cookie':notes_store.device_cookie(token,https=self.headers.get('X-Forwarded-Proto','https')!='http')})
+    except ValueError as e:return self.reply({'error':str(e)},status=403)
+    except Exception:return self.reply({'error':'Unable to unlock notes. Try again later.'},status=503)
+   if action=='lock':
+    try:notes_store.lock_device(STORE,self.headers.get('Cookie'))
+    except Exception:return self.reply({'error':'Could not revoke this desktop unlock.'},status=503)
+    return self.reply({'locked':True},extra_headers={'Set-Cookie':notes_store.clear_cookie(https=self.headers.get('X-Forwarded-Proto','https')!='http')})
+   try:
+    if not notes_store.allowed(STORE,self.headers.get('Cookie')):
+     return self.reply({'error':'Unlock private notes first.'},status=403)
+    if action=='save':
+     return self.reply(notes_store.save(STORE,body.get('html'),body.get('revision')))
+    raise ValueError('Unknown notes action.')
+   except ValueError as e:
+    return self.reply({'error':str(e)},status=409 if 'another window' in str(e) else 400)
+   except Exception:return self.reply({'error':'Notes could not be saved. Your existing saved notes were preserved.'},status=503)
   if self.path=='/team':
    try:
     t=donors().team;act=body.get('action')

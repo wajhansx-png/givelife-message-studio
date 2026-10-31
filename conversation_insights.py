@@ -101,3 +101,54 @@ REVIEW_INSTRUCTION=(
  'do not assert a task was completed or suggest the owner already implemented a '
  'proposal without verified results. Do not perform any sends, edits or state changes.'
 )
+
+
+STATUS_RE = re.compile(r'(?i)where things stand|rs\.?\s*0|auto\s*(?:is\s*)?off|30 waiting|stop the batch|start the next case|case finished|main group.*due|leave auto off')
+FUTURE_RE = re.compile(r'(?i)retention|monthly donors?|recurring giving|ambassadors?|referral|handoff|consent|verification checklist|measurable|experiment|donor journey|growth engine|task tracking|long[- ]term')
+PROPOSALS = {
+ 'context_and_ai':(
+  'Build reliable one-prompt execution',
+  'Track each request, its referenced prior task, approved actions and their receipts across conversations. Separate analytical questions from live operational commands.',
+  'Run a weekly test of 10 real prompts, counting misunderstandings, unwanted actions and incomplete steps.'),
+ 'donor_growth':(
+  'Grow monthly donors and warm introductions',
+  'Invite willing previous donors into a modest recurring-giving circle. Ask active supporters for introductions rather than relying on repeated broad appeals.',
+  'Measure opted-in recurring donors, second donations and new introductions each month.'),
+ 'messaging_automation':(
+  'Make outreach stateful and verifiable',
+  'Use one queue with consent checks, case-specific stop rules, recipient-level receipts and manual review for uncertain WhatsApp sends. Avoid rapid repeated appeals that fatigue supporters.',
+  'Report confirmed, uncertain, paused and opted-out recipients separately.'),
+ 'case_accuracy':(
+  'Use a case-verification and closeout checklist',
+  'Store the evidence, approved facts, exact target and last verified update with each case. Require factual review before publishing; prevent old case captions or images being reused.',
+  'Check future cases for arithmetic mistakes, unsupported medical claims and cross-case content.'),
+ 'volunteer_team':(
+  'Give ambassadors clear, measurable duties',
+  'Assign short opt-in sharing tasks to a named coordinator and keep evidence, follow-up and completion tracking separate from fundraising totals.',
+  'Track active ambassadors and actual confirmed shares, not just group membership.'),
+ 'ui_friction':(
+  'Make frequent app actions reliably one tap',
+  'Keep keyboard focus during refreshes, put high-frequency actions within reach, and reject clipped controls, menus or chat replies before each deployment.',
+  'Run mobile and desktop regression checks covering focus, overflow and action completion.')
+}
+def generic_status_answer(reply,review):
+ """Recognize a stale status recap instead of a historical strategy."""
+ text=str(reply or '')
+ if review.get('owner_turns_examined',0)<5 or review.get('theme_count',0)<2:return False
+ return len(STATUS_RE.findall(text))>=3 and len(FUTURE_RE.findall(text))<2
+
+def evidence_fallback(review):
+ """Grounded recommendation if DeepSeek ignores the history evidence."""
+ ranked=[r for r in review.get('themes',[]) if r.get('id') in PROPOSALS]
+ if not ranked:
+  return ('I do not have enough retained owner conversations for a reliable historical review. '
+          'I can only assess the chats the app saved; I cannot infer your missing history.')
+ lines=['I reviewed patterns in your saved instructions, not just the latest case status. The next priorities are:']
+ for n,row in enumerate(ranked[:5],1):
+  title,action,measure=PROPOSALS[row['id']]
+  explanation=f'You mentioned {row["theme"].lower()} in {row["distinct_owner_requests"]} distinct saved requests.'
+  example=row.get('examples') or []
+  if example:explanation+=' For example: “'+example[0]['owner_said'][:90].rstrip(' .')+'.”'
+  lines.append(f'{n}. **{title}.** {explanation}\n   **Change:** {action}\n   **Measure:** {measure}')
+ lines.append('These are suggestions, not actions taken. Only conversations retained in the app were reviewed.')
+ return '\n\n'.join(lines)

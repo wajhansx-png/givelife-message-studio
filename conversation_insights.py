@@ -57,7 +57,8 @@ def build_history_review(archived,recent=(),limit=6):
   for row in valid_history(collection):
    if row['who']!='you':continue
    raw=evidence_text(row['text'])
-   if len(raw)<14 or len(raw)>950:continue # Skip greetings and enormous pasted transcripts.
+   if len(raw)<14:continue # Skip greetings; retain a bounded excerpt from long instructions.
+   raw=raw[:950]
    key=SPACE.sub(' ',raw.lower()).strip(' .?!')
    if key in seen:continue
    seen.add(key)

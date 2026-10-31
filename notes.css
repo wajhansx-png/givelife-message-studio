@@ -58,6 +58,12 @@
 #fnLockError{min-height:18px;margin:12px 0 0;color:var(--red)}
 .fn-lock-card small{font-size:12px;display:block;margin-top:22px;color:var(--faint);line-height:1.45}
 .foundation-notes button:focus-visible,.foundation-notes select:focus-visible,.foundation-notes input:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+@media(max-width:899px){
+ .donor-toolbar:has(.donor-notes-trigger){display:grid;grid-template-columns:minmax(0,1fr) 78px;gap:5px}
+ .donor-toolbar:has(.donor-notes-trigger) .donor-search{grid-column:1;grid-row:1;width:100%;min-width:0}
+ .donor-toolbar:has(.donor-notes-trigger) .donor-notes-trigger{grid-column:2;grid-row:1;margin:0;min-width:0;min-height:42px}
+ .donor-toolbar:has(.donor-notes-trigger) .donor-tabs{grid-column:1/-1;grid-row:2}
+}
 @media(max-width:740px){
  .donor-notes-trigger{font-size:12px;min-width:62px;min-height:40px;padding:6px 9px}
  .fn-head{min-height:62px;padding:7px 12px;gap:7px}

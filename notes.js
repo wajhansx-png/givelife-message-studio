@@ -5,7 +5,9 @@
  const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e};
  const trigger=make('button','donor-notes-trigger','✎ Notes');trigger.type='button';trigger.id='donorNotesTab';
  trigger.setAttribute('aria-label','Open private foundation Notes');
- donors.querySelector('#donorMessagesTab')?.after(trigger);
+ const mobile=matchMedia('(max-width:899px)');
+ const placeTrigger=()=>{if(mobile.matches)donors.querySelector('.donor-toolbar')?.append(trigger);else donors.querySelector('#donorMessagesTab')?.after(trigger)};
+ placeTrigger();mobile.addEventListener('change',placeTrigger);
  const modal=make('dialog','foundation-notes');
  modal.id='foundationNotes';modal.setAttribute('aria-label','Foundation notes');
  modal.innerHTML='<div class="fn-shell">'+
@@ -35,7 +37,7 @@
  function selection(){const s=window.getSelection();if(!s||!s.rangeCount||!editor.contains(s.anchorNode))return null;return s.getRangeAt(0)}
  document.addEventListener('selectionchange',()=>{const r=selection();if(r)savedRange=r.cloneRange()});
  function refocus(){editor.focus({preventScroll:true});if(savedRange){const s=window.getSelection();s.removeAllRanges();try{s.addRange(savedRange)}catch(e){}}}
- function command(cmd,value){refocus();document.execCommand('styleWithCSS',false,true);document.execCommand(cmd,false,value||null);changed()}
+ function command(cmd,value){refocus();document.execCommand('styleWithCSS',false,false);document.execCommand(cmd,false,value||null);changed()}
  for(const button of modal.querySelectorAll('[data-cmd]')){button.addEventListener('mousedown',e=>e.preventDefault());button.onclick=()=>command(button.dataset.cmd)}
  const block=$('fnBlock');block.onchange=()=>{command('formatBlock',block.value);block.value='p'};
  function selectedList(){const s=window.getSelection();let n=s?.anchorNode;while(n&&n!==editor){if(n.nodeType===1&&n.tagName==='UL')return n;n=n.parentNode}return null}

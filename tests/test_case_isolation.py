@@ -151,6 +151,15 @@ class CaseIsolation(unittest.TestCase):
    self.assertNotRegex(caption.lower(),r'(?:will|can|may|threatening to)\\s+paraly[sz]e|paralys')
   self.assertNotRegex(self.app.build_group(0,25000,'Yousuf').lower(),r'paraly[sz]|damage his eyesight')
 
+ def test_legacy_case_name_does_not_come_from_saved_medical_caption(self):
+  import json
+  self.app.STORE.put('cases',{'current':'legacy','cases':[{'id':'legacy','name':'Current case','created_at':0,'snapshot':None}]})
+  existing=json.loads(self.app.DRAFT.read_text(encoding='utf-8'))
+  existing['group']='Yousuf has a brain condition; please help.'
+  self.app.DRAFT.write_text(json.dumps(existing),encoding='utf-8')
+  self.assertEqual(self.app.active_case_name(),'Current case')
+  self.assertNotIn('Yousuf',self.app.build_group(0,25000))
+
  def test_unnamed_case_does_not_assume_yousuf_story(self):
   for caption in (self.app.build_group(0,25000,'Current case'),self.app.build_dm(0,25000,'Current case')):
    self.assertIn('Current case',caption)

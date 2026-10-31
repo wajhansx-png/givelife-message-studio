@@ -201,14 +201,29 @@ def build_dm(sel,left,case_name=None):
  name=_case_title(case_name if case_name is not None else active_case_name())
  if left<=0:
   return f'Assalam o alaikum Brother,\n\nThe case for {name} has been completed. Thank you to everyone who helped.\n\n- GiveLife Foundation'
+ index=sel[0] if isinstance(sel,(list,tuple)) and sel else sel if isinstance(sel,int) else 0
  if name.casefold() != 'yousuf':
+  # Twenty distinct, non-speculative captions for any new case. The previous
+  # single generic copy made 20-person batches fail for every new patient.
+  openings=(
+   'GiveLife Foundation is collecting support for',
+   'We are sharing a GiveLife Foundation case for',
+   'Please consider the GiveLife Foundation case for',
+   'Our current GiveLife Foundation case is for',
+   'Community support is being collected for',
+  )
+  reviews=(
+   'Please review the case details before donating.',
+   'You can review the evidence and contribute if comfortable.',
+   'Please check the supplied documents before deciding.',
+   'Consider helping after reviewing the verified information.',
+  )
+  opener=openings[int(index)%5];review=reviews[(int(index)//5)%4]
   p2,p1=math.ceil(left/2000),math.ceil(left/1000)
-  return (f'Assalam o alaikum Brother,\n\nGiveLife Foundation is collecting support for {name}. '
-          'Please review the case details before donating.\n\n'
+  return (f'Assalam o alaikum Brother,\n\n{opener} {name}. {review}\n\n'
           f'*Rs. {left:,} left*\n'
           f'{p2} people giving Rs. 2,000 or {p1} giving Rs. 1,000 can help complete the amount.\n\n'
           '*03097458815* Easypaisa / JazzCash (Wajdan Khan)\n\n- GiveLife Foundation')
- index=sel[0] if isinstance(sel,(list,tuple)) and sel else sel if isinstance(sel,int) else 0
  return dm_templates.build(index,left)
 
 def variant(advance):

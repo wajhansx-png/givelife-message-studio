@@ -8690,3 +8690,15 @@ html body .donor-page .bank-message.bank-detail > header .tool {
     color: #f0f3fb !important;
   }
 }
+
+/* Reader mode (desktop): a long answer that cannot fit beside the send buttons gets the full width, in 2-3 comfortable columns. */
+@media (min-width: 900px) {
+  html body.reader .layout { grid-template-columns: minmax(0, 1fr) !important; }
+  html body.reader .layout .action-rail { display: none !important; }
+  html body.reader .layout > .talk, html body.reader .layout .side { grid-column: 1 / -1 !important; }
+}
+html body :is(.talk, .hist) .log > .e.bot.cols4 { columns: 4; column-gap: 30px; }
+html body :is(.talk, .hist) .log > .e.bot.cols4 .reply-line { break-inside: avoid; }
+@media (min-width: 900px) {
+  html body.reader #live { display: none !important; }
+}

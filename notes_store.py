@@ -21,8 +21,8 @@ COOKIE_AGE = 400 * 24 * 3600  # Chrome caps persistent cookies; renew on each vi
 MAX_SIZE = 250_000
 # Salted verifier of the owner-selected PIN; the PIN itself is NOT checked into git.
 # NOTES_PASSWORD env var overrides this verifier without rebuilding the application.
-PIN_SALT = bytes.fromhex("e8de211325ef7a4972f36f4d3341c0e3")
-PIN_HASH = bytes.fromhex("6e244b08c91c46e096dfd2da8734212bf59fb319c8cb5f820064fbffd9b16331")
+PIN_SALT = bytes.fromhex("1555704ab0df55e47acf12389a5d1128")
+PIN_HASH = bytes.fromhex("7bdabe56198dbf1a97a3cdf562f3125aa5e18f98ef72810414f316c316d3462e")
 PIN_ITERATIONS = 320_000
 _lock = threading.RLock()
 _attempts = {}

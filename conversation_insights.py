@@ -37,6 +37,9 @@ SPACE = re.compile(r'\s+')
 def wants_review(text):
  """Separate 'what happened just now?' from 'review our past chats and plan ahead'."""
  t=str(text or '').strip()
+ # Frequent owner typos should not turn a strategy request into a live status recap.
+ t=re.sub(r'(?i)\bfutur+(?:e)?\b','future',t)
+ t=re.sub(r'(?i)\bsug+est+i*o+ns?\b','suggestions',t)
  return bool(HISTORY_RE.search(t)) and not bool(ACTION_RE.search(t))
 
 def evidence_text(value):

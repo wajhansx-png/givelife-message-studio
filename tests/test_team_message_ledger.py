@@ -31,6 +31,30 @@ class TeamMessageLedger(unittest.TestCase):
         digest = hashlib.sha256(b'923001234567').hexdigest()
         self.assertIsNone(app.STORE.get('dm_recipient_'+digest))
 
+    def test_direct_web_route_cannot_spoof_internal_team_kind(self):
+        import json, threading, urllib.error, urllib.request
+        app = self.app
+        http = app.ThreadingHTTPServer(('127.0.0.1',0),app.Handler)
+        thread = threading.Thread(target=http.serve_forever,daemon=True)
+        thread.start()
+        try:
+            payload = json.dumps({'kind':'team_msg','target':'phone',
+                                  'phone':'03001234567','message':'unapproved task ping',
+                                  'poster':False}).encode()
+            request = urllib.request.Request(
+                'http://127.0.0.1:'+str(http.server_port)+'/send-custom',
+                data=payload,
+                headers={'Authorization':'Bearer test-only-studio-access-key',
+                         'Content-Type':'application/json'})
+            with patch.object(app, 'send_image') as wire:
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    urllib.request.urlopen(request,timeout=3)
+                self.assertEqual(ctx.exception.code,403)
+                wire.assert_not_called()
+        finally:
+            http.shutdown()
+            http.server_close()
+
     def test_team_message_still_respects_a_saved_optout(self):
         app = self.app
         digest = hashlib.sha256(b'923001234567').hexdigest()

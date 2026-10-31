@@ -301,7 +301,7 @@ class TeamTasks:
             if not timed:
                 reply=f'{len(made)} task{"s" if len(made)!=1 else ""} saved without a deadline. No WhatsApp messages scheduled.'
             else:
-                reply=f'{len(made)} task{"s" if len(made)!=1 else ""} saved. First scheduled WhatsApp message: {fmt_time(min(t["start_at"] for t in timed), now)}.'
+                reply=f'{len(made)} task{"s" if len(made)!=1 else ""} started. First scheduled WhatsApp message: {fmt_time(min(t["start_at"] for t in timed), now)}.'
                 if len(timed)<len(made):reply+=f' {len(made)-len(timed)} task(s) have no deadline and will not be auto-sent.'
             return {**self.view(),'reply':reply}
 

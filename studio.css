@@ -8681,3 +8681,44 @@ html body :is(.talk, .hist) .log > .e.bot.cols3 {
     max-height: none !important;
   }
 }
+
+
+/* Native select menus must match the active theme, not a white OS popup. */
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] select option,
+:root[data-theme="dark"] select optgroup {
+  color-scheme: dark;
+}
+:root[data-theme="dark"] select option,
+:root[data-theme="dark"] select optgroup {
+  background-color: #242735 !important;
+  color: #f0f3fb !important;
+}
+:root[data-theme="dark"] select option:disabled {
+  color: #a9b0c0 !important;
+}
+:root[data-theme="light"] select,
+:root[data-theme="light"] select option,
+:root[data-theme="light"] select optgroup {
+  color-scheme: light;
+}
+:root[data-theme="light"] select option,
+:root[data-theme="light"] select optgroup {
+  background-color: #ffffff !important;
+  color: #1b2537 !important;
+}
+:root[data-theme="light"] select option:disabled {
+  color: #6d7687 !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) select,
+  :root:not([data-theme="light"]) select option,
+  :root:not([data-theme="light"]) select optgroup {
+    color-scheme: dark;
+  }
+  :root:not([data-theme="light"]) select option,
+  :root:not([data-theme="light"]) select optgroup {
+    background-color: #242735 !important;
+    color: #f0f3fb !important;
+  }
+}

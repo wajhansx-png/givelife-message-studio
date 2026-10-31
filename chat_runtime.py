@@ -8,7 +8,21 @@ from chat_memory import safe_text
 from state_shapes import mapping,records,memories,history as valid_history
 
 def claims_completion(reply):
- return bool(re.search(r'(?i)^\s*(?:sent|posted|deleted|saved|queued|scheduled|updated|changed)\b|\b(?:i (?:have |just )?(?:sent|posted|deleted|saved|updated|changed|queued|scheduled)|successfully (?:sent|posted|deleted))\b|\b(?:draft|caption|message|balance|rule)\s+(?:has been|is now|was|is)\s+(?:saved|updated|changed|sent|posted|deleted)\b',reply))
+ """Detect unverified action-completion language across common phrasings.
+
+ A model's prose is NOT a delivery receipt. Only tool outcomes may confirm
+ sending, scheduling, persistence or other consequential operations.
+ """
+ value=str(reply or '')
+ return bool(re.search(
+  r'(?i)^\s*(?:sent|posted|deleted|saved|queued|scheduled|updated|changed|delivered|completed)\b'
+  r'|\b(?:i (?:have |just )?(?:sent|posted|deleted|saved|updated|changed|queued|scheduled|delivered|completed)'
+  r'|successfully (?:sent|posted|deleted|saved|scheduled|delivered))\b'
+  r'|\b(?:draft|caption|message|balance|rule|batch|task)\s+(?:has been|is now|was|is)\s+(?:saved|updated|changed|sent|posted|deleted|delivered|completed|confirmed)\b'
+  r'|\b(?:whatsapp|gateway|api)\s+(?:has\s+)?confirmed\s+(?:the\s+)?(?:message|post|send|delivery)\b'
+  r'|\b(?:message|dm|post|batch|delivery)\s+(?:was|is|has been)\s+(?:confirmed|delivered|completed)\b'
+  r'|\b(?:all\s+(?:requested\s+)?actions|everything)\s+(?:is\s+)?(?:done|completed)\b',
+  value))
 
 def context_messages(text,history,state,memory):
  import assistant

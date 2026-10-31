@@ -233,7 +233,7 @@ class TeamTasks:
         with self.lock:
             d = self._load();now = self.now()
             plan = None
-            if d['plan'] and d['plan']['created'] > now - 900:
+            if d['plan'] and d['plan'].get('owner_source_verified') is True and d['plan']['created'] > now - 900:
                 plan = {'items': [{**i, 'due_label': fmt_time(i['due_at'], now), 'start_label': fmt_time(i['start_at'], now)} for i in d['plan']['items']]}
             return {'member': {'name': d['member']['name']} if d['member'] else None, 'tasks': [self._public_task(t, now) for t in d['tasks'] if t['status'] != 'Cancelled'],
                     'unread': d['unread'], 'plan': plan, 'paused': d['paused'], 'quiet': d['quiet'], 'now_label': fmt_time(now),
@@ -268,7 +268,7 @@ class TeamTasks:
             if not d['member']:
                 raise ValueError('Add your teammate first (name and WhatsApp number).')
             items = plan_tasks(text, self.now(), d['quiet'])
-            d['plan'] = {'created': self.now(), 'items': items};self._save()
+            d['plan'] = {'created': self.now(), 'items': items, 'owner_source_verified': True};self._save()
             return self.view()
 
     def discard_plan(self):
@@ -278,6 +278,9 @@ class TeamTasks:
     def confirm_plan(self):
         with self.lock:
             d = self._load();now = self.now()
+            if d['plan'] and d['plan'].get('owner_source_verified') is not True:
+                d['plan'] = None;self._save()
+                raise ValueError('An older task plan had an unverified deadline and was discarded. Add the task again; no time will be invented.')
             if not d['plan'] or d['plan']['created'] < now - 900:
                 d['plan'] = None;self._save()
                 raise ValueError('There is no task plan waiting. Write the tasks again.')

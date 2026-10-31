@@ -1667,6 +1667,12 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
       if not dm_composer.complete(args.get('text','')):raise ValueError('Keep the full DM with blank lines, formatting, amount, donation options and payment details. Do not replace it with a name or one-paragraph summary.')
      work=workflow();work.begin(owner['text'],args['kind'],get_message(args['kind'])['text']);work.validate(args['text'])
      result=fn(**args);work.commit(args['kind'],args['text'])
+     if read_left()<=0:
+      # A completed case may still have its old fundraising poster on disk.
+      # Saved thank-you drafts default to text-only, never the old poster.
+      with work.lock:
+       work.data['poster']=False
+       work.persist()
      result=args['kind'].upper()+' message saved ('+('poster + caption' if work.data.get('poster',True) else 'text only')+').\n\n'+args['text']
     elif name=='remember':result=mem_add(prompt)
     else:result=fn(**args)

@@ -8651,38 +8651,6 @@ html body .donor-page .bank-message.bank-detail > header .tool {
 }
 .team-lefthead .team-link { min-height: 44px; }
 
-
-/* Reply readability: one column regardless of length; never clip content to fake a fit. */
-html body :is(.talk, .hist) .log > .e.bot:not(.dots),
-html body :is(.talk, .hist) .log > .e.bot.cols2,
-html body :is(.talk, .hist) .log > .e.bot.cols3 {
-  columns: auto !important;
-  column-count: 1 !important;
-  column-width: auto !important;
-  column-rule: none !important;
-  column-gap: normal !important;
-  height: auto !important;
-  max-height: none !important;
-  overflow: visible !important;
-  font-size: 16px !important;
-  line-height: 1.5;
-  white-space: normal;
-}
-@media (min-width: 900px) {
-  html body .talk .log > .e.bot:not(.dots) {
-    width: min(100%, 78ch);
-    max-width: 100% !important;
-    align-self: center;
-    padding: 18px 22px;
-  }
-  /* A long answer grows naturally. The page, not the message bubble, scrolls. */
-  html body .talk .log {
-    overflow: visible !important;
-    max-height: none !important;
-  }
-}
-
-
 /* Native select menus must match the active theme, not a white OS popup. */
 :root[data-theme="dark"] select,
 :root[data-theme="dark"] select option,

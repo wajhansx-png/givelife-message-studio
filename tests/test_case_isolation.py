@@ -128,6 +128,29 @@ class CaseIsolation(unittest.TestCase):
                self.app.milestone_text(2000,30000),self.app.thank_text(),
                self.app.share_text(),self.app.done_text()):
    self.assertNotIn('Yousuf',text)
+ def test_templates_never_invent_medical_outcomes(self):
+  import dm_templates
+  for index in range(dm_templates.COUNT):
+   caption=dm_templates.build(index,25000)
+   self.assertIn('family reported',caption)
+   self.assertNotRegex(caption.lower(),r'(?:will|can|may|threatening to)\\s+paraly[sz]e|paralys')
+  self.assertNotRegex(self.app.build_group(0,25000,'Yousuf').lower(),r'paraly[sz]|damage his eyesight')
+
+ def test_unnamed_case_does_not_assume_yousuf_story(self):
+  for caption in (self.app.build_group(0,25000,'Current case'),self.app.build_dm(0,25000,'Current case')):
+   self.assertIn('Current case',caption)
+   self.assertNotIn('Yousuf',caption)
+   self.assertNotIn('brain',caption.lower())
+
+ def test_corrupt_balance_never_uses_a_guessed_amount_or_sends(self):
+  (self.app.DATA/'state.md').write_text('LEFT: unknown\\n',encoding='utf-8')
+  with self.assertRaisesRegex(ValueError,'balance is missing or invalid'):
+   self.app.read_left()
+  with self.assertRaisesRegex(ValueError,'balance is missing or invalid'):
+   self.app.start_send_job(['main'],'Test appeal',manual=True)
+  with self.assertRaisesRegex(ValueError,'balance is missing or invalid'):
+   self.app.send_custom({'target':'main','message':'Test appeal','poster':False})
+
  def test_switch_back_restores_original_drafts_and_case_identity(self):
   cases=self.app.donors().cases
   previous=cases.view()['current']

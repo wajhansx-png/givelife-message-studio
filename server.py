@@ -77,6 +77,8 @@ def send_custom(body):
  if not isinstance(message,str):raise ValueError('Message must be text.')
  if read_left()<=0 and completed_case_appeal(message):
   raise ValueError('Not sent: this completed case caption contains a fundraising appeal. Replace it with a thank-you message.')
+ if read_left()<=0 and body.get('poster') is True:
+  body={**body,'poster':False}  # do not attach the old fundraising poster to a thank-you
  if not is_group and body.get('kind') in ('dm_appeal','donor_registry','donor_manual','donor_batch'):
   if read_left()<=0:raise ValueError('Not sent: the case is complete (Rs. 0 left). Set a new amount left before sending an appeal.')
   normal=donors().book.normal_amount_for_phone(body.get('phone','')) if body.get('phone') else 0
@@ -2303,7 +2305,7 @@ class Handler(BaseHTTPRequestHandler):
    try:
     options=workflow().options('group',caption)
     with SEND_LOCK:
-     picture=not options or options.get('poster',True)
+     picture=read_left()>0 and (not options or options.get('poster',True))
      result=send_image('120363431210327603@g.us',caption) if picture else send_text('120363431210327603@g.us',caption)
      if not picture and result.get('code')=='SUCCESS':
       jid='120363431210327603@g.us';stamp=time.time();LAST_LOCAL[jid]=stamp;record_delivery(jid,caption,result)

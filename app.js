@@ -88,7 +88,7 @@ for(const id of Object.keys(scrollState))$(id).addEventListener('scroll',()=>{co
 function followReplies(){for(const id of Object.keys(scrollState)){scrollState[id].follow=true;unreadReplies[id]=false}paintUnread()}
 function think(on){pendingChats=Math.max(0,pendingChats+(on?1:-1));thinking=pendingChats>0;drawLog()}let logChain=Promise.resolve();
 function say(who,text,err,turnId){if(typeof text!=='string'||!text.trim())return;const item={id:turnId||(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()),who,text,err:!!err,t:Date.now()};history.push(item);history=history.slice(-80);if(who==='you')followReplies();if(who==='app'){for(const id of Object.keys(scrollState))if(!scrollState[id].follow)unreadReplies[id]=true;paintUnread();$($('hist').open?'histAnnouncement':'chatAnnouncement').textContent=text}if(who!=='auto')logChain=logChain.then(()=>post('/chat-log',{who,text,err:!!err,turn_id:item.id})).catch(()=>{});try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}drawLog();if(err)setLiveNotice(text,true)}
-const GREETING='Hi. Tell me what changed or what to do: "34k left", "came 2000", "Ali 0300 1234567", "send all", or anything else. I can use saved preferences and recent context.';
+const GREETING='Hi! Tell me what changed, like "34k left" or "send all" — I remember your preferences.';
 async function syncChat(){try{await logChain;const d=await (await fetch('/chat')).json();
  if(d.items&&d.items.length){history=d.items.slice(-80).map(x=>({id:x.turn_id||x.id,who:x.who,text:x.text,err:!!x.err,t:x.t}));try{localStorage.setItem('givelife-chat',JSON.stringify(history))}catch(e){}}
  else if(!history.length)say('app',GREETING);
@@ -257,8 +257,8 @@ function sentAge(stamp){const seconds=Math.max(0,Math.floor(Date.now()/1000-stam
 function paintGroupTimes(data){if(data&&typeof data==='object'&&!Array.isArray(data))groupSentTimes=data;
  for(const el of document.querySelectorAll('[data-last-group]')){const key=el.dataset.lastGroup,keys=key==='all'?['main','community','fiverr','upwork','uet','toprated']:key==='free'?['community','fiverr','upwork','uet','toprated']:[key];
   const valid=keys.map(k=>groupSentTimes?.[k]).filter(t=>typeof t==='number'&&Number.isFinite(t)&&t>0&&t<=Date.now()/1000+60);
-  el.textContent=!groupSentTimes?'Checking…':!valid.length?'No confirmed send':(keys.length>1?'Latest: ':'Sent ')+sentAge(Math.max(...valid));
-  el.title=keys.length>1?keys.map(k=>(GN[k]||k)+': '+(typeof groupSentTimes?.[k]==='number'&&groupSentTimes[k]>0&&groupSentTimes[k]<=Date.now()/1000+60?new Date(groupSentTimes[k]*1000).toLocaleString():'No confirmed send recorded')).join('\n'):valid.length?'Confirmed '+new Date(valid[0]*1000).toLocaleString():'No confirmed send recorded';
+  el.textContent=!groupSentTimes?'Checking…':!valid.length?'Not sent yet':(keys.length>1?'Latest: ':'Sent ')+sentAge(Math.max(...valid));
+  el.title=keys.length>1?keys.map(k=>(GN[k]||k)+': '+(typeof groupSentTimes?.[k]==='number'&&groupSentTimes[k]>0&&groupSentTimes[k]<=Date.now()/1000+60?new Date(groupSentTimes[k]*1000).toLocaleString():'Not sent yet')).join('\n'):valid.length?'Confirmed '+new Date(valid[0]*1000).toLocaleString():'No confirmed send recorded';
  }
 }
 setInterval(paintGroupTimes,30000);
@@ -518,11 +518,8 @@ document.addEventListener('click',event=>{
 /* ---- start ---- */
 setView(localStorage.getItem('givelife-view')==='dm'?'dm':'group');
 seenAuto=Number(localStorage.getItem('givelife-seen-auto')||0);addEventListener('beforeunload',()=>localStorage.setItem('givelife-seen-auto',String(seenAuto)));
-fetch('/health').then(r=>r.json()).then(d=>{const f=document.querySelector('.foot');
- if(f&&d.version&&!$('buildTag')){const v=document.createElement('span');v.id='buildTag';v.className='build-tag';v.textContent='build '+d.version;v.title='The version of the app that is running. If it does not match the latest commit, Render is still deploying.';f.insertBefore(v,f.querySelector('.sp'))}
- if(f&&d.ai_provider&&!$('aiTag')){const a=document.createElement('span');a.id='aiTag';a.className='build-tag';a.textContent=d.ai_provider;a.title='The AI model answering chat requests right now.';f.insertBefore(a,f.querySelector('.sp'))}
- if(d.ai_provider)setNote('aiRes','Currently: '+d.ai_provider+'.');
-}).catch(()=>{});
+fetch('/health').then(r=>r.json()).then(d=>{if(d.ai_provider)setNote('aiRes','Currently: '+d.ai_provider+'.')}).catch(()=>{});
+document.getElementById('footDonors')?.addEventListener('click',()=>document.getElementById('openDonors')?.click());
 ensureDrafts().then(()=>status('✓ Ready')).catch(()=>{const d=cached('drafts');if(d){applyDrafts(d);status('Offline · showing the last saved message',1)}else status('Could not load',1)});
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false;renderSendMode()}}).catch(()=>{});

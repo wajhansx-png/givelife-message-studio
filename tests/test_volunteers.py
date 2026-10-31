@@ -30,6 +30,10 @@ class VolunteerTests(unittest.TestCase):
   self.v.mutate({'action':'add','name':'Sara','phone':'03001234567'})
   self.assertEqual([x['name'] for x in self.v.view()['items']],['Sara']);self.assertEqual(self.donors.list()['items'],[])
   self.assertTrue(all('phone' not in x for x in self.v.view()['items']),'numbers stay hidden')
+ def test_rename_updates_the_saved_name(self):
+  item=self.v.mutate({'action':'add','name':'Sara','phone':'03001234567'})
+  self.v.mutate({'action':'update','id':item['donor']['id'],'name':'Sara Khan'})
+  self.assertEqual([x['name'] for x in self.v.view()['items']],['Sara Khan'])
  def test_message_is_saved_and_required_before_sending(self):
   self.v.mutate({'action':'add','name':'Sara','phone':'03001234567'})
   with self.assertRaisesRegex(ValueError,'Write the message'):self.v.mutate({'action':'send_all','request_id':'r1aaaaaaaa'})

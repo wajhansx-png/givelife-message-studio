@@ -431,7 +431,7 @@ async function saveDms(){const on=$('swDm').checked;$('swNew').disabled=!on;
  try{const r=await post('/autopilot-settings',{action:'dms',enabled:on,daily:+($('set').dataset.daily||30),new_people:$('swNew').checked}),d=await r.json();if(!r.ok)throw Error(d.error);status('✓ '+d.reply)}catch(e){status(e.message||'Could not save',1);loadSet()}}
 $('swDm').onchange=saveDms;$('swNew').onchange=saveDms;
 $('aiTest').onclick=async()=>{const b=$('aiTest');b.disabled=true;setNote('aiRes','Asking the assistant…');
- try{const d=await (await fetch('/ai-test')).json();d.ok?setNote('aiRes',`Working. Answered in ${(d.ms/1000).toFixed(1)} s.`,'ok'):setNote('aiRes',d.error||'Not working.','err')}
+ try{const d=await (await fetch('/ai-test')).json();d.ok?setNote('aiRes',`${d.provider||'AI'} answered in ${(d.ms/1000).toFixed(1)} s.`,'ok'):setNote('aiRes',d.error||'Not working.','err')}
  catch(e){setNote('aiRes','Could not reach the server.','err')}finally{b.disabled=false}};
 let outT=null;
 $('waOut').onclick=async()=>{const b=$('waOut');
@@ -520,7 +520,11 @@ document.addEventListener('click',event=>{
 /* ---- start ---- */
 setView(localStorage.getItem('givelife-view')==='dm'?'dm':'group');
 seenAuto=Number(localStorage.getItem('givelife-seen-auto')||0);addEventListener('beforeunload',()=>localStorage.setItem('givelife-seen-auto',String(seenAuto)));
-fetch('/health').then(r=>r.json()).then(d=>{if(d.version){const f=document.querySelector('.foot');if(f&&!$('buildTag')){const v=document.createElement('span');v.id='buildTag';v.className='build-tag';v.textContent='build '+d.version;v.title='The version of the app that is running. If it does not match the latest commit, Render is still deploying.';f.insertBefore(v,f.querySelector('.sp'))}}}).catch(()=>{});
+fetch('/health').then(r=>r.json()).then(d=>{const f=document.querySelector('.foot');
+ if(f&&d.version&&!$('buildTag')){const v=document.createElement('span');v.id='buildTag';v.className='build-tag';v.textContent='build '+d.version;v.title='The version of the app that is running. If it does not match the latest commit, Render is still deploying.';f.insertBefore(v,f.querySelector('.sp'))}
+ if(f&&d.ai_provider&&!$('aiTag')){const a=document.createElement('span');a.id='aiTag';a.className='build-tag';a.textContent=d.ai_provider;a.title='The AI model answering chat requests right now.';f.insertBefore(a,f.querySelector('.sp'))}
+ if(d.ai_provider)setNote('aiRes','Currently: '+d.ai_provider+'.');
+}).catch(()=>{});
 ensureDrafts().then(()=>status('✓ Ready')).catch(()=>{const d=cached('drafts');if(d){applyDrafts(d);status('Offline · showing the last saved message',1)}else status('Could not load',1)});
 fetch('/left').then(r=>r.json()).then(d=>{left=d.left;cached('left',d.left);showLeft()}).catch(()=>{const l=cached('left');if(l!=null){left=l;showLeft()}});
 fetch('/poster').then(r=>r.ok?r.blob():null).then(b=>{if(b){$('poster').src=URL.createObjectURL(b);$('poster').hidden=false;renderSendMode()}}).catch(()=>{});

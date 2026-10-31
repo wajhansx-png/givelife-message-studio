@@ -508,33 +508,52 @@ class TeamTasks:
 
     def _deliver(self, text, phone):
         """True=confirmed sent; False=definitely unsent; None=uncertain, never retry."""
+        self._last_attempt_error = ''
         try:
             r = self.app.send_custom({'kind': 'team_msg', 'target': 'phone', 'phone': phone, 'message': text, 'poster': False})
             code = r.get('code') if isinstance(r, dict) else None
             if code == 'SUCCESS': return True
-            if code in ('NOT_SENT', 'CANCELLED', 'SKIPPED', 'COOLDOWN'): return False
+            if code in ('NOT_SENT', 'CANCELLED', 'SKIPPED', 'COOLDOWN'):
+                self._last_attempt_error = 'WhatsApp rejected the send before confirming it (' + str(code) + ').'
+                return False
+            self._last_attempt_error = 'The WhatsApp gateway returned an unconfirmed result (' + str(code or 'unknown')[:24] + ').'
+            return None
+        except ValueError as exc:
+            # Only explicit pre-dispatch validation errors can be safely retried.
+            # An unknown exception may occur *after* WhatsApp accepted a message.
+            error = str(exc)
+            known = (
+                'WhatsApp is disconnected', 'WhatsApp disconnected',
+                'Persistent send records are unavailable', 'Another send is running',
+                'This recipient is blocked or opted out', 'Your own account is excluded',
+            )
+            if any(error.startswith(prefix) for prefix in known):
+                self._last_attempt_error = error[:180]
+                return False
+            self._last_attempt_error = 'The send was not confirmed; verify WhatsApp before trying again.'
             return None
         except Exception:
-            # Exceptions, including ValueError, can happen AFTER gateway dispatch.
-            # Unless preflight proved no send, delivery must remain uncertain.
+            self._last_attempt_error = 'The send outcome is unknown; verify WhatsApp before retrying.'
             return None
 
     def _finish(self, job, ok, now):
         d = self._load();tasks = [t for t in d['tasks'] if t['id'] in job['tasks']]
         if ok is True:
+            d['last_send_error'] = ''
             self._event('sent', job['text'], tasks[0] if tasks else None)
             return
+        d['last_send_error'] = getattr(self, '_last_attempt_error', '') or 'WhatsApp did not confirm the message.'
         if ok is None:
             for t in tasks:
                 t.update(delivery_uncertain=True, reminded=True, checked=True, final_sent=True)
             self._event('send_uncertain', 'WhatsApp could not confirm a Team message to '+d['member']['name']+
-                        '. Check WhatsApp before manually retrying; no automatic repeat.', tasks[0] if tasks else None, notify=True)
+                        '. ' + d['last_send_error'] + ' Check WhatsApp before manually retrying; no automatic repeat.', tasks[0] if tasks else None, notify=True)
             return
         if job['kind'] == 'ask':
             for t in tasks:
                 t['status'] = 'Waiting';t['asked_at'] = None;t['next_try'] = now + (3600 if t['attempts'] >= 3 else self.RETRY_AFTER)
                 if t['attempts'] == 3:
-                    self._event('send_failed', f'Could not reach {d["member"]["name"]} on WhatsApp about: {t["text"][:60]}. Check WhatsApp.', t, notify=True)
+                    self._event('send_failed', f'Could not reach {d["member"]["name"]} on WhatsApp about: {t["text"][:60]}. {d["last_send_error"]}', t, notify=True)
         else:
             self._event('send_failed', f'A message to {d["member"]["name"]} did not go through ({job["kind"]}).', tasks[0] if tasks else None)
 

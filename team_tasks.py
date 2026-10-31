@@ -1,9 +1,9 @@
-"""Team tasks over WhatsApp. The owner writes today's tasks and a deadline; the app splits them into timed tasks (after a preview the
-owner confirms) and then talks to the teammate on WhatsApp like the owner would: short, casual, no task numbers, no robot phrases.
+"""Team tasks over WhatsApp. The owner writes tasks with an optional explicit deadline;
+the app previews them before the owner confirms. Untimed tasks start tracking after confirmation. and then talks to the teammate on WhatsApp like the owner would: short, casual, no task numbers, no robot phrases.
 It asks once, nudges once, checks before the deadline, notices lateness, reads his replies, and shows the owner one tiny screen.
 
 Rules that keep it honest:
-- All times are Pakistan time (UTC+5). Nothing goes out 11 pm to 7 am, while paused, or while sending is on hold.
+- All times are Pakistan time (UTC+5). Quiet hours are optional; paused/hold blocks automatic messages.
 - Nothing is sent until the owner confirms the plan.
 - A message is reserved before it is sent, so a crash can never send the same message twice. A send that fails is retried
   (asks only), then the owner is told.
@@ -181,6 +181,8 @@ def pick(options, seed):
 class TeamTasks:
     KEY = 'team'
     RETRY_AFTER = 300
+    NO_DEADLINE_REMINDER = 2 * 3600
+    NO_DEADLINE_CHECK = 6 * 3600
     JITTER = (5, 45)   # seconds after the start time before the first message goes out, so it does not arrive on the dot
 
     def __init__(self, app, clock=time.time):
@@ -196,7 +198,7 @@ class TeamTasks:
             if not isinstance(raw, dict):
                 raw = {}
             for k, v in (('member', None), ('tasks', []), ('feed', []), ('plan', None), ('seen', []), ('counter', 0), ('paused', False), ('unread', 0),
-                         ('last_sent', 0), ('pending_notes', []), ('last_note', 0), ('outbox', []), ('greeted', ''), ('last_clarify', 0), ('quiet', None), ('force', False)):
+                         ('last_sent', 0), ('pending_notes', []), ('last_note', 0), ('outbox', []), ('greeted', ''), ('last_clarify', 0), ('quiet', None), ('force', False), ('last_send_error', '')):
                 raw.setdefault(k, v)
             self._cache = raw
         return self._cache
@@ -238,7 +240,8 @@ class TeamTasks:
             return {'member': {'name': d['member']['name']} if d['member'] else None, 'tasks': [self._public_task(t, now) for t in d['tasks'] if t['status'] != 'Cancelled'],
                     'unread': d['unread'], 'plan': plan, 'paused': d['paused'], 'quiet': d['quiet'], 'now_label': fmt_time(now),
                     'counts': {s: sum(1 for t in d['tasks'] if t['status'] == s) for s in ('Waiting', 'Asked', 'Reported', 'Late', 'Done', 'Unscheduled')},
-                    'latest': [{'label': fmt_time(e['at'], now), 'text': e['text']} for e in d['feed'] if e['kind'] in ('update', 'report', 'blocked', 'proof', 'send_uncertain')][-3:][::-1]}
+                    'last_send_error': d.get('last_send_error', ''),
+                    'latest': [{'label': fmt_time(e['at'], now), 'text': e['text']} for e in d['feed'] if e['kind'] in ('update', 'report', 'blocked', 'proof', 'send_uncertain', 'send_failed')][-3:][::-1]}
 
     # ---- owner actions
     def set_member(self, name, phone):
@@ -294,7 +297,7 @@ class TeamTasks:
                     raise ValueError('The deadline passed while the plan was waiting. Plan it again.')
                 d['counter'] += 1
                 tid = uuid.uuid4().hex
-                made.append({'id': tid, 'no': d['counter'], 'text': i['text'], 'start_at': i['start_at'], 'due_at': i['due_at'], 'status': 'Unscheduled' if i['due_at'] is None else 'Waiting', 'created_at': now, 'attempts': 0,
+                made.append({'id': tid, 'no': d['counter'], 'text': i['text'], 'start_at': i['start_at'] if i['start_at'] is not None else now, 'due_at': i['due_at'], 'status': 'Waiting', 'created_at': now, 'attempts': 0,
                              'next_try': 0, 'asked_at': None, 'reminded': False, 'checked': False, 'final_sent': False, 'acked': False, 'proof': False, 'proof_asked': False,
                              'blocked_replied': False, 'report_text': '', 'reported_at': None, 'verified_at': None, 'jit': self.JITTER[0] + int(tid[:6], 16) % (self.JITTER[1] - self.JITTER[0] + 1)})
             d['tasks'].extend(made);d['plan'] = None
@@ -302,7 +305,7 @@ class TeamTasks:
             self._save()
             timed=[t for t in made if t['start_at'] is not None]
             if not timed:
-                reply=f'{len(made)} task{"s" if len(made)!=1 else ""} saved without a deadline. No WhatsApp messages scheduled.'
+                reply=f'{len(made)} task{"s" if len(made)!=1 else ""} confirmed without a deadline. WhatsApp will ask for updates, then follow up after 2 and 6 hours if still open; no due time was invented.'
             else:
                 reply=f'{len(made)} task{"s" if len(made)!=1 else ""} started. First scheduled WhatsApp message: {fmt_time(min(t["start_at"] for t in timed), now)}.'
                 if len(timed)<len(made):reply+=f' {len(made)-len(timed)} task(s) have no deadline and will not be auto-sent.'
@@ -345,7 +348,7 @@ class TeamTasks:
             if t['status'] != 'Reported':
                 raise ValueError('Only a reported task can be sent back.')
             t.update(status='Asked', reminded=False, checked=False, final_sent=False, acked=False, report_text='', reported_at=None, proof_asked=False, proof=False, asked_at=now)
-            moved = t['due_at'] < now + 1800
+            moved = t['due_at'] is not None and t['due_at'] < now + 1800
             if moved:
                 t['due_at'] = now + 1800
             note = str(note).strip()[:200]
@@ -360,11 +363,11 @@ class TeamTasks:
             if not d['member']:
                 raise ValueError('Add your teammate first.')
             ongoing = [t for t in d['tasks'] if t['status'] in ('Asked', 'Late')]
-            waiting = [t for t in d['tasks'] if t['status'] == 'Waiting']
+            waiting = [t for t in d['tasks'] if t['status'] in ('Waiting', 'Unscheduled')]
             if ident:
                 t = self._find(ident)
-                if t['status'] == 'Waiting':
-                    t.update(start_at=now, jit=0, next_try=0)   # not asked yet: ask now
+                if t['status'] in ('Waiting', 'Unscheduled'):
+                    t.update(status='Waiting', start_at=now, jit=0, next_try=0)   # not asked yet: ask now
                     d['force'] = True;self._save();return self.view()
                 if t['status'] not in ('Asked', 'Late', 'Reported'):
                     raise ValueError('That task is not ongoing.')
@@ -376,7 +379,7 @@ class TeamTasks:
                     raise ValueError('There is no ongoing task to ask about.')
                 if not ongoing:
                     for t in waiting:
-                        t.update(start_at=now, jit=0, next_try=0)
+                        t.update(status='Waiting', start_at=now, jit=0, next_try=0)
                     d['force'] = True;self._save();return self.view()
                 first = self._first()
                 if len(ongoing) == 1:
@@ -427,6 +430,12 @@ class TeamTasks:
     def _ask_text(self, tasks, now):
         due = lambda t: fmt_time(t['due_at'], now)
         p = self._prefix(now)
+        if all(t['due_at'] is None for t in tasks):
+            if len(tasks) == 1:
+                return p + f"can you take care of this: {tasks[0]['text']}? Let me know how it goes."
+            return p + "please take care of these when you can:\n" + '\n'.join('- ' + t['text'] for t in tasks) + '\nPlease send me an update on each one.'
+        if any(t['due_at'] is None for t in tasks):
+            return p + "here are the tasks:\n" + '\n'.join('- ' + t['text'] + (f" (by {due(t)})" if t['due_at'] is not None else ' (no deadline)') for t in tasks) + '\nLet me know how they are going.'
         if len(tasks) == 1:
             t = tasks[0]
             return p + pick((f"here's one for you: {t['text']}. Need it by {due(t)}.", f"can you do this one: {t['text']}? Deadline is {due(t)}.",
@@ -437,6 +446,8 @@ class TeamTasks:
     def _text_for(self, kind, t, now):
         """The task text is an instruction ("update the sheet"), so it is quoted after a colon instead of being forced into a sentence."""
         name = self._first();s = short(t['text']);due = fmt_time(t['due_at'], now)
+        if t['due_at'] is None and kind in ('remind', 'check', 'final'):
+            return pick((f'{name}, how is this going? {s}', f'Quick update please on: {s}', f'Any progress on this one, {name}? {s}'), t['id']+kind)
         options = {
             'remind': (f'{name}, any update on this? {s}', f"How's this coming along? {s}", f'Checking in on this one, {name}: {s}. How far along are you?'),
             'check': (f'{s} - will that be ready by {due}?', f'Quick one, {name}: {s}. Are you on track for {due}?', f'Still waiting on this: {s}. It is due at {due}, are you close?'),
@@ -463,7 +474,7 @@ class TeamTasks:
         if d['outbox']:
             m = d['outbox'].pop(0);d['last_sent'] = now
             return {'kind': 'say', 'text': m['text'], 'tasks': [], 'sub': m['kind']}
-        ready = sorted((t for t in d['tasks'] if t['status'] == 'Waiting' and not t.get('delivery_uncertain') and now >= t['start_at'] + t['jit'] and now >= t['next_try']), key=lambda x: x['start_at'])[:4]
+        ready = sorted((t for t in d['tasks'] if t['status'] == 'Waiting' and t.get('start_at') is not None and not t.get('delivery_uncertain') and now >= t['start_at'] + t['jit'] and now >= t['next_try']), key=lambda x: x['start_at'])[:4]
         if ready:
             for t in ready:
                 t['status'] = 'Asked';t['asked_at'] = now;t['attempts'] += 1
@@ -472,7 +483,13 @@ class TeamTasks:
         for t in sorted(d['tasks'], key=lambda x: x['start_at'] if x['start_at'] is not None else float('inf')):
             if t.get('delivery_uncertain'): continue
             kind = None
-            if t['status'] == 'Asked' and not t['acked'] and not t['reminded'] and now >= (t['asked_at'] or now) + 30 * 60 + t['jit'] * 10 and now < t['due_at'] - 15 * 60:
+            if t['status'] == 'Asked' and t.get('due_at') is None:
+                elapsed = now - (t.get('asked_at') or now)
+                if not t.get('acked') and not t.get('reminded') and elapsed >= self.NO_DEADLINE_REMINDER:
+                    kind = 'remind';t['reminded'] = True
+                elif not t.get('checked') and elapsed >= self.NO_DEADLINE_CHECK:
+                    kind = 'check';t['checked'] = True
+            elif t['status'] == 'Asked' and not t['acked'] and not t['reminded'] and now >= (t['asked_at'] or now) + 30 * 60 + t['jit'] * 10 and now < t['due_at'] - 15 * 60:
                 kind = 'remind';t['reminded'] = True
             elif t['status'] == 'Asked' and not t['checked'] and t['due_at'] - 15 * 60 <= now < t['due_at'] and (t['asked_at'] or 0) < t['due_at'] - 15 * 60:
                 kind = 'check';t['checked'] = True
@@ -556,7 +573,7 @@ class TeamTasks:
 
     def _deadlines(self, now):
         for t in self._load()['tasks']:
-            if t['status'] in ('Waiting', 'Asked') and now > t['due_at']:
+            if t['status'] in ('Waiting', 'Asked') and t.get('due_at') is not None and now > t['due_at']:
                 was = t['status'];t['status'] = 'Late';t['late_at'] = now
                 self._event('late', f'Late: {t["text"]}' + (' (delivery unconfirmed)' if t.get('delivery_uncertain') else '' if was == 'Asked' else ' (it was never sent to him)'), t, notify=True)
 

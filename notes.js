@@ -123,18 +123,32 @@
   finally{submit.disabled=false}
  });
  editor.addEventListener('input',rememberDirty);
+ // Paste text safely rather than allowing clipboard HTML to execute in the editor.
+ editor.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));rememberDirty()});
+ let savedRange=null;
+ document.addEventListener('selectionchange',()=>{
+  if(!page.open||!loaded)return;
+  const selection=window.getSelection();
+  if(selection?.rangeCount&&editor.contains(selection.anchorNode))savedRange=selection.getRangeAt(0).cloneRange();
+ });
+ const restoreSelection=()=>{
+  editor.focus();
+  if(savedRange&&editor.contains(savedRange.commonAncestorContainer)){
+   const selection=window.getSelection();selection.removeAllRanges();selection.addRange(savedRange);
+  }
+ };
  // Keep the selected text while clicking toolbar buttons.
  page.querySelectorAll('.notes-toolbar button').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
  page.querySelectorAll('[data-command]').forEach(b=>b.addEventListener('click',()=>{
-  editor.focus();document.execCommand(b.dataset.command,false,null);rememberDirty();
+  restoreSelection();document.execCommand(b.dataset.command,false,null);rememberDirty();
  }));
  const applyBlock=tag=>{
-  editor.focus();document.execCommand('formatBlock',false,tag);rememberDirty();
+  restoreSelection();document.execCommand('formatBlock',false,tag);rememberDirty();
  };
  el('notesStyle').addEventListener('change',e=>{applyBlock(e.target.value);e.target.value='p'});
  el('notesColor').addEventListener('change',e=>{
   if(!e.target.value)return;
-  editor.focus();document.execCommand('foreColor',false,e.target.value);
+  restoreSelection();document.execCommand('foreColor',false,e.target.value);
   e.target.value='';rememberDirty();
  });
  const findList=()=>{
@@ -143,7 +157,7 @@
   return node?.closest?.('ul,ol')||null;
  };
  el('notesChecklist').addEventListener('click',()=>{
-  editor.focus();
+  restoreSelection();
   const old=findList();
   if(old&&old.tagName==='UL'){
    old.classList.toggle('notes-checklist');

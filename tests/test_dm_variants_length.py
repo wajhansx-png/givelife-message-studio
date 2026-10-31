@@ -11,9 +11,9 @@ class LengthRule(unittest.TestCase):
  def test_a_version_of_nearly_the_same_length_is_accepted(self):
   self.assertEqual(dm_variants.validate(self.src,self.src.replace('Days have passed.','Time has passed.')),'')
  def test_a_much_longer_or_shorter_version_is_rejected(self):
-  longer=self.src.replace('He is still at home.','He is still at home and the family keeps waiting for help every single hour of the day and night with no answer at all.')
+  longer=self.src.replace('His parents reported that he was admitted to hospital for treatment.','His parents reported that he was admitted to hospital for treatment and his family is looking for community support. Please check the verified documents for all current clinical facts, because we cannot guess what the doctors may say next.')
   self.assertIn('length',dm_variants.validate(self.src,longer))
-  shorter=self.src.replace('Fluid is filling his brain, which will paralyze his body. Both kidneys are badly swollen. He also has a hernia.','Fluid is filling his brain.')
+  shorter=self.src.replace(dm_templates.REPORTED_CONDITION,'Yousuf needs treatment.')
   self.assertIn('length',dm_variants.validate(self.src,shorter))
  def test_the_prompt_states_the_length_and_asks_for_urgency(self):
   p=dm_variants._prompt(self.src,10,[]);low,high=dm_variants.length_range(self.src)

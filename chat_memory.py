@@ -12,7 +12,17 @@ def safe_text(text, limit=6000):
  return text[:limit]
 
 def tokens(text):
- return set(re.findall(r'[\w\u0600-\u06ff]{2,}',str(text).casefold()))-set('the this that with from have your what when then send message please'.split())
+ # Lightweight concept normalization improves retrieval of the owner's
+ # corrections without inventing facts or requiring a paid embedding API.
+ aliases={'breathing':'breath','breathless':'breath','shortness':'breath',
+          'paralysing':'paralysis','paralyzing':'paralysis',
+          'kidneys':'kidney','fingers':'finger','captions':'caption',
+          'messages':'message','donations':'donation','donors':'donor',
+          'paragraphs':'paragraph','teammates':'teammate',
+          'schedules':'schedule','batches':'batch','groups':'group'}
+ words=re.findall(r'[\w\u0600-\u06ff]{2,}',str(text).casefold())
+ return {aliases.get(word,word) for word in words}-set(
+  'the this that with from have your what when then send message please'.split())
 
 def preference_key(text):
  return 'format:markup' if re.search(r'(?i)bold|italic',text) else 'format:spacing' if re.search(r'(?i)paragraph|spacing',text) else 'format:structure' if re.search(r'(?i)format|structure',text) else 'greeting' if re.search(r'(?i)logical name|unclear name|no name|brother|sister',text) else 'donation_order' if '2000' in text.replace(',','') and '1000' in text.replace(',','') and re.search(r'(?i)first|before|order',text) else None
@@ -99,7 +109,7 @@ class Knowledge:
    source=item.get('source','app_output')
    if source!='owner_input' and not asks_ai:continue
    overlap=len(query_tokens & tokens(item.get('text','')))
-   if overlap>=2:
+   if overlap >= (1 if asks_ai and source!='owner_input' else 2):
     out.append({**item,'score':overlap*2+(5 if source=='owner_input' else 0),'source':'historical_'+source})
   for item in self.data['feedback'][-30:]:
    correction=item.get('correction','')

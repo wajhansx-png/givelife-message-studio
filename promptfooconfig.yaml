@@ -1,0 +1,13 @@
+# Offline GiveLife tool-permission and intent regressions.
+# No real AI API calls, WhatsApp messages, or donor data.
+# Run explicitly from repository root: npx promptfoo@latest eval --config promptfooconfig.yaml
+description: GiveLife V1 intent and safety regressions
+prompts:
+  - '{{input}}'
+providers:
+  - id: file://tests/evals/provider.py
+    label: Local GiveLife policy (offline)
+tests:
+  - file://tests/evals/cases.py:generate_tests
+evaluateOptions:
+  maxConcurrency: 1

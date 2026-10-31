@@ -1658,7 +1658,10 @@ def assistant_task(body):
     # active 300-message chat); no old assistant answers can become facts.
     with KNOWLEDGE.lock:
      past_turns=[dict(row) for row in KNOWLEDGE.data.get('turns',[])]
-    review_data=conversation_insights.build_history_review(past_turns,hist)
+     corrections=[{'who':'you','text':row.get('correction',''),'time':row.get('time')}
+                  for row in KNOWLEDGE.data.get('feedback',[])
+                  if row.get('status')=='confirmed_by_owner' and row.get('correction')]
+    review_data=conversation_insights.build_history_review(past_turns+corrections,hist)
    selection=draft_flow.selected_option(text,hist)
    output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text)+KNOWLEDGE.lessons_for(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'history_review':review_data,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident,selection,draft_flow.option_kind(hist,mapping(body.get('screen')).get('view'))))
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return

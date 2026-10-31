@@ -1,0 +1,78 @@
+/* Foundation notes — calm, compact and centered, with large accessible controls. */
+.donor-notes-trigger{min-height:38px;min-width:68px;padding:7px 12px;border:1px solid var(--line2);border-radius:9px;background:var(--surface2);color:var(--ink);font-size:13px;font-weight:650;white-space:nowrap;flex-shrink:0}
+.donor-notes-trigger:hover,.donor-notes-trigger:focus-visible{border-color:var(--g);background:var(--gs)}
+.foundation-notes{position:fixed;inset:0;width:100vw;height:100dvh;max-width:100vw;max-height:100dvh;border:0;padding:0;margin:0;background:var(--bg);color:var(--ink);overflow:hidden}
+.foundation-notes::backdrop{background:rgba(0,0,0,.54)}
+.foundation-notes [hidden]{display:none!important}
+.fn-shell{height:100%;min-height:0;display:flex;flex-direction:column}
+.fn-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:68px;padding:9px max(16px,env(safe-area-inset-right));border-bottom:1px solid var(--line);background:var(--surface)}
+.fn-heading{display:flex;gap:14px;align-items:center;min-width:0}
+.fn-heading h1{font-size:19px;line-height:1.15;font-weight:750;letter-spacing:-.5px;margin:0;color:var(--ink)}
+.fn-heading span{font-size:12px;color:var(--mut);white-space:nowrap}
+.fn-back,.fn-lock{border:1px solid var(--line2);border-radius:9px;min-height:42px;padding:8px 14px;background:var(--surface2);color:var(--ink);white-space:nowrap;font-size:13px;font-weight:650}
+.fn-head-right{display:flex;align-items:center;gap:10px;min-width:0}
+#fnStatus{font-size:12px;color:var(--mut);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#fnStatus[data-state=error]{color:var(--red)}
+#fnStatus[data-state=saving]{color:var(--warn)}
+.fn-save,.fn-primary{border:0;border-radius:9px;background:var(--btn);color:#fff;min-height:42px;padding:10px 17px;font-size:13px;font-weight:700}
+.fn-save:hover,.fn-primary:hover{background:var(--btnh)}
+.fn-save:disabled,.fn-primary:disabled{opacity:.6}
+.fn-work{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:26px 18px 38px}
+.fn-editor-wrap{width:min(100%,920px);margin:0 auto}
+.fn-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px 14px 0 0;position:sticky;top:-26px;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.025)}
+.fn-toolbar button{min-width:38px;min-height:38px;padding:5px 9px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--ink);font-size:15px;font-weight:650}
+.fn-toolbar button:hover,.fn-toolbar button:focus-visible{border-color:var(--line2);background:var(--surface2)}
+.fn-toolbar button:active{background:var(--gs)}
+.fn-label{display:inline-flex;align-items:center;gap:6px;color:var(--mut);font-size:12px;padding-left:6px}
+.fn-toolbar select{font-size:13px;min-height:38px;padding:6px 23px 6px 9px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);color:var(--ink)}
+.fn-sep{width:1px;height:25px;background:var(--line);margin:0 5px}
+.fn-colors{display:flex;align-items:center;gap:7px}
+.fn-colors span{font-size:12px;color:var(--mut);margin-right:3px}
+.fn-colors button{min-width:25px;width:27px;height:27px;min-height:27px;padding:0;border-radius:50%;background:var(--swatch);border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line2)}
+.fn-colors button:hover,.fn-colors button:focus-visible{box-shadow:0 0 0 2px var(--ring)}
+.fn-page{min-height:470px;background:var(--surface);border:1px solid var(--line);border-top:0;border-radius:0 0 14px 14px;box-shadow:var(--sh2)}
+.fn-editor{min-height:470px;outline:none;max-width:100%;overflow-wrap:break-word;padding:36px clamp(18px,6%,62px) 100px;font-size:16px;line-height:1.8;color:var(--ink);font-family:inherit;caret-color:var(--g)}
+.fn-editor:empty::before{content:attr(data-placeholder);color:var(--faint);pointer-events:none}
+.fn-editor p,.fn-editor div{margin:0 0 .6em}
+.fn-editor h1{font-size:27px;line-height:1.3;letter-spacing:-.6px;font-weight:750;margin:0 0 .7em}
+.fn-editor h2{font-size:22px;line-height:1.4;font-weight:700;margin:1em 0 .55em}
+.fn-editor h3{font-size:18px;line-height:1.4;font-weight:700;margin:1em 0 .5em}
+.fn-editor ul,.fn-editor ol{padding-left:27px;margin:0 0 .9em}
+.fn-editor li{padding:2px 0 2px 4px}
+.fn-editor blockquote{border-left:3px solid var(--g);margin:1em 0;padding:0 14px;color:var(--mut)}
+.fn-editor ul[data-list=check]{list-style:none;padding:0 0 0 8px}
+.fn-editor ul[data-list=check] > li{position:relative;padding-left:36px;min-height:34px;cursor:text}
+.fn-editor ul[data-list=check] > li:before{content:'';position:absolute;left:3px;top:7px;width:19px;height:19px;border-radius:6px;border:1.5px solid var(--line2);background:var(--surface2);cursor:pointer}
+.fn-editor ul[data-list=check] > li[data-checked=true]:before{content:'✓';background:var(--g);color:#fff;border-color:var(--g);font-weight:800;line-height:19px;text-align:center;font-size:14px}
+.fn-editor ul[data-list=check] > li[data-checked=true]{color:var(--mut);text-decoration:line-through;text-decoration-thickness:1px}
+.fn-tips{padding:12px 0;text-align:center;color:var(--faint);font-size:12px}
+.fn-lockscreen{flex:1;min-height:0;display:grid;place-items:center;padding:24px;overflow-y:auto}
+.fn-lock-card{width:min(100%,425px);border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:36px 32px;box-shadow:var(--sh2);text-align:center}
+.fn-lock-symbol{width:54px;height:54px;border-radius:14px;background:var(--gs);color:var(--g);display:grid;place-items:center;font-size:26px;font-weight:750;margin:0 auto 16px}
+.fn-lock-card h2{font-size:23px;font-weight:750;letter-spacing:-.6px;margin:0 0 10px}
+.fn-lock-card p{font-size:14px;line-height:1.6;color:var(--mut);margin:0 0 22px}
+.fn-lock-card form{text-align:left}
+.fn-lock-card label{display:block;font-size:12px;font-weight:700;margin:0 0 7px}
+.fn-lock-card input{width:100%;min-height:48px;background:var(--surface2);border:1px solid var(--line2);border-radius:9px;color:var(--ink);padding:11px;font-size:16px;margin-bottom:12px}
+.fn-lock-card form button{width:100%;min-height:48px}
+#fnLockError{min-height:18px;margin:12px 0 0;color:var(--red)}
+.fn-lock-card small{font-size:12px;display:block;margin-top:22px;color:var(--faint);line-height:1.45}
+.foundation-notes button:focus-visible,.foundation-notes select:focus-visible,.foundation-notes input:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+@media(max-width:740px){
+ .donor-notes-trigger{font-size:12px;min-width:62px;min-height:40px;padding:6px 9px}
+ .fn-head{min-height:62px;padding:7px 12px;gap:7px}
+ .fn-heading{gap:9px}.fn-heading h1{font-size:16px}.fn-heading span{font-size:10px}
+ .fn-back,.fn-lock{min-height:44px;padding:8px 10px;font-size:12px}
+ .fn-head-right{gap:5px}#fnStatus{max-width:74px;font-size:11px}
+ .fn-save{min-height:44px;padding:9px 11px}
+ .fn-work{padding:10px 8px 25px}
+ .fn-toolbar{position:sticky;top:-10px;gap:3px;padding:7px}
+ .fn-toolbar button{min-width:34px;min-height:36px;padding:4px 7px}
+ .fn-toolbar select{min-height:36px;font-size:12px}
+ .fn-colors{gap:6px}.fn-colors span{display:none}
+ .fn-colors button{width:25px;height:25px;min-width:25px;min-height:25px}
+ .fn-sep{margin:0 2px}
+ .fn-page,.fn-editor{min-height:calc(100dvh - 210px)}
+ .fn-editor{font-size:16px;padding:26px 18px 90px}
+ .fn-lock-card{padding:28px 21px}
+}

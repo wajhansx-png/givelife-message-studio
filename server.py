@@ -2,6 +2,7 @@ import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, da
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store
+from foundation_notes import NotesVault, UnlockError, ConflictError, cookie_header, cookie_token
 import manual_commands
 import dm_composer
 import dm_templates
@@ -46,6 +47,7 @@ def serialized_send(fn):
  return call
 
 STORE=configured_store()
+NOTES_VAULT=NotesVault(STORE)
 CAMPAIGN_CONTACTED=set(json.loads((ROOT/'campaign-blocks.json').read_text())) if (ROOT/'campaign-blocks.json').exists() else set()
 BLOCKED=set(CAMPAIGN_CONTACTED)
 def persist_file(key,path):
@@ -2020,14 +2022,16 @@ class Handler(BaseHTTPRequestHandler):
   return bool(key) and secrets.compare_digest(self.headers.get('Authorization',''),'Bearer '+key)
  def do_OPTIONS(self):
   self.reply({})
- def reply(self,data,kind='application/json',status=200):
+ def reply(self,data,kind='application/json',status=200,extra_headers=None):
   self.response_sent=True
   if not isinstance(data,(str,bytes)):data=json.dumps(data,ensure_ascii=False)
   self.send_response(status);self.send_header('Content-Type',kind+'; charset=utf-8');self.send_header('Cache-Control','no-store')
   origin=self.headers.get('Origin')
   if origin in self.remote_config().get('origins',[]):
    self.send_header('Access-Control-Allow-Origin',origin);self.send_header('Vary','Origin');self.send_header('Access-Control-Allow-Headers','Authorization, Content-Type');self.send_header('Access-Control-Allow-Methods','GET, POST, OPTIONS')
-  self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(data if isinstance(data,bytes) else data.encode())
+  self.send_header('X-Content-Type-Options','nosniff')
+  for name,value in (extra_headers or {}).items():self.send_header(name,value)
+  self.end_headers();self.wfile.write(data if isinstance(data,bytes) else data.encode())
  def do_GET(self):
   if self.path=='/health':return self.reply({'ok':True,'version':(os.environ.get('RENDER_GIT_COMMIT') or 'local')[:7],
    'ai_provider':('DeepSeek ('+(os.environ.get('DEEPSEEK_REASONING_MODEL') or assistant.MODEL)+')') if assistant.client() else 'Not connected'})
@@ -2036,7 +2040,7 @@ class Handler(BaseHTTPRequestHandler):
   if self.path.split('?')[0] in ('/group-finder','/group-finder.js','/group-finder.css'):
    name=self.path.split('?')[0][1:];name='group-finder.html' if name=='group-finder' else name
    return self.reply((ROOT/name).read_bytes(),'text/html' if name.endswith('.html') else 'text/css' if name.endswith('.css') else 'application/javascript')
-  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/team.js','/donors.css','/studio.css'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/team.js','/notes.js','/donors.css','/notes.css','/studio.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
@@ -2049,6 +2053,12 @@ class Handler(BaseHTTPRequestHandler):
     q=urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
     return self.reply(donors().book.list(q.get('tab',['all'])[0],q.get('q',[''])[0]))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
+  if self.path=='/foundation-notes':
+   try:
+    cookie=self.headers.get('Cookie','')
+    if not NOTES_VAULT.can_access(cookie):return self.reply({'locked':True})
+    return self.reply({'locked':False,**NOTES_VAULT.read()},extra_headers={'Set-Cookie':cookie_header(cookie_token(cookie))})
+   except Exception:return self.reply({'error':'Notes storage could not be read. Try again.'},status=503)
   if self.path=='/donor-delivery':return self.reply(donors().jobs.status())
   if self.path=='/team':return self.reply(donors().team.view())
   if self.path=='/cases':
@@ -2103,7 +2113,7 @@ class Handler(BaseHTTPRequestHandler):
   global ACTIVE,OWNER_REVISION
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   if self.path!='/api/group-finder':ENGINE.touch_owner()
-  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/cases','/team','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
+  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/cases','/team','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/foundation-notes','/api/group-finder'):
    with LOCK:OWNER_REVISION+=1
    OWNER_GUARD.revision=OWNER_REVISION
   origin=self.headers.get('Origin');same_origin=origin and urllib.parse.urlparse(origin).netloc==self.headers.get('Host')
@@ -2121,6 +2131,25 @@ class Handler(BaseHTTPRequestHandler):
    except Conflict as e:return self.reply({'error':str(e)},status=409)
    except ResearchError as e:return self.reply({'error':str(e),'code':e.code},status=502)
    except (ValueError,TypeError,KeyError) as e:return self.reply({'error':str(e)},status=400)
+  if self.path=='/foundation-notes':
+   action=body.get('action')
+   try:
+    if action=='unlock':
+     if NOTES_VAULT.can_access(self.headers.get('Cookie','')):
+      return self.reply({'locked':False})
+     token=NOTES_VAULT.unlock(body.get('password'),self.client_address[0])
+     return self.reply({'locked':False},extra_headers={'Set-Cookie':cookie_header(token)})
+    if action=='forget':
+     NOTES_VAULT.forget(self.headers.get('Cookie',''))
+     return self.reply({'locked':True},extra_headers={'Set-Cookie':cookie_header('',clear=True)})
+    if not NOTES_VAULT.can_access(self.headers.get('Cookie','')):
+     return self.reply({'error':'Unlock Notes first.'},status=403)
+    if action=='save':return self.reply(NOTES_VAULT.save(body.get('html'),body.get('version')))
+    return self.reply({'error':'Unknown Notes action.'},status=400)
+   except UnlockError as e:return self.reply({'error':str(e)},status=429 if 'Too many' in str(e) else 401)
+   except ConflictError as e:return self.reply({'error':str(e),'conflict':True},status=409)
+   except ValueError as e:return self.reply({'error':str(e)},status=400)
+   except Exception:return self.reply({'error':'Notes database unavailable. Nothing was saved.'},status=503)
   if self.path=='/team':
    try:
     t=donors().team;act=body.get('action')

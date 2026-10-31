@@ -101,8 +101,8 @@ class SafeNoteHTML(HTMLParser):
     TAGS = {"p", "div", "br", "strong", "b", "em", "i", "u", "s",
             "h1", "h2", "h3", "blockquote", "ul", "ol", "li", "span", "font", "input"}
     VOID = {"br", "input"}
-    COLOR = re.compile(r"^(?:#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?|rgb\\(\\s*(?:\\d{1,3}\\s*,\\s*){2}\\d{1,3}\\s*\\))$")
-    STYLE = re.compile(r"(?:^|;)\\s*color\\s*:\\s*([^;]+)", re.I)
+    COLOR = re.compile(r"^(?:#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?|rgb\(\s*(?:\d{1,3}\s*,\s*){2}\d{1,3}\s*\))$")
+    STYLE = re.compile(r"(?:^|;)\s*color\s*:\s*([^;]+)", re.I)
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.parts = []
@@ -119,6 +119,8 @@ class SafeNoteHTML(HTMLParser):
         safe = ""
         if tag == "ul" and props.get("class") == "notes-checklist":
             safe = ' class="notes-checklist"'
+        if tag == "li" and props.get("data-checked") == "true":
+            safe = ' data-checked="true"'
         if tag in ("span", "font"):
             raw = props.get("color", "") if tag == "font" else ""
             if not raw:

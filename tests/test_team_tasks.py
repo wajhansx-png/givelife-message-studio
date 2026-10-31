@@ -208,6 +208,21 @@ class Sending(Base):
   self.assertEqual(len(self.sent),1)
   self.assertEqual(self.status('a'),'Asked')
 
+ def test_confirmed_preflight_failure_shows_real_error_and_can_retry(self):
+  self.start('find new volunteers')
+  def rejected(_):
+   raise ValueError('WhatsApp is disconnected. Tap WhatsApp to reconnect.')
+  self.app.send_custom=rejected
+  self.tick(1)
+  self.assertEqual(self.status('find new volunteers'),'Waiting')
+  self.assertIn('disconnected',self.t.view()['last_send_error'])
+  self.assertFalse(self.t.view()['tasks'][0]['delivery_uncertain'])
+  self.app.send_custom=self.send
+  self.tick(7)
+  self.assertEqual(self.status('find new volunteers'),'Asked')
+  self.assertEqual(len(self.sent),1)
+  self.assertEqual(self.t.view()['last_send_error'],'')
+
  def test_new_teammate_cannot_inherit_unfinished_tasks(self):
   self.start('a deadline 6pm')
   with self.assertRaisesRegex(ValueError,'unfinished tasks'):

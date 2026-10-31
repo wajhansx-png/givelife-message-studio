@@ -75,6 +75,8 @@ def custom_recipient(body):
 def send_custom(body):
  jid,is_group=custom_recipient(body);message=body.get('message','')
  if not isinstance(message,str):raise ValueError('Message must be text.')
+ if read_left()<=0 and completed_case_appeal(message):
+  raise ValueError('Not sent: this completed case caption contains a fundraising appeal. Replace it with a thank-you message.')
  if not is_group and body.get('kind') in ('dm_appeal','donor_registry','donor_manual','donor_batch'):
   if read_left()<=0:raise ValueError('Not sent: the case is complete (Rs. 0 left). Set a new amount left before sending an appeal.')
   normal=donors().book.normal_amount_for_phone(body.get('phone','')) if body.get('phone') else 0
@@ -381,6 +383,12 @@ def start_send_job(keys,caption,manual=False,request_id=None,with_picture=True):
  check_hold()
  keys=list(dict.fromkeys(keys))
  if not caption.strip():raise ValueError('Message is empty.')
+ if read_left()<=0:
+  if completed_case_appeal(caption):
+   raise ValueError('Not sent: the completed case caption still requests donations. Nothing was sent.')
+  # The previous fundraising poster can remain on disk after closure.
+  # Avoid attaching it to a completion announcement.
+  with_picture=False
  if not keys or any(k not in GROUPS and k!='test' for k in keys):raise ValueError('Unknown group.')
  if request_id and not re.fullmatch(r'[A-Za-z0-9_-]{8,100}',str(request_id)):raise ValueError('Invalid send request id.')
  with LOCK:
@@ -662,6 +670,9 @@ SEND_LOCK2=threading.Lock();LAST_FREE_SEND=[0]
 def send_free(to,text,with_picture,literal=False):
  check_hold()
  text=str(text).strip()
+ if read_left()<=0 and completed_case_appeal(text):
+  raise ValueError('Not sent: the case has ended and this text asks for donations.')
+ if read_left()<=0:with_picture=False
  if not text or len(text)>4000:raise ValueError('Message must be 1 to 4,000 characters.')
  if not literal and (manual_commands.control_payload(text) or (manual_commands.group(text) and re.search(r'(?i)\b(now|message|restart|gap|poster|send)\b',text))):raise ValueError('That is a send instruction, not message text. Use send_appeal for the current group caption.')
  to=str(to).strip();key=manual_commands.group(to)
@@ -2275,6 +2286,8 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/test':
    caption=str(body.get('message',''))
    if not caption.strip():return self.reply({'error':'Message is empty'},status=400)
+   if read_left()<=0 and completed_case_appeal(caption):
+    return self.reply({'error':'Completed case: remove all fundraising text before testing this message.'},status=400)
    try:
     options=workflow().options('group',caption)
     with SEND_LOCK:

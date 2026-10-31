@@ -1,0 +1,26 @@
+"""/health reports which AI provider is configured, for the footer badge."""
+import os,sys,unittest
+from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+import server as app
+
+class HealthProvider(unittest.TestCase):
+ def setUp(self):
+  self.env=dict(os.environ)
+  os.environ.pop('CEREBRAS_API_KEY',None);os.environ.pop('DEEPSEEK_API_KEY',None)
+ def tearDown(self):
+  os.environ.clear();os.environ.update(self.env)
+ def body(self):
+  h=app.Handler.__new__(app.Handler);out=[]
+  h.reply=lambda b:out.append(b) or b
+  h.path='/health';h.do_GET();return out[-1]
+ def test_not_connected_when_no_key(self):
+  self.assertEqual(self.body()['ai_provider'],'Not connected')
+ def test_deepseek_when_only_deepseek_key_set(self):
+  os.environ['DEEPSEEK_API_KEY']='d-key'
+  self.assertIn('DeepSeek',self.body()['ai_provider'])
+ def test_cerebras_when_cerebras_key_set(self):
+  os.environ['CEREBRAS_API_KEY']='c-key'
+  self.assertIn('Cerebras',self.body()['ai_provider']);self.assertIn('gpt-oss-120b',self.body()['ai_provider'])
+
+if __name__=='__main__':unittest.main()

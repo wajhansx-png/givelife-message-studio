@@ -8702,3 +8702,7 @@ html body :is(.talk, .hist) .log > .e.bot.cols4 .reply-line { break-inside: avoi
 @media (min-width: 900px) {
   html body.reader #live { display: none !important; }
 }
+/* The footer already crowds build + status + keyboard-shortcuts + gear on a phone; the AI model stays in Settings there. */
+@media (max-width: 560px) {
+  #aiTag { display: none; }
+}

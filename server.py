@@ -2027,7 +2027,8 @@ class Handler(BaseHTTPRequestHandler):
    self.send_header('Access-Control-Allow-Origin',origin);self.send_header('Vary','Origin');self.send_header('Access-Control-Allow-Headers','Authorization, Content-Type');self.send_header('Access-Control-Allow-Methods','GET, POST, OPTIONS')
   self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(data if isinstance(data,bytes) else data.encode())
  def do_GET(self):
-  if self.path=='/health':return self.reply({'ok':True,'version':(os.environ.get('RENDER_GIT_COMMIT') or 'local')[:7]})
+  if self.path=='/health':return self.reply({'ok':True,'version':(os.environ.get('RENDER_GIT_COMMIT') or 'local')[:7],
+   'ai_provider':('Cerebras ('+assistant.CEREBRAS_MODEL+')' if os.environ.get('CEREBRAS_API_KEY') else 'DeepSeek ('+(os.environ.get('DEEPSEEK_REASONING_MODEL') or assistant.MODEL)+')') if assistant.client() else 'Not connected'})
   icon=SITE_ICONS.get(self.path.split('?')[0])
   if icon:return self.reply((ROOT/'icons'/icon[0]).read_bytes(),icon[1])
   if self.path.split('?')[0] in ('/group-finder','/group-finder.js','/group-finder.css'):

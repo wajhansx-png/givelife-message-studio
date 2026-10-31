@@ -1,0 +1,174 @@
+/* Private foundation notebook. The password stays on the server, not in localStorage. */
+(()=>{
+ const donor=document.getElementById('donorsPage');
+ if(!donor)return;
+ const make=(tag,klass,text)=>{const e=document.createElement(tag);if(klass)e.className=klass;if(text!==undefined)e.textContent=text;return e};
+ const button=make('button','donor-notes-shortcut','Notes');
+ button.type='button';button.id='donorNotesShortcut';button.setAttribute('aria-label','Open private foundation notes');
+ const header=donor.querySelector('.donor-head');
+ header?.insertBefore(button,header.querySelector('#donorBulk'));
+
+ const page=make('dialog','foundation-notes');
+ page.id='foundationNotes';page.setAttribute('aria-label','Private foundation notes');
+ page.innerHTML=String.raw`
+   <section class="notes-shell">
+    <header class="notes-head">
+     <button class="notes-back" type="button" id="notesBack" aria-label="Back to Donors">← Back</button>
+     <div class="notes-headline"><span class="notes-kicker">GIVELIFE FOUNDATION</span><h1>My Notes</h1></div>
+     <span class="notes-sync" id="notesSync" role="status" aria-live="polite"></span>
+     <button type="button" class="notes-lock" id="notesLock" hidden>Lock</button>
+    </header>
+    <div class="notes-center" id="notesLocked" hidden>
+      <div class="notes-unlock">
+       <div class="notes-lock-icon" aria-hidden="true">✦</div>
+       <h2>Private ideas, all in one place.</h2>
+       <p>Only you can read or edit this notebook. Unlock it once on your desktop and it will remember this browser.</p>
+       <form id="notesUnlockForm" autocomplete="off">
+        <label for="notesPassword">Notes password</label>
+        <div class="notes-password-row"><input id="notesPassword" type="password" name="notes_password" autocomplete="current-password" required placeholder="Enter password" aria-label="Notes password"><button class="notes-primary" type="submit" id="notesUnlockButton">Unlock notes</button></div>
+        <p class="notes-error" id="notesError" role="alert"></p>
+       </form>
+       <small>Access is remembered on this browser. You can lock it manually at any time.</small>
+      </div>
+    </div>
+    <section class="notes-workspace" id="notesWorkspace" hidden>
+      <div class="notes-toolbar" role="toolbar" aria-label="Format your notes">
+        <label class="notes-select-label"><span class="sr-only">Text style</span><select id="notesStyle" aria-label="Text style"><option value="p">Normal text</option><option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option></select></label>
+        <span class="notes-separator" aria-hidden="true"></span>
+        <button type="button" data-command="bold" aria-label="Bold" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button type="button" data-command="italic" aria-label="Italic" title="Italic (Ctrl+I)"><i>I</i></button>
+        <span class="notes-separator" aria-hidden="true"></span>
+        <button type="button" data-command="insertUnorderedList" aria-label="Bulleted list" title="Bulleted list">☷</button>
+        <button type="button" data-command="insertOrderedList" aria-label="Numbered list" title="Numbered list">1.</button>
+        <button type="button" id="notesChecklist" aria-label="Checklist" title="Checklist">☑</button>
+        <span class="notes-separator" aria-hidden="true"></span>
+        <label class="notes-color-wrap" title="Text color"><span class="sr-only">Text color</span><select id="notesColor" aria-label="Text color">
+         <option value="">Color</option><option value="#28344b">Slate</option><option value="#2563eb">Blue</option>
+         <option value="#168059">Green</option><option value="#b36b22">Amber</option><option value="#b24958">Red</option>
+         <option value="#7a54c7">Purple</option>
+        </select></label>
+      </div>
+      <div class="notes-paper-scroll">
+       <main class="notes-paper">
+        <div id="notesEditor" class="notes-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Your foundation notes" data-placeholder="Start writing your ideas…&#10;&#10;Think about donors, volunteers, new projects, or anything you want to remember." spellcheck="true"></div>
+       </main>
+      </div>
+      <footer class="notes-foot"><span id="notesHint">Your ideas are private · Saved to GiveLife</span><button type="button" id="notesRetry" hidden>Retry save</button></footer>
+    </section>
+   </section>`;
+ document.body.append(page);
+ const el=id=>document.getElementById(id);
+ const editor=el('notesEditor'),sync=el('notesSync'),retry=el('notesRetry');
+ let revision=0,loaded=false,dirty=false,saving=false,saveTimer=null,retryDelay=0;
+ const setStatus=(s,error=false)=>{sync.textContent=s;sync.dataset.error=String(error)};
+ async function request(body){
+  const r=await fetch('/notes',body===undefined?{credentials:'same-origin'}:{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  let response;try{response=await r.json()}catch(e){throw Error('Notes server did not respond correctly.')}
+  if(!r.ok)throw Error(response.error||'Unable to save notes.');
+  return response;
+ }
+ function screen(locked){
+  el('notesLocked').hidden=!locked;
+  el('notesWorkspace').hidden=locked;
+  el('notesLock').hidden=locked;
+ }
+ async function load(){
+  setStatus('Loading…');
+  try{
+   const r=await request();
+   if(r.locked){loaded=false;screen(true);setStatus('Locked');return}
+   if(!dirty||!loaded){
+    editor.innerHTML=r.html||'';
+    revision=r.revision||0;
+    dirty=false;loaded=true;
+   }
+   screen(false);setStatus(dirty?'Unsaved changes':'Saved');
+  }catch(e){setStatus(e.message,true);retry.hidden=false}
+ }
+ async function open(){
+  if(!page.open)page.showModal();
+  await load();
+  if(el('notesWorkspace').hidden)el('notesPassword').focus({preventScroll:true});
+  else editor.focus({preventScroll:true});
+ }
+ const rememberDirty=()=>{
+  dirty=true;retry.hidden=true;setStatus('Saving…');
+  clearTimeout(saveTimer);saveTimer=setTimeout(save,800);
+ };
+ async function save(){
+  clearTimeout(saveTimer);
+  if(saving||!dirty||!loaded)return;
+  saving=true;const html=editor.innerHTML,base=revision;
+  try{
+   const r=await request({action:'save',html,revision:base});
+   revision=r.revision;dirty=editor.innerHTML!==html;
+   retry.hidden=true;setStatus(dirty?'Saving…':'Saved');
+  }catch(e){
+   dirty=true;setStatus(e.message,true);retry.hidden=false;
+  }finally{
+   saving=false;
+   if(dirty&&retry.hidden)saveTimer=setTimeout(save,350);
+  }
+ }
+ el('notesUnlockForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const pin=el('notesPassword').value,submit=el('notesUnlockButton');
+  submit.disabled=true;el('notesError').textContent='';
+  try{
+   const r=await request({action:'unlock',password:pin});
+   el('notesPassword').value='';
+   revision=r.revision||0;editor.innerHTML=r.html||'';dirty=false;loaded=true;
+   screen(false);setStatus('Saved');editor.focus({preventScroll:true});
+  }catch(err){el('notesError').textContent=err.message}
+  finally{submit.disabled=false}
+ });
+ editor.addEventListener('input',rememberDirty);
+ // Keep the selected text while clicking toolbar buttons.
+ page.querySelectorAll('.notes-toolbar button').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
+ page.querySelectorAll('[data-command]').forEach(b=>b.addEventListener('click',()=>{
+  editor.focus();document.execCommand(b.dataset.command,false,null);rememberDirty();
+ }));
+ const applyBlock=tag=>{
+  editor.focus();document.execCommand('formatBlock',false,tag);rememberDirty();
+ };
+ el('notesStyle').addEventListener('change',e=>{applyBlock(e.target.value);e.target.value='p'});
+ el('notesColor').addEventListener('change',e=>{
+  if(!e.target.value)return;
+  editor.focus();document.execCommand('foreColor',false,e.target.value);
+  e.target.value='';rememberDirty();
+ });
+ const findList=()=>{
+  let node=window.getSelection()?.anchorNode;
+  if(node?.nodeType===3)node=node.parentElement;
+  return node?.closest?.('ul,ol')||null;
+ };
+ el('notesChecklist').addEventListener('click',()=>{
+  editor.focus();
+  const old=findList();
+  if(old&&old.tagName==='UL'){
+   old.classList.toggle('notes-checklist');
+  }else{
+   document.execCommand('insertUnorderedList',false,null);
+   const created=findList();
+   if(created?.tagName==='UL')created.classList.add('notes-checklist');
+  }
+  rememberDirty();
+ });
+ editor.addEventListener('click',e=>{
+  const li=e.target.closest('ul.notes-checklist > li');
+  if(!li)return;
+  const rect=li.getBoundingClientRect();
+  if(e.clientX>rect.left+16)return; // only the checkbox gutter toggles
+  li.dataset.checked=li.dataset.checked==='true'?'false':'true';
+  rememberDirty();
+ });
+ retry.onclick=()=>{retry.hidden=true;save()};
+ function back(){if(dirty){clearTimeout(saveTimer);save()}page.close()}
+ el('notesBack').onclick=back;
+ el('notesLock').onclick=async()=>{
+  if(dirty){await save();if(dirty){setStatus('Save changes before locking.',true);return}}
+  try{await request({action:'lock'});loaded=false;screen(true);setStatus('Locked')}catch(e){setStatus(e.message,true)}
+ };
+ page.addEventListener('cancel',e=>{e.preventDefault();back()});
+ button.onclick=open;
+})();

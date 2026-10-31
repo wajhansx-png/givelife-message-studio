@@ -44,7 +44,7 @@
    const bar=make('div','team-bar');const fill=make('i','');fill.style.width=(all.length?Math.round(100*done.length/all.length):0)+'%';bar.append(fill);sum.append(bar);
    const late=left.filter(t=>t.status==='Late').length;const next=left.filter(t=>t.status!=='Late')[0];
    const bits=[];if(left.length)bits.push(left.length+' left');if(late)bits.push(late+' late');if(review.length)bits.push(review.length+' to check');if(next&&next.due_at!=null)bits.push('next due '+next.due_label);if(left.some(t=>t.status==='Unscheduled'))bits.push(left.filter(t=>t.status==='Unscheduled').length+' unscheduled');
-   sum.append(make('div','team-line',bits.join(' · ')||(all.length?'All done ✓':'Add tasks below')));if(late)sum.dataset.late='true';body.append(sum);
+   sum.append(make('div','team-line',bits.join(' · ')||(all.length?'All done ✓':'Add tasks below')));if(data.last_send_error)sum.append(make('p','team-error','WhatsApp: '+data.last_send_error));if(late)sum.dataset.late='true';body.append(sum);
    /* 2. his latest reply, in the middle, in plain words */
    if(lim.latest>0){const c=make('section','team-card team-latest');c.append(make('h2','',first+"'s latest update"));
     const items=(data.latest||[]).slice(0,lim.latest+Math.max(0,lim.latest2));

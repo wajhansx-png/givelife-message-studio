@@ -29,11 +29,11 @@
  function more(n){if(n<=0)return null;const b=make('button','team-more','+'+n+' more · Show all');b.type='button';b.setAttribute('aria-label','Show all '+n+' hidden Team entries');b.onclick=()=>{expanded=true;draw(true)};return b}
  function build(lim){
   page.textContent='';const shell=make('div','team-shell');
-  const head=make('header','team-head');const title=make('div','team-title');title.append(make('h1','','Team'));title.append(make('span','team-sub',data?.member?data.member.name+(data.paused?' · paused':''):'Add your teammate to start'));head.append(title);
+  const head=make('header','team-head');const title=make('div','team-title');title.append(make('h1','','Team'));title.append(make('span','team-sub',data?.member?data.member.name+(data.paused?' · paused · Resume to start':' · tracking is on'):'Add your teammate to start'));head.append(title);
   if(data?.member){const p=make('button','tool team-pause',data.paused?'Resume':'Pause');p.type='button';p.onclick=()=>act({action:'pause',on:!data.paused},data.paused?'Resumed.':'Paused. Nothing will be sent.');head.append(p)}
   shell.append(head);const body=make('div','team-body');
   if(!data?.member){
-   const f=make('form','team-card team-setup');f.append(make('h2','','Who is your teammate?'),make('p','team-hint','Their WhatsApp number stays hidden.'));
+   const f=make('form','team-card team-setup');f.append(make('h2','','Who is your teammate?'),make('p','team-hint','Save a number, then start a task. GiveLife asks for updates automatically; saving a number alone sends nothing.'));
    const n=make('input','');n.name='team_name';n.placeholder='Name';n.autocomplete='off';n.setAttribute('aria-label','Teammate name');const ph=make('input','');ph.name='team_phone';ph.type='tel';ph.placeholder='WhatsApp number';ph.setAttribute('aria-label','Teammate WhatsApp number');
    const b=make('button','primary','Save teammate');b.type='submit';f.append(n,ph,b);f.onsubmit=e=>{e.preventDefault();act({action:'member',name:n.value,phone:ph.value},'Teammate saved.')};body.append(f)}
   else{
@@ -44,7 +44,7 @@
    const bar=make('div','team-bar');const fill=make('i','');fill.style.width=(all.length?Math.round(100*done.length/all.length):0)+'%';bar.append(fill);sum.append(bar);
    const late=left.filter(t=>t.status==='Late').length;const next=left.filter(t=>t.status!=='Late')[0];
    const bits=[];if(left.length)bits.push(left.length+' left');if(late)bits.push(late+' late');if(review.length)bits.push(review.length+' to check');if(next&&next.due_at!=null)bits.push('next due '+next.due_label);if(left.some(t=>t.status==='Unscheduled'))bits.push(left.filter(t=>t.status==='Unscheduled').length+' unscheduled');
-   sum.append(make('div','team-line',bits.join(' · ')||(all.length?'All done ✓':'Add tasks below')));if(late)sum.dataset.late='true';body.append(sum);
+   sum.append(make('div','team-line',bits.join(' · ')||(all.length?'All done ✓':'Add tasks below')));if(data.last_send_error)sum.append(make('p','team-error','WhatsApp: '+data.last_send_error));if(late)sum.dataset.late='true';body.append(sum);
    /* 2. his latest reply, in the middle, in plain words */
    if(lim.latest>0){const c=make('section','team-card team-latest');c.append(make('h2','',first+"'s latest update"));
     const items=(data.latest||[]).slice(0,lim.latest+Math.max(0,lim.latest2));
@@ -59,19 +59,19 @@
     const m=more(review.length-lim.check);if(m)c.append(m);body.append(c)}
    /* 4. what is left, each with a button that asks him for an update right now */
    if(left.length&&lim.left>0){const c=make('section','team-card');const h=make('div','team-lefthead');h.append(make('h2','','Left'));
-    if(left.length>1){const all2=make('button','team-link','Ask all for an update');all2.type='button';all2.onclick=()=>act({action:'ask'},'Asked '+first+' for an update.');h.append(all2)}c.append(h);
-    for(const t of left.slice(0,lim.left)){const row=make('div','team-task');row.dataset.s=t.status;const txt=make('div','team-text');txt.append(make('strong','',t.text),make('span','team-due',(t.status==='Unscheduled'?'No deadline · no automatic send':(t.status==='Late'?'Late · was due ':t.status==='Waiting'?'Not asked yet · due ':'Asked · due ')+t.due_label)));row.append(txt);
-     if(t.status==='Unscheduled'){const doneButton=make('button','tool team-ask','Mark done');doneButton.type='button';doneButton.onclick=()=>act({action:'verify',id:t.id},'Marked done; no message sent.');row.append(doneButton)}else{const ask=make('button','tool team-ask',t.status==='Waiting'?'Ask now':'Ask update');ask.type='button';ask.setAttribute('aria-label','Ask '+first+' for an update on '+t.text);ask.onclick=()=>act({action:'ask',id:t.id},'Asked '+first+' on WhatsApp.');row.append(ask);}
+    if(left.length>1){const all2=make('button','team-link','Ask all for an update');all2.type='button';all2.onclick=()=>act({action:'ask'},'Update request queued. Delivery is not confirmed yet.');h.append(all2)}c.append(h);
+    for(const t of left.slice(0,lim.left)){const row=make('div','team-task');row.dataset.s=t.status;const txt=make('div','team-text');txt.append(make('strong','',t.text),make('span','team-due',(t.due_at==null?(t.status==='Unscheduled'?'Not tracking yet · no deadline':t.status==='Waiting'?'Waiting to ask · no deadline':'Tracking · no deadline'):(t.status==='Late'?'Late · was due ':t.status==='Waiting'?'Not asked yet · due ':'Asked · due ')+t.due_label))));row.append(txt);
+     {const ask=make('button','tool team-ask',t.status==='Waiting'||t.status==='Unscheduled'?'Ask now':'Ask update');ask.type='button';ask.setAttribute('aria-label','Ask '+first+' for an update on '+t.text);ask.onclick=()=>act({action:'ask',id:t.id},'Update request queued. Delivery is not confirmed yet.');row.append(ask);}
      const x=make('button','team-x','✕');x.type='button';x.setAttribute('aria-label','Cancel '+t.text);x.onclick=()=>{if(confirm('Cancel this task?'))act({action:'cancel',id:t.id},'Cancelled.')};row.append(x);c.append(row)}
     const m=more(left.length-lim.left);if(m)c.append(m);body.append(c)}
    if(lim.done&&done.length){body.append(make('p','team-donelist','Done ✓  '+done.map(t=>t.text).join(' · ')))}
    /* 5. new tasks: the plan or the box sits at the bottom, under everything above */
    const add=make('section','team-card team-addbox');
    if(data.plan){add.append(make('h2','','Check the plan · nothing is sent until you press Start'));
-    data.plan.items.slice(0,lim.plan).forEach((i,k)=>{const r=make('div','team-task');const txt=make('div','team-text');txt.append(make('strong','',(k+1)+'. '+i.text),make('span','team-due',(i.due_at==null?'No deadline · no automatic send':'Ask '+i.start_label+' · due '+i.due_label)));r.append(txt);add.append(r)});
+    data.plan.items.slice(0,lim.plan).forEach((i,k)=>{const r=make('div','team-task');const txt=make('div','team-text');txt.append(make('strong','',(k+1)+'. '+i.text),make('span','team-due',(i.due_at==null?'No deadline · asks after Start, checks again after 2 and 6 hours':'Ask '+i.start_label+' · due '+i.due_label)));r.append(txt);add.append(r)});
     const m=more(data.plan.items.length-lim.plan);if(m)add.append(m);
     const go=make('button','primary','Start tasks');go.type='button';go.onclick=()=>{planText='';addOpen=false;act({action:'confirm'},'Tasks started.')};const ds=make('button','tool','Discard');ds.type='button';ds.onclick=()=>{addOpen=false;act({action:'discard'})};const ar=make('div','team-actions');ar.append(go,ds);add.append(ar);body.append(add)}
-   else if(addOpen||planText){add.append(make('h2','','Write today\'s tasks'));const ta=make('textarea','');ta.id='teamText';ta.name='team_tasks';ta.rows=3;ta.maxLength=3000;ta.value=planText;ta.placeholder='One task per line. Add a deadline only if you want automatic WhatsApp follow-ups:\nFind new volunteers\n(Optional) deadline 6pm';ta.setAttribute('aria-label','Today\'s tasks');
+   else if(addOpen||planText){add.append(make('h2','','Write today\'s tasks'));const ta=make('textarea','');ta.id='teamText';ta.name='team_tasks';ta.rows=3;ta.maxLength=3000;ta.value=planText;ta.placeholder='One task per line. Deadlines optional. WhatsApp asks for updates after you press Start:\nFind new volunteers\n(Optional) deadline 6pm';ta.setAttribute('aria-label','Today\'s tasks');
     const go=make('button','primary','Plan the tasks');go.type='button';go.onclick=()=>act({action:'plan',text:ta.value});if(lastError)add.append(make('p','team-error',lastError));const x=make('button','tool','Cancel');x.type='button';x.onclick=()=>{planText='';addOpen=false;draw(true)};const ar=make('div','team-actions');ar.append(go,x);add.append(ta,ar);body.append(add)}
    else{const b=make('button','primary team-add','+ Add tasks');b.type='button';b.onclick=()=>{addOpen=true;draw(true);page.querySelector('#teamText')?.focus()};body.append(b)}}
   shell.append(body);const foot=make('footer','team-foot');const back=make('button','tool team-back','← Back');back.type='button';back.onclick=()=>page.close();foot.append(back);shell.append(foot);page.append(shell);

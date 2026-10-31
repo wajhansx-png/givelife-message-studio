@@ -274,8 +274,8 @@ test('team screen keeps the focused field (and the phone keyboard) when the wind
 test('team: a planning error is visible inside the Team screen, and quiet hours are an optional switch in Settings',async({page,request})=>{
  await open(page,request,390,700);await request.post('/__test/seed',{headers:auth,data:{team_demo:[[1,'Asked']]}});
  await page.locator('#openTeam').click();await page.getByRole('button',{name:'+ Add tasks'}).click();
- await page.locator('#teamText').fill('Do the thing');await page.getByRole('button',{name:'Plan the tasks'}).click();
- const err=page.locator('.team-page .team-error');await expect(err).toBeVisible();await expect(err).toContainText('deadline');
+ await page.locator('#teamText').fill('Do the thing deadline 25:99');await page.getByRole('button',{name:'Plan the tasks'}).click();
+ const err=page.locator('.team-page .team-error');await expect(err).toBeVisible();await expect(err).toContainText('valid time');
  const box=await err.boundingBox();expect(box.y).toBeGreaterThan(0);expect(box.y+box.height).toBeLessThan(700);
  await page.locator('.team-back').click();await page.locator('#gear').click();const sw=page.locator('#teamQuietOn');await expect(sw).not.toBeChecked();
  await sw.check();await expect.poll(async()=>(await (await request.get('/team',{headers:auth})).json()).quiet).toEqual([23,7]);

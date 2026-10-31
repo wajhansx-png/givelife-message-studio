@@ -57,7 +57,7 @@
  $('fnUnlockForm').onsubmit=async e=>{e.preventDefault();const btn=$('fnUnlock'),input=$('fnPassword');btn.disabled=true;$('fnLockError').textContent='';try{await request({action:'unlock',password:input.value});input.value='';await load()}catch(err){$('fnLockError').textContent=err.message;input.select()}finally{btn.disabled=false}};
  $('fnSave').onclick=save;
  $('fnLock').onclick=async()=>{if(dirty){await save();if(dirty){state('Save your changes before locking.','error');return}}try{await request({action:'forget'});editor.textContent='';renderLocked();$('fnPassword').value=''}catch(e){state(e.message,'error')}};
- function close(){if(dirty)save();modal.close();}
+ async function close(){if(dirty||saving){await save();if(dirty||saving){state('Your edits are not saved yet. Use Save before leaving.','error');return}}modal.close();}
  $('fnClose').onclick=close;modal.addEventListener('cancel',e=>{e.preventDefault();close()});
  modal.addEventListener('close',()=>{openEpoch++;clearTimeout(timer);if(dirty&&!saving)save()});
  trigger.onclick=()=>{if(!modal.open)modal.showModal();load()};

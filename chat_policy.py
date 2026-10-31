@@ -77,19 +77,20 @@ def brief(reply,limit=320):
   out=(out+" "+s_).strip()
  return out or text[:limit]
 
-def permitted(name,text):
- if name in READ:return True
+def task_assignment_only(text):
+ """A task description is not permission to carry out that described action."""
  owner=owner_text(text).strip()
- # "Add a task to write a caption" delegates that work; it does not request
- # the AI to write or send the caption itself. Prevent task descriptions from
- # being mistaken for separate operational instructions.
  task_only=bool(re.match(
   r'(?i)^(?:in\s+(?:the\s+)?tasks?\b|tasks?\s*[:\-]|'
   r'(?:please\s+)?(?:give|assign|add|create|set)\s+(?:a\s+)?tasks?\b)',owner))
  independent=bool(re.search(
   r'(?i)\b(?:and then|then|also)\s+(?:please\s+)?'
   r'(?:send|post|edit|rewrite|save|update|change|start|stop|schedule)\b',owner))
- if task_only and not independent and name!='team_action':return False
+ return task_only and not independent
+
+def permitted(name,text):
+ if name in READ:return True
+ if task_assignment_only(text) and name!='team_action':return False
  if name=='donor_action':return bool(re.search(r'(?i)\b(donor|donors|important|donated)\b',owner_text(text)))
  if name=='shortcut_action':return bool(re.search(r'(?i)\b(shortcuts?|when i say|macro)\b',owner_text(text)))
  if name=='team_action':return bool(re.search(r'(?i)\b(team|teammate|team mate|tasks?|kaam)\b',owner_text(text)))

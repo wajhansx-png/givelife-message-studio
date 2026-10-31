@@ -229,16 +229,21 @@ def dm_selection(new):
  return [index]
 
 def completed_case_appeal(text):
- """A closed case may be thanked or reported, never solicited again."""
- value=str(text or '')
+ """Detect fundraising in closed-case drafts without blocking proper completion thanks.
+
+ Do not confuse 'Rs. 0 left to raise' in an accurate completion update with a
+ request for 'Rs. 0 LEFT' and zero donors. Normalize WhatsApp formatting first.
+ """
+ value=re.sub(r'[*_]+',' ',str(text or ''))
  return bool(re.search(
-  r'(?i)\b(?:rs\.?\s*0\s*(?:left|still\s+needed|needed|remaining)|'
-  r'0\s+people\s+(?:donating|giving)|'
-  r'people\s+(?:donating|giving)\s+rs\.?\s*[\d,]+|'
-  r'(?:donate|donation|donating|contribute)\s+(?:now|today|to|rs\.?|for|here|via)|'
-  r'help\s+(?:him|her|them|this\s+child)\s+(?:get|pay\s+for)\s+treatment|'
-  r'reply\s+\*?done\*?\s+after\s+you\s+donate|'
-  r'easypaisa|jazzcash|\d+\s+people\s+can\s+(?:finish|complete))\b',
+  r'(?i)\b(?:rs\.?\s*0\s*(?:left(?!\s+to\s+raise)|still\s+needed|needed|remaining)'
+  r'|rs\.?\s*[1-9][\d,]*\s+(?:left|needed|remaining)'
+  r'|0\s+people\s+(?:donating|giving)'
+  r'|people\s+(?:donating|giving)\s+rs\.?\s*[\d,]+'
+  r'|(?:donate|donation|donating|contribute)\s+(?:now|today|to|rs\.?|for|here|via)'
+  r'|help\s+(?:him|her|them|this\s+child)\s+(?:get|pay\s+for)\s+treatment'
+  r'|reply\s+done\s+after\s+you\s+donate'
+  r'|easypaisa|jazzcash|\d+\s+people\s+can\s+(?:finish|complete))\b',
   value))
 
 def ensure_completed_drafts():

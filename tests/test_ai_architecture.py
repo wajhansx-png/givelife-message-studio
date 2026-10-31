@@ -85,6 +85,14 @@ class PolicyTests(unittest.TestCase):
   self.assertTrue(chat_policy.permitted('team_action',phrase))
   self.assertTrue(chat_policy.permitted('set_message','Write a new group caption for the open case.'))
   self.assertTrue(chat_policy.permitted('set_message','Fix the last paragraph in the DM.'))
+  for task in ('Add a task to write a new Group caption.',
+               'In tasks give task to send thanks to volunteers.',
+               'Assign task to start a new case later.',
+               'Tasks: change the donation amount.'):
+   with self.subTest(task=task):
+    self.assertTrue(chat_policy.permitted('team_action',task))
+    for forbidden in ('set_message','new_wording','send_message','send_appeal','case_action','set_left','autopilot'):
+     self.assertFalse(chat_policy.permitted(forbidden,task))
  def test_smalltalk_router_does_not_hide_mixed_work_instructions(self):
   for text in ('Hu','how r u','helllooo','Everything good?'):self.assertTrue(chat_policy.smalltalk(text))
   self.assertFalse(chat_policy.smalltalk('how r u; send main now'))

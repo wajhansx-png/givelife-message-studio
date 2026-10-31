@@ -1651,8 +1651,16 @@ def assistant_task(body):
    KNOWLEDGE.report_correction(text)
    if hist and hist[-1]['who']=='you' and hist[-1]['text'].strip()==text.strip():hist=hist[:-1]
    preferences=mem_get()
+   import conversation_insights
+   review_data={}
+   if conversation_insights.wants_review(text):
+    # Entire available saved OWNER history (including older turns outside the
+    # active 300-message chat); no old assistant answers can become facts.
+    with KNOWLEDGE.lock:
+     past_turns=[dict(row) for row in KNOWLEDGE.data.get('turns',[])]
+    review_data=conversation_insights.build_history_review(past_turns,hist)
    selection=draft_flow.selected_option(text,hist)
-   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text)+KNOWLEDGE.lessons_for(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident,selection,draft_flow.option_kind(hist,mapping(body.get('screen')).get('view'))))
+   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text)+KNOWLEDGE.lessons_for(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'history_review':review_data,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident,selection,draft_flow.option_kind(hist,mapping(body.get('screen')).get('view'))))
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
    output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
    output['superseded']=revision!=OWNER_REVISION

@@ -127,7 +127,7 @@ class Knowledge:
    if remember and correction:self.remember(correction,'owner_confirmed_correction',item['id'])
    self.save();return item
  def report_correction(self,text):
-  if not re.search(r'(?i)\b(wrong|incorrect|mistake|i meant|not what i|you misunderstood)\b',text):return
+  if not re.search(r'(?i)\b(wrong|incorrect|mistakes?|errors?|bugs?|broken|failed|doesn.t work|didn.t work|not understanding|you misunderstood|you did not understand|not what i|i meant|keeps repeating)\b',text):return
   with self.lock:
    self.data['feedback'].append({'id':uuid.uuid4().hex,'correction':safe_text(text,1500),'category':'reported_response','status':'reported_needs_review','time':time.time()});self.save()
  def trace(self,item):

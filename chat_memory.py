@@ -91,12 +91,16 @@ class Knowledge:
    related_format=format_query and topic.startswith('format:')
    if not overlap and not broad and not related_format: continue
    item['score']=4+overlap*3+(2 if item.get('key') else 0)+(3 if related_format else 0);out.append(item)
+  # Old assistant answers often contain invented or superseded case details.
+  # Do not retrieve them as facts for new work unless the owner explicitly asks
+  # what the assistant previously said. Owner instructions remain retrievable.
+  asks_ai=bool(re.search(r'(?i)\b(?:assistant|ai|deepseek|bot)\b.{0,50}\b(?:said|wrote|replied|answered)\b|\b(?:last|previous)\s+(?:ai\s+)?(?:reply|answer)\b',str(query)))
   for item in turns:
+   source=item.get('source','app_output')
+   if source!='owner_input' and not asks_ai:continue
    overlap=len(query_tokens & tokens(item.get('text','')))
    if overlap>=2:
-    # The owner's account of events has precedence over old assistant guesses.
-    source=item.get('source','app_output')
-    out.append({**item,'score':overlap*2+(2 if source=='owner_input' else 0),'source':'historical_'+source})
+    out.append({**item,'score':overlap*2+(5 if source=='owner_input' else 0),'source':'historical_'+source})
   for item in self.data['feedback'][-30:]:
    correction=item.get('correction','')
    if correction and query_tokens & tokens(correction):out.append({'id':item['id'],'text':correction,'time':item.get('time',0),'source':'owner_reported_issue','score':5+len(query_tokens & tokens(correction))})

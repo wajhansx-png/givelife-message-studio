@@ -1386,8 +1386,16 @@ def agent_action(name,prompt,args,owner):
   t=donors().team
   if act=='status':return t.summary()
   if act=='plan':
-   v=t.plan(args.get('text') or chat_policy.owner_text(prompt))
-   return 'Plan (nothing sent yet):\n'+'\n'.join(f'{i+1}. {x["text"]} (ask {x["start_label"]}, due {x["due_label"]})' for i,x in enumerate(v['plan']['items']))+'\nSay "confirm tasks" to start.'
+   # NEVER trust an AI-generated deadline or rewritten task. Only the current
+   # owner's words are allowed to supply scheduling instructions.
+   task_source=chat_policy.owner_text(prompt).strip()
+   task_source=re.sub(r'(?is)^(?:in\s+(?:the\s+)?tasks?\s*[,;:]?\s*)?(?:please\s+)?(?:give|add|assign|create|set)\s+(?:a\s+)?tasks?\s+(?:to|for|:)?\s*','',task_source)
+   task_source=task_source or chat_policy.owner_text(prompt).strip()
+   v=t.plan(task_source)
+   lines=[f'{i+1}. {x["text"]} ('+
+          (f'ask {x["start_label"]}, due {x["due_label"]}' if x['due_at'] is not None else 'no deadline; no automatic send')+')'
+          for i,x in enumerate(v['plan']['items'])]
+   return 'Plan (nothing sent yet):\n'+'\n'.join(lines)+'\nSay "confirm tasks" to save.'
   if act=='confirm':
    if not says(r'\b(confirm|start|yes|go ahead|haan|theek)\b'):raise ValueError('Starting tasks needs your clear "confirm". Nothing was sent.')
    return t.confirm_plan()['reply']

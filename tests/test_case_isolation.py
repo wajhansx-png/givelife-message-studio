@@ -59,6 +59,45 @@ class CaseIsolation(unittest.TestCase):
    self.assertNotIn('0 people',text.lower())
    self.assertNotIn('Rs. 0 still needed',text)
   self.assertFalse(self.app.auto_on())
+ def test_completed_case_rejects_new_mixed_fundraising_caption(self):
+  self.app.donors().cases.new('Yousuf',20000)
+  self.app.set_left(0)
+  bad=('The case for Yousuf has been completed. Thank you everyone.\\n\\n'
+       '*_Rs. 0 LEFT_*\\n*_0 people donating Rs. 2,000_*\\n'
+       'Reply Done after you donate. - GiveLife Foundation')
+  for kind in ('group','dm'):
+   with self.subTest(kind=kind),self.assertRaisesRegex(ValueError,'completed'):
+    self.app.save_draft(kind,bad)
+   text=self.app.get_message(kind)['text']
+   self.assertNotIn('people donating',text)
+   self.assertIn('complete',text.lower())
+  self.assertEqual(self.app.get_message('group')['text'],self.app.build_group(0,0))
+ def test_get_drafts_repairs_persisted_legacy_mixed_completion_appeal(self):
+  import json
+  self.app.donors().cases.new('Yousuf',20000)
+  self.app.set_left(0)
+  stored=json.loads(self.app.DRAFT.read_text(encoding='utf-8'))
+  stored['group']='*The case for Yousuf has been completed.*\\n\\n*_Rs. 0 LEFT_*\\n*_0 people donating Rs. 2,000_*'
+  stored['dm']='Thanks everyone!\\n\\nOR 0 people donating Rs. 1,000. Reply Done after you donate.'
+  self.app.DRAFT.write_text(json.dumps(stored),encoding='utf-8')
+  group=self.app.get_message('group')['text']
+  dm=self.app.get_message('dm')['text']
+  self.assertIn('Case complete',group)
+  self.assertIn('completed',dm)
+  for text in (group,dm):
+   self.assertNotIn('0 people',text)
+   self.assertNotIn('Rs. 0 LEFT',text)
+  repaired=json.loads(self.app.DRAFT.read_text(encoding='utf-8'))
+  self.assertEqual(repaired['group'],group)
+  self.assertEqual(repaired['dm'],dm)
+ def test_completed_case_cannot_dispatch_old_fundraising_caption_even_by_manual_route(self):
+  self.app.donors().cases.new('Yousuf',15000)
+  self.app.set_left(0)
+  caption='Case completed, but 0 people donating Rs. 2,000; donate today.'
+  with self.assertRaisesRegex(ValueError,'completed case'):
+   self.app.start_send_job(['main'],caption,manual=True)
+  with self.assertRaisesRegex(ValueError,'completed case'):
+   self.app.send_custom({'target':'main','message':caption})
  def test_new_case_never_inherits_old_patient_poster_or_medical_documents(self):
   import base64
   cases=self.app.donors().cases

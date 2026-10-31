@@ -79,7 +79,7 @@ def context_messages(text,history,state,memory):
   context['turn_task']={'kind':'dm_variants','required_tool':'generate_dm_variants','save_without_reconfirmation':True,
    'instruction':'Rewrite the exact message the owner pasted into the requested number of versions. Preserve its line breaks, blank lines, emojis, bold/italic markers, numbers and payment details. Save them in Messages and put the first on the DM screen. Do not send. Omit source only when the owner clearly means the saved DM.'}
   context['recent_owner_instructions']=[safe_text(h['text'],1000) for h in valid_history(history)[-16:] if h['who']=='you'][-6:]
- elif (not reviewing) and (draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None or contextual_draft_fix(text,history,state)):
+ elif (not reviewing) and (not chat_policy.task_assignment_only(text)) and (draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None or contextual_draft_fix(text,history,state)):
   # A caption-edit turn should not be distracted by posting/rhythm summaries.
   for key in ('auto','pace','idle_min','group_intervals','status','recent'):context['state'].pop(key,None)
   context['turn_task']={'kind':'draft_edit','required_tool':'set_message','save_without_reconfirmation':True}
@@ -120,7 +120,7 @@ def run_chat(text,history,state,memory,do):
  # Retrospective suggestions are read-only. Historical "send" commands in
  # archived messages must never become executable instructions.
  referential_edit=(not reviewing) and contextual_draft_fix(text,history,state)
- tools=[] if chat_policy.smalltalk(text) or reviewing else [t for t in assistant.CHAT_TOOLS if chat_policy.permitted(t['function']['name'],text) or (selection is not None or referential_edit) and t['function']['name']=='set_message']
+ tools=[] if chat_policy.smalltalk(text) or reviewing else [t for t in assistant.CHAT_TOOLS if chat_policy.permitted(t['function']['name'],text) or (not chat_policy.task_assignment_only(text)) and (selection is not None or referential_edit) and t['function']['name']=='set_message']
  request_steps=task_intent.steps(chat_policy.owner_text(text))
  requested_kinds={x['kind'] for x in request_steps}
  expected_sends=max(1,len(task_intent.send_clauses(chat_policy.owner_text(text))))
@@ -135,7 +135,7 @@ def run_chat(text,history,state,memory,do):
  schemas={t['function']['name']:t['function']['parameters'] for t in tools}
  actions=[];done=[];jobs=[];outcomes=[];errors=[];cache={};started=time.monotonic();nudged=False;reply='';looked=False
  required_variants=chat_policy.variant_request(chat_policy.owner_text(text))
- required_edit=(not reviewing) and (draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None or referential_edit) and not required_variants
+ required_edit=(not reviewing) and not chat_policy.task_assignment_only(text) and (draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None or referential_edit) and not required_variants
  saved_edit=False;variants_done=False
  for iteration in range(8):
   if time.monotonic()-started>150:errors.append('The reasoning time limit was reached.');break

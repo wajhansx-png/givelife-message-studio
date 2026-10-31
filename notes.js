@@ -177,7 +177,7 @@
   rememberDirty();
  });
  retry.onclick=()=>{retry.hidden=true;save()};
- function back(){if(dirty){clearTimeout(saveTimer);save()}page.close()}
+ async function back(){if(dirty){clearTimeout(saveTimer);await save();if(dirty){setStatus('Save failed. Use Retry save before leaving.',true);retry.hidden=false;return}}page.close()}
  el('notesBack').onclick=back;
  el('notesLock').onclick=async()=>{
   if(dirty){await save();if(dirty){setStatus('Save changes before locking.',true);return}}

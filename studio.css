@@ -3947,13 +3947,13 @@ dialog:not([open])::backdrop {
 /* Long assistant replies tighten up so the whole answer stays on one screen. */
 .talk .log .e.bot.tight,
 .hist .log .e.bot.tight {
-  line-height: 1.3;
+  line-height: 1.38;
   padding-block: 9px;
 }
 .talk .log .e.bot.tight .reply-line,
 .hist .log .e.bot.tight .reply-line {
-  line-height: 1.3;
-  min-height: 1.3em;
+  line-height: 1.38;
+  min-height: 1.38em;
 }
 .talk .log .e.bot.tight .reply-line.blank,
 .hist .log .e.bot.tight .reply-line.blank {

@@ -119,11 +119,11 @@ function fit(){if(editing)return;const chat=$('chat'),m=$(view()+'Preview');if(!
 }
 /* [font px, columns, tightness]. Short answers get a big font. Long ones use the width of a wide screen
    (two columns) before the text is ever made small, and scrolling is the very last resort. */
-/* Readable first: the font never goes below 13.5px. If a long answer still does not fit, it scrolls
+/* Readable first: the font never goes below 14px. If a long answer still does not fit, it scrolls
    (starting at its first line) instead of shrinking into tiny text. */
 const FIT_STEPS=[[16,1,0],[15,1,0],[14.5,1,0]];
 /* Wide screens: one column for short answers, then two, then three, choosing the fewest columns that keep the text big. */
-const FIT_STEPS_WIDE=[[18,1,0],[17,1,0],[16,1,0],[17,2,0],[16,2,0],[15,2,0],[16,3,0],[15,3,0],[14.5,2,1],[14.5,3,1],[14,2,1],[14,3,1],[13.5,3,1],[13,3,2],[12.5,3,2],[12,3,2]];
+const FIT_STEPS_WIDE=[[18,1,0],[17,1,0],[16,1,0],[17,2,0],[16,2,0],[15,2,0],[16,3,0],[15,3,0],[14.5,2,1],[14.5,3,1],[14,2,1],[14,3,1]];
 function fitConversation(){
  for(const id of ['log','histLog']){const log=$(id);if(!log.clientHeight)continue;const reply=[...log.querySelectorAll('.e.bot:not(.dots)')].at(-1);if(!reply)continue;
   /* Choose the mode from the normal layout every time. Measuring the already-expanded layout
@@ -143,7 +143,7 @@ function fitReply(log,reply,id){
   let fitted=false;const cs=getComputedStyle(log),room=log.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),wide=log.clientWidth>=760,biggest=log.clientWidth<500?15:18;
   for(const [size,cols,tight] of (wide?FIT_STEPS_WIDE:FIT_STEPS)){if(size>biggest||cols>2&&room<760)continue;reply.style.fontSize=size+'px';reply.classList.toggle('cols3',cols>2);reply.classList.toggle('cols2',cols>1);reply.classList.toggle('tight',tight>=1);reply.classList.toggle('tighter',tight>=2);if(reply.scrollHeight<=available){fitted=true;break}}
   /* If even the smallest step does not fit, keep the boxes (they scroll a little) rather than one long column. */
-  if(!fitted){if(wide){const three=room>=760;reply.style.fontSize=(three?13.5:14)+'px';reply.classList.toggle('cols3',three);reply.classList.add('cols2');reply.classList.add('tight');reply.classList.remove('tighter')}else{reply.style.fontSize=(log.clientWidth<500?15:16)+'px';reply.classList.remove('cols2','cols3','tight','tighter')}}
+  if(!fitted){if(wide){const three=room>=760;reply.style.fontSize='14px';reply.classList.toggle('cols3',three);reply.classList.add('cols2');reply.classList.add('tight');reply.classList.remove('tighter')}else{reply.style.fontSize=(log.clientWidth<500?15:16)+'px';reply.classList.remove('cols2','cols3','tight','tighter')}}
   return fitted
 }
 function scheduleConversationFit(){if(conversationFrame)return;conversationFrame=requestAnimationFrame(()=>{conversationFrame=0;fitConversation();for(const id of Object.keys(scrollState))if(scrollState[id].follow)followChat($(id),true)})}

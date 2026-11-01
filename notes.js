@@ -60,6 +60,70 @@
  const el=id=>document.getElementById(id);
  const editor=el('notesEditor'),sync=el('notesSync'),retry=el('notesRetry');
  let revision=0,loaded=false,dirty=false,saving=false,saveTimer=null,retryDelay=0;
+ // A stable paper height prevents the editor itself from collapsing when a
+ // mobile keyboard opens; only its scrollable viewport becomes shorter.
+ const mobileNotes=matchMedia('(max-width:720px)');
+ const paperScroll=page.querySelector('.notes-paper-scroll');
+ let expandedHeight=0,lastMobileWidth=0,caretFrame=0,layoutFrame=0;
+ function revealCaret(){
+  if(!page.open||document.activeElement!==editor||!paperScroll)return;
+  const selection=window.getSelection();
+  if(!selection||!selection.rangeCount)return;
+  const range=selection.getRangeAt(0).cloneRange();
+  range.collapse(false);
+  const caret=range.getBoundingClientRect(),viewport=paperScroll.getBoundingClientRect();
+  if(!caret.height&&!caret.width)return;
+  const padding=28;
+  if(caret.bottom>viewport.bottom-padding)paperScroll.scrollTop+=caret.bottom-(viewport.bottom-padding);
+  else if(caret.top<viewport.top+padding)paperScroll.scrollTop-=viewport.top+padding-caret.top;
+ }
+ function scheduleCaret(){
+  cancelAnimationFrame(caretFrame);
+  caretFrame=requestAnimationFrame(()=>requestAnimationFrame(revealCaret));
+ }
+ function sizeForKeyboard(){
+  if(!page.open)return;
+  if(!mobileNotes.matches){
+   page.dataset.keyboard='closed';
+   for(const key of ('--notes-visible-height','--notes-visible-top','--notes-paper-min-height'))page.style.removeProperty(key);
+   expandedHeight=0;lastMobileWidth=0;return;
+  }
+  const visual=window.visualViewport;
+  const visibleHeight=Math.min(window.innerHeight,visual?.height||window.innerHeight);
+  if(lastMobileWidth!==window.innerWidth){
+   lastMobileWidth=window.innerWidth;
+   expandedHeight=Math.max(window.innerHeight,visibleHeight);
+  }
+  if(!expandedHeight)expandedHeight=Math.max(window.innerHeight,visibleHeight);
+  const focused=document.activeElement===editor||document.activeElement===el('notesPassword');
+  const keyboard=(focused||page.dataset.keyboard==='open')&&expandedHeight-visibleHeight>120;
+  if(!keyboard&&!focused)expandedHeight=Math.max(expandedHeight,visibleHeight);
+  page.dataset.keyboard=keyboard?'open':'closed';
+  page.style.setProperty('--notes-paper-min-height',Math.round(Math.max(380,expandedHeight-145))+'px');
+  if(keyboard){
+   page.style.setProperty('--notes-visible-height',Math.round(visibleHeight)+'px');
+   page.style.setProperty('--notes-visible-top',Math.round(visual?.offsetTop||0)+'px');
+   scheduleCaret();
+  }else{
+   page.style.removeProperty('--notes-visible-height');
+   page.style.removeProperty('--notes-visible-top');
+  }
+ }
+ function scheduleSize(){
+  cancelAnimationFrame(layoutFrame);
+  layoutFrame=requestAnimationFrame(sizeForKeyboard);
+ }
+ window.addEventListener('resize',scheduleSize);
+ window.addEventListener('orientationchange',()=>{expandedHeight=0;lastMobileWidth=0;scheduleSize()});
+ if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',scheduleSize);
+  window.visualViewport.addEventListener('scroll',scheduleSize);
+ }
+ page.addEventListener('focusin',scheduleSize);
+ page.addEventListener('focusout',()=>setTimeout(scheduleSize,180));
+ editor.addEventListener('input',scheduleCaret);
+ editor.addEventListener('keyup',scheduleCaret);
+
  const setStatus=(s,error=false)=>{sync.textContent=s;sync.dataset.error=String(error)};
  async function request(body){
   const r=await fetch('/notes',body===undefined?{credentials:'same-origin'}:{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -87,9 +151,11 @@
  }
  async function open(){
   if(!page.open)page.showModal();
+  scheduleSize();
   await load();
+  scheduleSize();
   if(el('notesWorkspace').hidden)el('notesPassword').focus({preventScroll:true});
-  else editor.focus({preventScroll:true});
+  else if(!mobileNotes.matches)editor.focus({preventScroll:true});
  }
  const rememberDirty=()=>{
   dirty=true;retry.hidden=true;setStatus('Saving…');
@@ -118,7 +184,7 @@
    const r=await request({action:'unlock',password:pin});
    el('notesPassword').value='';
    revision=r.revision||0;editor.innerHTML=r.html||'';dirty=false;loaded=true;
-   screen(false);setStatus('Saved');editor.focus({preventScroll:true});
+   screen(false);setStatus('Saved');scheduleSize();if(!mobileNotes.matches)editor.focus({preventScroll:true});
   }catch(err){el('notesError').textContent=err.message}
   finally{submit.disabled=false}
  });
@@ -177,7 +243,7 @@
   rememberDirty();
  });
  retry.onclick=()=>{retry.hidden=true;save()};
- async function back(){if(dirty){clearTimeout(saveTimer);await save();if(dirty){setStatus('Save failed. Use Retry save before leaving.',true);retry.hidden=false;return}}page.close()}
+ async function back(){if(dirty){clearTimeout(saveTimer);await save();if(dirty){setStatus('Save failed. Use Retry save before leaving.',true);retry.hidden=false;return}}page.close();page.dataset.keyboard='closed'}
  el('notesBack').onclick=back;
  el('notesLock').onclick=async()=>{
   if(dirty){await save();if(dirty){setStatus('Save changes before locking.',true);return}}

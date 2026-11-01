@@ -44,9 +44,9 @@
         <button type="button" id="notesChecklist" aria-label="Checklist" title="Checklist">☑</button>
         <span class="notes-separator" aria-hidden="true"></span>
         <label class="notes-color-wrap" title="Text color"><span class="sr-only">Text color</span><select id="notesColor" aria-label="Text color">
-         <option value="">Color</option><option value="#28344b">Slate</option><option value="#2563eb">Blue</option>
-         <option value="#168059">Green</option><option value="#b36b22">Amber</option><option value="#b24958">Red</option>
-         <option value="#7a54c7">Purple</option>
+         <option value="">Color</option><option value="#d5d9e0">Slate</option><option value="#85b7f6">Blue</option>
+         <option value="#8ddfba">Green</option><option value="#efc389">Amber</option><option value="#f4a4ad">Red</option>
+         <option value="#c7aff6">Purple</option>
         </select></label>
       </div>
       <div class="notes-paper-scroll">

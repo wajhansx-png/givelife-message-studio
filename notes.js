@@ -92,7 +92,8 @@
  page.addEventListener('focusin',event=>{
   if(notesHead.contains(event.target)||notesToolbar.contains(event.target))revealControls();
  });
- let shortcutFocusPending=false;
+ let shortcutFocusPending=false,shortcutFocusRevision=0;
+ page.addEventListener('pointerdown',()=>{shortcutFocusRevision++},true);
  document.addEventListener('keyup',event=>{
   if(event.key!=='Alt'||!shortcutFocusPending)return;
   shortcutFocusPending=false;
@@ -109,6 +110,16 @@
    // Alt keyup is the reliable moment: Chromium may restore the editor's
    // focus when the modifier is released, undoing focus set on keydown.
    shortcutFocusPending=page.dataset.controls==='open';
+   if(shortcutFocusPending){
+    const revision=++shortcutFocusRevision;
+    // Some browsers restore the contenteditable focus after Alt keyup.
+    // One guarded post-keyboard retry prevents that without stealing focus
+    // from any subsequent pointer interaction.
+    setTimeout(()=>{
+     if(page.open&&revision===shortcutFocusRevision&&page.dataset.controls==='open')
+      el('notesStyle').focus({preventScroll:true});
+    },140);
+   }
   }
   if(event.key==='Escape'&&page.dataset.controls==='open'&&!document.fullscreenElement){
    event.preventDefault();event.stopPropagation();concealControls(true);editor.focus({preventScroll:true});

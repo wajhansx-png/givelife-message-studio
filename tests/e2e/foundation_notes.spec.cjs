@@ -147,6 +147,8 @@ test('quiet Notes keeps only writing visible; top-edge reveals controls and full
  await expect(toolbar).toBeHidden();
  await page.keyboard.press('Alt+t');
  await expect(toolbar).toBeVisible();
+ const focusDiagnostics=await page.evaluate(()=>({active:document.activeElement?.id,controls:document.getElementById('foundationNotes')?.dataset.controls,full:document.fullscreenElement?.tagName,style: getComputedStyle(document.getElementById('notesStyle')).visibility}));
+ console.log('Notes Alt+T focus:',JSON.stringify(focusDiagnostics));
  await expect(page.locator('#notesStyle')).toBeFocused();
  await page.keyboard.press('Escape');
  await expect(toolbar).toBeHidden();
@@ -180,7 +182,7 @@ test('desktop note-taking: type, select, style, save, reopen and keep writing fo
  await page.mouse.move(160,18);
  await page.getByRole('button',{name:'Bold',exact:true}).click();
  const selectedHtml=await editor.innerHTML();
- expect(selectedHtml,'Bold must apply visibly to the selected note text').toMatch(/<(?:b|strong)\\b|font-weight\\s*:\\s*(?:bold|700)/i);
+ expect(selectedHtml,'Bold must apply visibly to the selected note text').toMatch(/<(?:b|strong)\b|font-weight\s*:\s*(?:bold|700)/i);
  await expect(page.locator('#notesSync')).toHaveText('Saved',{timeout:10000});
  await page.mouse.move(900,610);
  await expect(page.locator('.notes-toolbar')).toBeHidden();

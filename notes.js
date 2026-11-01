@@ -116,10 +116,23 @@
   }catch(_){setStatus('Browser did not allow full screen.',true)}
  }
  fullscreenButton.addEventListener('click',toggleFullscreen);
+ let notesWasFullscreen=false;
  document.addEventListener('fullscreenchange',()=>{
   const active=!!document.fullscreenElement;
   fullscreenButton.textContent=active?'Exit full screen':'Full screen';
   fullscreenButton.setAttribute('aria-pressed',String(active));
+  if(active&&page.open){notesWasFullscreen=true;return}
+  if(!active&&notesWasFullscreen&&page.open){
+   notesWasFullscreen=false;
+   // Chromium sometimes leaves the modal inert after a document-level
+   // fullscreen transition. Reopen the same dialog to restore its top layer
+   // without reloading Notes or touching the unsaved editor content.
+   const scroll=paperScroll.scrollTop;
+   page.close();page.showModal();
+   paperScroll.scrollTop=scroll;
+   scheduleSize();
+   if(!mobileNotes.matches)editor.focus({preventScroll:true});
+  }
  });
  // A stable paper height prevents the editor itself from collapsing when a
  // mobile keyboard opens; only its scrollable viewport becomes shorter.

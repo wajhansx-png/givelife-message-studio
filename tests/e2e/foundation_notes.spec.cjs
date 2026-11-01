@@ -55,3 +55,45 @@ test('phone notes: readable editing surface, toolbar and no sideways scrolling',
  const bar=await page.locator('.notes-toolbar').boundingBox();
  expect(bar.x+bar.width).toBeLessThanOrEqual(391);
 });
+
+test('mobile virtual keyboard keeps Notes paper tall while the caret stays visible',async({page,request})=>{
+ await open(page,request,390,844);
+ await page.locator('#notesPassword').fill('test-preview-only-pin');
+ await page.locator('#notesUnlockButton').click();
+ const editor=page.locator('#notesEditor');
+ await expect(editor).toBeVisible();
+ // Opening Notes must not force the mobile keyboard until the user taps the page.
+ expect(await page.evaluate(()=>document.activeElement?.id)).not.toBe('notesEditor');
+ const initial=await page.evaluate(()=>({
+  paper:document.querySelector('.notes-paper').getBoundingClientRect().height,
+  scroller:document.querySelector('.notes-paper-scroll').getBoundingClientRect().height
+ }));
+ await editor.fill(Array.from({length:36},(_,i)=>'Foundation idea '+(i+1)).join('\\n'));
+ await editor.focus();
+ // Mobile Chromium has no native keyboard, so resize the visual viewport as an
+ // Android keyboard does with interactive-widget=resizes-content.
+ await page.setViewportSize({width:390,height:460});
+ await expect(page.locator('#foundationNotes')).toHaveAttribute('data-keyboard','open');
+ const smaller=await page.evaluate(()=>{
+  const paper=document.querySelector('.notes-paper'),scroller=document.querySelector('.notes-paper-scroll');
+  const bar=document.querySelector('.notes-toolbar');
+  const bounds=scroller.getBoundingClientRect();
+  return {paper:paper.getBoundingClientRect().height,scroller:bounds.height,
+   toolbar:bar.getBoundingClientRect().height,
+   xOverflow:document.documentElement.scrollWidth>innerWidth+1,
+   scrollable:scroller.scrollHeight>scroller.clientHeight+20,
+   keyboardOverlay:bounds.bottom>innerHeight+1};
+ });
+ expect(smaller.paper).toBeGreaterThanOrEqual(initial.paper-8);
+ expect(smaller.scroller).toBeGreaterThan(150);
+ expect(smaller.toolbar).toBeLessThanOrEqual(50);
+ expect(smaller.scrollable).toBe(true);
+ expect(smaller.xOverflow).toBe(false);
+ expect(smaller.keyboardOverlay).toBe(false);
+ await editor.press('End');
+ await editor.type(' Extra mobile update');
+ await expect(editor).toContainText('Extra mobile update');
+ await page.setViewportSize({width:390,height:844});
+ await expect(page.locator('#foundationNotes')).toHaveAttribute('data-keyboard','closed');
+ expect((await page.locator('.notes-paper-scroll').boundingBox()).height).toBeGreaterThan(smaller.scroller);
+});

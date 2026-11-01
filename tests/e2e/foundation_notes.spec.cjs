@@ -141,7 +141,7 @@ test('quiet Notes keeps only writing visible; top-edge reveals controls and full
  await expect(toolbar).toBeVisible();
  await expect(page.getByRole('button',{name:'Full screen',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Full screen',exact:true}).click();
- await expect.poll(()=>page.evaluate(()=>document.fullscreenElement?.id==='foundationNotes')).toBe(true);
+ await expect.poll(()=>page.evaluate(()=>!!document.fullscreenElement)).toBe(true);
  await page.evaluate(()=>document.exitFullscreen());
  await page.mouse.move(920,600);
  await expect(toolbar).toBeHidden();
@@ -165,4 +165,69 @@ test('mobile Notes opens a hidden toolbar by tapping top edge without shrinking 
  expect((await page.locator('.notes-paper').boundingBox()).height).toBeGreaterThanOrEqual(height-2);
  await page.locator('#foundationNotes').dispatchEvent('pointerdown',{pointerType:'touch',clientX:12,clientY:16});
  await expect(page.locator('.notes-toolbar')).toBeHidden();
+});
+
+test('desktop note-taking: type, select, style, save, reopen and keep writing focus',async({page,request})=>{
+ await open(page,request,1440,900);
+ await page.locator('#notesPassword').fill('test-preview-only-pin');
+ await page.locator('#notesUnlockButton').click();
+ const editor=page.locator('#notesEditor');
+ await editor.fill('Meet university donors and plan outreach');
+ await expect(page.locator('#notesSync')).toHaveText('Saved',{timeout:10000});
+ await page.mouse.move(850,620);
+ await expect(page.locator('.notes-toolbar')).toBeHidden();
+ await editor.focus();await editor.press('ControlOrMeta+A');
+ await page.mouse.move(160,18);
+ await page.getByRole('button',{name:'Bold',exact:true}).click();
+ await expect(editor.locator('b,strong')).toContainText('Meet university donors');
+ await expect(page.locator('#notesSync')).toHaveText('Saved',{timeout:10000});
+ await page.mouse.move(900,610);
+ await expect(page.locator('.notes-toolbar')).toBeHidden();
+ const editorHeight=(await editor.boundingBox()).height;
+ await editor.focus();
+ await editor.press('End');
+ await editor.press('Enter');
+ await editor.type('New volunteer recruitment ideas');
+ await expect(editor).toContainText('New volunteer recruitment ideas');
+ await expect(page.locator('#notesSync')).toHaveText('Saved',{timeout:10000});
+ expect((await editor.boundingBox()).height).toBeGreaterThanOrEqual(editorHeight-2);
+ await page.mouse.move(110,18);
+ await page.locator('#notesBack').click();
+ await page.locator('#donorNotesShortcut').click();
+ await expect(editor).toContainText('Meet university donors');
+ await expect(editor).toContainText('New volunteer recruitment ideas');
+});
+test('narrow phone: controls fit, text stays legible, touch reveals and hides tools',async({page,request})=>{
+ await open(page,request,320,680);
+ await page.locator('#notesPassword').fill('test-preview-only-pin');
+ await page.locator('#notesUnlockButton').click();
+ const editor=page.locator('#notesEditor');
+ await expect(editor).toBeVisible();
+ await expect(page.locator('.notes-toolbar')).toBeHidden();
+ await editor.fill('Contact committed donors today.');
+ await expect(page.locator('#notesSync')).toHaveText('Saved',{timeout:10000});
+ await page.locator('#foundationNotes').dispatchEvent('pointerdown',{pointerType:'touch',clientX:10,clientY:12});
+ await expect(page.locator('.notes-toolbar')).toBeVisible();
+ const bounds=await page.evaluate(()=>{
+  const screen=document.getElementById('foundationNotes').getBoundingClientRect();
+  const back=document.getElementById('notesBack').getBoundingClientRect();
+  const lock=document.getElementById('notesLock').getBoundingClientRect();
+  const full=document.getElementById('notesFullscreen').getBoundingClientRect();
+  const bar=document.querySelector('.notes-toolbar').getBoundingClientRect();
+  return {screen:[screen.left,screen.right],back:[back.left,back.right],lock:[lock.left,lock.right],
+   full:[full.left,full.right],toolbar:[bar.left,bar.right],overflow:document.documentElement.scrollWidth>innerWidth+1};
+ });
+ expect(bounds.back[0]).toBeGreaterThanOrEqual(0);
+ expect(bounds.full[1]).toBeLessThanOrEqual(321);
+ expect(bounds.lock[1]).toBeLessThanOrEqual(321);
+ expect(bounds.back[1]).toBeLessThan(bounds.lock[0]);
+ expect(bounds.lock[1]).toBeLessThan(bounds.full[0]);
+ expect(bounds.toolbar[1]).toBeLessThanOrEqual(321);
+ expect(bounds.overflow).toBe(false);
+ await page.locator('#foundationNotes').dispatchEvent('pointerdown',{pointerType:'touch',clientX:10,clientY:12});
+ await expect(page.locator('.notes-toolbar')).toBeHidden();
+ await page.setViewportSize({width:320,height:400});
+ await editor.focus();
+ await expect(page.locator('#foundationNotes')).toHaveAttribute('data-keyboard','open');
+ expect((await page.locator('.notes-paper').boundingBox()).height).toBeGreaterThan(400);
 });

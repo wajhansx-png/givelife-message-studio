@@ -44,7 +44,7 @@
         <button type="button" id="notesChecklist" aria-label="Checklist" title="Checklist">☑</button>
         <span class="notes-separator" aria-hidden="true"></span>
         <label class="notes-color-wrap" title="Text color"><span class="sr-only">Text color</span><select id="notesColor" aria-label="Text color">
-         <option value="">Color</option><option value="#d5d9e0">Slate</option><option value="#85b7f6">Blue</option>
+         <option value="">Color</option><option value="#ededed">White (default)</option><option value="#d5d9e0">Slate</option><option value="#85b7f6">Blue</option>
          <option value="#8ddfba">Green</option><option value="#efc389">Amber</option><option value="#f4a4ad">Red</option>
          <option value="#c7aff6">Purple</option>
         </select></label>
@@ -60,7 +60,7 @@
  document.body.append(page);
  const el=id=>document.getElementById(id);
  const editor=el('notesEditor'),sync=el('notesSync'),retry=el('notesRetry');
- let revision=0,loaded=false,dirty=false,saving=false,saveTimer=null,retryDelay=0;
+ let revision=0,loaded=false,dirty=false,saving=false,saveTimer=null;
  // Writing mode is fully quiet. Hover the top 125px (desktop), tap the top
  // edge (touch), or press Alt+T (keyboard) to reveal actions. Editor focus
  // alone must NOT reveal the toolbar: typing should never feel distracting.
@@ -381,7 +381,7 @@
   more.addEventListener('pointerdown',e=>e.preventDefault());more.onclick=()=>{extra.hidden=!extra.hidden;more.setAttribute('aria-expanded',String(!extra.hidden));positionBar()};
   command('Bold','B','bold',extra);command('Italic','Italic','italic',extra);command('Bulleted list','• List','insertUnorderedList',extra);
   const color=make('select');color.setAttribute('aria-label','Selected text color');
-  for(const [value,label] of [['','Color'],['#ededed','Default'],['#85b7f6','Blue'],['#8ddfba','Green'],['#efc389','Amber'],['#f4a4ad','Red'],['#c7aff6','Purple']]){const o=make('option','',label);o.value=value;color.append(o)}
+  for(const [value,label] of [['','Color'],['#ededed','White (default)'],['#85b7f6','Blue'],['#8ddfba','Green'],['#efc389','Amber'],['#f4a4ad','Red'],['#c7aff6','Purple']]){const o=make('option','',label);o.value=value;color.append(o)}
   extra.append(color);
   style.onchange=()=>{if(validRange(savedRange))applyBlock(style.value);queue()};
   color.onchange=()=>{if(color.value&&validRange(savedRange)){restoreSelection();document.execCommand('foreColor',false,color.value);rememberDirty()}color.value='';extra.hidden=true;more.setAttribute('aria-expanded','false');queue()};

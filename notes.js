@@ -365,7 +365,7 @@
   const bar=make('div','notes-selection-tools');bar.id='notesSelectionTools';bar.hidden=true;
   bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Format selected text');
   const style=make('select');style.setAttribute('aria-label','Selected text style');
-  for(const [value,label] of [['p','Text'],['h1','Heading 1'],['h2','Heading 2'],['h3','Heading 3']]){const option=make('option','',label);option.value=value;style.append(option)}
+  for(const [value,label] of [['h2','Heading 2'],['h1','Heading 1'],['h3','Heading 3'],['p','Normal text']]){const option=make('option','',label);option.value=value;style.append(option)}
   bar.append(style);
   const toggleButtons=new Map();
   const command=(label,text,cmd,parent=bar)=>{
@@ -401,7 +401,7 @@
    const anchor=rects[0],box=bar.getBoundingClientRect();
    bar.style.left=Math.max(left+8,Math.min(anchor.left+anchor.width/2-box.width/2,left+width-box.width-8))+'px';
    const above=anchor.top-box.height-10,below=rects.at(-1).bottom+10;
-   bar.style.top=(mobileNotes.matches?Math.max(top+8,bottom-box.height-12):Math.max(top+8,Math.min(above>=top+72?above:below,bottom-box.height-8)))+'px';
+   bar.style.top=(mobileNotes.matches?Math.max(top+8,bottom-box.height-12):Math.max(top+136,Math.min(above>=top+136?above:below,bottom-box.height-8)))+'px';
   }
   function update(){
    if(!page.open||!loaded||el('notesWorkspace').hidden||composing){hideBar();hideCaret();return}

@@ -66,6 +66,15 @@
  // alone must NOT reveal the toolbar: typing should never feel distracting.
  const notesHead=page.querySelector('.notes-head'),notesToolbar=page.querySelector('.notes-toolbar');
  const fullscreenButton=el('notesFullscreen');
+ // Wide screens share one controls row; touch layouts retain their separate
+ // horizontally scrollable toolbar. Moving the same nodes keeps selections
+ // and formatting handlers intact.
+ const wideNotes=matchMedia('(min-width:1100px)');
+ function placeToolbar(){
+  if(wideNotes.matches&&page.dataset.mode==='writing')notesHead.insertBefore(notesToolbar,sync);
+  else el('notesWorkspace').prepend(notesToolbar);
+ }
+ placeToolbar();wideNotes.addEventListener('change',placeToolbar);
  page.dataset.mode='loading';
  page.dataset.controls='closed';
  function revealControls(){if(page.dataset.mode==='writing')page.dataset.controls='open'}
@@ -195,7 +204,7 @@
   const keyboard=(focused||page.dataset.keyboard==='open')&&expandedHeight-visibleHeight>120;
   if(!keyboard&&!focused)expandedHeight=Math.max(expandedHeight,visibleHeight);
   page.dataset.keyboard=keyboard?'open':'closed';
-  page.style.setProperty('--notes-paper-min-height',Math.round(Math.max(380,expandedHeight-145))+'px');
+  page.style.setProperty('--notes-paper-min-height',Math.round(Math.max(380,expandedHeight-80))+'px');
   if(keyboard){
    page.style.setProperty('--notes-visible-height',Math.round(visibleHeight)+'px');
    page.style.setProperty('--notes-visible-top',Math.round(visual?.offsetTop||0)+'px');
@@ -232,6 +241,7 @@
   el('notesWorkspace').hidden=locked;
   el('notesLock').hidden=locked;
   page.dataset.mode=locked?'locked':'writing';
+  placeToolbar();
   page.dataset.controls='closed';
  }
  async function load(){
@@ -354,3 +364,5 @@
  page.addEventListener('cancel',e=>{e.preventDefault();back()});
  button.onclick=open;
 })();
+
+

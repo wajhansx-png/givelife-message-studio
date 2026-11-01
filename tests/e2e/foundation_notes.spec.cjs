@@ -131,7 +131,7 @@ test('quiet Notes keeps only writing visible; top-edge reveals controls and full
  expect(colors.page).toBe('rgb(36, 36, 36)');
  expect(colors.paper).toBe('rgba(0, 0, 0, 0)');
  expect(colors.editor).toBe('rgba(0, 0, 0, 0)');
- expect(colors.border).toBe('0px');
+ expect(colors.border).toBe('1px');
  expect(colors.outline).toBe('none');
  expect(colors.shadow).toBe('none');
  await page.locator('#notesEditor').fill('A focused foundation idea');

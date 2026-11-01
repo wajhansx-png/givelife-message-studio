@@ -205,18 +205,18 @@
 .foundation-notes .notes-paper-scroll{
  display:flex;
  justify-content:center;
- padding:106px 20px 32px;
+ padding:76px 20px 16px;
 }
 .foundation-notes .notes-paper{
- width:min(100%,1000px);
+ width:min(100%,860px);
  min-height:100%;
  flex-shrink:0;
- border:0;
- border-radius:0;
+ border:1px solid #424242;
+ border-radius:10px;
  background:transparent;
 }
 .foundation-notes .notes-editor{
- padding:30px 48px 52px;
+ padding:24px 48px 40px;
  background:transparent;
  border:0;
  border-radius:0;
@@ -227,9 +227,8 @@
 }
 .foundation-notes .notes-editor:focus,
 .foundation-notes .notes-editor:focus-visible,
-.foundation-notes .notes-editor:active,
-.foundation-notes .notes-paper:focus-within{
- border:0;
+.foundation-notes .notes-editor:active{
+ border:1px solid #424242;
  box-shadow:none;
  outline:none;
 }
@@ -272,7 +271,7 @@
  .foundation-notes .notes-paper{
   display:block;width:100%;
   min-height:var(--notes-paper-min-height,460px);
-  border:0;border-radius:0;box-shadow:none;
+  border:1px solid #424242;border-radius:8px;box-shadow:none;
  }
  .foundation-notes .notes-editor{
   display:block;box-sizing:border-box;
@@ -344,3 +343,29 @@ dialog#foundationNotes.foundation-notes::backdrop{
   pointer-events:none;
  }
 }
+
+/* Compact desktop controls leave more height for the centered notebook. */
+@media(min-width:1100px){
+ .foundation-notes[data-mode="writing"] .notes-head{
+  height:64px;min-height:64px;max-height:64px;
+  padding:8px max(20px,calc((100vw - 1440px)/2));gap:12px;
+ }
+ .foundation-notes[data-mode="writing"] .notes-head .notes-toolbar{
+  position:static;flex:1;min-width:0;width:auto;
+  height:44px;min-height:44px;max-height:44px;padding:0;
+  opacity:1;visibility:inherit;pointer-events:inherit;transform:none;
+  gap:4px;overflow-x:auto;
+ }
+ .foundation-notes[data-mode="writing"] .notes-toolbar button,
+ .foundation-notes[data-mode="writing"] .notes-toolbar select{height:36px;font-size:13px}
+ .foundation-notes[data-mode="writing"] .notes-toolbar select{min-width:90px;max-width:120px}
+ .foundation-notes[data-mode="writing"] .notes-toolbar label{flex-shrink:0}
+ .foundation-notes[data-mode="writing"] .notes-sync{flex-shrink:0;max-width:160px}
+ .foundation-notes[data-mode="writing"] .notes-headline{flex-shrink:0}
+ .foundation-notes[data-mode="writing"] .notes-kicker{display:none}
+ .foundation-notes[data-mode="writing"] .notes-headline h1{font-size:19px}
+}
+@media(min-width:721px) and (max-width:1099px){
+ .foundation-notes .notes-paper-scroll{padding-top:112px}
+}
+

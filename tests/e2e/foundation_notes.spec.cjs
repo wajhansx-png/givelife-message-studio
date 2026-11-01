@@ -3,7 +3,7 @@ const auth={Authorization:'Bearer manual-fix-preview-key'};
 async function open(page,request,width=1280,height=800){
  await page.setViewportSize({width,height});
  await page.addInitScript(()=>localStorage.setItem('givelife-cloud-key','manual-fix-preview-key'));
- await request.post('/__test/seed',{headers:auth,data:{reply:'Ready.'}});
+ await request.post('/__test/seed',{headers:auth,data:{reply:'Ready.',reset_notes:true}});
  await page.goto('/');
  await page.locator('#openDonors').click();
  await page.locator('#donorNotesShortcut').click();

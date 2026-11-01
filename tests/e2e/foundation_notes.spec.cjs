@@ -21,6 +21,7 @@ test('private notes: password, autosave, reload, desktop remembrance and lock',a
  await expect(editor).toBeVisible();
  await editor.fill('Plan student volunteer outreach');
  await expect(page.locator('#notesSync')).toHaveText('Saved',{timeout:10000});
+ await page.mouse.move(100,18); // reveal hidden navigation as a user would
  await page.locator('#notesBack').click();
  await page.locator('#donorNotesShortcut').click();
  await expect(editor).toContainText('Plan student volunteer outreach');
@@ -30,8 +31,11 @@ test('private notes: password, autosave, reload, desktop remembrance and lock',a
  await page.locator('#donorNotesShortcut').click();
  await expect(page.locator('#notesLocked')).toBeHidden();
  await expect(editor).toContainText('Plan student volunteer outreach');
+ await page.mouse.move(100,18);
  await page.locator('#notesLock').click();
  await expect(page.locator('#notesLocked')).toBeVisible();
+ await page.mouse.move(100,18); // reveal hidden navigation as a user would
+ await page.mouse.move(100,18);
  await page.locator('#notesBack').click();
  await page.locator('#donorNotesShortcut').click();
  await expect(page.locator('#notesLocked')).toBeVisible();

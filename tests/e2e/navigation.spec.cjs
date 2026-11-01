@@ -272,6 +272,8 @@ test('team screen keeps the focused field (and the phone keyboard) when the wind
 });
 
 test('team: a planning error is visible inside the Team screen, and quiet hours are an optional switch in Settings',async({page,request})=>{
+ await page.route('**/team',route=>route.request().method()==='POST'&&route.request().postDataJSON()?.action==='plan'
+  ?route.fulfill({status:400,json:{error:'The deadline must be in the future.'}}):route.continue());
  await open(page,request,390,700);await request.post('/__test/seed',{headers:auth,data:{team_demo:[[1,'Asked']]}});
  await page.locator('#openTeam').click();await page.getByRole('button',{name:'+ Add tasks'}).click();
  await page.locator('#teamText').fill('Do the thing');await page.getByRole('button',{name:'Plan the tasks'}).click();
@@ -281,3 +283,4 @@ test('team: a planning error is visible inside the Team screen, and quiet hours 
  await sw.check();await expect.poll(async()=>(await (await request.get('/team',{headers:auth})).json()).quiet).toEqual([23,7]);
  await sw.uncheck();await expect.poll(async()=>(await (await request.get('/team',{headers:auth})).json()).quiet).toBeNull();
 });
+

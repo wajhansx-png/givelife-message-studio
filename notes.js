@@ -162,7 +162,10 @@
    page.close();page.showModal();
    paperScroll.scrollTop=scroll;
    scheduleSize();
-   if(!mobileNotes.matches)editor.focus({preventScroll:true});
+   concealControls(true);
+   if(!mobileNotes.matches)requestAnimationFrame(()=>{
+    if(page.open){editor.focus({preventScroll:true});concealControls(true)}
+   });
   }
  });
  // A stable paper height prevents the editor itself from collapsing when a
@@ -257,10 +260,17 @@
    screen(false);setStatus(dirty?'Unsaved changes':'Saved');
   }catch(e){setStatus(e.message,true);retry.hidden=false}
  }
+ let notesRoute='donors/all/notes',notesParentState=null;
  async function open(){
+  const restoring=Nav.path().endsWith('/notes');
+  notesParentState=restoring?window.history.state?.notesParent||null:window.history.state;
+  notesRoute=Nav.path().replace(/\/notes$/,'')+'/notes';
+  Nav.go(notesRoute);
+  if(!restoring)window.history.replaceState({...window.history.state,notesParent:notesParentState},'',location.href);
   if(!page.open)page.showModal();
   scheduleSize();
   await load();
+  if(!page.open)return;
   scheduleSize();
   if(el('notesWorkspace').hidden)el('notesPassword').focus({preventScroll:true});
   else if(!mobileNotes.matches)editor.focus({preventScroll:true});
@@ -351,18 +361,27 @@
   rememberDirty();
  });
  retry.onclick=()=>{retry.hidden=true;save()};
- async function back(){
-  if(dirty){clearTimeout(saveTimer);await save();if(dirty){setStatus('Save failed. Use Retry save before leaving.',true);retry.hidden=false;return}}
+ async function back(allowed=()=>true){
+  if(dirty){clearTimeout(saveTimer);await save();if(!allowed())return false;if(dirty){setStatus('Save failed. Use Retry save before leaving.',true);retry.hidden=false;return}}
+  if(!allowed())return false;
   if(document.fullscreenElement)await document.exitFullscreen().catch(()=>{});
-  page.close();page.dataset.keyboard='closed';page.dataset.controls='closed';
+  if(!allowed())return false;
+  page.close();page.dataset.keyboard='closed';page.dataset.controls='closed';return true;
  }
- el('notesBack').onclick=back;
+ el('notesBack').onclick=async()=>{if(await back()){
+  Nav.go(notesRoute.replace(/\/notes$/,''),{replace:true});
+  if(notesParentState)window.history.replaceState(notesParentState,'',location.href);
+  renderNav();
+ }};
  el('notesLock').onclick=async()=>{
   if(dirty){await save();if(dirty){setStatus('Save changes before locking.',true);return}}
   try{await request({action:'lock'});loaded=false;screen(true);setStatus('Locked')}catch(e){setStatus(e.message,true)}
  };
- page.addEventListener('cancel',e=>{e.preventDefault();back()});
+ page.addEventListener('cancel',e=>{e.preventDefault();el('notesBack').click()});
+ window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+ window.FoundationNotes={show:open,hide:back,isOpen:()=>page.open,route:()=>notesRoute};
  button.onclick=open;
 })();
+
 
 

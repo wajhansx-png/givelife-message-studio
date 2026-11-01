@@ -345,6 +345,10 @@ dialog#foundationNotes.foundation-notes::backdrop{
 }
 
 /* Compact desktop controls leave more height for the centered notebook. */
+/* Notes intentionally keeps its charcoal writing theme in Light mode too. */
+html body #foundationNotes .notes-head{background:#242424!important}
+html body #foundationNotes #notesSync{color:#c2c2c2!important}
+html body #foundationNotes #notesSync[data-error=true]{color:#ffbdbd!important}
 @media(min-width:1100px){
  .foundation-notes[data-mode="writing"] .notes-head{
   height:64px;min-height:64px;max-height:64px;
@@ -368,4 +372,5 @@ dialog#foundationNotes.foundation-notes::backdrop{
 @media(min-width:721px) and (max-width:1099px){
  .foundation-notes .notes-paper-scroll{padding-top:112px}
 }
+
 

@@ -8,7 +8,7 @@ const Nav={rendering:false,
  path(){try{return decodeURIComponent((location.hash||'').replace(/^#\/?/,''))}catch(e){return ''}},
  top(){return Nav.path().split('/')[0]},
  /* The chat log below owns the name `history`, so the browser's is always reached as window.history. */
- valid(path){return /^(?:chat|settings|preview|whatsapp|donors\/(?:all|important|donated|not_donated|not_contacted|volunteers|messages))$/.test(path)},
+ valid(path){return /^(?:chat|settings(?:\/(?:memory|poster))?|keyboard|team|preview|whatsapp|donors\/(?:all|important|donated|not_donated|not_contacted|volunteers|messages)(?:\/(?:notes|add|bulk|pace))?)$/.test(path)},
  go(path,{replace=false}={}){if(Nav.rendering||Nav.path()===path)return;const h=window.history,from=replace?h.state?.from:Nav.path();try{(replace?h.replaceState:h.pushState).call(h,{nav:1,from:Nav.valid(from)?from:''},'',path?'#/'+path:location.pathname+location.search)}catch(e){}},
  // Close synchronously. A delayed history.back() can undo the next tap or race a refresh.
  leave(name){if(Nav.rendering||Nav.top()!==name)return;const from=window.history.state?.from;Nav.go(Nav.valid(from)&&from.split('/')[0]!==name?from:'',{replace:true});renderNav()}};
@@ -339,14 +339,14 @@ if(window.visualViewport){visualViewport.addEventListener('resize',updateChatVie
 let correctionTurn=null;
 $('feedbackClose').onclick=()=>$('feedbackDialog').close();
 $('feedbackForm').onsubmit=async e=>{e.preventDefault();await logChain;const r=await post('/feedback',{turn_id:correctionTurn,correction:$('feedbackText').value,remember:$('feedbackRemember').checked}),d=await r.json();if(!r.ok){$('feedbackStatus').textContent=d.error;return}$('feedbackDialog').close();status(d.warning||('Correction saved'+($('feedbackRemember').checked?' to memory.':'.')),!!d.warning)};
-async function showMemory(){const r=await fetch('/knowledge'),d=await r.json(),box=$('memoryContent');box.textContent='';const stats=document.createElement('p');stats.textContent=d.feedback_count+' confirmed corrections · '+d.archived_turns+' archived turns. Patterns: '+(Object.entries(d.patterns||{}).map(([k,v])=>k+' '+v).join(', ')||'none yet');box.append(stats);for(const item of d.entries||[]){const row=document.createElement('div');row.className='memory-item';const label=document.createElement('p');label.textContent=item.text;const remove=document.createElement('button');remove.type='button';remove.textContent='Forget';remove.onclick=async()=>{await post('/knowledge',{forget:item.id});showMemory()};row.append(label,remove);box.append(row)}if(!$('memoryDialog').open)$('memoryDialog').showModal()}
-if($('openMemory'))$('openMemory').onclick=()=>showMemory().catch(e=>status(e.message,1));$('memoryClose').onclick=()=>$('memoryDialog').close();
+async function showMemory(){Nav.go('settings/memory');if(!$('memoryDialog').open)$('memoryDialog').showModal();const r=await fetch('/knowledge'),d=await r.json();if(Nav.path()!=='settings/memory')return;const box=$('memoryContent');box.textContent='';const stats=document.createElement('p');stats.textContent=d.feedback_count+' confirmed corrections · '+d.archived_turns+' archived turns. Patterns: '+(Object.entries(d.patterns||{}).map(([k,v])=>k+' '+v).join(', ')||'none yet');box.append(stats);for(const item of d.entries||[]){const row=document.createElement('div');row.className='memory-item';const label=document.createElement('p');label.textContent=item.text;const remove=document.createElement('button');remove.type='button';remove.textContent='Forget';remove.onclick=async()=>{await post('/knowledge',{forget:item.id});showMemory()};row.append(label,remove);box.append(row)}if(!$('memoryDialog').open)$('memoryDialog').showModal();Nav.go('settings/memory')}
+if($('openMemory'))$('openMemory').onclick=()=>showMemory().catch(e=>status(e.message,1));$('memoryClose').onclick=()=>{$('memoryDialog').close();Nav.go('settings',{replace:true})};$('memoryDialog').addEventListener('cancel',e=>{e.preventDefault();$('memoryClose').click()});
 if($('runChatEval'))$('runChatEval').onclick=async()=>{const b=$('runChatEval'),label=$('chatEvalStatus');b.disabled=true;try{const r=await post('/assistant-evaluate',{}),start=await r.json();if(!r.ok)throw Error(start.error);for(let i=0;i<600;i++){const response=await fetch('/assistant-evaluate/'+start.eval_id),task=await response.json();if(!response.ok)throw Error(task.error||'Could not read evaluation.');label.textContent=(task.results||[]).map(x=>x.case+': '+(x.passed?'passed':'FAILED — '+(x.error||((x.calls||[]).join(', ')+' | '+(x.reply||''))))).join('\n')+'\n'+(task.results||[]).length+'/'+task.total+' complete';if(task.done)break;await new Promise(resolve=>setTimeout(resolve,1000))}}catch(e){label.textContent=e.message}finally{b.disabled=false}};
 
 
 /* ---- autopilot ---- */
 let aiAvailable=false;
-function paintAuto(on){autoKnown=true;autoOn=!!on;$('auto').setAttribute('aria-pressed',String(autoOn));$('auto').setAttribute('aria-checked',String(autoOn));$('auto').querySelector('.lbl').textContent=autoOn?'ON':'OFF';$('auto').disabled=false;$('live').dataset.on=autoOn?'1':'0';paintStatusLine()}
+function paintAuto(on){autoKnown=true;autoOn=!!on;$('auto').setAttribute('aria-checked',String(autoOn));$('auto').querySelector('.lbl').textContent=autoOn?'ON':'OFF';$('auto').disabled=false;$('live').dataset.on=autoOn?'1':'0';paintStatusLine()}
 async function toggleAuto(on){const r=await post('/autopilot',{on}),d=await r.json();paintAuto(d.on);say(d.on||!on?'auto':'app',d.reply,!d.on&&on);if(d.on)pollAuto()}
 $('auto').onclick=()=>toggleAuto(!autoOn).catch(e=>say('app',e.message,1));
 let liveSnapshot=null,checkedAt=0,pollError='',liveNotice=null,lastAnnouncedError='';
@@ -468,9 +468,9 @@ document.fonts?.ready.then(()=>{fit();fitConversation()});
 function flip(){const m=$(view()+'Preview');m.classList.remove('flip');void m.offsetWidth;m.classList.add('flip')}
 
 function focusChatInput(){if($('hist').open){$('histCmd').focus({preventScroll:true});return}if(isPhone()){openChat();$('histCmd').focus({preventScroll:true});return}if(!document.body.classList.contains('nomsg'))setNoMsg(true);$('cmd').focus({preventScroll:true})}
-function openKeyboardHelp(){$('keyboardDialog').showModal();$('keyboardClose').focus({preventScroll:true})}
+function openKeyboardHelp(){Nav.go('keyboard');$('keyboardDialog').showModal();$('keyboardClose').focus({preventScroll:true})}
 if($('keyboardHelp'))$('keyboardHelp').onclick=openKeyboardHelp;
-if($('keyboardClose'))$('keyboardClose').onclick=()=>$('keyboardDialog').close();
+if($('keyboardClose'))$('keyboardClose').onclick=()=>{$('keyboardDialog').close();Nav.leave('keyboard')};$('keyboardDialog').addEventListener('cancel',e=>{e.preventDefault();$('keyboardClose').click()});
 /* Desktop shortcuts do not move controls or steal focus from dialogs. */
 document.addEventListener('keydown',e=>{
  if(typeof e.key!=='string'||e.repeat)return;
@@ -485,23 +485,68 @@ document.addEventListener('keydown',e=>{
  if(a){e.preventDefault();a()}});
 
 /* ---- show the screen the address names (refresh, Back and Forward all come here) ---- */
-function renderNav(){if($('cloudLogin')?.closest('dialog')?.open)return;const parts=Nav.path().split('/'),top=parts[0];Nav.rendering=true;
+// Only UI-opening actions are restorable. Sending, logout, uploads and saves
+// never run during routing or refresh.
+const smallScreens=[
+ {id:'donorAddDialog',suffix:'add',open:()=>$('donorAdd').click()},
+ {id:'donorPasteDialog',suffix:'bulk',open:()=>$('donorBulk').click()},
+ {id:'donorBatchPicker',suffix:'pace',open:()=>$('donorPace').click()},
+ {id:'posterDialog',path:'settings/poster',open:()=>window.DonorHub?.openPoster()}
+];
+function smallRoute(screen){return screen.path||'donors/'+(Nav.top()==='donors'?Nav.path().split('/')[1]:'all')+'/'+screen.suffix}
+function restoreSmallDialog(path,open=false){for(const screen of smallScreens){const dialog=$(screen.id);if(!dialog)continue;
+ const target=screen.path?path===screen.path:path.startsWith('donors/')&&path.split('/')[2]===screen.suffix;
+ if(dialog.open&&!target)dialog.close();
+ if(open&&target&&!dialog.open)screen.open();
+}}
+addEventListener('DOMContentLoaded',()=>{
+ for(const screen of smallScreens){const dialog=$(screen.id);if(!dialog)continue;
+  new MutationObserver(()=>{if(dialog.open)Nav.go(smallRoute(screen))}).observe(dialog,{attributes:true,attributeFilter:['open']});
+  dialog.addEventListener('close',()=>{const target=smallRoute(screen);if(Nav.path()===target){Nav.go(screen.path?'settings':target.split('/').slice(0,2).join('/'),{replace:true});renderNav()}});
+ }
+});
+let navigationEpoch=0;
+async function renderNav(){
+ if($('cloudLogin')?.closest('dialog')?.open)return;
+ const epoch=++navigationEpoch,path=Nav.path(),parts=path.split('/'),top=parts[0],notes=top==='donors'&&parts[2]==='notes';
+ if(window.FoundationNotes?.isOpen()&&!notes){
+  const closed=await window.FoundationNotes.hide(()=>epoch===navigationEpoch);
+  if(epoch!==navigationEpoch)return;
+  if(!closed){Nav.go(window.FoundationNotes.route(),{replace:true});return}
+ }
+ Nav.rendering=true;
  try{
+  restoreSmallDialog(path);
   if(top!=='chat'&&$('hist').open)closeChat();
   if(top!=='settings'&&$('set').open)$('set').close();
+  if(path!=='settings/memory'&&$('memoryDialog').open)$('memoryDialog').close();
+  if(top!=='keyboard'&&$('keyboardDialog').open)$('keyboardDialog').close();
+  if(top!=='team'&&window.TeamHub?.isOpen())window.TeamHub.hide();
   if(top!=='donors'&&window.DonorHub?.isOpen())window.DonorHub.hide();
   if(top!=='whatsapp'&&$('whatsappDialog')?.open)$('whatsappDialog').close();
   if(top==='preview'&&document.body.classList.contains('nomsg'))setNoMsg(false);
   if(top===''&&!document.body.classList.contains('nomsg'))setNoMsg(true);
   if(top==='chat'&&!$('hist').open)openChat();
   if(top==='settings'&&!$('set').open){$('set').showModal();loadSet();checkWa()}
-  if(top==='donors')window.DonorHub?.show(parts[1]||'all');
+  if(path==='settings/memory'&&!$('memoryDialog').open){$('memoryDialog').showModal();showMemory().catch(e=>{$('memoryContent').textContent='Could not load memory. Close and try again.'})}
+  if(path==='settings/poster')restoreSmallDialog(path,true);
+  if(top==='keyboard'&&!$('keyboardDialog').open)openKeyboardHelp();
+  if(top==='team'&&!window.TeamHub?.isOpen())window.TeamHub?.show();
+  if(top==='donors'){
+   window.DonorHub?.show(parts[1]||'all');
+   if(!notes)restoreSmallDialog(path,true);
+   if(notes&&!window.FoundationNotes?.isOpen())window.FoundationNotes?.show();
+  }
   if(top==='whatsapp'&&!$('whatsappDialog')?.open)$('whatsappConnection').click();
- }finally{Nav.rendering=false}}
-addEventListener('popstate',()=>smooth(renderNav));
-addEventListener('load',()=>renderNav(),{once:true});
-addEventListener('hashchange',()=>smooth(renderNav));
-addEventListener('studio-unlocked',()=>renderNav());
+ }finally{Nav.rendering=false;clearTimeout(window.studioBootTimer);delete document.documentElement.dataset.uiBoot}
+}
+// Both popstate and hashchange can fire for the same navigation. Coalesce them.
+let navigationFrame=0;
+function scheduleNavigation(){cancelAnimationFrame(navigationFrame);navigationFrame=requestAnimationFrame(()=>{renderNav()})}
+addEventListener('popstate',scheduleNavigation);
+addEventListener('hashchange',scheduleNavigation);
+addEventListener('DOMContentLoaded',()=>{renderNav()},{once:true});
+addEventListener('studio-unlocked',()=>{renderNav()});
 // Dialogs and Back/Forward use the same brief, interruptible entrance.
 let previousSurface=document.body.dataset.view+':'+document.body.classList.contains('nomsg');
 new MutationObserver(changes=>{
@@ -549,3 +594,5 @@ $('caseSelect')?.addEventListener('change',async e=>{const sel=e.target,v=sel.va
   if(confirm('Open this case? The current one is saved first.')){await caseAct({action:'switch',id:v});location.reload()}else await loadCases()
  }catch(err){alert(err.message);await loadCases()}});
 loadCases();
+
+

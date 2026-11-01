@@ -14,9 +14,9 @@
     "test:python": "python -m unittest discover -s tests -q"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.64.1",
     "fast-check": "^4.10.2",
     "vitest": "^5.0.5"
   }
 }
-

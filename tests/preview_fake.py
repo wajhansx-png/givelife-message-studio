@@ -31,6 +31,8 @@ class FakeWhatsApp(BaseHTTPRequestHandler):
  def log_message(self,*args):pass
 class PreviewHTTPServer(ThreadingHTTPServer):
  request_queue_size=128
+ daemon_threads=True
+ block_on_close=False
 fake=PreviewHTTPServer(('127.0.0.1',0),FakeWhatsApp);threading.Thread(target=fake.serve_forever,daemon=True).start()
 os.environ.pop('DB_URI',None);os.environ.pop('RENDER_EXTERNAL_URL',None);os.environ.pop('DEEPSEEK_API_KEY',None)
 os.environ.setdefault('NOTES_PASSWORD','test-preview-only-pin')
@@ -67,6 +69,11 @@ def preview_get(self):
   return self.reply({'events':events})
  return original_get(self)
 def preview_post(self):
+ if '--test-api' in sys.argv and self.path=='/__test/shutdown':
+  if not self.authorized():return self.reply({'error':'Access key required'},status=401)
+  self.reply({'ok':True})
+  threading.Thread(target=self.server.shutdown,daemon=True).start()
+  return
  if '--test-api' in sys.argv and self.path=='/__test/seed':
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   body=json.loads(self.rfile.read(int(self.headers.get('Content-Length',0))))
@@ -94,3 +101,4 @@ port=int(sys.argv[sys.argv.index('--port')+1]) if '--port' in sys.argv else 3003
 http=PreviewHTTPServer(('127.0.0.1',port),server.Handler)
 print(f'Local fake-WhatsApp preview: http://127.0.0.1:{port}/ (no real messages possible)',flush=True)
 http.serve_forever()
+

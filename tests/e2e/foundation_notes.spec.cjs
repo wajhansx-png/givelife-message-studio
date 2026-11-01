@@ -27,8 +27,7 @@ test('private notes: password, autosave, reload, desktop remembrance and lock',a
  await expect(editor).toContainText('Plan student volunteer outreach');
  await expect(page.locator('#notesLocked')).toBeHidden();
  await page.reload();
- if(!(await page.locator('#donorsPage').isVisible()))await page.locator('#openDonors').click();
- await page.locator('#donorNotesShortcut').click();
+ await expect(page.locator('#foundationNotes')).toBeVisible();
  await expect(page.locator('#notesLocked')).toBeHidden();
  await expect(editor).toContainText('Plan student volunteer outreach');
  await page.mouse.move(100,18);
@@ -232,3 +231,4 @@ test('narrow phone: controls fit, text stays legible, touch reveals and hides to
  await expect(page.locator('#foundationNotes')).toHaveAttribute('data-keyboard','open');
  expect((await page.locator('.notes-paper').boundingBox()).height).toBeGreaterThan(400);
 });
+

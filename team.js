@@ -76,10 +76,11 @@
    else{const b=make('button','primary team-add','+ Add tasks');b.type='button';b.onclick=()=>{addOpen=true;draw(true);page.querySelector('#teamText')?.focus()};body.append(b)}}
   shell.append(body);const foot=make('footer','team-foot');const back=make('button','tool team-back','← Back');back.type='button';back.onclick=()=>page.close();foot.append(back);shell.append(foot);page.append(shell);
  }
- async function open(){await refresh(true);if(!data){toast('Could not load the team screen.',true);return}if(!page.open)page.showModal();draw(true);if(data.unread)try{data={...data,...await api({action:'read'})};lastUnread=0;paintBadge()}catch(e){}clearInterval(timer);timer=setInterval(()=>refresh(true),8000)}
- page.addEventListener('close',()=>{expanded=false;clearInterval(timer);timer=setInterval(()=>refresh(true),45000)});
+ async function open(){Nav.go('team');if(!page.open){page.textContent='Loading team…';page.showModal()}await refresh(true);if(!page.open||Nav.top()!=='team')return;if(!data){page.textContent='Could not load Team. ';const back=make('button','tool','Back');back.onclick=()=>page.close();page.append(back);return}if(!page.open)page.showModal();draw(true);if(data.unread)try{data={...data,...await api({action:'read'})};lastUnread=0;paintBadge()}catch(e){}clearInterval(timer);timer=setInterval(()=>refresh(true),8000)}
+ page.addEventListener('close',()=>{Nav.leave('team');expanded=false;clearInterval(timer);timer=setInterval(()=>refresh(true),45000)});
  page.addEventListener('cancel',e=>{e.preventDefault();page.close()});
  let rz=0;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(page.open)draw()},120)});
+ window.TeamHub={show:open,hide:()=>page.close(),isOpen:()=>page.open};
  launch.onclick=open;
  document.addEventListener('donors-changed',()=>refresh(true));
  refresh(true);timer=setInterval(()=>refresh(true),45000);
@@ -97,3 +98,4 @@
   api().then(d=>{const q=d.quiet;on.checked=!!q;hrs.hidden=!q;if(q){from.value=q[0];to.value=q[1]}}).catch(()=>{})}
  document.getElementById('gear')?.addEventListener('click',()=>setTimeout(quietRow,50));
 })();
+

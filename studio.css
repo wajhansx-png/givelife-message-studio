@@ -3558,7 +3558,7 @@ dialog:not([open])::backdrop {
   background: var(--surface2);
   border-color: var(--g);
 }
-.donor-msgs[aria-pressed=true] {
+.donor-msgs[aria-selected=true] {
   background: var(--gs);
   border-color: var(--g);
   color: var(--gink);
@@ -7301,14 +7301,14 @@ html:root:not(.no-theme) body :is(.talk, .hist) .e.bot {
 /* switches: OFF is a quiet track, ON is the gradient with a white knob */
 html body input.sw:checked, #settings input.sw:checked, dialog input.sw:checked,
 html body .autosw[aria-checked=true],
-html body .autosw[aria-pressed=true] {
+html body .autosw[aria-checked=true] {
   background: var(--grad) !important;
   border-color: transparent !important;
   box-shadow: 0 6px 16px -8px #2f6fe8cc !important;
 }
 html body input.sw:checked::before, html body input.sw:checked::after,
 html body .autosw[aria-checked=true]::before, html body .autosw[aria-checked=true]::after,
-html body .autosw[aria-pressed=true] .knob::after {
+html body .autosw[aria-checked=true] .knob::after {
   background: #fff !important;
 }
 /* the Messages panel tabs match the donor tabs */
@@ -8733,4 +8733,17 @@ html body .donor-page .donor-row .donor-more > summary {
 html body .donor-page .donor-row .donor-more > summary:hover,
 html body .donor-page .donor-row .donor-more[open] > summary {
   background: color-mix(in srgb, var(--ink) 10%, transparent) !important;
+}
+
+
+/* Donor totals must remain readable in both themes. */
+html body .donor-count{color:var(--mut);opacity:1}
+.donor-message-tablist{display:inline-flex;flex-shrink:0}
+.leftchip .lw{margin-inline-start:4px}
+html body #previewBackBottom{color:var(--ink);background:var(--surface2);border:1px solid var(--line2)}
+/* On narrow phones the case/balance must be readable, not an arrow-only picker. */
+@media(max-width:420px){
+ html body .brandbar{flex-wrap:wrap}
+ html body .brandbar .case-pick{order:10;flex:1 0 100%!important;width:100%}
+ html body .brandbar #caseSelect{width:100%;max-width:none;min-height:38px}
 }

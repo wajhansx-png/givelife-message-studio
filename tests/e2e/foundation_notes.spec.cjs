@@ -149,6 +149,13 @@ test('quiet Notes keeps only writing visible; top-edge reveals controls and full
  await expect(toolbar).toBeVisible();
  const focusDiagnostics=await page.evaluate(()=>({active:document.activeElement?.id,controls:document.getElementById('foundationNotes')?.dataset.controls,full:document.fullscreenElement?.tagName,style: getComputedStyle(document.getElementById('notesStyle')).visibility}));
  console.log('Notes Alt+T focus:',JSON.stringify(focusDiagnostics));
+ const directFocus=await page.evaluate(()=>{
+  const ctrl=document.getElementById('notesStyle'),dialog=document.getElementById('foundationNotes');
+  const prev=document.activeElement?.id;
+  ctrl.focus();
+  return {prev,after:document.activeElement?.id,modal:dialog.matches(':modal'),inert:dialog.inert,open:dialog.open,nearest:document.elementFromPoint(160,70)?.id};
+ });
+ console.log('Notes direct focus probe:',JSON.stringify(directFocus));
  await expect(page.locator('#notesStyle')).toBeFocused();
  await page.keyboard.press('Escape');
  await expect(toolbar).toBeHidden();

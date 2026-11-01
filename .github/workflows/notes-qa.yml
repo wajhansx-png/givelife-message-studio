@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - feat/foundation-notes-private-editor-20261031
+      - feature/notes-distraction-free-20261101
     paths:
       - notes_store.py
       - notes.js

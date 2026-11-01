@@ -100,3 +100,247 @@
  .foundation-notes[data-keyboard="open"] .notes-toolbar select{height:35px}
  .foundation-notes[data-keyboard="open"] .notes-paper-scroll{padding-top:4px;padding-bottom:4px}
 }
+
+/* Distraction-free writing: solid Calmly-style charcoal throughout.
+   Controls occupy an overlay, never the document's writing space. */
+.foundation-notes,
+.foundation-notes::backdrop,
+.foundation-notes .notes-shell,
+.foundation-notes .notes-workspace,
+.foundation-notes .notes-paper-scroll,
+.foundation-notes .notes-paper,
+.foundation-notes .notes-editor {
+ background:#242424;
+ background-image:none;
+ box-shadow:none;
+}
+.foundation-notes{border:0;outline:0;color:#ececec}
+.foundation-notes::backdrop{background:#242424}
+.foundation-notes .notes-head,
+.foundation-notes .notes-toolbar {
+ background:#242424;
+ background-image:none;
+ border:0;
+ box-shadow:none;
+}
+.foundation-notes[data-mode="writing"] .notes-head,
+.foundation-notes[data-mode="writing"] .notes-toolbar {
+ position:absolute;
+ left:0;
+ right:0;
+ z-index:5;
+ opacity:0;
+ visibility:hidden;
+ pointer-events:none;
+ transform:translateY(-7px);
+ transition:opacity .12s ease,transform .12s ease,visibility .12s;
+}
+.foundation-notes[data-mode="writing"] .notes-head {
+ top:0;
+ height:56px;
+ min-height:56px;
+ max-height:56px;
+ padding-top:6px;
+ padding-bottom:6px;
+}
+.foundation-notes[data-mode="writing"] .notes-toolbar{
+ top:56px;
+ min-height:50px;
+ height:50px;
+ max-height:50px;
+ flex-wrap:nowrap;
+ overflow-x:auto;
+ overflow-y:hidden;
+ scrollbar-width:none;
+ padding-top:5px;
+ padding-bottom:5px;
+}
+.foundation-notes[data-mode="writing"] .notes-toolbar::-webkit-scrollbar{display:none}
+.foundation-notes[data-mode="writing"][data-controls="open"] .notes-head,
+.foundation-notes[data-mode="writing"][data-controls="open"] .notes-toolbar,
+.foundation-notes[data-mode="writing"]:has(.notes-sync[data-error="true"]) .notes-head{
+ opacity:1;
+ visibility:visible;
+ pointer-events:auto;
+ transform:none;
+}
+.foundation-notes .notes-headline h1,
+.foundation-notes .notes-kicker{color:#e8e8e8}
+.foundation-notes .notes-sync{color:#aaa}
+.foundation-notes .notes-back,
+.foundation-notes .notes-lock,
+.foundation-notes .notes-fullscreen{
+ min-height:40px;
+ color:#e8e8e8;
+ background:#303030;
+ border:1px solid #3b3b3b;
+ border-radius:8px;
+ padding:8px 12px;
+ font-weight:650;
+ white-space:nowrap;
+ cursor:pointer;
+}
+.foundation-notes .notes-fullscreen{margin-left:0}
+.foundation-notes .notes-back:hover,
+.foundation-notes .notes-lock:hover,
+.foundation-notes .notes-fullscreen:hover,
+.foundation-notes .notes-toolbar button:hover,
+.foundation-notes .notes-toolbar select:hover{
+ background:#393939;
+ border-color:#4a4a4a;
+}
+.foundation-notes .notes-toolbar button,
+.foundation-notes .notes-toolbar select{
+ color:#ececec;
+ background:#303030;
+ border-color:#3d3d3d;
+}
+.foundation-notes .notes-toolbar button:focus-visible,
+.foundation-notes .notes-toolbar select:focus-visible,
+.foundation-notes .notes-head button:focus-visible{
+ outline:2px solid #b7b7b7;
+ outline-offset:2px;
+}
+.foundation-notes .notes-separator{border-color:#424242}
+.foundation-notes .notes-paper-scroll{
+ display:flex;
+ justify-content:center;
+ padding:106px 20px 32px;
+}
+.foundation-notes .notes-paper{
+ width:min(100%,1000px);
+ min-height:100%;
+ flex-shrink:0;
+ border:0;
+ border-radius:0;
+ background:transparent;
+}
+.foundation-notes .notes-editor{
+ padding:30px 48px 52px;
+ background:transparent;
+ border:0;
+ border-radius:0;
+ box-shadow:none;
+ outline:none;
+ color:#ededed;
+ caret-color:#d8d8d8;
+}
+.foundation-notes .notes-editor:focus,
+.foundation-notes .notes-editor:focus-visible,
+.foundation-notes .notes-editor:active,
+.foundation-notes .notes-paper:focus-within{
+ border:0;
+ box-shadow:none;
+ outline:none;
+}
+.foundation-notes .notes-editor:empty:before{content:none}
+.foundation-notes .notes-foot{height:0;min-height:0;padding:0;overflow:visible;pointer-events:none;background:transparent}
+.foundation-notes #notesHint{display:none!important}
+.foundation-notes #notesRetry{pointer-events:auto}
+.foundation-notes #notesRetry:not([hidden]){
+ display:block;
+ position:fixed;
+ top:115px;
+ right:16px;
+ z-index:8;
+ background:#383838;
+ border:1px solid #666;
+ color:#f3f3f3;
+}
+.foundation-notes .notes-sync[data-error="true"]{color:#ffbdbd}
+@media(max-width:720px){
+ .foundation-notes[data-mode="writing"] .notes-head{
+  height:48px;min-height:48px;max-height:48px;
+  padding:3px 8px;
+ }
+ .foundation-notes[data-mode="writing"] .notes-headline h1{font-size:16px}
+ .foundation-notes[data-mode="writing"] .notes-kicker{display:none}
+ .foundation-notes[data-mode="writing"] .notes-toolbar{
+  top:48px;height:44px;min-height:44px;max-height:44px;
+  padding:4px 8px;
+ }
+ .foundation-notes[data-mode="writing"] .notes-toolbar button,
+ .foundation-notes[data-mode="writing"] .notes-toolbar select{height:36px}
+ .foundation-notes .notes-back,.foundation-notes .notes-lock,
+ .foundation-notes .notes-fullscreen{min-height:38px;padding:6px 9px;font-size:12px}
+ .foundation-notes .notes-paper-scroll{
+  display:block;overflow-y:auto;overflow-x:hidden;
+  padding:57px 7px 14px;
+  scroll-padding-top:18px;
+  scroll-padding-bottom:36px;
+ }
+ .foundation-notes .notes-paper{
+  display:block;width:100%;
+  min-height:var(--notes-paper-min-height,460px);
+  border:0;border-radius:0;box-shadow:none;
+ }
+ .foundation-notes .notes-editor{
+  display:block;box-sizing:border-box;
+  min-height:var(--notes-paper-min-height,460px);
+  height:auto;flex:none;
+  padding:16px 16px 40px;
+  font-size:16px;line-height:1.68;
+ }
+ .foundation-notes[data-keyboard="open"] .notes-paper-scroll{
+  padding-top:40px;
+  padding-bottom:8px;
+ }
+ .foundation-notes[data-keyboard="open"] .notes-head{
+  height:43px;min-height:43px;max-height:43px;
+ }
+ .foundation-notes[data-keyboard="open"] .notes-toolbar{
+  top:43px;height:43px;min-height:43px;max-height:43px;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ .foundation-notes .notes-head,.foundation-notes .notes-toolbar{transition:none}
+}
+
+/* Explicitly paint the top-level dialog; a transparent dialog could let the
+   blue donor surface show through despite a dark editor. */
+dialog#foundationNotes.foundation-notes[open],
+dialog#foundationNotes.foundation-notes:fullscreen{
+ background-color:#242424!important;
+ background-image:none!important;
+ border:0!important;
+ outline:0!important;
+ box-shadow:none!important;
+}
+dialog#foundationNotes.foundation-notes::backdrop{
+ background:#242424!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+}
+
+/* Small phones have room for the three actions, not a five-item title bar.
+   On a save error, show a readable status without stealing writing space. */
+@media(max-width:720px){
+ .foundation-notes[data-mode="writing"] .notes-head{
+  gap:6px;
+  justify-content:space-between;
+ }
+ .foundation-notes[data-mode="writing"] .notes-headline{
+  display:none;
+ }
+ .foundation-notes[data-mode="writing"] .notes-sync:not([data-error="true"]){
+  display:none;
+ }
+ .foundation-notes[data-mode="writing"] .notes-lock{
+  margin-left:auto;
+ }
+ .foundation-notes[data-mode="writing"] .notes-sync[data-error="true"]{
+  position:fixed;
+  left:10px;
+  right:10px;
+  bottom:16px;
+  z-index:8;
+  max-width:none;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid #6b4545;
+  background:#352525;
+  color:#ffd2d2;
+  font-size:12px;
+  pointer-events:none;
+ }
+}

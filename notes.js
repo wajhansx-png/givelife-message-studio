@@ -105,14 +105,19 @@
  });
  async function toggleFullscreen(){
   try{
-   if(document.fullscreenElement===page)await document.exitFullscreen();
-   else if(typeof page.requestFullscreen==='function')await page.requestFullscreen({navigationUI:'hide'});
-   else setStatus('Full screen is unavailable on this browser.',true);
+   if(document.fullscreenElement){await document.exitFullscreen();return}
+   // Native fullscreen rejects modal <dialog> in some browsers. Fullscreen the
+   // document instead; its open Notes dialog remains the topmost visible layer.
+   const target=document.documentElement;
+   if(typeof target.requestFullscreen!=='function'){
+    setStatus('Full screen is unavailable on this browser.',true);return;
+   }
+   await target.requestFullscreen({navigationUI:'hide'});
   }catch(_){setStatus('Browser did not allow full screen.',true)}
  }
  fullscreenButton.addEventListener('click',toggleFullscreen);
  document.addEventListener('fullscreenchange',()=>{
-  const active=document.fullscreenElement===page;
+  const active=!!document.fullscreenElement;
   fullscreenButton.textContent=active?'Exit full screen':'Full screen';
   fullscreenButton.setAttribute('aria-pressed',String(active));
  });
@@ -303,7 +308,7 @@
  retry.onclick=()=>{retry.hidden=true;save()};
  async function back(){
   if(dirty){clearTimeout(saveTimer);await save();if(dirty){setStatus('Save failed. Use Retry save before leaving.',true);retry.hidden=false;return}}
-  if(document.fullscreenElement===page)await document.exitFullscreen().catch(()=>{});
+  if(document.fullscreenElement)await document.exitFullscreen().catch(()=>{});
   page.close();page.dataset.keyboard='closed';page.dataset.controls='closed';
  }
  el('notesBack').onclick=back;

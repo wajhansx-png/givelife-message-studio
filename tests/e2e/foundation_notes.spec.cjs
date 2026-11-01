@@ -45,6 +45,9 @@ test('phone notes: readable editing surface, toolbar and no sideways scrolling',
  await expect(editor).toBeVisible();
  await editor.fill('Find university representatives');
  await editor.press('ControlOrMeta+A');
+ // Formatting controls are hidden until the pointer reaches the top.
+ await page.mouse.move(130,18);
+ await expect(page.locator('.notes-toolbar')).toBeVisible();
  await page.getByRole('button',{name:'Bold',exact:true}).click();
  await expect(editor.locator('b,strong')).toContainText('Find university representatives');
  await page.locator('#notesStyle').selectOption('h2');
@@ -96,4 +99,66 @@ test('mobile virtual keyboard keeps Notes paper tall while the caret stays visib
  await page.setViewportSize({width:390,height:844});
  await expect(page.locator('#foundationNotes')).toHaveAttribute('data-keyboard','closed');
  expect((await page.locator('.notes-paper-scroll').boundingBox()).height).toBeGreaterThan(smaller.scroller);
+});
+
+test('quiet Notes keeps only writing visible; top-edge reveals controls and fullscreen',async({page,request})=>{
+ await open(page,request,1280,800);
+ await page.locator('#notesPassword').fill('test-preview-only-pin');
+ await page.locator('#notesUnlockButton').click();
+ await expect(page.locator('#notesEditor')).toBeVisible();
+ const head=page.locator('.notes-head'),toolbar=page.locator('.notes-toolbar');
+ // Pointer starts away from the top after entry so editing is distraction-free.
+ await page.mouse.move(920,600);
+ await expect(head).toBeHidden();
+ await expect(toolbar).toBeHidden();
+ const colors=await page.evaluate(()=>{
+  const page=document.getElementById('foundationNotes');
+  const paper=document.querySelector('.notes-paper');
+  const editor=document.getElementById('notesEditor');
+  return {
+   page:getComputedStyle(page).backgroundColor,
+   paper:getComputedStyle(paper).backgroundColor,
+   editor:getComputedStyle(editor).backgroundColor,
+   border:getComputedStyle(paper).borderTopWidth,
+   outline:getComputedStyle(editor).outlineStyle,
+   shadow:getComputedStyle(paper).boxShadow
+  };
+ });
+ expect(colors.page).toBe('rgb(36, 36, 36)');
+ expect(colors.paper).toBe('rgba(0, 0, 0, 0)');
+ expect(colors.editor).toBe('rgba(0, 0, 0, 0)');
+ expect(colors.border).toBe('0px');
+ expect(colors.outline).toBe('none');
+ expect(colors.shadow).toBe('none');
+ await page.locator('#notesEditor').fill('A focused foundation idea');
+ await expect(toolbar).toBeHidden();
+ await page.mouse.move(100,18);
+ await expect(head).toBeVisible();
+ await expect(toolbar).toBeVisible();
+ await expect(page.getByRole('button',{name:'Full screen',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Full screen',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>document.fullscreenElement?.id==='foundationNotes')).toBe(true);
+ await page.evaluate(()=>document.exitFullscreen());
+ await page.mouse.move(920,600);
+ await expect(toolbar).toBeHidden();
+ await page.keyboard.press('Alt+t');
+ await expect(toolbar).toBeVisible();
+ await expect(page.locator('#notesStyle')).toBeFocused();
+ await page.keyboard.press('Escape');
+ await expect(toolbar).toBeHidden();
+});
+test('mobile Notes opens a hidden toolbar by tapping top edge without shrinking editor',async({page,request})=>{
+ await open(page,request,390,844);
+ await page.locator('#notesPassword').fill('test-preview-only-pin');
+ await page.locator('#notesUnlockButton').click();
+ await expect(page.locator('#notesEditor')).toBeVisible();
+ await expect(page.locator('.notes-toolbar')).toBeHidden();
+ const height=(await page.locator('.notes-paper').boundingBox()).height;
+ await page.locator('#foundationNotes').dispatchEvent('pointerdown',{pointerType:'touch',clientX:12,clientY:16});
+ await expect(page.locator('.notes-toolbar')).toBeVisible();
+ await page.locator('#notesStyle').selectOption('h2');
+ await page.locator('#notesEditor').fill('Volunteer outreach');
+ expect((await page.locator('.notes-paper').boundingBox()).height).toBeGreaterThanOrEqual(height-2);
+ await page.locator('#foundationNotes').dispatchEvent('pointerdown',{pointerType:'touch',clientX:12,clientY:16});
+ await expect(page.locator('.notes-toolbar')).toBeHidden();
 });

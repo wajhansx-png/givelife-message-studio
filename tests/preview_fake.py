@@ -70,6 +70,9 @@ def preview_post(self):
  if '--test-api' in sys.argv and self.path=='/__test/seed':
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   body=json.loads(self.rfile.read(int(self.headers.get('Content-Length',0))))
+  if body.get('reset_notes'):
+   # Reset only test database, never production. Keep browser security sessions.
+   server.STORE.put('foundation_notes_v1',{'html':'','revision':0,'updated_at':0})
   if 'reply' in body:server.chat_add('app',str(body['reply']),turn_id='test-reply-'+str(time.time()))
   if 'group' in body:server.save_draft('group',str(body['group']))
   if 'incoming' in body:incoming.append({'id':'in-'+str(len(incoming)+1),'content':str(body['incoming']),'is_from_me':False,'timestamp':__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()})

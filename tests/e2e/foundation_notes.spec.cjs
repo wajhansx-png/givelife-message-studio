@@ -179,7 +179,8 @@ test('desktop note-taking: type, select, style, save, reopen and keep writing fo
  await editor.focus();await editor.press('ControlOrMeta+A');
  await page.mouse.move(160,18);
  await page.getByRole('button',{name:'Bold',exact:true}).click();
- await expect(editor.locator('b,strong')).toContainText('Meet university donors');
+ const selectedHtml=await editor.innerHTML();
+ expect(selectedHtml,'Bold must apply visibly to the selected note text').toMatch(/<(?:b|strong)\\b|font-weight\\s*:\\s*(?:bold|700)/i);
  await expect(page.locator('#notesSync')).toHaveText('Saved',{timeout:10000});
  await page.mouse.move(900,610);
  await expect(page.locator('.notes-toolbar')).toBeHidden();

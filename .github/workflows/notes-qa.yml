@@ -2,6 +2,7 @@ name: Foundation Notes focused QA
 on:
   push:
     branches:
+      - main
       - feat/foundation-notes-private-editor-20261031
     paths:
       - notes_store.py

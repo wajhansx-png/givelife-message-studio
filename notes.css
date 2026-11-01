@@ -392,6 +392,7 @@ html body #foundationNotes .notes-editor.notes-custom-caret{caret-color:transpar
 @media(forced-colors:active){.notes-caret{background:CanvasText}.notes-selection-tools{border-color:ButtonText}}
 
 /* Keep the page still; long notes scroll within their writing surface. */
+html body #foundationNotes .notes-editor{font-size:var(--notes-font-size,18px)!important}
 html:has(#foundationNotes[open]),body:has(#foundationNotes[open]){overflow:hidden!important}
 html body #foundationNotes .notes-paper-scroll{overflow:hidden!important;display:flex;min-height:0}
 html body #foundationNotes .notes-paper{display:flex!important;flex-direction:column;height:100%;min-height:0!important;max-height:100%;overflow:hidden;box-sizing:border-box}

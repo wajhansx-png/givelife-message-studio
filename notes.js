@@ -34,6 +34,8 @@
     </div>
     <section class="notes-workspace" id="notesWorkspace" hidden>
       <div class="notes-toolbar" role="toolbar" aria-label="Format your notes">
+        <button type="button" id="notesFontDown" aria-label="Decrease notes font size" title="Smaller text">A−</button>
+        <button type="button" id="notesFontUp" aria-label="Increase notes font size" title="Larger text">A+</button>
         <label class="notes-select-label"><span class="sr-only">Text style</span><select id="notesStyle" aria-label="Text style"><option value="p">Normal text</option><option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option></select></label>
         <span class="notes-separator" aria-hidden="true"></span>
         <button type="button" data-command="bold" aria-label="Bold" title="Bold (Ctrl+B)"><b>B</b></button>
@@ -60,6 +62,18 @@
  document.body.append(page);
  const el=id=>document.getElementById(id);
  const editor=el('notesEditor'),sync=el('notesSync'),retry=el('notesRetry');
+ let fontSize=18;
+ try{const stored=Number(localStorage.getItem('givelife-notes-font-size'));if(Number.isInteger(stored)&&stored>=14&&stored<=28)fontSize=stored}catch{}
+ const paintFont=()=>{
+  editor.style.setProperty('--notes-font-size',fontSize+'px');
+  el('notesFontDown').disabled=fontSize<=14;el('notesFontUp').disabled=fontSize>=28;
+  el('notesFontUp').title='Larger text · '+fontSize+'px';el('notesFontDown').title='Smaller text · '+fontSize+'px';
+ };
+ for(const [id,delta] of [['notesFontDown',-1],['notesFontUp',1]])el(id).onclick=()=>{
+  fontSize=Math.max(14,Math.min(28,fontSize+delta));paintFont();
+  try{localStorage.setItem('givelife-notes-font-size',String(fontSize))}catch{}
+ };
+ paintFont();
  let revision=0,loaded=false,dirty=false,saving=false,saveTimer=null;
  // Writing mode is fully quiet. Hover the top 125px (desktop), tap the top
  // edge (touch), or press Alt+T (keyboard) to reveal actions. Editor focus

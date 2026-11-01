@@ -44,3 +44,18 @@ test('selection lists, More options and outside selections are scoped to Notes',
  await page.evaluate(()=>{const r=document.createRange();r.selectNodeContents(document.querySelector('.notes-headline'));const s=getSelection();s.removeAllRanges();s.addRange(r)});
  await expect(bar).not.toBeVisible();
 });
+
+test('Notes font controls are bounded and remembered after refresh',async({page})=>{
+ await open(page,390);
+ const editor=page.locator('#notesEditor');
+ await expect(editor).toHaveCSS('font-size','18px');
+ await page.keyboard.press('Alt+t');
+ await page.getByRole('button',{name:'Increase notes font size'}).click();
+ await expect(editor).toHaveCSS('font-size','19px');
+ await page.getByRole('button',{name:'Decrease notes font size'}).click();
+ await expect(editor).toHaveCSS('font-size','18px');
+ await page.getByRole('button',{name:'Increase notes font size'}).click();
+ await page.reload();
+ await expect(editor).toHaveCSS('font-size','19px');
+ expect(await editor.innerHTML()).not.toContain('--notes-font-size');
+});

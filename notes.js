@@ -17,6 +17,7 @@
      <div class="notes-headline"><span class="notes-kicker">GIVELIFE FOUNDATION</span><h1>My Notes</h1></div>
      <span class="notes-sync" id="notesSync" role="status" aria-live="polite"></span>
      <button type="button" class="notes-lock" id="notesLock" hidden>Lock</button>
+     <button type="button" class="notes-fullscreen" id="notesFullscreen" aria-pressed="false" title="Hide browser chrome while writing">Full screen</button>
     </header>
     <div class="notes-center" id="notesLocked" hidden>
       <div class="notes-unlock">
@@ -50,7 +51,7 @@
       </div>
       <div class="notes-paper-scroll">
        <main class="notes-paper">
-        <div id="notesEditor" class="notes-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Your foundation notes" data-placeholder="Start writing your ideas…&#10;&#10;Think about donors, volunteers, new projects, or anything you want to remember." spellcheck="true"></div>
+        <div id="notesEditor" class="notes-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Your foundation notes" data-placeholder="" spellcheck="true"></div>
        </main>
       </div>
       <footer class="notes-foot"><span id="notesHint">Your ideas are private · Saved to GiveLife</span><button type="button" id="notesRetry" hidden>Retry save</button></footer>
@@ -60,6 +61,61 @@
  const el=id=>document.getElementById(id);
  const editor=el('notesEditor'),sync=el('notesSync'),retry=el('notesRetry');
  let revision=0,loaded=false,dirty=false,saving=false,saveTimer=null,retryDelay=0;
+ // Writing mode is fully quiet. Hover the top 125px (desktop), tap the top
+ // edge (touch), or press Alt+T (keyboard) to reveal actions. Editor focus
+ // alone must NOT reveal the toolbar: typing should never feel distracting.
+ const notesHead=page.querySelector('.notes-head'),notesToolbar=page.querySelector('.notes-toolbar');
+ const fullscreenButton=el('notesFullscreen');
+ page.dataset.mode='loading';
+ page.dataset.controls='closed';
+ function revealControls(){if(page.dataset.mode==='writing')page.dataset.controls='open'}
+ function concealControls(force=false){
+  if(page.dataset.mode!=='writing')return;
+  if(!force&&(notesHead.contains(document.activeElement)||notesToolbar.contains(document.activeElement)))return;
+  page.dataset.controls='closed';
+ }
+ page.addEventListener('pointermove',event=>{
+  if(page.dataset.mode!=='writing'||event.pointerType==='touch')return;
+  const top=event.clientY-page.getBoundingClientRect().top;
+  if(top<=125)revealControls();
+  else if(top>160&&!notesHead.contains(event.target)&&!notesToolbar.contains(event.target))concealControls(true);
+ });
+ page.addEventListener('pointerleave',()=>concealControls());
+ page.addEventListener('pointerdown',event=>{
+  if(event.pointerType!=='touch'||page.dataset.mode!=='writing')return;
+  const top=event.clientY-page.getBoundingClientRect().top;
+  if(top<=38&&!notesHead.contains(event.target)&&!notesToolbar.contains(event.target)){
+   event.preventDefault();
+   page.dataset.controls=page.dataset.controls==='open'?'closed':'open';
+  }
+ });
+ page.addEventListener('focusin',event=>{
+  if(notesHead.contains(event.target)||notesToolbar.contains(event.target))revealControls();
+ });
+ page.addEventListener('keydown',event=>{
+  if(page.dataset.mode!=='writing')return;
+  if(event.altKey&&!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='t'){
+   event.preventDefault();
+   page.dataset.controls=page.dataset.controls==='open'?'closed':'open';
+   if(page.dataset.controls==='open')el('notesStyle').focus({preventScroll:true});
+  }
+  if(event.key==='Escape'&&page.dataset.controls==='open'&&!document.fullscreenElement){
+   event.preventDefault();event.stopPropagation();concealControls(true);editor.focus({preventScroll:true});
+  }
+ });
+ async function toggleFullscreen(){
+  try{
+   if(document.fullscreenElement===page)await document.exitFullscreen();
+   else if(typeof page.requestFullscreen==='function')await page.requestFullscreen({navigationUI:'hide'});
+   else setStatus('Full screen is unavailable on this browser.',true);
+  }catch(_){setStatus('Browser did not allow full screen.',true)}
+ }
+ fullscreenButton.addEventListener('click',toggleFullscreen);
+ document.addEventListener('fullscreenchange',()=>{
+  const active=document.fullscreenElement===page;
+  fullscreenButton.textContent=active?'Exit full screen':'Full screen';
+  fullscreenButton.setAttribute('aria-pressed',String(active));
+ });
  // A stable paper height prevents the editor itself from collapsing when a
  // mobile keyboard opens; only its scrollable viewport becomes shorter.
  const mobileNotes=matchMedia('(max-width:720px)');
@@ -135,6 +191,8 @@
   el('notesLocked').hidden=!locked;
   el('notesWorkspace').hidden=locked;
   el('notesLock').hidden=locked;
+  page.dataset.mode=locked?'locked':'writing';
+  page.dataset.controls='closed';
  }
  async function load(){
   setStatus('Loading…');
@@ -243,7 +301,11 @@
   rememberDirty();
  });
  retry.onclick=()=>{retry.hidden=true;save()};
- async function back(){if(dirty){clearTimeout(saveTimer);await save();if(dirty){setStatus('Save failed. Use Retry save before leaving.',true);retry.hidden=false;return}}page.close();page.dataset.keyboard='closed'}
+ async function back(){
+  if(dirty){clearTimeout(saveTimer);await save();if(dirty){setStatus('Save failed. Use Retry save before leaving.',true);retry.hidden=false;return}}
+  if(document.fullscreenElement===page)await document.exitFullscreen().catch(()=>{});
+  page.close();page.dataset.keyboard='closed';page.dataset.controls='closed';
+ }
  el('notesBack').onclick=back;
  el('notesLock').onclick=async()=>{
   if(dirty){await save();if(dirty){setStatus('Save changes before locking.',true);return}}

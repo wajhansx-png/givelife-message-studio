@@ -51,7 +51,7 @@ test('phone notes: readable editing surface, toolbar and no sideways scrolling',
  // Formatting controls are hidden until the pointer reaches the top.
  await page.mouse.move(130,18);
  await expect(page.locator('.notes-toolbar')).toBeVisible();
- await page.getByRole('button',{name:'Bold',exact:true}).click();
+ await page.locator('.notes-toolbar').getByRole('button',{name:'Bold',exact:true}).click();
  await expect(editor.locator('b,strong')).toContainText('Find university representatives');
  await page.locator('#notesStyle').selectOption('h2');
  await expect(editor.locator('h2')).toHaveCount(1);
@@ -177,7 +177,7 @@ test('desktop note-taking: type, select, style, save, reopen and keep writing fo
  await expect(page.locator('.notes-toolbar')).toBeHidden();
  await editor.focus();await editor.press('ControlOrMeta+A');
  await page.mouse.move(160,18);
- await page.getByRole('button',{name:'Bold',exact:true}).click();
+ await page.locator('.notes-toolbar').getByRole('button',{name:'Bold',exact:true}).click();
  const selectedHtml=await editor.innerHTML();
  expect(selectedHtml,'Bold must apply visibly to the selected note text').toMatch(/<(?:b|strong)\b|font-weight\s*:\s*(?:bold|700)/i);
  await expect(page.locator('#notesSync')).toHaveText('Saved',{timeout:10000});

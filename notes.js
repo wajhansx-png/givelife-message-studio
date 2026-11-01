@@ -92,20 +92,23 @@
  page.addEventListener('focusin',event=>{
   if(notesHead.contains(event.target)||notesToolbar.contains(event.target))revealControls();
  });
+ let shortcutFocusPending=false;
+ document.addEventListener('keyup',event=>{
+  if(event.key!=='Alt'||!shortcutFocusPending)return;
+  shortcutFocusPending=false;
+  requestAnimationFrame(()=>{
+   if(page.open&&page.dataset.mode==='writing'&&page.dataset.controls==='open')
+    el('notesStyle').focus({preventScroll:true});
+  });
+ });
  document.addEventListener('keydown',event=>{
   if(!page.open||page.dataset.mode!=='writing')return;
   if(event.altKey&&!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='t'){
    event.preventDefault();
    page.dataset.controls=page.dataset.controls==='open'?'closed':'open';
-   if(page.dataset.controls==='open'){
-    const style=el('notesStyle');
-    style.focus({preventScroll:true});
-    requestAnimationFrame(()=>{
-     if(page.open&&page.dataset.controls==='open'&&!notesToolbar.contains(document.activeElement)){
-      style.focus({preventScroll:true});
-     }
-    });
-   }
+   // Alt keyup is the reliable moment: Chromium may restore the editor's
+   // focus when the modifier is released, undoing focus set on keydown.
+   shortcutFocusPending=page.dataset.controls==='open';
   }
   if(event.key==='Escape'&&page.dataset.controls==='open'&&!document.fullscreenElement){
    event.preventDefault();event.stopPropagation();concealControls(true);editor.focus({preventScroll:true});

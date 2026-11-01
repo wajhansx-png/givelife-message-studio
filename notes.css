@@ -311,3 +311,36 @@ dialog#foundationNotes.foundation-notes::backdrop{
  backdrop-filter:none!important;
  -webkit-backdrop-filter:none!important;
 }
+
+/* Small phones have room for the three actions, not a five-item title bar.
+   On a save error, show a readable status without stealing writing space. */
+@media(max-width:720px){
+ .foundation-notes[data-mode="writing"] .notes-head{
+  gap:6px;
+  justify-content:space-between;
+ }
+ .foundation-notes[data-mode="writing"] .notes-headline{
+  display:none;
+ }
+ .foundation-notes[data-mode="writing"] .notes-sync:not([data-error="true"]){
+  display:none;
+ }
+ .foundation-notes[data-mode="writing"] .notes-lock{
+  margin-left:auto;
+ }
+ .foundation-notes[data-mode="writing"] .notes-sync[data-error="true"]{
+  position:fixed;
+  left:10px;
+  right:10px;
+  bottom:16px;
+  z-index:8;
+  max-width:none;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid #6b4545;
+  background:#352525;
+  color:#ffd2d2;
+  font-size:12px;
+  pointer-events:none;
+ }
+}

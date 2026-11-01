@@ -92,8 +92,8 @@
  page.addEventListener('focusin',event=>{
   if(notesHead.contains(event.target)||notesToolbar.contains(event.target))revealControls();
  });
- page.addEventListener('keydown',event=>{
-  if(page.dataset.mode!=='writing')return;
+ document.addEventListener('keydown',event=>{
+  if(!page.open||page.dataset.mode!=='writing')return;
   if(event.altKey&&!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='t'){
    event.preventDefault();
    page.dataset.controls=page.dataset.controls==='open'?'closed':'open';

@@ -56,3 +56,47 @@
  .donor-page .donor-notes-shortcut{min-height:44px;white-space:nowrap;padding:7px 12px;flex:none}
  .donor-page .donor-head .donor-total{margin-left:0}
 }
+
+/* Mobile writing mode: the keyboard shortens the visible viewport, not the
+   document itself. The paper remains full-sized and scrolls behind the caret. */
+@media (max-width:720px){
+ .foundation-notes{
+  height:var(--notes-visible-height,100dvh);
+  max-height:none;
+  top:var(--notes-visible-top,0px);
+  bottom:auto;
+ }
+ .notes-shell,.notes-workspace{min-height:0}
+ .notes-head{height:56px;min-height:56px;max-height:56px;flex-shrink:0;padding:5px 10px;gap:8px}
+ .notes-toolbar{
+  min-height:49px;max-height:49px;flex-wrap:nowrap;flex-shrink:0;
+  overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:5px;padding:5px 10px;
+ }
+ .notes-toolbar::-webkit-scrollbar{display:none}
+ .notes-toolbar button,.notes-toolbar select,.notes-toolbar label{flex-shrink:0}
+ .notes-paper-scroll{
+  min-height:0;display:block;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
+  scroll-padding-top:16px;scroll-padding-bottom:56px;padding:7px 8px 9px;
+ }
+ .notes-paper{
+  display:block;width:100%;min-height:var(--notes-paper-min-height,460px);
+  flex-shrink:0;margin:0 auto;
+ }
+ .notes-editor{
+  display:block;box-sizing:border-box;min-height:var(--notes-paper-min-height,460px);
+  height:auto;padding:22px 20px;line-height:1.65;
+ }
+ .foundation-notes[data-keyboard="open"] .notes-head{
+  height:46px;min-height:46px;max-height:46px;padding-top:2px;padding-bottom:2px;
+ }
+ .foundation-notes[data-keyboard="open"] .notes-kicker{display:none}
+ .foundation-notes[data-keyboard="open"] .notes-headline h1{font-size:16px}
+ .foundation-notes[data-keyboard="open"] .notes-toolbar{
+  height:43px;min-height:43px;max-height:43px;padding:3px 9px;
+ }
+ .foundation-notes[data-keyboard="open"] .notes-toolbar button,
+ .foundation-notes[data-keyboard="open"] .notes-toolbar select{height:35px}
+ .foundation-notes[data-keyboard="open"] .notes-paper-scroll{padding-top:4px;padding-bottom:4px}
+}

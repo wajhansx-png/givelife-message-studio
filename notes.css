@@ -234,8 +234,9 @@
  outline:none;
 }
 .foundation-notes .notes-editor:empty:before{content:none}
-.foundation-notes .notes-foot,
-.foundation-notes #notesHint{height:0;min-height:0;padding:0;display:none}
+.foundation-notes .notes-foot{height:0;min-height:0;padding:0;overflow:visible;pointer-events:none;background:transparent}
+.foundation-notes #notesHint{display:none!important}
+.foundation-notes #notesRetry{pointer-events:auto}
 .foundation-notes #notesRetry:not([hidden]){
  display:block;
  position:fixed;

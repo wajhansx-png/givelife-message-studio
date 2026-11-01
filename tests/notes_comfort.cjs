@@ -18,9 +18,9 @@ const path=require('node:path');const ROOT=path.resolve(__dirname,'..');const as
   const metrics=await page.evaluate(()=>{
    const paper=document.querySelector('.notes-paper'),editor=document.querySelector('.notes-editor');
    const p=paper.getBoundingClientRect(),e=editor.getBoundingClientRect();
-   return {border:getComputedStyle(paper).borderTopWidth,top:e.top+parseFloat(getComputedStyle(editor).paddingTop),left:e.left+parseFloat(getComputedStyle(editor).paddingLeft),width:p.width,bottom:p.bottom,outer:getComputedStyle(document.querySelector('dialog')).borderTopWidth,overflow:document.documentElement.scrollWidth>innerWidth};
+   return {border:getComputedStyle(paper).borderTopWidth,top:e.top+parseFloat(getComputedStyle(editor).paddingTop),left:e.left+parseFloat(getComputedStyle(editor).paddingLeft),width:p.width,bottom:p.bottom,editorBorder:getComputedStyle(editor).borderTopWidth,radius:getComputedStyle(paper).borderTopLeftRadius,outer:getComputedStyle(document.querySelector('dialog')).borderTopWidth,overflow:document.documentElement.scrollWidth>innerWidth};
   });
-  assert.equal(metrics.border,'1px',`writing border at ${width}`);assert.equal(metrics.outer,'0px');assert.equal(metrics.overflow,false);
+  assert.equal(metrics.border,'1px',`writing border at ${width}`);assert.equal(metrics.outer,'0px');assert.equal(metrics.editorBorder,'0px');assert(parseFloat(metrics.radius)>=12);assert.equal(metrics.overflow,false);
   assert(metrics.top<(width>720&&width<1100?155:115),`text starts higher at ${width}: ${metrics.top}`);
   assert(metrics.bottom>=870,`paper uses available height at ${width}`);
   if(width>=1100){

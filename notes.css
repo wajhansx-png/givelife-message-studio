@@ -211,8 +211,8 @@
  width:min(100%,860px);
  min-height:100%;
  flex-shrink:0;
- border:1px solid #424242;
- border-radius:10px;
+ border:1px solid rgba(255,255,255,.08);
+ border-radius:16px;
  background:transparent;
 }
 .foundation-notes .notes-editor{
@@ -228,7 +228,7 @@
 .foundation-notes .notes-editor:focus,
 .foundation-notes .notes-editor:focus-visible,
 .foundation-notes .notes-editor:active{
- border:1px solid #424242;
+ border:0;
  box-shadow:none;
  outline:none;
 }
@@ -271,7 +271,7 @@
  .foundation-notes .notes-paper{
   display:block;width:100%;
   min-height:var(--notes-paper-min-height,460px);
-  border:1px solid #424242;border-radius:8px;box-shadow:none;
+  border:1px solid rgba(255,255,255,.08);border-radius:12px;box-shadow:none;
  }
  .foundation-notes .notes-editor{
   display:block;box-sizing:border-box;

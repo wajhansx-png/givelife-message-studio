@@ -295,3 +295,19 @@
 @media(prefers-reduced-motion:reduce){
  .foundation-notes .notes-head,.foundation-notes .notes-toolbar{transition:none}
 }
+
+/* Explicitly paint the top-level dialog; a transparent dialog could let the
+   blue donor surface show through despite a dark editor. */
+dialog#foundationNotes.foundation-notes[open],
+dialog#foundationNotes.foundation-notes:fullscreen{
+ background-color:#242424!important;
+ background-image:none!important;
+ border:0!important;
+ outline:0!important;
+ box-shadow:none!important;
+}
+dialog#foundationNotes.foundation-notes::backdrop{
+ background:#242424!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+}

@@ -97,7 +97,15 @@
   if(event.altKey&&!event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='t'){
    event.preventDefault();
    page.dataset.controls=page.dataset.controls==='open'?'closed':'open';
-   if(page.dataset.controls==='open')requestAnimationFrame(()=>el('notesStyle').focus({preventScroll:true}));
+   if(page.dataset.controls==='open'){
+    const style=el('notesStyle');
+    style.focus({preventScroll:true});
+    requestAnimationFrame(()=>{
+     if(page.open&&page.dataset.controls==='open'&&!notesToolbar.contains(document.activeElement)){
+      style.focus({preventScroll:true});
+     }
+    });
+   }
   }
   if(event.key==='Escape'&&page.dataset.controls==='open'&&!document.fullscreenElement){
    event.preventDefault();event.stopPropagation();concealControls(true);editor.focus({preventScroll:true});

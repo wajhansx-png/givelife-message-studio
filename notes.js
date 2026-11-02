@@ -80,13 +80,10 @@
  // alone must NOT reveal the toolbar: typing should never feel distracting.
  const notesHead=page.querySelector('.notes-head'),notesToolbar=page.querySelector('.notes-toolbar');
  const fullscreenButton=el('notesFullscreen');
- // Wide screens share one controls row; touch layouts retain their separate
- // horizontally scrollable toolbar. Moving the same nodes keeps selections
- // and formatting handlers intact.
+ // Keep the same formatting controls beside the editor at every screen size.
  const wideNotes=matchMedia('(min-width:1100px)');
  function placeToolbar(){
-  if(wideNotes.matches&&page.dataset.mode==='writing')notesHead.insertBefore(notesToolbar,sync);
-  else el('notesWorkspace').prepend(notesToolbar);
+  el('notesWorkspace').prepend(notesToolbar);
  }
  placeToolbar();wideNotes.addEventListener('change',placeToolbar);
  page.dataset.mode='loading';

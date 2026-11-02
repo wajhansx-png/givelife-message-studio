@@ -1,0 +1,26 @@
+const {test,expect}=require('@playwright/test');
+for(const width of [1440,390,320])test(`Notes right formatting column ${width}`,async({page})=>{
+ await page.setViewportSize({width,height:850});
+ await page.addInitScript(()=>localStorage.setItem('givelife-cloud-key','manual-fix-preview-key'));
+ await page.request.post('/__test/seed',{headers:{Authorization:'Bearer manual-fix-preview-key'},data:{reset_notes:true}});
+ await page.goto('/#/donors/all/notes');
+ await page.locator('#notesPassword').fill('test-preview-only-pin');await page.locator('#notesUnlockButton').click();
+ const editor=page.locator('#notesEditor'),rail=page.locator('.notes-toolbar');
+ await expect(rail).toBeVisible();
+ await editor.fill('Foundation task');await editor.press('ControlOrMeta+A');
+ await rail.getByRole('button',{name:'Bold',exact:true}).click();
+ await expect(editor.locator('b,strong')).toContainText('Foundation task');
+ await rail.getByLabel('Text color',{exact:true}).selectOption('#f4a4ad');
+ await rail.getByLabel('Text color',{exact:true}).selectOption('#ededed');
+ await rail.getByRole('button',{name:'Increase notes font size'}).click();
+ await expect(editor).toHaveCSS('font-size','19px');
+ const box=await page.locator('.notes-paper').boundingBox(),tools=await rail.boundingBox();
+ expect(box.y).toBeLessThanOrEqual(72);expect(box.x+box.width).toBeLessThanOrEqual(tools.x);
+ expect(tools.x+tools.width).toBeLessThanOrEqual(width);
+ await editor.fill(Array.from({length:100},(_,i)=>'Task '+i).join('\n'));
+ await editor.evaluate(e=>e.scrollTop=0);await editor.hover();await page.mouse.wheel(0,700);
+ await expect.poll(()=>editor.evaluate(e=>e.scrollTop)).toBeGreaterThan(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollTop)).toBe(0);
+ await expect(page.locator('#notesSync')).toHaveText('Saved');
+ await page.screenshot({path:`test-results/notes-rail-${width}.png`});
+});

@@ -66,6 +66,8 @@ def owner_text(text):
  text=re.split(r'(?i)(?:message says|text says|transcript|chat log|conversation log|see fixes in logic|see fn remove|summarize this|analyse this|analyze this)\s*:',text,maxsplit=1)[0]
  return text
 
+QUIET=re.compile(r"(?i)\b(?:quiet|silent|no (?:posting|sending|posts)|don.?t (?:post|send)|nothing (?:posts|sends))\b.*\b\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:to|till|until|se|-)\s*\d{1,2}")
+DELEGATE=re.compile(r"(?i)^\s*(?:please\s+)?(?:tell|ask|remind|let)\s+(?:akhtar|(?:the |my )?team ?mate|my team)\s+(?:to|that)\b")
 def intent(text):
  t=owner_text(text)
  query=manual_commands.question_request(t) or bool(re.search(r'(?i)^show (?:me )?(?:what|status)\b',t.strip()))
@@ -73,7 +75,7 @@ def intent(text):
  inspect=bool(re.match(r'(?i)^\s*(?:please\s+)?(?:show|preview|draft|explain|review|summari[sz]e|analy[sz]e|tell me)\b',t))
  negative=bool(re.search(r"(?i)\b(?:don'?t|dont|do not|never|stop)\s+(?:ever\s+)?(?:send|sending|resend|resending|re-send|post|posting|repost|share|sharing|forward|bhejo|bhej|dm|dms)\b|\b(preview only|draft only)\b",t))
  dm_verb=bool(re.match(r'(?i)^\s*dm\s+(?!(?:has|have|had|is|was|looks|needs|should|does|caption|format|structure|name|text|icons|remove|edit|change)\b)\S',t))
- sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query and not inspect and not manual_commands.deferred_request(t)
+ sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query and not inspect and not manual_commands.deferred_request(t) and not DELEGATE.match(t)
  if re.search(r'(?i)\bsend\s+(?:me|us)\b.{0,50}\b(?:10|ten|\d{1,2})\b.{0,40}\b(?:versions?|variants?|wordings?)\b',t):sending=False
  # "Send a more emotional message" can request wording. An explicit destination
  # or immediate-send phrase disambiguates it; otherwise only prepare the rewrite.
@@ -126,7 +128,7 @@ def permitted(name,text):
  if task_assignment_only(text) and name!='team_action':return False
  if name=='donor_action':return bool(re.search(r'(?i)\b(donor|donors|important|donated)\b',owner_text(text)))
  if name=='shortcut_action':return bool(re.search(r'(?i)\b(shortcuts?|when i say|macro)\b',owner_text(text)))
- if name=='team_action':return bool(re.search(r'(?i)\b(team|teammate|team mate|tasks?|kaam)\b',owner_text(text)))
+ if name=='team_action':return bool(re.search(r'(?i)\b(team|teammate|team mate|tasks?|kaam|akhtar)\b',owner_text(text)))
  if name=='volunteer_action':return bool(re.search(r'(?i)\bvolunteers?\b',owner_text(text)))
  if name=='case_action':return bool(re.search(r'(?i)\bcases?\b',owner_text(text)))
  if name=='send_text_list':return intent(text)['send'] and len(re.findall(r'(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}',owner_text(text)))>=1
@@ -135,6 +137,8 @@ def permitted(name,text):
  if name in ('set_message','new_wording') and variants:return False
  if name=='hold' and manual_commands.dm_control(t):return False
  if name=='schedule_task':return (timed_tasks.requested(t) or timed_tasks.cancel_request(t)) and not i['query'] and not i['negative']
+ if name=='set_quiet_hours' and QUIET.search(owner_text(text)):return True
+ if name=='schedule_task' and QUIET.search(owner_text(text)):return False
  if name in SEND|{'autopilot','hold','delete_last_message','set_left','money_came','set_dms','set_pace','set_group_pace','pause_group','resume_group','set_quiet_hours'} and manual_commands.deferred_request(t):return False
  if name in SEND|{'autopilot','hold','resume_group','pause_group'} and timed_tasks.requested(t):return False
  if name in ('send_appeal','send_dm_appeal') and literal_text_to_person(t):return False # "send hi to Ali" is those words only, never the poster and saved appeal

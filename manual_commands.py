@@ -63,7 +63,7 @@ def outside_literals(text):
 
 def question_request(text):
  if re.search(r'(?i)(?:[;!?]\s*|\band then\s+)(?:please\s+)?(?:send|resend|post|set|change|write|stop|pause|resume)\b',outside_literals(text)):return False
- return bool(re.match(r'(?i)^\s*(?:what|why|how|when|where|who|did|have|has|was|were|is|are|should|can i|could i|would it|if i|suppose|imagine)\b',outside_literals(text)) or re.match(r'(?i)^\s*(?:(?:can|could|would|will) you\s+)?(?:please\s+)?(?:tell|show|let) me\s+(?:if|whether|when|why|how|what)\b',outside_literals(text)))
+ return bool(re.match(r'(?i)^\s*(?:what|why|how|when|where|who|did|have|has|was|were|is(?!\s+(?:message|msg|caption|dm|ko|line|ka|ke|mein|me)\b)|are|should|can i|could i|would it|if i|suppose|imagine)\b',outside_literals(text)) or re.match(r'(?i)^\s*(?:(?:can|could|would|will) you\s+)?(?:please\s+)?(?:tell|show|let) me\s+(?:if|whether|when|why|how|what)\b',outside_literals(text)))
 
 def deferred_request(text):
  return bool(re.search(r'(?i)\b(?:later|not now|tomorrow|tonight|next (?:day|week|month)|in\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?)|after\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?))\b|\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',outside_literals(text)))
@@ -76,7 +76,7 @@ def balance_amount(text,allow_with=True):
  """Use an amount bound to balance wording, never a year/group count/phone."""
  t=outside_literals(text);number=r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*'+UNIT+r'?(?!\w)'
  patterns=[number+r'\s*(?:is\s+)?(?:left|remaining|remain|baqi|baki|bacha|bache|bachey|bachi|bachay|bacha hai|rehte|reh gaye)\b',
-           r'\b(?:remaining(?:\s+amount)?|amount(?:\s+(?:left|remaining))?|balance|baqi)\s*(?:is|to|=|:)?\s*(?:rs\.?\s*)?'+number+r'(?!\s*(?:people|groups?|members?|donors?|dms?|messages?|msgs?|contacts?|numbers?|times?|days?|hours?|hrs?|minutes?|mins?|lines?|words?|versions?))',
+           r'\b(?:remaining(?:\s+amount)?|amount(?:\s+(?:left|remaining))?|balance|baqi|(?:bache|bachey|bachay|bacha)(?:\s+(?:hain|hai))?)\s*(?:is|to|=|:)?\s*(?:rs\.?\s*)?'+number+r'(?!\s*(?:people|groups?|members?|donors?|dms?|messages?|msgs?|contacts?|numbers?|times?|days?|hours?|hrs?|minutes?|mins?|lines?|words?|versions?))',
            r'\bleft\s*(?:is|=|:)?\s*(?:rs\.?\s*)?(?=\d[\d,]*\s*(?:k|hazar|hazaar|thousand|lakh|lac)\b|\d{3,})'+number+r'(?!\s*(?:people|groups?|members?|minutes?|hours?|messages?|dms?|donors?|times?))',
            *([r'\bwith\s+(?:rs\.?\s*)?'+number+r'(?!\s*(?:people|groups?|members?|minutes?|mins?|mnts?|mints?|hours?|hrs?|secs?|seconds?|days?|donors?|dms?|messages?|msgs?|times?|lines?|words?|versions?|contacts?|numbers?|gap|rest|delay|break|batch\w*))(?!\s*(?:\w+\s+)?(?:gap|rest|delay|break)\b)'] if allow_with else [])]
  candidates=[]

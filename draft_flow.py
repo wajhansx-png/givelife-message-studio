@@ -76,11 +76,14 @@ def editing_request(text):
  t=re.sub(r'(?i)^(?:please|kindly|can you|could you|would you)\s+','',str(text).strip())
  # Settings talk ("change dm gap to 5 minutes", "remove the poster") never edits the saved wording.
  if re.search(r'(?i)\b(?:gap|limit|daily|interval|pace|speed|delay|batch|chunk|poster|picture|image|timer|resume|rest)\b',t) and not re.search(r'(?i)\b(?:caption|message|wording|lines?|paragraphs?|hook|opening|ending|text|sentence|phrase)\b',t):return False
+ if re.match(r'(?i)^(?:bold|bolden|italic|italicize|translate|convert|reformat)\b',t) and not re.search(r'(?i)\b(?:poster|image|picture)\b',t):return True
+ if re.search(r'(?i)\b(?:write|make|rewrite|translate|convert|put)\s+(?:it|this|that|the \w+)\s+(?:in|to|into)\s+(?:roman \s*)?(?:urdu|english|hindi)\b',t):return True
+ if not re.search(r'\d',t) and re.search(r'(?i)\b(?:message|msg|caption|dm|line|lines|paragraph|amount|wording)\b.*\b(?:karo|kar do|likho|likh do|badlo|hatao|hata do|nikalo|nikal do|dalo|daalo|chh?ota|bada)\b',t):return True
  if re.search(r'(?i)^show\b.*\b(?:first|before)\b.*\b(?:make|write|prepare|draft|compose)\b',t):return True
  if re.search(r"(?i)^(?:let s|lets|let's)\s+(?:send|post)\b.*\b(?:message|caption)\b",t):return True
  if re.fullmatch(r'(?i)(?:(?:show|write|make|give)(?: me)?\s+)?(?:a\s+)?(?:new|fresh)\s+(?:(?:group|dm)\s+)?(?:message|caption|draft|wording)[.!]*',t):return True
  if re.match(r'(?i)^(?:remember|always|never|from now|in future)\b',t) and not re.search(r'(?i)\band\s+(?:rewrite|change|edit|make)\b',t):return False
- if re.match(r'(?i)^(?:what|why|how|did|have|is|can|could|show|preview|explain|review|summari[sz]e|analy[sz]e)\b',t):return False
+ if re.match(r'(?i)^(?:what|why|how|did|have|is(?!\s+(?:message|msg|caption|dm|ko|line|ka|ke|mein|me)\b)|can|could|show|preview|explain|review|summari[sz]e|analy[sz]e)\b',t):return False
  if re.match(r'(?i)^(?:delete|remove)\b',t) and re.search(r'(?i)\b(?:message|post)\b',t) and not re.search(r'(?i)\b(?:line|words?|paragraph|wording|caption)\b',t):return False
  subject=r'(?:message|dm|caption|draft|hook|opening|lines?|paragraphs?|wording|phrase|sentence|bullet|format|bold|italic|report|icon|emoji|emojis|end|ending|closing|beginning|dua|duas|signature|top|bottom|first line|last line|payment details|amount line)'
  operation=r'(?:write|rewrite|edit|change|replace|remove|delete|add|move|put|make|use|keep|lead|start|shorten|improve|reword)'

@@ -91,6 +91,11 @@ def owner_text(text):
  text=re.split(r'(?i)(?:message says|text says|transcript|chat log|conversation log|see fixes in logic|see fn remove|summarize this|analyse this|analyze this)\s*:',text,maxsplit=1)[0]
  return text
 
+HOLD_OBJ=r'(?:everything|ev\w*thing|all|sending|posting|posts?|messages?|dms?|whatsapp|auto(?:pilot)?|now|please|immediately|asap|it all|sab|sab kuch)'
+HOLD_NOW=re.compile(r'(?i)^\s*(?:(?:please|ok|okay|now|abhi)\s+)*(?:hold|pause|stop|wait|resume|continue|unhold|release)(?:\s+(?:on|up))?[ .!]*$|\b(?:hold|pause|stop|wait|resume|continue|unhold|release)\s+(?:the \s*|all \s*|every \s*)?'+HOLD_OBJ+r'\b|\b(?:hold|pause|stop)\b.{0,15}\bfor\s+\d|\bwrong whatsapp\b|\bconnected now\b')
+PACE_VERB=r'(?i)\b(?:every|after|pace|speed|slow|fast|pause|resume|quiet|enable|disable|start|restart|stop)\b'
+ON_OFF=r'(?i)\b(?:dms?|auto\w*|posting|sending)\s+(?:on|off)\b|\b(?:on|off)\s+(?:dms?|auto\w*|posting)\b|\b(?:turn|switch)\s+(?:on|off)\b'
+PACE_SCOPE=r'(?i)\b(?:post\w*|send\w*|groups?|main|fiverr|upwork|uet|community|toprated|top rated|freelance|dms?|donors?|auto\w*|pace|gap|interval|quiet|hours?|minutes?|mins?)\b'
 QUIET=re.compile(r"(?i)\b(?:quiet|silent|no (?:posting|sending|posts)|don.?t (?:post|send)|nothing (?:posts|sends))\b.*\b\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:to|till|until|se|-)\s*\d{1,2}")
 TO_ME=re.compile(r'(?i)\b(?:send|post|share|text|dm|message|bhej\w*)\s+(?:it |that |this |the \w+ |a \w+ |me )?(?:to )?me\b|\b(?:share|send|post)\b.{0,30}\bwith me\b|^\s*(?:can|could|would|will) you (?:please )?(?:send|post|share)\s*[?!.]*\s*$')
 DELEGATE=re.compile(r"(?i)^\s*(?:please\s+)?(?:tell|ask|remind|let)\s+(?:akhtar|(?:the |my )?team ?mate|my team)\s+(?:to|that)\b")
@@ -177,14 +182,14 @@ def permitted(name,text):
  if name in verbs and re.search(r"(?i)\b(?:don'?t|dont|do not|never)\s+(?:"+verbs[name]+r')\b',t):return False
  inspect=bool(re.match(r'(?i)^\s*(?:please\s+)?(?:show|preview|explain|review|summari[sz]e|analy[sz]e|tell me)\b',t))
  if inspect and name not in ('set_message','prepare_dm'):return False
- if name=='delete_last_message':return bool(re.search(r'(?i)\b(delete|remove|revoke)\b',t)) and not re.search(r"(?i)\b(dont|don't|do not|never)\b",t)
- if name=='hold':return bool(re.search(r'(?i)\b(hold|wait|pause|stop|resume|continue|unhold|wrong whatsapp|connected now)\b',t))
+ if name=='delete_last_message':return bool(re.search(r'(?i)\b(?:delete|remove|revoke)\b.{0,40}\b(?:messages?|msgs?|posts?|last|latest)\b|\b(?:messages?|msgs?|posts?)\b.{0,40}\b(?:delete|remove|revoke)\b',t)) and not re.search(r"(?i)\b(dont|don't|do not|never)\b",t)
+ if name=='hold':return HOLD_NOW.search(t) is not None
  if name=='autopilot':return bool(re.search(r'(?i)\b(?:auto|autopilot)\b',t) and re.search(r'(?i)\b(?:on|off|enable|disable|start|restart|stop|turn|switch|resume|pause)\b',t))
  if name in ('remember','add_rule'):return bool(re.search(r'(?i)\b(remember|always|never|from now|in future|daily|every|quiet|pause|pace|slow|fast|yaad rakho)\b',t))
  if name=='delete_rule':return bool(re.search(r'(?i)\b(forget|delete|remove)\b.*\b(rule|memory|preference)\b',t))
  if name in ('set_left','money_came'):
   return any((p.get('kind')=='money')==(name=='money_came') for p in financial_plans(t))
- if name in ('set_group_pace','set_pace','pause_group','resume_group','set_quiet_hours','set_dms'):return bool(re.search(r'(?i)\b(every|after|pace|speed|slow|fast|pause|resume|quiet|enable|disable|start|stop|on|off)\b',t))
+ if name in ('set_group_pace','set_pace','pause_group','resume_group','set_quiet_hours','set_dms'):return bool((re.search(PACE_VERB,t) or re.search(ON_OFF,t)) and re.search(PACE_SCOPE,t))
  if name=='edit_dm_name':return bool(re.search(r'(?i)\b(name|call him|call her|greeting)\b',t))
  # A general adjective like "new" in "find new volunteers" cannot authorize
  # a caption edit. Require a genuinely message-directed drafting instruction.

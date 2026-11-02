@@ -87,6 +87,7 @@ def parse(text,now=None):
  auto=bool(re.search(r'\b(auto|autopilot)\b',low))
  resume=bool(re.search(r'\b(resume|continue|restart)\b|\bstart\s+(?:sending|posting)\b',low))
  if resume:
+  if re.search(r'\b(?:dms?|dm s|direct messages?|donor dms?)\b',low) and not manual_commands.groups(instruction):return None # donor DMs resume through the DM controls
   action='resume';keys=manual_commands.groups(instruction)
   if 'test' in keys:raise ValueError('The test group has no automatic posting. Schedule a single send to it instead.')
   if not keys and not auto and not re.match(r'^(?:please\s+)?(?:resume|continue|restart)\s+(?:at|by|in|after)\b',low):raise ValueError('Which groups should resume? For example: resume freelance at 11am.')

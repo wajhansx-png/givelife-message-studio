@@ -332,7 +332,23 @@ class DonorIntegration:
             if due is not None:
                 if not self.paused:return {'reply':'DMs are not stopped, so there is nothing to resume at that time. Nothing was changed.','paused':False}
                 return self.schedule_resume(dt.datetime.fromtimestamp(due,timed_tasks.PKT).strftime('%Y-%m-%dT%H:%M'),request_id)
-        if control=='stop_dms':return self.pause_personal()
+        if control=='stop_dms':
+            # "pause dms for 1 hour" / "hold dms till 11am" pause now and resume at that time.
+            import timed_tasks
+            span=re.search(r'(?i)\bfor\s+(\d+(?:\.\d+)?)\s*(min\w*|mnts?|hours?|hrs?)\b',t)
+            until=re.search(r'(?i)\b(?:till|until|by)\b',t)
+            if span or (until and timed_tasks.due_time(t) is not None):
+                due=time.time()+float(span[1])*(3600 if span[2].casefold().startswith('h') else 60) if span else timed_tasks.due_time(t)
+                result=self.pause_personal()
+                try:
+                    stamp=dt.datetime.fromtimestamp(due,timed_tasks.PKT).strftime('%Y-%m-%dT%H:%M')
+                    later=self.schedule_resume(stamp,request_id)
+                except Exception as e:
+                    return {'reply':result['reply']+' I could not schedule the resume: '+str(e)+' Press Resume DMs when ready.','paused':True}
+                return {'reply':'DMs stopped. '+later['reply'],'paused':True,'resume':later.get('resume')}
+            if timed_tasks.due_time(t) is not None:
+                return {'reply':'I did not change anything. Say "stop dms" to stop now, or "hold dms till 11am" to stop now and resume at 11am. Stopping later at a set time is not scheduled.','paused':self.paused}
+            return self.pause_personal()
         if control=='resume_dms':return {'reply':self.resume_personal()}
         if re.fullmatch(r'(?i)(?:please\s+)?(?:(?:send|start|run|do)\s+(?:the\s+|my\s+)?(?:dms?|dm batch(?:es)?|batches|donor dms?)|dm\s+(?:the\s+)?(?:important|them)(?:\s+donors?)?)(?:\s+(?:to\s+)?(?:important(?:\s+donors?)?|them|now|please|again|everyone))*[.!]*',t):
             if self.app.CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it before starting a donor batch.')

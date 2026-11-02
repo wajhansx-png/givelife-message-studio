@@ -74,6 +74,8 @@ def preview_request(text):
 
 def editing_request(text):
  t=re.sub(r'(?i)^(?:please|kindly|can you|could you|would you)\s+','',str(text).strip())
+ # Settings talk ("change dm gap to 5 minutes", "remove the poster") never edits the saved wording.
+ if re.search(r'(?i)\b(?:gap|limit|daily|interval|pace|speed|delay|batch|chunk|poster|picture|image|timer|resume|rest)\b',t) and not re.search(r'(?i)\b(?:caption|message|wording|lines?|paragraphs?|hook|opening|ending|text|sentence|phrase)\b',t):return False
  if re.search(r'(?i)^show\b.*\b(?:first|before)\b.*\b(?:make|write|prepare|draft|compose)\b',t):return True
  if re.search(r"(?i)^(?:let s|lets|let's)\s+(?:send|post)\b.*\b(?:message|caption)\b",t):return True
  if re.fullmatch(r'(?i)(?:(?:show|write|make|give)(?: me)?\s+)?(?:a\s+)?(?:new|fresh)\s+(?:(?:group|dm)\s+)?(?:message|caption|draft|wording)[.!]*',t):return True

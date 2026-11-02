@@ -4,7 +4,7 @@ import datetime as dt
 import unittest
 import test_manual_sends as fixture
 from test_manual_sends import app
-import timed_tasks,chat_policy
+import timed_tasks,chat_policy,manual_commands,draft_flow
 
 NOW=dt.datetime(2026,11,3,9,0,tzinfo=timed_tasks.PKT).timestamp()
 
@@ -56,5 +56,38 @@ class ResumeDmsAtATime(unittest.TestCase):
   out=hub.command('resume dms at 11am','transcript-3')
   self.assertIn('not stopped',str(out))
   self.assertFalse(hub.paused)
+
+class SettingsWordsAreNotMoneyOrStops(unittest.TestCase):
+ def test_gap_and_donor_counts_never_become_the_balance(self):
+  for text in ('dm 20 donors with 4 min gap','with 20 donors','dm 30 donors with 2 hours rest','send with 4 min gap'):
+   with self.subTest(text=text):self.assertIsNone(manual_commands.parse(text))
+  self.assertEqual(manual_commands.parse('with 5000 remaining')['amount'],5000)
+
+ def test_poster_setting_does_not_stop_dms(self):
+  for text in ('dm poster off','dm without poster'):
+   with self.subTest(text=text):self.assertIsNone(manual_commands.dm_control(text))
+  self.assertEqual(manual_commands.dm_control('stop dms'),'stop_dms')
+
+ def test_gap_and_poster_requests_never_edit_the_caption(self):
+  for text in ('change dm gap to 5 minutes','remove the dm poster','set dm daily limit 30'):
+   with self.subTest(text=text):self.assertFalse(draft_flow.editing_request(text))
+  self.assertTrue(draft_flow.editing_request('shorten the dm'))
+  self.assertTrue(draft_flow.editing_request('remove the poster line from the message'))
+
+class PauseThenResumeLater(unittest.TestCase):
+ setUp=fixture.SendTests.setUp
+ tearDown=fixture.SendTests.tearDown
+ def test_pause_for_an_hour_stops_now_and_schedules_the_resume(self):
+  hub=app.donors();hub.resume_personal()
+  out=hub.command('pause dms for 1 hour','pause-hour')
+  self.assertTrue(hub.paused)
+  self.assertEqual(hub.resume_status().get('state'),'Pending')
+  self.assertIn('resume at',str(out))
+
+ def test_stop_at_a_clock_time_changes_nothing(self):
+  hub=app.donors();hub.resume_personal()
+  out=hub.command('stop dms at 11pm','stop-at')
+  self.assertFalse(hub.paused)
+  self.assertIn('did not change anything',str(out))
 
 if __name__=='__main__':unittest.main()

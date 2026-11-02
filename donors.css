@@ -32,3 +32,132 @@ html body #donorPasteDialog label.batch-fresh.paste-step-time{display:flex!impor
 html body #donorPasteDialog #pastePoster{width:18px;min-width:18px;height:18px;margin:0;flex:none}
 @media(max-width:420px){html body #donorBatchPicker,html body #donorPasteDialog{padding:14px}html body #donorBatchForm{gap:8px}}
 
+
+
+/* Donor Messages shares the focused black editor design of Group Preview. */
+#donorsPage[data-panel="messages"]{background:#232323;color:#ededed}
+#donorsPage[data-panel="messages"] .donor-shell{width:100%;max-width:none;padding:18px 24px;gap:0}
+#donorsPage[data-panel="messages"] .donor-head,
+#donorsPage[data-panel="messages"] .donor-toolbar,
+#donorsPage[data-panel="messages"] .donor-bottom,
+#donorsPage[data-panel="messages"] .donor-progress,
+#donorsPage[data-panel="messages"] .donor-batch-list,
+#donorsPage[data-panel="messages"] .hide-row{display:none!important}
+#donorsPage[data-panel="messages"] .donor-messages{
+ display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;
+ padding:0;background:#232323;color:#ededed;font-family:Arial,system-ui,sans-serif;
+}
+#donorsPage[data-panel="messages"] .bank-heading{
+ width:min(1600px,100%);margin:0 auto 12px;min-height:48px;
+ display:flex;align-items:center;gap:16px;flex:none;font-size:13px;color:#d1d1d1;
+}
+#donorsPage[data-panel="messages"] .bank-heading .bank-back{
+ order:0;display:inline-flex;align-items:center;justify-content:center;
+ min-height:40px;border:1px solid #ffffff24;border-radius:9px;padding:8px 14px;
+ background:#2b2b2b;color:#ededed;font-size:13px;font-weight:700;cursor:pointer;
+}
+#donorsPage[data-panel="messages"] .bank-current{
+ order:1;color:#ededed;font-size:15px;white-space:nowrap;
+}
+#donorsPage[data-panel="messages"] .bank-heading>span:not(.bank-current){
+ order:2;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#bcbcbc;
+}
+#donorsPage[data-panel="messages"] .bank-heading .bank-top-info{order:3;flex:0!important;font-size:11px;color:#a9a9a9}
+#donorsPage[data-panel="messages"] .bank-workspace{
+ display:grid;grid-template-columns:minmax(0,1fr) 128px 280px;gap:12px;
+ width:min(1600px,100%);margin:0 auto;flex:1;min-height:0;align-items:stretch;
+}
+#donorsPage[data-panel="messages"] .bank-message.bank-detail{
+ min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column;
+ border:1px solid #ffffff12;border-radius:20px;padding:0;background:#232323;color:#ededed;
+}
+#donorsPage[data-panel="messages"] .bank-message.bank-detail header{
+ padding:14px 26px 0;margin:0;min-height:44px;flex:none;
+ color:#ededed;font-size:14px;
+}
+#donorsPage[data-panel="messages"] .bank-preview{
+ flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;
+ background:transparent;color:#ededed;border:0;border-radius:0;
+ padding:24px 42px 36px;line-height:1.55;white-space:pre-wrap;
+ overflow-wrap:anywhere;font-family:Arial,system-ui,sans-serif;
+ scrollbar-width:thin;font-size:20px;
+}
+#donorsPage[data-panel="messages"] .bank-preview .bank-line{min-height:1.55em}
+#donorsPage[data-panel="messages"] .bank-preview .bank-line.blank{min-height:.75em}
+#donorsPage[data-panel="messages"] .bank-message textarea{
+ flex:1;min-height:0;width:100%;height:100%;resize:none;box-sizing:border-box;
+ border:0;border-radius:0;background:transparent;color:#ededed;caret-color:#65a7ff;
+ padding:24px 42px 36px;font:20px/1.55 Arial,system-ui,sans-serif;
+ outline:none;overflow:auto;overscroll-behavior:contain;
+}
+#donorsPage[data-panel="messages"] .bank-actions{
+ min-width:0;min-height:0;display:flex;flex-direction:column;align-self:start;
+ gap:7px;max-height:100%;overflow:auto;scrollbar-width:thin;
+}
+#donorsPage[data-panel="messages"] .bank-actions button,
+#donorsPage[data-panel="messages"] .bank-picker button{
+ border:1px solid #ffffff24;background:#2b2b2b;color:#ededed;
+ border-radius:9px;padding:8px 10px;min-height:44px;font-size:13px;font-weight:650;cursor:pointer;
+}
+#donorsPage[data-panel="messages"] .bank-actions button:hover,
+#donorsPage[data-panel="messages"] .bank-picker button:hover{background:#353535}
+#donorsPage[data-panel="messages"] button:focus-visible{outline:2px solid #82b8ff;outline-offset:2px}
+#donorsPage[data-panel="messages"] .bank-actions button:disabled{opacity:.45;cursor:default}
+#donorsPage[data-panel="messages"] .bank-actions>.bank-regenerate{
+ min-height:48px;margin-top:7px;background:#315cd0;color:#fff;
+}
+#donorsPage[data-panel="messages"] .bank-pagination{
+ display:flex;flex-direction:column;align-items:stretch;gap:7px;margin:0;
+}
+#donorsPage[data-panel="messages"] .bank-pagination .bank-back-bottom{display:none}
+#donorsPage[data-panel="messages"] .bank-pagination>span{
+ text-align:center;color:#c6c6c6;font-size:12px;padding:3px 0;
+}
+#donorsPage[data-panel="messages"] .bank-picker{
+ min-width:0;min-height:0;display:flex;flex-direction:column;gap:7px;
+ align-self:stretch;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;
+ background:#272727;border:1px solid #ffffff12;border-radius:16px;padding:16px;
+}
+#donorsPage[data-panel="messages"] .bank-picker-title{
+ margin:0 0 9px;font-size:16px;line-height:1.3;color:#ededed;
+}
+#donorsPage[data-panel="messages"] .bank-picker button{
+ display:block;flex:none;text-align:center;white-space:normal;min-height:46px;
+}
+#donorsPage[data-panel="messages"] .bank-picker button[aria-pressed="true"]{
+ background:#315cd0;color:#fff;border-color:#4775eb;
+}
+#donorsPage[data-panel="messages"] .bank-picker button:last-child{
+ margin-bottom:4px;
+}
+@media(max-width:850px){
+ #donorsPage[data-panel="messages"] .donor-shell{padding:8px;gap:0}
+ #donorsPage[data-panel="messages"] .bank-heading{min-height:44px;gap:8px;margin-bottom:8px}
+ #donorsPage[data-panel="messages"] .bank-heading .bank-top-info{display:none}
+ #donorsPage[data-panel="messages"] .bank-heading>span:not(.bank-current){font-size:11px}
+ #donorsPage[data-panel="messages"] .bank-workspace{
+  grid-template-columns:minmax(0,1fr) 82px;
+  grid-template-rows:minmax(210px,1fr) minmax(130px,28dvh);
+  gap:7px;overflow:auto;
+ }
+ #donorsPage[data-panel="messages"] .bank-message.bank-detail{border-radius:12px}
+ #donorsPage[data-panel="messages"] .bank-message.bank-detail header{padding:8px 12px 0;min-height:32px}
+ #donorsPage[data-panel="messages"] .bank-preview,
+ #donorsPage[data-panel="messages"] .bank-message textarea{padding:12px;font-size:16px;line-height:1.45}
+ #donorsPage[data-panel="messages"] .bank-actions button{min-height:44px;font-size:11px;padding:6px 4px}
+ #donorsPage[data-panel="messages"] .bank-picker{
+  grid-column:1/-1;min-height:0;border-radius:12px;
+  padding:10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;align-content:start;
+ }
+ #donorsPage[data-panel="messages"] .bank-picker-title{
+  grid-column:1/-1;font-size:13px;margin:0 0 3px;
+ }
+ #donorsPage[data-panel="messages"] .bank-picker button{min-height:44px;font-size:11px;padding:5px}
+}
+@media(max-width:380px){
+ #donorsPage[data-panel="messages"] .bank-heading .bank-current{font-size:13px}
+ #donorsPage[data-panel="messages"] .bank-heading .bank-back{padding:6px 8px}
+}
+@media(prefers-reduced-motion:reduce){
+ #donorsPage[data-panel="messages"] *{scroll-behavior:auto!important}
+}

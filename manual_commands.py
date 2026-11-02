@@ -10,8 +10,14 @@ ALIASES={
  'free':('all 5 freelance groups','all five freelance groups','all freelance groups','all freelance','5 freelance','freelance','free'),
  'all':('all 6 groups','all six groups','all groups','all'),
  'test':('givelife test','give life test','test group','test')}
-SEND=re.compile(r'\b(send|resend|post|share|bhejo|bhej|daalo|dalo|sebd|semd)\b|بھیج|ارسال',re.I)
-CONTROL=re.compile(r'^(?:(?:man|please|bhai|bro|yaar|now|abhi|send|resend|post|it|this|that|again|do|go|and|restart|reset|the|gap|timer|message|msg|poster|image|picture|appeal|with|updated|amount|right|away|asap|immediately|fast|quick|only|current|latest|hadith|hadees|haditg|caption|draft|full|proper|correct|sebd|semd|bhejo|abhi)(?:\s+|(?=[.!?]*$)))+[.!?]*$',re.I)
+_SEND_RX=re.compile(r'\b(send|resend|post|share|bhejo|bhej|daalo|dalo|sebd|semd)\b|بھیج|ارسال',re.I)
+# "the post is old", "good post", "post status" use the word as a noun: they are not a command to send.
+NOUN_POST=re.compile(r'(?i)\b(?:the|a|an|this|that|my|our|your|good|bad|nice|old|new|last|first|next|group|main|each|every|his|her|their|latest|current|saved|daily|morning|evening|same|great|late|failed|another)\s+(?:posts?|shares?|sends?)\b|\b(?:posts?|shares?|sends?)\s+(?:count|status|log|history|button|time|date)\b|\b(?:posts?|shares?)\s+(?:is|was|are|were|has|had|failed|status|count|looks|mortem|price|time|date|limit|history|log|numbers?|empty)\b')
+class _SendPattern:
+ def search(self,text,*args):return _SEND_RX.search(NOUN_POST.sub(' ',str(text)),*args)
+ pattern=_SEND_RX.pattern
+SEND=_SendPattern()
+CONTROL=re.compile(r'^(?:(?:man|please|bhai|bro|yaar|now|abhi|send|resend|post|it|this|that|again|do|go|and|restart|reset|the|gap|timer|message|msg|poster|image|picture|appeal|with|updated|amount|right|away|asap|immediately|fast|quick|only|current|latest|hadith|hadees|haditg|caption|draft|full|proper|correct|sebd|semd|bhejo|abhi|saved|post|posts|new|fresh|next|same|usual|regular|normal|standard|ready|final)(?:\s+|(?=[.!?]*$)))+[.!?]*$',re.I)
 
 def norm(text):
  t=str(text).casefold().replace('give-life','givelife')
@@ -105,7 +111,7 @@ def dm_control(text):
  return None
 
 def parse(text):
- t=str(text).strip();t=re.sub(r'^(?:please|kindly|can you|could you|would you)\s+(?=send|resend|delete|remove|revoke|text|message)', '',t,flags=re.I);low=norm(t);low=re.sub(r'\s+',' ',low)
+ t=str(text).strip();t=re.sub(r'^(?:please|kindly|can you|could you|would you)\s+(?=(?:send|resend|delete|remove|revoke|text|message)\s+\S)', '',t,flags=re.I);low=norm(t);low=re.sub(r'\s+',' ',low)
  if not t:return None
  if re.search(r'exclusive\s+upwork|37\s*(?:member|members)|120363432572916292|120363431093838536',low):return {'kind':'refuse_target'}
  if question_request(t) or deferred_request(t):return None

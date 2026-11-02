@@ -92,6 +92,7 @@ def owner_text(text):
  return text
 
 QUIET=re.compile(r"(?i)\b(?:quiet|silent|no (?:posting|sending|posts)|don.?t (?:post|send)|nothing (?:posts|sends))\b.*\b\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:to|till|until|se|-)\s*\d{1,2}")
+TO_ME=re.compile(r'(?i)\b(?:send|post|share|text|dm|message|bhej\w*)\s+(?:it |that |this |the \w+ |a \w+ |me )?(?:to )?me\b|\b(?:share|send|post)\b.{0,30}\bwith me\b|^\s*(?:can|could|would|will) you (?:please )?(?:send|post|share)\s*[?!.]*\s*$')
 DELEGATE=re.compile(r"(?i)^\s*(?:please\s+)?(?:tell|ask|remind|let)\s+(?:akhtar|(?:the |my )?team ?mate|my team)\s+(?:to|that)\b")
 def intent(text):
  t=owner_text(text)
@@ -100,7 +101,7 @@ def intent(text):
  inspect=bool(re.match(r'(?i)^\s*(?:please\s+)?(?:show|preview|draft|explain|review|summari[sz]e|analy[sz]e|tell me)\b',t))
  negative=bool(re.search(r"(?i)\b(?:don'?t|dont|do not|never|stop)\s+(?:ever\s+)?(?:send|sending|resend|resending|re-send|post|posting|repost|share|sharing|forward|bhejo|bhej|dm|dms)\b|\b(preview only|draft only)\b",t))
  dm_verb=bool(re.match(r'(?i)^\s*dm\s+(?!(?:has|have|had|is|was|looks|needs|should|does|caption|format|structure|name|text|icons|remove|edit|change)\b)\S',t))
- sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query and not inspect and not manual_commands.deferred_request(t) and not DELEGATE.match(t)
+ sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query and not inspect and not manual_commands.deferred_request(t) and not DELEGATE.match(t) and not TO_ME.search(t)
  if re.search(r'(?i)\bsend\s+(?:me|us)\b.{0,50}\b(?:10|ten|\d{1,2})\b.{0,40}\b(?:versions?|variants?|wordings?)\b',t):sending=False
  # "Send a more emotional message" can request wording. An explicit destination
  # or immediate-send phrase disambiguates it; otherwise only prepare the rewrite.

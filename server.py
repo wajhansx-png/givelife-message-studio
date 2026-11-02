@@ -441,8 +441,10 @@ def start_send_job(keys,caption,manual=False,request_id=None,with_picture=True):
     return ACTIVE  # a double click observes the existing in-flight send; never duplicates it
    if not manual:return None
    cancel_jobs()
+  captions=focus_bank().reserve_groups(caption,len(keys)) if STORE and 'test' not in keys else None
   ident=uuid.uuid4().hex
   JOBS[ident]={'done':False,'results':[],'message':'Sending now…','manual':bool(manual),'keys':keys,'caption':caption,'with_picture':bool(with_picture)}
+  if captions:JOBS[ident]['captions']=captions
   JOB_CANCEL[ident]=threading.Event();ACTIVE=ident;LAST_JOB['id']=ident
   if request_id:
    REQUEST_JOBS[request_id]=ident
@@ -456,7 +458,8 @@ def run_job(job_id,keys,caption,queue=False):
  global ACTIVE
  job=JOBS[job_id];event=JOB_CANCEL.setdefault(job_id,threading.Event());last_send=None
  try:
-  for key in keys:
+  for index,key in enumerate(keys):
+   outgoing=job.get('captions',[caption]*len(keys))[index]
    if event.is_set() or on_hold():break
    name,jid=('Givelife test','120363431210327603@g.us') if key=='test' else GROUPS[key]
    if last_send is not None:
@@ -467,11 +470,11 @@ def run_job(job_id,keys,caption,queue=False):
     job.update(message='Sending to '+name,next_send_at=None,next_target=key);save_job(job_id)
     OWNER_GUARD.cancel_event=event
     try:
-     if job.get('with_picture',True):result=send_image(jid,caption,not job.get('manual',False))
+     if job.get('with_picture',True):result=send_image(jid,outgoing,not job.get('manual',False))
      else:
-      result=send_text(jid,caption)
+      result=send_text(jid,outgoing)
       if result.get('code')=='SUCCESS':
-       record_delivery(jid,caption,result);LAST_LOCAL[jid]=time.time()
+       record_delivery(jid,outgoing,result);LAST_LOCAL[jid]=time.time()
        if STORE:
         saved=STORE.get('last_sent',{});saved[jid]=time.time();STORE.put('last_sent',saved)
     finally:OWNER_GUARD.cancel_event=None
@@ -2252,7 +2255,10 @@ class Handler(BaseHTTPRequestHandler):
    try:
     kind=body.get('kind');bank=focus_bank()
     if kind not in ('group','dm'):raise ValueError('Choose group or DM.')
-    return self.reply(bank.retry(kind) if body.get('action')=='retry' else bank.save(kind,body.get('text'),body.get('revision')))
+    action=body.get('action')
+    if action=='manual':return self.reply(bank.manual(kind,body.get('messages')))
+    if action in ('retry','regenerate'):return self.reply(bank.retry(kind,fresh=action=='regenerate'))
+    return self.reply(bank.save(kind,body.get('text'),body.get('revision')))
    except ValueError as e:return self.reply({'error':str(e)},status=409)
   if self.path=='/drafts':
    if any(not isinstance(body.get(k),str) or len(body[k])>10000 for k in ('group','dm')):return self.reply({'error':'Both captions must be text, at most 10,000 characters each.'},status=400)

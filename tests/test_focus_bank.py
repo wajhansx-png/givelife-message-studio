@@ -48,5 +48,21 @@ class FocusTests(unittest.TestCase):
   self.assertEqual(b.get('group')['state'],'Ready');self.assertEqual(len(b.get('group')['items']),10);self.assertEqual(b.get('group')['items'][:2],partial['items'])
  def test_old_failed_bank_restarts_once_after_generator_upgrade(self):
   b=self.make();source=self.drafts['group'];b.app.STORE.put('focus_wording',{'group':{'source':source,'revision':'old','items':[],'state':'Needs retry','error':'old failure'}})
-  row=b.get('group');self.assertEqual(row['state'],'Generating');self.assertEqual(row['error'],'');self.assertEqual(row['generator'],2)
+  row=b.get('group');self.assertEqual(row['state'],'Generating');self.assertEqual(row['error'],'');self.assertEqual(row['generator'],3)
+ def test_manual_messages_are_distinct_and_group_sends_never_reuse(self):
+  b=self.make()
+  with patch.object(b,'start'):b.save('group',self.drafts['group'])
+  messages=['Owner message '+str(i) for i in range(10)];b.manual('group',messages)
+  first=b.reserve_groups(self.drafts['group'],6);second=b.reserve_groups(self.drafts['group'],4)
+  self.assertEqual(len(set(first+second)),10)
+  self.assertEqual(b.reserve_groups(self.drafts['group'],1),[self.drafts['group']])
+  with self.assertRaises(ValueError):b.reserve_groups(self.drafts['group'],1)
+  with self.assertRaises(ValueError):b.manual('group',['duplicate','duplicate'])
+ def test_regeneration_keeps_manual_slots_and_invalidates_old_worker(self):
+  b=self.make()
+  with patch.object(b,'start'):old=b.save('group',self.drafts['group'])
+  row=b.manual('group',['A manually approved message'])
+  self.assertFalse(b.record('group',old['revision'],{'items':['stale']}))
+  with patch.object(b,'start'):fresh=b.retry('group',fresh=True)
+  self.assertEqual(fresh['items'],['A manually approved message']);self.assertNotEqual(fresh['revision'],row['revision'])
 if __name__=='__main__':unittest.main()

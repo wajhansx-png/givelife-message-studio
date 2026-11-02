@@ -8,5 +8,5 @@ for(const width of [1440,390])test(`DM focus keeps real sending controls ${width
  await page.locator('#dmName').fill('Ali');await page.locator('#dmPhone').fill('03001112222');await page.locator('#sendDm').click();
  await expect.poll(()=>sent?.phone).toBe('923001112222');expect(sent.message).toContain('thank you for helping this family.');expect(sent.message).toContain('Ali Brother');
  await page.screenshot({path:`test-results/focus-dm-${width}.png`});await page.locator('#focusBack').click();await expect(page.locator('#messageFocus')).toBeHidden();await expect(page.locator('#sendDm')).toHaveCount(1);
- await page.getByRole('button',{name:'Group',exact:true}).click();await page.locator('#desktopPreview').click();await expect(page.locator('#messageFocus .dm-send')).toHaveCount(0);
+ await page.getByRole('button',{name:'Group',exact:true}).click();await expect(page.locator('#messageFocus .dm-send')).toHaveCount(0);
 });

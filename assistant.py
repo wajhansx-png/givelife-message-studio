@@ -104,15 +104,18 @@ def _system(memory):
     return SYSTEM
 
 
-def _chat_raw(key, system, tools, messages, max_tokens=None):
+def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None):
     """One call to DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
     model=os.environ.get('DEEPSEEK_REASONING_MODEL') or MODEL
     thinking=model in ('deepseek-reasoner','deepseek-flash','deepseek-v4-pro') or os.environ.get('DEEPSEEK_THINKING')=='enabled'
+    if thinking_mode is False:
+        model=os.environ.get('DEEPSEEK_WRITING_MODEL') or MODEL;thinking=False
     limit=int(max_tokens or os.environ.get('DEEPSEEK_MAX_TOKENS','8192' if thinking else '4096'))
     body = {'model': model, 'messages': [{'role': 'system', 'content': system}] + messages,
             'max_tokens': max(2048,min(16384,limit))}
     if thinking:body.update(thinking={'type':'enabled'},reasoning_effort='high')
     else:body['temperature']=0.2
+    if thinking_mode is False:body.update(thinking={'type':'disabled'},temperature=0.7)
     if tools:
         body.update(tools=tools, tool_choice='auto')
     req = urllib.request.Request(API_URL, data=json.dumps(body).encode('utf-8'), method='POST',

@@ -183,7 +183,7 @@ SOURCE>>>{avoid_text}
 
 
 def _call(key, prompt):
-    message = assistant._chat_raw(key, SYSTEM, [], [{'role': 'user', 'content': prompt}], max_tokens=8192)
+    message = assistant._chat_raw(key, SYSTEM, [], [{'role': 'user', 'content': prompt}], max_tokens=8192, thinking_mode=False)
     content = message.get('content') if isinstance(message, dict) else ''
     return _json_list(content)
 

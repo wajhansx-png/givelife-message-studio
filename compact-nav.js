@@ -23,6 +23,16 @@
   const badge=panel.querySelector('.team-badge'),summary=panel.parentElement.querySelector('summary');
   if(badge){const update=()=>{summary.dataset.unread=String(!badge.hidden);summary.setAttribute('aria-label',badge.hidden?'More app options':'More app options, new Team updates')};new MutationObserver(update).observe(badge,{attributes:true,childList:true,subtree:true});update()}
  }
+ // Keep common preview actions visible, retaining their existing handlers.
+ const messageTools=document.querySelector('.msgcard .tools');
+ if(messageTools){
+  const overflow=messageTools.querySelector('.overflow-tools');
+  const copy=document.getElementById('copy');
+  if(copy){copy.textContent='Copy';messageTools.insertBefore(copy,overflow)}
+  const poster=document.createElement('button');poster.type='button';poster.id='previewChangePoster';poster.className='tool';poster.textContent='Change poster';poster.onclick=()=>{document.getElementById('posterDialog').dataset.returnRoute=window.Nav?.path?.()||'preview';window.DonorHub?.openPoster()};
+  messageTools.insertBefore(poster,document.getElementById('edit'));
+  const hiddenPoster=overflow?.querySelector('button:not([id])');if(hiddenPoster)hiddenPoster.remove();
+ }
  document.getElementById('openTeam')?.remove();
  const head=document.querySelector('.donor-head');
  if(head){

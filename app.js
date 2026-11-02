@@ -502,7 +502,7 @@ function restoreSmallDialog(path,open=false){for(const screen of smallScreens){c
 addEventListener('DOMContentLoaded',()=>{
  for(const screen of smallScreens){const dialog=$(screen.id);if(!dialog)continue;
   new MutationObserver(()=>{if(dialog.open)Nav.go(smallRoute(screen))}).observe(dialog,{attributes:true,attributeFilter:['open']});
-  dialog.addEventListener('close',()=>{const target=smallRoute(screen);if(Nav.path()===target){Nav.go(screen.path?'settings':target.split('/').slice(0,2).join('/'),{replace:true});renderNav()}});
+  dialog.addEventListener('close',()=>{const target=smallRoute(screen);if(Nav.path()===target){Nav.go(dialog.dataset.returnRoute||(screen.path?'settings':target.split('/').slice(0,2).join('/')),{replace:true});delete dialog.dataset.returnRoute;renderNav()}});
  }
 });
 let navigationEpoch=0;

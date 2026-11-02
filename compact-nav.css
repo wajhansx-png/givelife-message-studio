@@ -57,3 +57,7 @@ html body #donorsPage #donorNotice[data-error=true]{background:var(--surface2);c
 #donorNotice>span{flex:1;min-width:0;overflow-wrap:anywhere}
 #donorNotice .donor-notice-close{display:grid;place-items:center;flex:0 0 32px;width:32px;min-height:32px;padding:0;border:0;background:transparent;color:inherit;font-size:23px;cursor:pointer}
 #donorNotice:empty{display:none}
+
+.msgcard .tools{flex-wrap:wrap;gap:6px}
+.msgcard .tools #previewChangePoster,.msgcard .tools #edit,.msgcard .tools #fresh,.msgcard .tools #copy{display:inline-flex!important;align-items:center;justify-content:center;min-height:40px;padding:0 12px;font-size:13px;flex-shrink:0}
+@media(max-width:599px){.msgcard .tools .ctx{flex:1 1 100%}.msgcard .tools #previewChangePoster,.msgcard .tools #edit,.msgcard .tools #fresh,.msgcard .tools #copy{min-height:44px;padding:0 10px}.msgcard .tools .sp{display:none}}

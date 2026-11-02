@@ -2,7 +2,7 @@
 conversation: they continue the request just discussed, finish it, and never widen what may be sent."""
 import json,unittest
 from unittest.mock import patch
-import assistant,chat_runtime,chat_policy,draft_flow
+import assistant,chat_runtime,chat_policy,draft_flow,manual_commands
 import test_manual_sends as fixture
 from test_manual_sends import app
 
@@ -112,6 +112,17 @@ class AutopilotWording(unittest.TestCase):
    with self.subTest(phrase=phrase):
     self.assertTrue(chat_policy.permitted('autopilot',phrase))
   self.assertFalse(chat_policy.permitted('autopilot',"don't turn off auto"))
+
+class UrduAndHinglishCommands(unittest.TestCase):
+ def test_everyday_phrasings_run_without_the_model(self):
+  expected={'ab 3000 bache hain':('amount',3000),'1500 aaye hain':('money',1500),'Rs 1500 aye hain':('money',1500),
+   'stop sending':('hold',None),'rukk jao':('hold',None),'resume everything':('resume',None),'continue sending':('resume',None),
+   'chalu karo':('resume',None),'dobara bhej do':('repeat',None),'same again':('repeat',None)}
+  for phrase,(kind,amount) in expected.items():
+   with self.subTest(phrase=phrase):
+    plan=manual_commands.parse(phrase) or {}
+    self.assertEqual(plan.get('kind'),kind)
+    if amount is not None:self.assertEqual(plan.get('amount'),amount)
 
 class ServerGuardAgrees(unittest.TestCase):
  setUp=fixture.SendTests.setUp

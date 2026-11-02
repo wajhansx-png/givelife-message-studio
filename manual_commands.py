@@ -75,7 +75,7 @@ def _times(unit):return MULT.get((unit or '').casefold(),1)
 def balance_amount(text,allow_with=True):
  """Use an amount bound to balance wording, never a year/group count/phone."""
  t=outside_literals(text);number=r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*'+UNIT+r'?(?!\w)'
- patterns=[number+r'\s*(?:is\s+)?(?:left|remaining|remain|baqi|baki|bacha|bachay|bacha hai|rehte|reh gaye)\b',
+ patterns=[number+r'\s*(?:is\s+)?(?:left|remaining|remain|baqi|baki|bacha|bache|bachey|bachi|bachay|bacha hai|rehte|reh gaye)\b',
            r'\b(?:remaining(?:\s+amount)?|amount(?:\s+(?:left|remaining))?|balance|baqi)\s*(?:is|to|=|:)?\s*(?:rs\.?\s*)?'+number,
            r'\bleft\s*(?:is|=|:)?\s*(?:rs\.?\s*)?(?=\d[\d,]*\s*(?:k|hazar|hazaar|thousand|lakh|lac)\b|\d{3,})'+number+r'(?!\s*(?:people|groups?|members?|minutes?|hours?|messages?|dms?|donors?|times?))',
            *([r'\bwith\s+(?:rs\.?\s*)?'+number+r'(?!\s*(?:people|groups?|members?|minutes?|hours?))'] if allow_with else [])]
@@ -114,8 +114,8 @@ def parse(text):
  if re.search(r'exclusive\s+upwork|37\s*(?:member|members)|120363432572916292|120363431093838536',low):return {'kind':'refuse_target'}
  if re.search(r'\b(don t|dont|do not|never|stop|disable|no)\b.*\b(dm|dms|direct messages)\b',low) or low in ('dm off','dms off','auto dms off'):
   return {'kind':'stop_dms'}
- if low in ('hold','wait','hold on','hold everything','stop everything','pause everything','stop','stop it','stop all','stop now','stop please','pause','ruk','ruk jao','ruko','rok do','rok','band karo','band kar do','bas') or re.search(r'wrong (?:whatsapp|number)',low):return {'kind':'hold'}
- if low in ('resume','continue','go ahead','connected','connected now','right one connected','release','unhold'):return {'kind':'resume'}
+ if low in ('hold','wait','hold on','hold everything','stop everything','pause everything','stop','stop it','stop all','stop now','stop please','pause','ruk','ruk jao','ruko','rok do','rok','band karo','band kar do','bas','stop sending','stop posting','stop the sending','rukk jao','ruk jao ji','sending band karo','posting band karo','sab band karo','sab rok do') or re.search(r'wrong (?:whatsapp|number)',low):return {'kind':'hold'}
+ if low in ('resume','continue','go ahead','connected','connected now','right one connected','release','unhold','resume everything','resume all','resume sending','resume posting','continue sending','continue posting','start sending','start posting','chalu karo','chalu kar do','shuru karo','phir chalu karo'):return {'kind':'resume'}
  if re.search(r'\b(?:every|each|after)\s+\d+\s*(?:min|mnt|mint|hour)',low):return None
  # While chatting by plain text: "his name is Wajdan say name hi bro" / "say hi bro" continue that chat.
  say=re.fullmatch(r"(?:(?:his|her|their)\s+name\s+is\s+([A-Za-z][A-Za-z'-]{1,25})\s*[,.]?\s*(?:and\s+|then\s+)?)?(?:say|tell\s+(?:him|her|them))\s+(?:name\s+)?(.{1,160})",t,re.I|re.S)
@@ -125,7 +125,7 @@ def parse(text):
  if rename:return {'kind':'dm_name','to':rename[2] or '', 'name':rename[3].strip()}
  if ('2000' in low.replace(' ','') or '2 000' in low) and ('1000' in low.replace(' ','') or '1 000' in low) and re.search(r'\b(first|before|then|order)\b',low) and re.search(r'\b(message|messages|caption|wording|write|show)\b',low):return {'kind':'donation_order'}
  if re.search(r'\b(don t|dont|do not|remove|delete)\b',low) and re.search(r'\b(write|line|wording|words|caption|this much)\b',low) and re.search(r'\b(came|received|arrived)\b',low):return {'kind':'remove_arrival_line'}
- arrival=re.fullmatch(r'(?:(?:someone|somebody|a donor|donor|he|she|they)\s+(?:sent|gave|paid|donated)|donation(?:\s+of)?|donated|came|got|received|recieved|aya|aaya|mila|mile)\s*(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?(?:\s+(?:came in|came|received|donated))?|(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?\s+(?:came in|came|arrived|received|donated|aya|aaya|aye|aaye|ayi|aayi|mila|mile|mil gaye|mil gaya)',t,re.I)
+ arrival=re.fullmatch(r'(?:(?:someone|somebody|a donor|donor|he|she|they)\s+(?:sent|gave|paid|donated)|donation(?:\s+of)?|donated|came|got|received|recieved|aya|aaya|mila|mile)\s*(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?(?:\s+(?:came in|came|received|donated))?|(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?\s+(?:came in|came|arrived|received|donated|aya|aaya|aye|aaye|ayi|aayi|mila|mile|mil gaye|mil gaya)(?:\s+(?:hain|hai|hue|huay|ho gaye|ho gaya))?',t,re.I)
  if arrival:
   amount=float((arrival[1] or arrival[3]).replace(',',''))*_times(arrival[2] or arrival[4])
   if amount.is_integer() and amount>=0:return {'kind':'money','amount':int(amount)}
@@ -159,7 +159,7 @@ def parse(text):
   if m and re.search(r'(?i)\s+only\s+',m[2]):m=re.match(r'^(?:send|text|message)\s+(.+?)\s+(?:to|in)\s+(.+?)\s+only\s+.+$',t,re.I|re.S)
   if m and not control_payload(m[1]) and group(m[2]):return {'kind':'text','text':m[1].strip(),'to':group(m[2]),'literal':True}
   return {'kind':'appeal','target':target,'amount':amount}
- if (SEND.search(t) or low.startswith('now send') or low in ('again','do it','go','now','once more','one more time','do it again','repeat','repeat it','send once more','dobara','dubara','phir se','phir se bhejo','dobara bhejo','phir bhejo')) and control_payload(t) or low in ('once more','one more time','do it again','repeat','repeat it','dobara','dubara','phir se','phir bhejo','phir se bhejo','dobara bhejo'):return {'kind':'repeat'}
+ if (SEND.search(t) or low.startswith('now send') or low in ('again','do it','go','now','once more','one more time','do it again','repeat','repeat it','send once more','dobara','dubara','phir se','phir se bhejo','dobara bhejo','phir bhejo','dobara bhej do','phir se bhej do','same again','send same again','send it again','send again please','again please')) and control_payload(t) or low in ('once more','one more time','do it again','repeat','repeat it','dobara','dubara','phir se','phir bhejo','phir se bhejo','dobara bhejo','dobara bhej do','phir se bhej do','same again','send same again','send it again','send again please','again please'):return {'kind':'repeat'}
  if amount is not None and not SEND.search(t):return {'kind':'amount','amount':amount}
  m=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
  if m:

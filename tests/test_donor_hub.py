@@ -331,6 +331,50 @@ class IntegrationTests(unittest.TestCase):
   with patch.object(app,'send_image',side_effect=image):
    first=registry.send_one(d['id'],'click-one-test');again=registry.send_one(d['id'],'click-two-test');duplicate=registry.send_one(d['id'],'click-two-test')
   self.assertEqual(len(sent),2);self.assertEqual(first['code'],'SUCCESS');self.assertEqual(again['code'],'SUCCESS');self.assertTrue(duplicate['repeated_request']);self.assertEqual(registry.book.resolve(d['id'])['delivery'],'Sent');self.assertNotEqual(sent[0][1],sent[1][1]);self.assertIn('03097458815',sent[0][1]);self.assertIn('03097458815',sent[1][1]);self.assertGreater(registry.jobs.manual_sent_at,0)
+ def test_single_donor_uses_only_saved_messages_not_main_dm_draft(self):
+  from donor_messages import MessageBank
+  app=self.app;hub=app.donors()
+  donor=hub.book.add('Ali','03001234567')['donor']
+  bank=hub.messages.get()
+  first=bank['items'][0]['text'].replace('please read about Yousuf','please consider the SAVED FIRST DONOR MESSAGE about Yousuf',1)
+  second=bank['items'][1]['text'].replace('please read about Yousuf','please consider the SAVED SECOND DONOR MESSAGE about Yousuf',1)
+  hub.messages.update('wording-01',first)
+  hub.messages.update('wording-02',second)
+  old=app.get_message('dm')['text']
+  app.save_draft('dm',old.replace('please read about Yousuf','DO NOT SEND THIS MAIN SCREEN DRAFT about Yousuf',1))
+  sent=[]
+  with patch.object(app,'send_image',side_effect=lambda jid,text:sent.append(text) or {'code':'SUCCESS','results':{'message_id':'fake'}}):
+   one=hub.send_one(donor['id'],'saved-bank-click-01')
+   # Recreate the bank reader: cursor must survive across app instances/restarts.
+   hub.messages=MessageBank(app)
+   two=hub.send_one(donor['id'],'saved-bank-click-02')
+   duplicate=hub.send_one(donor['id'],'saved-bank-click-02')
+  self.assertEqual([one['code'],two['code']],['SUCCESS','SUCCESS'])
+  self.assertTrue(duplicate['repeated_request'])
+  self.assertEqual(len(sent),2)
+  self.assertIn('SAVED FIRST DONOR MESSAGE',sent[0])
+  self.assertIn('SAVED SECOND DONOR MESSAGE',sent[1])
+  self.assertNotIn('DO NOT SEND THIS MAIN SCREEN DRAFT',' '.join(sent))
+  self.assertTrue(all('03097458815' in t and t.startswith('Ali Bhai') for t in sent))
+
+ def test_individual_dm_rotates_all_saved_versions_then_wraps(self):
+  app=self.app;hub=app.donors();donor=hub.book.add('Ali','03001234567')['donor']
+  stored=hub.messages.get()['items'];self.assertEqual(len(stored),20)
+  sent=[]
+  with patch.object(app,'send_image',side_effect=lambda jid,text:sent.append(text) or {'code':'SUCCESS','results':{'message_id':'fake'}}):
+   for i in range(21):
+    result=hub.send_one(donor['id'],f'bank-rotation-click-{i:03d}')
+    self.assertEqual(result['code'],'SUCCESS')
+  self.assertEqual(len(set(sent[:20])),20)
+  self.assertEqual(sent[20],sent[0])
+
+ def test_individual_dm_refuses_missing_saved_bank_without_sending_other_draft(self):
+  app=self.app;hub=app.donors();donor=hub.book.add('Ali','03001234567')['donor']
+  with patch.object(hub.messages,'get',return_value={'items':[]}),patch.object(app,'send_image') as send:
+   with self.assertRaisesRegex(ValueError,'Saved Donors Messages are missing'):
+    hub.send_one(donor['id'],'no-saved-bank-click')
+   send.assert_not_called()
+
  def test_explicit_repeat_still_respects_optout_and_daily_cap(self):
   import hashlib
   app=self.app;registry=app.donors();d=registry.book.add('Ali','03001234567')['donor'];app.STORE.put('optout_'+hashlib.sha256(b'923001234567').hexdigest(),True)

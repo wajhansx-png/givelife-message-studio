@@ -8,7 +8,7 @@ ALIASES={
  'uet':('fiverr course uet','fiverr uet','uet'),
  'toprated':('top rated upworkers','topratedupworkers','top rated','toprated'),
  'free':('all 5 freelance groups','all five freelance groups','all freelance groups','all freelance','5 freelance','freelance','free'),
- 'all':('all 6 groups','all six groups','all groups','all'),
+ 'all':('all 6 groups','all six groups','all the groups','every group','sab groups','sabhi groups','sare groups','saare groups','all groups','all'),
  'test':('givelife test','give life test','test group','test')}
 _SEND_RX=re.compile(r'\b(send|resend|post|share|bhejo|bhej|daalo|dalo|sebd|semd)\b|بھیج|ارسال',re.I)
 # "the post is old", "good post", "post status" use the word as a noun: they are not a command to send.
@@ -23,6 +23,8 @@ def norm(text):
  t=str(text).casefold().replace('give-life','givelife')
  t=re.sub(r'\b(?:guvelife|givelufe|givlife|giveilfe)\b','givelife',t)
  t=re.sub(r'\b(froup|gruo|gruop|goup|grp)\b','group',t)
+ t=re.sub(r'\b(?:fiver|fivver|fivrr|fiverrr|fiverr)\b','fiverr',t)
+ t=re.sub(r'\b(?:upwrk|upwok|uptwork|upwoek)\b','upwork',t)
  t=re.sub(r'\b(evv?erything|evrything|everythng|everthing)\b','everything',t)
  return re.sub(r'[^\w\s]',' ',t).strip()
 
@@ -35,7 +37,7 @@ def _group_mentions(text):
  keys=list(dict.fromkeys(m[2] for m in matches))
  return keys
 
-GROUP_EXCLUSION=re.compile(r'(?i)\b(?:except(?: for)?|excluding|but not|not(?: to)?)\s+')
+GROUP_EXCLUSION=re.compile(r'(?i)\b(?:except(?: for)?|excluding|but not|(?:but|without|skip(?:ping)?|other than|apart from|besides|leave out|leaving out)(?=(?: the)?\s+(?:upwork|fiverr|uet|main|test|community|top|give|free|all))|not(?: to)?)\s+')
 
 def has_group_exclusion(text):
  match=GROUP_EXCLUSION.search(str(text))
@@ -47,7 +49,7 @@ def groups(text):
  exclusion=GROUP_EXCLUSION.search(t)
  if not exclusion:return _group_mentions(t)
  included=_group_mentions(t[:exclusion.start()]);excluded=_group_mentions(t[exclusion.end():])
- if not included:return _group_mentions(t)
+ if not included:return [] # "send except upwork" names no audience: ask, never send to the excluded group
  if not excluded:return [] # Missing exclusion needs clarification, never an aggregate send.
  production=['main','community','fiverr','upwork','uet','toprated']
  def expand(keys):

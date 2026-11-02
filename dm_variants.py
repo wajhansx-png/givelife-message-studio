@@ -5,20 +5,23 @@ the general path: the owner pastes any complete message, the model rewrites
 only the wording, and deterministic checks reject any version that changes the
 line structure, emojis, bold/italic markers, numbers or payment details.
 """
-import json, re
+import difflib, json, re
 
 import assistant
 import dm_composer
 
-VERSION = 'dm-variants-2026-10-30'
+VERSION = 'dm-variants-2026-11-02-deep-rewrite'
 
-# Each version stays about as long as the message the owner gave (a few characters either way).
-LENGTH_TOLERANCE = 0.08
+# Meaning and formatting matter more than matching a character count.
+# Allow sentence-level rewrites while keeping each message reasonably compact.
+LENGTH_TOLERANCE = 0.28
 
 SYSTEM = """You are a careful fundraising copy editor for GiveLife Foundation.
 You rewrite one WhatsApp direct message into new versions with the same concept,
 facts and formatting. Return only the JSON array the user asks for. Never add
-commentary, markdown fences, headings or a delivery claim."""
+commentary, markdown fences, headings or a delivery claim.
+Write in very easy English. Vary the ENTIRE editable story, not just one hook.
+Do not invent medical details, fundraising deadlines or verified outcomes."""
 
 
 def clean_source(source):
@@ -62,6 +65,28 @@ def _emojis(text):
     return re.findall(r'[\U0001F000-\U0001FAFF\u2600-\u27BF]', str(text or ''))
 
 
+def _editable_lines(text):
+    # Exclude exact payment/contact lines from variation scoring.
+    return [line.strip() for line in str(text).split('\n')
+            if line.strip() and not re.search(
+                r'(?i)easypaisa|jazzcash|wajdan khan|reply \*done\*|03097458815', line)]
+
+
+def _similarity(a, b):
+    def normalized(text):
+        return ' '.join(re.findall(r"[a-z]+", '\n'.join(_editable_lines(text)).lower()))
+    return difflib.SequenceMatcher(None, normalized(a), normalized(b), autojunk=False).ratio()
+
+
+def _meaningful_changes(source, candidate):
+    a = _editable_lines(source)
+    b = _editable_lines(candidate)
+    if len(a) != len(b):
+        return 0
+    return sum(difflib.SequenceMatcher(None, x.lower(), y.lower(), autojunk=False).ratio() < 0.83
+               for x, y in zip(a, b))
+
+
 def validate(source, text, existing=()):
     """Return an error string, or '' when the version is safe to save."""
     if not isinstance(text, str):
@@ -83,7 +108,7 @@ def validate(source, text, existing=()):
         return 'line breaks, blank lines, emojis or bold/italic markers changed'
     if _emojis(text) != _emojis(source):
         return 'an emoji changed or moved'
-    if not set(_numbers(source)).issubset(set(_numbers(text))):
+    if _numbers(source) != _numbers(text):
         return 'a number, amount or phone number changed'
     source_lines = source.split('\n')
     text_lines = text.split('\n')
@@ -105,6 +130,14 @@ def validate(source, text, existing=()):
         return 'payment details or the reply instruction changed'
     if not dm_composer.complete(text):
         return 'the message is not complete'
+    # Reject superficial variations that merely swap the first sentence.
+    # Requiring at least two rewritten editable lines makes the whole appeal change.
+    editable = len(_editable_lines(source))
+    minimum_lines = 2 if editable >= 3 else 1
+    if _meaningful_changes(source, text) < minimum_lines or _similarity(source, text) > 0.81:
+        return 'not deeply rewritten; change the opening AND the body wording'
+    if any(_similarity(text, other) > 0.87 for other in existing if isinstance(other, str)):
+        return 'too similar to an existing version; rewrite the story differently'
     return ''
 
 
@@ -151,20 +184,22 @@ def _prompt(source, count, avoid):
             )
     low, high = length_range(source)
     size = len(source)
-    return f"""Rewrite the source message below into exactly {count} new versions.
+    return f"""Rewrite the source message below into exactly {count} DISTINCT, fully reworded versions.
 
 The source has {len(lines)} lines and {blank} blank lines. Keep that exact line
 structure. Keep every blank line in the same place.
 
 NON-NEGOTIABLE:
-- Length: every version must be between {low} and {high} characters in total
-  (the source has {size}). Count it. Do not make versions shorter or longer.
-- Strong urgency and a sense of danger in every version, with a different angle
-  each time (time passing, the condition spreading, the family waiting). Use only
-  the facts already in the source. Never write "will die" or an invented deadline,
-  never the word DANGER, and never a begging closing line.
-- Keep the same meaning, facts, paragraph order and length of the appeal.
-- Change only the wording of the variable sentences. Do not change the concept.
+- Length: target {low} to {high} characters (source {size}); natural length is
+  more important than matching the original number of letters.
+- Rewrite the entire message: change the opening AND at least two other meaningful
+  prose lines. Do NOT only change two words, replace synonyms, or reorder a sentence.
+- Maintain the same core concept and verified urgency; use different clear, emotional
+  approaches across versions. No invented time pressure, medical progression,
+  consequences, deadlines, promises, or extra diagnoses.
+- Rewrite each editable paragraph into genuinely different, very easy English.
+  Retain the original paragraph order, blank lines, and WhatsApp formatting.
+- Do not invent guilt, death threats, or unverified claims.
 - Keep every emoji and every *, _ and *_ WhatsApp formatting marker in the same
   position. Do not flatten, add or remove formatting.
 - Keep every number, amount, phone number, account name, payment method and the
@@ -172,7 +207,9 @@ NON-NEGOTIABLE:
 - Keep the same greeting form. Do not add a name or a new salutation.
 - Do not invent symptoms, hospitals, dates, promises, donations or deadlines.
 - Do not use long dashes.
-- Every version must be unique and clearly different from the others.
+- EVERY new version must differ substantively from the source and other versions
+  in both the hook and body. Avoid repeating the same 5-8 word phrases.
+- The exact payment/phone and account lines are immutable, copy them verbatim.
 - Return ONLY a JSON array of {count} strings. No commentary, no markdown fences.
 
 SOURCE:
@@ -200,12 +237,13 @@ def generate(source, count=10, avoid=None):
     if key is None:
         raise ValueError('The AI is not connected, so I cannot reword a custom message. The built-in structured DM still works.')
     last_error = ''
-    for _ in range(4):
+    for _ in range(5):
         need = count - len(out)
         if need <= 0:
             break
         try:
-            candidates = _call(key, _prompt(source, need, existing + out))
+            # Smaller batches avoid model truncation and improve diversity.
+            candidates = _call(key, _prompt(source, min(need, 5), existing + out))
         except Exception as exc:
             last_error = str(exc)
             if re.search(r'(?i)returned (?:401|403)|not connected|api key', last_error):
@@ -222,7 +260,7 @@ def generate(source, count=10, avoid=None):
     if len(out) < count:
         detail = (' The last problem was: ' + last_error) if last_error else ''
         raise ValueError(
-            f'The AI returned only {len(out)} versions that kept the exact structure and facts.{detail} '
+            f'The AI returned only {len(out)} sufficiently different versions that kept the facts and formatting.{detail} '
             'The saved DM and the message bank were not changed.'
         )
     return out[:count]

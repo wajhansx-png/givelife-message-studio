@@ -132,8 +132,12 @@ class MessageBank:
                     except ValueError as exc:
                         warning = str(exc)
             texts = texts[:20]
-            if master_first and (len(texts) < count or len(set(texts)) != len(texts)):
-                raise ValueError('Could not safely rewrite Message 1 into enough distinct versions. Your edits and old versions were kept.')
+            if master_first and (len(texts) != total or len(set(texts)) != total):
+                raise ValueError(
+                    f'Only {len(texts) - 1} of {total - 1} substantially rewritten versions passed verification. '
+                    'Nothing was replaced; Message 1 and all previous messages are still saved. '
+                    + (warning or 'Retry regeneration when the AI service is ready.')
+                )
             data = {
                 'fingerprint': self._fingerprint(source),
                 'items': self._entries(texts),

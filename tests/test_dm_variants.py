@@ -29,12 +29,37 @@ class VariantTests(unittest.TestCase):
 
     def test_validator_rejects_changed_structure_numbers_and_payment_line(self):
         source = self.source()
-        good = dm_templates.build(1, app.read_left())
-        self.assertEqual(dm_variants.validate(source, good), '')
-        self.assertIn('number', dm_variants.validate(source, good.replace('Rs. 25,000', 'Rs. 20,000')))
-        self.assertIn('line breaks', dm_variants.validate(source, good.replace('\n\n', '\n', 1)))
-        self.assertIn('payment', dm_variants.validate(source, good.replace('Easypaisa / JazzCash', 'Easypaisa or JazzCash')))
-        self.assertIn('duplicate', dm_variants.validate(source, good, [good]))
+        near_copy = dm_templates.build(1, app.read_left())
+        self.assertIn('not deeply rewritten', dm_variants.validate(source, near_copy))
+        self.assertIn('number', dm_variants.validate(source, near_copy.replace('Rs. 25,000', 'Rs. 20,000')))
+        self.assertIn('line breaks', dm_variants.validate(source, near_copy.replace('\n\n', '\n', 1)))
+        self.assertIn('payment', dm_variants.validate(source, near_copy.replace('Easypaisa / JazzCash', 'Easypaisa or JazzCash')))
+        self.assertIn('duplicate', dm_variants.validate(source, near_copy, [near_copy]))
+
+    def test_fully_reworded_burial_message_passes_and_small_changes_fail(self):
+        source = (
+            'Bhai, Please help this grieving family with burial costs.\n\n'
+            '💔 Their child has passed away. The family is seeking help with burial expenses.\n\n'
+            '*They need kind people who can support them today.*\n\n'
+            'Rs. 45,000 LEFT.\n\n'
+            '*_Just 23 people donating Rs. 2,000 can complete the amount._*\n\n'
+            'Please support them if you can.\n\n'
+            '03097458815 — Easypaisa / JazzCash Wajdan Khan'
+        )
+        rewritten = (
+            'Bhai, The parents are asking for help to cover their child\'s burial.\n\n'
+            '💔 This family lost their child and is now struggling to pay the funeral bills.\n\n'
+            '*Any person who is able to give can stand beside them.*\n\n'
+            'Rs. 45,000 LEFT.\n\n'
+            '*_Only 23 supporters giving Rs. 2,000 each could cover this cost._*\n\n'
+            'Even a small contribution would matter.\n\n'
+            '03097458815 — Easypaisa / JazzCash Wajdan Khan'
+        )
+        self.assertEqual(dm_variants.validate(source, rewritten), '')
+        small = source.replace('Please help', 'Please kindly help')
+        self.assertIn('not deeply rewritten', dm_variants.validate(source, small))
+        self.assertIn('too similar', dm_variants.validate(source, rewritten, [rewritten.replace('The parents', 'These parents')]))
+        self.assertIn('number', dm_variants.validate(source, rewritten.replace('45,000', '40,000')))
 
     def test_canonical_bank_generate_has_twenty_unique_complete_versions(self):
         bank = app.donors().messages.generate(self.source(), 10)

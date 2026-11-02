@@ -111,7 +111,7 @@
  function syncBankControls(){const box=el('donorMessages');for(const b of box.querySelectorAll('.bank-regenerate'))b.disabled=bankRegenerating||bankSaves.size>0;for(const b of box.querySelectorAll('[data-bank-save-id]')){b.disabled=bankRegenerating||bankSaves.has(b.dataset.bankSaveId);const input=box.querySelector('.bank-detail textarea');if(!input)continue;input.disabled=bankRegenerating;b.textContent=bankSaves.has(b.dataset.bankSaveId)?'Saving…':input.hidden?'Edit':'Save'}}
  let bankFitObserver;
  function paintBankPreview(preview,text){if(window.waFormat)preview.innerHTML=window.waFormat(text).split('\n').map(line=>'<div class="bank-line'+(line?'':' blank')+'">'+(line||'<br>')+'</div>').join('');else preview.textContent=text}
- function fitBankPreview(){const preview=el('donorMessages').querySelector('.bank-preview');if(!preview||!preview.clientHeight||preview.hidden)return;for(let size=innerWidth>=900?26:19;size>=12;size-=.5){preview.style.fontSize=size+'px';if(preview.scrollHeight<=preview.clientHeight+1)break}}
+ function fitBankPreview(){const preview=el('donorMessages').querySelector('.bank-preview');if(preview)preview.style.removeProperty('font-size');/* Keep comfortable fixed type; scroll content instead of enlarging/shrinking it. */}
  document.fonts?.ready.then(fitBankPreview);
  async function api(path,body){const r=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error||'The request could not complete.');return d}
  let dismissedJob='';try{dismissedJob=sessionStorage.getItem('givelife-dismissed-batch')||''}catch(e){}

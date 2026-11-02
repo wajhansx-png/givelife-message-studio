@@ -234,8 +234,8 @@ def _call(key, prompt):
     return _json_list(content)
 
 
-def generate(source, count=10, avoid=None):
-    """Return `count` validated reworded versions, or raise ValueError."""
+def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False):
+    """Validate every rewrite, report accepted batches, and optionally retain partial results."""
     source = clean_source(source)
     if not dm_composer.complete(source):
         raise ValueError('Paste the complete message with its paragraphs, amount and payment details.')
@@ -252,12 +252,16 @@ def generate(source, count=10, avoid=None):
             break
         try:
             # Smaller batches avoid model truncation and improve diversity.
-            candidates = _call(key, _prompt(source, min(need, 5), existing + out))
+            prompt = _prompt(source, min(need, 5), existing + out)
+            if last_error:
+                prompt += "\nThe previous attempt was rejected because: " + last_error[:240] + ". Correct that while keeping the verified facts."
+            candidates = _call(key, prompt)
         except Exception as exc:
             last_error = str(exc)
-            if re.search(r'(?i)returned (?:401|403)|not connected|api key', last_error):
+            if re.search(r'(?i)returned (?:401|402|403|429)|not connected|api key', last_error):
                 break
             continue
+        before = len(out)
         for candidate in candidates:
             reason = validate(source, candidate, existing + out)
             if reason:
@@ -266,6 +270,11 @@ def generate(source, count=10, avoid=None):
             out.append(candidate.strip())
             if len(out) >= count:
                 break
+        if progress is not None and len(out) > before:
+            if progress(list(out)) is False:
+                raise ValueError("Generation stopped because the source changed. Your newer edit is safe.")
+    if allow_partial and out:
+        return out[:count]
     if len(out) < count:
         detail = (' The last problem was: ' + last_error) if last_error else ''
         raise ValueError(

@@ -53,7 +53,19 @@
  for(const id of ['batchCount','batchGap','batchLimit','batchEach','batchPauseCustom','batchJMin','batchJMax'])el(id).oninput=paintAudience;for(const id of ['batchPause','batchRandom','batchIncl'])el(id).onchange=()=>{if(id==='batchIncl'&&pickerScope)el('batchCount').value=Math.min(1000,batchAvailable())||'';paintAudience()};
  el('donorHideSent').onclick=()=>{hideSent=!hideSent;try{localStorage.setItem('givelife-hide-contacted',hideSent?'1':'0')}catch(e){}applyFilters()};
  el('donorBatchForm').onsubmit=e=>{e.preventDefault();const mins=Number(el('batchGap').value),per=Number(el('batchLimit').value);if(!(mins>=1&&mins<=10)){el('batchGap').focus();return}el('donorGap').value=mins*60;el('donorPace').textContent='Gap: '+mins+' min ▾';if(!pickerScope){picker.close();return}const count=Number(el('batchCount').value),pauses=batchPauses();if(!(count>=1&&count<=1000)||!(per>=1&&per<=20)||!pauses){paintAudience();return}const body={chunk:per,limit:count,rests:pauses,skip_contacted:!el('batchIncl').checked,poster:el('batchPoster').checked};if(el('batchRandom').checked){const lo=Number(el('batchJMin').value)||0,hi=Number(el('batchJMax').value)||0;body.jitter={min:-Math.abs(lo),max:Math.abs(hi)}}batchBody=body;picker.close();send(pickerScope,undefined,per,el('batchFresh').checked)};
- let bankRegenerating=false;const bankSaves=new Set();
+ let bankRegenerating=false,bankGenerationTimer=null;const bankSaves=new Set();
+ function bankGenerationLabel(){const g=bankData?.generation;if(!g)return '';return g.state==='Generating'?`Generating DMs · ${g.ready}/${g.target} saved`:g.state==='Ready'?`${g.ready} DM messages ready`:g.error?`${g.ready}/${g.target} saved · ${g.error}`:''}
+ function queueBankGenerationPoll(){
+  clearTimeout(bankGenerationTimer);
+  if(!page.open||tab!=='messages'||bankData?.generation?.state!=='Generating')return;
+  bankGenerationTimer=setTimeout(async()=>{try{
+   const fresh=await api('/donor-messages');if(!page.open||tab!=='messages')return;
+   const changed=JSON.stringify(fresh.generation)!==JSON.stringify(bankData?.generation);bankData=fresh;
+   const editing=el('donorMessages').querySelector('textarea:not([hidden])');
+   if(changed&&!editing&&!bankEdits.size)showMessages();else{const state=el('donorMessages').querySelector('.bank-generation-state');if(state)state.textContent=bankGenerationLabel();syncBankControls()}
+  }catch(e){const state=el('donorMessages').querySelector('.bank-generation-state');if(state)state.textContent='Connection interrupted. Saved versions are safe; checking again.'}finally{queueBankGenerationPoll()}},1500);
+ }
+
  async function showMessages(force=false){
   if(!bankData||force){el('donorMessages').textContent='Loading saved message variants…';try{bankData=await api('/donor-messages')}catch(e){el('donorMessages').textContent=e.message;return}}
   if(tab!=='messages')return;const box=el('donorMessages');box.textContent='';const head=make('div','bank-heading');head.append(make('span','',bankData.items.length+' wording variants · same facts · editable'));const regen=make('button','tool bank-regenerate','Regenerate');regen.onclick=async()=>{if(bankRegenerating||bankSaves.size)return;
@@ -64,8 +76,8 @@
   // Saving Message 1 first avoids generating from yesterday's hidden origin.
   if(bankEdits.has(master.id)){const text=bankEdits.get(master.id);await api('/donor-messages',{id:master.id,text});master.text=text;bankEdits.delete(master.id);keepBankEdits()}
   bankData=await api('/donor-messages',{action:'regenerate'});
-  bankEdits.clear();keepBankEdits();showMessages();notice('Regenerated from your saved Message 1. Message 1 was preserved.')
- }catch(e){notice(e.message,true);showMessages()}finally{bankRegenerating=false;syncBankControls()}};box.append(head);
+  bankEdits.clear();keepBankEdits();showMessages();notice('Generating in the background. Message 1 is preserved; accepted versions save automatically.')
+ }catch(e){notice(e.message,true);showMessages()}finally{bankRegenerating=false;syncBankControls()}};box.append(head);const generationState=make('span','bank-generation-state',bankGenerationLabel());generationState.setAttribute('role','status');head.append(generationState);queueBankGenerationPoll();
   let selected;try{selected=sessionStorage.getItem('givelife-bank-selected')}catch(e){}
   const savedIndex=bankData.items.findIndex(item=>item.id===selected);if(savedIndex>=0)bankPage=Math.max(bankPage,savedIndex+1);
   const items=bankData.items.slice(0,bankPage);
@@ -108,7 +120,7 @@
   if(typeof ResizeObserver!=='undefined'){bankFitObserver?.disconnect();bankFitObserver=new ResizeObserver(()=>fitBankPreview());bankFitObserver.observe(grid);const fitTarget=grid.querySelector('.bank-detail');if(fitTarget)bankFitObserver.observe(fitTarget)}
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>fitBankPreview());
  }
- function syncBankControls(){const box=el('donorMessages');for(const b of box.querySelectorAll('.bank-regenerate'))b.disabled=bankRegenerating||bankSaves.size>0;for(const b of box.querySelectorAll('[data-bank-save-id]')){b.disabled=bankRegenerating||bankSaves.has(b.dataset.bankSaveId);const input=box.querySelector('.bank-detail textarea');if(!input)continue;input.disabled=bankRegenerating;b.textContent=bankSaves.has(b.dataset.bankSaveId)?'Saving…':input.hidden?'Edit':'Save'}}
+ function syncBankControls(){const box=el('donorMessages');for(const b of box.querySelectorAll('.bank-regenerate'))b.disabled=bankRegenerating||bankSaves.size>0||bankData?.generation?.state==='Generating';for(const b of box.querySelectorAll('[data-bank-save-id]')){b.disabled=bankRegenerating||bankSaves.has(b.dataset.bankSaveId);const input=box.querySelector('.bank-detail textarea');if(!input)continue;input.disabled=bankRegenerating;b.textContent=bankSaves.has(b.dataset.bankSaveId)?'Saving…':input.hidden?'Edit':'Save'}}
  let bankFitObserver;
  function paintBankPreview(preview,text){if(window.waFormat)preview.innerHTML=window.waFormat(text).split('\n').map(line=>'<div class="bank-line'+(line?'':' blank')+'">'+(line||'<br>')+'</div>').join('');else preview.textContent=text}
  function fitBankPreview(tries=0){const preview=el('donorMessages').querySelector('.bank-preview');if(!preview)return;preview.style.removeProperty('font-size');if(!preview.clientHeight){if(typeof tries==='number'&&tries<30&&typeof requestAnimationFrame==='function')requestAnimationFrame(()=>fitBankPreview(tries+1));return}/* Long message: shrink the type a little (never below 13px) so it fits without scrolling. */let size=parseFloat(getComputedStyle(preview).fontSize);while(size>13&&preview.scrollHeight>preview.clientHeight+2){size-=0.5;preview.style.fontSize=size+'px'}}

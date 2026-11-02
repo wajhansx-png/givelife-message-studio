@@ -2307,7 +2307,7 @@ class Handler(BaseHTTPRequestHandler):
     if self.path=='/donors':return self.reply(donors().mutate(body))
     if self.path=='/donor-send':return self.reply(donors().send_one(body.get('id'),body.get('request_id'),poster=body.get('poster',True)))
     if self.path=='/donor-messages':
-     if body.get('action')=='regenerate':return self.reply(donors().messages.regenerate())
+     if body.get('action')=='regenerate':return self.reply(donors().messages.start_regeneration())
      if body.get('action')=='generate':
       source=str(body.get('source','') or '')
       if not source.strip():raise ValueError('Paste the complete message you want versions of.')

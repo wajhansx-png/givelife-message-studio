@@ -75,3 +75,13 @@ body.message-focus-open>.app,body.message-focus-open>.foot{visibility:hidden}
 #messageFocus #focusNext{font-size:0!important}#messageFocus #focusNext::after{content:'Next →';font-size:15px}
 }
 
+/* Phone edit mode: the text box scrolls and fills the screen; only Done, Copy and four formatting buttons show. */
+@media(max-width:899px){
+#messageFocus header{background:#232323;box-shadow:0 6px 8px -6px #0009;margin-inline:-10px;padding-inline:10px}
+#messageFocus:has(#focusText:not([hidden])) .group-send,#messageFocus:has(#focusText:not([hidden])) .dm-send,#messageFocus:has(#focusText:not([hidden])) #focusNext,#messageFocus:has(#focusText:not([hidden])) #focusPoster,#messageFocus:has(#focusText:not([hidden])) #focusManual,#messageFocus:has(#focusText:not([hidden])) #focusRegenerate,#messageFocus:has(#focusText:not([hidden])) #focusRetry{display:none!important}
+#messageFocus #focusText{height:calc(100dvh - 214px)!important;min-height:200px!important;max-height:none;overflow-y:auto!important;resize:none;font-size:16px!important;padding:14px!important}
+#messageFocus [data-mark],#messageFocus [data-emoji]{flex:1 1 0!important;min-width:0!important;min-height:44px!important;align-items:center;justify-content:center;gap:4px;font-size:13px!important;padding:4px!important;white-space:nowrap}
+#messageFocus:has(#focusText:not([hidden])) #focusEdit,#messageFocus:has(#focusText:not([hidden])) #focusCopy{flex:1 1 calc(50% - 6px)}
+}
+@media(max-width:899px){#messageFocus{padding-top:0}#messageFocus header{position:sticky;top:0;padding-top:8px;padding-bottom:6px;height:auto;max-height:none;min-height:56px}}
+

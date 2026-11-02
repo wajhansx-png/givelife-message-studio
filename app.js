@@ -192,13 +192,14 @@ function showLeft(){cancelAnimationFrame(leftTween);const from=shownLeft,to=left
 function applyDrafts(d){if(typeof d.group==='string'&&typeof d.dm==='string')draftsReady=true;if(d.dm_identity){$('dmName').value=d.dm_identity.name||'';$('dmPhone').value=d.dm_identity.phone||'';gender=d.dm_identity.gender==='Sister'?'Sister':'Brother';document.querySelectorAll('#gender button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===gender)))}if(d.group!=null||d.dm!=null)draftSaved=JSON.stringify({group:d.group??$('group').value,dm:d.dm??$('dm').value});if(d.group!=null)$('group').value=d.group;if(d.dm!=null)$('dm').value=d.dm;if(d.left!=null){left=d.left;showLeft()}applyGreeting(false);render()}
 $('leftChip').onclick=()=>{openChat();$('histCmd').placeholder='Amount left, e.g. 25000 or 25k';$('histCmd').focus({preventScroll:true})};
 let gender='Brother';
-function logicalName(value){if(/acc+ount|\d|@|https?:\/\/|[_/\\]|\b(jr|junior|sr|senior|accounts?|accts?|admin|team|group|member|donors?|business|company|shop|store|services?|official|office|unknown|unnamed|name|contact|number|test|user|brother|sister|friend|wife|wifey|boss|customer|client|support|sales|marketing|web|developer|designer|agency|digital|seo|upwork|fiverr|foundation|givelife)\b/i.test(value))return '';const words=value.replace(/[^A-Za-z\s'-]/g,'').trim().split(/\s+/),n=words[0];return words.length<=4&&words.every(w=>w.length>=2)&&/^[A-Za-z][A-Za-z'-]{1,19}$/.test(n)&&/[aeiouy]/i.test(n)?n[0].toUpperCase()+n.slice(1).toLowerCase():''}
-function greet(){const n=logicalName($('dmName').value.trim());return n?n+' '+gender:'Brother'}
-const GREET=/^(\*?_?)(?:(?:[A-Za-z][A-Za-z .'-]{0,45})\s+)?(?:Brother|Sister)\b([_*]?)[,.:!]?[ \t\r\n]*/i;
+function logicalName(value){if(/acc+ount|\d|@|https?:\/\/|[_/\\]|\b(jr|junior|sr|senior|accounts?|accts?|admin|team|group|member|donors?|business|company|shop|store|services?|official|office|unknown|unnamed|name|contact|number|test|user|brother|bhai|sister|friend|wife|wifey|boss|customer|client|support|sales|marketing|web|developer|designer|agency|digital|seo|upwork|fiverr|foundation|givelife)\b/i.test(value))return '';const words=value.replace(/[^A-Za-z\s'-]/g,'').trim().split(/\s+/),n=words[0];return words.length<=4&&words.every(w=>w.length>=2)&&/^[A-Za-z][A-Za-z'-]{1,19}$/.test(n)&&/[aeiouy]/i.test(n)?n[0].toUpperCase()+n.slice(1).toLowerCase():''}
+function greet(){const n=logicalName($('dmName').value.trim());return n?n+' '+(gender==='Sister'?'Sister':'Bhai'):'Bhai'}
+const GREET=/^(\*?_?)(?:(?:[A-Za-z][A-Za-z .'-]{0,45})\s+)?(?:Brother|Bhai|Sister)\b([_*]?)[,.:!]?[ \t\r\n]*/i;
 function applyGreeting(doSave=true){const t=$('dm').value;if(!t)return;const g=greet(),nt=GREET.test(t)?t.replace(GREET,(_,open,close)=>open+g+close+', '):g+', '+t;
  if(nt!==t){$('dm').value=nt;paint('dm');requestAnimationFrame(fit);if(doSave)saveSoon()}}
 function setGender(g){gender=g;document.querySelectorAll('#gender button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===g)));applyGreeting()}
 document.querySelectorAll('#gender button').forEach(b=>b.onclick=()=>setGender(b.dataset.g));
+$('dmPoster').addEventListener('change',()=>{$('sendDm').textContent=$('dmPoster').checked?'Send DM with poster':'Send text-only DM'});
 $('dmName').addEventListener('input',()=>applyGreeting());
 
 /* ---- tools ---- */
@@ -246,7 +247,7 @@ function cleanPhone(p){p=p.replace(/[\s()+-]/g,'');if(p.startsWith('00'))p=p.sli
 $('sendDm').onclick=async()=>{if(editing)setEditing(false);const phone=cleanPhone($('dmPhone').value);
  if(!phone){say('app','Enter a phone number first, e.g. 0300 1234567.',1);$('dmPhone').focus();return}
  if(!lockSend('dm',true))return;busy(true);try{await ensureCaption('dm');applyGreeting(false);clearTimeout(timer);await save();
-  const r=await post('/send-custom',{target:'phone',phone,message:$('dm').value,poster:true,kind:'dm_appeal',name:$('dmName').value,gender}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not send');
+  const r=await post('/send-custom',{target:'phone',phone,message:$('dm').value,poster:$('dmPoster').checked,kind:'dm_appeal',name:$('dmName').value,gender}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not send');
   if(d.code==='SUCCESS'){const result='✓ DM sent to '+greet()+'.';say('app',result+' New wording is ready for the next person.');setLiveNotice(result);$('dmPhone').value='';$('dmName').value='';setGender('Brother');await freshWording()}
   else say('app','Not confirmed: '+(d.message||'')+' Check WhatsApp before retrying.',1)}
  catch(e){say('app',e.message,1)}finally{lockSend('dm',false);busy(false)}};

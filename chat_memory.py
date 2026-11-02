@@ -91,6 +91,9 @@ class Knowledge:
   with self.lock:
    entries=[dict(x) for x in self.data['entries'] if isinstance(x,dict) and x.get('active')]
    turns=[dict(x) for x in self.data['turns'] if isinstance(x,dict)]
+   retired=[dict(x) for x in self.data['entries'] if isinstance(x,dict) and not x.get('active')]
+   feedback=[dict(x) for x in self.data['feedback'][-30:] if isinstance(x,dict)]
+  retired_text={x.get('text') for x in retired};retired_sources={x.get('source_id') for x in retired if x.get('source_id')}
   broad=bool(re.search(r'(?i)\b(?:preferences?|rules?|memories|remember|corrections?)\b',str(query)))
   for item in entries:
    overlap=len(query_tokens & tokens(item.get('text','')))
@@ -106,12 +109,14 @@ class Knowledge:
   # what the assistant previously said. Owner instructions remain retrievable.
   asks_ai=bool(re.search(r'(?i)\b(?:assistant|ai|deepseek|bot)\b.{0,50}\b(?:say|says|said|write|wrote|reply|replied|answer|answered)\b|\b(?:last|previous)\s+(?:ai\s+)?(?:reply|answer)\b',str(query)))
   for item in turns:
+   if item.get('text') in retired_text:continue
    source=item.get('source','app_output')
    if source!='owner_input' and not asks_ai:continue
    overlap=len(query_tokens & tokens(item.get('text','')))
    if overlap >= (1 if asks_ai and source!='owner_input' else 2):
     out.append({**item,'score':overlap*2+(5 if source=='owner_input' else 0),'source':'historical_'+source})
-  for item in self.data['feedback'][-30:]:
+  for item in feedback:
+   if item.get('id') in retired_sources or item.get('correction') in retired_text:continue
    correction=item.get('correction','')
    if correction and query_tokens & tokens(correction):out.append({'id':item['id'],'text':correction,'time':item.get('time',0),'source':'owner_reported_issue','score':5+len(query_tokens & tokens(correction))})
   out.sort(key=lambda e:(e['score'],e.get('time',0)),reverse=True)

@@ -48,7 +48,7 @@ class OnePromptExecution(unittest.TestCase):
    return assistant.chat(text,[],{'case_name':'Yousuf','left':25000},[],do),model
  def test_send_then_change_setting_is_one_prompt_with_no_duplicate_send(self):
   actions=[]
-  script=[call('send_message',{'to':'923001234567','text':'hi'}),
+  script=[call('send_message',{'to':'923001234567','text':'hi','with_picture':False}),
           {'content':'Done!'},
           call('set_group_pace',{'target':'all','minutes':30}),
           {'content':'All done.'}]
@@ -61,15 +61,15 @@ class OnePromptExecution(unittest.TestCase):
   self.assertNotIn('Not completed',result['reply'])
  def test_two_requested_sends_are_separate_actions_without_duplicate(self):
   calls=[]
-  responses=[call('send_message',{'to':'923001234567','text':'Hello'}),
-             call('send_message',{'to':'923007654321','text':'Thanks'}),
+  responses=[call('send_message',{'to':'923001234567','text':'Hello','with_picture':False}),
+             call('send_message',{'to':'923007654321','text':'Thanks','with_picture':False}),
              {'content':'All done.'}]
   result,_=self.run_script('send "Hello" to 03001234567 and then send "Thanks" to 03007654321',
     responses,{'send_message':lambda **kwargs:(calls.append((kwargs['to'],kwargs['text'])) or 'Confirmed delivery.')})
   self.assertEqual(calls,[('923001234567','Hello'),('923007654321','Thanks')])
   self.assertNotIn('Not completed',result['reply'])
  def test_when_second_step_not_executed_report_partial_not_complete(self):
-  script=[call('send_message',{'to':'923001234567','text':'hi'}),
+  script=[call('send_message',{'to':'923001234567','text':'hi','with_picture':False}),
           {'content':'All done.'},{'content':'All done.'}]
   result,_=self.run_script('send hi to 03001234567 then set all groups every 30 min',script,{'send_message':lambda **kwargs:'WhatsApp confirmed.'})
   self.assertIn('Not completed or verified',result['reply'])
@@ -82,3 +82,4 @@ class OnePromptExecution(unittest.TestCase):
   self.assertNotIn('send_appeal',offered)
 
 if __name__=='__main__':unittest.main()
+

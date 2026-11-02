@@ -45,8 +45,8 @@ def pace_rules(text):
         speed=re.search(r'\b(fast|faster|slow|slower)\b',clause)
         if not speed:continue
         group=find_group(clause)
-        if not group and re.search(r'\b(one|other|that|this)\b',clause):return []
-        out.append({'kind':'gap','group':group or 'all','minutes':15 if speed[1].startswith('fast') else 60})
+        if not group:return []
+        out.append({'kind':'gap','group':group,'minutes':15 if speed[1].startswith('fast') else 60})
     return out
 
 
@@ -102,10 +102,11 @@ def parse(text, now=None):
 
     # every N minutes / hours
     m = re.search(r'\b(?:every|each|after)\s+(\d+(?:\.\d+)?)\s*(min(?:ute)?s?|mints?|mnts?|h(?:ours?)?)\b', low)
-    if m and (group or re.search(r'\b(post|posting|send)\b', low)):
+    if m and not group:return None, 'Name the group for this posting interval.'
+    if m and group:
         mins = float(m.group(1)) * (60 if m.group(2).startswith('h') else 1)
         mins = max(15, int(mins))
-        g = group or 'all'
+        g = group
         return {'kind': 'gap', 'group': g, 'minutes': mins}, f'Post in {g} every {mins} minutes (15 is the automatic-posting minimum; manual sends override it).'
 
     # quiet hours: "no posting 2am to 7am", "quiet 2 to 7", "don't post at night"

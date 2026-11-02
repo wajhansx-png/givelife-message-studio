@@ -167,7 +167,7 @@ def _slim(state):
     out['status']=state.get('send_status')
     out['donor_context']=mapping(state.get('donor_context'))
     out['schedules']=state.get('schedules') if isinstance(state.get('schedules'),list) else None
-    out['schedules_note']='These are ALL pending timed tasks right now (position, id). Empty or missing means none are queued.'
+    out['schedules_note']='These are ALL pending timed tasks right now (position, id). An empty list means none are queued.' if isinstance(state.get('schedules'),list) else 'Schedule state is unavailable, not empty. Use list_schedules before claiming that nothing is scheduled; report a read failure honestly.'
     out['draft_task']={k:v for k,v in mapping(state.get('draft_task')).items() if k in ('kind','state','target','poster','max_lines','instruction')}
     act = state.get('recent_activity')
     if act:

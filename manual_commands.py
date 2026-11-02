@@ -110,7 +110,7 @@ def parse(text):
  if re.search(r'\b(hold|pause|stop)\b',low) and re.search(r'\bdms?\b',low) and re.search(r'\b(and|both|also|plus)\b.*\b(groups?|posts?)\b',low):return {'kind':'hold'}
  if re.search(r"(?i)\b(?:don'?t|dont|do not|never)\s+(?:stop|hold|disable|pause|delete|remove|revoke|change|set|record)\b",t):return None
  if low in ('update','status','report','whats update','what s update','whats upadte','what s upadte','what is the update','nothing sent yet man','nothing sent yet') or re.search(r'\b(freelance|freelamce)\b.*\b(update|rules)\b|\b(update|rules)\b.*\b(freelance|freelamce)\b',low):return {'kind':'status','freelance':bool(re.search(r'freela',low))}
- if re.search(r'\b(fast|faster|slow|slower)\b',low) and re.search(r'\b(send|post|pace|speed|posting|sending)\b',low) and not re.search(r'\b(now|right away|immediately|asap)\b',low):return None # pace is a setting, not outgoing text
+ if re.search(r'\b(fast|faster|slow|slower)\b',low) and re.search(r'\b(send|post|pace|speed|posting|sending)\b',low) and not re.search(r'\b(now|right away|immediately|asap)\b',low) and not re.match(r'(?:send|text|message)\s+.+?\s+(?:to|ko)\s+.+',low):return None # explicit text recipients are resolved below
  if re.search(r'exclusive\s+upwork|37\s*(?:member|members)|120363432572916292|120363431093838536',low):return {'kind':'refuse_target'}
  if re.search(r'\b(don t|dont|do not|never|stop|disable|no)\b.*\b(dm|dms|direct messages)\b',low) or low in ('dm off','dms off','auto dms off'):
   return {'kind':'stop_dms'}

@@ -627,7 +627,7 @@ def studio_state():
  since={k:(round((time.time()-saved[v[1]])/60) if v[1] in saved else None) for k,v in GROUPS.items()}
  dm_context={'paused':DONORS.paused,'counts':DONORS.book.list()['counts'],'batch':DONORS.jobs.status()} if DONORS else {'state':'Directory not opened yet'}
  try:schedules=timed_scheduler().summary()
- except Exception:schedules=[]
+ except Exception:schedules=None
  return {'left':read_left(),'case_name':active_case_name(),'case_closed':read_left()<=0,'whatsapp':wa_ok(),'minutes_since_post':since,'autopilot':auto_on(),'donor_context':dm_context,'schedules':schedules}
 
 def start_group_job(key,caption):
@@ -1517,12 +1517,15 @@ def agent_action(name,prompt,args,owner):
   return f'Sending your message to {len(phones)} numbers, about one a minute. I will post the result here when it finishes.'
  raise ValueError('Unknown action.')
 
-def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection_kind='group'):
+def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection_kind='group',history=None,screen=None):
  callbacks=base_chat_callbacks();cache={};verified=set();owner=chat_policy.intent(prompt)
  dm_revision=donors().revision
  variant=chat_policy.variant_request(owner['text'])
- if (draft_flow.editing_request(owner['text']) and not variant or selection is not None) and (revision is None or revision==OWNER_REVISION):
-  kind=selection_kind if selection is not None else 'dm' if re.search(r'(?i)\bdm\b',owner['text']) else 'group'
+ draft_state={'draft_task':dict(workflow().data),'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'screen':mapping(screen)}
+ contextual_edit=draft_flow.contextual_edit(owner['text'],history or [],draft_state)
+ edit_kind=selection_kind if selection is not None else draft_flow.current_kind(owner['text'],draft_state)
+ if (((draft_flow.editing_request(owner['text']) and chat_policy.permitted('set_message',prompt)) or contextual_edit) and not variant or selection is not None) and (revision is None or revision==OWNER_REVISION):
+  kind=edit_kind
   workflow().begin(owner['text'],kind,get_message(kind)['text'])
  sending=owner['send'];dm_allowed=owner['batch']
  send_tools={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
@@ -1564,10 +1567,11 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
    if name=='dm_donors':
     if not chat_policy.permitted(name,prompt):raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
     return donors().model_tool(prompt,task_id,'send')
-   if not chat_policy.permitted(name,prompt) and not (name=='set_message' and selection is not None and not chat_policy.task_assignment_only(prompt)):
+   if not chat_policy.permitted(name,prompt) and not (name=='set_message' and (selection is not None or contextual_edit) and not chat_policy.task_assignment_only(prompt)):
     if name in send_tools and not sending:raise ValueError('The current instruction does not ask to send. Nothing was sent.')
     if name in ('dm_list','dm_donors','dm_group'):raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
     raise ValueError('The current instruction does not authorize '+name+'. Nothing was changed or sent.')
+   if name=='set_message' and (contextual_edit or draft_flow.editing_request(owner['text'])) and not (re.search(r'(?i)\bdm\b',owner['text']) and re.search(r'(?i)\bgroup\b',owner['text'])) and args.get('kind')!=edit_kind:raise ValueError('This edit refers to the active '+edit_kind+' draft. Use that kind; no other draft was changed.')
    if name in send_tools and not sending:raise ValueError('The current instruction does not ask to send. Nothing was sent.')
    if name in ('dm_list','dm_donors','dm_group') and not dm_allowed:raise ValueError('The current instruction does not authorize DMs. Nothing was sent.')
    if name=='delete_last_message' and (not re.search(r'(?i)\b(delete|remove|revoke)\b',prompt) or re.search(r"(?i)\b(don'?t|do not|never)\b.*\b(delete|remove|revoke)\b",prompt)):raise ValueError('No deletion was requested. Nothing was deleted.')
@@ -1582,6 +1586,7 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
     if desired is not None and args.get('enabled') is not desired:raise ValueError('The DM switch does not match the current instruction. Nothing was changed.')
    if name in ('pause_group','resume_group','set_group_pace'):
     named=manual_commands.groups(owner['text']);target=args.get('key',args.get('target'))
+    if not named:raise ValueError('Name the group whose posting settings should change. No settings were changed.')
     expanded=set(k for key in named for k in (GROUPS if key=='all' else FREELANCE if key=='free' else [key]))
     permitted_target=set(GROUPS) if target=='all' else set(FREELANCE) if target=='free' else {target}
     if named and not permitted_target.issubset(expanded):raise ValueError('That group setting is outside the groups named in your instruction.')
@@ -1596,6 +1601,7 @@ def chat_callbacks(prompt='',revision=None,task_id=None,selection=None,selection
    if name=='dm_list':
     explicit={norm_phone(x) for x in re.findall(r'(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}',chat_policy.owner_text(prompt))}
     if any(norm_phone(p.get('phone','')) not in explicit and norm_phone(p.get('phone',''))+'@s.whatsapp.net' not in verified for p in args.get('people',[])):raise ValueError('Every DM-list recipient must come from this owner instruction or a verified lookup.')
+   if name=='set_pace' and not manual_commands.groups(owner['text']):raise ValueError('Name the group posting scope. A personal message cannot change group posting.')
    if name in ('set_left','money_came'):
     plans=chat_policy.financial_plans(prompt)
     expected=[p.get('amount') for p in plans if (p.get('kind')=='money')==(name=='money_came')]
@@ -1704,7 +1710,7 @@ def assistant_task(body):
   if saved:
    ASSIST_TASKS[ident]=saved if saved.get('done') else {'done':True,'error':'This request was interrupted by a restart. Check confirmed activity; it will not be repeated automatically.'}
    return ident
-  if draft_flow.selected_option(text,chat_get(40)) is not None or chat_policy.intent(text)['negative'] or re.fullmatch(r'(?i)\s*(?:no|cancel|stop|wait)\s*',text) or any(chat_policy.permitted(name,text) for name in base_chat_callbacks() if name not in chat_policy.READ):OWNER_REVISION+=1
+  if draft_flow.selected_option(text,chat_get(40)) is not None or draft_flow.contextual_edit(chat_policy.owner_text(text),chat_get(40),{'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8'))}) or chat_policy.intent(text)['negative'] or re.fullmatch(r'(?i)\s*(?:no|cancel|stop|wait)\s*',text) or any(chat_policy.permitted(name,text) for name in base_chat_callbacks() if name not in chat_policy.READ):OWNER_REVISION+=1
   revision=OWNER_REVISION
   ASSIST_TASKS[ident]={'done':False}
   if STORE:STORE.put('assistant_task_'+ident,{'done':False,'started':time.time()})
@@ -1728,7 +1734,9 @@ def assistant_task(body):
     review_data=conversation_insights.build_history_review(past_turns+corrections,hist)
     review_data['tool_failure_patterns']=conversation_insights.summarize_failures(failures)
    selection=draft_flow.selected_option(text,hist)
-   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(text)+KNOWLEDGE.lessons_for(text),'pending_task':KNOWLEDGE.data.get('pending',{}),'history_review':review_data,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident,selection,draft_flow.option_kind(hist,mapping(body.get('screen')).get('view'))))
+   import task_intent
+   retrieval_query=task_intent.retrieval_query(text,hist,draft_flow.active_task({'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8'))}))
+   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(retrieval_query)+KNOWLEDGE.lessons_for(retrieval_query),'pending_task':KNOWLEDGE.data.get('pending',{}),'history_review':review_data,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident,selection,draft_flow.option_kind(hist,mapping(body.get('screen')).get('view')),hist,mapping(body.get('screen'))))
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
    output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
    output['superseded']=revision!=OWNER_REVISION
@@ -1812,14 +1820,15 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
  if donor_result is not None:return {'handled':True,**donor_result,'donors_changed':True}
  preview=draft_flow.preview_request(text)
  if preview:
-  kind=('dm' if message_kind=='dm' else 'group') if preview=='current' else preview
+  kind=draft_flow.current_kind(text,{'screen':{'view':message_kind},'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8'))}) if preview=='current' else preview
   return {'handled':True,'reply':get_message(kind)['text']}
  if not fast_command_eligible(text):return {'handled':False}
  timed=timed_chat_command(text,request_id)
  if timed is not None:return {'handled':True,'reply':timed}
  import rules
- pace=rules.pace_rules(text)
- rule,description=rules.parse(text)
+ literal_plan=manual_commands.parse(text) or {}
+ pace=[] if literal_plan.get('kind')=='text' else rules.pace_rules(text)
+ rule,description=(None,'') if literal_plan.get('kind')=='text' else rules.parse(text)
  if not pace and rule and rule.get('kind')=='gap':pace=[rule]
  if pace:
   # "Post in all every 15 min" is an execution request, not merely an

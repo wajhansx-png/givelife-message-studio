@@ -18,13 +18,7 @@ def contextual_draft_fix(text,history,state):
   return False
  if re.search(r'(?i)\b(?:ui|css|code|dropdown|button|website|screen|layout|bug)\b',phrase):
   return False
- active=mapping(mapping(state).get('draft_task'))
- if active.get('kind') in ('group','dm') and active.get('state')=='editing':return True
- owner=[h for h in valid_history(history)[-14:] if h['who']=='you']
- if not owner:return False
- prior=owner[-1]['text']
- return bool(draft_flow.editing_request(prior) and re.search(
-  r'(?i)\b(?:group|dm|message|caption|draft|hook|paragraph|line|wording)\b',prior))
+ return draft_flow.contextual_edit(phrase,history,state)
 
 def claims_completion(reply):
  """Detect unverified action-completion language across common phrasings.
@@ -48,7 +42,7 @@ def context_messages(text,history,state,memory):
  if chat_policy.smalltalk(text):
   tone=[x for x in memories(memory) if re.search(r'(?i)language|english|urdu|natural|simple|short|friendly',x['rule'])][-5:]
   return [{'role':'user','content':'Conversation data: '+json.dumps({'preferences':tone,'recent_smalltalk':[h for h in valid_history(history)[-12:] if chat_policy.smalltalk(h['text'])][-4:]},ensure_ascii=False)}, {'role':'user','content':safe_text(text,10000)}]
- state=mapping(state)
+ state=dict(mapping(state));state['draft_task']=draft_flow.active_task(state)
  # Historical instructions and retrieved material stay outside the system role.
  reviewing=conversation_insights.wants_review(text)
  context={'state':assistant._slim(state),'preferences':memories(memory)[-20:],
@@ -79,10 +73,10 @@ def context_messages(text,history,state,memory):
   context['turn_task']={'kind':'dm_variants','required_tool':'generate_dm_variants','save_without_reconfirmation':True,
    'instruction':'Rewrite the exact message the owner pasted into the requested number of versions. Preserve its line breaks, blank lines, emojis, bold/italic markers, numbers and payment details. Save them in Messages and put the first on the DM screen. Do not send. Omit source only when the owner clearly means the saved DM.'}
   context['recent_owner_instructions']=[safe_text(h['text'],1000) for h in valid_history(history)[-16:] if h['who']=='you'][-6:]
- elif (not reviewing) and (not chat_policy.task_assignment_only(text)) and (draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None or contextual_draft_fix(text,history,state)):
+ elif (not reviewing) and (not chat_policy.task_assignment_only(text)) and ((draft_flow.editing_request(chat_policy.owner_text(text)) and chat_policy.permitted('set_message',text)) or selection is not None or contextual_draft_fix(text,history,state)):
   # A caption-edit turn should not be distracted by posting/rhythm summaries.
   for key in ('auto','pace','idle_min','group_intervals','status','recent'):context['state'].pop(key,None)
-  context['turn_task']={'kind':'draft_edit','required_tool':'set_message','save_without_reconfirmation':True}
+  context['turn_task']={'kind':'draft_edit','draft_kind':draft_flow.current_kind(text,state),'required_tool':'set_message','save_without_reconfirmation':True}
   if selection is not None:context['turn_task'].update(selected_option=selection,draft_kind=draft_flow.option_kind(valid_history(history),mapping(state.get('screen')).get('view')),instruction='Apply only this owner-selected draft option to the saved caption. Preserve the rest. No send, money, rule or Auto change is authorized.')
   context['recent_owner_instructions']=[safe_text(h['text'],1000) for h in valid_history(history)[-16:] if h['who']=='you'][-6:]
  for item in context['preferences']:item['rule']=safe_text(item.get('rule'),500)
@@ -110,7 +104,7 @@ def run_chat(text,history,state,memory,do):
  key=assistant.client()
  preview=draft_flow.preview_request(chat_policy.owner_text(text))
  if preview and 'get_message' in do:
-  kind=preview if preview!='current' else ('dm' if mapping(mapping(state).get('screen')).get('view')=='dm' else 'group')
+  kind=preview if preview!='current' else draft_flow.current_kind(text,state)
   actual=do['get_message'](kind=kind)
   return {'reply':actual['text'],'actions':[],'done':[],'jobs':[],'diagnostics':{'model':None,'iterations':0,'tools':[{'tool':'get_message','status':'observed'}],'errors':[]}}
  if key is None:return None
@@ -135,7 +129,7 @@ def run_chat(text,history,state,memory,do):
  schemas={t['function']['name']:t['function']['parameters'] for t in tools}
  actions=[];done=[];jobs=[];outcomes=[];errors=[];cache={};started=time.monotonic();nudged=False;reply='';looked=False
  required_variants=chat_policy.variant_request(chat_policy.owner_text(text))
- required_edit=(not reviewing) and not chat_policy.task_assignment_only(text) and (draft_flow.editing_request(chat_policy.owner_text(text)) or selection is not None or referential_edit) and not required_variants
+ required_edit=(not reviewing) and not chat_policy.task_assignment_only(text) and ((draft_flow.editing_request(chat_policy.owner_text(text)) and chat_policy.permitted('set_message',text)) or selection is not None or referential_edit) and not required_variants
  saved_edit=False;variants_done=False
  for iteration in range(8):
   if time.monotonic()-started>150:errors.append('The reasoning time limit was reached.');break

@@ -1,5 +1,38 @@
 """Draft-task boundaries shared by tool permissions, runtime and direct reads."""
 import re
+import hashlib
+from state_shapes import mapping, history as valid_history
+
+def active_task(state):
+ state=mapping(state);task=mapping(state.get('draft_task'));drafts=mapping(state.get('drafts'))
+ value=drafts.get(task.get('kind'))
+ if isinstance(value,str) and task.get('hash') and task['hash']!=hashlib.sha256(value.encode()).hexdigest():return {}
+ return task
+
+def current_kind(text,state):
+ """Explicit draft scope, then persisted work, then the visible screen."""
+ t=str(text)
+ if re.search(r'(?i)\bdm\b',t):return 'dm'
+ if re.search(r'(?i)\b(?:group|givelife|give life)\b',t):return 'group'
+ state=mapping(state);task=active_task(state)
+ if task.get('kind') in ('group','dm') and task.get('state') in ('editing','ready'):
+  return task['kind']
+ return 'dm' if mapping(state.get('screen')).get('view')=='dm' else 'group'
+
+def contextual_edit(text,history,state):
+ """Resolve a short edit against active work; this never authorizes a send."""
+ t=str(text).strip()
+ if not re.match(r'(?i)^(?:fix|correct|adjust|improve)\s+(?:that|this|it|the\s+(?:last|first|previous))\b',t):return False
+ if re.search(r"(?i)\b(?:don'?t|dont|do not|never)\s+(?:edit|change|save|rewrite|replace|update|touch|modify)\b|\b(?:preview only|read only|no changes)\b",t):return False
+ if re.search(r'(?i)\b(?:tasks?|teammate|akhtar|schedule|settings|batch|timer|login|connection|donors?|volunteers?|balance)\b',t):return False
+ if re.search(r'(?i)\b(?:ui|css|code|dropdown|button|website|screen|layout|bug)\b',t):return False
+ task=active_task(state)
+ if mapping(mapping(state).get('draft_task')).get('hash') and not task:return False
+ if task.get('kind') in ('group','dm') and task.get('state') in ('editing','ready'):return True
+ owner=[h for h in valid_history(history)[-14:] if h['who']=='you']
+ if not owner:return False
+ prior=owner[-1]['text']
+ return bool(editing_request(prior) and re.search(r'(?i)\b(?:group|dm|message|caption|draft|hook|paragraph|line|wording)\b',prior))
 
 def selected_option(text,history):
  """An owner-selected draft option authorizes editing only, never money/sends."""

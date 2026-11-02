@@ -28,6 +28,18 @@ def words(value):
  return {w for w in re.findall(r"[\w]+",str(value).casefold()) if len(w)>2 and w not in STOP}
 def referential(text):
  return len(str(text).strip())<=180 and bool(REF.search(str(text)))
+
+def retrieval_query(text,hist,task=None):
+ """Give short follow-ups topic words for retrieval, never action permission."""
+ value=str(text).strip()
+ if not referential(value) and not re.fullmatch(r'(?i)(?:show|shorter|more short|only \d+ lines)[.!]*',value):return value
+ task=task if isinstance(task,dict) else {}
+ hints=[]
+ if task.get('state') in ('editing','ready') and isinstance(task.get('instruction'),str):hints.append(task['instruction'][:500])
+ for turn in reversed(valid_history(hist)):
+  if turn['who']=='you' and turn['text'].strip()!=value:
+   hints.append(turn['text'][:500]);break
+ return value+'\nContext for retrieval only: '+' '.join(hints) if hints else value
 def steps(text):
  """Small, explainable plan for the current request. NOT an execution grant."""
  cleaned=str(text).strip()

@@ -29,6 +29,27 @@ def confirmation(text):
 def _substantive(turn):
  value=turn['text'].strip()
  return turn['who']=='you' and len(value)>=8 and not confirmation(value) and not smalltalk(value)
+LIST_ITEM=re.compile(r"(?m)^\s*(?:\*\*)?(?:option \s*)?(?P<n>\d{1,2})[.)]?(?:\*\*)?\s*(?P<t>.*)$")
+ORDINALS={'first':1,'1st':1,'pehla':1,'pehli':1,'one':1,'second':2,'2nd':2,'doosra':2,'dusra':2,'two':2,'third':3,'3rd':3,'teesra':3,'three':3,'fourth':4,'4th':4,'four':4,'chautha':4,'fifth':5,'five':5}
+CHOICE_FILLERS=frozenset('do go with option number no the one ok okay please karo kar choose pick select use wala ye yeh start run idea suggestion pls plz'.split())
+def numbered_items(text):
+ """Items of a numbered list in an assistant message (the number may sit on its own line)."""
+ lines=str(text).split(chr(10));items={}
+ for i,line in enumerate(lines):
+  m=LIST_ITEM.match(line)
+  if not m:continue
+  title=m['t'].strip()
+  if not title:title=next((x.strip() for x in lines[i+1:i+3] if x.strip() and not LIST_ITEM.match(x)),'')
+  if title and int(m['n']) not in items:items[int(m['n'])]=title
+ return items
+def choice(text,items):
+ """"1", "do 2", "first one", "option 3", "pehla": the numbered suggestion the owner picked, else None."""
+ words=re.sub(r"[^\w\s]"," ",str(text).casefold()).split()
+ if not words or len(words)>5 or len(items)<2:return None
+ picks={int(w) for w in words if w.isdigit() and len(w)<=2}|{ORDINALS[w] for w in words if w in ORDINALS}
+ if len(picks)!=1:return None
+ if [w for w in words if not w.isdigit() and w not in ORDINALS and w not in CHOICE_FILLERS]:return None
+ return items.get(next(iter(picks)))
 def followup(text,history):
  """Resolve a short reply ("yes", "do it", "kar do", "all groups") against the question it answers.
 
@@ -41,8 +62,12 @@ def followup(text,history):
  plain={'text':value,'inherited':False,'prev':'','asked':''}
  if not value or not turns or turns[-1]['who']=='you':return plain
  last=turns[-1]
+ if last['who']=='app' and draft_flow.selected_option(value,valid_history(history)) is None:
+  picked=choice(value,numbered_items(last['text']))
+  if picked:return {'text':picked,'inherited':True,'prev':picked,'asked':last['text'][-300:]}
  if last['who']!='app' or not ASKED.search(last['text'][-400:]):return plain
  answer=confirmation(value)
+ if len(numbered_items(last['text']))>=2 and (answer or re.search(r'\d',value)):return plain # an ambiguous reply to a list of options: the model must ask which one
  if not answer and (len(value.split())>6 or smalltalk(value) or intent(value)['send'] or QUESTION.search(value) or re.search(r'(?i)\b(?:send|post|dm|edit|change|set|delete|add|remove|stop|pause|hold|start|resume)\b',value)):return plain
  prev=next((t['text'].strip() for t in reversed(turns[:-1]) if _substantive(t)),'')
  if not prev or intent(prev)['query']:return plain
@@ -153,7 +178,7 @@ def permitted(name,text):
  if inspect and name not in ('set_message','prepare_dm'):return False
  if name=='delete_last_message':return bool(re.search(r'(?i)\b(delete|remove|revoke)\b',t)) and not re.search(r"(?i)\b(dont|don't|do not|never)\b",t)
  if name=='hold':return bool(re.search(r'(?i)\b(hold|wait|pause|stop|resume|continue|unhold|wrong whatsapp|connected now)\b',t))
- if name=='autopilot':return bool(re.search(r'(?i)\b(?:auto|autopilot)\b',t) and re.search(r'(?i)\b(?:on|off|enable|disable|start|stop|turn|switch|resume|pause)\b',t))
+ if name=='autopilot':return bool(re.search(r'(?i)\b(?:auto|autopilot)\b',t) and re.search(r'(?i)\b(?:on|off|enable|disable|start|restart|stop|turn|switch|resume|pause)\b',t))
  if name in ('remember','add_rule'):return bool(re.search(r'(?i)\b(remember|always|never|from now|in future|daily|every|quiet|pause|pace|slow|fast|yaad rakho)\b',t))
  if name=='delete_rule':return bool(re.search(r'(?i)\b(forget|delete|remove)\b.*\b(rule|memory|preference)\b',t))
  if name in ('set_left','money_came'):

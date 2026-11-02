@@ -113,6 +113,34 @@ class AutopilotWording(unittest.TestCase):
     self.assertTrue(chat_policy.permitted('autopilot',phrase))
   self.assertFalse(chat_policy.permitted('autopilot',"don't turn off auto"))
 
+SUGGESTIONS=chr(10).join(['Hi! Here is where things stand and what I would do next.','1','Post main group now','The case is time-sensitive.',
+ '2','Restart Auto for main only','Keeps the case visible every 15 minutes.','3','Send a fresh donor batch','187 donors are uncontacted.',
+ 'Tell me which one to start, e.g. "post main now".'])
+
+class PickingASuggestion(Replay,unittest.TestCase):
+ HISTORY=chat('hi there suggestions',SUGGESTIONS)
+ def test_numbers_and_ordinals_pick_the_matching_suggestion(self):
+  for reply,expected in (('1','Post main group now'),('do 2','Restart Auto for main only'),('first one','Post main group now'),('option 3','Send a fresh donor batch'),('pehla','Post main group now')):
+   with self.subTest(reply=reply):
+    follow=chat_policy.followup(reply,self.HISTORY)
+    self.assertTrue(follow['inherited']);self.assertEqual(follow['text'],expected)
+
+ def test_a_bare_yes_or_unknown_number_never_guesses_an_option(self):
+  for reply in ('yes','kar do','4','2000','1 and 2'):
+   with self.subTest(reply=reply):self.assertFalse(chat_policy.followup(reply,self.HISTORY)['inherited'])
+
+ def test_picking_one_runs_that_action_only(self):
+  sent=[]
+  self.play('1',self.HISTORY,[call('send_appeal',{'target':'main'}),{'content':'ok'}],{'send_appeal':lambda **kw:(sent.append(kw) or 'WhatsApp confirmed the post.')})
+  self.assertEqual(sent,[{'target':'main'}])
+  context=next(m['content'] for m in self.model.call_args_list[0].args[3] if m['content'].startswith('APP_CONTEXT_JSON'))
+  self.assertIn('Post main group now',context)
+
+ def test_picking_the_auto_option_cannot_send(self):
+  self.play('2',self.HISTORY,[{'content':'Auto restarted.'}],{})
+  self.assertNotIn('send_appeal',self.offered)
+  self.assertIn('autopilot',self.offered)
+
 class UrduAndHinglishCommands(unittest.TestCase):
  def test_everyday_phrasings_run_without_the_model(self):
   expected={'ab 3000 bache hain':('amount',3000),'1500 aaye hain':('money',1500),'Rs 1500 aye hain':('money',1500),

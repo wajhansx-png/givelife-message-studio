@@ -15,7 +15,11 @@ def repeat_target(task,text):
 def update_amount(text,old,left):
  text=re.sub(r'(?<!\d)(?:'+re.escape(f'{old:,}')+'|'+str(old)+r')(?!\d)',f'{left:,}',text)
  def option(m):return str(math.ceil(left/int(m['unit'].replace(',','').replace(' ',''))))+m['body']+m['unit']
- return re.sub(r'(?i)(?<!\d)\d+(?P<body>\s+people\s+(?:donating|giving|at)\s+(?:Rs\.?\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)',option,text)
+ text=re.sub(r'(?i)(?<!\d)\d+(?P<body>\s+(?:kind\s+)?people\s+(?:(?:donating|giving|contributing|contributing at|at|of|or)\s+)?(?:Rs\.?\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)',option,text)
+ text=re.sub(r'(?i)(?<!\d)\d+(?P<body>\s*[×x]\s*(?:Rs\.?\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)',option,text)
+ def reverse(m):return m[1]+str(math.ceil(left/int(m[2].replace(',','').replace(' ',''))))+m[3]
+ return re.sub(r'(?i)((?:Rs\.?\s*)?(2[ ,]?000|1[ ,]?000)\s+by\s+)\d+(\s+people)',reverse,text)
+
 
 def requirements(prompt):
  t=str(prompt);out={}

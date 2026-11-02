@@ -1,4 +1,5 @@
 import sys
+import caption_facts
 import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, datetime, math, re, secrets, os, base64, hashlib
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -75,6 +76,7 @@ def custom_recipient(body):
 
 def send_custom(body):
  jid,is_group=custom_recipient(body);message=body.get('message','')
+ if isinstance(message,str) and body.get('kind') in ('dm_appeal','donor_registry','donor_manual','donor_batch','owner_text'):message=caption_facts.current(sys.modules[__name__],message);body={**body,'message':message}
  if not isinstance(message,str):raise ValueError('Message must be text.')
  if read_left()<=0 and completed_case_appeal(message):
   raise ValueError('Not sent: this completed case caption contains a fundraising appeal. Replace it with a thank-you message.')
@@ -332,9 +334,10 @@ def set_left(left):
    g=build_group(variant(False),0)
    d=build_dm(dm_selection(False),0)
   else:
-   g=draft_workflow.update_amount(before['group'],old,left) if custom=='group' else build_group(variant(False),left)
-   d=draft_workflow.update_amount(before['dm'],old,left) if custom=='dm' else build_dm(dm_selection(False),left)
+   g=draft_workflow.update_amount(before['group'],old,left) if custom=='group' or STORE and STORE.get('focus_wording',{}).get('group') else build_group(variant(False),left)
+   d=draft_workflow.update_amount(before['dm'],old,left) if custom=='dm' or STORE and STORE.get('focus_wording',{}).get('dm') else build_dm(dm_selection(False),left)
   save_draft('group',g);save_draft('dm',d)
+  if int(left)>0:caption_facts.transform_banks(sys.modules[__name__],lambda text:draft_workflow.update_amount(text,old,left))
   if custom:task.commit(custom,g if custom=='group' else d)
   return g,d
 
@@ -459,7 +462,7 @@ def run_job(job_id,keys,caption,queue=False):
  job=JOBS[job_id];event=JOB_CANCEL.setdefault(job_id,threading.Event());last_send=None
  try:
   for index,key in enumerate(keys):
-   outgoing=job.get('captions',[caption]*len(keys))[index]
+   outgoing=caption_facts.current(sys.modules[__name__],job.get('captions',[caption]*len(keys))[index])
    if event.is_set() or on_hold():break
    name,jid=('Givelife test','120363431210327603@g.us') if key=='test' else GROUPS[key]
    if last_send is not None:
@@ -468,6 +471,7 @@ def run_job(job_id,keys,caption,queue=False):
    with SEND_LOCK:
     if event.is_set() or on_hold():break
     job.update(message='Sending to '+name,next_send_at=None,next_target=key);save_job(job_id)
+    outgoing=caption_facts.current(sys.modules[__name__],outgoing)
     OWNER_GUARD.cancel_event=event
     try:
      if job.get('with_picture',True):result=send_image(jid,outgoing,not job.get('manual',False))
@@ -1954,6 +1958,9 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
 def manual_command(text,request_id=None,message_kind='group'):
  previous=getattr(OWNER_GUARD,'revision',None)
  try:
+  try:janazah_time=caption_facts.parse_time(str(text))
+  except ValueError as error:return {'handled':True,'reply':str(error)}
+  if janazah_time:return {'handled':True,'reply':caption_facts.set_time(sys.modules[__name__],janazah_time)}
   if draft_flow.preview_request(text):return execute_manual_command(text,request_id,message_kind)
   pending=KNOWLEDGE.data.get('pending',{})
   if pending.get('created',0)<time.time()-600:pending={};KNOWLEDGE.data['pending']={}

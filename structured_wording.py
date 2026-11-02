@@ -48,7 +48,7 @@ def variants(source,existing=(),call=None):
    if not isinstance(value,str):continue
    if '\n' in value or '\r' in value:continue
    value=value.strip()
-   if not value or '\n' in value:continue
+   if not value or value==original or '\n' in value:continue
    if segment==0:
     if re.search(r'[*_~`\U0001F000-\U0001FAFF\u2600-\u27BF]',value):continue
     if dm_variants._numbers(value)!=dm_variants._numbers(original):continue
@@ -57,11 +57,11 @@ def variants(source,existing=(),call=None):
    elif TOKEN.search(value):continue
    if abs(len(value)-len(original))>40:continue
    if value not in clean:clean.append(value)
-  options.append(clean+[original])
+  options.append(clean or [original])
  result=[]
  # For each fresh hook, balance lengths across the other prose segments. Exact
  # formatting and numeric tokens never enter the model's output at all.
- for hook in options[0][:-1]:
+ for hook in [v for v in options[0] if v!=slots[0]]:
   states={len(hook)-len(slots[0]):[hook]}
   for original,choices in zip(slots[1:],options[1:]):
    nxt={}

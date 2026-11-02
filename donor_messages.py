@@ -171,12 +171,20 @@ class MessageBank:
                 with self.lock:
                     if not self._generation_current(generation):
                         return
-                missing = generation['target'] - 1 - len(prior)
-                result = dm_variants.generate(source, missing, avoid=[source] + prior,
-                                             progress=record, allow_partial=True) if missing else []
-                record(result, 'Ready' if len(prior) + len(result) >= generation['target'] - 1 else 'Partial',
-                       '' if len(prior) + len(result) >= generation['target'] - 1
-                       else 'Some versions are ready. Retry to finish the remaining versions.')
+                # Continue productive partial batches automatically, with a finite
+                # budget. Provider failures stop here; no endless background retry.
+                for _ in range(3):
+                    prior = list(accepted)
+                    missing = generation['target'] - 1 - len(prior)
+                    if not missing:
+                        break
+                    result = dm_variants.generate(source, missing, avoid=[source] + prior,
+                                                 progress=record, allow_partial=True)
+                    if not record(result) or not result:
+                        break
+                complete = len(accepted) >= generation['target'] - 1
+                record(accepted[len(prior):], 'Ready' if complete else 'Partial',
+                       '' if complete else 'Some versions are ready. Retry to finish the remaining versions.')
         except Exception as exc:
             # The callback already saved accepted work. A failure never resets it.
             record(accepted[len(prior):], 'Partial', str(exc)[:350])

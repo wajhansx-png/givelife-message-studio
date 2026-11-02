@@ -103,6 +103,14 @@ class GenerationProgressTests(unittest.TestCase):
         self.assertEqual(model.call_args.kwargs['avoid'], [self.source] + self.versions[:2])
         self.assertEqual([row['text'] for row in ready['items']], [self.source] + self.versions)
 
+    def test_successful_partial_batches_continue_without_another_click(self):
+        with patch('dm_variants.generate', side_effect=[self.versions[:2], self.versions[2:]]) as model:
+            self.bank.start_regeneration()
+            ready = self.wait('Ready')
+        self.assertEqual(model.call_count, 2)
+        self.assertEqual(model.call_args.args[1], 17)
+        self.assertEqual(len(ready['items']), 20)
+
     def test_late_worker_cannot_overwrite_a_new_master_edit(self):
         gate, entered = threading.Event(), threading.Event()
 

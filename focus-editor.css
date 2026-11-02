@@ -48,3 +48,30 @@ body.message-focus-open>.app,body.message-focus-open>.foot{visibility:hidden}
 #messageFocus .group-send,#messageFocus .dm-send{flex:none;width:100%;overflow:visible;padding:12px}
 #messageFocus #focusFormatted{max-height:42dvh;overflow-y:auto}
 }
+
+/* Editor tools: formatting only while editing; secondary actions quieter; phone actions sit in a sticky thumb bar. */
+#messageFocus [data-mark],#messageFocus [data-emoji]{display:none!important}
+#messageFocus:has(#focusText:not([hidden])) [data-mark],#messageFocus:has(#focusText:not([hidden])) [data-emoji]{display:flex!important}
+#messageFocus #focusNext{background:#315cd0!important;color:#fff!important;border-color:#4775eb!important;font-weight:700}
+#messageFocus #focusPoster,#messageFocus #focusManual,#messageFocus #focusRegenerate{background:transparent;color:#cfcfcf}
+#messageFocus .focus-rail button{border-radius:12px}
+@media(max-width:899px){
+#messageFocus .focus-workspace,#messageFocus.with-group .focus-workspace,#messageFocus.with-dm .focus-workspace{display:flex;flex-direction:column}
+#messageFocus .focus-paper{order:1}
+#messageFocus .group-send,#messageFocus .dm-send{order:2}
+#messageFocus .focus-rail{order:3;position:sticky;bottom:calc(-12px - env(safe-area-inset-bottom));z-index:4;background:#232323;margin:0 -10px;padding:8px 10px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #ffffff1f;gap:6px}
+#messageFocus .focus-rail small{display:none}
+#messageFocus .focus-rail button{flex:1 1 calc(33% - 6px);min-width:0;min-height:48px!important;font-size:14px!important}
+#messageFocus #focusPoster,#messageFocus #focusManual,#messageFocus #focusRegenerate{min-height:40px!important;font-size:12px!important;flex-basis:calc(33% - 6px)}
+#messageFocus #focusFormatted{max-height:calc(100dvh - 250px);overflow-y:auto;font-size:16px;padding:14px}
+#messageFocus .focus-rail button[hidden]{display:none!important}
+#messageFocus #focusPoster,#messageFocus #focusManual,#messageFocus #focusRegenerate{flex:1 1 auto;white-space:nowrap;padding:6px 8px!important}
+}
+@media(max-width:899px){
+#messageFocus #focusRetry{background:transparent;color:#cfcfcf}
+#messageFocus #focusPoster,#messageFocus #focusManual,#messageFocus #focusRegenerate,#messageFocus #focusRetry{flex:1 1 0!important;min-width:0!important;min-height:40px!important;font-size:0!important;padding:4px!important;white-space:nowrap}
+#messageFocus #focusPoster::after,#messageFocus #focusManual::after,#messageFocus #focusRegenerate::after,#messageFocus #focusRetry::after{font-size:12px;font-weight:600}
+#messageFocus #focusPoster::after{content:'Poster'}#messageFocus #focusManual::after{content:'Manual'}#messageFocus #focusRegenerate::after{content:'Regenerate'}#messageFocus #focusRetry::after{content:'Retry'}
+#messageFocus #focusNext{font-size:0!important}#messageFocus #focusNext::after{content:'Next →';font-size:15px}
+}
+

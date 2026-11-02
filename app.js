@@ -578,7 +578,7 @@ pollAuto();setInterval(pollAuto,5000);pollCamp();refreshNextActions();
 document.getElementById('railPreview')?.addEventListener('click',()=>document.getElementById('desktopPreview')?.click());
 document.getElementById('railDonors')?.addEventListener('click',()=>document.getElementById('openDonors')?.click());
 /* Desktop: Settings sits in the centred footer beside Keyboard shortcuts instead of the far corner. */
-(()=>{const gear=document.getElementById('gear'),foot=document.querySelector('.foot'),bar=document.querySelector('.brandbar'),wide=matchMedia('(min-width:900px)');if(!gear||!foot||!bar)return;const place=()=>{(wide.matches?foot:bar).append(gear)};place();wide.addEventListener('change',place)})();
+
 
 /* ---- Cases: save a finished case, open an old one, start a new one from zero ---- */
 async function loadCases(){try{const r=await fetch('/cases');if(!r.ok)return;const d=await r.json(),sel=$('caseSelect');if(!sel)return;sel.textContent='';

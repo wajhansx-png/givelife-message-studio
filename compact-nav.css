@@ -78,7 +78,6 @@ html body .layout>.side,html body.nomsg .layout>.side{align-self:end;margin-bloc
 html,html body{height:auto!important;min-height:100%;overflow-y:auto!important}
 html body .app{height:auto;min-height:100dvh}
 }
-@media(max-width:560px){html body .brandbar #desktopPreview{display:none!important}}
 @media(max-width:380px){html body .brandbar{gap:4px;padding-inline:6px}html body .brandbar .seg button{padding:0 9px}}
 @media(max-width:899px){
 html body .brandbar #donorNotesShortcut,html body .donor-add,html body .donor-search,html body .message-copy,html body #histMain,html body dialog#set button,html body dialog#set select{min-height:44px}
@@ -91,3 +90,9 @@ html body .donor-head #donorAdd,html body #hideMsg,html body .overflow-tools but
 @media(max-width:899px){
 html body input:not([type=checkbox]):not([type=radio]):not([type=range]):not(.sw),html body textarea,html body select{font-size:16px!important}
 }
+/* Navbar: only Group/DM, Notes, status and More stay in the bar; Preview, Settings and the phone amount live in More. */
+html body .compact-nav-panel #desktopPreview,html body .compact-nav-panel #gear,html body .compact-nav-panel .more-amount{display:flex!important;align-items:center;justify-content:flex-start;gap:8px;width:100%;height:auto;min-height:44px;padding:8px 12px;margin:0;font-size:14px!important;text-align:left;border-radius:10px;position:static!important;visibility:visible!important;flex:none}
+html body .compact-nav-panel #desktopPreview::before{display:none}
+html body .compact-nav-panel .more-amount{display:none!important}
+@media(max-width:560px){html body .brandbar #leftChip{display:none!important}html body .compact-nav-panel .more-amount{display:flex!important}}
+@media(pointer:coarse){html body #mainNavMore #keyboardHelp{display:none!important}}

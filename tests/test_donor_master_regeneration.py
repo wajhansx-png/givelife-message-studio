@@ -61,6 +61,16 @@ class DonorMasterTests(unittest.TestCase):
   self.assertEqual(two['origin'],second)
   self.assertNotEqual(two['origin'],one['origin'])
 
+ def test_master_edit_survives_main_dm_draft_changes(self):
+  bank=app.donors().messages
+  master=bank.get()['items'][0]
+  edited=master['text'].replace('Brother, ', 'Bhai, ', 1)
+  bank.update(master['id'],edited)
+  app.save_draft('dm',dm_templates.build(1,app.read_left()))
+  restarted=MessageBank(app)
+  self.assertEqual(restarted.get()['items'][0]['text'],edited)
+  self.assertEqual(restarted.get()['mode'],'custom')
+
  def test_model_failure_keeps_last_saved_master_and_previous_versions(self):
   bank=app.donors().messages
   first=bank.get()['items'][0]

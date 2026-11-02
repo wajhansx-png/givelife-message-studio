@@ -217,6 +217,7 @@ class DonorDelivery:
                 while not self.connected():
                     if time.time()>=deadline:raise ValueError('WhatsApp stayed disconnected for 30 minutes. Reconnect it, then press Continue.')
                     if self.stop.wait(15):return None
+            if self.stop.is_set():return None
             return self.send(body)
     def _run(self,j):
         receipts=[];sent=skipped=failed=0;last_completion=None;state='Completed';error='';chunk=j.get('chunk');gap_next=float(j['gap_seconds']);done_here=set()
@@ -291,3 +292,4 @@ class DonorDelivery:
             args.update(ids=j['ids'],personal_names=j['personal_names'],limit=len(j['ids']))
         return self.start(**args,request_id='auto-'+uuid.uuid4().hex)
     AUTO_WINDOW=36*3600
+

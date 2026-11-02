@@ -166,6 +166,12 @@ class MessageBank:
             if row is None:
                 raise ValueError('Message not found.')
             row['text'] = text
+            if ident == 'wording-01':
+                # An owner-edited master becomes authoritative even when the
+                # main DM draft is later changed in the other app screen.
+                data['mode'] = 'custom'
+                data['origin'] = text
+                data['fingerprint'] = self._fingerprint(text)
             data['updated_at'] = time.time()
             self._save(data)
             return {'saved': True, 'item': row}

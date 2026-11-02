@@ -64,3 +64,19 @@ html body #donorsPage #donorNotice[data-error=true]{background:var(--surface2);c
 
 .brandbar #desktopPreview{display:inline-grid!important;place-items:center;position:static!important;visibility:visible!important;width:44px;min-width:44px;height:44px;padding:0;font-size:0!important}
 .brandbar #desktopPreview::before{content:'';display:block;width:21px;height:21px;background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Cpath d='M3 12s3-7 9-7 9 7 9 7-3 7-9 7-9-7-9-7Z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center/contain no-repeat}
+
+/* Phone/tablet header: one tidy row, and no dead gap above the send buttons. */
+@media(max-width:899px){
+html body .brandbar{flex-wrap:nowrap!important;gap:6px;padding:6px 8px;align-items:center}
+html body .brandbar>*{min-width:0}
+html body .brandbar .seg{flex:none}
+html body .brandbar .seg button{padding:0 12px}
+html body .brandbar .sp{flex:1 1 0;min-width:0}
+html body .brandbar>button,html body .brandbar>details,html body .brandbar>label{flex:none}
+html body .layout{grid-template-rows:max-content!important;min-height:0;align-content:start}
+html body .layout>.side{align-self:start}
+html,html body{height:auto!important;min-height:100%;overflow-y:auto!important}
+html body .app{height:auto;min-height:100dvh}
+}
+@media(max-width:560px){html body .brandbar #desktopPreview{display:none!important}}
+@media(max-width:380px){html body .brandbar{gap:4px;padding-inline:6px}html body .brandbar .seg button{padding:0 9px}}

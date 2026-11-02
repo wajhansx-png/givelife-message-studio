@@ -495,7 +495,7 @@ const smallScreens=[
  {id:'donorBatchPicker',suffix:'pace',open:()=>$('donorPace').click()},
  {id:'posterDialog',path:'settings/poster',open:()=>window.DonorHub?.openPoster()}
 ];
-function smallRoute(screen){return screen.path||'donors/'+(Nav.top()==='donors'?Nav.path().split('/')[1]:'all')+'/'+screen.suffix}
+function smallRoute(screen){return screen.path||'donors/'+(Nav.top()==='donors'?(Nav.path().split('/')[1]||'all'):'all')+'/'+screen.suffix}
 function restoreSmallDialog(path,open=false){for(const screen of smallScreens){const dialog=$(screen.id);if(!dialog)continue;
  const target=screen.path?path===screen.path:path.startsWith('donors/')&&path.split('/')[2]===screen.suffix;
  if(dialog.open&&!target)dialog.close();

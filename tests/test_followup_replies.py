@@ -181,4 +181,40 @@ class ServerGuardAgrees(unittest.TestCase):
    app.chat_callbacks(follow['text'],revision=app.OWNER_REVISION)['set_message'](kind='dm',text='Changed without being asked')
   self.assertEqual(app.get_message('dm')['text'],original)
 
+class WholeConversationOverHttp(unittest.TestCase):
+ setUp=fixture.SendTests.setUp
+ tearDown=fixture.SendTests.tearDown
+ def converse(self,text,script):
+  import json,threading,time,urllib.request
+  server=app.ThreadingHTTPServer(('127.0.0.1',0),app.Handler)
+  threading.Thread(target=server.serve_forever,daemon=True).start()
+  def request(path,body=None):
+   req=urllib.request.Request('http://127.0.0.1:'+str(server.server_port)+path,data=json.dumps(body).encode() if body else None,headers={'Authorization':'Bearer test-only-studio-access-key','Content-Type':'application/json'})
+   with urllib.request.urlopen(req) as r:return json.load(r)
+  try:
+   with patch.object(assistant,'client',return_value='fake'),patch.object(assistant,'_chat_raw',side_effect=script) as model:
+    started=request('/assistant',{'text':text,'request_id':'e2e-'+str(abs(hash(text))),'screen':{'view':'dm'}})
+    deadline=time.monotonic()+5
+    while time.monotonic()<deadline:
+     result=request('/assistant-status/'+started['task_id'])
+     if result.get('done'):break
+     time.sleep(.02)
+   return result,model
+  finally:server.shutdown();server.server_close()
+
+ def test_yes_after_the_assistants_offer_saves_the_dm_through_the_real_server(self):
+  original=app.get_message('dm')['text'];shorter=original.replace('Brother,','Brother, please read this.')
+  app.workflow().begin('make the dm shorter','dm',original);app.workflow().revise(original)
+  app.chat_add('you','make the dm shorter');app.chat_add('app','Here is the shorter DM. Shall I save it?')
+  result,model=self.converse('yes',[{'tool_calls':[{'id':'e','function':{'name':'set_message','arguments':json.dumps({'kind':'dm','text':shorter})}}]},{'content':'Saved.'}])
+  self.assertTrue(result.get('done'));self.assertNotIn('error',result)
+  self.assertEqual(app.get_message('dm')['text'],shorter)
+
+ def test_yes_with_nothing_asked_changes_nothing_over_http(self):
+  original=app.get_message('dm')['text']
+  app.chat_add('you','make the dm shorter');app.chat_add('app','Saved the shorter DM.')
+  result,model=self.converse('yes',[{'content':'Anything else?'}])
+  self.assertTrue(result.get('done'))
+  self.assertEqual(app.get_message('dm')['text'],original)
+
 if __name__=='__main__':unittest.main()

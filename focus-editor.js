@@ -19,5 +19,5 @@
  $('focusPoster').onclick=()=>{ $('posterDialog').dataset.returnRoute='preview';window.DonorHub.openPoster()};
  $('focusRetry').onclick=async()=>{try{row=await api({action:'retry'});$('focusRetry').hidden=true;watch()}catch(e){status(e.message)}};
  screen.querySelectorAll('[data-mark],[data-emoji]').forEach(b=>{b.onmousedown=e=>e.preventDefault();b.onclick=()=>{if(!editing)edit(true);const t=$('focusText'),a=t.selectionStart,z=t.selectionEnd,m=b.dataset.mark;let start=a,end=z;if(m&&a===z){start=t.value.lastIndexOf('\n',a-1)+1;end=t.value.indexOf('\n',a);if(end<0)end=t.value.length}const selected=t.value.slice(start,end),value=m?m+selected+m:b.dataset.emoji;t.setRangeText(value,start,end,'select');t.dispatchEvent(new Event('input'));t.focus({preventScroll:true})}});
- addEventListener('hashchange',sync);addEventListener('resize',fit);addEventListener('beforeunload',()=>{if(dirty)sessionStorage.setItem('focus-draft-'+kind,$('focusText').value)});sync();
+ addEventListener('studio-navigate',sync);addEventListener('popstate',sync);addEventListener('hashchange',sync);addEventListener('resize',fit);addEventListener('beforeunload',()=>{if(dirty)sessionStorage.setItem('focus-draft-'+kind,$('focusText').value)});sync();
 })();

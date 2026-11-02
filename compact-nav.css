@@ -200,3 +200,7 @@ html body .app > .foot > #openDonors{grid-column:2;grid-row:1;justify-self:cente
 #donorsPage[data-panel="messages"] .bank-heading:has(.bank-generation-state:not(:empty)){flex-wrap:wrap}
 html body #donorsPage[data-panel="messages"] .bank-heading > .bank-generation-state{display:block;flex:1 0 100%!important;order:4;max-width:100%;white-space:normal;font-size:12px;line-height:1.4;color:var(--ink)}
 html body #donorsPage[data-panel="messages"] .bank-heading > .bank-generation-state:empty{display:none}
+
+@media(max-width:899px){
+ html body .app > .foot > #chatOpen{display:flex;align-items:center;justify-content:center;grid-column:1;grid-row:1;justify-self:end;margin:0;min-width:0;min-height:46px;padding:0 14px}
+}

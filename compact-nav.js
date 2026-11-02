@@ -12,6 +12,10 @@
   details.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();details.open=false;summary.focus()}});
   return panel;
  }
+ // Keep both mobile shortcuts in the same bottom row; reuse their handlers.
+ const chatShortcut=document.getElementById('chatOpen'),chatRow=chatShortcut?.parentElement,footer=document.querySelector('.foot'),mobileNav=matchMedia('(max-width:899px)');
+ const placeChatShortcut=()=>{if(!chatShortcut||!footer||!chatRow)return;if(mobileNav.matches)footer.prepend(chatShortcut);else chatRow.append(chatShortcut)};
+ placeChatShortcut();mobileNav.addEventListener('change',placeChatShortcut);
  const bar=document.querySelector('.brandbar');
  if(bar){
   const panel=menu(bar,'mainNavMore','More app options');

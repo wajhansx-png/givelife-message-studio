@@ -145,6 +145,11 @@ html body #donorPasteDialog #pastePoster{width:18px;min-width:18px;height:18px;m
  #donorsPage[data-panel="messages"] .bank-preview,
  #donorsPage[data-panel="messages"] .bank-message textarea{padding:12px;font-size:16px;line-height:1.45}
  #donorsPage[data-panel="messages"] .bank-actions button{min-height:44px;font-size:11px;padding:6px 4px}
+ #donorsPage[data-panel="messages"] .bank-pagination .bank-back-bottom{
+  display:block;position:fixed;right:8px;bottom:max(8px,env(safe-area-inset-bottom));
+  z-index:12;min-height:48px;padding:10px 14px;background:#315cd0;color:#fff;
+  box-shadow:0 3px 12px #0007;
+ }
  #donorsPage[data-panel="messages"] .bank-picker{
   grid-column:1/-1;min-height:0;border-radius:12px;
   padding:10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;align-content:start;

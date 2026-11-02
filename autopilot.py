@@ -220,8 +220,9 @@ class Engine:
         self.s['wa_down_since'] = 0
         if left <= 0:
             if not self.s.get('d1_done'):
+                posted=self.h['post_text_all'](self.h['done_text']())
+                if posted is False:return
                 self.s['d1_done'] = True
-                self.h['post_text_all'](self.h['done_text']())
                 self.log('Goal complete: completion message posted to all groups. Posting stopped.')
             return self.notify('goal', 'The goal is complete (Rs. 0 left). I posted the completion message and stopped. Set up the next case when ready.', 86400)
         self.s['d1_done'] = False

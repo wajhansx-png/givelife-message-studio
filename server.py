@@ -1161,19 +1161,29 @@ def post_text_all(text):
    time.sleep(60)
  threading.Thread(target=run,daemon=True).start()
 
-def variant_pool():
- return 'a' if 0<read_left()<=10000 else 'n'
+def saved_auto_group_caption():
+ """One authoritative source: the saved Group editor and its version bank."""
+ caption=get_message('group')['text']
+ if not caption.strip():raise ValueError('Save a message in Group before Auto can post.')
+ if STORE:
+  bank=focus_bank();row=bank.get('group')
+  if not row.get('revision'):row=bank.save('group',caption)
+  return row['source']
+ return caption
 
-def variant_count():
- return len(ALMOST) if variant_pool()=='a' else len(HOOKS)
+def start_auto_group_job(keys,_legacy_caption=None):
+ # Ignore independent milestone/share/template copy supplied by old Auto paths.
+ # The shared sender reserves unused versions from this same saved source.
+ return start_keys_job(keys,saved_auto_group_caption())
 
-def caption_variant(i):
- return build_group(int(i),read_left())
+def auto_post_saved_to_all(_legacy_caption=None):
+ return start_auto_group_job(list(GROUPS))
 
-def variant_names():
- names={i:h[0].replace('{P2}','N')[:48] for i,h in enumerate(HOOKS)}
- names.update({100+i:a[0].replace('{L}','X').replace('{P2}','N')[:48] for i,a in enumerate(ALMOST)})
- return names
+def variant_pool():return 'owner'
+def variant_count():return 1
+def caption_variant(i):return saved_auto_group_caption()
+def variant_names():return {0:'Saved Group message bank'}
+
 
 def goal_value():
  m=re.search(r'^GOAL:\s*(\d+)',(DATA/'state.md').read_text(encoding='utf-8-sig'),re.M);return int(m[1]) if m else 0
@@ -1297,8 +1307,8 @@ def ai_test():
 ENGINE=autopilot.Engine({'DATA':DATA,'store_get':lambda k:STORE.get(k) if STORE else None,'persist':persist_file,'log':auto_log,
  'send_text':send_text,'owner_jid':lambda:OWNER_PHONE+'@s.whatsapp.net','enabled':auto_on,'read_left':read_left,'wa_ok':wa_ok,
  'busy':lambda:ACTIVE is not None,'last_sent':last_sent_by_key,'groups':lambda:list(GROUPS),'group_jids':lambda:{k:v[1] for k,v in GROUPS.items()},
- 'caption':lambda:json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),'start_job':start_keys_job,'last_results':last_results,'messages':group_messages,
- 'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':post_text_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm,'caption_variant':caption_variant,'variant_count':variant_count,'variant_pool':variant_pool,'variant_names':variant_names,'goal':goal_value,'milestone_text':milestone_text,'update_text':update_text,'wa_reconnect':lambda:api('/app/reconnect'),'on_hold':on_hold,'dm_busy':lambda:bool(CAMPAIGN.get('running')),'job_message':job_message,'recent_chats':recent_chats,'outreach':outreach})
+ 'caption':lambda:json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),'start_job':start_auto_group_job,'last_results':last_results,'messages':group_messages,
+ 'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':auto_post_saved_to_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm,'caption_variant':caption_variant,'variant_count':variant_count,'variant_pool':variant_pool,'variant_names':variant_names,'goal':goal_value,'milestone_text':milestone_text,'update_text':update_text,'wa_reconnect':lambda:api('/app/reconnect'),'on_hold':on_hold,'dm_busy':lambda:bool(CAMPAIGN.get('running')),'job_message':job_message,'recent_chats':recent_chats,'outreach':outreach})
 
 def engine_do(auto_review=False):
  return {'set_pace':lambda main_minutes,freelance_minutes:ENGINE.set_pace(main_minutes,freelance_minutes),'pause_group':lambda key,hours:ENGINE.pause(key,hours),'resume_group':lambda key:ENGINE.resume(key),

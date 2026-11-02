@@ -87,3 +87,7 @@ html body input.sw{min-height:0;width:56px;height:32px}
 @media(max-width:899px){
 html body .donor-head #donorAdd,html body #hideMsg,html body .overflow-tools button,html body .msgcard .tool{min-height:44px}
 }
+/* 16px text fields stop iPhone Safari from zooming the page when a field is focused. */
+@media(max-width:899px){
+html body input:not([type=checkbox]):not([type=radio]):not([type=range]):not(.sw),html body textarea,html body select{font-size:16px!important}
+}

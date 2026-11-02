@@ -198,37 +198,65 @@ class MessageBank:
             raise ValueError('Prepare enough different messages in Messages before starting this batch.')
         return items[:count]
 
-    def reserve_one(self):
-        """Reserve the next saved Donors > Messages version for an explicit DM.
+    ROTATION_KEY = 'donor_single_rotation'
 
-        Allocate before sending, keep cursor in persistent storage and never
-        silently use the separate main-screen DM draft as a fallback.
-        If delivery is uncertain, the reserved version remains consumed.
+    def _rotation_texts(self):
+        """Validated, enabled Donors > Messages texts (the only source any DM route may use)."""
+        bank = self.get()
+        rows = bank.get('items') or []
+        texts = [row['text'] for row in rows
+                 if isinstance(row, dict) and row.get('enabled', True)
+                 and isinstance(row.get('text'), str) and row['text'].strip()]
+        if not texts or len(texts) != len(set(texts)):
+            raise ValueError('Saved Donors Messages are missing or duplicated. Nothing was sent.')
+        if any(not dm_composer.complete(text) for text in texts):
+            raise ValueError('A saved donor message is incomplete. Edit it in Donors > Messages before sending.')
+        return texts
+
+    def _reserve(self, count):
+        """Reserve the next `count` saved Donors > Messages versions from the ONE shared
+        cursor used by every donor-DM route: single clicks (reserve_one) and batch/Auto
+        rounds (reserve_round) advance the same persisted pointer, in persistent storage,
+        so nobody gets repeated or near-repeated wording just because a different sending
+        method was used. Uncertain sends stay consumed so a restart never replays them.
+        """
+        if not self.app.STORE:
+            raise ValueError('Saved DM rotation is unavailable. Nothing was sent.')
+        texts = self._rotation_texts()
+        if count > len(texts):
+            raise ValueError('Prepare enough different messages in Messages before starting this batch.')
+        revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
+        saved = self.app.STORE.get(self.ROTATION_KEY, {}) or {}
+        index = int(saved.get('next_index', 0) or 0) % len(texts) if saved.get('revision') == revision else 0
+        last = saved.get('last_text')
+        if len(texts) > 1 and last == texts[index]:
+            index = (index + 1) % len(texts)
+        selected = []
+        for _ in range(count):
+            value = texts[index]
+            selected.append(value)
+            index = (index + 1) % len(texts)
+        self.app.STORE.put(self.ROTATION_KEY, {
+            'revision': revision,
+            'next_index': index,
+            'last_text': selected[-1]
+        })
+        return selected
+
+    def reserve_one(self):
+        """Reserve the next saved Donors > Messages version for an explicit single DM.
+
+        All explicit one-person sends use exactly what the owner sees in
+        Donors > Messages (not get_message('dm') or older templates).
         """
         with self.lock:
-            if not self.app.STORE:
-                raise ValueError('Saved DM rotation is unavailable. Nothing was sent.')
-            bank = self.get()
-            rows = bank.get('items') or []
-            # All explicit one-person sends use exactly what the owner sees in
-            # Donors > Messages (not get_message('dm') or older templates).
-            texts = [row['text'] for row in rows
-                     if isinstance(row, dict) and row.get('enabled', True)
-                     and isinstance(row.get('text'), str) and row['text'].strip()]
-            if not texts or len(texts) != len(set(texts)):
-                raise ValueError('Saved Donors Messages are missing or duplicated. Nothing was sent.')
-            if any(not dm_composer.complete(text) for text in texts):
-                raise ValueError('A saved donor message is incomplete. Edit it in Donors > Messages before sending.')
-            revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
-            saved = self.app.STORE.get('donor_single_rotation', {}) or {}
-            index = int(saved.get('next_index', 0) or 0) % len(texts) if saved.get('revision') == revision else 0
-            last = saved.get('last_text')
-            if len(texts) > 1 and last == texts[index]:
-                index = (index + 1) % len(texts)
-            result = texts[index]
-            self.app.STORE.put('donor_single_rotation', {
-                'revision': revision,
-                'next_index': (index + 1) % len(texts),
-                'last_text': result
-            })
-            return result
+            return self._reserve(1)[0]
+
+    def reserve_round(self, count):
+        """Reserve `count` saved versions for one batch/Auto round, from the same shared
+        cursor as reserve_one. Call this once per round at batch start, not per dispatch:
+        the resulting assignment is fixed for the round and re-amount-synced later via
+        captions()/the bank's own amount refresh, not by reserving again.
+        """
+        with self.lock:
+            return self._reserve(count)

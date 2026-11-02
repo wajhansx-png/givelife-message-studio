@@ -8,7 +8,7 @@ class DonorIntegration:
         self.app=app;self.book=DonorBook(app.DATA,app.STORE)
         from donor_messages import MessageBank
         self.messages=MessageBank(app);self.paused=bool(app.STORE.get('donor_dm_pause',False)) if app.STORE else False
-        self.jobs=DonorDelivery(app.DATA,app.STORE,self.book,app.send_custom,lambda:self.messages.captions(1)[0],app.wa_ok,lambda:app.on_hold() or self.paused,self.eligible,self.personal_name,self.messages.captions,lambda:app.read_left()<=0)
+        self.jobs=DonorDelivery(app.DATA,app.STORE,self.book,app.send_custom,lambda:self.messages.captions(1)[0],app.wa_ok,lambda:app.on_hold() or self.paused,self.eligible,self.personal_name,self.messages.captions,lambda:app.read_left()<=0,reserve=self.messages.reserve_round)
         self.jobs.exclusion_reason=self.exclusion_reason
         from donor_paste import PastedDonors
         self.pasted=PastedDonors(self.book,self.jobs,lambda:app.OWNER_PHONE,lambda label:self.personal_name(label,explicit=True),self._start_pasted_batch)

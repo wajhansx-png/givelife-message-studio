@@ -122,3 +122,40 @@ html body #donorsPage[data-panel="messages"] .bank-picker-title{font-size:14px}
 html body #donorsPage[data-panel="messages"] .bank-preview,html body #donorsPage[data-panel="messages"] .bank-message textarea{padding:16px;font-size:17px}
 }
 @media(max-width:850px){html body #donorsPage[data-panel="messages"] .bank-heading .bank-back{min-height:44px}}
+
+/* Phones: versions as a chip row on top, message full width in the middle, actions in the thumb zone at the bottom. */
+@media(max-width:850px){
+html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"pick" "msg" "act";gap:8px;overflow:visible}
+html body #donorsPage[data-panel="messages"] .bank-picker{grid-area:pick;display:flex;flex-direction:row;align-items:center;gap:8px;padding:8px;overflow-x:auto;overflow-y:hidden;border-radius:12px}
+html body #donorsPage[data-panel="messages"] .bank-picker-title{display:none}
+html body #donorsPage[data-panel="messages"] .bank-picker button{flex:0 0 auto;min-width:96px;min-height:44px;margin:0}
+html body #donorsPage[data-panel="messages"] .bank-message.bank-detail{grid-area:msg}
+html body #donorsPage[data-panel="messages"] .bank-message.bank-detail header{padding:8px 14px 0;min-height:24px}
+html body #donorsPage[data-panel="messages"] .bank-actions{grid-area:act;flex-direction:row;flex-wrap:wrap;align-items:stretch;gap:8px;align-self:end;overflow:visible;padding-bottom:env(safe-area-inset-bottom)}
+html body #donorsPage[data-panel="messages"] .bank-pagination{display:contents}
+html body #donorsPage[data-panel="messages"] .bank-actions>button,html body #donorsPage[data-panel="messages"] .bank-pagination>button:not(.bank-back-bottom){flex:1 1 calc(25% - 8px);min-width:72px;min-height:48px}
+html body #donorsPage[data-panel="messages"] .bank-pagination>span{order:5;flex:1 1 100%;text-align:center;padding:0}
+html body #donorsPage[data-panel="messages"] .bank-actions>.bank-regenerate{order:6;flex:1 1 100%;margin:0}
+html body #donorsPage[data-panel="messages"] .bank-pagination .bank-back-bottom{display:none}
+html body #donorsPage[data-panel="messages"] .bank-preview,html body #donorsPage[data-panel="messages"] .bank-message textarea{padding:12px 14px 16px}
+}
+@media(max-width:850px){
+html body #donorsPage[data-panel="messages"] .bank-message.bank-detail header{display:none}
+html body #donorsPage[data-panel="messages"] .bank-picker{padding:4px 6px;scrollbar-width:none}
+html body #donorsPage[data-panel="messages"] .bank-picker::-webkit-scrollbar{display:none}
+html body #donorsPage[data-panel="messages"] .bank-preview,html body #donorsPage[data-panel="messages"] .bank-message textarea{padding:10px 14px 12px}
+}
+
+/* Saved DM versions, simplified: no version list or "Message N" label, no Previous; just the message and a clear Next. */
+html body #donorsPage[data-panel="messages"] .bank-picker,html body #donorsPage[data-panel="messages"] .bank-message.bank-detail header,html body #donorsPage[data-panel="messages"] [data-bank-nav="previous"]{display:none!important}
+html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,760px) 168px;justify-content:center}
+html body #donorsPage[data-panel="messages"] .bank-actions>button,html body #donorsPage[data-panel="messages"] .bank-pagination>button{font-size:15px}
+html body #donorsPage[data-panel="messages"] [data-bank-nav="next"]{min-height:56px;background:#315cd0!important;color:#fff!important;border-color:#4775eb!important;font-weight:700}
+html body #donorsPage[data-panel="messages"] [data-bank-nav="next"]::after{content:' →'}
+html body #donorsPage[data-panel="messages"] .bank-actions>.bank-regenerate{background:#2b2b2b;color:#ededed}
+@media(max-width:850px){
+html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"msg" "act"}
+html body #donorsPage[data-panel="messages"] .bank-actions>button,html body #donorsPage[data-panel="messages"] .bank-pagination>button:not(.bank-back-bottom){flex:1 1 calc(33% - 8px)}
+html body #donorsPage[data-panel="messages"] [data-bank-nav="next"]{order:7;flex:1 1 100%!important}
+}
+

@@ -76,6 +76,8 @@ def custom_recipient(body):
 
 def send_custom(body):
  jid,is_group=custom_recipient(body);message=body.get('message','')
+ if is_group and read_left()<=0 and isinstance(message,str) and completed_case_appeal(message):
+  raise ValueError('Not sent: completed case cannot use an old fundraising request.')
  if is_group:message=focus_bank().get('group').get('source','')
  if isinstance(message,str) and body.get('kind') in ('dm_appeal','donor_registry','donor_manual','donor_batch','owner_text'):message=caption_facts.current(sys.modules[__name__],message);body={**body,'message':message}
  if not isinstance(message,str):raise ValueError('Message must be text.')
@@ -427,6 +429,8 @@ def start_send_job(keys,caption,manual=False,request_id=None,with_picture=True):
  global ACTIVE
  check_hold()
  keys=list(dict.fromkeys(keys))
+ if read_left()<=0 and isinstance(caption,str) and completed_case_appeal(caption):
+  raise ValueError('Not sent: completed case cannot reuse an old fundraising caption.')
  # A send's supplied caption cannot bypass or replace the saved Group tab bank.
  if not STORE:raise ValueError('Persistent Group rotation is unavailable. Nothing sent.')
  bank=focus_bank().get('group')

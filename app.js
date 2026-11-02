@@ -15,7 +15,7 @@ const Nav={rendering:false,
 /* Server-issued next steps are tied to the exact saved draft, never AI-authored commands. */
 let nextActions=[],nextActionEpoch=0;const nextActionPending=new Set();
 function drawNextActions(){renderSendMode();requestAnimationFrame(()=>fitConversation());for(const id of ['chatNextActions','histNextActions']){const row=$(id);if(!row)continue;row.textContent='';row.hidden=!nextActions.length;for(const a of nextActions){const b=document.createElement('button');b.type='button';b.textContent=a.label;b.title=a.detail||'';b.disabled=!!a.disabled||nextActionPending.has(a.id);b.setAttribute('aria-label',a.label+(a.detail?' · '+a.detail:''));b.onclick=()=>runNextAction(a);row.append(b)}}}
-function renderSendMode(){const label=$('sendMode');if(!label)return;const mode=nextActions[0]?.detail||'Poster + caption';label.textContent=mode;if($('ctx'))$('ctx').textContent=view()==='group'?(mode==='Text only'?'Group · text only':'Group · poster'):'DM · poster';if($('poster')?.src)$('poster').hidden=view()==='group'&&mode==='Text only'}
+function renderSendMode(){const label=$('sendMode');if(!label)return;const mode=nextActions[0]?.detail||'Poster + caption';label.textContent=mode;if($('ctx'))$('ctx').textContent=view()==='group'?(mode==='Text only'?'Group · text only':'Group · poster'):($('dmPoster')?.checked===false?'DM · text only':'DM · poster');if($('poster')?.src)$('poster').hidden=view()==='group'&&mode==='Text only'}
 function clearNextActions(){nextActionEpoch++;nextActions=[];drawNextActions()}
 async function refreshNextActions(){const epoch=++nextActionEpoch;try{const r=await fetch('/chat-next-actions');if(!r.ok)return;const d=await r.json();if(epoch!==nextActionEpoch)return;nextActions=(Array.isArray(d.items)?d.items:[]).filter(a=>a&&/^[a-f0-9]{32}$/.test(a.id)&&typeof a.label==='string').slice(0,3);drawNextActions()}catch(e){}}
 async function runNextAction(a){if(a.disabled||nextActionPending.has(a.id))return;nextActionPending.add(a.id);drawNextActions();try{const r=await post('/chat-action',{action_id:a.id}),d=await r.json();if(!r.ok)throw Error(d.error||'This action is unavailable. Refresh the draft.');if(d.choose_group){closeChat();setView('group')}if(d.reply)say('app',d.reply);if(d.job_id){a.disabled=true;watchGroupJob(d.job_id,d.caption)}}catch(e){say('app',e.message,1)}finally{nextActionPending.delete(a.id);await refreshNextActions();drawNextActions()}}
@@ -199,7 +199,7 @@ function applyGreeting(doSave=true){const t=$('dm').value;if(!t)return;const g=g
  if(nt!==t){$('dm').value=nt;paint('dm');requestAnimationFrame(fit);if(doSave)saveSoon()}}
 function setGender(g){gender=g;document.querySelectorAll('#gender button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===g)));applyGreeting()}
 document.querySelectorAll('#gender button').forEach(b=>b.onclick=()=>setGender(b.dataset.g));
-$('dmPoster').addEventListener('change',()=>{$('sendDm').textContent=$('dmPoster').checked?'Send DM with poster':'Send text-only DM'});
+$('dmPoster').addEventListener('change',()=>{$('sendDm').textContent=$('dmPoster').checked?'Send DM with poster':'Send text-only DM';renderSendMode()});
 $('dmName').addEventListener('input',()=>applyGreeting());
 
 /* ---- tools ---- */

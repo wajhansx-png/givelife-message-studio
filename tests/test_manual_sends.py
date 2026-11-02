@@ -46,6 +46,9 @@ class SendTests(unittest.TestCase):
   app.HOLD.write_text('{"on":false}');app.AUTO.write_text('{"on":false}');app.CAMPAIGN.update(running=False,stop=False)
   app.MEMORY.write_text('[]',encoding='utf-8')
   app.DM_NAMES.clear();app.CONTACT_CONTEXT.clear();app.set_left(25000)
+  # Ten synthetic saved Group-tab variants, never sent outside the fake transport.
+  source=app.get_message('group')['text']
+  app.STORE.put('focus_wording',{'group':{'source':source,'revision':'fixture-bank','items':[f'*Version {i:02d}*\n'+source for i in range(1,11)],'state':'Ready'}})
   self.sent=[];self.status_connected=True;self.status_recent=False
   def api(path):
    if '/status' in path:return {'results':{'is_connected':self.status_connected,'is_logged_in':self.status_connected}}
@@ -175,10 +178,12 @@ class SendTests(unittest.TestCase):
  def test_requested_caption_is_frozen(self):
   with patch.object(app.threading.Thread,'start'):
    result=app.manual_command('resend now to givelife with 25k')
-  snap=app.JOBS[result['job_id']]['caption'];app.set_left(23000)
+  job=app.JOBS[result['job_id']];snap=job['captions'][0];app.set_left(23000)
   self.assertIn('25,000',snap);self.assertNotIn('23,000',snap)
-  app.run_job(result['job_id'],['main'],snap)
-  self.assertEqual(self.sent[0]['text'],snap);self.assertIn('23,000',json.loads(app.DRAFT.read_text(encoding='utf-8'))['group'])
+  app.run_job(result['job_id'],['main'],job['caption'])
+  self.assertEqual(self.sent[0]['text'],app.caption_facts.current(app,snap))
+  self.assertIn('23,000',self.sent[0]['text'])
+  self.assertIn('23,000',json.loads(app.DRAFT.read_text(encoding='utf-8'))['group'])
  def test_donation_wording_order_never_changes_money(self):
   result=app.manual_command('in messages add 2000 by this much first, then 1000, not 1000 first')
   self.assertEqual(app.read_left(),25000)

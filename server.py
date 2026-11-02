@@ -2185,7 +2185,7 @@ class Handler(BaseHTTPRequestHandler):
    try:
     if self.path=='/donor-paste':
      if body.get('action')=='preview':return self.reply(donors().pasted.preview(body.get('text'),body.get('gap_seconds',240)))
-     if body.get('action')=='start':return self.reply(donors().pasted.start(body.get('token'),body.get('gap_seconds',240),body.get('request_id'),body.get('poster',True)))
+     if body.get('action')=='start':return self.reply(donors().pasted.start(body.get('token'),body.get('gap_seconds',240),body.get('request_id'),body.get('poster',True),body.get('message')))
      raise ValueError('Choose preview or start for the pasted donor list.')
     if self.path=='/donors':return self.reply(donors().mutate(body))
     if self.path=='/donor-send':return self.reply(donors().send_one(body.get('id'),body.get('request_id')))

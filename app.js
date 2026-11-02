@@ -396,7 +396,7 @@ const GN={all:'All 6 groups',free:'Freelance groups',main:'GiveLife',community:'
 const PACE={L1:'Normal pace: donations are coming.',L2:'Donations slowed: posting faster.',L3:'Donations very slow: working at full effort.',L4:'Long quiet spell: easing off so the groups do not get tired.'};
 function paintLive(st){const box=$('live');if(!st){$('liveMore').textContent=$('liveMeta').textContent;return}
  box.dataset.pace=st.pace;paintStatusLine();
- const n=(st.next||[])[0],t=st.today||{};
+ const t=st.today||{};
  const more=$('liveMore');more.textContent='';
  const add=(k,v)=>{const d=document.createElement('div'),a=document.createElement('div');a.className='k';a.textContent=k;d.textContent=v;more.append(a,d)};
  if(box.dataset.error==='1')add('Needs attention',$('liveMeta').textContent);
@@ -581,7 +581,7 @@ document.getElementById('railDonors')?.addEventListener('click',()=>document.get
 
 /* ---- Cases: save a finished case, open an old one, start a new one from zero ---- */
 async function loadCases(){try{const r=await fetch('/cases');if(!r.ok)return;const d=await r.json(),sel=$('caseSelect');if(!sel)return;sel.textContent='';
- for(const c of d.cases){const o=document.createElement('option');o.value=c.id;const done=c.left===0;o.textContent=c.name+(c.left==null?'':done?' · done ✓':' · Rs. '+Number(c.left).toLocaleString('en-PK')+' left');o.selected=c.current;sel.append(o)}
+ for(const c of d.cases){const o=document.createElement('option');o.value=c.id;const done=c.left===0;o.textContent=c.name+(done?' · done ✓':'');o.selected=c.current;sel.append(o)}
  for(const [v,t] of [['__rename','✎ Rename this case…'],['__new','＋ New case from zero…']]){const o=document.createElement('option');o.value=v;o.textContent=t;sel.append(o)}
  const cur=d.cases.find(c=>c.current);sel.dataset.done=String(!!cur&&cur.left===0);sel.title=cur&&cur.left===0?'This case is complete. Start a new case here; this one stays saved.':'Cases'}catch(e){}}
 async function caseAct(body){const r=await post('/cases',body),d=await r.json();if(!r.ok)throw Error(d.error||'Could not change the case.');return d}

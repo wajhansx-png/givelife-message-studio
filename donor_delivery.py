@@ -65,7 +65,7 @@ class DonorDelivery:
             except ValueError:pass
         return names[:100]
     def _public(self,j):
-        result={k:copy.deepcopy(v) for k,v in j.items() if k not in ('boot','caption','captions','ids','signature','personal_names')}
+        result={k:copy.deepcopy(v) for k,v in j.items() if k not in ('boot','caption','captions','ids','signature','personal_names','custom_template')}
         if result.get('state')=='Completed' and not result.get('sent') and result.get('skipped'):
             result.update(state='Nothing sent',error='This earlier batch skipped its recipients. No DM was sent.')
         return result
@@ -73,7 +73,8 @@ class DonorDelivery:
         with self.lock:
             data=self._load();j=next(x for x in data['jobs'] if x['id']==ident);j.update(fields,updated_at=time.time());self._save(data)
             return copy.deepcopy(j)
-    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None,chunk=None,rest_seconds=1200,fresh=False,rests=None,jitter=None,skip_contacted=None,hold_until=None):
+    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None,chunk=None,rest_seconds=1200,fresh=False,rests=None,jitter=None,skip_contacted=None,hold_until=None,custom_template=None):
+        if custom_template is not None and (scope!='selected' or not isinstance(custom_template,str) or not custom_template.strip() or len(custom_template)>8000):raise ValueError("Write a custom message for selected recipients (up to 8,000 characters).")
         if self.case_closed():raise ValueError('The case is complete (Rs. 0 left), so no donor DMs were started. Set a new amount left first if you need to ask again.')
         if type(gap_seconds) not in (float,int) or not math.isfinite(gap_seconds) or not 0<gap_seconds<=600:raise ValueError('Choose a gap from 1 to 10 minutes. Suggested: 3–5 minutes.')
         if limit is not None and (type(limit) is not int or not 1<=limit<=1000):raise ValueError('Choose a recipient count of 1–1,000.')
@@ -88,7 +89,7 @@ class DonorDelivery:
             if not isinstance(jitter,dict) or any(type(jitter.get(k)) not in (float,int) or not -300<=jitter[k]<=600 for k in ('min','max')) or jitter['min']>jitter['max']:raise ValueError('Random gap: choose a minimum and maximum change in seconds, minimum first.')
             jitter={'min':float(jitter['min']),'max':float(jitter['max'])}
         if self.held():raise ValueError('Sending is on hold. Resume it before starting DMs.')
-        caption=self.caption()
+        caption=custom_template if custom_template is not None else self.caption()
         if not isinstance(caption,str) or not caption.strip():raise ValueError('The saved DM message is empty. Edit it first.')
         gap=max(60,float(gap_seconds));rid=str(request_id or uuid.uuid4().hex)
         if not 1<=len(rid)<=100:raise ValueError('Invalid send request.')
@@ -126,10 +127,10 @@ class DonorDelivery:
         size=chunk or len(rows);captions=[]
         for start in range(0,len(rows),size):
             part=len(rows[start:start+size])
-            texts=self.variants(part) if self.variants else [caption]*part
-            if self.variants and (not isinstance(texts,list) or len(texts)!=part or any(not isinstance(text,str) or not text.strip() for text in texts) or len(set(texts))!=part):raise ValueError('Prepare enough different messages in Messages before starting this batch.')
+            texts=self.variants(part) if self.variants and custom_template is None else [caption]*part
+            if self.variants and custom_template is None and (not isinstance(texts,list) or len(texts)!=part or any(not isinstance(text,str) or not text.strip() for text in texts) or len(set(texts))!=part):raise ValueError('Prepare enough different messages in Messages before starting this batch.')
             captions+=texts
-        signature=hashlib.sha256(json.dumps([scope,gap,ids,limit,poster,captions,personal_names,chunk,rests,jitter,hold_until,[r['id'] for r in rows]],sort_keys=True).encode()).hexdigest()
+        signature=hashlib.sha256(json.dumps([scope,gap,ids,limit,poster,captions,custom_template,personal_names,chunk,rests,jitter,hold_until,[r['id'] for r in rows]],sort_keys=True).encode()).hexdigest()
         with self.lock:
             data=self._load();previous=next((j for j in data['jobs'] if j.get('request_id')==rid),None)
             if previous:
@@ -150,6 +151,7 @@ class DonorDelivery:
             if chunk and len(rows)>chunk:job.update(chunk=chunk,rest_seconds=rests[0],rests=rests,batches=-(-len(rows)//chunk))
             if jitter:job['jitter']=jitter
             if personal_names is not None:job['personal_names']=copy.deepcopy(personal_names)
+            if custom_template is not None:job['custom_template']=custom_template
             data['jobs'].append(job);self._save(data);self.active=ident;self.stop.clear()
         if run:threading.Thread(target=self._run,args=(copy.deepcopy(job),),daemon=True).start()
         pauses=', '.join(f'{x/60:g}' for x in (job.get('rests') or []));rounds=(f" {job['batches']} batches of up to {chunk}. Pause between batches: {pauses} min. Everything continues by itself, even with the app closed. Say stop any time." if job.get('chunk') else '')+(f" Gap between DMs varies by {jitter['min']:g} to {jitter['max']:+g} seconds." if jitter else '')+(f" {already} already contacted were left out." if already else '')
@@ -176,6 +178,9 @@ class DonorDelivery:
     def _fresh_caption(self,j,index):
         """The wording saved when the batch started, but with today's amount: donations that arrive while a long batch waits
         between DMs must not be sent as an old balance."""
+        if 'custom_template' in j:
+            ident=j['ids'][index];name=(j.get('personal_names',{}).get(ident) or ('','Brother'))[0]
+            return j['custom_template'].replace('{name}',name or 'Brother')
         captions=j.get('captions',[j['caption']]*len(j['ids']));saved=captions[index]
         if not self.variants:return saved
         try:
@@ -230,7 +235,7 @@ class DonorDelivery:
                 name,gender=j['personal_names'][ident] if 'personal_names' in j else self.name_for(r['name'])
                 self._update(j['id'],state='Sending',next_at=None,current=hide_numbers(r['name']),batch=(index//chunk+1) if chunk else 1,sent=sent,skipped=skipped,receipts=receipts)
                 self.book.delivery(ident,'Sending')
-                try:result=self._dispatch(j,{'target':'phone','phone':r['phone'],'message':self._fresh_caption(j,index),'poster':j['poster'],'kind':self.KIND,'first_in_batch':sent==0,'name':name,'gender':gender},receipts,sent,skipped)
+                try:result=self._dispatch(j,{'target':'phone','phone':r['phone'],'message':self._fresh_caption(j,index),'poster':j['poster'],'kind':'owner_text' if 'custom_template' in j else self.KIND,'first_in_batch':sent==0,'name':name,'gender':gender},receipts,sent,skipped)
                 except ValueError as e:
                     self.book.delivery(ident,'Not sent');state='Stopped';error=hide_numbers(e);break
                 except Exception:
@@ -257,6 +262,7 @@ class DonorDelivery:
         args=dict(scope=j['scope'],gap_seconds=j['gap_seconds'],poster=j.get('poster',True),hold_until=hold if hold and hold>time.time() else None,skip_contacted=False)
         if j.get('chunk'):args.update(chunk=j['chunk'],rests=j.get('rests'))
         if j.get('jitter'):args['jitter']=j['jitter']
+        if 'custom_template' in j:args['custom_template']=j['custom_template']
         if j['scope']=='selected':
             if not j.get('personal_names'):return None
             args.update(ids=j['ids'],personal_names=j['personal_names'],limit=len(j['ids']))

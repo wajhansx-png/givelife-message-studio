@@ -16,3 +16,19 @@
 
 .donor-progress[data-error=true]{background:var(--wbg);color:var(--warn)}
 
+/* Short forms: settings flow above a footer that never covers inputs. */
+html body #donorBatchPicker{width:min(94vw,540px);padding:20px;max-height:90dvh}
+html body #donorBatchForm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 16px}
+html body #donorBatchForm>label{margin:0;align-self:center;font-size:13px}
+html body #donorBatchForm>input,html body #donorBatchForm>select{height:40px;min-height:40px;margin:0;font-size:14px}
+html body #donorBatchForm>.batch-hint,html body #donorBatchForm>.batch-more,html body #donorBatchForm>.batch-foot,html body #batchResume{grid-column:1/-1}
+html body #donorBatchForm>.batch-foot{position:static;margin-top:8px;padding:0;background:transparent}
+html body #batchPlan{font-size:12px;line-height:1.5;margin:0 0 10px}
+html body #donorBatchPicker h2,html body #donorPasteDialog h2{font-size:20px;margin:0 0 16px}
+html body #donorPasteDialog{width:min(94vw,540px);max-height:90dvh;padding:20px}
+html body #donorPasteDialog p{font-size:12px;line-height:1.5;margin:8px 0}
+html body #pasteMessage{min-height:100px;font-size:14px}
+html body #donorPasteDialog label.batch-fresh.paste-step-time{display:flex!important;align-items:center;gap:8px}
+html body #donorPasteDialog #pastePoster{width:18px;min-width:18px;height:18px;margin:0;flex:none}
+@media(max-width:420px){html body #donorBatchPicker,html body #donorPasteDialog{padding:14px}html body #donorBatchForm{gap:8px}}
+

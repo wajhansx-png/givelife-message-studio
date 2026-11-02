@@ -25,6 +25,21 @@ class PastedDonorTests(unittest.TestCase):
             result=helper.preview('03001234567')
             self.assertEqual(result['count'],1)
             self.assertEqual(result['names'],['Donor 1'])
+
+    def test_custom_message_personalizes_without_saved_appeal_or_extra_greeting(self):
+        helper=self.helper()
+        preview=helper.preview('03001234567, Ali\n03011234567, Sara')
+        self.start(helper,preview,message='Hello {name}, thank you.',poster=False,gap_seconds=180)
+        self.run_job()
+        self.assertEqual([b['message'] for b in self.sent],['Hello Ali, thank you.','Hello Sara, thank you.'])
+        self.assertTrue(all(b['kind']=='owner_text' and not b['poster'] for b in self.sent))
+        self.assertGreaterEqual(self.times[1]-self.times[0],180)
+
+    def test_custom_message_validation_happens_before_saving_contacts(self):
+        helper=self.helper();preview=helper.preview('03001234567, Ali')
+        for message in ('', ' '*3, 42, 'x'*8001):
+            with self.assertRaises(ValueError):self.start(helper,preview,message=message)
+        self.assertEqual(self.book.list()['counts']['all'],0)
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
         self.store = Store()
@@ -216,4 +231,5 @@ class PastedNameIntegrationTests(unittest.TestCase):
 
 
 if __name__ == '__main__': unittest.main()
+
 

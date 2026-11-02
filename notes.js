@@ -5,8 +5,8 @@
  const make=(tag,klass,text)=>{const e=document.createElement(tag);if(klass)e.className=klass;if(text!==undefined)e.textContent=text;return e};
  const button=make('button','donor-notes-shortcut','Notes');
  button.type='button';button.id='donorNotesShortcut';button.setAttribute('aria-label','Open private foundation notes');
- const header=donor.querySelector('.donor-head');
- header?.insertBefore(button,header.querySelector('#donorBulk'));
+ const header=document.querySelector('.brandbar');
+ header?.append(button);
 
  const page=make('dialog','foundation-notes');
  page.id='foundationNotes';page.setAttribute('aria-label','Private foundation notes');

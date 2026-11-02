@@ -119,7 +119,8 @@ class PastedDonors:
                 'warnings': [f'{duplicates} repeated line(s) removed; the first name is used.'] if duplicates else [],
                 'expires_in': 600}
 
-    def start(self, token, gap_seconds=240, request_id=None, poster=True):
+    def start(self, token, gap_seconds=240, request_id=None, poster=True, message=None):
+        if message is not None and (not isinstance(message,str) or not message.strip() or len(message)>8000):raise ValueError("Write a message of 1 to 8,000 characters.")
         if type(gap_seconds) not in (float, int) or not math.isfinite(gap_seconds) or not 60 <= gap_seconds <= 600:
             raise ValueError('Choose a gap from 1 to 10 minutes.')
         if type(poster) is not bool:
@@ -128,7 +129,7 @@ class PastedDonors:
             raise ValueError('Invalid send request. Preview the pasted donors again.')
         if not isinstance(token, str):
             raise ValueError('Preview the pasted donors again before sending.')
-        options = (float(gap_seconds), poster, request_id)
+        options = (float(gap_seconds), poster, request_id, message)
         with self.lock:
             self._prune()
             prepared = self.prepared.get(token)
@@ -151,6 +152,7 @@ class PastedDonors:
             body = {'scope': 'selected', 'ids': [row['id'] for row in rows],
                     'limit': len(rows), 'gap_seconds': gap_seconds,
                     'request_id': request_id, 'poster': poster, 'personal_names': names}
+            if message is not None:body['custom_template']=message
             result = (self.starter or self.jobs.start)(**body)
             result['saved'] = {'added': saved['added'],
                                'duplicates': saved['duplicates'] + prepared['duplicates']}

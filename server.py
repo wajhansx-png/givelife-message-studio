@@ -1786,9 +1786,13 @@ def assistant_task(body):
     review_data=conversation_insights.build_history_review(past_turns+corrections,hist)
     review_data['tool_failure_patterns']=conversation_insights.summarize_failures(failures)
    selection=draft_flow.selected_option(text,hist)
-   import task_intent
-   retrieval_query=task_intent.retrieval_query(text,hist,draft_flow.active_task({'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8'))}))
-   output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(retrieval_query)+KNOWLEDGE.lessons_for(retrieval_query),'pending_task':KNOWLEDGE.data.get('pending',{}),'history_review':review_data,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident,selection,draft_flow.option_kind(hist,mapping(body.get('screen')).get('view')),hist,mapping(body.get('screen'))))
+   image_attached=str(body.get('image') or '')
+   if image_attached and chat_policy.variant_request(text):
+    output={'reply':'I cannot read the attached image with this model, so please paste the message text. Paste it and I will generate the 10 versions you need.','actions':[],'done':[],'jobs':[],'diagnostics':{'model':assistant.MODEL,'iterations':0,'duration_ms':0,'tools':[],'errors':[]}}
+   else:
+    import task_intent
+    retrieval_query=task_intent.retrieval_query(text,hist,draft_flow.active_task({'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8'))}))
+    output=assistant.chat(text,hist or body.get('history',[]),{**studio_state(),'last_recipient':manual_recipient(),'draft_task':workflow().data,'drafts':json.loads(DRAFT.read_text(encoding='utf-8')),'recipient_names':DM_NAMES,'retrieved':KNOWLEDGE.retrieve(retrieval_query)+KNOWLEDGE.lessons_for(retrieval_query),'pending_task':KNOWLEDGE.data.get('pending',{}),'history_review':review_data,'rules':ENGINE.rule_list(),'recent_activity':[x['text'] for x in AUTOLOG[-4:]],'send_status':send_status_text(),'engine':ENGINE.summary(),'suggestions':[x['text'] for x in ENGINE.suggestions()],'screen':body.get('screen',{})},preferences,chat_callbacks(text,revision,ident,selection,draft_flow.option_kind(hist,mapping(body.get('screen')).get('view')),hist,mapping(body.get('screen'))))
    if output is None:ASSIST_TASKS[ident].update(done=True,error='The AI is not connected. Direct commands still work.');return
    output.update(**json.loads(DRAFT.read_text(encoding='utf-8')),left=read_left(),autopilot=auto_on(),dm_identity=dm_identity())
    output['superseded']=revision!=OWNER_REVISION

@@ -19,10 +19,22 @@ def current_kind(text,state):
   return task['kind']
  return 'dm' if mapping(state.get('screen')).get('view')=='dm' else 'group'
 
+TONE=r'(?:shorter|short|longer|long|chh?ota|chh?oti|lamba|lambi|bada|badi|simpler|simple|emotional|urgent|formal|casual|stronger|softer|direct|concise)'
+LEAD=r'(?:(?:ok|okay|and|also|now|then|aur|phir|ab)[\s,]+)*'
+def refinement(text):
+ """A short follow-up that only makes sense against the draft just worked on ("shorter", "isko chota karo", "also add jazzcash", "same for dm")."""
+ t=re.sub(r'[.!]+$','',str(text).strip())
+ if not t or len(t.split())>9:return False
+ if re.fullmatch(r'(?i)'+LEAD+r'(?:make\s+it\s+|isko\s+|ise\s+|is\s+ko\s+|it\s+)?(?:a\s+bit\s+|bit\s+|thoda\s+|thora\s+|bohat\s+|bahut\s+|zyada\s+|more\s+|little\s+|bit\s+more\s+)?'+TONE+r'(?:\s+kar(?:o|\s*do|\s*den|\s*dein)?)?',t):return True
+ if re.fullmatch(r'(?i)'+LEAD+r'(?:do\s+the\s+)?same(?:\s+thing)?\s+(?:for|in|on|to)\s+(?:the\s+)?(?:dm|dms|group|groups)',t):return True
+ if re.match(r'(?i)^'+LEAD+r'(?:add|include|put|insert|remove|delete|hata(?:o|\s*do)|nikal(?:o|\s*do)|dalo|daal(?:o|\s*do))\b.{2,70}$',t):
+  return not re.search(r'(?i)\b(?:last\s+(?:message|post)|rule|schedule|donors?|team|task|volunteers?|contact|group\s+to|to\s+(?:the\s+)?(?:team|donors?|list))\b',t)
+ return False
+
 def contextual_edit(text,history,state):
  """Resolve a short edit against active work; this never authorizes a send."""
  t=str(text).strip()
- if not re.match(r'(?i)^(?:fix|correct|adjust|improve)\s+(?:that|this|it|the\s+(?:last|first|previous))\b',t):return False
+ if not (refinement(t) or re.match(r'(?i)^(?:fix|correct|adjust|improve)\s+(?:that|this|it|the\s+(?:last|first|previous))\b',t)):return False
  if re.search(r"(?i)\b(?:don'?t|dont|do not|never)\s+(?:edit|change|save|rewrite|replace|update|touch|modify)\b|\b(?:preview only|read only|no changes)\b",t):return False
  if re.search(r'(?i)\b(?:tasks?|teammate|akhtar|schedule|settings|batch|timer|login|connection|donors?|volunteers?|balance)\b',t):return False
  if re.search(r'(?i)\b(?:ui|css|code|dropdown|button|website|screen|layout|bug)\b',t):return False
@@ -68,7 +80,7 @@ def editing_request(text):
  if re.match(r'(?i)^(?:remember|always|never|from now|in future)\b',t) and not re.search(r'(?i)\band\s+(?:rewrite|change|edit|make)\b',t):return False
  if re.match(r'(?i)^(?:what|why|how|did|have|is|can|could|show|preview|explain|review|summari[sz]e|analy[sz]e)\b',t):return False
  if re.match(r'(?i)^(?:delete|remove)\b',t) and re.search(r'(?i)\b(?:message|post)\b',t) and not re.search(r'(?i)\b(?:line|words?|paragraph|wording|caption)\b',t):return False
- subject=r'(?:message|caption|draft|hook|opening|lines?|paragraphs?|wording|phrase|sentence|bullet|format|bold|italic|report|icon|emoji|emojis|end|ending|closing|beginning|dua|duas|signature|top|bottom|first line|last line|payment details|amount line)'
+ subject=r'(?:message|dm|caption|draft|hook|opening|lines?|paragraphs?|wording|phrase|sentence|bullet|format|bold|italic|report|icon|emoji|emojis|end|ending|closing|beginning|dua|duas|signature|top|bottom|first line|last line|payment details|amount line)'
  operation=r'(?:write|rewrite|edit|change|replace|remove|delete|add|move|put|make|use|keep|lead|start|shorten|improve|reword)'
  if re.search(r'(?i)\b'+operation+r'\b.*\b'+subject+r'\b',t):return True
  if re.search(r'(?i)\b'+subject+r'\b.*\b'+operation+r'\b',t):return True

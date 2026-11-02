@@ -3,6 +3,7 @@ import re,math
 import manual_commands
 import timed_tasks
 import draft_flow
+from state_shapes import history as valid_history
 
 READ={'find_contact','recent_activity','list_rules','search_memory','list_schedules','get_message','app_status'}
 SEND={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
@@ -18,6 +19,38 @@ def switch_request(text,subject):
 def smalltalk(text):
  t=re.sub(r'[^\w\s]','',str(text).casefold()).strip()
  return bool(re.fullmatch(r'(?:hi+|hu|hey+|he+l+o+|yo+|salam|assalamualaikum|how (?:are|r) (?:you|u)|how are you doing|hows it going|everything good|good (?:morning|evening|night)|kya haal hai|kya hal hai|sab theek)',t))
+CONFIRM_WORDS=frozenset('yes yeah yep yup y ok okay k sure haan han ha ji jee bilkul theek thik hai chalo please plz pls do it go ahead on proceed carry confirm confirmed kar karo kardo krdo den dein de that this same sahi agree fine good correct right'.split())
+CONFIRM_CORE=frozenset('yes yeah yep yup y ok okay k sure haan han ha ji jee bilkul theek thik chalo confirm confirmed proceed kar karo kardo krdo sahi agree'.split())|{'do','go','correct','right','fine','good'}
+ASKED=re.compile(r"(?i)\?\s*(?:\W*)$|\b(?:shall i|should i|want me to|would you like|do you want|say (?:yes|confirm)|reply (?:yes|confirm)|let me know|which one|which (?:group|dm|donor|message))\b")
+def confirmation(text):
+ """A bare yes/ok/haan/kar do. It carries no instruction of its own."""
+ words=re.findall(r"[a-z]+",str(text).casefold())
+ return 0<len(words)<=5 and all(w in CONFIRM_WORDS for w in words) and any(w in CONFIRM_CORE for w in words)
+def _substantive(turn):
+ value=turn['text'].strip()
+ return turn['who']=='you' and len(value)>=8 and not confirmation(value) and not smalltalk(value)
+def followup(text,history):
+ """Resolve a short reply ("yes", "do it", "kar do", "all groups") against the question it answers.
+
+ The previous owner request supplies the MEANING; the current reply is the owner's confirmation.
+ A send is inherited only when the assistant's last turn actually asked about sending, and a reply
+ that is not shaped like an answer is never expanded. Returns the text to use for permission checks.
+ """
+ value=str(text).strip();turns=valid_history(history)
+ if turns and turns[-1]['who']=='you' and turns[-1]['text'].strip()==value:turns=turns[:-1]
+ plain={'text':value,'inherited':False,'prev':'','asked':''}
+ if not value or not turns or turns[-1]['who']=='you':return plain
+ last=turns[-1]
+ if last['who']!='app' or not ASKED.search(last['text'][-400:]):return plain
+ answer=confirmation(value)
+ if not answer and (len(value.split())>6 or smalltalk(value) or intent(value)['send'] or QUESTION.search(value) or re.search(r'(?i)\b(?:send|post|dm|edit|change|set|delete|add|remove|stop|pause|hold|start|resume)\b',value)):return plain
+ prev=next((t['text'].strip() for t in reversed(turns[:-1]) if _substantive(t)),'')
+ if not prev or intent(prev)['query']:return plain
+ asked_send=bool(re.search(r'(?i)\b(?:send|post|dm|message|share|resend|bhej\w*)\b',last['text']))
+ effective=prev if answer else prev+'. '+value
+ if intent(effective)['send'] and not asked_send:return plain
+ return {'text':effective,'inherited':True,'prev':prev,'asked':last['text'][-300:]}
+
 def variant_request(text):
  """A request to rewrite a pasted message into several versions, not a single draft edit."""
  t=owner_text(text)
@@ -116,7 +149,7 @@ def permitted(name,text):
  if inspect and name not in ('set_message','prepare_dm'):return False
  if name=='delete_last_message':return bool(re.search(r'(?i)\b(delete|remove|revoke)\b',t)) and not re.search(r"(?i)\b(dont|don't|do not|never)\b",t)
  if name=='hold':return bool(re.search(r'(?i)\b(hold|wait|pause|stop|resume|continue|unhold|wrong whatsapp|connected now)\b',t))
- if name=='autopilot':return bool(re.search(r'(?i)\b(auto|autopilot)\b.*\b(on|off|enable|disable|start|stop)\b|\b(enable|disable|start|stop)\b.*\b(auto|autopilot)\b',t))
+ if name=='autopilot':return bool(re.search(r'(?i)\b(?:auto|autopilot)\b',t) and re.search(r'(?i)\b(?:on|off|enable|disable|start|stop|turn|switch|resume|pause)\b',t))
  if name in ('remember','add_rule'):return bool(re.search(r'(?i)\b(remember|always|never|from now|in future|daily|every|quiet|pause|pace|slow|fast|yaad rakho)\b',t))
  if name=='delete_rule':return bool(re.search(r'(?i)\b(forget|delete|remove)\b.*\b(rule|memory|preference)\b',t))
  if name in ('set_left','money_came'):

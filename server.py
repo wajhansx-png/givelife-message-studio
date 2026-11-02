@@ -1,3 +1,4 @@
+import sys
 import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, datetime, math, re, secrets, os, base64, hashlib
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -271,6 +272,14 @@ def save_draft(key,text):
    raise ValueError('This case is completed. A saved caption cannot request new donations or show Rs. 0 LEFT. Use a completion or thank-you message instead. Nothing was saved.')
   draft=json.loads(DRAFT.read_text(encoding='utf-8'));draft[key]=text;DRAFT.write_text(json.dumps(draft,ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
 
+_FOCUS_BANK=None
+def focus_bank():
+ global _FOCUS_BANK
+ if _FOCUS_BANK is None:
+  from focus_bank import FocusBank
+  _FOCUS_BANK=FocusBank(sys.modules[__name__])
+ return _FOCUS_BANK
+
 def get_message(kind):
  if kind not in ('group','dm'):raise ValueError('Choose group or DM.')
  with LOCK:
@@ -278,10 +287,20 @@ def get_message(kind):
   return {'kind':kind,'text':json.loads(DRAFT.read_text(encoding='utf-8'))[kind]}
 
 def next_message():
+ bank=focus_bank().get('group') if STORE else {}
+ if bank.get('revision'):
+  items=bank.get('items',[])
+  if not items:return get_message('group')['text']
+  text=items[int(time.time())%len(items)];save_draft('group',text);return text
  with LOCK:
   text=build_group(variant(True),read_left());save_draft('group',text);return text
 
 def next_dm():
+ bank=focus_bank().get('dm') if STORE else {}
+ if bank.get('revision'):
+  items=bank.get('items',[])
+  if not items:return get_message('dm')['text']
+  text=items[int(time.time())%len(items)];save_draft('dm',text);return text
  with LOCK:
   text=build_dm(dm_selection(True),read_left());save_draft('dm',text);return text
 
@@ -2063,7 +2082,7 @@ class Handler(BaseHTTPRequestHandler):
   if self.path.split('?')[0] in ('/group-finder','/group-finder.js','/group-finder.css'):
    name=self.path.split('?')[0][1:];name='group-finder.html' if name=='group-finder' else name
    return self.reply((ROOT/name).read_bytes(),'text/html' if name.endswith('.html') else 'text/css' if name.endswith('.css') else 'application/javascript')
-  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/team.js','/notes.js','/notes.css','/donors.css','/studio.css','/compact-nav.js','/compact-nav.css'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/team.js','/notes.js','/notes.css','/donors.css','/studio.css','/compact-nav.js','/compact-nav.css','/focus-editor.js','/focus-editor.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
@@ -2092,6 +2111,10 @@ class Handler(BaseHTTPRequestHandler):
   if self.path.split('?')[0]=='/volunteers':
    try:return self.reply(donors().volunteers.view(urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get('q',[''])[0]))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
+  if self.path.startswith('/focus-bank?'):
+   kind=urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get('kind',['group'])[0]
+   if kind not in ('group','dm'):return self.reply({'error':'Choose group or DM.'},status=400)
+   bank=focus_bank();bank.start(kind);return self.reply(bank.get(kind))
   if self.path=='/donor-messages':return self.reply(donors().messages.get())
   if self.path=='/wa-status':
    try:return self.reply(api('/devices/'+DEVICE+'/status'))
@@ -2225,12 +2248,22 @@ class Handler(BaseHTTPRequestHandler):
     if CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it first.')
     return self.reply(donors().start_batch(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster','chunk','rest_seconds','fresh','rests','jitter','skip_contacted')}))
    except ValueError as e:return self.reply({'error':str(e)},status=400)
+  if self.path=='/focus-bank':
+   try:
+    kind=body.get('kind');bank=focus_bank()
+    if kind not in ('group','dm'):raise ValueError('Choose group or DM.')
+    return self.reply(bank.retry(kind) if body.get('action')=='retry' else bank.save(kind,body.get('text'),body.get('revision')))
+   except ValueError as e:return self.reply({'error':str(e)},status=409)
   if self.path=='/drafts':
    if any(not isinstance(body.get(k),str) or len(body[k])>10000 for k in ('group','dm')):return self.reply({'error':'Both captions must be text, at most 10,000 characters each.'},status=400)
    with LOCK:
+    previous={k:get_message(k)['text'] for k in ('group','dm')}
     old=get_message('group')['text'];work=workflow();active=work.current('group',old)
     DRAFT.write_text(json.dumps({k:str(body[k]) for k in ('group','dm')},ensure_ascii=False),encoding='utf-8');persist_file('drafts',DRAFT)
     if active and body['group']!=old:work.revise(body['group'])
+   if STORE:
+    for kind in ('group','dm'):
+     if body[kind]!=previous[kind]:focus_bank().save(kind,body[kind])
    self.reply({'saved':True})
   elif self.path=='/chat-action':
    try:self.reply(execute_chat_action(body.get('action_id')))

@@ -66,9 +66,10 @@ class DonorIntegration:
         rows=self.book.recipients('selected',body.get('ids'),None)
         if rows and not any(self.eligible(r['phone']) for r in rows):raise ValueError('Not sent: '+self.exclusion_reason(rows[0]['phone']))
         return self.start_batch(**body)
-    def send_one(self,ident,request_id):
+    def send_one(self,ident,request_id,poster=True):
         """Each explicit click is a new immediate send; repeated request IDs never resend."""
         if not self.app.STORE:raise ValueError('Persistent sending records are unavailable.')
+        if type(poster) is not bool:raise ValueError('Poster must be on or off.')
         self.resume_personal()
         if not isinstance(request_id,str) or not re.fullmatch(r'[a-zA-Z0-9_-]{8,100}',request_id):raise ValueError('Invalid send request. Refresh the donor page.')
         r=self.book.resolve(ident)
@@ -89,7 +90,7 @@ class DonorIntegration:
                 # Source of truth: only the visible saved Donors > Messages versions.
                 # Reserving consumes a version even if delivery becomes uncertain.
                 caption=self.messages.reserve_one()
-                result=self.app.send_custom({'target':'phone','phone':r['phone'],'message':caption,'poster':True,'kind':'donor_manual','name':name,'gender':gender})
+                result=self.app.send_custom({'target':'phone','phone':r['phone'],'message':caption,'poster':poster,'kind':'donor_manual','name':name,'gender':gender})
                 confirmed=isinstance(result,dict) and result.get('code')=='SUCCESS'
                 if confirmed:self.jobs.manual_sent_at=time.time()
                 state='Sent' if confirmed else 'Uncertain';self.book.delivery(r['id'],state)

@@ -81,6 +81,9 @@ def send_custom(body):
  if is_group:message=focus_bank().get('group').get('source','')
  if isinstance(message,str) and body.get('kind') in ('dm_appeal','donor_registry','donor_manual','donor_batch','owner_text'):message=caption_facts.current(sys.modules[__name__],message);body={**body,'message':message}
  if not isinstance(message,str):raise ValueError('Message must be text.')
+ # A closed case refuses every donor appeal first, with the clearest reason.
+ if not is_group and body.get('kind') in ('dm_appeal','donor_registry','donor_manual','donor_batch') and read_left()<=0:
+  raise ValueError('Not sent: the case is complete (Rs. 0 left). Set a new amount left before sending an appeal.')
  if read_left()<=0 and completed_case_appeal(message):
   raise ValueError('Not sent: this completed case caption contains a fundraising appeal. Replace it with a thank-you message.')
  if read_left()<=0 and body.get('poster') is True:
@@ -2276,7 +2279,7 @@ class Handler(BaseHTTPRequestHandler):
      if body.get('action')=='start':return self.reply(donors().pasted.start(body.get('token'),body.get('gap_seconds',240),body.get('request_id'),body.get('poster',True),body.get('message'),body.get('attachment')))
      raise ValueError('Choose preview or start for the pasted donor list.')
     if self.path=='/donors':return self.reply(donors().mutate(body))
-    if self.path=='/donor-send':return self.reply(donors().send_one(body.get('id'),body.get('request_id')))
+    if self.path=='/donor-send':return self.reply(donors().send_one(body.get('id'),body.get('request_id'),poster=body.get('poster',True)))
     if self.path=='/donor-messages':
      if body.get('action')=='regenerate':return self.reply(donors().messages.regenerate())
      if body.get('action')=='generate':

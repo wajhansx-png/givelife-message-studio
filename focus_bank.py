@@ -207,39 +207,48 @@ def valid(source,text,existing=()):
  return True
 
 def safe_local_versions(source):
- """Ten immediately available safe lead-ins; entire owner message remains verbatim."""
+ """Ten immediately available, genuinely varied local versions.
+
+ The owner's saved message is never edited: each version wraps it, intact and
+ verbatim, between a different short opening line and a different short
+ closing line (ten distinct pairs, not one swapped clause), so the versions
+ read as distinct without touching a single fact, amount, payment detail,
+ emoji or formatting mark inside the saved message itself.
+ """
  if not isinstance(source,str) or not source.strip():return []
- lines=source.split('\n')
- first=next((i for i,line in enumerate(lines) if line.strip()),None)
- if first is None:return []
- line=lines[first]
- # Keep all existing emojis, markdown markers and punctuation exactly where they are.
- start=re.search(r'[A-Za-z0-9]',line)
- if not start:return []
- prefixes=(
-  'Please take a moment to read: ',
-  'This message matters to us all: ',
-  'Please read this important update: ',
-  'Your kindness and attention matter: ',
-  'Please hear this message carefully: ',
-  'A heartfelt message to our community: ',
-  'Please consider this important news: ',
-  'Your support and care can matter: ',
-  'We ask you to read this with care: ',
-  'Please give this message your attention: ',
-  'We want to share something important: ',
-  'Please keep this message in mind: ',
+ body=source.strip('\n')
+ openers=(
+  'Please take a moment to read this:',
+  'Before you scroll past, please read this:',
+  'Something important for everyone here:',
+  'Please read this with care:',
+  'A message that deserves your full attention:',
+  "Please don't skip this one:",
+  'For everyone in this group, please read:',
+  'A few minutes of your time, please:',
+  'Something we are asking you to read:',
+  'Please take this message seriously:',
+ )
+ closers=(
+  'Thank you to everyone who has already helped.',
+  'Every contribution, large or small, makes a difference.',
+  "If you can't give today, please share this with someone who can.",
+  'Thank you for reading this far.',
+  'Your attention to this means a lot.',
+  'Please consider this before you move on.',
+  'Every person who helps makes the next step possible.',
+  'Thank you for taking this seriously.',
+  'If you have questions, please ask before deciding.',
+  'Thank you, from all of us.',
  )
  out=[]
- for prefix in prefixes:
-  changed=lines.copy()
-  changed[first]=line[:start.start()]+prefix+line[start.start():]
-  value='\n'.join(changed)
-  # Preserve every byte of the original source after the insert, and prevent
-  # changed number/emoji/format/payment lines or duplicate wording.
-  if (len(value)>len(source)+80 or
-      dm_variants._shape(source)!=dm_variants._shape(value) or
-      dm_variants._numbers(source)!=dm_variants._numbers(value) or
-      dm_variants._emojis(source)!=dm_variants._emojis(value)):continue
+ for opener,closer in zip(openers,closers):
+  value=opener+'\n\n'+body+'\n\n'+closer
+  # The saved message must stay byte-for-byte intact inside the wrapper, and
+  # the wrapper text itself must add no numbers or emojis (no invented
+  # urgency, deadlines or figures) beyond what the owner already wrote.
+  if source not in value:continue
+  if dm_variants._numbers(source)!=dm_variants._numbers(value):continue
+  if dm_variants._emojis(source)!=dm_variants._emojis(value):continue
   if wording_key(value) not in {wording_key(x) for x in out}:out.append(value)
  return out

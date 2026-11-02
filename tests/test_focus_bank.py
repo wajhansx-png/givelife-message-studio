@@ -55,9 +55,11 @@ class FocusTests(unittest.TestCase):
    row=b.ensure_group_ready()
   self.assertEqual(len(row['items']),10)
   self.assertEqual(row['state'],'Ready')
+  # Ten distinct opening lines AND ten distinct closing lines (not one swapped
+  # clause), while the saved message itself stays byte-for-byte intact inside.
   self.assertEqual(len({x.split('\n')[0] for x in row['items']}),10)
-  self.assertTrue(all(x.split('\n')[0].endswith(source.split('\n')[0].split(' ',1)[-1]) for x in row['items']))
-  self.assertTrue(all(x.split('\n')[1:]==source.split('\n')[1:] for x in row['items']))
+  self.assertEqual(len({x.rsplit('\n',1)[-1] for x in row['items']}),10)
+  self.assertTrue(all(source in x for x in row['items']))
   self.assertTrue(all('47,000' in x and '03097458815' in x for x in row['items']))
   self.assertEqual(self.drafts['group'],source)
   self.assertEqual(b.reserve_groups(source,10),row['items'])

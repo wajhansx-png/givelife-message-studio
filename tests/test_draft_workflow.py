@@ -25,14 +25,15 @@ class WorkflowTests(unittest.TestCase):
   actions=self.draft();self.draft('Add the poster to this message')
   actions=app.next_chat_actions();test=next(a for a in actions if a['target']=='test')
   start=app.execute_chat_action(test['id']);job=self.wait(start['job_id'])
-  self.assertEqual(self.sent[0]['text'],CAPTION);self.assertEqual(app.get_message('group')['text'],CAPTION)
+  # Every group route sends a saved Group-tab version (Error 1); the exact draft stays intact inside it.
+  self.assertIn(CAPTION,self.sent[0]['text']);self.assertEqual(app.get_message('group')['text'],CAPTION)
   self.assertNotIn('next_caption',job);self.assertEqual(app.workflow().data['target'],'main')
  def test_action_is_idempotent_and_text_only_is_honored(self):
   action=next(a for a in self.draft() if a['target']=='main')
   sent=[]
   with patch.object(app,'send_text',side_effect=lambda jid,text:(sent.append((jid,text)) or {'code':'SUCCESS','results':{'message_id':'text-test'}})):
    one=app.execute_chat_action(action['id']);self.wait(one['job_id']);two=app.execute_chat_action(action['id'])
-  self.assertEqual(one['job_id'],two['job_id']);self.assertEqual(sent,[(app.GROUPS['main'][1],CAPTION)]);self.assertEqual(self.sent,[])
+  self.assertEqual(one['job_id'],two['job_id']);self.assertEqual(len(sent),1);self.assertEqual(sent[0][0],app.GROUPS['main'][1]);self.assertIn(CAPTION,sent[0][1]);self.assertEqual(self.sent,[])
  def test_stale_action_cannot_send_after_any_caption_edit(self):
   old=next(a for a in self.draft() if a['target']=='main');app.save_draft('group',CAPTION+' changed')
   with self.assertRaisesRegex(ValueError,'draft changed'):app.execute_chat_action(old['id'])
@@ -40,7 +41,7 @@ class WorkflowTests(unittest.TestCase):
  def test_generic_send_uses_current_task_not_old_toprated(self):
   app.LAST_MANUAL.update(kind='appeal',target='toprated');self.draft('Make a message for givelife with poster')
   result=app.manual_command('send now');self.wait(result['job_id'])
-  self.assertEqual(self.sent[0]['phone'],app.GROUPS['main'][1]);self.assertEqual(self.sent[0]['text'],CAPTION)
+  self.assertEqual(self.sent[0]['phone'],app.GROUPS['main'][1]);self.assertIn(CAPTION,self.sent[0]['text'])
  def test_unknown_task_recipient_never_falls_back(self):
   app.LAST_MANUAL.update(kind='appeal',target='toprated');self.draft('Make a short hadith message without poster')
   with self.assertRaisesRegex(ValueError,'previous recipient'):app.manual_command('send now')

@@ -330,7 +330,7 @@ class IntegrationTests(unittest.TestCase):
   def image(jid,text):sent.append((jid,text));return {'code':'SUCCESS','results':{'message_id':'fake-'+str(len(sent))}}
   with patch.object(app,'send_image',side_effect=image):
    first=registry.send_one(d['id'],'click-one-test');again=registry.send_one(d['id'],'click-two-test');duplicate=registry.send_one(d['id'],'click-two-test')
-  self.assertEqual(len(sent),2);self.assertEqual(first['code'],'SUCCESS');self.assertEqual(again['code'],'SUCCESS');self.assertTrue(duplicate['repeated_request']);self.assertEqual(registry.book.resolve(d['id'])['delivery'],'Sent');self.assertEqual(sent[0][1],sent[1][1]);self.assertIn('03097458815',sent[0][1]);self.assertGreater(registry.jobs.manual_sent_at,0)
+  self.assertEqual(len(sent),2);self.assertEqual(first['code'],'SUCCESS');self.assertEqual(again['code'],'SUCCESS');self.assertTrue(duplicate['repeated_request']);self.assertEqual(registry.book.resolve(d['id'])['delivery'],'Sent');self.assertNotEqual(sent[0][1],sent[1][1]);self.assertIn('03097458815',sent[0][1]);self.assertIn('03097458815',sent[1][1]);self.assertGreater(registry.jobs.manual_sent_at,0)
  def test_explicit_repeat_still_respects_optout_and_daily_cap(self):
   import hashlib
   app=self.app;registry=app.donors();d=registry.book.add('Ali','03001234567')['donor'];app.STORE.put('optout_'+hashlib.sha256(b'923001234567').hexdigest(),True)

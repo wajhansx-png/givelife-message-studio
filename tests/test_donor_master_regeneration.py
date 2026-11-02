@@ -71,6 +71,24 @@ class DonorMasterTests(unittest.TestCase):
   self.assertEqual(restarted.get()['items'][0]['text'],edited)
   self.assertEqual(restarted.get()['mode'],'custom')
 
+ def test_incomplete_second_batch_does_not_overwrite_old_twenty(self):
+  bank=app.donors().messages
+  first=bank.get()['items'][0]
+  edited=first['text'].replace('Brother, ', 'Bhai, ',1)
+  bank.update(first['id'],edited)
+  old=bank.get()['items']
+  calls=[0]
+  def incomplete(source,count=10,avoid=None):
+   calls[0]+=1
+   if calls[0]==1:
+    return self.fake_variants(source,count,avoid)
+   raise ValueError('AI did not produce enough distinct body rewrites')
+  with patch('dm_variants.generate',side_effect=incomplete):
+   with self.assertRaisesRegex(ValueError,'Only 9 of 19'):
+    bank.regenerate()
+  self.assertEqual(bank.get()['items'],old)
+  self.assertEqual(bank.get()['items'][0]['text'],edited)
+
  def test_model_failure_keeps_last_saved_master_and_previous_versions(self):
   bank=app.donors().messages
   first=bank.get()['items'][0]

@@ -865,6 +865,8 @@ def timed_chat_command(text,request_id=None):
 
 def timed_loop():
  while True:
+  try:donors().tick_resume()
+  except Exception:pass
   try:timed_scheduler().tick()
   except Exception:
    auto_log('Timed scheduler could not read or save its records. No automatic retry of dispatched actions.');time.sleep(60)
@@ -2167,7 +2169,7 @@ class Handler(BaseHTTPRequestHandler):
     token=notes_store.cookie_token(self.headers.get('Cookie'))
     return self.reply({'locked':False,**notes_store.load(STORE)},extra_headers={'Set-Cookie':notes_store.device_cookie(token,https=self.headers.get('X-Forwarded-Proto','https')!='http')})
    except Exception:return self.reply({'error':'Notes are temporarily unavailable. Your saved notes were not changed.'},status=503)
-  if self.path=='/donor-delivery':return self.reply({**donors().jobs.status(),'paused':bool(donors().paused)})
+  if self.path=='/donor-delivery':return self.reply({**donors().jobs.status(),'paused':bool(donors().paused),'resume':donors().resume_status()})
   if self.path=='/team':return self.reply(donors().team.view())
   if self.path=='/cases':
    try:return self.reply(donors().cases.view())
@@ -2316,6 +2318,8 @@ class Handler(BaseHTTPRequestHandler):
     if body.get('test'):return self.reply(donors().test_dm(body.get('poster',True)))
     if body.get('toggle'):return self.reply(donors().toggle())
     if body.get('stop'):return self.reply(donors().pause_personal())
+    if body.get('resume_at') is not None:return self.reply(donors().schedule_resume(body['resume_at'],body.get('request_id')))
+    if body.get('resume') is True:return self.reply(donors().resume_all())
     if CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it first.')
     return self.reply(donors().start_batch(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster','chunk','rest_seconds','fresh','rests','jitter','skip_contacted')}))
    except ValueError as e:return self.reply({'error':str(e)},status=400)

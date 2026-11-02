@@ -2,6 +2,22 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync('donors.js','utf8');
+test('clock input uses Pakistan time even on a browser in another zone',()=>{
+ const ctx={Date:{parse:Date.parse,now:()=>Date.parse('2026-11-03T10:00:00Z')},Number,Error};vm.createContext(ctx);
+ const a=source.indexOf('function resumeClockValue(');vm.runInContext(source.slice(a,source.indexOf('\n',a)),ctx);
+ assert.equal(ctx.resumeClockValue('2026-11-03','15:01'),'2026-11-03T15:01');
+ assert.throws(()=>ctx.resumeClockValue('2026-11-03','14:59'),/future/);
+ assert.throws(()=>ctx.resumeClockValue('','15:01'),/both/);
+});
+test('Resume opens the choice dialog and never resumes before a choice',async()=>{
+ let shown=0,requests=0;
+ const nodes={donorToggle:{},donorResumeNow:{focus(){}},donorResumeClock:{hidden:false},donorResumeNote:{},donorResumeSchedule:{}};
+ const ctx={el:id=>nodes[id],resumeDialog:{open:false,showModal(){shown++}},api:async()=>{requests++;return {paused:true}},notice(){},poll(){},syncToggle:async()=>{}};
+ vm.createContext(ctx);const a=source.indexOf('function openResumeChoice(');
+ assert.notEqual(a,-1,'resume must have a choice dialog');
+ vm.runInContext(source.slice(a,source.indexOf(' function ',a+10)),ctx);
+ ctx.openResumeChoice();assert.equal(shown,1);assert.equal(requests,0);
+});
 test('failed regeneration preserves unsaved Message 1 and unlocks controls',async()=>{
  const edits=new Map([['master','my new message']]);let paints=0;
  const ctx={bankRegenerating:false,bankSaves:new Set(),bankEdits:edits,bankData:{items:[{id:'master',text:'old'}]},syncBankControls(){paints++},keepBankEdits(){},showMessages(){},notice(){},api:async()=>{throw Error('offline')}};

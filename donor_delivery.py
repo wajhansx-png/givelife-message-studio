@@ -66,9 +66,9 @@ class DonorDelivery:
                 if self.book.resolve(ident).get('delivery')=='Sending':done.add(ident)
             except ValueError:pass
         return done
-    def _remaining(self,j):
+    def _remaining(self,j,allow_expired=False):
         """Who is still waiting in a recently stopped batch, or None when it cannot be continued."""
-        if j.get('state') not in ('Stopped','Interrupted') or time.time()-j.get('updated_at',0)>(self.AUTO_WINDOW if j.get('auto') else self.RESUME_WINDOW):return None
+        if j.get('state') not in ('Stopped','Interrupted') or not allow_expired and time.time()-j.get('updated_at',0)>(self.AUTO_WINDOW if j.get('auto') else self.RESUME_WINDOW):return None
         done=self._done(j);left=[i for i in j.get('ids',[]) if i not in done]
         return left or None
     def _waiting(self,j):
@@ -89,7 +89,7 @@ class DonorDelivery:
         with self.lock:
             data=self._load();j=next(x for x in data['jobs'] if x['id']==ident);j.update(fields,updated_at=time.time());self._save(data)
             return copy.deepcopy(j)
-    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None,chunk=None,rest_seconds=1200,fresh=False,rests=None,jitter=None,skip_contacted=None,hold_until=None,custom_template=None,attachment=None):
+    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None,chunk=None,rest_seconds=1200,fresh=False,rests=None,jitter=None,skip_contacted=None,hold_until=None,custom_template=None,attachment=None,resume_id=None):
         if attachment is not None and (not isinstance(attachment,str) or not re.fullmatch('[a-f0-9]{32}',attachment)):raise ValueError('Choose the attachment again.')
         if custom_template is not None and (scope!='selected' or not isinstance(custom_template,str) or not custom_template.strip() or len(custom_template)>8000):raise ValueError("Write a custom message for selected recipients (up to 8,000 characters).")
         if self.case_closed():raise ValueError('The case is complete (Rs. 0 left), so no donor DMs were started. Set a new amount left first if you need to ask again.')
@@ -125,7 +125,9 @@ class DonorDelivery:
         resumed='';self.status()
         with self.lock:
             jobs=self._load().get('jobs',[]);prev=jobs[-1] if jobs else None
-        left=self._remaining(prev) if prev and not fresh and prev.get('scope')==scope and (scope!='selected' or set(prev.get('ids',[]))&set(ids or [])) else None
+        if resume_id and (not prev or prev.get('id')!=resume_id or prev.get('scope')!=scope or prev.get('state') not in ('Stopped','Interrupted')):raise ValueError('The stopped batch changed. Check its delivery results before resuming.')
+        left=self._remaining(prev,allow_expired=bool(resume_id)) if prev and not fresh and prev.get('scope')==scope and (scope!='selected' or set(prev.get('ids',[]))&set(ids or [])) else None
+        if resume_id and left is None:raise ValueError('Everyone in the stopped batch was already handled. Nothing was sent again.')
         same_batch=prev and not fresh and prev.get('scope')==scope and (scope!='selected' or set(prev.get('ids',[]))&set(ids or []))
         recent=prev and time.time()-prev.get('updated_at',0)<=(self.AUTO_WINDOW if prev.get('auto') else self.RESUME_WINDOW)
         if left is None and same_batch and recent and prev.get('state') in ('Stopped','Interrupted'):
@@ -168,7 +170,7 @@ class DonorDelivery:
                 return {'job':self._public(existing),'reply':'This donor batch is already tracked. It was not started again.'}
             job={'id':ident,'request_id':rid,'signature':signature,'boot':self.boot,'scope':scope,'gap_seconds':gap,'poster':poster,'ids':[r['id'] for r in rows],'caption':caption,'captions':captions,'state':'Starting','sent':0,'skipped':0,'failed':0,'total':len(rows),'current':'','receipts':[],'created_at':now,'updated_at':now,'next_at':None}
             job.update(auto=True,batch=1,hold_until=hold_until)
-            if chunk and len(rows)>chunk:job.update(chunk=chunk,rest_seconds=rests[0],rests=rests,batches=-(-len(rows)//chunk))
+            if chunk:job.update(chunk=chunk,rest_seconds=rests[0],rests=rests,batches=-(-len(rows)//chunk))
             if jitter:job['jitter']=jitter
             if personal_names is not None:job['personal_names']=copy.deepcopy(personal_names)
             if custom_template is not None:job['custom_template']=custom_template

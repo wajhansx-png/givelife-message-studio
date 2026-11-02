@@ -354,7 +354,7 @@ function setLiveNotice(text,error=false){liveNotice={text:String(text||''),error
 function sinceLabel(timestamp){if(typeof timestamp!=='number'||!Number.isFinite(timestamp)||timestamp<=0)return 'Not checked yet';const s=Math.max(0,Math.floor(Date.now()/1000-timestamp));return s<60?s+'s ago':s<3600?Math.floor(s/60)+'m ago':Math.floor(s/3600)+'h ago'}
 function waitLabel(timestamp){const s=Math.max(0,Math.ceil(timestamp-Date.now()/1000));return s<60?s+'s':Math.ceil(s/60)+' min'}
 function statusView(st,on){
- if(!st)return {text:on?'Waiting for bot status…':'Automatic actions off',state:on?'loading':'off'};
+ if(!st)return {text:on?'Waiting for bot status…':'Auto off',state:on?'loading':'off'};
  let state=st.state||(/^(Sending|Posting|Waiting 60)/i.test(st.now||'')?'sending':/^(On hold|Paused:|Quiet)/i.test(st.now||'')?'paused':on?'idle':'off');
  if(state==='sending'&&st.job?.next_send_at)return {text:'Next: '+(GN[st.job.next_target]||st.job.next_target||'recipient')+' in '+waitLabel(st.job.next_send_at),state};
  if(state==='idle'||state==='off'){
@@ -362,7 +362,7 @@ function statusView(st,on){
   if(st.scheduled)candidates.push({at:st.scheduled.due_at,label:GN[st.scheduled.label]||st.scheduled.label,type:'Scheduled'});
   candidates.sort((a,b)=>a.at-b.at);const next=candidates[0];
   if(next)return {text:next.at<=Date.now()/1000?next.label+' due · waiting for send check':'Waiting · '+next.type+': '+next.label+' in '+waitLabel(next.at),state};
-  return {text:on?'Waiting for next reply check':'Automatic actions off',state};
+  return {text:on?'Waiting for next reply check':'Auto off',state};
  }
  let text=st.now||'Waiting for bot status…';if(state==='reading')text=text.replace(/^Reading replies:/,'Reading:');for(const [key,name] of Object.entries(GN)){if(st.job?.next_target===key&&/^Sending to /i.test(text))text='Sending: '+name}
  return {text,state};

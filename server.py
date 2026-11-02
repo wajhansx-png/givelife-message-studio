@@ -115,7 +115,8 @@ def send_custom(body):
    ledger.update(count=ledger['count']+1,last=now);STORE.put('dm_daily',ledger);STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':now})
   # Reserve before dispatch. A network failure must not silently allow duplicates.
   try:
-   if body.get('poster') is True:result=send_image(jid,message)
+   if body.get('attachment'):result=send_batch_attachment(jid,message,body['attachment'])
+   elif body.get('poster') is True:result=send_image(jid,message)
    else:
     req=urllib.request.Request(GOWA_URL+'/send/message',data=json.dumps({'phone':jid,'message':message}).encode(),headers={'X-Device-Id':DEVICE,'Content-Type':'application/json'},method='POST')
     with urllib.request.urlopen(req,timeout=40) as response:result=mapping(json.load(response))
@@ -329,6 +330,18 @@ def post_media(jid,cap,path):
  """Send one picture or MP4 video with its caption file through the WhatsApp gateway."""
  video=str(path).endswith('.mp4')
  return subprocess.run(['curl','-s','--max-time','150' if video else '60','-X','POST',GOWA_URL+('/send/video' if video else '/send/image'),'-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',(f'video=@{path};type=video/mp4' if video else f'image=@{path};type=image/jpeg'),'-F',f'caption=<{cap}','-F','compress=false'],capture_output=True)
+
+@serialized_send
+def send_batch_attachment(jid,caption,ident):
+ import batch_media
+ path,mime=batch_media.load(STORE,ident,ATT)
+ field='video' if mime=='video/mp4' else 'image' if mime.startswith('image/') else 'file'
+ cap=ATT/('caption-'+uuid.uuid4().hex+'.txt');cap.write_text(caption,encoding='utf-8')
+ try:
+  r=subprocess.run(['curl','-s','--max-time','150','-X','POST',GOWA_URL+'/send/'+field,'-H',f'X-Device-Id: {DEVICE}','-F',f'phone={jid}','-F',f'{field}=@{path};type={mime}','-F',f'caption=<{cap}'],capture_output=True)
+  try:return mapping(json.loads(r.stdout))
+  except Exception:return {'code':'UNCERTAIN','message':'Attachment delivery was not confirmed. Check WhatsApp; do not resend automatically.'}
+ finally:cap.unlink(missing_ok=True)
 
 @serialized_send
 def send_image(jid,caption,check_gap=False,_retry=True):
@@ -925,6 +938,9 @@ if STORE:
 CAMPAIGN={'running':False,'stop':False,'total':0,'sent':0,'failed':0,'skipped':0,'next_at':0,'current':'','log':[],'id':None}
 
 def save_upload(data_url,use):
+ if use=='bulk':
+  import batch_media
+  return batch_media.save(STORE,data_url)
  if use=='papers':return 'papers-'+str(save_papers(data_url))
  raw=base64.b64decode(data_url.split(',',1)[-1])
  if data_url.startswith('data:video/'):
@@ -2047,7 +2063,7 @@ class Handler(BaseHTTPRequestHandler):
   if self.path.split('?')[0] in ('/group-finder','/group-finder.js','/group-finder.css'):
    name=self.path.split('?')[0][1:];name='group-finder.html' if name=='group-finder' else name
    return self.reply((ROOT/name).read_bytes(),'text/html' if name.endswith('.html') else 'text/css' if name.endswith('.css') else 'application/javascript')
-  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/team.js','/notes.js','/notes.css','/donors.css','/studio.css'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/team.js','/notes.js','/notes.css','/donors.css','/studio.css','/compact-nav.js','/compact-nav.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
@@ -2194,7 +2210,7 @@ class Handler(BaseHTTPRequestHandler):
    try:
     if self.path=='/donor-paste':
      if body.get('action')=='preview':return self.reply(donors().pasted.preview(body.get('text'),body.get('gap_seconds',240)))
-     if body.get('action')=='start':return self.reply(donors().pasted.start(body.get('token'),body.get('gap_seconds',240),body.get('request_id'),body.get('poster',True),body.get('message')))
+     if body.get('action')=='start':return self.reply(donors().pasted.start(body.get('token'),body.get('gap_seconds',240),body.get('request_id'),body.get('poster',True),body.get('message'),body.get('attachment')))
      raise ValueError('Choose preview or start for the pasted donor list.')
     if self.path=='/donors':return self.reply(donors().mutate(body))
     if self.path=='/donor-send':return self.reply(donors().send_one(body.get('id'),body.get('request_id')))
@@ -2382,7 +2398,8 @@ ensure_dm_structure()
 if __name__=='__main__':
  threading.Thread(target=recover_group_research,daemon=True,name='research-recovery').start()
  threading.Thread(target=donor_autopilot,daemon=True).start()
- threading.Thread(target=team_loop,daemon=True,name='team-loop').start()
+ # Team was removed from the interface. Retain records without hidden outreach.
+ if os.environ.get('GIVELIFE_TEAM_ENABLED')=='1':threading.Thread(target=team_loop,daemon=True,name='team-loop').start()
  PILOT.start()
  ENGINE.start()
  threading.Thread(target=timed_loop,daemon=True).start()

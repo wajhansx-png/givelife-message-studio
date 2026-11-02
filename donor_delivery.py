@@ -1,5 +1,5 @@
 """Explicit donor batches, saved receipts and no automatic replay after restart."""
-import copy, hashlib, json, math, random, threading, time, uuid
+import copy, hashlib, json, math, random, re, threading, time, uuid
 from pathlib import Path
 from donor_book import hide_numbers
 
@@ -73,7 +73,8 @@ class DonorDelivery:
         with self.lock:
             data=self._load();j=next(x for x in data['jobs'] if x['id']==ident);j.update(fields,updated_at=time.time());self._save(data)
             return copy.deepcopy(j)
-    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None,chunk=None,rest_seconds=1200,fresh=False,rests=None,jitter=None,skip_contacted=None,hold_until=None,custom_template=None):
+    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None,chunk=None,rest_seconds=1200,fresh=False,rests=None,jitter=None,skip_contacted=None,hold_until=None,custom_template=None,attachment=None):
+        if attachment is not None and (not isinstance(attachment,str) or not re.fullmatch('[a-f0-9]{32}',attachment)):raise ValueError('Choose the attachment again.')
         if custom_template is not None and (scope!='selected' or not isinstance(custom_template,str) or not custom_template.strip() or len(custom_template)>8000):raise ValueError("Write a custom message for selected recipients (up to 8,000 characters).")
         if self.case_closed():raise ValueError('The case is complete (Rs. 0 left), so no donor DMs were started. Set a new amount left first if you need to ask again.')
         if type(gap_seconds) not in (float,int) or not math.isfinite(gap_seconds) or not 0<gap_seconds<=600:raise ValueError('Choose a gap from 1 to 10 minutes. Suggested: 3–5 minutes.')
@@ -130,7 +131,7 @@ class DonorDelivery:
             texts=self.variants(part) if self.variants and custom_template is None else [caption]*part
             if self.variants and custom_template is None and (not isinstance(texts,list) or len(texts)!=part or any(not isinstance(text,str) or not text.strip() for text in texts) or len(set(texts))!=part):raise ValueError('Prepare enough different messages in Messages before starting this batch.')
             captions+=texts
-        signature=hashlib.sha256(json.dumps([scope,gap,ids,limit,poster,captions,custom_template,personal_names,chunk,rests,jitter,hold_until,[r['id'] for r in rows]],sort_keys=True).encode()).hexdigest()
+        signature=hashlib.sha256(json.dumps([scope,gap,ids,limit,poster,captions,custom_template,attachment,personal_names,chunk,rests,jitter,hold_until,[r['id'] for r in rows]],sort_keys=True).encode()).hexdigest()
         with self.lock:
             data=self._load();previous=next((j for j in data['jobs'] if j.get('request_id')==rid),None)
             if previous:
@@ -152,6 +153,7 @@ class DonorDelivery:
             if jitter:job['jitter']=jitter
             if personal_names is not None:job['personal_names']=copy.deepcopy(personal_names)
             if custom_template is not None:job['custom_template']=custom_template
+            if attachment:job['attachment']=attachment
             data['jobs'].append(job);self._save(data);self.active=ident;self.stop.clear()
         if run:threading.Thread(target=self._run,args=(copy.deepcopy(job),),daemon=True).start()
         pauses=', '.join(f'{x/60:g}' for x in (job.get('rests') or []));rounds=(f" {job['batches']} batches of up to {chunk}. Pause between batches: {pauses} min. Everything continues by itself, even with the app closed. Say stop any time." if job.get('chunk') else '')+(f" Gap between DMs varies by {jitter['min']:g} to {jitter['max']:+g} seconds." if jitter else '')+(f" {already} already contacted were left out." if already else '')
@@ -218,7 +220,7 @@ class DonorDelivery:
                 try:r=self.book.resolve(ident)
                 except ValueError:skipped+=1;receipts.append({'id':ident,'name':'Removed donor','state':'Skipped'});continue
                 if not self.eligible(r['phone']):
-                    skipped+=1;receipts.append({'id':ident,'name':hide_numbers(r['name']),'state':'Skipped: opted out or blocked'});continue
+                    skipped+=1;receipts.append({'id':ident,'name':hide_numbers(r['name']),'state':'Skipped: '+getattr(self,'exclusion_reason',lambda p:'recipient excluded')(r['phone'])});continue
                 if last_completion is not None or self.manual_inflight.is_set() or self.manual_sent_at>j['created_at']:
                     due=max(last_completion or 0,self.manual_sent_at)+gap_next;self._update(j['id'],state='Waiting',next_at=due,current='Waiting between DMs',sent=sent,skipped=skipped,receipts=receipts)
                     while self.manual_inflight.is_set() or time.time()<due:
@@ -231,11 +233,12 @@ class DonorDelivery:
                 except ValueError:skipped+=1;continue
                 if self.held():state='Stopped';error='Sending is on hold.';break
                 if self.case_closed():state='Stopped';error='The case is complete (Rs. 0 left), so the rest of this batch was stopped before sending.';break
-                if not self.eligible(r['phone']):skipped+=1;continue
+                if not self.eligible(r['phone']):
+                    skipped+=1;receipts.append({'id':ident,'name':hide_numbers(r['name']),'state':'Skipped: '+getattr(self,'exclusion_reason',lambda p:'recipient excluded')(r['phone'])});continue
                 name,gender=j['personal_names'][ident] if 'personal_names' in j else self.name_for(r['name'])
                 self._update(j['id'],state='Sending',next_at=None,current=hide_numbers(r['name']),batch=(index//chunk+1) if chunk else 1,sent=sent,skipped=skipped,receipts=receipts)
                 self.book.delivery(ident,'Sending')
-                try:result=self._dispatch(j,{'target':'phone','phone':r['phone'],'message':self._fresh_caption(j,index),'poster':j['poster'],'kind':'owner_text' if 'custom_template' in j else self.KIND,'first_in_batch':sent==0,'name':name,'gender':gender},receipts,sent,skipped)
+                try:result=self._dispatch(j,{'target':'phone','phone':r['phone'],'message':self._fresh_caption(j,index),'poster':j['poster'],'kind':'owner_text' if 'custom_template' in j else self.KIND,'attachment':j.get('attachment'),'first_in_batch':sent==0,'name':name,'gender':gender},receipts,sent,skipped)
                 except ValueError as e:
                     self.book.delivery(ident,'Not sent');state='Stopped';error=hide_numbers(e);break
                 except Exception:
@@ -263,6 +266,7 @@ class DonorDelivery:
         if j.get('chunk'):args.update(chunk=j['chunk'],rests=j.get('rests'))
         if j.get('jitter'):args['jitter']=j['jitter']
         if 'custom_template' in j:args['custom_template']=j['custom_template']
+        if j.get('attachment'):args['attachment']=j['attachment']
         if j['scope']=='selected':
             if not j.get('personal_names'):return None
             args.update(ids=j['ids'],personal_names=j['personal_names'],limit=len(j['ids']))

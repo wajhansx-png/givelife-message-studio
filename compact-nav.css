@@ -1,0 +1,53 @@
+/* Quiet navigation; secondary controls remain one menu away. */
+html body .compact-nav-menu{position:relative;flex:none;z-index:30}
+html body .compact-nav-menu>summary{display:flex;align-items:center;justify-content:center;min-height:40px;padding:6px 12px;border:1px solid var(--line2);border-radius:9px;color:var(--ink);background:var(--surface);font-size:13px;font-weight:600;cursor:pointer;list-style:none;box-sizing:border-box}
+.compact-nav-menu>summary::-webkit-details-marker{display:none}
+html body .compact-nav-menu>summary::after{content:'⌄';margin-left:7px}
+html body .compact-nav-panel{position:absolute;right:0;top:calc(100% + 7px);width:220px;max-width:calc(100vw - 24px);padding:8px;display:flex;flex-direction:column;gap:6px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);box-shadow:0 8px 24px #0004}
+html body .compact-nav-menu:not([open])>.compact-nav-panel{display:none}
+html body .compact-nav-panel button,html body .compact-nav-panel select{width:100%;max-width:100%!important;min-height:40px;text-align:left;font-size:13px;white-space:normal}
+html body .compact-nav-panel button{display:flex!important;align-items:center;position:static!important;inset:auto!important;transform:none!important;margin:0}
+html body #mainNavMore #keyboardHelp{display:flex!important;visibility:visible!important;width:100%;height:auto}
+html body .brandbar,html body .donor-head{position:relative;z-index:50;overflow:visible!important}
+html body .compact-nav-panel .case-pick{display:flex!important;flex-direction:column;gap:5px;width:100%;max-width:100%;font-size:11px;color:var(--mut);order:0;flex:none!important}
+html body .compact-nav-panel .team-launch,html body .compact-nav-panel #desktopPreview{display:flex!important;align-items:center;justify-content:space-between;margin:0}
+html body .compact-nav-panel .donor-message-tablist{display:block}
+html body .brandbar{gap:8px;padding:6px 10px;min-height:50px}
+html body .brandbar .brand{font-size:16px;margin-right:6px}
+html body .brandbar .brand small{display:none}
+html body .brandbar .seg button{min-height:40px;padding:0 15px;font-size:13px}
+html body .brandbar .leftchip{font-size:13px;padding:6px 10px;min-height:40px}
+html body .brandbar #donorNotesShortcut{min-height:40px;padding:6px 12px;font-size:13px}
+html body .donor-head{gap:10px;justify-content:flex-start;padding-block:6px;min-height:46px}
+html body .donor-head .donor-title{margin-right:auto}
+html body .donor-head h1{font-size:20px;line-height:1.2}
+html body .donor-head>.donor-total{display:flex;align-items:center;gap:8px;padding:4px 8px;background:transparent;border:0;box-shadow:none;min-height:0}
+html body .donor-head>.donor-total small{font-size:11px;text-transform:none;letter-spacing:0}
+html body .donor-head>.donor-total strong{font-size:14px}
+html body .donor-head #donorAdd{min-height:40px;padding:6px 14px;font-size:13px}
+html body .donor-toolbar{gap:12px;padding:0;min-height:44px}
+html body .donor-tabs{gap:2px;padding:3px;border-radius:10px;flex:1}
+html body .donor-tabs button{min-height:38px;padding:6px 10px;font-size:12px;border-radius:7px;box-shadow:none!important}
+html body .donor-search{min-height:40px;max-width:300px;font-size:13px}
+.compact-nav-menu>summary:focus-visible{outline:2px solid var(--g);outline-offset:3px}
+.compact-nav-menu>summary[data-unread=true]::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--g);margin-right:6px}
+html body .message-copy{font-size:0!important;width:28px;min-width:28px;height:28px;padding:5px!important;border:0!important;background:transparent!important;box-shadow:none!important}
+html body .message-copy::before{content:'';display:block;width:16px;height:16px;background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Crect x='8' y='8' width='12' height='13' rx='2'/%3E%3Cpath d='M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3'/%3E%3C/svg%3E") center/contain no-repeat}
+html body [data-group="free"] .group-label{color:#93c5fd!important}
+html[data-theme="light"] body [data-group="free"] .group-label{color:#1d4ed8!important}
+html body #donorsPage #donorProgress[data-error=true]{background:var(--surface2)!important;color:var(--ink)!important;border:1px solid var(--line2)!important;border-left:3px solid var(--warn)!important;border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.5;box-shadow:none!important}
+html body #donorsPage #donorNotice[data-error=true]{background:var(--surface2);color:var(--ink);border-left:3px solid var(--warn);border-radius:7px}
+@media(max-width:720px){
+ html body .brandbar{gap:5px;flex-wrap:wrap}
+ html body .brandbar .leftchip{font-size:12px;padding-inline:5px}
+ html body .brandbar .seg button{padding-inline:10px}
+ html body .brandbar #donorNotesShortcut{padding-inline:8px}
+ html body .compact-nav-menu>summary{min-height:44px;padding-inline:9px}
+ html body .donor-head{gap:6px;flex-wrap:wrap}
+ html body .donor-head h1{font-size:17px}
+ html body .donor-head>.donor-total{order:5;flex-basis:100%;margin:0;padding:0 2px;font-size:12px}
+ html body .donor-toolbar{gap:6px}
+ html body .donor-tabs{grid-template-columns:repeat(5,minmax(0,1fr))}
+ html body .donor-tabs button{min-height:44px;font-size:10px;padding:4px 2px}
+ html body .donor-search{max-width:none;width:100%}
+}

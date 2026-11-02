@@ -9,6 +9,7 @@ class DonorIntegration:
         from donor_messages import MessageBank
         self.messages=MessageBank(app);self.paused=bool(app.STORE.get('donor_dm_pause',False)) if app.STORE else False
         self.jobs=DonorDelivery(app.DATA,app.STORE,self.book,app.send_custom,lambda:app.get_message('dm')['text'],app.wa_ok,lambda:app.on_hold() or self.paused,self.eligible,self.personal_name,self.messages.captions,lambda:app.read_left()<=0)
+        self.jobs.exclusion_reason=self.exclusion_reason
         from donor_paste import PastedDonors
         self.pasted=PastedDonors(self.book,self.jobs,lambda:app.OWNER_PHONE,lambda label:self.personal_name(label,explicit=True),self._start_pasted_batch)
         self.manual_lock=threading.RLock()
@@ -59,6 +60,11 @@ class DonorIntegration:
         return result
     def _start_pasted_batch(self,**body):
         if self.app.CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it before starting a donor batch.')
+        if body.get('attachment'):
+            import batch_media
+            batch_media.load(self.app.STORE,body['attachment'],self.app.ATT)
+        rows=self.book.recipients('selected',body.get('ids'),None)
+        if rows and not any(self.eligible(r['phone']) for r in rows):raise ValueError('Not sent: '+self.exclusion_reason(rows[0]['phone']))
         return self.start_batch(**body)
     def send_one(self,ident,request_id):
         """Each explicit click is a new immediate send; repeated request IDs never resend."""
@@ -92,16 +98,19 @@ class DonorIntegration:
                 self.book.delivery(r['id'],'Uncertain');raise
             finally:self.jobs.manual_inflight.clear()
     def eligible(self,phone):
+        return not self.exclusion_reason(phone)
+    def exclusion_reason(self,phone):
         a=self.app
-        if phone==normalize_phone(a.OWNER_PHONE):return False
+        if phone==normalize_phone(a.OWNER_PHONE):return 'This is the connected account, which is excluded from donor batches.'
         import hashlib
         digests=[hashlib.sha256(jid.encode()).hexdigest() for jid in (phone,phone+'@s.whatsapp.net')]
         keys=[prefix+d for d in digests for prefix in ('dm_recipient_','optout_')]
         values=a.STORE.get_many(keys) if a.STORE and hasattr(a.STORE,'get_many') else {k:a.STORE.get(k) for k in keys} if a.STORE else {}
         for digest in digests:
-            if digest in a.BLOCKED-getattr(a,'CAMPAIGN_CONTACTED',set()) or values.get('optout_'+digest):return False
+            if values.get('optout_'+digest):return 'This recipient opted out of messages.'
+            if digest in a.BLOCKED-getattr(a,'CAMPAIGN_CONTACTED',set()):return 'This recipient is blocked from outreach.'
         # An earlier send (even an uncertain one) never stops a deliberate new send.
-        return True
+        return ''
     def personal_name(self,label,explicit=False):
         # Donor labels are metadata. Random/business labels fall back to Brother.
         raw_label=str(label)

@@ -40,6 +40,13 @@ class PastedDonorTests(unittest.TestCase):
         for message in ('', ' '*3, 42, 'x'*8001):
             with self.assertRaises(ValueError):self.start(helper,preview,message=message)
         self.assertEqual(self.book.list()['counts']['all'],0)
+
+    def test_attachment_is_saved_with_batch_and_not_replaced_by_poster(self):
+        helper=self.helper();preview=helper.preview('03001234567, Ali')
+        self.start(helper,preview,message='Hello {name}',attachment='a'*32)
+        self.run_job()
+        self.assertEqual(self.sent[0]['attachment'],'a'*32)
+        self.assertFalse(self.sent[0]['poster'])
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
         self.store = Store()

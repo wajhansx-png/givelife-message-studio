@@ -33,6 +33,16 @@ class DonorDelivery:
             if changed:self._save(data)
             if not jobs:return {'state':'Idle','sent':0,'skipped':0,'failed':0,'total':0}
             out=self._public(jobs[-1]);left=self._remaining(jobs[-1])
+            # Older releases combined self-account and opt-out exclusions. Explain
+            # legacy receipts from current verified records without replaying them.
+            for receipt in out.get('receipts',[]):
+                if receipt.get('state')=='Skipped: opted out or blocked':
+                    try:
+                        phone=self.book.resolve(receipt['id'])['phone']
+                        reason=getattr(self,'exclusion_reason',lambda p:'')(phone)
+                    except (ValueError,KeyError):reason=''
+                    receipt['state']='Skipped: '+(reason or 'Excluded by an earlier batch. Start a new batch to check eligibility again.')
+
             if left is not None:out['resumable']=len(left)
             out['waiting']=self._waiting(jobs[-1])
             j=jobs[-1];seen={r.get('id') for r in j.get('receipts',[])}

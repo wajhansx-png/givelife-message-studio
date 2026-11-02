@@ -51,3 +51,9 @@ html body #donorsPage #donorNotice[data-error=true]{background:var(--surface2);c
  html body .donor-tabs button{min-height:44px;font-size:10px;padding:4px 2px}
  html body .donor-search{max-width:none;width:100%}
 }
+
+/* One quiet, dismissible outcome; never two persistent result panels. */
+#donorNotice:not(:empty){display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line,#454753);border-radius:10px;background:var(--surface,#252732);color:var(--ink,#e9eaf0);font-size:13px;line-height:1.4;margin:6px 0;box-shadow:none;flex-shrink:0}
+#donorNotice>span{flex:1;min-width:0;overflow-wrap:anywhere}
+#donorNotice .donor-notice-close{display:grid;place-items:center;flex:0 0 32px;width:32px;min-height:32px;padding:0;border:0;background:transparent;color:inherit;font-size:23px;cursor:pointer}
+#donorNotice:empty{display:none}

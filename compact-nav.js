@@ -15,10 +15,10 @@
  const bar=document.querySelector('.brandbar');
  if(bar){
   const panel=menu(bar,'mainNavMore','More app options');
-  for(const selector of ['#desktopPreview','.case-pick','#keyboardHelp']){
+  for(const selector of ['.case-pick','#keyboardHelp']){
    const control=document.querySelector(selector);if(control)panel.append(control);
   }
-  const preview=document.getElementById('desktopPreview');if(preview)preview.textContent='Message preview';
+  const preview=document.getElementById('desktopPreview');if(preview){preview.textContent='Message preview';preview.setAttribute('aria-label','Message preview');preview.title='Message preview';bar.insertBefore(preview,panel.parentElement)}
   const caseLabel=panel.querySelector('.case-pick .sr-only');if(caseLabel)caseLabel.classList.remove('sr-only');
   const badge=panel.querySelector('.team-badge'),summary=panel.parentElement.querySelector('summary');
   if(badge){const update=()=>{summary.dataset.unread=String(!badge.hidden);summary.setAttribute('aria-label',badge.hidden?'More app options':'More app options, new Team updates')};new MutationObserver(update).observe(badge,{attributes:true,childList:true,subtree:true});update()}

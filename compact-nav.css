@@ -96,3 +96,29 @@ html body .compact-nav-panel #desktopPreview::before{display:none}
 html body .compact-nav-panel .more-amount{display:none!important}
 @media(max-width:560px){html body .brandbar #leftChip{display:none!important}html body .compact-nav-panel .more-amount{display:flex!important}}
 @media(pointer:coarse){html body #mainNavMore #keyboardHelp{display:none!important}}
+
+/* Saved DM versions: one border colour, one radius family (16 cards / 12 buttons), readable line length and type size. */
+html body #donorsPage[data-panel="messages"] .bank-heading,html body #donorsPage[data-panel="messages"] .bank-workspace{width:min(1360px,100%)}
+html body #donorsPage[data-panel="messages"] .bank-heading{gap:14px;margin-bottom:16px}
+html body #donorsPage[data-panel="messages"] .bank-heading>span:not(.bank-current){font-size:14px;color:#c9c9c9}
+html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,1fr) 152px 272px;gap:16px}
+html body #donorsPage[data-panel="messages"] .bank-message.bank-detail,html body #donorsPage[data-panel="messages"] .bank-picker{border:1px solid #ffffff1f;border-radius:16px}
+html body #donorsPage[data-panel="messages"] .bank-message.bank-detail header{padding:16px 32px 0;font-size:14px;color:#c9c9c9}
+html body #donorsPage[data-panel="messages"] .bank-preview,html body #donorsPage[data-panel="messages"] .bank-message textarea{padding:20px 32px 28px;font-size:18px;line-height:1.6}
+html body #donorsPage[data-panel="messages"] .bank-preview .bank-line,html body #donorsPage[data-panel="messages"] .bank-message textarea{max-width:66ch}
+html body #donorsPage[data-panel="messages"] .bank-actions{gap:10px}
+html body #donorsPage[data-panel="messages"] .bank-actions button,html body #donorsPage[data-panel="messages"] .bank-picker button{min-height:48px;border-radius:12px!important;border-color:#ffffff1f;font-size:14px;font-weight:600;padding:8px 12px}
+html body #donorsPage[data-panel="messages"] .bank-pagination{gap:8px}
+html body #donorsPage[data-panel="messages"] .bank-pagination>span{font-size:13px}
+html body #donorsPage[data-panel="messages"] .bank-actions>.bank-regenerate{margin-top:6px}
+html body #donorsPage[data-panel="messages"] .bank-picker{padding:18px;gap:10px}
+html body #donorsPage[data-panel="messages"] .bank-picker-title{font-size:15px;margin-bottom:6px}
+@media(max-width:1100px){html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,1fr) 132px 220px;gap:12px}html body #donorsPage[data-panel="messages"] .bank-preview,html body #donorsPage[data-panel="messages"] .bank-message textarea{padding:18px 24px 24px;font-size:17px}}
+@media(max-width:850px){
+html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,1fr) 96px;gap:10px}
+html body #donorsPage[data-panel="messages"] .bank-actions button,html body #donorsPage[data-panel="messages"] .bank-picker button{min-height:48px;font-size:13px;padding:6px 4px}
+html body #donorsPage[data-panel="messages"] .bank-picker{padding:12px;gap:8px}
+html body #donorsPage[data-panel="messages"] .bank-picker-title{font-size:14px}
+html body #donorsPage[data-panel="messages"] .bank-preview,html body #donorsPage[data-panel="messages"] .bank-message textarea{padding:16px;font-size:17px}
+}
+@media(max-width:850px){html body #donorsPage[data-panel="messages"] .bank-heading .bank-back{min-height:44px}}

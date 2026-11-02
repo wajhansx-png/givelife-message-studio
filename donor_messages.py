@@ -96,7 +96,7 @@ class MessageBank:
                 self._save(self._build(source))
             return copy.deepcopy(self.cache)
 
-    def generate(self, source, count=10, total=20):
+    def generate(self, source, count=10, total=20, master_first=False):
         """Build a bank from a pasted message. Returns the saved bank."""
         source = dm_variants.clean_source(source)
         if not dm_composer.complete(source):
@@ -105,11 +105,24 @@ class MessageBank:
         total = max(count, min(20, int(total or 20)))
         with self.gen_lock:
             warning = ''
-            canonical = dm_templates.matches(source)
+            # Regenerate always uses the current saved Message 1, never the
+            # initial template or an older hidden source. Keep it unmodified.
+            canonical = dm_templates.matches(source) and not master_first
             left = self.app.read_left()
             if canonical:
                 texts = [dm_templates.build(i, left) for i in range(total)]
                 requested = count
+            elif master_first:
+                texts = [source]
+                need = min(count - 1, total - 1)
+                if need:
+                    texts += dm_variants.generate(source, need, avoid=texts)
+                requested = count
+                if total > len(texts):
+                    try:
+                        texts += dm_variants.generate(source, total - len(texts), avoid=texts)
+                    except ValueError as exc:
+                        warning = str(exc)
             else:
                 texts = dm_variants.generate(source, count)
                 requested = len(texts)
@@ -119,11 +132,13 @@ class MessageBank:
                     except ValueError as exc:
                         warning = str(exc)
             texts = texts[:20]
+            if master_first and (len(texts) < count or len(set(texts)) != len(texts)):
+                raise ValueError('Could not safely rewrite Message 1 into enough distinct versions. Your edits and old versions were kept.')
             data = {
                 'fingerprint': self._fingerprint(source),
                 'items': self._entries(texts),
                 'updated_at': time.time(),
-                'source': 'Generated from the message you supplied; same structure and facts',
+                'source': 'Generated from saved Message 1; same facts and formatting' if master_first else 'Generated from the message you supplied; same structure and facts',
                 'mode': 'structured' if canonical else 'custom',
                 'origin': source,
                 'requested': min(requested, len(texts)),
@@ -131,7 +146,15 @@ class MessageBank:
                 'left': left,
             }
             self._guard()
-            self._save(data)
+            with self.lock:
+                if master_first:
+                    live = self.get()
+                    primary = live.get('items',[{}])[0].get('text') if live.get('items') else None
+                    if primary != source:
+                        raise ValueError('Message 1 changed while regenerating. Your latest edit is safe. Click Regenerate again.')
+                    # A donation can change the balance during an AI call.
+                    self._sync_amount(data)
+                self._save(data)
             return copy.deepcopy(data)
 
     def update(self, ident, text):
@@ -143,6 +166,12 @@ class MessageBank:
             if row is None:
                 raise ValueError('Message not found.')
             row['text'] = text
+            if ident == 'wording-01':
+                # An owner-edited master becomes authoritative even when the
+                # main DM draft is later changed in the other app screen.
+                data['mode'] = 'custom'
+                data['origin'] = text
+                data['fingerprint'] = self._fingerprint(text)
             data['updated_at'] = time.time()
             self._save(data)
             return {'saved': True, 'item': row}
@@ -150,16 +179,14 @@ class MessageBank:
     def regenerate(self):
         with self.lock:
             data = self.get()
-            source = data.get('origin') if data.get('mode') == 'custom' else self._source()
-            old = data.get('left')
-            try:
-                current = self.app.read_left()
-            except (OSError, ValueError, TypeError):
-                current = old
-            if data.get('mode') == 'custom' and isinstance(old, int) and isinstance(current, int) and old != current:
-                source = draft_workflow.update_amount(source, old, current)
-            requested = data.get('requested') or dm_templates.PRIMARY_COUNT
-        return self.generate(source, requested, total=20)
+            # Message 1 is the single source of truth, including its edits,
+            # emotional angle, bold/italic positions, spacing and CTA.
+            items = data.get('items') or []
+            if not items or not isinstance(items[0].get('text'), str):
+                raise ValueError('Save Message 1 before regenerating.')
+            source = items[0]['text']
+            requested = max(2, min(20, int(data.get('requested') or dm_templates.PRIMARY_COUNT)))
+        return self.generate(source, requested, total=20, master_first=True)
 
     def captions(self, count):
         items = [r['text'] for r in self.get()['items'] if r.get('enabled')]

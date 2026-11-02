@@ -1,5 +1,5 @@
 """Owner-source wording banks. Generated text never replaces the saved original."""
-import copy,hashlib,threading,time,uuid,re
+import copy,hashlib,threading,time,uuid,re,difflib
 import dm_variants
 
 class FocusBank:
@@ -12,8 +12,8 @@ class FocusBank:
  def get(self,kind):
   with self.app.LOCK,self.lock:
    data=self._load();row=data.get(kind)
-   if row and row.get('generator',0)<3 and row.get('state')=='Needs retry':
-    row.update(generator=3,state='Generating',error='');data[kind]=row;self._put(data)
+   if row and row.get('generator',0)<4 and (row.get('state')=='Needs retry' or row.get('state')=='Partial' and not row.get('manual')):
+    row.update(generator=4,state='Generating',error='');data[kind]=row;self._put(data)
    current=self.app.get_message(kind)['text']
    changed=bool(row and current!=row['source'] and current not in row.get('items',[]))
    result=copy.deepcopy(row or {'source':current,'items':[],'state':'Not generated','revision':''})
@@ -29,11 +29,11 @@ class FocusBank:
    # Archive owner text before replacing it, without touching other campaign data.
    history=(old.get('history',[])+([old['source']] if old.get('source') else []))[-20:]
    ident=hashlib.sha256(text.encode()).hexdigest()
-   row={'source':text,'revision':ident,'items':[],'state':'Generating','generator':3,'history':history,'updated':time.time()}
+   row={'source':text,'revision':ident,'items':[],'state':'Generating','generator':4,'history':history,'updated':time.time()}
    self.app.save_draft(kind,text);data[kind]=row
    if kind=='group' and not data.get('dm',{}).get('custom'):
     dm='Brother, '+text
-    self.app.save_draft('dm',dm);data['dm']={'source':dm,'revision':hashlib.sha256(dm.encode()).hexdigest(),'items':[],'state':'Generating','generator':3,'history':[],'updated':time.time()}
+    self.app.save_draft('dm',dm);data['dm']={'source':dm,'revision':hashlib.sha256(dm.encode()).hexdigest(),'items':[],'state':'Generating','generator':4,'history':[],'updated':time.time()}
    if kind=='dm':row['custom']=True
    self._put(data)
    kinds=[kind]+(['dm'] if kind=='group' and not data.get('dm',{}).get('custom') else [])
@@ -54,7 +54,21 @@ class FocusBank:
   try:
    api=dm_variants.assistant.client()
    if api is None and len(items)<10:raise ValueError('AI is not connected. Your original is saved; retry when connected.')
-   for attempt in range(8):
+   # Formatting is deterministic: ask the model for prose alternatives and
+   # assemble source tokens in code, rather than rejecting full-message output.
+   from structured_wording import variants as structured_variants
+   for pass_no in range(3):
+    if len(items)>=10:break
+    if not self.current(kind,row['revision']):
+     with self.lock:self.running.discard(key)
+     return
+    try:
+     for text in structured_variants(source,row.get('avoid',[])+items):
+      if valid(source,text,items):items.append(text)
+      if len(items)==10:break
+     self.record(kind,row['revision'],{'items':items,'progress':len(items)})
+    except Exception as exc:last_error=str(exc)[:180]
+   for attempt in range(2):
     if not self.current(kind,row['revision']):
      with self.lock:self.running.discard(key)
      return
@@ -78,10 +92,11 @@ class FocusBank:
     if not self.record(kind,row['revision'],{'items':items,'progress':len(items)}):
      with self.lock:self.running.discard(key)
      return
-   if len(items)!=10:raise ValueError(str(len(items))+'/10 versions ready. Remaining versions need another attempt; original and accepted versions are kept.')
-   result={'items':items,'state':'Ready','error':'','generator':3}
-  except Exception as exc:result={'items':items,'state':'Partial' if items else 'Needs retry','error':str(exc)[:350],'generator':3}
+   if len(items)!=10:raise ValueError(str(len(items))+'/10 versions ready. '+(last_error or 'The AI could not match the required wording length.')+' Original kept.')
+   result={'items':items,'state':'Ready','error':'','generator':4}
+  except Exception as exc:result={'items':items,'state':'Partial' if items else 'Needs retry','error':str(exc)[:350],'generator':4}
   try:
+   print('wording_generation',kind,'ready='+str(len(items)),'state='+result['state'],flush=True)
    if self.record(kind,row['revision'],result) and kind=='dm' and items:self.publish_dm(row['revision'],items,'Owner DM with validated exact-length versions')
   finally:
    with self.lock:self.running.discard(key)
@@ -106,7 +121,7 @@ class FocusBank:
   with self.app.LOCK,self.lock:
    data=self._load();row=data.get(kind)
    if not row:raise ValueError('Save your original message first.')
-   row.update(manual=texts,items=texts,revision=uuid.uuid4().hex,state='Ready' if len(texts)==10 else 'Partial',error='',generator=3);self._put(data)
+   row.update(manual=texts,items=texts,revision=uuid.uuid4().hex,state='Ready' if len(texts)==10 else 'Partial',error='',generator=4);self._put(data)
   if kind=='dm':self.publish_dm(row['revision'],texts,'Owner-approved manual messages')
   return self.get(kind)
  def reserve_groups(self,caption,count):
@@ -133,6 +148,8 @@ def wording_key(text):
 def valid(source,text,existing=()):
  if not isinstance(text,str) or text==source or text in existing or len(text)!=len(source):return False
  if wording_key(text) in {wording_key(t) for t in [source,*existing]}:return False
+ hook=lambda t:re.sub(r'[^\w\s]','',next((l for l in t.split('\n') if l.strip()),'')).casefold().strip()
+ if any(difflib.SequenceMatcher(None,hook(text),hook(t)).ratio()>.90 for t in [source,*existing]):return False
  if dm_variants._shape(text)!=dm_variants._shape(source) or dm_variants._numbers(text)!=dm_variants._numbers(source) or dm_variants._emojis(text)!=dm_variants._emojis(source):return False
  for line in source.split('\n'):
   if any(t in line.lower() for t in ('easypaisa','jazzcash','account','03097458815','wajdan')) and line not in text:return False

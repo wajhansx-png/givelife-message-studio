@@ -9,6 +9,7 @@ class Store:
  def put(self,k,v):self.data[k]=copy.deepcopy(v)
 class FocusTests(unittest.TestCase):
  def make(self):
+  mocked=patch('structured_wording.variants',return_value=[]);mocked.start();self.addCleanup(mocked.stop)
   self.drafts={'group':'*Please help this family today.*\n\nRs. 50,000 needed\n\n03097458815 Easypaisa / JazzCash Wajdan Khan','dm':'Brother, support this family.'}
   bank=SimpleNamespace(lock=threading.RLock(),_save=lambda d:None,_fingerprint=lambda t:t,_entries=lambda ts:[{'text':t} for t in ts]);self.app=SimpleNamespace(donors=lambda:SimpleNamespace(messages=bank),read_left=lambda:50000,STORE=Store(),LOCK=threading.RLock(),get_message=lambda k:{'text':self.drafts[k]},save_draft=lambda k,v:self.drafts.update({k:v}))
   return FocusBank(self.app)
@@ -48,7 +49,7 @@ class FocusTests(unittest.TestCase):
   self.assertEqual(b.get('group')['state'],'Ready');self.assertEqual(len(b.get('group')['items']),10);self.assertEqual(b.get('group')['items'][:2],partial['items'])
  def test_old_failed_bank_restarts_once_after_generator_upgrade(self):
   b=self.make();source=self.drafts['group'];b.app.STORE.put('focus_wording',{'group':{'source':source,'revision':'old','items':[],'state':'Needs retry','error':'old failure'}})
-  row=b.get('group');self.assertEqual(row['state'],'Generating');self.assertEqual(row['error'],'');self.assertEqual(row['generator'],3)
+  row=b.get('group');self.assertEqual(row['state'],'Generating');self.assertEqual(row['error'],'');self.assertEqual(row['generator'],4)
  def test_manual_messages_are_distinct_and_group_sends_never_reuse(self):
   b=self.make()
   with patch.object(b,'start'):b.save('group',self.drafts['group'])

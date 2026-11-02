@@ -90,6 +90,10 @@ class DeferredWordingNeverSendsNow(unittest.TestCase):
    with self.subTest(phrase=phrase):
     with self.assertRaises(ValueError) as caught:timed_tasks.parse(phrase,NOW)
     self.assertIn('What time',str(caught.exception))
+ def test_conditions_are_never_an_immediate_send(self):
+  for phrase in ('send main if no donation comes','send main when amount reaches 20k','send main once he donates','agar paise aaye to main me bhejo','send when ready'):
+   with self.subTest(phrase=phrase):self.assertIsNone(manual_commands.parse(phrase))
+  self.assertEqual(manual_commands.parse('once more')['kind'],'repeat')
  def test_immediate_wording_still_sends_now(self):
   for phrase in ('send main','abhi bhejo main','send main now'):
    with self.subTest(phrase=phrase):self.assertEqual(manual_commands.parse(phrase)['kind'],'appeal')

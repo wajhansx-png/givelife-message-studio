@@ -80,7 +80,10 @@ def _times(unit):return MULT.get((unit or '').casefold(),1)
 
 def balance_amount(text,allow_with=True):
  """Use an amount bound to balance wording, never a year/group count/phone."""
- t=outside_literals(text);number=r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*'+UNIT+r'?(?!\w)'
+ t=outside_literals(text)
+ # "remaining 5000 is wrong" complains about a number; it never sets it.
+ if re.search(r'(?i)\d[0-9,]*\s*(?:k|hazar|lakh|lac)?\s+(?:left |remaining |baqi |bacha )?(?:is |was |looks |seems |hai |tha )?(?:wrong|incorrect|galat|not correct|not right|old|outdated)\b',t):return None
+ number=r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*'+UNIT+r'?(?!\w)'
  patterns=[number+r'\s*(?:is\s+)?(?:left|remaining|remain|baqi|baki|bacha|bache|bachey|bachi|bachay|bacha hai|rehte|reh gaye)\b',
            r'\b(?:remaining(?:\s+amount)?|amount(?:\s+(?:left|remaining))?|balance|baqi|(?:bache|bachey|bachay|bacha)(?:\s+(?:hain|hai))?)\s*(?:is|to|=|:)?\s*(?:rs\.?\s*)?'+number+r'(?!\s*(?:people|groups?|members?|donors?|dms?|messages?|msgs?|contacts?|numbers?|times?|days?|hours?|hrs?|minutes?|mins?|lines?|words?|versions?))',
            r'\bleft\s*(?:is|=|:)?\s*(?:rs\.?\s*)?(?=\d[\d,]*\s*(?:k|hazar|hazaar|thousand|lakh|lac)\b|\d{3,})'+number+r'(?!\s*(?:people|groups?|members?|minutes?|hours?|messages?|dms?|donors?|times?))',

@@ -23,4 +23,10 @@ class MentionsAreNotSends(unittest.TestCase):
     self.assertEqual((manual_commands.parse(phrase) or {}).get('kind'),kind)
     self.assertTrue(chat_policy.intent(phrase)['send'])
 
+class ComplaintsAreNotAmounts(unittest.TestCase):
+ def test_a_complaint_about_a_number_never_sets_it(self):
+  for phrase in ('remaining 5000 is wrong','5000 left is wrong','balance 5000 galat hai','5000 old'):
+   with self.subTest(phrase=phrase):self.assertIsNone(manual_commands.parse(phrase))
+  self.assertEqual(manual_commands.parse('that was wrong, 4000 left')['amount'],4000)
+
 if __name__=='__main__':unittest.main()

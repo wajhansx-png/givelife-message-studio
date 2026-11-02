@@ -240,7 +240,8 @@ async function sendGroup(key){if(!lockSend(key,true))return;let tracked=false;if
 document.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>sendGroup(b.dataset.group));
 function armAll(){return sendGroup('all')}
 $('sendAll').onclick=armAll;
-async function sendTest(kind){const key='test:'+kind;if(!lockSend(key,true))return;setLiveNotice('Sending to test group…');busy(true);try{await ensureCaption(kind);clearTimeout(timer);await save();const r=await post('/test',{message:$(kind).value}),d=await r.json();const result=d.code==='SUCCESS'?'✓ Sent to the test group.':'Test failed: '+(d.message||d.error||'');say('app',result,d.code!=='SUCCESS');setLiveNotice(result,d.code!=='SUCCESS')}
+async function fillEmptyCaption(kind){await ensureDrafts();if($(kind)&&!$(kind).value.trim()){const r=await post(kind==='group'?'/next-message':'/next-dm'),d=await r.json();if(r.ok&&typeof d.message==='string'&&d.message.trim()){$(kind).value=d.message;if(kind==='dm')applyGreeting(false);render();await save()}}}
+async function sendTest(kind){const key='test:'+kind;if(!lockSend(key,true))return;setLiveNotice('Sending to test group…');busy(true);try{await fillEmptyCaption(kind);await ensureCaption(kind);clearTimeout(timer);await save();const r=await post('/test',{message:$(kind).value}),d=await r.json();const result=d.code==='SUCCESS'?'✓ Sent to the test group.':'Test failed: '+(d.message||d.error||'');say('app',result,d.code!=='SUCCESS');setLiveNotice(result,d.code!=='SUCCESS')}
  catch(e){say('app',e.message||'Could not send',1)}finally{lockSend(key,false);busy(false)}}
 document.querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>{if(editing)setEditing(false);sendTest(b.dataset.test)});
 function cleanPhone(p){p=p.replace(/[\s()+-]/g,'');if(p.startsWith('00'))p=p.slice(2);if(/^03\d{9}$/.test(p))p='92'+p.slice(1);return /^[1-9]\d{7,14}$/.test(p)?p:''}

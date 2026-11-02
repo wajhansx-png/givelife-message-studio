@@ -325,6 +325,13 @@ class DonorIntegration:
         # A bare "stop" while donor DMs are running can only mean those DMs.
         if self.jobs.active and re.fullmatch(r'(?i)(?:please\s+)?(?:stop|pause|cancel|ruk(?:\s+jao)?|band(?:\s+karo)?|bas)(?:\s+(?:it|this|now|all|sending|everything|the batch|batch|the rest|rest))?[.!]*',t):return self.pause_personal()
         control=manual_commands.dm_control(t)
+        if control=='resume_dms':
+            # "resume DMs by 11 am" means at that time, never right now.
+            import timed_tasks
+            due=timed_tasks.due_time(t)
+            if due is not None:
+                if not self.paused:return {'reply':'DMs are not stopped, so there is nothing to resume at that time. Nothing was changed.','paused':False}
+                return self.schedule_resume(dt.datetime.fromtimestamp(due,timed_tasks.PKT).strftime('%Y-%m-%dT%H:%M'),request_id)
         if control=='stop_dms':return self.pause_personal()
         if control=='resume_dms':return {'reply':self.resume_personal()}
         if re.fullmatch(r'(?i)(?:please\s+)?(?:(?:send|start|run|do)\s+(?:the\s+|my\s+)?(?:dms?|dm batch(?:es)?|batches|donor dms?)|dm\s+(?:the\s+)?(?:important|them)(?:\s+donors?)?)(?:\s+(?:to\s+)?(?:important(?:\s+donors?)?|them|now|please|again|everyone))*[.!]*',t):

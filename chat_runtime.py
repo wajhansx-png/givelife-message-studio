@@ -37,6 +37,14 @@ def claims_completion(reply):
   r'|\b(?:all\s+(?:requested\s+)?actions|everything)\s+(?:is\s+)?(?:done|completed)\b',
   value))
 
+def collapse_repeats(turns):
+ """Identical back-to-back lines (the same failed Test notice seven times) become one, so they cannot push the real conversation out of the context window."""
+ out=[]
+ for turn in turns:
+  if out and out[-1]['who']==turn['who'] and out[-1]['text'].strip()==turn['text'].strip():out[-1]['count']=out[-1].get('count',1)+1;continue
+  out.append(dict(turn))
+ return out
+
 def context_messages(text,history,state,memory,decision=None,follow=None):
  import assistant
  decision=decision or text
@@ -88,10 +96,10 @@ def context_messages(text,history,state,memory,decision=None,follow=None):
   if isinstance(item,dict) and 'text' in item:item['text']=safe_text(item['text'],800)
  msgs=[];budget=18000
  selected=[]
- for h in reversed(valid_history(history)):
+ for h in reversed(collapse_repeats(valid_history(history))):
   if reviewing and h['who']!='you':continue
   if reviewing and len(selected)>=6:break
-  content=safe_text(h['text'],4000)
+  content=safe_text(h['text'],4000)+(' (repeated '+str(h['count'])+' times)' if h.get('count',1)>1 else '')
   if len(content)>budget:continue
   selected.append({'role':'user' if h['who']=='you' else 'assistant','content':content});budget-=len(content)
   if len(selected)>=28:break

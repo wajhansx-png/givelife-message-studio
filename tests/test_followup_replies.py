@@ -141,6 +141,16 @@ class PickingASuggestion(Replay,unittest.TestCase):
   self.assertNotIn('send_appeal',self.offered)
   self.assertIn('autopilot',self.offered)
 
+class RepeatedNoticesDoNotEraseContext(unittest.TestCase):
+ def test_thirty_identical_failures_keep_the_real_conversation_in_view(self):
+  history=[{'who':'you','text':'send the caption to main at 11am'}]+[{'who':'app','text':'Test failed: Group tab has 0/10 distinct saved versions.'}]*40+[{'who':'you','text':'resume group dms by 11 am'}]
+  messages=chat_runtime.context_messages('ok',history,{},[])
+  texts=[m['content'] for m in messages]
+  self.assertIn('send the caption to main at 11am',texts)
+  self.assertIn('resume group dms by 11 am',texts)
+  self.assertEqual(sum('Test failed' in t for t in texts),1)
+  self.assertTrue(any('repeated 40 times' in t for t in texts))
+
 class UrduAndHinglishCommands(unittest.TestCase):
  def test_everyday_phrasings_run_without_the_model(self):
   expected={'ab 3000 bache hain':('amount',3000),'1500 aaye hain':('money',1500),'Rs 1500 aye hain':('money',1500),

@@ -227,10 +227,10 @@ class Engine:
             return self.notify('goal', 'The goal is complete (Rs. 0 left). I posted the completion message and stopped. Set up the next case when ready.', 86400)
         self.s['d1_done'] = False
         for key, every, scan in (('last_scan', 120, self.scan_group_replies), ('last_dm_scan', 120, self.scan_dm_replies),
-                                 ('last_chat_scan', 120, self.scan_saved_chats)):
-            if now() - self.s[key] >= every:
+                                 ('last_chat_scan', 120, self.scan_saved_chats), ('last_reply_scan', 120, self.scan_reply_setup)):
+            if now() - self.s.get(key, 0) >= every:
                 self.s[key] = now()
-                self.activity = {'label':{'last_scan':'Reading group replies','last_dm_scan':'Reading donor replies','last_chat_scan':'Checking saved chats'}[key], 'started':now()}
+                self.activity = {'label':{'last_scan':'Reading group replies','last_dm_scan':'Reading donor replies','last_chat_scan':'Checking saved chats','last_reply_scan':'Checking new chats'}[key], 'started':now()}
                 try:
                     scan()
                 finally:
@@ -569,6 +569,44 @@ class Engine:
                 else:
                     self.notify('dmq-' + str(mid), f'…{tail} replied: "{text[:120]}". Please answer them.', 0)
 
+    def scan_reply_setup(self):
+        """New chats: when someone sends a picture or says done/donated, send one of the owner's own
+        written replies. Each message is answered once, each person at most once every 6 hours."""
+        setup = self.h.get('reply_setup', lambda: {})()
+        if not setup.get('enabled') or not setup.get('replies') or self.h.get('on_hold', lambda: False)():
+            return
+        done = self.s.setdefault('reply_seen', [])
+        by_phone = self.s.setdefault('reply_by_phone', {})
+        for phone, name in self.h['recent_chats']():
+            jid = phone + '@s.whatsapp.net'
+            try:
+                msgs = self.h['messages'](jid)
+            except Exception:
+                continue
+            if not isinstance(msgs, list):
+                continue
+            for m in msgs:
+                mid, text = m.get('id'), str(m.get('content') or '')
+                if not mid or mid in done or m.get('is_from_me') or _stamp(m) < setup.get('since', 0):
+                    continue
+                done.append(mid)  # decided once, whatever happens next: never answered twice
+                if OPT_OUT.search(text) and not DONE.search(text):
+                    continue
+                if not (DONE.search(text) or m.get('media_type') == 'image'):
+                    continue
+                if now() - by_phone.get(phone, 0) < 6 * 3600:
+                    continue
+                reply = self.h['reply_take']()
+                if not reply:
+                    return
+                try:
+                    self.h['send_text'](jid, reply)
+                except Exception:
+                    continue
+                by_phone[phone] = now()
+                self.log(f'Sent your saved reply to …{phone[-4:]} (picture or "done").')
+        self.s['reply_seen'] = done[-1000:]
+
     def _reply(self, jid, text):
         if not self.s.get('dm_enabled') or self.h.get('on_hold',lambda:False)():return
         try:
@@ -618,7 +656,13 @@ class Engine:
                 digest = hashlib.sha256((phone + '@s.whatsapp.net').encode()).hexdigest()
                 if tier != 'repeat' and self.h['already_dmed'](digest):
                     continue
-                result = self.h['send_dm'](phone, self.h['dm_text'](name, tier), digest)
+                try:
+                    text = self.h['dm_text'](name, tier)
+                except ValueError as exc:
+                    # The saved Donors > Messages bank is missing or invalid: say so, never fall back.
+                    self.notify('dmbank', 'Auto DMs stopped: ' + str(exc)[:160], 3600)
+                    break
+                result = self.h['send_dm'](phone, text, digest)
                 if result.get('code') != 'SUCCESS':
                     self.notify('dmfail', 'A DM did not go through, so I stopped DMs for now: ' + str(result.get('message', ''))[:100], 3600)
                     break

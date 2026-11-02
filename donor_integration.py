@@ -21,16 +21,40 @@ class DonorIntegration:
         self.cases=Cases(app,self)
         self.revision=0
     def pause_personal(self):
+        if not self.paused and self.app.STORE:
+            # Remember what was running so a second press can resume the whole automation.
+            eng=self.app.ENGINE.s;job=self.jobs.status() if self.jobs.active else {}
+            batch={k:job[k] for k in ('scope','gap_seconds','poster','chunk') if job.get(k) is not None} if job.get('scope') in ('all','important','donated','not_donated') else None
+            self.app.STORE.put('donor_dm_resume',{'engine':bool(eng.get('dm_enabled')),'daily':eng.get('dm_daily',30),'batch':batch})
         self.revision+=1
         self.paused=True
         if self.app.STORE:self.app.STORE.put('donor_dm_pause',True)
         self.jobs.cancel();self.app.CAMPAIGN['stop']=True;self.app.ENGINE.set_dms(False,self.app.ENGINE.s.get('dm_daily',30))
-        return {'reply':'Personal DMs stopped (paused). Group posting and its timers are unchanged.'}
+        return {'reply':'DMs stopped (paused). Group posting is unchanged. Press Resume DMs to continue everything.','paused':True}
     def resume_personal(self):
         was_paused=self.paused
         self.paused=False
         if self.app.STORE and was_paused:self.app.STORE.put('donor_dm_pause',False)
         return 'Personal DM sending is available again. Group posting is unchanged.'
+    def resume_all(self):
+        """Second press of Stop DMs: lift the pause, turn Auto DMs back on if they were on, and
+        continue the stopped batch (nobody already sent is repeated)."""
+        info=(self.app.STORE.get('donor_dm_resume') if self.app.STORE else None) or {}
+        notes=['DMs resumed.']
+        self.resume_personal()
+        if info.get('engine'):notes.append(self.app.ENGINE.set_dms(True,info.get('daily',30)))
+        if info.get('batch'):
+            try:self.start_batch(**info['batch'],request_id='resume-'+uuid.uuid4().hex);notes.append('The stopped batch continues; nobody already sent is repeated.')
+            except ValueError as e:notes.append('Batch not restarted: '+str(e))
+        if self.app.STORE:self.app.STORE.put('donor_dm_resume',{})
+        return {'reply':' '.join(notes),'paused':False}
+    def toggle(self):
+        return self.resume_all() if self.paused else self.pause_personal()
+    def test_dm(self,poster=True):
+        """Send the first saved donor message to the owner's own WhatsApp, marked TEST. Uses no rotation."""
+        if type(poster) is not bool:raise ValueError('Poster must be on or off.')
+        import dm_composer
+        return self.app.send_dm_test(dm_composer.personalize(self.messages._rotation_texts()[0],'','Brother'),poster)
     PREFS_KEY='donor_batch_prefs'
     def prefs(self):
         """How the owner usually runs a donor batch, learned from his last confirmed one."""

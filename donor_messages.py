@@ -199,6 +199,7 @@ class MessageBank:
         return items[:count]
 
     ROTATION_KEY = 'donor_single_rotation'
+    MIN_VERSIONS = 10
 
     def _rotation_texts(self):
         """Validated, enabled Donors > Messages texts (the only source any DM route may use)."""
@@ -211,6 +212,11 @@ class MessageBank:
             raise ValueError('Saved Donors Messages are missing or duplicated. Nothing was sent.')
         if any(not dm_composer.complete(text) for text in texts):
             raise ValueError('A saved donor message is incomplete. Edit it in Donors > Messages before sending.')
+        if len(texts) < self.MIN_VERSIONS:
+            # A one-version bank would send the same wording to everyone (and is what a
+            # bank overwritten by another screen looks like). Refuse instead of repeating.
+            raise ValueError(f'Donors > Messages has only {len(texts)} saved version(s). '
+                             'Open Messages and press Regenerate so at least 10 are ready. Nothing was sent.')
         return texts
 
     def _reserve(self, count):

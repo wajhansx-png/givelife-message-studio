@@ -5,7 +5,7 @@ from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store
 import manual_commands
-import dm_composer
+import dm_composer,reply_setup
 import dm_templates
 from state_shapes import mapping, memories, history as valid_history
 import chat_policy
@@ -310,9 +310,8 @@ def next_message():
 def next_dm():
  bank=focus_bank().get('dm') if STORE else {}
  if bank.get('revision'):
-  items=bank.get('items',[])
-  if not items:return get_message('dm')['text']
-  text=items[int(time.time())%len(items)];save_draft('dm',text);return text
+  if not bank.get('items'):return get_message('dm')['text']
+  text=focus_bank().next_dm_version() or get_message('dm')['text'];save_draft('dm',text);return text
  with LOCK:
   text=build_dm(dm_selection(True),read_left());save_draft('dm',text);return text
 
@@ -351,12 +350,16 @@ def set_left(left):
   if custom:task.commit(custom,g if custom=='group' else d)
   return g,d
 
-def poster_media():
- """The saved poster: a video when the owner chose one (and it is still on disk), otherwise the picture."""
- kind=DATA/'poster-kind.txt';video=DATA/'poster.mp4'
- try:chosen=kind.read_text(encoding='utf-8').strip()=='video'
- except OSError:chosen=False
- return video if chosen and video.exists() else DATA/'poster.jpg'
+def poster_media(use='group'):
+ """The saved poster: a video when the owner chose one (and it is still on disk), otherwise the picture.
+ DMs have their own poster (use='dm'); without one they use the shared Group poster."""
+ for prefix in (('dm-',) if use=='dm' else ())+('',):
+  kind=DATA/(prefix+'poster-kind.txt');video=DATA/(prefix+'poster.mp4');picture=DATA/(prefix+'poster.jpg')
+  try:chosen=kind.read_text(encoding='utf-8').strip()=='video'
+  except OSError:chosen=False
+  if chosen and video.exists():return video
+  if picture.exists():return picture
+ return DATA/'poster.jpg'
 
 def post_media(jid,cap,path):
  """Send one picture or MP4 video with its caption file through the WhatsApp gateway."""
@@ -391,7 +394,7 @@ def send_image(jid,caption,check_gap=False,_retry=True):
    latest=max(datetime.datetime.fromisoformat(m['timestamp'].replace('Z','+00:00')) for m in outgoing);age=(datetime.datetime.now(datetime.timezone.utc)-latest).total_seconds()
    if age<900:return {'code':'COOLDOWN','message':f'Posted recently. Try in {math.ceil((900-age)/60)} min.'}
  cap=DATA/('caption-'+uuid.uuid4().hex+'.txt');cap.write_text(caption,encoding='utf-8')
- r=post_media(jid,cap,poster_media())
+ r=post_media(jid,cap,poster_media('group' if str(jid).endswith('@g.us') else 'dm'))
  cap.unlink(missing_ok=True)
  try:result=mapping(json.loads(r.stdout))
  except Exception:result={'code':'ERROR','message':'Send not confirmed. Check WhatsApp before retrying.'}
@@ -963,8 +966,21 @@ def dm_text(name,tier='member'):
  acct='📲 *03097458815* — Easypaisa / JazzCash\nWajdan Khan (GiveLife Foundation account)'
  if tier=='repeat':return f'{who}, JazakAllah for supporting GiveLife before. 🤲\n\nRs. {left:,} is still needed for {active_case_name()}. Could you help once more, or share this case with family and friends?\n\n{acct}'
  if tier=='reminder':return f'{who}, a gentle reminder about {active_case_name()}. 🤲\n\nRs. {left:,} is still needed. If you have already donated, JazakAllah. If not, whenever you can:\n\n{acct}\n\nReply *Done* after you donate.'
- t=build_dm([_random.randrange(dm_templates.COUNT)],left,active_case_name())
- return t.replace('Brother, ',who+', ',1)
+ # Every other Auto DM comes from the saved Donors > Messages bank (shared rotation), never
+ # from built-in templates. A missing/invalid bank raises and Auto stops with a clear reason.
+ return dm_composer.personalize(donors().messages.reserve_one(),first,'Sister' if first.lower() in FEMALE else 'Brother')
+
+def send_dm_test(text,poster=True):
+ """A clearly marked test DM to the owner's own WhatsApp. Never touches donor records or rotation."""
+ if not wa_ok():raise ValueError('WhatsApp is not connected. Link it first.')
+ me=norm_phone(OWNER_PHONE)
+ if not me:raise ValueError('Your own WhatsApp number is not known yet. Nothing was sent.')
+ body='🧪 TEST DM (only you see this)\n\n'+str(text)
+ with SEND_LOCK:
+  check_hold()
+  result=send_image(me,body) if poster else send_text(me,body)
+ if result.get('code')!='SUCCESS':raise ValueError('Test not confirmed: '+str(result.get('message',''))[:100]+' Check WhatsApp.')
+ return {'code':'SUCCESS','reply':'Test DM sent to your own WhatsApp.'}
 
 def send_dm(phone,text,digest):
  if STORE:STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':time.time()})
@@ -981,6 +997,12 @@ if STORE:
  if _v:(DATA/'poster.mp4').write_bytes(base64.b64decode(_v))
  if STORE.get('poster_kind')=='video' and _v:(DATA/'poster-kind.txt').write_text('video',encoding='utf-8')
  elif STORE.get('poster_kind')=='video':(DATA/'poster-kind.txt').write_text('image',encoding='utf-8') # a large video is not kept across restarts; fall back to the picture
+if STORE:
+ _dp=STORE.get('dm_poster_b64')
+ if _dp:(DATA/'dm-poster.jpg').write_bytes(base64.b64decode(_dp))
+ _dv=STORE.get('dm_poster_video_b64')
+ if _dv:(DATA/'dm-poster.mp4').write_bytes(base64.b64decode(_dv))
+ if STORE.get('dm_poster_kind') in ('image','video'):(DATA/'dm-poster-kind.txt').write_text('video' if STORE.get('dm_poster_kind')=='video' and _dv else 'image',encoding='utf-8')
 CAMPAIGN={'running':False,'stop':False,'total':0,'sent':0,'failed':0,'skipped':0,'next_at':0,'current':'','log':[],'id':None}
 
 def save_upload(data_url,use):
@@ -988,22 +1010,24 @@ def save_upload(data_url,use):
   import batch_media
   return batch_media.save(STORE,data_url)
  if use=='papers':return 'papers-'+str(save_papers(data_url))
+ dm=use=='dm_poster';pre='dm-' if dm else '';key='dm_poster' if dm else 'poster'
+ if dm:use='poster'
  raw=base64.b64decode(data_url.split(',',1)[-1])
  if data_url.startswith('data:video/'):
   if len(raw)>15_000_000:raise ValueError('Video is too big (max 15 MB, the WhatsApp limit).')
   if raw[4:8]!=b'ftyp':raise ValueError('Use an MP4 video (H.264). Other video types are not accepted.')
   if use=='poster':
    if (DONORS and DONORS.jobs.active) or CAMPAIGN.get('running') or ACTIVE and not mapping(JOBS.get(ACTIVE)).get('done'):raise ValueError('Wait until the active send finishes before changing the poster.')
-   (DATA/'poster.mp4').write_bytes(raw);(DATA/'poster-kind.txt').write_text('video',encoding='utf-8')
-   if STORE:STORE.put('poster_video_b64',base64.b64encode(raw).decode() if len(raw)<=3_000_000 else '');STORE.put('poster_kind','video')
+   (DATA/(pre+'poster.mp4')).write_bytes(raw);(DATA/(pre+'poster-kind.txt')).write_text('video',encoding='utf-8')
+   if STORE:STORE.put(key+'_video_b64',base64.b64encode(raw).decode() if len(raw)<=3_000_000 else '');STORE.put(key+'_kind','video')
    return 'poster'
   aid=uuid.uuid4().hex[:12];(ATT/(aid+'.mp4')).write_bytes(raw);return aid
  if len(raw)>8_000_000:raise ValueError('Picture is too big (max 8 MB).')
  if use=='poster':
   if (DONORS and DONORS.jobs.active) or CAMPAIGN.get('running') or ACTIVE and not mapping(JOBS.get(ACTIVE)).get('done'):raise ValueError('Wait until the active send finishes before changing the poster.')
   if not raw.startswith(b'\xff\xd8\xff'):raise ValueError('Choose a JPEG poster. The upload control converts your picture automatically.')
-  if STORE:STORE.put('poster_b64',base64.b64encode(raw).decode());STORE.put('poster_kind','image')
-  (DATA/'poster.jpg').write_bytes(raw);(DATA/'poster-kind.txt').write_text('image',encoding='utf-8')
+  if STORE:STORE.put(key+'_b64',base64.b64encode(raw).decode());STORE.put(key+'_kind','image')
+  (DATA/(pre+'poster.jpg')).write_bytes(raw);(DATA/(pre+'poster-kind.txt')).write_text('image',encoding='utf-8')
   return 'poster'
  aid=uuid.uuid4().hex[:12];(ATT/(aid+'.jpg')).write_bytes(raw);return aid
 
@@ -1324,7 +1348,7 @@ ENGINE=autopilot.Engine({'DATA':DATA,'store_get':lambda k:STORE.get(k) if STORE 
  'send_text':send_text,'owner_jid':lambda:OWNER_PHONE+'@s.whatsapp.net','enabled':auto_on,'read_left':read_left,'wa_ok':wa_ok,
  'busy':lambda:ACTIVE is not None,'last_sent':last_sent_by_key,'groups':lambda:list(GROUPS),'group_jids':lambda:{k:v[1] for k,v in GROUPS.items()},
  'caption':lambda:json.loads(DRAFT.read_text(encoding='utf-8')).get('group',''),'start_job':start_auto_group_job,'last_results':last_results,'messages':group_messages,
- 'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':auto_post_saved_to_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm,'caption_variant':caption_variant,'variant_count':variant_count,'variant_pool':variant_pool,'variant_names':variant_names,'goal':goal_value,'milestone_text':milestone_text,'update_text':update_text,'wa_reconnect':lambda:api('/app/reconnect'),'on_hold':on_hold,'dm_busy':lambda:bool(CAMPAIGN.get('running')),'job_message':job_message,'recent_chats':recent_chats,'outreach':outreach})
+ 'poster_left':poster_left,'sender_phone':sender_phone,'send_papers':send_papers,'has_papers':has_papers,'thank_text':thank_text,'share_text':share_text,'done_text':done_text,'post_text_all':auto_post_saved_to_all,'recent_dms':recent_dms,'note_dm':note_dm,'optout':optout,'send_scheduled':send_scheduled,'donor_answer':lambda q:assistant.donor_reply(q,read_left()),'already_dmed':already_dmed,'dm_text':dm_text,'send_dm':send_dm,'reply_setup':lambda:reply_setup.get(STORE),'reply_take':lambda:reply_setup.take(STORE),'caption_variant':caption_variant,'variant_count':variant_count,'variant_pool':variant_pool,'variant_names':variant_names,'goal':goal_value,'milestone_text':milestone_text,'update_text':update_text,'wa_reconnect':lambda:api('/app/reconnect'),'on_hold':on_hold,'dm_busy':lambda:bool(CAMPAIGN.get('running')),'job_message':job_message,'recent_chats':recent_chats,'outreach':outreach})
 
 def engine_do(auto_review=False):
  return {'set_pace':lambda main_minutes,freelance_minutes:ENGINE.set_pace(main_minutes,freelance_minutes),'pause_group':lambda key,hours:ENGINE.pause(key,hours),'resume_group':lambda key:ENGINE.resume(key),
@@ -2122,7 +2146,7 @@ class Handler(BaseHTTPRequestHandler):
   if self.path.split('?')[0] in ('/group-finder','/group-finder.js','/group-finder.css'):
    name=self.path.split('?')[0][1:];name='group-finder.html' if name=='group-finder' else name
    return self.reply((ROOT/name).read_bytes(),'text/html' if name.endswith('.html') else 'text/css' if name.endswith('.css') else 'application/javascript')
-  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/team.js','/notes.js','/notes.css','/donors.css','/studio.css','/compact-nav.js','/compact-nav.css','/focus-editor.js','/focus-editor.css'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/replies.js','/team.js','/notes.js','/notes.css','/donors.css','/studio.css','/compact-nav.js','/compact-nav.css','/focus-editor.js','/focus-editor.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
@@ -2143,7 +2167,7 @@ class Handler(BaseHTTPRequestHandler):
     token=notes_store.cookie_token(self.headers.get('Cookie'))
     return self.reply({'locked':False,**notes_store.load(STORE)},extra_headers={'Set-Cookie':notes_store.device_cookie(token,https=self.headers.get('X-Forwarded-Proto','https')!='http')})
    except Exception:return self.reply({'error':'Notes are temporarily unavailable. Your saved notes were not changed.'},status=503)
-  if self.path=='/donor-delivery':return self.reply(donors().jobs.status())
+  if self.path=='/donor-delivery':return self.reply({**donors().jobs.status(),'paused':bool(donors().paused)})
   if self.path=='/team':return self.reply(donors().team.view())
   if self.path=='/cases':
    try:return self.reply(donors().cases.view())
@@ -2155,8 +2179,7 @@ class Handler(BaseHTTPRequestHandler):
    kind=urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get('kind',['group'])[0]
    if kind not in ('group','dm'):return self.reply({'error':'Choose group or DM.'},status=400)
    bank=focus_bank()
-   if kind=='group':bank.ensure_group_ready()
-   else:bank.start(kind)
+   bank.start(kind)  # resume generation if needed; never rewrite the bank just because the tab opened
    return self.reply(bank.get(kind))
   if self.path=='/donor-messages':return self.reply(donors().messages.get())
   if self.path=='/wa-status':
@@ -2167,6 +2190,8 @@ class Handler(BaseHTTPRequestHandler):
    self.reply(DRAFT.read_bytes())
   elif self.path=='/chat-next-actions':self.reply({'items':next_chat_actions()})
   elif self.path=='/poster':self.reply((DATA/'poster.jpg').read_bytes(),'image/jpeg')
+  elif self.path=='/dm-poster':
+   img=poster_media('dm');self.reply(img.read_bytes() if img.suffix=='.jpg' else (DATA/'poster.jpg').read_bytes(),'image/jpeg')
   elif self.path=='/format.js':self.reply((ROOT/'format.js').read_bytes(),'application/javascript')
   elif self.path=='/app.js':self.reply((ROOT/'app.js').read_bytes(),'application/javascript')
   elif self.path=='/left':self.reply({'left':read_left()})
@@ -2177,6 +2202,7 @@ class Handler(BaseHTTPRequestHandler):
    result=EVAL_TASKS.get(self.path.split('/')[-1]);self.reply(result or {'error':'Unknown evaluation.'},status=200 if result else 404)
   elif self.path=='/campaign':self.reply({**{k:v for k,v in CAMPAIGN.items() if k!='stop'},'log':CAMPAIGN['log'][-8:],'wait':max(0,round(CAMPAIGN['next_at']-time.time()))})
   elif self.path=='/rules':self.reply({'items':ENGINE.rule_list(),'autopilot':auto_on()})
+  elif self.path=='/reply-setup':self.reply({**reply_setup.get(STORE),'autopilot':auto_on()})
   elif self.path=='/ai-test':self.reply(ai_test())
   elif self.path=='/wa-check':
    c=check_groups(True);self.reply({'checked':c.get('checked'),'missing':c.get('missing',[]),'fixed':c.get('fixed',[]),'whatsapp':wa_ok()})
@@ -2287,6 +2313,8 @@ class Handler(BaseHTTPRequestHandler):
       if not source.strip():raise ValueError('Paste the complete message you want versions of.')
       return self.reply(donors().messages.generate(source,body.get('count',10)))
      return self.reply(donors().messages.update(body.get('id'),body.get('text')))
+    if body.get('test'):return self.reply(donors().test_dm(body.get('poster',True)))
+    if body.get('toggle'):return self.reply(donors().toggle())
     if body.get('stop'):return self.reply(donors().pause_personal())
     if CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it first.')
     return self.reply(donors().start_batch(**{k:v for k,v in body.items() if k in ('scope','gap_seconds','ids','limit','request_id','poster','chunk','rest_seconds','fresh','rests','jitter','skip_contacted')}))
@@ -2367,6 +2395,9 @@ class Handler(BaseHTTPRequestHandler):
     KNOWLEDGE.trace({'evaluation':ident,'passed':sum(x['passed'] for x in EVAL_TASKS[ident]['results']),'total':len(cases),'sandbox':True})
    threading.Thread(target=evaluate,daemon=True).start();self.reply({'eval_id':ident})
   elif self.path=='/autopilot':self.reply({'reply':set_auto(bool(body.get('on'))),'on':auto_on()})
+  elif self.path=='/reply-setup':
+   try:self.reply({**reply_setup.save(STORE,bool(body.get('enabled')),body.get('replies',[])),'autopilot':auto_on()})
+   except ValueError as e:self.reply({'error':str(e)},status=400)
   elif self.path=='/upload-image':
    try:self.reply({'id':save_upload(str(body.get('data','')),body.get('use','attachment'))})
    except Exception as e:self.reply({'error':str(e)[:120]},status=400)

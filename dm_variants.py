@@ -210,6 +210,15 @@ NON-NEGOTIABLE:
 - EVERY new version must differ substantively from the source and other versions
   in both the hook and body. Avoid repeating the same 5-8 word phrases.
 - The exact payment/phone and account lines are immutable, copy them verbatim.
+- VOICE: copy the owner's own voice from the source: same short punchy lines, same
+  bold/italic rhythm, same direct "you" address, same simple words. Never sound formal.
+- Make every version emotionally gripping and urgent using ONLY the true facts in the
+  source (the child's condition as written, the amount still needed, how few people it
+  takes). Start with a scroll-stopping hook: a direct question to the reader, a stark
+  small-amount-versus-a-child's-need contrast, or a vivid detail from the source. Use a
+  different emotional angle in each version (a parent's pain, the small amount, "it could
+  be your child", gratitude, sharing helps). Urgency means "needed now because of the
+  amount left", never an invented deadline.
 - Return ONLY a JSON array of {count} strings. No commentary, no markdown fences.
 
 SOURCE:

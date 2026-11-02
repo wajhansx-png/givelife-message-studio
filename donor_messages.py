@@ -197,3 +197,38 @@ class MessageBank:
         if len(set(items)) < count:
             raise ValueError('Prepare enough different messages in Messages before starting this batch.')
         return items[:count]
+
+    def reserve_one(self):
+        """Reserve the next saved Donors > Messages version for an explicit DM.
+
+        Allocate before sending, keep cursor in persistent storage and never
+        silently use the separate main-screen DM draft as a fallback.
+        If delivery is uncertain, the reserved version remains consumed.
+        """
+        with self.lock:
+            if not self.app.STORE:
+                raise ValueError('Saved DM rotation is unavailable. Nothing was sent.')
+            bank = self.get()
+            rows = bank.get('items') or []
+            # All explicit one-person sends use exactly what the owner sees in
+            # Donors > Messages (not get_message('dm') or older templates).
+            texts = [row['text'] for row in rows
+                     if isinstance(row, dict) and row.get('enabled', True)
+                     and isinstance(row.get('text'), str) and row['text'].strip()]
+            if not texts or len(texts) != len(set(texts)):
+                raise ValueError('Saved Donors Messages are missing or duplicated. Nothing was sent.')
+            if any(not dm_composer.complete(text) for text in texts):
+                raise ValueError('A saved donor message is incomplete. Edit it in Donors > Messages before sending.')
+            revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
+            saved = self.app.STORE.get('donor_single_rotation', {}) or {}
+            index = int(saved.get('next_index', 0) or 0) % len(texts) if saved.get('revision') == revision else 0
+            last = saved.get('last_text')
+            if len(texts) > 1 and last == texts[index]:
+                index = (index + 1) % len(texts)
+            result = texts[index]
+            self.app.STORE.put('donor_single_rotation', {
+                'revision': revision,
+                'next_index': (index + 1) % len(texts),
+                'last_text': result
+            })
+            return result

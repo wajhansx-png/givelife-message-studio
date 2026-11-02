@@ -11,9 +11,8 @@
  poster.innerHTML=`<h2>DM poster</h2><p>This poster is used for DMs only. Group messages keep their own poster (change it on the main screen). Captions stay unchanged.</p><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status"></p><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
  document.body.append(poster);
  const launch=make('button','primary donor-launch donor-launch-foot','Donors');launch.type='button';launch.id='openDonors';launch.setAttribute('aria-label','Open Donors');
- /* On a phone the Donors button sits in the thumb row beside a smaller Chat button; otherwise it is the big footer shortcut. */
- const phoneRow=document.querySelector('.navrow'),phone=matchMedia('(max-width:899px)'),placeLauncher=()=>{if(phone.matches&&phoneRow){phoneRow.append(launch);launch.classList.add('in-thumb-row')}else{document.querySelector('.foot')?.insertBefore(launch,document.getElementById('keyboardHelp'));launch.classList.remove('in-thumb-row')}};
- placeLauncher();phone.addEventListener('change',placeLauncher);
+ /* Keep Donors at the bottom centre on every screen size. */
+ document.querySelector('.foot')?.insertBefore(launch,document.getElementById('keyboardHelp'));
  const settings=document.querySelector('#set .body');if(settings){const row=make('div','row');const text=make('div','t');text.append(make('b','','DM poster'),make('small','','Used for DMs only'));const b=make('button','tool','Change DM poster');b.type='button';b.onclick=openPoster;row.append(text,b);settings.prepend(row)}
  const tools=document.querySelector('.overflow-tools>div');if(tools){const b=make('button','tool','Change DM poster');b.type='button';b.onclick=openPoster;tools.append(b)}
  let vols={items:[],message:'',delivery:null},volPoll=0;let drawEpoch=0;const DRAW_CHUNK=40;let tab='all',data={items:[],counts:{}},searchTimer,sendPending=false,pollTimer,posterData=null,posterUrl=null,noticeTimer;

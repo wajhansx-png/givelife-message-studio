@@ -159,3 +159,20 @@ html body #donorsPage[data-panel="messages"] .bank-actions>button,html body #don
 html body #donorsPage[data-panel="messages"] [data-bank-nav="next"]{order:7;flex:1 1 100%!important}
 }
 
+/* Donors list: readable names, quiet controls, status as a colour pill, fewer borders. */
+html body #donorsPage .donor-table{border-color:#ffffff14}
+html body #donorsPage .donor-row{border-bottom:1px solid #ffffff0f}
+html body #donorsPage .donor-name{font-size:15px;font-weight:600;color:#ededed}
+html body #donorsPage#donorsPage .donor-row .donor-dm,html body #donorsPage#donorsPage .donor-row .donor-status,html body #donorsPage#donorsPage .donor-row .donor-more>summary{border:0!important;box-shadow:none!important;border-radius:999px!important}
+html body #donorsPage#donorsPage .donor-row .donor-dm{background:#315cd022!important;color:#9db8ff!important}
+html body #donorsPage#donorsPage .donor-row .donor-status{background:#ffffff0d!important;color:#bdbdbd!important;font-size:12px!important;font-weight:600}
+html body #donorsPage .donor-row[data-donated="true"] .donor-status{background:#1f8f4f2e!important;color:#6fe0a0!important}
+html body #donorsPage#donorsPage .donor-row .donor-more>summary{background:transparent!important;color:#bdbdbd}
+html body #donorsPage .donor-tabs button{font-size:12px}
+@media(max-width:899px){
+html body #donorsPage .donor-row{min-height:56px!important;height:auto!important;padding-block:6px;column-gap:6px}
+html body #donorsPage#donorsPage .donor-row .donor-dm,html body #donorsPage#donorsPage .donor-row .donor-status{min-height:40px;align-self:center}
+html body #donorsPage .donor-total{border:0;background:transparent}
+}
+html body #donorsPage#donorsPage .donor-row .donor-more{border:0!important;box-shadow:none!important;background:transparent!important}
+

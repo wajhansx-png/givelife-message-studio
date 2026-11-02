@@ -16,6 +16,8 @@ for(const width of [1440,390,320])test(`Notes right formatting column ${width}`,
  await expect(editor).toHaveCSS('font-size','19px');
  const box=await page.locator('.notes-paper').boundingBox(),tools=await rail.boundingBox();
  expect(box.y).toBeLessThanOrEqual(72);expect(box.x+box.width).toBeLessThanOrEqual(tools.x);
+ expect(tools.x-(box.x+box.width)).toBeLessThanOrEqual(10);
+ await expect(rail.getByRole('button',{name:'Numbered list'})).toHaveText('Numbers');
  expect(tools.x+tools.width).toBeLessThanOrEqual(width);
  await editor.fill(Array.from({length:100},(_,i)=>'Task '+i).join('\n'));
  await editor.evaluate(e=>e.scrollTop=0);await editor.hover();await page.mouse.wheel(0,700);

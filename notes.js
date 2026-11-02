@@ -80,6 +80,26 @@
  // alone must NOT reveal the toolbar: typing should never feel distracting.
  const notesHead=page.querySelector('.notes-head'),notesToolbar=page.querySelector('.notes-toolbar');
  const fullscreenButton=el('notesFullscreen');
+ const railLabels={insertOrderedList:'Numbers',insertUnorderedList:'Bullets',bold:'Bold',italic:'Italic'};
+ for(const [command,label] of Object.entries(railLabels))notesToolbar.querySelector('[data-command="'+command+'"]').textContent=label;
+ el('notesChecklist').textContent='Checklist';el('notesFontDown').textContent='Smaller';el('notesFontUp').textContent='Larger';
+ const heading=el('notesStyle').closest('label'),colorLabel=el('notesColor').closest('label');
+ heading.prepend(make('span','notes-rail-label','Heading'));
+ notesToolbar.querySelectorAll('.notes-separator').forEach(e=>e.remove());
+ notesToolbar.append(heading,notesToolbar.querySelector('[data-command="insertOrderedList"]'),notesToolbar.querySelector('[data-command="insertUnorderedList"]'),el('notesChecklist'),notesToolbar.querySelector('[data-command="bold"]'),notesToolbar.querySelector('[data-command="italic"]'),el('notesFontDown'),el('notesFontUp'),colorLabel);
+ function alignRail(){
+  if(!page.open||page.dataset.mode!=='writing')return;
+  const paper=page.querySelector('.notes-paper').getBoundingClientRect();
+  const mobile=innerWidth<=720;let top=paper.top+(mobile?2:120);
+  const selection=getSelection();
+  if(!mobile&&selection?.rangeCount&&!selection.isCollapsed&&editor.contains(selection.anchorNode)){
+   const rect=selection.getRangeAt(0).getBoundingClientRect();if(rect.height)top=rect.top;
+  }
+  top=Math.max(paper.top,Math.min(top,innerHeight-notesToolbar.scrollHeight-12));
+  notesToolbar.style.left=(paper.right+8)+'px';notesToolbar.style.top=top+'px';
+ }
+ new ResizeObserver(alignRail).observe(page.querySelector('.notes-paper'));
+ document.addEventListener('selectionchange',alignRail);window.addEventListener('resize',alignRail);
  // Keep the same formatting controls beside the editor at every screen size.
  const wideNotes=matchMedia('(min-width:1100px)');
  function placeToolbar(){

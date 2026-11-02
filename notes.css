@@ -433,4 +433,18 @@ html body #foundationNotes[data-mode="writing"] .notes-selection-tools{display:n
  html body #foundationNotes[data-mode="writing"] .notes-editor{padding:16px 12px 28px}
 }
 
+html body #foundationNotes[data-mode="writing"] .notes-toolbar{right:auto;bottom:auto;width:168px;height:auto;max-height:calc(100dvh - 76px);display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:6px;border-color:#ffffff10;background:#262626;align-content:start}
+html body #foundationNotes[data-mode="writing"] .notes-toolbar label,
+html body #foundationNotes[data-mode="writing"] .notes-toolbar [data-command="insertOrderedList"]{grid-column:1/-1}
+html body #foundationNotes[data-mode="writing"] .notes-toolbar button{font-size:12px;border-color:#ffffff0c;background:#303030}
+.notes-rail-label{display:block;font-size:11px;color:#cecece;padding:1px 3px 4px}
+html body #foundationNotes[data-mode="writing"] .notes-paper-scroll{padding-right:198px}
+@media(max-width:720px){
+ html body #foundationNotes[data-mode="writing"] .notes-toolbar{width:100px;padding:4px;gap:3px}
+ html body #foundationNotes[data-mode="writing"] .notes-toolbar button{font-size:10px;padding:3px 1px}
+ html body #foundationNotes[data-mode="writing"] .notes-toolbar [data-command="insertUnorderedList"],
+ html body #foundationNotes[data-mode="writing"] .notes-toolbar #notesChecklist{grid-column:1/-1}
+ html body #foundationNotes[data-mode="writing"] .notes-paper-scroll{padding-right:120px}
+}
+
 

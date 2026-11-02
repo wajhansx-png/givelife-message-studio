@@ -109,7 +109,7 @@ class Engine:
             self.s['started'] = now()
             self.s['last_money'] = now()
             self.s['l4_told'] = False
-            self.s['last_scan'] = self.s['last_dm_scan'] = 0  # read replies on the first minute
+            self.s['last_scan'] = self.s['last_dm_scan'] = self.s['last_chat_scan'] = 0  # inspect all channels on activation
             self.s['notified'] = {k: v for k, v in self.s['notified'].items() if now() - v < 3600}
             self.save()
 
@@ -226,8 +226,8 @@ class Engine:
                 self.log('Goal complete: completion message posted to all groups. Posting stopped.')
             return self.notify('goal', 'The goal is complete (Rs. 0 left). I posted the completion message and stopped. Set up the next case when ready.', 86400)
         self.s['d1_done'] = False
-        for key, every, scan in (('last_scan', 300, self.scan_group_replies), ('last_dm_scan', 600, self.scan_dm_replies),
-                                 ('last_chat_scan', 1200, self.scan_saved_chats)):
+        for key, every, scan in (('last_scan', 120, self.scan_group_replies), ('last_dm_scan', 120, self.scan_dm_replies),
+                                 ('last_chat_scan', 120, self.scan_saved_chats)):
             if now() - self.s[key] >= every:
                 self.s[key] = now()
                 self.activity = {'label':{'last_scan':'Reading group replies','last_dm_scan':'Reading donor replies','last_chat_scan':'Checking saved chats'}[key], 'started':now()}

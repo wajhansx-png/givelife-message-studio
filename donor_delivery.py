@@ -192,7 +192,7 @@ class DonorDelivery:
         between DMs must not be sent as an old balance."""
         if 'custom_template' in j:
             ident=j['ids'][index];name=(j.get('personal_names',{}).get(ident) or ('','Brother'))[0]
-            return j['custom_template'].replace('{name}',name or 'Brother')
+            return j['custom_template'].replace('{name}',name or 'Bhai')
         captions=j.get('captions',[j['caption']]*len(j['ids']));saved=captions[index]
         if not self.variants:return saved
         try:

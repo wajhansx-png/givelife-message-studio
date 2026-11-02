@@ -7,14 +7,14 @@ import dm_composer, assistant
 class CompositionTests(unittest.TestCase):
  def test_labels_and_unclear_names_use_only_brother(self):
   for name in ('Jr Accounts','jr acccount','JrAccounts','Web Developer','03001234567','Unknown','Name','A','xqz','Ali_123','GiveLife Foundation'):
-   with self.subTest(name=name):self.assertEqual(dm_composer.greeting(name,'Sister'),'Brother')
-  self.assertEqual(dm_composer.greeting('Wajdan Khan'),'Wajdan Brother')
+   with self.subTest(name=name):self.assertEqual(dm_composer.greeting(name,'Sister'),'Bhai')
+  self.assertEqual(dm_composer.greeting('Wajdan Khan'),'Wajdan Bhai')
   self.assertEqual(dm_composer.greeting('Ayesha Khan','Sister'),'Ayesha Sister')
  def test_greeting_preserves_formatted_paragraphs(self):
   for opening in ('Brother, doctors can treat it.','*Brother, doctors can treat it.*','*_Name Brother doctors can treat it._*','Jr Accounts Brother, doctors can treat it.'):
    body='\n\n_Italic case details_\n\n*Rs. 25,000 left*\n\n*_13 people at Rs. 2,000_*\n\n📲 03097458815'
    changed=dm_composer.personalize(opening+body,'Wajdan')
-   self.assertIn('Wajdan Brother',changed);self.assertTrue(changed.endswith(body));self.assertIn('doctors can treat it.',changed)
+   self.assertIn('Wajdan Bhai',changed);self.assertTrue(changed.endswith(body));self.assertIn('doctors can treat it.',changed)
    self.assertEqual(dm_composer.personalize(changed,'Wajdan'),changed)
  def test_correction_parser(self):
   for prompt in ('his name is wadjdan','jr account name is wajdan just in msg change name','change name to Wajdan'):
@@ -54,7 +54,7 @@ class DMFlowTests(unittest.TestCase):
   jid='923001234567@s.whatsapp.net'
   with patch.object(app,'find_data',return_value=([{'id':jid,'name':'Jr Accounts','group':False}],1)):
    first=app.send_dm_appeal('jr account')
-   original=self.sent[-1]['text'];self.assertTrue(original.startswith('Brother, '));self.assertTrue(dm_composer.complete(original))
+   original=self.sent[-1]['text'];self.assertTrue(original.startswith('Bhai, '));self.assertTrue(dm_composer.complete(original))
    before=len(self.sent);result=app.manual_command('jr account name is wajdan just in msg change name')
    self.assertEqual(len(self.sent),before);self.assertIn('Nothing was sent',result['reply']);self.assertEqual(result['dm_identity']['name'],'Wajdan')
    self.assertEqual(app.LAST_MANUAL['to'],jid)
@@ -76,7 +76,7 @@ class DMFlowTests(unittest.TestCase):
  def test_incomplete_saved_draft_repaired_before_appeal(self):
   app.save_draft('dm','Wajdan Brother,')
   app.send_dm_appeal('923001234567',name='Wajdan')
-  self.assertTrue(dm_composer.complete(self.sent[-1]['text']));self.assertTrue(self.sent[-1]['text'].startswith('Wajdan Brother, '))
+  self.assertTrue(dm_composer.complete(self.sent[-1]['text']));self.assertTrue(self.sent[-1]['text'].startswith('Wajdan Bhai, '))
  def test_form_rejects_incomplete_dm(self):
   with self.assertRaisesRegex(ValueError,'incomplete'):app.send_custom({'target':'phone','phone':'923001234567','message':'Wajdan Brother,','kind':'dm_appeal','poster':True})
   self.assertEqual(self.sent,[])
@@ -88,14 +88,14 @@ class DMFlowTests(unittest.TestCase):
  def test_greeting_does_not_leak_between_people(self):
   app.send_dm_appeal('923001234567');app.edit_dm_name('Wajdan')
   app.send_dm_appeal('923009876543')
-  self.assertTrue(self.sent[-1]['text'].startswith('Brother, '));self.assertNotIn('Wajdan Brother',self.sent[-1]['text'])
+  self.assertTrue(self.sent[-1]['text'].startswith('Bhai, '));self.assertNotIn('Wajdan Bhai',self.sent[-1]['text'])
  def test_ai_lookup_then_full_dm_preserves_contact_name_rules(self):
   jid='923001234567@s.whatsapp.net';messages=[
    {'tool_calls':[{'id':'lookup','function':{'name':'find_contact','arguments':json.dumps({'query':'jr account'})}}]},
    {'tool_calls':[{'id':'send','function':{'name':'send_dm_appeal','arguments':json.dumps({'to':jid,'name':'Jr Accounts'})}}]}]
   with patch.object(app,'find_data',return_value=([{'id':jid,'name':'Jr Accounts','group':False}],1)),patch.object(assistant,'client',return_value='fake-key'),patch.object(assistant,'_chat_raw',side_effect=messages):
    result=assistant.chat('send to jr account',[],{'drafts':json.loads(app.DRAFT.read_text(encoding='utf-8'))},[],app.chat_callbacks('send to jr account',revision=0))
-  self.assertEqual(len(self.sent),1);self.assertTrue(self.sent[0]['text'].startswith('Brother, '));self.assertTrue(dm_composer.complete(self.sent[0]['text']));self.assertIn('confirmed',result['reply'])
+  self.assertEqual(len(self.sent),1);self.assertTrue(self.sent[0]['text'].startswith('Bhai, '));self.assertTrue(dm_composer.complete(self.sent[0]['text']));self.assertIn('confirmed',result['reply'])
  def test_logical_saved_name_used_for_dm(self):
   jid='923001234567@s.whatsapp.net'
   with patch.object(app,'find_data',return_value=([{'id':jid,'name':'Ayesha Khan','group':False}],1)):

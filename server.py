@@ -91,6 +91,8 @@ def send_custom(body):
   message=greet_text(message,body.get('name',''),body.get('gender','Brother'),normal)
   if dm_composer.unverified_medical_claim(message):raise ValueError('Not sent: the saved DM contains an unverified claim about spreading paralysis or finger numbness. Correct the caption first.')
   if not dm_composer.complete(message):raise ValueError('The full DM is incomplete. Restore its paragraphs and payment details before sending.')
+ if not is_group and body.get('kind')=='owner_text' and 'gender' in body:
+  message=dm_composer.personalize(message,body.get('name',''),body.get('gender','Brother'))
  if not is_group and body.get('kind') in ('volunteer_batch','volunteer_manual'):
   message=message.replace('{name}',str(body.get('name') or '').strip() or 'friend')
  if not message.strip() or len(message)>10000:raise ValueError('Write a message of 1 to 10,000 characters.')
@@ -954,7 +956,7 @@ def clean_first_name(name):
  return dm_composer.first_name(name)
 
 def dm_text(name,tier='member'):
- left=read_left();first=clean_first_name(re.sub(r'(?i)\bdonors?\b','',str(name or '')).strip());who=(first+' ' if first else '')+('Sister' if first.lower() in FEMALE else 'Brother')
+ left=read_left();first=clean_first_name(re.sub(r'(?i)\bdonors?\b','',str(name or '')).strip());who=dm_composer.greeting(first,'Sister' if first.lower() in FEMALE else 'Brother')
  acct='📲 *03097458815* — Easypaisa / JazzCash\nWajdan Khan (GiveLife Foundation account)'
  if tier=='repeat':return f'{who}, JazakAllah for supporting GiveLife before. 🤲\n\nRs. {left:,} is still needed for {active_case_name()}. Could you help once more, or share this case with family and friends?\n\n{acct}'
  if tier=='reminder':return f'{who}, a gentle reminder about {active_case_name()}. 🤲\n\nRs. {left:,} is still needed. If you have already donated, JazakAllah. If not, whenever you can:\n\n{acct}\n\nReply *Done* after you donate.'

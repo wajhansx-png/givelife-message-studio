@@ -383,6 +383,21 @@ h3 {
 .dmrow .seg {
   align-self: end;
 }
+.dm-poster {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dm-poster input {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--g);
+}
 .duo {
   margin-top: 4px;
 }

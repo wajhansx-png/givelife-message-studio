@@ -76,13 +76,15 @@ def balance_amount(text,allow_with=True):
  """Use an amount bound to balance wording, never a year/group count/phone."""
  t=outside_literals(text);number=r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*'+UNIT+r'?(?!\w)'
  patterns=[number+r'\s*(?:is\s+)?(?:left|remaining|remain|baqi|baki|bacha|bache|bachey|bachi|bachay|bacha hai|rehte|reh gaye)\b',
-           r'\b(?:remaining(?:\s+amount)?|amount(?:\s+(?:left|remaining))?|balance|baqi)\s*(?:is|to|=|:)?\s*(?:rs\.?\s*)?'+number,
+           r'\b(?:remaining(?:\s+amount)?|amount(?:\s+(?:left|remaining))?|balance|baqi)\s*(?:is|to|=|:)?\s*(?:rs\.?\s*)?'+number+r'(?!\s*(?:people|groups?|members?|donors?|dms?|messages?|msgs?|contacts?|numbers?|times?|days?|hours?|hrs?|minutes?|mins?|lines?|words?|versions?))',
            r'\bleft\s*(?:is|=|:)?\s*(?:rs\.?\s*)?(?=\d[\d,]*\s*(?:k|hazar|hazaar|thousand|lakh|lac)\b|\d{3,})'+number+r'(?!\s*(?:people|groups?|members?|minutes?|hours?|messages?|dms?|donors?|times?))',
            *([r'\bwith\s+(?:rs\.?\s*)?'+number+r'(?!\s*(?:people|groups?|members?|minutes?|mins?|mnts?|mints?|hours?|hrs?|secs?|seconds?|days?|donors?|dms?|messages?|msgs?|times?|lines?|words?|versions?|contacts?|numbers?|gap|rest|delay|break|batch\w*))(?!\s*(?:\w+\s+)?(?:gap|rest|delay|break)\b)'] if allow_with else [])]
  candidates=[]
  for pattern in patterns:
   for m in re.finditer(pattern,t,re.I):
    n=float(m[1].replace(',',''))*_times(m[2])
+   # A bare small number ("20 left in the batch") is a count, never rupees.
+   if n<100 and not m[2] and not re.search(r'(?i)rs\.?',m[0]) and not re.search(r'(?i)\brs\.?\s*$',t[:m.start()]):continue
    if n.is_integer() and 0<=n<=10000000:candidates.append(int(n))
  raw=re.fullmatch(r'(?:rs\.?\s*)?(\d[\d,]*(?:\.\d+)?)\s*'+UNIT+r'?',t.strip(),re.I)
  if raw:
@@ -130,6 +132,7 @@ def parse(text):
  arrival=re.fullmatch(r'(?:(?:someone|somebody|a donor|donor|he|she|they)\s+(?:sent|gave|paid|donated)|donation(?:\s+of)?|donated|came|got|received|recieved|aya|aaya|mila|mile)\s*(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?(?:\s+(?:came in|came|received|donated))?|(?:rs\.?\s*)?(\d[\d,.]*)\s*'+UNIT+r'?\s+(?:came in|came|arrived|received|donated|aya|aaya|aye|aaye|ayi|aayi|mila|mile|mil gaye|mil gaya)(?:\s+(?:hain|hai|hue|huay|ho gaye|ho gaya))?',t,re.I)
  if arrival:
   amount=float((arrival[1] or arrival[3]).replace(',',''))*_times(arrival[2] or arrival[4])
+  if amount<100 and not (arrival[2] or arrival[4]) and not re.search(r'(?i)\brs\.?',t):return None # "3 came" is a head-count, not rupees
   if amount.is_integer() and amount>=0:return {'kind':'money','amount':int(amount)}
  if re.match(r'^(delete|remove|revoke)\b',low) and re.search(r'\b(message|messages|msg|post|group)\b',low):return {'kind':'delete','target':group(t)}
  # Explicit quoted text is data, even if it contains a command word.

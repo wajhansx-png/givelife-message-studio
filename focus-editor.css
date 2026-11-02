@@ -39,11 +39,12 @@ body.message-focus-open>.app,body.message-focus-open>.foot{visibility:hidden}
 #messageFocus header button{min-height:44px}
 #messageFocus .focus-workspace,#messageFocus.with-group .focus-workspace,#messageFocus.with-dm .focus-workspace{display:flex;flex-direction:column;flex:none;width:100%;gap:10px;overflow:visible;grid-template-columns:none;grid-template-rows:none}
 #messageFocus .focus-paper{flex:none;overflow:visible}
-#messageFocus #focusFormatted,#messageFocus #focusText{position:static;height:auto;min-height:36dvh;overflow:visible;padding:16px 14px;font-size:17px;line-height:1.5;display:block}
+#messageFocus #focusFormatted,#messageFocus #focusText{position:static;height:auto;min-height:30dvh;overflow:visible;padding:16px 14px;font-size:17px;line-height:1.5;display:block}
 #messageFocus #focusText{width:100%;min-height:50dvh}
 #messageFocus #focusFormatted[hidden],#messageFocus #focusText[hidden]{display:none}
 #messageFocus .focus-rail{flex-direction:row;flex-wrap:wrap;align-items:stretch;gap:8px;overflow:visible;max-height:none;align-self:stretch}
 #messageFocus .focus-rail button{flex:1 1 calc(33% - 8px);min-width:96px;min-height:48px!important;font-size:14px!important;padding:8px 10px!important}
 #messageFocus .focus-rail small{flex:1 1 100%;order:-1;text-align:left;font-size:12px}
 #messageFocus .group-send,#messageFocus .dm-send{flex:none;width:100%;overflow:visible;padding:12px}
+#messageFocus #focusFormatted{max-height:42dvh;overflow-y:auto}
 }

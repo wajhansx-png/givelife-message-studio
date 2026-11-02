@@ -81,6 +81,6 @@ html body .app{height:auto;min-height:100dvh}
 @media(max-width:560px){html body .brandbar #desktopPreview{display:none!important}}
 @media(max-width:380px){html body .brandbar{gap:4px;padding-inline:6px}html body .brandbar .seg button{padding:0 9px}}
 @media(max-width:899px){
-html body #donorNotesShortcut,html body .donor-add,html body .donor-search,html body .message-copy,html body #histMain,html body dialog#set button,html body dialog#set select{min-height:44px}
+html body .brandbar #donorNotesShortcut,html body .donor-add,html body .donor-search,html body .message-copy,html body #histMain,html body dialog#set button,html body dialog#set select{min-height:44px}
 html body input.sw{min-height:0;width:56px;height:32px}
 }

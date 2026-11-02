@@ -86,7 +86,10 @@ class DonorIntegration:
             name,gender=self.personal_name(r['name']);self.jobs.manual_inflight.set()
             try:
                 self.book.delivery(r['id'],'Sending')
-                result=self.app.send_custom({'target':'phone','phone':r['phone'],'message':self.app.get_message('dm')['text'],'poster':True,'kind':'donor_manual','name':name,'gender':gender})
+                # Source of truth: only the visible saved Donors > Messages versions.
+                # Reserving consumes a version even if delivery becomes uncertain.
+                caption=self.messages.reserve_one()
+                result=self.app.send_custom({'target':'phone','phone':r['phone'],'message':caption,'poster':True,'kind':'donor_manual','name':name,'gender':gender})
                 confirmed=isinstance(result,dict) and result.get('code')=='SUCCESS'
                 if confirmed:self.jobs.manual_sent_at=time.time()
                 state='Sent' if confirmed else 'Uncertain';self.book.delivery(r['id'],state)

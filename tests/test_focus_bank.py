@@ -56,8 +56,10 @@ class FocusTests(unittest.TestCase):
   messages=['Owner message '+str(i) for i in range(10)];b.manual('group',messages)
   first=b.reserve_groups(self.drafts['group'],6);second=b.reserve_groups(self.drafts['group'],4)
   self.assertEqual(len(set(first+second)),10)
-  self.assertEqual(b.reserve_groups(self.drafts['group'],1),[self.drafts['group']])
-  with self.assertRaises(ValueError):b.reserve_groups(self.drafts['group'],1)
+  self.assertEqual(b.reserve_groups(self.drafts['group'],1),[first[0]])
+  restarted=FocusBank(self.app)
+  self.assertEqual(restarted.reserve_groups(self.drafts['group'],1),[first[1]])
+  self.assertEqual(len(set(first+second)),10)
   with self.assertRaises(ValueError):b.manual('group',['duplicate','duplicate'])
  def test_regeneration_keeps_manual_slots_and_invalidates_old_worker(self):
   b=self.make()

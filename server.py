@@ -76,6 +76,9 @@ def custom_recipient(body):
 
 def send_custom(body):
  jid,is_group=custom_recipient(body);message=body.get('message','')
+ if is_group and read_left()<=0 and isinstance(message,str) and completed_case_appeal(message):
+  raise ValueError('Not sent: completed case cannot use an old fundraising request.')
+ if is_group:message=focus_bank().get('group').get('source','')
  if isinstance(message,str) and body.get('kind') in ('dm_appeal','donor_registry','donor_manual','donor_batch','owner_text'):message=caption_facts.current(sys.modules[__name__],message);body={**body,'message':message}
  if not isinstance(message,str):raise ValueError('Message must be text.')
  if read_left()<=0 and completed_case_appeal(message):
@@ -116,6 +119,8 @@ def send_custom(body):
    if ledger['count']>=50 and not manual and not explicit_batch:raise ValueError('The 50-DM daily limit has been reached.')
    if not manual and not (explicit_batch and body.get('first_in_batch') is True) and now-ledger.get('last',0)<60:raise ValueError('Wait at least 60 seconds between DMs.')
    ledger.update(count=ledger['count']+1,last=now);STORE.put('dm_daily',ledger);STORE.put('dm_recipient_'+digest,{'state':'uncertain','time':now})
+  # Every group delivery (including direct/custom sends) uses the shared saved bank.
+  if is_group:message=focus_bank().reserve_groups(message,1)[0]
   # Reserve before dispatch. A network failure must not silently allow duplicates.
   try:
    if body.get('attachment'):result=send_batch_attachment(jid,message,body['attachment'])
@@ -424,9 +429,15 @@ def start_send_job(keys,caption,manual=False,request_id=None,with_picture=True):
  global ACTIVE
  check_hold()
  keys=list(dict.fromkeys(keys))
- if not caption.strip():raise ValueError('Message is empty.')
+ if read_left()<=0 and isinstance(caption,str) and completed_case_appeal(caption):
+  raise ValueError('Not sent: completed case cannot reuse an old fundraising caption.')
+ # A send's supplied caption cannot bypass or replace the saved Group tab bank.
+ if not STORE:raise ValueError('Persistent Group rotation is unavailable. Nothing sent.')
+ bank=focus_bank().get('group')
+ caption=bank.get('source','')
+ if not caption.strip():raise ValueError('Save the Group message and its 10 versions first.')
  if read_left()<=0:
-  if completed_case_appeal(caption):
+  if completed_case_appeal(caption) or any(completed_case_appeal(v) for v in bank.get('items',[])):
    raise ValueError('Not sent: the completed case caption still requests donations. Nothing was sent.')
   # The previous fundraising poster can remain on disk after closure.
   # Avoid attaching it to a completion announcement.
@@ -444,7 +455,7 @@ def start_send_job(keys,caption,manual=False,request_id=None,with_picture=True):
     return ACTIVE  # a double click observes the existing in-flight send; never duplicates it
    if not manual:return None
    cancel_jobs()
-  captions=focus_bank().reserve_groups(caption,len(keys)) if STORE and 'test' not in keys else None
+  captions=focus_bank().reserve_groups(caption,len(keys))
   ident=uuid.uuid4().hex
   JOBS[ident]={'done':False,'results':[],'message':'Sending now…','manual':bool(manual),'keys':keys,'caption':caption,'with_picture':bool(with_picture)}
   if captions:JOBS[ident]['captions']=captions
@@ -736,6 +747,10 @@ def send_free(to,text,with_picture,literal=False):
   target=phone+'@s.whatsapp.net'
  with SEND_LOCK:
   check_hold()
+  if target.endswith('@g.us'):
+   text=focus_bank().reserve_groups(get_message('group')['text'],1)[0]
+   if read_left()<=0 and completed_case_appeal(text):
+    raise ValueError('Completed case: saved Group caption still asks for donations. Nothing sent.')
   img=image_path(current_chat_image() or 'poster') if with_picture else None
   result=send_with_image(target,text,img)
  if result.get('code')!='SUCCESS':raise ValueError('Not confirmed: '+str(result.get('message',''))[:100]+' Check WhatsApp before retrying.')
@@ -1154,12 +1169,8 @@ def optout(phone):
  BLOCKED.add(d)
 
 def post_text_all(text):
- def run():
-  for k,(name,jid) in GROUPS.items():
-   try:send_text(jid,text)
-   except Exception:pass
-   time.sleep(60)
- threading.Thread(target=run,daemon=True).start()
+ # Legacy entry point must obey the same Group tab rotation and batch safeguards.
+ return start_auto_group_job(list(GROUPS),text)
 
 def saved_auto_group_caption():
  """One authoritative source: the saved Group editor and its version bank."""
@@ -2417,11 +2428,12 @@ class Handler(BaseHTTPRequestHandler):
   elif self.path=='/test':
    caption=str(body.get('message',''))
    if not caption.strip():return self.reply({'error':'Message is empty'},status=400)
-   if read_left()<=0 and completed_case_appeal(caption):
-    return self.reply({'error':'Completed case: remove all fundraising text before testing this message.'},status=400)
    try:
     options=workflow().options('group',caption)
     with SEND_LOCK:
+     caption=focus_bank().reserve_groups(caption,1)[0]
+     if read_left()<=0 and completed_case_appeal(caption):
+      raise ValueError('Completed case: saved Group version still asks for donations. Nothing sent.')
      picture=read_left()>0 and (not options or options.get('poster',True))
      result=send_image('120363431210327603@g.us',caption) if picture else send_text('120363431210327603@g.us',caption)
      if not picture and result.get('code')=='SUCCESS':

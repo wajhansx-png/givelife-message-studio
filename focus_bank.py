@@ -125,14 +125,36 @@ class FocusBank:
   if kind=='dm':self.publish_dm(row['revision'],texts,'Owner-approved manual messages')
   return self.get(kind)
  def reserve_groups(self,caption,count):
-  """Reserve distinct captions before dispatch. Uncertain sends stay consumed."""
+  """Reserve only saved Group-tab versions, cycling all ten across Auto/manual sends.
+
+  The persisted cursor is shared by every group sender. Uncertain sends stay
+  consumed so they are never accidentally repeated after a restart.
+  """
+  if not isinstance(count,int) or isinstance(count,bool) or not 1<=count<=10:
+   raise ValueError('Choose between 1 and 10 group recipients per batch.')
   with self.app.LOCK,self.lock:
-   data=self._load();row=data.get('group',{})
-   if not row or caption not in [row.get('source')]+row.get('items',[]):return None
-   used=set(self.app.STORE.get('focus_group_used',[]));pool=list(dict.fromkeys(row.get('items',[])+[row['source']]))
-   available=[t for t in pool if wording_key(t) not in used]
-   if len(available)<count:raise ValueError(str(len(available))+' unused group messages ready; '+str(count)+' needed. Add manual messages or regenerate versions first. Nothing sent.')
-   selected=available[:count];used.update(wording_key(t) for t in selected);self.app.STORE.put('focus_group_used',sorted(used));return selected
+   row=self.get('group')
+   if not self.app.STORE:raise ValueError('Persistent Group rotation is unavailable. Nothing sent.')
+   items=row.get('items',[])
+   pool=[];seen=set()
+   for value in items:
+    if not isinstance(value,str) or not value.strip():continue
+    signature=wording_key(value)
+    if signature not in seen:pool.append(value);seen.add(signature)
+   if len(pool)!=10:
+    raise ValueError('Group tab has '+str(len(pool))+'/10 distinct saved versions. Finish generating or save all 10 before sending. Nothing sent.')
+   saved=self.app.STORE.get('focus_group_rotation',{}) or {}
+   revision=row.get('revision')
+   cursor=int(saved.get('next_index',0) or 0)%len(pool) if saved.get('revision')==revision else 0
+   last=saved.get('last_key')
+   selected=[]
+   for _ in range(count):
+    # A new bank revision may share wording with the previous one.
+    if last and wording_key(pool[cursor])==last:cursor=(cursor+1)%len(pool)
+    value=pool[cursor];selected.append(value);last=wording_key(value)
+    cursor=(cursor+1)%len(pool)
+   self.app.STORE.put('focus_group_rotation',{'revision':revision,'next_index':cursor,'last_key':last})
+   return selected
  def retry(self,kind,fresh=False):
   with self.lock:
    data=self._load()

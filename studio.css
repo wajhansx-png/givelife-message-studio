@@ -8747,3 +8747,39 @@ html body #previewBackBottom{color:var(--ink);background:var(--surface2);border:
  html body .brandbar .case-pick{order:10;flex:1 0 100%!important;width:100%}
  html body .brandbar #caseSelect{width:100%;max-width:none;min-height:38px}
 }
+
+/* Donor actions: Important is primary; All stays a neutral alternative. */
+html body .donor-page #donorSendImportant {
+  background: var(--btn) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: var(--sh1) !important;
+}
+html body .donor-page #donorSendImportant:hover {
+  background: var(--btnh) !important;
+}
+html body .donor-page #donorSendAll {
+  background: var(--fill) !important;
+  color: var(--ink) !important;
+  border-color: transparent !important;
+  box-shadow: var(--lift) !important;
+}
+html body .donor-page #donorSendAll:hover {
+  background: var(--surface2) !important;
+}
+/* Keep the existing filter layout, with quieter, tighter navigation. */
+html body .donor-page .donor-tabs {
+  gap: 4px;
+  padding: 4px;
+}
+html body .donor-page .donor-tabs button {
+  padding: 6px 8px;
+  font-weight: 600;
+  box-shadow: none !important;
+}
+html body .donor-page .donor-tabs button:not([aria-selected=true]) {
+  background: transparent !important;
+}
+html body .donor-page .donor-tabs button:not([aria-selected=true]):hover {
+  background: var(--surface2) !important;
+}

@@ -1,8 +1,8 @@
 """Preserve the owner's full DM; recipient labels are not personal names."""
 import re
 
-LABEL = re.compile(r'(?i)\b(jr|junior|sr|senior|accounts?|accts?|admin|team|group|member|donors?|business|company|shop|store|services?|official|office|unknown|unnamed|name|contact|number|test|user|brother|sister|friend|wife|wifey|boss|customer|client|support|sales|marketing|web|developer|designer|agency|digital|seo|upwork|fiverr|foundation|givelife)\b')
-GREETING = re.compile(r'^(?P<mark>\*?_?)(?:(?:[A-Za-z][A-Za-z .\'-]{0,45})\s+)?(?:Brother|Sister)\b(?P<close>[_*]?)(?:[,.:!]?)[ \t\r\n]*', re.I)
+LABEL = re.compile(r'(?i)\b(jr|junior|sr|senior|accounts?|accts?|admin|team|group|member|donors?|business|company|shop|store|services?|official|office|unknown|unnamed|name|contact|number|test|user|brother|bhai|sister|friend|wife|wifey|boss|customer|client|support|sales|marketing|web|developer|designer|agency|digital|seo|upwork|fiverr|foundation|givelife)\b')
+GREETING = re.compile(r'^(?P<mark>\*?_?)(?:(?:[A-Za-z][A-Za-z .\'-]{0,45})\s+)?(?:Brother|Bhai|Sister)\b(?P<close>[_*]?)(?:[,.:!]?)[ \t\r\n]*', re.I)
 
 def first_name(value):
     value = str(value or '').strip()
@@ -19,7 +19,7 @@ def first_name(value):
 
 def greeting(name, gender='Brother'):
     name = first_name(name)
-    return (name + ' ' if name else '') + ('Sister' if name and gender == 'Sister' else 'Brother')
+    return (name + ' ' if name else '') + ('Sister' if name and gender == 'Sister' else 'Bhai')
 
 def personalize(text, name='', gender='Brother'):
     text = str(text).replace('\r\n', '\n').strip()

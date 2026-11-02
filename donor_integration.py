@@ -325,6 +325,8 @@ class DonorIntegration:
         # A bare "stop" while donor DMs are running can only mean those DMs.
         if self.jobs.active and re.fullmatch(r'(?i)(?:please\s+)?(?:stop|pause|cancel|ruk(?:\s+jao)?|band(?:\s+karo)?|bas)(?:\s+(?:it|this|now|all|sending|everything|the batch|batch|the rest|rest))?[.!]*',t):return self.pause_personal()
         control=manual_commands.dm_control(t)
+        if control is None and self.paused and re.search(r'(?i)\b(?:schedule|start|begin|run)\b',t) and re.search(r'(?i)\b(?:dms?|dm s|direct messages?)\b',t) and not re.search(r'(?i)\b(?:donors?|important)\b|\d+\s*(?:dms?|people|donors?)',t):
+            control='resume_dms' # "start/schedule dms by 11am" while DMs are stopped means resume them at that time
         if control=='resume_dms':
             # "resume DMs by 11 am" means at that time, never right now.
             import timed_tasks

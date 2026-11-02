@@ -74,6 +74,20 @@ class SettingsWordsAreNotMoneyOrStops(unittest.TestCase):
   self.assertTrue(draft_flow.editing_request('shorten the dm'))
   self.assertTrue(draft_flow.editing_request('remove the poster line from the message'))
 
+class ScheduleWordingForDms(unittest.TestCase):
+ setUp=fixture.SendTests.setUp
+ tearDown=fixture.SendTests.tearDown
+ def test_schedule_dms_by_a_time_while_stopped_resumes_them_then(self):
+  hub=app.donors();hub.pause_personal()
+  out=hub.command('Schedule group dms by 11 am','sched-1')
+  self.assertTrue(hub.paused);self.assertEqual(hub.resume_status().get('state'),'Pending');self.assertIn('11:00',str(out))
+
+ def test_schedule_dms_while_running_gets_an_honest_answer(self):
+  hub=app.donors();hub.resume_personal()
+  self.assertIsNone(hub.command('Schedule group dms by 11 am','sched-2'))
+  with self.assertRaises(ValueError) as caught:timed_tasks.parse('Schedule group dms by 11 am',NOW)
+  self.assertIn('nothing was scheduled',str(caught.exception))
+
 class PauseThenResumeLater(unittest.TestCase):
  setUp=fixture.SendTests.setUp
  tearDown=fixture.SendTests.tearDown

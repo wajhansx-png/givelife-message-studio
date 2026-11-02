@@ -99,6 +99,7 @@ def parse(text,now=None):
  else:
   if not re.search(r'\b(send|post|share|message|msg|schedule|schedul)\b',low):return None
   action='send';keys=manual_commands.groups(instruction)
+  if not keys and re.search(r'\b(?:dms?|dm s|direct messages?|donor dms?)\b',low):raise ValueError('I can schedule a group post, an Auto change, or a DM resume (say: resume dms by 11am). Starting a new donor DM batch at a set time is not available yet, so nothing was scheduled.')
   if not keys:raise ValueError('Which group should I schedule? For example: send to GiveLife main tomorrow at 9pm.')
  if re.search(r'\bevery\s+\d',low):raise ValueError('Use one timed send or daily at a clock time. Keep interval rules, such as every 30 minutes, separate.')
  quote=re.search(r'"([^"\n]+)"|“([^”\n]+)”',t)

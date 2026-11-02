@@ -56,15 +56,26 @@
  let bankRegenerating=false;const bankSaves=new Set();
  async function showMessages(force=false){
   if(!bankData||force){el('donorMessages').textContent='Loading saved message variants…';try{bankData=await api('/donor-messages')}catch(e){el('donorMessages').textContent=e.message;return}}
-  if(tab!=='messages')return;const box=el('donorMessages');box.textContent='';const head=make('div','bank-heading');head.append(make('span','',bankData.items.length+' wording variants · same facts · editable'));const regen=make('button','tool bank-regenerate','Regenerate');regen.onclick=async()=>{if(bankRegenerating||bankSaves.size)return;if(bankEdits.size&&!confirm('Replace your unsaved message edits with new variants?'))return;bankRegenerating=true;syncBankControls();try{bankData=await api('/donor-messages',{action:'regenerate'});bankEdits.clear();keepBankEdits();showMessages()}catch(e){notice(e.message,true)}finally{bankRegenerating=false;syncBankControls()}};head.append(regen);box.append(head);
+  if(tab!=='messages')return;const box=el('donorMessages');box.textContent='';const head=make('div','bank-heading');head.append(make('span','',bankData.items.length+' wording variants · same facts · editable'));const regen=make('button','tool bank-regenerate','Regenerate');regen.onclick=async()=>{if(bankRegenerating||bankSaves.size)return;
+ const master=bankData.items[0];if(!master){notice('Save Message 1 before regenerating.',true);return}
+ if([...bankEdits.keys()].some(id=>id!==master.id)&&!confirm('Unsaved edits to other versions will be replaced. Continue?'))return;
+ bankRegenerating=true;syncBankControls();
+ try{
+  // Saving Message 1 first avoids generating from yesterday's hidden origin.
+  if(bankEdits.has(master.id)){const text=bankEdits.get(master.id);await api('/donor-messages',{id:master.id,text});master.text=text;bankEdits.delete(master.id);keepBankEdits()}
+  bankData=await api('/donor-messages',{action:'regenerate'});
+  bankEdits.clear();keepBankEdits();showMessages();notice('Regenerated from your saved Message 1. Message 1 was preserved.')
+ }catch(e){notice(e.message,true);showMessages()}finally{bankRegenerating=false;syncBankControls()}};box.append(head);
   let selected;try{selected=sessionStorage.getItem('givelife-bank-selected')}catch(e){}
   const savedIndex=bankData.items.findIndex(item=>item.id===selected);if(savedIndex>=0)bankPage=Math.max(bankPage,savedIndex+1);
   const items=bankData.items.slice(0,bankPage);
   if(!items.some(item=>item.id===selected))selected=items[0]?.id;
   const currentIndex=bankData.items.findIndex(item=>item.id===selected);const mobileTitle=make('strong','bank-current',currentIndex<0?'Messages':'Message '+(currentIndex+1)+' of '+bankData.items.length);head.prepend(mobileTitle);
   const back=make('button','bank-back','← Back');back.type='button';back.setAttribute('aria-label','Back to donors');back.onclick=()=>selectDonorTab('all');head.prepend(back);
-  const more=make('details','bank-more'),summary=make('summary','','⋯');summary.setAttribute('aria-label','More message actions');const menu=make('div',''),regenMobile=make('button','tool bank-regenerate','Regenerate');regenMobile.type='button';regenMobile.onclick=()=>{more.open=false;regen.onclick()};menu.append(regenMobile);more.append(summary,menu);head.append(more);
-  const grid=make('div','bank-workspace'),picker=make('nav','bank-picker');picker.setAttribute('aria-label','Saved DM messages');
+  const info=make('span','bank-top-info','Edit Message 1 to update all regenerated wordings');head.append(info);
+  const grid=make('div','bank-workspace'),picker=make('nav','bank-picker'),actions=make('aside','bank-actions');
+ picker.setAttribute('aria-label','Saved DM messages');actions.setAttribute('aria-label','Message actions');
+ picker.append(make('h2','bank-picker-title','Saved DM versions'));
   for(const [i,item] of items.entries()){
    const pick=make('button','', 'Message '+(i+1));pick.type='button';pick.setAttribute('aria-pressed',String(item.id===selected));pick.dataset.bankId=item.id;
    pick.onclick=()=>{try{sessionStorage.setItem('givelife-bank-selected',item.id)}catch(e){}showMessages()};
@@ -72,7 +83,7 @@
    picker.append(pick);
   }
   if(bankPage<bankData.items.length){const more=make('button','tool','Show 10 more');more.onclick=()=>{bankPage+=10;showMessages()};picker.append(more)}
-  grid.append(picker);const index=items.findIndex(item=>item.id===selected),item=items[index];
+  const index=items.findIndex(item=>item.id===selected),item=items[index];
   if(item){
    const card=make('article','bank-message bank-detail'),title=make('header','');card.dataset.bankDetail=item.id;title.append(make('strong','','Message '+(index+1)));
    const preview=make('div','bank-preview');paintBankPreview(preview,item.text);
@@ -83,17 +94,21 @@
     if(edit.hidden){edit.hidden=false;preview.hidden=true;button.textContent='Save';edit.focus({preventScroll:true})}
     else{const submitted=edit.value;bankSaves.add(item.id);syncBankControls();try{await api('/donor-messages',{id:item.id,text:submitted});item.text=submitted;const latest=bankEdits.get(item.id)??edit.value;if(latest===submitted)bankEdits.delete(item.id);keepBankEdits();const active=[...box.querySelectorAll('[data-bank-detail]')].find(node=>node.dataset.bankDetail===item.id);if(active&&!bankEdits.has(item.id)){active.querySelector('textarea').hidden=true;const shown=active.querySelector('.bank-preview');shown.hidden=false;paintBankPreview(shown,submitted)}notice(bankEdits.has(item.id)?'Saved. Your newer edits are still unsaved.':'Message saved.')}catch(e){notice(e.message,true)}finally{bankSaves.delete(item.id);syncBankControls();fitBankPreview()}}
    };
-   title.append(button);card.append(title,preview,edit);grid.append(card);
+   actions.append(button);
+   const copy=make('button','tool bank-copy','Copy');
+   copy.type='button';copy.onclick=async()=>{try{await navigator.clipboard.writeText(bankEdits.get(item.id)??item.text);notice('Message copied.')}catch(e){notice('Select the text and copy it.',true)}};
+   actions.append(copy);
+   card.append(title,preview,edit);grid.append(card);
   }
   if(!item)grid.append(make('p','donor-empty','No saved messages yet. Use Regenerate to create them.'));
   const nav=make('nav','bank-pagination');nav.setAttribute('aria-label','Message navigation');const backBottom=make('button','bank-back-bottom','← Back');backBottom.type='button';backBottom.setAttribute('aria-label','Back to donors');backBottom.onclick=()=>selectDonorTab('all');nav.append(backBottom);
   const position=bankData.items.findIndex(entry=>entry.id===selected);
   for(const [step,label] of [[-1,'Previous'],[1,'Next']]){const b=make('button',step===1?'primary':'',label);b.type='button';b.dataset.bankNav=step===1?'next':'previous';b.setAttribute('aria-label',step===1?'Next message':'Previous message');b.disabled=position<0||position+step<0||position+step>=bankData.items.length;b.onclick=()=>{const target=position+step;bankPage=Math.max(bankPage,target+1);try{sessionStorage.setItem('givelife-bank-selected',bankData.items[target].id)}catch(e){}showMessages();[...box.querySelectorAll('[data-bank-nav]')].find(node=>node.dataset.bankNav===b.dataset.bankNav)?.focus({preventScroll:true})};if(step===1){const count=make('span','',position<0?'0 / 0':(position+1)+' / '+bankData.items.length);count.setAttribute('aria-live','polite');nav.append(count)}nav.append(b)}
-  box.append(grid,nav);syncBankControls();
+  actions.append(nav,regen);grid.append(actions,picker);box.append(grid);syncBankControls();
   if(typeof ResizeObserver!=='undefined'){bankFitObserver?.disconnect();bankFitObserver=new ResizeObserver(fitBankPreview);bankFitObserver.observe(grid)}
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(fitBankPreview);
  }
- function syncBankControls(){const box=el('donorMessages');for(const b of box.querySelectorAll('.bank-regenerate'))b.disabled=bankRegenerating||bankSaves.size>0;for(const b of box.querySelectorAll('[data-bank-save-id]')){b.disabled=bankRegenerating||bankSaves.has(b.dataset.bankSaveId);const input=b.closest('.bank-detail').querySelector('textarea');input.disabled=bankRegenerating;b.textContent=bankSaves.has(b.dataset.bankSaveId)?'Saving…':input.hidden?'Edit':'Save'}}
+ function syncBankControls(){const box=el('donorMessages');for(const b of box.querySelectorAll('.bank-regenerate'))b.disabled=bankRegenerating||bankSaves.size>0;for(const b of box.querySelectorAll('[data-bank-save-id]')){b.disabled=bankRegenerating||bankSaves.has(b.dataset.bankSaveId);const input=box.querySelector('.bank-detail textarea');if(!input)continue;input.disabled=bankRegenerating;b.textContent=bankSaves.has(b.dataset.bankSaveId)?'Saving…':input.hidden?'Edit':'Save'}}
  let bankFitObserver;
  function paintBankPreview(preview,text){if(window.waFormat)preview.innerHTML=window.waFormat(text).split('\n').map(line=>'<div class="bank-line'+(line?'':' blank')+'">'+(line||'<br>')+'</div>').join('');else preview.textContent=text}
  function fitBankPreview(){const preview=el('donorMessages').querySelector('.bank-preview');if(!preview||!preview.clientHeight||preview.hidden)return;for(let size=innerWidth>=900?26:19;size>=12;size-=.5){preview.style.fontSize=size+'px';if(preview.scrollHeight<=preview.clientHeight+1)break}}

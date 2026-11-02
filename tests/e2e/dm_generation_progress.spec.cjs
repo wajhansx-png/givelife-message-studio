@@ -16,6 +16,7 @@ for(const width of [1440,390])test(`DM generation saves progress and survives re
  await expect(page.locator('.bank-generation-state')).toContainText('Generating DMs');
  await expect(page.locator('.bank-regenerate')).toBeDisabled();
  await expect(page.locator('.bank-generation-state')).toHaveText('20 DM messages ready',{timeout:10000});
+ await expect(page.locator('.bank-generation-state')).toBeVisible();
  await expect(page.locator('.bank-regenerate')).toBeEnabled();
  await page.reload();await expect(page.locator('.bank-generation-state')).toHaveText('20 DM messages ready');
  await expect(page.locator('.bank-preview')).toContainText('Brother');

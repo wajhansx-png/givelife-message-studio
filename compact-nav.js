@@ -35,6 +35,9 @@
   messageTools.insertBefore(poster,document.getElementById('edit'));
   const hiddenPoster=overflow?.querySelector('button:not([id])');if(hiddenPoster)hiddenPoster.remove();
  }
+ // Phone peek: tapping the message preview opens the full editor.
+ const card=document.getElementById('card'),showMsg=document.getElementById('showMsg'),phone=matchMedia('(max-width:899px) and (min-height:600px)');
+ if(card&&showMsg)card.addEventListener('click',e=>{if(phone.matches&&document.body.classList.contains('nomsg')&&!e.target.closest('button,a,input,select,textarea,summary')){e.preventDefault();showMsg.click()}});
  document.getElementById('openTeam')?.remove();
  const head=document.querySelector('.donor-head');
  if(head){

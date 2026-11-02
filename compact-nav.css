@@ -176,3 +176,18 @@ html body #donorsPage .donor-total{border:0;background:transparent}
 }
 html body #donorsPage#donorsPage .donor-row .donor-more{border:0!important;box-shadow:none!important;background:transparent!important}
 
+/* Phone main screen: fill the empty gap with a read-only peek of the message being sent; tap it to open the editor. */
+@media(max-width:899px) and (min-height:600px){
+html body.nomsg .app{height:100dvh!important;min-height:0!important}
+html body.nomsg .layout{min-height:0!important;grid-template-rows:minmax(0,1fr) auto!important;overflow:hidden}
+html body.nomsg #card.msgcard{display:flex!important;grid-row:1;grid-column:1;height:100%;max-height:100%;min-height:0;align-self:stretch;overflow:hidden;cursor:pointer;position:relative;-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
+html body.nomsg #card .tools,html body.nomsg #card .preview-dock{display:none!important}
+html body.nomsg #card .chat{flex:1;min-height:0;overflow:hidden;justify-content:flex-start!important;align-items:stretch}
+html body.nomsg #card .chat>.message{margin-top:0!important}
+html body.nomsg #card .message{font-size:14px;line-height:1.45}
+html body.nomsg #showMsg{display:none!important}
+html body.nomsg .layout>.side{grid-row:2;grid-column:1;margin-block:0!important}
+}
+/* Settings: the one destructive action reads as destructive. */
+html body dialog#set #waOut{color:#ff8a8a!important;background:#ff4d4d14!important}
+

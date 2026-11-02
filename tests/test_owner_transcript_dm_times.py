@@ -74,6 +74,26 @@ class SettingsWordsAreNotMoneyOrStops(unittest.TestCase):
   self.assertTrue(draft_flow.editing_request('shorten the dm'))
   self.assertTrue(draft_flow.editing_request('remove the poster line from the message'))
 
+class DeferredWordingNeverSendsNow(unittest.TestCase):
+ PHRASES=('main me bhejo kal subah 9 baje','fiverr me bhejo 10 minute baad','main me bhejo aadhe ghante baad','send main in half an hour','send main in an hour',
+  'bhejo main raat 11 baje','send main kal','main me kal bhejo','send main tonight','send main this evening','send main in 10 minutes','send main tomorrow at 9pm')
+ def test_no_direct_send_for_any_deferred_phrase(self):
+  for phrase in self.PHRASES:
+   with self.subTest(phrase=phrase):
+    self.assertIsNone(manual_commands.parse(phrase))
+    self.assertFalse(chat_policy.permitted('send_appeal',phrase))
+ def test_clear_times_become_schedules_and_vague_ones_ask_for_a_time(self):
+  for phrase in ('main me bhejo kal subah 9 baje','fiverr me bhejo 10 minute baad','send main in half an hour','send main in an hour','bhejo main raat 11 baje'):
+   with self.subTest(phrase=phrase):
+    plan=timed_tasks.parse(phrase,NOW);self.assertEqual((plan['command'],plan['action']),('create','send'))
+  for phrase in ('send main kal','send main tonight'):
+   with self.subTest(phrase=phrase):
+    with self.assertRaises(ValueError) as caught:timed_tasks.parse(phrase,NOW)
+    self.assertIn('What time',str(caught.exception))
+ def test_immediate_wording_still_sends_now(self):
+  for phrase in ('send main','abhi bhejo main','send main now'):
+   with self.subTest(phrase=phrase):self.assertEqual(manual_commands.parse(phrase)['kind'],'appeal')
+
 class ScheduleWordingForDms(unittest.TestCase):
  setUp=fixture.SendTests.setUp
  tearDown=fixture.SendTests.tearDown

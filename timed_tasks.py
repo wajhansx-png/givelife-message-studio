@@ -8,7 +8,7 @@ PKT=dt.timezone(dt.timedelta(hours=5))
 def requested(text):
  text=str(text)
  if re.search(r'(?i)\bevery\s+\d',text) and not re.search(r'(?i)\bat\s*\d|\d\s*(?:am|pm)\b',text):return False
- return bool(re.search(r'(?i)\b(?:schedul\w*|at\s+\d{1,2}|tomorrow|daily|every day|(?:in|after)\s+\d+(?:\.\d+)?\s*(?:sec\w*|min\w*|hour\w*|hr\w*))\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',text))
+ return bool(re.search(r'(?i)\b(?:schedul\w*|at\s+\d{1,2}|tomorrow|daily|every day|tonight|kal|parso|subah|shaam|raat ko|aaj raat|this (?:morning|afternoon|evening)|\d{1,2}(?::\d{2})? *baje|\d+(?:\.?\d+)? *(?:min\w*|mnt\w*|ghant\w*|hours?|hrs?) *(?:ke )?(?:baad|bad)|(?:ek|aik|do|teen|aadhe) ghant\w* (?:baad|bad)|(?:in|after) (?:half an|an|one) (?:hour|hr)|(?:in|after)\s+\d+(?:\.\d+)?\s*(?:sec\w*|min\w*|hour\w*|hr\w*))\b|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',text))
 
 CLOCK=r'\b(?:(?:at|by|till|until|around|@)\s*)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b|\b(?:at|by|till|until|@)\s*(\d{1,2})(?::(\d{2}))?\b'
 def due_time(text,now=None,anchor=False):
@@ -23,6 +23,30 @@ def due_time(text,now=None,anchor=False):
   seconds=float(relative[1])*(3600 if relative[2].startswith('h') else 60 if relative[2].startswith('m') else 1)
   if not 1<=seconds<=366*86400:raise ValueError('Choose a delay from 1 second to 366 days.')
   return now+seconds
+ if re.search(r'\b(?:in|after) half an hour\b|\baadhe ghant\w* (?:baad|bad)\b',low):return now+1800
+ hours_word=re.search(r'\b(?:(?:in|after) (?:an|one) (?:hour|hr)|(?:ek|aik|1) ghant\w* (?:baad|bad)|(?:do|2) ghant\w* (?:baad|bad)|(?:teen|3) ghant\w* (?:baad|bad))\b',low)
+ if hours_word:
+  text=hours_word[0];count=2 if re.search(r'\b(?:do|2)\b',text) else 3 if re.search(r'\b(?:teen|3)\b',text) else 1
+  return now+3600*count
+ urdu_rel=re.search(r'\b(?P<n>\d+(?:\.?\d+)?)\s*(?P<u>min\w*|mnt\w*|mint\w*|ghant\w*|hours?|hrs?) *(?:ke )?(?:baad|bad)\b',low)
+ if urdu_rel:
+  seconds=float(urdu_rel['n'])*(3600 if urdu_rel['u'].startswith(('g','h')) else 60)
+  if not 1<=seconds<=366*86400:raise ValueError('Choose a delay from 1 second to 366 days.')
+  return now+seconds
+ baje=re.search(r'\b(?P<h>\d{1,2})(?::(?P<m>\d{2}))? *baje\b',low)
+ if baje:
+  hour,minute=int(baje['h']),int(baje['m'] or 0)
+  if minute>59 or not 1<=hour<=12:raise ValueError('That clock time is invalid. Say for example 9 baje subah or 9 baje shaam (PKT).')
+  if re.search(r'\b(?:subah|savere|fajr)\b',low):hour=hour%12
+  elif re.search(r'\b(?:dopahar|dupahar)\b',low):hour=12 if hour==12 else hour+12 if hour<=4 else hour
+  elif re.search(r'\b(?:shaam|sham|raat|rat)\b',low):hour=hour%12+12
+  else:raise ValueError('Is that 9 baje subah (morning) or shaam/raat (evening/night)? Nothing was changed.')
+  when=current.replace(hour=hour,minute=minute,second=0,microsecond=0)
+  if anchor:return when.timestamp()
+  if re.search(r'\b(?:tomorrow|kal)\b',low):when+=dt.timedelta(days=1)
+  elif when.timestamp()<=now and not re.search(r'\b(?:today|aaj)\b',low):when+=dt.timedelta(days=1)
+  if when.timestamp()<=now:raise ValueError('That time has passed. Choose a future time.')
+  return when.timestamp()
  found=[m for m in re.finditer(CLOCK,low)]
  normal={(int(m[1] or m[4]),int(m[2] or m[5] or 0),m[3]) for m in found}
  if not normal:return None
@@ -97,7 +121,7 @@ def parse(text,now=None):
   if re.search(r'\b(start|enable|on)\b',low) and re.search(r'\b(stop|disable|off)\b',low):raise ValueError('Schedule one Auto change at a time: ON or OFF.')
   action='auto_off' if re.search(r'\b(stop|disable|off)\b',low) else 'auto_on';keys=[]
  else:
-  if not re.search(r'\b(send|post|share|message|msg|schedule|schedul)\b',low):return None
+  if not re.search(r'\b(send|post|share|message|msg|schedule|schedul|bhej\w*|daalo|dalo)\b',low):return None
   action='send';keys=manual_commands.groups(instruction)
   if not keys and re.search(r'\b(?:dms?|dm s|direct messages?|donor dms?)\b',low):raise ValueError('I can schedule a group post, an Auto change, or a DM resume (say: resume dms by 11am). Starting a new donor DM batch at a set time is not available yet, so nothing was scheduled.')
   if not keys:raise ValueError('Which group should I schedule? For example: send to GiveLife main tomorrow at 9pm.')

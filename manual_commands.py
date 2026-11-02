@@ -74,7 +74,7 @@ def question_request(text):
  return bool(re.match(r'(?i)^\s*(?:what|why|how|when|where|who|did|have|has|was|were|is(?!\s+(?:message|msg|caption|dm|ko|line|ka|ke|mein|me)\b)|are|should|can i|could i|would it|if i|suppose|imagine)\b',outside_literals(text)) or re.match(r'(?i)^\s*(?:(?:can|could|would|will) you\s+)?(?:please\s+)?(?:tell|show|let) me\s+(?:if|whether|when|why|how|what)\b',outside_literals(text)))
 
 def deferred_request(text):
- return bool(re.search(r'(?i)\b(?:later|not now|tomorrow|tonight|next (?:day|week|month)|in\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?)|after\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?))\b|\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',outside_literals(text)))
+ return bool(re.search(r'(?i)\b(?:later|not now|tomorrow|tonight|kal|parso|baje|subah|shaam|raat ko|aaj raat|dopahar|this (?:morning|afternoon|evening)|in the (?:morning|evening)|baad mein|baad me|thori der baad|thodi der baad|\d+(?:\.?\d+)? *(?:min\w*|ghant\w*|hours?|hrs?) *(?:ke )?baad|(?:ek|aik|do|teen|aadhe) ghant\w* (?:ke )?baad|(?:in|after) (?:a|an|one|half an|a couple of|couple of|two|three) (?:hours?|hrs?|mins?|minutes?|days?)|(?:in|after) half an hour|next (?:day|week|month)|in\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?)|after\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?))\b|\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',outside_literals(text)))
 
 MULT={'k':1000,'hazar':1000,'hazaar':1000,'hajar':1000,'hazr':1000,'thousand':1000,'lakh':100000,'lac':100000,'lakhs':100000}
 UNIT=r'(k|hazar|hazaar|hajar|hazr|thousand|lakhs?|lac)'

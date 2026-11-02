@@ -340,10 +340,12 @@ class IntegrationTests(unittest.TestCase):
   second=bank['items'][1]['text'].replace('please read about Yousuf','please consider the SAVED SECOND DONOR MESSAGE about Yousuf',1)
   hub.messages.update('wording-01',first)
   hub.messages.update('wording-02',second)
-  old=app.get_message('dm')['text']
-  app.save_draft('dm',old.replace('please read about Yousuf','DO NOT SEND THIS MAIN SCREEN DRAFT about Yousuf',1))
+  old_get=app.get_message
+  stale=old_get('dm')['text'].replace('please read about Yousuf','DO NOT SEND THIS MAIN SCREEN DRAFT about Yousuf',1)
+  def wrong_main_source(kind):
+   return {'text':stale} if kind=='dm' else old_get(kind)
   sent=[]
-  with patch.object(app,'send_image',side_effect=lambda jid,text:sent.append(text) or {'code':'SUCCESS','results':{'message_id':'fake'}}):
+  with patch.object(app,'get_message',side_effect=wrong_main_source),patch.object(app,'send_image',side_effect=lambda jid,text:sent.append(text) or {'code':'SUCCESS','results':{'message_id':'fake'}}):
    one=hub.send_one(donor['id'],'saved-bank-click-01')
    # Recreate the bank reader: cursor must survive across app instances/restarts.
    hub.messages=MessageBank(app)

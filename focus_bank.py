@@ -124,6 +124,36 @@ class FocusBank:
    row.update(manual=texts,items=texts,revision=uuid.uuid4().hex,state='Ready' if len(texts)==10 else 'Partial',error='',generator=4);self._put(data)
   if kind=='dm':self.publish_dm(row['revision'],texts,'Owner-approved manual messages')
   return self.get(kind)
+ def ensure_group_ready(self):
+  """Instantly recover missing Group versions without relying on an LLM.
+
+  Local versions only prepend different appeals to the exact saved message.
+  No patient facts, monetary amounts, formatting, emojis, or payment details change.
+  This also invalidates in-flight older AI results before they can overwrite the bank.
+  """
+  with self.app.LOCK,self.lock:
+   if not self.app.STORE:raise ValueError('Persistent Group rotation is unavailable. Nothing sent.')
+   row=self.get('group')
+   if not row.get('source','').strip():raise ValueError('Save a Group message before sending. Nothing sent.')
+   data=self._load()
+   if not data.get('group'):
+    row={'source':row['source'],'items':[],'revision':hashlib.sha256(row['source'].encode()).hexdigest(),'state':'Generating','generator':4}
+    data['group']=row
+   pool=[];seen=set()
+   for value in row.get('items',[]):
+    if not isinstance(value,str) or not value.strip():continue
+    key=wording_key(value)
+    if key not in seen:pool.append(value);seen.add(key)
+   if len(pool)<10:
+    for value in safe_local_versions(row['source']):
+     key=wording_key(value)
+     if key not in seen:pool.append(value);seen.add(key)
+     if len(pool)>=10:break
+    if len(pool)<10:
+     raise ValueError('Could not safely create 10 distinct Group versions. Check the saved message. Nothing sent.')
+    row.update(items=pool[:10],revision=uuid.uuid4().hex,state='Ready',error='',generator=4,progress=10)
+    data['group']=row;self._put(data)
+   return copy.deepcopy(row)
  def reserve_groups(self,caption,count):
   """Reserve only saved Group-tab versions, cycling all ten across Auto/manual sends.
 
@@ -133,8 +163,7 @@ class FocusBank:
   if not isinstance(count,int) or isinstance(count,bool) or not 1<=count<=10:
    raise ValueError('Choose between 1 and 10 group recipients per batch.')
   with self.app.LOCK,self.lock:
-   row=self.get('group')
-   if not self.app.STORE:raise ValueError('Persistent Group rotation is unavailable. Nothing sent.')
+   row=self.ensure_group_ready()
    items=row.get('items',[])
    pool=[];seen=set()
    for value in items:
@@ -176,3 +205,41 @@ def valid(source,text,existing=()):
  for line in source.split('\n'):
   if any(t in line.lower() for t in ('easypaisa','jazzcash','account','03097458815','wajdan')) and line not in text:return False
  return True
+
+def safe_local_versions(source):
+ """Ten immediately available safe lead-ins; entire owner message remains verbatim."""
+ if not isinstance(source,str) or not source.strip():return []
+ lines=source.split('\n')
+ first=next((i for i,line in enumerate(lines) if line.strip()),None)
+ if first is None:return []
+ line=lines[first]
+ # Keep all existing emojis, markdown markers and punctuation exactly where they are.
+ start=re.search(r'[A-Za-z0-9]',line)
+ if not start:return []
+ prefixes=(
+  'Please take a moment to read: ',
+  'This message matters to us all: ',
+  'Please read this important update: ',
+  'Your kindness and attention matter: ',
+  'Please hear this message carefully: ',
+  'A heartfelt message to our community: ',
+  'Please consider this important news: ',
+  'Your support and care can matter: ',
+  'We ask you to read this with care: ',
+  'Please give this message your attention: ',
+  'We want to share something important: ',
+  'Please keep this message in mind: ',
+ )
+ out=[]
+ for prefix in prefixes:
+  changed=lines.copy()
+  changed[first]=line[:start.start()]+prefix+line[start.start():]
+  value='\n'.join(changed)
+  # Preserve every byte of the original source after the insert, and prevent
+  # changed number/emoji/format/payment lines or duplicate wording.
+  if (len(value)>len(source)+80 or
+      dm_variants._shape(source)!=dm_variants._shape(value) or
+      dm_variants._numbers(source)!=dm_variants._numbers(value) or
+      dm_variants._emojis(source)!=dm_variants._emojis(value)):continue
+  if wording_key(value) not in {wording_key(x) for x in out}:out.append(value)
+ return out

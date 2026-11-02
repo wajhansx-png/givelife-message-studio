@@ -47,6 +47,32 @@ class FocusTests(unittest.TestCase):
   self.assertTrue(all(len(t)==len(source) for t in partial['items']))
   with patch('dm_variants.assistant.client',return_value='fake'),patch('dm_variants._call',return_value=candidates[2:]):b._generate('group',partial,('group',row['revision']))
   self.assertEqual(b.get('group')['state'],'Ready');self.assertEqual(len(b.get('group')['items']),10);self.assertEqual(b.get('group')['items'][:2],partial['items'])
+ def test_empty_bank_is_repaired_instantly_with_fact_preserving_wordings(self):
+  b=self.make()
+  source='💔 2-year-old Yousaf has passed away.\n\nHis parents need burial support.\n\nRs. 47,000 STILL NEEDED.\n\n03097458815 — Easypaisa / JazzCash - Wajdan Khan'
+  self.drafts['group']=source
+  with patch('dm_variants.assistant.client',side_effect=AssertionError('Never call AI for recovery')):
+   row=b.ensure_group_ready()
+  self.assertEqual(len(row['items']),10)
+  self.assertEqual(row['state'],'Ready')
+  self.assertEqual(len({x.split('\n')[0] for x in row['items']}),10)
+  self.assertTrue(all(x.split('\n')[0].endswith(source.split('\n')[0].split(' ',1)[-1]) for x in row['items']))
+  self.assertTrue(all(x.split('\n')[1:]==source.split('\n')[1:] for x in row['items']))
+  self.assertTrue(all('47,000' in x and '03097458815' in x for x in row['items']))
+  self.assertEqual(self.drafts['group'],source)
+  self.assertEqual(b.reserve_groups(source,10),row['items'])
+  restarted=FocusBank(self.app)
+  self.assertEqual(restarted.reserve_groups(source,1),[row['items'][0]])
+ def test_failed_generation_can_be_recovered_without_network(self):
+  b=self.make()
+  original=self.drafts['group']
+  self.app.STORE.put('focus_wording',{'group':{'source':original,'revision':'stale-gen','items':[],'state':'Needs retry','error':'429 API unavailable','generator':4}})
+  with patch('dm_variants.assistant.client',side_effect=AssertionError('Never call AI during recovery')):
+   ready=b.ensure_group_ready()
+  self.assertEqual(ready['state'],'Ready')
+  self.assertEqual(len(ready['items']),10)
+  self.assertFalse(b.record('group','stale-gen',{'items':[],'state':'Needs retry'}))
+  self.assertEqual(b.get('group')['items'],ready['items'])
  def test_old_failed_bank_restarts_once_after_generator_upgrade(self):
   b=self.make();source=self.drafts['group'];b.app.STORE.put('focus_wording',{'group':{'source':source,'revision':'old','items':[],'state':'Needs retry','error':'old failure'}})
   row=b.get('group');self.assertEqual(row['state'],'Generating');self.assertEqual(row['error'],'');self.assertEqual(row['generator'],4)

@@ -2149,7 +2149,10 @@ class Handler(BaseHTTPRequestHandler):
   if self.path.startswith('/focus-bank?'):
    kind=urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get('kind',['group'])[0]
    if kind not in ('group','dm'):return self.reply({'error':'Choose group or DM.'},status=400)
-   bank=focus_bank();bank.start(kind);return self.reply(bank.get(kind))
+   bank=focus_bank()
+   if kind=='group':bank.ensure_group_ready()
+   else:bank.start(kind)
+   return self.reply(bank.get(kind))
   if self.path=='/donor-messages':return self.reply(donors().messages.get())
   if self.path=='/wa-status':
    try:return self.reply(api('/devices/'+DEVICE+'/status'))

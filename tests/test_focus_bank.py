@@ -37,4 +37,16 @@ class FocusTests(unittest.TestCase):
   with patch.object(b,'start'):latest=b.save('group',source+'!',row['revision'])
   with patch('dm_variants.assistant.client',return_value='fake'),patch('dm_variants._call',return_value=versions):b._generate('group',row,('group',row['revision']))
   self.assertEqual(b.get('group')['source'],latest['source']);self.assertEqual(b.get('group')['items'],[])
+ def test_partial_versions_are_saved_and_retry_fills_only_missing(self):
+  b=self.make();source='*Hook A*\n\nThey are worried about burial expenses.\n\nRs. 50,000 needed\n\n03097458815 Easypaisa / JazzCash Wajdan Khan'
+  with patch.object(b,'start'):row=b.save('group',source)
+  candidates=[source.replace('Hook A','Hook '+chr(66+i)).replace('They are',"They're") for i in range(10)]
+  with patch('dm_variants.assistant.client',return_value='fake'),patch('dm_variants._call',return_value=candidates[:2]):b._generate('group',row,('group',row['revision']))
+  partial=b.get('group');self.assertEqual(partial['state'],'Partial');self.assertEqual(len(partial['items']),2)
+  self.assertTrue(all(len(t)==len(source) for t in partial['items']))
+  with patch('dm_variants.assistant.client',return_value='fake'),patch('dm_variants._call',return_value=candidates[2:]):b._generate('group',partial,('group',row['revision']))
+  self.assertEqual(b.get('group')['state'],'Ready');self.assertEqual(len(b.get('group')['items']),10);self.assertEqual(b.get('group')['items'][:2],partial['items'])
+ def test_old_failed_bank_restarts_once_after_generator_upgrade(self):
+  b=self.make();source=self.drafts['group'];b.app.STORE.put('focus_wording',{'group':{'source':source,'revision':'old','items':[],'state':'Needs retry','error':'old failure'}})
+  row=b.get('group');self.assertEqual(row['state'],'Generating');self.assertEqual(row['error'],'');self.assertEqual(row['generator'],2)
 if __name__=='__main__':unittest.main()

@@ -84,3 +84,6 @@ html body .app{height:auto;min-height:100dvh}
 html body .brandbar #donorNotesShortcut,html body .donor-add,html body .donor-search,html body .message-copy,html body #histMain,html body dialog#set button,html body dialog#set select{min-height:44px}
 html body input.sw{min-height:0;width:56px;height:32px}
 }
+@media(max-width:899px){
+html body .donor-head #donorAdd,html body #hideMsg,html body .overflow-tools button,html body .msgcard .tool{min-height:44px}
+}

@@ -356,3 +356,7 @@ html body #messageFocus #focusFormatted .wa-line.blank{height:.5em;min-height:.5
 @media(max-width:700px){html body #messageFocus :is(#focusFormatted,#focusText){font-size:16px!important;padding:12px!important}} /* 16px stops iOS zooming into the editor */
 /* Wide screens: the message sits in a centred reading column, lower from the top. */
 @media(min-width:701px){html body #messageFocus :is(#focusFormatted,#focusText){padding:56px max(24px,calc((100% - 640px)/2)) 24px!important}}
+/* WhatsApp look: the message is a green bubble on the dark chat wallpaper, so the eye lands on it. */
+html body #messageFocus .focus-paper{background:#0b141a radial-gradient(#ffffff0a 1px,transparent 1.5px) 0 0/18px 18px!important;border-color:#ffffff10!important}
+html body #messageFocus :is(#focusFormatted,#focusText){box-sizing:border-box!important;background:#005c4b!important;color:#e9edef!important;border-radius:14px 4px 14px 14px!important;box-shadow:0 1px 3px #0007!important;width:calc(100% - 20px)!important;max-width:640px!important;margin:10px auto!important;padding:12px 14px!important}
+@media(min-width:701px){html body #messageFocus :is(#focusFormatted,#focusText){margin:48px auto 24px!important;padding:18px 22px!important;width:calc(100% - 48px)!important}}

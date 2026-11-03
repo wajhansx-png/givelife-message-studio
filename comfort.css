@@ -1432,14 +1432,59 @@ html body #messageFocus :is(#focusFormatted, #focusText) {
 }
 
 /* ---- Delayed send pill row ---- */
-.delay-row{display:flex;align-items:center;gap:6px;padding:8px 0 2px;flex-wrap:wrap}
-.delay-label{font-size:12px;font-weight:600;color:var(--mut);white-space:nowrap;margin-right:2px}
-.delay-pill{flex:1;min-width:54px;min-height:36px;padding:0 8px;border-radius:20px;border:1.5px solid var(--line2);background:var(--surface);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
-.delay-pill:hover{background:var(--gs)}
-.delay-pill[aria-pressed="true"]{background:var(--btn);border-color:var(--btn);color:#fff}
-.delay-hint{display:block;font-size:10px;font-weight:500;opacity:.8;margin-top:2px;line-height:1.2}
-/* When a delay is active, send buttons show a tinted border to signal scheduled mode */
-.delay-armed .prim .big,.delay-armed .chips button,.delay-armed #sendAll{border:1.5px solid var(--btn)!important;background:color-mix(in srgb,var(--btn) 8%,var(--surface))!important}
+.delay-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 2px;
+  flex-wrap: wrap;
+}
+.delay-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mut);
+  white-space: nowrap;
+  margin-right: 2px;
+}
+.delay-pill {
+  flex: 1;
+  min-width: 54px;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 20px;
+  border: 1.5px solid var(--line2);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.delay-pill:hover {
+  background: var(--gs);
+}
+.delay-pill[aria-pressed='true'] {
+  background: var(--btn);
+  border-color: var(--btn);
+  color: #fff;
+}
+.delay-hint {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.8;
+  margin-top: 2px;
+  line-height: 1.2;
+}
+/* Legacy selector kept for any remaining .prim/.chips refs; new layout handled below */
+.delay-armed .prim .big,
+.delay-armed .chips button {
+  border: 1.5px solid var(--btn) !important;
+  background: color-mix(in srgb, var(--btn) 8%, var(--surface)) !important;
+}
 /* On phone stack the row compactly */
 @media(max-width:600px){.delay-row{gap:4px}.delay-pill{font-size:12px;min-height:34px}}
 
@@ -1458,3 +1503,137 @@ html body .donor-page .deselect-chip{color:#ffb4b4!important;border-color:#ff6b6
 html body .donor-page .bank-format{min-width:44px;font-weight:800}
 html body .donor-page .bank-test{background:#14532d!important;color:#d1fae5!important}
 html body .donor-page .bank-base{background:#3a2a0c!important;color:#ffd27a!important}
+@media (max-width: 600px) {
+  .delay-row {
+    gap: 4px;
+  }
+  .delay-pill {
+    font-size: 12px;
+    min-height: 34px;
+  }
+}
+
+/* ---- Simplified group-send two-button layout ---- */
+.group-two {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+.group-drop-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 130px;
+}
+.group-main-btn,
+.group-free-btn {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: none;
+  background: var(--btn);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  position: relative;
+}
+.group-main-btn .gd-arrow,
+.group-free-btn .gd-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  opacity: 0.7;
+  pointer-events: auto;
+  padding: 4px 2px;
+}
+.group-main-btn .last-sent,
+.group-free-btn .last-sent {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.8;
+  line-height: 1.2;
+}
+.group-free-btn {
+  background: var(--surface2);
+  color: var(--ink);
+  border: 1.5px solid var(--line2);
+}
+.group-all-btn {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line2);
+  background: var(--surface2);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.group-all-btn .last-sent {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+.group-drop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.group-drop button {
+  width: 100%;
+  padding: 11px 14px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.group-drop button:hover {
+  background: var(--gs);
+}
+.group-drop button .last-sent {
+  font-size: 11px;
+  opacity: 0.6;
+}
+/* armed tint on the two main buttons when delay is active */
+.delay-armed .group-main-btn,
+.delay-armed .group-free-btn,
+.delay-armed .group-all-btn {
+  outline: 2px solid var(--btn);
+  outline-offset: 2px;
+}
+@media (max-width: 480px) {
+  .group-two {
+    gap: 6px;
+  }
+  .group-main-btn,
+  .group-free-btn {
+    font-size: 14px;
+    min-height: 42px;
+  }
+}

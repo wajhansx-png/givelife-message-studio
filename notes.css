@@ -939,18 +939,6 @@ html body #foundationNotes #notesSync[data-error='true'] {
 html body #foundationNotes .notes-editor {
   caret-color: #60a5fa !important;
 }
-html body #foundationNotes .notes-editor.notes-custom-caret {
-  caret-color: transparent !important;
-}
-.notes-caret {
-  position: fixed;
-  z-index: 9;
-  width: 2.5px;
-  border-radius: 1px;
-  background: #60a5fa;
-  pointer-events: none;
-  animation: notes-caret-blink 1.1s step-end infinite;
-}
 @keyframes notes-caret-blink {
   0%,
   100% {
@@ -958,84 +946,6 @@ html body #foundationNotes .notes-editor.notes-custom-caret {
   }
   50% {
     opacity: 0;
-  }
-}
-.notes-selection-tools {
-  position: fixed;
-  z-index: 12;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-  width: 260px;
-  max-width: calc(100vw - 16px);
-  padding: 6px;
-  border: 1px solid #555;
-  border-radius: 12px;
-  background: #303030;
-  color: #eee;
-  box-shadow: 0 6px 24px #0004;
-  font: 13px/1.3 system-ui;
-}
-.notes-selection-tools[hidden],
-.notes-caret[hidden],
-.notes-selection-more[hidden] {
-  display: none !important;
-}
-.notes-selection-tools button,
-.notes-selection-tools select {
-  min-height: 44px;
-  min-width: 44px;
-  padding: 6px 8px;
-  border: 1px solid #555;
-  border-radius: 7px;
-  background: #383838;
-  color: #eee;
-  font: inherit;
-  cursor: pointer;
-}
-.notes-selection-tools > select {
-  width: 108px;
-  min-width: 108px;
-}
-.notes-selection-tools button:hover {
-  background: #464646;
-}
-.notes-selection-tools :focus-visible {
-  outline: 2px solid #85b7f6;
-  outline-offset: 2px;
-}
-.notes-selection-more {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  flex-basis: 100%;
-  padding-top: 4px;
-  border-top: 1px solid #555;
-}
-@media (max-width: 720px) {
-  .notes-selection-tools {
-    margin-top: calc(-1 * env(safe-area-inset-bottom, 0px));
-  }
-  .notes-selection-more {
-    order: -1;
-    border-top: 0;
-    border-bottom: 1px solid #555;
-    padding-top: 0;
-    padding-bottom: 4px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .notes-caret {
-    animation: none;
-  }
-}
-@media (forced-colors: active) {
-  .notes-caret {
-    background: CanvasText;
-  }
-  .notes-selection-tools {
-    border-color: ButtonText;
   }
 }
 
@@ -1069,37 +979,6 @@ html body #foundationNotes .notes-editor {
   overscroll-behavior: contain;
   scrollbar-width: thin;
   box-sizing: border-box;
-}
-.notes-selection-tools {
-  width: 218px;
-  padding: 3px;
-  gap: 2px;
-  border-color: #454545;
-  border-radius: 7px;
-  background: #292929;
-  box-shadow: 0 2px 8px #0003;
-}
-.notes-selection-tools button,
-.notes-selection-tools select {
-  height: 30px;
-  min-height: 30px;
-  min-width: 36px;
-  padding: 3px 6px;
-  border: 0;
-  background: transparent;
-  border-radius: 4px;
-  font-size: 12px;
-  box-shadow: none;
-}
-.notes-selection-tools > select {
-  width: 100px;
-  min-width: 100px;
-}
-@media (max-width: 720px) {
-  .notes-selection-tools button,
-  .notes-selection-tools select {
-    min-height: 44px;
-  }
 }
 
 /* One predictable formatting rail beside the writing surface. */
@@ -1158,9 +1037,6 @@ html body #foundationNotes[data-mode='writing'] .notes-separator {
 }
 html body #foundationNotes[data-mode='writing'] .notes-paper-scroll {
   padding: 60px 132px 18px 20px;
-}
-html body #foundationNotes[data-mode='writing'] .notes-selection-tools {
-  display: none !important;
 }
 @media (max-width: 720px) {
   html body #foundationNotes[data-mode='writing'] .notes-toolbar {

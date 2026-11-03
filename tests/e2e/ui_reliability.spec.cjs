@@ -106,6 +106,7 @@ for (const width of [1440, 390])
   test(`light theme and donor forms accessibility ${width}`, async ({ page }) => {
     test.setTimeout(180000);
     await setup(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' }); // measure final colours, not a fade-in
     await page.setViewportSize({ width, height: 850 });
     await page.addInitScript(() => localStorage.setItem('givelife-theme', 'light'));
     for (const route of [

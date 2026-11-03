@@ -46,6 +46,19 @@ class ResumeScheduleTests(unittest.TestCase):
    resumed=hub.jobs.export_jobs()['jobs'][-1]
   self.assertEqual(resumed['ids'],original[2:]);self.assertEqual(resumed['gap_seconds'],180)
   self.assertEqual(resumed['chunk'],2);self.assertEqual(resumed['rests'],[120,300]);self.assertEqual(resumed['jitter'],{'min':-10,'max':15});self.assertFalse(resumed['poster'])
+ def test_stopped_bulk_batch_resumes_with_its_people_message_and_names(self):
+  hub=app.donors();ids=[hub.book.add('Donor '+str(i),'92300123%04d'%i)['donor']['id'] for i in range(4)]
+  names={i:('Donor','Brother') for i in ids}
+  with patch.object(app,'wa_ok',return_value=True),patch.object(hub.jobs,'connected',return_value=True):
+   job=hub.jobs.start(scope='selected',ids=ids,personal_names=names,custom_template='Hi {name}, thanks.',limit=4,gap_seconds=180,poster=False,run=False,request_id='bulk-resume')['job']
+   hub.pause_personal();hub.jobs._update(job['id'],state='Stopped',receipts=[{'id':ids[0],'state':'Sent'}]);hub.jobs.active=None
+   start=hub.jobs.start
+   with patch.object(hub.jobs,'start',side_effect=lambda **kw:start(**kw,run=False)):
+    reply=hub.resume_all()
+  resumed=hub.jobs.export_jobs()['jobs'][-1]
+  self.assertNotEqual(resumed['id'],job['id']);self.assertEqual(resumed['ids'],ids[1:])
+  self.assertEqual(resumed['scope'],'selected');self.assertEqual(resumed['custom_template'],'Hi {name}, thanks.')
+  self.assertEqual(resumed['gap_seconds'],180);self.assertFalse(resumed['poster']);self.assertIn('continues',reply['reply'])
  def test_resume_refuses_while_stop_is_still_finishing(self):
   hub=app.donors();hub.pause_personal();hub.jobs.active='inflight'
   with self.assertRaisesRegex(ValueError,'stopping'):hub.resume_all()

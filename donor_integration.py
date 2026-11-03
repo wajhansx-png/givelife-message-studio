@@ -1,5 +1,5 @@
 """Shared donor UI/chat commands and private delivery integration."""
-import re, time, hashlib, threading, uuid, datetime as dt
+import re, time, hashlib, threading, uuid, copy, datetime as dt
 from donor_book import DonorBook, normalize_phone, parse_contact, send_request, PHONE
 from donor_delivery import DonorDelivery
 
@@ -30,12 +30,20 @@ class DonorIntegration:
             if not self.jobs.active and not job.get('resumable'):job={}
             batch={k:job[k] for k in ('scope','gap_seconds','poster','chunk','rests','rest_seconds','jitter') if job.get(k) is not None} if job.get('scope') in ('all','important','donated','not_donated') else None
             if batch:batch.update(limit=job['total'],resume_id=job['id'],skip_contacted=False)
+            elif job.get('scope')=='selected':batch=self._selected_batch(job)
             self.app.STORE.put('donor_dm_resume',{'engine':bool(eng.get('dm_enabled')),'daily':eng.get('dm_daily',30),'batch':batch})
         self.revision+=1
         self.paused=True
         if self.app.STORE:self.app.STORE.put('donor_dm_pause',True)
         self.jobs.cancel();self.app.CAMPAIGN['stop']=True;self.app.ENGINE.set_dms(False,self.app.ENGINE.s.get('dm_daily',30))
         return {'reply':'DMs stopped (paused). Group posting is unchanged. Press Resume DMs to continue everything.','paused':True}
+    def _selected_batch(self,job):
+        """Resume settings for a pasted/bulk batch: the same people, names, message and attachment as the stopped job."""
+        jobs=self.jobs.export_jobs().get('jobs',[]);raw=next((x for x in reversed(jobs) if x.get('id')==job.get('id')),None)
+        if not raw or not raw.get('ids') or not raw.get('personal_names'):return None
+        batch={k:raw[k] for k in ('gap_seconds','poster','chunk','rests','jitter','custom_template','attachment') if raw.get(k) is not None}
+        batch.update(scope='selected',ids=list(raw['ids']),personal_names=copy.deepcopy(raw['personal_names']),limit=len(raw['ids']),resume_id=raw['id'],skip_contacted=False)
+        return batch
     def resume_personal(self):
         with self.control_lock:return self._resume_personal()
     def _resume_personal(self):

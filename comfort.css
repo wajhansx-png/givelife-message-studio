@@ -120,3 +120,10 @@ html body #messageFocus :is(small,.last-sent,.send-title span){font-size:12px!im
 }
 #messageFocus#messageFocus :is(small,small.last-sent,.last-sent,.send-title span){font-size:12px!important}
 input#volPoster,input#donorRowPoster{width:20px;height:20px;min-height:28px}
+
+/* ---- Phone bottom shortcuts: Chat and Donors as one centred pair of equal buttons ---- */
+@media(max-width:899px){
+ html body .app > .foot{display:flex!important;justify-content:center;align-items:center;gap:10px;padding-inline:0}
+ html body .app > .foot > :is(#chatOpen,#openDonors){flex:0 0 min(200px,calc((100% - 10px)/2))!important;width:min(200px,calc((100% - 10px)/2))!important;max-width:200px;padding:0 12px!important;box-sizing:border-box;min-width:0!important;min-height:52px!important;margin:0!important;justify-self:auto!important;justify-content:center;font-size:17px}
+ html body .app > .foot > :not(#chatOpen):not(#openDonors):not(.sr-only){display:none!important}
+}

@@ -30,10 +30,11 @@ test('Back and Forward move between screens smoothly and never leave the app',as
  await page.locator('#showMsg').click();await expect(page).toHaveURL(/#\/preview/);await page.reload();await expect(page.locator('#card')).toBeVisible();
  await page.locator('#previewBackBottom').click();await expect(page.locator('#card')).not.toBeVisible();
 });
-test('phone: a small Chat button and a wide Donors button share the thumb row',async({page,request})=>{
+test('phone: Chat and Donors are an equal, centred pair in the thumb row',async({page,request})=>{
  await open(page,request,390,844);
  const chat=await page.locator('#chatOpen').boundingBox(),donors=await page.locator('#openDonors').boundingBox();
- expect(Math.abs(chat.y-donors.y)).toBeLessThan(4);expect(chat.x).toBeLessThan(donors.x);expect(chat.width).toBeLessThan(donors.width);
+ expect(Math.abs(chat.y-donors.y)).toBeLessThan(4);expect(chat.x).toBeLessThan(donors.x);expect(Math.abs(chat.width-donors.width)).toBeLessThan(2);
+ expect(Math.abs((chat.x+donors.x+donors.width)/2-390/2)).toBeLessThan(2);expect(chat.height).toBeGreaterThanOrEqual(44);
  expect(donors.y+donors.height).toBeGreaterThan(844*0.6);
 });
 test('phone: every full screen has a Back button in the lower half',async({page,request})=>{

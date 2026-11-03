@@ -2128,3 +2128,24 @@ html body .grp-card.delay-armed :is(#btnGivelife#btnGivelife,#btnFree#btnFree),h
 html body .report-card{text-align:left!important;width:min(680px,calc(100vw - 40px))!important;margin:0 auto!important}
 html body .report-card .report-line{display:flex;gap:10px;align-items:flex-start;margin:14px 0!important}
 html body .report-card button{display:block;margin:22px 0 0!important}
+
+/* Sending bar: status line, plan chips (batches / rests / gap), actions; can fold away to a ⌃ button. */
+html body #donorProgress:not([hidden]){display:grid!important;grid-template-columns:1fr auto auto auto;align-items:center;gap:8px 10px!important;position:relative;padding:10px 12px!important}
+html body #donorProgress>span{grid-column:1/2;min-width:0;font-size:13px!important;line-height:1.4}
+html body #donorProgress>.dp-facts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;order:2}
+html body #donorProgress>.dp-facts[hidden]{display:none}
+html body #donorProgress .dp-fact{display:inline-flex;align-items:baseline;gap:6px;padding:5px 10px;border-radius:999px;background:#ffffff0f;border:1px solid #34d39933;color:#d1fae5;font-size:12.5px;white-space:nowrap}
+html body #donorProgress .dp-fact small{opacity:.75;font-size:11px}
+html body #donorProgress .dp-fact b{font-weight:800}
+html body #donorProgress>.dp-hide{order:3;width:36px;height:36px;min-width:36px;padding:0;border-radius:10px;font-size:18px;line-height:1;background:#ffffff10;border:1px solid #ffffff26;color:#e5e7eb}
+html body #donorProgress.dp-collapsed{display:none!important}
+html body #donorsPage .dp-show{position:sticky;bottom:8px;margin:6px 0 6px auto;display:flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:999px;background:#14532d;border:1px solid #34d39966;color:#d1fae5;font-weight:800;font-size:13px;z-index:4;width:max-content}
+html body #donorsPage .dp-show[hidden]{display:none!important}
+@media (max-width:700px){
+  html body #donorProgress:not([hidden]){grid-template-columns:1fr 1fr 36px!important;padding:8px 10px!important}
+  html body #donorProgress>span{grid-column:1/3!important;font-size:12px!important}
+  html body #donorProgress>.dp-hide{grid-column:3;grid-row:1}
+  html body #donorProgress>.dp-facts{grid-column:1/-1!important}
+  html body #donorProgress .dp-fact{font-size:11.5px;padding:4px 8px}
+  html body #donorProgress>button:not(.dp-hide){grid-row:3;min-height:38px!important;font-size:13px!important}
+}

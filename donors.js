@@ -141,6 +141,29 @@
     const attention = ['Failed', 'Uncertain'].includes(st.resume?.state),
       paused = !!st.paused;
     resumeStatus.hidden = !pending && !attention && !paused;
+    /* Folded: the panel shows as a small pill until tapped open again (remembered). */
+    let folded = false;
+    try {
+      folded = localStorage.getItem('givelife-resume-folded') === '1';
+    } catch (e) {}
+    resumeStatus.classList.toggle('rs-folded', folded && !attention);
+    if (!resumeStatus.querySelector('.rs-fold')) {
+      const fold = make('button', 'rs-fold', '⌄');
+      fold.type = 'button';
+      fold.setAttribute('aria-label', 'Hide the resume panel');
+      const pill = make('button', 'rs-pill', '⌃ DMs paused');
+      pill.type = 'button';
+      pill.setAttribute('aria-label', 'Show the resume panel');
+      const set = (v) => {
+        try {
+          localStorage.setItem('givelife-resume-folded', v ? '1' : '0');
+        } catch (e) {}
+        resumeStatus.classList.toggle('rs-folded', v);
+      };
+      fold.onclick = () => set(true);
+      pill.onclick = () => set(false);
+      resumeStatus.append(fold, pill);
+    }
     resumeStatus.dataset.state = pending ? 'scheduled' : attention ? 'attention' : 'paused';
     resumeStatus.querySelector('span').textContent = pending
       ? 'DMs paused · Resume at ' + st.resume.label

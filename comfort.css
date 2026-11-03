@@ -2194,3 +2194,14 @@ html body .report-card .report-resume[data-state=failed]{border-color:#f8717199}
   html body .donor-page .donor-row .donor-top-chip{width:26px!important;min-width:26px!important;min-height:30px!important}
   html body .donor-page .donor-row .donor-top-chip::before{font-size:13px!important}
 }
+/* Resume panel: one compact row; folds to a small pill. */
+html body #donorResumeStatus:not([hidden]){display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:6px 8px!important;padding:8px 10px!important;margin:6px 0!important;border-radius:12px!important;position:relative}
+html body #donorResumeStatus>span{flex:1 1 100%;font-size:12.5px!important;line-height:1.35!important;padding-right:40px}
+html body #donorResumeStatus .donor-resume-actions{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;flex:1 1 100%;margin:0!important}
+html body #donorResumeStatus .donor-resume-actions button{flex:1 1 0!important;min-height:34px!important;padding:0 8px!important;font-size:12.5px!important;border-radius:9px!important;white-space:nowrap}
+html body #donorResumeStatus .rs-fold{position:absolute;top:6px;right:6px;width:30px;height:30px;min-width:30px;padding:0;border-radius:8px;font-size:16px;line-height:1;background:#ffffff10;border:1px solid #ffffff26}
+html body #donorResumeStatus .rs-pill{display:none}
+html body #donorResumeStatus.rs-folded{background:transparent!important;border:0!important;padding:0!important;box-shadow:none!important;justify-content:flex-end}
+html body #donorResumeStatus.rs-folded>:not(.rs-pill){display:none!important}
+html body #donorResumeStatus.rs-folded .rs-pill{display:inline-flex;align-items:center;min-height:34px;padding:0 14px;border-radius:999px;background:#3b2f12;border:1px solid #facc1566;color:#fde68a;font-weight:800;font-size:13px}
+html body #donorResumeStatus .donor-resume-actions button{white-space:normal!important;line-height:1.1!important}

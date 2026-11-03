@@ -315,3 +315,36 @@ html body .donor-page .donor-head>.donor-total>strong{border:0!important;backgro
 html body .donor-page .donor-head>.donor-total>strong::after{text-transform:none;letter-spacing:0}
 html body .donor-page .donor-head>.donor-total::before,html body .donor-page .donor-head>.donor-total::after{content:none!important}
 html body #donorsPage .donor-head>.donor-total{border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;padding:0!important}
+
+/* ==== Donor notices: a toast above the bottom action bar, not a banner in the page flow ====
+   Where the eyes and the mouse already are after pressing DM, Stop or Save; nothing below it jumps. */
+html body #donorsPage #donorNotice:not(:empty){
+ position:fixed!important;left:50%;bottom:calc(max(10px,env(safe-area-inset-bottom)) + 84px);transform:translateX(-50%);z-index:30;
+ width:min(560px,calc(100vw - 24px));margin:0!important;padding:10px 8px 10px 14px!important;border-radius:14px!important;
+ border:1px solid var(--line2)!important;border-left:4px solid var(--ok)!important;background:var(--surface2)!important;color:var(--ink)!important;
+ box-shadow:var(--sh3)!important;font-size:14px;line-height:1.4;animation:cmfToast .22s var(--ease) both}
+html body #donorsPage #donorNotice[data-error=true]:not(:empty){border-left-color:var(--red)!important;background:color-mix(in srgb,var(--red) 14%,var(--surface2))!important}
+html body #donorsPage #donorNotice .donor-notice-close{flex:0 0 44px!important;width:44px!important;min-height:44px!important;margin:-6px 0;border-radius:10px;font-size:24px}
+html body #donorsPage #donorNotice>button:not(.donor-notice-close){min-height:44px;padding:0 14px;border-radius:10px;font-weight:700;color:var(--gink)}
+@keyframes cmfToast{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){html body #donorsPage #donorNotice:not(:empty){animation:none}}
+
+/* ==== Paused DMs: a clear strip above the bottom bar with Resume now / At a time ==== */
+html body #donorsPage #donorResumeStatus:not([hidden]){
+ display:flex;flex-direction:row!important;flex-wrap:wrap;align-items:center;gap:10px 12px;flex:none!important;height:auto!important;max-height:none!important;margin:0 0 8px;padding:10px 12px 10px 14px;
+ border:1px solid var(--line2);border-left:4px solid var(--amber);border-radius:14px;background:color-mix(in srgb,var(--amber) 10%,var(--surface2));font-size:14px;font-weight:600}
+html body #donorsPage #donorResumeStatus[data-state=attention]{border-left-color:var(--red);background:color-mix(in srgb,var(--red) 12%,var(--surface2))}
+html body #donorsPage #donorResumeStatus>span{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
+html body #donorsPage #donorResumeStatus .donor-resume-actions{display:flex;flex:0 1 auto;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+html body #donorsPage #donorResumeStatus .donor-resume-actions button{min-height:48px;padding:0 16px;border-radius:12px;font-size:15px;font-weight:700;white-space:nowrap}
+html body #donorsPage #donorResumeStatus .donor-resume-actions button[hidden]{display:none}
+html body #donorsPage #donorResumeStatus #donorResumeNowInline{background:var(--btn);color:#fff;border-color:transparent}
+@media(max-width:899px){
+ html body #donorsPage #donorResumeStatus:not([hidden]){margin-bottom:6px}
+ html body #donorsPage #donorResumeStatus .donor-resume-actions{flex:1 1 100%;display:grid;grid-template-columns:1fr 1fr;justify-content:stretch}
+ html body #donorsPage #donorResumeStatus .donor-resume-actions button{min-height:52px;white-space:normal;line-height:1.15}
+ html body #donorsPage #donorResumeStatus #donorResumeCancel:not([hidden]){grid-column:1/-1;font-weight:600}
+}
+/* The toast clears the paused strip instead of covering it */
+html body #donorsPage:has(#donorResumeStatus:not([hidden])) #donorNotice:not(:empty){bottom:calc(max(10px,env(safe-area-inset-bottom)) + 160px)}
+@media(min-width:900px){html body #donorsPage:has(#donorResumeStatus:not([hidden])) #donorNotice:not(:empty){bottom:calc(max(10px,env(safe-area-inset-bottom)) + 150px)}}

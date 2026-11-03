@@ -257,6 +257,42 @@ class MessageBank:
                 self._save(data)
             return copy.deepcopy(data)
 
+    def set_base(self, text):
+        """Save the owner's base message as the only message. No versions are made until
+        the owner presses Generate 20 versions (start_regeneration)."""
+        text = dm_variants.clean_source(text) if isinstance(text, str) else text
+        if not isinstance(text, str) or len(text) > 10000 or not dm_composer.complete(text):
+            raise ValueError('Keep the complete base message: paragraphs, remaining amount and payment details.')
+        with self.lock:
+            data = self.get()
+            if (data.get('generation') or {}).get('state') == 'Generating':
+                data['generation'].update(state='Superseded', error='A new base message was saved. Press Generate 20 versions.')
+            data.update(mode='custom', origin=text, fingerprint=self._fingerprint(text), base=text,
+                        items=self._entries([text]), previous_items=data.get('items') or [],
+                        generation={}, updated_at=time.time(), warning='',
+                        source='Base message; press Generate 20 versions to create the others')
+            self._save(data)
+            return copy.deepcopy(data)
+
+    TEST_KEY = 'donor_test_rotation'
+
+    def next_test(self):
+        """The next saved version for a Test DM. One version repeats; with twenty, each test is the next one."""
+        with self.lock:
+            texts = [row['text'] for row in self.get().get('items') or []
+                     if isinstance(row, dict) and row.get('enabled', True) and isinstance(row.get('text'), str) and row['text'].strip()]
+            if not texts:
+                raise ValueError('Save a base message first. Nothing was sent.')
+            revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
+            saved = (self.app.STORE.get(self.TEST_KEY, {}) if self.app.STORE else self.__dict__.get('_test_cursor', {})) or {}
+            index = int(saved.get('next_index', 0) or 0) % len(texts) if saved.get('revision') == revision else 0
+            cursor = {'revision': revision, 'next_index': (index + 1) % len(texts)}
+            if self.app.STORE:
+                self.app.STORE.put(self.TEST_KEY, cursor)
+            else:
+                self._test_cursor = cursor
+            return index + 1, len(texts), texts[index]
+
     def update(self, ident, text):
         if not isinstance(text, str) or len(text) > 10000 or not dm_composer.complete(text):
             raise ValueError('Keep the complete case message, paragraphs, remaining amount and payment details.')

@@ -92,7 +92,7 @@
 
  async function showMessages(force=false){
   if(!bankData||force){el('donorMessages').textContent='Loading saved message variants…';try{bankData=await api('/donor-messages')}catch(e){el('donorMessages').textContent=e.message;return}}
-  if(tab!=='messages')return;const box=el('donorMessages');box.textContent='';const head=make('div','bank-heading');head.append(make('span','',bankData.items.length+' wording variants · same facts · editable'));const regen=make('button','tool bank-regenerate','Regenerate');regen.onclick=async()=>{if(bankRegenerating||bankSaves.size)return;
+  if(tab!=='messages')return;const box=el('donorMessages');box.textContent='';const head=make('div','bank-heading');head.append(make('span','',bankData.items.length+' wording variants · same facts · editable'));const regen=make('button','tool bank-regenerate',bankData.items.length>1?'Regenerate 20':'Generate 20 versions');regen.onclick=async()=>{if(bankRegenerating||bankSaves.size)return;
  const master=bankData.items[0];if(!master){notice('Save Message 1 before regenerating.',true);return}
  if([...bankEdits.keys()].some(id=>id!==master.id)&&!confirm('Unsaved edits to other versions will be replaced. Continue?'))return;
  bankRegenerating=true;syncBankControls();
@@ -100,7 +100,7 @@
   // Saving Message 1 first avoids generating from yesterday's hidden origin.
   if(bankEdits.has(master.id)){const text=bankEdits.get(master.id);await api('/donor-messages',{id:master.id,text});master.text=text;bankEdits.delete(master.id);keepBankEdits()}
   bankData=await api('/donor-messages',{action:'regenerate'});
-  bankEdits.clear();keepBankEdits();showMessages();notice('Generating in the background. Message 1 is preserved; accepted versions save automatically.')
+  bankEdits.clear();keepBankEdits();showMessages();notice('Generating 20 versions from your base message. Each one saves as soon as it is ready.')
  }catch(e){notice(e.message,true);showMessages()}finally{bankRegenerating=false;syncBankControls()}};box.append(head);const generationState=make('span','bank-generation-state',bankGenerationLabel());generationState.setAttribute('role','status');head.append(generationState);queueBankGenerationPoll();
   let selected;try{selected=sessionStorage.getItem('givelife-bank-selected')}catch(e){}
   const savedIndex=bankData.items.findIndex(item=>item.id===selected);if(savedIndex>=0)bankPage=Math.max(bankPage,savedIndex+1);
@@ -108,7 +108,7 @@
   if(!items.some(item=>item.id===selected))selected=items[0]?.id;
   const currentIndex=bankData.items.findIndex(item=>item.id===selected);const mobileTitle=make('strong','bank-current',currentIndex<0?'Messages':'Message '+(currentIndex+1)+' of '+bankData.items.length);head.prepend(mobileTitle);
   const back=make('button','bank-back','← Back');back.type='button';back.setAttribute('aria-label','Back to donors');back.onclick=()=>selectDonorTab('all');head.prepend(back);
-  const info=make('span','bank-top-info','Edit Message 1 to update all regenerated wordings');head.append(info);
+  const info=make('span','bank-top-info',bankData.items.length>1?'Message 1 is the base message':'Only the base message is saved · press Generate 20 versions');head.append(info);
   const grid=make('div','bank-workspace'),picker=make('nav','bank-picker'),actions=make('aside','bank-actions');
  picker.setAttribute('aria-label','Saved DM messages');actions.setAttribute('aria-label','Message actions');
  picker.append(make('h2','bank-picker-title','Saved DM versions'));
@@ -131,6 +131,7 @@
     else{const submitted=edit.value;bankSaves.add(item.id);syncBankControls();try{await api('/donor-messages',{id:item.id,text:submitted});item.text=submitted;const latest=bankEdits.get(item.id)??edit.value;if(latest===submitted)bankEdits.delete(item.id);keepBankEdits();const active=[...box.querySelectorAll('[data-bank-detail]')].find(node=>node.dataset.bankDetail===item.id);if(active&&!bankEdits.has(item.id)){active.querySelector('textarea').hidden=true;const shown=active.querySelector('.bank-preview');shown.hidden=false;paintBankPreview(shown,submitted)}notice(bankEdits.has(item.id)?'Saved. Your newer edits are still unsaved.':'Message saved.')}catch(e){notice(e.message,true)}finally{bankSaves.delete(item.id);syncBankControls();fitBankPreview()}}
    };
    actions.append(button);
+   for(const [mark,label] of [['*','B'],['_','I']]){const f=make('button','tool bank-format',label);f.type='button';f.setAttribute('aria-label',mark==='*'?'Bold':'Italic');f.onmousedown=e=>e.preventDefault();f.onclick=()=>{if(edit.hidden)button.click();wrapMark(edit,mark);bankEdits.set(item.id,edit.value);keepBankEdits()};actions.append(f)}
    const copy=make('button','tool bank-copy','Copy');
    copy.type='button';copy.onclick=async()=>{try{await navigator.clipboard.writeText(bankEdits.get(item.id)??item.text);notice('Message copied.')}catch(e){notice('Select the text and copy it.',true)}};
    actions.append(copy);
@@ -140,12 +141,20 @@
   const nav=make('nav','bank-pagination');nav.setAttribute('aria-label','Message navigation');const backBottom=make('button','bank-back-bottom','← Back');backBottom.type='button';backBottom.setAttribute('aria-label','Back to donors');backBottom.onclick=()=>selectDonorTab('all');nav.append(backBottom);
   const position=bankData.items.findIndex(entry=>entry.id===selected);
   for(const [step,label] of [[-1,'Previous'],[1,'Next']]){const b=make('button',step===1?'primary':'',label);b.type='button';b.dataset.bankNav=step===1?'next':'previous';b.setAttribute('aria-label',step===1?'Next message':'Previous message');b.disabled=position<0||position+step<0||position+step>=bankData.items.length;b.onclick=()=>{const target=position+step;bankPage=Math.max(bankPage,target+1);try{sessionStorage.setItem('givelife-bank-selected',bankData.items[target].id)}catch(e){}showMessages();[...box.querySelectorAll('[data-bank-nav]')].find(node=>node.dataset.bankNav===b.dataset.bankNav)?.focus({preventScroll:true})};if(step===1){const count=make('span','',position<0?'0 / 0':(position+1)+' / '+bankData.items.length);count.setAttribute('aria-live','polite');nav.append(count)}nav.append(b)}
-  actions.append(nav,regen);grid.append(actions,picker);box.append(grid);syncBankControls();
+  const baseBtn=make('button','tool bank-base','Base message');baseBtn.type='button';baseBtn.onclick=openBaseMessage;
+  const testBtn=make('button','tool bank-test','Test');testBtn.type='button';testBtn.onclick=async()=>{testBtn.disabled=true;try{const r=await api('/donor-messages',{action:'test',poster:singlePosterOn});notice(r.reply)}catch(e){notice(e.message,true)}finally{testBtn.disabled=false}};
+  actions.append(nav,baseBtn,regen,testBtn);grid.append(actions,picker);box.append(grid);syncBankControls();
   if(typeof ResizeObserver!=='undefined'){bankFitObserver?.disconnect();bankFitObserver=new ResizeObserver(()=>fitBankPreview());bankFitObserver.observe(grid);const fitTarget=grid.querySelector('.bank-detail');if(fitTarget)bankFitObserver.observe(fitTarget)}
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>fitBankPreview());
  }
  function syncBankControls(){const box=el('donorMessages');for(const b of box.querySelectorAll('.bank-regenerate'))b.disabled=bankRegenerating||bankSaves.size>0||bankData?.generation?.state==='Generating';for(const b of box.querySelectorAll('[data-bank-save-id]')){b.disabled=bankRegenerating||bankSaves.has(b.dataset.bankSaveId);const input=box.querySelector('.bank-detail textarea');if(!input)continue;input.disabled=bankRegenerating;b.textContent=bankSaves.has(b.dataset.bankSaveId)?'Saving…':input.hidden?'Edit':'Save'}}
  let bankFitObserver;
+ function wrapMark(input,mark){const a=input.selectionStart,b=input.selectionEnd,v=input.value;if(a===b){input.focus();return}const picked=v.slice(a,b),lead=picked.match(/^\s*/)[0],tail=picked.match(/\s*$/)[0],core=picked.trim();const on=core.startsWith(mark)&&core.endsWith(mark)&&core.length>1;const out=lead+(on?core.slice(1,-1):mark+core+mark)+tail;input.setRangeText(out,a,b,'select');input.focus();input.dispatchEvent(new Event('input'))}
+ function openBaseMessage(){let d=el('baseMessageDialog');if(!d){d=document.createElement('dialog');d.id='baseMessageDialog';d.className='base-dialog';d.innerHTML='<form method="dialog"><h2>Base message</h2><p>The 20 versions are written from this. Saving keeps only this message until you press Generate 20 versions.</p><div class="base-tools"><button type="button" data-mark="*" aria-label="Bold"><b>B</b></button><button type="button" data-mark="_" aria-label="Italic"><i>I</i></button></div><textarea id="baseMessageText" rows="14" aria-label="Base message"></textarea><p id="baseMessageNote" role="status"></p><div class="base-actions"><button type="button" id="baseMessageCancel">Cancel</button><button type="button" id="baseMessageSave" class="primary">Save base message</button></div></form>';document.body.append(d);
+  for(const b of d.querySelectorAll('[data-mark]')){b.onmousedown=e=>e.preventDefault();b.onclick=()=>wrapMark(el('baseMessageText'),b.dataset.mark)}
+  el('baseMessageCancel').onclick=()=>d.close();
+  el('baseMessageSave').onclick=async()=>{const text=el('baseMessageText').value;if(bankData?.items?.length>1&&!confirm('Saving replaces the '+bankData.items.length+' saved versions with this one base message. Continue?'))return;el('baseMessageSave').disabled=true;try{bankData=await api('/donor-messages',{action:'base',text});bankEdits.clear();keepBankEdits();try{sessionStorage.removeItem('givelife-bank-selected')}catch(e){}d.close();showMessages();notice('Base message saved. Press Generate 20 versions when ready.')}catch(e){el('baseMessageNote').textContent=e.message}finally{el('baseMessageSave').disabled=false}}}
+  el('baseMessageNote').textContent='';el('baseMessageText').value=bankData?.base||bankData?.items?.[0]?.text||'';d.showModal();el('baseMessageText').focus()}
  function paintBankPreview(preview,text){if(window.waFormat)preview.innerHTML=window.waFormat(text).split('\n').map(line=>'<div class="bank-line'+(line?'':' blank')+'">'+(line||'<br>')+'</div>').join('');else preview.textContent=text}
  function fitBankPreview(tries=0){const preview=el('donorMessages').querySelector('.bank-preview');if(!preview)return;preview.style.removeProperty('font-size');if(!preview.clientHeight){if(typeof tries==='number'&&tries<30&&typeof requestAnimationFrame==='function')requestAnimationFrame(()=>fitBankPreview(tries+1));return}/* Reading comfort: the type size stays steady; a long message scrolls inside its card instead of shrinking. */}
  document.fonts?.ready.then(()=>fitBankPreview());

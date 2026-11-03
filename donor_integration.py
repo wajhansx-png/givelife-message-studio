@@ -113,10 +113,12 @@ class DonorIntegration:
     def toggle(self):
         return self.resume_all() if self.paused else self.pause_personal()
     def test_dm(self,poster=True):
-        """Send the first saved donor message to the owner's own WhatsApp, marked TEST. Uses no rotation."""
+        """Send the next saved donor message (its own test cursor, never the donor rotation) to the test number, marked TEST."""
         if type(poster) is not bool:raise ValueError('Poster must be on or off.')
         import dm_composer
-        return self.app.send_dm_test(dm_composer.personalize(self.messages._rotation_texts()[0],'','Brother'),poster)
+        number,total,text=self.messages.next_test()
+        result=self.app.send_dm_test(dm_composer.personalize(text,'','Brother'),poster)
+        return {**result,'version':number,'total':total,'reply':f"Test DM sent: version {number} of {total}."}
     PREFS_KEY='donor_batch_prefs'
     def prefs(self):
         """How the owner usually runs a donor batch, learned from his last confirmed one."""

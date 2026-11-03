@@ -34,7 +34,8 @@ class SourceAndControlTests(unittest.TestCase):
 
  def test_test_dm_goes_only_to_the_owner_and_uses_no_rotation(self):
   hub=app.donors();seen=[]
-  with patch.object(app,'wa_ok',return_value=True),patch.object(app,'OWNER_PHONE','923001112223'),patch.object(app,'send_image',side_effect=lambda j,t:seen.append((j,t)) or {'code':'SUCCESS'}):
+  # test_dm now sends to TEST_DM_PHONE (not regular rotation); donor_single_rotation must stay untouched
+  with patch.object(app,'wa_ok',return_value=True),patch.object(app,'TEST_DM_PHONE','923001112223'),patch.object(app,'send_image',side_effect=lambda j,t:seen.append((j,t)) or {'code':'SUCCESS'}):
    out=hub.test_dm(True)
   self.assertEqual(out['code'],'SUCCESS');self.assertEqual(seen[0][0],'923001112223');self.assertTrue(seen[0][1].startswith('🧪 TEST DM'))
   self.assertIsNone(app.STORE.get('donor_single_rotation'))

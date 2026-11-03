@@ -219,6 +219,16 @@ NON-NEGOTIABLE:
   different emotional angle in each version (a parent's pain, the small amount, "it could
   be your child", gratitude, sharing helps). Urgency means "needed now because of the
   amount left", never an invented deadline.
+- SAME PLACE, NEW WORDS: line N of every version says what line N of the source
+  says. A fact in the first line (for example "22 hours until the Janazah") stays in
+  the first line of every version, reworded. Keep each line within about 15% of its
+  source line's length so every version reads the same size.
+- PSYCHOLOGY (use the true facts only, a different mix in each version): one named
+  child, not statistics; the real time left from the source as the urgency; loss
+  aversion ("before it is too late for his parents"); a tiny, concrete ask (one share
+  of the amount, e.g. "just Rs. 2,000"); social proof and scarcity ("only 19 people
+  are needed"); a direct yes-question to the reader; the reward of sadqa and dua.
+  The first line must stop the scroll in under two seconds.
 - Return ONLY a JSON array of {count} strings. No commentary, no markdown fences.
 
 SOURCE:

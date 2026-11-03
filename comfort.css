@@ -401,3 +401,14 @@ html body .donor-page .donor-tabs{display:grid!important;grid-template-columns:r
 html body .donor-page .hide-row{display:flex;gap:8px;flex-wrap:wrap}
 html body .donor-page .hide-row[hidden]{display:none}
 html body .donor-page .deselect-chip{color:#ffb4b4!important;border-color:#ff6b6b55!important;background:#3a1416!important}
+/* Base message dialog and the DM editor's Bold / Italic buttons. */
+.base-dialog{width:min(640px,calc(100vw - 32px));border:1px solid #ffffff1f;border-radius:16px;background:#1b1d24;color:#e9edef;padding:18px}
+.base-dialog::backdrop{background:#000a}
+.base-dialog h2{margin:0 0 4px;font-size:18px}.base-dialog p{margin:0 0 10px;font-size:13px;color:#b8c0c8}
+.base-dialog textarea{width:100%;box-sizing:border-box;min-height:300px;background:#144d37;color:#e9edef;border:0;border-radius:0 8px 8px 8px;padding:10px;font:16px/21px "Segoe UI",Helvetica,Arial,sans-serif;resize:vertical}
+.base-tools,.base-actions{display:flex;gap:8px;margin:0 0 8px}.base-actions{justify-content:flex-end;margin:10px 0 0}
+.base-dialog button{min-height:44px;min-width:44px;border-radius:10px;border:1px solid #ffffff26;background:#262a33;color:inherit;font-weight:700;padding:0 14px}
+.base-dialog .primary{background:#2563eb;border-color:#2563eb}
+html body .donor-page .bank-format{min-width:44px;font-weight:800}
+html body .donor-page .bank-test{background:#14532d!important;color:#d1fae5!important}
+html body .donor-page .bank-base{background:#3a2a0c!important;color:#ffd27a!important}

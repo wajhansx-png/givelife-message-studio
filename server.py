@@ -915,6 +915,7 @@ def base_chat_callbacks():
 
 import autopilot, learning as learning_mod, random as _random
 OWNER_PHONE=os.environ.get('OWNER_PHONE','923205069925')
+TEST_DM_PHONE=os.environ.get('TEST_DM_PHONE','923097458815') # Test DMs go to the owner's 0309 7458815 WhatsApp
 
 @serialized_send
 def send_text(jid,text):
@@ -976,7 +977,7 @@ def dm_text(name,tier='member'):
 def send_dm_test(text,poster=True):
  """A clearly marked test DM to the owner's own WhatsApp. Never touches donor records or rotation."""
  if not wa_ok():raise ValueError('WhatsApp is not connected. Link it first.')
- me=norm_phone(OWNER_PHONE)
+ me=norm_phone(TEST_DM_PHONE or OWNER_PHONE)
  if not me:raise ValueError('Your own WhatsApp number is not known yet. Nothing was sent.')
  body='🧪 TEST DM (only you see this)\n\n'+str(text)
  with SEND_LOCK:
@@ -2329,6 +2330,8 @@ class Handler(BaseHTTPRequestHandler):
     if self.path=='/donor-send':return self.reply(donors().send_one(body.get('id'),body.get('request_id'),poster=body.get('poster',True)))
     if self.path=='/donor-messages':
      if body.get('action')=='regenerate':return self.reply(donors().messages.start_regeneration())
+     if body.get('action')=='base':return self.reply(donors().messages.set_base(body.get('text')))
+     if body.get('action')=='test':return self.reply(donors().test_dm(body.get('poster',True)))
      if body.get('action')=='generate':
       source=str(body.get('source','') or '')
       if not source.strip():raise ValueError('Paste the complete message you want versions of.')

@@ -18,10 +18,12 @@ cases=[
 ("new case Ahmed 50000","case_action"),("tell akhtar to post","team_action"),("add volunteer Sara 03001234567","volunteer_action"),
 ("delete last message in main","delete_last_message"),("remember always keep it short","remember"),("forget rule 2","delete_rule"),("hold everything","hold"),("resume","hold"),
 ("save shortcut hi means send main","shortcut_action"),("when i say go do send main","shortcut_action"),("generate 10 versions of this dm","generate_dm_variants"),
+("hadees hata do","set_message"),("emoji hata do","set_message"),("isko aur emotional banao","set_message"),("first line hook banao","set_message"),("isme se hadith nikal do","set_message"),("paragraph 2 hata do","set_message"),("caption chota karo","set_message"),("dua add karo","set_message"),
 ("new wording for group","new_wording"),("fresh caption","set_message"),("prepare dm for Ali","prepare_dm"),("his name is Sara","edit_dm_name"),
 ]
 
 FORBIDDEN=[
+ ('gap 5 minute karo','set_message'),('rule hata do','set_message'),('pace karo 30 min','set_message'),('poster hata do','set_message'),
  ('what is left','set_left'),('how much came today','money_came'),('3 came','money_came'),('20 left in the batch','set_left'),
  ("don't send it","send_appeal"),('never post again','send_message'),('tell akhtar to post','send_appeal'),('tell akhtar to send','send_message'),
  ('dm poster off','hold'),('dm poster off','set_message'),('change dm gap to 5 minutes','set_message'),('set dm daily limit 30','set_message'),

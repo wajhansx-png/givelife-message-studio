@@ -82,6 +82,8 @@ def editing_request(text):
   return len(parts)>1 and any(editing_request(x) for x in parts)
  if re.match(r'(?i)^(?:bold|bolden|italic|italicize|translate|convert|reformat)\b',t) and not re.search(r'(?i)\b(?:poster|image|picture)\b',t):return True
  if re.search(r'(?i)\b(?:write|make|rewrite|translate|convert|put)\s+(?:it|this|that|the \w+)\s+(?:in|to|into)\s+(?:roman \s*)?(?:urdu|english|hindi)\b',t):return True
+ if re.search(r'(?i)\b(?:hadith|hadees|hadis|emojis?|dua|duas|hook|para|paragraph|lines?|naam|opening|ending|heading|title)\b',t) and re.search(r'(?i)\b(?:hata(?: do|o)?|nikal(?:o| do)?|banao|badlo|badal do|likho|likh do|add karo|dalo|daalo|daal do|change karo|remove karo|karo)\b',t) and not re.search(r'(?i)\b(?:poster|image|picture|gap|rules?|donors?|schedule|pace)\b',t):return True
+ if re.search(r'(?i)\b(?:isko|ise|is ko)\b.*\b(?:emotional|short|chh?ota|simple|strong|naram|lamba|banao)\b',t):return True
  if not re.search(r'\d',t) and re.search(r'(?i)\b(?:message|msg|caption|dm|line|lines|paragraph|amount|wording)\b.*\b(?:karo|kar do|likho|likh do|badlo|hatao|hata do|nikalo|nikal do|dalo|daalo|chh?ota|bada)\b',t):return True
  if re.search(r'(?i)^show\b.*\b(?:first|before)\b.*\b(?:make|write|prepare|draft|compose)\b',t):return True
  if re.search(r"(?i)^(?:let s|lets|let's)\s+(?:send|post)\b.*\b(?:message|caption)\b",t):return True

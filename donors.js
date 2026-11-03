@@ -1797,7 +1797,7 @@
         overall = inScope.length ? inScope.filter((d) => d.dm_sent).length + ' / ' + inScope.length + ' DMed · ' : '';
       el('donorProgress').querySelector('span').textContent =
         overall +
-        `${j.state} · ✓ ${j.sent || 0} sent · ${j.pending ?? Math.max(0, (j.total || 0) - (j.sent || 0) - (j.skipped || 0))} pending · ${j.failed || 0} failed` +
+        `${j.state} · ✓ ${(j.previous_sent || 0)+(j.sent || 0)} / ${j.original_total || j.total || 0} DM sent · ${j.pending ?? Math.max(0, (j.total || 0) - (j.sent || 0) - (j.skipped || 0) - (j.failed || 0))} left · ${j.failed || 0} failed` +
         (j.skipped ? ' · ' + j.skipped + ' skipped' : '') +
         (j.current ? ' · ' + j.current : '') +
         (j.next_at ? ' · ' + Math.max(0, Math.ceil(j.next_at - Date.now() / 1000)) + 's' : '') +
@@ -1810,15 +1810,12 @@
           : '') +
         (j.error ? ' · ' + j.error : '');
       if (!active && j.error && !j.sent) {
-        const reason = (j.receipts || []).find((r) => r.state?.startsWith('Skipped: '));
-        el('donorProgress').querySelector('span').textContent =
-          'Not sent. ' + (reason ? reason.state.slice(9) : j.error);
         el('donorBatchList').open = false;
       }
       const terminal = !active && j.state !== 'Idle';
       const jobKey = JSON.stringify([j.id, j.updated_at, j.state, j.sent, j.error, j.receipts]);
       if (terminal) {
-        el('donorProgress').hidden = true;
+        el('donorProgress').hidden = false;
         el('donorBatchList').hidden = true;
         if (jobKey !== dismissedJob) {
           /* An app update restarts the server mid-batch; the batch continues by itself, so this is news, not an error. */

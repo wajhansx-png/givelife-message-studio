@@ -25,6 +25,8 @@ class DonorDelivery:
         variants=None,
         case_closed=None,
         reserve=None,
+        refresh_caption=None,
+        balance=None,
     ):
         self.path = Path(folder) / self.FILE
         self.store = store
@@ -49,6 +51,8 @@ class DonorDelivery:
         # live (not snapshotted here) so tests that swap `.variants` after construction
         # still take effect.
         self.reserve = reserve
+        self.refresh_caption = refresh_caption
+        self.balance = balance
         self._cache = None
 
     def _load(self):
@@ -319,6 +323,8 @@ class DonorDelivery:
         with self.lock:
             jobs = self._load().get("jobs", [])
             prev = jobs[-1] if jobs else None
+        if resume_id:
+            prev = next((j for j in jobs if j.get("id") == resume_id), None)
         if resume_id and (
             not prev
             or prev.get("id") != resume_id
@@ -490,6 +496,10 @@ class DonorDelivery:
                 "next_at": None,
             }
             job.update(auto=True, batch=1, hold_until=hold_until)
+            if self.balance:
+                job['caption_balance'] = self.balance()
+            if left is not None:
+                job.update(original_total=prev.get('original_total',prev['total']),previous_sent=prev.get('previous_sent',0)+sum(r.get('state')=='Sent' for r in prev.get('receipts',[])))
             if chunk:
                 job.update(
                     chunk=chunk, rest_seconds=rests[0], rests=rests, batches=-(-len(rows) // chunk)
@@ -576,6 +586,8 @@ class DonorDelivery:
             return j["custom_template"].replace("{name}", name or "Bhai")
         captions = j.get("captions", [j["caption"]] * len(j["ids"]))
         saved = captions[index]
+        if self.reserve:
+            return self.refresh_caption(saved,j.get('caption_balance')) if self.refresh_caption else saved
         if not self.variants:
             return saved
         try:

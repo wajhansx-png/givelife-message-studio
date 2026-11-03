@@ -97,3 +97,85 @@
   else place();
   window.AutoReplies = { open };
 })();
+
+/* Report: a quick two-line view of what is happening right now (groups, then DMs). */
+(() => {
+  const GROUP_NAMES = {
+    main: 'GiveLife',
+    community: 'Upwork Community',
+    fiverr: 'Fiverr Course',
+    upwork: 'Upwork Course',
+    uet: 'Fiverr UET',
+    toprated: 'Top Rated',
+  };
+  const dlg = document.createElement('dialog');
+  dlg.className = 'report-dialog';
+  dlg.setAttribute('aria-label', 'Report');
+  dlg.innerHTML =
+    '<div class="report-card"><h2>Right now</h2><p class="report-line" id="reportGroups">Loading…</p><p class="report-line" id="reportDms"></p><button type="button" id="reportClose">Close</button></div>';
+  document.body.append(dlg);
+  const $ = (id) => document.getElementById(id);
+  const clock = (sec) =>
+    new Date(sec * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  async function fill() {
+    $('reportGroups').textContent = 'Loading…';
+    $('reportDms').textContent = '';
+    try {
+      const d = await (await fetch('/autopilot')).json(),
+        st = d.status || {},
+        t = st.today || {},
+        next = (st.next || [])[0];
+      $('reportGroups').textContent =
+        '👥 Groups: ' +
+        (t.posts || 0) +
+        ' posts today' +
+        (next ? ' · next ' + (GROUP_NAMES[next.group] || next.group) + (next.in ? ' in ' + next.in + ' min' : ' now') : '') +
+        (d.on ? '' : ' · Auto is OFF');
+    } catch (e) {
+      $('reportGroups').textContent = '👥 Groups: status unavailable right now.';
+    }
+    try {
+      const j = await (await fetch('/donor-delivery')).json(),
+        active = ['Starting', 'Sending', 'Waiting'].includes(j.state),
+        sent = (j.previous_sent || 0) + (j.sent || 0),
+        total = j.original_total || j.total || 0;
+      $('reportDms').textContent = active
+        ? '💬 DMs: ' +
+          sent +
+          ' / ' +
+          total +
+          ' sent · ' +
+          Math.max(0, total - sent) +
+          ' left' +
+          (j.next_batch_at ? ' · next batch at ' + clock(j.next_batch_at) : j.next_at ? ' · next in ' + Math.max(0, Math.ceil(j.next_at - Date.now() / 1000)) + 's' : '')
+        : '💬 DMs: not sending right now' + (sent ? ' · last batch ' + sent + ' / ' + total + ' sent' : '');
+    } catch (e) {
+      $('reportDms').textContent = '💬 DMs: status unavailable right now.';
+    }
+  }
+  const open = () => {
+    fill();
+    dlg.showModal();
+  };
+  $('reportClose').onclick = () => dlg.close();
+  dlg.addEventListener('click', (e) => {
+    if (e.target === dlg) dlg.close();
+  });
+  const place = () => {
+    const bar = document.querySelector('.brandbar');
+    if (bar && !bar.querySelector('.report-open')) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'report-open';
+      b.title = 'Report';
+      b.setAttribute('aria-label', 'Report');
+      b.textContent = '📊 Report';
+      b.onclick = open;
+      const more = bar.querySelector('#mainNavMore');
+      more ? bar.insertBefore(b, more) : bar.append(b);
+    }
+  };
+  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', place);
+  else place();
+  window.GiveLifeReport = { open };
+})();

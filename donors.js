@@ -18,6 +18,12 @@
     page.querySelector('.donor-message-tablist'),
   );
 
+  /* Batch DM count, shown on its own at the right side of the donor list. */
+  const dmBadge = make('div', 'donor-dm-badge');
+  dmBadge.id = 'donorDmBadge';
+  dmBadge.hidden = true;
+  dmBadge.setAttribute('role', 'status');
+  page.querySelector('.donor-shell').append(dmBadge);
   /* ---- fullscreen expand ---- */
   {
     const btn = page.querySelector('#donorExpand');
@@ -33,7 +39,7 @@
         else if (!enter && document.fullscreenElement) document.exitFullscreen().catch(() => {});
       } catch (e) {}
     }
-    btn.onclick = () => { const entering = !page.classList.contains('donor-expanded'); tryNativeFS(entering); updateExpandBtn(entering); };
+    btn.onclick = () => { const entering = !page.classList.contains('donor-expanded'); updateExpandBtn(entering); };
     document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && page.classList.contains('donor-expanded')) updateExpandBtn(false); });
   }
 
@@ -1144,6 +1150,7 @@
     } catch (e) {}
     el('donorNotice').textContent = '';
     el('donorProgress').hidden = true;
+    dmBadge.hidden = true;
     el('donorBatchList').hidden = true;
   }
   function notice(text, error = false, undo) {
@@ -1809,7 +1816,15 @@
       const inScope = allDonors.filter((d) =>
           j.scope === 'top' ? d.top_donor : j.scope === 'important' ? d.important : j.scope === 'all' ? true : false,
         ),
-        overall = inScope.length ? inScope.filter((d) => d.dm_sent).length + ' / ' + inScope.length + ' DMed · ' : '';
+        overall = '';
+      dmBadge.hidden = !active || !inScope.length;
+      if (!dmBadge.hidden) {
+        dmBadge.textContent = '';
+        dmBadge.append(
+          make('strong', '', inScope.filter((d) => d.dm_sent).length + ' / ' + inScope.length),
+          make('small', '', 'DMed'),
+        );
+      }
       el('donorProgress').querySelector('span').textContent =
         overall +
         `${j.state} · ✓ ${(j.previous_sent || 0)+(j.sent || 0)} / ${j.original_total || j.total || 0} DM sent · ${j.pending ?? Math.max(0, (j.total || 0) - (j.sent || 0) - (j.skipped || 0) - (j.failed || 0))} left · ${j.failed || 0} failed` +

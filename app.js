@@ -2161,7 +2161,7 @@ function paintLive(st) {
       'You',
       `Away for ${st.away_hours} h. I am running things; I will only message you if something needs you.`,
     );
-  for (const l of (st.learned || []).slice(0, 3)) add('Learned', l);
+  for (const l of (st.learned || []).slice(0, 1)) add('Learned', l);
 }
 $('liveBar').onclick = () => {
   paintLive(liveSnapshot);

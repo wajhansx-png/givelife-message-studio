@@ -1770,3 +1770,92 @@ html body .donor-page #donorEditBatch{margin-left:auto;margin-right:8px;backgrou
 html body #donorsPage #donorNotice:not(:empty){width:min(420px,calc(100vw - 24px));padding:6px 8px 6px 10px!important;font-size:12px!important;line-height:1.35;border-radius:8px!important;box-shadow:none!important;max-height:90px;overflow:auto;}
 html body #donorsPage #donorNotice .donor-notice-close{width:32px!important;min-height:32px!important;flex-basis:32px!important;margin:0;}
 @media(max-width:600px){html body #donorsPage #donorNotice .donor-notice-close{width:44px!important;min-height:44px!important;flex-basis:44px!important;}}
+
+/* ===== Donors page polish ===== */
+/* All tabs in one row. */
+html body #donorsPage .donor-toolbar{flex-wrap:nowrap!important;align-items:center!important;gap:10px!important}
+html body #donorsPage .donor-tabs{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto;scrollbar-width:none;flex:1 1 auto;min-width:0}
+html body #donorsPage .donor-tabs::-webkit-scrollbar{display:none}
+html body #donorsPage .donor-tabs>[role=tab]{flex:0 0 auto!important;width:auto!important;min-width:0!important;min-height:44px!important;padding:0 14px!important;white-space:nowrap!important;font-size:14px!important}
+html body #donorsPage .donor-toolbar .donor-search{flex:0 1 260px!important;min-width:150px!important}
+/* DM count on its own, right side of the list. */
+html body #donorsPage .donor-shell{position:relative}
+html body #donorsPage .donor-dm-badge{position:absolute;right:28px;top:50%;transform:translateY(-50%);z-index:5;display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 18px;border-radius:18px;background:linear-gradient(135deg,#065f46,#0e7490);border:1px solid #34d39966;box-shadow:0 10px 30px #0008;color:#ecfdf5;pointer-events:none}
+html body #donorsPage .donor-dm-badge strong{font-size:26px;font-weight:900;line-height:1}
+html body #donorsPage .donor-dm-badge small{font-size:12px;opacity:.85;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+html body #donorsPage .donor-dm-badge[hidden]{display:none!important}
+@media(max-width:900px){html body #donorsPage .donor-dm-badge{top:auto;bottom:150px;right:12px;transform:none;padding:8px 12px}html body #donorsPage .donor-dm-badge strong{font-size:18px}}
+/* DM all removed; DM ★ Important stands out. */
+html body #donorsPage #donorSendAll{display:none!important}
+html body #donorsPage #donorSendImportant{background:linear-gradient(135deg,#f59e0b,#ea580c)!important;border:0!important;color:#fff!important;font-weight:900!important;box-shadow:0 6px 18px #ea580c55!important}
+/* Full-screen icon only on the donor list. */
+html body #donorsPage:is([data-panel=messages],[data-panel=volunteers]) .donor-expand-btn{display:none!important}
+/* Full screen: list centred, smaller type, no counter or bottom buttons. */
+html body #donorsPage.donor-expanded .donor-shell{align-items:center!important}
+html body #donorsPage.donor-expanded .donor-table{width:min(1100px,100%)!important;margin:0 auto!important}
+html body #donorsPage.donor-expanded .donor-row,html body #donorsPage.donor-expanded .donor-columns{font-size:14px!important}
+html body #donorsPage.donor-expanded .donor-row .donor-name{font-size:15px!important}
+html body #donorsPage.donor-expanded :is(.donor-bottom,#donorProgress,#donorBatchList,.donor-dm-badge){display:none!important}
+
+/* ===== DM Messages screen: one centred column, buttons right under the message ===== */
+@media (min-width:701px){
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-workspace{max-width:960px!important;margin:0 auto!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions{position:static!important;display:flex!important;flex-wrap:wrap!important;justify-content:center!important;align-items:center!important;gap:10px!important;width:100%!important;max-width:960px!important;margin:16px auto 0!important;padding:12px!important;border-radius:16px!important;background:#ffffff08!important;border:1px solid #ffffff14!important;box-sizing:border-box}
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions>button,html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>button{min-height:46px!important;min-width:64px!important;padding:0 18px!important;border-radius:12px!important;font-size:15px!important;font-weight:800!important;flex:0 0 auto!important;width:auto!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination{display:flex!important;gap:10px!important;align-items:center!important;order:-1;flex:0 0 100%!important;justify-content:center!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages [data-bank-nav='next']{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;border:0!important;min-width:150px!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages [data-bank-nav='previous']{display:inline-flex!important;min-width:150px!important}
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions button{transition:transform .12s ease,filter .12s ease}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions button:hover{transform:translateY(-1px);filter:brightness(1.12)}
+
+/* ===== Main page: colourful send buttons, compact live bar, nicer reply bubble ===== */
+html body .group-send .grp-card .group-main-btn{background:linear-gradient(135deg,#059669,#0d9488 55%,#0284c7)!important;border:0!important;color:#fff!important;box-shadow:0 6px 18px #05966944!important}
+html body .group-send .grp-card .group-free-btn{background:linear-gradient(135deg,#7c3aed,#4f46e5 55%,#2563eb)!important;border:0!important;color:#fff!important;box-shadow:0 6px 18px #4f46e544!important}
+html body .group-send .grp-card :is(.group-main-btn,.group-free-btn) .last-sent{color:#ffffffcc!important;opacity:1!important}
+html body .group-send .group-all-btn{background:linear-gradient(135deg,#f59e0b,#ea580c)!important;border:0!important;color:#fff!important;box-shadow:0 6px 18px #ea580c44!important}
+html body .group-send .group-all-btn .last-sent{color:#ffffffd9!important}
+html body .group-send .grp-card[data-scope=main]{border-color:#10b98133!important;background:#10b9810a!important}
+html body .group-send .grp-card[data-scope=free]{border-color:#7c3aed33!important;background:#7c3aed0a!important}
+html body .group-send :is(.group-main-btn,.group-free-btn,.group-all-btn,.delay-pill){transition:transform .12s ease,filter .12s ease}
+html body .group-send :is(.group-main-btn,.group-free-btn,.group-all-btn,.delay-pill):hover{transform:translateY(-1px);filter:brightness(1.1)}
+/* Live bar: narrower, one tidy line; the details panel is compact and readable at a glance. */
+html body #live{max-width:820px!important;margin-left:auto!important;margin-right:auto!important}
+html body #live .livebar{min-height:46px!important;padding:6px 14px!important;font-size:14px!important}
+html body #liveMore{max-height:46vh!important;overflow:auto!important;padding:10px 14px!important;font-size:13px!important;line-height:1.35!important;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px 18px}
+html body #liveMore[hidden]{display:none!important}
+html body #liveMore :is(b,strong,h4,dt){font-size:10.5px!important;letter-spacing:.06em;opacity:.7}
+html body #liveMore :is(p,div,dd,span){margin:0!important}
+/* App replies in chat: soft gradient card. */
+html body .e.bot{background:linear-gradient(135deg,#1e3a8a55,#6d28d955 60%,#0e749055)!important;border:1px solid #818cf855!important;border-left:3px solid #818cf8!important;box-shadow:0 10px 30px #0006,inset 0 1px 0 #ffffff14!important;backdrop-filter:blur(6px)}
+html body .e.bot.err{background:linear-gradient(135deg,#7f1d1d66,#9a341266)!important;border-color:#f8717166!important;border-left-color:#f87171!important}
+html body #liveMore{grid-template-columns:minmax(120px,170px) 1fr!important;align-items:baseline}
+html body #liveMore>.k{font-size:10.5px!important;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.65}
+html body #liveMore>div:not(.k){font-size:13px!important}
+
+/* Report dialog: centred card on a gradient. */
+.report-dialog{border:0;padding:0;background:transparent;max-width:none;max-height:none;width:100vw;height:100dvh;display:none}
+.report-dialog[open]{display:grid;place-items:center}
+.report-dialog::backdrop{background:radial-gradient(circle at 20% 20%,#7c3aed88,transparent 50%),radial-gradient(circle at 80% 80%,#0891b288,transparent 50%),#050816ee;backdrop-filter:blur(6px)}
+.report-card{width:min(640px,calc(100vw - 32px));padding:28px 28px 22px;border-radius:24px;background:linear-gradient(135deg,#111827ee,#1e1b4bee);border:1px solid #a78bfa55;box-shadow:0 30px 80px #000a;color:#f5f3ff;text-align:center;animation:reportIn .25s ease}
+.report-card h2{margin:0 0 16px;font-size:20px;letter-spacing:.04em;background:linear-gradient(90deg,#a78bfa,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.report-line{margin:10px 0;font-size:18px;font-weight:700;line-height:1.4}
+.report-card button{margin-top:14px;min-height:44px;padding:0 26px;border-radius:12px;border:1px solid #a78bfa66;background:#2e1065;color:#ede9fe;font-weight:800;cursor:pointer}
+@keyframes reportIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+html body .brandbar .report-open{min-height:44px;padding:0 14px;border-radius:12px;border:1px solid #a78bfa66;background:linear-gradient(135deg,#4c1d95,#1e3a8a);color:#ede9fe;font-weight:800;cursor:pointer;white-space:nowrap}
+@media(max-width:600px){html body .brandbar .report-open{padding:0 10px;font-size:13px}}
+
+/* ===== Smooth motion everywhere (respects reduced-motion) ===== */
+@media (prefers-reduced-motion:no-preference){
+  @keyframes glFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes glFade{from{opacity:0}to{opacity:1}}
+  html body dialog[open]{animation:glFadeUp .22s cubic-bezier(.2,.7,.2,1)}
+  html body dialog[open]::backdrop{animation:glFade .22s ease}
+  html body #donorsPage .donor-table:not([hidden]),html body #donorsPage #donorMessages:not([hidden]),html body #donorsPage #donorVolunteers:not([hidden]){animation:glFadeUp .24s cubic-bezier(.2,.7,.2,1)}
+  html body #donorsPage #donorRows>.donor-row{animation:glFade .2s ease both}
+  html body #donorsPage [role=tab],html body button,html body .delay-pill,html body summary{transition:background-color .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease,transform .12s ease}
+  html body button:active{transform:scale(.97)}
+  html body .compact-nav-panel,html body .group-drop:not([hidden]),html body #liveMore:not([hidden]){animation:glFadeUp .18s ease}
+  html body #messageFocus,html body .focus-paper{animation:glFade .22s ease}
+  html { scroll-behavior:smooth }
+}

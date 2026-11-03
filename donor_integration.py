@@ -77,7 +77,7 @@ class DonorIntegration:
                     )
                     if job.get(k) is not None
                 }
-                if job.get("scope") in ("all", "important", "donated", "not_donated")
+                if job.get("scope") in ("all", "important", "top", "donated", "not_donated")
                 else None
             )
             if batch:
@@ -539,7 +539,7 @@ class DonorIntegration:
                 k: v
                 for k, v in body.items()
                 if k
-                in ("name", "important", "donated", "amount", "normal_amount", "notes", "phone")
+                in ("name", "top_donor", "important", "donated", "amount", "normal_amount", "notes", "phone")
             }
             if "phone" in fields and self.book.resolve(body.get("id", "")).get("phone"):
                 del fields["phone"]  # a saved number is never replaced from here
@@ -737,6 +737,7 @@ class DonorIntegration:
             if last.get("resumable") and last.get("scope") in (
                 "all",
                 "important",
+                "top",
                 "donated",
                 "not_donated",
             ):
@@ -972,8 +973,13 @@ class DonorIntegration:
             changes = {
                 k: v
                 for k, v in args.items()
-                if k in ("name", "important", "donated", "amount", "notes")
+                if k in ("name", "top_donor", "important", "donated", "amount", "notes")
             }
+            if "top_donor" in changes:
+                if not re.search(r"(?i)top donors?", owner) or changes["top_donor"] != (
+                    not bool(re.search(r"(?i)(remove|not|unmark)", owner))
+                ):
+                    raise ValueError("Top donor membership does not match your instruction.")
             if "important" in changes:
                 if "important" not in low or changes["important"] != (
                     not bool(

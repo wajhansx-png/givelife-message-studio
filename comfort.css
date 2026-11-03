@@ -1672,3 +1672,11 @@ html body .group-send .free-sw{min-height:38px;min-width:64px;padding:0 12px;bor
 html body .group-send .free-sw.on{background:#16a34a;border-color:#16a34a;color:#fff}
 html body .group-send .group-all-btn{grid-column:1/-1;min-height:44px}
 @media(max-width:520px){html body .group-send .group-two{grid-template-columns:1fr}}
+
+/* DM Messages action bar: on a phone the buttons wrap into tidy rows instead of overlapping. */
+@media (max-width: 700px) {
+  html body .donor-page .bank-actions{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:8px!important;padding:8px!important;height:auto!important;max-height:none!important;overflow:visible!important}
+  html body .donor-page .bank-actions>*{min-width:0!important;min-height:46px!important;padding:0 4px!important;font-size:13px!important;line-height:1.15!important;white-space:normal!important;text-align:center}
+  html body .donor-page .bank-actions>nav,html body .donor-page .bank-actions .bank-pagination{grid-column:1/-1!important}
+  html body .donor-page .bank-actions .bank-regenerate,html body .donor-page .bank-actions .bank-base,html body .donor-page .bank-actions .bank-test{grid-column:span 2!important}
+}

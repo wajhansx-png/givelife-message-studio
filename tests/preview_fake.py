@@ -138,7 +138,7 @@ if "--donors" in sys.argv:
         if i < 3:
             server.donors().book.update(row["id"], important=True)
 if "--draft-task" in sys.argv:
-    text = "*A short charity reminder.*\nYousuf needs treatment. *Rs. 25,000 left.* 💔\n*03097458815* Easypaisa / JazzCash (Wajdan Khan)"
+    text = "*A short charity reminder.*\nYousuf needs treatment. *Rs. 25,000 left.* 💔\n*03097458815* EASYPAISA ONLY (Wajdan Khan)"
     server.chat_callbacks(
         "Make a message for givelife without poster only 3 lines", revision=server.OWNER_REVISION
     )["set_message"](kind="group", text=text)

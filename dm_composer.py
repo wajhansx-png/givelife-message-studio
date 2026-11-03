@@ -50,8 +50,19 @@ def already_greets(text, name):
     return bool(match and re.search(r"\b" + re.escape(first) + r"\b", match.group(0), re.I))
 
 
+PAYMENT_OLD = re.compile(
+    r"(?i)\beasy\s?paisa\s*(?:/|&|and|or|,)\s*jazz\s?cash(?:\s+only)?\b"
+    r"|\bjazz\s?cash\s*(?:/|&|and|or|,)\s*easy\s?paisa\b|\bjazz\s?cash\b"
+)
+
+
+def payment_fix(text):
+    """Every outgoing message names EASYPAISA ONLY: JazzCash is never offered."""
+    return PAYMENT_OLD.sub("EASYPAISA ONLY", str(text))
+
+
 def personalize(text, name="", gender="Brother"):
-    text = str(text).replace("\r\n", "\n").strip()
+    text = payment_fix(str(text).replace("\r\n", "\n")).strip()
     if already_greets(text, name):
         return text
     match = GREETING.match(text)

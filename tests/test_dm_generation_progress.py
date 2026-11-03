@@ -219,10 +219,8 @@ class GenerationProgressTests(unittest.TestCase):
             self.bank.start_regeneration()
             self.assertTrue(entered.wait(1))
             try:
-                with self.assertRaisesRegex(
-                    ValueError, r"still being written \(1 of 20 saved\).*Nothing was sent"
-                ):
-                    self.bank._rotation_texts()
+                # One saved version still sends while the rest are being written.
+                self.assertEqual(len(self.bank._rotation_texts()), 1)
             finally:
                 gate.set()
             self.wait("Ready")

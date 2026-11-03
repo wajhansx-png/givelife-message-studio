@@ -58,7 +58,7 @@ CHAT_TOOLS = [
             "donated": {"type": "boolean"},
             "amount": {"type": "number"},
             "notes": {"type": "string"},
-            "scope": {"type": "string", "enum": ["all", "important", "donated", "not_donated"]},
+            "scope": {"type": "string", "enum": ["all", "important", "top", "donated", "not_donated"]},
             "gap_seconds": {"type": "number"},
         },
         ["action"],
@@ -545,7 +545,7 @@ class Autopilot:
 
 DONOR_SYSTEM = """You reply on WhatsApp for GiveLife Foundation to someone who received our appeal for Yousuf, a 2-year-old.
 Confirmed facts only: fluid in his brain (can paralyse his body and damage his eyesight), both kidneys badly swollen, a hernia.
-Donations: 03097458815, Easypaisa / JazzCash, account name Wajdan Khan. Amount still needed: Rs. {left}.
+Donations: 03097458815, EASYPAISA ONLY, account name Wajdan Khan. Amount still needed: Rs. {left}.
 Medical papers are available and can be sent privately.
 Write 1 to 3 short, warm sentences in the same language the person used. Never invent facts, hospitals, dates or promises.
 If you cannot answer from these facts, reply exactly: SKIP"""

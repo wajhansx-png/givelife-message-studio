@@ -165,7 +165,7 @@ def run_case(key):
         ]
     if key in ("draft_hook", "draft_correction", "fresh_preserves_update"):
         state["drafts"]["group"] = (
-            "*Yousuf is 2 and needs treatment.*\n\nFluid in his brain can affect his sight and cause paralysis. His kidneys are swollen and he has a hernia.\n\n_His parents report that he is now short of breath._\n\n*_Rs. 25,000 LEFT_*\n\n*_13 people donating Rs. 2,000_*\n*_OR 25 people donating Rs. 1,000_*\n\n03097458815\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation"
+            "*Yousuf is 2 and needs treatment.*\n\nFluid in his brain can affect his sight and cause paralysis. His kidneys are swollen and he has a hernia.\n\n_His parents report that he is now short of breath._\n\n*_Rs. 25,000 LEFT_*\n\n*_13 people donating Rs. 2,000_*\n*_OR 25 people donating Rs. 1,000_*\n\n03097458815\nEASYPAISA ONLY (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation"
         )
     result = assistant.chat(
         case["prompt"],

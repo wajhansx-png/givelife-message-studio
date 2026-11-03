@@ -656,7 +656,7 @@ class Engine:
             self.thank(phone)
         self.notify(
             "done-" + str(mid),
-            f'{what}. I thanked them privately and asked them to share. Check Easypaisa/JazzCash and tell me the new amount left (for example "34k left").',
+            f'{what}. I thanked them privately and asked them to share. Check Easypaisa and tell me the new amount left (for example "34k left").',
             0,
         )
 
@@ -1056,7 +1056,7 @@ class Engine:
                     "level": "L2",
                     "action": "owner",
                     "short": "Update the amount left",
-                    "text": 'The amount left has not been updated for 6 hours. Check Easypaisa/JazzCash and tell me (for example "34k left").',
+                    "text": 'The amount left has not been updated for 6 hours. Check Easypaisa and tell me (for example "34k left").',
                 }
             )
         return out

@@ -4,7 +4,7 @@ import test_manual_sends as fixture
 from test_manual_sends import app, commands
 import draft_workflow
 
-CAPTION = "*A short charity reminder.*\nYousuf needs treatment. *Rs. 25,000 left.* 💔\n*03097458815* Easypaisa / JazzCash (Wajdan Khan)"
+CAPTION = "*A short charity reminder.*\nYousuf needs treatment. *Rs. 25,000 left.* 💔\n*03097458815* EASYPAISA ONLY (Wajdan Khan)"
 
 
 class WorkflowTests(unittest.TestCase):

@@ -403,23 +403,12 @@ class MessageBank:
             earlier = self._sendable(bank.get("previous_items"))
             if len(earlier) >= self.MIN_VERSIONS and len(earlier) == len(set(earlier)):
                 texts = earlier
-        if not texts or len(texts) != len(set(texts)):
-            raise ValueError("Saved Donors Messages are missing or duplicated. Nothing was sent.")
+        texts = list(dict.fromkeys(texts))  # a repeated wording is sent once per round, never an error
+        if not texts:
+            raise ValueError("Saved Donors Messages are missing. Open Messages and save one. Nothing was sent.")
         if any(not dm_composer.complete(text) for text in texts):
             raise ValueError(
                 "A saved donor message is incomplete. Edit it in Donors > Messages before sending."
-            )
-        if len(texts) < self.MIN_VERSIONS:
-            # A one-version bank would send the same wording to everyone (and is what a
-            # bank overwritten by another screen looks like). Refuse instead of repeating.
-            if generation.get("state") == "Generating":
-                raise ValueError(
-                    f"Donors > Messages is still being written ({len(texts)} of "
-                    f"{generation.get('target', 20)} saved). Try again in a minute. Nothing was sent."
-                )
-            raise ValueError(
-                f"Donors > Messages has only {len(texts)} saved version(s). "
-                "Open Messages and press Regenerate so at least 10 are ready. Nothing was sent."
             )
         return texts
 
@@ -433,10 +422,6 @@ class MessageBank:
         if not self.app.STORE:
             raise ValueError("Saved DM rotation is unavailable. Nothing was sent.")
         texts = self._rotation_texts()
-        if count > len(texts):
-            raise ValueError(
-                "Prepare enough different messages in Messages before starting this batch."
-            )
         revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
         saved = self.app.STORE.get(self.ROTATION_KEY, {}) or {}
         index = (

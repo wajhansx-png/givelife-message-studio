@@ -30,15 +30,12 @@ class SourceAndControlTests(unittest.TestCase):
             sent.split(", ", 1)[1], [t.split(", ", 1)[1] if ", " in t else t for t in texts]
         )
 
-    def test_a_one_version_bank_is_refused_instead_of_repeating_one_text(self):
+    def test_a_short_bank_still_sends_what_is_saved(self):
         hub = app.donors()
         bank = hub.messages.get()
         bank["items"] = bank["items"][:1]
-        with (
-            patch.object(hub.messages, "get", return_value=bank),
-            self.assertRaisesRegex(ValueError, "only 1 saved version"),
-        ):
-            hub.messages.reserve_one()
+        with patch.object(hub.messages, "get", return_value=bank):
+            self.assertEqual(hub.messages.reserve_one(), bank["items"][0]["text"])
 
     def test_main_screen_dm_rotates_through_its_own_saved_versions(self):
         fb = app.focus_bank()

@@ -40,7 +40,7 @@ class VariantTests(unittest.TestCase):
         self.assertIn(
             "payment",
             dm_variants.validate(
-                source, near_copy.replace("Easypaisa / JazzCash", "Easypaisa or JazzCash")
+                source, near_copy.replace("EASYPAISA ONLY", "EASYPAISA or Cash")
             ),
         )
         self.assertIn("duplicate", dm_variants.validate(source, near_copy, [near_copy]))
@@ -53,7 +53,7 @@ class VariantTests(unittest.TestCase):
             "Rs. 45,000 LEFT.\n\n"
             "*_Just 23 people donating Rs. 2,000 can complete the amount._*\n\n"
             "Please support them if you can.\n\n"
-            "03097458815 — Easypaisa / JazzCash Wajdan Khan"
+            "03097458815 — EASYPAISA ONLY Wajdan Khan"
         )
         rewritten = (
             "Bhai, The parents are asking for help to cover their child's burial.\n\n"
@@ -62,7 +62,7 @@ class VariantTests(unittest.TestCase):
             "Rs. 45,000 LEFT.\n\n"
             "*_Only 23 supporters giving Rs. 2,000 each could cover this cost._*\n\n"
             "Even a small contribution would matter.\n\n"
-            "03097458815 — Easypaisa / JazzCash Wajdan Khan"
+            "03097458815 — EASYPAISA ONLY Wajdan Khan"
         )
         self.assertEqual(dm_variants.validate(source, rewritten), "")
         small = source.replace("Please help", "Please kindly help")
@@ -129,13 +129,13 @@ class VariantTests(unittest.TestCase):
         )
 
     def test_custom_bank_survives_dm_screen_changes(self):
-        custom = self.source().replace("Easypaisa / JazzCash", "Easypaisa or JazzCash")
+        custom = self.source().replace("EASYPAISA ONLY", "EASYPAISA or Cash")
 
         def fake_generate(source, count=10, avoid=None):
             start = len(avoid or [])
             return [
                 dm_templates.build(start + i, app.read_left()).replace(
-                    "Easypaisa / JazzCash", "Easypaisa or JazzCash"
+                    "EASYPAISA ONLY", "EASYPAISA or Cash"
                 )
                 for i in range(count)
             ]

@@ -19,7 +19,7 @@ STRUCTURE = (
     "*_{option1}_*\n\n"
     "_{hook}_ {cta}\n\n"
     "📲 *03097458815*\n"
-    "Easypaisa / JazzCash\n"
+    "EASYPAISA ONLY\n"
     "Wajdan Khan (GiveLife Foundation account)\n\n"
     "Reply *Done* after donating."
 )
@@ -285,7 +285,7 @@ def _shape(text):
 def matches(text):
     """True when a supplied message has the exact canonical line/format skeleton."""
     text = str(text or "")
-    fixed = ("03097458815", "Easypaisa / JazzCash", "Wajdan Khan", "Reply *Done* after donating.")
+    fixed = ("03097458815", "EASYPAISA ONLY", "Wajdan Khan", "Reply *Done* after donating.")
     if not all(token in text for token in fixed):
         return False
     try:

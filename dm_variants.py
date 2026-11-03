@@ -130,7 +130,7 @@ def validate(source, text, existing=()):
         return "the greeting punctuation changed"
     for token in (
         "03097458815",
-        "Easypaisa / JazzCash",
+        "EASYPAISA ONLY",
         "Wajdan Khan",
         "Reply *Done* after donating.",
     ):

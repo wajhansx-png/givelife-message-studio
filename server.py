@@ -441,7 +441,7 @@ def build_group(n, left, case_name=None):
             f"*_Rs. {left:,} LEFT_*\n\n"
             f"*_{p2} people donating Rs. 2,000_*\n"
             f"*_OR {p1} people donating Rs. 1,000_* 🤲\n\n"
-            "*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n"
+            "*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\n"
             "- GiveLife Foundation"
         )
     pool = ALMOST if 0 < left <= 10000 else None
@@ -458,7 +458,7 @@ def build_group(n, left, case_name=None):
     return (
         f"*{hook}*\n\nFluid in Yousuf's brain *can paralyse his body and damage his eyesight.* Both his kidneys are badly swollen. 💔\n\n"
         f"*_Rs. {left:,} LEFT_*\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n{push}\n\n"
-        "*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation"
+        "*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation"
     )
 
 
@@ -473,7 +473,7 @@ def build_dm(sel, left, case_name=None):
             "Please review the case details before donating.\n\n"
             f"*Rs. {left:,} left*\n"
             f"{p2} people giving Rs. 2,000 or {p1} giving Rs. 1,000 can help complete the amount.\n\n"
-            "*03097458815* Easypaisa / JazzCash (Wajdan Khan)\n\n- GiveLife Foundation"
+            "*03097458815* EASYPAISA ONLY (Wajdan Khan)\n\n- GiveLife Foundation"
         )
     index = sel[0] if isinstance(sel, (list, tuple)) and sel else sel if isinstance(sel, int) else 0
     return dm_templates.build(index, left)
@@ -768,6 +768,7 @@ def send_batch_attachment(jid, caption, ident):
 
 @serialized_send
 def send_image(jid, caption, check_gap=False, _retry=True):
+    caption = dm_composer.payment_fix(caption)
     if on_hold():
         return {"code": "ERROR", "message": "On hold: you told me to wait."}
     if jid in NEVER_GROUPS:
@@ -1880,6 +1881,7 @@ TEST_DM_PHONE = os.environ.get("TEST_DM_PHONE", "923097458815")  # Test DMs go t
 
 @serialized_send
 def send_text(jid, text):
+    text = dm_composer.payment_fix(text)
     check_hold()
     req = urllib.request.Request(
         GOWA_URL + "/send/message",
@@ -1976,7 +1978,7 @@ def dm_text(name, tier="member"):
     left = read_left()
     first = clean_first_name(re.sub(r"(?i)\bdonors?\b", "", str(name or "")).strip())
     who = dm_composer.greeting(first, "Sister" if first.lower() in FEMALE else "Brother")
-    acct = "📲 *03097458815* — Easypaisa / JazzCash\nWajdan Khan (GiveLife Foundation account)"
+    acct = "📲 *03097458815* — EASYPAISA ONLY\nWajdan Khan (GiveLife Foundation account)"
     if tier == "repeat":
         return f"{who}, JazakAllah for supporting GiveLife before. 🤲\n\nRs. {left:,} is still needed for {active_case_name()}. Could you help once more, or share this case with family and friends?\n\n{acct}"
     if tier == "reminder":
@@ -2368,7 +2370,7 @@ def share_text():
     return (
         f"*Rs. {left:,} is still left for {active_case_name()}.* 💔\n\nIf you cannot donate right now, you can still help: "
         "*share this poster on your WhatsApp status* and send it to 3 friends today. Sharing costs nothing and reaches new donors. 🤲\n\n"
-        "*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n- GiveLife Foundation"
+        "*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\n- GiveLife Foundation"
     )
 
 
@@ -2492,12 +2494,12 @@ def update_text(came, left):
         return (
             f"Rs. {came:,} came in for {active_case_name()}. Rs. {left:,} is still needed. "
             "We need your help to complete the amount.\n\n"
-            "*03097458815* Easypaisa / JazzCash (Wajdan Khan)\n- GiveLife Foundation"
+            "*03097458815* EASYPAISA ONLY (Wajdan Khan)\n- GiveLife Foundation"
         )
     p2 = math.ceil(left / 2000)
     return (
         f"🔴 *Rs. {came:,} came in. It is NOT enough.*\n\n⚠️ Fluid in Yousuf's brain *can still paralyse his body and damage his eyesight.* Both his kidneys are still badly swollen.\n\n"
-        f"💰 *Rs. {left:,} still LEFT*\n*{p2} people x Rs. 2,000 — he needs you now*\n\n*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\nReply *Done* after you donate.\n- GiveLife Foundation"
+        f"💰 *Rs. {left:,} still LEFT*\n*{p2} people x Rs. 2,000 — he needs you now*\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\nReply *Done* after you donate.\n- GiveLife Foundation"
     )
 
 
@@ -2505,7 +2507,7 @@ def milestone_text(raised, left):
     p2, p1 = math.ceil(left / 2000), math.ceil(left / 1000)
     return (
         f"*Rs. {raised:,} has been raised for {active_case_name()}. Rs. {left:,} is still missing.* 💔\n\n*_{p2} people donating Rs. 2,000_*\n*_OR {p1} people donating Rs. 1,000_* 🤲\n\n"
-        "*03097458815*\nEasypaisa / JazzCash (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation"
+        "*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\n\nReply *Done* after you donate.\n- GiveLife Foundation"
     )
 
 

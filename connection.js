@@ -291,30 +291,10 @@
     if (key && !document.hidden) checkStatus();
   }
   setInterval(pollConnection, 15000);
+  /* Every same-origin API call carries the key; only the page's own static files go out bare. */
+  const isStatic = (u) => u === '/' || u === '/health' || /^\/[^?]*\.(?:js|css|html|png|jpe?g|svg|ico|webp|json|webmanifest|woff2?)(?:\?|$)/i.test(u);
   window.fetch = async (url, options = {}) => {
-    if (
-      typeof url !== 'string' ||
-      !(
-        paths.includes(url) ||
-        url === '/reply-setup' ||
-        url === '/dm-poster' ||
-        url === '/notes' ||
-        url === '/donors' ||
-        url === '/volunteers' ||
-        url === '/cases' ||
-        url.startsWith('/volunteers?') ||
-        url === '/donor-delivery' ||
-        url === '/donor-send' ||
-        url === '/donor-messages' ||
-        url === '/donor-paste' ||
-        url === '/focus-bank' ||
-        url.startsWith('/focus-bank?') ||
-        url.startsWith('/donors?') ||
-        url.startsWith('/send-status/') ||
-        url.startsWith('/assistant-status/') ||
-        url.startsWith('/assistant-evaluate/')
-      )
-    )
+    if (typeof url !== 'string' || !url.startsWith('/') || url.startsWith('//') || isStatic(url))
       return raw(url, options);
     if (!navigator.onLine)
       throw Error(

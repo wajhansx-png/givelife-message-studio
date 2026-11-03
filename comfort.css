@@ -1680,3 +1680,11 @@ html body .group-send .group-all-btn{grid-column:1/-1;min-height:44px}
   html body .donor-page .bank-actions>nav,html body .donor-page .bank-actions .bank-pagination{grid-column:1/-1!important}
   html body .donor-page .bank-actions .bank-regenerate,html body .donor-page .bank-actions .bank-base,html body .donor-page .bank-actions .bank-test{grid-column:span 2!important}
 }
+
+/* Main page send panel: the two cards stack in one column so every timer button has room. */
+html body .group-send .group-two{grid-template-columns:1fr!important}
+html body .group-send .grp-card .delay-row:not(.free-auto){flex-wrap:nowrap!important}
+html body .group-send .grp-card .delay-row:not(.free-auto) .delay-label{flex:0 0 auto!important;max-width:30%}
+html body .group-send .grp-card .delay-pill,html body .group-send .grp-card .every-pill{white-space:nowrap!important;min-height:40px!important}
+html body .group-send .grp-card .free-auto{flex-wrap:wrap!important}
+html body .group-send .grp-card .group-main-btn,html body .group-send .grp-card .group-free-btn{flex-direction:row!important;flex-wrap:wrap;align-items:center!important;justify-content:space-between;min-height:48px!important}

@@ -1,45 +1,603 @@
 'use strict';
-(()=>{
- const $=id=>document.getElementById(id), endpoint='/api/group-finder';
- let key=localStorage.getItem('givelife-cloud-key')||'',data=null,tab='all',query='',offset=0,epoch=0,review=null,signature='',poll=null;
- let selected=new Set(),selectionLoaded=false,unlock=null,searchTimer=null;
- const labels={affiliation:'University affiliation',invite:'Invitation link',member:'Your membership',posting:'Who can post?',charity:'Charity permission',activity:'Recent activity'};
- const options={affiliation:{unknown:'Not checked',verified:'Verified',unverified:'Not this university'},invite:{unknown:'Not checked',valid:'Valid',expired:'Expired / revoked'},member:{unknown:'Not checked',yes:'Joined',no:'Not joined'},posting:{unknown:'Not checked',all_members:'All members',admins_only:'Admins only'},charity:{unknown:'Not checked',allowed:'Allowed',denied:'Not allowed'},activity:{unknown:'Not checked',active:'Active',quiet:'Quiet'}};
- const el=(tag,content,cls)=>{const n=document.createElement(tag);if(content!==undefined)n.textContent=content;if(cls)n.className=cls;return n};
- function feedback(message,bad=false){$('feedback').textContent=message;$('feedback').classList.toggle('error',bad)}
- function show(id){const d=$(id);if(!d.open){d._returnFocus=document.activeElement;d.showModal();d.querySelector('header button,button')?.focus({preventScroll:true})}}
- function close(id){const d=$(id);d.close();d._returnFocus?.focus({preventScroll:true})}
- document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>close(b.dataset.close));
- function auth(){if(!unlock){show('accessDialog');unlock=new Promise(resolve=>{$('accessForm').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;$('accessNote').textContent='Checking access…';try{const candidate=$('accessKey').value.trim();const r=await fetch(endpoint,{headers:{Authorization:'Bearer '+candidate},credentials:'omit'});if(!r.ok)throw Error(r.status===401?'That key was not accepted.':'Could not reach your research records. Try again.');key=candidate;localStorage.setItem('givelife-cloud-key',key);$('accessKey').value='';close('accessDialog');unlock=null;resolve()}catch(err){$('accessNote').textContent=err.message}finally{button.disabled=false}}})}return unlock}
- async function api(body,suffix=''){if(!navigator.onLine)throw Error('You are offline. Saved results remain visible; reconnect and try again.');if(!key)await auth();const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);try{const response=await fetch(endpoint+suffix,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+key,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,credentials:'omit',signal:controller.signal});if(response.status===401){key='';localStorage.removeItem('givelife-cloud-key');await auth();return api(body,suffix)}const result=await response.json();if(!response.ok)throw Error(result.error||'Research could not be completed. Try again.');return result}catch(error){if(error.name==='AbortError')throw Error('The cloud is taking too long. Existing records are safe. Try again.');throw error}finally{clearTimeout(timer)}}
- function urlState(){const p=new URLSearchParams(location.search);tab=['all','ready','needs_verification','blocked','expired'].includes(p.get('tab'))?p.get('tab'):'all';query=p.get('q')||'';offset=Math.max(0,Number(p.get('offset'))||0);$('search').value=query}
- function saveURL(){const p=new URLSearchParams();if(tab!=='all')p.set('tab',tab);if(query)p.set('q',query);if(offset)p.set('offset',String(offset));history.replaceState(null,'',location.pathname+(p.size?'?'+p:''))}
- function age(at){if(!at)return 'Not checked';const secs=Math.max(0,(Date.now()/1000)-at);return secs<60?'Just now':secs<3600?Math.floor(secs/60)+'m ago':secs<86400?Math.floor(secs/3600)+'h ago':Math.floor(secs/86400)+'d ago'}
- function universitySelect(id,current){const select=$(id),old=current??select.value;select.replaceChildren();for(const u of data.universities){const o=el('option',u.name);o.value=u.id;select.append(o)}if([...select.options].some(o=>o.value===old))select.value=old}
- function selectedIds(){return [...selected].filter(id=>data.universities.some(u=>u.id===id))}
- function renderUniversities(){if(!selectionLoaded){let saved;try{saved=JSON.parse(localStorage.getItem('givelife-research-targets')||'null')}catch(e){}selected=new Set(Array.isArray(saved)?saved:(data.settings.university_ids.length?data.settings.university_ids:data.universities.map(u=>u.id)));selectionLoaded=true}const box=$('universityChoices');box.replaceChildren();for(const u of data.universities){const label=el('label'),check=el('input'),name=el('span',u.name),meta=el('small',u.city+(u.annual_tuition_pkr?' · Fee context checked':' · Fee context not checked'));check.type='checkbox';check.checked=selected.has(u.id);check.setAttribute('aria-label','Research '+u.name);check.onchange=()=>{check.checked?selected.add(u.id):selected.delete(u.id);localStorage.setItem('givelife-research-targets',JSON.stringify([...selected]))};name.append(meta);label.append(check,name);box.append(label)}for(const id of ['importUniversity','feeUniversity'])universitySelect(id);$('cadence').value=data.settings.enabled?String(data.settings.interval_hours):'0'}
- function render(){for(const [k,v] of Object.entries(data.counts))if($('count-'+k))$('count-'+k).textContent=String(v);document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===tab)));$('provider').textContent=data.provider;$('previous').hidden=offset===0;$('next').hidden=offset+data.items.length>=data.total;$('pageLabel').textContent=data.total?`${offset+1}–${offset+data.items.length} of ${data.total}`:'';
-  const nextSignature=JSON.stringify(data.items);if(nextSignature!==signature){signature=nextSignature;$('groupRows').replaceChildren();for(const row of data.items){const node=el('article',undefined,'group-row'),name=el('div'),score=el('div',String(row.score),'score'),checks=el('div',undefined,'checks'),button=el('button','Review');name.append(el('div',row.title,'group-name'),el('div',row.university_name+(row.city?' · '+row.city:''),'meta'));score.append(el('small','/100'));const statusLabel={ready:'Ready',needs_verification:'Needs checks',blocked:'Blocked',expired:'Expired link'}[row.status];checks.append(el('span',statusLabel,'tag '+row.status),el('small','Posting: '+options.posting[row.checks.posting.value]+' · Charity: '+options.charity[row.checks.charity.value]),el('small','Source '+age(Math.max(0,...row.sources.map(s=>s.checked_at)))));button.type='button';button.setAttribute('aria-label','Review '+row.title);button.onclick=()=>openReview(row);node.append(name,score,checks,button);$('groupRows').append(node)}}
-  $('empty').hidden=!!data.total;$('empty').querySelector('h2').textContent=data.counts.all?'No groups match this view':'No groups researched yet';$('empty').querySelector('p').textContent=data.counts.all?'Try All or clear your search.':'Choose universities, then find public group links. No groups are joined and no messages are sent.';
-  const job=data.jobs.at(-1),active=job&&['queued','running'].includes(job.state);$('stopResearch').hidden=!active;$('stopResearch').dataset.job=job?.id||'';$('findGroups').disabled=!!active;$('findGroups').textContent=active?'Researching…':'Find groups';$('researchPhase').textContent=job?job.phase:'Ready to research';$('researchProgress').textContent=job?`${job.completed_queries.length}/${job.queries.length} queries · ${job.pages_read} source pages · ${job.new_groups} new groups · ${age(job.updated_at)}`:`${data.universities.length} universities · ${data.counts.all} saved groups · No messages will be sent`;
-  $('researchErrors').hidden=!job?.errors?.length;$('errorList').replaceChildren();for(const error of job?.errors||[])$('errorList').append(el('li',error.code+': '+error.message));
- }
- async function load(){const current=++epoch;try{const p=new URLSearchParams({tab,q:query,offset:String(offset)});const next=await api(null,'?'+p);if(current!==epoch)return;const uniChanged=!data||JSON.stringify(data.universities)!==JSON.stringify(next.universities);data=next;render();if(uniChanged)renderUniversities()}catch(error){feedback(error.message,true);if(!data)$('researchPhase').textContent='Research could not load'}finally{clearTimeout(poll);poll=setTimeout(()=>{if(!document.hidden)load();else poll=setTimeout(load,15000)},data?.jobs.some(j=>['queued','running'].includes(j.state))?3000:15000)}}
- async function submit(form,event,note,body,done){event.preventDefault();const button=event.submitter;button.disabled=true;$(note).textContent='Saving…';try{const result=await api(body);$(note).textContent='Saved.';if(done)await done(result);await load()}catch(error){$(note).textContent=error.message}finally{button.disabled=false}}
- document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{tab=button.dataset.tab;query='';offset=0;$('search').value='';saveURL();feedback('');load()});
- $('search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{query=$('search').value.trim();offset=0;saveURL();load()},180)};
- $('previous').onclick=()=>{offset=Math.max(0,offset-50);saveURL();load()};$('next').onclick=()=>{offset+=50;saveURL();load()};
- $('targetsOpen').onclick=()=>{if(!data)return;renderUniversities();show('targets')};$('importOpen').onclick=()=>{if(!data)return;universitySelect('importUniversity');show('importDialog')};
- $('findGroups').onclick=async()=>{if(!data)return;const ids=selectedIds();if(!ids.length){show('targets');$('scheduleNote').textContent='Choose at least one university.';return}const button=$('findGroups');button.disabled=true;feedback('Starting public-source research…');try{await api({action:'search',university_ids:ids,request_id:crypto.randomUUID(),max_queries:12,max_pages:20});feedback('Research started. No groups will be joined and no messages sent.');await load()}catch(error){feedback(error.message,true);button.disabled=false}};
- $('stopResearch').onclick=async()=>{const button=$('stopResearch');button.disabled=true;try{await api({action:'cancel',id:button.dataset.job});feedback('Stop requested. The current source check may finish first.');await load()}catch(error){feedback(error.message,true)}finally{button.disabled=false}};
- $('scheduleForm').onsubmit=e=>submit(e.target,e,'scheduleNote',{action:'schedule',enabled:$('cadence').value!=='0',interval_hours:Number($('cadence').value)||24,university_ids:selectedIds()});
- $('universityForm').onsubmit=e=>submit(e.target,e,'universityNote',{action:'university',name:$('uniName').value,domains:[$('uniDomain').value.trim()],city:$('uniCity').value},result=>{selected.add(result.id);localStorage.setItem('givelife-research-targets',JSON.stringify([...selected]));e.target.reset()});
- $('feeForm').onsubmit=e=>submit(e.target,e,'feeNote',{action:'fee',id:$('feeUniversity').value,annual_tuition_pkr:Number($('annualFee').value),source_url:$('feeSource').value});
- try{$('importText').value=sessionStorage.getItem('givelife-research-import')||''}catch(e){}$('importText').oninput=()=>{try{sessionStorage.setItem('givelife-research-import',$('importText').value)}catch(e){}};
- $('importForm').onsubmit=e=>submit(e.target,e,'importNote',{action:'import',university_id:$('importUniversity').value,text:$('importText').value,source_url:$('importSource').value},result=>{feedback(`${result.added} new groups saved; ${result.existing} existing links merged.`);$('importText').value='';sessionStorage.removeItem('givelife-research-import');tab='all';query='';offset=0;$('search').value='';saveURL();close('importDialog')});
- async function openReview(row){review=row;$('reviewTitle').textContent=row.title;$('reviewUniversity').textContent=row.university_name;$('inviteLink').href=row.invite;$('reviewReasons').textContent=row.reasons.join(' · ')||'All required checks are fresh.';$('reviewNote').textContent='';$('evidenceReference').value='';$('confirmCheck').checked=false;$('blockGroup').checked=!!row.blocked;universitySelect('reviewUni',row.university_id);$('sourceEvidence').replaceChildren();for(const source of row.sources){const node=el('div',undefined,'evidence-source'),link=el('a',source.url);link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';node.append(link,el('p',(source.verified?'Fetched source':'Unverified pasted/search link')+' · '+age(source.checked_at)),el('p',source.excerpt));$('sourceEvidence').append(node)}const list=el('ul');for(const reason of row.score_reasons)list.append(el('li',reason.label+': +'+reason.points));$('sourceEvidence').append(list);$('checkFields').replaceChildren();for(const [kind,label] of Object.entries(labels)){const wrapper=el('label',label),select=el('select');select.id='check-'+kind;select.name=kind;for(const [value,name] of Object.entries(options[kind])){const o=el('option',name);o.value=value;select.append(o)}select.value=row.checks[kind].value;wrapper.append(select,el('small',row.stale_checks.includes(kind)?'Expired: check again':age(row.checks[kind].checked_at)));$('checkFields').append(wrapper)}$('joinedGroup').replaceChildren(el('option','Not mapped'));$('joinedGroup').firstChild.value='';$('checkAccount').disabled=!row.jid;show('reviewDialog');$('joinedNote').textContent='Loading joined groups…';try{const result=await api({action:'joined'});if(review?.id!==row.id)return;for(const group of result.items){const o=el('option',group.name);o.value=group.jid;$('joinedGroup').append(o)}if(row.jid&&!result.items.some(g=>g.jid===row.jid)){const o=el('option','Previously mapped group (not in current list)');o.value=row.jid;$('joinedGroup').append(o)}$('joinedGroup').value=row.jid||'';$('joinedNote').textContent='Mapping must match this exact invitation. A similar name is not proof.'}catch(error){$('joinedNote').textContent=error.message}}
- $('checkAccount').onclick=async()=>{const button=$('checkAccount');button.disabled=true;try{const row=await api({action:'check_account',id:review.id,version:review.version});await load();await openReview(row);$('reviewNote').textContent='Account check saved. Charity permission still needs separate evidence.'}catch(error){$('reviewNote').textContent=error.message}finally{button.disabled=!review?.jid}};
- $('reviewForm').onsubmit=e=>{const changes=Object.fromEntries(Object.keys(labels).map(kind=>[kind,$('check-'+kind).value]));changes.university_id=$('reviewUni').value;changes.jid=$('joinedGroup').value;changes.blocked=$('blockGroup').checked;submit(e.target,e,'reviewNote',{action:'review',id:review.id,version:review.version,changes,evidence:{kind:$('evidenceKind').value,reference:$('evidenceReference').value},confirm_observed:$('confirmCheck').checked},()=>{feedback('Verified checks saved.');close('reviewDialog')})};
- addEventListener('popstate',()=>{urlState();load()});document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});addEventListener('offline',()=>feedback('Offline. Existing results remain visible.',true));
- urlState();load();
+(() => {
+  const $ = (id) => document.getElementById(id),
+    endpoint = '/api/group-finder';
+  let key = localStorage.getItem('givelife-cloud-key') || '',
+    data = null,
+    tab = 'all',
+    query = '',
+    offset = 0,
+    epoch = 0,
+    review = null,
+    signature = '',
+    poll = null;
+  let selected = new Set(),
+    selectionLoaded = false,
+    unlock = null,
+    searchTimer = null;
+  const labels = {
+    affiliation: 'University affiliation',
+    invite: 'Invitation link',
+    member: 'Your membership',
+    posting: 'Who can post?',
+    charity: 'Charity permission',
+    activity: 'Recent activity',
+  };
+  const options = {
+    affiliation: {
+      unknown: 'Not checked',
+      verified: 'Verified',
+      unverified: 'Not this university',
+    },
+    invite: { unknown: 'Not checked', valid: 'Valid', expired: 'Expired / revoked' },
+    member: { unknown: 'Not checked', yes: 'Joined', no: 'Not joined' },
+    posting: { unknown: 'Not checked', all_members: 'All members', admins_only: 'Admins only' },
+    charity: { unknown: 'Not checked', allowed: 'Allowed', denied: 'Not allowed' },
+    activity: { unknown: 'Not checked', active: 'Active', quiet: 'Quiet' },
+  };
+  const el = (tag, content, cls) => {
+    const n = document.createElement(tag);
+    if (content !== undefined) n.textContent = content;
+    if (cls) n.className = cls;
+    return n;
+  };
+  function feedback(message, bad = false) {
+    $('feedback').textContent = message;
+    $('feedback').classList.toggle('error', bad);
+  }
+  function show(id) {
+    const d = $(id);
+    if (!d.open) {
+      d._returnFocus = document.activeElement;
+      d.showModal();
+      d.querySelector('header button,button')?.focus({ preventScroll: true });
+    }
+  }
+  function close(id) {
+    const d = $(id);
+    d.close();
+    d._returnFocus?.focus({ preventScroll: true });
+  }
+  document
+    .querySelectorAll('[data-close]')
+    .forEach((b) => (b.onclick = () => close(b.dataset.close)));
+  function auth() {
+    if (!unlock) {
+      show('accessDialog');
+      unlock = new Promise((resolve) => {
+        $('accessForm').onsubmit = async (e) => {
+          e.preventDefault();
+          const button = e.submitter;
+          button.disabled = true;
+          $('accessNote').textContent = 'Checking access…';
+          try {
+            const candidate = $('accessKey').value.trim();
+            const r = await fetch(endpoint, {
+              headers: { Authorization: 'Bearer ' + candidate },
+              credentials: 'omit',
+            });
+            if (!r.ok)
+              throw Error(
+                r.status === 401
+                  ? 'That key was not accepted.'
+                  : 'Could not reach your research records. Try again.',
+              );
+            key = candidate;
+            localStorage.setItem('givelife-cloud-key', key);
+            $('accessKey').value = '';
+            close('accessDialog');
+            unlock = null;
+            resolve();
+          } catch (err) {
+            $('accessNote').textContent = err.message;
+          } finally {
+            button.disabled = false;
+          }
+        };
+      });
+    }
+    return unlock;
+  }
+  async function api(body, suffix = '') {
+    if (!navigator.onLine)
+      throw Error('You are offline. Saved results remain visible; reconnect and try again.');
+    if (!key) await auth();
+    const controller = new AbortController(),
+      timer = setTimeout(() => controller.abort(), 90000);
+    try {
+      const response = await fetch(endpoint + suffix, {
+        method: body ? 'POST' : 'GET',
+        headers: {
+          Authorization: 'Bearer ' + key,
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        credentials: 'omit',
+        signal: controller.signal,
+      });
+      if (response.status === 401) {
+        key = '';
+        localStorage.removeItem('givelife-cloud-key');
+        await auth();
+        return api(body, suffix);
+      }
+      const result = await response.json();
+      if (!response.ok) throw Error(result.error || 'Research could not be completed. Try again.');
+      return result;
+    } catch (error) {
+      if (error.name === 'AbortError')
+        throw Error('The cloud is taking too long. Existing records are safe. Try again.');
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  function urlState() {
+    const p = new URLSearchParams(location.search);
+    tab = ['all', 'ready', 'needs_verification', 'blocked', 'expired'].includes(p.get('tab'))
+      ? p.get('tab')
+      : 'all';
+    query = p.get('q') || '';
+    offset = Math.max(0, Number(p.get('offset')) || 0);
+    $('search').value = query;
+  }
+  function saveURL() {
+    const p = new URLSearchParams();
+    if (tab !== 'all') p.set('tab', tab);
+    if (query) p.set('q', query);
+    if (offset) p.set('offset', String(offset));
+    history.replaceState(null, '', location.pathname + (p.size ? '?' + p : ''));
+  }
+  function age(at) {
+    if (!at) return 'Not checked';
+    const secs = Math.max(0, Date.now() / 1000 - at);
+    return secs < 60
+      ? 'Just now'
+      : secs < 3600
+        ? Math.floor(secs / 60) + 'm ago'
+        : secs < 86400
+          ? Math.floor(secs / 3600) + 'h ago'
+          : Math.floor(secs / 86400) + 'd ago';
+  }
+  function universitySelect(id, current) {
+    const select = $(id),
+      old = current ?? select.value;
+    select.replaceChildren();
+    for (const u of data.universities) {
+      const o = el('option', u.name);
+      o.value = u.id;
+      select.append(o);
+    }
+    if ([...select.options].some((o) => o.value === old)) select.value = old;
+  }
+  function selectedIds() {
+    return [...selected].filter((id) => data.universities.some((u) => u.id === id));
+  }
+  function renderUniversities() {
+    if (!selectionLoaded) {
+      let saved;
+      try {
+        saved = JSON.parse(localStorage.getItem('givelife-research-targets') || 'null');
+      } catch (e) {}
+      selected = new Set(
+        Array.isArray(saved)
+          ? saved
+          : data.settings.university_ids.length
+            ? data.settings.university_ids
+            : data.universities.map((u) => u.id),
+      );
+      selectionLoaded = true;
+    }
+    const box = $('universityChoices');
+    box.replaceChildren();
+    for (const u of data.universities) {
+      const label = el('label'),
+        check = el('input'),
+        name = el('span', u.name),
+        meta = el(
+          'small',
+          u.city + (u.annual_tuition_pkr ? ' · Fee context checked' : ' · Fee context not checked'),
+        );
+      check.type = 'checkbox';
+      check.checked = selected.has(u.id);
+      check.setAttribute('aria-label', 'Research ' + u.name);
+      check.onchange = () => {
+        check.checked ? selected.add(u.id) : selected.delete(u.id);
+        localStorage.setItem('givelife-research-targets', JSON.stringify([...selected]));
+      };
+      name.append(meta);
+      label.append(check, name);
+      box.append(label);
+    }
+    for (const id of ['importUniversity', 'feeUniversity']) universitySelect(id);
+    $('cadence').value = data.settings.enabled ? String(data.settings.interval_hours) : '0';
+  }
+  function render() {
+    for (const [k, v] of Object.entries(data.counts))
+      if ($('count-' + k)) $('count-' + k).textContent = String(v);
+    document
+      .querySelectorAll('[data-tab]')
+      .forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
+    $('provider').textContent = data.provider;
+    $('previous').hidden = offset === 0;
+    $('next').hidden = offset + data.items.length >= data.total;
+    $('pageLabel').textContent = data.total
+      ? `${offset + 1}–${offset + data.items.length} of ${data.total}`
+      : '';
+    const nextSignature = JSON.stringify(data.items);
+    if (nextSignature !== signature) {
+      signature = nextSignature;
+      $('groupRows').replaceChildren();
+      for (const row of data.items) {
+        const node = el('article', undefined, 'group-row'),
+          name = el('div'),
+          score = el('div', String(row.score), 'score'),
+          checks = el('div', undefined, 'checks'),
+          button = el('button', 'Review');
+        name.append(
+          el('div', row.title, 'group-name'),
+          el('div', row.university_name + (row.city ? ' · ' + row.city : ''), 'meta'),
+        );
+        score.append(el('small', '/100'));
+        const statusLabel = {
+          ready: 'Ready',
+          needs_verification: 'Needs checks',
+          blocked: 'Blocked',
+          expired: 'Expired link',
+        }[row.status];
+        checks.append(
+          el('span', statusLabel, 'tag ' + row.status),
+          el(
+            'small',
+            'Posting: ' +
+              options.posting[row.checks.posting.value] +
+              ' · Charity: ' +
+              options.charity[row.checks.charity.value],
+          ),
+          el('small', 'Source ' + age(Math.max(0, ...row.sources.map((s) => s.checked_at)))),
+        );
+        button.type = 'button';
+        button.setAttribute('aria-label', 'Review ' + row.title);
+        button.onclick = () => openReview(row);
+        node.append(name, score, checks, button);
+        $('groupRows').append(node);
+      }
+    }
+    $('empty').hidden = !!data.total;
+    $('empty').querySelector('h2').textContent = data.counts.all
+      ? 'No groups match this view'
+      : 'No groups researched yet';
+    $('empty').querySelector('p').textContent = data.counts.all
+      ? 'Try All or clear your search.'
+      : 'Choose universities, then find public group links. No groups are joined and no messages are sent.';
+    const job = data.jobs.at(-1),
+      active = job && ['queued', 'running'].includes(job.state);
+    $('stopResearch').hidden = !active;
+    $('stopResearch').dataset.job = job?.id || '';
+    $('findGroups').disabled = !!active;
+    $('findGroups').textContent = active ? 'Researching…' : 'Find groups';
+    $('researchPhase').textContent = job ? job.phase : 'Ready to research';
+    $('researchProgress').textContent = job
+      ? `${job.completed_queries.length}/${job.queries.length} queries · ${job.pages_read} source pages · ${job.new_groups} new groups · ${age(job.updated_at)}`
+      : `${data.universities.length} universities · ${data.counts.all} saved groups · No messages will be sent`;
+    $('researchErrors').hidden = !job?.errors?.length;
+    $('errorList').replaceChildren();
+    for (const error of job?.errors || [])
+      $('errorList').append(el('li', error.code + ': ' + error.message));
+  }
+  async function load() {
+    const current = ++epoch;
+    try {
+      const p = new URLSearchParams({ tab, q: query, offset: String(offset) });
+      const next = await api(null, '?' + p);
+      if (current !== epoch) return;
+      const uniChanged =
+        !data || JSON.stringify(data.universities) !== JSON.stringify(next.universities);
+      data = next;
+      render();
+      if (uniChanged) renderUniversities();
+    } catch (error) {
+      feedback(error.message, true);
+      if (!data) $('researchPhase').textContent = 'Research could not load';
+    } finally {
+      clearTimeout(poll);
+      poll = setTimeout(
+        () => {
+          if (!document.hidden) load();
+          else poll = setTimeout(load, 15000);
+        },
+        data?.jobs.some((j) => ['queued', 'running'].includes(j.state)) ? 3000 : 15000,
+      );
+    }
+  }
+  async function submit(form, event, note, body, done) {
+    event.preventDefault();
+    const button = event.submitter;
+    button.disabled = true;
+    $(note).textContent = 'Saving…';
+    try {
+      const result = await api(body);
+      $(note).textContent = 'Saved.';
+      if (done) await done(result);
+      await load();
+    } catch (error) {
+      $(note).textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+  document.querySelectorAll('[data-tab]').forEach(
+    (button) =>
+      (button.onclick = () => {
+        tab = button.dataset.tab;
+        query = '';
+        offset = 0;
+        $('search').value = '';
+        saveURL();
+        feedback('');
+        load();
+      }),
+  );
+  $('search').oninput = () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      query = $('search').value.trim();
+      offset = 0;
+      saveURL();
+      load();
+    }, 180);
+  };
+  $('previous').onclick = () => {
+    offset = Math.max(0, offset - 50);
+    saveURL();
+    load();
+  };
+  $('next').onclick = () => {
+    offset += 50;
+    saveURL();
+    load();
+  };
+  $('targetsOpen').onclick = () => {
+    if (!data) return;
+    renderUniversities();
+    show('targets');
+  };
+  $('importOpen').onclick = () => {
+    if (!data) return;
+    universitySelect('importUniversity');
+    show('importDialog');
+  };
+  $('findGroups').onclick = async () => {
+    if (!data) return;
+    const ids = selectedIds();
+    if (!ids.length) {
+      show('targets');
+      $('scheduleNote').textContent = 'Choose at least one university.';
+      return;
+    }
+    const button = $('findGroups');
+    button.disabled = true;
+    feedback('Starting public-source research…');
+    try {
+      await api({
+        action: 'search',
+        university_ids: ids,
+        request_id: crypto.randomUUID(),
+        max_queries: 12,
+        max_pages: 20,
+      });
+      feedback('Research started. No groups will be joined and no messages sent.');
+      await load();
+    } catch (error) {
+      feedback(error.message, true);
+      button.disabled = false;
+    }
+  };
+  $('stopResearch').onclick = async () => {
+    const button = $('stopResearch');
+    button.disabled = true;
+    try {
+      await api({ action: 'cancel', id: button.dataset.job });
+      feedback('Stop requested. The current source check may finish first.');
+      await load();
+    } catch (error) {
+      feedback(error.message, true);
+    } finally {
+      button.disabled = false;
+    }
+  };
+  $('scheduleForm').onsubmit = (e) =>
+    submit(e.target, e, 'scheduleNote', {
+      action: 'schedule',
+      enabled: $('cadence').value !== '0',
+      interval_hours: Number($('cadence').value) || 24,
+      university_ids: selectedIds(),
+    });
+  $('universityForm').onsubmit = (e) =>
+    submit(
+      e.target,
+      e,
+      'universityNote',
+      {
+        action: 'university',
+        name: $('uniName').value,
+        domains: [$('uniDomain').value.trim()],
+        city: $('uniCity').value,
+      },
+      (result) => {
+        selected.add(result.id);
+        localStorage.setItem('givelife-research-targets', JSON.stringify([...selected]));
+        e.target.reset();
+      },
+    );
+  $('feeForm').onsubmit = (e) =>
+    submit(e.target, e, 'feeNote', {
+      action: 'fee',
+      id: $('feeUniversity').value,
+      annual_tuition_pkr: Number($('annualFee').value),
+      source_url: $('feeSource').value,
+    });
+  try {
+    $('importText').value = sessionStorage.getItem('givelife-research-import') || '';
+  } catch (e) {}
+  $('importText').oninput = () => {
+    try {
+      sessionStorage.setItem('givelife-research-import', $('importText').value);
+    } catch (e) {}
+  };
+  $('importForm').onsubmit = (e) =>
+    submit(
+      e.target,
+      e,
+      'importNote',
+      {
+        action: 'import',
+        university_id: $('importUniversity').value,
+        text: $('importText').value,
+        source_url: $('importSource').value,
+      },
+      (result) => {
+        feedback(`${result.added} new groups saved; ${result.existing} existing links merged.`);
+        $('importText').value = '';
+        sessionStorage.removeItem('givelife-research-import');
+        tab = 'all';
+        query = '';
+        offset = 0;
+        $('search').value = '';
+        saveURL();
+        close('importDialog');
+      },
+    );
+  async function openReview(row) {
+    review = row;
+    $('reviewTitle').textContent = row.title;
+    $('reviewUniversity').textContent = row.university_name;
+    $('inviteLink').href = row.invite;
+    $('reviewReasons').textContent = row.reasons.join(' · ') || 'All required checks are fresh.';
+    $('reviewNote').textContent = '';
+    $('evidenceReference').value = '';
+    $('confirmCheck').checked = false;
+    $('blockGroup').checked = !!row.blocked;
+    universitySelect('reviewUni', row.university_id);
+    $('sourceEvidence').replaceChildren();
+    for (const source of row.sources) {
+      const node = el('div', undefined, 'evidence-source'),
+        link = el('a', source.url);
+      link.href = source.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      node.append(
+        link,
+        el(
+          'p',
+          (source.verified ? 'Fetched source' : 'Unverified pasted/search link') +
+            ' · ' +
+            age(source.checked_at),
+        ),
+        el('p', source.excerpt),
+      );
+      $('sourceEvidence').append(node);
+    }
+    const list = el('ul');
+    for (const reason of row.score_reasons)
+      list.append(el('li', reason.label + ': +' + reason.points));
+    $('sourceEvidence').append(list);
+    $('checkFields').replaceChildren();
+    for (const [kind, label] of Object.entries(labels)) {
+      const wrapper = el('label', label),
+        select = el('select');
+      select.id = 'check-' + kind;
+      select.name = kind;
+      for (const [value, name] of Object.entries(options[kind])) {
+        const o = el('option', name);
+        o.value = value;
+        select.append(o);
+      }
+      select.value = row.checks[kind].value;
+      wrapper.append(
+        select,
+        el(
+          'small',
+          row.stale_checks.includes(kind)
+            ? 'Expired: check again'
+            : age(row.checks[kind].checked_at),
+        ),
+      );
+      $('checkFields').append(wrapper);
+    }
+    $('joinedGroup').replaceChildren(el('option', 'Not mapped'));
+    $('joinedGroup').firstChild.value = '';
+    $('checkAccount').disabled = !row.jid;
+    show('reviewDialog');
+    $('joinedNote').textContent = 'Loading joined groups…';
+    try {
+      const result = await api({ action: 'joined' });
+      if (review?.id !== row.id) return;
+      for (const group of result.items) {
+        const o = el('option', group.name);
+        o.value = group.jid;
+        $('joinedGroup').append(o);
+      }
+      if (row.jid && !result.items.some((g) => g.jid === row.jid)) {
+        const o = el('option', 'Previously mapped group (not in current list)');
+        o.value = row.jid;
+        $('joinedGroup').append(o);
+      }
+      $('joinedGroup').value = row.jid || '';
+      $('joinedNote').textContent =
+        'Mapping must match this exact invitation. A similar name is not proof.';
+    } catch (error) {
+      $('joinedNote').textContent = error.message;
+    }
+  }
+  $('checkAccount').onclick = async () => {
+    const button = $('checkAccount');
+    button.disabled = true;
+    try {
+      const row = await api({ action: 'check_account', id: review.id, version: review.version });
+      await load();
+      await openReview(row);
+      $('reviewNote').textContent =
+        'Account check saved. Charity permission still needs separate evidence.';
+    } catch (error) {
+      $('reviewNote').textContent = error.message;
+    } finally {
+      button.disabled = !review?.jid;
+    }
+  };
+  $('reviewForm').onsubmit = (e) => {
+    const changes = Object.fromEntries(
+      Object.keys(labels).map((kind) => [kind, $('check-' + kind).value]),
+    );
+    changes.university_id = $('reviewUni').value;
+    changes.jid = $('joinedGroup').value;
+    changes.blocked = $('blockGroup').checked;
+    submit(
+      e.target,
+      e,
+      'reviewNote',
+      {
+        action: 'review',
+        id: review.id,
+        version: review.version,
+        changes,
+        evidence: { kind: $('evidenceKind').value, reference: $('evidenceReference').value },
+        confirm_observed: $('confirmCheck').checked,
+      },
+      () => {
+        feedback('Verified checks saved.');
+        close('reviewDialog');
+      },
+    );
+  };
+  addEventListener('popstate', () => {
+    urlState();
+    load();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) load();
+  });
+  addEventListener('offline', () => feedback('Offline. Existing results remain visible.', true));
+  urlState();
+  load();
 })();

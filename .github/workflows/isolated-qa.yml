@@ -63,6 +63,8 @@ jobs:
         run: |
           corepack enable
           corepack pnpm install --frozen-lockfile
+      - name: JavaScript and CSS formatting
+        run: corepack pnpm exec prettier --check "**/*.{js,cjs,mjs,css}"
       - name: JS unit tests
         id: jsunit
         continue-on-error: true

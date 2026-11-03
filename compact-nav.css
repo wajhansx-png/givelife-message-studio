@@ -1,209 +1,921 @@
 /* Quiet navigation; secondary controls remain one menu away. */
-html body .compact-nav-menu{position:relative;flex:none;z-index:30}
-html body .compact-nav-menu>summary{display:flex;align-items:center;justify-content:center;min-height:40px;padding:6px 12px;border:1px solid var(--line2);border-radius:9px;color:var(--ink);background:var(--surface);font-size:13px;font-weight:600;cursor:pointer;list-style:none;box-sizing:border-box}
-.compact-nav-menu>summary::-webkit-details-marker{display:none}
-html body .compact-nav-menu>summary::after{content:'⌄';margin-left:7px}
-html body .compact-nav-panel{position:absolute;right:0;top:calc(100% + 7px);width:220px;max-width:calc(100vw - 24px);padding:8px;display:flex;flex-direction:column;gap:6px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);box-shadow:0 8px 24px #0004}
-html body .compact-nav-menu:not([open])>.compact-nav-panel{display:none}
-html body .compact-nav-panel button,html body .compact-nav-panel select{width:100%;max-width:100%!important;min-height:40px;text-align:left;font-size:13px;white-space:normal}
-html body .compact-nav-panel button{display:flex!important;align-items:center;position:static!important;inset:auto!important;transform:none!important;margin:0}
-html body #mainNavMore #keyboardHelp{display:flex!important;visibility:visible!important;width:100%;height:auto}
-html body .brandbar,html body .donor-head{position:relative;z-index:50;overflow:visible!important}
-html body .compact-nav-panel .case-pick{display:flex!important;flex-direction:column;gap:5px;width:100%;max-width:100%;font-size:11px;color:var(--mut);order:0;flex:none!important}
-html body .compact-nav-panel #desktopPreview{display:flex!important;align-items:center;justify-content:space-between;margin:0}
-html body .compact-nav-panel .donor-message-tablist{display:block}
-html body .brandbar{gap:8px;padding:6px 10px;min-height:50px}
-html body .brandbar .brand{font-size:16px;margin-right:6px}
-html body .brandbar .brand small{display:none}
-html body .brandbar .seg button{min-height:40px;padding:0 15px;font-size:13px}
-html body .brandbar .leftchip{font-size:13px;padding:6px 10px;min-height:40px}
-html body .brandbar #donorNotesShortcut{min-height:40px;padding:6px 12px;font-size:13px}
-html body .donor-head{gap:10px;justify-content:flex-start;padding-block:6px;min-height:46px}
-html body .donor-head .donor-title{margin-right:auto}
-html body .donor-head h1{font-size:20px;line-height:1.2}
-html body .donor-head>.donor-total{display:flex;align-items:center;gap:8px;padding:4px 8px;background:transparent;border:0;box-shadow:none;min-height:0}
-html body .donor-head>.donor-total small{font-size:11px;text-transform:none;letter-spacing:0}
-html body .donor-head>.donor-total strong{font-size:14px}
-html body .donor-head #donorAdd{min-height:40px;padding:6px 14px;font-size:13px}
-html body .donor-toolbar{gap:12px;padding:0;min-height:44px}
-html body .donor-tabs{gap:2px;padding:3px;border-radius:10px;flex:1}
-html body .donor-tabs button{min-height:38px;padding:6px 10px;font-size:12px;border-radius:7px;box-shadow:none!important}
-html body .donor-search{min-height:40px;max-width:300px;font-size:13px}
-.compact-nav-menu>summary:focus-visible{outline:2px solid var(--g);outline-offset:3px}
-.compact-nav-menu>summary[data-unread=true]::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--g);margin-right:6px}
-html body .message-copy{font-size:0!important;width:28px;min-width:28px;height:28px;padding:5px!important;border:0!important;background:transparent!important;box-shadow:none!important}
-html body .message-copy::before{content:'';display:block;width:16px;height:16px;background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Crect x='8' y='8' width='12' height='13' rx='2'/%3E%3Cpath d='M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3'/%3E%3C/svg%3E") center/contain no-repeat}
-html body [data-group="free"] .group-label{color:#93c5fd!important}
-html[data-theme="light"] body [data-group="free"] .group-label{color:#1d4ed8!important}
-html body #donorsPage #donorProgress[data-error=true]{background:var(--surface2)!important;color:var(--ink)!important;border:1px solid var(--line2)!important;border-left:3px solid var(--warn)!important;border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.5;box-shadow:none!important}
-html body #donorsPage #donorNotice[data-error=true]{background:var(--surface2);color:var(--ink);border-left:3px solid var(--warn);border-radius:7px}
-@media(max-width:720px){
- html body .brandbar{gap:5px;flex-wrap:wrap}
- html body .brandbar .leftchip{font-size:12px;padding-inline:5px}
- html body .brandbar .seg button{padding-inline:10px}
- html body .brandbar #donorNotesShortcut{padding-inline:8px}
- html body .compact-nav-menu>summary{min-height:44px;padding-inline:9px}
- html body .donor-head{gap:6px;flex-wrap:wrap}
- html body .donor-head h1{font-size:17px}
- html body .donor-head>.donor-total{order:5;flex-basis:100%;margin:0;padding:0 2px;font-size:12px}
- html body .donor-toolbar{gap:6px}
- html body .donor-tabs{grid-template-columns:repeat(5,minmax(0,1fr))}
- html body .donor-tabs button{min-height:44px;font-size:10px;padding:4px 2px}
- html body .donor-search{max-width:none;width:100%}
+html body .compact-nav-menu {
+  position: relative;
+  flex: none;
+  z-index: 30;
+}
+html body .compact-nav-menu > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--line2);
+  border-radius: 9px;
+  color: var(--ink);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  box-sizing: border-box;
+}
+.compact-nav-menu > summary::-webkit-details-marker {
+  display: none;
+}
+html body .compact-nav-menu > summary::after {
+  content: '⌄';
+  margin-left: 7px;
+}
+html body .compact-nav-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 7px);
+  width: 220px;
+  max-width: calc(100vw - 24px);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px #0004;
+}
+html body .compact-nav-menu:not([open]) > .compact-nav-panel {
+  display: none;
+}
+html body .compact-nav-panel button,
+html body .compact-nav-panel select {
+  width: 100%;
+  max-width: 100% !important;
+  min-height: 40px;
+  text-align: left;
+  font-size: 13px;
+  white-space: normal;
+}
+html body .compact-nav-panel button {
+  display: flex !important;
+  align-items: center;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  margin: 0;
+}
+html body #mainNavMore #keyboardHelp {
+  display: flex !important;
+  visibility: visible !important;
+  width: 100%;
+  height: auto;
+}
+html body .brandbar,
+html body .donor-head {
+  position: relative;
+  z-index: 50;
+  overflow: visible !important;
+}
+html body .compact-nav-panel .case-pick {
+  display: flex !important;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  max-width: 100%;
+  font-size: 11px;
+  color: var(--mut);
+  order: 0;
+  flex: none !important;
+}
+html body .compact-nav-panel #desktopPreview {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+}
+html body .compact-nav-panel .donor-message-tablist {
+  display: block;
+}
+html body .brandbar {
+  gap: 8px;
+  padding: 6px 10px;
+  min-height: 50px;
+}
+html body .brandbar .brand {
+  font-size: 16px;
+  margin-right: 6px;
+}
+html body .brandbar .brand small {
+  display: none;
+}
+html body .brandbar .seg button {
+  min-height: 40px;
+  padding: 0 15px;
+  font-size: 13px;
+}
+html body .brandbar .leftchip {
+  font-size: 13px;
+  padding: 6px 10px;
+  min-height: 40px;
+}
+html body .brandbar #donorNotesShortcut {
+  min-height: 40px;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+html body .donor-head {
+  gap: 10px;
+  justify-content: flex-start;
+  padding-block: 6px;
+  min-height: 46px;
+}
+html body .donor-head .donor-title {
+  margin-right: auto;
+}
+html body .donor-head h1 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+html body .donor-head > .donor-total {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  min-height: 0;
+}
+html body .donor-head > .donor-total small {
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+html body .donor-head > .donor-total strong {
+  font-size: 14px;
+}
+html body .donor-head #donorAdd {
+  min-height: 40px;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+html body .donor-toolbar {
+  gap: 12px;
+  padding: 0;
+  min-height: 44px;
+}
+html body .donor-tabs {
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  flex: 1;
+}
+html body .donor-tabs button {
+  min-height: 38px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 7px;
+  box-shadow: none !important;
+}
+html body .donor-search {
+  min-height: 40px;
+  max-width: 300px;
+  font-size: 13px;
+}
+.compact-nav-menu > summary:focus-visible {
+  outline: 2px solid var(--g);
+  outline-offset: 3px;
+}
+.compact-nav-menu > summary[data-unread='true']::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--g);
+  margin-right: 6px;
+}
+html body .message-copy {
+  font-size: 0 !important;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 5px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html body .message-copy::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Crect x='8' y='8' width='12' height='13' rx='2'/%3E%3Cpath d='M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3'/%3E%3C/svg%3E")
+    center/contain no-repeat;
+}
+html body [data-group='free'] .group-label {
+  color: #93c5fd !important;
+}
+html[data-theme='light'] body [data-group='free'] .group-label {
+  color: #1d4ed8 !important;
+}
+html body #donorsPage #donorProgress[data-error='true'] {
+  background: var(--surface2) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--line2) !important;
+  border-left: 3px solid var(--warn) !important;
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: none !important;
+}
+html body #donorsPage #donorNotice[data-error='true'] {
+  background: var(--surface2);
+  color: var(--ink);
+  border-left: 3px solid var(--warn);
+  border-radius: 7px;
+}
+@media (max-width: 720px) {
+  html body .brandbar {
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  html body .brandbar .leftchip {
+    font-size: 12px;
+    padding-inline: 5px;
+  }
+  html body .brandbar .seg button {
+    padding-inline: 10px;
+  }
+  html body .brandbar #donorNotesShortcut {
+    padding-inline: 8px;
+  }
+  html body .compact-nav-menu > summary {
+    min-height: 44px;
+    padding-inline: 9px;
+  }
+  html body .donor-head {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  html body .donor-head h1 {
+    font-size: 17px;
+  }
+  html body .donor-head > .donor-total {
+    order: 5;
+    flex-basis: 100%;
+    margin: 0;
+    padding: 0 2px;
+    font-size: 12px;
+  }
+  html body .donor-toolbar {
+    gap: 6px;
+  }
+  html body .donor-tabs {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  html body .donor-tabs button {
+    min-height: 44px;
+    font-size: 10px;
+    padding: 4px 2px;
+  }
+  html body .donor-search {
+    max-width: none;
+    width: 100%;
+  }
 }
 
 /* One quiet, dismissible outcome; never two persistent result panels. */
-#donorNotice:not(:empty){display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line,#454753);border-radius:10px;background:var(--surface,#252732);color:var(--ink,#e9eaf0);font-size:13px;line-height:1.4;margin:6px 0;box-shadow:none;flex-shrink:0}
-#donorNotice>span{flex:1;min-width:0;overflow-wrap:anywhere}
-#donorNotice .donor-notice-close{display:grid;place-items:center;flex:0 0 32px;width:32px;min-height:32px;padding:0;border:0;background:transparent;color:inherit;font-size:23px;cursor:pointer}
-#donorNotice:empty{display:none}
+#donorNotice:not(:empty) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--line, #454753);
+  border-radius: 10px;
+  background: var(--surface, #252732);
+  color: var(--ink, #e9eaf0);
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 6px 0;
+  box-shadow: none;
+  flex-shrink: 0;
+}
+#donorNotice > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#donorNotice .donor-notice-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 23px;
+  cursor: pointer;
+}
+#donorNotice:empty {
+  display: none;
+}
 
-.msgcard .tools{flex-wrap:wrap;gap:6px}
-.msgcard .tools #previewChangePoster,.msgcard .tools #edit,.msgcard .tools #fresh,.msgcard .tools #copy{display:inline-flex!important;align-items:center;justify-content:center;min-height:40px;padding:0 12px;font-size:13px;flex-shrink:0}
-@media(max-width:599px){.msgcard .tools .ctx{flex:1 1 100%}.msgcard .tools #previewChangePoster,.msgcard .tools #edit,.msgcard .tools #fresh,.msgcard .tools #copy{min-height:44px;padding:0 10px}.msgcard .tools .sp{display:none}}
+.msgcard .tools {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.msgcard .tools #previewChangePoster,
+.msgcard .tools #edit,
+.msgcard .tools #fresh,
+.msgcard .tools #copy {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+@media (max-width: 599px) {
+  .msgcard .tools .ctx {
+    flex: 1 1 100%;
+  }
+  .msgcard .tools #previewChangePoster,
+  .msgcard .tools #edit,
+  .msgcard .tools #fresh,
+  .msgcard .tools #copy {
+    min-height: 44px;
+    padding: 0 10px;
+  }
+  .msgcard .tools .sp {
+    display: none;
+  }
+}
 
-.brandbar #desktopPreview{display:inline-grid!important;place-items:center;position:static!important;visibility:visible!important;width:44px;min-width:44px;height:44px;padding:0;font-size:0!important}
-.brandbar #desktopPreview::before{content:'';display:block;width:21px;height:21px;background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Cpath d='M3 12s3-7 9-7 9 7 9 7-3 7-9 7-9-7-9-7Z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center/contain no-repeat}
+.brandbar #desktopPreview {
+  display: inline-grid !important;
+  place-items: center;
+  position: static !important;
+  visibility: visible !important;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 0 !important;
+}
+.brandbar #desktopPreview::before {
+  content: '';
+  display: block;
+  width: 21px;
+  height: 21px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Cpath d='M3 12s3-7 9-7 9 7 9 7-3 7-9 7-9-7-9-7Z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E")
+    center/contain no-repeat;
+}
 
 /* Phone/tablet: one-row header; send buttons and Chat/Donors sit at the bottom, in thumb reach; 44px touch targets. */
-@media(max-width:899px){
-html body .brandbar{flex-wrap:nowrap!important;gap:6px;padding:6px 8px;align-items:center}
-html body .brandbar>*{min-width:0}
-html body .brandbar .seg{flex:none}
-html body .brandbar .seg button{padding:0 12px}
-html body .brandbar .sp{flex:1 1 0;min-width:0}
-html body .brandbar>button,html body .brandbar>details,html body .brandbar>label{flex:none}
-html body .layout{grid-template-rows:minmax(0,1fr) auto!important;align-content:stretch}
-html body .layout>.side,html body.nomsg .layout>.side{align-self:end;margin-block:auto 0;padding-bottom:env(safe-area-inset-bottom)}
-html,html body{height:auto!important;min-height:100%;overflow-y:auto!important}
-html body .app{height:auto;min-height:100dvh}
+@media (max-width: 899px) {
+  html body .brandbar {
+    flex-wrap: nowrap !important;
+    gap: 6px;
+    padding: 6px 8px;
+    align-items: center;
+  }
+  html body .brandbar > * {
+    min-width: 0;
+  }
+  html body .brandbar .seg {
+    flex: none;
+  }
+  html body .brandbar .seg button {
+    padding: 0 12px;
+  }
+  html body .brandbar .sp {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  html body .brandbar > button,
+  html body .brandbar > details,
+  html body .brandbar > label {
+    flex: none;
+  }
+  html body .layout {
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    align-content: stretch;
+  }
+  html body .layout > .side,
+  html body.nomsg .layout > .side {
+    align-self: end;
+    margin-block: auto 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  html,
+  html body {
+    height: auto !important;
+    min-height: 100%;
+    overflow-y: auto !important;
+  }
+  html body .app {
+    height: auto;
+    min-height: 100dvh;
+  }
 }
-@media(max-width:380px){html body .brandbar{gap:4px;padding-inline:6px}html body .brandbar .seg button{padding:0 9px}}
-@media(max-width:899px){
-html body .brandbar #donorNotesShortcut,html body .donor-add,html body .donor-search,html body .message-copy,html body #histMain,html body dialog#set button,html body dialog#set select{min-height:44px}
-html body input.sw{min-height:0;width:56px;height:32px}
+@media (max-width: 380px) {
+  html body .brandbar {
+    gap: 4px;
+    padding-inline: 6px;
+  }
+  html body .brandbar .seg button {
+    padding: 0 9px;
+  }
 }
-@media(max-width:899px){
-html body .donor-head #donorAdd,html body #hideMsg,html body .overflow-tools button,html body .msgcard .tool{min-height:44px}
+@media (max-width: 899px) {
+  html body .brandbar #donorNotesShortcut,
+  html body .donor-add,
+  html body .donor-search,
+  html body .message-copy,
+  html body #histMain,
+  html body dialog#set button,
+  html body dialog#set select {
+    min-height: 44px;
+  }
+  html body input.sw {
+    min-height: 0;
+    width: 56px;
+    height: 32px;
+  }
+}
+@media (max-width: 899px) {
+  html body .donor-head #donorAdd,
+  html body #hideMsg,
+  html body .overflow-tools button,
+  html body .msgcard .tool {
+    min-height: 44px;
+  }
 }
 /* 16px text fields stop iPhone Safari from zooming the page when a field is focused. */
-@media(max-width:899px){
-html body input:not([type=checkbox]):not([type=radio]):not([type=range]):not(.sw),html body textarea,html body select{font-size:16px!important}
+@media (max-width: 899px) {
+  html body input:not([type='checkbox']):not([type='radio']):not([type='range']):not(.sw),
+  html body textarea,
+  html body select {
+    font-size: 16px !important;
+  }
 }
 /* Navbar: only Group/DM, Notes, status and More stay in the bar; Preview, Settings and the phone amount live in More. */
-html body .compact-nav-panel #desktopPreview,html body .compact-nav-panel #gear,html body .compact-nav-panel .more-amount{display:flex!important;align-items:center;justify-content:flex-start;gap:8px;width:100%;height:auto;min-height:44px;padding:8px 12px;margin:0;font-size:14px!important;text-align:left;border-radius:10px;position:static!important;visibility:visible!important;flex:none}
-html body .compact-nav-panel #desktopPreview::before{display:none}
-html body .compact-nav-panel .more-amount{display:none!important}
-@media(max-width:560px){html body .brandbar #leftChip{display:none!important}html body .compact-nav-panel .more-amount{display:flex!important}}
-@media(pointer:coarse){html body #mainNavMore #keyboardHelp{display:none!important}}
+html body .compact-nav-panel #desktopPreview,
+html body .compact-nav-panel #gear,
+html body .compact-nav-panel .more-amount {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  margin: 0;
+  font-size: 14px !important;
+  text-align: left;
+  border-radius: 10px;
+  position: static !important;
+  visibility: visible !important;
+  flex: none;
+}
+html body .compact-nav-panel #desktopPreview::before {
+  display: none;
+}
+html body .compact-nav-panel .more-amount {
+  display: none !important;
+}
+@media (max-width: 560px) {
+  html body .brandbar #leftChip {
+    display: none !important;
+  }
+  html body .compact-nav-panel .more-amount {
+    display: flex !important;
+  }
+}
+@media (pointer: coarse) {
+  html body #mainNavMore #keyboardHelp {
+    display: none !important;
+  }
+}
 
 /* Saved DM versions: one border colour, one radius family (16 cards / 12 buttons), readable line length and type size. */
-html body #donorsPage[data-panel="messages"] .bank-heading,html body #donorsPage[data-panel="messages"] .bank-workspace{width:min(1360px,100%)}
-html body #donorsPage[data-panel="messages"] .bank-heading{gap:14px;margin-bottom:16px}
-html body #donorsPage[data-panel="messages"] .bank-heading>span:not(.bank-current){font-size:14px;color:#c9c9c9}
-html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,1fr) 152px 272px;gap:16px}
-html body #donorsPage[data-panel="messages"] .bank-message.bank-detail,html body #donorsPage[data-panel="messages"] .bank-picker{border:1px solid #ffffff1f;border-radius:16px}
-html body #donorsPage[data-panel="messages"] .bank-message.bank-detail header{padding:16px 32px 0;font-size:14px;color:#c9c9c9}
-html body #donorsPage[data-panel="messages"] .bank-preview,html body #donorsPage[data-panel="messages"] .bank-message textarea{padding:20px 32px 28px;font-size:18px;line-height:1.6}
-html body #donorsPage[data-panel="messages"] .bank-preview .bank-line,html body #donorsPage[data-panel="messages"] .bank-message textarea{max-width:66ch}
-html body #donorsPage[data-panel="messages"] .bank-actions{gap:10px}
-html body #donorsPage[data-panel="messages"] .bank-actions button,html body #donorsPage[data-panel="messages"] .bank-picker button{min-height:48px;border-radius:12px!important;border-color:#ffffff1f;font-size:14px;font-weight:600;padding:8px 12px}
-html body #donorsPage[data-panel="messages"] .bank-pagination{gap:8px}
-html body #donorsPage[data-panel="messages"] .bank-pagination>span{font-size:13px}
-html body #donorsPage[data-panel="messages"] .bank-actions>.bank-regenerate{margin-top:6px}
-html body #donorsPage[data-panel="messages"] .bank-picker{padding:18px;gap:10px}
-html body #donorsPage[data-panel="messages"] .bank-picker-title{font-size:15px;margin-bottom:6px}
-@media(max-width:1100px){html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,1fr) 132px 220px;gap:12px}html body #donorsPage[data-panel="messages"] .bank-preview,html body #donorsPage[data-panel="messages"] .bank-message textarea{padding:18px 24px 24px;font-size:17px}}
-@media(max-width:850px){
-html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,1fr) 96px;gap:10px}
-html body #donorsPage[data-panel="messages"] .bank-actions button,html body #donorsPage[data-panel="messages"] .bank-picker button{min-height:48px;font-size:13px;padding:6px 4px}
-html body #donorsPage[data-panel="messages"] .bank-picker{padding:12px;gap:8px}
-html body #donorsPage[data-panel="messages"] .bank-picker-title{font-size:14px}
-html body #donorsPage[data-panel="messages"] .bank-preview,html body #donorsPage[data-panel="messages"] .bank-message textarea{padding:16px;font-size:17px}
+html body #donorsPage[data-panel='messages'] .bank-heading,
+html body #donorsPage[data-panel='messages'] .bank-workspace {
+  width: min(1360px, 100%);
 }
-@media(max-width:850px){html body #donorsPage[data-panel="messages"] .bank-heading .bank-back{min-height:44px}}
+html body #donorsPage[data-panel='messages'] .bank-heading {
+  gap: 14px;
+  margin-bottom: 16px;
+}
+html body #donorsPage[data-panel='messages'] .bank-heading > span:not(.bank-current) {
+  font-size: 14px;
+  color: #c9c9c9;
+}
+html body #donorsPage[data-panel='messages'] .bank-workspace {
+  grid-template-columns: minmax(0, 1fr) 152px 272px;
+  gap: 16px;
+}
+html body #donorsPage[data-panel='messages'] .bank-message.bank-detail,
+html body #donorsPage[data-panel='messages'] .bank-picker {
+  border: 1px solid #ffffff1f;
+  border-radius: 16px;
+}
+html body #donorsPage[data-panel='messages'] .bank-message.bank-detail header {
+  padding: 16px 32px 0;
+  font-size: 14px;
+  color: #c9c9c9;
+}
+html body #donorsPage[data-panel='messages'] .bank-preview,
+html body #donorsPage[data-panel='messages'] .bank-message textarea {
+  padding: 20px 32px 28px;
+  font-size: 18px;
+  line-height: 1.6;
+}
+html body #donorsPage[data-panel='messages'] .bank-preview .bank-line,
+html body #donorsPage[data-panel='messages'] .bank-message textarea {
+  max-width: 66ch;
+}
+html body #donorsPage[data-panel='messages'] .bank-actions {
+  gap: 10px;
+}
+html body #donorsPage[data-panel='messages'] .bank-actions button,
+html body #donorsPage[data-panel='messages'] .bank-picker button {
+  min-height: 48px;
+  border-radius: 12px !important;
+  border-color: #ffffff1f;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+html body #donorsPage[data-panel='messages'] .bank-pagination {
+  gap: 8px;
+}
+html body #donorsPage[data-panel='messages'] .bank-pagination > span {
+  font-size: 13px;
+}
+html body #donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate {
+  margin-top: 6px;
+}
+html body #donorsPage[data-panel='messages'] .bank-picker {
+  padding: 18px;
+  gap: 10px;
+}
+html body #donorsPage[data-panel='messages'] .bank-picker-title {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+@media (max-width: 1100px) {
+  html body #donorsPage[data-panel='messages'] .bank-workspace {
+    grid-template-columns: minmax(0, 1fr) 132px 220px;
+    gap: 12px;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-preview,
+  html body #donorsPage[data-panel='messages'] .bank-message textarea {
+    padding: 18px 24px 24px;
+    font-size: 17px;
+  }
+}
+@media (max-width: 850px) {
+  html body #donorsPage[data-panel='messages'] .bank-workspace {
+    grid-template-columns: minmax(0, 1fr) 96px;
+    gap: 10px;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-actions button,
+  html body #donorsPage[data-panel='messages'] .bank-picker button {
+    min-height: 48px;
+    font-size: 13px;
+    padding: 6px 4px;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-picker {
+    padding: 12px;
+    gap: 8px;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-picker-title {
+    font-size: 14px;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-preview,
+  html body #donorsPage[data-panel='messages'] .bank-message textarea {
+    padding: 16px;
+    font-size: 17px;
+  }
+}
+@media (max-width: 850px) {
+  html body #donorsPage[data-panel='messages'] .bank-heading .bank-back {
+    min-height: 44px;
+  }
+}
 
 /* Phones: versions as a chip row on top, message full width in the middle, actions in the thumb zone at the bottom. */
-@media(max-width:850px){
-html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"pick" "msg" "act";gap:8px;overflow:visible}
-html body #donorsPage[data-panel="messages"] .bank-picker{grid-area:pick;display:flex;flex-direction:row;align-items:center;gap:8px;padding:8px;overflow-x:auto;overflow-y:hidden;border-radius:12px}
-html body #donorsPage[data-panel="messages"] .bank-picker-title{display:none}
-html body #donorsPage[data-panel="messages"] .bank-picker button{flex:0 0 auto;min-width:96px;min-height:44px;margin:0}
-html body #donorsPage[data-panel="messages"] .bank-message.bank-detail{grid-area:msg}
-html body #donorsPage[data-panel="messages"] .bank-message.bank-detail header{padding:8px 14px 0;min-height:24px}
-html body #donorsPage[data-panel="messages"] .bank-actions{grid-area:act;flex-direction:row;flex-wrap:wrap;align-items:stretch;gap:8px;align-self:end;overflow:visible;padding-bottom:env(safe-area-inset-bottom)}
-html body #donorsPage[data-panel="messages"] .bank-pagination{display:contents}
-html body #donorsPage[data-panel="messages"] .bank-actions>button,html body #donorsPage[data-panel="messages"] .bank-pagination>button:not(.bank-back-bottom){flex:1 1 calc(25% - 8px);min-width:72px;min-height:48px}
-html body #donorsPage[data-panel="messages"] .bank-pagination>span{order:5;flex:1 1 100%;text-align:center;padding:0}
-html body #donorsPage[data-panel="messages"] .bank-actions>.bank-regenerate{order:6;flex:1 1 100%;margin:0}
-html body #donorsPage[data-panel="messages"] .bank-pagination .bank-back-bottom{display:none}
-html body #donorsPage[data-panel="messages"] .bank-preview,html body #donorsPage[data-panel="messages"] .bank-message textarea{padding:12px 14px 16px}
+@media (max-width: 850px) {
+  html body #donorsPage[data-panel='messages'] .bank-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'pick' 'msg' 'act';
+    gap: 8px;
+    overflow: visible;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-picker {
+    grid-area: pick;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 12px;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-picker-title {
+    display: none;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-picker button {
+    flex: 0 0 auto;
+    min-width: 96px;
+    min-height: 44px;
+    margin: 0;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-message.bank-detail {
+    grid-area: msg;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-message.bank-detail header {
+    padding: 8px 14px 0;
+    min-height: 24px;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-actions {
+    grid-area: act;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 8px;
+    align-self: end;
+    overflow: visible;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  html body #donorsPage[data-panel='messages'] .bank-pagination {
+    display: contents;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-actions > button,
+  html body #donorsPage[data-panel='messages'] .bank-pagination > button:not(.bank-back-bottom) {
+    flex: 1 1 calc(25% - 8px);
+    min-width: 72px;
+    min-height: 48px;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-pagination > span {
+    order: 5;
+    flex: 1 1 100%;
+    text-align: center;
+    padding: 0;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate {
+    order: 6;
+    flex: 1 1 100%;
+    margin: 0;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-pagination .bank-back-bottom {
+    display: none;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-preview,
+  html body #donorsPage[data-panel='messages'] .bank-message textarea {
+    padding: 12px 14px 16px;
+  }
 }
-@media(max-width:850px){
-html body #donorsPage[data-panel="messages"] .bank-message.bank-detail header{display:none}
-html body #donorsPage[data-panel="messages"] .bank-picker{padding:4px 6px;scrollbar-width:none}
-html body #donorsPage[data-panel="messages"] .bank-picker::-webkit-scrollbar{display:none}
-html body #donorsPage[data-panel="messages"] .bank-preview,html body #donorsPage[data-panel="messages"] .bank-message textarea{padding:10px 14px 12px}
+@media (max-width: 850px) {
+  html body #donorsPage[data-panel='messages'] .bank-message.bank-detail header {
+    display: none;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-picker {
+    padding: 4px 6px;
+    scrollbar-width: none;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-picker::-webkit-scrollbar {
+    display: none;
+  }
+  html body #donorsPage[data-panel='messages'] .bank-preview,
+  html body #donorsPage[data-panel='messages'] .bank-message textarea {
+    padding: 10px 14px 12px;
+  }
 }
 
 /* Saved DM versions, simplified: no version list or "Message N" label, no Previous; just the message and a clear Next. */
-html body #donorsPage[data-panel="messages"] .bank-picker,html body #donorsPage[data-panel="messages"] .bank-message.bank-detail header,html body #donorsPage[data-panel="messages"] [data-bank-nav="previous"]{display:none!important}
-html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,760px) 168px;justify-content:center}
-html body #donorsPage[data-panel="messages"] .bank-actions>button,html body #donorsPage[data-panel="messages"] .bank-pagination>button{font-size:15px}
-html body #donorsPage[data-panel="messages"] [data-bank-nav="next"]{min-height:56px;background:#315cd0!important;color:#fff!important;border-color:#4775eb!important;font-weight:700}
-html body #donorsPage[data-panel="messages"] [data-bank-nav="next"]::after{content:' →'}
-html body #donorsPage[data-panel="messages"] .bank-actions>.bank-regenerate{background:#2b2b2b;color:#ededed}
-@media(max-width:850px){
-html body #donorsPage[data-panel="messages"] .bank-workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"msg" "act"}
-html body #donorsPage[data-panel="messages"] .bank-actions>button,html body #donorsPage[data-panel="messages"] .bank-pagination>button:not(.bank-back-bottom){flex:1 1 calc(33% - 8px)}
-html body #donorsPage[data-panel="messages"] [data-bank-nav="next"]{order:7;flex:1 1 100%!important}
+html body #donorsPage[data-panel='messages'] .bank-picker,
+html body #donorsPage[data-panel='messages'] .bank-message.bank-detail header,
+html body #donorsPage[data-panel='messages'] [data-bank-nav='previous'] {
+  display: none !important;
+}
+html body #donorsPage[data-panel='messages'] .bank-workspace {
+  grid-template-columns: minmax(0, 760px) 168px;
+  justify-content: center;
+}
+html body #donorsPage[data-panel='messages'] .bank-actions > button,
+html body #donorsPage[data-panel='messages'] .bank-pagination > button {
+  font-size: 15px;
+}
+html body #donorsPage[data-panel='messages'] [data-bank-nav='next'] {
+  min-height: 56px;
+  background: #315cd0 !important;
+  color: #fff !important;
+  border-color: #4775eb !important;
+  font-weight: 700;
+}
+html body #donorsPage[data-panel='messages'] [data-bank-nav='next']::after {
+  content: ' →';
+}
+html body #donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate {
+  background: #2b2b2b;
+  color: #ededed;
+}
+@media (max-width: 850px) {
+  html body #donorsPage[data-panel='messages'] .bank-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas: 'msg' 'act';
+  }
+  html body #donorsPage[data-panel='messages'] .bank-actions > button,
+  html body #donorsPage[data-panel='messages'] .bank-pagination > button:not(.bank-back-bottom) {
+    flex: 1 1 calc(33% - 8px);
+  }
+  html body #donorsPage[data-panel='messages'] [data-bank-nav='next'] {
+    order: 7;
+    flex: 1 1 100% !important;
+  }
 }
 
 /* Donors list: readable names, quiet controls, status as a colour pill, fewer borders. */
-html body #donorsPage .donor-table{border-color:#ffffff14}
-html body #donorsPage .donor-row{border-bottom:1px solid #ffffff0f}
-html body #donorsPage .donor-name{font-size:15px;font-weight:600;color:#ededed}
-html body #donorsPage#donorsPage .donor-row .donor-dm,html body #donorsPage#donorsPage .donor-row .donor-status,html body #donorsPage#donorsPage .donor-row .donor-more>summary{border:0!important;box-shadow:none!important;border-radius:999px!important}
-html body #donorsPage#donorsPage .donor-row .donor-dm{background:#315cd022!important;color:#9db8ff!important}
-html body #donorsPage#donorsPage .donor-row .donor-status{background:#ffffff0d!important;color:#bdbdbd!important;font-size:12px!important;font-weight:600}
-html body #donorsPage .donor-row[data-donated="true"] .donor-status{background:#1f8f4f2e!important;color:#6fe0a0!important}
-html body #donorsPage#donorsPage .donor-row .donor-more>summary{background:transparent!important;color:#bdbdbd}
-html body #donorsPage .donor-tabs button{font-size:12px}
-@media(max-width:899px){
-html body #donorsPage .donor-row{min-height:56px!important;height:auto!important;padding-block:6px;column-gap:6px}
-html body #donorsPage#donorsPage .donor-row .donor-dm,html body #donorsPage#donorsPage .donor-row .donor-status{min-height:40px;align-self:center}
-html body #donorsPage .donor-total{border:0;background:transparent}
+html body #donorsPage .donor-table {
+  border-color: #ffffff14;
 }
-html body #donorsPage#donorsPage .donor-row .donor-more{border:0!important;box-shadow:none!important;background:transparent!important}
+html body #donorsPage .donor-row {
+  border-bottom: 1px solid #ffffff0f;
+}
+html body #donorsPage .donor-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ededed;
+}
+html body #donorsPage#donorsPage .donor-row .donor-dm,
+html body #donorsPage#donorsPage .donor-row .donor-status,
+html body #donorsPage#donorsPage .donor-row .donor-more > summary {
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 999px !important;
+}
+html body #donorsPage#donorsPage .donor-row .donor-dm {
+  background: #315cd022 !important;
+  color: #9db8ff !important;
+}
+html body #donorsPage#donorsPage .donor-row .donor-status {
+  background: #ffffff0d !important;
+  color: #bdbdbd !important;
+  font-size: 12px !important;
+  font-weight: 600;
+}
+html body #donorsPage .donor-row[data-donated='true'] .donor-status {
+  background: #1f8f4f2e !important;
+  color: #6fe0a0 !important;
+}
+html body #donorsPage#donorsPage .donor-row .donor-more > summary {
+  background: transparent !important;
+  color: #bdbdbd;
+}
+html body #donorsPage .donor-tabs button {
+  font-size: 12px;
+}
+@media (max-width: 899px) {
+  html body #donorsPage .donor-row {
+    min-height: 56px !important;
+    height: auto !important;
+    padding-block: 6px;
+    column-gap: 6px;
+  }
+  html body #donorsPage#donorsPage .donor-row .donor-dm,
+  html body #donorsPage#donorsPage .donor-row .donor-status {
+    min-height: 40px;
+    align-self: center;
+  }
+  html body #donorsPage .donor-total {
+    border: 0;
+    background: transparent;
+  }
+}
+html body #donorsPage#donorsPage .donor-row .donor-more {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
 
 /* Phone main screen: fill the empty gap with a read-only peek of the message being sent; tap it to open the editor. */
-@media(max-width:899px) and (min-height:600px){
-html body.nomsg .app{height:100dvh!important;min-height:0!important}
-html body.nomsg .layout{min-height:0!important;grid-template-rows:minmax(0,1fr) auto!important;overflow:hidden}
-html body.nomsg #card.msgcard{display:flex!important;grid-row:1;grid-column:1;height:100%;max-height:100%;min-height:0;align-self:stretch;overflow:hidden;cursor:pointer;position:relative;-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
-html body.nomsg #card .tools,html body.nomsg #card .preview-dock{display:none!important}
-html body.nomsg #card .chat{flex:1;min-height:0;overflow:hidden;justify-content:flex-start!important;align-items:stretch}
-html body.nomsg #card .chat>.message{margin-top:0!important}
-html body.nomsg #card .message{font-size:14px;line-height:1.45}
-html body.nomsg #showMsg{display:none!important}
-html body.nomsg .layout>.side{grid-row:2;grid-column:1;margin-block:0!important}
+@media (max-width: 899px) and (min-height: 600px) {
+  html body.nomsg .app {
+    height: 100dvh !important;
+    min-height: 0 !important;
+  }
+  html body.nomsg .layout {
+    min-height: 0 !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    overflow: hidden;
+  }
+  html body.nomsg #card.msgcard {
+    display: flex !important;
+    grid-row: 1;
+    grid-column: 1;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    align-self: stretch;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    -webkit-mask-image: linear-gradient(#000 72%, transparent);
+    mask-image: linear-gradient(#000 72%, transparent);
+  }
+  html body.nomsg #card .tools,
+  html body.nomsg #card .preview-dock {
+    display: none !important;
+  }
+  html body.nomsg #card .chat {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    justify-content: flex-start !important;
+    align-items: stretch;
+  }
+  html body.nomsg #card .chat > .message {
+    margin-top: 0 !important;
+  }
+  html body.nomsg #card .message {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  html body.nomsg #showMsg {
+    display: none !important;
+  }
+  html body.nomsg .layout > .side {
+    grid-row: 2;
+    grid-column: 1;
+    margin-block: 0 !important;
+  }
 }
 /* Settings: the one destructive action reads as destructive. */
-html body dialog#set #waOut{color:#ff8a8a!important;background:#ff4d4d14!important}
-
+html body dialog#set #waOut {
+  color: #ff8a8a !important;
+  background: #ff4d4d14 !important;
+}
 
 /* Centre the bottom shortcut independently of any secondary footer controls. */
-html body .app > .foot{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;padding-inline:0}
-html body .app > .foot > #openDonors{grid-column:2;grid-row:1;justify-self:center;margin-inline:0}
+html body .app > .foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  padding-inline: 0;
+}
+html body .app > .foot > #openDonors {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  margin-inline: 0;
+}
 
 /* Generation progress stays visible on phones as well as desktop. */
-#donorsPage[data-panel="messages"] .bank-heading:has(.bank-generation-state:not(:empty)){flex-wrap:wrap}
-html body #donorsPage[data-panel="messages"] .bank-heading > .bank-generation-state{display:block;flex:1 0 100%!important;order:4;max-width:100%;white-space:normal;font-size:12px;line-height:1.4;color:var(--ink)}
-html body #donorsPage[data-panel="messages"] .bank-heading > .bank-generation-state:empty{display:none}
+#donorsPage[data-panel='messages'] .bank-heading:has(.bank-generation-state:not(:empty)) {
+  flex-wrap: wrap;
+}
+html body #donorsPage[data-panel='messages'] .bank-heading > .bank-generation-state {
+  display: block;
+  flex: 1 0 100% !important;
+  order: 4;
+  max-width: 100%;
+  white-space: normal;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+html body #donorsPage[data-panel='messages'] .bank-heading > .bank-generation-state:empty {
+  display: none;
+}
 
-@media(max-width:899px){
- html body .app > .foot > #chatOpen{display:flex;align-items:center;justify-content:center;grid-column:1;grid-row:1;justify-self:end;margin:0;min-width:0;min-height:46px;padding:0 14px}
+@media (max-width: 899px) {
+  html body .app > .foot > #chatOpen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: end;
+    margin: 0;
+    min-width: 0;
+    min-height: 46px;
+    padding: 0 14px;
+  }
 }
 
 /* Touch targets: the case selector inside More is as tall as the other phone controls. */
-@media(max-width:899px){html body .compact-nav-panel #caseSelect{min-height:44px}}
+@media (max-width: 899px) {
+  html body .compact-nav-panel #caseSelect {
+    min-height: 44px;
+  }
+}

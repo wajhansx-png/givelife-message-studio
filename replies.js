@@ -1,17 +1,90 @@
 /* Auto replies: the owner's own written replies for chats where someone sends a picture or says done/donated. */
-(()=>{
- const make=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
- const dlg=make('dialog','donor-form-dialog replies-dialog');dlg.setAttribute('aria-label','Auto replies');
- dlg.innerHTML='<h2>Auto replies</h2><p>When someone in your WhatsApp sends a picture or says done / donated, Auto sends one of the replies below (in turn). Each message is answered once. Only runs while Auto is on. It never marks a donation as received.</p><label style="display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:600"><input type="checkbox" id="repEnabled" style="width:20px;height:20px;min-height:0;flex:none"> Turn on auto replies</label><div id="repList"></div><p id="repNote" role="status"></p><div class="donor-form-actions"><button type="button" id="repAdd">+ Add reply</button><button type="button" id="repClose">Close</button><button type="button" class="primary" id="repSave">Save</button></div>';
- document.body.append(dlg);
- const $=id=>document.getElementById(id);
- const row=(text)=>{const box=make('div','rep-row');box.style.cssText='display:flex;gap:8px;align-items:flex-start;margin:6px 0';const ta=make('textarea','');ta.style.flex='1';ta.rows=3;ta.maxLength=1000;ta.placeholder='Write a reply, e.g. JazakAllah, we will confirm and update you soon. 🤲';ta.value=text||'';const rm=make('button','tool','Remove');rm.type='button';rm.onclick=()=>box.remove();box.append(ta,rm);$('repList').append(box)};
- const note=(t,bad)=>{$('repNote').textContent=t;$('repNote').style.color=bad?'var(--red)':''};
- async function load(){try{const r=await fetch('/reply-setup');const d=await r.json();$('repEnabled').checked=!!d.enabled;$('repList').textContent='';(d.replies&&d.replies.length?d.replies:['']).forEach(row);note(d.autopilot?'':'Auto is off. Replies are saved but only sent while Auto is on.',false)}catch(e){note('Could not load your replies.',true)}}
- $('repAdd').onclick=()=>row('');
- $('repClose').onclick=()=>dlg.close();
- $('repSave').onclick=async()=>{const replies=[...dlg.querySelectorAll('textarea')].map(t=>t.value.trim()).filter(Boolean);$('repSave').disabled=true;try{const r=await fetch('/reply-setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:$('repEnabled').checked,replies})});const d=await r.json();if(!r.ok)throw Error(d.error||'Could not save.');note('Saved '+d.replies.length+' repl'+(d.replies.length===1?'y':'ies')+(d.enabled?' · on':' · off'),false)}catch(e){note(e.message,true)}finally{$('repSave').disabled=false}};
- const open=()=>{load();dlg.showModal()};
- const tools=document.querySelector('.overflow-tools>div');if(tools){const b=make('button','tool','Auto replies');b.type='button';b.onclick=open;tools.append(b)}
- window.AutoReplies={open};
+(() => {
+  const make = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  const dlg = make('dialog', 'donor-form-dialog replies-dialog');
+  dlg.setAttribute('aria-label', 'Auto replies');
+  dlg.innerHTML =
+    '<h2>Auto replies</h2><p>When someone in your WhatsApp sends a picture or says done / donated, Auto sends one of the replies below (in turn). Each message is answered once. Only runs while Auto is on. It never marks a donation as received.</p><label style="display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:600"><input type="checkbox" id="repEnabled" style="width:20px;height:20px;min-height:0;flex:none"> Turn on auto replies</label><div id="repList"></div><p id="repNote" role="status"></p><div class="donor-form-actions"><button type="button" id="repAdd">+ Add reply</button><button type="button" id="repClose">Close</button><button type="button" class="primary" id="repSave">Save</button></div>';
+  document.body.append(dlg);
+  const $ = (id) => document.getElementById(id);
+  const row = (text) => {
+    const box = make('div', 'rep-row');
+    box.style.cssText = 'display:flex;gap:8px;align-items:flex-start;margin:6px 0';
+    const ta = make('textarea', '');
+    ta.style.flex = '1';
+    ta.rows = 3;
+    ta.maxLength = 1000;
+    ta.placeholder = 'Write a reply, e.g. JazakAllah, we will confirm and update you soon. 🤲';
+    ta.value = text || '';
+    const rm = make('button', 'tool', 'Remove');
+    rm.type = 'button';
+    rm.onclick = () => box.remove();
+    box.append(ta, rm);
+    $('repList').append(box);
+  };
+  const note = (t, bad) => {
+    $('repNote').textContent = t;
+    $('repNote').style.color = bad ? 'var(--red)' : '';
+  };
+  async function load() {
+    try {
+      const r = await fetch('/reply-setup');
+      const d = await r.json();
+      $('repEnabled').checked = !!d.enabled;
+      $('repList').textContent = '';
+      (d.replies && d.replies.length ? d.replies : ['']).forEach(row);
+      note(
+        d.autopilot ? '' : 'Auto is off. Replies are saved but only sent while Auto is on.',
+        false,
+      );
+    } catch (e) {
+      note('Could not load your replies.', true);
+    }
+  }
+  $('repAdd').onclick = () => row('');
+  $('repClose').onclick = () => dlg.close();
+  $('repSave').onclick = async () => {
+    const replies = [...dlg.querySelectorAll('textarea')]
+      .map((t) => t.value.trim())
+      .filter(Boolean);
+    $('repSave').disabled = true;
+    try {
+      const r = await fetch('/reply-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: $('repEnabled').checked, replies }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw Error(d.error || 'Could not save.');
+      note(
+        'Saved ' +
+          d.replies.length +
+          ' repl' +
+          (d.replies.length === 1 ? 'y' : 'ies') +
+          (d.enabled ? ' · on' : ' · off'),
+        false,
+      );
+    } catch (e) {
+      note(e.message, true);
+    } finally {
+      $('repSave').disabled = false;
+    }
+  };
+  const open = () => {
+    load();
+    dlg.showModal();
+  };
+  const tools = document.querySelector('.overflow-tools>div');
+  if (tools) {
+    const b = make('button', 'tool', 'Auto replies');
+    b.type = 'button';
+    b.onclick = open;
+    tools.append(b);
+  }
+  window.AutoReplies = { open };
 })();

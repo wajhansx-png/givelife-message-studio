@@ -1726,3 +1726,11 @@ html body .group-send .grp-card .free-auto{display:grid!important;grid-template-
 html body .group-send .grp-card .free-auto .free-sw{grid-column:2/-1}
 html body .group-send .grp-card .free-auto .delay-label:nth-of-type(2){grid-column:1/-1}
 html body .group-send .grp-card .delay-pill,html body .group-send .grp-card .every-pill{min-width:0!important;padding:0 2px!important;font-size:13px!important}
+
+/* Full screen on the Donors page: only the donor list box fills the screen (header, tabs and search step aside). */
+html body #donorsPage.donor-expanded{inset:0!important;width:100vw!important;max-width:none!important;height:100dvh!important;max-height:none!important;margin:0!important;padding:0!important;border-radius:0!important}
+html body #donorsPage.donor-expanded .donor-shell{display:flex!important;flex-direction:column!important;width:100%!important;max-width:none!important;height:100dvh!important;max-height:none!important;padding:8px!important;gap:6px!important;border-radius:0!important;box-sizing:border-box}
+html body #donorsPage.donor-expanded :is(.donor-head,.donor-toolbar,.hide-row,#donorNotice,.donor-resume-status){display:none!important}
+html body #donorsPage.donor-expanded .donor-table{flex:1 1 0!important;min-height:0!important;height:auto!important;max-height:none!important;overflow:auto!important}
+html body #donorsPage.donor-expanded .donor-bottom{flex:0 0 auto}
+html body #donorsPage.donor-expanded .donor-expand-btn{position:sticky;right:0}

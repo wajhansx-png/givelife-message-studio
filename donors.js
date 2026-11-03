@@ -10,7 +10,7 @@
   const page = make('dialog', 'donor-page');
   page.id = 'donorsPage';
   page.setAttribute('aria-label', 'Donor Hub');
-  page.innerHTML = `<div class="donor-shell"><header class="donor-head"><div class="donor-title"><h1>Donors <span class="donor-count" id="donorTotal"></span></h1></div><span class="donor-total"><small>Total donated</small> <strong id="donorTotalAmount">PKR 0</strong></span><span class="donor-total"><small>Normal total</small> <strong id="donorNormalTotal">PKR 0</strong></span><span class="donor-message-tablist" role="tablist" aria-label="Message bank"><button role="tab" class="donor-msgs" id="donorMessagesTab" data-tab="messages" aria-selected="false" aria-label="Messages">Messages</button></span><button class="donor-bulk" id="donorBulk">Bulk message</button><button class="donor-add" id="donorAdd">+ Add</button></header><div class="donor-toolbar"><div class="donor-tabs" role="tablist" aria-label="Donor filters"><button role="tab" data-tab="all" aria-selected="true">All</button><button role="tab" data-tab="important" aria-selected="false">★ Important</button><button role="tab" data-tab="donated" aria-selected="false">Donated</button><button role="tab" data-tab="not_contacted" aria-selected="false">Not contacted</button><button role="tab" data-tab="volunteers" aria-selected="false">Volunteers</button></div><input class="donor-search" id="donorSearch" name="donor_search" type="search" autocomplete="off" placeholder="Search donors…" aria-label="Search donor names or private numbers"></div><div id="donorHideRow" class="hide-row" hidden><button type="button" id="donorHideSent" class="hide-chip"></button><button type="button" id="donorDeselectAll" class="hide-chip deselect-chip">Deselect all</button></div><div id="donorNotice" class="donor-notice" role="status" aria-live="polite"></div><div class="donor-table" id="donorTable" role="region" aria-label="Donor list" tabindex="0"><div class="donor-columns" aria-hidden="false"><span>★</span><span>Name</span><span>DM</span><span>Status</span><span>PKR</span><span><button type="button" class="donor-expand-btn" id="donorExpand" aria-label="Expand to full screen" title="Expand to full screen">⤢</button></span></div><div id="donorRows"></div></div><section id="donorMessages" class="donor-messages" aria-label="DM wording bank" hidden></section><section id="donorVolunteers" class="donor-volunteers" aria-label="Volunteers" hidden></section><div class="donor-progress" id="donorProgress" hidden><span></span><button id="donorContinue" hidden>Restart</button><button id="donorStop">Pause</button></div><details id="donorBatchList" class="batch-list" hidden><summary id="donorBatchSummary"></summary><div class="batch-cols"><section><h3>Sent</h3><ol id="batchSent"></ol></section><section><h3>Next</h3><ol id="batchNext"></ol></section></div><p id="batchOther"></p></details><footer class="donor-bottom"><button type="button" class="donor-back-bottom back-action" id="donorMainBottom" aria-label="Back to main screen">← Back</button><button type="button" class="donor-gap" id="donorPace">Gap: 4 min ▾</button><input id="donorGap" type="hidden" value="240"><button type="button" class="donor-mini" id="donorTest" title="Send one clearly marked test DM to your own WhatsApp">Test DM</button><button type="button" class="donor-mini" id="donorToggle" title="Stop all DMs. Press again to resume everything.">Stop DMs</button><label class="donor-poster-toggle" for="donorRowPoster" title="Attach the poster to the single-tap DM button beside each donor"><input type="checkbox" id="donorRowPoster" checked> Poster on DM</label><span class="donor-message-info">Saved DM · Important first</span><button class="send-important" id="donorSendImportant">DM ★ Important</button><button class="send-donors" id="donorSendAll">DM all</button></footer></div>`;
+  page.innerHTML = `<div class="donor-shell"><header class="donor-head"><div class="donor-title"><h1>Donors <span class="donor-count" id="donorTotal"></span></h1></div><span class="donor-total"><small>Total donated</small> <strong id="donorTotalAmount">PKR 0</strong></span><span class="donor-total"><small>Normal total</small> <strong id="donorNormalTotal">PKR 0</strong></span><span class="donor-message-tablist" role="tablist" aria-label="Message bank"><button role="tab" class="donor-msgs" id="donorMessagesTab" data-tab="messages" aria-selected="false" aria-label="Messages">Messages</button></span><button class="donor-bulk" id="donorBulk">Bulk message</button><button class="donor-add" id="donorAdd">+ Add</button></header><div class="donor-toolbar"><div class="donor-tabs" role="tablist" aria-label="Donor filters"><button role="tab" data-tab="all" aria-selected="true">All</button><button role="tab" data-tab="important" aria-selected="false">★ Important</button><button role="tab" data-tab="top" aria-selected="false">Top donors</button><button role="tab" data-tab="donated" aria-selected="false">Donated</button><button role="tab" data-tab="not_contacted" aria-selected="false">Not contacted</button><button role="tab" data-tab="volunteers" aria-selected="false">Volunteers</button></div><input class="donor-search" id="donorSearch" name="donor_search" type="search" autocomplete="off" placeholder="Search donors…" aria-label="Search donor names or private numbers"></div><div id="donorHideRow" class="hide-row" hidden><button type="button" id="donorHideSent" class="hide-chip"></button><button type="button" id="donorDeselectAll" class="hide-chip deselect-chip">Deselect all</button></div><div id="donorNotice" class="donor-notice" role="status" aria-live="polite"></div><div class="donor-table" id="donorTable" role="region" aria-label="Donor list" tabindex="0"><div class="donor-columns" aria-hidden="false"><span>★</span><span>Name</span><span>DM</span><span>Status</span><span>PKR</span><span><button type="button" class="donor-expand-btn" id="donorExpand" aria-label="Expand to full screen" title="Expand to full screen">⤢</button></span></div><div id="donorRows"></div></div><section id="donorMessages" class="donor-messages" aria-label="DM wording bank" hidden></section><section id="donorVolunteers" class="donor-volunteers" aria-label="Volunteers" hidden></section><div class="donor-progress" id="donorProgress" hidden><span></span><button id="donorContinue" hidden>Restart</button><button id="donorStop">Pause</button></div><details id="donorBatchList" class="batch-list" hidden><summary id="donorBatchSummary"></summary><div class="batch-cols"><section><h3>Sent</h3><ol id="batchSent"></ol></section><section><h3>Next</h3><ol id="batchNext"></ol></section></div><p id="batchOther"></p></details><footer class="donor-bottom"><button type="button" class="donor-back-bottom back-action" id="donorMainBottom" aria-label="Back to main screen">← Back</button><button type="button" class="donor-gap" id="donorPace">Gap: 4 min ▾</button><input id="donorGap" type="hidden" value="240"><button type="button" class="donor-mini" id="donorTest" title="Send one clearly marked test DM to your own WhatsApp">Test DM</button><button type="button" class="donor-mini" id="donorToggle" title="Stop all DMs. Press again to resume everything.">Stop DMs</button><label class="donor-poster-toggle" for="donorRowPoster" title="Attach the poster to the single-tap DM button beside each donor"><input type="checkbox" id="donorRowPoster" checked> Poster on DM</label><span class="donor-message-info">Saved DM · Important first</span><button class="send-important" id="donorSendImportant">DM ★ Important</button><button class="send-donors" id="donorSendAll">DM all</button></footer></div>`;
   document.body.append(page);
 
   /* ---- fullscreen expand ---- */
@@ -293,12 +293,14 @@
   function updateCounts() {
     const counts = {
       all: allDonors.length,
+      top: 0,
       important: 0,
       donated: 0,
       not_contacted: 0,
       donated_amount: 0,
     };
     for (const d of allDonors) {
+      if (d.top_donor) counts.top++;
       if (d.important) counts.important++;
       if (d.donated) {
         counts.donated++;
@@ -311,6 +313,7 @@
     const labels = {
       all: 'All',
       important: '★ Important',
+      top: 'Top donors',
       donated: 'Donated',
       not_contacted: innerWidth < 560 ? 'Not DMed' : 'Not contacted',
       volunteers: innerWidth < 360 ? 'Helpers' : 'Volunteers',
@@ -326,6 +329,7 @@
         {
           all: 'All donors',
           important: 'Important donors',
+          top: 'Top donors',
           donated: 'Donated donors',
           not_contacted: 'Not contacted donors',
           volunteers: 'Volunteers',
@@ -407,12 +411,22 @@
       showMessages();
       return;
     }
+    for (const [flag, field, rank] of [
+      ['important', 'important_order', 'important_rank'],
+      ['top_donor', 'top_order', 'top_rank'],
+    ])
+      allDonors
+        .filter((d) => d[flag])
+        .sort((a, b) => (a[field] ?? Number.MAX_SAFE_INTEGER) - (b[field] ?? Number.MAX_SAFE_INTEGER))
+        .forEach((d, i) => (d[rank] = i + 1));
+    el('donorSendImportant').textContent = tab === 'top' ? 'DM Top donors' : 'DM ★ Important';
     const q = el('donorSearch').value.trim().toLocaleLowerCase();
     data.items = allDonors
       .filter(
         (d) =>
           (tab === 'all' ||
             (tab === 'important' && d.important) ||
+            (tab === 'top' && d.top_donor) ||
             (tab === 'donated' && d.donated) ||
             (tab === 'not_contacted' && !d.donated && !d.dm_sent)) &&
           !(tab === 'important' && hideSent && d.dm_sent && !q) &&
@@ -422,7 +436,14 @@
       )
       .sort(
         (a, b) =>
+          (tab === 'top'
+            ? (a.top_order ?? Number.MAX_SAFE_INTEGER) - (b.top_order ?? Number.MAX_SAFE_INTEGER)
+            : 0) ||
           Number(b.important) - Number(a.important) ||
+          Number(!!a.dm_sent) - Number(!!b.dm_sent) ||
+          (a.dm_sent ? (a.last_sent_at || 0) - (b.last_sent_at || 0) : 0) ||
+          (a.important_order ?? Number.MAX_SAFE_INTEGER) - (b.important_order ?? Number.MAX_SAFE_INTEGER) ||
+          0 ||
           Number(!!a.dm_sent) - Number(!!b.dm_sent) ||
           (a.dm_sent ? (a.last_sent_at || 0) - (b.last_sent_at || 0) : 0) ||
           a.name.localeCompare(b.name),
@@ -511,7 +532,9 @@
     const scope = pickerScope,
       incl = el('batchIncl').checked;
     return allDonors.filter(
-      (d) => (scope === 'important' ? d.important : true) && (incl || !d.dm_sent),
+      (d) =>
+        (scope === 'important' ? d.important : scope === 'top' ? d.top_donor : true) &&
+        (incl || !d.dm_sent),
     ).length;
   }
   function batchPauses() {
@@ -534,7 +557,8 @@
     el('batchRandomRow').hidden = !el('batchRandom').checked;
     const free = batchAvailable();
     const hidden = allDonors.filter(
-      (d) => (scope === 'important' ? d.important : true) && d.dm_sent,
+      (d) =>
+        (scope === 'important' ? d.important : scope === 'top' ? d.top_donor : true) && d.dm_sent,
     ).length;
     el('batchAudience').textContent = !scope
       ? ''
@@ -1177,6 +1201,8 @@
           Object.assign(donor, r.donor);
           paintRow(donor);
           updateCounts();
+          if (('important' in fields || 'top_donor' in fields) && ['important', 'top'].includes(tab))
+            applyFilters();
         }
       })
       .catch((e) => {
@@ -1256,6 +1282,7 @@
     const labels = {
       all: 'All',
       important: '★ Important',
+      top: 'Top donors',
       donated: 'Donated',
       not_contacted: innerWidth < 560 ? 'Not DMed' : 'Not contacted',
       volunteers: innerWidth < 360 ? 'Helpers' : 'Volunteers',
@@ -1277,6 +1304,7 @@
         {
           all: 'All donors',
           important: 'Important donors',
+          top: 'Top donors',
           donated: 'Donated donors',
           not_contacted: 'Not contacted donors',
           volunteers: 'Volunteers',
@@ -1337,6 +1365,24 @@
           const ident = make('div', 'donor-identity');
           ident.onclick = () => star.click();
           ident.append(make('div', 'donor-name', d.name));
+          ident.firstChild.dataset.rank =
+            tab === 'top' ? d.top_rank || '' : tab === 'important' ? d.important_rank || '' : '';
+          {
+            const best = make('button', 'donor-top-chip', d.top_donor ? 'Top ✓' : '+ Top');
+            best.type = 'button';
+            best.setAttribute('aria-pressed', !!d.top_donor);
+            best.setAttribute(
+              'aria-label',
+              (d.top_donor ? 'Remove from Top donors: ' : 'Add to Top donors: ') + d.name,
+            );
+            best.onclick = async (e) => {
+              e.stopPropagation();
+              if (d.top_donor) return change(d.id, { top_donor: false });
+              if (!d.important) await change(d.id, { important: true });
+              await change(d.id, { top_donor: true });
+            };
+            ident.append(best);
+          }
           if (d.normal_amount > 0)
             ident.append(
               make(
@@ -1562,7 +1608,7 @@
     }
     applyFilters();
   }
-  const TABS = ['all', 'important', 'donated', 'not_contacted', 'volunteers', 'messages'];
+  const TABS = ['all', 'important', 'top', 'donated', 'not_contacted', 'volunteers', 'messages'];
   function showSelectedTab() {
     page.dataset.panel = tab;
     el('donorMessagesTab').tabIndex = 0;
@@ -1736,7 +1782,7 @@
       lastJob = j;
       el('donorContinue').hidden =
         active ||
-        !(j.resumable > 0 && ['all', 'important', 'donated', 'not_donated'].includes(j.scope));
+        !(j.resumable > 0 && ['all', 'important', 'top', 'donated', 'not_donated'].includes(j.scope));
       if (!el('donorContinue').hidden)
         el('donorContinue').textContent = 'Restart (' + j.resumable + ' left)';
       el('donorProgress').querySelector('span').textContent =
@@ -2120,7 +2166,7 @@
     } catch (e) {}
   };
   el('donorSendAll').onclick = () => openBatchPicker('all');
-  el('donorSendImportant').onclick = () => openBatchPicker('important');
+  el('donorSendImportant').onclick = () => openBatchPicker(tab === 'top' ? 'top' : 'important');
   el('donorContinue').onclick = openResumeChoice;
   el('donorProgress').querySelector('span').onclick = () => {
     const box = el('donorBatchList');

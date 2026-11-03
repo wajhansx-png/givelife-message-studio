@@ -305,7 +305,7 @@ class Engine:
             ("last_scan", 120, self.scan_group_replies),
             ("last_dm_scan", 120, self.scan_dm_replies),
             ("last_chat_scan", 120, self.scan_saved_chats),
-            ("last_reply_scan", 120, self.scan_reply_setup),
+            ("last_reply_scan", 60, self.scan_reply_setup),
         ):
             if now() - self.s.get(key, 0) >= every:
                 self.s[key] = now()

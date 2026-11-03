@@ -5519,6 +5519,45 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply({"scheduled": True, "task_id": task["id"], "due_at": due, "message": "Scheduled: send to " + name + " in " + mins_label + ". (Task #" + task["id"] + ")"})
             except ValueError as e:
                 self.reply({"error": str(e)}, status=400)
+        elif self.path == "/schedule-resume":
+            # Resume GiveLife or the freelance groups now, or at a Pakistan time (HH:MM, today or tomorrow).
+            which = body.get("which")
+            if which not in ("main", "free", "all"):
+                return self.reply({"error": "Choose GiveLife, Freelance or All."}, status=400)
+            keys = list(GROUPS) if which == "all" else FREELANCE if which == "free" else ["main"]
+            name = {"main": "GiveLife", "free": "all freelance groups", "all": "all groups"}[which]
+            try:
+                at = str(body.get("at") or "").strip()
+                if not at:
+                    for key in keys:
+                        ENGINE.resume(key)
+                    set_hold(False)
+                    if not auto_on():
+                        set_auto(True)
+                    return self.reply({"message": "Resumed " + name + " now."})
+                if not re.fullmatch(r"\d{1,2}:\d{2}", at):
+                    raise ValueError("Choose a time like 14:30.")
+                PKT = datetime.timezone(datetime.timedelta(hours=5))
+                now = datetime.datetime.now(PKT)
+                hh, mm = map(int, at.split(":"))
+                if not (0 <= hh < 24 and 0 <= mm < 60):
+                    raise ValueError("Choose a valid time.")
+                when = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+                if when <= now:
+                    when += datetime.timedelta(days=1)
+                task = {
+                    "action": "resume", "targets": keys, "due": when.timestamp(),
+                    "daily": False, "clock": when.strftime("%H:%M"),
+                    "id": uuid.uuid4().hex[:8], "state": "pending", "created": time.time(),
+                    "request_id": body.get("request_id"), "signature": "ui-resume-" + uuid.uuid4().hex,
+                }
+                sched = timed_scheduler()
+                with sched.lock:
+                    sched.tasks.append(task)
+                    sched.save()
+                self.reply({"message": "Resume " + name + " at " + when.strftime("%I:%M %p").lstrip("0") + (" tomorrow" if when.date() > now.date() else "") + " (Pakistan time)."})
+            except ValueError as e:
+                self.reply({"error": str(e)}, status=400)
         elif self.path == "/test":
             caption = str(body.get("message", ""))
             if not caption.strip():

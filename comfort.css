@@ -1995,3 +1995,26 @@ html body .compact-nav-menu>summary::after,html body #donorsPage .donor-head sum
 }
 html body #messageFocus .focus-rail #focusEdit{background:linear-gradient(135deg,#059669,#0d9488)!important;color:#fff!important;border-color:transparent!important}
 html body #messageFocus .focus-rail #focusCopy{background:linear-gradient(135deg,#0ea5e9,#2563eb)!important;color:#fff!important;border-color:transparent!important}
+
+/* Resume messages dialog. */
+.resume-groups-dialog{width:min(460px,calc(100vw - 24px));box-sizing:border-box;border:1px solid #ffffff1f;border-radius:18px;background:#1b1d24;color:#e9edef;padding:20px}
+.resume-groups-dialog::backdrop{background:#000a}
+.resume-groups-dialog h2{margin:0 0 12px;font-size:19px}
+.resume-groups-dialog label{display:block;margin:10px 0 6px;font-weight:700;font-size:14px}
+.resume-groups-dialog :is(select,input){width:100%;box-sizing:border-box;min-height:48px;font-size:16px;border-radius:12px;padding:0 12px;background:#262a33;color:inherit;border:1px solid #ffffff26}
+.resume-groups-dialog .rg-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px}
+.resume-groups-dialog .rg-actions button{min-height:48px;border-radius:12px;border:1px solid #ffffff26;background:#262a33;color:inherit;font-weight:800;padding:0 6px}
+.resume-groups-dialog .rg-actions .primary{background:linear-gradient(135deg,#059669,#0d9488);border:0;color:#fff}
+.resume-groups-dialog #rgNote{min-height:18px;margin:10px 0 0;font-size:14px}
+@media(max-width:420px){.resume-groups-dialog .rg-actions{grid-template-columns:1fr 1fr}.resume-groups-dialog .rg-actions .primary{grid-column:1/-1;order:-1}}
+/* Send DMs window: wider on desktop, options in two columns, footer never covers fields. */
+@media (min-width:701px){
+  html body #donorBatchPicker{width:min(760px,calc(100vw - 32px))!important;overflow:auto!important}
+  html body #donorBatchForm .batch-more[open]{display:grid!important;grid-template-columns:1fr 1fr;gap:6px 14px!important;max-height:none!important;overflow:visible!important}
+  html body #donorBatchForm .batch-more[open]>summary,html body #donorBatchForm .batch-more[open]>label.batch-fresh,html body #donorBatchForm .batch-more[open]>#batchRandomRow{grid-column:1/-1}
+}
+html body #donorBatchForm .batch-foot{position:sticky!important;bottom:-14px!important;background:#1b1d24!important;border-top:1px solid #ffffff14;padding:10px 0 4px!important;z-index:2}
+/* Donor resume window: big, clear time inputs. */
+html body #donorResumeDialog :is(input[type=date],input[type=time]){width:100%;box-sizing:border-box;min-height:48px;font-size:16px}
+html body #donorResumeDialog .donor-resume-choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+html body #donorResumeDialog .donor-resume-choices button{min-height:52px;font-weight:800}

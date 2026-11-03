@@ -180,3 +180,54 @@
   else place();
   window.GiveLifeReport = { open };
 })();
+
+/* Resume messages: pick GiveLife or Freelance, then resume now or at a Pakistan time. */
+(() => {
+  const dlg = document.createElement('dialog');
+  dlg.className = 'resume-groups-dialog';
+  dlg.setAttribute('aria-label', 'Resume messages');
+  dlg.innerHTML =
+    '<h2>Resume messages</h2><label for="rgWhich">Which groups?</label><select id="rgWhich"><option value="main">GiveLife</option><option value="free">All freelance groups</option><option value="all">All 6 groups</option></select><label for="rgTime">Resume at (Pakistan time, optional)</label><input id="rgTime" type="time" step="60"><p id="rgNote" role="status"></p><div class="rg-actions"><button type="button" id="rgCancel">Cancel</button><button type="button" id="rgAt">Resume at time</button><button type="button" id="rgNow" class="primary">Resume now</button></div>';
+  document.body.append(dlg);
+  const $ = (id) => document.getElementById(id);
+  async function go(at) {
+    const note = $('rgNote');
+    if (at === '' ) return (note.textContent = 'Pick a time first, or press Resume now.');
+    note.textContent = 'Working…';
+    for (const b of dlg.querySelectorAll('button')) b.disabled = true;
+    try {
+      const r = await fetch('/schedule-resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ which: $('rgWhich').value, at: at || '' }),
+        }),
+        d = await r.json().catch(() => ({ error: 'The app is restarting. Try again in a minute.' }));
+      if (!r.ok) throw Error(d.error || 'Could not resume.');
+      note.textContent = '✓ ' + d.message;
+      setTimeout(() => dlg.open && dlg.close(), 1600);
+    } catch (e) {
+      note.textContent = e.message;
+    } finally {
+      for (const b of dlg.querySelectorAll('button')) b.disabled = false;
+    }
+  }
+  $('rgNow').onclick = () => go(null);
+  $('rgAt').onclick = () => go($('rgTime').value);
+  $('rgCancel').onclick = () => dlg.close();
+  const open = () => {
+    $('rgNote').textContent = '';
+    dlg.showModal();
+  };
+  const place = () => {
+    const panel = document.querySelector('#mainNavMore .compact-nav-panel');
+    if (!panel || panel.querySelector('.resume-open')) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tool resume-open';
+    b.textContent = 'Resume messages';
+    b.onclick = open;
+    panel.append(b);
+  };
+  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', place);
+  else place();
+})();

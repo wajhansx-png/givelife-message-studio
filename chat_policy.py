@@ -58,6 +58,8 @@ def proposal(text):
  offer=match['offer'].strip().rstrip('.')
  return offer if len(offer.split())>=2 else ''
 
+ELLIPSIS=re.compile(r'(?i)^\s*(?:(?:and|also|now|then|aur|phir|plus|same(?: for| to| in)?)\s+(?:in |to |me |mein )?|(?=(?:[a-z]+ ){0,3}[a-z]+ bhi\s*$))(?:the )?')
+SENT_RECEIPT=re.compile(r'(?i)^(?:sending to|sent to|confirmed sent|whatsapp confirmed|✓ sent|done\b.*(?:sent|posted))')
 def followup(text,history):
  """Resolve a short reply ("yes", "do it", "kar do", "all groups") against the question it answers.
 
@@ -73,6 +75,12 @@ def followup(text,history):
  if last['who']=='app' and draft_flow.selected_option(value,valid_history(history)) is None:
   picked=choice(value,numbered_items(last['text']))
   if picked:return {'text':picked,'inherited':True,'prev':picked,'asked':last['text'][-300:]}
+ if last['who']=='app' and ELLIPSIS.match(value) and manual_commands.groups(value) and not intent(value)['negative'] and not manual_commands.deferred_request(value):
+  # "and fiverr" / "fiverr bhi" right after a confirmed send repeats that send for the named group.
+  previous=next((t['text'].strip() for t in reversed(turns[:-1]) if t['who']=='you'),'')
+  if SENT_RECEIPT.search(last['text']) and intent(previous)['send'] and not intent(previous)['negative']:
+   target=re.sub(r'\s+bhi\s*$','',re.sub(ELLIPSIS,'',value)).strip() or value
+   return {'text':'send to '+target,'inherited':True,'prev':previous,'asked':last['text'][-300:]}
  if last['who']!='app' or not ASKED.search(last['text'][-400:]):return plain
  answer=confirmation(value)
  if len(numbered_items(last['text']))>=2 and (answer or re.search(r'\d',value)):return plain # an ambiguous reply to a list of options: the model must ask which one

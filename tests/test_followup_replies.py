@@ -117,6 +117,19 @@ SUGGESTIONS=chr(10).join(['Hi! Here is where things stand and what I would do ne
  '2','Restart Auto for main only','Keeps the case visible every 15 minutes.','3','Send a fresh donor batch','187 donors are uncontacted.',
  'Tell me which one to start, e.g. "post main now".'])
 
+class AndAnotherGroup(Replay,unittest.TestCase):
+ SENT=chat('send main','Sending to GiveLife main now. The automatic-post timer restarts after confirmation.')
+ def test_and_fiverr_after_a_confirmed_send_means_send_there_too(self):
+  for reply,target in (('and fiverr','fiverr'),('also upwork','upwork'),('now uet','uet'),('aur fiverr','fiverr'),('fiverr bhi','fiverr'),('same in uet','uet')):
+   with self.subTest(reply=reply):
+    follow=chat_policy.followup(reply,self.SENT)
+    self.assertTrue(follow['inherited']);self.assertEqual(follow['text'],'send to '+target)
+    self.assertTrue(chat_policy.permitted('send_appeal',follow['text']))
+ def test_it_needs_a_confirmed_send_and_a_group_name(self):
+  for reply in ('fiverr','and ali','hello','and fiverr tomorrow at 9pm',"and not fiverr"):
+   with self.subTest(reply=reply):self.assertFalse(chat_policy.followup(reply,self.SENT)['inherited'] and chat_policy.permitted('send_appeal',chat_policy.followup(reply,self.SENT)['text']))
+  self.assertFalse(chat_policy.followup('and fiverr',chat('send main','Which groups should I post to?'))['text'].startswith('send to'))
+
 class YesAcceptsTheOffer(Replay,unittest.TestCase):
  def test_yes_accepts_the_assistants_own_proposal(self):
   for history,expected in (

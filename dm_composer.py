@@ -71,6 +71,10 @@ def personalize(text, name="", gender="Brother"):
         # Keep formatting that wraps the opening paragraph, and all following text.
         prefix = match["mark"] + greeting(name, gender) + match["close"] + ", "
         return prefix + text[match.end() :]
+    first_line = text.split(chr(10), 1)[0]
+    if text[:1] in "*_" and len(first_line) > 2 and first_line.endswith(text[0]):
+        # A bold/italic opening line keeps the name inside it: "*Hamza Bhai, Only 22 hours left*".
+        return text[0] + greeting(name, gender) + ", " + text[1:]
     return prefix + text
 
 

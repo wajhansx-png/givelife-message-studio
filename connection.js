@@ -16,6 +16,7 @@
     '/reply-setup',
     '/next-message',
     '/send-group',
+    '/schedule-group',
     '/test',
     '/groups',
     '/wa-status',
@@ -320,7 +321,7 @@
         'No internet. Auto keeps running on the server. Try again when you are back online.',
       );
     if (!key) await unlock();
-    if (url === '/send-group' || url === '/test') {
+    if (url === '/send-group' || url === '/schedule-group' || url === '/test') {
       await checkStatus();
       if (!connected) {
         if (!wa.open) wa.showModal();

@@ -169,6 +169,9 @@ class DonorBook:
                 if changes.get(flag) is True and not row.get(flag):
                     counters=data.setdefault('ranking_next',{});counters[flag]=int(counters.get(flag,0))+1;changes[field]=counters[flag]
                 elif changes.get(flag) is False:changes[field]=None
+            if changes.get('donated') is True and not row.get('donated') and row.get('last_dm_key') and time.time()-float(row.get('last_sent_at') or 0)<=self.DM_CREDIT_WINDOW:
+                learned=data.get('dm_learning',{}).get(row['last_dm_key'])
+                if learned:learned['wins']=int(learned.get('wins',0))+1
             row.update(changes,updated_at=max(time.time(),math.nextafter(float(row.get('updated_at',0)),math.inf)));self._save(data)
             return {'donor':self._public(row),'reply':'Updated '+hide_numbers(row['name'])+'.'}
     def delete(self,donor):
@@ -232,14 +235,33 @@ class DonorBook:
                 for k,d in self.CASE_FIELDS.items():r[k]=copy.deepcopy(fields.get(r['id'],{}).get(k,d))
                 r['updated_at']=time.time()
             self._save(data)
-    def delivery(self,ident,state,stamp=None):
+    def delivery(self,ident,state,stamp=None,text=None):
         with self.lock:
             data=self._load();r=next((r for r in data['records'] if r['id']==ident),None)
             if not r:return
             r['delivery']=state
             if state=='Sent':
                 r['last_sent_at']=stamp or time.time();r['dm_sent']=True;r['sent_count']=int(r.get('sent_count') or 0)+1
+                if text and str(text).strip():
+                    # Remember which wording this person got, so a later donation teaches future DMs.
+                    key=dm_text_key(text);r['last_dm_key']=key
+                    learn=data.setdefault('dm_learning',{});row=learn.setdefault(key,{'text':str(text)[:2000],'sent':0,'wins':0})
+                    row['sent']+=1;row['last']=r['last_sent_at']
+                    if len(learn)>80:
+                        for old in sorted(learn,key=lambda k:learn[k].get('last',0))[:len(learn)-80]:learn.pop(old,None)
             self._save(data)
+
+    DM_CREDIT_WINDOW=7*86400
+    def proven_dm_texts(self,limit=2,min_sent=5):
+        """Real DM wordings that donors answered with a donation, best first."""
+        with self.lock:
+            rows=[r for r in self._load().get('dm_learning',{}).values() if r.get('wins') and r.get('sent',0)>=min_sent]
+        rows.sort(key=lambda r:-((r['wins']+1)/(r['sent']+2)))
+        return [r['text'] for r in rows[:limit]]
+
+def dm_text_key(text):
+    import hashlib
+    return hashlib.sha1(' '.join(str(text).split()).encode('utf-8')).hexdigest()[:16]
 
 def send_request(text):
     """Only direct registry batches; content edits and schedules stay in the AI workflow."""

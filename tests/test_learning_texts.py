@@ -1,9 +1,11 @@
 """Per-wording learning: real outcomes, credited only to the post before the money."""
 
-import unittest
+import tempfile, time, unittest
+from pathlib import Path
 
 import dm_variants
 import learning
+from donor_book import DonorBook
 
 
 class LearningTexts(unittest.TestCase):
@@ -41,6 +43,27 @@ class LearningTexts(unittest.TestCase):
         self.assertIn("Never copy their facts", prompt)
         dm_variants.PROVEN = lambda: 1 / 0
         self.assertNotIn("PROVEN STYLE", dm_variants._prompt("a\nb", 2, []))
+
+
+class DmLearning(unittest.TestCase):
+    def test_dm_wording_is_credited_when_that_donor_donates(self):
+        with tempfile.TemporaryDirectory() as folder:
+            book = DonorBook(Path(folder))
+            ids = [book.add("D%d" % i, "92311%07d" % (4000000 + i))["donor"]["id"] for i in range(5)]
+            for i in ids:
+                book.delivery(i, "Sent", time.time(), text="Wording X")
+            book.update(ids[0], donated=True, amount=2000)
+            self.assertEqual(book.proven_dm_texts(), ["Wording X"])
+
+    def test_unconfirmed_or_old_dm_never_teaches(self):
+        with tempfile.TemporaryDirectory() as folder:
+            book = DonorBook(Path(folder))
+            ids = [book.add("E%d" % i, "92311%07d" % (5000000 + i))["donor"]["id"] for i in range(5)]
+            for i in ids:
+                book.delivery(i, "Uncertain", text="Never sent")
+                book.delivery(i, "Sent", time.time() - 30 * 86400, text="Old wording")
+            book.update(ids[0], donated=True, amount=2000)
+            self.assertEqual(book.proven_dm_texts(), [])
 
 
 if __name__ == "__main__":

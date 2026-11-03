@@ -839,7 +839,7 @@ class DonorDelivery:
                         {
                             "target": "phone",
                             "phone": r["phone"],
-                            "message": self._fresh_caption(j, index),
+                            "message": (caption_now := self._fresh_caption(j, index)),
                             "poster": j["poster"],
                             "kind": "owner_text" if "custom_template" in j else self.KIND,
                             "attachment": j.get("attachment"),
@@ -882,7 +882,7 @@ class DonorDelivery:
                     error = "Delivery was not confirmed. Check WhatsApp. No automatic retry."
                     break
                 sent += 1
-                self.book.delivery(ident, "Sent", last_completion)
+                self.book.delivery(ident, "Sent", last_completion, text=caption_now)
                 receipts.append(
                     {
                         "id": ident,

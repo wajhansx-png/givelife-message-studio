@@ -2762,7 +2762,7 @@ ENGINE = autopilot.Engine(
         "outreach": outreach,
     }
 )
-__import__("dm_variants").PROVEN = lambda: learning_mod.proven_texts(ENGINE.L)
+__import__("dm_variants").PROVEN = lambda: (learning_mod.proven_texts(ENGINE.L, 1) + donors().book.proven_dm_texts(1)) or learning_mod.proven_texts(ENGINE.L)
 
 
 def engine_do(auto_review=False):

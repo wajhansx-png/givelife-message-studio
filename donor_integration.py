@@ -459,7 +459,7 @@ class DonorIntegration:
                 if confirmed:
                     self.jobs.manual_sent_at = time.time()
                 state = "Sent" if confirmed else "Uncertain"
-                self.book.delivery(r["id"], state)
+                self.book.delivery(r["id"], state, text=caption if state == "Sent" else None)
                 output = {
                     "id": r["id"],
                     "code": "SUCCESS" if confirmed else "UNCERTAIN",

@@ -1,7 +1,7 @@
 """Resume scheduling uses synthetic donors, persisted state and no WhatsApp transport."""
 
 import datetime as dt
-import unittest, threading
+import unittest, threading, time
 from unittest.mock import patch
 import test_manual_sends as fixture
 from test_manual_sends import app
@@ -105,7 +105,9 @@ class ResumeScheduleTests(unittest.TestCase):
 
     def test_stopped_bulk_batch_resumes_with_its_people_message_and_names(self):
         hub = app.donors()
-        ids = [hub.book.add("Donor " + str(i), "92300123%04d" % i)["donor"]["id"] for i in range(4)]
+        # Unique numbers: a number another test already DMed is (correctly) treated as already sent.
+        base = 9230050000 + int(time.time() * 1000) % 90000
+        ids = [hub.book.add("Donor " + str(i), str(base * 10 + i))["donor"]["id"] for i in range(4)]
         names = {i: ("Donor", "Brother") for i in ids}
         with (
             patch.object(app, "wa_ok", return_value=True),

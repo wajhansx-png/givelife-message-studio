@@ -183,6 +183,10 @@ def _json_list(raw):
     return out
 
 
+# Set by the server: real past wordings that brought donations (learning.proven_texts).
+PROVEN = lambda: []
+
+
 def _prompt(source, count, avoid):
     lines = source.split("\n")
     blank = sum(1 for line in lines if not line.strip())
@@ -198,6 +202,17 @@ def _prompt(source, count, avoid):
                 "\nThese versions already exist. Do not reuse their openings or wording:\n"
                 + "\n".join("- " + opening for opening in openings)
             )
+    try:
+        proven = [str(t) for t in (PROVEN() or [])][:2]
+    except Exception:
+        proven = []
+    if proven:
+        avoid_text += (
+            "\n\nPROVEN STYLE (real past messages that were followed by donations). Learn their"
+            " structure, opening style, urgency and tone only. Never copy their facts, names,"
+            " amounts, times or deadlines; every fact must come from the SOURCE:\n"
+            + "\n---\n".join(p[:900] for p in proven)
+        )
     low, high = length_range(source)
     size = len(source)
     return f"""Rewrite the source message below into exactly {count} DISTINCT, fully reworded versions.

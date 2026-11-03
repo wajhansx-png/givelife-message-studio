@@ -8,7 +8,7 @@ Everything here is plain data in one dict (`L`), stored with the engine state:
   followups - gentle reminders to send later: [{'phone', 'name', 'due', 'kind'}]
 """
 
-import random, time, datetime
+import hashlib, random, time, datetime
 
 PKT = datetime.timezone(datetime.timedelta(hours=5))
 WINDOW = 3600  # a donation within an hour of a post is credited to that post
@@ -22,10 +22,32 @@ def _v(L, variant):
     return L["variants"].setdefault(str(variant), {"posts": 0, "wins": 0})
 
 
-def record_post(L, variant, ts=None):
+def _text_key(text):
+    return hashlib.sha1(" ".join(str(text).split()).encode("utf-8")).hexdigest()[:16]
+
+
+def record_post(L, variant, ts=None, text=None):
+    """A post went out. With its text, the exact wording is tracked so real outcomes can teach later drafts."""
     ts = ts or time.time()
     _v(L, variant)["posts"] += 1
-    L["recent"] = (L["recent"] + [[ts, variant]])[-40:]
+    key = None
+    if text and str(text).strip():
+        key = _text_key(text)
+        texts = L.setdefault("texts", {})
+        row = texts.setdefault(key, {"text": str(text)[:2000], "posts": 0, "wins": 0})
+        row["posts"] += 1
+        row["last"] = ts
+        if len(texts) > 80:  # keep the most recent wordings only
+            for old in sorted(texts, key=lambda k: texts[k].get("last", 0))[: len(texts) - 80]:
+                texts.pop(old, None)
+    L["recent"] = (L["recent"] + [[ts, variant, key]])[-40:]
+
+
+def proven_texts(L, limit=2, min_posts=3):
+    """Real past wordings that were followed by donations, best first (never invented)."""
+    rows = [r for r in L.get("texts", {}).values() if r.get("wins") and r.get("posts", 0) >= min_posts]
+    rows.sort(key=lambda r: -((r["wins"] + 1) / (r["posts"] + 2)))
+    return [r["text"] for r in rows[:limit]]
 
 
 def credit_money(L, ts=None):
@@ -33,9 +55,13 @@ def credit_money(L, ts=None):
     ts = ts or time.time()
     hour = str(datetime.datetime.fromtimestamp(ts, PKT).hour)
     L["hours"][hour] = L["hours"].get(hour, 0) + 1
-    for t, variant in reversed(L["recent"]):
+    for entry in reversed(L["recent"]):
+        t, variant = entry[0], entry[1]
         if 0 <= ts - t <= WINDOW:
             _v(L, variant)["wins"] += 1
+            key = entry[2] if len(entry) > 2 else None
+            if key and key in L.get("texts", {}):
+                L["texts"][key]["wins"] += 1
             return variant
     return None
 

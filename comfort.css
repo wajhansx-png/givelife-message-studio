@@ -2087,3 +2087,44 @@ html body #btnGivelife#btnGivelife,html body #btnFree#btnFree,html body #sendAll
   html body .brandbar>.seg button{padding:0 10px!important;font-size:14px!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;min-width:0!important}
   html body .brandbar>.sp{display:none!important}
 }
+
+/* ===== Calm palette (owner's choice): no strong colours on the send panel ===== */
+/* GiveLife, All freelance, All 6: a slightly lighter grey than ordinary buttons. */
+html body #btnGivelife#btnGivelife,html body #btnFree#btnFree,html body #sendAll#sendAll{background:#2e333d!important;color:#f1f5f9!important;border:1px solid #ffffff2e!important;box-shadow:none!important}
+html body :is(#btnGivelife,#btnFree,#sendAll) .last-sent{color:#cbd5e1!important}
+html body .group-send .grp-card[data-scope]{background:transparent!important;border-color:#ffffff14!important}
+/* Freelance sending switch: neutral, the word ON/OFF says it all. */
+html body #freeAuto#freeAuto,html body #freeAuto#freeAuto.on{background:#262a33!important;color:#e5e7eb!important;border:1px solid #ffffff26!important;box-shadow:none!important}
+/* Timers: plain grey; the chosen one is a brighter grey with a light border and a tick. */
+html body .group-send .delay-pill{background:#22262e!important;color:#cbd5e1!important;border:1px solid #ffffff1f!important;box-shadow:none!important}
+html body .group-send .delay-pill[aria-pressed='true'][aria-pressed='true']{background:#454b57!important;color:#fff!important;border:1.5px solid #e2e8f0!important;box-shadow:none!important;font-weight:900!important}
+html body .group-send .delay-pill[aria-pressed='true']::before{content:'✓ ';font-weight:900}
+html body .grp-card.delay-armed :is(#btnGivelife#btnGivelife,#btnFree#btnFree),html body #sendAll#sendAll.delay-armed{box-shadow:0 0 0 1.5px #e2e8f0!important}
+
+/* Notes on phones/tablets: toolbar is one swipeable row on top, the page uses the full width,
+   and the screen follows the visible height so the keyboard never hides the text. */
+@media (max-width:900px){
+  html body #foundationNotes .notes-shell{height:100dvh!important;max-height:100dvh!important}
+  html body #foundationNotes #notesWorkspace{flex-direction:column!important;height:auto!important;flex:1 1 auto!important;min-height:0!important}
+  html body #foundationNotes .notes-toolbar{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;width:100%!important;height:auto!important;max-height:none!important;gap:6px!important;padding:6px 8px!important;position:sticky!important;top:0!important;z-index:3;box-sizing:border-box;scrollbar-width:none;flex:0 0 auto!important}
+  html body #foundationNotes .notes-toolbar::-webkit-scrollbar{display:none}
+  html body #foundationNotes .notes-toolbar>*{flex:0 0 auto!important;width:auto!important;min-width:0!important;margin:0!important}
+  html body #foundationNotes .notes-toolbar :is(button,select){min-height:40px!important;height:40px!important;padding:0 12px!important;font-size:16px!important;white-space:nowrap!important;border-radius:10px!important}
+  html body #foundationNotes .notes-toolbar .notes-select-label{display:flex!important;align-items:center;gap:6px;font-size:12px}
+  html body #foundationNotes .notes-paper-scroll{flex:1 1 auto!important;width:100%!important;min-height:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch}
+  html body #foundationNotes .notes-paper{width:auto!important;max-width:none!important;margin:8px!important;min-height:calc(100dvh - 140px)!important;box-sizing:border-box}
+  html body #foundationNotes [contenteditable]{font-size:16px!important;scroll-margin-bottom:40vh}
+}
+@media (max-width:900px){
+  html body #foundationNotes .notes-paper-scroll{display:block!important}
+  html body #foundationNotes .notes-paper{display:block!important;width:auto!important;flex:none!important}
+  html body #foundationNotes .notes-paper>*{width:100%!important;max-width:none!important;box-sizing:border-box}
+}
+@media (max-width:900px){
+  html body #foundationNotes .notes-paper-scroll{padding:0 0 12px!important}
+  html body #foundationNotes .notes-toolbar select{width:auto!important;min-width:130px!important;padding-right:30px!important}
+}
+/* Report: the block sits in the centre of the screen, its text reads left-aligned. */
+html body .report-card{text-align:left!important;width:min(680px,calc(100vw - 40px))!important;margin:0 auto!important}
+html body .report-card .report-line{display:flex;gap:10px;align-items:flex-start;margin:14px 0!important}
+html body .report-card button{display:block;margin:22px 0 0!important}

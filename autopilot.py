@@ -505,8 +505,9 @@ class Engine:
         if not keys:
             return
         variant = self._pick_variant()
-        if self.h["start_job"](keys, self.h["caption_variant"](variant[1])):
-            learning.record_post(self.L, variant[0])
+        caption = self.h["caption_variant"](variant[1])
+        if self.h["start_job"](keys, caption):
+            learning.record_post(self.L, variant[0], text=caption if isinstance(caption, str) else None)
             self.s["pending_post"] = now()
             self.s["posts_today"] += len(keys)
             by = self.s.setdefault("posts_by", {})

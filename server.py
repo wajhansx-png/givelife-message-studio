@@ -2762,6 +2762,7 @@ ENGINE = autopilot.Engine(
         "outreach": outreach,
     }
 )
+__import__("dm_variants").PROVEN = lambda: learning_mod.proven_texts(ENGINE.L)
 
 
 def engine_do(auto_review=False):
@@ -5502,8 +5503,9 @@ class Handler(BaseHTTPRequestHandler):
                 due = time.time() + delay * 60
                 PKT = datetime.timezone(datetime.timedelta(hours=5))
                 when = datetime.datetime.fromtimestamp(due, PKT)
+                # The saved message is read when the send is due, so a changed amount left is never sent stale.
                 task = {
-                    "action": "send", "targets": keys, "text": caption, "due": due,
+                    "action": "send", "targets": keys, "text": None, "due": due,
                     "daily": False, "clock": when.strftime("%H:%M"),
                     "id": uuid.uuid4().hex[:8], "state": "pending", "created": time.time(),
                     "request_id": body.get("request_id"), "signature": "ui-" + uuid.uuid4().hex,

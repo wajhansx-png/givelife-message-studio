@@ -185,6 +185,8 @@ def parse(text):
  phone_text=re.fullmatch(r'((?:\+?92|0092|0)?3\d{2}[\s-]?\d{7})\s+(?:send|text|message)\s+(.+)',t,re.I|re.S)
  if phone_text and not control_payload(phone_text[2]):return {'kind':'text','to':phone_text[1],'text':phone_text[2],'literal':True}
  targets=groups(t);target=targets[0] if len(targets)==1 else None
+ if len(targets)>1 and re.search(r'\b(or|either|whichever|ya)\b',low) and not re.search(r'\b(and|both|plus|aur)\b',low):return None # "main or fiverr" is a choice to confirm, not both
+ if target and SEND.search(t) and re.search(r':\s*\S',t) and not re.search(r'^[^:]*["“]',t):return None # "post update in main: case completed" carries its own words, never the saved appeal
  if len(targets)>1 and re.search(r'\b(already|got it|has it|is done|are done|received it)\b',low):return None # "main got it already, now send fiverr": let context decide which group is new
  if SEND.search(t) and has_group_exclusion(t) and not targets:return {'kind':'no_groups'}
  if SEND.search(t) and len(targets)>1 and not re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return {'kind':'appeals','targets':targets,'amount':amount}

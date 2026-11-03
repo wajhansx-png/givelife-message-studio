@@ -22,5 +22,13 @@ class EnglishSendReferenceTests(unittest.TestCase):
         self.assertEqual(manual_commands.parse('send hi to main')['kind'], 'text')
 
 
+class EnglishChoiceAndInlineTextTests(unittest.TestCase):
+    def test_or_is_a_choice_not_both(self):
+        self.assertIsNone(manual_commands.parse('send to main or fiverr'))
+
+    def test_inline_text_after_colon_is_not_the_saved_appeal(self):
+        self.assertIsNone(manual_commands.parse('post update in main: case completed'))
+
+
 if __name__ == '__main__':
     unittest.main()

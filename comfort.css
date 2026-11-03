@@ -1637,3 +1637,23 @@ html body .donor-page .bank-base{background:#3a2a0c!important;color:#ffd27a!impo
     min-height: 42px;
   }
 }
+
+/* Send DMs dialog: one simple column, clear rows, big Start button. Loads last so it wins over older rules. */
+html body #donorBatchPicker{width:min(460px,calc(100vw - 24px))!important;max-height:calc(100dvh - 24px)!important;padding:18px!important;overflow:auto!important}
+html body #donorBatchPicker h2{margin:0 0 12px!important;font-size:20px!important}
+html body #donorBatchForm{display:flex!important;flex-direction:column!important;gap:10px!important;padding:0!important;margin:0!important}
+html body #donorBatchForm>*{margin:0!important;min-width:0!important}
+html body #donorBatchForm label{display:block!important;font-size:14px!important;font-weight:700!important;line-height:1.3!important}
+html body #donorBatchForm label.batch-fresh{display:flex!important;align-items:center!important;gap:10px!important;font-weight:600!important;min-height:44px!important;padding:0!important;border:0!important;background:none!important}
+html body #donorBatchForm input[type=checkbox]{width:22px!important;height:22px!important;margin:0!important;flex:none!important}
+html body #donorBatchForm input[type=number],html body #donorBatchForm input[type=text],html body #donorBatchForm select{width:100%!important;box-sizing:border-box!important;min-height:46px!important;font-size:16px!important;padding:0 12px!important}
+html body #donorBatchForm .batch-hint{font-size:13px!important;opacity:.75!important;margin:0!important}
+html body #batchResume:not([hidden]){display:flex!important;flex-direction:column!important;gap:4px!important;padding:10px 12px!important;border:1px solid #ffffff1f!important;border-radius:12px!important}
+html body #donorBatchForm .batch-gap-row{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:8px!important}
+html body #donorBatchForm .batch-gap-row #batchGap{grid-column:1/-1!important}
+html body #donorBatchForm .batch-gap-btn{min-height:46px!important;font-size:15px!important}
+html body #donorBatchForm .batch-more{padding:8px 12px!important;border:1px solid #ffffff1f!important;border-radius:12px!important}
+html body #donorBatchForm .batch-more[open]{display:flex!important;flex-direction:column!important;gap:8px!important}
+html body #donorBatchForm .batch-foot{position:sticky!important;bottom:-18px!important;background:inherit!important;padding:10px 0 2px!important}
+html body #donorBatchForm .donor-form-actions{display:grid!important;grid-template-columns:1fr 2fr!important;gap:10px!important}
+html body #donorBatchForm .donor-form-actions button{min-height:50px!important;font-size:16px!important;font-weight:800!important}

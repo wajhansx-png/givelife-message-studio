@@ -1061,6 +1061,7 @@ async function sendGroup(key) {
   setLiveNotice('Sending to ' + (GN[key] || key) + '…');
   busy(true);
   try {
+    await fillEmptyCaption('group');
     await ensureCaption('group');
     clearTimeout(timer);
     await save();
@@ -1113,6 +1114,7 @@ async function scheduleGroup(key) {
   setLiveNotice('Scheduling ' + (GN[key] || key) + '…');
   busy(true);
   try {
+    await fillEmptyCaption('group');
     await ensureCaption('group');
     await save();
     const caption = $('group').value;
@@ -1263,6 +1265,7 @@ $('sendDm').onclick = async () => {
   if (!lockSend('dm', true)) return;
   busy(true);
   try {
+    await fillEmptyCaption('dm');
     await ensureCaption('dm');
     applyGreeting(false);
     clearTimeout(timer);

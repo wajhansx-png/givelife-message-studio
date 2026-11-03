@@ -381,12 +381,13 @@ class IntegrationTests(unittest.TestCase):
     hub.send_one(donor['id'],'no-saved-bank-click')
    send.assert_not_called()
 
- def test_explicit_repeat_still_respects_optout_and_daily_cap(self):
+ def test_owner_single_click_overrides_auto_optout(self):
+  # PR #85: a deliberate one-person send by the owner overrides an auto-detected opt-out; batches still honour it.
   import hashlib
   app=self.app;registry=app.donors();d=registry.book.add('Ali','03001234567')['donor'];app.STORE.put('optout_'+hashlib.sha256(b'923001234567').hexdigest(),True)
-  with patch.object(app,'send_image') as image:
-   with self.assertRaisesRegex(ValueError,'opted out'):registry.send_one(d['id'],'blocked-click-test')
-   image.assert_not_called()
+  with patch.object(app,'send_image',return_value={'code':'SUCCESS'}) as image:
+   registry.send_one(d['id'],'owner-click-test')
+   image.assert_called_once()
  def test_failed_manual_send_does_not_show_sent(self):
   app=self.app;registry=app.donors();d=registry.book.add('Ali','03001234567')['donor']
   with patch.object(app,'send_image',return_value={'code':'UNCERTAIN'}):result=registry.send_one(d['id'],'uncertain-click-test')

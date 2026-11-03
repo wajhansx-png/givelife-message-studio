@@ -106,13 +106,13 @@ class DMFlowTests(unittest.TestCase):
   callbacks['send_message'](to='923001234567',text='Hello Wajdan',with_picture=True)
   self.assertEqual(self.sent[-1]['text'],'Hello Wajdan')
 
-if __name__=='__main__':unittest.main()
 
 class ManualOptOutOverrideTests(unittest.TestCase):
  setUp=fixture.SendTests.setUp
  tearDown=fixture.SendTests.tearDown
  def test_manual_send_overrides_auto_opt_out_but_batch_does_not(self):
   import hashlib
+  blocked=set(app.BLOCKED);self.addCleanup(lambda:(app.BLOCKED.clear(),app.BLOCKED.update(blocked)))  # optout() blocks the number process-wide
   app.optout('923001234567')
   message=app.get_message('dm')['text']
   with self.assertRaisesRegex(ValueError,'blocked or opted out'):
@@ -120,3 +120,5 @@ class ManualOptOutOverrideTests(unittest.TestCase):
   self.assertEqual(self.sent,[])
   result=app.send_custom({'target':'phone','phone':'923001234567','message':message,'kind':'donor_manual','name':'Jr Accounts','gender':'Brother','poster':True})
   self.assertEqual(result.get('code'),'SUCCESS');self.assertEqual(len(self.sent),1)
+
+if __name__=='__main__':unittest.main()

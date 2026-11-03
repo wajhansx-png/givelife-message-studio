@@ -1,4 +1,5 @@
 const {test,expect}=require('@playwright/test');
+const {openSettings,openDonorMessages}=require('./helpers.cjs');
 const auth={Authorization:'Bearer manual-fix-preview-key'};
 const LONG=Array.from({length:7},(_,i)=>`Part ${i+1}: this is what is actually in place right now. Schedules: #f2c3c664 pending at 10:00 AM PKT to resume GiveLife main. Groups: GiveLife Foundation every 45 minutes. Balance: Rs. 15,000 left.`).join('\n\n');
 async function open(page,request,width,height,reply){
@@ -12,7 +13,7 @@ test('a refresh stays on the same Donors tab, and on Messages',async({page,reque
  await page.locator('#openDonors').click();await page.locator('.donor-tabs [data-tab=important]').click();
  await page.reload();await expect(page.locator('#donorsPage')).toBeVisible();await expect(page.locator('.donor-tabs [data-tab=important]')).toHaveAttribute('aria-selected','true');
  expect(page.url()).toContain('#/donors/important');
- await page.locator('[data-tab=messages]').click();await page.getByRole('button',{name:'Message 3',exact:true}).click();
+ await openDonorMessages(page);await page.getByRole('button',{name:'Message 3',exact:true}).click();
  await page.reload();await expect(page.locator('#donorMessages')).toBeVisible();await expect(page.locator('.bank-detail header')).toContainText('Message 3');
 });
 test('Back and Forward move between screens smoothly and never leave the app',async({page,request})=>{
@@ -24,7 +25,7 @@ test('Back and Forward move between screens smoothly and never leave the app',as
  await page.locator('#donorMainBottom').click();await expect(page.locator('#donorsPage')).not.toBeVisible();
  await page.locator('#chatOpen').click();await expect(page.locator('#hist')).toBeVisible();await page.reload();await expect(page.locator('#hist')).toBeVisible();
  await page.locator('#histMain').click();await expect(page.locator('#hist')).not.toBeVisible();
- await page.locator('#gear').click();await expect(page.locator('#set')).toBeVisible();await page.reload();await expect(page.locator('#set')).toBeVisible();
+ await openSettings(page);await expect(page.locator('#set')).toBeVisible();await page.reload();await expect(page.locator('#set')).toBeVisible();
  await page.locator('#setCloseBottom').click();await expect(page.locator('#set')).not.toBeVisible();
  await page.locator('#showMsg').click();await expect(page).toHaveURL(/#\/preview/);await page.reload();await expect(page.locator('#card')).toBeVisible();
  await page.locator('#previewBackBottom').click();await expect(page.locator('#card')).not.toBeVisible();
@@ -38,9 +39,9 @@ test('phone: a small Chat button and a wide Donors button share the thumb row',a
 test('phone: every full screen has a Back button in the lower half',async({page,request})=>{
  await open(page,request,390,844);
  await page.locator('#openDonors').click();expect((await page.locator('#donorMainBottom').boundingBox()).y).toBeGreaterThan(422);
- await page.locator('[data-tab=messages]').click();expect((await page.locator('.bank-back-bottom').boundingBox()).y).toBeGreaterThan(422);
+ await openDonorMessages(page);expect((await page.locator('.bank-back-bottom').boundingBox()).y).toBeGreaterThan(422);
  await page.locator('.bank-back-bottom').click();await page.locator('#donorMainBottom').click();
- await page.locator('#gear').click();expect((await page.locator('#setCloseBottom').boundingBox()).y).toBeGreaterThan(422);await page.locator('#setCloseBottom').click();
+ await openSettings(page);expect((await page.locator('#setCloseBottom').boundingBox()).y).toBeGreaterThan(422);await page.locator('#setCloseBottom').click();
  await page.locator('#chatOpen').click();expect((await page.locator('#histMain').boundingBox()).y).toBeGreaterThan(422);
 });
 test('a long assistant reply stays readable: big text, starts at its first line, scrolls instead of shrinking',async({page,request})=>{
@@ -201,7 +202,7 @@ test('tapping a donor name stars it, every screen has one "Back" and it is the l
  await row.locator('.donor-name').click();await expect(star).not.toHaveAttribute('aria-pressed',before);
  await expect(page.locator('#donorMainBottom')).toHaveText('← Back');
  const last=await page.locator('.donor-bottom').evaluate(el=>[...el.children].filter(n=>n.offsetParent).sort((a,b)=>a.getBoundingClientRect().x-b.getBoundingClientRect().x).at(-1).id);expect(last).toBe('donorMainBottom');
- await page.locator('[data-tab=messages]').click();await expect(page.locator('.bank-back-bottom')).toHaveText('← Back');await expect(page.locator('.donor-sub')).toHaveCount(0);
+ await openDonorMessages(page);await expect(page.locator('.bank-back-bottom')).toHaveText('← Back');await expect(page.locator('.donor-sub')).toHaveCount(0);
 });
 
 test('Volunteers tab: all five tabs fit on one line, add by name and number, save the message and DM one volunteer',async({page,request})=>{
@@ -279,7 +280,7 @@ test('team: a planning error is visible inside the Team screen, and quiet hours 
  await page.locator('#teamText').fill('Do the thing');await page.getByRole('button',{name:'Plan the tasks'}).click();
  const err=page.locator('.team-page .team-error');await expect(err).toBeVisible();await expect(err).toContainText('deadline');
  const box=await err.boundingBox();expect(box.y).toBeGreaterThan(0);expect(box.y+box.height).toBeLessThan(700);
- await page.locator('.team-back').click();await page.locator('#gear').click();const sw=page.locator('#teamQuietOn');await expect(sw).not.toBeChecked();
+ await page.locator('.team-back').click();await openSettings(page);const sw=page.locator('#teamQuietOn');await expect(sw).not.toBeChecked();
  await sw.check();await expect.poll(async()=>(await (await request.get('/team',{headers:auth})).json()).quiet).toEqual([23,7]);
  await sw.uncheck();await expect.poll(async()=>(await (await request.get('/team',{headers:auth})).json()).quiet).toBeNull();
 });

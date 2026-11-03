@@ -1,0 +1,122 @@
+/* Comfort layer. Loaded last. Touch-size targets, readable text floors, calm motion, quiet error states.
+   Only sizing, spacing and motion live here; behaviour, IDs and wording stay with their screens. */
+html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
+img:not([src]),img[src=""]{display:none!important}
+.wide-only{display:inline}
+@media(max-width:600px){.wide-only{display:none}}
+
+/* ---- Motion: one short, quiet curve everywhere ---- */
+button,summary,select,input,textarea,[role=switch],[role=tab],.donor-row,.card,.e,.donor-more>div>button{
+ transition:background-color .16s var(--ease),color .16s var(--ease),border-color .16s var(--ease),box-shadow .2s var(--ease),transform .14s var(--ease),opacity .16s var(--ease),filter .16s var(--ease)}
+@media(hover:hover){
+ :is(.big,.chips button,.tool,.ghost,.rail-quick button,.donor-tabs button,.chat-open,.open-donors):not(:disabled):hover{transform:translateY(-1px)}
+ .donor-row:hover{background:color-mix(in srgb,var(--surface2) 70%,transparent)}
+}
+button:not(:disabled):active,summary:active,[role=switch]:not(:disabled):active{transform:scale(.97);filter:brightness(.94)}
+:focus-visible{transition:outline-offset .12s var(--ease)}
+dialog[open]{animation:cmfFade .2s var(--ease) both}
+dialog[open]::backdrop{animation:cmfFade .2s var(--ease) both}
+@keyframes cmfFade{from{opacity:0}to{opacity:1}}
+.e.err,.e.bot.err,.e.sys.err,#status.err,[role=alert]{animation:cmfNudge .28s var(--ease) both}
+@keyframes cmfNudge{0%{transform:translateX(0)}30%{transform:translateX(-3px)}60%{transform:translateX(3px)}100%{transform:translateX(0)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ---- Errors read as errors: icon-free, colour plus a left rule and tinted ground ---- */
+#status.err,.e.err,.e.bot.err,.e.sys.err{border-left:3px solid var(--red);background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--ink)}
+#status.err{padding:6px 10px;border-radius:8px;white-space:normal}
+
+/* ---- Text floors: nothing under 12px ---- */
+:is(.last-sent,#donorTotal,.notes-kicker,#notesSync,#status,.donor-head small,.tab-count){font-size:12px!important}
+.notes-kicker{letter-spacing:.8px}
+
+/* ---- Comfortable targets, desktop pointer ---- */
+button,summary,select{min-height:32px}
+.donor-row label,label.dm-poster,label.dm-field{min-height:32px}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--g)}
+input#donorRowPoster,input#volPoster{margin-inline:6px}
+
+/* ---- Phone and any narrow or touch screen: 44px thumbs, 12px+ text, less chrome ---- */
+@media(max-width:899px),(pointer:coarse){
+ :is(button,summary,select,input:not([type=checkbox]):not([type=radio]),textarea.single){min-height:44px}
+ .donor-star,.donor-more>summary,.donor-more summary{min-width:44px;min-height:44px;display:inline-grid;place-items:center}
+ .donor-tabs button{min-height:44px}
+ .donor-tabs :is(.tab-name,.tab-word){font-size:12px!important}
+ .donor-tabs{overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity}
+ .donor-tabs::-webkit-scrollbar{display:none}
+ .donor-tabs button{flex:1 0 auto;scroll-snap-align:start;white-space:nowrap}
+ :is(#donorTest,#donorToggle,.donor-bottom button){font-size:13px!important;white-space:nowrap}
+ :is(.message-copy,.clip,#histCmd,#notesBack,#notesFullscreen,#batchCount,#batchGap,#batchPause,#batchLimit){min-height:44px}
+ .message-copy{min-width:44px;padding-inline:12px}
+ #messageFocus :is(#focusPoster,#focusRetry,#focusManual,#focusRegenerate,#focusEdit,#focusCopy,#focusNext){min-height:44px}
+ .brandbar :is(.connect-badge,#whatsappConnection){flex:none;min-width:44px;max-width:44px}
+ input,select,textarea{font-size:16px}  /* stops iOS zooming into a field on focus */
+}
+@media(max-width:899px) and (orientation:landscape){
+ .donor-tabs button,.seg button,.leftchip,summary{min-height:44px}
+}
+/* Dialog and sheet footers keep their actions above the home bar */
+@media(max-width:899px){
+ dialog:not(.hist){max-height:calc(100dvh - 16px)}
+ .memory-dialog,.keyboard-dialog,.connect-dialog{padding-bottom:max(16px,env(safe-area-inset-bottom))}
+}
+
+/* ---- Specificity bridge: screens below use `html body …!important`, so the floors repeat here ---- */
+html body :is(small.last-sent,.last-sent,#donorTotal){font-size:12px!important}
+html body .donor-page .donor-bottom :is(#donorTest,#donorToggle,#donorSendImportant,#donorSendAll){font-size:13px!important;white-space:nowrap}
+html body .donor-page .donor-bottom :is(.donor-poster-toggle,.donor-poster-toggle *){font-size:12px!important}
+html body :is(.donor-poster-toggle,label.dm-poster,.donor-bottom label){min-height:32px;align-items:center}
+@media(max-width:899px),(pointer:coarse){
+ html body #messageFocus :is(.focus-rail button,#focusPoster,#focusManual,#focusRegenerate,#focusRetry,#focusEdit,#focusCopy,#focusNext){min-height:44px!important}
+ html body .donor-page .donor-row :is(.donor-star,.donor-more>summary){min-width:44px!important;min-height:44px!important}
+ html body :is(button.message-copy,button.clip,#histCmd,#notesBack,#notesFullscreen){min-height:44px!important}
+ html body :is(#batchCount,#batchGap,#batchPause,#batchLimit){min-height:44px!important}
+ html body .brandbar :is(button#whatsappConnection,.connect-badge){flex:0 0 44px!important;min-width:44px!important;max-width:44px!important;width:44px!important;padding:0!important}
+}
+@media(max-width:899px) and (orientation:landscape){
+ html body :is(.leftchip,button#leftChip,.brandbar summary,.seg button){min-height:44px!important}
+}
+
+/* ---- Smallest phones (320–360): everything fits one screen width, no sideways drift ---- */
+@media(max-width:360px){
+ html body .donor-page .donor-bottom{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ html body .donor-page .donor-bottom>*{min-width:0!important}
+ html body .donor-page .donor-bottom button{padding-inline:4px!important;font-size:12px!important;line-height:1.1;white-space:normal}
+ html body .brandbar{gap:2px!important}
+ html body .brandbar .seg button{padding:0 9px!important;font-size:13px}
+ html body .brandbar :is(#donorNotesShortcut,#mainNavMore>summary){padding-inline:9px!important;font-size:13px}
+ button.clip,.composer .clip{min-width:44px}
+}
+/* Sticky action bars fade the content passing beneath them, so cut-off cards look intentional */
+@media(max-width:899px){
+ html body #messageFocus .focus-rail{box-shadow:0 -14px 14px -6px #232323}
+}
+
+@media(max-width:899px){
+ html body #histForm{grid-template-columns:44px minmax(0,1fr) 48px!important}
+ html body :is(.donor-poster-toggle,label.dm-poster,.donor-bottom label,.vol-poster,label:has(>#volPoster)){min-height:44px;align-items:center}
+ html body #messageFocus .group-send :is(small,.last-sent){font-size:12px!important}
+}
+@media(max-width:340px){
+ html body .app{padding-inline:6px!important}
+ html body .brandbar .seg button{padding:0 7px!important;font-size:12.5px}
+}
+@media(max-width:899px){html body #histForm .clip{width:44px!important;min-width:44px!important;min-height:44px!important}}
+html body #messageFocus :is(small,.last-sent,.send-title span){font-size:12px!important}
+@media(max-width:899px){
+ html body :is(#edit,#fresh,#copy,#previewChangePoster,#leftChip,button.leftchip){min-height:44px!important}
+}
+
+/* ---- Preview on phones: send cards are compact so the screen needs far less scrolling ---- */
+@media(max-width:899px){
+ html body #messageFocus .group-send{padding:8px!important;gap:6px!important}
+ html body #messageFocus .group-send .send-title{flex-direction:row!important;align-items:baseline;justify-content:space-between;gap:8px}
+ html body #messageFocus .group-send h2{font-size:15px!important}
+ html body #messageFocus .group-send .chips{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+ html body #messageFocus .group-send .chips button:not(.all){min-height:44px!important;padding:4px 4px!important}
+ html body #messageFocus .group-send .chips button .group-label{font-size:12.5px;line-height:1.15;overflow-wrap:anywhere}
+ html body #messageFocus .group-send .chips .all{grid-column:1/-1}
+ html body #messageFocus .group-send .group-section-title{display:none}
+ html body #messageFocus .group-send .prim button{min-height:44px!important}
+}
+#messageFocus#messageFocus :is(small,small.last-sent,.last-sent,.send-title span){font-size:12px!important}
+input#volPoster,input#donorRowPoster{width:20px;height:20px;min-height:28px}

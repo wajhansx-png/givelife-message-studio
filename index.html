@@ -71,12 +71,13 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
 @media(max-width:899px) and (max-height:600px){.app{gap:4px}.live{min-height:56px}.livebar{min-height:44px}.hist header{min-height:36px}.hist .composer{margin-bottom:12px}.hist .log{padding-top:10px;padding-bottom:10px}}
 @media(max-width:899px) and (max-height:550px){body[data-view=dm]:has(.dmrow input:focus) .msgcard{display:none}body[data-view=dm]:has(.dmrow input:focus) .layout{display:flex;flex-direction:column}body[data-view=dm]:has(.dmrow input:focus) .side{flex:1;justify-content:flex-end;overflow:auto}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
-</style><link rel="stylesheet" href="/donors.css"><link rel="stylesheet" href="/notes.css"><link rel="stylesheet" href="/studio.css"><link rel="stylesheet" href="/compact-nav.css"><link rel="stylesheet" href="/focus-editor.css"></head>
+</style><link rel="stylesheet" href="/donors.css"><link rel="stylesheet" href="/notes.css"><link rel="stylesheet" href="/studio.css"><link rel="stylesheet" href="/compact-nav.css"><link rel="stylesheet" href="/focus-editor.css"><link rel="stylesheet" href="/comfort.css"></head>
 <body class="nomsg" data-view="group">
 <a class="skip-link" href="#main-workspace">Skip to workspace</a>
 <div class="app"><span id="liveAnnouncement" class="sr-only" role="status" aria-live="polite"></span>
  <div class="offline" id="offline" role="status" hidden><b>No internet.</b> Auto keeps running on the server. Sending works again when you are back online.</div>
  <header class="brandbar">
+  <h1 class="sr-only">GiveLife message studio</h1>
   <div class="brand" translate="no"><div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 5.7c-2.2-2.2-5.4-1.6-8.5 1.4C8.9 4.1 5.7 3.5 3.5 5.7c-2.8 2.8-1.4 6.5 8.5 13.6 9.9-7.1 11.3-10.8 8.5-13.6Z"/></svg></div><div class="bname">GiveLife<small>Message studio</small></div></div>
   <div class="seg" role="group" aria-label="Message type"><button data-view-button="group" aria-pressed="true" title="Group messages (G)">Group messages</button></div>
   <button type="button" id="desktopPreview" class="desktop-preview" aria-controls="card" aria-pressed="false" aria-keyshortcuts="H" title="Show or hide the message preview (H)">Preview</button>
@@ -84,7 +85,7 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
   <span class="sp"></span>
   <button id="leftChip" class="leftchip" title="Change the amount left">Rs. …</button><button id="gear" class="gear" aria-label="Settings" title="Settings">&#9881;</button>
  </header>
- <section class="live" id="live" data-on="0"><button type="button" class="livebar" id="liveBar" aria-expanded="false"><i class="pulse"></i><span class="live-tag" aria-hidden="true">LIVE</span><b id="liveNow">Auto OFF</b><span class="livecopy"><strong id="liveMeta">Checking status…</strong><small id="liveDetail">Connecting to your bot</small></span><em>&#8964;</em></button><button type="button" class="autosw" id="auto" disabled role="switch" aria-checked="false" aria-label="Auto mode" title="Switch automatic actions on or off"><span class="lbl">…</span><i class="knob"></i></button><div class="livemore" id="liveMore" hidden></div></section>
+ <section class="live" id="live" aria-label="Automatic sending" data-on="0"><button type="button" class="livebar" id="liveBar" aria-expanded="false"><i class="pulse"></i><span class="live-tag" aria-hidden="true">LIVE</span><b id="liveNow">Auto OFF</b><span class="livecopy"><strong id="liveMeta">Checking status…</strong><small id="liveDetail">Connecting to your bot</small></span><em>&#8964;</em></button><button type="button" class="autosw" id="auto" disabled role="switch" aria-checked="false" aria-label="Auto mode" title="Switch automatic actions on or off"><span class="lbl">…</span><i class="knob"></i></button><div class="livemore" id="liveMore" hidden></div></section>
  <button type="button" class="showmsg" id="showMsg" aria-controls="card" aria-expanded="false"><span>Show message</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
  <main class="layout" id="main-workspace" tabindex="-1">
   <section class="card msgcard" id="card" aria-label="Message">
@@ -141,7 +142,7 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
 <input type="file" id="file" accept="image/*,video/mp4,video/quicktime" hidden><textarea id="group" hidden></textarea><textarea id="dm" hidden></textarea>
 <dialog id="feedbackDialog" class="memory-dialog" aria-label="Correct an assistant response"><h2>What should be different?</h2><form id="feedbackForm"><textarea id="feedbackText" name="feedbackText" aria-label="Your correction" placeholder="Describe the mistake and the correct behaviour…"></textarea><label class="feedback-check"><input type="checkbox" id="feedbackRemember">Remember this correction for future chats</label><p id="feedbackStatus" role="status"></p><button class="primary" type="submit">Save correction</button><button type="button" id="feedbackClose">Cancel</button></form></dialog>
 <dialog id="memoryDialog" class="memory-dialog" aria-label="Memory and feedback"><h2>Memory & feedback</h2><p>Saved preferences help future replies. They never authorize sending a new message.</p><div id="memoryContent"></div><button type="button" id="memoryClose">Close</button></dialog>
-<p id="startupRecovery" role="alert">The screen could not open. <a href="" onclick="location.reload();return false">Reload this screen</a></p><script src="/connection.js"></script><script src="/format.js"></script><script src="/app.js"></script><script src="/donors.js"></script><script src="/replies.js"></script><script src="/notes.js"></script><script src="/compact-nav.js"></script><script src="/focus-editor.js"></script></body></html>
+<p id="startupRecovery" role="alert">The screen could not open. <a href="" onclick="location.reload();return false">Reload this screen</a></p><script src="/connection.js"></script><script src="/format.js"></script><script src="/app.js"></script><script src="/donors.js"></script><script src="/replies.js"></script><script src="/notes.js"></script><script src="/compact-nav.js"></script><script src="/focus-editor.js"></script><script src="/comfort.js"></script></body></html>
 
 
 

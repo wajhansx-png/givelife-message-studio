@@ -2063,3 +2063,27 @@ html body #freeAuto#freeAuto{background:#7f1d1d!important;color:#fee2e2!importan
 html body #freeAuto#freeAuto.on{background:#14532d!important;color:#d1fae5!important;border-color:#22c55e!important}
 html body #donorStop#donorStop{background:#7f1d1d!important;color:#fee2e2!important}
 html body dialog.report-dialog.report-dialog[open]{transform:none!important;translate:none!important;scale:none!important}
+
+/* ===== Audit round ===== */
+/* Selected timers: solid blue on every screen size; the matching group button gets a white ring. */
+html body .group-send .delay-pill[aria-pressed='true'][aria-pressed='true']{background:#2563eb!important;border-color:#93c5fd!important;color:#fff!important;box-shadow:0 0 0 2px #2563eb66!important}
+html body .grp-card.delay-armed :is(#btnGivelife#btnGivelife,#btnFree#btnFree){box-shadow:0 0 0 3px #ffffffd9,0 8px 22px #0007!important}
+html body #sendAll#sendAll.delay-armed{box-shadow:0 0 0 3px #ffffffd9,0 8px 22px #0007!important}
+/* DM bubble grows with its text: no flex squeezing; the Messages area scrolls as a whole. */
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail .bank-preview,html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail textarea{flex:0 0 auto!important}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail,html body #donorsPage[data-panel='messages'] #donorMessages .bank-workspace{flex:0 0 auto!important}
+html body #donorsPage[data-panel='messages'] #donorMessages{overflow-y:auto!important;-webkit-overflow-scrolling:touch}
+/* GiveLife, All freelance and All 6 share the Donors button colour. */
+html body #btnGivelife#btnGivelife,html body #btnFree#btnFree,html body #sendAll#sendAll{background:linear-gradient(135deg,#0e7490 0%,#2f6fe8 52%,#6d4ef0 100%)!important;color:#fff!important;box-shadow:inset 0 1px 0 #ffffff2e,0 8px 20px -10px #2f6fe8e6!important}
+/* WhatsApp dot: never clipped on phones. */
+@media (max-width:700px){
+  html body .brandbar{overflow:visible!important;padding-right:10px!important}
+  html body .brandbar>#whatsappConnection{margin-left:auto!important;flex:0 0 40px!important}
+  html body .brandbar>button,html body .brandbar>details>summary{min-width:0!important}
+  html body .brandbar>button:first-of-type{font-size:14px!important;padding-left:12px!important;padding-right:12px!important}
+}
+@media (max-width:700px){
+  html body .brandbar>.seg{flex:1 1 auto!important;min-width:0!important;overflow:hidden}
+  html body .brandbar>.seg button{padding:0 10px!important;font-size:14px!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;min-width:0!important}
+  html body .brandbar>.sp{display:none!important}
+}

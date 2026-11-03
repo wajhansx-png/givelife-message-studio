@@ -1086,7 +1086,15 @@ async function sendGroup(key) {
   }
 }
 /* ---- delay pills ---- */
-const delays = { main: 0, free: 0 };
+/* Chosen send timers stay selected (also after a reload) until the owner changes them. */
+const delays = (() => {
+  try {
+    const d = JSON.parse(localStorage.getItem('givelife-delays') || '{}');
+    return { main: [15, 30, 45, 60].includes(d.main) ? d.main : 0, free: [15, 30, 45, 60].includes(d.free) ? d.free : 0 };
+  } catch (e) {
+    return { main: 0, free: 0 };
+  }
+})();
 const delayScope = (key) => (key === 'main' ? 'main' : key === 'all' ? (delays.main ? 'main' : 'free') : 'free');
 const delayFor = (key) => delays[delayScope(key)];
 const delayText = (m) => (m < 60 ? m + ' min' : m === 60 ? '1 hr' : m / 60 + ' hr');
@@ -1114,10 +1122,16 @@ function setDelay(scope, minutes) {
   paintDelay('main');
   paintDelay('free');
   $('sendAll').classList.toggle('delay-armed', delays.main > 0 || delays.free > 0);
+  try {
+    localStorage.setItem('givelife-delays', JSON.stringify(delays));
+  } catch (e) {}
 }
 document
   .querySelectorAll('.delay-pill')
   .forEach((p) => (p.onclick = () => setDelay(p.dataset.delayScope, Number(p.dataset.delay))));
+paintDelay('main');
+paintDelay('free');
+$('sendAll').classList.toggle('delay-armed', delays.main > 0 || delays.free > 0);
 async function scheduleGroup(key) {
   if (!lockSend(key, true)) return;
   setLiveNotice('Scheduling ' + (GN[key] || key) + '…');
@@ -1129,7 +1143,6 @@ async function scheduleGroup(key) {
     const caption = $('group').value;
     const label = GN[key] || key;
     const wait = delayFor(key),
-      scope = delayScope(key),
       delayLabel = delayText(wait);
     $('groupStatus').textContent = 'Scheduling for ' + label + ' in ' + delayLabel + '…';
     const r = await post('/schedule-group', {
@@ -1142,7 +1155,6 @@ async function scheduleGroup(key) {
     if (!r.ok) throw Error(d.error || 'Could not schedule');
     $('groupStatus').textContent =
       '✓ Scheduled: send to ' + label + ' in ' + delayLabel + '. (Task #' + d.task_id + ')';
-    if (delays[scope]) setDelay(scope, delays[scope]);
   } catch (e) {
     $('groupStatus').textContent = '✗ ' + e.message;
     say('app', e.message, 1);

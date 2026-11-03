@@ -2158,3 +2158,5 @@ html body #donorsPage .dp-show[hidden]{display:none!important}
   html body #donorProgress>#donorEditBatch{grid-column:1/2!important}
   html body #donorProgress>#donorStop{grid-column:2/4!important}
 }
+/* The Sent / Next list under the sending bar is removed (owner's choice). */
+html body #donorsPage #donorBatchList{display:none!important}

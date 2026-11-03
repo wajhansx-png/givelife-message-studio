@@ -37,15 +37,23 @@ def _group_mentions(text):
  keys=list(dict.fromkeys(m[2] for m in matches))
  return keys
 
-GROUP_EXCLUSION=re.compile(r'(?i)\b(?:except(?: for)?|excluding|but not|(?:but|without|skip(?:ping)?|other than|apart from|besides|leave out|leaving out)(?=(?: the)?\s+(?:upwork|fiverr|uet|main|test|community|top|give|free|all))|not(?: to)?)\s+')
+GROUP_EXCLUSION=re.compile(r'(?i)\b(?:except(?: for)?|excluding|but not|instead of|rather than|in place of|(?:but|without|skip(?:ping)?|other than|apart from|besides|leave out|leaving out)(?=(?: the)?\s+(?:upwork|fiverr|uet|main|test|community|top|give|free|all))|not(?: to)?)\s+')
+
+# Roman Urdu exclusions: "siwaye upwork" before the group, "upwork ke ilawa" / "upwork chhor ke" after it.
+URDU_EXCLUDE_PRE=re.compile(r'(?i)\b(?:siwaye|siwae|siwai|sivaye|siwa|ilawa|alawa)\b\s+')
+URDU_EXCLUDE_POST=re.compile(r'(?i)\b(\w+(?:\s+(?:group|grp|wala|wale|ko))*)\s+(?:(?:ke|kay|k)\s+(?:ilawa|alawa|siwa|siwaye|siwae)|(?:chh?or+|chh?od)\s*(?:ke|kay|kar|kr|k)|nikal\s*(?:ke|kar|kr|k))\b')
+def english_exclusion(text):
+ t=str(text);post=URDU_EXCLUDE_POST.search(t)
+ if post and _group_mentions(post[1]):return (t[:post.start()]+' '+t[post.end():]).strip()+' except '+post[1]
+ return URDU_EXCLUDE_PRE.sub('except ',t)
 
 def has_group_exclusion(text):
- match=GROUP_EXCLUSION.search(str(text))
+ text=english_exclusion(text);match=GROUP_EXCLUSION.search(str(text))
  return bool(match and _group_mentions(str(text)[:match.start()]))
 
 def groups(text):
  """Resolve explicit exclusions before any aggregate target is dispatched."""
- t=str(text)
+ t=english_exclusion(text)
  exclusion=GROUP_EXCLUSION.search(t)
  if not exclusion:return _group_mentions(t)
  included=_group_mentions(t[:exclusion.start()]);excluded=_group_mentions(t[exclusion.end():])
@@ -161,6 +169,11 @@ def parse(text):
  # A trailing speed word does not belong to the recipient's name.
  def recipient(v):
   return re.sub(r'(?i)\s+(?:fast|quickly|asap|immediately|right now)\s*[!.]*$', '', str(v).strip()).strip()
+ # "send the same thing to fiverr" points back at an earlier message; the words are not the text to post.
+ def back_reference(v):
+  return bool(re.fullmatch(r'(?i)(?:the\s+)?(?:same|same\s+(?:thing|one|message|msg|text|post|again)|what\s+(?:you|i|we)\s+(?:sent|posted|wrote|said)(?:\s+(?:to|in)\s+.+?)?|(?:the\s+)?(?:last|previous|earlier|old)\s+(?:one|message|msg|text|post)|that\s+(?:one|message|msg|text|post)|this\s+(?:one))',str(v).strip()))
+ explicit_ref=re.match(r'^(?:please\s+)?(?:send|resend|text|message|bhejo|forward|share)\s+(.+?)\s+(?:to|ko|in)\s+(.+)$',t,re.I|re.S)
+ if explicit_ref and back_reference(explicit_ref[1]):return None
  # Resolve a literal payload and its destination before scanning aliases inside it.
  explicit=re.match(r'^(?:please\s+)?(?:send|resend|text|message|bhejo)\s+(.+?)\s+(?:to|ko)\s+(.+)$',t,re.I|re.S)
  payload=re.sub(r'(?i)(?:rs\.?\s*)?\d[\d,]*(?:\.\d+)?\s*k?','',explicit[1]) if explicit and amount is not None else explicit[1] if explicit else ''
@@ -172,6 +185,7 @@ def parse(text):
  phone_text=re.fullmatch(r'((?:\+?92|0092|0)?3\d{2}[\s-]?\d{7})\s+(?:send|text|message)\s+(.+)',t,re.I|re.S)
  if phone_text and not control_payload(phone_text[2]):return {'kind':'text','to':phone_text[1],'text':phone_text[2],'literal':True}
  targets=groups(t);target=targets[0] if len(targets)==1 else None
+ if len(targets)>1 and re.search(r'\b(already|got it|has it|is done|are done|received it)\b',low):return None # "main got it already, now send fiverr": let context decide which group is new
  if SEND.search(t) and has_group_exclusion(t) and not targets:return {'kind':'no_groups'}
  if SEND.search(t) and len(targets)>1 and not re.search(r'\b(write|draft|compose|create|rewrite|shorten|improve)\b',low):return {'kind':'appeals','targets':targets,'amount':amount}
  if SEND.search(t) and target:

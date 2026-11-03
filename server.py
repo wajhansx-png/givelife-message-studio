@@ -1950,6 +1950,8 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
  if not plan:return {'handled':False}
  # "go ahead" / "continue" answer the assistant's last question. They only mean "lift the hold" while a hold is on.
  if plan['kind']=='resume' and not on_hold() and re.fullmatch(r'(?i)\s*(?:please\s+)?(?:go ahead|continue|go on|carry on)\s*[.!]*\s*',str(text)):return {'handled':False}
+ # "do it" / "go" / "send it" right after the assistant asked something is the answer to that question, not "resend the last message".
+ if plan['kind']=='repeat' and re.fullmatch(r'(?i)\s*(?:please\s+)?(?:do it|do that|go|go ahead|send it|ok|okay|yes)\s*[.!]*\s*',str(text)) and chat_policy.followup(text,chat_get(8))['inherited']:return {'handled':False}
  if plan['kind']=='say':
   # Only meaningful inside a plain-text chat; otherwise the assistant reads it with its context.
   if LAST_MANUAL.get('kind')!='text' or not LAST_MANUAL.get('to'):return {'handled':False}

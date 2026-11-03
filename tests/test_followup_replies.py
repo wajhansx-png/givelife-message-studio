@@ -218,6 +218,12 @@ class ServerGuardAgrees(unittest.TestCase):
   out=app.manual_command('go ahead')
   self.assertTrue(out['handled']);self.assertIn('Hold released',out['reply'])
 
+ def test_do_it_after_a_question_is_not_a_resend_of_the_last_message(self):
+  app.LAST_MANUAL.update(kind='text',to='923001234567',text='hello Ali')
+  app.chat_add('you','how is donation going');app.chat_add('app','Slow today. Want me to post main now?')
+  self.assertEqual(app.manual_command('do it')['handled'],False)
+  self.assertEqual(self.sent,[])
+
  def test_bare_yes_without_a_question_cannot_save(self):
   original=app.get_message('dm')['text']
   follow=chat_policy.followup('yes',chat('make the dm shorter','Saved it.'))

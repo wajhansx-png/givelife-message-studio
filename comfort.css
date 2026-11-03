@@ -1743,3 +1743,8 @@ html body #donorsPage .donor-head>.hide-row .hide-chip{min-height:38px;padding:0
 /* The Auto interval is a saved setting, not a send timer: green, so it never looks like a second timer choice. */
 html body .group-send .grp-card .every-pill[aria-pressed='true']{background:#14532d!important;border-color:#22c55e!important;color:#d1fae5!important;box-shadow:none!important}
 html body .group-send .grp-card .free-auto{border-top:1px dashed #ffffff22;padding-top:8px!important;margin-top:4px}
+
+/* Right rail: the send panel shows from its top edge; the rail itself scrolls if the window is short. */
+html body .action-rail .group-send{overflow:visible!important}
+html body .action-rail{overflow-y:auto!important;overflow-x:hidden!important;align-content:start}
+html body .group-send .grp-card .delay-hint{display:none!important}

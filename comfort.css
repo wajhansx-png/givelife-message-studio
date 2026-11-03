@@ -1921,3 +1921,17 @@ html body .replies-dialog .donor-form-actions button{min-height:46px;padding:0 6
   html body #donorsPage .donor-table .donor-row,html body #donorsPage .donor-table .donor-columns{grid-template-columns:44px minmax(0,1fr) 130px 150px 130px 52px!important;width:100%!important;box-sizing:border-box}
   html body #donorsPage .donor-table .donor-columns>span:nth-child(6){display:flex;justify-content:center}
 }
+
+/* DM count badge lives outside the donor box, in the right-hand margin (JS hides it when there is no room). */
+html body #donorsPage .donor-dm-badge{position:fixed!important;top:50%!important;right:auto!important;transform:translateY(-50%)!important}
+@media (min-width:901px){
+  html body #donorsPage .donor-toolbar .donor-tabs{flex:0 1 auto!important;overflow-x:auto!important}
+  html body #donorsPage .donor-toolbar .donor-search{flex:1 1 180px!important;min-width:140px!important}
+}
+@media (min-width:701px) and (max-width:1250px){
+  html body #donorsPage .donor-toolbar{flex-wrap:wrap!important}
+  html body #donorsPage .donor-toolbar .donor-tabs{flex:1 1 100%!important}
+  html body #donorsPage .donor-toolbar .donor-search{flex:1 1 100%!important}
+}
+@media (min-width:1251px){html body #donorsPage .donor-toolbar .donor-tabs{flex:0 0 auto!important;overflow:visible!important}}
+@media (min-width:1251px){html body #donorsPage .donor-toolbar .donor-tabs{width:max-content!important;max-width:none!important}}

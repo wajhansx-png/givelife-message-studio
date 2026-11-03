@@ -21,7 +21,7 @@
   page.innerHTML = String.raw`
    <section class="notes-shell">
     <header class="notes-head">
-     <button class="notes-back" type="button" id="notesBack" aria-label="Back to Donors">← Back</button>
+     <button class="notes-back back-action" type="button" id="notesBack" aria-label="Back to Donors">← Back</button>
      <div class="notes-headline"><span class="notes-kicker">GIVELIFE FOUNDATION</span><h1>My Notes</h1></div>
      <span class="notes-sync" id="notesSync" role="status" aria-live="polite"></span>
      <button type="button" class="notes-lock" id="notesLock" hidden>Lock</button>

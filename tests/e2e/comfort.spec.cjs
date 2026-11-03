@@ -239,7 +239,7 @@ for (const width of [1440, 390])
     await inside(page, page.locator('#donorAddDialog'));
     await shot(page, `${width}-add-donor`);
     await page.locator('#donorAddCancel').click();
-    await page.locator('#donorMain:visible, #donorMainBottom:visible').first().click();
+    await page.locator('#donorMainBottom').click();
     if (width >= 900) await page.locator('#chatExpand').click();
     else await page.locator('#chatOpen').click();
     await inside(page, page.locator('#hist'));

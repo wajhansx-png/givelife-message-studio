@@ -676,9 +676,6 @@ html body #donorsPage[data-panel='messages'] .bank-picker-title {
     flex: 1 1 100%;
     margin: 0;
   }
-  html body #donorsPage[data-panel='messages'] .bank-pagination .bank-back-bottom {
-    display: none;
-  }
   html body #donorsPage[data-panel='messages'] .bank-preview,
   html body #donorsPage[data-panel='messages'] .bank-message textarea {
     padding: 12px 14px 16px;

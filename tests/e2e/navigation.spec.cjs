@@ -85,13 +85,13 @@ test('phone: every full screen has a Back button in the lower half', async ({ pa
   await open(page, request, 390, 844);
   await page.locator('#openDonors').click();
   expect((await page.locator('#donorMainBottom').boundingBox()).y).toBeGreaterThan(422);
-  /* Messages keeps its Back button at the top-left, large enough to tap; the actions sit in the lower half. */
+  /* Messages has exactly one Back: the last row, in the lower half where the thumb rests. */
   await openMessages(page);
-  const back = await page.locator('.bank-back').boundingBox();
+  await expect(page.locator('.bank-back-bottom')).toHaveCount(1);
+  const back = await page.locator('.bank-back-bottom').boundingBox();
   expect(back.height).toBeGreaterThanOrEqual(44);
-  expect(back.y + back.height).toBeLessThanOrEqual(100);
-  expect((await page.locator('[data-bank-nav=next]').boundingBox()).y).toBeGreaterThan(422);
-  await page.locator('.bank-back').click();
+  expect(back.y).toBeGreaterThan(422);
+  await page.locator('.bank-back-bottom').click();
   await page.locator('#donorMainBottom').click();
   await openSettings(page);
   expect((await page.locator('#setCloseBottom').boundingBox()).y).toBeGreaterThan(422);
@@ -314,7 +314,7 @@ test('a stopped batch offers Continue and the dialog says already-sent people ar
   await page.locator('#openDonors').click();
   /* A finished or stopped job is summarised in one dismissible notice; continuing happens from the batch dialog. */
   await expect(page.locator('#donorNotice')).toContainText('Not sent');
-  await page.locator('#donorSendImportant:visible, #donorMain:visible').first().isVisible();
+  await page.locator('#donorSendImportant').isVisible();
   await page.locator('#donorSendImportant').click();
   await expect(page.locator('#batchResume')).toBeVisible();
   await expect(page.locator('#batchResumeText')).toContainText('already sent will be skipped');
@@ -433,7 +433,6 @@ test('donor list is numbered, progress is one slim line, and tabs have a visible
     .first()
     .evaluate((e) => getComputedStyle(e).backgroundColor);
   expect(bg).not.toBe('rgba(0, 0, 0, 0)');
-  await expect(page.locator('#donorMain')).toBeHidden();
 });
 
 test('the poster dialog and the chat clip accept an MP4 video as well as a picture', async ({
@@ -444,7 +443,7 @@ test('the poster dialog and the chat clip accept an MP4 video as well as a pictu
   expect(await page.locator('#file').getAttribute('accept')).toContain('video/mp4');
   await page.locator('#openDonors').click();
   await page
-    .locator('#donorMain, #donorMainBottom')
+    .locator('#donorMainBottom')
     .first()
     .isVisible()
     .catch(() => {});

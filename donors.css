@@ -1177,9 +1177,6 @@ html body #donorPasteDialog #pastePoster {
   gap: 7px;
   margin: 0;
 }
-#donorsPage[data-panel='messages'] .bank-pagination .bank-back-bottom {
-  display: none;
-}
 #donorsPage[data-panel='messages'] .bank-pagination > span {
   text-align: center;
   color: #c6c6c6;
@@ -1261,18 +1258,6 @@ html body #donorPasteDialog #pastePoster {
     min-height: 44px;
     font-size: 11px;
     padding: 6px 4px;
-  }
-  #donorsPage[data-panel='messages'] .bank-pagination .bank-back-bottom {
-    display: block;
-    position: fixed;
-    right: 8px;
-    bottom: max(8px, env(safe-area-inset-bottom));
-    z-index: 12;
-    min-height: 48px;
-    padding: 10px 14px;
-    background: #315cd0;
-    color: #fff;
-    box-shadow: 0 3px 12px #0007;
   }
   #donorsPage[data-panel='messages'] .bank-picker {
     grid-column: 1/-1;

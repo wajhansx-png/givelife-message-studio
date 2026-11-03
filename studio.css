@@ -7119,14 +7119,6 @@ html body a.ghost {
   justify-content: flex-end;
 }
 /* Back is the last item of the same centred cluster: right next to Next / DM all */
-html body .donor-page .donor-bottom #donorMainBottom,
-html body .donor-page .bank-pagination .bank-back-bottom {
-  order: 99;
-  position: static;
-  margin-left: 8px;
-  min-width: 112px;
-  flex: none;
-}
 html body .donor-page .bank-pagination {
   justify-content: center;
 }
@@ -8148,4 +8140,66 @@ html body .donor-page .donor-tabs button:not([aria-selected='true']) {
 }
 html body .donor-page .donor-tabs button:not([aria-selected='true']):hover {
   background: var(--surface2) !important;
+}
+
+/* Back: one per screen, the same soft red outline everywhere so it never looks like a send action.
+   `:not(#back):not(#back-action)` only raises specificity above the older per-screen button rules. */
+:root {
+  --back: #b91c1c;
+  --back-wash: #b91c1c14;
+}
+:root[data-theme='dark'] {
+  --back: #f87171;
+  --back-wash: #f871711a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --back: #f87171;
+    --back-wash: #f871711a;
+  }
+}
+html body button.back-action:not(#back):not(#back-action) {
+  background: var(--back-wash) !important;
+  border: 1.5px solid var(--back) !important;
+  color: var(--back) !important;
+  font-weight: 700;
+}
+html body button.back-action:not(#back):not(#back-action):hover:not(:disabled) {
+  background: var(--back) !important;
+  color: #fff !important;
+}
+/* Group/DM tool column: Back sits directly below Regenerate, full width on phones. */
+html body #messageFocus button#focusBack {
+  order: 99;
+  min-height: 48px;
+}
+@media (max-width: 899px) {
+  html body #messageFocus button#focusBack {
+    flex: 1 1 100%;
+    font-size: 15px;
+  }
+  /* Messages on phones: the only Back is the last row, in the thumb zone and in the normal flow. */
+  html
+    body
+    #donorsPage[data-panel='messages']
+    .bank-pagination
+    button.bank-back-bottom:not(#back):not(#back-action) {
+    display: block;
+    position: static;
+    order: 9;
+    flex: 1 1 100%;
+    min-height: 48px;
+    margin: 0;
+  }
+}
+/* Messages (desktop): Back is the last button of the tool column, directly below Regenerate. */
+html
+  body
+  #donorsPage[data-panel='messages']
+  .bank-actions
+  > button.bank-back-bottom:not(#back):not(#back-action) {
+  display: block;
+  position: static;
+  margin: 8px 0 0;
+  min-height: 48px;
 }

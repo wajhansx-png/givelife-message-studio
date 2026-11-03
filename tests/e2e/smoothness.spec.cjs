@@ -205,7 +205,7 @@ for (const [width, height] of [
       else await page.locator(`[data-tab=${tab}]`).click();
       await page.reload();
       await expect(page.locator(`[data-tab=${tab}]`)).toHaveAttribute('aria-selected', 'true');
-      if (tab === 'messages') await page.locator('.bank-back').click();
+      if (tab === 'messages') await page.locator('.bank-back-bottom').click();
       await page.locator('#donorMainBottom').click();
       await page.locator(width < 900 ? '#chatOpen' : '#chatExpand').click();
       await expect(page.locator('#hist')).toBeVisible();

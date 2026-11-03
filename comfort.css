@@ -1966,3 +1966,32 @@ html body .group-send .group-all-btn{background:linear-gradient(135deg,#2563eb,#
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>.bank-back-bottom{display:inline-flex!important;align-items:center;justify-content:center;order:-2}
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>span{display:inline!important;font-size:13px;opacity:.75;order:-1}
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>[data-bank-nav='next'],html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>button.primary{width:auto!important;min-width:130px!important;max-width:170px!important;min-height:44px!important}
+
+/* ===== Round 4 ===== */
+/* Report: a full screen gradient with the two lines in the centre (no card). */
+.report-dialog::backdrop{background:radial-gradient(circle at 15% 20%,#7c3aed 0,transparent 45%),radial-gradient(circle at 85% 80%,#0891b2 0,transparent 45%),radial-gradient(circle at 70% 15%,#db2777aa 0,transparent 40%),#0b1026!important;backdrop-filter:none}
+.report-card{background:transparent!important;border:0!important;box-shadow:none!important;width:min(900px,calc(100vw - 32px))!important}
+.report-card h2{font-size:clamp(22px,3vw,34px)!important;margin-bottom:24px!important}
+.report-line{font-size:clamp(17px,2.2vw,28px)!important;text-shadow:0 2px 12px #0008}
+.report-card button{background:#ffffff1a!important;border:1px solid #ffffff40!important;backdrop-filter:blur(6px)}
+/* Group preview: action buttons sit right next to the message; frequent ones coloured. */
+@media (min-width:901px){
+  html body #messageFocus .focus-workspace{justify-content:center!important;gap:16px!important}
+  html body #messageFocus .focus-paper{flex:0 1 auto!important;width:auto!important;max-width:760px!important}
+  html body #messageFocus :is(#focusFormatted,#focusText){margin:24px!important}
+}
+html body #messageFocus #focusRail button:is(#focusEdit,[data-act=edit]),html body #messageFocus .focus-rail button:first-child{background:linear-gradient(135deg,#059669,#0d9488)!important;color:#fff!important;border:0!important}
+html body #messageFocus .focus-rail button:nth-child(2){background:linear-gradient(135deg,#0ea5e9,#2563eb)!important;color:#fff!important;border:0!important}
+/* "More ⌄" menus: label and arrow on one line, centred. */
+html body .compact-nav-menu>summary,html body #donorsPage .donor-head summary{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;white-space:nowrap!important;line-height:1!important}
+html body .compact-nav-menu>summary::after,html body #donorsPage .donor-head summary::after{position:static!important;transform:none!important;margin:0!important;line-height:1!important}
+/* Donor list: DM / Status / PKR start right after the names. */
+@media (min-width:901px){
+  html body #donorsPage .donor-table .donor-row,html body #donorsPage .donor-table .donor-columns{grid-template-columns:44px minmax(220px,380px) 120px 150px 130px 52px!important;justify-content:start!important}
+}
+@media (min-width:901px){
+  html body #messageFocus .focus-workspace{grid-template-columns:minmax(0,760px) 136px 280px!important;justify-content:center!important;column-gap:18px!important}
+  html body #messageFocus .focus-paper{width:100%!important;max-width:none!important}
+}
+html body #messageFocus .focus-rail #focusEdit{background:linear-gradient(135deg,#059669,#0d9488)!important;color:#fff!important;border-color:transparent!important}
+html body #messageFocus .focus-rail #focusCopy{background:linear-gradient(135deg,#0ea5e9,#2563eb)!important;color:#fff!important;border-color:transparent!important}

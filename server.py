@@ -151,7 +151,6 @@ HOOKS=[
  ("He is 2. He cannot ask for help. This message is his voice.","Be his voice. Send Rs. 1,000 or Rs. 2,000."),
  ("Scroll past this, and nothing changes for him. Send Rs. 1,000, and something does.","One send. One minute. It matters to a 2-year-old and his family."),
  ("Only {P2} people are needed.","Be one of the {P2}. Not tomorrow. Now.")]
-DP=json.loads((ROOT/'dm_pools.json').read_text(encoding='utf-8'))
 
 def read_left():
  state=(DATA/'state.md').read_text(encoding='utf-8-sig');m=re.search(r'^LEFT:\s*(\d+)',state,re.M);return int(m[1]) if m else 39000
@@ -688,10 +687,6 @@ def studio_state():
  except Exception:schedules=None
  return {'left':read_left(),'case_name':active_case_name(),'case_closed':read_left()<=0,'whatsapp':wa_ok(),'minutes_since_post':since,'autopilot':auto_on(),'donor_context':dm_context,'schedules':schedules}
 
-def start_group_job(key,caption):
- keys=list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key]
- return start_send_job(keys,caption,manual=False)
-
 
 def _items(resp):
  r=resp.get('results',resp) if isinstance(resp,dict) else resp
@@ -730,7 +725,6 @@ def find_contacts(query):
  if not out:return f'No chat or contact matches "{query}" (checked {checked} chats and contacts). Tell the owner honestly and ask for the number.'
  return json.dumps(out,ensure_ascii=False)
 
-SEND_LOCK2=threading.Lock();LAST_FREE_SEND=[0]
 
 def send_free(to,text,with_picture,literal=False):
  check_hold()
@@ -1198,10 +1192,6 @@ def optout(phone):
  d=hashlib.sha256((phone+'@s.whatsapp.net').encode()).hexdigest()
  if STORE:STORE.put('optout_'+d,True)
  BLOCKED.add(d)
-
-def post_text_all(text):
- # Legacy entry point must obey the same Group tab rotation and batch safeguards.
- return start_auto_group_job(list(GROUPS),text)
 
 def saved_auto_group_caption():
  """One authoritative source: the saved Group editor and its version bank."""

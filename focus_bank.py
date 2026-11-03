@@ -37,8 +37,6 @@ class FocusBank:
    if kind=='dm':row['custom']=True
    self._put(data)
    kinds=[kind]+(['dm'] if kind=='group' and not data.get('dm',{}).get('custom') else [])
-  if 'dm' in kinds:
-   self.publish_dm(data['dm']['revision'],[data['dm']['source']],'Owner message; versions generating')
   for k in kinds:self.start(k)
   return self.get(kind)
  def start(self,kind):
@@ -94,11 +92,6 @@ class FocusBank:
    data=self._load()
    if data.get(kind,{}).get('revision')!=revision:return False
    data[kind].update(copy.deepcopy(values));self._put(data);return True
- def publish_dm(self,revision,items,label):
-  """Deliberately does nothing. Donors > Messages (the 20 saved donor versions) is owned
-  by the Donors page alone. Saving a Group message or a main-screen DM used to overwrite
-  it here, so donor DMs went out with Group-derived text instead of the saved 20."""
-  return
  def next_dm_version(self):
   """Next saved main-screen DM version, from a persisted cursor (never the clock)."""
   with self.app.LOCK,self.lock:
@@ -122,7 +115,6 @@ class FocusBank:
    data=self._load();row=data.get(kind)
    if not row:raise ValueError('Save your original message first.')
    row.update(manual=texts,items=texts,revision=uuid.uuid4().hex,state='Ready' if len(texts)==10 else 'Partial',error='',generator=GEN);self._put(data)
-  if kind=='dm':self.publish_dm(row['revision'],texts,'Owner-approved manual messages')
   return self.get(kind)
  def ensure_group_ready(self):
   """Instantly recover missing Group versions without relying on an LLM.
@@ -224,8 +216,6 @@ def reject_reason(source,text,existing=()):
  if dm_variants._meaningful_changes(source,text)<minimum or dm_variants._similarity(source,text)>.81:return 'not deeply rewritten; change the opening AND the body wording'
  if any(dm_variants._similarity(text,other)>.87 for other in existing if isinstance(other,str)):return 'too similar to another version'
  return ''
-
-def valid(source,text,existing=()):return not reject_reason(source,text,existing)
 
 def safe_local_versions(source):
  """Ten immediately available, genuinely varied local versions.

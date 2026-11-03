@@ -2,7 +2,9 @@ import tempfile,unittest,threading,copy
 from types import SimpleNamespace
 from unittest.mock import patch
 from pathlib import Path
-from focus_bank import FocusBank,valid
+from focus_bank import FocusBank,reject_reason
+
+def valid(source,text,existing=()):return not reject_reason(source,text,existing)
 SRC='*Hook A*\n\nThey are worried about burial costs and cannot manage them alone this week, so they are asking people for any help.\n\nPlease read this carefully today and think about what you can give for them.\n\nRs. 50,000 needed\n\n03097458815 Easypaisa / JazzCash Wajdan Khan'
 _H=['Stop scrolling for one minute','Imagine this were your own child','Somebody is waiting on you right now','Look at this family before you move on','A mother is praying tonight','Think of a small child in pain','One quick tap can change this home','You are the answer to their dua','Do not let this be the post you ignore','Their whole family is counting on kind strangers now']
 _B=['Their little one needs urgent care and they cannot pay the bills','A parent is begging for help to cover treatment fees','They have sold what they could and still fall short','The doctors are waiting but the money is not there','This family has nobody else to ask but you','Every single hour without help makes this harder for them','They never thought they would have to ask strangers','A small gift from many hands would lift this burden','They are trying to stay strong for their child','Please do not leave them alone with this']

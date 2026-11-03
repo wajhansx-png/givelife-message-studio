@@ -29,7 +29,7 @@ class NormalDonationLine(unittest.TestCase):
   self.assertNotIn('will save him',self.greet(500,left=0))
  def test_the_rewritten_dm_is_still_a_complete_message(self):
   import dm_composer
-  full=server.build_dm([0]*len(server.DP),26000)
+  full=server.build_dm([0],26000)
   with patch.object(server,'read_left',return_value=26000):out=server.greet_text(full,'Ali','Brother',500)
   self.assertTrue(dm_composer.complete(out),out)
 

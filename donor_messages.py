@@ -207,8 +207,8 @@ class MessageBank:
             with self.lock:
                 self.regeneration_running.discard(ident)
 
-    def generate(self, source, count=10, total=20, master_first=False):
-        """Build a bank from a pasted message. Returns the saved bank."""
+    def generate(self, source, count=10, total=20):
+        """Build a bank from a message the owner pasted. Returns the saved bank."""
         source = dm_variants.clean_source(source)
         if not dm_composer.complete(source):
             raise ValueError('Paste the complete message with its paragraphs, amount and payment details.')
@@ -220,24 +220,11 @@ class MessageBank:
             raise ValueError('Messages are still being written in the background. Wait until they finish, then try again.')
         with self.gen_lock:
             warning = ''
-            # Regenerate always uses the current saved Message 1, never the
-            # initial template or an older hidden source. Keep it unmodified.
-            canonical = dm_templates.matches(source) and not master_first
             left = self.app.read_left()
+            canonical = dm_templates.matches(source)
             if canonical:
                 texts = [dm_templates.build(i, left) for i in range(total)]
                 requested = count
-            elif master_first:
-                texts = [source]
-                need = min(count - 1, total - 1)
-                if need:
-                    texts += dm_variants.generate(source, need, avoid=texts)
-                requested = count
-                if total > len(texts):
-                    try:
-                        texts += dm_variants.generate(source, total - len(texts), avoid=texts)
-                    except ValueError as exc:
-                        warning = str(exc)
             else:
                 texts = dm_variants.generate(source, count)
                 requested = len(texts)
@@ -247,17 +234,11 @@ class MessageBank:
                     except ValueError as exc:
                         warning = str(exc)
             texts = texts[:20]
-            if master_first and (len(texts) != total or len(set(texts)) != total):
-                raise ValueError(
-                    f'Only {len(texts) - 1} of {total - 1} substantially rewritten versions passed verification. '
-                    'Nothing was replaced; Message 1 and all previous messages are still saved. '
-                    + (warning or 'Retry regeneration when the AI service is ready.')
-                )
             data = {
                 'fingerprint': self._fingerprint(source),
                 'items': self._entries(texts),
                 'updated_at': time.time(),
-                'source': 'Generated from saved Message 1; same facts and formatting' if master_first else 'Generated from the message you supplied; same structure and facts',
+                'source': 'Generated from the message you supplied; same structure and facts',
                 'mode': 'structured' if canonical else 'custom',
                 'origin': source,
                 'requested': min(requested, len(texts)),
@@ -266,13 +247,6 @@ class MessageBank:
             }
             self._guard()
             with self.lock:
-                if master_first:
-                    live = self.get()
-                    primary = live.get('items',[{}])[0].get('text') if live.get('items') else None
-                    if primary != source:
-                        raise ValueError('Message 1 changed while regenerating. Your latest edit is safe. Click Regenerate again.')
-                    # A donation can change the balance during an AI call.
-                    self._sync_amount(data)
                 self._save(data)
             return copy.deepcopy(data)
 
@@ -296,18 +270,6 @@ class MessageBank:
             data['updated_at'] = time.time()
             self._save(data)
             return {'saved': True, 'item': row}
-
-    def regenerate(self):
-        with self.lock:
-            data = self.get()
-            # Message 1 is the single source of truth, including its edits,
-            # emotional angle, bold/italic positions, spacing and CTA.
-            items = data.get('items') or []
-            if not items or not isinstance(items[0].get('text'), str):
-                raise ValueError('Save Message 1 before regenerating.')
-            source = items[0]['text']
-            requested = max(2, min(20, int(data.get('requested') or dm_templates.PRIMARY_COUNT)))
-        return self.generate(source, requested, total=20, master_first=True)
 
     def captions(self, count):
         items = [r['text'] for r in self.get()['items'] if r.get('enabled')]

@@ -1693,3 +1693,14 @@ html body .group-send .grp-card .group-main-btn,html body .group-send .grp-card 
 html body #donorsPage:is([data-panel='important'],[data-panel='top']) .donor-name[data-rank]:not([data-rank=''])::before{content:'#' attr(data-rank) ' ';font-weight:800;color:#ffd27a}
 html body .donor-page .donor-top-chip{margin-top:4px;min-height:28px;padding:0 10px;border-radius:14px;border:1px solid #ffd27a66;background:#3a2a0c;color:#ffd27a;font-size:12px;font-weight:800;cursor:pointer}
 html body .donor-page .donor-top-chip[aria-pressed='true']{background:#ffd27a;color:#3a2a0c}
+
+/* Main send panel, final spacing: every label gets its own line, timer pills share a clean row, nothing overlaps. */
+html body .group-send .grp-card .delay-row .delay-label{flex:0 0 100%!important;max-width:none!important;margin:0!important}
+html body .group-send .grp-card .delay-row{flex-wrap:wrap!important;gap:6px!important}
+html body .group-send .grp-card .delay-pill,html body .group-send .grp-card .every-pill{flex:1 1 0!important;min-width:56px!important;font-size:13px!important;white-space:nowrap!important}
+html body .group-send .grp-card .free-auto .free-sw{flex:1 1 0!important;min-width:0!important}
+html body .group-send .grp-card .free-auto .delay-label:first-child{flex:0 0 auto!important}
+html body .group-send .grp-card .group-main-btn,html body .group-send .grp-card .group-free-btn{padding-right:32px!important;gap:6px!important}
+html body .group-send .grp-card .gd-arrow{position:absolute;right:12px;top:50%;transform:translateY(-50%)}
+html body .group-send .grp-card .last-sent{margin-left:auto;font-size:11px;opacity:.7;white-space:nowrap}
+@media(max-width:380px){html body .group-send .grp-card .delay-pill,html body .group-send .grp-card .every-pill{font-size:12px!important;min-width:48px!important}}

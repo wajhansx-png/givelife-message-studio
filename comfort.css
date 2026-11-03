@@ -1758,3 +1758,9 @@ html body .group-send .grp-card .delay-pill{min-height:38px!important;font-size:
 html body .group-send .grp-card .delay-row:not(.free-auto){gap:5px!important}
 html body .group-send .send-title{margin-bottom:6px!important}
 html body .group-send .group-all-btn{min-height:44px!important}
+
+/* Freelance sending switch (full width) and the DM Stop / Resume button colours. */
+html body .group-send .grp-card .free-sw{width:100%;min-height:42px;border-radius:12px;font-size:14px;font-weight:800;background:#7f1d1d;border:1.5px solid #ef4444;color:#fee2e2}
+html body .group-send .grp-card .free-sw.on{background:#14532d;border-color:#22c55e;color:#d1fae5}
+html body .donor-page #donorToggle[data-paused='false']{background:#7f1d1d!important;border-color:#ef4444!important;color:#fee2e2!important}
+html body .donor-page #donorToggle[data-paused='true']{background:#14532d!important;border-color:#22c55e!important;color:#d1fae5!important}

@@ -1864,12 +1864,12 @@ function paintFreeAuto(sum) {
   if (sum) freeSummary = sum;
   if (!freeSummary) return;
   const paused = freeSummary.paused || {},
-    on = autoOn && !FREE_KEYS.some((k) => paused[k] > 0),
+    on = !FREE_KEYS.some((k) => paused[k] > 0),
     every = Number((freeSummary.group_intervals || {}).community || freeSummary.freelance_every || 0);
   const sw = $('freeAuto');
   if (!sw) return;
   sw.setAttribute('aria-checked', String(on));
-  sw.textContent = on ? 'ON' : 'OFF';
+  sw.textContent = on ? 'Freelance sending: ON' : 'Freelance sending: OFF (paused)';
   sw.classList.toggle('on', on);
   document
     .querySelectorAll('.every-pill')
@@ -1891,9 +1891,8 @@ if ($('freeAuto')) $('freeAuto').onclick = async () => {
       await freeAutoCall(
         turnOn ? { action: 'resume', key: k } : { action: 'pause', key: k, hours: 720 },
       );
-    if (turnOn && !autoOn) await toggleAuto(true);
     paintFreeAuto();
-    say('app', turnOn ? 'Freelance auto is ON.' : 'Freelance auto is OFF.');
+    say('app', turnOn ? 'Freelance sending is ON.' : 'Freelance sending is paused.');
   } catch (e) {
     say('app', e.message, 1);
   } finally {

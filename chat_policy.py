@@ -85,7 +85,7 @@ def followup(text,history):
  if offer:
   # "yes" accepts what was offered. A send in the owner's older request is not accepted by a yes about something else.
   effective=offer if intent(offer)['send'] or intent(prev)['send'] or intent(prev)['query'] or not prev else prev+'. '+offer
-  prev=prev or offer
+  prev=effective # the model is told to carry out the accepted offer, never the older request
  else:effective=prev if answer else prev+'. '+value
  if intent(effective)['send'] and not asked_send:return plain
  return {'text':effective,'inherited':True,'prev':prev,'asked':last['text'][-300:]}

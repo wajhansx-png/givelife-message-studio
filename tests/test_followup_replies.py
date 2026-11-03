@@ -131,6 +131,11 @@ class YesAcceptsTheOffer(Replay,unittest.TestCase):
   self.play('yes',history,[{'content':'Auto restarted.'}],{})
   self.assertIn('autopilot',self.offered)
   self.assertNotIn('send_appeal',self.offered)
+ def test_the_model_is_told_the_accepted_offer_not_the_older_request(self):
+  history=chat('send the caption to all groups','Saved. Want me to restart Auto for main only?')
+  self.play('yes',history,[{'content':'ok'}],{})
+  context=next(m['content'] for m in self.model.call_args_list[0].args[3] if m['content'].startswith('APP_CONTEXT_JSON'))
+  self.assertIn('restart Auto for main only',context.split('continues_owner_request')[1][:80])
  def test_yes_to_save_it_still_edits_the_draft_the_owner_asked_about(self):
   follow=chat_policy.followup('yes',chat('make the dm shorter','Here is the shorter DM. Shall I save it?'))
   self.assertTrue(chat_policy.permitted('set_message',follow['text']))

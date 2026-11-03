@@ -2171,3 +2171,26 @@ html body .report-card .report-resume{font-size:clamp(13px,1.6vw,16px);padding:8
 html body .report-card .report-resume[data-state=done],html body .report-card .report-resume[data-state=completed]{border-color:#34d39966}
 html body .report-card .report-resume[data-state=pending]{border-color:#facc1566}
 html body .report-card .report-resume[data-state=failed]{border-color:#f8717199}
+/* Phone donor rows: tighter side columns so names get the room, and long names use two lines. */
+@media (max-width:700px){
+  html body #donorsPage .donor-table .donor-row{grid-template-columns:24px minmax(0,1fr) 50px 88px 24px!important;column-gap:6px!important;padding-left:6px!important;padding-right:4px!important}
+  html body #donorsPage .donor-row>.donor-dm{min-width:0!important;width:50px!important;padding:0!important;font-size:12px!important}
+  html body #donorsPage .donor-row>.donor-status{min-width:0!important;width:88px!important;padding:0 4px!important;font-size:11.5px!important;white-space:normal!important;line-height:1.15!important}
+  html body #donorsPage .donor-row>.donor-more summary{width:24px!important;min-width:24px!important;padding:0!important}
+  html body #donorsPage .donor-row .donor-identity{gap:5px!important}
+  html body #donorsPage .donor-row .donor-identity .donor-name{white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden!important;text-overflow:clip!important;line-height:1.2!important;font-size:15px!important;word-break:break-word}
+  html body #donorsPage .donor-row .donor-name::before{font-size:13px!important}
+  html body .donor-page .donor-row .donor-top-chip{width:30px!important;min-width:30px!important;min-height:30px!important}
+  html body .donor-page .donor-row .donor-top-chip::before{font-size:14px!important}
+}
+@media (max-width:700px){
+  html body #donorsPage .donor-table .donor-row{grid-template-columns:22px minmax(0,1fr) 44px 80px 22px!important;column-gap:5px!important}
+  html body #donorsPage .donor-row>.donor-dm{width:44px!important;font-size:0!important}
+  html body #donorsPage .donor-row>.donor-dm::after{font-size:12px!important}
+  html body #donorsPage .donor-row>.donor-status{width:80px!important;font-size:11px!important}
+}
+@media (max-width:700px){
+  html body #donorsPage .donor-row .donor-identity .donor-name{display:block!important;-webkit-line-clamp:unset!important;white-space:nowrap!important;text-overflow:ellipsis!important;overflow:hidden!important;font-size:14.5px!important}
+  html body .donor-page .donor-row .donor-top-chip{width:26px!important;min-width:26px!important;min-height:30px!important}
+  html body .donor-page .donor-row .donor-top-chip::before{font-size:13px!important}
+}

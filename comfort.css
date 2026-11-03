@@ -296,3 +296,22 @@ html body dialog#donorsPage[data-panel="messages"] #donorMessages{background:tra
  html body #donorsPage .donor-row .donor-star,html body #donorsPage .donor-row .donor-more>summary{min-width:44px!important;width:44px!important}
 }
 @media(max-width:899px){html body .donor-page .donor-tabs>button{min-width:44px!important}}
+
+/* ==== Donors header: the total is a plain statistic beside the title, never a button-looking box ==== */
+html body .donor-page .donor-head .donor-title{order:0}
+html body .donor-page .donor-head>.donor-total{
+ order:1;display:inline-flex!important;align-items:baseline;gap:0;flex:0 1 auto;min-width:0;height:auto!important;min-height:0!important;
+ margin:0 auto 0 0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important;text-align:left;white-space:nowrap}
+html body .donor-page .donor-head>.donor-total>small{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+html body .donor-page .donor-head>.donor-total>strong{font-size:14px!important;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+html body .donor-page .donor-head>.donor-total>strong::after{content:' donated';font-weight:500;color:var(--mut)}
+html body .donor-page .donor-head>:is(.donor-message-tablist,#donorAdd,#donorNavMore){order:2}
+@media(max-width:899px){
+ html body .donor-page .donor-head>.donor-total{margin-left:2px!important}
+ html body .donor-page .donor-head>.donor-total>strong{font-size:13px!important}
+}
+@media(max-width:360px){html body .donor-page .donor-head>.donor-total>strong::after{content:''}}
+html body .donor-page .donor-head>.donor-total>strong{border:0!important;background:none!important;box-shadow:none!important;padding:0!important;border-radius:0!important;outline:0!important;text-transform:none!important;letter-spacing:0!important}
+html body .donor-page .donor-head>.donor-total>strong::after{text-transform:none;letter-spacing:0}
+html body .donor-page .donor-head>.donor-total::before,html body .donor-page .donor-head>.donor-total::after{content:none!important}
+html body #donorsPage .donor-head>.donor-total{border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;padding:0!important}

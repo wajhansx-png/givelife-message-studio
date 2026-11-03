@@ -1859,3 +1859,24 @@ html body .brandbar .report-open{min-height:44px;padding:0 14px;border-radius:12
   html body #messageFocus,html body .focus-paper{animation:glFade .22s ease}
   html { scroll-behavior:smooth }
 }
+
+/* ===== Phone fixes ===== */
+@media (max-width:700px){
+  /* Donors toolbar: search is a normal one-line box above the tab row. */
+  html body #donorsPage .donor-toolbar{flex-direction:column!important;align-items:stretch!important;gap:8px!important;height:auto!important;min-height:0!important}
+  html body #donorsPage .donor-toolbar .donor-search{order:-1;flex:0 0 auto!important;height:44px!important;min-height:44px!important;max-height:44px!important;width:100%!important;min-width:0!important}
+  html body #donorsPage .donor-tabs{flex:0 0 auto!important;width:100%!important}
+  html body #donorsPage .donor-tabs>[role=tab]{min-height:40px!important;padding:0 12px!important;font-size:13px!important}
+  html body #donorsPage .donor-dm-badge{display:none!important}
+  /* Top bar: Report shrinks to its icon so More stays on screen. */
+  html body .brandbar .report-open{font-size:0!important;padding:0!important;width:44px;min-width:44px;flex:0 0 44px}
+  html body .brandbar .report-open::before{content:'📊';font-size:20px}
+  html body .brandbar{min-width:0;overflow:visible}
+}
+/* Reply dialog: full-width boxes, small remove, even buttons. */
+html body .replies-dialog{width:min(560px,calc(100vw - 24px))!important;box-sizing:border-box}
+html body .replies-dialog .rep-row{display:grid!important;grid-template-columns:1fr 40px;gap:8px!important;align-items:start!important}
+html body .replies-dialog .rep-row textarea{width:100%;box-sizing:border-box;min-height:64px;font-size:16px;border-radius:12px;padding:10px}
+html body .replies-dialog .rep-remove{width:40px;min-width:40px;height:40px;min-height:40px;padding:0;border-radius:10px;font-size:16px}
+html body .replies-dialog .donor-form-actions{display:grid!important;grid-template-columns:1fr 1fr 1fr;gap:8px!important}
+html body .replies-dialog .donor-form-actions button{min-height:46px;padding:0 6px;font-size:14px;white-space:normal;line-height:1.15}

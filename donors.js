@@ -1816,8 +1816,12 @@
       const inScope = allDonors.filter((d) =>
           j.scope === 'top' ? d.top_donor : j.scope === 'important' ? d.important : j.scope === 'all' ? true : false,
         ),
-        overall = '';
-      dmBadge.hidden = !active || !inScope.length;
+        phone = matchMedia('(max-width:700px)').matches,
+        overall =
+          phone && inScope.length
+            ? inScope.filter((d) => d.dm_sent).length + ' / ' + inScope.length + ' DMed · '
+            : '';
+      dmBadge.hidden = phone || !active || !inScope.length;
       if (!dmBadge.hidden) {
         dmBadge.textContent = '';
         dmBadge.append(

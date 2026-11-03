@@ -21,7 +21,8 @@
     ta.maxLength = 1000;
     ta.placeholder = 'Write a reply, e.g. JazakAllah, we will confirm and update you soon. 🤲';
     ta.value = text || '';
-    const rm = make('button', 'tool', 'Remove');
+    const rm = make('button', 'tool rep-remove', '✕');
+    rm.setAttribute('aria-label', 'Remove this reply');
     rm.type = 'button';
     rm.onclick = () => box.remove();
     box.append(ta, rm);

@@ -51,4 +51,28 @@
   else if(toggle){if(test)bottom.insertBefore(test,toggle);if(poster)toggle.after(poster)}
  }
  placeDonorControls();phone.addEventListener('change',placeDonorControls);
+
+ /* Donor Messages reader: progress from "Message n of N", → for Next on desktop, swipe left for Next on phones. */
+ const box=document.getElementById('donorMessages');
+ const nextBtn=()=>box?.querySelector('[data-bank-nav=next]:not(:disabled)');
+ function decorateReader(){
+  if(!box)return;const head=box.querySelector('.bank-heading'),title=box.querySelector('.bank-current');if(!head||!title)return;
+  const m=/(\d+)\s+of\s+(\d+)/.exec(title.textContent||'');
+  let bar=box.querySelector(':scope > .bank-progress');
+  if(!bar){bar=document.createElement('div');bar.className='bank-progress';bar.setAttribute('aria-hidden','true');bar.append(document.createElement('i'));head.after(bar)}
+  bar.firstChild.style.width=m?Math.round(+m[1]/+m[2]*100)+'%':'0%';
+  if(!box.querySelector(':scope > .bank-hint')&&box.querySelector('.bank-workspace')){const hint=document.createElement('p');hint.className='bank-hint';hint.textContent='Press → for the next message';box.append(hint)}
+  const n=nextBtn();if(n&&!n.title)n.title='Next message (→)';
+ }
+ if(box){new MutationObserver(()=>requestAnimationFrame(decorateReader)).observe(box,{childList:true});decorateReader()}
+ const readerOpen=()=>document.getElementById('donorsPage')?.dataset.panel==='messages'&&document.getElementById('donorsPage')?.open;
+ document.addEventListener('keydown',e=>{
+  if(e.key!=='ArrowRight'||e.altKey||e.ctrlKey||e.metaKey||!readerOpen())return;
+  if(e.target.closest?.('input,textarea,select,[contenteditable=true]'))return;
+  const n=nextBtn();if(n){e.preventDefault();n.click()}
+ });
+ let touch=null;
+ box?.addEventListener('touchstart',e=>{if(e.target.closest('.bank-preview')&&e.touches.length===1)touch={x:e.touches[0].clientX,y:e.touches[0].clientY};else touch=null},{passive:true});
+ box?.addEventListener('touchend',e=>{if(!touch)return;const t=e.changedTouches[0],dx=t.clientX-touch.x,dy=t.clientY-touch.y;touch=null;
+  if(dx<-70&&Math.abs(dy)<45&&!getSelection()?.toString()){const n=nextBtn();if(n)n.click()}},{passive:true});
 })();

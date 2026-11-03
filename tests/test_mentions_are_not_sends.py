@@ -23,6 +23,19 @@ class MentionsAreNotSends(unittest.TestCase):
     self.assertEqual((manual_commands.parse(phrase) or {}).get('kind'),kind)
     self.assertTrue(chat_policy.intent(phrase)['send'])
 
+class RefusalsNeverSend(unittest.TestCase):
+ PHRASES=('main me mat bhejo','mat bhejo','abhi nahi bhejo','send mat karo','post mat karo main me','main me abhi post nahi karna','no send to main','no need to send',
+  'send nahi karna','dm mat karo','dms mat bhejo','kisi ko mat bhejo','pehle show karo phir bhejo','send only after I confirm','send after I confirm')
+ def test_urdu_and_english_refusals_never_send(self):
+  names=[t['function']['name'] for t in assistant.CHAT_TOOLS]
+  for phrase in self.PHRASES:
+   with self.subTest(phrase=phrase):
+    self.assertNotIn((manual_commands.parse(phrase) or {}).get('kind'),('appeal','appeals','text','repeat','appeal_to'))
+    self.assertEqual([n for n in names if n in SEND_TOOLS and chat_policy.permitted(n,phrase)],[])
+ def test_polite_requests_with_na_still_send(self):
+  self.assertTrue(chat_policy.intent('bhej do na')['send'])
+  self.assertEqual(manual_commands.parse('dobara bhejo')['kind'],'repeat')
+
 class ComplaintsAreNotAmounts(unittest.TestCase):
  def test_a_complaint_about_a_number_never_sets_it(self):
   for phrase in ('remaining 5000 is wrong','5000 left is wrong','balance 5000 galat hai','5000 old'):

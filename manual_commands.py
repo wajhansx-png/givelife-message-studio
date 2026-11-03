@@ -73,8 +73,13 @@ def question_request(text):
  if re.search(r'(?i)(?:[;!?]\s*|\band then\s+)(?:please\s+)?(?:send|resend|post|set|change|write|stop|pause|resume)\b',outside_literals(text)):return False
  return bool(re.match(r'(?i)^\s*(?:what|why|how|when|where|who|did|have|has|was|were|is(?!\s+(?:message|msg|caption|dm|ko|line|ka|ke|mein|me)\b)|are|should|can i|could i|would it|if i|suppose|imagine)\b',outside_literals(text)) or re.match(r'(?i)^\s*(?:(?:can|could|would|will) you\s+)?(?:please\s+)?(?:tell|show|let) me\s+(?:if|whether|when|why|how|what)\b',outside_literals(text)))
 
+URDU_NO=re.compile(r'(?i)\b(?:mat|nahi|nahin|nhi|mt)\b|\bno\s+(?:need\s+to\s+)?(?:send|post|share|dm|sending|posting)\b')
+def negated_send(text):
+ """"main me mat bhejo", "post nahi karna", "no send to main": a refusal that uses a send word."""
+ t=outside_literals(text);return bool(SEND.search(t) and URDU_NO.search(t))
+
 def deferred_request(text):
- return bool(re.search(r'(?i)\b(?:if|unless|once (?:he|she|they|it|i|you|we|the|a|amount|money|donation|someone)|until|when|agar|jab|jaise hi|warna|later|not now|tomorrow|tonight|kal|parso|baje|subah|shaam|raat ko|aaj raat|dopahar|this (?:morning|afternoon|evening)|in the (?:morning|evening)|baad mein|baad me|thori der baad|thodi der baad|\d+(?:\.?\d+)? *(?:min\w*|ghant\w*|hours?|hrs?) *(?:ke )?baad|(?:ek|aik|do|teen|aadhe) ghant\w* (?:ke )?baad|(?:in|after) (?:a|an|one|half an|a couple of|couple of|two|three) (?:hours?|hrs?|mins?|minutes?|days?)|(?:in|after) half an hour|next (?:day|week|month)|in\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?)|after\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?))\b|\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',outside_literals(text)))
+ return bool(re.search(r'(?i)\b(?:only after|after i (?:confirm|say|approve|check)|pehle\b.*\b(?:phir|then)|if|unless|once (?:he|she|they|it|i|you|we|the|a|amount|money|donation|someone)|until|when|agar|jab|jaise hi|warna|later|not now|tomorrow|tonight|kal|parso|baje|subah|shaam|raat ko|aaj raat|dopahar|this (?:morning|afternoon|evening)|in the (?:morning|evening)|baad mein|baad me|thori der baad|thodi der baad|\d+(?:\.?\d+)? *(?:min\w*|ghant\w*|hours?|hrs?) *(?:ke )?baad|(?:ek|aik|do|teen|aadhe) ghant\w* (?:ke )?baad|(?:in|after) (?:a|an|one|half an|a couple of|couple of|two|three) (?:hours?|hrs?|mins?|minutes?|days?)|(?:in|after) half an hour|next (?:day|week|month)|in\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?)|after\s+\d+(?:\.\d+)?\s*(?:min(?:ute)?s?|hours?|days?))\b|\bat\s+\d|\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b',outside_literals(text)))
 
 MULT={'k':1000,'hazar':1000,'hazaar':1000,'hajar':1000,'hazr':1000,'thousand':1000,'lakh':100000,'lac':100000,'lakhs':100000}
 UNIT=r'(k|hazar|hazaar|hajar|hazr|thousand|lakhs?|lac)'
@@ -119,7 +124,7 @@ def parse(text):
  t=str(text).strip();t=re.sub(r'^(?:please|kindly|can you|could you|would you)\s+(?=(?:send|resend|delete|remove|revoke|text|message)\s+\S)', '',t,flags=re.I);low=norm(t);low=re.sub(r'\s+',' ',low)
  if not t:return None
  if re.search(r'exclusive\s+upwork|37\s*(?:member|members)|120363432572916292|120363431093838536',low):return {'kind':'refuse_target'}
- if question_request(t) or deferred_request(t):return None
+ if question_request(t) or deferred_request(t) or negated_send(t):return None
  control=dm_control(t)
  if control:return {'kind':control}
  if re.search(r'\b(hold|pause|stop)\b',low) and re.search(r'\bdms?\b',low) and re.search(r'\b(and|both|also|plus)\b.*\b(groups?|posts?)\b',low):return {'kind':'hold'}

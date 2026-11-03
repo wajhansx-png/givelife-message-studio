@@ -71,6 +71,13 @@ class ConfirmationReplies(Replay,unittest.TestCase):
   self.assertFalse(chat_policy.followup('yes',[])['inherited'])
   self.assertFalse(chat_policy.followup('yes',chat('hi','Hello! How can I help?'))['inherited'])
 
+class RefusalsAnswerNothing(unittest.TestCase):
+ def test_no_cancel_nahi_never_inherit_the_earlier_request(self):
+  history=chat('send the caption now','Which groups should I post to?')
+  for reply in ('no','cancel','nahi','not now','never mind','abhi nahi','stop'):
+   with self.subTest(reply=reply):self.assertFalse(chat_policy.followup(reply,history)['inherited'])
+  self.assertTrue(chat_policy.followup('all groups',history)['inherited'])
+
 class AnswersToQuestions(Replay,unittest.TestCase):
  def test_group_choice_completes_the_pending_send(self):
   sent=[]

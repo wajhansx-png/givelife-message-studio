@@ -70,6 +70,7 @@ def followup(text,history):
  value=str(text).strip();turns=valid_history(history)
  if turns and turns[-1]['who']=='you' and turns[-1]['text'].strip()==value:turns=turns[:-1]
  plain={'text':value,'inherited':False,'prev':'','asked':''}
+ if re.search(r"(?i)\b(?:no|nope|nah|nahi|nahin|nhi|cancel|stop|wait|never|forget|leave|rehne|chhod|chor|mat|dont|don't|not|later)\b",value):return plain # a refusal answers nothing and authorizes nothing
  if not value or not turns or turns[-1]['who']=='you':return plain
  last=turns[-1]
  if last['who']=='app' and draft_flow.selected_option(value,valid_history(history)) is None:

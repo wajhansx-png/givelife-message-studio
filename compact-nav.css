@@ -204,3 +204,10 @@ html body #donorsPage[data-panel="messages"] .bank-heading > .bank-generation-st
 @media(max-width:899px){
  html body .app > .foot > #chatOpen{display:flex;align-items:center;justify-content:center;grid-column:1;grid-row:1;justify-self:end;margin:0;min-width:0;min-height:46px;padding:0 14px}
 }
+
+/* Batch dialog: checkbox rows and the custom-minutes field span the full row so label/field pairs stay aligned */
+html body #donorBatchForm>label.batch-fresh,html body #donorBatchForm>#batchPauseCustom,html body #donorBatchForm>#batchRandomRow{grid-column:1/-1}
+html body #donorBatchForm>label.batch-fresh{display:flex;align-items:center;gap:10px;min-height:44px}
+
+/* Chat: small Copy links keep their look but get a 44px touch area; the attach button is 44 wide */
+@media(max-width:899px){html body .message-copy{position:relative}html body .message-copy::after{content:'';position:absolute;inset:-8px -2px}html body .composer .clip{min-width:44px}}

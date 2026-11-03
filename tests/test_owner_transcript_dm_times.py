@@ -122,6 +122,11 @@ class PauseThenResumeLater(unittest.TestCase):
   self.assertEqual(hub.resume_status().get('state'),'Pending')
   self.assertIn('resume at',str(out))
 
+ def test_stop_by_a_clock_time_is_not_a_pause_until_then(self):
+  hub=app.donors();hub.resume_personal()
+  out=hub.command('stop dms by 11pm','stop-by')
+  self.assertFalse(hub.paused);self.assertIn('did not change anything',str(out))
+
  def test_stop_at_a_clock_time_changes_nothing(self):
   hub=app.donors();hub.resume_personal()
   out=hub.command('stop dms at 11pm','stop-at')

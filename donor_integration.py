@@ -338,7 +338,7 @@ class DonorIntegration:
             # "pause dms for 1 hour" / "hold dms till 11am" pause now and resume at that time.
             import timed_tasks
             span=re.search(r'(?i)\bfor\s+(\d+(?:\.\d+)?)\s*(min\w*|mnts?|hours?|hrs?)\b',t)
-            until=re.search(r'(?i)\b(?:till|until|by)\b',t)
+            until=re.search(r'(?i)\b(?:till|until)\b',t) # "stop dms by 11am" is a stop at that time, which is not supported
             if span or (until and timed_tasks.due_time(t) is not None):
                 due=time.time()+float(span[1])*(3600 if span[2].casefold().startswith('h') else 60) if span else timed_tasks.due_time(t)
                 result=self.pause_personal()

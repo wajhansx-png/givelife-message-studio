@@ -1790,7 +1790,13 @@
         !(j.resumable > 0 && ['all', 'important', 'top', 'donated', 'not_donated'].includes(j.scope));
       if (!el('donorContinue').hidden)
         el('donorContinue').textContent = 'Restart (' + j.resumable + ' left)';
+      /* Whole-audience total from the donor list itself, so it stays right after an app restart. */
+      const inScope = allDonors.filter((d) =>
+          j.scope === 'top' ? d.top_donor : j.scope === 'important' ? d.important : j.scope === 'all' ? true : false,
+        ),
+        overall = inScope.length ? inScope.filter((d) => d.dm_sent).length + ' / ' + inScope.length + ' DMed · ' : '';
       el('donorProgress').querySelector('span').textContent =
+        overall +
         `${j.state} · ✓ ${j.sent || 0} sent · ${j.pending ?? Math.max(0, (j.total || 0) - (j.sent || 0) - (j.skipped || 0))} pending · ${j.failed || 0} failed` +
         (j.skipped ? ' · ' + j.skipped + ' skipped' : '') +
         (j.current ? ' · ' + j.current : '') +

@@ -1108,11 +1108,9 @@ function paintDelay(scope) {
     });
   }
 }
-/* One timer at a time: choosing a time on one card switches the other card's timer off. */
+/* Each card keeps one timer: choosing a time switches that card's other times off. */
 function setDelay(scope, minutes) {
   delays[scope] = delays[scope] === minutes ? 0 : minutes;
-  const other = scope === 'main' ? 'free' : 'main';
-  if (delays[scope] > 0) delays[other] = 0;
   paintDelay('main');
   paintDelay('free');
   $('sendAll').classList.toggle('delay-armed', delays.main > 0 || delays.free > 0);
@@ -1869,6 +1867,7 @@ function paintFreeAuto(sum) {
     on = autoOn && !FREE_KEYS.some((k) => paused[k] > 0),
     every = Number((freeSummary.group_intervals || {}).community || freeSummary.freelance_every || 0);
   const sw = $('freeAuto');
+  if (!sw) return;
   sw.setAttribute('aria-checked', String(on));
   sw.textContent = on ? 'ON' : 'OFF';
   sw.classList.toggle('on', on);
@@ -1883,7 +1882,7 @@ async function freeAutoCall(body) {
   if (d.summary) freeSummary = d.summary;
   return d;
 }
-$('freeAuto').onclick = async () => {
+if ($('freeAuto')) $('freeAuto').onclick = async () => {
   const sw = $('freeAuto'),
     turnOn = sw.getAttribute('aria-checked') !== 'true';
   sw.disabled = true;

@@ -367,3 +367,6 @@ html body #messageFocus #focusFormatted .wa-line.blank{height:10px;min-height:10
 html body #messageFocus #focusText{font:14.2px/19px "Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif!important;background:#144d37!important;border-radius:0 8px 8px 8px!important;max-width:min(560px,calc(100% - 20px))!important}
 @media(min-width:701px){html body #messageFocus #focusFormatted{margin:40px auto 24px!important;max-width:min(560px,calc(100% - 48px))!important}}
 @media(max-width:700px){html body #messageFocus :is(#focusFormatted,#focusText){font-size:16px!important;line-height:21px!important}}
+/* Edit mode keeps the bubble's size: the editor grows with the text instead of filling the screen. */
+html body #messageFocus #focusText{field-sizing:content;height:auto!important;min-height:120px!important;max-height:calc(100dvh - 300px)!important;overflow-y:auto!important;width:min(560px,calc(100% - 20px))!important;padding:8px 10px 10px!important;resize:none}
+@media(min-width:701px){html body #messageFocus #focusText{margin:40px auto 24px!important;width:min(560px,calc(100% - 48px))!important}}

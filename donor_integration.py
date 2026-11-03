@@ -28,7 +28,7 @@ class DonorIntegration:
             # Remember what was running so a second press can resume the whole automation.
             eng=self.app.ENGINE.s;job=self.jobs.status()
             if not self.jobs.active and not job.get('resumable'):job={}
-            batch={k:job[k] for k in ('scope','gap_seconds','poster','chunk','rests','rest_seconds','jitter') if job.get(k) is not None} if job.get('scope') in ('all','important','donated','not_donated') else None
+            batch={k:job[k] for k in ('scope','gap_seconds','poster','chunk','rests','rest_seconds','jitter') if job.get(k) is not None} if job.get('scope') in ('all','important','top','donated','not_donated') else None
             if batch:batch.update(limit=job['total'],resume_id=job['id'],skip_contacted=False)
             self.app.STORE.put('donor_dm_resume',{'engine':bool(eng.get('dm_enabled')),'daily':eng.get('dm_daily',30),'batch':batch})
         self.revision+=1
@@ -223,7 +223,7 @@ class DonorIntegration:
                 if p==normalize_phone(self.app.OWNER_PHONE):raise ValueError('Your own account is excluded.')
             return self.book.add(body.get('name',''),body.get('phone',''),body.get('text',''))
         if action=='update':
-            fields={k:v for k,v in body.items() if k in ('name','important','donated','amount','normal_amount','notes','phone')}
+            fields={k:v for k,v in body.items() if k in ('name','top_donor','important','donated','amount','normal_amount','notes','phone')}
             if 'phone' in fields and self.book.resolve(body.get('id','')).get('phone'):del fields['phone']   # a saved number is never replaced from here
             return self.book.update(body.get('id',''),expected_updated_at=body.get('expected_updated_at'),**fields)
         if action=='delete':return self.book.delete(body.get('id',''))
@@ -298,7 +298,7 @@ class DonorIntegration:
         if t.casefold() in ('hold','pause','wait','stop') and self.jobs.active:return self.pause_personal()
         if re.fullmatch(r'(?i)(?:please\s+)?(?:continue|resume|carry on|go on|keep going|jari rakho|phir se shuru|start again|restart)(?:\s+(?:it|the batch|sending|dms?|donor dms?|donors?|from where (?:it )?stopped))?[.!]*',t) and not self.jobs.active:
             last=self.jobs.status()
-            if last.get('resumable') and last.get('scope') in ('all','important','donated','not_donated'):
+            if last.get('resumable') and last.get('scope') in ('all','important','top','donated','not_donated'):
                 return self.start_batch(scope=last['scope'],gap_seconds=last.get('gap_seconds',240),poster=last.get('poster',True),chunk=last.get('chunk'),rest_seconds=last.get('rest_seconds',1200),request_id=request_id)
         if t.casefold() in ('resume','continue','unhold') and self.paused and not self.app.on_hold():return {'reply':self.resume_personal()}
         if re.search(r"(?i)\b(dont|don't|do not|never)\b",t) or manual_commands.question_request(t):return None
@@ -377,7 +377,7 @@ class DonorIntegration:
         if action=='send':
             expected=send_request(owner)
             if not expected:
-                segment=re.search(r'(?i)\b(?:send|dm|sned|sebd)\s+(?:to\s+)?(?:all\s+|important\s+|not donated\s+|donated\s+)?donors?\b[^;]*',owner)
+                segment=re.search(r'(?i)\b(?:send|dm|sned|sebd)\s+(?:to\s+)?(?:all\s+|top\s+|important\s+|not donated\s+|donated\s+)?donors?\b[^;]*',owner)
                 if segment:expected=send_request(segment[0])
             if not expected or not chat_policy.intent(prompt)['send']:raise ValueError('Name the donor audience and gap in a direct send request.')
             if args.get('scope',expected['scope'])!=expected['scope'] or float(args.get('gap_seconds',expected['gap_seconds']))!=expected['gap_seconds']:raise ValueError('Audience or gap differs from your instruction.')
@@ -392,7 +392,9 @@ class DonorIntegration:
             if not re.search(r'(?i)\b(remove|delete)\b',owner):raise ValueError('No donor removal was requested.')
             return self.book.delete(r['id'])
         if action=='update':
-            changes={k:v for k,v in args.items() if k in ('name','important','donated','amount','notes')}
+            changes={k:v for k,v in args.items() if k in ('name','top_donor','important','donated','amount','notes')}
+            if 'top_donor' in changes:
+                if not re.search(r'(?i)\btop donors?\b',owner) or changes['top_donor'] != (not bool(re.search(r'(?i)\b(remove|not|unmark)\b',owner))):raise ValueError('Top donor membership does not match your instruction.')
             if 'important' in changes:
                 if 'important' not in low or changes['important'] != (not bool(re.search(r'(?i)\b(not important|unmark|unstar|remove.*important)\b',owner))):raise ValueError('Importance does not match your instruction.')
             if 'donated' in changes:

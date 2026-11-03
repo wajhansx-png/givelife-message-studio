@@ -389,3 +389,11 @@ html body #messageFocus #focusRailBack{background:#3a2a0c!important;color:#ffd27
 html body #messageFocus #focusRailBack:hover{background:#4a360f!important}
 html body #messageFocus:has(#focusText:not([hidden])) #focusRailBack{display:none!important}
 @media(max-width:899px){html body #messageFocus #focusRailBack{order:99;flex:1 1 100%!important;width:100%}}
+
+/* Six donor audiences share one row; ranked tabs never depend on send status. */
+html body .donor-page .donor-tabs{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important}
+@media(max-width:899px){
+ html body .donor-page .donor-tabs>button{min-width:0!important;padding:4px 2px!important}
+ html body .donor-page .donor-tabs :is(.tab-name,.tab-word){white-space:normal!important;font-size:10px!important}
+ html body .donor-page[data-panel="top"] .donor-bottom>#donorSendImportant::after{content:'DM Top'}
+}

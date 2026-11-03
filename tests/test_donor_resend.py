@@ -42,17 +42,17 @@ class QueueOrder(unittest.TestCase):
   for name,phone in (('Ali','03001111111'),('Bilal','03002222222'),('Chand','03003333333'),('Danish','03004444444')):
    d=self.book.add(name,phone)['donor'];self.ids[name]=d['id'];self.book.update(d['id'],important=True)
  def names(self,tab='important'):return [r['name'] for r in self.book.list(tab)['items']]
- def test_the_top_of_the_list_is_always_the_next_person(self):
+ def test_important_positions_do_not_change_after_delivery(self):
   self.assertEqual(self.names(),['Ali','Bilal','Chand','Danish'])
-  self.book.delivery(self.ids['Ali'],'Sent',100.0);self.assertEqual(self.names(),['Bilal','Chand','Danish','Ali'])
-  self.book.delivery(self.ids['Bilal'],'Sent',200.0);self.assertEqual(self.names(),['Chand','Danish','Ali','Bilal'])
- def test_sent_people_sink_in_the_order_they_were_sent_and_repeat_sends_move_them_last(self):
+  self.book.delivery(self.ids['Ali'],'Sent',100.0);self.assertEqual(self.names(),['Ali','Bilal','Chand','Danish'])
+  self.book.delivery(self.ids['Bilal'],'Sent',200.0);self.assertEqual(self.names(),['Ali','Bilal','Chand','Danish'])
+ def test_repeat_sends_never_reorder_important_donors(self):
   for name,t in (('Danish',100.0),('Ali',200.0),('Chand',300.0)):self.book.delivery(self.ids[name],'Sent',t)
-  self.assertEqual(self.names(),['Bilal','Danish','Ali','Chand'])
-  self.book.delivery(self.ids['Danish'],'Sent',400.0);self.assertEqual(self.names(),['Bilal','Ali','Chand','Danish'])
+  self.assertEqual(self.names(),['Ali','Bilal','Chand','Danish'])
+  self.book.delivery(self.ids['Danish'],'Sent',400.0);self.assertEqual(self.names(),['Ali','Bilal','Chand','Danish'])
  def test_a_batch_takes_people_in_the_same_order_as_the_screen(self):
   self.book.delivery(self.ids['Ali'],'Sent',100.0)
-  self.assertEqual([r['name'] for r in self.book.recipients('important',None,2)],['Bilal','Chand'])
+  self.assertEqual([r['name'] for r in self.book.recipients('important',None,2)],['Ali','Bilal'])
  def test_important_still_comes_before_everyone_else(self):
   x=self.book.add('Aaa','03005555555')['donor'];self.assertEqual(self.names('all')[-1],'Aaa')
 

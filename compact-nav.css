@@ -211,3 +211,12 @@ html body #donorBatchForm>label.batch-fresh{display:flex;align-items:center;gap:
 
 /* Chat: small Copy links keep their look but get a 44px touch area; the attach button is 44 wide */
 @media(max-width:899px){html body .message-copy{position:relative}html body .message-copy::after{content:'';position:absolute;inset:-8px -2px}html body .composer .clip{min-width:44px}}
+
+/* Ranked lists keep their saved rank, including when a search hides earlier rows. */
+#donorsPage:is([data-panel="important"],[data-panel="top"]) .donor-name::before{content:"#" attr(data-rank) " ";counter-increment:none}
+#donorResumeDialog .donor-resume-status{padding:6px 0;border:0;background:none;font-size:12px;flex-direction:column;align-items:stretch}
+#donorResumeNowInline,#donorResumeAtInline{display:none!important}
+#donorToggle{font-size:12px;padding:6px 10px}
+@media(max-width:720px){html body .donor-tabs{grid-template-columns:repeat(6,minmax(0,1fr))}html body .donor-tabs button{font-size:10px;min-height:44px;padding:4px 1px}}
+
+html body .donor-tabs{grid-template-columns:repeat(6,minmax(0,1fr))}

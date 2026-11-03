@@ -63,6 +63,10 @@ def payment_fix(text):
 
 def personalize(text, name="", gender="Brother"):
     text = payment_fix(str(text).replace("\r\n", "\n")).strip()
+    if gender == "Sister" and first_name(name):
+        # A message written for "Brother" reads "Sister" all the way through, not only in the greeting.
+        text = re.sub(r"\bBrother\b", "Sister", text)
+        text = re.sub(r"\bbrother\b", "sister", text)
     if already_greets(text, name):
         return text
     match = GREETING.match(text)

@@ -1712,3 +1712,9 @@ html body .action-rail,html body .action-rail .group-send,html body .action-rail
 html body .action-rail .group-send{overflow:hidden}
 html body .group-send .grp-card .group-drop-wrap,html body .group-send .grp-card .group-main-btn,html body .group-send .grp-card .group-free-btn{width:100%;box-sizing:border-box}
 html body .group-send .group-all-btn{width:100%;box-sizing:border-box}
+
+/* Donor rows: the "+ Top" chip sits on the same line as the name, so rows keep their height and never overlap. */
+html body .donor-page .donor-row .donor-identity{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important;min-width:0!important;overflow:hidden!important}
+html body .donor-page .donor-row .donor-identity .donor-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body .donor-page .donor-row .donor-identity .donor-normal-tag{display:none!important}
+html body .donor-page .donor-row .donor-top-chip{flex:0 0 auto;margin:0!important;min-height:26px!important;padding:0 8px!important;line-height:1;font-size:11px!important;white-space:nowrap}

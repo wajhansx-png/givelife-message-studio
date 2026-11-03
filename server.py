@@ -2487,6 +2487,30 @@ class Handler(BaseHTTPRequestHandler):
     ident=start_send_job(list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key],caption,True,body.get('request_id'),with_picture=options.get('poster',True) if options else True)
     self.reply({'job_id':ident})
    except ValueError as e:self.reply({'error':str(e)},status=400)
+  elif self.path=='/schedule-group':
+   if not isinstance(body.get('group'),str):return self.reply({'error':'Group must be text.'},status=400)
+   key=body.get('group')
+   if key not in GROUPS and key not in ('all','free'):return self.reply({'error':'Unknown group'},status=400)
+   try:
+    delay=int(body.get('delay_minutes',0))
+    if not 1<=delay<=1440:raise ValueError('Delay must be 1–1440 minutes.')
+    caption=str(body.get('message') or '')
+    if not caption.strip():caption=json.loads(DRAFT.read_text(encoding='utf-8')).get('group','')
+    if not caption.strip():raise ValueError('Save a group message first, then schedule.')
+    keys=list(GROUPS) if key=='all' else FREELANCE if key=='free' else [key]
+    due=time.time()+delay*60
+    PKT=datetime.timezone(datetime.timedelta(hours=5))
+    when=datetime.datetime.fromtimestamp(due,PKT)
+    task={'action':'send','targets':keys,'text':caption,'due':due,'daily':False,'clock':when.strftime('%H:%M'),
+          'id':uuid.uuid4().hex[:8],'state':'pending','created':time.time(),'request_id':body.get('request_id'),'signature':'ui-'+uuid.uuid4().hex}
+    sched=timed_scheduler()
+    with sched.lock:
+     if sum(x['state'] in ('pending','running','dispatching') for x in sched.tasks)>=100:raise ValueError('Too many pending schedules. Cancel one first.')
+     sched.tasks.append(task);sched.save()
+    name='all 6 groups' if key=='all' else 'all 5 freelance groups' if key=='free' else (GROUPS[key][0] if key in GROUPS else key)
+    mins_label=str(delay)+' min' if delay<60 else ('1 hour' if delay==60 else str(delay//60)+' hr')
+    self.reply({'scheduled':True,'task_id':task['id'],'due_at':due,'message':'Scheduled: send to '+name+' in '+mins_label+'. (Task #'+task['id']+')'})
+   except ValueError as e:self.reply({'error':str(e)},status=400)
   elif self.path=='/test':
    caption=str(body.get('message',''))
    if not caption.strip():return self.reply({'error':'Message is empty'},status=400)

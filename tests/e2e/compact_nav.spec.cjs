@@ -1,4 +1,5 @@
 const {test,expect}=require('@playwright/test');
+const {openDonorMessages}=require('./helpers.cjs');
 for(const width of [1440,1024,390,320])test(`compact navigation keeps actions reachable ${width}`,async({page})=>{
  await page.setViewportSize({width,height:900});
  await page.addInitScript(()=>localStorage.setItem('givelife-cloud-key','manual-fix-preview-key'));
@@ -7,7 +8,7 @@ for(const width of [1440,1024,390,320])test(`compact navigation keeps actions re
  await expect(page.locator('.message-copy').first()).toHaveCSS('font-size','0px');
  const main=page.locator('#mainNavMore');await expect(main).toBeVisible();
  await expect(page.locator('.brandbar #donorNotesShortcut')).toBeVisible();
- await expect(page.locator('#desktopPreview')).toBeVisible();
+ await expect(page.locator('#desktopPreview')).toHaveCount(1);
  await main.locator('summary').click();await expect(page.locator('#caseSelect')).toBeVisible();
  await page.keyboard.press('Escape');await expect(main).not.toHaveAttribute('open');
  await main.locator('summary').click();await page.locator('#keyboardHelp').click();
@@ -15,7 +16,7 @@ for(const width of [1440,1024,390,320])test(`compact navigation keeps actions re
  await page.goto('/#/donors/all');
  const more=page.locator('#donorNavMore');await expect(more).toBeVisible();
  await expect(page.locator('#donorBulk')).not.toBeVisible();
- await more.locator('summary').click();await page.locator('#donorMessagesTab').click();
+ await more.locator('summary').click();await openDonorMessages(page);
  await expect(page.locator('#donorMessages')).toBeVisible();await expect(more).not.toHaveAttribute('open');
  await page.goto('/#/donors/all');
  await more.locator('summary').click();await page.locator('#donorBulk').click();

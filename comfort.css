@@ -360,3 +360,10 @@ html body #messageFocus #focusFormatted .wa-line.blank{height:.5em;min-height:.5
 html body #messageFocus .focus-paper{background:#0b141a radial-gradient(#ffffff0a 1px,transparent 1.5px) 0 0/18px 18px!important;border-color:#ffffff10!important}
 html body #messageFocus :is(#focusFormatted,#focusText){box-sizing:border-box!important;background:#005c4b!important;color:#e9edef!important;border-radius:14px 4px 14px 14px!important;box-shadow:0 1px 3px #0007!important;width:calc(100% - 20px)!important;max-width:640px!important;margin:10px auto!important;padding:12px 14px!important}
 @media(min-width:701px){html body #messageFocus :is(#focusFormatted,#focusText){margin:48px auto 24px!important;padding:18px 22px!important;width:calc(100% - 48px)!important}}
+/* Bubble hugs the text like WhatsApp: no stretching to the bottom, WhatsApp size, font and corner. */
+html body #messageFocus #focusFormatted{position:static!important;inset:auto!important;height:auto!important;min-height:0!important;max-height:calc(100dvh - 300px)!important;overflow-y:auto!important;width:fit-content!important;max-width:min(560px,calc(100% - 20px))!important;padding:8px 10px 10px!important;border-radius:0 8px 8px 8px!important;font:14.2px/19px "Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif!important;background:#144d37!important;color:#e9edef!important}
+html body #messageFocus #focusFormatted .wa-line{min-height:19px}
+html body #messageFocus #focusFormatted .wa-line.blank{height:10px;min-height:10px}
+html body #messageFocus #focusText{font:14.2px/19px "Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif!important;background:#144d37!important;border-radius:0 8px 8px 8px!important;max-width:min(560px,calc(100% - 20px))!important}
+@media(min-width:701px){html body #messageFocus #focusFormatted{margin:40px auto 24px!important;max-width:min(560px,calc(100% - 48px))!important}}
+@media(max-width:700px){html body #messageFocus :is(#focusFormatted,#focusText){font-size:16px!important;line-height:21px!important}}

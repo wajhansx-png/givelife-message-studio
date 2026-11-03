@@ -19,6 +19,7 @@ cases=[
 ("delete last message in main","delete_last_message"),("remember always keep it short","remember"),("forget rule 2","delete_rule"),("hold everything","hold"),("resume","hold"),
 ("save shortcut hi means send main","shortcut_action"),("when i say go do send main","shortcut_action"),("generate 10 versions of this dm","generate_dm_variants"),
 ("hadees hata do","set_message"),("emoji hata do","set_message"),("isko aur emotional banao","set_message"),("first line hook banao","set_message"),("isme se hadith nikal do","set_message"),("paragraph 2 hata do","set_message"),("caption chota karo","set_message"),("dua add karo","set_message"),
+("main ka pace 20 min karo","set_group_pace"),("fiverr 3 ghante ke liye band karo","pause_group"),("fiverr dubara chalu karo","resume_group"),("auto on karo","autopilot"),("auto band karo","autopilot"),("autopilot chalu karo","autopilot"),("raat 2 se subah 7 tak koi post nahi","set_quiet_hours"),("paise aaye 5000","money_came"),("sab rok do","hold"),("sab band karo","hold"),("sab groups me har 15 min","set_group_pace"),
 ("new wording for group","new_wording"),("fresh caption","set_message"),("prepare dm for Ali","prepare_dm"),("his name is Sara","edit_dm_name"),
 ]
 

@@ -199,7 +199,7 @@ class UrduAndHinglishCommands(unittest.TestCase):
  def test_everyday_phrasings_run_without_the_model(self):
   expected={'ab 3000 bache hain':('amount',3000),'1500 aaye hain':('money',1500),'Rs 1500 aye hain':('money',1500),
    'stop sending':('hold',None),'rukk jao':('hold',None),'resume everything':('resume',None),'continue sending':('resume',None),
-   'chalu karo':('resume',None),'dobara bhej do':('repeat',None),'same again':('repeat',None)}
+   'chalu karo':('resume',None),'dobara bhej do':('repeat',None),'same again':('repeat',None),'paise aaye 5000':('money',5000),'sab rok do':('hold',None)}
   for phrase,(kind,amount) in expected.items():
    with self.subTest(phrase=phrase):
     plan=manual_commands.parse(phrase) or {}

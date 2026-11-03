@@ -1657,3 +1657,18 @@ html body #donorBatchForm .batch-more[open]{display:flex!important;flex-directio
 html body #donorBatchForm .batch-foot{position:sticky!important;bottom:-18px!important;background:inherit!important;padding:10px 0 2px!important}
 html body #donorBatchForm .donor-form-actions{display:grid!important;grid-template-columns:1fr 2fr!important;gap:10px!important}
 html body #donorBatchForm .donor-form-actions button{min-height:50px!important;font-size:16px!important;font-weight:800!important}
+
+/* Main page: GiveLife and Freelance each get their own card, timer and (freelance) auto control. */
+html body .group-send .group-two{display:grid!important;grid-template-columns:1fr 1fr;gap:10px!important}
+html body .group-send .grp-card{display:flex;flex-direction:column;gap:6px;min-width:0;padding:8px;border:1px solid #ffffff1a;border-radius:14px}
+html body .group-send .grp-card .group-drop-wrap{min-width:0!important}
+html body .group-send .grp-card .delay-row{padding:2px 0!important;gap:5px!important}
+html body .group-send .grp-card .delay-label{flex:0 0 100%;font-size:11px}
+html body .group-send .grp-card .delay-pill,html body .group-send .grp-card .every-pill{flex:1;min-width:0!important;min-height:38px!important;padding:0 4px!important;font-size:12px!important;border-radius:10px!important;border:1.5px solid var(--line2);background:var(--surface);color:var(--ink);font-weight:700}
+html body .group-send .grp-card .every-pill[aria-pressed=true]{background:var(--btn);border-color:var(--btn);color:#fff}
+html body .group-send .free-auto{align-items:center}
+html body .group-send .free-auto .delay-label{flex:0 0 auto}
+html body .group-send .free-sw{min-height:38px;min-width:64px;padding:0 12px;border-radius:19px;border:1.5px solid var(--line2);background:var(--surface);color:var(--ink);font-weight:800;font-size:13px}
+html body .group-send .free-sw.on{background:#16a34a;border-color:#16a34a;color:#fff}
+html body .group-send .group-all-btn{grid-column:1/-1;min-height:44px}
+@media(max-width:520px){html body .group-send .group-two{grid-template-columns:1fr}}

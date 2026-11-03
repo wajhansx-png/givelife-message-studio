@@ -1086,29 +1086,33 @@ async function sendGroup(key) {
   }
 }
 /* ---- delay pills ---- */
-let selectedDelay = 0;
-function setDelay(minutes) {
-  selectedDelay = selectedDelay === minutes ? 0 : minutes;
-  document.querySelectorAll('.delay-pill').forEach((b) => {
-    b.setAttribute('aria-pressed', String(Number(b.dataset.delay) === selectedDelay));
+const delays = { main: 0, free: 0 };
+const delayScope = (key) => (key === 'main' ? 'main' : key === 'all' ? (delays.main ? 'main' : 'free') : 'free');
+const delayFor = (key) => delays[delayScope(key)];
+const delayText = (m) => (m < 60 ? m + ' min' : m === 60 ? '1 hr' : m / 60 + ' hr');
+function setDelay(scope, minutes) {
+  delays[scope] = delays[scope] === minutes ? 0 : minutes;
+  document.querySelectorAll('.delay-pill[data-delay-scope="' + scope + '"]').forEach((b) => {
+    b.setAttribute('aria-pressed', String(Number(b.dataset.delay) === delays[scope]));
   });
-  const row = $('delayRow');
-  row.classList.toggle('delay-active', selectedDelay > 0);
-  row.closest('section').classList.toggle('delay-armed', selectedDelay > 0);
-  document.querySelectorAll('[data-group]').forEach((b) => {
-    const hint = b.querySelector('.delay-hint');
-    if (hint) hint.remove();
-    if (selectedDelay > 0) {
-      const h = document.createElement('small');
-      h.className = 'delay-hint';
-      h.textContent = 'in ' + (selectedDelay < 60 ? selectedDelay + ' min' : '1 hr');
-      b.append(h);
-    }
-  });
+  const card = document.querySelector('.grp-card[data-scope="' + scope + '"]');
+  if (card) {
+    card.classList.toggle('delay-armed', delays[scope] > 0);
+    card.querySelectorAll('[data-group]').forEach((b) => {
+      b.querySelector('.delay-hint')?.remove();
+      if (delays[scope] > 0) {
+        const h = document.createElement('small');
+        h.className = 'delay-hint';
+        h.textContent = 'in ' + delayText(delays[scope]);
+        b.append(h);
+      }
+    });
+  }
+  $('sendAll').classList.toggle('delay-armed', delays.main > 0 || delays.free > 0);
 }
 document
   .querySelectorAll('.delay-pill')
-  .forEach((p) => (p.onclick = () => setDelay(Number(p.dataset.delay))));
+  .forEach((p) => (p.onclick = () => setDelay(p.dataset.delayScope, Number(p.dataset.delay))));
 async function scheduleGroup(key) {
   if (!lockSend(key, true)) return;
   setLiveNotice('Scheduling ' + (GN[key] || key) + '…');
@@ -1119,19 +1123,21 @@ async function scheduleGroup(key) {
     await save();
     const caption = $('group').value;
     const label = GN[key] || key;
-    const delayLabel = selectedDelay < 60 ? selectedDelay + ' min' : '1 hr';
+    const wait = delayFor(key),
+      scope = delayScope(key),
+      delayLabel = delayText(wait);
     $('groupStatus').textContent = 'Scheduling for ' + label + ' in ' + delayLabel + '…';
     const r = await post('/schedule-group', {
       group: key,
       message: caption,
-      delay_minutes: selectedDelay,
+      delay_minutes: wait,
       request_id: requestId(),
     });
     const d = await r.json();
     if (!r.ok) throw Error(d.error || 'Could not schedule');
     $('groupStatus').textContent =
       '✓ Scheduled: send to ' + label + ' in ' + delayLabel + '. (Task #' + d.task_id + ')';
-    setDelay(0);
+    if (delays[scope]) setDelay(scope, delays[scope]);
   } catch (e) {
     $('groupStatus').textContent = '✗ ' + e.message;
     say('app', e.message, 1);
@@ -1169,7 +1175,7 @@ $('btnGivelife').addEventListener('click', (e) => {
   } else {
     $('dropGivelife').hidden = true;
     $('btnGivelife').setAttribute('aria-expanded', 'false');
-    if (selectedDelay > 0) scheduleGroup('main');
+    if (delays.main > 0) scheduleGroup('main');
     else sendGroup('main');
   }
 });
@@ -1177,7 +1183,7 @@ $('btnFree').addEventListener('click', (e) => {
   if (!e.target.closest('.gd-arrow')) {
     $('dropFree').hidden = true;
     $('btnFree').setAttribute('aria-expanded', 'false');
-    if (selectedDelay > 0) scheduleGroup('free');
+    if (delays.free > 0) scheduleGroup('free');
     else sendGroup('free');
   } else {
     toggleGroupDrop('btnFree', 'dropFree');
@@ -1189,7 +1195,7 @@ document.querySelectorAll('.group-drop [data-group]').forEach((b) => {
     b.closest('.group-drop-wrap')
       .querySelector('[aria-haspopup]')
       ?.setAttribute('aria-expanded', 'false');
-    if (selectedDelay > 0) scheduleGroup(b.dataset.group);
+    if (delayFor(b.dataset.group) > 0) scheduleGroup(b.dataset.group);
     else sendGroup(b.dataset.group);
   };
 });
@@ -1200,7 +1206,7 @@ function armAll() {
   return sendGroup('all');
 }
 $('sendAll').onclick = () => {
-  if (selectedDelay > 0) scheduleGroup('all');
+  if (delays.main > 0 || delays.free > 0) scheduleGroup('all');
   else armAll();
 };
 async function fillEmptyCaption(kind) {
@@ -1847,6 +1853,60 @@ async function toggleAuto(on) {
   say(d.on || !on ? 'auto' : 'app', d.reply, !d.on && on);
   if (d.on) pollAuto();
 }
+const FREE_KEYS = ['community', 'fiverr', 'upwork', 'uet', 'toprated'];
+let freeSummary = null;
+function paintFreeAuto(sum) {
+  if (sum) freeSummary = sum;
+  if (!freeSummary) return;
+  const paused = freeSummary.paused || {},
+    on = autoOn && !FREE_KEYS.some((k) => paused[k] > 0),
+    every = Number((freeSummary.group_intervals || {}).community || freeSummary.freelance_every || 0);
+  const sw = $('freeAuto');
+  sw.setAttribute('aria-checked', String(on));
+  sw.textContent = on ? 'ON' : 'OFF';
+  sw.classList.toggle('on', on);
+  document
+    .querySelectorAll('.every-pill')
+    .forEach((p) => p.setAttribute('aria-pressed', String(Number(p.dataset.every) === every)));
+}
+async function freeAutoCall(body) {
+  const r = await post('/autopilot-settings', body),
+    d = await r.json();
+  if (!r.ok) throw Error(d.error || 'Could not change freelance auto');
+  if (d.summary) freeSummary = d.summary;
+  return d;
+}
+$('freeAuto').onclick = async () => {
+  const sw = $('freeAuto'),
+    turnOn = sw.getAttribute('aria-checked') !== 'true';
+  sw.disabled = true;
+  try {
+    for (const k of FREE_KEYS)
+      await freeAutoCall(
+        turnOn ? { action: 'resume', key: k } : { action: 'pause', key: k, hours: 720 },
+      );
+    if (turnOn && !autoOn) await toggleAuto(true);
+    paintFreeAuto();
+    say('app', turnOn ? 'Freelance auto is ON.' : 'Freelance auto is OFF.');
+  } catch (e) {
+    say('app', e.message, 1);
+  } finally {
+    sw.disabled = false;
+    pollAuto();
+  }
+};
+document.querySelectorAll('.every-pill').forEach((p) => {
+  p.onclick = async () => {
+    try {
+      const main = (freeSummary && freeSummary.main_every) || 20;
+      await freeAutoCall({ action: 'pace', main, freelance: Number(p.dataset.every) });
+      paintFreeAuto();
+      say('app', 'Freelance auto will post every ' + delayText(Number(p.dataset.every)) + '.');
+    } catch (e) {
+      say('app', e.message, 1);
+    }
+  };
+});
 $('auto').onclick = () => toggleAuto(!autoOn).catch((e) => say('app', e.message, 1));
 let liveSnapshot = null,
   checkedAt = 0,
@@ -2013,6 +2073,7 @@ async function pollAuto() {
     aiAvailable = !!d.ai;
     liveSnapshot = d.status || null;
     paintAuto(d.on);
+    paintFreeAuto(d.summary);
     paintLive(d.status);
     refreshLiveDrafts(d, baseline);
     for (const x of d.log || []) {

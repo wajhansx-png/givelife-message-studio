@@ -2241,7 +2241,8 @@
                 <span id="sendMode">Poster + caption</span>
               </div>
               <div class="group-two" role="group" aria-label="Send groups">
-                <div class="group-drop-wrap">
+                <div class="grp-card" data-scope="main">
+                  <div class="group-drop-wrap">
                   <button
                     class="group-main-btn"
                     data-group="main"
@@ -2265,7 +2266,16 @@
                     </button>
                   </div>
                 </div>
-                <div class="group-drop-wrap">
+                  <div class="delay-row" role="group" aria-label="GiveLife timer">
+                    <span class="delay-label">GiveLife in</span>
+                    <button type="button" class="delay-pill" data-delay="15" data-delay-scope="main" aria-pressed="false">15 min</button>
+                    <button type="button" class="delay-pill" data-delay="30" data-delay-scope="main" aria-pressed="false">30 min</button>
+                    <button type="button" class="delay-pill" data-delay="45" data-delay-scope="main" aria-pressed="false">45 min</button>
+                    <button type="button" class="delay-pill" data-delay="60" data-delay-scope="main" aria-pressed="false">1 hr</button>
+                  </div>
+                </div>
+                <div class="grp-card" data-scope="free">
+                  <div class="group-drop-wrap">
                   <button
                     class="group-free-btn"
                     data-group="free"
@@ -2314,6 +2324,22 @@
                     </button>
                   </div>
                 </div>
+                  <div class="delay-row" role="group" aria-label="Freelance timer">
+                    <span class="delay-label">Freelance in</span>
+                    <button type="button" class="delay-pill" data-delay="15" data-delay-scope="free" aria-pressed="false">15 min</button>
+                    <button type="button" class="delay-pill" data-delay="30" data-delay-scope="free" aria-pressed="false">30 min</button>
+                    <button type="button" class="delay-pill" data-delay="45" data-delay-scope="free" aria-pressed="false">45 min</button>
+                    <button type="button" class="delay-pill" data-delay="60" data-delay-scope="free" aria-pressed="false">1 hr</button>
+                  </div>
+                  <div class="delay-row free-auto" role="group" aria-label="Freelance auto">
+                    <span class="delay-label">Auto</span>
+                    <button type="button" class="free-sw" id="freeAuto" role="switch" aria-checked="false">OFF</button>
+                    <span class="delay-label">every</span>
+                    <button type="button" class="every-pill" data-every="30" aria-pressed="false">30 min</button>
+                    <button type="button" class="every-pill" data-every="60" aria-pressed="false">1 hr</button>
+                    <button type="button" class="every-pill" data-every="120" aria-pressed="false">2 hr</button>
+                  </div>
+                </div>
                 <button
                   class="group-all-btn"
                   id="sendAll"
@@ -2321,21 +2347,6 @@
                   aria-label="Send to all 6 groups"
                 >
                   <small class="last-sent" data-last-group="all" id="sent-all"></small>All 6
-                </button>
-              </div>
-              <div class="delay-row" id="delayRow" role="group" aria-label="Schedule delay">
-                <span class="delay-label">Send in</span>
-                <button type="button" class="delay-pill" data-delay="15" aria-pressed="false">
-                  15 min
-                </button>
-                <button type="button" class="delay-pill" data-delay="30" aria-pressed="false">
-                  30 min
-                </button>
-                <button type="button" class="delay-pill" data-delay="45" aria-pressed="false">
-                  45 min
-                </button>
-                <button type="button" class="delay-pill" data-delay="60" aria-pressed="false">
-                  1 hr
                 </button>
               </div>
               <div id="groupStatus" role="status"></div>

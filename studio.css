@@ -92,8 +92,6 @@ button:active:not(:disabled) {
 button:disabled {
   cursor: default;
 }
-:focus-visible {
-}
 input,
 textarea,
 select {
@@ -123,8 +121,6 @@ h1,
 h2,
 h3 {
   text-wrap: balance;
-}
-.brand {
 }
 .brand small {
   display: block;
@@ -177,15 +173,9 @@ h3 {
   border-radius: 8px;
   min-height: 40px;
 }
-.brandbar .connect-badge {
-}
 .live {
   border-width: 1px 1px 1px 5px;
   padding: 10px 12px 10px 16px;
-}
-.livebar {
-}
-.livebar strong {
 }
 .livebar small {
   font-size: 12px;
@@ -201,11 +191,6 @@ h3 {
 }
 .live .autosw {
   min-height: 44px;
-}
-.live .autosw[aria-checked=true] {
-}
-.live[data-state=sending],
-.live[data-state=reading] {
 }
 .card,
 .action-rail {
@@ -237,8 +222,6 @@ h3 {
   color: var(--ink);
   white-space: pre-wrap;
 }
-.e.bot strong {
-}
 .e.you {
   border: 0;
   padding: 9px 14px;
@@ -258,10 +241,6 @@ h3 {
   line-height: 1.4;
   margin-top: -12px;
   align-self: center;
-}
-.composer {
-}
-.composer:focus-within {
 }
 .composer .go {
   display: grid;
@@ -288,8 +267,6 @@ h3 {
 }
 .send-title {
   gap: 4px;
-}
-.send-title h2 {
 }
 .send-title span {
   color: var(--mut);
@@ -319,8 +296,6 @@ h3 {
 .ghost:hover {
   background: var(--gs);
   border-color: var(--g);
-}
-.chips .all {
 }
 .last-sent {
   margin-top: 4px;
@@ -405,8 +380,6 @@ dialog {
   border: 1px solid var(--line2);
   overscroll-behavior: contain;
 }
-dialog::backdrop {
-}
 dialog header {
   min-height: 56px;
   padding: 10px 20px;
@@ -425,8 +398,6 @@ dialog header {
 }
 .theme button {
   font-size: 12px;
-}
-.sw {
 }
 .set .advanced {
   border-bottom: 1px solid var(--line);
@@ -487,8 +458,6 @@ dialog header {
   border-color: var(--red);
   outline-color: var(--red);
 }
-.poster-choose {
-}
 .poster-dialog img {
   min-height: 80px;
   max-height: 42dvh;
@@ -534,8 +503,6 @@ body .connect-dialog h2 {
 .donor-head {
   padding-block: 4px;
 }
-.donor-head h1 {
-}
 .donor-tabs [aria-selected=true],
 .send-important {
   background: var(--important);
@@ -545,16 +512,8 @@ body .connect-dialog h2 {
 .donor-row[data-important=true] {
   border-left-color: var(--important);
 }
-.donor-star[aria-pressed=true] {
-}
-.donor-tabs button {
-}
-.donor-tabs [aria-selected=true] {
-}
 .donor-table {
   background: var(--surface);
-}
-.donor-row {
 }
 .donor-row:focus-within,
 .donor-row:has(details[open]) {
@@ -565,12 +524,6 @@ body .connect-dialog h2 {
   letter-spacing: 0;
   color: var(--mut);
 }
-.donor-name {
-}
-.donor-row .donor-status,
-.donor-row .donor-dm,
-.donor-row .donor-amount {
-}
 .donor-row .donor-dm {
   cursor: pointer;
 }
@@ -578,8 +531,6 @@ body .connect-dialog h2 {
   border-color: var(--g);
   background: var(--gs);
   color: var(--gink);
-}
-.donor-total {
 }
 .donor-total small {
   color: var(--mut);
@@ -596,9 +547,6 @@ body .connect-dialog h2 {
   background: var(--wbg);
   color: var(--warn);
 }
-.bank-grid {
-  gap: 16px;
-}
 .bank-message {
   padding: 14px;
 }
@@ -606,8 +554,6 @@ body .connect-dialog h2 {
   background: var(--msg);
   border-radius: 8px;
   white-space: pre-wrap;
-}
-.bank-message textarea {
 }
 .bank-message header {
   min-height: 40px;
@@ -632,20 +578,11 @@ body .connect-dialog h2 {
   .app {
     padding: 16px 24px 12px;
   }
-  .brandbar {
-  }
-  body .layout,
-  body.nomsg .layout {
-  }
-  .talk {
-  }
   .talk .log {
     width: 100%;
   }
   .talk .log .e.bot {
     font-size: 15px;
-  }
-  .talk .log .e.you {
   }
   .talk .composer,
   .talk .next-actions {
@@ -655,22 +592,8 @@ body .connect-dialog h2 {
   .talk .composer {
     background: var(--surface);
   }
-  .action-rail {
-  }
-  .send-title {
-  }
-  .prim {
-  }
-  .prim button {
-  }
-  .chips button {
-  }
   .send .chips {
     column-gap: 8px;
-  }
-  .msgcard {
-  }
-  .message {
   }
   .hist .log {
     padding: 24px max(24px,calc((100% - 70ch)/2));
@@ -693,8 +616,6 @@ body .connect-dialog h2 {
   }
   .donor-table {
     scroll-padding-block: 32px 16px;
-  }
-  .donor-bottom {
   }
   .donor-search {
     max-width: 360px;
@@ -766,8 +687,6 @@ body .connect-dialog h2 {
     font-size: 11px;
     line-height: 1.4;
   }
-  .live .autosw {
-  }
   .showmsg {
     min-height: 36px;
     padding-inline: 14px;
@@ -788,19 +707,9 @@ body .connect-dialog h2 {
   .nomsg .prim .main {
     order: 0;
   }
-  .nomsg .prim button {
-  }
-  .chips {
-  }
-  .chips button {
-  }
   .last-sent {
     font-size: 10px;
     line-height: 1.35;
-  }
-  .nomsg .chat-open {
-  }
-  .navrow {
   }
   .chat-open {
     width: 100%;
@@ -853,40 +762,16 @@ body .connect-dialog h2 {
   .hist .composer .clip {
     min-height: 44px;
   }
-  .hist .composer .go {
-  }
-  .hist .chat-return {
-  }
   .hist .chat-return button {
     border: 1px solid var(--line2);
     background: var(--surface);
     border-radius: 7px;
   }
-  .hist .next-actions {
-  }
-  .hist .next-actions button {
-  }
   .donor-shell {
     padding: 8px 6px max(10px,env(safe-area-inset-bottom));
   }
-  .donor-head {
-  }
-  .donor-head h1 {
-  }
-  .donor-total small {
-  }
-  .donor-toolbar {
-  }
-  .donor-tabs {
-  }
-  .donor-tabs button {
-  }
-  .donor-search {
-  }
   .donor-row {
     padding: 0 2px;
-  }
-  .donor-name {
   }
   .donor-star {
     width: 26px;
@@ -903,11 +788,6 @@ body .connect-dialog h2 {
   .donor-row .donor-dm {
     min-width: 44px;
   }
-  .donor-bottom {
-  }
-  .donor-bottom .send-important,
-  .donor-bottom .send-donors {
-  }
   .donor-gap#donorPace {
     min-height: 48px;
     font-size: 11px;
@@ -920,21 +800,12 @@ body .connect-dialog h2 {
   .donor-progress button {
     min-height: 40px;
   }
-  .donor-head .donor-back {
-  }
-  .bank-grid {
-    gap: 12px;
-  }
-  .bank-heading {
-  }
   .bank-preview {
     font-size: 13px;
   }
   .donor-form-dialog,
   .poster-dialog {
     padding: 20px;
-  }
-  .set .row {
   }
   .set .row .t small {
     font-size: 12px;
@@ -944,12 +815,6 @@ body .connect-dialog h2 {
   }
 }
 @media(max-width:360px) {
-  .brandbar {
-  }
-  .brandbar .seg button {
-  }
-  .brandbar .leftchip {
-  }
   .brandbar .donor-launch {
     padding-inline: 6px;
   }
@@ -965,21 +830,11 @@ body .connect-dialog h2 {
   .donor-row {
     column-gap: 2px;
   }
-  .donor-name {
-  }
-  .donor-row .donor-status {
-  }
-  .donor-head h1 {
-  }
   .donor-add {
     padding-inline: 8px;
   }
   .donor-total {
     padding: 4px;
-  }
-  .donor-count {
-  }
-  .donor-head {
   }
 }
 @media(max-height:650px) and (max-width:899px) {
@@ -1022,8 +877,6 @@ body .connect-dialog h2 {
     min-width: 44px;
     flex-basis: 44px;
   }
-  .hist .chat-return button {
-  }
 }
 @media(max-width:360px) {
   .brandbar .seg button {
@@ -1063,8 +916,6 @@ body .connect-dialog h2 {
   html {
     overscroll-behavior: none;
   }
-  .donor-row:hover {
-  }
 }
 @media(prefers-reduced-motion:reduce) {
   *,
@@ -1079,8 +930,6 @@ body .connect-dialog h2 {
 }
 .reply-line {
   white-space: pre-wrap;
-}
-.reply-line.blank {
 }
 .reply-line.blank br {
   display: none;
@@ -1193,21 +1042,15 @@ body .connect-dialog h2 {
   .talk .next-actions {
     padding: 0;
   }
-  .talk .next-actions button {
-  }
   .action-rail {
     position: relative;
     top: auto;
     height: 100%;
     max-height: none;
   }
-  .prim {
-  }
   .prim button {
     min-height: 54px;
     font-size: 12px;
-  }
-  .chips {
   }
   .chips button {
     font-size: 12px;
@@ -1247,8 +1090,6 @@ body .connect-dialog h2 {
   }
   .livebar strong {
     font-size: 16px;
-  }
-  .last-sent {
   }
 }
 @media(max-width:899px) {
@@ -1298,8 +1139,6 @@ body .connect-dialog h2 {
   .chat {
     padding: 10px 12px;
     overflow: hidden;
-  }
-  .hist .log {
   }
   .hist .e.bot {
     padding: 12px;
@@ -1447,8 +1286,6 @@ button {
 .brand small {
   font-size: 11px;
 }
-.mark {
-}
 .brandbar .seg {
   background: var(--surface2);
   border-color: transparent;
@@ -1474,13 +1311,9 @@ button {
   min-height: 52px;
   gap: 8px;
 }
-.live[data-on="1"] {
-}
 .live[data-state=sending],
 .live[data-state=reading] {
   box-shadow: none;
-}
-.live[data-error="1"] {
 }
 .livebar strong {
   font-size: 15px;
@@ -1496,8 +1329,6 @@ button {
   min-width: 78px;
   border-color: var(--line2);
 }
-.live .autosw[aria-checked=true] {
-}
 .pulse {
   animation: none!important;
 }
@@ -1511,8 +1342,6 @@ button {
   line-height: 1.6;
   font-size: 13px;
   overflow-wrap: anywhere;
-}
-.card {
 }
 .talk-title {
   font-weight: 600;
@@ -1557,8 +1386,6 @@ button {
   font-size: 12px;
   color: var(--mut);
 }
-.composer {
-}
 .composer:focus-within {
   outline-offset: 2px;
 }
@@ -1581,8 +1408,6 @@ button {
   border-color: var(--line2);
   color: var(--gink);
   font-weight: 500;
-}
-.next-actions button:hover {
 }
 .action-rail {
   border: 0;
@@ -1637,8 +1462,6 @@ button {
 .message strong {
   font-weight: 650;
 }
-.msgcard .tools {
-}
 .dm-field {
   line-height: 1.45;
 }
@@ -1663,8 +1486,6 @@ dialog {
   max-height: calc(100dvh - 24px);
   overflow: auto;
   scroll-padding: 16px;
-}
-dialog::backdrop {
 }
 dialog h2 {
   font-weight: 650;
@@ -1768,18 +1589,8 @@ dialog header {
 .donor-head {
   padding-bottom: 10px;
 }
-.donor-head h1 {
-}
 .donor-total {
   font-variant-numeric: tabular-nums;
-}
-.donor-tabs {
-}
-.donor-tabs button {
-}
-.donor-tabs [aria-selected=true] {
-}
-.donor-table {
 }
 .donor-columns {
   height: 32px;
@@ -1793,13 +1604,6 @@ dialog header {
 .donor-name {
   font-size: 13px;
   font-weight: 500;
-}
-.donor-row[data-important=true] {
-}
-.donor-row[data-donated=true] .donor-status,
-.donor-row[data-delivery=Sent] .donor-dm {
-}
-.donor-star[aria-pressed=true] {
 }
 .donor-row .donor-status,
 .donor-row .donor-dm,
@@ -1838,13 +1642,9 @@ dialog header {
 }
 .bank-heading {
   flex: none;
-  min-height: 48px;
   padding: 4px 0 12px;
   color: var(--mut);
   font-size: 13px;
-}
-.bank-mobile-picker {
-  display: none;
 }
 .group-section-title {
   display: flex;
@@ -1883,8 +1683,6 @@ dialog header {
 .bank-picker button:hover {
   background: var(--surface2);
   color: var(--ink);
-}
-.bank-picker [aria-pressed=true] {
 }
 .bank-detail {
   display: flex;
@@ -1936,9 +1734,6 @@ dialog header {
     gap: 12px;
     padding-block: 12px 8px;
   }
-  body .layout,
-  body.nomsg .layout {
-  }
   .talk {
     background: transparent;
     border: 0;
@@ -1970,14 +1765,8 @@ dialog header {
     min-height: 36px;
     font-size: 12px;
   }
-  .action-rail {
-  }
   .send-title {
     margin-bottom: 14px;
-  }
-  .send-title h2 {
-  }
-  .send-title span {
   }
   .prim {
     grid-template-columns: 1fr;
@@ -1990,8 +1779,6 @@ dialog header {
     justify-content: space-between;
     gap: 10px;
     text-align: left;
-  }
-  .prim .main {
   }
   .chips {
     flex-direction: column;
@@ -2009,8 +1796,6 @@ dialog header {
   .last-sent {
     margin: 0;
     flex: none;
-  }
-  .group-label {
   }
   .live-tag {
     display: none;
@@ -2075,8 +1860,6 @@ dialog header {
   .group-section-title {
     display: none;
   }
-  .hist .log {
-  }
   .hist .log .e.bot {
     max-width: 100%;
     font-size: 15px;
@@ -2087,17 +1870,9 @@ dialog header {
   .hist .chat-return button {
     padding-inline: 16px;
   }
-  .hist .composer {
-  }
-  .hist .composer .go {
-  }
-  .hist .composer textarea {
-  }
   .hist .next-actions {
     flex-wrap: wrap;
     overflow: auto;
-  }
-  .hist .next-actions button {
   }
   .hist .reply-feedback {
     min-height: 44px;
@@ -2105,22 +1880,10 @@ dialog header {
   .donor-shell {
     padding-inline: 8px;
   }
-  .donor-head {
-  }
-  .donor-head h1 {
-  }
-  .donor-count {
-  }
-  .donor-total small {
-  }
-  .donor-total strong {
-  }
   .donor-back,
   .donor-add {
     min-height: 44px;
     font-size: 12px;
-  }
-  .donor-toolbar {
   }
   .donor-search {
     font-size: 16px;
@@ -2128,8 +1891,6 @@ dialog header {
   }
   .donor-tabs {
     gap: 4px;
-  }
-  .donor-tabs button {
   }
   .donor-row {
     contain-intrinsic-size: auto 48px;
@@ -2148,9 +1909,6 @@ dialog header {
     font-size: 11px;
     min-height: 44px;
     height: 44px;
-  }
-  .donor-bottom .send-important,
-  .donor-bottom .send-donors {
   }
   .donor-form-dialog,
   .poster-dialog,
@@ -2178,17 +1936,6 @@ dialog header {
   }
   .bank-picker {
     display: none;
-  }
-  .bank-mobile-picker {
-    display: block;
-    min-height: 44px;
-    flex: 1;
-    min-width: 0;
-    padding: 8px 12px;
-    background: var(--surface);
-    color: var(--ink);
-    border: 1px solid var(--line2);
-    border-radius: 8px;
   }
   .bank-heading>span {
     display: none;
@@ -2244,12 +1991,8 @@ dialog header {
     gap: 2px;
     padding-inline: 2px;
   }
-  .donor-row .donor-status {
-  }
   .donor-total {
     padding-inline: 5px;
-  }
-  .donor-head h1 {
   }
   .donor-count {
     font-size: 11px;
@@ -2303,8 +2046,6 @@ dialog header {
   .send-title {
     margin-bottom: 8px;
   }
-  .send-title h2 {
-  }
   .prim {
     grid-template-columns: repeat(2,minmax(0,1fr));
     gap: 6px;
@@ -2344,14 +2085,10 @@ dialog header {
   .group-label {
     max-width: 100%;
   }
-  .last-sent {
-  }
 }
 @media(min-width:900px) and (max-height:650px) {
   .action-rail {
     padding-block: 6px;
-  }
-  .send-title span {
   }
   .action-rail .prim button {
     min-height: 48px;
@@ -2408,9 +2145,7 @@ dialog header {
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
-.bank-back,
-.bank-more,
-.bank-current {
+.bank-back, .bank-current {
   display: none;
 }
 @media(max-width:899px) {
@@ -2458,8 +2193,6 @@ dialog header {
   .donor-head .donor-back {
     min-width: 54px;
     padding-inline: 8px;
-  }
-  .donor-toolbar {
   }
   .donor-row:not([data-donated=true]) {
     grid-template-columns: 24px minmax(72px,1fr) 48px 86px 32px;
@@ -2545,9 +2278,6 @@ dialog header {
     min-width: 100px;
     font-size: 14px;
   }
-  .donor-page[data-panel=messages] .donor-head,
-  .donor-page[data-panel=messages] .donor-toolbar {
-  }
   .bank-heading {
     padding: 0 0 6px;
     gap: 6px;
@@ -2567,41 +2297,6 @@ dialog header {
   .bank-heading>.bank-regenerate {
     display: none;
   }
-  .bank-more {
-    display: block;
-    position: relative;
-    flex: none;
-  }
-  .bank-more summary {
-    min-width: 44px;
-    min-height: 44px;
-    display: grid;
-    place-items: center;
-    list-style: none;
-    border: 1px solid var(--line2);
-    border-radius: 8px;
-    background: var(--surface);
-    font-size: 22px;
-    cursor: pointer;
-  }
-  .bank-more summary::-webkit-details-marker {
-    display: none;
-  }
-  .bank-more>div {
-    position: absolute;
-    right: 0;
-    top: calc(100% + 4px);
-    z-index: 30;
-    padding: 6px;
-    border: 1px solid var(--line2);
-    border-radius: 8px;
-    background: var(--surface);
-    min-width: 128px;
-  }
-  .bank-mobile-picker {
-    font-size: 15px;
-    padding-inline: 8px;
-  }
   .bank-current {
     display: block;
     flex: 1;
@@ -2616,8 +2311,6 @@ dialog header {
 @media(max-width:360px) {
   .donor-head {
     gap: 4px;
-  }
-  .donor-head h1 {
   }
   .donor-head .donor-total {
     padding-inline: 5px;
@@ -2649,8 +2342,6 @@ html {
 body {
   background-attachment: fixed;
   font-feature-settings: "cv11","ss01";
-}
-::selection {
 }
 * {
   scrollbar-width: thin;
@@ -2977,9 +2668,7 @@ textarea {
 .overflow-tools summary:hover {
   background: var(--surface2);
 }
-.overflow-tools[open]>div,
-.donor-more[open]>div,
-.bank-more[open]>div {
+.overflow-tools[open]>div, .donor-more[open]>div {
   border-radius: 12px;
   border-color: var(--line);
   box-shadow: var(--sh3);
@@ -3012,8 +2701,6 @@ textarea {
 .prim .main .last-sent,
 .big:not(.all) .last-sent {
   color: #ffffffd9;
-}
-.composer .go {
 }
 @media(pointer:fine) {
   .prim .main:hover,
@@ -3231,9 +2918,6 @@ dialog.hist {
   background: var(--bg);
   backdrop-filter: none;
 }
-.donor-page,
-.hist {
-}
 dialog header {
   border-bottom-color: var(--line);
 }
@@ -3287,8 +2971,6 @@ dialog header {
     background: color-mix(in srgb,var(--g) 5%,var(--surface));
   }
 }
-.donor-row[data-important=true] {
-}
 .donor-star {
   transition: color var(--mid) var(--ease),transform var(--fast) var(--ease);
 }
@@ -3302,11 +2984,7 @@ dialog header {
   border-color: var(--g)!important;
 }
 .donor-total {
-  background: color-mix(in srgb,var(--g) 10%,transparent);
   border: 1px solid color-mix(in srgb,var(--g) 22%,transparent);
-  border-radius: 10px;
-}
-.donor-add {
 }
 .donor-row[data-donated=true] .donor-status,
 .donor-row[data-delivery=Sent] .donor-dm {
@@ -3490,13 +3168,6 @@ dialog:not([open])::backdrop {
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-.donor-sub {
-  font-size: 12px;
-  color: var(--mut);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .donor-count {
   font-size: 13px;
@@ -3747,11 +3418,6 @@ dialog:not([open])::backdrop {
     grid-column: auto;
     padding: 4px 10px;
   }
-  .donor-head h1 {
-  }
-  .donor-sub {
-    display: none;
-  }
   .donor-total small {
     font-size: 10px;
   }
@@ -3768,8 +3434,6 @@ dialog:not([open])::backdrop {
   .donor-head .donor-msgs {
     grid-column: auto;
   }
-  .donor-head {
-  }
   .donor-head .donor-total {
     order: 0;
   }
@@ -3781,8 +3445,6 @@ dialog:not([open])::backdrop {
   .donor-tabs {
     width: 100%;
     flex: none;
-  }
-  .donor-tabs button {
   }
   .donor-search {
     max-width: none;
@@ -3831,30 +3493,6 @@ dialog:not([open])::backdrop {
     border: 1px solid var(--line2);
     color: var(--ink);
     box-shadow: none;
-  }
-  .navrow .donor-launch.in-thumb-row {
-    flex: 1;
-    min-height: 52px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 700;
-    border: 0;
-    border-radius: 12px;
-    color: #fff;
-    background: linear-gradient(180deg,#ffffff1f,#ffffff00 60%),var(--btn);
-    box-shadow: inset 0 1px 0 #ffffff2e,0 8px 20px -10px color-mix(in srgb,var(--btn) 90%,transparent);
-  }
-  .navrow .donor-launch.in-thumb-row::before {
-    content: '';
-    width: 20px;
-    height: 20px;
-    background: currentColor;
-    -webkit-mask: var(--people) center/contain no-repeat;
-    mask: var(--people) center/contain no-repeat;
-    --people: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3.5'/%3E%3Cpath d='M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5'/%3E%3Cpath d='M16 4.7a3.5 3.5 0 0 1 0 6.6M18.5 14.8c1.8.7 3 2.4 3.4 5.2'/%3E%3C/svg%3E");
   }
   .nomsg .chat-open {
     width: auto;
@@ -3940,9 +3578,6 @@ dialog:not([open])::backdrop {
     flex-basis: 32%;
     font-size: 13px;
   }
-  .navrow .donor-launch.in-thumb-row {
-    font-size: 15px;
-  }
   .donor-head h1 {
     font-size: 16px;
   }
@@ -4005,8 +3640,6 @@ dialog:not([open])::backdrop {
   }
   .donor-count {
     display: none;
-  }
-  .donor-head {
   }
 }
 @media(max-width:899px) {
@@ -4078,8 +3711,6 @@ dialog:not([open])::backdrop {
   .talk .log {
     justify-content: center;
   }
-  .talk .log .e.bot {
-  }
   .talk .log .e.you {
     align-self: center;
     max-width: min(100%,860px);
@@ -4095,11 +3726,6 @@ dialog:not([open])::backdrop {
 
 /* ===== Group box: bigger and easier to read ===== */
 @media(min-width:900px) {
-  body .layout,
-  body.nomsg .layout {
-  }
-  .action-rail {
-  }
   .send-title h2 {
     font-size: 18px;
   }
@@ -4123,10 +3749,6 @@ dialog:not([open])::backdrop {
   .last-sent {
     opacity: .95;
   }
-  .chips .all {
-  }
-  .group-section-title {
-  }
 }
 @media(min-width:900px) and (max-height:800px) {
   .action-rail .prim button {
@@ -4145,12 +3767,6 @@ dialog:not([open])::backdrop {
   }
   .send-title h2 {
     font-size: 15px;
-  }
-}
-@media(min-width:900px) and (max-height:650px) {
-  .action-rail .prim button,
-  .chips button,
-  .chips .all {
   }
 }
 
@@ -4337,8 +3953,6 @@ body::after {
 }
 /* Group box v2: two big tiles per row at every desktop height, names easy to read. */
 @media(min-width:900px) {
-  .app {
-  }
   .action-rail {
     justify-content: center;
   }
@@ -4493,24 +4107,13 @@ body::after {
   }
 }
 /* The answer box stands out from the page: lighter panel, clear edge, soft lift. */
-:root[data-theme=dark] {
-}
-@media(prefers-color-scheme:dark) {
-  :root:not([data-theme=light]) {
-  }
-}
 :root {
   --bubble: #ffffff;
   --bubble-line: #b9c8c1;
 }
-:root[data-theme=dark] {
-}
 .talk .log .e.bot,
 .hist .log .e.bot {
   color: var(--ink);
-}
-:root:not([data-theme=dark]) .talk .log .e.bot,
-:root:not([data-theme=dark]) .hist .log .e.bot {
 }
 .talk .log .e.bot.cols2,
 .hist .log .e.bot.cols2 {
@@ -4527,24 +4130,12 @@ body::after {
   border-color: color-mix(in srgb,var(--g) 40%,transparent);
 }
 /* Chat highlight v2: a clearly brighter answer panel with a green edge on a darker chat area. */
-:root[data-theme=dark] {
-}
-@media(prefers-color-scheme:dark) {
-  :root:not([data-theme=light]) {
-  }
-}
 :root {
   --chat-well: #e4ede8;
 }
 .talk.card,
 .hist {
   background: var(--chat-well);
-}
-.talk .log .e.bot,
-.hist .log .e.bot {
-}
-:root:not([data-theme=dark]) .talk .log .e.bot,
-:root:not([data-theme=dark]) .hist .log .e.bot {
 }
 .talk .log .e.bot.cols2,
 .hist .log .e.bot.cols2 {
@@ -4610,15 +4201,9 @@ body::after {
   .talk.long-reply .next-actions[hidden] {
     display: none;
   }
-  .talk.long-reply .next-actions button {
-  }
-  .talk.long-reply:has(.next-actions:not([hidden])) .log {
-  }
 }
 
 /* ===== Reading design for answers: titles first, details second ===== */
-.e.bot {
-}
 :root[data-theme=dark] .e.bot {
   --title: #ffffff;
 }
@@ -4647,20 +4232,6 @@ body::after {
   margin-top: 0;
 }
 /* The opening line reads as a calm intro; the closing question stands out as the next step. */
-.e.bot .r-lead {
-  color: var(--title);
-  font-weight: 500;
-  margin-bottom: .35em;
-}
-.e.bot .r-ask {
-  margin-top: .8em;
-  padding: .45em .7em;
-  border-radius: 10px;
-  color: var(--title);
-  font-weight: 650;
-  width: fit-content;
-  max-width: 100%;
-}
 /* Numbered steps: a round number badge, a bright title and softer detail with a hanging indent. */
 .e.bot .r-num {
   margin-top: .5em;
@@ -4686,34 +4257,8 @@ body::after {
   margin-top: .12em;
 }
 /* Bullets: a small green dot and the same hanging indent. */
-.e.bot .r-bullet {
-  position: relative;
-  padding-left: 1.15em;
-  margin-top: .22em;
-}
-.e.bot .r-bullet::before {
-  content: '';
-  position: absolute;
-  left: .25em;
-  top: .62em;
-  width: .38em;
-  height: .38em;
-  border-radius: 50%;
-  background: var(--g);
-}
-.e.bot .r-bullet .wa-list {
-  display: inline;
-  padding: 0;
-  text-indent: 0;
-}
-.e.bot .r-blank {
-  height: .35em!important;
-  min-height: .35em!important;
-}
 .e.bot.tight .r-head {
   margin-top: .6em;
-}
-.e.bot.tight .r-num {
 }
 .e.bot.tighter .r-head {
   margin-top: .45em;
@@ -4725,17 +4270,11 @@ body::after {
 .e.bot.cols3 .r-head {
   break-after: avoid;
 }
-:root:not([data-theme=dark]) .e.bot {
-}
 /* Action buttons beside a long answer: small, and the answer stays centered. */
 @media(min-width:900px) {
-  .talk.long-reply .next-actions {
-  }
   .talk.long-reply .next-actions button {
     border-radius: 10px;
     line-height: 1.2;
-  }
-  .talk.long-reply:has(.next-actions:not([hidden])) .log {
   }
 }
 .e.bot .r-num .rt,
@@ -4841,13 +4380,6 @@ body::after {
 .e.bot.tight .r-num {
   margin-top: .28em;
 }
-.e.bot.tight .r-bullet {
-  margin-top: .12em;
-}
-.e.bot.tight .r-lead,
-.e.bot.tight .r-ask {
-  margin-block: .3em;
-}
 .e.bot.tight .reply-line,
 .e.bot.tighter .reply-line {
   line-height: 1.32;
@@ -4860,19 +4392,11 @@ body::after {
     padding: 10px 10px 6px;
     gap: 10px;
   }
-  .hist .log .e.bot {
-  }
   .hist .log .e.bot.tight {
     padding: 9px 12px;
   }
 }
 /* Answer panel v3: calm solid card, high-contrast text (no dim grey). */
-:root[data-theme=dark] {
-}
-@media(prefers-color-scheme:dark) {
-  :root:not([data-theme=light]) {
-  }
-}
 .talk .log .e.bot,
 .hist .log .e.bot {
   background: var(--bubble);
@@ -4904,18 +4428,9 @@ body::after {
 .e.bot .r-num .rt {
   color: var(--title);
 }
-.e.bot .r-ask {
-  background: color-mix(in srgb,var(--g) 22%,transparent);
-}
 .e.bot.cols2,
 .e.bot.cols3 {
   column-rule-color: var(--bubble-line)!important;
-}
-@media(min-width:900px) {
-  .talk.long-reply .next-actions {
-  }
-  .talk.long-reply:has(.next-actions:not([hidden])) .log {
-  }
 }
 /* Phone chat: Back and the quick actions share one row, the header is slim: more room for the answer. */
 @media(max-width:899px) {
@@ -4978,17 +4493,11 @@ body::after {
   .hist .log .e.bot .reply-line {
     line-height: 1.5;
   }
-  .hist .e.bot .r-lead {
-    margin-bottom: .5em;
-  }
   .hist .e.bot .r-head {
     margin: 1em 0 .45em;
   }
   .hist .e.bot .r-head:first-child {
     margin-top: 0;
-  }
-  .hist .e.bot .r-bullet {
-    margin-top: .35em;
   }
   .hist .e.bot .r-num {
     margin-top: .75em;
@@ -4996,18 +4505,6 @@ body::after {
   .hist .e.bot .r-num .rd {
     margin-top: .15em;
   }
-  .hist .e.bot .r-ask {
-    margin-top: 1em;
-  }
-  .hist .e.bot .r-blank {
-    height: .5em!important;
-    min-height: .5em!important;
-  }
-}
-.build-tag {
-  margin-left: 12px;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
 }
 @media(min-width:900px) {
   .talk.long-reply:has(.next-actions:not([hidden])) .log {
@@ -5190,10 +4687,6 @@ body::after {
 }
 .donor-bulk:hover {
   border-color: var(--g);
-}
-@media(min-width:900px) {
-  .donor-head {
-  }
 }
 @media(max-width:899px) {
   .donor-head {
@@ -5436,11 +4929,6 @@ body::after {
   font-weight: 700;
   cursor: pointer;
 }
-.donor-normal-hint {
-  font-size: 11.5px;
-  line-height: 1.4;
-  color: var(--mut);
-}
 .donor-more>div button {
   min-height: 44px;
 }
@@ -5456,22 +4944,6 @@ body::after {
     margin-block: 2px;
   }
   /* Donors: roomier rows. */
-  .donor-shell {
-  }
-  .donor-head {
-  }
-  .donor-toolbar {
-  }
-  .donor-row {
-  }
-  .donor-columns {
-  }
-  .donor-row .donor-status,
-  .donor-row .donor-dm,
-  .donor-row .donor-amount {
-  }
-  .donor-name {
-  }
   .donor-bottom {
     gap: 16px;
     position: relative;
@@ -5559,13 +5031,6 @@ body::after {
   }
   .donor-row {
     contain-intrinsic-size: auto 56px;
-  }
-  .donor-row .donor-dm,
-  .donor-row .donor-status,
-  .donor-row .donor-amount {
-  }
-  .donor-star,
-  .donor-more summary {
   }
   .chips {
     gap: 10px;
@@ -5684,22 +5149,8 @@ body::after {
 }
 /* Donors page: more of the list, less chrome */
 @media(min-width:900px) {
-  .donor-head {
-  }
-  .donor-shell {
-  }
   .donor-toolbar {
     margin-block: 0;
-  }
-  .donor-bottom {
-  }
-  .donor-row {
-  }
-  .donor-columns {
-  }
-  .donor-row .donor-status,
-  .donor-row .donor-dm,
-  .donor-row .donor-amount {
   }
   .donor-name {
     font-size: 14px;
@@ -5712,10 +5163,7 @@ body::after {
   }
 }
 /* Tabs and segmented choices always show a filled button */
-.donor-tabs button,
-.seg button,
-.bank-pages button,
-.segmented button {
+.donor-tabs button, .seg button {
   background: var(--surface2);
   border: 1px solid var(--line2);
   color: var(--ink);
@@ -5785,24 +5233,7 @@ dialog[open] {
 :is(button,summary,select,input,textarea):not(.primary):not(.go):not([aria-selected=true]):not([aria-pressed=true]):not(:disabled) {
   border-color: var(--ctl);
 }
-.leftchip,
-.connect-badge,
-.livebar,
-#chatExpand,
-.clip,
-.keys,
-.message-copy,
-.remove,
-#sendAll,
-.donor-bulk,
-.send-important,
-.bank-more summary,
-.donor-more summary,
-.donor-star,
-.chips button,
-.ghost,
-.tool,
-.donor-msgs {
+.leftchip, .connect-badge, .livebar, #chatExpand, .clip, .keys, .message-copy, .remove, #sendAll, .donor-bulk, .send-important, .donor-more summary, .donor-star, .chips button, .ghost, .tool, .donor-msgs {
   border: 1px solid var(--ctl);
 }
 .donor-star,
@@ -5825,9 +5256,6 @@ dialog[open] {
 .donor-row .donor-status:hover {
   border-color: var(--g);
 }
-.donor-row[data-delivery=Sent] .donor-dm,
-.donor-row[data-donated=true] .donor-status {
-}
 .donor-normal,
 .donor-normal-box input {
   border: 1px solid var(--ctl);
@@ -5840,10 +5268,6 @@ textarea:focus-visible,
 [tabindex]:focus-visible {
   outline: 3px solid var(--g);
   outline-offset: 2px;
-}
-.build-tag {
-  opacity: 1;
-  color: var(--mut);
 }
 .last-sent {
   opacity: 1;
@@ -5863,9 +5287,6 @@ textarea:focus-visible,
   }
   .donor-head h1 {
     font-size: 20px;
-  }
-  .donor-sub {
-    font-size: 11px;
   }
   .donor-total {
     padding-block: 4px;
@@ -5931,8 +5352,6 @@ textarea:focus-visible,
     height: 42px;
     min-height: 42px;
   }
-}
-:root[data-theme=dark] {
 }
 .donor-page .donor-tabs button[aria-selected=true] {
   background: var(--g)!important;
@@ -6028,8 +5447,6 @@ body button#whatsappConnection {
     display: none;
   }
   /* Header actions next to the title, not at the far edge. */
-  .donor-page .donor-head {
-  }
 }
 /* Modern star icon (rounded outline / solid), instead of the old text glyphs ★ ☆ */
 .donor-star {
@@ -6045,8 +5462,6 @@ body button#whatsappConnection {
   background: currentColor;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M12 3.6l2.5 5.1 5.6.8-4.05 3.95.96 5.58L12 16.4l-5.01 2.63.96-5.58L3.9 9.5l5.6-.8z'/%3E%3C/svg%3E") center/contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M12 3.6l2.5 5.1 5.6.8-4.05 3.95.96 5.58L12 16.4l-5.01 2.63.96-5.58L3.9 9.5l5.6-.8z'/%3E%3C/svg%3E") center/contain no-repeat;
-}
-.donor-star[aria-pressed=true] {
 }
 .donor-star[aria-pressed=true]::before {
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black' stroke='black' stroke-width='1.6' stroke-linejoin='round'%3E%3Cpath d='M12 3.6l2.5 5.1 5.6.8-4.05 3.95.96 5.58L12 16.4l-5.01 2.63.96-5.58L3.9 9.5l5.6-.8z'/%3E%3C/svg%3E") center/contain no-repeat;
@@ -6125,27 +5540,13 @@ body button#whatsappConnection {
 
 /* ===== UX pass: readable minimum type, thumb-sized targets, one primary colour per area, colour = meaning ===== */
 /* 1. Nothing readable below 12px (meta text was 11px). */
-small,
-.last-sent,
-.message-copy,
-.donor-columns,
-.build-tag,
-.keys,
-.brand small,
-.donor-sub,
-.batch-hint,
-.donor-normal-tag,
-.donor-normal-hint {
+small, .last-sent, .message-copy, .donor-columns, .keys, .brand small, .batch-hint, .donor-normal-tag {
   font-size: 12px!important;
 }
 .group-section-title {
   font-size: 12px!important;
 }
-.last-sent,
-.message-copy,
-.donor-columns,
-.keys,
-.build-tag {
+.last-sent, .message-copy, .donor-columns, .keys {
   font-size: 12px!important;
 }
 /* 2. Phone: every tap target at least 44px (Apple HIG / WCAG 2.5.5). */
@@ -6166,9 +5567,6 @@ small,
   .donor-more summary {
     min-height: 44px!important;
     height: 44px!important;
-  }
-  .donor-star,
-  .donor-more summary {
   }
   .batch-dialog input[type=checkbox] {
     width: 22px;
@@ -6473,19 +5871,10 @@ dialog {
 dialog::backdrop {
   background: #00000080!important;
 }
-.mark {
-  background: var(--primary)!important;
-  color: var(--primary-fg)!important;
-}
-.mark svg {
-  stroke: var(--primary-fg)!important;
-}
 /* Button, variant outline (default for every control): border input, bg-input/30 in dark, shadow-xs, hover bg-accent */
 :is(.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-more,.big:not(.all):not(.primary):not(.main),.big.all,.copy,.menu button) {
   color: var(--ink)!important;
   transition: background-color .15s,color .15s,border-color .15s,box-shadow .15s;
-}
-:root[data-theme=dark] :is(.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-more,.big:not(.all):not(.primary):not(.main),.big.all,.copy,.menu button) {
 }
 :is(.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-more,.big:not(.all):not(.primary):not(.main),.big.all,.copy,.menu button):hover {
   color: var(--ink)!important;
@@ -6514,7 +5903,6 @@ dialog::backdrop {
 /* Tabs: muted list, active trigger = bg-background + border (light shadow-sm) */
 .donor-page .donor-tabs,
 .brandbar .seg {
-  background: var(--surface2)!important;
   border-color: var(--line)!important;
   border-radius: 10px!important;
 }
@@ -6536,10 +5924,6 @@ html body .brandbar .seg button[aria-pressed=true] {
 .donor-page .donor-tabs button[aria-selected=true] :is(.tab-name,.tab-word) {
   color: var(--primary-fg)!important;
   background: transparent!important;
-}
-.donor-page .donor-tabs button[aria-selected=true] .tab-count {
-  background: #00000026!important;
-  color: var(--primary-fg)!important;
 }
 /* Input / textarea: rounded-md border input, bg-transparent (dark input/30), shadow-xs, focus ring 3px ring/50 */
 :is(input,textarea,select):not([type=checkbox]):not([type=radio]) {
@@ -6566,10 +5950,6 @@ html body .brandbar .seg button[aria-pressed=true] {
   color: var(--ink)!important;
 }
 /* Chat */
-.e.bot {
-  background: var(--bubble)!important;
-  border-color: var(--bubble-line)!important;
-}
 .e.you {
   background: var(--surface2)!important;
 }
@@ -6590,12 +5970,6 @@ html body .brandbar .seg button[aria-pressed=true] {
   background: var(--surface2)!important;
   color: var(--ok)!important;
 }
-.donor-star[aria-pressed=true] {
-  color: var(--important)!important;
-}
-.donor-row[data-important=true] {
-  background: color-mix(in srgb,var(--important) 8%,var(--surface))!important;
-}
 .donor-row[data-delivery=Sent] .donor-dm,
 .donor-row[data-donated=true] .donor-status {
   color: var(--ok)!important;
@@ -6606,10 +5980,6 @@ html body .brandbar .seg button[aria-pressed=true] {
   box-shadow: none!important;
 }
 /* unselected tabs keep a visible fill (eyes never read bare text) */
-.donor-page .donor-tabs button:not([aria-selected=true]) {
-  background: var(--surface3)!important;
-  color: var(--ink)!important;
-}
 :root[data-theme=dark] .donor-page .donor-tabs button:not([aria-selected=true]) {
   background: #ffffff14!important;
 }
@@ -6649,18 +6019,8 @@ html body .brandbar .seg button[aria-pressed=true] {
   transform: translateY(-1px);
   box-shadow: var(--lift),0 10px 20px -10px #00000066!important;
 }
-.e.bot {
-  box-shadow: var(--card-sh)!important;
-  border-radius: 16px!important;
-  background-image: linear-gradient(180deg,#ffffff08,#00000000 40%)!important;
-}
 :root:not([data-theme=dark]) .e.bot {
   background-image: none!important;
-  background: #fff!important;
-}
-.composer {
-  background: var(--surface2)!important;
-  box-shadow: var(--card-sh)!important;
 }
 .donor-page .donor-tabs button[aria-selected=true],
 .seg button[aria-pressed=true] {
@@ -6684,8 +6044,6 @@ html body .brandbar .seg button[aria-pressed=true] {
 :root[data-theme=dark] {
   --fill: linear-gradient(180deg,#2b2b2e,#202023);
   --fill-h: linear-gradient(180deg,#35353a,#28282c);
-}
-:root:not([data-theme=dark]) {
 }
 :is(.ghost,.tool,.chips button,#sendAll,.rail-quick button,.donor-back-bottom,.donor-bulk,.leftchip,#donorPace,.donor-back,.dm,.donor-row .donor-dm,.donor-row .donor-status,.donor-row .donor-more,.big:not(.all):not(.primary):not(.main),.big.all,.copy,.menu button) {
   background: var(--fill)!important;
@@ -6761,9 +6119,6 @@ button.autosw,
 .donor-row[data-important=true] :is(.donor-amount,.donor-normal) {
   background: var(--surface2)!important;
 }
-.donor-row {
-  border-color: var(--line)!important;
-}
 .donor-row:hover {
   background: color-mix(in srgb,var(--ink) 4%,transparent)!important;
 }
@@ -6774,7 +6129,6 @@ h3,
 .donor-title {
   letter-spacing: -.015em;
 }
-.donor-table-head,
 .donor-head span {
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -6812,11 +6166,6 @@ h3,
 .donor-launch {
   border: 0!important;
 }
-button.donor-launch.in-thumb-row,
-.in-thumb-row {
-  border: 0!important;
-  box-shadow: var(--lift)!important;
-}
 #openDonors,
 #openDonors.donor-launch {
   border: 0!important;
@@ -6832,9 +6181,6 @@ button.donor-launch.in-thumb-row,
   --fill: linear-gradient(180deg,#ffffff,#eeeef1);
   --fill-h: linear-gradient(180deg,#ffffff,#e4e4e8);
   --lift: inset 0 1px 0 #fff,0 0 0 1px #0000001f,0 1px 2px #00000026,0 8px 16px -10px #00000040;
-}
-.composer {
-  border-color: var(--line)!important;
 }
 :root:not([data-theme=dark]) #liveBar,
 :root:not([data-theme=dark]) .livebar {
@@ -7009,9 +6355,6 @@ button, summary, .donor-launch, #openDonors {
 :is(.prim .main, .composer .go, .send-donors, .donor-add, .primary, .go, #batchStart, .donor-page .donor-tabs button[aria-selected=true], .seg button[aria-pressed=true]) {
   box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--primary) 70%, transparent) !important;
 }
-:is(.prim .main, .composer .go, .send-donors, .donor-add, .primary, .go, #batchStart):hover {
-  background: var(--btnh) !important;
-}
 :is(.big, .chips button, .rail-quick button, .donor-row .donor-dm, .donor-row .donor-status, .donor-more > summary, .donor-bulk, #donorPace, .donor-back-bottom, .donor-back, .ghost, .tool) {
   border-radius: 14px !important;
 }
@@ -7040,9 +6383,6 @@ button, summary, .donor-launch, #openDonors {
 }
 .donor-row {
   border-color: var(--line) !important;
-}
-.donor-row[data-important=true] {
-  background: color-mix(in srgb, var(--primary) 7%, var(--surface)) !important;
 }
 .donor-star[aria-pressed=true] {
   color: #f2c14e !important;
@@ -7189,7 +6529,7 @@ html body, html body .donor-page, html body .hist {
 .donor-row {
   background: transparent;
 }
-html body .talk .log, html body .talk .log-wrap, html body .talk footer, html body .talk .compose-row {
+html body .talk .log, html body .talk footer {
   background: transparent !important;
 }
 html body :is(.prim .main, .composer .go, .send-donors, .donor-add, .primary, .go, #batchStart, .donor-page .donor-tabs button[aria-selected=true], .brandbar .seg button[aria-pressed=true], .seg button[aria-pressed=true], .mark) {
@@ -7233,10 +6573,6 @@ html:root:not(.no-theme) body :is(.prim .main, .composer .go, .send-donors, .don
 }
 html body .talk, html body .hist .log {
   background: var(--read-bg) !important;
-}
-html body :is(.talk, .hist) .e.bot {
-  background: var(--read-sheet) !important;
-  color: var(--read-ink) !important;
 }
 html body :is(.talk, .hist) .e.bot :is(strong, b, em) {
   color: inherit;
@@ -7400,14 +6736,7 @@ html body .live .autosw .lbl {
 /* ===== 13. Responsive icons and small phones: dots and chevrons are centred and never touch an edge; donor tabs and rows
    fit from 320px up. ===== */
 html body .brandbar .connect-badge {
-  display: grid !important;
   place-items: center;
-  padding: 0 !important;
-}
-html body .brandbar .connect-badge::before {
-  position: static !important;
-  margin: 0 !important;
-  inset: auto !important;
 }
 html body .live .livebar {
   padding-inline: 14px !important;
@@ -7477,10 +6806,6 @@ html body .live .autosw .knob {
   html body .donor-page .donor-row .donor-status { grid-area: 2 / 3; }
   html body .donor-page .donor-row .donor-amount { grid-area: 2 / 4; }
 }
-html body .brandbar .connect-badge {
-  font-size: 0 !important;
-  line-height: 0 !important;
-}
 @media(max-width:359px) {
   html body .donor-page .donor-row {
     height: auto !important;
@@ -7491,7 +6816,6 @@ html body .brandbar .connect-badge {
   }
 }
 html body .brandbar .connect-badge {
-  display: flex !important;
   align-items: center;
   justify-content: center;
 }
@@ -7594,14 +6918,6 @@ html body :is(.talk, .hist) .e.bot strong {
 }
 html body :is(.talk, .hist) .e.bot em {
   color: var(--r-em);
-}
-html body :is(.talk, .hist) .e.bot .r-bullet::before {
-  background: var(--r-head) !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--r-head) 22%, transparent);
-}
-html body :is(.talk, .hist) .e.bot .r-ask {
-  color: var(--r-key) !important;
-  font-weight: 650;
 }
 /* money amounts (Rs. 15,000) are the first thing a reader looks for: warm colour */
 html body :is(.talk, .hist) .e.bot .amt {
@@ -8055,8 +7371,7 @@ html body .donor-page .donor-tabs:has([data-tab=volunteers]) {
 .team-review {
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--warn-ink, #fbbf24) 70%, transparent) !important;
 }
-.team-hint,
-.team-empty {
+.team-hint {
   margin: 0;
   font-size: 14px;
   color: var(--mut);
@@ -8090,18 +7405,9 @@ html body .donor-page .donor-tabs:has([data-tab=volunteers]) {
   color: var(--mut);
   overflow-wrap: anywhere;
 }
-.team-proof {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--bad-ink, #f87171);
-}
-.team-proof[data-ok=true] {
-  color: var(--ok-ink, #4ade80);
-}
 .team-actions {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
 }
 .team-actions button,
 .team-task .tool,
@@ -8141,13 +7447,6 @@ html body .donor-page .donor-tabs:has([data-tab=volunteers]) {
 .team-chip[data-s=Asked] {
   color: var(--warn-ink, #fbbf24);
   background: color-mix(in srgb, var(--warn-ink, #fbbf24) 14%, transparent);
-}
-.team-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 340px;
-  overflow-y: auto;
 }
 .team-ev {
   display: grid;

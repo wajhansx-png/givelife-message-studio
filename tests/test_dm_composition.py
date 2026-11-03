@@ -109,7 +109,7 @@ class DMFlowTests(unittest.TestCase):
         with patch.object(
             app, "find_data", return_value=([{"id": jid, "name": "Jr Accounts", "group": False}], 1)
         ):
-            first = app.send_dm_appeal("jr account")
+            app.send_dm_appeal("jr account")
             original = self.sent[-1]["text"]
             self.assertTrue(original.startswith("Bhai, "))
             self.assertTrue(dm_composer.complete(original))

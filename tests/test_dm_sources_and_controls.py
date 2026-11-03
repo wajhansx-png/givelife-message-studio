@@ -1,6 +1,6 @@
 """Where DMs come from, Test DM, Stop/Resume DMs, auto replies and the separate DM poster."""
 
-import copy, sys, tempfile, unittest
+import copy, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
 import test_manual_sends as fixture

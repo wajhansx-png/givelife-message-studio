@@ -65,7 +65,7 @@ class ResumeScheduleTests(unittest.TestCase):
 
     def test_resume_keeps_full_batch_setup_and_only_original_remaining_people(self):
         hub = app.donors()
-        ids = [hub.book.add("Donor " + str(i), "92300123%04d" % i)["donor"]["id"] for i in range(7)]
+        [hub.book.add("Donor " + str(i), "92300123%04d" % i)["donor"]["id"] for i in range(7)]
         with (
             patch.object(app, "wa_ok", return_value=True),
             patch.object(hub.jobs, "connected", return_value=True),
@@ -181,7 +181,7 @@ class ResumeScheduleTests(unittest.TestCase):
     def test_last_inflight_dm_completes_before_resume_and_auto_is_still_restored(self):
         hub = app.donors()
         app.ENGINE.s.update(dm_enabled=True, dm_daily=25)
-        ident = hub.book.add("Final donor", "923009991234")["donor"]["id"]
+        hub.book.add("Final donor", "923009991234")["donor"]["id"]
         with patch.object(hub.jobs, "connected", return_value=True):
             job = hub.start_batch(scope="all", limit=1, run=False)["job"]
             raw = hub.jobs.export_jobs()["jobs"][-1]
@@ -199,7 +199,7 @@ class ResumeScheduleTests(unittest.TestCase):
 
     def test_legacy_pause_record_uses_the_real_stopped_job_settings(self):
         hub = app.donors()
-        ident = hub.book.add("Legacy donor", "923009991234")["donor"]["id"]
+        hub.book.add("Legacy donor", "923009991234")["donor"]["id"]
         with patch.object(hub.jobs, "connected", return_value=True):
             job = hub.start_batch(
                 scope="all",

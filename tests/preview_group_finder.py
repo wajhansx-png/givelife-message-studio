@@ -1,6 +1,5 @@
 """Isolated research preview: synthetic websites/search and no real WhatsApp or database access."""
 
-import json
 import os
 import shutil
 import sys

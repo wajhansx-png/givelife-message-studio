@@ -11,7 +11,6 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_manual_sends import app
 from group_finder import GroupBook
-from group_research import ResearchService
 from group_finder_integration import GroupFinder
 
 LINK = "https://chat.whatsapp.com/AbCdEfGhIjKlMnOpQrStUv"

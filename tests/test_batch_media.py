@@ -1,5 +1,4 @@
-import base64, tempfile, unittest
-from pathlib import Path
+import base64, unittest
 from unittest.mock import patch
 import batch_media
 import test_manual_sends as fixture

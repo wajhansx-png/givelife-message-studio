@@ -217,7 +217,7 @@ class ToolLoopAuditTests(unittest.TestCase):
                 ],
             ) as model,
         ):
-            result = assistant.chat(
+            assistant.chat(
                 "2",
                 history,
                 {},

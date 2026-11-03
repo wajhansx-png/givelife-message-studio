@@ -10,7 +10,7 @@ Rules that keep it honest:
 - "Done" from the teammate is only a report. "Not done", "almost done", "will be done by 5" are NOT reports.
 - Network calls never run while the lock is held, so the owner's screen never waits on WhatsApp."""
 
-import copy, datetime, hashlib, os, re, threading, time, uuid
+import datetime, hashlib, re, threading, time, uuid
 from donor_book import normalize_phone
 
 PKT = datetime.timezone(datetime.timedelta(hours=5))
@@ -834,7 +834,7 @@ class TeamTasks:
         d = self._load()
         if not self._can_send(now):
             return None
-        forced = d["force"]
+        d["force"]
         d["force"] = False
         if d["outbox"]:
             m = d["outbox"].pop(0)

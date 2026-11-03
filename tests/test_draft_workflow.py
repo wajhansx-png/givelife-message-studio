@@ -1,4 +1,4 @@
-import json, unittest
+import unittest
 from unittest.mock import patch
 import test_manual_sends as fixture
 from test_manual_sends import app, commands

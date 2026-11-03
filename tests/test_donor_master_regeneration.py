@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 import test_manual_sends as fixture
 from test_manual_sends import app
-import dm_composer, dm_templates, dm_variants
+import dm_composer, dm_templates
 from donor_messages import MessageBank
 
 

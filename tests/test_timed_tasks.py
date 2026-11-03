@@ -161,7 +161,7 @@ class TimedTests(unittest.TestCase):
         self.assertEqual(self.dispatched, [])
 
     def test_pending_survives_restart(self):
-        t = self.create()
+        self.create()
         s = tt.Scheduler(
             self.s.path,
             self.store,
@@ -225,7 +225,7 @@ class TimedTests(unittest.TestCase):
         self.assertTrue(json.loads(s.path.read_text()))
 
     def test_overlapping_deploy_workers_do_not_dispatch_twice(self):
-        task = self.create()
+        self.create()
         other = tt.Scheduler(
             self.s.path,
             self.store,

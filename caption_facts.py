@@ -1,6 +1,6 @@
 """Factual caption updates shared by drafts, version banks and dispatch."""
 
-import re, uuid, copy
+import re, uuid
 import draft_workflow
 
 TIME = re.compile(

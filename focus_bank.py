@@ -1,6 +1,6 @@
 """Owner-source wording banks. Generated text never replaces the saved original."""
 
-import copy, hashlib, threading, time, uuid, re, difflib
+import copy, hashlib, threading, time, uuid, re
 import dm_variants
 
 

@@ -1,7 +1,7 @@
 """Cases: each case (for example "Yousuf") keeps its own amount, captions, stars, donated marks, DM-sent marks and batch history.
 Closing one saves it; a new case starts from zero; any saved case can be opened again. Donor and volunteer names and numbers are shared."""
 
-import base64, copy, json, re, threading, time, uuid
+import base64, json, re, threading, time, uuid
 
 
 class Cases:

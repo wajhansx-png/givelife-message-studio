@@ -193,7 +193,7 @@ class DeliveryTests(RegistryTests):
             self.jobs._run(job)
 
     def test_saved_caption_order_and_exact_minimum_gap(self):
-        a = self.add("First", "03001234567")
+        self.add("First", "03001234567")
         b = self.add("Important", "03011234567")
         self.book.update(b["id"], important=True)
         result = self.jobs.start("all", 120, run=False)
@@ -263,7 +263,7 @@ class DeliveryTests(RegistryTests):
     def test_stop_during_rest_sends_nothing_more(self):
         for i in range(3):
             self.add("P%d" % i, "030012345%02d" % i)
-        r = self.jobs.start("all", 60, chunk=1, rest_seconds=600, run=False)
+        self.jobs.start("all", 60, chunk=1, rest_seconds=600, run=False)
         job = self.jobs._load()["jobs"][-1]
 
         def wait(seconds):
@@ -387,7 +387,7 @@ class DeliveryTests(RegistryTests):
     def test_stop_button_then_continue_resumes_after_the_last_sent_and_lists_names(self):
         self._five()
         job = self.jobs.start("important", 60, run=False)["job"]
-        stored = self.jobs._load()["jobs"][-1]
+        self.jobs._load()["jobs"][-1]
         real = self.send
 
         def send(body):
@@ -535,7 +535,7 @@ class DeliveryTests(RegistryTests):
     def test_live_progress_during_a_pause_shows_next_batch(self):
         self._many(25)
         seen = {}
-        r = self.jobs.start("important", 60, chunk=20, rests=[1500], run=False)
+        self.jobs.start("important", 60, chunk=20, rests=[1500], run=False)
         job = self.jobs._load()["jobs"][-1]
 
         def wait(seconds):
@@ -720,7 +720,7 @@ class IntegrationTests(unittest.TestCase):
         app = self.app
         hub = app.donors()
         d = hub.book.add("Ali", "03001234567")["donor"]
-        v = hub.volunteers.book.add("Sara", "03007654321")["donor"]
+        hub.volunteers.book.add("Sara", "03007654321")["donor"]
         hub.book.update(d["id"], important=True, donated=True, amount=5000)
         hub.book.delivery(d["id"], "Sent")
         app.set_left(0)

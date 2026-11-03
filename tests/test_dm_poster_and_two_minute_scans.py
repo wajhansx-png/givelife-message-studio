@@ -1,7 +1,6 @@
 """Offline regressions for donor poster, greeting, and Auto scan cadence."""
 
 import io, json, time, unittest
-from types import SimpleNamespace
 from unittest.mock import patch, Mock
 import test_manual_sends as fixture
 from test_manual_sends import app

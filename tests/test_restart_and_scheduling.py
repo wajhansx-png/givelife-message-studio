@@ -1,8 +1,8 @@
-import copy, json, threading, time, types, unittest
+import copy, json, threading, time, unittest
 from unittest.mock import patch
 import test_manual_sends as fixture
 from test_manual_sends import app, commands
-import assistant, autopilot, rules, state_shapes
+import assistant, autopilot
 
 
 class RestartTests(unittest.TestCase):

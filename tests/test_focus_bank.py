@@ -1,7 +1,6 @@
-import tempfile, unittest, threading, copy
+import unittest, threading, copy
 from types import SimpleNamespace
 from unittest.mock import patch
-from pathlib import Path
 from focus_bank import FocusBank, reject_reason
 
 

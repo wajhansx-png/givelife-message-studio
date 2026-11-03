@@ -439,7 +439,7 @@ class OneBatchAtATime(unittest.TestCase):
             gate.wait()
             try:
                 results.append(jobs.start("all", 60, run=False, request_id="r%d" % i)["job"]["id"])
-            except ValueError as e:
+            except ValueError:
                 results.append("refused")
 
         threads = [threading.Thread(target=go, args=(i,)) for i in range(8)]

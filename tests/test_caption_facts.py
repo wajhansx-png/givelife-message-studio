@@ -1,5 +1,4 @@
-import unittest, re
-from unittest.mock import patch
+import unittest
 import test_manual_sends as fixture
 from test_manual_sends import app
 import caption_facts, draft_workflow

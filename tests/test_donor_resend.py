@@ -110,7 +110,7 @@ class QueueOrder(unittest.TestCase):
         )
 
     def test_important_still_comes_before_everyone_else(self):
-        x = self.book.add("Aaa", "03005555555")["donor"]
+        self.book.add("Aaa", "03005555555")["donor"]
         self.assertEqual(self.names("all")[-1], "Aaa")
 
 

@@ -1,5 +1,4 @@
-import copy, hashlib, json, sys, tempfile, threading, time, types, unittest
-from pathlib import Path
+import hashlib, time, types, unittest
 from unittest.mock import patch
 import test_donor_hub as hub
 import manual_commands, chat_policy, persist
@@ -102,7 +101,7 @@ class WorkflowTests(unittest.TestCase):
 
     def test_bare_stop_stops_a_running_donor_batch_and_does_nothing_otherwise(self):
         registry = self.app.donors()
-        d = registry.book.add("Ali", "923001234567")["donor"]
+        registry.book.add("Ali", "923001234567")["donor"]
         self.assertIsNone(registry.command("stop", request_id="nothing-running"))
         registry.jobs.active = "running"
         for word in ("stop", "Stop it", "pause", "ruk jao", "band karo", "stop all"):
@@ -140,7 +139,7 @@ class WorkflowTests(unittest.TestCase):
         for i in range(25):
             d = registry.book.add("Donor " + str(i), "92300" + str(1000000 + i))["donor"]
             registry.book.update(d["id"], important=True)
-        result = registry.start_batch(
+        registry.start_batch(
             scope="important", gap_seconds=240, run=False, request_id="twenty-test"
         )
         job = registry.jobs._load()["jobs"][-1]

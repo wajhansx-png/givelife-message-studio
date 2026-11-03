@@ -3,7 +3,7 @@ proving the cancel tool is offered and the live schedules reach the model."""
 
 import json, os, unittest
 from unittest.mock import patch
-import assistant, chat_policy, draft_flow, manual_commands as m
+import assistant, chat_policy, manual_commands as m
 
 
 class Phrases(unittest.TestCase):

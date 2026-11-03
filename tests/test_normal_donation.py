@@ -61,7 +61,6 @@ class NormalDonationLine(unittest.TestCase):
 
 class SavingTheAmount(unittest.TestCase):
     def test_the_donor_update_endpoint_keeps_the_usual_amount(self):
-        import tempfile, donor_integration
         from test_donor_hub import IntegrationTests
 
         fixture = IntegrationTests()
@@ -69,7 +68,7 @@ class SavingTheAmount(unittest.TestCase):
         try:
             registry = fixture.app.donors()
             donor = registry.book.add("Ali", "03001234567")["donor"]
-            result = registry.mutate({"action": "update", "id": donor["id"], "normal_amount": 750})
+            registry.mutate({"action": "update", "id": donor["id"], "normal_amount": 750})
             self.assertEqual(registry.book.normal_amount_for_phone("03001234567"), 750)
             registry.mutate({"action": "update", "id": donor["id"], "normal_amount": 0})
             self.assertEqual(registry.book.normal_amount_for_phone("03001234567"), 0)

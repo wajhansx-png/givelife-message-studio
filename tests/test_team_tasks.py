@@ -304,8 +304,7 @@ class HumanWords(Base):
     def test_wording_varies_between_tasks(self):
         self.start("a deadline 6pm")
         self.tick(1)
-        first = self.sent[0].split(",", 1)[1]
-        seen = {first}
+        self.sent[0].split(",", 1)[1]
         for n in range(12):
             self.t.plan("task %d deadline 9pm" % n)
             self.t.confirm_plan() if False else None

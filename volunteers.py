@@ -1,8 +1,8 @@
 """Volunteers: people who help share the case. A name and a private number, one message the owner writes, and the same
 safe batch sending as donors (gaps, saved receipts, never twice) but with their own list, their own records and no appeal rules."""
 
-import re, threading, time
-from donor_book import DonorBook, normalize_phone, hide_numbers
+import re, threading
+from donor_book import DonorBook, normalize_phone
 from donor_delivery import DonorDelivery
 
 

@@ -93,7 +93,7 @@ class VolunteerTests(unittest.TestCase):
             self.v.mutate({"action": "add", "name": n, "phone": p})
         self.v.mutate({"action": "message", "text": "Please share: {name}"})
         with patch.object(self.v.jobs, "_run"):
-            r = self.v.mutate(
+            self.v.mutate(
                 {"action": "send_all", "request_id": "req-vol-0001", "gap_seconds": 60}
             )
         self.run_job()

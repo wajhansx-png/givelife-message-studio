@@ -1,4 +1,4 @@
-import unittest, threading, io, json
+import unittest, io, json
 from unittest.mock import patch, Mock
 import test_manual_sends as fixture
 from test_manual_sends import app

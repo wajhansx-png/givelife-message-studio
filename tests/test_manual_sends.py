@@ -1,4 +1,4 @@
-import copy, importlib, json, os, sys, tempfile, threading, time, types, unittest
+import copy, json, os, sys, tempfile, threading, time, types, unittest
 from pathlib import Path
 from unittest.mock import patch
 
@@ -381,7 +381,7 @@ class SendTests(unittest.TestCase):
     def test_current_wording_edit_not_a_future_rule(self):
         app.save_draft("group", app.update_text(3000, 25000))
         before = copy.deepcopy(app.ENGINE.rule_list())
-        result = app.manual_command("dont write this much came in delete")
+        app.manual_command("dont write this much came in delete")
         self.assertEqual(app.read_left(), 25000)
         self.assertNotIn("came in", json.loads(app.DRAFT.read_text(encoding="utf-8"))["group"])
         self.assertEqual(app.ENGINE.rule_list(), before)

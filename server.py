@@ -2509,13 +2509,13 @@ def donor_autopilot():
  import urllib.request
  time.sleep(20)
  for _ in range(20):
-  try:donors().jobs.recover();break
+  try:donors().jobs.recover();donors().volunteers.jobs.recover();break
   except Exception:time.sleep(30)
  url=os.environ.get('RENDER_EXTERNAL_URL','').rstrip('/')
  while True:
   time.sleep(540)
   try:
-   if url and donors().jobs.active:urllib.request.urlopen(url+'/health',timeout=20).read()
+   if url and (donors().jobs.active or donors().volunteers.jobs.active):urllib.request.urlopen(url+'/health',timeout=20).read()
   except Exception:pass
 
 ensure_dm_structure()

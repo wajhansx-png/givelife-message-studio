@@ -12,6 +12,7 @@ class VolunteerDelivery(DonorDelivery):
 
 class Volunteers:
     MESSAGE_KEY='volunteer_message';MAX=4000
+    START_DELAYS=(0,300,600,900,1800,3600,7200)
     def __init__(self,app,eligible):
         self.app=app;self.book=VolunteerBook(app.DATA,app.STORE);self.lock=threading.RLock()
         self.jobs=VolunteerDelivery(app.DATA,app.STORE,self.book,app.send_custom,self.message,app.wa_ok,lambda:app.on_hold(),eligible,self.first_name)
@@ -49,5 +50,15 @@ class Volunteers:
             if not self.message().strip():raise ValueError('Write the message for volunteers first (the box under the list), then send.')
             if action=='send_one':
                 return self.jobs.start('selected',body.get('gap_seconds',180),ids=[self.book.resolve(body.get('id',''))['id']],limit=1,request_id=body.get('request_id'),poster=bool(body.get('poster',True)),skip_contacted=False)
-            return self.jobs.start('all',body.get('gap_seconds',180),limit=None,chunk=20,request_id=body.get('request_id'),poster=bool(body.get('poster',True)),skip_contacted=bool(body.get('skip_contacted',True)))
+            delay=body.get('delay_seconds',0)
+            if type(delay) is not int or delay not in self.START_DELAYS:raise ValueError('Choose Send now, 5, 10, 15, 30 minutes, 1 hour or 2 hours.')
+            with self.lock:
+                rid=body.get('request_id');old=next((j for j in self.jobs.export_jobs()['jobs'] if rid and j.get('request_id')==rid),None)
+                if old:
+                    if old.get('start_delay_seconds',0)!=delay or old.get('poster')!=bool(body.get('poster',True)) or old.get('gap_seconds')!=body.get('gap_seconds',180):raise ValueError('This request was already used for another volunteer batch. Check its delivery status.')
+                    return {'job':self.jobs._public(old),'reply':'This volunteer batch is already tracked. Its original send time is unchanged.'}
+                result=self.jobs.start('all',body.get('gap_seconds',180),limit=None,chunk=20,request_id=rid,poster=bool(body.get('poster',True)),skip_contacted=bool(body.get('skip_contacted',True)),hold_until=time.time()+delay if delay else None)
+                self.jobs._update(result['job']['id'],start_delay_seconds=delay)
+            if delay:result['reply']=f'Volunteer DMs scheduled to start in {delay//60} minutes. The saved message and poster choice are queued; you can close the app.'
+            return result
         raise ValueError('Unknown volunteer action.')

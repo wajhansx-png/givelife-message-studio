@@ -91,7 +91,7 @@ class DonorBook:
                 for index,row in enumerate(sorted((r for r in records if r.get(flag)),key=lambda r:(r.get(field) or 0,r['id'])),1):row[rank]=index
             q=str(query).strip().casefold(); digits=re.sub(r'\D','',q)
             rows=[r for r in records if (tab=='all' or tab=='important' and r['important'] or tab=='top' and r.get('top_donor') or tab=='donated' and r['donated'] or tab=='not_donated' and not r['donated'] or tab=='not_contacted' and not r['donated'] and not self.contacted(r)) and (not q or q in r['name'].casefold() or q in r.get('notes','').casefold() or len(digits)>=4 and digits in r['phone'])]
-            rows.sort(key=(lambda r:(r.get('top_order' if tab=='top' else 'important_order') or 0,r['id'])) if tab in ('important','top') else self.queue_key)
+            rows.sort(key=(lambda r:(r.get('top_order' if tab in ('important','top') else 'important_order') or 0,r['id'])) if tab=='top' else self.queue_key)
             return {'items':[self._public(r) for r in rows],'counts':counts}
     def add(self,name='',phone='',text='',source='Added in studio'):
         if text: name,phone=parse_contact(text,name)
@@ -219,7 +219,7 @@ class DonorBook:
         if scope not in ('all','important','top','donated','not_donated','selected'):raise ValueError('Choose an audience.')
         with self.lock:
             rows=[r for r in self._load()['records'] if not r.get('deleted') and r.get('phone') and (scope=='all' or scope=='selected' and r['id'] in (ids or []) or scope=='important' and r['important'] or scope=='top' and r.get('top_donor') or scope=='donated' and r['donated'] or scope=='not_donated' and not r['donated'])]
-            rows.sort(key=(lambda r:(r.get('top_order' if scope=='top' else 'important_order') or 0,r['id'])) if scope in ('important','top') else self.queue_key)
+            rows.sort(key=(lambda r:(r.get('top_order' if scope=='top' else 'important_order') or 0,r['id'])) if scope=='top' else self.queue_key)
             return copy.deepcopy(rows[:limit] if limit else rows)
     CASE_FIELDS={'top_donor':False,'top_order':None,'important_order':None,'important':False,'donated':False,'amount':0,'delivery':'Not contacted','last_sent_at':None,'sent_count':0,'dm_sent':False}
     def export_case_fields(self):

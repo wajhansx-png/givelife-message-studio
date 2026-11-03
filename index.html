@@ -92,7 +92,7 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
    <div class="tools"><button type="button" id="previewBack" class="preview-back">← Back</button><div class="ctx"><img id="poster" alt="" width="28" height="28" hidden><span id="ctx">Group message · poster attached</span></div><span class="sp"></span>
     <button class="tool" id="edit" title="Edit message (E)">Edit</button><button class="tool" id="fresh" title="New wording (N)">New</button><details class="overflow-tools"><summary aria-label="More message actions" title="More message actions">⋯</summary><div><button class="tool" id="copy" title="Copy (C)">Copy message</button><button class="tool" id="hideMsg" title="Hide message (H)">Hide message</button></div></details></div>
    <div class="chat" id="chat" tabindex="0" aria-label="WhatsApp caption preview. Use Edit to change it."><div class="message" id="groupPreview"></div><div class="message" id="dmPreview"></div></div>
-   <div class="thumb-dock preview-dock"><button type="button" class="tool" id="previewBackBottom">← Back</button></div>
+   <div class="thumb-dock preview-dock"><button type="button" class="tool back-action" id="previewBackBottom">← Back</button></div>
   </section>
   <aside class="side">
    <section class="card talk" aria-label="Assistant">
@@ -113,6 +113,13 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
      <button class="big all" id="sendAll" title="GiveLife and all 5 freelance groups" aria-label="Send to all 6 groups" aria-describedby="sent-all"><span class="group-label">Send to all 6 groups</span><small class="last-sent" data-last-group="all" id="sent-all">Checking…</small></button>
     </div>
     <div id="groupStatus" role="status"></div>
+    <div class="delay-row" id="delayRow" role="group" aria-label="Schedule delay">
+     <span class="delay-label">Send in</span>
+     <button type="button" class="delay-pill" data-delay="15" aria-pressed="false">15 min</button>
+     <button type="button" class="delay-pill" data-delay="30" aria-pressed="false">30 min</button>
+     <button type="button" class="delay-pill" data-delay="45" aria-pressed="false">45 min</button>
+     <button type="button" class="delay-pill" data-delay="60" aria-pressed="false">1 hr</button>
+    </div>
    </section>
    <section class="card send dm-send" aria-label="Send direct message">
     <div class="send-title"><h2>Send a direct message</h2><label class="dm-poster"><input type="checkbox" id="dmPoster" checked> Attach poster (image + caption)</label></div><div class="dmrow"><label class="dm-field" for="dmName">Name (optional)<input id="dmName" name="recipient_name" placeholder="e.g. Ali…" autocomplete="off"></label><div class="seg" id="gender"><button type="button" data-g="Brother" aria-pressed="true">Bhai</button><button type="button" data-g="Sister" aria-pressed="false">Sister</button></div><label class="dm-field phone-field" for="dmPhone">Private number<input id="dmPhone" name="recipient_phone" type="tel" inputmode="tel" placeholder="e.g. 0300 1234567…" autocomplete="off" spellcheck="false"></label></div>
@@ -138,7 +145,7 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
   <div class="row"><div class="t"><b>Memory &amp; feedback</b></div><button type="button" class="tool" id="openMemory">Review</button></div>
   <div class="row"><div class="t"><b>University group finder</b></div><a class="tool" href="/group-finder">Find groups</a></div>
   <div class="row"><div class="t"><b>WhatsApp</b><small id="waRes">Disconnect this number from the studio.</small></div><button type="button" class="tool danger" id="waOut">Log out</button></div>
- </div><div class="thumb-dock"><button type="button" class="tool" id="setCloseBottom">← Back</button></div></dialog>
+ </div><div class="thumb-dock"><button type="button" class="tool back-action" id="setCloseBottom">← Back</button></div></dialog>
 <input type="file" id="file" accept="image/*,video/mp4,video/quicktime" hidden><textarea id="group" hidden></textarea><textarea id="dm" hidden></textarea>
 <dialog id="feedbackDialog" class="memory-dialog" aria-label="Correct an assistant response"><h2>What should be different?</h2><form id="feedbackForm"><textarea id="feedbackText" name="feedbackText" aria-label="Your correction" placeholder="Describe the mistake and the correct behaviour…"></textarea><label class="feedback-check"><input type="checkbox" id="feedbackRemember">Remember this correction for future chats</label><p id="feedbackStatus" role="status"></p><button class="primary" type="submit">Save correction</button><button type="button" id="feedbackClose">Cancel</button></form></dialog>
 <dialog id="memoryDialog" class="memory-dialog" aria-label="Memory and feedback"><h2>Memory & feedback</h2><div id="memoryContent"></div><button type="button" id="memoryClose">Close</button></dialog>

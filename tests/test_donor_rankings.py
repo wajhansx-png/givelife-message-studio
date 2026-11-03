@@ -17,9 +17,9 @@ class RankingTests(unittest.TestCase):
   self.assertEqual(self.ids_for('top'),list(reversed(self.ids)))
   self.book.delivery(self.ids[0],'Sent');self.book.update(self.ids[0],name='AAA',donated=True,amount=500)
   self.book=DonorBook(self.tmp.name,self.store)
-  self.assertEqual(self.ids_for('important'),self.ids)
+  self.assertEqual(self.ids_for('important'),self.ids[1:]+self.ids[:1])
   self.assertEqual(self.ids_for('top'),list(reversed(self.ids)))
-  self.assertEqual([r['id'] for r in self.book.recipients('important')],self.ids)
+  self.assertEqual([r['id'] for r in self.book.recipients('important')],self.ids[1:]+self.ids[:1]) # sent people sink to the end
   self.assertEqual([r['id'] for r in self.book.recipients('top')],list(reversed(self.ids)))
   self.assertEqual(self.book.list('important',query='Ali')['items'][0]['important_rank'],3)
  def test_duplicate_mark_keeps_rank_and_readd_appends(self):

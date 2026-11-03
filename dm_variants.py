@@ -5,12 +5,13 @@ the general path: the owner pastes any complete message, the model rewrites
 only the wording, and deterministic checks reject any version that changes the
 line structure, emojis, bold/italic markers, numbers or payment details.
 """
+
 import difflib, json, re
 
 import assistant
 import dm_composer
 
-VERSION = 'dm-variants-2026-11-02-deep-rewrite'
+VERSION = "dm-variants-2026-11-02-deep-rewrite"
 
 # Meaning and formatting matter more than matching a character count.
 # Allow sentence-level rewrites while keeping each message reasonably compact.
@@ -26,55 +27,59 @@ Do not invent medical details, fundraising deadlines or verified outcomes."""
 
 def clean_source(source):
     """Strip a leading/trailing owner instruction from a pasted message."""
-    text = str(source or '').replace('\r\n', '\n').strip()
-    lines = text.split('\n')
+    text = str(source or "").replace("\r\n", "\n").strip()
+    lines = text.split("\n")
     instruction = re.compile(
-        r'(?i)\b(?:generate|make|create|write|rewrite|give|show|prepare|produce)\b'
-        r'.{0,120}\b(?:versions?|variants?|wordings?|rewrites?)\b'
+        r"(?i)\b(?:generate|make|create|write|rewrite|give|show|prepare|produce)\b"
+        r".{0,120}\b(?:versions?|variants?|wordings?|rewrites?)\b"
     )
     while lines and instruction.search(lines[0]) and len(lines[0]) < 300:
         lines.pop(0)
     while lines and instruction.search(lines[-1]) and len(lines[-1]) < 300:
         lines.pop()
-    return '\n'.join(lines).strip()
+    return "\n".join(lines).strip()
 
 
 def length_range(source):
-    n = len(str(source or '').strip())
+    n = len(str(source or "").strip())
     return int(n * (1 - LENGTH_TOLERANCE)), int(n * (1 + LENGTH_TOLERANCE)) + 1
 
 
 def _shape(text):
     """The exact line/blank-line/emoji/marker skeleton of a message."""
-    lines = str(text or '').replace('\r\n', '\n').strip('\n').split('\n')
+    lines = str(text or "").replace("\r\n", "\n").strip("\n").split("\n")
     out = []
     for line in lines:
         if not line.strip():
-            out.append(('', 0, 0, True))
+            out.append(("", 0, 0, True))
             continue
-        lead = re.match(r'^[^\w\s]*', line).group(0)
-        out.append((lead, line.count('*'), line.count('_'), False))
+        lead = re.match(r"^[^\w\s]*", line).group(0)
+        out.append((lead, line.count("*"), line.count("_"), False))
     return out
 
 
 def _numbers(text):
-    return [int(value.replace(',', '')) for value in re.findall(r'\d[\d,]*', str(text or ''))]
+    return [int(value.replace(",", "")) for value in re.findall(r"\d[\d,]*", str(text or ""))]
 
 
 def _emojis(text):
-    return re.findall(r'[\U0001F000-\U0001FAFF\u2600-\u27BF]', str(text or ''))
+    return re.findall(r"[\U0001F000-\U0001FAFF\u2600-\u27BF]", str(text or ""))
 
 
 def _editable_lines(text):
     # Exclude exact payment/contact lines from variation scoring.
-    return [line.strip() for line in str(text).split('\n')
-            if line.strip() and not re.search(
-                r'(?i)easypaisa|jazzcash|wajdan khan|reply \*done\*|03097458815', line)]
+    return [
+        line.strip()
+        for line in str(text).split("\n")
+        if line.strip()
+        and not re.search(r"(?i)easypaisa|jazzcash|wajdan khan|reply \*done\*|03097458815", line)
+    ]
 
 
 def _similarity(a, b):
     def normalized(text):
-        return ' '.join(re.findall(r"[a-z]+", '\n'.join(_editable_lines(text)).lower()))
+        return " ".join(re.findall(r"[a-z]+", "\n".join(_editable_lines(text)).lower()))
+
     return difflib.SequenceMatcher(None, normalized(a), normalized(b), autojunk=False).ratio()
 
 
@@ -83,104 +88,114 @@ def _meaningful_changes(source, candidate):
     b = _editable_lines(candidate)
     if len(a) != len(b):
         return 0
-    return sum(difflib.SequenceMatcher(None, x.lower(), y.lower(), autojunk=False).ratio() < 0.83
-               for x, y in zip(a, b))
+    return sum(
+        difflib.SequenceMatcher(None, x.lower(), y.lower(), autojunk=False).ratio() < 0.83
+        for x, y in zip(a, b)
+    )
 
 
 def validate(source, text, existing=()):
     """Return an error string, or '' when the version is safe to save."""
     if not isinstance(text, str):
-        return 'not text'
-    text = text.replace('\r\n', '\n').strip()
-    source = str(source or '').replace('\r\n', '\n').strip()
+        return "not text"
+    text = text.replace("\r\n", "\n").strip()
+    source = str(source or "").replace("\r\n", "\n").strip()
     if len(text) < 180:
-        return 'too short'
+        return "too short"
     if len(text) > 10000:
-        return 'too long'
+        return "too long"
     if text == source:
-        return 'same as the source'
+        return "same as the source"
     low, high = length_range(source)
     if not low <= len(text) <= high:
-        return f'length {len(text)} is outside {low}-{high} characters (the source has {len(source)})'
+        return (
+            f"length {len(text)} is outside {low}-{high} characters (the source has {len(source)})"
+        )
     if text in existing:
-        return 'duplicate wording'
+        return "duplicate wording"
     if _shape(text) != _shape(source):
-        return 'line breaks, blank lines, emojis or bold/italic markers changed'
+        return "line breaks, blank lines, emojis or bold/italic markers changed"
     if _emojis(text) != _emojis(source):
-        return 'an emoji changed or moved'
+        return "an emoji changed or moved"
     if _numbers(source) != _numbers(text):
-        return 'a number, amount or phone number changed'
-    source_lines = source.split('\n')
-    text_lines = text.split('\n')
+        return "a number, amount or phone number changed"
+    source_lines = source.split("\n")
+    text_lines = text.split("\n")
     for source_line, text_line in zip(source_lines, text_lines):
-        if 'Rs.' in source_line and 'Rs.' not in text_line:
-            return 'the currency formatting changed'
-    first_source = next((line for line in source_lines if line.strip()), '')
-    first_text = next((line for line in text_lines if line.strip()), '')
-    if first_source.startswith('Brother,') and not first_text.startswith('Brother,'):
-        return 'the greeting punctuation changed'
-    for token in ('03097458815', 'Easypaisa / JazzCash', 'Wajdan Khan', 'Reply *Done* after donating.'):
+        if "Rs." in source_line and "Rs." not in text_line:
+            return "the currency formatting changed"
+    first_source = next((line for line in source_lines if line.strip()), "")
+    first_text = next((line for line in text_lines if line.strip()), "")
+    if first_source.startswith("Brother,") and not first_text.startswith("Brother,"):
+        return "the greeting punctuation changed"
+    for token in (
+        "03097458815",
+        "Easypaisa / JazzCash",
+        "Wajdan Khan",
+        "Reply *Done* after donating.",
+    ):
         if token in source and token not in text:
-            return 'payment details or the reply instruction changed'
+            return "payment details or the reply instruction changed"
     fixed_lines = [
-        line.strip() for line in source.split('\n')
-        if re.search(r'(?i)(?:Easypaisa|JazzCash|Wajdan Khan|03097458815|Reply \*Done\*)', line)
+        line.strip()
+        for line in source.split("\n")
+        if re.search(r"(?i)(?:Easypaisa|JazzCash|Wajdan Khan|03097458815|Reply \*Done\*)", line)
     ]
     if any(line not in text for line in fixed_lines):
-        return 'payment details or the reply instruction changed'
+        return "payment details or the reply instruction changed"
     if not dm_composer.complete(text):
-        return 'the message is not complete'
+        return "the message is not complete"
     # Reject superficial variations that merely swap the first sentence.
     # Requiring at least two rewritten editable lines makes the whole appeal change.
     editable = len(_editable_lines(source))
     minimum_lines = 2 if editable >= 3 else 1
     if _meaningful_changes(source, text) < minimum_lines or _similarity(source, text) > 0.81:
-        return 'not deeply rewritten; change the opening AND the body wording'
+        return "not deeply rewritten; change the opening AND the body wording"
     if any(_similarity(text, other) > 0.87 for other in existing if isinstance(other, str)):
-        return 'too similar to an existing version; rewrite the story differently'
-    return ''
+        return "too similar to an existing version; rewrite the story differently"
+    return ""
 
 
 def _json_list(raw):
-    raw = str(raw or '').strip()
-    raw = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.I)
-    raw = re.sub(r'\s*```$', '', raw)
+    raw = str(raw or "").strip()
+    raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.I)
+    raw = re.sub(r"\s*```$", "", raw)
     try:
         data = json.loads(raw, strict=False)
     except (ValueError, TypeError):
-        match = re.search(r'\[[\s\S]*\]', raw)
+        match = re.search(r"\[[\s\S]*\]", raw)
         if not match:
-            raise ValueError('The model did not return a JSON list of messages.')
+            raise ValueError("The model did not return a JSON list of messages.")
         data = json.loads(match.group(0), strict=False)
     if isinstance(data, dict):
-        data = data.get('versions') or data.get('messages') or data.get('items')
+        data = data.get("versions") or data.get("messages") or data.get("items")
     if isinstance(data, str):
         data = [data]
     if not isinstance(data, list):
-        raise ValueError('The model did not return a JSON list of messages.')
+        raise ValueError("The model did not return a JSON list of messages.")
     out = []
     for item in data:
         if isinstance(item, str):
             out.append(item)
-        elif isinstance(item, dict) and isinstance(item.get('text'), str):
-            out.append(item['text'])
+        elif isinstance(item, dict) and isinstance(item.get("text"), str):
+            out.append(item["text"])
     return out
 
 
 def _prompt(source, count, avoid):
-    lines = source.split('\n')
+    lines = source.split("\n")
     blank = sum(1 for line in lines if not line.strip())
-    avoid_text = ''
+    avoid_text = ""
     if avoid:
         openings = []
         for item in avoid:
-            first = next((line.strip() for line in item.split('\n') if line.strip()), '')
+            first = next((line.strip() for line in item.split("\n") if line.strip()), "")
             if first and first not in openings:
                 openings.append(first[:180])
         if openings:
             avoid_text = (
-                '\nThese versions already exist. Do not reuse their openings or wording:\n'
-                + '\n'.join('- ' + opening for opening in openings)
+                "\nThese versions already exist. Do not reuse their openings or wording:\n"
+                + "\n".join("- " + opening for opening in openings)
             )
     low, high = length_range(source)
     size = len(source)
@@ -212,23 +227,24 @@ NON-NEGOTIABLE:
 - The exact payment/phone and account lines are immutable, copy them verbatim.
 - VOICE: copy the owner's own voice from the source: same short punchy lines, same
   bold/italic rhythm, same direct "you" address, same simple words. Never sound formal.
+- SAME PLACE, NEW WORDS: line N of every version says what line N of the source says.
+  A fact in the first line (for example "22 hours until the Janazah") stays in the first
+  line of every version, reworded. Keep each line within about 15% of its source line's
+  length. Do not rearrange sections or move facts between lines.
+- PSYCHOLOGY (use the true facts only, a different mix in each version): one named child
+  or person if the source names one; the real time left from the source as the urgency;
+  loss aversion ("what happens if this doesn't reach in time"); a tiny, concrete ask
+  ("just Rs 500"); social proof and scarcity ("only 5 people needed"); a direct
+  yes-question ("Can you send right now?"); the reward of sadqa and dua. The first line
+  must stop the scroll in under two seconds.
 - Make every version emotionally gripping and urgent using ONLY the true facts in the
-  source (the child's condition as written, the amount still needed, how few people it
-  takes). Start with a scroll-stopping hook: a direct question to the reader, a stark
-  small-amount-versus-a-child's-need contrast, or a vivid detail from the source. Use a
-  different emotional angle in each version (a parent's pain, the small amount, "it could
-  be your child", gratitude, sharing helps). Urgency means "needed now because of the
-  amount left", never an invented deadline.
-- SAME PLACE, NEW WORDS: line N of every version says what line N of the source
-  says. A fact in the first line (for example "22 hours until the Janazah") stays in
-  the first line of every version, reworded. Keep each line within about 15% of its
-  source line's length so every version reads the same size.
-- PSYCHOLOGY (use the true facts only, a different mix in each version): one named
-  child, not statistics; the real time left from the source as the urgency; loss
-  aversion ("before it is too late for his parents"); a tiny, concrete ask (one share
-  of the amount, e.g. "just Rs. 2,000"); social proof and scarcity ("only 19 people
-  are needed"); a direct yes-question to the reader; the reward of sadqa and dua.
-  The first line must stop the scroll in under two seconds.
+  source (the patient's situation exactly as written, the amount still needed, how few
+  people it takes). Start with a scroll-stopping hook: a direct question to the reader, a
+  stark small-amount-versus-the-need contrast, or a vivid detail from the source. Use a
+  different emotional angle in each version (the family's pain, the small amount, "it
+  could be someone you love", gratitude, sharing helps). Do not assume the patient's age,
+  gender or relationship: say only what the source says. Urgency means "needed now because
+  of the amount left", never an invented deadline.
 - Return ONLY a JSON array of {count} strings. No commentary, no markdown fences.
 
 SOURCE:
@@ -239,8 +255,10 @@ SOURCE>>>{avoid_text}
 
 
 def _call(key, prompt):
-    message = assistant._chat_raw(key, SYSTEM, [], [{'role': 'user', 'content': prompt}], max_tokens=8192, thinking_mode=False)
-    content = message.get('content') if isinstance(message, dict) else ''
+    message = assistant._chat_raw(
+        key, SYSTEM, [], [{"role": "user", "content": prompt}], max_tokens=8192, thinking_mode=False
+    )
+    content = message.get("content") if isinstance(message, dict) else ""
     return _json_list(content)
 
 
@@ -248,14 +266,20 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
     """Validate every rewrite, report accepted batches, and optionally retain partial results."""
     source = clean_source(source)
     if not dm_composer.complete(source):
-        raise ValueError('Paste the complete message with its paragraphs, amount and payment details.')
+        raise ValueError(
+            "Paste the complete message with its paragraphs, amount and payment details."
+        )
     count = max(1, min(20, int(count)))
-    existing = [str(item).strip() for item in (avoid or []) if isinstance(item, str) and item.strip()]
+    existing = [
+        str(item).strip() for item in (avoid or []) if isinstance(item, str) and item.strip()
+    ]
     out = []
     key = assistant.client()
     if key is None:
-        raise ValueError('The AI is not connected, so I cannot reword a custom message. The built-in structured DM still works.')
-    last_error = ''
+        raise ValueError(
+            "The AI is not connected, so I cannot reword a custom message. The built-in structured DM still works."
+        )
+    last_error = ""
     for _ in range(5):
         need = count - len(out)
         if need <= 0:
@@ -264,11 +288,15 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
             # Smaller batches avoid model truncation and improve diversity.
             prompt = _prompt(source, min(need, 5), existing + out)
             if last_error:
-                prompt += "\nThe previous attempt was rejected because: " + last_error[:240] + ". Correct that while keeping the verified facts."
+                prompt += (
+                    "\nThe previous attempt was rejected because: "
+                    + last_error[:240]
+                    + ". Correct that while keeping the verified facts."
+                )
             candidates = _call(key, prompt)
         except Exception as exc:
             last_error = str(exc)
-            if re.search(r'(?i)returned (?:401|402|403|429)|not connected|api key', last_error):
+            if re.search(r"(?i)returned (?:401|402|403|429)|not connected|api key", last_error):
                 break
             continue
         before = len(out)
@@ -282,13 +310,15 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
                 break
         if progress is not None and len(out) > before:
             if progress(list(out)) is False:
-                raise ValueError("Generation stopped because the source changed. Your newer edit is safe.")
+                raise ValueError(
+                    "Generation stopped because the source changed. Your newer edit is safe."
+                )
     if allow_partial and out:
         return out[:count]
     if len(out) < count:
-        detail = (' The last problem was: ' + last_error) if last_error else ''
+        detail = (" The last problem was: " + last_error) if last_error else ""
         raise ValueError(
-            f'The AI returned only {len(out)} sufficiently different versions that kept the facts and formatting.{detail} '
-            'The saved DM and the message bank were not changed.'
+            f"The AI returned only {len(out)} sufficiently different versions that kept the facts and formatting.{detail} "
+            "The saved DM and the message bank were not changed."
         )
     return out[:count]

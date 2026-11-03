@@ -3,6 +3,7 @@
 This feature is separate from the donor records and AI assistant. No notes are
 returned until both the studio authentication and notes device lock succeed.
 """
+
 import hashlib
 import hmac
 import html
@@ -61,13 +62,19 @@ def allowed(store, cookie_header):
 
 
 def device_cookie(token, https=True):
-    return (f"{COOKIE}={token}; Path=/notes; Max-Age={COOKIE_AGE}; HttpOnly; "
-            + ("Secure; " if https else "") + "SameSite=Strict")
+    return (
+        f"{COOKIE}={token}; Path=/notes; Max-Age={COOKIE_AGE}; HttpOnly; "
+        + ("Secure; " if https else "")
+        + "SameSite=Strict"
+    )
 
 
 def clear_cookie(https=True):
-    return (f"{COOKIE}=; Path=/notes; Max-Age=0; HttpOnly; "
-            + ("Secure; " if https else "") + "SameSite=Strict")
+    return (
+        f"{COOKIE}=; Path=/notes; Max-Age=0; HttpOnly; "
+        + ("Secure; " if https else "")
+        + "SameSite=Strict"
+    )
 
 
 def unlock(store, pin, ip="local"):
@@ -98,11 +105,34 @@ def lock_device(store, cookie_header):
 
 class SafeNoteHTML(HTMLParser):
     """Tight HTML allowlist: markup, headings, lists, checkboxes and text colors."""
-    TAGS = {"p", "div", "br", "strong", "b", "em", "i", "u", "s",
-            "h1", "h2", "h3", "blockquote", "ul", "ol", "li", "span", "font", "input"}
+
+    TAGS = {
+        "p",
+        "div",
+        "br",
+        "strong",
+        "b",
+        "em",
+        "i",
+        "u",
+        "s",
+        "h1",
+        "h2",
+        "h3",
+        "blockquote",
+        "ul",
+        "ol",
+        "li",
+        "span",
+        "font",
+        "input",
+    }
     VOID = {"br", "input"}
-    COLOR = re.compile(r"^(?:#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?|rgb\(\s*(?:\d{1,3}\s*,\s*){2}\d{1,3}\s*\))$")
+    COLOR = re.compile(
+        r"^(?:#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?|rgb\(\s*(?:\d{1,3}\s*,\s*){2}\d{1,3}\s*\))$"
+    )
     STYLE = re.compile(r"(?:^|;)\s*color\s*:\s*([^;]+)", re.I)
+
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.parts = []
@@ -169,8 +199,11 @@ def load(store):
     record = store.get(NOTE_KEY)
     if not isinstance(record, dict):
         return {"html": "", "revision": 0, "updated_at": 0}
-    return {"html": str(record.get("html", "")), "revision": int(record.get("revision", 0)),
-            "updated_at": record.get("updated_at", 0)}
+    return {
+        "html": str(record.get("html", "")),
+        "revision": int(record.get("revision", 0)),
+        "updated_at": record.get("updated_at", 0),
+    }
 
 
 def save(store, source, revision):
@@ -180,7 +213,9 @@ def save(store, source, revision):
     with _lock:
         current = load(store)
         if revision != current["revision"]:
-            raise ValueError("These notes changed in another window. Copy your current text before reloading.")
+            raise ValueError(
+                "These notes changed in another window. Copy your current text before reloading."
+            )
         row = {"html": cleaned, "revision": revision + 1, "updated_at": time.time()}
         store.put(NOTE_KEY, row)
         return row

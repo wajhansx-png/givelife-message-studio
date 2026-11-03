@@ -1,0 +1,76 @@
+{
+  "name": "GiveLife - Daily review only",
+  "active": false,
+  "settings": {
+    "timezone": "Asia/Karachi",
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all"
+  },
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "review-manual",
+      "name": "Test review",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {"rule": {"interval": [{"field": "cronExpression", "expression": "0 9 * * *"}]}},
+      "id": "review-daily",
+      "name": "Daily at 9 AM PKT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR-GIVELIFE-HOST/operations/review",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {"timeout": 60000}
+      },
+      "id": "review-http",
+      "name": "Save daily review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 100],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict", "version": 2},
+          "conditions": [{"id": "ready", "leftValue": "={{ $json.state }}", "rightValue": "ready_for_review", "operator": {"type": "string", "operation": "equals"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "review-check",
+      "name": "Review saved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [520, 100]
+    },
+    {
+      "parameters": {"errorMessage": "GiveLife review needs inspection. No sends were started. Check the saved occurrence and database before retrying."},
+      "id": "review-error",
+      "name": "Needs attention",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [780, 220]
+    }
+  ],
+  "connections": {
+    "Test review": {"main": [[{"node": "Save daily review", "type": "main", "index": 0}]]},
+    "Daily at 9 AM PKT": {"main": [[{"node": "Save daily review", "type": "main", "index": 0}]]},
+    "Save daily review": {"main": [[{"node": "Review saved?", "type": "main", "index": 0}]]},
+    "Review saved?": {"main": [[], [{"node": "Needs attention", "type": "main", "index": 0}]]}
+  },
+  "tags": []
+}

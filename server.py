@@ -37,7 +37,7 @@ def serialized_send(fn):
  @wraps(fn)
  def call(*args,**kwargs):
   with WIRE_LOCK:
-   for secret_name in ('DEEPSEEK_API_KEY','UI_ACCESS_KEY','DB_URI'):
+   for secret_name in ('DEEPSEEK_API_KEY','UI_ACCESS_KEY','DB_URI','OPERATIONS_REVIEW_KEY'):
     secret=os.environ.get(secret_name,'')
     if len(secret)>8 and any(secret in str(value) for value in (*args,*kwargs.values())):raise ValueError('Private service credentials cannot be included in outgoing messages.')
    revision=getattr(OWNER_GUARD,'revision',None)
@@ -2249,6 +2249,9 @@ class Handler(BaseHTTPRequestHandler):
    if not self.response_sent:self.reply({'error':'This request did not complete reliably. Check confirmed activity before repeating any send.'},status=502)
  def _post(self):
   global ACTIVE,OWNER_REVISION
+  if self.path=='/operations/review':
+   import operations_review
+   return operations_review.handle_http(self,sys.modules[__name__])
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   if self.path!='/api/group-finder':ENGINE.touch_owner()
   if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/cases','/team','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):

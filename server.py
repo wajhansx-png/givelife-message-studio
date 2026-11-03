@@ -1948,6 +1948,8 @@ def execute_manual_command(text,request_id=None,message_kind='group'):
           ('. Auto ON; scheduled posting is active. No send is confirmed yet.' if start_posting else '. Interval saved. Auto '+('ON.' if auto_on() else 'OFF; nothing will post until enabled.'))}
  plan=manual_commands.parse(text)
  if not plan:return {'handled':False}
+ # "go ahead" / "continue" answer the assistant's last question. They only mean "lift the hold" while a hold is on.
+ if plan['kind']=='resume' and not on_hold() and re.fullmatch(r'(?i)\s*(?:please\s+)?(?:go ahead|continue|go on|carry on)\s*[.!]*\s*',str(text)):return {'handled':False}
  if plan['kind']=='say':
   # Only meaningful inside a plain-text chat; otherwise the assistant reads it with its context.
   if LAST_MANUAL.get('kind')!='text' or not LAST_MANUAL.get('to'):return {'handled':False}

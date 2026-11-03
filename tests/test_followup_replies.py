@@ -211,6 +211,13 @@ class ServerGuardAgrees(unittest.TestCase):
   self.assertTrue(callback['set_message'](kind='dm',text=original.replace('Brother,','Brother, please read.')))
   self.assertEqual(app.workflow().data['kind'],'dm')
 
+ def test_go_ahead_answers_the_question_instead_of_lifting_a_hold(self):
+  app.HOLD.write_text('{"on":false}')
+  self.assertEqual(app.manual_command('go ahead')['handled'],False)
+  app.set_hold(True)
+  out=app.manual_command('go ahead')
+  self.assertTrue(out['handled']);self.assertIn('Hold released',out['reply'])
+
  def test_bare_yes_without_a_question_cannot_save(self):
   original=app.get_message('dm')['text']
   follow=chat_policy.followup('yes',chat('make the dm shorter','Saved it.'))

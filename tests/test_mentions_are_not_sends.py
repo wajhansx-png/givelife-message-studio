@@ -32,6 +32,11 @@ class RefusalsNeverSend(unittest.TestCase):
    with self.subTest(phrase=phrase):
     self.assertNotIn((manual_commands.parse(phrase) or {}).get('kind'),('appeal','appeals','text','repeat','appeal_to'))
     self.assertEqual([n for n in names if n in SEND_TOOLS and chat_policy.permitted(n,phrase)],[])
+ def test_refusals_do_not_delete_or_stop_dms_either(self):
+  for phrase in ('delete mat karo main ka message','dms band mat karo','dms mat roko','hold mat karo','dms resume mat karo'):
+   with self.subTest(phrase=phrase):self.assertIsNone(manual_commands.parse(phrase))
+  self.assertEqual(manual_commands.parse('delete last message in main')['kind'],'delete')
+  self.assertEqual(manual_commands.parse('dms band karo')['kind'],'stop_dms')
  def test_polite_requests_with_na_still_send(self):
   self.assertTrue(chat_policy.intent('bhej do na')['send'])
   self.assertEqual(manual_commands.parse('dobara bhejo')['kind'],'repeat')

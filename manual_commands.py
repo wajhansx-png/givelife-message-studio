@@ -112,7 +112,7 @@ def balance_amount(text,allow_with=True):
 def dm_control(text):
  t=norm(text);t=re.sub(r'\bdm\s+s\b','dms',t)
  if not re.search(r'\b(dms?|direct messages|personal messages|private messages|donor messages)\b',t):return None
- if re.search(r'\b(don t|dont|do not|never)\s+(stop|pause|hold|resume|start)\b',t):return None
+ if re.search(r'\b(don t|dont|do not|never)\s+(stop|pause|hold|resume|start)\b',t) or URDU_NO.search(t):return None
  # "dm poster off" / "dm without poster" changes the poster, it does not stop the DMs.
  if re.search(r'\b(poster|picture|image|pic)\b',t) and re.search(r'\b(on|off|with|without|no|enable|disable|remove)\b',t) and not re.search(r'\b(hold|pause|stop|resume)\b',t):return None
  if re.search(r'\b(and|plus|also|both)\b.*\b(groups?|posts?|everything)\b',t) and not re.search(r'\b(keep|continue|unchanged|running|unaffected)\b',t):return None
@@ -150,7 +150,7 @@ def parse(text):
   amount=float((arrival[1] or arrival[3]).replace(',',''))*_times(arrival[2] or arrival[4])
   if amount<100 and not (arrival[2] or arrival[4]) and not re.search(r'(?i)\brs\.?',t):return None # "3 came" is a head-count, not rupees
   if amount.is_integer() and amount>=0:return {'kind':'money','amount':int(amount)}
- if re.match(r'^(delete|remove|revoke)\b',low) and re.search(r'\b(message|messages|msg|post|group)\b',low):return {'kind':'delete','target':group(t)}
+ if re.match(r'^(delete|remove|revoke)\b',low) and not URDU_NO.search(low) and re.search(r'\b(message|messages|msg|post|group)\b',low):return {'kind':'delete','target':group(t)}
  # Explicit quoted text is data, even if it contains a command word.
  q=re.match(r'^(?:please\s+)?(?:send|text|message|bhejo)\s+["“\'](.+?)["”\']\s+(?:to|ko|in)\s+(.+)$',t,re.I|re.S)
  if q:return {'kind':'text','text':q[1],'to':re.sub(r'(?i)\s+(?:fast|quickly|asap|immediately|right now)\s*[!.]*$', '', q[2].strip()).strip(),'literal':True}

@@ -169,7 +169,10 @@
   try {
     if (localStorage.getItem('givelife-report-open') === '1') setTimeout(open, 600);
   } catch (e) {}
-  $('reportClose').onclick = () => dlg.close();
+  $('reportClose').onclick = () => {
+    remember(false);
+    dlg.close();
+  };
   dlg.addEventListener('click', (e) => {
     if (e.target === dlg) dlg.close();
   });

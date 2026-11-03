@@ -354,3 +354,5 @@ html body #messageFocus :is(#focusFormatted,#focusText){font:14px/1.45 Arial,sys
 html body #messageFocus #focusFormatted .wa-line{min-height:1.45em}
 html body #messageFocus #focusFormatted .wa-line.blank{height:.5em;min-height:.5em}
 @media(max-width:700px){html body #messageFocus :is(#focusFormatted,#focusText){font-size:16px!important;padding:12px!important}} /* 16px stops iOS zooming into the editor */
+/* Wide screens: the message sits in a centred reading column, lower from the top. */
+@media(min-width:701px){html body #messageFocus :is(#focusFormatted,#focusText){padding:56px max(24px,calc((100% - 640px)/2)) 24px!important}}

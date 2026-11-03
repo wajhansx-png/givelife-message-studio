@@ -1,0 +1,1432 @@
+/* Comfort layer. Loaded last. Touch-size targets, readable text floors, calm motion, quiet error states.
+   Only sizing, spacing and motion live here; behaviour, IDs and wording stay with their screens. */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+img:not([src]),
+img[src=''] {
+  display: none !important;
+}
+
+/* ---- Motion: one short, quiet curve everywhere ---- */
+button,
+summary,
+select,
+input,
+textarea,
+[role='switch'],
+[role='tab'],
+.donor-row,
+.donor-more > div > button {
+  transition:
+    background-color 0.16s var(--ease),
+    color 0.16s var(--ease),
+    border-color 0.16s var(--ease),
+    box-shadow 0.2s var(--ease),
+    transform 0.14s var(--ease),
+    opacity 0.16s var(--ease),
+    filter 0.16s var(--ease);
+}
+@media (hover: hover) {
+  :is(
+      .big,
+      .chips button,
+      .tool,
+      .ghost,
+      .rail-quick button,
+      .donor-tabs button,
+      .chat-open,
+      .open-donors
+    ):not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+  .donor-row:hover {
+    background: color-mix(in srgb, var(--surface2) 70%, transparent);
+  }
+}
+button:not(:disabled):active,
+summary:active,
+[role='switch']:not(:disabled):active {
+  transform: scale(0.97);
+  filter: brightness(0.94);
+}
+:focus-visible {
+  transition: outline-offset 0.12s var(--ease);
+}
+dialog[open]::backdrop {
+  animation: cmfFade 0.2s var(--ease) both;
+}
+@keyframes cmfFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.e.err,
+.e.bot.err,
+.e.sys.err,
+#status.err,
+[role='alert'] {
+  animation: cmfNudge 0.28s var(--ease) both;
+}
+@keyframes cmfNudge {
+  0% {
+    transform: translateX(0);
+  }
+  30% {
+    transform: translateX(-3px);
+  }
+  60% {
+    transform: translateX(3px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after,
+  ::backdrop {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- Errors read as errors: icon-free, colour plus a left rule and tinted ground ---- */
+#status.err,
+.e.err,
+.e.bot.err,
+.e.sys.err {
+  border-left: 3px solid var(--red);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+  color: var(--ink);
+}
+#status.err {
+  padding: 6px 10px;
+  border-radius: 8px;
+  white-space: normal;
+}
+
+/* ---- Text floors: nothing under 12px ---- */
+:is(.last-sent, #donorTotal, .notes-kicker, #notesSync, #status, .donor-head small, .tab-count) {
+  font-size: 12px !important;
+}
+.notes-kicker {
+  letter-spacing: 0.8px;
+}
+
+/* ---- Comfortable targets, desktop pointer ---- */
+button,
+summary,
+select {
+  min-height: 32px;
+}
+.donor-row label,
+label.dm-poster,
+label.dm-field {
+  min-height: 32px;
+}
+input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--g);
+}
+input#donorRowPoster,
+input#volPoster {
+  margin-inline: 6px;
+}
+
+/* ---- Phone and any narrow or touch screen: 44px thumbs, 12px+ text, less chrome ---- */
+@media (max-width: 899px), (pointer: coarse) {
+  :is(button, summary, select, input:not([type='checkbox']):not([type='radio']), textarea.single) {
+    min-height: 44px;
+  }
+  .donor-star,
+  .donor-more > summary,
+  .donor-more summary {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-grid;
+    place-items: center;
+  }
+  .donor-tabs button {
+    min-height: 44px;
+  }
+  .donor-tabs :is(.tab-name, .tab-word) {
+    font-size: 12px !important;
+  }
+  .donor-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+  .donor-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .donor-tabs button {
+    flex: 1 0 auto;
+    scroll-snap-align: start;
+    white-space: nowrap;
+  }
+  :is(#donorTest, #donorToggle, .donor-bottom button) {
+    font-size: 13px !important;
+    white-space: nowrap;
+  }
+  #messageFocus
+    :is(
+      #focusPoster,
+      #focusRetry,
+      #focusManual,
+      #focusRegenerate,
+      #focusEdit,
+      #focusCopy,
+      #focusNext
+    ) {
+    min-height: 44px;
+  }
+  .brandbar :is(.connect-badge, #whatsappConnection) {
+    flex: none;
+    min-width: 44px;
+    max-width: 44px;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  } /* stops iOS zooming into a field on focus */
+}
+@media (max-width: 899px) and (orientation: landscape) {
+  .donor-tabs button,
+  .seg button,
+  .leftchip,
+  summary {
+    min-height: 44px;
+  }
+}
+/* Dialog and sheet footers keep their actions above the home bar */
+@media (max-width: 899px) {
+  dialog:not(.hist) {
+    max-height: calc(100dvh - 16px);
+  }
+  .memory-dialog,
+  .keyboard-dialog,
+  .connect-dialog {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+
+/* ---- Specificity bridge: screens below use `html body …!important`, so the floors repeat here ---- */
+html body :is(small.last-sent, .last-sent, #donorTotal) {
+  font-size: 12px !important;
+}
+html
+  body
+  .donor-page
+  .donor-bottom
+  :is(#donorTest, #donorToggle, #donorSendImportant, #donorSendAll) {
+  font-size: 13px !important;
+  white-space: nowrap;
+}
+html body .donor-page .donor-bottom :is(.donor-poster-toggle, .donor-poster-toggle *) {
+  font-size: 12px !important;
+}
+html body :is(.donor-poster-toggle, label.dm-poster, .donor-bottom label) {
+  min-height: 32px;
+  align-items: center;
+}
+@media (max-width: 899px), (pointer: coarse) {
+  html
+    body
+    #messageFocus
+    :is(
+      .focus-rail button,
+      #focusPoster,
+      #focusManual,
+      #focusRegenerate,
+      #focusRetry,
+      #focusEdit,
+      #focusCopy,
+      #focusNext
+    ) {
+    min-height: 44px !important;
+  }
+  html body .donor-page .donor-row :is(.donor-star, .donor-more > summary) {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  html
+    body
+    :is(
+      button.clip,
+      #histCmd,
+      #notesBack,
+      #notesFullscreen,
+      #batchCount,
+      #batchGap,
+      #batchPause,
+      #batchLimit
+    ) {
+    min-height: 44px !important;
+  }
+  html body :is(#batchCount, #batchGap, #batchPause, #batchLimit) {
+    min-height: 44px !important;
+  }
+  html body .brandbar :is(button#whatsappConnection, .connect-badge) {
+    flex: 0 0 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    width: 44px !important;
+    padding: 0 !important;
+  }
+}
+@media (max-width: 899px) and (orientation: landscape) {
+  html body :is(.leftchip, button#leftChip, .brandbar summary, .seg button) {
+    min-height: 44px !important;
+  }
+}
+
+/* ---- Smallest phones (320–360): everything fits one screen width, no sideways drift ---- */
+@media (max-width: 360px) {
+  html body .donor-page .donor-bottom {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  html body .donor-page .donor-bottom > * {
+    min-width: 0 !important;
+  }
+  html body .donor-page .donor-bottom button {
+    padding-inline: 4px !important;
+    font-size: 12px !important;
+    line-height: 1.1;
+    white-space: normal;
+  }
+  html body .brandbar {
+    gap: 2px !important;
+  }
+  html body .brandbar .seg button {
+    padding: 0 9px !important;
+    font-size: 13px;
+  }
+  html body .brandbar :is(#donorNotesShortcut, #mainNavMore > summary) {
+    padding-inline: 9px !important;
+    font-size: 13px;
+  }
+  button.clip,
+  .composer .clip {
+    min-width: 44px;
+  }
+}
+/* Sticky action bars fade the content passing beneath them, so cut-off cards look intentional */
+@media (max-width: 899px) {
+  html body #messageFocus .focus-rail {
+    box-shadow: 0 -14px 14px -6px #232323;
+  }
+}
+
+@media (max-width: 899px) {
+  html body #histForm {
+    grid-template-columns: 44px minmax(0, 1fr) 48px !important;
+  }
+  html
+    body
+    :is(
+      .donor-poster-toggle,
+      label.dm-poster,
+      .donor-bottom label,
+      .vol-poster,
+      label:has(> #volPoster)
+    ) {
+    min-height: 44px;
+    align-items: center;
+  }
+  html body #messageFocus .group-send :is(small, .last-sent) {
+    font-size: 12px !important;
+  }
+}
+@media (max-width: 340px) {
+  html body .app {
+    padding-inline: 6px !important;
+  }
+  html body .brandbar .seg button {
+    padding: 0 7px !important;
+    font-size: 12.5px;
+  }
+}
+@media (max-width: 899px) {
+  html body #histForm .clip {
+    width: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+}
+html body #messageFocus :is(small, .last-sent, .send-title span) {
+  font-size: 12px !important;
+}
+@media (max-width: 899px) {
+  html body :is(#edit, #fresh, #copy, #previewChangePoster, #leftChip, button.leftchip) {
+    min-height: 44px !important;
+  }
+}
+
+/* ---- Preview on phones: send cards are compact so the screen needs far less scrolling ---- */
+@media (max-width: 899px) {
+  html body #messageFocus .group-send {
+    padding: 8px !important;
+    gap: 6px !important;
+  }
+  html body #messageFocus .group-send .send-title {
+    flex-direction: row !important;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  html body #messageFocus .group-send h2 {
+    font-size: 15px !important;
+  }
+  html body #messageFocus .group-send .chips {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  html body #messageFocus .group-send .chips button:not(.all) {
+    min-height: 44px !important;
+    padding: 4px 4px !important;
+  }
+  html body #messageFocus .group-send .chips button .group-label {
+    font-size: 12.5px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+  html body #messageFocus .group-send .chips .all {
+    grid-column: 1/-1;
+  }
+  html body #messageFocus .group-send .group-section-title {
+    display: none;
+  }
+  html body #messageFocus .group-send .prim button {
+    min-height: 44px !important;
+  }
+}
+#messageFocus#messageFocus :is(small, small.last-sent, .last-sent, .send-title span) {
+  font-size: 12px !important;
+}
+input#volPoster,
+input#donorRowPoster {
+  width: 20px;
+  height: 20px;
+  min-height: 28px;
+}
+
+/* ---- Phone bottom shortcuts: Chat and Donors as one centred pair of equal buttons ---- */
+@media (max-width: 899px) {
+  html body .app > .foot {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding-inline: 0;
+  }
+  html body .app > .foot > :is(#chatOpen, #openDonors) {
+    flex: 0 0 min(200px, calc((100% - 10px) / 2)) !important;
+    width: min(200px, calc((100% - 10px) / 2)) !important;
+    max-width: 200px;
+    padding: 0 12px !important;
+    box-sizing: border-box;
+    min-width: 0 !important;
+    min-height: 52px !important;
+    margin: 0 !important;
+    justify-self: auto !important;
+    justify-content: center;
+    font-size: 17px;
+  }
+  html body .app > .foot > :not(#chatOpen):not(#openDonors):not(.sr-only) {
+    display: none !important;
+  }
+}
+
+/* ---- Screen changes ease in (comfort.js adds .cmf-enter when a screen, tab or message appears) ---- */
+.cmf-enter {
+  animation: cmfEnter 0.24s var(--ease) both;
+}
+@keyframes cmfEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+dialog.cmf-enter,
+#messageFocus.cmf-enter {
+  animation-name: cmfEnterScreen;
+}
+@keyframes cmfEnterScreen {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+} /* whole screens only fade: a full-screen sheet never shifts off the edge */
+
+/* ---- Chat on phones: Copy is a bare icon, never a boxed "Copy" button. The 44px box stays
+   invisible so it is still easy to hit; desktop keeps its original small corner icon. ---- */
+@media (max-width: 899px) {
+  html body #histLog > .e > .message-copy,
+  html body #histLog > .e.bot:not(.dots) > .message-copy,
+  html body #histLog > .e.you > .message-copy {
+    font-size: 0 !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 14px !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--mut) !important;
+    opacity: 0.75;
+    border-radius: 12px !important;
+  }
+  html body #histLog > .e > .message-copy::after {
+    content: none !important;
+  } /* the 44px box is the touch area; no ring spilling past the bubble */
+  html body #histLog > .e > .message-copy:active,
+  html body #histLog > .e > .message-copy:focus-visible {
+    opacity: 1;
+    color: var(--ink) !important;
+    background: var(--surface2) !important;
+  }
+}
+
+/* ---- Donors nav: Messages is a speech-bubble button beside + Add ---- */
+html body .donor-page .donor-head .donor-message-tablist {
+  display: inline-flex;
+  flex: none;
+}
+html body .donor-page .donor-head #donorMessagesTab {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line2);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 650;
+}
+html body .donor-page .donor-head #donorMessagesTab::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z'/%3E%3C/svg%3E")
+    center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z'/%3E%3C/svg%3E")
+    center/contain no-repeat;
+}
+html body .donor-page .donor-head #donorMessagesTab[aria-selected='true'] {
+  background: var(--btn);
+  color: #fff;
+  border-color: transparent;
+}
+@media (max-width: 899px) {
+  html body .donor-page .donor-head #donorMessagesTab {
+    font-size: 0 !important;
+    width: 44px;
+    padding: 0;
+  }
+}
+
+/* ---- Donors bottom bar on phones: one row, Back on the left, the main action under the right thumb ---- */
+@media (max-width: 899px) {
+  html body .donor-page .donor-bottom {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    align-items: stretch;
+  }
+  html body .donor-page .donor-bottom > * {
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+  html
+    body
+    .donor-page
+    .donor-bottom
+    > :is(#donorMainBottom, #donorToggle, #donorSendImportant, #donorSendAll) {
+    flex: 1 1 0 !important;
+    min-height: 52px !important;
+    padding: 0 6px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  html body .donor-page .donor-bottom > #donorMainBottom {
+    order: 1;
+    flex-grow: 0.9 !important;
+  }
+  html body .donor-page .donor-bottom > #donorToggle {
+    order: 2;
+  }
+  html body .donor-page .donor-bottom > #donorSendImportant {
+    order: 3;
+    font-size: 0 !important;
+  }
+  html body .donor-page .donor-bottom > #donorSendImportant::after {
+    content: 'DM ★';
+    font-size: 14px;
+    font-weight: 700;
+  }
+  html body .donor-page .donor-bottom > #donorSendAll {
+    order: 4;
+    flex-grow: 1.15 !important;
+  }
+  html body .donor-page .donor-bottom > :is(.donor-message-info, #donorPace) {
+    display: none !important;
+  }
+  html body .donor-page .compact-nav-panel :is(#donorTest, .donor-poster-toggle) {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    font-size: 13px !important;
+    font-weight: 600;
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+/* ==== Donor Messages: a full-screen reader ====
+   One centred reading column, steady type (17px desktop / 16px phone, 1.5 line height), progress at the top,
+   and one action bar directly under the text: Edit · Copy · ↻ on the left, Next as the only primary on the right.
+   Phones: the card fills the screen and the bar sits in the thumb zone. */
+html body #donorsPage[data-panel='messages'] #donorMessages {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  height: 100%;
+  min-height: 0;
+  padding: 0 !important;
+  overflow: hidden;
+}
+/* Header: Back · title · status */
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading {
+  display: grid !important;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px !important;
+  width: min(760px, 100%);
+  margin: 0 auto !important;
+  padding: 0 !important;
+  min-height: 48px;
+  flex: none;
+  border: 0 !important;
+  background: none !important;
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading > .bank-back {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 44px !important;
+  padding: 0 14px !important;
+  border-radius: 12px;
+  font-weight: 600;
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading > .bank-current {
+  display: block !important;
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  font-size: 17px !important;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading > .bank-generation-state {
+  display: inline-flex !important;
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  align-items: center;
+  order: 0 !important;
+  flex: none !important;
+  width: auto !important;
+  min-height: 28px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--mut) !important;
+  font-size: 12px !important;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+html
+  body
+  #donorsPage[data-panel='messages']
+  #donorMessages
+  .bank-heading
+  > .bank-generation-state:empty {
+  display: none !important;
+}
+html
+  body
+  #donorsPage[data-panel='messages']
+  #donorMessages
+  .bank-heading
+  > :is(span:not([class]), .bank-top-info) {
+  display: none !important;
+}
+/* Progress (drawn by comfort.js from "Message n of N") */
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-progress {
+  width: min(760px, 100%);
+  margin: -4px auto 0;
+  height: 4px;
+  flex: none;
+  border-radius: 4px;
+  background: var(--surface2);
+  overflow: hidden;
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--btn);
+  transition: width 0.24s var(--ease);
+}
+/* Column: card then actions */
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-workspace {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch;
+  gap: 12px !important;
+  width: min(760px, 100%);
+  margin: 0 auto !important;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  padding: 0 !important;
+  justify-content: flex-start !important;
+  grid-template-columns: none !important;
+  grid-template-areas: none !important;
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin: 0 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 18px !important;
+  background: var(--surface) !important;
+  box-shadow: var(--sh1);
+  overflow: hidden;
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail > header {
+  display: none !important;
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail .bank-preview,
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail textarea {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin: 0 !important;
+  padding: 26px 32px 28px !important;
+  font-size: 17px !important;
+  line-height: 1.5 !important;
+  color: var(--ink);
+  max-width: none;
+  scrollbar-width: thin;
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail textarea {
+  min-height: min(60dvh, 520px);
+  width: 100%;
+  border: 0 !important;
+  background: transparent !important;
+  resize: none;
+  outline: none;
+}
+html
+  body
+  #donorsPage[data-panel='messages']
+  #donorMessages
+  .bank-detail
+  .bank-preview
+  .wa-line
+  + .wa-line {
+  margin-top: 0;
+}
+/* One action bar */
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+  gap: 8px !important;
+  flex: none !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  align-self: stretch !important;
+  margin: 0 !important;
+  padding: 0 0 max(0px, env(safe-area-inset-bottom)) !important;
+  position: static !important;
+  grid-area: auto !important;
+  overflow: visible !important;
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions > button {
+  flex: 0 0 auto !important;
+  min-width: 96px !important;
+  min-height: 48px !important;
+  height: auto !important;
+  max-height: 56px;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 18px !important;
+  border-radius: 12px !important;
+  font-size: 15px !important;
+  font-weight: 600;
+  order: 1;
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions > .bank-regenerate {
+  order: 3 !important;
+  background: transparent !important;
+  color: var(--mut) !important;
+  border-color: var(--line) !important;
+}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination {
+  order: 9 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  border: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  align-items: stretch;
+  height: auto !important;
+  flex: 1 1 auto !important;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: auto !important;
+}
+html
+  body
+  #donorsPage[data-panel='messages']
+  #donorMessages
+  .bank-pagination
+  > :is(span, .bank-back-bottom, [data-bank-nav='previous']) {
+  display: none !important;
+}
+html
+  body
+  #donorsPage[data-panel='messages']
+  #donorMessages
+  .bank-pagination
+  > [data-bank-nav='next'] {
+  flex: 0 1 220px !important;
+  min-width: 140px !important;
+  min-height: 52px !important;
+  margin: 0 !important;
+  border-radius: 14px !important;
+  font-size: 16px !important;
+  font-weight: 700;
+  order: 0 !important;
+}
+html
+  body
+  #donorsPage[data-panel='messages']
+  #donorMessages
+  .bank-pagination
+  > [data-bank-nav='next']:disabled {
+  opacity: 0.45;
+}
+@media (min-width: 900px) {
+  html body #donorsPage[data-panel='messages'] #donorMessages {
+    justify-content: flex-start !important;
+    padding-top: 8px !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail {
+    max-height: calc(100dvh - 250px);
+  }
+}
+/* Phones: card fills the screen, compact one-row thumb bar: Edit · Copy · ↻ · Next */
+@media (max-width: 899px) {
+  html body #donorsPage[data-panel='messages'] #donorMessages {
+    gap: 10px !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading {
+    grid-template-columns: auto 1fr;
+    row-gap: 2px !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading > .bank-current {
+    justify-self: start;
+    font-size: 16px !important;
+  }
+  html
+    body
+    #donorsPage[data-panel='messages']
+    #donorMessages
+    .bank-heading
+    > .bank-generation-state {
+    grid-column: 1/-1;
+    grid-row: 2;
+    justify-self: start;
+    background: none;
+    padding: 0 2px;
+    min-height: 0;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail {
+    flex: 1 1 auto;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail .bank-preview,
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail textarea {
+    padding: 16px 18px 20px !important;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail textarea {
+    min-height: 0;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions {
+    gap: 6px !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions > button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    min-height: 52px !important;
+    padding: 0 6px !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions > .bank-regenerate {
+    flex: 0 0 52px !important;
+    font-size: 0 !important;
+    padding: 0 !important;
+  }
+  html
+    body
+    #donorsPage[data-panel='messages']
+    #donorMessages
+    .bank-actions
+    > .bank-regenerate::after {
+    content: '↻';
+    font-size: 22px;
+    line-height: 1;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination {
+    flex: 1.6 1 0 !important;
+    min-width: 0;
+  }
+  html
+    body
+    #donorsPage[data-panel='messages']
+    #donorMessages
+    .bank-pagination
+    > [data-bank-nav='next'] {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+}
+/* Editing is unmistakable: tinted ring and a small label, so read and edit modes never look alike */
+html
+  body
+  #donorsPage[data-panel='messages']
+  #donorMessages
+  .bank-detail:has(textarea:not([hidden])) {
+  border-color: var(--ring) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 22%, transparent);
+}
+html
+  body
+  #donorsPage[data-panel='messages']
+  #donorMessages
+  .bank-detail:has(textarea:not([hidden]))::before {
+  content: 'Editing';
+  display: block;
+  padding: 10px 32px 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ring);
+}
+@media (max-width: 899px) {
+  html
+    body
+    #donorsPage[data-panel='messages']
+    #donorMessages
+    .bank-detail:has(textarea:not([hidden]))::before {
+    padding: 10px 18px 0;
+  }
+}
+
+/* ==== Full-bleed Donors on phones, full-screen Messages everywhere ==== */
+@media (max-width: 899px) {
+  html body dialog#donorsPage.donor-page {
+    margin: 0 !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+  html body dialog#donorsPage .donor-shell {
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)) !important;
+  }
+}
+html body dialog#donorsPage[data-panel='messages'] {
+  margin: 0 !important;
+  inset: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+html body dialog#donorsPage[data-panel='messages'] #donorMessages {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+@media (max-width: 899px) {
+  /* The reader column stretches to the bottom so the action bar sits on the thumb edge, no dead space */
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-workspace {
+    flex: 1 1 auto !important;
+    max-height: none;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail {
+    flex: 1 1 auto !important;
+    max-height: none;
+  }
+}
+
+/* ==== Donors page controls that fit every phone width ==== */
+@media (max-width: 899px) {
+  /* Bottom bar: compact ← Back, then three equal actions whose labels wrap instead of truncating */
+  html body .donor-page .donor-bottom > #donorMainBottom {
+    flex: 0 0 52px !important;
+    font-size: 0 !important;
+    padding: 0 !important;
+  }
+  html body .donor-page .donor-bottom > #donorMainBottom::after {
+    content: '←';
+    font-size: 22px;
+    line-height: 1;
+  }
+  html body .donor-page .donor-bottom > :is(#donorToggle, #donorSendImportant, #donorSendAll) {
+    flex: 1 1 0 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    line-height: 1.15 !important;
+    font-size: 13px !important;
+    padding: 0 6px !important;
+    overflow-wrap: anywhere;
+  }
+  html body .donor-page .donor-bottom > #donorSendImportant {
+    font-size: 0 !important;
+  }
+  html body .donor-page .donor-bottom > #donorSendAll {
+    flex-grow: 1.15 !important;
+    font-size: 14px !important;
+  }
+  /* Filter tabs take their natural widths so no label is clipped */
+  html body .donor-page .donor-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    grid-template-columns: none !important;
+  }
+  html body .donor-page .donor-tabs > button {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    padding: 4px 6px !important;
+    width: auto !important;
+  }
+  html body .donor-page .donor-tabs :is(.tab-name, .tab-word) {
+    white-space: nowrap;
+  }
+  /* Header: the total stays readable and never squeezes the buttons */
+  html body .donor-page .donor-head {
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+  }
+  html body .donor-page .donor-head .donor-total {
+    flex: 0 1 auto;
+    min-width: 0;
+    text-align: right;
+  }
+}
+@media (max-width: 360px) {
+  html body .donor-page .donor-head .donor-total small {
+    display: none !important;
+  }
+  html body .donor-page .donor-tabs > button {
+    padding: 4px 4px !important;
+  }
+}
+/* Narrow phones: tighter DM and status pills give donor names more room; rows stay on one line where possible */
+@media (max-width: 380px) {
+  html body #donorsPage .donor-row {
+    column-gap: 4px !important;
+    padding-inline: 4px !important;
+  }
+  html body #donorsPage .donor-row .donor-star {
+    min-width: 36px !important;
+    width: 36px !important;
+  }
+  html body #donorsPage .donor-row .donor-dm {
+    min-width: 44px !important;
+    width: 44px !important;
+    padding: 0 !important;
+  }
+  html body #donorsPage .donor-row .donor-status {
+    padding: 0 8px !important;
+    font-size: 12px !important;
+    min-width: 0 !important;
+    width: auto !important;
+    white-space: nowrap;
+  }
+  html body #donorsPage .donor-row .donor-more > summary {
+    min-width: 36px !important;
+    width: 36px !important;
+  }
+}
+@media (max-width: 380px) {
+  html body #donorsPage .donor-row {
+    grid-template-columns: 36px minmax(0, 1fr) 44px auto 36px !important;
+    grid-template-rows: auto !important;
+    align-items: center;
+  }
+  html body #donorsPage .donor-row > .donor-star {
+    grid-area: 1/1 !important;
+  }
+  html body #donorsPage .donor-row > .donor-identity {
+    grid-area: 1/2 !important;
+    min-width: 0;
+  }
+  html body #donorsPage .donor-row > .donor-dm {
+    grid-area: 1/3 !important;
+  }
+  html body #donorsPage .donor-row > .donor-status {
+    grid-area: 1/4 !important;
+  }
+  html body #donorsPage .donor-row > .donor-more {
+    grid-area: 1/5 !important;
+  }
+  html body #donorsPage .donor-row > .donor-amount {
+    display: none !important;
+  }
+}
+@media (max-width: 380px) {
+  html body #donorsPage .donor-row > button.donor-status {
+    font-size: 12px !important;
+    padding: 0 7px !important;
+    letter-spacing: 0;
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: 78px;
+  }
+}
+@media (max-width: 380px) {
+  html body #donorsPage .donor-row {
+    grid-template-columns: 44px minmax(0, 1fr) 44px auto 44px !important;
+  }
+  html body #donorsPage .donor-row .donor-star,
+  html body #donorsPage .donor-row .donor-more > summary {
+    min-width: 44px !important;
+    width: 44px !important;
+  }
+}
+@media (max-width: 899px) {
+  html body .donor-page .donor-tabs > button {
+    min-width: 44px !important;
+  }
+}
+
+/* ==== Donors header: the total is a plain statistic beside the title, never a button-looking box ==== */
+html body .donor-page .donor-head .donor-title {
+  order: 0;
+}
+html body .donor-page .donor-head > .donor-total {
+  order: 1;
+  display: inline-flex !important;
+  align-items: baseline;
+  gap: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 auto 0 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  text-align: left;
+  white-space: nowrap;
+}
+html body .donor-page .donor-head > .donor-total > small {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+html body .donor-page .donor-head > .donor-total > strong {
+  font-size: 14px !important;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+html body .donor-page .donor-head > .donor-total > strong::after {
+  content: ' donated';
+  font-weight: 500;
+  color: var(--mut);
+}
+html body .donor-page .donor-head > :is(.donor-message-tablist, #donorAdd, #donorNavMore) {
+  order: 2;
+}
+@media (max-width: 899px) {
+  html body .donor-page .donor-head > .donor-total {
+    margin-left: 2px !important;
+  }
+  html body .donor-page .donor-head > .donor-total > strong {
+    font-size: 13px !important;
+  }
+}
+@media (max-width: 360px) {
+  html body .donor-page .donor-head > .donor-total > strong::after {
+    content: '';
+  }
+}
+html body .donor-page .donor-head > .donor-total > strong {
+  border: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+html body .donor-page .donor-head > .donor-total > strong::after {
+  text-transform: none;
+  letter-spacing: 0;
+}
+html body .donor-page .donor-head > .donor-total::before,
+html body .donor-page .donor-head > .donor-total::after {
+  content: none !important;
+}
+html body #donorsPage .donor-head > .donor-total {
+  border: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+/* ==== Donor notices: a toast above the bottom action bar, not a banner in the page flow ====
+   Where the eyes and the mouse already are after pressing DM, Stop or Save; nothing below it jumps. */
+html body #donorsPage #donorNotice:not(:empty) {
+  position: fixed !important;
+  left: 50%;
+  bottom: calc(max(10px, env(safe-area-inset-bottom)) + 84px);
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(560px, calc(100vw - 24px));
+  margin: 0 !important;
+  padding: 10px 8px 10px 14px !important;
+  border-radius: 14px !important;
+  border: 1px solid var(--line2) !important;
+  border-left: 4px solid var(--ok) !important;
+  background: var(--surface2) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--sh3) !important;
+  font-size: 14px;
+  line-height: 1.4;
+  animation: cmfToast 0.22s var(--ease) both;
+}
+html body #donorsPage #donorNotice[data-error='true']:not(:empty) {
+  border-left-color: var(--red) !important;
+  background: color-mix(in srgb, var(--red) 14%, var(--surface2)) !important;
+}
+html body #donorsPage #donorNotice .donor-notice-close {
+  flex: 0 0 44px !important;
+  width: 44px !important;
+  min-height: 44px !important;
+  margin: -6px 0;
+  border-radius: 10px;
+  font-size: 24px;
+}
+html body #donorsPage #donorNotice > button:not(.donor-notice-close) {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  color: var(--gink);
+}
+@keyframes cmfToast {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html body #donorsPage #donorNotice:not(:empty) {
+    animation: none;
+  }
+}
+
+/* ==== Paused DMs: a clear strip above the bottom bar with Resume now / At a time ==== */
+html body #donorsPage #donorResumeStatus:not([hidden]) {
+  display: flex;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  flex: none !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 0 8px;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid var(--line2);
+  border-left: 4px solid var(--amber);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--amber) 10%, var(--surface2));
+  font-size: 14px;
+  font-weight: 600;
+}
+html body #donorsPage #donorResumeStatus[data-state='attention'] {
+  border-left-color: var(--red);
+  background: color-mix(in srgb, var(--red) 12%, var(--surface2));
+}
+html body #donorsPage #donorResumeStatus > span {
+  flex: 1 1 140px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+html body #donorsPage #donorResumeStatus .donor-resume-actions {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+html body #donorsPage #donorResumeStatus .donor-resume-actions button {
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+html body #donorsPage #donorResumeStatus .donor-resume-actions button[hidden] {
+  display: none;
+}
+html body #donorsPage #donorResumeStatus #donorResumeNowInline {
+  background: var(--btn);
+  color: #fff;
+  border-color: transparent;
+}
+@media (max-width: 899px) {
+  html body #donorsPage #donorResumeStatus:not([hidden]) {
+    margin-bottom: 6px;
+  }
+  html body #donorsPage #donorResumeStatus .donor-resume-actions {
+    flex: 1 1 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    justify-content: stretch;
+  }
+  html body #donorsPage #donorResumeStatus .donor-resume-actions button {
+    min-height: 52px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+  html body #donorsPage #donorResumeStatus #donorResumeCancel:not([hidden]) {
+    grid-column: 1/-1;
+    font-weight: 600;
+  }
+}
+/* The toast clears the paused strip instead of covering it */
+html body #donorsPage:has(#donorResumeStatus:not([hidden])) #donorNotice:not(:empty) {
+  bottom: calc(max(10px, env(safe-area-inset-bottom)) + 160px);
+}
+@media (min-width: 900px) {
+  html body #donorsPage:has(#donorResumeStatus:not([hidden])) #donorNotice:not(:empty) {
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 150px);
+  }
+}
+
+/* Saved message: small, quick-to-read text, and the same font when editing as when reading. */
+html body #messageFocus :is(#focusFormatted, #focusText) {
+  font:
+    14px/1.45 Arial,
+    system-ui,
+    sans-serif !important;
+  letter-spacing: 0 !important;
+  padding: 14px 18px !important;
+}
+html body #messageFocus #focusFormatted .wa-line {
+  min-height: 1.45em;
+}
+html body #messageFocus #focusFormatted .wa-line.blank {
+  height: 0.5em;
+  min-height: 0.5em;
+}
+@media (max-width: 700px) {
+  html body #messageFocus :is(#focusFormatted, #focusText) {
+    font-size: 16px !important;
+    padding: 12px !important;
+  }
+} /* 16px stops iOS zooming into the editor */
+/* Wide screens: the message sits in a centred reading column, lower from the top. */
+@media (min-width: 701px) {
+  html body #messageFocus :is(#focusFormatted, #focusText) {
+    padding: 56px max(24px, calc((100% - 640px) / 2)) 24px !important;
+  }
+}
+/* WhatsApp look: the message is a green bubble on the dark chat wallpaper, so the eye lands on it. */
+html body #messageFocus .focus-paper {
+  background: #0b141a radial-gradient(#ffffff0a 1px, transparent 1.5px) 0 0/18px 18px !important;
+  border-color: #ffffff10 !important;
+}
+html body #messageFocus :is(#focusFormatted, #focusText) {
+  box-sizing: border-box !important;
+  background: #005c4b !important;
+  color: #e9edef !important;
+  border-radius: 14px 4px 14px 14px !important;
+  box-shadow: 0 1px 3px #0007 !important;
+  width: calc(100% - 20px) !important;
+  max-width: 640px !important;
+  margin: 10px auto !important;
+  padding: 12px 14px !important;
+}
+@media (min-width: 701px) {
+  html body #messageFocus :is(#focusFormatted, #focusText) {
+    margin: 48px auto 24px !important;
+    padding: 18px 22px !important;
+    width: calc(100% - 48px) !important;
+  }
+}

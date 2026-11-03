@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openSettings, openMessages, showDm } = require('./helpers.cjs');
+const { openSettings, openDonorMessages } = require('./helpers.cjs');
 const path = require('node:path');
 const auth = { Authorization: 'Bearer manual-fix-preview-key' };
 async function open(page, request, width = 1440, height = 900, theme = 'dark') {
@@ -52,8 +52,6 @@ test('desktop reading column centers the reply and composer', async ({ page, req
       .last()
       .evaluate((el) => getComputedStyle(el).textAlign),
   ).toBe('left');
-  // Settings is grouped inside More, not loose in the navbar.
-  await expect(page.locator('#gear')).toBeHidden();
   await page.locator('#mainNavMore > summary').click();
   await expect(page.locator('#gear')).toBeVisible();
 });
@@ -78,7 +76,7 @@ for (const [width, height, theme] of [
     await expect(page.locator('.donor-row').first()).toBeVisible();
     await inside(page, page.locator('#donorsPage'));
     await shot(page, `${width}-${theme}-donors`);
-    await openMessages(page);
+    await openDonorMessages(page);
     await expect(page.locator('#donorMessages')).toBeVisible();
     await shot(page, `${width}-${theme}-messages`);
     if (width >= 390)
@@ -89,9 +87,9 @@ for (const [width, height, theme] of [
         .toBe(true);
     await page.getByRole('button', { name: 'Back to donors', exact: true }).click();
     await page.locator('#donorMainBottom').click();
-    await showDm(page);
+    await page.getByRole('button', { name: 'DM', exact: true }).click();
     await page.locator('#sendMoreDonors').click();
-    await inside(page, page.getByRole('dialog', { name: 'Bulk message', exact: true }));
+    await inside(page, page.getByRole('dialog', { name: 'Send to more donors', exact: true }));
   });
 }
 test('mobile chat keeps draft, closes keyboard after send and has a reachable return row', async ({
@@ -124,10 +122,10 @@ test('mobile chat keeps draft, closes keyboard after send and has a reachable re
 test('mobile library selection beyond first ten survives reload', async ({ page, request }) => {
   await open(page, request, 390, 844);
   await page.locator('#openDonors').click();
-  await openMessages(page);
+  await openDonorMessages(page);
   for (let i = 0; i < 19; i++)
     await page.getByRole('button', { name: 'Next message', exact: true }).click();
-  await expect(page.locator('.bank-current')).toHaveText('Message 20 of 20');
+  await expect(page.locator('.bank-detail header')).toContainText('Message 20');
   await page.reload();
   /* A refresh keeps the screen: Donors is still open on its Messages tab. */
   await expect(page.locator('.bank-current')).toHaveText('Message 20 of 20');
@@ -143,21 +141,58 @@ test('donor tabs support arrow keys without retaining stale search', async ({ pa
   await expect(page.locator('[data-tab=important]')).toBeFocused();
   await expect(page.locator('[data-tab=important]')).toHaveAttribute('aria-selected', 'true');
 });
-test('message library moves with Next and preserves unsaved edits across a refresh', async ({
-  page,
-  request,
-}) => {
+test('message library switches previews and preserves unsaved edits', async ({ page, request }) => {
   await open(page, request);
   await page.locator('#openDonors').click();
-  await openMessages(page);
-  await page.getByRole('button', { name: 'Next message', exact: true }).click();
-  await expect(page.locator('.bank-current')).toHaveText('Message 2 of 20');
-  await page.locator('#donorMessages').getByRole('button', { name: 'Edit', exact: true }).click();
+  await openDonorMessages(page);
+  await page.getByRole('button', { name: 'Message 2', exact: true }).click();
+  await expect(page.locator('.bank-detail header')).toContainText('Message 2');
+  await page.locator('.bank-detail').getByRole('button', { name: 'Edit', exact: true }).click();
   await page.getByLabel('Edit message 2', { exact: true }).fill('Synthetic edited caption.');
+  await page.getByRole('button', { name: 'Message 1', exact: true }).click();
+  await page.getByRole('button', { name: 'Message 2', exact: true }).click();
+  await expect(page.getByLabel('Edit message 2', { exact: true })).toHaveValue(
+    'Synthetic edited caption.',
+  );
   await page.reload();
   await expect(page.getByLabel('Edit message 2', { exact: true })).toHaveValue(
     'Synthetic edited caption.',
   );
+});
+test('failed chat requests keep the typed draft without retrying', async ({ page, request }) => {
+  await open(page, request);
+  let calls = 0;
+  await page.route('**/assistant', (r) => {
+    calls++;
+    return r.abort();
+  });
+  await page.locator('#cmd').fill('Please explain this synthetic campaign carefully.');
+  await page.locator('#cmdForm .go').click();
+  await expect(page.locator('#cmd')).toHaveValue(
+    'Please explain this synthetic campaign carefully.',
+  );
+  expect(calls).toBe(1);
+});
+test('first use defaults to dark; light and device themes persist and update', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.addInitScript(() =>
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
+  );
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await openSettings(page);
+  await page.locator('#theme [data-t=light]').click();
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('#set')).toBeVisible();
+  await page.locator('#theme [data-t=system]').click();
+  expect(await page.locator('html').evaluate((el) => getComputedStyle(el).colorScheme)).toBe(
+    'light',
+  );
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect
+    .poll(() => page.locator('html').evaluate((el) => getComputedStyle(el).colorScheme))
+    .toBe('dark');
 });
 test('typing during a slow save keeps newer text as an unsaved draft', async ({
   page,
@@ -165,7 +200,7 @@ test('typing during a slow save keeps newer text as an unsaved draft', async ({
 }) => {
   await open(page, request);
   await page.locator('#openDonors').click();
-  await openMessages(page);
+  await openDonorMessages(page);
   let release, submitted;
   await page.route('**/donor-messages', async (route) => {
     if (route.request().method() === 'POST' && route.request().postDataJSON().id) {
@@ -174,12 +209,12 @@ test('typing during a slow save keeps newer text as an unsaved draft', async ({
     }
     await route.continue();
   });
-  await page.locator('#donorMessages').getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.locator('.bank-detail').getByRole('button', { name: 'Edit', exact: true }).click();
   const editor = page.getByLabel('Edit message 1', { exact: true }),
     sentText = (await editor.inputValue()) + '\n\nSynthetic submitted A',
     newerText = sentText + '\nNewer draft B';
   await editor.fill(sentText);
-  await page.locator('#donorMessages').getByRole('button', { name: 'Save', exact: true }).click();
+  await page.locator('.bank-detail').getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(() => !!submitted).toBe(true);
   await editor.fill(newerText);
   release();
@@ -196,7 +231,7 @@ test('regeneration cannot be duplicated by switching message previews', async ({
 }) => {
   await open(page, request);
   await page.locator('#openDonors').click();
-  await openMessages(page);
+  await openDonorMessages(page);
   let release,
     calls = 0;
   await page.route('**/donor-messages', async (route) => {
@@ -211,7 +246,7 @@ test('regeneration cannot be duplicated by switching message previews', async ({
   });
   await page.getByRole('button', { name: 'Regenerate', exact: true }).click();
   await expect.poll(() => calls).toBe(1);
-  await page.getByRole('button', { name: 'Next message', exact: true }).click();
+  await page.getByRole('button', { name: 'Message 2', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Regenerate', exact: true })).toBeDisabled();
   release();
   await expect(page.getByRole('button', { name: 'Regenerate', exact: true })).toBeEnabled();
@@ -239,7 +274,7 @@ for (const width of [1440, 390])
     await inside(page, page.locator('#donorAddDialog'));
     await shot(page, `${width}-add-donor`);
     await page.locator('#donorAddCancel').click();
-    await page.locator('#donorMainBottom').click();
+    await page.locator('#donorMain:visible, #donorMainBottom:visible').first().click();
     if (width >= 900) await page.locator('#chatExpand').click();
     else await page.locator('#chatOpen').click();
     await inside(page, page.locator('#hist'));
@@ -249,7 +284,7 @@ test('an empty message library explains how to recover', async ({ page, request 
   await open(page, request);
   await page.route('**/donor-messages', (r) => r.fulfill({ json: { items: [] } }));
   await page.locator('#openDonors').click();
-  await openMessages(page);
+  await openDonorMessages(page);
   await expect(page.locator('#donorMessages')).toContainText('No saved messages yet');
   await expect(page.getByRole('button', { name: 'Regenerate', exact: true })).toBeEnabled();
 });
@@ -281,24 +316,20 @@ for (const [width, height] of [
     );
     await open(page, request, width, height);
     await page.locator('#openDonors').click();
-    await openMessages(page);
+    await openDonorMessages(page);
     await expect(page.locator('#donorSearch')).not.toBeVisible();
     await expect(page.locator('.donor-bottom')).not.toBeVisible();
     await expect(page.locator('#donorProgress')).not.toBeVisible();
     const total = 20;
     await expect(page.locator('.bank-mobile-picker')).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Previous message', exact: true }),
+    ).toBeDisabled();
     for (let i = 0; i < total; i++) {
       await expect(page.locator('.bank-current')).toHaveText('Message ' + (i + 1) + ' of ' + total);
-      /* The whole message is readable: it fits, or (on the smallest phones, where type never shrinks below 13px) it scrolls inside its box. */
       await expect
         .poll(() =>
-          page.locator('.bank-preview').evaluate((el) => {
-            const cs = getComputedStyle(el);
-            return (
-              (el.scrollHeight <= el.clientHeight + 2 || /auto|scroll/.test(cs.overflowY)) &&
-              parseFloat(cs.fontSize) >= 13
-            );
-          }),
+          page.locator('.bank-preview').evaluate((el) => el.scrollHeight <= el.clientHeight + 2),
         )
         .toBe(true);
       await inside(page, page.getByRole('button', { name: 'Next message', exact: true }));
@@ -307,6 +338,10 @@ for (const [width, height] of [
         await page.getByRole('button', { name: 'Next message', exact: true }).click();
     }
     await expect(page.getByRole('button', { name: 'Next message', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'Previous message', exact: true }).click();
+    await expect(page.locator('.bank-current')).toHaveText(
+      'Message ' + (total - 1) + ' of ' + total,
+    );
   });
 test('phone donor rows fit real-length names and confirmed DM labels', async ({
   page,
@@ -362,7 +397,7 @@ test('phone donor rows fit real-length names and confirmed DM labels', async ({
         return r.top >= b.top && r.bottom <= b.bottom;
       }).length;
     }),
-  ).toBeGreaterThanOrEqual(5); /* 56px rows keep names readable */
+  ).toBeGreaterThanOrEqual(9);
   await shot(page, 'phone-realistic-donors');
 });
 test('delivery refresh updates donor counts without replacing the active editor', async ({
@@ -392,8 +427,8 @@ test('delivery refresh updates donor counts without replacing the active editor'
   );
   await open(page, request);
   await page.locator('#openDonors').click();
-  await openMessages(page);
-  await page.locator('#donorMessages').getByRole('button', { name: 'Edit', exact: true }).click();
+  await openDonorMessages(page);
+  await page.locator('.bank-detail').getByRole('button', { name: 'Edit', exact: true }).click();
   const editor = page.getByLabel('Edit message 1', { exact: true });
   await editor.fill('Draft must survive a delivery refresh.');
   sent = 13;

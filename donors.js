@@ -16,13 +16,82 @@
   resumeStatus.id = 'donorResumeStatus';
   resumeStatus.hidden = true;
   resumeStatus.innerHTML =
-    '<span role="status" aria-live="polite"></span><button type="button" id="donorResumeCancel">Stop scheduled resume</button>';
-  page.querySelector('.donor-shell').insertBefore(resumeStatus, el('donorTable'));
+    '<span role="status" aria-live="polite"></span><div class="donor-resume-actions"><button type="button" class="primary" id="donorResumeNowInline">Resume now</button><button type="button" id="donorResumeAtInline">At a time…</button><button type="button" id="donorResumeCancel">Stop scheduled resume</button></div>';
+  page
+    .querySelector('.donor-shell')
+    .insertBefore(resumeStatus, page.querySelector('.donor-bottom'));
   const resumeDialog = make('dialog', 'donor-form-dialog donor-resume-dialog');
   resumeDialog.id = 'donorResumeDialog';
   resumeDialog.setAttribute('aria-labelledby', 'donorResumeTitle');
   resumeDialog.innerHTML = `<h2 id="donorResumeTitle">Resume donor DMs</h2><p>Continue your saved automatic setup: same audience, gaps, batches, pauses and poster. People already handled are skipped.</p><div class="donor-resume-choices"><button type="button" class="primary" id="donorResumeNow">Resume now</button><button type="button" id="donorResumeSchedule">Resume at a time</button></div><form id="donorResumeClock" hidden><label for="donorResumeDate">Date (Pakistan)</label><input type="date" id="donorResumeDate" required><label for="donorResumeTime">Time (PKT)</label><input type="time" id="donorResumeTime" required step="60"><p>Pakistan time (UTC+5). The saved setup runs on the server when it is available; you can close the app.</p><div class="donor-form-actions"><button type="submit" class="primary" id="donorResumeSave">Schedule resume</button></div></form><p id="donorResumeNote" role="status" aria-live="polite"></p><div class="donor-form-actions"><button type="button" id="donorResumeClose">Cancel</button></div>`;
   document.body.append(resumeDialog);
+  const volTiming = make('dialog', 'donor-form-dialog volunteer-timing-dialog');
+  volTiming.id = 'volTimingDialog';
+  volTiming.setAttribute('aria-labelledby', 'volTimingTitle');
+  volTiming.innerHTML = `<h2 id="volTimingTitle">DM all volunteers</h2><p id="volTimingAudience"></p><form id="volTimingForm"><label for="volStartDelay">Start sending</label><select id="volStartDelay" name="delay_seconds"><option value="0">Send now</option><option value="300">In 5 minutes</option><option value="600">In 10 minutes</option><option value="900">In 15 minutes</option><option value="1800">In 30 minutes</option><option value="3600">In 1 hour</option><option value="7200">In 2 hours</option></select><p id="volTimingPlan" role="status"></p><p>Your message and poster choice will be queued on the server. You can close the app. Sending starts when the server is available.</p><p id="volTimingNote" role="status" aria-live="polite"></p><div class="donor-form-actions"><button type="button" id="volTimingCancel">Cancel</button><button type="submit" class="primary" id="volTimingStart">Send now</button></div></form>`;
+  document.body.append(volTiming);
+  let volSendPlan = null,
+    volTimingPending = false;
+  function volunteerDelaySeconds(raw) {
+    if (!/^(0|300|600|900|1800|3600|7200)$/.test(String(raw)))
+      throw Error('Choose when to start sending.');
+    return Number(raw);
+  }
+  function paintVolunteerTiming() {
+    const delay = volunteerDelaySeconds(el('volStartDelay').value);
+    el('volTimingStart').textContent = delay ? 'Schedule DMs' : 'Send now';
+    el('volTimingPlan').textContent =
+      (delay ? 'First DM in ' + delay / 60 + ' minutes. ' : 'First DM now. ') +
+      'Then one DM every 3 minutes.';
+  }
+  function openVolunteerTiming(text, poster) {
+    if (volTimingPending) return;
+    if (!text.trim()) {
+      notice('Write the message for volunteers first.', true);
+      el('volMessage')?.focus();
+      return;
+    }
+    volSendPlan = { text, poster, request_id: 'v' + requestId() };
+    el('volStartDelay').value = '0';
+    el('volTimingNote').textContent = '';
+    el('volTimingAudience').textContent =
+      'Send to the volunteers still waiting in your list (' + vols.items.length + ' total).';
+    paintVolunteerTiming();
+    if (!volTiming.open) volTiming.showModal();
+    el('volStartDelay').focus();
+  }
+  el('volStartDelay').onchange = paintVolunteerTiming;
+  el('volTimingCancel').onclick = () => volTiming.close();
+  el('volTimingForm').onsubmit = async (e) => {
+    e.preventDefault();
+    if (volTimingPending || !volSendPlan) return;
+    volTimingPending = true;
+    el('volTimingStart').disabled = true;
+    el('volStartDelay').disabled = true;
+    el('volTimingNote').textContent = 'Saving your send…';
+    try {
+      const plan = volSendPlan,
+        delay = volunteerDelaySeconds(el('volStartDelay').value);
+      await api('/volunteers', { action: 'message', text: plan.text });
+      const result = await api('/volunteers', {
+        action: 'send_all',
+        request_id: plan.request_id,
+        poster: plan.poster,
+        gap_seconds: 180,
+        delay_seconds: delay,
+      });
+      volTiming.close();
+      await loadVolunteers();
+      if (tab === 'volunteers') showVolunteers(true);
+      notice(result.reply);
+    } catch (error) {
+      el('volTimingNote').textContent = error.message;
+    } finally {
+      volTimingPending = false;
+      el('volTimingStart').disabled = false;
+      el('volStartDelay').disabled = false;
+    }
+  };
   let resumePending = false;
   function openResumeChoice() {
     el('donorResumeClock').hidden = true;
@@ -38,10 +107,18 @@
       : st.paused
         ? 'Resume DMs'
         : 'Stop DMs';
-    resumeStatus.hidden = !pending && !['Failed', 'Uncertain'].includes(st.resume?.state);
+    const attention = ['Failed', 'Uncertain'].includes(st.resume?.state),
+      paused = !!st.paused;
+    resumeStatus.hidden = !pending && !attention && !paused;
+    resumeStatus.dataset.state = pending ? 'scheduled' : attention ? 'attention' : 'paused';
     resumeStatus.querySelector('span').textContent = pending
       ? 'DMs paused · Resume at ' + st.resume.label
-      : 'Resume needs attention: ' + (st.resume?.error || '');
+      : attention
+        ? 'Resume needs attention: ' + (st.resume?.error || '')
+        : 'DMs paused';
+    el('donorResumeNowInline').hidden = attention || !(pending || paused);
+    el('donorResumeAtInline').hidden = attention || !(pending || paused);
+    el('donorResumeAtInline').textContent = pending ? 'Change time' : 'At a time…';
     el('donorResumeCancel').hidden = !pending;
   }
   function resumeClockValue(date, time) {
@@ -73,6 +150,7 @@
       await poll();
     } catch (e) {
       el('donorResumeNote').textContent = e.message;
+      if (!resumeDialog.open) notice(e.message, true);
     } finally {
       resumePending = false;
       for (const id of ['donorResumeNow', 'donorResumeSchedule', 'donorResumeSave'])
@@ -98,6 +176,11 @@
       el('donorResumeTime').focus();
     }
   };
+  el('donorResumeNowInline').onclick = () => submitResume();
+  el('donorResumeAtInline').onclick = () => {
+    openResumeChoice();
+    el('donorResumeSchedule').click();
+  };
   el('donorResumeCancel').onclick = async () => {
     el('donorResumeCancel').disabled = true;
     try {
@@ -114,12 +197,12 @@
   const add = make('dialog', 'donor-form-dialog');
   add.id = 'donorAddDialog';
   add.setAttribute('aria-label', 'Add donor');
-  add.innerHTML = `<h2>Add donor</h2><p>A name is enough. Add the number now or later to send DMs.</p><form id="donorAddForm"><label for="donorNewName">Name or saved label</label><input id="donorNewName" name="donor_name" aria-describedby="donorAddNote" maxlength="120" placeholder="Ali Donor or D25" autocomplete="off"><label for="donorNewPhone">Phone number (optional)</label><input id="donorNewPhone" name="donor_phone" aria-describedby="donorAddNote" type="password" inputmode="tel" autocomplete="off" placeholder="Optional. Country code, or Pakistani 03 number"><p id="donorAddNote" role="status"></p><div class="donor-form-actions"><button type="button" id="donorAddCancel">Cancel</button><button type="submit" class="primary" id="donorAddSave">Add donor</button></div></form><details><summary>Import verified contacts</summary><p>Import a studio contacts JSON file. Existing donors, notes and donation statuses are preserved.</p><button type="button" id="donorImport">Choose contacts file</button><input type="file" id="donorImportFile" accept="application/json,.json" hidden></details>`;
+  add.innerHTML = `<h2>Add donor</h2><form id="donorAddForm"><label for="donorNewName">Name or saved label</label><input id="donorNewName" name="donor_name" aria-describedby="donorAddNote" maxlength="120" placeholder="Ali Donor or D25" autocomplete="off"><label for="donorNewPhone">Phone number (optional)</label><input id="donorNewPhone" name="donor_phone" aria-describedby="donorAddNote" type="password" inputmode="tel" autocomplete="off" placeholder="Optional. Country code, or Pakistani 03 number"><p id="donorAddNote" role="status"></p><div class="donor-form-actions"><button type="button" id="donorAddCancel">Cancel</button><button type="submit" class="primary" id="donorAddSave">Add donor</button></div></form><details><summary>Import verified contacts</summary><button type="button" id="donorImport">Choose contacts file</button><input type="file" id="donorImportFile" accept="application/json,.json" hidden></details>`;
   document.body.append(add);
   const poster = make('dialog', 'poster-dialog');
   poster.id = 'posterDialog';
   poster.setAttribute('aria-label', 'Change DM poster');
-  poster.innerHTML = `<h2>DM poster</h2><p>This poster is used for DMs only. Group messages keep their own poster (change it on the main screen). Captions stay unchanged.</p><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status"></p><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
+  poster.innerHTML = `<h2>DM poster</h2><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status"></p><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
   document.body.append(poster);
   const launch = make('button', 'primary donor-launch donor-launch-foot', 'Donors');
   launch.type = 'button';
@@ -131,7 +214,7 @@
   if (settings) {
     const row = make('div', 'row');
     const text = make('div', 't');
-    text.append(make('b', '', 'DM poster'), make('small', '', 'Used for DMs only'));
+    text.append(make('b', '', 'DM poster'));
     const b = make('button', 'tool', 'Change DM poster');
     b.type = 'button';
     b.onclick = openPoster;
@@ -355,7 +438,47 @@
   }
   const picker = make('dialog', 'donor-form-dialog batch-dialog');
   picker.setAttribute('aria-label', 'Donor batch settings');
-  picker.innerHTML = `<h2>Send donor DMs</h2><form id="donorBatchForm"><div id="batchResume" hidden><p id="batchResumeText"></p><label class="batch-fresh"><input type="checkbox" id="batchFresh"> Start over and send to everyone again</label></div><label for="batchCount">Total people</label><input id="batchCount" name="count" type="number" min="1" max="1000" inputmode="numeric" required><p id="batchAudience" class="batch-hint"></p><label for="batchGap">Wait between messages (minutes)</label><input id="batchGap" name="gap_minutes" type="number" min="1" max="10" inputmode="numeric" value="4" required><label for="batchPause">Rest after each batch</label><select id="batchPause" name="pause"><option value="20">20 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="custom">Custom…</option></select><input id="batchPauseCustom" type="number" min="1" max="1440" inputmode="numeric" placeholder="Minutes between batches" aria-label="Custom minutes between batches" hidden><label class="batch-fresh"><input type="checkbox" id="batchPoster" checked> Attach poster (image + caption)</label><label for="batchLimit">People in each batch</label><select id="batchLimit" name="batch_size"><option value="5">5 people</option><option value="10">10 people</option><option value="15">15 people</option><option value="20" selected>20 people</option></select><details class="batch-more"><summary>Extra settings</summary><label for="batchEach">Different pause after each batch (minutes)</label><input id="batchEach" name="each" type="text" inputmode="text" placeholder="e.g. 20, 30, 60 (the last one repeats)" autocomplete="off"><label class="batch-fresh"><input type="checkbox" id="batchRandom"> Random gap between DMs</label><div id="batchRandomRow" hidden><div><label for="batchJMin">Shorter by up to (s)</label><input id="batchJMin" type="number" min="0" max="300" inputmode="numeric" value="10"></div><div><label for="batchJMax">Longer by up to (s)</label><input id="batchJMax" type="number" min="0" max="600" inputmode="numeric" value="15"></div></div><label class="batch-fresh"><input type="checkbox" id="batchIncl"> Include people already contacted</label></details><div class="batch-foot"><p id="batchPlan" class="batch-plan" role="status" aria-live="polite"></p><div class="donor-form-actions"><button type="button" id="batchCancel">Cancel</button><button type="submit" class="primary" id="batchStart">Start sending</button></div></div></form>`;
+  picker.innerHTML = `<h2>Send DMs</h2><form id="donorBatchForm">
+<div id="batchResume" hidden>
+  <p id="batchResumeText" class="batch-hint"></p>
+  <label class="batch-fresh"><input type="checkbox" id="batchFresh"> Start from the beginning</label>
+</div>
+<label for="batchCount">How many people?</label>
+<input id="batchCount" name="count" type="number" min="1" max="1000" inputmode="numeric" required>
+<p id="batchAudience" class="batch-hint"></p>
+<label>Minutes between each message</label>
+<div class="batch-gap-row">
+  <button type="button" class="batch-gap-btn" data-gap="2">2 min</button>
+  <button type="button" class="batch-gap-btn" data-gap="4">4 min</button>
+  <button type="button" class="batch-gap-btn" data-gap="6">6 min</button>
+  <button type="button" class="batch-gap-btn" data-gap="8">8 min</button>
+  <input id="batchGap" name="gap_minutes" type="number" min="1" max="10" inputmode="numeric" value="4" aria-label="Custom minutes" placeholder="or type">
+</div>
+<label class="batch-fresh"><input type="checkbox" id="batchPoster" checked> Attach poster</label>
+<details class="batch-more">
+  <summary>More options</summary>
+  <label for="batchPause">Rest between batches</label>
+  <select id="batchPause" name="pause"><option value="20">20 min</option><option value="30">30 min</option><option value="60">1 hour</option><option value="custom">Custom…</option></select>
+  <input id="batchPauseCustom" type="number" min="1" max="1440" inputmode="numeric" placeholder="Minutes" aria-label="Custom minutes between batches" hidden>
+  <label for="batchLimit">People per batch</label>
+  <select id="batchLimit" name="batch_size"><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="20" selected>20</option></select>
+  <label class="batch-fresh"><input type="checkbox" id="batchIncl"> Include already-contacted people</label>
+  <label class="batch-fresh"><input type="checkbox" id="batchRandom"> Vary the gap slightly</label>
+  <div id="batchRandomRow" hidden>
+    <div><label for="batchJMin">Short by up to (s)</label><input id="batchJMin" type="number" min="0" max="300" inputmode="numeric" value="10"></div>
+    <div><label for="batchJMax">Long by up to (s)</label><input id="batchJMax" type="number" min="0" max="600" inputmode="numeric" value="15"></div>
+  </div>
+  <label for="batchEach">Different rest after each batch (optional)</label>
+  <input id="batchEach" name="each" type="text" inputmode="text" placeholder="e.g. 20, 30, 60" autocomplete="off">
+</details>
+<div class="batch-foot">
+  <p id="batchPlan" class="batch-plan" role="status" aria-live="polite"></p>
+  <div class="donor-form-actions">
+    <button type="button" id="batchCancel">Cancel</button>
+    <button type="submit" class="primary" id="batchStart">Start sending</button>
+  </div>
+</div>
+</form>`;
   picker.id = 'donorBatchPicker';
   document.body.append(picker);
   let batchBody = {},
@@ -403,7 +526,7 @@
       pauses = batchPauses();
     const plan = el('batchPlan');
     if (!scope) {
-      plan.textContent = 'Choose the gap used for your next batch.';
+      plan.textContent = '';
       return;
     }
     if (!count || !pauses) {
@@ -451,6 +574,7 @@
     el('batchCount').value = scope ? Math.min(1000, batchAvailable()) || '' : '';
     el('batchCount').disabled = !scope;
     paintAudience();
+    highlightGapBtn();
     el('batchStart').textContent = scope ? (left ? 'Continue' : 'Start sending') : 'Save gap';
     picker.showModal();
     el('batchStart').focus({ preventScroll: true });
@@ -459,8 +583,17 @@
   el('batchLimit').oninput = paintAudience;
   el('batchLimit').onchange = paintAudience;
   el('batchCancel').onclick = () => picker.close();
-  for (const b of picker.querySelectorAll('[data-gap]'))
-    b.onclick = () => (el('batchGap').value = b.dataset.gap);
+  function highlightGapBtn() {
+    const v = String(el('batchGap').value);
+    for (const b of picker.querySelectorAll('.batch-gap-btn'))
+      b.setAttribute('aria-pressed', String(b.dataset.gap === v));
+  }
+  for (const b of picker.querySelectorAll('.batch-gap-btn'))
+    b.onclick = () => {
+      el('batchGap').value = b.dataset.gap;
+      highlightGapBtn();
+      paintAudience();
+    };
   for (const id of [
     'batchCount',
     'batchGap',
@@ -470,7 +603,13 @@
     'batchJMin',
     'batchJMax',
   ])
-    el(id).oninput = paintAudience;
+    el(id).oninput =
+      id === 'batchGap'
+        ? () => {
+            highlightGapBtn();
+            paintAudience();
+          }
+        : paintAudience;
   for (const id of ['batchPause', 'batchRandom', 'batchIncl'])
     el(id).onchange = () => {
       if (id === 'batchIncl' && pickerScope)
@@ -854,13 +993,7 @@
       if (typeof tries === 'number' && tries < 30 && typeof requestAnimationFrame === 'function')
         requestAnimationFrame(() => fitBankPreview(tries + 1));
       return;
-    }
-    /* Long message: shrink the type a little (never below 13px) so it fits without scrolling. */ let size =
-      parseFloat(getComputedStyle(preview).fontSize);
-    while (size > 13 && preview.scrollHeight > preview.clientHeight + 2) {
-      size -= 0.5;
-      preview.style.fontSize = size + 'px';
-    }
+    } /* Reading comfort: the type size stays steady; a long message scrolls inside its card instead of shrinking. */
   }
   document.fonts?.ready.then(() => fitBankPreview());
   async function api(path, body) {
@@ -1204,13 +1337,35 @@
             if (menuBuilt) return;
             menuBuilt = true;
             const menu = make('div', '');
-            const rename = make('button', '', 'Rename');
-            rename.type = 'button';
-            rename.onclick = () => {
-              const n = prompt('Saved name or label', d.name);
-              if (n?.trim()) change(d.id, { name: n.trim() });
+            const rename = make('div', 'donor-normal-box');
+            const rlabel = make('label', '', 'Name');
+            const rinput = make('input', 'donor-normal');
+            rinput.type = 'text';
+            rinput.name = 'donor_name';
+            rinput.autocomplete = 'off';
+            rinput.maxLength = 60;
+            rinput.value = d.name;
+            rlabel.append(rinput);
+            const rsave = make('button', 'donor-normal-save', 'Save name');
+            rsave.type = 'button';
+            const saveName = () => {
+              const n = rinput.value.trim();
+              if (!n) {
+                notice('Enter a name.', true);
+                rinput.focus();
+                return;
+              }
+              if (n !== d.name) change(d.id, { name: n });
               more.open = false;
             };
+            rsave.onclick = saveName;
+            rinput.onkeydown = (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                saveName();
+              }
+            };
+            rename.append(rlabel, rsave);
             const normal = make('div', 'donor-normal-box');
             const nlabel = make('label', '', 'Usually donates (Rs.)');
             const ninput = make('input', 'donor-normal');
@@ -1631,8 +1786,21 @@
     if (box.hidden) {
       return;
     }
+    const scheduled = active && j.hold_until > Date.now() / 1000;
     box.textContent =
-      (active ? 'Sending to volunteers · ' : 'Last send · ') +
+      (scheduled
+        ? 'Scheduled · first DM at ' +
+          new Date(j.hold_until * 1000).toLocaleString('en-PK', {
+            timeZone: 'Asia/Karachi',
+            day: 'numeric',
+            month: 'short',
+            hour: 'numeric',
+            minute: '2-digit',
+          }) +
+          ' PKT · '
+        : active
+          ? 'Sending to volunteers · '
+          : 'Last send · ') +
       (j.sent || 0) +
       ' sent · ' +
       Math.max(0, (j.total || 0) - (j.sent || 0) - (j.skipped || 0) - (j.failed || 0)) +
@@ -1698,10 +1866,7 @@
     };
     const list = make('div', 'vol-list');
     if (vols.items.length) list.setAttribute('role', 'list');
-    if (!vols.items.length)
-      list.append(
-        make('p', 'donor-empty', 'No volunteers yet. Add a name and their WhatsApp number above.'),
-      );
+    if (!vols.items.length) list.append(make('p', 'donor-empty', 'No volunteers yet.'));
     vols.items.forEach((d, i) => {
       const row = make('div', 'vol-row');
       row.setAttribute('role', 'listitem');
@@ -1790,33 +1955,7 @@
     const all = make('button', 'primary send-donors', 'DM all volunteers');
     all.type = 'button';
     all.disabled = !vols.items.length;
-    all.onclick = async () => {
-      await volAct({ action: 'message', text: ta.value });
-      if (!ta.value.trim()) {
-        notice('Write the message for volunteers first.', true);
-        ta.focus();
-        return;
-      }
-      if (
-        !confirm(
-          'Send this message to ' +
-            vols.items.length +
-            ' volunteer' +
-            (vols.items.length === 1 ? '' : 's') +
-            '? Each gets it once, a few minutes apart.',
-        )
-      )
-        return;
-      volAct(
-        {
-          action: 'send_all',
-          request_id: 'v' + crypto.randomUUID().replace(/-/g, ''),
-          poster: pc.checked,
-          gap_seconds: 180,
-        },
-        'Sending to volunteers started.',
-      );
-    };
+    all.onclick = () => openVolunteerTiming(ta.value, pc.checked);
     const pause = make('button', 'tool', 'Pause');
     pause.type = 'button';
     pause.hidden = !(
@@ -2009,7 +2148,7 @@
       if (posterUrl) URL.revokeObjectURL(posterUrl);
       posterUrl = URL.createObjectURL(await r.blob());
       el('posterCurrent').src = posterUrl;
-      el('posterNote').textContent = 'Choose a new picture to replace it.';
+      el('posterNote').textContent = '';
     } catch (e) {
       el('posterNote').textContent = e.message;
     }
@@ -2091,8 +2230,8 @@
   const paste = make('dialog', 'donor-form-dialog paste-dialog');
   paste.id = 'donorPasteDialog';
   paste.setAttribute('aria-label', 'Bulk message');
-  paste.innerHTML = `<h2>Bulk message</h2><p class="paste-step-list">Paste one number and name per line. Names are optional. Up to 20 people.</p><p class="paste-step-time">Choose your message and the wait between people. The first DM starts now.</p><label for="pastePeople" class="paste-step-list">Numbers and names</label><textarea id="pastePeople" name="recipients" rows="5" autocomplete="off" spellcheck="false" placeholder="0300 1234567, Ali
-Ayesha, +92 301 1234567" aria-describedby="pasteResult"></textarea><div id="pasteResult" class="paste-result" role="status" aria-live="polite">Numbers are hidden in the recipient preview.</div><ol id="pastePlan" class="paste-plan" aria-label="Planned send times" hidden></ol><label for="pasteGap" class="paste-step-time">Gap between DMs</label><select id="pasteGap" class="paste-step-time" name="gap_minutes">${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}" ${i === 3 ? 'selected' : ''}>${i + 1} minute${i ? 's' : ''}</option>`).join('')}</select><label for="pasteMessage" class="paste-step-time">Your message (optional)</label><textarea id="pasteMessage" class="paste-step-time" rows="3" maxlength="8000" placeholder="Write any message…"></textarea><p class="paste-step-time">{name} uses the pasted name; no name uses Bhai. Leave blank to use saved messages.</p><label class="paste-step-time batch-fresh"><input type="checkbox" id="pastePoster" checked> Attach poster</label><label for="pasteMedia" class="paste-step-time">Attach media</label><input id="pasteMedia" class="paste-step-time" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,application/pdf"><p id="pasteMediaNote" class="paste-step-time" role="status">Image, MP4 video or PDF, up to 15 MB. Replaces poster for this batch.</p><div class="donor-form-actions"><button type="button" id="pasteCancel">Cancel</button><button type="button" id="pasteBack" class="paste-step-time">← Back</button><button type="button" class="primary paste-step-list" id="pasteNext" disabled>DM all</button><button type="button" class="primary paste-step-time" id="pasteStart" disabled>Start DMs now</button></div>`;
+  paste.innerHTML = `<h2>Bulk message</h2><label for="pastePeople" class="paste-step-list">Numbers and names</label><textarea id="pastePeople" name="recipients" rows="5" autocomplete="off" spellcheck="false" placeholder="0300 1234567, Ali
+Ayesha, +92 301 1234567" aria-describedby="pasteResult"></textarea><div id="pasteResult" class="paste-result" role="status" aria-live="polite"></div><ol id="pastePlan" class="paste-plan" aria-label="Planned send times" hidden></ol><label for="pasteGap" class="paste-step-time">Gap between DMs</label><select id="pasteGap" class="paste-step-time" name="gap_minutes">${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}" ${i === 3 ? 'selected' : ''}>${i + 1} minute${i ? 's' : ''}</option>`).join('')}</select><label for="pasteMessage" class="paste-step-time">Your message (optional)</label><textarea id="pasteMessage" class="paste-step-time" rows="3" maxlength="8000" placeholder="Write any message…"></textarea><p class="paste-step-time">{name} uses the pasted name; no name uses Bhai. Leave blank to use saved messages.</p><label class="paste-step-time batch-fresh"><input type="checkbox" id="pastePoster" checked> Attach poster</label><label for="pasteMedia" class="paste-step-time">Attach media</label><input id="pasteMedia" class="paste-step-time" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,application/pdf"><p id="pasteMediaNote" class="paste-step-time" role="status"></p><div class="donor-form-actions"><button type="button" id="pasteCancel">Cancel</button><button type="button" id="pasteBack" class="paste-step-time">← Back</button><button type="button" class="primary paste-step-list" id="pasteNext" disabled>DM all</button><button type="button" class="primary paste-step-time" id="pasteStart" disabled>Start DMs now</button></div>`;
   document.body.append(paste);
   let pasteAttachment = null,
     mediaPending = false;
@@ -2174,7 +2313,7 @@ Ayesha, +92 301 1234567" aria-describedby="pasteResult"></textarea><div id="past
     el('pasteResult').textContent = 'Checking names and numbers…';
     if (!el('pastePeople').value.trim()) {
       el('pastePlan').hidden = true;
-      el('pasteResult').textContent = 'Numbers are hidden in the recipient preview.';
+      el('pasteResult').textContent = '';
       return;
     }
     pasteTimer = setTimeout(async () => {

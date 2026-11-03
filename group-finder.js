@@ -269,7 +269,7 @@
       : 'No groups researched yet';
     $('empty').querySelector('p').textContent = data.counts.all
       ? 'Try All or clear your search.'
-      : 'Choose universities, then find public group links. No groups are joined and no messages are sent.';
+      : 'Choose universities, then find public group links.';
     const job = data.jobs.at(-1),
       active = job && ['queued', 'running'].includes(job.state);
     $('stopResearch').hidden = !active;

@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openPreview, showDm } = require('./helpers.cjs');
+const { showPreview, showDm } = require('./helpers.cjs');
 
 for (const width of [390, 1440])
   test('DM Attach Poster works inside focused editor ' + width, async ({ page }) => {
@@ -9,7 +9,7 @@ for (const width of [390, 1440])
     );
     await page.goto('/');
     await showDm(page);
-    await openPreview(page);
+    await showPreview(page);
     await expect(page.locator('#messageFocus')).toBeVisible();
     const poster = page.locator('#dmPoster');
     await expect(poster).toBeVisible();

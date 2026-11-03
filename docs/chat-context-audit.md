@@ -30,3 +30,34 @@ No weights were trained or fine-tuned. Existing persistent preferences, feedback
 The offline pass rate is not a real-world intent-accuracy percentage. Full production history review and an independent live-model holdout evaluation remain necessary. The broader repository has unrelated baseline test failures documented in the cleanup work; this release does not certify the whole application.
 
 The additional manual-send suite initially reproduced the Akhtar/fast routing failure and passes after the repair. New end-to-end coverage uses an actual local HTTP server, fake model responses, and synthetic storage: /assistant → runtime → guarded callback → persisted DM → read-only show. It does not replace a live-model evaluation.
+
+
+# Update — 3 November 2026 (owner transcript review)
+
+Evidence: the owner's pasted chat transcript, the repository, and offline replays through the real runtime, server callbacks and HTTP endpoint with a scripted model. No live model key was available in this workspace, so model wording and tool choice by the real model remain unmeasured.
+
+## Real failures found in the transcript, with cause and repair
+
+| What the owner saw | Cause | Repair |
+| --- | --- | --- |
+| "resume group dm's by 11 am" resumed DMs immediately | The donor DM control ignored the time words | A time makes it a scheduled resume; "pause dms for 1 hour" / "hold dms till 11am" stop now and resume then; "stop dms at 11pm" changes nothing and says so |
+| "Givelife main today by 11am" failed with "Give a group/action and a future time" | "by 11am" and repeated identical times were rejected; the answer lost the earlier request | One time parser (by/at/till/today/tomorrow, Urdu baje/subah/shaam, ghante baad); a short answer inherits the question it answers |
+| Test failed 7 times with "0/10 versions", "caption is empty" | The test send required the full ten-version bank, and an empty caption was an error | A test send no longer needs the bank and fills an empty caption first |
+| Chat had no context | Identical notice lines flooded the context window; short replies ("yes", "kar do", "1", "and fiverr") had no permission or meaning | Repeats collapse to one line; a reply is resolved against the question it answers, the numbered option it picks, or the offer it accepts |
+
+## Dangerous misreads found by fuzzing, now fixed
+
+"in an hour", "in half an hour", "kal subah 9 baje", "10 minute baad" and "tonight" posted immediately; "main me mat bhejo", "post nahi karna", "delete mat karo" sent or deleted; "send except upwork" sent to upwork; "the post in main is old", "draft the post", "main post status" sent or re-sent; "remaining 5000 is wrong", "with 4 min gap", "3 came" changed the balance; "dm poster off" stopped DMs; "then rest 20 minutes" became the gap; questions ending in "?" or starting with kya/kitne acted as commands. Each now has a permanent regression test (test_owner_transcript_dm_times, test_mentions_are_not_sends, test_hold_and_delete_need_commands, test_group_wording, test_tool_permission_corpus, test_followup_replies, test_donor_request_wording).
+
+## Limits
+
+The permission layer is still regex based. It now has a 64-phrase positive corpus and several hundred negative look-alikes, but new phrasings will appear. Add each real failure as a minimized phrase to the corpus.
+
+## Suggested next work
+
+1. Run the 20 golden transcripts against the real model with every outbound action mocked and score tool choice, arguments and partial-completion reports (EVALS.md, "Future live-model evaluation").
+2. Support a scheduled donor DM batch start ("dm 20 important donors at 8pm"); today the app says plainly that it cannot.
+3. Support "stop DMs at 11pm" as a scheduled stop.
+4. Replace regex tool gating with a small intent classifier over (current text, last assistant turn, active draft), keeping the regex rules as a veto layer.
+5. Show the owner what was understood in one line before any send ("Posting the saved caption to GiveLife main now"), with an undo window for non-delivered jobs.
+6. Log every rejected tool call with its phrase so the owner can mark "this should have worked" and the corpus grows from real use.

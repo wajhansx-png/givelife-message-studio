@@ -33,7 +33,11 @@ for (const width of [1440, 390])
       await expect(page.locator('#donorResumeStatus')).toContainText('06:30 PM PKT');
       await expect(page.locator('#donorToggle')).toHaveText('Change resume');
       await page.getByRole('button', { name: 'Stop scheduled resume', exact: true }).click();
-      await expect(page.locator('#donorResumeStatus')).not.toBeVisible();
+      await expect(page.locator('#donorResumeStatus')).toContainText('DMs paused');
+      await expect(page.locator('#donorResumeStatus')).not.toContainText('PKT');
+      await expect(
+        page.getByRole('button', { name: 'Stop scheduled resume', exact: true }),
+      ).not.toBeVisible();
       await page.locator('#donorToggle').click();
       await dialog.getByRole('button', { name: 'Resume now', exact: true }).click();
       await expect(dialog).not.toBeVisible();

@@ -637,10 +637,7 @@ class DonorDelivery:
                     current="Waiting for the next batch time",
                 )
                 if self._sleep_until(hold):
-                    self._update(
-                        j["id"], state="Stopped", next_at=None, next_batch_at=None, current=""
-                    )
-                    self.active = None
+                    state = "Stopped"
                     return
             for index, ident in enumerate(j["ids"]):
                 if self.stop.is_set():
@@ -861,7 +858,7 @@ class DonorDelivery:
             or time.time() - j.get("updated_at", 0) > self.AUTO_WINDOW
         ):
             return None
-        hold = j.get("next_batch_at") or j.get("next_at")
+        hold = max((j.get(key) or 0 for key in ("hold_until", "next_batch_at", "next_at")))
         args = dict(
             scope=j["scope"],
             gap_seconds=j["gap_seconds"],

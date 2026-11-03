@@ -598,3 +598,12 @@ form p {
     scroll-behavior: auto !important;
   }
 }
+
+/* Phones: 16px fields stop iOS from zooming the page when a field is focused */
+@media (max-width: 899px) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

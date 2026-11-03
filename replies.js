@@ -9,7 +9,7 @@
   const dlg = make('dialog', 'donor-form-dialog replies-dialog');
   dlg.setAttribute('aria-label', 'Auto replies');
   dlg.innerHTML =
-    '<h2>Auto replies</h2><p>When someone in your WhatsApp sends a picture or says done / donated, Auto sends one of the replies below (in turn). Each message is answered once. Only runs while Auto is on. It never marks a donation as received.</p><label style="display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:600"><input type="checkbox" id="repEnabled" style="width:20px;height:20px;min-height:0;flex:none"> Turn on auto replies</label><div id="repList"></div><p id="repNote" role="status"></p><div class="donor-form-actions"><button type="button" id="repAdd">+ Add reply</button><button type="button" id="repClose">Close</button><button type="button" class="primary" id="repSave">Save</button></div>';
+    '<h2>Replies to “done” or a picture</h2><label style="display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:600"><input type="checkbox" id="repEnabled" style="width:20px;height:20px;min-height:0;flex:none"> Turn on auto replies</label><div id="repList"></div><p id="repNote" role="status"></p><div class="donor-form-actions"><button type="button" id="repAdd">+ Add reply</button><button type="button" id="repClose">Close</button><button type="button" class="primary" id="repSave">Save</button></div>';
   document.body.append(dlg);
   const $ = (id) => document.getElementById(id);
   const row = (text) => {

@@ -1091,12 +1091,26 @@ function armAll() {
   return sendGroup('all');
 }
 $('sendAll').onclick = armAll;
+async function fillEmptyCaption(kind) {
+  await ensureDrafts();
+  if ($(kind) && !$(kind).value.trim()) {
+    const r = await post(kind === 'group' ? '/next-message' : '/next-dm'),
+      d = await r.json();
+    if (r.ok && typeof d.message === 'string' && d.message.trim()) {
+      $(kind).value = d.message;
+      if (kind === 'dm') applyGreeting(false);
+      render();
+      await save();
+    }
+  }
+}
 async function sendTest(kind) {
   const key = 'test:' + kind;
   if (!lockSend(key, true)) return;
   setLiveNotice('Sending to test group…');
   busy(true);
   try {
+    await fillEmptyCaption(kind);
     await ensureCaption(kind);
     clearTimeout(timer);
     await save();
@@ -2302,7 +2316,10 @@ const smallScreens = [
 function smallRoute(screen) {
   return (
     screen.path ||
-    'donors/' + (Nav.top() === 'donors' ? Nav.path().split('/')[1] : 'all') + '/' + screen.suffix
+    'donors/' +
+      (Nav.top() === 'donors' ? Nav.path().split('/')[1] || 'all' : 'all') +
+      '/' +
+      screen.suffix
   );
 }
 function restoreSmallDialog(path, open = false) {

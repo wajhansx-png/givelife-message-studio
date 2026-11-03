@@ -93,6 +93,29 @@ class SourceAndControlTests(unittest.TestCase):
             self.assertEqual(app.poster_media("dm").name, "dm-poster.jpg")
             self.assertEqual(app.poster_media("group").name, "poster.jpg")
 
+    def test_poster_dialog_replaces_the_poster_for_groups_and_dms(self):
+        import base64
+
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.object(app, "DATA", Path(folder)),
+            patch.object(app, "STORE", None),
+            patch.object(app, "CAMPAIGN", {}),
+            patch.object(app, "ACTIVE", None),
+            patch.object(app, "DONORS", None),
+        ):
+            (Path(folder) / "poster.jpg").write_bytes(b"\xff\xd8\xffold")
+            (Path(folder) / "dm-poster.jpg").write_bytes(b"\xff\xd8\xffolddm")
+            new = b"\xff\xd8\xffnew"
+            self.assertEqual(
+                app.save_upload(
+                    "data:image/jpeg;base64," + base64.b64encode(new).decode(), "dm_poster"
+                ),
+                "poster",
+            )
+            self.assertEqual(app.poster_media("group").read_bytes(), new)
+            self.assertEqual(app.poster_media("dm").read_bytes(), new)
+
 
 class AutoReplyTests(unittest.TestCase):
     def engine(self, store, messages):

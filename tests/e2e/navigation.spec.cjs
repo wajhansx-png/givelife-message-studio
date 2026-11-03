@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openSettings, openPreview, openMessages, showDm } = require('./helpers.cjs');
+const { openSettings, openDonorMessages } = require('./helpers.cjs');
 const auth = { Authorization: 'Bearer manual-fix-preview-key' };
 const LONG = Array.from(
   { length: 7 },
@@ -27,12 +27,11 @@ test('a refresh stays on the same Donors tab, and on Messages', async ({ page, r
     'true',
   );
   expect(page.url()).toContain('#/donors/important');
-  await openMessages(page);
-  for (let i = 0; i < 2; i++)
-    await page.getByRole('button', { name: 'Next message', exact: true }).click();
+  await openDonorMessages(page);
+  await page.getByRole('button', { name: 'Message 3', exact: true }).click();
   await page.reload();
   await expect(page.locator('#donorMessages')).toBeVisible();
-  await expect(page.locator('.bank-current')).toHaveText('Message 3 of 20');
+  await expect(page.locator('.bank-detail header')).toContainText('Message 3');
 });
 test('Back and Forward move between screens smoothly and never leave the app', async ({
   page,
@@ -61,15 +60,14 @@ test('Back and Forward move between screens smoothly and never leave the app', a
   await expect(page.locator('#set')).toBeVisible();
   await page.locator('#setCloseBottom').click();
   await expect(page.locator('#set')).not.toBeVisible();
-  /* On phones the message peek itself opens the editor. */
-  await page.locator('#card').click();
+  await page.locator('#showMsg').click();
   await expect(page).toHaveURL(/#\/preview/);
   await page.reload();
-  await expect(page.locator('#messageFocus')).toBeVisible();
-  await page.locator('#focusBack').click();
-  await expect(page.locator('#messageFocus')).not.toBeVisible();
+  await expect(page.locator('#card')).toBeVisible();
+  await page.locator('#previewBackBottom').click();
+  await expect(page.locator('#card')).not.toBeVisible();
 });
-test('phone: a small Chat button and a wide Donors button share the thumb row', async ({
+test('phone: Chat and Donors are an equal, centred pair in the thumb row', async ({
   page,
   request,
 }) => {
@@ -78,19 +76,17 @@ test('phone: a small Chat button and a wide Donors button share the thumb row', 
     donors = await page.locator('#openDonors').boundingBox();
   expect(Math.abs(chat.y - donors.y)).toBeLessThan(4);
   expect(chat.x).toBeLessThan(donors.x);
-  expect(chat.width).toBeLessThan(donors.width);
+  expect(Math.abs(chat.width - donors.width)).toBeLessThan(2);
+  expect(Math.abs((chat.x + donors.x + donors.width) / 2 - 390 / 2)).toBeLessThan(2);
+  expect(chat.height).toBeGreaterThanOrEqual(44);
   expect(donors.y + donors.height).toBeGreaterThan(844 * 0.6);
 });
 test('phone: every full screen has a Back button in the lower half', async ({ page, request }) => {
   await open(page, request, 390, 844);
   await page.locator('#openDonors').click();
   expect((await page.locator('#donorMainBottom').boundingBox()).y).toBeGreaterThan(422);
-  /* Messages has exactly one Back: the last row, in the lower half where the thumb rests. */
-  await openMessages(page);
-  await expect(page.locator('.bank-back-bottom')).toHaveCount(1);
-  const back = await page.locator('.bank-back-bottom').boundingBox();
-  expect(back.height).toBeGreaterThanOrEqual(44);
-  expect(back.y).toBeGreaterThan(422);
+  await openDonorMessages(page);
+  expect((await page.locator('.bank-back-bottom').boundingBox()).y).toBeGreaterThan(422);
   await page.locator('.bank-back-bottom').click();
   await page.locator('#donorMainBottom').click();
   await openSettings(page);
@@ -175,7 +171,7 @@ test('bulk paste shows when every number will be sent before anything starts', a
   request,
 }) => {
   await open(page, request, 390, 844);
-  await showDm(page);
+  await page.locator('[data-view-button=dm]').click();
   await page.locator('#sendMoreDonors').click();
   await page.locator('#pastePeople').fill('Ali 03001234567\n03011234567\n1. Sara - 0302 1234567');
   await expect(page.locator('#pastePlan li')).toHaveCount(4);
@@ -205,7 +201,6 @@ test('DM in bulk button sits in the Donors header and opens the bulk modal', asy
 }) => {
   await open(page, request, 1280, 800);
   await page.locator('#openDonors').click();
-  await page.locator('#donorNavMore summary').click();
   await page.locator('#donorBulk').click();
   await expect(page.locator('.paste-dialog')).toBeVisible();
   await page.locator('#pastePeople').fill('03001234567 03011234567 03021234567');
@@ -312,9 +307,18 @@ test('a stopped batch offers Continue and the dialog says already-sent people ar
     return r.fulfill({ json: stopped });
   });
   await page.locator('#openDonors').click();
-  /* A finished or stopped job is summarised in one dismissible notice; continuing happens from the batch dialog. */
-  await expect(page.locator('#donorNotice')).toContainText('Not sent');
-  await page.locator('#donorSendImportant').isVisible();
+  await expect(page.locator('#donorContinue')).toBeVisible();
+  await expect(page.locator('#donorContinue')).toContainText('3 left');
+  await page.locator('#donorProgress span').click();
+  await expect(page.locator('#batchSent li').first()).toContainText('Ali');
+  await expect(page.locator('#batchNext li')).toHaveText(['Sara', 'Omar', 'Zain']);
+  await expect(page.locator('#batchOther')).toContainText('Bilal');
+  await page.locator('#donorContinue').click();
+  await expect.poll(() => posted).not.toBeNull();
+  expect(posted.scope).toBe('important');
+  expect(posted.fresh).toBeUndefined();
+  expect(posted.ids).toBeUndefined();
+  await page.locator('#donorSendImportant:visible, #donorMain:visible').first().isVisible();
   await page.locator('#donorSendImportant').click();
   await expect(page.locator('#batchResume')).toBeVisible();
   await expect(page.locator('#batchResumeText')).toContainText('already sent will be skipped');
@@ -365,33 +369,34 @@ test('on desktop the Back button sits in the middle of the screen, and the group
   expect(rail.x).toBeGreaterThan(1440 / 2);
   await page.locator('#openDonors').click();
   const back = await page.locator('#donorMainBottom').boundingBox();
-  expect(Math.abs(back.x + back.width / 2 - 720)).toBeLessThan(330);
+  expect(Math.abs(back.x + back.width / 2 - 720)).toBeLessThan(260);
   const dm = await page.locator('.donor-row .donor-dm').first().boundingBox();
   expect(Math.abs(dm.x + dm.width / 2 - 720)).toBeLessThan(160);
   await page.locator('#donorMainBottom').click();
   await expect(page.locator('#donorsPage')).toBeHidden();
-  await openSettings(page);
+  await page.locator('.gear').first().click();
   const dock = await page.locator('#setCloseBottom').boundingBox();
   expect(Math.abs(dock.x + dock.width / 2 - 720)).toBeLessThan(40);
 });
 
-test('desktop preview: the full message opens in the focused editor with left-aligned text', async ({
+test('desktop preview: message centred with left-aligned text, actions at the bottom, shortcuts in the groups box', async ({
   page,
   request,
 }) => {
   await open(page, request, 1440, 900);
-  await openPreview(page);
-  await expect(page.locator('#messageFocus')).toBeVisible();
-  const paper = await page.locator('.focus-paper').boundingBox();
-  expect(paper.width).toBeGreaterThan(300);
-  expect(paper.x + paper.width).toBeLessThanOrEqual(1440);
+  await page.locator('#railPreview').click();
+  await expect(page.locator('#card')).toBeVisible();
+  const card = await page.locator('#card').boundingBox();
+  const msg = await page.locator('#groupPreview').boundingBox();
+  expect(Math.abs(msg.x + msg.width / 2 - (card.x + card.width / 2))).toBeLessThan(30);
   expect(
-    await page.locator('#focusFormatted').evaluate((el) => getComputedStyle(el).textAlign),
+    await page.locator('#groupPreview').evaluate((el) => getComputedStyle(el).textAlign),
   ).toMatch(/left|start/);
-  await expect(page.locator('#focusEdit')).toBeVisible();
-  await page.locator('#focusBack').click();
-  await expect(page.locator('#messageFocus')).toBeHidden();
-  await page.locator('#openDonors').click();
+  const tools = await page.locator('#card .tools').boundingBox();
+  expect(tools.y).toBeGreaterThan(msg.y + msg.height - 1);
+  const edit = await page.locator('#edit').boundingBox();
+  expect(Math.abs(edit.x + edit.width / 2 - (card.x + card.width / 2))).toBeLessThan(160);
+  await page.locator('#railDonors').click();
   await expect(page.locator('#donorsPage')).toBeVisible();
 });
 
@@ -433,6 +438,7 @@ test('donor list is numbered, progress is one slim line, and tabs have a visible
     .first()
     .evaluate((e) => getComputedStyle(e).backgroundColor);
   expect(bg).not.toBe('rgba(0, 0, 0, 0)');
+  await expect(page.locator('#donorMain')).toBeHidden();
 });
 
 test('the poster dialog and the chat clip accept an MP4 video as well as a picture', async ({
@@ -443,7 +449,7 @@ test('the poster dialog and the chat clip accept an MP4 video as well as a pictu
   expect(await page.locator('#file').getAttribute('accept')).toContain('video/mp4');
   await page.locator('#openDonors').click();
   await page
-    .locator('#donorMainBottom')
+    .locator('#donorMain, #donorMainBottom')
     .first()
     .isVisible()
     .catch(() => {});
@@ -488,7 +494,7 @@ test('tapping a donor name stars it, every screen has one "Back" and it is the l
         .at(-1).id,
   );
   expect(last).toBe('donorMainBottom');
-  await openMessages(page);
+  await openDonorMessages(page);
   await expect(page.locator('.bank-back-bottom')).toHaveText('← Back');
   await expect(page.locator('.donor-sub')).toHaveCount(0);
 });
@@ -526,4 +532,202 @@ test('Volunteers tab: all five tabs fit on one line, add by name and number, sav
     await row.locator('.donor-more summary').click();
     await row.getByRole('button', { name: 'Remove' }).click();
   }
+});
+
+test('team over WhatsApp: tasks in the screen, a natural first message, his reply shows up to check, verified', async ({
+  page,
+  request,
+}) => {
+  const auth = { Authorization: 'Bearer manual-fix-preview-key' };
+  const post = (data) => request.post('/__test/seed', { headers: auth, data });
+  const events = async () =>
+    (await (await request.get('/__test/events', { headers: auth })).json()).events.filter(
+      (e) => e.path === '/send/message',
+    );
+  await open(page, request, 1440, 800);
+  await page.locator('#openTeam').click();
+  await expect(page.locator('.team-setup')).toBeVisible();
+  await page.locator('.team-setup input[name=team_name]').fill('Bilal Ahmed');
+  await page.locator('.team-setup input[name=team_phone]').fill('03001234567');
+  await page.locator('.team-setup .primary').click();
+  await expect(page.locator('.team-big')).toContainText('No tasks yet');
+  await page.getByRole('button', { name: '+ Add tasks' }).click();
+  await page
+    .locator('#teamText')
+    .fill('1) Post in the 3 groups\n2) Update the sheet\nDeadline in 4 hours');
+  await page.getByRole('button', { name: 'Plan the tasks' }).click();
+  await expect(
+    page.locator('.team-page').getByText('Nothing is sent until you press Start'),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Start tasks' }).click();
+  await expect(page.locator('.team-big')).toContainText('0 of 2 done');
+  const before = (await events()).length;
+  await page.waitForTimeout(1500);
+  await post({ team_tick: true });
+  await post({ team_tick: true });
+  const sent = (await events()).slice(before);
+  expect(sent.length, 'the first message goes once, even after two ticks').toBe(1);
+  expect(sent[0].fields.phone).toBe('923001234567');
+  expect(sent[0].fields.message).toContain('Post in the 3 groups');
+  expect(sent[0].fields.message).not.toMatch(/Task #|Reply "|bot/i);
+  expect(sent[0].fields.message).toMatch(/^Assalam o alaikum Bilal,/);
+  await post({ incoming: 'posted in the groups, done https://example.com/p', team_tick: true });
+  await expect(page.locator('.team-review')).toContainText('Post in the 3 groups', {
+    timeout: 12000,
+  });
+  await expect(page.locator('.team-review')).toContainText('Proof');
+  await page
+    .locator('.team-review')
+    .getByRole('button', { name: /Verified/ })
+    .click();
+  await expect(page.locator('.team-big')).toContainText('1 of 2 done');
+  const cmd = async (text) =>
+    (await request.post('/command', { headers: auth, data: { text } })).json();
+  expect((await cmd('team status')).reply).toContain('1 of 2 done');
+  expect((await cmd('hello how are you')).reply || '').not.toContain('of 2 done');
+});
+
+test('team screen is one screen with no scrolling at every size, even with a lot of data', async ({
+  page,
+  request,
+}) => {
+  const auth = { Authorization: 'Bearer manual-fix-preview-key' };
+  const sizes = [
+    [1920, 900],
+    [1440, 800],
+    [1280, 720],
+    [1024, 600],
+    [768, 1024],
+    [412, 915],
+    [390, 844],
+    [360, 640],
+    [320, 568],
+  ];
+  for (const demo of [
+    [[0, 'Waiting']],
+    [
+      [1, 'Reported'],
+      [2, 'Asked'],
+      [1, 'Done'],
+    ],
+    [
+      [8, 'Reported'],
+      [14, 'Asked'],
+      [3, 'Late'],
+      [5, 'Done'],
+    ],
+  ]) {
+    for (const [w, h] of sizes) {
+      await open(page, request, w, h);
+      await request.post('/__test/seed', { headers: auth, data: { team_demo: demo } });
+      await page.locator('#openTeam').click();
+      await expect(page.locator('.team-page')).toBeVisible();
+      await page.waitForTimeout(350);
+      const m = await page.evaluate(() => {
+        const b = document.querySelector('.team-body'),
+          s = document.querySelector('.team-shell'),
+          f = document.querySelector('.team-foot');
+        const r = f.getBoundingClientRect();
+        const bad = [...document.querySelectorAll('.team-page button')]
+          .filter(
+            (x) =>
+              x.offsetParent &&
+              (x.getBoundingClientRect().height < 43 ||
+                x.getBoundingClientRect().right > innerWidth + 1 ||
+                x.getBoundingClientRect().left < -1),
+          )
+          .map((x) => x.textContent.trim() + ':' + Math.round(x.getBoundingClientRect().height));
+        return {
+          fit: b.scrollHeight <= b.clientHeight + 1,
+          x:
+            document.documentElement.scrollWidth > innerWidth + 1 ||
+            s.scrollWidth > s.clientWidth + 1,
+          footIn: r.bottom <= innerHeight + 1 && r.top >= 0,
+          bad,
+          add: !!document.querySelector('.team-add') || !!document.querySelector('#teamText'),
+        };
+      });
+      expect(m.fit, `${w}x${h} ${JSON.stringify(demo)}: nothing to scroll`).toBe(true);
+      expect(m.x, `${w}x${h}: no sideways scroll`).toBe(false);
+      expect(m.footIn, `${w}x${h}: Back is on screen`).toBe(true);
+      expect(m.bad, `${w}x${h}: every button is 44px tall and inside`).toEqual([]);
+      expect(m.add, `${w}x${h}: the add button stays`).toBe(true);
+      await page.locator('.team-back').click();
+    }
+  }
+  await open(page, request, 390, 700);
+  await request.post('/__test/seed', { headers: auth, data: { team_demo: [[2, 'Asked']] } });
+  await page.locator('#openTeam').click();
+  await page.getByRole('button', { name: '+ Add tasks' }).click();
+  await page
+    .locator('#teamText')
+    .fill(
+      Array.from({ length: 20 }, (_, i) => 'Task number ' + (i + 1) + ' with some words').join(
+        '\n',
+      ) + '\ndeadline tomorrow 9pm',
+    );
+  await page.getByRole('button', { name: 'Plan the tasks' }).click();
+  await expect(page.getByRole('button', { name: 'Start tasks' })).toBeVisible();
+  const fit = await page.evaluate(() => {
+    const b = document.querySelector('.team-body');
+    return b.scrollHeight <= b.clientHeight + 1;
+  });
+  expect(fit, 'a 20-task plan preview also fits one screen').toBe(true);
+});
+
+test('team screen keeps the focused field (and the phone keyboard) when the window resizes or refreshes', async ({
+  page,
+  request,
+}) => {
+  await open(page, request, 390, 700);
+  await request.post('/__test/seed', { headers: auth, data: { team_demo: [[1, 'Asked']] } });
+  await page.locator('#openTeam').click();
+  await page.getByRole('button', { name: '+ Add tasks' }).click();
+  const box = page.locator('#teamText');
+  await box.click();
+  await box.fill('Post in groups');
+  await page.setViewportSize({ width: 390, height: 380 });
+  await page.waitForTimeout(400); // what the keyboard does
+  await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(() => document.activeElement?.id)).toBe('teamText');
+  expect(await box.inputValue()).toBe('Post in groups');
+  await page.waitForTimeout(9500); // past one automatic refresh
+  expect(await page.evaluate(() => document.activeElement?.id)).toBe('teamText');
+  expect(await box.inputValue()).toBe('Post in groups');
+});
+
+test('team: a planning error is visible inside the Team screen, and quiet hours are an optional switch in Settings', async ({
+  page,
+  request,
+}) => {
+  await page.route('**/team', (route) =>
+    route.request().method() === 'POST' && route.request().postDataJSON()?.action === 'plan'
+      ? route.fulfill({ status: 400, json: { error: 'The deadline must be in the future.' } })
+      : route.continue(),
+  );
+  await open(page, request, 390, 700);
+  await request.post('/__test/seed', { headers: auth, data: { team_demo: [[1, 'Asked']] } });
+  await page.locator('#openTeam').click();
+  await page.getByRole('button', { name: '+ Add tasks' }).click();
+  await page.locator('#teamText').fill('Do the thing');
+  await page.getByRole('button', { name: 'Plan the tasks' }).click();
+  const err = page.locator('.team-page .team-error');
+  await expect(err).toBeVisible();
+  await expect(err).toContainText('deadline');
+  const box = await err.boundingBox();
+  expect(box.y).toBeGreaterThan(0);
+  expect(box.y + box.height).toBeLessThan(700);
+  await page.locator('.team-back').click();
+  await openSettings(page);
+  const sw = page.locator('#teamQuietOn');
+  await expect(sw).not.toBeChecked();
+  await sw.check();
+  await expect
+    .poll(async () => (await (await request.get('/team', { headers: auth })).json()).quiet)
+    .toEqual([23, 7]);
+  await sw.uncheck();
+  await expect
+    .poll(async () => (await (await request.get('/team', { headers: auth })).json()).quiet)
+    .toBeNull();
 });

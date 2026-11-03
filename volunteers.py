@@ -1,7 +1,7 @@
 """Volunteers: people who help share the case. A name and a private number, one message the owner writes, and the same
 safe batch sending as donors (gaps, saved receipts, never twice) but with their own list, their own records and no appeal rules."""
 
-import re, threading
+import re, threading, time
 from donor_book import DonorBook, normalize_phone
 from donor_delivery import DonorDelivery
 
@@ -21,6 +21,7 @@ class VolunteerDelivery(DonorDelivery):
 class Volunteers:
     MESSAGE_KEY = "volunteer_message"
     MAX = 4000
+    START_DELAYS = (0, 300, 600, 900, 1800, 3600, 7200)
 
     def __init__(self, app, eligible):
         self.app = app
@@ -106,13 +107,46 @@ class Volunteers:
                     poster=bool(body.get("poster", True)),
                     skip_contacted=False,
                 )
-            return self.jobs.start(
-                "all",
-                body.get("gap_seconds", 180),
-                limit=None,
-                chunk=20,
-                request_id=body.get("request_id"),
-                poster=bool(body.get("poster", True)),
-                skip_contacted=bool(body.get("skip_contacted", True)),
-            )
+            delay = body.get("delay_seconds", 0)
+            if type(delay) is not int or delay not in self.START_DELAYS:
+                raise ValueError("Choose Send now, 5, 10, 15, 30 minutes, 1 hour or 2 hours.")
+            with self.lock:
+                rid = body.get("request_id")
+                old = next(
+                    (
+                        j
+                        for j in self.jobs.export_jobs()["jobs"]
+                        if rid and j.get("request_id") == rid
+                    ),
+                    None,
+                )
+                if old:
+                    if (
+                        old.get("start_delay_seconds", 0) != delay
+                        or old.get("poster") != bool(body.get("poster", True))
+                        or old.get("gap_seconds") != body.get("gap_seconds", 180)
+                    ):
+                        raise ValueError(
+                            "This request was already used for another volunteer batch. Check its delivery status."
+                        )
+                    return {
+                        "job": self.jobs._public(old),
+                        "reply": "This volunteer batch is already tracked. Its original send time is unchanged.",
+                    }
+                result = self.jobs.start(
+                    "all",
+                    body.get("gap_seconds", 180),
+                    limit=None,
+                    chunk=20,
+                    request_id=rid,
+                    poster=bool(body.get("poster", True)),
+                    skip_contacted=bool(body.get("skip_contacted", True)),
+                    hold_until=time.time() + delay if delay else None,
+                )
+                self.jobs._update(result["job"]["id"], start_delay_seconds=delay)
+            if delay:
+                result["reply"] = (
+                    f"Volunteer DMs scheduled to start in {delay // 60} minutes. The saved message and poster choice are queued; you can close the app."
+                )
+            return result
         raise ValueError("Unknown volunteer action.")

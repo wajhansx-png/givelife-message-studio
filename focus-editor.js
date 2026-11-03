@@ -57,7 +57,7 @@
   manual.id = 'manualMessages';
   manual.setAttribute('aria-label', 'Manual messages');
   manual.innerHTML =
-    '<header><b>Add your messages</b><button id="manualClose" aria-label="Close manual messages">×</button></header><p>Up to 10 different messages. Your wording is kept exactly.</p><div class="manual-nav"><button id="manualPrev">←</button><span id="manualSlot"></span><button id="manualNext">→</button></div><textarea id="manualText" aria-label="Manual message" rows="10" maxlength="10000"></textarea><p id="manualState" role="status"></p><button id="manualSave">Save messages</button>';
+    '<header><b>Add your messages</b><button id="manualClose" aria-label="Close manual messages">×</button></header><div class="manual-nav"><button id="manualPrev">←</button><span id="manualSlot"></span><button id="manualNext">→</button></div><textarea id="manualText" aria-label="Manual message" rows="10" maxlength="10000"></textarea><p id="manualState" role="status"></p><button id="manualSave">Save messages</button>';
   document.body.append(manual);
   let slots = [],
     slot = 0;

@@ -570,6 +570,14 @@ def send_request(text):
         t,
     )
     rests = [unit(pause[1] or pause[3], pause[2] or pause[4])] if pause else None
+    if not pause:
+        # "then rest 20 minutes" / "20 min rest" is the pause between batches, never the gap between DMs.
+        pause = re.search(
+            r"(?i)\b(?:rest|break|pause)\s*(?:for|of|=|:)?\s*(?P<n>\d+(?:\.?\d+)?)\s*(?P<u>minutes?|mins?|hours?|hrs?)\b|(?P<n2>\d+(?:\.?\d+)?)\s*(?P<u2>minutes?|mins?|hours?|hrs?)\s+(?:rest|break)\b",
+            t,
+        )
+        if pause:
+            rests = [unit(pause["n"] or pause["n2"], pause["u"] or pause["u2"])]
     t_gap = (t[: pause.start()] + " " + t[pause.end() :]) if pause else t
     jitter = (
         {"min": -10, "max": 15}
@@ -601,6 +609,9 @@ def send_request(text):
         "rests": rests,
         "jitter": jitter,
         "poster": not bool(
-            re.search(r"(?i)\b(?:without|no) (?:poster|picture|image)\b|\btext only\b", t)
+            re.search(
+                r"(?i)\b(?:without|no)\s+(?:the\s+)?(?:poster|picture|image|pic)\b|\b(?:poster|picture|image|pic)\s+off\b|\btext only\b",
+                t,
+            )
         ),
     }

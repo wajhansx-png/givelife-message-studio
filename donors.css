@@ -920,8 +920,39 @@ html body #donorBatchForm > select {
 html body #donorBatchForm > .batch-hint,
 html body #donorBatchForm > .batch-more,
 html body #donorBatchForm > .batch-foot,
+html body #donorBatchForm > .batch-gap-row,
+html body #donorBatchForm > label:has(+ .batch-gap-row),
 html body #batchResume {
   grid-column: 1/-1;
+}
+html body .batch-gap-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+html body .batch-gap-btn {
+  padding: 6px 14px;
+  height: 38px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--ink);
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+html body .batch-gap-btn:hover,
+html body .batch-gap-btn[aria-pressed='true'] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+html body .batch-gap-row #batchGap {
+  width: 80px;
+  min-width: 60px;
+  height: 38px;
+  flex-shrink: 0;
 }
 html body #donorBatchForm > .batch-foot {
   position: static;
@@ -1350,4 +1381,20 @@ html body #donorPasteDialog #pastePoster {
   .donor-resume-choices {
     grid-template-columns: 1fr;
   }
+}
+.volunteer-timing-dialog select {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  padding: 10px 12px;
+}
+.volunteer-timing-dialog #volTimingPlan {
+  margin-top: 12px;
+  color: var(--ink);
 }

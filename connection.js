@@ -57,7 +57,7 @@
   modal.className = 'connect-dialog';
   modal.setAttribute('aria-label', 'Unlock GiveLife studio');
   modal.innerHTML =
-    '<form id="cloudLogin"><div class="brandmark" style="margin-bottom:16px">♡</div><h2>Welcome to your studio</h2><p class="connect-muted">Your captions and WhatsApp, in one place.</p><label for="cloudKey">Private access key</label><input id="cloudKey" name="access_key" type="password" autocomplete="current-password" placeholder="Paste your access key…" required><p id="cloudError" class="connect-note" role="status" aria-live="polite">Use the key from your GiveLife setup.</p><button id="cloudUnlock" class="primary" style="width:100%">Unlock studio</button><p class="connect-muted" style="margin-bottom:0">Free cloud hosting may need about a minute to wake up.</p></form>';
+    '<form id="cloudLogin"><div class="brandmark" style="margin-bottom:16px">♡</div><h2>Welcome to your studio</h2><label for="cloudKey">Private access key</label><input id="cloudKey" name="access_key" type="password" autocomplete="current-password" placeholder="Paste your access key…" required><p id="cloudError" class="connect-note" role="status" aria-live="polite"></p><button id="cloudUnlock" class="primary" style="width:100%">Unlock studio</button></form>';
   document.body.append(modal);
   const el = (id) => document.getElementById(id);
   async function request(path, options = {}, token = key, timeout = 90000) {
@@ -141,7 +141,7 @@
   wa.id = 'whatsappDialog';
   wa.setAttribute('aria-label', 'WhatsApp connection');
   wa.innerHTML =
-    '<button id="waCloudClose" class="connect-close" aria-label="Close connection screen">✕</button><h2>WhatsApp connection</h2><p class="connect-muted">Connect once, then send from your phone or computer.</p><div class="connect-state"><div class="connect-symbol" id="waSymbol">◌</div><div><strong id="waHeading">Checking connection</strong><span id="waDetail">Contacting your cloud service…</span></div></div><div id="waInstructions"><ol class="connect-steps"><li>Tap <b>Show QR code</b> below.</li><li>On your WhatsApp phone, open <b>Settings → Linked devices → Link a device</b>.</li><li>Scan the QR on another screen. Keep this page open until it says connected.</li></ol><p class="connect-muted">Using only one phone? Open this screen on another device to scan its QR.</p></div><div id="waQRBox" class="connect-qr" hidden><img width="260" height="260" id="waCloudQR" alt="Scan this QR with WhatsApp Linked devices"><p id="waQRTime" class="connect-muted"></p></div><p id="waCloudStatus" class="connect-note" role="status" aria-live="polite"></p><div class="connect-actions"><button id="waReconnect" class="primary" hidden>Reconnect WhatsApp</button><button id="waCloudLogin" class="primary">Show QR code</button><button id="waCloudRefresh">Check again</button></div><p class="connect-muted" style="margin-bottom:0">Your laptop can be off. The free cloud may sleep between visits.</p>';
+    '<button id="waCloudClose" class="connect-close" aria-label="Close connection screen">✕</button><h2>WhatsApp connection</h2><div class="connect-state"><div class="connect-symbol" id="waSymbol">◌</div><div><strong id="waHeading">Checking connection</strong><span id="waDetail">Contacting your cloud service…</span></div></div><div id="waInstructions"><ol class="connect-steps"><li>Tap <b>Show QR code</b> below.</li><li>On your WhatsApp phone, open <b>Settings → Linked devices → Link a device</b>.</li><li>Scan the QR on another screen. Keep this page open until it says connected.</li></ol><p class="connect-muted">Using only one phone? Open this screen on another device to scan its QR.</p></div><div id="waQRBox" class="connect-qr" hidden><img width="260" height="260" id="waCloudQR" alt="Scan this QR with WhatsApp Linked devices"><p id="waQRTime" class="connect-muted"></p></div><p id="waCloudStatus" class="connect-note" role="status" aria-live="polite"></p><div class="connect-actions"><button id="waReconnect" class="primary" hidden>Reconnect WhatsApp</button><button id="waCloudLogin" class="primary">Show QR code</button><button id="waCloudRefresh">Check again</button></div>';
   document.body.append(wa);
   function paint(state, detail) {
     connected = state === 'online';
@@ -164,7 +164,7 @@
     if (connected) {
       expires = 0;
       el('waQRBox').hidden = true;
-      el('waCloudStatus').textContent = 'Ready. Return to your captions and send.';
+      el('waCloudStatus').textContent = '';
     }
   }
   function checkStatus() {

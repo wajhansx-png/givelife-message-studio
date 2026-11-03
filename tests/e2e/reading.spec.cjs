@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openPreview } = require('./helpers.cjs');
+const { showPreview } = require('./helpers.cjs');
 const auth = { Authorization: 'Bearer manual-fix-preview-key' };
 async function open(page, request) {
   await request.post('/__test/seed', {
@@ -27,8 +27,8 @@ for (const [width, height] of [
     await open(page, request);
     await request.post('/__test/seed', { headers: auth, data: { group: caption } });
     await page.reload();
-    if (width >= 900) await openPreview(page);
-    else await page.locator('#card').click(); /* phone: tapping the message peek opens the editor */
+    if (width >= 900) await showPreview(page);
+    else await page.locator('#showMsg').click();
     await expect(page.locator('#groupPreview')).toContainText('GiveLife Foundation');
     await expect
       .poll(() => page.locator('#chat').evaluate((el) => el.scrollHeight <= el.clientHeight + 2))
@@ -39,10 +39,7 @@ for (const [width, height] of [
       width: document.documentElement.scrollWidth,
       w: innerWidth,
     }));
-    if (height >= 700)
-      expect(bounds.bottom).toBeLessThanOrEqual(
-        bounds.h + 2,
-      ); /* very short phones may scroll the page */
+    expect(bounds.bottom).toBeLessThanOrEqual(bounds.h + 2);
     expect(bounds.width).toBeLessThanOrEqual(bounds.w + 1);
   });
 }

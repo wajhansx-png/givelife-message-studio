@@ -231,7 +231,8 @@ def send_custom(body):
             if jid == norm_phone(OWNER_PHONE):
                 raise ValueError("Your own account is excluded from donor sending.")
             exclusions = BLOCKED - CAMPAIGN_CONTACTED if explicit else BLOCKED
-            if (
+            # A deliberate one-person send by the owner overrides an auto-detected opt-out; batches and automation still honour it.
+            if not manual and (
                 alternate in exclusions
                 or digest in exclusions
                 or records.get("optout_" + alternate)
@@ -2031,16 +2032,24 @@ if STORE:
             "image", encoding="utf-8"
         )  # a large video is not kept across restarts; fall back to the picture
 if STORE:
+    # Older versions saved the poster dialog as a DM-only copy, so group posts kept the old poster.
+    # That copy is the owner's latest choice: make it the shared poster once.
     _dp = STORE.get("dm_poster_b64")
-    if _dp:
-        (DATA / "dm-poster.jpg").write_bytes(base64.b64decode(_dp))
     _dv = STORE.get("dm_poster_video_b64")
-    if _dv:
-        (DATA / "dm-poster.mp4").write_bytes(base64.b64decode(_dv))
-    if STORE.get("dm_poster_kind") in ("image", "video"):
-        (DATA / "dm-poster-kind.txt").write_text(
-            "video" if STORE.get("dm_poster_kind") == "video" and _dv else "image", encoding="utf-8"
-        )
+    _dk = STORE.get("dm_poster_kind")
+    if _dk == "video" and _dv:
+        (DATA / "poster.mp4").write_bytes(base64.b64decode(_dv))
+        (DATA / "poster-kind.txt").write_text("video", encoding="utf-8")
+        STORE.put("poster_video_b64", _dv)
+        STORE.put("poster_kind", "video")
+    elif _dp and _dk in ("image", None, ""):
+        (DATA / "poster.jpg").write_bytes(base64.b64decode(_dp))
+        (DATA / "poster-kind.txt").write_text("image", encoding="utf-8")
+        STORE.put("poster_b64", _dp)
+        STORE.put("poster_kind", "image")
+    if _dp or _dv or _dk:
+        for k in ("dm_poster_b64", "dm_poster_video_b64", "dm_poster_kind"):
+            STORE.put(k, "")
 CAMPAIGN = {
     "running": False,
     "stop": False,
@@ -2055,6 +2064,14 @@ CAMPAIGN = {
 }
 
 
+def clear_dm_poster():
+    for name in ("dm-poster.jpg", "dm-poster.mp4", "dm-poster-kind.txt"):
+        (DATA / name).unlink(missing_ok=True)
+    if STORE:
+        for k in ("dm_poster_b64", "dm_poster_video_b64", "dm_poster_kind"):
+            STORE.put(k, "")
+
+
 def save_upload(data_url, use):
     if use == "bulk":
         import batch_media
@@ -2062,11 +2079,11 @@ def save_upload(data_url, use):
         return batch_media.save(STORE, data_url)
     if use == "papers":
         return "papers-" + str(save_papers(data_url))
-    dm = use == "dm_poster"
-    pre = "dm-" if dm else ""
-    key = "dm_poster" if dm else "poster"
-    if dm:
+    # One poster for groups and DMs: the poster dialog (use='dm_poster') replaces both, never a DM-only copy.
+    if use == "dm_poster":
         use = "poster"
+    pre = ""
+    key = "poster"
     raw = base64.b64decode(data_url.split(",", 1)[-1])
     if data_url.startswith("data:video/"):
         if len(raw) > 15_000_000:
@@ -2089,6 +2106,7 @@ def save_upload(data_url, use):
                     base64.b64encode(raw).decode() if len(raw) <= 3_000_000 else "",
                 )
                 STORE.put(key + "_kind", "video")
+            clear_dm_poster()
             return "poster"
         aid = uuid.uuid4().hex[:12]
         (ATT / (aid + ".mp4")).write_bytes(raw)
@@ -2112,6 +2130,7 @@ def save_upload(data_url, use):
             STORE.put(key + "_kind", "image")
         (DATA / (pre + "poster.jpg")).write_bytes(raw)
         (DATA / (pre + "poster-kind.txt")).write_text("image", encoding="utf-8")
+        clear_dm_poster()
         return "poster"
     aid = uuid.uuid4().hex[:12]
     (ATT / (aid + ".jpg")).write_bytes(raw)
@@ -3841,6 +3860,7 @@ def assistant_task(body):
                 }
             )
             return ident
+        effective = chat_policy.followup(text, chat_get(40))["text"]
         if (
             draft_flow.selected_option(text, chat_get(40)) is not None
             or draft_flow.contextual_edit(
@@ -3851,10 +3871,10 @@ def assistant_task(body):
                     "drafts": json.loads(DRAFT.read_text(encoding="utf-8")),
                 },
             )
-            or chat_policy.intent(text)["negative"]
+            or chat_policy.intent(effective)["negative"]
             or re.fullmatch(r"(?i)\s*(?:no|cancel|stop|wait)\s*", text)
             or any(
-                chat_policy.permitted(name, text)
+                chat_policy.permitted(name, effective)
                 for name in base_chat_callbacks()
                 if name not in chat_policy.READ
             )
@@ -3895,6 +3915,7 @@ def assistant_task(body):
                     failures
                 )
             selection = draft_flow.selected_option(text, hist)
+            follow = chat_policy.followup(text, hist)
             image_attached = str(body.get("image") or "")
             if image_attached and chat_policy.variant_request(text):
                 output = {
@@ -3945,7 +3966,7 @@ def assistant_task(body):
                     },
                     preferences,
                     chat_callbacks(
-                        text,
+                        follow["text"],
                         revision,
                         ident,
                         selection,
@@ -4198,6 +4219,25 @@ def execute_manual_command(text, request_id=None, message_kind="group"):
         }
     plan = manual_commands.parse(text)
     if not plan:
+        return {"handled": False}
+    # "go ahead" / "continue" answer the assistant's last question. They only mean "lift the hold" while a hold is on.
+    if (
+        plan["kind"] == "resume"
+        and not on_hold()
+        and re.fullmatch(
+            r"(?i)\s*(?:please\s+)?(?:go ahead|continue|go on|carry on)\s*[.!]*\s*", str(text)
+        )
+    ):
+        return {"handled": False}
+    # "do it" / "go" / "send it" right after the assistant asked something is the answer to that question, not "resend the last message".
+    if (
+        plan["kind"] == "repeat"
+        and re.fullmatch(
+            r"(?i)\s*(?:please\s+)?(?:do it|do that|go|go ahead|send it|ok|okay|yes)\s*[.!]*\s*",
+            str(text),
+        )
+        and chat_policy.followup(text, chat_get(8))["inherited"]
+    ):
         return {"handled": False}
     if plan["kind"] == "say":
         # Only meaningful inside a plain-text chat; otherwise the assistant reads it with its context.
@@ -4671,6 +4711,8 @@ class Handler(BaseHTTPRequestHandler):
             "/compact-nav.css",
             "/focus-editor.js",
             "/focus-editor.css",
+            "/comfort.js",
+            "/comfort.css",
         ):
             name = "index.html" if self.path == "/" else self.path[1:]
             return self.reply(
@@ -5438,7 +5480,19 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 options = workflow().options("group", caption)
                 with SEND_LOCK:
-                    caption = focus_bank().reserve_groups(caption, 1)[0]
+                    try:
+                        caption = focus_bank().reserve_groups(caption, 1)[0]
+                    except ValueError as e:
+                        # A test only checks delivery; it must not wait for the ten-version bank to finish generating.
+                        if not any(
+                            x in str(e)
+                            for x in (
+                                "distinct saved versions",
+                                "Could not safely create",
+                                "Save a Group message",
+                            )
+                        ):
+                            raise
                     if read_left() <= 0 and completed_case_appeal(caption):
                         raise ValueError(
                             "Completed case: saved Group version still asks for donations. Nothing sent."
@@ -5487,6 +5541,7 @@ def donor_autopilot():
     for _ in range(20):
         try:
             donors().jobs.recover()
+            donors().volunteers.jobs.recover()
             break
         except Exception:
             time.sleep(30)
@@ -5494,7 +5549,7 @@ def donor_autopilot():
     while True:
         time.sleep(540)
         try:
-            if url and donors().jobs.active:
+            if url and (donors().jobs.active or donors().volunteers.jobs.active):
                 urllib.request.urlopen(url + "/health", timeout=20).read()
         except Exception:
             pass

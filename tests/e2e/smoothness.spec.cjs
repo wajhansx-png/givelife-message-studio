@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { reveal, openSettings, openPreview, openMessages } = require('./helpers.cjs');
+const { openSettings, showPreview } = require('./helpers.cjs');
 test.use({ actionTimeout: 8000 });
 const path = require('node:path');
 const auth = { Authorization: 'Bearer manual-fix-preview-key' };
@@ -201,11 +201,11 @@ for (const [width, height] of [
     await open(page, request, width, height);
     for (const tab of ['all', 'important', 'donated', 'not_contacted', 'messages']) {
       await page.locator('#openDonors').click();
-      if (tab === 'messages') await openMessages(page);
-      else await page.locator(`[data-tab=${tab}]`).click();
+      await page.locator(`[data-tab=${tab}]`).click();
       await page.reload();
       await expect(page.locator(`[data-tab=${tab}]`)).toHaveAttribute('aria-selected', 'true');
-      if (tab === 'messages') await page.locator('.bank-back-bottom').click();
+      if (tab === 'messages')
+        await page.locator(width < 900 ? '.bank-back-bottom' : '[data-tab=all]').click();
       await page.locator('#donorMainBottom').click();
       await page.locator(width < 900 ? '#chatOpen' : '#chatExpand').click();
       await expect(page.locator('#hist')).toBeVisible();
@@ -224,6 +224,29 @@ for (const [width, height] of [
       });
     }
   });
+test('closing an overlay after refresh restores its Preview parent visibly as well as in the address', async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(90000);
+  await open(page, request, 1280, 720);
+  for (const [launch, close] of [
+    ['#gear', '#setClose'],
+    ['#openDonors', '#donorMainBottom'],
+    ['#whatsappConnection', '#waCloudClose'],
+  ]) {
+    await showPreview(page);
+    await expect(page).toHaveURL(/#\/preview$/);
+    if (launch === '#gear') await openSettings(page);
+    else await page.locator(launch).click();
+    await page.reload();
+    await page.locator(close).click();
+    await expect(page).toHaveURL(/#\/preview$/);
+    await expect(page.locator('#card')).toBeVisible();
+    await expect(page.locator('body')).not.toHaveClass(/nomsg/);
+    await showPreview(page);
+  }
+});
 test('browser Back and Forward restore the visible screen after immediate Close navigation', async ({
   page,
   request,
@@ -242,9 +265,9 @@ test('browser Back and Forward restore the visible screen after immediate Close 
   await page.goForward();
   await expect(page.locator('#set')).toBeVisible();
   await page.locator('#setClose').click();
-  await openPreview(page);
+  await showPreview(page);
   await page.goBack();
-  await expect(page.locator('#messageFocus')).not.toBeVisible();
+  await expect(page.locator('#card')).not.toBeVisible();
   await page.goForward();
-  await expect(page.locator('#messageFocus')).toBeVisible();
+  await expect(page.locator('#card')).toBeVisible();
 });

@@ -117,6 +117,25 @@ SUGGESTIONS=chr(10).join(['Hi! Here is where things stand and what I would do ne
  '2','Restart Auto for main only','Keeps the case visible every 15 minutes.','3','Send a fresh donor batch','187 donors are uncontacted.',
  'Tell me which one to start, e.g. "post main now".'])
 
+class YesAcceptsTheOffer(Replay,unittest.TestCase):
+ def test_yes_accepts_the_assistants_own_proposal(self):
+  for history,expected in (
+   (chat('send the caption to all groups','Saved. Want me to restart Auto for main only?'),'restart Auto for main only'),
+   (chat('hello there friend','Want me to post main now?'),'post main now'),
+   ([{'who':'app','text':'Donations look slow. Want me to restart Auto for main only?'}],'restart Auto for main only')):
+   with self.subTest(expected=expected):
+    follow=chat_policy.followup('yes',history)
+    self.assertTrue(follow['inherited']);self.assertEqual(follow['text'],expected)
+ def test_yes_about_auto_does_not_resend_the_older_send_request(self):
+  history=chat('send the caption to all groups','Saved. Want me to restart Auto for main only?')
+  self.play('yes',history,[{'content':'Auto restarted.'}],{})
+  self.assertIn('autopilot',self.offered)
+  self.assertNotIn('send_appeal',self.offered)
+ def test_yes_to_save_it_still_edits_the_draft_the_owner_asked_about(self):
+  follow=chat_policy.followup('yes',chat('make the dm shorter','Here is the shorter DM. Shall I save it?'))
+  self.assertTrue(chat_policy.permitted('set_message',follow['text']))
+  self.assertEqual(follow['text'],'make the dm shorter. save it')
+
 class PickingASuggestion(Replay,unittest.TestCase):
  HISTORY=chat('hi there suggestions',SUGGESTIONS)
  def test_numbers_and_ordinals_pick_the_matching_suggestion(self):

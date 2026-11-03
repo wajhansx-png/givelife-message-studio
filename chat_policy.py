@@ -50,6 +50,14 @@ def choice(text,items):
  if len(picks)!=1:return None
  if [w for w in words if not w.isdigit() and w not in ORDINALS and w not in CHOICE_FILLERS]:return None
  return items.get(next(iter(picks)))
+OFFER=re.compile(r"(?i)(?:do you want me to|would you like me to|want me to|shall i|should i|can i|may i)\s+(?P<offer>[^?]+)\?\s*\W*$")
+def proposal(text):
+ """What the assistant just offered to do ("Want me to restart Auto for main only?" -> "restart Auto for main only")."""
+ match=OFFER.search(str(text).strip())
+ if not match:return ''
+ offer=match['offer'].strip().rstrip('.')
+ return offer if len(offer.split())>=2 else ''
+
 def followup(text,history):
  """Resolve a short reply ("yes", "do it", "kar do", "all groups") against the question it answers.
 
@@ -70,9 +78,15 @@ def followup(text,history):
  if len(numbered_items(last['text']))>=2 and (answer or re.search(r'\d',value)):return plain # an ambiguous reply to a list of options: the model must ask which one
  if not answer and (len(value.split())>6 or smalltalk(value) or intent(value)['send'] or QUESTION.search(value) or re.search(r'(?i)\b(?:send|post|dm|edit|change|set|delete|add|remove|stop|pause|hold|start|resume)\b',value)):return plain
  prev=next((t['text'].strip() for t in reversed(turns[:-1]) if _substantive(t)),'')
- if not prev or intent(prev)['query']:return plain
+ offer=proposal(last['text']) if answer else ''
+ if offer and intent(prev)['query'] and re.fullmatch(r'(?i)\w+ (?:it|that|this|them)',offer):offer=''
+ if not prev and not offer or prev and intent(prev)['query'] and not offer:return plain
  asked_send=bool(re.search(r'(?i)\b(?:send|post|dm|message|share|resend|bhej\w*)\b',last['text']))
- effective=prev if answer else prev+'. '+value
+ if offer:
+  # "yes" accepts what was offered. A send in the owner's older request is not accepted by a yes about something else.
+  effective=offer if intent(offer)['send'] or intent(prev)['send'] or intent(prev)['query'] or not prev else prev+'. '+offer
+  prev=prev or offer
+ else:effective=prev if answer else prev+'. '+value
  if intent(effective)['send'] and not asked_send:return plain
  return {'text':effective,'inherited':True,'prev':prev,'asked':last['text'][-300:]}
 

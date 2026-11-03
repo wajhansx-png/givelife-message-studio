@@ -1090,8 +1090,7 @@ const delays = { main: 0, free: 0 };
 const delayScope = (key) => (key === 'main' ? 'main' : key === 'all' ? (delays.main ? 'main' : 'free') : 'free');
 const delayFor = (key) => delays[delayScope(key)];
 const delayText = (m) => (m < 60 ? m + ' min' : m === 60 ? '1 hr' : m / 60 + ' hr');
-function setDelay(scope, minutes) {
-  delays[scope] = delays[scope] === minutes ? 0 : minutes;
+function paintDelay(scope) {
   document.querySelectorAll('.delay-pill[data-delay-scope="' + scope + '"]').forEach((b) => {
     b.setAttribute('aria-pressed', String(Number(b.dataset.delay) === delays[scope]));
   });
@@ -1108,6 +1107,14 @@ function setDelay(scope, minutes) {
       }
     });
   }
+}
+/* One timer at a time: choosing a time on one card switches the other card's timer off. */
+function setDelay(scope, minutes) {
+  delays[scope] = delays[scope] === minutes ? 0 : minutes;
+  const other = scope === 'main' ? 'free' : 'main';
+  if (delays[scope] > 0) delays[other] = 0;
+  paintDelay('main');
+  paintDelay('free');
   $('sendAll').classList.toggle('delay-armed', delays.main > 0 || delays.free > 0);
 }
 document

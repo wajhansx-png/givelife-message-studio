@@ -1748,3 +1748,13 @@ html body .group-send .grp-card .free-auto{border-top:1px dashed #ffffff22;paddi
 html body .action-rail .group-send{overflow:visible!important}
 html body .action-rail{overflow-y:auto!important;overflow-x:hidden!important;align-content:start}
 html body .group-send .grp-card .delay-hint{display:none!important}
+
+/* Compact send panel: no repeated labels, tight cards, pills sized to the narrow desktop rail. */
+html body .group-send .grp-card .delay-row .delay-label{display:none!important}
+html body .group-send .grp-card{padding:6px!important;gap:6px!important;border-radius:12px!important}
+html body .group-send .group-two{gap:8px!important}
+html body .group-send .grp-card .group-main-btn,html body .group-send .grp-card .group-free-btn{min-height:44px!important;padding:6px 30px 6px 12px!important}
+html body .group-send .grp-card .delay-pill{min-height:38px!important;font-size:12.5px!important;padding:0!important;letter-spacing:-.2px;border-radius:9px!important}
+html body .group-send .grp-card .delay-row:not(.free-auto){gap:5px!important}
+html body .group-send .send-title{margin-bottom:6px!important}
+html body .group-send .group-all-btn{min-height:44px!important}

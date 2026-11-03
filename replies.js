@@ -9,7 +9,7 @@
   const dlg = make('dialog', 'donor-form-dialog replies-dialog');
   dlg.setAttribute('aria-label', 'Auto replies');
   dlg.innerHTML =
-    '<h2>Reply</h2><p style="margin:0 0 6px;font-size:13px;opacity:.75">Sent once when someone says done / donated or sends a picture. Checked every minute.</p><label style="display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:600"><input type="checkbox" id="repEnabled" style="width:20px;height:20px;min-height:0;flex:none"> Turn ON</label><div id="repList"></div><p id="repNote" role="status"></p><div class="donor-form-actions"><button type="button" id="repAdd">+ Add another reply</button><button type="button" id="repClose">Close</button><button type="button" class="primary" id="repSave">Save</button></div>';
+    '<h2>Reply</h2><p style="margin:0 0 6px;font-size:13px;opacity:.75">When someone sends a picture or says done / donated, every reply below goes to them as its own message. WhatsApp is checked every minute.</p><label style="display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:600"><input type="checkbox" id="repEnabled" style="width:20px;height:20px;min-height:0;flex:none"> Turn ON</label><div id="repList"></div><p id="repNote" role="status"></p><div class="donor-form-actions"><button type="button" id="repAdd">+ Add another reply</button><button type="button" id="repClose">Close</button><button type="button" class="primary" id="repSave">Save</button></div>';
   document.body.append(dlg);
   const $ = (id) => document.getElementById(id);
   const row = (text) => {
@@ -37,7 +37,8 @@
       const d = await r.json();
       $('repEnabled').checked = !!d.enabled;
       $('repList').textContent = '';
-      (d.replies && d.replies.length ? d.replies : ['']).forEach(row);
+      const saved = d.replies && d.replies.length ? d.replies : [];
+      (saved.length >= 2 ? saved : [...saved, '', ''].slice(0, 2)).forEach(row);
       note(
         d.autopilot ? '' : 'Auto is off. Replies are saved but only sent while Auto is on.',
         false,
@@ -80,12 +81,19 @@
     load();
     dlg.showModal();
   };
-  const tools = document.querySelector('.overflow-tools>div');
-  if (tools) {
-    const b = make('button', 'tool', 'Reply');
+  /* The Reply button lives in the header More menu (and the old message tools menu as a fallback). */
+  const place = () => {
+    const panel =
+      document.querySelector('#mainNavMore .compact-nav-panel') ||
+      document.querySelector('.overflow-tools>div');
+    if (!panel || panel.querySelector('.reply-open')) return !!panel;
+    const b = make('button', 'tool reply-open', 'Reply');
     b.type = 'button';
     b.onclick = open;
-    tools.append(b);
-  }
+    panel.append(b);
+    return true;
+  };
+  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', place);
+  else place();
   window.AutoReplies = { open };
 })();

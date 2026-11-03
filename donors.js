@@ -1105,7 +1105,10 @@
             }),
         signal: controller.signal,
       });
-      const d = await r.json();
+      /* While the app is being updated the server answers with a web page, not data: say so plainly. */
+      const d = await r.json().catch(() => {
+        throw Error('The app is restarting after an update. Wait a minute, then tap again.');
+      });
       if (!r.ok) throw Error(d.error || 'The request could not complete.');
       return d;
     } catch (e) {

@@ -163,10 +163,9 @@ class AutoReplyTests(unittest.TestCase):
         e, sent = self.engine(s, msgs)
         e.scan_reply_setup()
         e.scan_reply_setup()
-        self.assertEqual(
-            len(sent), 1
-        )  # the second scan adds nothing; same person only once per 6 hours
-        self.assertEqual(sent[0], ("923001234567@s.whatsapp.net", "Thank you"))
+        # Both saved replies go, each as its own message; the second scan adds nothing (once per 6 hours).
+        jid = "923001234567@s.whatsapp.net"
+        self.assertEqual(sent, [(jid, "Thank you"), (jid, "JazakAllah")])
 
     def test_off_or_on_hold_sends_nothing(self):
         s = self.store()

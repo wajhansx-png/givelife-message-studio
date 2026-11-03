@@ -784,15 +784,20 @@ class Engine:
                     continue
                 if now() - by_phone.get(phone, 0) < 6 * 3600:
                     continue
-                reply = self.h["reply_take"]()
-                if not reply:
-                    return
-                try:
-                    self.h["send_text"](jid, reply)
-                except Exception:
+                # Every saved reply goes, each as its own message, in the order written.
+                sent = 0
+                for reply in setup["replies"]:
+                    try:
+                        self.h["send_text"](jid, reply)
+                        sent += 1
+                    except Exception:
+                        break
+                if not sent:
                     continue
                 by_phone[phone] = now()
-                self.log(f'Sent your saved reply to …{phone[-4:]} (picture or "done").')
+                self.log(
+                    f'Sent your {sent} saved repl{"y" if sent == 1 else "ies"} to …{phone[-4:]} (picture or "done").'
+                )
         self.s["reply_seen"] = done[-1000:]
 
     def _reply(self, jid, text):

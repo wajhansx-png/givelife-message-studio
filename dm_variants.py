@@ -21,7 +21,8 @@ SYSTEM = """You are a careful fundraising copy editor for GiveLife Foundation.
 You rewrite one WhatsApp direct message into new versions with the same concept,
 facts and formatting. Return only the JSON array the user asks for. Never add
 commentary, markdown fences, headings or a delivery claim.
-Write in very easy English. Vary the ENTIRE editable story, not just one hook.
+Write English lines in very easy English and Urdu lines in simple, natural Urdu (Urdu script).
+Vary the ENTIRE editable story, not just one hook.
 Do not invent medical details, fundraising deadlines or verified outcomes."""
 
 
@@ -213,6 +214,9 @@ NON-NEGOTIABLE:
   approaches across versions. No invented time pressure, medical progression,
   consequences, deadlines, promises, or extra diagnoses.
 - Rewrite each editable paragraph into genuinely different, very easy English.
+- URDU: a line written in Urdu stays in Urdu script and is reworded in simple, moving Urdu
+  (never translated to English, never transliterated). A Quran verse, hadith or its
+  reference, e.g. (سورة المائدہ: 2), is copied exactly, word for word.
   Retain the original paragraph order, blank lines, and WhatsApp formatting.
 - Do not invent guilt, death threats, or unverified claims.
 - Keep every emoji and every *, _ and *_ WhatsApp formatting marker in the same

@@ -114,7 +114,8 @@ def send_custom(body):
    records={key:STORE.get(key) for key in ('optout_'+alternate,'optout_'+digest,'dm_recipient_'+alternate,'dm_recipient_'+digest)} if not hasattr(STORE,'get_many') else STORE.get_many(('optout_'+alternate,'optout_'+digest,'dm_recipient_'+alternate,'dm_recipient_'+digest))
    if jid==norm_phone(OWNER_PHONE):raise ValueError('Your own account is excluded from donor sending.')
    exclusions=BLOCKED-CAMPAIGN_CONTACTED if explicit else BLOCKED
-   if alternate in exclusions or digest in exclusions or records.get('optout_'+alternate) or records.get('optout_'+digest):raise ValueError('This recipient is blocked or opted out.')
+   # A deliberate one-person send by the owner overrides an auto-detected opt-out; batches and automation still honour it.
+   if not manual and (alternate in exclusions or digest in exclusions or records.get('optout_'+alternate) or records.get('optout_'+digest)):raise ValueError('This recipient is blocked or opted out.')
    if not explicit:
     for key in ('dm_recipient_'+alternate,'dm_recipient_'+digest):
      previous=records.get(key)

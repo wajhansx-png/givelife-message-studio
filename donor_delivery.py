@@ -228,7 +228,7 @@ class DonorDelivery:
             if hold and hold>time.time():
                 self._update(j['id'],state='Waiting',next_at=hold,next_batch_at=hold,current='Waiting for the next batch time')
                 if self._sleep_until(hold):
-                    self._update(j['id'],state='Stopped',next_at=None,next_batch_at=None,current='');self.active=None;return
+                    state='Stopped';return
             for index,ident in enumerate(j['ids']):
                 if self.stop.is_set():state='Stopped';break
                 if self.held():state='Stopped';error='Sending is on hold.';break
@@ -283,7 +283,7 @@ class DonorDelivery:
         with self.lock:
             self.status();jobs=self._load().get('jobs',[]);j=jobs[-1] if jobs else None
         if not j or not j.get('auto') or j.get('state')!='Interrupted' or not self._remaining(j) or j.get('boot')==self.boot or self.active or time.time()-j.get('updated_at',0)>self.AUTO_WINDOW:return None
-        hold=j.get('next_batch_at') or j.get('next_at')
+        hold=max((j.get(key) or 0 for key in ('hold_until','next_batch_at','next_at')))
         args=dict(scope=j['scope'],gap_seconds=j['gap_seconds'],poster=j.get('poster',True),hold_until=hold if hold and hold>time.time() else None,skip_contacted=False)
         if j.get('chunk'):args.update(chunk=j['chunk'],rests=j.get('rests'))
         if j.get('jitter'):args['jitter']=j['jitter']

@@ -1,4 +1,5 @@
 const {test,expect}=require('@playwright/test');
+const {showPreview}=require('./helpers.cjs');
 const auth={Authorization:'Bearer manual-fix-preview-key'};
 async function open(page,request){
  await request.post('/__test/seed',{headers:auth,data:{reply:'GROUP message saved (poster + caption).\n\n'+caption}});
@@ -14,7 +15,7 @@ for(const [width,height] of [[1440,900],[1280,720],[1024,768],[390,844],[320,640
   await page.setViewportSize({width,height});await open(page,request);
   await request.post('/__test/seed',{headers:auth,data:{group:caption}});
   await page.reload();
-  if(width>=900)await page.locator('#desktopPreview').click();else await page.locator('#showMsg').click();
+  if(width>=900)await showPreview(page);else await page.locator('#showMsg').click();
   await expect(page.locator('#groupPreview')).toContainText('GiveLife Foundation');
   await expect.poll(()=>page.locator('#chat').evaluate(el=>el.scrollHeight<=el.clientHeight+2)).toBe(true);
   const bounds=await page.locator('.app').evaluate(el=>({bottom:el.getBoundingClientRect().bottom,h:innerHeight,width:document.documentElement.scrollWidth,w:innerWidth}));

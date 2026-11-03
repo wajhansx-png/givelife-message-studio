@@ -33,7 +33,7 @@
   if(data?.member){const p=make('button','tool team-pause',data.paused?'Resume':'Pause');p.type='button';p.onclick=()=>act({action:'pause',on:!data.paused},data.paused?'Resumed.':'Paused. Nothing will be sent.');head.append(p)}
   shell.append(head);const body=make('div','team-body');
   if(!data?.member){
-   const f=make('form','team-card team-setup');f.append(make('h2','','Who is your teammate?'),make('p','team-hint','Their WhatsApp number stays hidden.'));
+   const f=make('form','team-card team-setup');f.append(make('h2','','Who is your teammate?'));
    const n=make('input','');n.name='team_name';n.placeholder='Name';n.autocomplete='off';n.setAttribute('aria-label','Teammate name');const ph=make('input','');ph.name='team_phone';ph.type='tel';ph.placeholder='WhatsApp number';ph.setAttribute('aria-label','Teammate WhatsApp number');
    const b=make('button','primary','Save teammate');b.type='submit';f.append(n,ph,b);f.onsubmit=e=>{e.preventDefault();act({action:'member',name:n.value,phone:ph.value},'Teammate saved.')};body.append(f)}
   else{

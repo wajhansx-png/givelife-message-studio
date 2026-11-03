@@ -1,4 +1,5 @@
 const {test,expect}=require('@playwright/test');
+const {openSettings,showPreview}=require('./helpers.cjs');
 test.use({actionTimeout:8000});
 const path=require('node:path');
 const auth={Authorization:'Bearer manual-fix-preview-key'};
@@ -57,13 +58,13 @@ for(const [width,height] of [[1280,720],[1024,600],[390,700],[320,568]])test(`sc
 test('closing an overlay after refresh restores its Preview parent visibly as well as in the address',async({page,request})=>{
  test.setTimeout(90000);await open(page,request,1280,720);
  for(const [launch,close] of [['#gear','#setClose'],['#openDonors','#donorMainBottom'],['#whatsappConnection','#waCloudClose']]){
-  await page.locator('#desktopPreview').click();await expect(page).toHaveURL(/#\/preview$/);await page.locator(launch).click();await page.reload();await page.locator(close).click();
-  await expect(page).toHaveURL(/#\/preview$/);await expect(page.locator('#card')).toBeVisible();await expect(page.locator('body')).not.toHaveClass(/nomsg/);await page.locator('#desktopPreview').click();
+  await showPreview(page);await expect(page).toHaveURL(/#\/preview$/);if(launch==='#gear')await openSettings(page);else await page.locator(launch).click();await page.reload();await page.locator(close).click();
+  await expect(page).toHaveURL(/#\/preview$/);await expect(page.locator('#card')).toBeVisible();await expect(page.locator('body')).not.toHaveClass(/nomsg/);await showPreview(page);
  }
 });
 test('browser Back and Forward restore the visible screen after immediate Close navigation',async({page,request})=>{
  await open(page,request,1280,720);await page.locator('#openDonors').click();await expect(page.locator('#donorsPage')).toBeVisible();
  await page.goBack();await expect(page.locator('#donorsPage')).not.toBeVisible();await page.goForward();await expect(page.locator('#donorsPage')).toBeVisible();await page.locator('#donorMainBottom').click();
- await page.locator('#gear').click();await page.goBack();await expect(page.locator('#set')).not.toBeVisible();await page.goForward();await expect(page.locator('#set')).toBeVisible();await page.locator('#setClose').click();
- await page.locator('#desktopPreview').click();await page.goBack();await expect(page.locator('#card')).not.toBeVisible();await page.goForward();await expect(page.locator('#card')).toBeVisible();
+ await openSettings(page);await page.goBack();await expect(page.locator('#set')).not.toBeVisible();await page.goForward();await expect(page.locator('#set')).toBeVisible();await page.locator('#setClose').click();
+ await showPreview(page);await page.goBack();await expect(page.locator('#card')).not.toBeVisible();await page.goForward();await expect(page.locator('#card')).toBeVisible();
 });

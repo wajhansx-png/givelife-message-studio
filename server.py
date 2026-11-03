@@ -114,7 +114,8 @@ def send_custom(body):
    records={key:STORE.get(key) for key in ('optout_'+alternate,'optout_'+digest,'dm_recipient_'+alternate,'dm_recipient_'+digest)} if not hasattr(STORE,'get_many') else STORE.get_many(('optout_'+alternate,'optout_'+digest,'dm_recipient_'+alternate,'dm_recipient_'+digest))
    if jid==norm_phone(OWNER_PHONE):raise ValueError('Your own account is excluded from donor sending.')
    exclusions=BLOCKED-CAMPAIGN_CONTACTED if explicit else BLOCKED
-   if alternate in exclusions or digest in exclusions or records.get('optout_'+alternate) or records.get('optout_'+digest):raise ValueError('This recipient is blocked or opted out.')
+   # A deliberate one-person send by the owner overrides an auto-detected opt-out; batches and automation still honour it.
+   if not manual and (alternate in exclusions or digest in exclusions or records.get('optout_'+alternate) or records.get('optout_'+digest)):raise ValueError('This recipient is blocked or opted out.')
    if not explicit:
     for key in ('dm_recipient_'+alternate,'dm_recipient_'+digest):
      previous=records.get(key)
@@ -2166,7 +2167,7 @@ class Handler(BaseHTTPRequestHandler):
   if self.path.split('?')[0] in ('/group-finder','/group-finder.js','/group-finder.css'):
    name=self.path.split('?')[0][1:];name='group-finder.html' if name=='group-finder' else name
    return self.reply((ROOT/name).read_bytes(),'text/html' if name.endswith('.html') else 'text/css' if name.endswith('.css') else 'application/javascript')
-  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/replies.js','/team.js','/notes.js','/notes.css','/donors.css','/studio.css','/compact-nav.js','/compact-nav.css','/focus-editor.js','/focus-editor.css'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/replies.js','/team.js','/notes.js','/notes.css','/donors.css','/studio.css','/compact-nav.js','/compact-nav.css','/focus-editor.js','/focus-editor.css','/comfort.js','/comfort.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
@@ -2521,13 +2522,13 @@ def donor_autopilot():
  import urllib.request
  time.sleep(20)
  for _ in range(20):
-  try:donors().jobs.recover();break
+  try:donors().jobs.recover();donors().volunteers.jobs.recover();break
   except Exception:time.sleep(30)
  url=os.environ.get('RENDER_EXTERNAL_URL','').rstrip('/')
  while True:
   time.sleep(540)
   try:
-   if url and donors().jobs.active:urllib.request.urlopen(url+'/health',timeout=20).read()
+   if url and (donors().jobs.active or donors().volunteers.jobs.active):urllib.request.urlopen(url+'/health',timeout=20).read()
   except Exception:pass
 
 ensure_dm_structure()

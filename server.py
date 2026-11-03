@@ -1000,20 +1000,30 @@ if STORE:
  if STORE.get('poster_kind')=='video' and _v:(DATA/'poster-kind.txt').write_text('video',encoding='utf-8')
  elif STORE.get('poster_kind')=='video':(DATA/'poster-kind.txt').write_text('image',encoding='utf-8') # a large video is not kept across restarts; fall back to the picture
 if STORE:
- _dp=STORE.get('dm_poster_b64')
- if _dp:(DATA/'dm-poster.jpg').write_bytes(base64.b64decode(_dp))
- _dv=STORE.get('dm_poster_video_b64')
- if _dv:(DATA/'dm-poster.mp4').write_bytes(base64.b64decode(_dv))
- if STORE.get('dm_poster_kind') in ('image','video'):(DATA/'dm-poster-kind.txt').write_text('video' if STORE.get('dm_poster_kind')=='video' and _dv else 'image',encoding='utf-8')
+ # Older versions saved the poster dialog as a DM-only copy, so group posts kept the old poster.
+ # That copy is the owner's latest choice: make it the shared poster once.
+ _dp=STORE.get('dm_poster_b64');_dv=STORE.get('dm_poster_video_b64');_dk=STORE.get('dm_poster_kind')
+ if _dk=='video' and _dv:
+  (DATA/'poster.mp4').write_bytes(base64.b64decode(_dv));(DATA/'poster-kind.txt').write_text('video',encoding='utf-8');STORE.put('poster_video_b64',_dv);STORE.put('poster_kind','video')
+ elif _dp and _dk in ('image',None,''):
+  (DATA/'poster.jpg').write_bytes(base64.b64decode(_dp));(DATA/'poster-kind.txt').write_text('image',encoding='utf-8');STORE.put('poster_b64',_dp);STORE.put('poster_kind','image')
+ if _dp or _dv or _dk:
+  for k in ('dm_poster_b64','dm_poster_video_b64','dm_poster_kind'):STORE.put(k,'')
 CAMPAIGN={'running':False,'stop':False,'total':0,'sent':0,'failed':0,'skipped':0,'next_at':0,'current':'','log':[],'id':None}
+
+def clear_dm_poster():
+ for name in ('dm-poster.jpg','dm-poster.mp4','dm-poster-kind.txt'):(DATA/name).unlink(missing_ok=True)
+ if STORE:
+  for k in ('dm_poster_b64','dm_poster_video_b64','dm_poster_kind'):STORE.put(k,'')
 
 def save_upload(data_url,use):
  if use=='bulk':
   import batch_media
   return batch_media.save(STORE,data_url)
  if use=='papers':return 'papers-'+str(save_papers(data_url))
- dm=use=='dm_poster';pre='dm-' if dm else '';key='dm_poster' if dm else 'poster'
- if dm:use='poster'
+ # One poster for groups and DMs: the poster dialog (use='dm_poster') replaces both, never a DM-only copy.
+ if use=='dm_poster':use='poster'
+ pre='';key='poster'
  raw=base64.b64decode(data_url.split(',',1)[-1])
  if data_url.startswith('data:video/'):
   if len(raw)>15_000_000:raise ValueError('Video is too big (max 15 MB, the WhatsApp limit).')
@@ -1022,6 +1032,7 @@ def save_upload(data_url,use):
    if (DONORS and DONORS.jobs.active) or CAMPAIGN.get('running') or ACTIVE and not mapping(JOBS.get(ACTIVE)).get('done'):raise ValueError('Wait until the active send finishes before changing the poster.')
    (DATA/(pre+'poster.mp4')).write_bytes(raw);(DATA/(pre+'poster-kind.txt')).write_text('video',encoding='utf-8')
    if STORE:STORE.put(key+'_video_b64',base64.b64encode(raw).decode() if len(raw)<=3_000_000 else '');STORE.put(key+'_kind','video')
+   clear_dm_poster()
    return 'poster'
   aid=uuid.uuid4().hex[:12];(ATT/(aid+'.mp4')).write_bytes(raw);return aid
  if len(raw)>8_000_000:raise ValueError('Picture is too big (max 8 MB).')
@@ -1030,6 +1041,7 @@ def save_upload(data_url,use):
   if not raw.startswith(b'\xff\xd8\xff'):raise ValueError('Choose a JPEG poster. The upload control converts your picture automatically.')
   if STORE:STORE.put(key+'_b64',base64.b64encode(raw).decode());STORE.put(key+'_kind','image')
   (DATA/(pre+'poster.jpg')).write_bytes(raw);(DATA/(pre+'poster-kind.txt')).write_text('image',encoding='utf-8')
+  clear_dm_poster()
   return 'poster'
  aid=uuid.uuid4().hex[:12];(ATT/(aid+'.jpg')).write_bytes(raw);return aid
 

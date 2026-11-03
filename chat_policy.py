@@ -1,166 +1,445 @@
 """Tool permissions derive from current owner text, never retrieved/tool content."""
-import re,math
+
+import re, math
 import manual_commands
 import timed_tasks
 import draft_flow
 
-READ={'find_contact','recent_activity','list_rules','search_memory','list_schedules','get_message','app_status'}
-SEND={'send_message','send_appeal','send_dm_appeal','dm_list','dm_donors','dm_group'}
+READ = {
+    "find_contact",
+    "recent_activity",
+    "list_rules",
+    "search_memory",
+    "list_schedules",
+    "get_message",
+    "app_status",
+}
+SEND = {"send_message", "send_appeal", "send_dm_appeal", "dm_list", "dm_donors", "dm_group"}
 
-def switch_request(text,subject):
- clauses=re.split(r';|\band(?: then)?\b|\bbut\b',owner_text(text),flags=re.I)
- selected=[c for c in clauses if re.search(r'(?i)\b(?:auto|autopilot)\b' if subject=='auto' else r'(?i)\bdms?\b',c)]
- states=set()
- for clause in selected:
-  if re.search(r'(?i)\b(on|enable|start)\b',clause):states.add(True)
-  if re.search(r'(?i)\b(off|disable|stop)\b',clause):states.add(False)
- return next(iter(states)) if len(states)==1 else None
+
+def switch_request(text, subject):
+    clauses = re.split(r";|\band(?: then)?\b|\bbut\b", owner_text(text), flags=re.I)
+    selected = [
+        c
+        for c in clauses
+        if re.search(r"(?i)\b(?:auto|autopilot)\b" if subject == "auto" else r"(?i)\bdms?\b", c)
+    ]
+    states = set()
+    for clause in selected:
+        if re.search(r"(?i)\b(on|enable|start)\b", clause):
+            states.add(True)
+        if re.search(r"(?i)\b(off|disable|stop)\b", clause):
+            states.add(False)
+    return next(iter(states)) if len(states) == 1 else None
+
+
 def smalltalk(text):
- t=re.sub(r'[^\w\s]','',str(text).casefold()).strip()
- return bool(re.fullmatch(r'(?:hi+|hu|hey+|he+l+o+|yo+|salam|assalamualaikum|how (?:are|r) (?:you|u)|how are you doing|hows it going|everything good|good (?:morning|evening|night)|kya haal hai|kya hal hai|sab theek)',t))
+    t = re.sub(r"[^\w\s]", "", str(text).casefold()).strip()
+    return bool(
+        re.fullmatch(
+            r"(?:hi+|hu|hey+|he+l+o+|yo+|salam|assalamualaikum|how (?:are|r) (?:you|u)|how are you doing|hows it going|everything good|good (?:morning|evening|night)|kya haal hai|kya hal hai|sab theek)",
+            t,
+        )
+    )
+
+
 def variant_request(text):
- """A request to rewrite a pasted message into several versions, not a single draft edit."""
- t=owner_text(text)
- if re.search(r'(?i)\b(?:send|post|dm)\b',t) and not re.search(r'(?i)\bsend\s+(?:me|us)\b',t) and not re.search(r'(?i)\b(?:generate|make|create|write|rewrite|give|show|prepare|produce)\b',t):return False
- return bool(
-  re.search(r'(?i)\b(?:generate|make|create|write|rewrite|give|show|prepare|produce)\b.{0,120}\b(?:10|ten|\d{1,2})\b.{0,50}\b(?:versions?|variants?|wordings?|rewrites?)\b',t)
-  or re.search(r'(?i)\b(?:10|ten|\d{1,2})\b.{0,40}\b(?:versions?|variants?|wordings?|rewrites?)\b',t))
+    """A request to rewrite a pasted message into several versions, not a single draft edit."""
+    t = owner_text(text)
+    if (
+        re.search(r"(?i)\b(?:send|post|dm)\b", t)
+        and not re.search(r"(?i)\bsend\s+(?:me|us)\b", t)
+        and not re.search(
+            r"(?i)\b(?:generate|make|create|write|rewrite|give|show|prepare|produce)\b", t
+        )
+    ):
+        return False
+    return bool(
+        re.search(
+            r"(?i)\b(?:generate|make|create|write|rewrite|give|show|prepare|produce)\b.{0,120}\b(?:10|ten|\d{1,2})\b.{0,50}\b(?:versions?|variants?|wordings?|rewrites?)\b",
+            t,
+        )
+        or re.search(
+            r"(?i)\b(?:10|ten|\d{1,2})\b.{0,40}\b(?:versions?|variants?|wordings?|rewrites?)\b", t
+        )
+    )
+
+
 def owner_text(text):
- text=re.sub(r'```[\s\S]*?```',' [quoted data] ',str(text))
- text=re.sub(r'(?m)^\s*>.*$',' [quoted data] ',text)
- text=re.sub(r'"[^"\n]*"|“[^”\n]*”',' [quoted data] ',text)
- text=re.sub(r"(?<!\w)'[^'\n]+'(?!\w)",' [quoted data] ',text)
- text=re.split(r'(?i)(?:message says|text says|transcript|chat log|conversation log|see fixes in logic|see fn remove|summarize this|analyse this|analyze this)\s*:',text,maxsplit=1)[0]
- return text
+    text = re.sub(r"```[\s\S]*?```", " [quoted data] ", str(text))
+    text = re.sub(r"(?m)^\s*>.*$", " [quoted data] ", text)
+    text = re.sub(r'"[^"\n]*"|“[^”\n]*”', " [quoted data] ", text)
+    text = re.sub(r"(?<!\w)'[^'\n]+'(?!\w)", " [quoted data] ", text)
+    text = re.split(
+        r"(?i)(?:message says|text says|transcript|chat log|conversation log|see fixes in logic|see fn remove|summarize this|analyse this|analyze this)\s*:",
+        text,
+        maxsplit=1,
+    )[0]
+    return text
+
 
 def intent(text):
- t=owner_text(text)
- query=manual_commands.question_request(t) or bool(re.search(r'(?i)^show (?:me )?(?:what|status)\b',t.strip()))
- # A request to inspect or draft a send is not itself permission to send.
- inspect=bool(re.match(r'(?i)^\s*(?:please\s+)?(?:show|preview|draft|explain|review|summari[sz]e|analy[sz]e|tell me)\b',t))
- negative=bool(re.search(r"(?i)\b(?:don'?t|dont|do not|never|stop)\s+(?:ever\s+)?(?:send|sending|resend|resending|re-send|post|posting|repost|share|sharing|forward|bhejo|bhej|dm|dms)\b|\b(preview only|draft only)\b",t))
- dm_verb=bool(re.match(r'(?i)^\s*dm\s+(?!(?:has|have|had|is|was|looks|needs|should|does|caption|format|structure|name|text|icons|remove|edit|change)\b)\S',t))
- sending=bool(manual_commands.SEND.search(t) or re.search(r'(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b',t) or dm_verb) and not negative and not query and not inspect and not manual_commands.deferred_request(t)
- if re.search(r'(?i)\bsend\s+(?:me|us)\b.{0,50}\b(?:10|ten|\d{1,2})\b.{0,40}\b(?:versions?|variants?|wordings?)\b',t):sending=False
- # "Send a more emotional message" can request wording. An explicit destination
- # or immediate-send phrase disambiguates it; otherwise only prepare the rewrite.
- if draft_flow.editing_request(t) and re.match(r'(?i)^\s*(?:send|sebd|semd|sned|snd)\s+(?:a\s+)?(?:more|less)\b',t) and not manual_commands.groups(t) and not re.search(r'(?i)\b(?:to|in|now|immediately|asap)\b|(?:\+?92|0)3\d{9}',t):sending=False
- return {'text':t,'send':sending,'query':query,'negative':negative,'batch':sending and bool(re.search(r'(?i)\b(dm|dms|donors?|members?|people|numbers|list)\b',t))}
+    t = owner_text(text)
+    query = manual_commands.question_request(t) or bool(
+        re.search(r"(?i)^show (?:me )?(?:what|status)\b", t.strip())
+    )
+    # A request to inspect or draft a send is not itself permission to send.
+    inspect = bool(
+        re.match(
+            r"(?i)^\s*(?:please\s+)?(?:show|preview|draft|explain|review|summari[sz]e|analy[sz]e|tell me)\b",
+            t,
+        )
+    )
+    negative = bool(
+        re.search(
+            r"(?i)\b(?:don'?t|dont|do not|never|stop)\s+(?:ever\s+)?(?:send|sending|resend|resending|re-send|post|posting|repost|share|sharing|forward|bhejo|bhej|dm|dms)\b|\b(preview only|draft only)\b",
+            t,
+        )
+    )
+    dm_verb = bool(
+        re.match(
+            r"(?i)^\s*dm\s+(?!(?:has|have|had|is|was|looks|needs|should|does|caption|format|structure|name|text|icons|remove|edit|change)\b)\S",
+            t,
+        )
+    )
+    sending = (
+        bool(
+            manual_commands.SEND.search(t)
+            or re.search(r"(?i)\b(?:snd|snt|sens|sned|semd|sebd)\b", t)
+            or dm_verb
+        )
+        and not negative
+        and not query
+        and not inspect
+        and not manual_commands.deferred_request(t)
+    )
+    if re.search(
+        r"(?i)\bsend\s+(?:me|us)\b.{0,50}\b(?:10|ten|\d{1,2})\b.{0,40}\b(?:versions?|variants?|wordings?)\b",
+        t,
+    ):
+        sending = False
+    # "Send a more emotional message" can request wording. An explicit destination
+    # or immediate-send phrase disambiguates it; otherwise only prepare the rewrite.
+    if (
+        draft_flow.editing_request(t)
+        and re.match(r"(?i)^\s*(?:send|sebd|semd|sned|snd)\s+(?:a\s+)?(?:more|less)\b", t)
+        and not manual_commands.groups(t)
+        and not re.search(r"(?i)\b(?:to|in|now|immediately|asap)\b|(?:\+?92|0)3\d{9}", t)
+    ):
+        sending = False
+    return {
+        "text": t,
+        "send": sending,
+        "query": query,
+        "negative": negative,
+        "batch": sending
+        and bool(re.search(r"(?i)\b(dm|dms|donors?|members?|people|numbers|list)\b", t)),
+    }
+
 
 def literal_text_to_person(text):
- """'send hi to wajdan': those words, to a person (not a group), and not a request to write or style a message."""
- plan=manual_commands.parse(text) or {}
- words=plan.get('text','')
- return plan.get('kind')=='text' and bool(plan.get('to')) and not manual_commands.group(plan['to']) and len(words)<=120 and not re.search(r'(?i)\b(message|caption|dm|poster|wording|version|hook|appeal|emotional|stronger|shorter|longer|draft|format|paragraph)\b',words)
+    """'send hi to wajdan': those words, to a person (not a group), and not a request to write or style a message."""
+    plan = manual_commands.parse(text) or {}
+    words = plan.get("text", "")
+    return (
+        plan.get("kind") == "text"
+        and bool(plan.get("to"))
+        and not manual_commands.group(plan["to"])
+        and len(words) <= 120
+        and not re.search(
+            r"(?i)\b(message|caption|dm|poster|wording|version|hook|appeal|emotional|stronger|shorter|longer|draft|format|paragraph)\b",
+            words,
+        )
+    )
 
-APP_WORDS=re.compile(r"(?i)\b(donor|donors|dm|dms|group|groups|send|sent|post|posts|message|messages|caption|poster|left|came|donat\w*|schedul\w*|auto|autopilot|whatsapp|campaign|yousuf|givelife|main|fiverr|upwork|uet|freelance|hold|resume|stop|pause|batch|important|wording|draft|version|rule|rules|gap|pace|status|report|rs|pkr|amount|balance|money|number|numbers|contact|reply|test)\b")
-QUESTION=re.compile(r"(?i)^\s*(?:what|why|how|when|where|who|which|is|are|was|were|do|does|did|can|could|should|would|will|tell me|explain|define|meaning of)\b|\?\s*$")
+
+APP_WORDS = re.compile(
+    r"(?i)\b(donor|donors|dm|dms|group|groups|send|sent|post|posts|message|messages|caption|poster|left|came|donat\w*|schedul\w*|auto|autopilot|whatsapp|campaign|yousuf|givelife|main|fiverr|upwork|uet|freelance|hold|resume|stop|pause|batch|important|wording|draft|version|rule|rules|gap|pace|status|report|rs|pkr|amount|balance|money|number|numbers|contact|reply|test)\b"
+)
+QUESTION = re.compile(
+    r"(?i)^\s*(?:what|why|how|when|where|who|which|is|are|was|were|do|does|did|can|could|should|would|will|tell me|explain|define|meaning of)\b|\?\s*$"
+)
+
+
 def off_topic(text):
- """Clearly a general question (health, trivia, jokes): question-shaped, with no app words and no numbers.
- Short follow-ups such as "give me suggestions" are about the work and are never shortened."""
- t=owner_text(text)
- return bool(QUESTION.search(t)) and not APP_WORDS.search(t)
+    """Clearly a general question (health, trivia, jokes): question-shaped, with no app words and no numbers.
+    Short follow-ups such as "give me suggestions" are about the work and are never shortened."""
+    t = owner_text(text)
+    return bool(QUESTION.search(t)) and not APP_WORDS.search(t)
+
+
 def about_the_work(reply):
- """True when the answer itself talks about the campaign: then it must never be shortened."""
- return bool(APP_WORDS.search(str(reply)))
-def brief(reply,limit=320):
- """Off-topic answers stay to one or two short sentences and never tack on campaign status."""
- text=re.split(r"(?im)^\s*(?:meanwhile|by the way|btw|also,? your campaign|your campaign|where things stand|current case|campaign status)\b",str(reply))[0].strip()
- text=re.sub(r"(?m)^\s*(?:[-*•]|\d+[.)])\s+","",text)
- text=re.sub(r"\*\*|__|\*","",text)
- sentences=re.split(r"(?<=[.!?])\s+(?=[A-Z\"'(])",re.sub(r"\s*\n+\s*"," ",text))
- out=""
- for s_ in sentences:
-  s_=s_.strip()
-  if not s_:continue
-  if out and (len(out)+len(s_)>limit or out.count(".")+out.count("!")+out.count("?")>=2):break
-  out=(out+" "+s_).strip()
- return out or text[:limit]
+    """True when the answer itself talks about the campaign: then it must never be shortened."""
+    return bool(APP_WORDS.search(str(reply)))
+
+
+def brief(reply, limit=320):
+    """Off-topic answers stay to one or two short sentences and never tack on campaign status."""
+    text = re.split(
+        r"(?im)^\s*(?:meanwhile|by the way|btw|also,? your campaign|your campaign|where things stand|current case|campaign status)\b",
+        str(reply),
+    )[0].strip()
+    text = re.sub(r"(?m)^\s*(?:[-*•]|\d+[.)])\s+", "", text)
+    text = re.sub(r"\*\*|__|\*", "", text)
+    sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z\"'(])", re.sub(r"\s*\n+\s*", " ", text))
+    out = ""
+    for s_ in sentences:
+        s_ = s_.strip()
+        if not s_:
+            continue
+        if out and (
+            len(out) + len(s_) > limit or out.count(".") + out.count("!") + out.count("?") >= 2
+        ):
+            break
+        out = (out + " " + s_).strip()
+    return out or text[:limit]
+
 
 def task_assignment_only(text):
- """A task description is not permission to carry out that described action."""
- owner=owner_text(text).strip()
- task_only=bool(re.match(
-  r'(?i)^(?:in\s+(?:the\s+)?tasks?\b|tasks?\s*[:\-]|'
-  r'(?:please\s+)?(?:give|assign|add|create|set)\s+(?:a\s+)?tasks?\b)',owner))
- independent=bool(re.search(
-  r'(?i)\b(?:and then|then|also)\s+(?:please\s+)?'
-  r'(?:send|post|edit|rewrite|save|update|change|start|stop|schedule)\b',owner))
- return task_only and not independent
+    """A task description is not permission to carry out that described action."""
+    owner = owner_text(text).strip()
+    task_only = bool(
+        re.match(
+            r"(?i)^(?:in\s+(?:the\s+)?tasks?\b|tasks?\s*[:\-]|"
+            r"(?:please\s+)?(?:give|assign|add|create|set)\s+(?:a\s+)?tasks?\b)",
+            owner,
+        )
+    )
+    independent = bool(
+        re.search(
+            r"(?i)\b(?:and then|then|also)\s+(?:please\s+)?"
+            r"(?:send|post|edit|rewrite|save|update|change|start|stop|schedule)\b",
+            owner,
+        )
+    )
+    return task_only and not independent
 
-def permitted(name,text):
- if name in READ:return True
- if task_assignment_only(text) and name!='team_action':return False
- if name=='donor_action':return bool(re.search(r'(?i)\b(donor|donors|important|donated)\b',owner_text(text)))
- if name=='shortcut_action':return bool(re.search(r'(?i)\b(shortcuts?|when i say|macro)\b',owner_text(text)))
- if name=='team_action':return bool(re.search(r'(?i)\b(team|teammate|team mate|tasks?|kaam)\b',owner_text(text)))
- if name=='volunteer_action':return bool(re.search(r'(?i)\bvolunteers?\b',owner_text(text)))
- if name=='case_action':return bool(re.search(r'(?i)\bcases?\b',owner_text(text)))
- if name=='send_text_list':return intent(text)['send'] and len(re.findall(r'(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}',owner_text(text)))>=1
- i=intent(text);t=i['text'];variants=variant_request(t)
- if name=='generate_dm_variants':return variants
- if name in ('set_message','new_wording') and variants:return False
- if name=='hold' and manual_commands.dm_control(t):return False
- if name=='schedule_task':return (timed_tasks.requested(t) or timed_tasks.cancel_request(t)) and not i['query'] and not i['negative']
- if name in SEND|{'autopilot','hold','delete_last_message','set_left','money_came','set_dms','set_pace','set_group_pace','pause_group','resume_group','set_quiet_hours'} and manual_commands.deferred_request(t):return False
- if name in SEND|{'autopilot','hold','resume_group','pause_group'} and timed_tasks.requested(t):return False
- if name in ('send_appeal','send_dm_appeal') and literal_text_to_person(t):return False # "send hi to Ali" is those words only, never the poster and saved appeal
- if name=='dm_donors':return i['send'] and bool(re.search(r'(?i)\bdonors?\b',t))
- if name=='dm_group':return i['send'] and bool(re.search(r'(?i)\b(members?|group)\b',t))
- if name=='dm_list':return i['send'] and bool(re.search(r'(?i)\b(list|numbers?|phones?)\b|(?:\+?92|0)3\d{2}',t))
- if name in SEND:return i['send']
- if i['query']:return False
- verbs={'delete_last_message':'delete|remove|revoke','autopilot':'turn|start|stop|enable|disable|change','hold':'hold|pause|stop|resume|continue|unhold','set_dms':'start|stop|enable|disable|change|turn','set_left':'set|change|update|record','money_came':'record|subtract|deduct|change','set_group_pace':'set|change|speed|slow','set_pace':'set|change|speed|slow','pause_group':'pause|stop','resume_group':'resume|start','set_message':'edit|change|rewrite|remove|replace|save'}
- if name in verbs and re.search(r"(?i)\b(?:don'?t|dont|do not|never)\s+(?:"+verbs[name]+r')\b',t):return False
- inspect=bool(re.match(r'(?i)^\s*(?:please\s+)?(?:show|preview|explain|review|summari[sz]e|analy[sz]e|tell me)\b',t))
- if inspect and name not in ('set_message','prepare_dm'):return False
- if name=='delete_last_message':return bool(re.search(r'(?i)\b(delete|remove|revoke)\b',t)) and not re.search(r"(?i)\b(dont|don't|do not|never)\b",t)
- if name=='hold':return bool(re.search(r'(?i)\b(hold|wait|pause|stop|resume|continue|unhold|wrong whatsapp|connected now)\b',t))
- if name=='autopilot':return bool(re.search(r'(?i)\b(auto|autopilot)\b.*\b(on|off|enable|disable|start|stop)\b|\b(enable|disable|start|stop)\b.*\b(auto|autopilot)\b',t))
- if name in ('remember','add_rule'):return bool(re.search(r'(?i)\b(remember|always|never|from now|in future|daily|every|quiet|pause|pace|slow|fast|yaad rakho)\b',t))
- if name=='delete_rule':return bool(re.search(r'(?i)\b(forget|delete|remove)\b.*\b(rule|memory|preference)\b',t))
- if name in ('set_left','money_came'):
-  return any((p.get('kind')=='money')==(name=='money_came') for p in financial_plans(t))
- if name in ('set_group_pace','set_pace','pause_group','resume_group','set_quiet_hours','set_dms'):return bool(re.search(r'(?i)\b(every|after|pace|speed|slow|fast|pause|resume|quiet|enable|disable|start|stop|on|off)\b',t))
- if name=='edit_dm_name':return bool(re.search(r'(?i)\b(name|call him|call her|greeting)\b',t))
- # A general adjective like "new" in "find new volunteers" cannot authorize
- # a caption edit. Require a genuinely message-directed drafting instruction.
- if name=='set_message':
-  return bool(draft_flow.editing_request(t)
-   or re.search(r'(?i)\b(?:fix|correct|adjust)\b.{0,70}\b(?:paragraph|line|dm|group|caption|draft|message|wording)\b',t)
-   or re.search(r'(?i)\b(?:save|write|create|make|prepare|draft|compose)\b.{0,100}\b(?:caption|message|draft|wording|appeal)\b',t))
- if name=='new_wording':
-  if draft_flow.editing_request(t) or re.search(r'(?i)\b(rewrite|shorten|shorter|brief|bold|italic|remove|replace|edit|format)\b',t):return False
-  return bool(re.search(r'(?i)\b(?:fresh|new|next|rotate|regenerate|another|different)\b.{0,55}\b(?:caption|message|draft|hook|wording|variant)\b',t)
-    or re.search(r'(?i)\b(?:caption|message|draft|hook|wording|variant)\b.{0,55}\b(?:fresh|new|next|rotate|regenerate|another|different)\b',t))
- if name=='prepare_dm':
-  return bool(re.search(r'(?i)\b(?:prepare|preview|show|draft|write|make)\b.{0,60}\b(?:dm|direct message|donor message)\b',t))
- return False
+
+def permitted(name, text):
+    if name in READ:
+        return True
+    if task_assignment_only(text) and name != "team_action":
+        return False
+    if name == "donor_action":
+        return bool(re.search(r"(?i)\b(donor|donors|important|donated)\b", owner_text(text)))
+    if name == "shortcut_action":
+        return bool(re.search(r"(?i)\b(shortcuts?|when i say|macro)\b", owner_text(text)))
+    if name == "team_action":
+        return bool(re.search(r"(?i)\b(team|teammate|team mate|tasks?|kaam)\b", owner_text(text)))
+    if name == "volunteer_action":
+        return bool(re.search(r"(?i)\bvolunteers?\b", owner_text(text)))
+    if name == "case_action":
+        return bool(re.search(r"(?i)\bcases?\b", owner_text(text)))
+    if name == "send_text_list":
+        return (
+            intent(text)["send"]
+            and len(re.findall(r"(?:\+?92|0092|0)?3\d{2}[\s-]?\d{7}", owner_text(text))) >= 1
+        )
+    i = intent(text)
+    t = i["text"]
+    variants = variant_request(t)
+    if name == "generate_dm_variants":
+        return variants
+    if name in ("set_message", "new_wording") and variants:
+        return False
+    if name == "hold" and manual_commands.dm_control(t):
+        return False
+    if name == "schedule_task":
+        return (
+            (timed_tasks.requested(t) or timed_tasks.cancel_request(t))
+            and not i["query"]
+            and not i["negative"]
+        )
+    if name in SEND | {
+        "autopilot",
+        "hold",
+        "delete_last_message",
+        "set_left",
+        "money_came",
+        "set_dms",
+        "set_pace",
+        "set_group_pace",
+        "pause_group",
+        "resume_group",
+        "set_quiet_hours",
+    } and manual_commands.deferred_request(t):
+        return False
+    if name in SEND | {
+        "autopilot",
+        "hold",
+        "resume_group",
+        "pause_group",
+    } and timed_tasks.requested(t):
+        return False
+    if name in ("send_appeal", "send_dm_appeal") and literal_text_to_person(t):
+        return False  # "send hi to Ali" is those words only, never the poster and saved appeal
+    if name == "dm_donors":
+        return i["send"] and bool(re.search(r"(?i)\bdonors?\b", t))
+    if name == "dm_group":
+        return i["send"] and bool(re.search(r"(?i)\b(members?|group)\b", t))
+    if name == "dm_list":
+        return i["send"] and bool(
+            re.search(r"(?i)\b(list|numbers?|phones?)\b|(?:\+?92|0)3\d{2}", t)
+        )
+    if name in SEND:
+        return i["send"]
+    if i["query"]:
+        return False
+    verbs = {
+        "delete_last_message": "delete|remove|revoke",
+        "autopilot": "turn|start|stop|enable|disable|change",
+        "hold": "hold|pause|stop|resume|continue|unhold",
+        "set_dms": "start|stop|enable|disable|change|turn",
+        "set_left": "set|change|update|record",
+        "money_came": "record|subtract|deduct|change",
+        "set_group_pace": "set|change|speed|slow",
+        "set_pace": "set|change|speed|slow",
+        "pause_group": "pause|stop",
+        "resume_group": "resume|start",
+        "set_message": "edit|change|rewrite|remove|replace|save",
+    }
+    if name in verbs and re.search(
+        r"(?i)\b(?:don'?t|dont|do not|never)\s+(?:" + verbs[name] + r")\b", t
+    ):
+        return False
+    inspect = bool(
+        re.match(
+            r"(?i)^\s*(?:please\s+)?(?:show|preview|explain|review|summari[sz]e|analy[sz]e|tell me)\b",
+            t,
+        )
+    )
+    if inspect and name not in ("set_message", "prepare_dm"):
+        return False
+    if name == "delete_last_message":
+        return bool(re.search(r"(?i)\b(delete|remove|revoke)\b", t)) and not re.search(
+            r"(?i)\b(dont|don't|do not|never)\b", t
+        )
+    if name == "hold":
+        return bool(
+            re.search(
+                r"(?i)\b(hold|wait|pause|stop|resume|continue|unhold|wrong whatsapp|connected now)\b",
+                t,
+            )
+        )
+    if name == "autopilot":
+        return bool(
+            re.search(
+                r"(?i)\b(auto|autopilot)\b.*\b(on|off|enable|disable|start|stop)\b|\b(enable|disable|start|stop)\b.*\b(auto|autopilot)\b",
+                t,
+            )
+        )
+    if name in ("remember", "add_rule"):
+        return bool(
+            re.search(
+                r"(?i)\b(remember|always|never|from now|in future|daily|every|quiet|pause|pace|slow|fast|yaad rakho)\b",
+                t,
+            )
+        )
+    if name == "delete_rule":
+        return bool(re.search(r"(?i)\b(forget|delete|remove)\b.*\b(rule|memory|preference)\b", t))
+    if name in ("set_left", "money_came"):
+        return any((p.get("kind") == "money") == (name == "money_came") for p in financial_plans(t))
+    if name in (
+        "set_group_pace",
+        "set_pace",
+        "pause_group",
+        "resume_group",
+        "set_quiet_hours",
+        "set_dms",
+    ):
+        return bool(
+            re.search(
+                r"(?i)\b(every|after|pace|speed|slow|fast|pause|resume|quiet|enable|disable|start|stop|on|off)\b",
+                t,
+            )
+        )
+    if name == "edit_dm_name":
+        return bool(re.search(r"(?i)\b(name|call him|call her|greeting)\b", t))
+    # A general adjective like "new" in "find new volunteers" cannot authorize
+    # a caption edit. Require a genuinely message-directed drafting instruction.
+    if name == "set_message":
+        return bool(
+            draft_flow.editing_request(t)
+            or re.search(
+                r"(?i)\b(?:fix|correct|adjust)\b.{0,70}\b(?:paragraph|line|dm|group|caption|draft|message|wording)\b",
+                t,
+            )
+            or re.search(
+                r"(?i)\b(?:save|write|create|make|prepare|draft|compose)\b.{0,100}\b(?:caption|message|draft|wording|appeal)\b",
+                t,
+            )
+        )
+    if name == "new_wording":
+        if draft_flow.editing_request(t) or re.search(
+            r"(?i)\b(rewrite|shorten|shorter|brief|bold|italic|remove|replace|edit|format)\b", t
+        ):
+            return False
+        return bool(
+            re.search(
+                r"(?i)\b(?:fresh|new|next|rotate|regenerate|another|different)\b.{0,55}\b(?:caption|message|draft|hook|wording|variant)\b",
+                t,
+            )
+            or re.search(
+                r"(?i)\b(?:caption|message|draft|hook|wording|variant)\b.{0,55}\b(?:fresh|new|next|rotate|regenerate|another|different)\b",
+                t,
+            )
+        )
+    if name == "prepare_dm":
+        return bool(
+            re.search(
+                r"(?i)\b(?:prepare|preview|show|draft|write|make)\b.{0,60}\b(?:dm|direct message|donor message)\b",
+                t,
+            )
+        )
+    return False
+
 
 def financial_plans(text):
- out=[]
- for part in re.split(r';|\band then\b|\bthen\b|\s+and\s+',owner_text(text),flags=re.I):
-  p=manual_commands.parse(part.strip()) or {}
-  if p.get('kind') in ('amount','money') or p.get('amount') is not None:out.append(p)
- return out
-
-def validate_args(schema,args,path='arguments'):
- if not isinstance(args,dict):raise ValueError('Tool arguments must be a JSON object.')
- def check(s,v,p):
-  kind=s.get('type');types={'string':str,'object':dict,'array':list,'boolean':bool,'integer':int,'number':(int,float)}
-  if kind in types and (not isinstance(v,types[kind]) or kind in ('number','integer') and isinstance(v,bool)):raise ValueError(p+' has the wrong type.')
-  if 'enum' in s and v not in s['enum']:raise ValueError(p+' is not an allowed value.')
-  if kind in ('number','integer') and not math.isfinite(v):raise ValueError(p+' must be finite.')
-  if isinstance(v,str) and len(v)>12000:raise ValueError(p+' is too long.')
-  if kind=='object':
-   props=s.get('properties',{})
-   if set(s.get('required',[]))-set(v):raise ValueError(p+' is missing required fields.')
-   if s.get('additionalProperties') is False and set(v)-set(props):raise ValueError(p+' has unexpected fields.')
-   for k,x in v.items():
-    if k in props:check(props[k],x,p+'.'+k)
-  if kind=='array':
-   if len(v)>100:raise ValueError(p+' has too many items.')
-   for j,x in enumerate(v):check(s.get('items',{}),x,p+'['+str(j)+']')
- check(schema,args,path)
+    out = []
+    for part in re.split(r";|\band then\b|\bthen\b|\s+and\s+", owner_text(text), flags=re.I):
+        p = manual_commands.parse(part.strip()) or {}
+        if p.get("kind") in ("amount", "money") or p.get("amount") is not None:
+            out.append(p)
+    return out
 
 
+def validate_args(schema, args, path="arguments"):
+    if not isinstance(args, dict):
+        raise ValueError("Tool arguments must be a JSON object.")
+
+    def check(s, v, p):
+        kind = s.get("type")
+        types = {
+            "string": str,
+            "object": dict,
+            "array": list,
+            "boolean": bool,
+            "integer": int,
+            "number": (int, float),
+        }
+        if kind in types and (
+            not isinstance(v, types[kind]) or kind in ("number", "integer") and isinstance(v, bool)
+        ):
+            raise ValueError(p + " has the wrong type.")
+        if "enum" in s and v not in s["enum"]:
+            raise ValueError(p + " is not an allowed value.")
+        if kind in ("number", "integer") and not math.isfinite(v):
+            raise ValueError(p + " must be finite.")
+        if isinstance(v, str) and len(v) > 12000:
+            raise ValueError(p + " is too long.")
+        if kind == "object":
+            props = s.get("properties", {})
+            if set(s.get("required", [])) - set(v):
+                raise ValueError(p + " is missing required fields.")
+            if s.get("additionalProperties") is False and set(v) - set(props):
+                raise ValueError(p + " has unexpected fields.")
+            for k, x in v.items():
+                if k in props:
+                    check(props[k], x, p + "." + k)
+        if kind == "array":
+            if len(v) > 100:
+                raise ValueError(p + " has too many items.")
+            for j, x in enumerate(v):
+                check(s.get("items", {}), x, p + "[" + str(j) + "]")
+
+    check(schema, args, path)

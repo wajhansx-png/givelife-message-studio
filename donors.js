@@ -1815,9 +1815,14 @@
         el('donorProgress').hidden = true;
         el('donorBatchList').hidden = true;
         if (jobKey !== dismissedJob) {
-          const failed = !!j.error || !!j.failed || j.state === 'Nothing sent';
+          /* An app update restarts the server mid-batch; the batch continues by itself, so this is news, not an error. */
+          const restarting = /Starting again by itself/.test(j.error || '');
+          const failed = !restarting && (!!j.error || !!j.failed || j.state === 'Nothing sent');
           const reason = (j.receipts || []).find((r) => r.state?.startsWith('Skipped: '));
-          const text = failed
+          const text = restarting
+            ? 'The app was updated, so sending restarted. It continues by itself ' +
+              (j.sent ? '(' + j.sent + ' already sent, not repeated).' : '(nobody is sent twice).')
+            : failed
             ? 'Not sent' +
               (j.sent ? ' to everyone' : '') +
               '. ' +

@@ -78,7 +78,7 @@ class DonorBook:
     def queue_key(r):
         """Default order for unranked audiences; Important and Top use their saved orders."""
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
-        return (not r['important'],sent,float(r.get('last_sent_at') or 0) if sent else 0.0,name_key(r['name']),r['id'])
+        return (not r['important'],sent,float(r.get('last_sent_at') or 0) if sent else 0.0,(r.get('important_order') or 0) if r['important'] else 0,name_key(r['name']),r['id']) # Important in the order they were starred
     def list(self,tab='all',query=''):
         if tab not in ('all','important','top','donated','not_donated','not_contacted'): raise ValueError('Choose a donor tab.')
         with self.lock:
@@ -183,6 +183,16 @@ class DonorBook:
         with self.lock:
             data=self._load();row=next((r for r in data['records'] if r.get('phone')==phone and not r.get('deleted')),None)
         return int(row.get('normal_amount') or 0) if row else 0
+    def clear_important(self):
+        """Deselect every Important (and Top) donor at once; the next stars start a fresh send order."""
+        with self.lock:
+            data=self._load();now=time.time();n=0
+            for r in data['records']:
+                if r.get('important') and not r.get('deleted'):
+                    r.update(important=False,important_order=None,top_donor=False,top_order=None,updated_at=max(now,math.nextafter(float(r.get('updated_at',0)),math.inf)));n+=1
+            data.setdefault('ranking_next',{}).update(important=0,top_donor=0)
+            self._save(data)
+            return {'cleared':n,'reply':f'Deselected {n} Important donor'+('' if n==1 else 's')+'.'}
     def restore(self,ident):
         with self.lock:
             data=self._load();r=next((r for r in data['records'] if r['id']==ident),None)

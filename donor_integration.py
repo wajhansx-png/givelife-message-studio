@@ -228,6 +228,7 @@ class DonorIntegration:
             return self.book.update(body.get('id',''),expected_updated_at=body.get('expected_updated_at'),**fields)
         if action=='delete':return self.book.delete(body.get('id',''))
         if action=='restore':return self.book.restore(body.get('id',''))
+        if action=='clear_important':return self.book.clear_important()
         if action=='import':return self.book.import_contacts(body.get('records'),self.app.OWNER_PHONE)
         raise ValueError('Unknown donor action.')
     NOT_A_NAME=r'(?!(?:send|dm|show|list|remove|delete|add|text|message|post|resend|stop|hold|resume|cancel|what|how|who|when|where|why|is|are|do|does|did|please|the|all|every|set|make|mark)\b)'

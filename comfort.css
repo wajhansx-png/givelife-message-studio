@@ -397,3 +397,7 @@ html body .donor-page .donor-tabs{display:grid!important;grid-template-columns:r
  html body .donor-page .donor-tabs :is(.tab-name,.tab-word){white-space:normal!important;font-size:10px!important}
  html body .donor-page[data-panel="top"] .donor-bottom>#donorSendImportant::after{content:'DM Top'}
 }
+/* Important tab: "Deselect all" sits beside the contacted chip, in a quiet red so it is not tapped by mistake. */
+html body .donor-page .hide-row{display:flex;gap:8px;flex-wrap:wrap}
+html body .donor-page .hide-row[hidden]{display:none}
+html body .donor-page .deselect-chip{color:#ffb4b4!important;border-color:#ff6b6b55!important;background:#3a1416!important}

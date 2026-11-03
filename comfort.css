@@ -2018,3 +2018,48 @@ html body #donorBatchForm .batch-foot{position:sticky!important;bottom:-14px!imp
 html body #donorResumeDialog :is(input[type=date],input[type=time]){width:100%;box-sizing:border-box;min-height:48px;font-size:16px}
 html body #donorResumeDialog .donor-resume-choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 html body #donorResumeDialog .donor-resume-choices button{min-height:52px;font-weight:800}
+
+/* ===== Round 5 ===== */
+/* One border only on the live pill, Auto and the message card. */
+html body #live .livebar,html body #live .autosw{box-shadow:none!important;border:1px solid #ffffff24!important}
+html body #live .autosw[aria-checked='true']{border-color:#34d399!important;box-shadow:0 0 14px #10b98166!important}
+html body #card{box-shadow:none!important;border:1px solid #ffffff1a!important}
+html body #card .chat{border:0!important;box-shadow:none!important}
+/* Live row uses the full width on phones. */
+@media (max-width:700px){
+  html body #live{width:100%!important;max-width:none!important;display:flex!important;gap:8px!important;align-items:stretch!important}
+  html body #live .livebar{flex:1 1 auto!important;min-width:0!important;width:auto!important}
+  html body #live .autosw{flex:0 0 auto!important}
+}
+/* GiveLife, Freelance and All 6 are always coloured (ids beat every older rule). */
+html body #btnGivelife{background:linear-gradient(135deg,#059669,#0d9488 55%,#0284c7)!important;color:#fff!important;border:0!important}
+html body #btnFree{background:linear-gradient(135deg,#7c3aed,#4f46e5 55%,#2563eb)!important;color:#fff!important;border:0!important}
+html body #sendAll{background:linear-gradient(135deg,#2563eb,#4f46e5 55%,#7c3aed)!important;color:#fff!important;border:0!important}
+html body :is(#btnGivelife,#btnFree,#sendAll) .last-sent{color:#ffffffd9!important;opacity:1!important}
+/* Top bar on phones: everything fits, WhatsApp dot fully visible. */
+@media (max-width:700px){
+  html body .brandbar{gap:4px!important;padding-left:6px!important;padding-right:6px!important;overflow:hidden}
+  html body .brandbar>button,html body .brandbar>details>summary{padding-left:10px!important;padding-right:10px!important}
+  html body #whatsappConnection{flex:0 0 40px!important;width:40px!important;min-width:40px!important;max-width:40px!important;padding:0!important;overflow:hidden}
+}
+/* Report covers the whole screen edge to edge. */
+html body .report-dialog[open]{position:fixed!important;inset:0!important;margin:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;border-radius:0!important;border:0!important;background:radial-gradient(circle at 15% 20%,#7c3aed 0,transparent 45%),radial-gradient(circle at 85% 80%,#0891b2 0,transparent 45%),radial-gradient(circle at 70% 15%,#db2777aa 0,transparent 40%),#0b1026!important}
+/* Donors progress line on phones: small, two compact rows. */
+@media (max-width:700px){
+  html body #donorProgress{padding:8px 10px!important;gap:6px!important;flex-wrap:wrap!important}
+  html body #donorProgress>span{font-size:12px!important;line-height:1.35!important;flex:1 1 100%!important}
+  html body #donorProgress>button{min-height:36px!important;padding:0 12px!important;font-size:13px!important;flex:1 1 0!important}
+}
+/* DM Messages: bubble always grows with its text; Back on the left, Next on the right. */
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail,html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail .bank-preview{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>.bank-back-bottom{order:1!important}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>span{order:2!important}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>:is([data-bank-nav='next'],button.primary){order:3!important}
+/* Doubled ids outrank the old phone "button:not(...)" reset in studio.css. */
+html body #btnGivelife#btnGivelife{background:linear-gradient(135deg,#059669,#0d9488 55%,#0284c7)!important;color:#fff!important;box-shadow:0 6px 18px #05966944!important}
+html body #btnFree#btnFree{background:linear-gradient(135deg,#7c3aed,#4f46e5 55%,#2563eb)!important;color:#fff!important;box-shadow:0 6px 18px #4f46e544!important}
+html body #sendAll#sendAll{background:linear-gradient(135deg,#2563eb,#4f46e5 55%,#7c3aed)!important;color:#fff!important;box-shadow:0 6px 18px #4f46e544!important}
+html body #freeAuto#freeAuto{background:#7f1d1d!important;color:#fee2e2!important;border:1.5px solid #ef4444!important}
+html body #freeAuto#freeAuto.on{background:#14532d!important;color:#d1fae5!important;border-color:#22c55e!important}
+html body #donorStop#donorStop{background:#7f1d1d!important;color:#fee2e2!important}
+html body dialog.report-dialog.report-dialog[open]{transform:none!important;translate:none!important;scale:none!important}

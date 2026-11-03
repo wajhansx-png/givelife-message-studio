@@ -154,10 +154,21 @@
       $('reportDms').textContent = '💬 DMs: status unavailable right now.';
     }
   }
+  const remember = (on) => {
+    try {
+      on ? localStorage.setItem('givelife-report-open', '1') : localStorage.removeItem('givelife-report-open');
+    } catch (e) {}
+  };
   const open = () => {
     fill();
-    dlg.showModal();
+    if (!dlg.open) dlg.showModal();
+    remember(true);
   };
+  dlg.addEventListener('close', () => remember(false));
+  /* Reopening the app returns to the Report if it was open. */
+  try {
+    if (localStorage.getItem('givelife-report-open') === '1') setTimeout(open, 600);
+  } catch (e) {}
   $('reportClose').onclick = () => dlg.close();
   dlg.addEventListener('click', (e) => {
     if (e.target === dlg) dlg.close();

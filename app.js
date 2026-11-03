@@ -1084,13 +1084,123 @@ async function sendGroup(key) {
     busy(false);
   }
 }
+/* ---- delay pills ---- */
+let selectedDelay = 0;
+function setDelay(minutes) {
+  selectedDelay = selectedDelay === minutes ? 0 : minutes;
+  document.querySelectorAll('.delay-pill').forEach((b) => {
+    b.setAttribute('aria-pressed', String(Number(b.dataset.delay) === selectedDelay));
+  });
+  const row = $('delayRow');
+  row.classList.toggle('delay-active', selectedDelay > 0);
+  row.closest('section').classList.toggle('delay-armed', selectedDelay > 0);
+  document.querySelectorAll('[data-group]').forEach((b) => {
+    const hint = b.querySelector('.delay-hint');
+    if (hint) hint.remove();
+    if (selectedDelay > 0) {
+      const h = document.createElement('small');
+      h.className = 'delay-hint';
+      h.textContent = 'in ' + (selectedDelay < 60 ? selectedDelay + ' min' : '1 hr');
+      b.append(h);
+    }
+  });
+}
 document
-  .querySelectorAll('[data-group]')
-  .forEach((b) => (b.onclick = () => sendGroup(b.dataset.group)));
+  .querySelectorAll('.delay-pill')
+  .forEach((p) => (p.onclick = () => setDelay(Number(p.dataset.delay))));
+async function scheduleGroup(key) {
+  if (!lockSend(key, true)) return;
+  setLiveNotice('Scheduling ' + (GN[key] || key) + '…');
+  busy(true);
+  try {
+    await ensureCaption('group');
+    await save();
+    const caption = $('group').value;
+    const label = GN[key] || key;
+    const delayLabel = selectedDelay < 60 ? selectedDelay + ' min' : '1 hr';
+    $('groupStatus').textContent = 'Scheduling for ' + label + ' in ' + delayLabel + '…';
+    const r = await post('/schedule-group', {
+      group: key,
+      message: caption,
+      delay_minutes: selectedDelay,
+      request_id: requestId(),
+    });
+    const d = await r.json();
+    if (!r.ok) throw Error(d.error || 'Could not schedule');
+    $('groupStatus').textContent =
+      '✓ Scheduled: send to ' + label + ' in ' + delayLabel + '. (Task #' + d.task_id + ')';
+    setDelay(0);
+  } catch (e) {
+    $('groupStatus').textContent = '✗ ' + e.message;
+    say('app', e.message, 1);
+  } finally {
+    lockSend(key, false);
+    busy(false);
+  }
+}
+/* ---- group dropdowns ---- */
+function toggleGroupDrop(btnId, dropId) {
+  const btn = $(btnId),
+    drop = $(dropId);
+  if (!btn || !drop) return;
+  const open = !drop.hidden;
+  document.querySelectorAll('.group-drop').forEach((d) => (d.hidden = true));
+  document
+    .querySelectorAll('[aria-haspopup]')
+    .forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  if (!open) {
+    drop.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+  }
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.group-drop-wrap')) {
+    document.querySelectorAll('.group-drop').forEach((d) => (d.hidden = true));
+    document
+      .querySelectorAll('[aria-haspopup]')
+      .forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  }
+});
+$('btnGivelife').addEventListener('click', (e) => {
+  if (e.target.closest('.gd-arrow')) {
+    toggleGroupDrop('btnGivelife', 'dropGivelife');
+  } else {
+    $('dropGivelife').hidden = true;
+    $('btnGivelife').setAttribute('aria-expanded', 'false');
+    if (selectedDelay > 0) scheduleGroup('main');
+    else sendGroup('main');
+  }
+});
+$('btnFree').addEventListener('click', (e) => {
+  if (!e.target.closest('.gd-arrow')) {
+    $('dropFree').hidden = true;
+    $('btnFree').setAttribute('aria-expanded', 'false');
+    if (selectedDelay > 0) scheduleGroup('free');
+    else sendGroup('free');
+  } else {
+    toggleGroupDrop('btnFree', 'dropFree');
+  }
+});
+document.querySelectorAll('.group-drop [data-group]').forEach((b) => {
+  b.onclick = () => {
+    b.closest('.group-drop').hidden = true;
+    b.closest('.group-drop-wrap')
+      .querySelector('[aria-haspopup]')
+      ?.setAttribute('aria-expanded', 'false');
+    if (selectedDelay > 0) scheduleGroup(b.dataset.group);
+    else sendGroup(b.dataset.group);
+  };
+});
+document.querySelectorAll('[data-test]').forEach((b) => {
+  b.onclick = () => sendTest(b.dataset.test);
+});
 function armAll() {
   return sendGroup('all');
 }
-$('sendAll').onclick = armAll;
+$('sendAll').onclick = () => {
+  if (selectedDelay > 0) scheduleGroup('all');
+  else armAll();
+};
 async function fillEmptyCaption(kind) {
   await ensureDrafts();
   if ($(kind) && !$(kind).value.trim()) {

@@ -1,157 +1,2593 @@
 <!doctype html>
-<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><meta name="theme-color" content="#0d1020"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="alternate icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-title" content="GiveLife"><script>try{var t=localStorage.getItem("givelife-theme")||"dark";if(t==="system")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t==="light"?"light":"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script><script>document.documentElement.dataset.uiBoot='loading';window.studioBootTimer=setTimeout(function(){if(document.documentElement.dataset.uiBoot==='loading')document.documentElement.dataset.uiBoot='error'},10000)</script><style>
-html[data-ui-boot] .app{visibility:hidden}
-#startupRecovery{display:none}
-html[data-ui-boot=error] #startupRecovery{display:block;position:fixed;inset:35% 16px auto;text-align:center;color:var(--ink);z-index:9999}
-html[data-ui-boot=loading]::after{content:'Opening your screen…';position:fixed;inset:45% 16px auto;text-align:center;color:var(--mut);font:15px system-ui}
-</style><title>GiveLife · Message studio</title>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#0d1020" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-title" content="GiveLife" />
+    <script>
+      try {
+        var t = localStorage.getItem('givelife-theme') || 'dark';
+        if (t === 'system') delete document.documentElement.dataset.theme;
+        else document.documentElement.dataset.theme = t === 'light' ? 'light' : 'dark';
+      } catch (e) {
+        document.documentElement.dataset.theme = 'dark';
+      }
+    </script>
+    <script>
+      document.documentElement.dataset.uiBoot = 'loading';
+      window.studioBootTimer = setTimeout(function () {
+        if (document.documentElement.dataset.uiBoot === 'loading')
+          document.documentElement.dataset.uiBoot = 'error';
+      }, 10000);
+    </script>
+    <style>
+      html[data-ui-boot] .app {
+        visibility: hidden;
+      }
+      #startupRecovery {
+        display: none;
+      }
+      html[data-ui-boot='error'] #startupRecovery {
+        display: block;
+        position: fixed;
+        inset: 35% 16px auto;
+        text-align: center;
+        color: var(--ink);
+        z-index: 9999;
+      }
+      html[data-ui-boot='loading']::after {
+        content: 'Opening your screen…';
+        position: fixed;
+        inset: 45% 16px auto;
+        text-align: center;
+        color: var(--mut);
+        font: 15px system-ui;
+      }
+    </style>
+    <title>GiveLife · Message studio</title>
 
-<style>
-/* Base tokens. studio.css supplies the final themes; first use defaults to dark. */
-:root{color-scheme:light;
- --bg:#f5f4ef;--surface:#ffffff;--surface2:#f0eee7;--line:#e4e1d8;--line2:#d6d2c6;--ink:#1c1c1a;--mut:#6a6862;--faint:#9a978e;
- --g:#0f6b52;--gd:#0b5541;--gs:#e3f0e9;--gink:#0b5541;
- --red:#c2363d;--rd:#a52a31;--warn:#a5531a;--wbg:#fbf0e3;--ok:#1f8a5b;--amber:#d99a1e;
- --msg:#e2f2da;--msgink:#14201b;--coral:#c6613f;--pill:#ece9e0;
- --ring:#2f7dd1;--sh1:0 1px 2px rgba(28,28,26,.05);--sh2:0 1px 2px rgba(28,28,26,.04),0 6px 20px rgba(28,28,26,.06);--sh3:0 18px 48px rgba(28,28,26,.18);
- --btn:#0f6b52;--btnh:#0b5541;--btnr:#c2363d;--btnrh:#a52a31;--r1:10px;--r2:14px;--r3:18px;--ease:cubic-bezier(.2,.8,.2,1)}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;
- --bg:#1a1a18;--surface:#242422;--surface2:#2c2c29;--line:#383834;--line2:#46463f;--ink:#ecebe5;--mut:#a7a59c;--faint:#7c7a72;
- --g:#3fb08d;--gd:#58c19f;--gs:#1e3329;--gink:#7fd3b6;--red:#e5626a;--rd:#f07a81;--warn:#e3a066;--wbg:#3a2c1f;--ok:#4cc38a;--amber:#e8b24a;
- --msg:#1f3529;--msgink:#e6efe9;--btn:#1d8566;--btnh:#22966f;--btnr:#c94148;--btnrh:#d4525a;--coral:#d97757;--pill:#33332f;--ring:#6aa9ee;--sh1:none;--sh2:0 1px 0 rgba(255,255,255,.02);--sh3:0 18px 48px rgba(0,0,0,.55)}}
-:root[data-theme=dark]{color-scheme:dark;
- --bg:#1a1a18;--surface:#242422;--surface2:#2c2c29;--line:#383834;--line2:#46463f;--ink:#ecebe5;--mut:#a7a59c;--faint:#7c7a72;
- --g:#3fb08d;--gd:#58c19f;--gs:#1e3329;--gink:#7fd3b6;--red:#e5626a;--rd:#f07a81;--warn:#e3a066;--wbg:#3a2c1f;--ok:#4cc38a;--amber:#e8b24a;
- --msg:#1f3529;--msgink:#e6efe9;--btn:#1d8566;--btnh:#22966f;--btnr:#c94148;--btnrh:#d4525a;--coral:#d97757;--pill:#33332f;--ring:#6aa9ee;--sh1:none;--sh2:0 1px 0 rgba(255,255,255,.02);--sh3:0 18px 48px rgba(0,0,0,.55)}
+    <style>
+      /* Base tokens. studio.css supplies the final themes; first use defaults to dark. */
+      :root {
+        color-scheme: light;
+        --bg: #f5f4ef;
+        --surface: #ffffff;
+        --surface2: #f0eee7;
+        --line: #e4e1d8;
+        --line2: #d6d2c6;
+        --ink: #1c1c1a;
+        --mut: #6a6862;
+        --faint: #9a978e;
+        --g: #0f6b52;
+        --gd: #0b5541;
+        --gs: #e3f0e9;
+        --gink: #0b5541;
+        --red: #c2363d;
+        --rd: #a52a31;
+        --warn: #a5531a;
+        --wbg: #fbf0e3;
+        --ok: #1f8a5b;
+        --amber: #d99a1e;
+        --msg: #e2f2da;
+        --msgink: #14201b;
+        --coral: #c6613f;
+        --pill: #ece9e0;
+        --ring: #2f7dd1;
+        --sh1: 0 1px 2px rgba(28, 28, 26, 0.05);
+        --sh2: 0 1px 2px rgba(28, 28, 26, 0.04), 0 6px 20px rgba(28, 28, 26, 0.06);
+        --sh3: 0 18px 48px rgba(28, 28, 26, 0.18);
+        --btn: #0f6b52;
+        --btnh: #0b5541;
+        --btnr: #c2363d;
+        --btnrh: #a52a31;
+        --r1: 10px;
+        --r2: 14px;
+        --r3: 18px;
+        --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          color-scheme: dark;
+          --bg: #1a1a18;
+          --surface: #242422;
+          --surface2: #2c2c29;
+          --line: #383834;
+          --line2: #46463f;
+          --ink: #ecebe5;
+          --mut: #a7a59c;
+          --faint: #7c7a72;
+          --g: #3fb08d;
+          --gd: #58c19f;
+          --gs: #1e3329;
+          --gink: #7fd3b6;
+          --red: #e5626a;
+          --rd: #f07a81;
+          --warn: #e3a066;
+          --wbg: #3a2c1f;
+          --ok: #4cc38a;
+          --amber: #e8b24a;
+          --msg: #1f3529;
+          --msgink: #e6efe9;
+          --btn: #1d8566;
+          --btnh: #22966f;
+          --btnr: #c94148;
+          --btnrh: #d4525a;
+          --coral: #d97757;
+          --pill: #33332f;
+          --ring: #6aa9ee;
+          --sh1: none;
+          --sh2: 0 1px 0 rgba(255, 255, 255, 0.02);
+          --sh3: 0 18px 48px rgba(0, 0, 0, 0.55);
+        }
+      }
+      :root[data-theme='dark'] {
+        color-scheme: dark;
+        --bg: #1a1a18;
+        --surface: #242422;
+        --surface2: #2c2c29;
+        --line: #383834;
+        --line2: #46463f;
+        --ink: #ecebe5;
+        --mut: #a7a59c;
+        --faint: #7c7a72;
+        --g: #3fb08d;
+        --gd: #58c19f;
+        --gs: #1e3329;
+        --gink: #7fd3b6;
+        --red: #e5626a;
+        --rd: #f07a81;
+        --warn: #e3a066;
+        --wbg: #3a2c1f;
+        --ok: #4cc38a;
+        --amber: #e8b24a;
+        --msg: #1f3529;
+        --msgink: #e6efe9;
+        --btn: #1d8566;
+        --btnh: #22966f;
+        --btnr: #c94148;
+        --btnrh: #d4525a;
+        --coral: #d97757;
+        --pill: #33332f;
+        --ring: #6aa9ee;
+        --sh1: none;
+        --sh2: 0 1px 0 rgba(255, 255, 255, 0.02);
+        --sh3: 0 18px 48px rgba(0, 0, 0, 0.55);
+      }
 
-/* Stable layout. Native system fonts keep every screen consistent, including offline. */
-*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}html{-webkit-text-size-adjust:100%;overscroll-behavior:none}
-body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
-button,input,textarea{font:inherit;color:inherit}button{cursor:pointer;touch-action:manipulation;border:0;background:none;user-select:none}button:hover{filter:brightness(.97)}button:disabled{opacity:.55;cursor:wait}
-:focus-visible{outline:3px solid var(--ring);outline-offset:2px}button:focus-visible{border-radius:10px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.sp{flex:1}[hidden]{display:none!important}.s{display:none}
-.app{height:100dvh;max-width:1440px;margin:auto;display:flex;flex-direction:column;gap:10px;padding:12px max(16px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
-.brandbar{display:flex;align-items:center;gap:10px;min-height:48px}.brand{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700;margin-right:12px}.brand small{display:none}.mark{display:grid;place-items:center;width:32px;height:32px;background:var(--btn);color:white;border-radius:10px}
-.seg{display:flex;background:var(--surface2);padding:3px;border-radius:12px}.seg button{min-height:42px;padding:0 18px;border-radius:9px;font-weight:600;color:var(--mut)}.seg button[aria-pressed=true]{background:var(--surface);color:var(--gink);box-shadow:var(--sh1)}
-.leftchip{min-height:44px;font-weight:700;color:var(--gink);padding:0 10px;white-space:nowrap;font-variant-numeric:tabular-nums}.lw{font-weight:500}.gear{width:44px;height:44px;font-size:22px;color:var(--mut);border-radius:12px}.gear:hover{background:var(--surface2)}
-.live{position:relative;display:flex;align-items:center;gap:8px;min-height:62px;padding:5px 7px 5px 12px;border:1px solid var(--line2);border-left:4px solid var(--g);border-radius:12px;background:var(--gs)}.livebar{display:flex;align-items:center;gap:9px;flex:1;min-width:0;min-height:50px;text-align:left}.livebar b{display:none}.live-tag{display:none;flex:none;font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--gink);border:1px solid currentColor;border-radius:6px;padding:3px 6px}.live[data-error="1"] .live-tag{color:var(--red)}.live[data-state=reading],.live[data-state=sending]{border-color:var(--g);box-shadow:0 0 0 1px var(--g)}.livecopy{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.livebar strong{color:var(--ink);font-size:15px;font-weight:750;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.livebar small{font-size:12px;line-height:1.4;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.livebar em{color:var(--mut);font-style:normal;margin-left:auto}.pulse{height:8px;width:8px;border-radius:50%;background:var(--g);flex:none}.live[data-state=off],.live[data-state=loading]{background:var(--surface2);border-left-color:var(--mut)}.live[data-state=paused]{background:var(--wbg);border-left-color:var(--warn)}.live[data-state=off] .pulse,.live[data-state=loading] .pulse{background:var(--mut)}.live[data-state=off] .live-tag,.live[data-state=loading] .live-tag{color:var(--mut)}.live[data-state=paused] .pulse{background:var(--warn)}.live[data-error="1"]{background:color-mix(in srgb,var(--red) 10%,var(--surface));border-left-color:var(--red)}.live[data-error="1"] .livebar strong{color:var(--red)}.live[data-error="1"] .pulse{background:var(--red)}
-.autosw{min-width:64px;min-height:44px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);font-size:12px;font-weight:700;color:var(--mut)}.autosw .lbl::before{content:'Auto '}.autosw[aria-checked=true]{color:var(--gink);background:var(--surface)}.autosw .knob{display:none}
-.livemore{position:absolute;top:100%;left:0;right:0;z-index:40;padding:16px;background:var(--surface);border:1px solid var(--line2);border-radius:12px;box-shadow:var(--sh3);max-height:65dvh;overflow:auto;font-size:14px}.livemore .k{font-size:12px;font-weight:700;color:var(--mut);margin-top:10px}.livemore .k:first-child{margin-top:0}
-.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(370px,.9fr);gap:14px}.layout>*{min-width:0}.card{border:1px solid var(--line);background:var(--surface);border-radius:16px;min-width:0;min-height:0}.msgcard{display:flex;flex-direction:column;overflow:hidden}.tools{display:flex;align-items:center;gap:6px;padding:10px}.ctx{display:flex;align-items:center;gap:8px;min-width:0;color:var(--mut);font-size:13px}.ctx img{width:28px;height:28px;border-radius:6px;object-fit:cover}.ctx span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tool,.later,.ghost{min-height:44px;padding:0 14px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);font-weight:600}.tool:hover,.later:hover,.ghost:hover{background:var(--surface2)}.tool.on{background:var(--btn);color:#fff;border-color:var(--btn)}.overflow-tools{position:relative}.overflow-tools summary{display:grid;place-items:center;cursor:pointer;min-width:44px;min-height:44px;border-radius:10px;list-style:none;font-size:20px}.overflow-tools summary::-webkit-details-marker{display:none}.overflow-tools[open]>div{position:absolute;right:0;top:100%;z-index:20;display:grid;gap:5px;min-width:150px;padding:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh2)}
-.chat{flex:1;min-height:0;margin:0 10px 10px;padding:16px 18px;background:var(--msg);color:var(--msgink);border-radius:12px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}.message{max-width:720px;font-size:17px;line-height:1.5;overflow-wrap:anywhere}.message[contenteditable=true]{outline:0;min-height:100%}.editing .chat{box-shadow:inset 0 0 0 2px var(--g)}.wa-line{white-space:break-spaces;min-height:1.5em}.wa-line.blank{height:.8em;min-height:.8em}.wa-list{display:inline-block;padding-left:12px;text-indent:-9px}.wa-quote{border-left:3px solid #849c83;padding-left:8px}
-body[data-view=group] #dmPreview,body[data-view=dm] #groupPreview,body[data-view=group] .dm-send,body[data-view=dm] .group-send,body[data-view=dm] #moreG{display:none}
-.desktop-preview,.send-title{display:none}.action-rail{display:flex;flex-direction:column;gap:8px;min-height:0}.side{display:flex;flex-direction:column;gap:10px;min-height:0}.talk{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}.talk-title{display:flex;align-items:center;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600;color:var(--mut)}.talk-title button{margin-left:auto;min-width:44px;min-height:36px;font-size:13px}
-.log{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;overflow-anchor:none;padding:16px;display:flex;flex-direction:column;gap:18px;font-size:16px;line-height:1.55;scrollbar-width:thin}.e{flex:none;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}.e.bot{font:inherit;align-self:flex-start;background:color-mix(in srgb,var(--gs) 30%,var(--surface2));border:1px solid var(--line2);border-radius:14px;padding:12px 15px;box-shadow:var(--sh1)}.e.you{align-self:flex-end;max-width:90%;background:var(--surface2);padding:8px 12px;border-radius:14px}.e.sys{align-self:flex-start;font-size:13px;line-height:1.5;color:var(--gink);border-left:3px solid var(--g);background:var(--gs);padding:9px 12px;border-radius:0 9px 9px 0}.e.sys.err,.e.bot.err{color:var(--red);border-color:var(--red);background:color-mix(in srgb,var(--red) 8%,var(--surface))}.e.err{color:var(--red)}.e.dots{color:var(--mut);font-size:14px}.dots em{font-style:normal}.spark{display:none}.reply-feedback{align-self:flex-start;font-size:12px;color:var(--mut);padding:8px;min-height:44px;margin-top:-16px;border-radius:8px}.reply-feedback:hover{background:var(--surface2)}
-.next-actions{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 6px;flex:none}.next-actions button{min-height:44px;padding:6px 11px;border:1px solid var(--line2);border-radius:10px;background:var(--gs);color:var(--gink);font-size:12px;font-weight:650}.next-actions button:disabled{background:var(--surface2);color:var(--mut)}.composer{flex:none;display:grid;grid-template-columns:44px minmax(0,1fr) 56px;align-items:end;gap:6px;margin:8px 12px 12px;padding:6px;border:1px solid var(--line2);border-radius:16px;background:var(--surface)}.composer:focus-within{border-color:var(--g)}.composer textarea{grid-column:2;grid-row:1;min-width:0;width:100%;height:44px;min-height:44px;max-height:120px;resize:none;overflow:auto;border:0;outline:0;background:transparent;color:var(--ink);font-size:16px;line-height:24px;padding:10px 2px}.composer textarea::placeholder{color:var(--mut)}.ctools{display:contents}.ctools .sp{display:none}.composer .clip{grid-column:1;grid-row:1;width:44px;height:48px;font-size:24px;color:var(--mut);border-radius:10px}.composer .go{grid-column:3;grid-row:1;width:56px;height:56px;background:var(--btn);color:white;font-size:26px;font-weight:700;border-radius:12px}
-.camp{display:flex;align-items:center;gap:6px;margin:8px 12px 0;font-size:13px;color:var(--gink)}.camp span{flex:1}.camp button{min-height:44px;padding:0 12px}.att{display:flex;align-items:center;gap:8px;margin:4px 12px;font-size:12px;color:var(--mut)}.att img{width:36px;height:36px;object-fit:cover;border-radius:6px}.att span{flex:1}.att button{min-width:44px}
-.send{position:relative;flex:none;padding:10px;display:flex;flex-direction:column;gap:8px}.prim,.duo{display:grid;grid-template-columns:1fr 1fr;gap:8px}.big{width:100%;min-height:48px;border-radius:12px;background:var(--btn);color:white;font-size:15px;font-weight:650;padding:6px 12px}.ghost{min-height:48px}.big.all{background:var(--surface2);color:var(--ink);border:1px solid var(--line2)}.navrow{display:flex;gap:8px;flex:none}.moreg,.chat-open{min-height:44px;border-radius:10px;font-size:14px;font-weight:600;padding:0 12px}.moreg{flex:1;border:1px solid var(--line2);background:var(--surface)}.moreg em{font-style:normal}.chat-open{margin-left:auto;display:none;background:var(--btn);color:white;min-width:112px}.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:8px;border-top:1px solid var(--line);margin-top:2px}.chips button{min-height:48px;padding:6px 8px;border-radius:10px;border:1px solid var(--line2);font-size:14px;font-weight:600}.chips button:hover{background:var(--gs)}.chips .all{grid-column:1/-1}.last-sent{display:block;font-size:10px;line-height:1.35;font-weight:500;opacity:.8;margin-top:3px}.group-label{display:block}.send button[aria-busy=true]{opacity:.65}#groupStatus{font-size:12px;color:var(--mut);max-height:3.2em;overflow:auto;white-space:pre-line}#groupStatus:empty{display:none}.dmrow{display:grid;grid-template-columns:1fr auto;gap:8px}.dmrow input{width:100%;min-width:0;min-height:46px;padding:0 10px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);font-size:16px}.dmrow #dmPhone{grid-column:1/-1}.dmrow .seg button{padding:0 10px;min-height:40px;font-size:13px}
-.foot{display:flex;gap:10px;min-height:18px;font-size:12px;color:var(--mut)}#status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#status.err{color:var(--red)}kbd{font:inherit}.showmsg{min-height:44px;color:var(--gink);font-weight:600;border:1px solid var(--line);border-radius:10px;align-self:center;padding:0 18px;font-size:13px}.showmsg svg{display:none}.nomsg .msgcard{display:none}.nomsg .layout{grid-template-columns:1fr}.nomsg .side{max-width:800px;width:100%;margin:auto;height:100%}.offline{display:none}
-dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:0;box-shadow:var(--sh3);border-radius:16px;margin:auto;max-height:90dvh}dialog::backdrop{background:#1118}dialog header{display:flex;align-items:center;gap:8px;min-height:60px;padding:8px 12px 8px 18px;border-bottom:1px solid var(--line);font-weight:650}.hist{width:min(720px,calc(100vw - 32px));height:min(88dvh,900px)}.hist[open]{display:flex;flex-direction:column}.hist .log{padding:18px 20px;scroll-padding:16px}.hist .composer{margin:0 16px max(20px,env(safe-area-inset-bottom))}.chat-return{display:flex;justify-content:flex-end;padding:0 16px 6px;min-height:44px;flex:none}.chat-return button{min-height:44px;padding:0 12px;color:var(--gink);font-weight:600;border-radius:10px}.hist .chat-return{display:none}.set{width:min(500px,calc(100vw - 24px))}.set .body{max-height:calc(90dvh - 70px);overflow:auto;padding:0 16px 12px}.row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.row .t{flex:1;min-width:0}.row b{font-weight:600}.row small{display:block;color:var(--mut);font-size:13px;margin-top:3px;line-height:1.4}.row small.err{color:var(--red)}.row small.ok{color:var(--gink)}.row .tool{flex:none}.tool.danger{color:var(--red)}.tool.danger.arm{background:var(--red);color:white}.sw{appearance:none;width:48px;height:44px;flex:none;border-radius:12px;background:var(--surface2);cursor:pointer;position:relative}.sw::after{content:'OFF';position:absolute;inset:0;display:grid;place-items:center;color:var(--mut);font-size:11px;font-weight:700}.sw:checked{background:var(--gs)}.sw:checked::after{content:'ON';color:var(--gink)}.sw:disabled{opacity:.4}.theme{display:flex;background:var(--surface2);border-radius:10px;padding:2px}.theme button{min-height:44px;padding:0 9px;border-radius:8px;font-size:13px}.theme button[aria-pressed=true]{background:var(--surface);box-shadow:var(--sh1)}.advanced summary{min-height:48px;display:flex;align-items:center;cursor:pointer;color:var(--mut);font-size:14px}.advanced summary::after{content:'⌄';margin-left:auto}#chatEvalStatus{white-space:pre-line;max-height:240px;overflow:auto}
-.memory-dialog{padding:20px;width:min(540px,calc(100vw - 24px));overflow:auto}.memory-dialog h2{font-size:20px;margin-bottom:10px}.memory-dialog p{font-size:14px;color:var(--mut);margin:8px 0}.memory-dialog textarea{width:100%;min-height:120px;padding:12px;font:inherit;background:var(--surface2);color:var(--ink);border:1px solid var(--line2);border-radius:12px}.memory-dialog button{min-height:48px;padding:10px 16px;border-radius:12px}.primary,.memory-dialog .primary{background:var(--btn);color:white;border-radius:10px;font-weight:600}.memory-item{padding:12px 0;border-bottom:1px solid var(--line);white-space:pre-wrap}.feedback-check{display:flex;gap:10px;align-items:center;margin:16px 0}.feedback-check input{width:24px;height:24px}
-.connect-dialog{background:var(--surface)!important;color:var(--ink)!important;border-color:var(--line)!important;font-family:inherit!important}.connect-dialog input{background:var(--surface2)!important;color:var(--ink)!important;border-color:var(--line2)!important}.connect-state{background:var(--surface2)!important}.connect-qr{background:white!important}.connect-muted,.connect-state span,.connect-note,.connect-steps{color:var(--mut)!important}.connect-badge{border-radius:10px!important;min-height:44px!important;font-size:13px!important;font-weight:600}.connect-badge[data-state=online]{color:var(--gink)!important;background:var(--gs)!important}.connect-badge[data-state=offline],.connect-badge[data-state=error]{color:var(--red)!important;background:var(--wbg)!important}
-@media(min-width:900px){
- .app{max-width:1400px;padding:12px 20px 10px;gap:12px}.brandbar{min-height:44px}.brand{font-size:17px;margin-right:8px}.desktop-preview{display:inline-flex;align-items:center;min-height:40px;padding:0 12px;border:1px solid var(--line2);border-radius:10px;font-size:13px;font-weight:600;white-space:nowrap}.desktop-preview[aria-pressed=true]{background:var(--gs);border-color:var(--g);color:var(--gink)}.showmsg{display:none}
- .live{min-height:68px;padding:6px 8px 6px 16px;border-left-width:6px;border-color:color-mix(in srgb,var(--g) 65%,var(--line));box-shadow:var(--sh1)}.livebar{min-height:52px;gap:12px}.livecopy{flex-direction:column;align-items:flex-start;gap:3px}.livebar strong{font-size:18px;font-weight:800;width:100%;letter-spacing:-.015em}.livebar small{font-size:12px;width:100%;color:var(--ink);opacity:.8}.live-tag{display:inline-block;font-size:10px;padding:5px 7px}.pulse{width:10px;height:10px}.autosw{min-height:44px}.live[data-state=off],.live[data-state=loading]{border-color:var(--line2)}.live[data-error="1"]{border-color:var(--red)}
- body .layout,body.nomsg .layout{grid-template-columns:minmax(0,1fr) 304px;gap:16px}body .side,body.nomsg .side{display:contents}.talk,.msgcard{grid-column:1;grid-row:1;height:100%;min-height:0}body:not(.nomsg) .talk{display:none}.action-rail{grid-column:2;grid-row:1;min-height:0;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}.send{padding:0;border:0;background:none;gap:10px}.send-title{display:flex;flex-direction:column;gap:3px;margin-bottom:4px}.send-title h2{font-size:14px;font-weight:650}.send-title span{font-size:12px;color:var(--mut)}.action-rail .camp{margin:0;padding:0 0 12px;border-bottom:1px solid var(--line);flex:none}.navrow{display:none}.chips{gap:8px;padding-top:14px;margin-top:4px}.chips button{font-size:13px;padding:8px 6px}.prim .big,.prim .ghost{font-size:14px}.dmrow{grid-template-columns:1fr}.dmrow .seg{justify-self:start}.dmrow input{font-size:15px}.dmrow .seg button{font-size:12px}.duo{grid-template-columns:1fr}.duo .big{order:0}.duo .ghost{order:1}#groupStatus{margin-top:8px;max-height:6em;font-size:12px}
- .talk-title{min-height:46px;padding:5px 18px;font-size:13px}.talk-title #chatLatest{margin-left:auto}.talk-title #chatExpand{margin-left:auto}.talk-title #chatLatest:not([hidden])+#chatExpand{margin-left:4px}.talk-title button{min-height:32px}.log{font-size:15px;line-height:1.65;padding:22px max(24px,calc((100% - 78ch)/2));gap:14px;scroll-padding-block:20px}.e.bot{max-width:72ch;padding:14px 18px;border-radius:14px}.e.you{max-width:min(80%,60ch);background:var(--surface2);border:1px solid var(--line);padding:9px 14px}.e.sys{max-width:72ch}.reply-feedback{min-height:28px;font-size:11px;padding:3px 8px;margin-top:-11px;margin-left:10px}.composer{width:calc(100% - 48px);max-width:78ch;margin:8px auto 18px;grid-template-columns:36px minmax(0,1fr) 52px;padding:6px;border-radius:14px}.composer .clip{width:36px;height:44px}.composer .go{width:52px;height:52px}.composer textarea{font-size:15px}.next-actions{width:calc(100% - 48px);max-width:78ch;margin-inline:auto;padding:0 0 4px}.next-actions button{font-size:12px;min-height:36px}.chat{padding:20px 24px;margin:0 14px 14px;background:var(--surface2)}.message{width:fit-content;max-width:min(100%,72ch);padding:18px 20px;border-radius:12px;background:var(--msg)}.message[contenteditable=true]{width:100%;max-width:none}.msgcard .tools{min-height:56px;padding:8px 14px}.foot{align-items:center;min-height:24px}.keys{min-height:28px;padding:2px 8px;border-radius:7px}.keys:hover{background:var(--surface2)}kbd{padding:1px 4px;border:1px solid var(--line2);border-radius:4px;font-size:11px}
- .hist{width:min(900px,calc(100vw - 80px));height:min(90dvh,1000px)}.hist header #histClose{display:block}.hist .log{padding:22px max(24px,calc((100% - 78ch)/2))}.hist .composer{margin:8px auto 20px}.set .body{padding-inline:20px}.set .row{padding-block:12px}
-}
-@media(min-width:900px){
- html,body{height:auto;min-height:100%}body{overflow:auto}.app{height:auto;min-height:100dvh}.layout{flex:1;min-height:calc(100dvh - 210px);align-items:start}.talk{height:auto;min-height:calc(100dvh - 210px);overflow:visible}.talk .log{flex:none;overflow:visible;max-height:none;min-height:120px;padding-block:16px;gap:10px}.talk .composer{position:sticky;bottom:12px;z-index:3;box-shadow:var(--sh2);margin-top:auto}.talk .next-actions{padding-top:4px}.action-rail{position:sticky;top:12px;height:auto;max-height:calc(100dvh - 24px)}.talk .log .e{max-width:100%}.talk .log .e.bot{max-width:72ch}.talk-title{position:relative}.hist .log{overflow:auto}.last-sent{font-size:11px}.prim button,.chips button{min-height:60px}.msgcard{height:calc(100dvh - 210px)}
-}
-@media(min-width:900px) and (max-width:1100px){body .layout,body.nomsg .layout{grid-template-columns:minmax(0,1fr) 276px;gap:12px}.app{padding-inline:14px}.action-rail{padding:12px}.brandbar{gap:6px}.desktop-preview{padding:0 9px}.livecopy{gap:3px}.livebar strong{font-size:16px}.log{padding-inline:24px}.next-actions button{font-size:11.5px}.connect-badge{font-size:12px!important}}
-.keyboard-dialog{width:min(480px,calc(100vw - 24px))}.keyboard-dialog dl{padding:14px 22px}.keyboard-dialog dl>div{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}.keyboard-dialog dt{color:var(--mut)}.keyboard-dialog dd{white-space:nowrap}.keyboard-dialog p{padding:0 22px 20px;font-size:12px;color:var(--mut)}
-@media(max-width:1100px){.brand .bname{display:none}.brand{margin-right:0}.ctx span{max-width:165px}}
-@media(max-width:899px){
- .app{padding:6px 10px max(8px,env(safe-area-inset-bottom));gap:6px}.brandbar{gap:4px;min-height:44px}.brand{display:none}.seg button{padding:0 14px;min-height:40px}.leftchip{font-size:14px;padding:0 6px}.gear{width:44px}.lw{display:none}.live{min-height:60px;padding:4px 6px 4px 10px}.livebar{gap:7px;min-height:48px}.livebar strong{font-size:14px}.livebar small{font-size:11.5px}.livebar em{display:none}.autosw{min-width:58px}.livebar b{display:none}.live-tag{display:none;flex:none;font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--gink);border:1px solid currentColor;border-radius:6px;padding:3px 6px}.live[data-error="1"] .live-tag{color:var(--red)}.live[data-state=reading],.live[data-state=sending]{border-color:var(--g);box-shadow:0 0 0 1px var(--g)}
- .brandbar .connect-badge{font-size:0!important;width:44px;min-width:44px;padding:0!important;display:grid;place-items:center}.brandbar .connect-badge::before{font-size:12px;font-weight:700;content:'WA'}.brandbar .connect-badge[data-state=online]::before{content:'WA ✓'}.brandbar .connect-badge[data-state=offline]::before,.brandbar .connect-badge[data-state=error]::before{content:'WA !';font-weight:700}
- .layout{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;gap:8px}.side{gap:6px}.talk.card{border:0;background:none;flex:none}.talk .log,.talk .composer,.talk .next-actions,.talk-title{display:none}.camp,.att{margin:0;font-size:12px}.att span{max-height:3em;overflow:hidden}.msgcard .tools{padding:6px 8px}.ctx{font-size:12px}.ctx img{width:24px;height:24px}.ctx span{max-width:120px}.tools .tool{padding:0 12px}.chat{margin:0 8px 8px;padding:12px 14px}.message{font-size:14px}.send{padding:0;border:0;background:none;gap:6px}.big{min-height:48px}.prim .main{order:2}.navrow{gap:8px}.moreg{min-height:48px}.chat-open{display:block;min-height:48px}.chips{grid-template-columns:1fr 1fr}.chips .s{display:none}.chips .l{display:inline}.foot{display:none}.dmrow{grid-template-columns:1fr 1fr}.dmrow .seg{grid-column:2;grid-row:1}.dmrow #dmPhone{grid-column:1/-1}.duo{grid-template-columns:1fr 2fr}.duo #sendDm{order:2}
- dialog.hist{position:fixed;top:var(--chat-top,0px);left:0;right:0;bottom:auto;width:100%;max-width:100%;height:var(--chat-height,100dvh);max-height:var(--chat-height,100dvh);margin:0;border:0;border-radius:0}.hist header{min-height:44px;padding:6px 16px;font-size:14px;color:var(--mut)}.hist header #histClose{display:none}.hist .log{padding:16px;gap:18px}.hist .chat-return{display:flex}.hist .composer{margin:0 10px max(24px,env(safe-area-inset-bottom));grid-template-columns:40px minmax(0,1fr) 56px;padding:5px;gap:4px}.hist .composer .clip{width:40px}.chat-return{padding:0 10px 2px}.nomsg .side{justify-content:center;height:auto;align-self:center;max-width:520px;gap:10px}.nomsg .layout{grid-template-rows:1fr;align-items:center}.nomsg .talk{display:none}.nomsg .talk:has(.camp:not([hidden]),.att:not([hidden])){display:flex}.nomsg .chips{position:static;transform:none}.nomsg .layout{overflow:auto}.nomsg .side{margin-block:auto}.chat-open{width:100%;font-size:15px}.nomsg .big,.nomsg .ghost,.nomsg .chips button,.nomsg .chat-open{min-height:48px}
-}
-@media(max-width:380px){.ctx span{display:none}.tools{gap:4px}.seg button{padding:0 12px}.leftchip{font-size:13px}.brandbar{gap:2px}.theme button{padding:0 7px}}
-@media(max-width:899px) and (max-height:600px){.app{gap:4px}.live{min-height:56px}.livebar{min-height:44px}.hist header{min-height:36px}.hist .composer{margin-bottom:12px}.hist .log{padding-top:10px;padding-bottom:10px}}
-@media(max-width:899px) and (max-height:550px){body[data-view=dm]:has(.dmrow input:focus) .msgcard{display:none}body[data-view=dm]:has(.dmrow input:focus) .layout{display:flex;flex-direction:column}body[data-view=dm]:has(.dmrow input:focus) .side{flex:1;justify-content:flex-end;overflow:auto}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
-</style><link rel="stylesheet" href="/donors.css"><link rel="stylesheet" href="/notes.css"><link rel="stylesheet" href="/studio.css"><link rel="stylesheet" href="/compact-nav.css"><link rel="stylesheet" href="/focus-editor.css"><link rel="stylesheet" href="/comfort.css"></head>
-<body class="nomsg" data-view="group">
-<a class="skip-link" href="#main-workspace">Skip to workspace</a>
-<div class="app"><span id="liveAnnouncement" class="sr-only" role="status" aria-live="polite"></span>
- <div class="offline" id="offline" role="status" hidden><b>No internet.</b> Auto keeps running on the server. Sending works again when you are back online.</div>
- <header class="brandbar">
-  <h1 class="sr-only">GiveLife message studio</h1>
-  <div class="brand" translate="no"><div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 5.7c-2.2-2.2-5.4-1.6-8.5 1.4C8.9 4.1 5.7 3.5 3.5 5.7c-2.8 2.8-1.4 6.5 8.5 13.6 9.9-7.1 11.3-10.8 8.5-13.6Z"/></svg></div><div class="bname">GiveLife<small>Message studio</small></div></div>
-  <div class="seg" role="group" aria-label="Message type"><button data-view-button="group" aria-pressed="true" title="Group messages (G)">Group messages</button></div>
-  <button type="button" id="desktopPreview" class="desktop-preview" aria-controls="card" aria-pressed="false" aria-keyshortcuts="H" title="Show or hide the message preview (H)">Preview</button>
-  <label class="case-pick" title="Cases: each case keeps its own amount, stars, donated and DM marks"><span class="sr-only">Case</span><select id="caseSelect" aria-label="Case"><option>Case…</option></select></label>
-  <span class="sp"></span>
-  <button id="leftChip" class="leftchip" title="Change the amount left">Rs. …</button><button id="gear" class="gear" aria-label="Settings" title="Settings">&#9881;</button>
- </header>
- <section class="live" id="live" aria-label="Automatic sending" data-on="0"><button type="button" class="livebar" id="liveBar" aria-expanded="false"><i class="pulse"></i><span class="live-tag" aria-hidden="true">LIVE</span><b id="liveNow">Auto OFF</b><span class="livecopy"><strong id="liveMeta">Checking status…</strong><small id="liveDetail">Connecting to your bot</small></span><em>&#8964;</em></button><button type="button" class="autosw" id="auto" disabled role="switch" aria-checked="false" aria-label="Auto mode" title="Switch automatic actions on or off"><span class="lbl">…</span><i class="knob"></i></button><div class="livemore" id="liveMore" hidden></div></section>
- <button type="button" class="showmsg" id="showMsg" aria-controls="card" aria-expanded="false"><span>Show message</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
- <main class="layout" id="main-workspace" tabindex="-1">
-  <section class="card msgcard" id="card" aria-label="Message">
-   <div class="tools"><button type="button" id="previewBack" class="preview-back">← Back</button><div class="ctx"><img id="poster" alt="" width="28" height="28" hidden><span id="ctx">Group message · poster attached</span></div><span class="sp"></span>
-    <button class="tool" id="edit" title="Edit message (E)">Edit</button><button class="tool" id="fresh" title="New wording (N)">New</button><details class="overflow-tools"><summary aria-label="More message actions" title="More message actions">⋯</summary><div><button class="tool" id="copy" title="Copy (C)">Copy message</button><button class="tool" id="hideMsg" title="Hide message (H)">Hide message</button></div></details></div>
-   <div class="chat" id="chat" tabindex="0" aria-label="WhatsApp caption preview. Use Edit to change it."><div class="message" id="groupPreview"></div><div class="message" id="dmPreview"></div></div>
-   <div class="thumb-dock preview-dock"><button type="button" class="tool back-action" id="previewBackBottom">← Back</button></div>
-  </section>
-  <aside class="side">
-   <section class="card talk" aria-label="Assistant">
-
-    <div class="talk-title"><button type="button" id="chatLatest" hidden>↓ Latest reply</button><button type="button" id="chatExpand" aria-label="Open full chat history">Chat history ↗</button></div>
-    <div class="log" id="log" tabindex="0" role="log" aria-live="off" aria-label="Conversation"></div>
-    <div class="att" id="att" hidden><img id="attImg" alt="Attached picture" width="36" height="36"><span>Picture attached. It will be sent with the next DMs. Say "make it the poster" to use it for groups.</span><button type="button" class="later" id="attX" aria-label="Remove picture">✕</button></div>
-    <div class="next-actions" id="chatNextActions" aria-label="Next actions for this draft" hidden></div><span id="chatAnnouncement" class="sr-only" role="status" aria-live="polite"></span><form id="cmdForm" class="cmd composer" autocomplete="off"><textarea id="cmd" name="cmd" rows="1" enterkeyhint="send" aria-label="Tell the app what to do" placeholder="Message GiveLife…"></textarea><div class="ctools"><button type="button" class="clip" data-clip title="Attach a picture" aria-label="Attach a picture">+</button><span class="sp"></span><button class="go" type="submit" aria-label="Send">&#8593;</button></div></form>
-   </section>
-   <div class="action-rail">
-   <div class="camp" id="camp" hidden><span id="campText"></span><button type="button" id="campStop" class="later">Stop</button></div>
-   <section class="card send group-send" aria-label="Send group message">
-    <div class="send-title"><h2>Send saved message</h2><span id="sendMode">Poster + caption</span></div><div class="prim"><button class="big main" data-group="main" aria-label="GiveLife main" aria-describedby="sent-main"><span class="group-label">GiveLife main</span><small class="last-sent" data-last-group="main" id="sent-main">Checking…</small></button><button class="ghost" data-test="group" aria-label="Test group" aria-describedby="sent-test"><span class="group-label">Test group</span><small class="last-sent" data-last-group="test" id="sent-test">Checking…</small></button></div>
-    <div class="chips" id="chips" role="group" aria-label="Freelance groups">
-     <button data-group="community" aria-label="Upwork Community" aria-describedby="sent-community"><span class="group-label">Upwork Community</span><small class="last-sent" data-last-group="community" id="sent-community">Checking…</small></button><button data-group="fiverr" aria-label="Fiverr Course" aria-describedby="sent-fiverr"><span class="group-label">Fiverr Course</span><small class="last-sent" data-last-group="fiverr" id="sent-fiverr">Checking…</small></button>
-     <button data-group="upwork" aria-label="Upwork Course" aria-describedby="sent-upwork"><span class="group-label">Upwork Course</span><small class="last-sent" data-last-group="upwork" id="sent-upwork">Checking…</small></button><button data-group="uet" aria-label="Fiverr UET" aria-describedby="sent-uet"><span class="group-label">Fiverr UET</span><small class="last-sent" data-last-group="uet" id="sent-uet">Checking…</small></button>
-     <button data-group="toprated" aria-label="Top Rated" aria-describedby="sent-toprated"><span class="group-label">Top Rated</span><small class="last-sent" data-last-group="toprated" id="sent-toprated">Checking…</small></button><button data-group="free" aria-label="All 5 freelance" aria-describedby="sent-free"><span class="group-label">All 5 freelance</span><small class="last-sent" data-last-group="free" id="sent-free">Checking…</small></button>
-     <button class="big all" id="sendAll" title="GiveLife and all 5 freelance groups" aria-label="Send to all 6 groups" aria-describedby="sent-all"><span class="group-label">Send to all 6 groups</span><small class="last-sent" data-last-group="all" id="sent-all">Checking…</small></button>
+      /* Stable layout. Native system fonts keep every screen consistent, including offline. */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+        overscroll-behavior: none;
+      }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          15px/1.5 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          Arial,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+        touch-action: manipulation;
+        border: 0;
+        background: none;
+        user-select: none;
+      }
+      button:hover {
+        filter: brightness(0.97);
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      :focus-visible {
+        outline: 3px solid var(--ring);
+        outline-offset: 2px;
+      }
+      button:focus-visible {
+        border-radius: 10px;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      .sp {
+        flex: 1;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      .s {
+        display: none;
+      }
+      .app {
+        height: 100dvh;
+        max-width: 1440px;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
+          max(16px, env(safe-area-inset-left));
+      }
+      .brandbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 48px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 18px;
+        font-weight: 700;
+        margin-right: 12px;
+      }
+      .brand small {
+        display: none;
+      }
+      .mark {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        background: var(--btn);
+        color: white;
+        border-radius: 10px;
+      }
+      .seg {
+        display: flex;
+        background: var(--surface2);
+        padding: 3px;
+        border-radius: 12px;
+      }
+      .seg button {
+        min-height: 42px;
+        padding: 0 18px;
+        border-radius: 9px;
+        font-weight: 600;
+        color: var(--mut);
+      }
+      .seg button[aria-pressed='true'] {
+        background: var(--surface);
+        color: var(--gink);
+        box-shadow: var(--sh1);
+      }
+      .leftchip {
+        min-height: 44px;
+        font-weight: 700;
+        color: var(--gink);
+        padding: 0 10px;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .lw {
+        font-weight: 500;
+      }
+      .gear {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+        color: var(--mut);
+        border-radius: 12px;
+      }
+      .gear:hover {
+        background: var(--surface2);
+      }
+      .live {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 62px;
+        padding: 5px 7px 5px 12px;
+        border: 1px solid var(--line2);
+        border-left: 4px solid var(--g);
+        border-radius: 12px;
+        background: var(--gs);
+      }
+      .livebar {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        flex: 1;
+        min-width: 0;
+        min-height: 50px;
+        text-align: left;
+      }
+      .livebar b {
+        display: none;
+      }
+      .live-tag {
+        display: none;
+        flex: none;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        color: var(--gink);
+        border: 1px solid currentColor;
+        border-radius: 6px;
+        padding: 3px 6px;
+      }
+      .live[data-error='1'] .live-tag {
+        color: var(--red);
+      }
+      .live[data-state='reading'],
+      .live[data-state='sending'] {
+        border-color: var(--g);
+        box-shadow: 0 0 0 1px var(--g);
+      }
+      .livecopy {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        flex: 1;
+      }
+      .livebar strong {
+        color: var(--ink);
+        font-size: 15px;
+        font-weight: 750;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .livebar small {
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--mut);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .livebar em {
+        color: var(--mut);
+        font-style: normal;
+        margin-left: auto;
+      }
+      .pulse {
+        height: 8px;
+        width: 8px;
+        border-radius: 50%;
+        background: var(--g);
+        flex: none;
+      }
+      .live[data-state='off'],
+      .live[data-state='loading'] {
+        background: var(--surface2);
+        border-left-color: var(--mut);
+      }
+      .live[data-state='paused'] {
+        background: var(--wbg);
+        border-left-color: var(--warn);
+      }
+      .live[data-state='off'] .pulse,
+      .live[data-state='loading'] .pulse {
+        background: var(--mut);
+      }
+      .live[data-state='off'] .live-tag,
+      .live[data-state='loading'] .live-tag {
+        color: var(--mut);
+      }
+      .live[data-state='paused'] .pulse {
+        background: var(--warn);
+      }
+      .live[data-error='1'] {
+        background: color-mix(in srgb, var(--red) 10%, var(--surface));
+        border-left-color: var(--red);
+      }
+      .live[data-error='1'] .livebar strong {
+        color: var(--red);
+      }
+      .live[data-error='1'] .pulse {
+        background: var(--red);
+      }
+      .autosw {
+        min-width: 64px;
+        min-height: 44px;
+        border: 1px solid var(--line2);
+        border-radius: 10px;
+        background: var(--surface);
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--mut);
+      }
+      .autosw .lbl::before {
+        content: 'Auto ';
+      }
+      .autosw[aria-checked='true'] {
+        color: var(--gink);
+        background: var(--surface);
+      }
+      .autosw .knob {
+        display: none;
+      }
+      .livemore {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        padding: 16px;
+        background: var(--surface);
+        border: 1px solid var(--line2);
+        border-radius: 12px;
+        box-shadow: var(--sh3);
+        max-height: 65dvh;
+        overflow: auto;
+        font-size: 14px;
+      }
+      .livemore .k {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--mut);
+        margin-top: 10px;
+      }
+      .livemore .k:first-child {
+        margin-top: 0;
+      }
+      .layout {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(370px, 0.9fr);
+        gap: 14px;
+      }
+      .layout > * {
+        min-width: 0;
+      }
+      .card {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        border-radius: 16px;
+        min-width: 0;
+        min-height: 0;
+      }
+      .msgcard {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .tools {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px;
+      }
+      .ctx {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        color: var(--mut);
+        font-size: 13px;
+      }
+      .ctx img {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        object-fit: cover;
+      }
+      .ctx span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tool,
+      .later,
+      .ghost {
+        min-height: 44px;
+        padding: 0 14px;
+        border: 1px solid var(--line2);
+        border-radius: 10px;
+        background: var(--surface);
+        font-weight: 600;
+      }
+      .tool:hover,
+      .later:hover,
+      .ghost:hover {
+        background: var(--surface2);
+      }
+      .tool.on {
+        background: var(--btn);
+        color: #fff;
+        border-color: var(--btn);
+      }
+      .overflow-tools {
+        position: relative;
+      }
+      .overflow-tools summary {
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        min-width: 44px;
+        min-height: 44px;
+        border-radius: 10px;
+        list-style: none;
+        font-size: 20px;
+      }
+      .overflow-tools summary::-webkit-details-marker {
+        display: none;
+      }
+      .overflow-tools[open] > div {
+        position: absolute;
+        right: 0;
+        top: 100%;
+        z-index: 20;
+        display: grid;
+        gap: 5px;
+        min-width: 150px;
+        padding: 8px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: var(--sh2);
+      }
+      .chat {
+        flex: 1;
+        min-height: 0;
+        margin: 0 10px 10px;
+        padding: 16px 18px;
+        background: var(--msg);
+        color: var(--msgink);
+        border-radius: 12px;
+        overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+      }
+      .message {
+        max-width: 720px;
+        font-size: 17px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+      .message[contenteditable='true'] {
+        outline: 0;
+        min-height: 100%;
+      }
+      .editing .chat {
+        box-shadow: inset 0 0 0 2px var(--g);
+      }
+      .wa-line {
+        white-space: break-spaces;
+        min-height: 1.5em;
+      }
+      .wa-line.blank {
+        height: 0.8em;
+        min-height: 0.8em;
+      }
+      .wa-list {
+        display: inline-block;
+        padding-left: 12px;
+        text-indent: -9px;
+      }
+      .wa-quote {
+        border-left: 3px solid #849c83;
+        padding-left: 8px;
+      }
+      body[data-view='group'] #dmPreview,
+      body[data-view='dm'] #groupPreview,
+      body[data-view='group'] .dm-send,
+      body[data-view='dm'] .group-send,
+      body[data-view='dm'] #moreG {
+        display: none;
+      }
+      .desktop-preview,
+      .send-title {
+        display: none;
+      }
+      .action-rail {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-height: 0;
+      }
+      .side {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 0;
+      }
+      .talk {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .talk-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--mut);
+      }
+      .talk-title button {
+        margin-left: auto;
+        min-width: 44px;
+        min-height: 36px;
+        font-size: 13px;
+      }
+      .log {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        overscroll-behavior: contain;
+        overflow-anchor: none;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        font-size: 16px;
+        line-height: 1.55;
+        scrollbar-width: thin;
+      }
+      .e {
+        flex: none;
+        max-width: 100%;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .e.bot {
+        font: inherit;
+        align-self: flex-start;
+        background: color-mix(in srgb, var(--gs) 30%, var(--surface2));
+        border: 1px solid var(--line2);
+        border-radius: 14px;
+        padding: 12px 15px;
+        box-shadow: var(--sh1);
+      }
+      .e.you {
+        align-self: flex-end;
+        max-width: 90%;
+        background: var(--surface2);
+        padding: 8px 12px;
+        border-radius: 14px;
+      }
+      .e.sys {
+        align-self: flex-start;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--gink);
+        border-left: 3px solid var(--g);
+        background: var(--gs);
+        padding: 9px 12px;
+        border-radius: 0 9px 9px 0;
+      }
+      .e.sys.err,
+      .e.bot.err {
+        color: var(--red);
+        border-color: var(--red);
+        background: color-mix(in srgb, var(--red) 8%, var(--surface));
+      }
+      .e.err {
+        color: var(--red);
+      }
+      .e.dots {
+        color: var(--mut);
+        font-size: 14px;
+      }
+      .dots em {
+        font-style: normal;
+      }
+      .spark {
+        display: none;
+      }
+      .reply-feedback {
+        align-self: flex-start;
+        font-size: 12px;
+        color: var(--mut);
+        padding: 8px;
+        min-height: 44px;
+        margin-top: -16px;
+        border-radius: 8px;
+      }
+      .reply-feedback:hover {
+        background: var(--surface2);
+      }
+      .next-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 0 12px 6px;
+        flex: none;
+      }
+      .next-actions button {
+        min-height: 44px;
+        padding: 6px 11px;
+        border: 1px solid var(--line2);
+        border-radius: 10px;
+        background: var(--gs);
+        color: var(--gink);
+        font-size: 12px;
+        font-weight: 650;
+      }
+      .next-actions button:disabled {
+        background: var(--surface2);
+        color: var(--mut);
+      }
+      .composer {
+        flex: none;
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) 56px;
+        align-items: end;
+        gap: 6px;
+        margin: 8px 12px 12px;
+        padding: 6px;
+        border: 1px solid var(--line2);
+        border-radius: 16px;
+        background: var(--surface);
+      }
+      .composer:focus-within {
+        border-color: var(--g);
+      }
+      .composer textarea {
+        grid-column: 2;
+        grid-row: 1;
+        min-width: 0;
+        width: 100%;
+        height: 44px;
+        min-height: 44px;
+        max-height: 120px;
+        resize: none;
+        overflow: auto;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--ink);
+        font-size: 16px;
+        line-height: 24px;
+        padding: 10px 2px;
+      }
+      .composer textarea::placeholder {
+        color: var(--mut);
+      }
+      .ctools {
+        display: contents;
+      }
+      .ctools .sp {
+        display: none;
+      }
+      .composer .clip {
+        grid-column: 1;
+        grid-row: 1;
+        width: 44px;
+        height: 48px;
+        font-size: 24px;
+        color: var(--mut);
+        border-radius: 10px;
+      }
+      .composer .go {
+        grid-column: 3;
+        grid-row: 1;
+        width: 56px;
+        height: 56px;
+        background: var(--btn);
+        color: white;
+        font-size: 26px;
+        font-weight: 700;
+        border-radius: 12px;
+      }
+      .camp {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 8px 12px 0;
+        font-size: 13px;
+        color: var(--gink);
+      }
+      .camp span {
+        flex: 1;
+      }
+      .camp button {
+        min-height: 44px;
+        padding: 0 12px;
+      }
+      .att {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 4px 12px;
+        font-size: 12px;
+        color: var(--mut);
+      }
+      .att img {
+        width: 36px;
+        height: 36px;
+        object-fit: cover;
+        border-radius: 6px;
+      }
+      .att span {
+        flex: 1;
+      }
+      .att button {
+        min-width: 44px;
+      }
+      .send {
+        position: relative;
+        flex: none;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .prim,
+      .duo {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .big {
+        width: 100%;
+        min-height: 48px;
+        border-radius: 12px;
+        background: var(--btn);
+        color: white;
+        font-size: 15px;
+        font-weight: 650;
+        padding: 6px 12px;
+      }
+      .ghost {
+        min-height: 48px;
+      }
+      .big.all {
+        background: var(--surface2);
+        color: var(--ink);
+        border: 1px solid var(--line2);
+      }
+      .navrow {
+        display: flex;
+        gap: 8px;
+        flex: none;
+      }
+      .moreg,
+      .chat-open {
+        min-height: 44px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 0 12px;
+      }
+      .moreg {
+        flex: 1;
+        border: 1px solid var(--line2);
+        background: var(--surface);
+      }
+      .moreg em {
+        font-style: normal;
+      }
+      .chat-open {
+        margin-left: auto;
+        display: none;
+        background: var(--btn);
+        color: white;
+        min-width: 112px;
+      }
+      .chips {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--line);
+        margin-top: 2px;
+      }
+      .chips button {
+        min-height: 48px;
+        padding: 6px 8px;
+        border-radius: 10px;
+        border: 1px solid var(--line2);
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .chips button:hover {
+        background: var(--gs);
+      }
+      .chips .all {
+        grid-column: 1/-1;
+      }
+      .last-sent {
+        display: block;
+        font-size: 10px;
+        line-height: 1.35;
+        font-weight: 500;
+        opacity: 0.8;
+        margin-top: 3px;
+      }
+      .group-label {
+        display: block;
+      }
+      .send button[aria-busy='true'] {
+        opacity: 0.65;
+      }
+      #groupStatus {
+        font-size: 12px;
+        color: var(--mut);
+        max-height: 3.2em;
+        overflow: auto;
+        white-space: pre-line;
+      }
+      #groupStatus:empty {
+        display: none;
+      }
+      .dmrow {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+      .dmrow input {
+        width: 100%;
+        min-width: 0;
+        min-height: 46px;
+        padding: 0 10px;
+        border: 1px solid var(--line2);
+        border-radius: 10px;
+        background: var(--surface);
+        font-size: 16px;
+      }
+      .dmrow #dmPhone {
+        grid-column: 1/-1;
+      }
+      .dmrow .seg button {
+        padding: 0 10px;
+        min-height: 40px;
+        font-size: 13px;
+      }
+      .foot {
+        display: flex;
+        gap: 10px;
+        min-height: 18px;
+        font-size: 12px;
+        color: var(--mut);
+      }
+      #status {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #status.err {
+        color: var(--red);
+      }
+      kbd {
+        font: inherit;
+      }
+      .showmsg {
+        min-height: 44px;
+        color: var(--gink);
+        font-weight: 600;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        align-self: center;
+        padding: 0 18px;
+        font-size: 13px;
+      }
+      .showmsg svg {
+        display: none;
+      }
+      .nomsg .msgcard {
+        display: none;
+      }
+      .nomsg .layout {
+        grid-template-columns: 1fr;
+      }
+      .nomsg .side {
+        max-width: 800px;
+        width: 100%;
+        margin: auto;
+        height: 100%;
+      }
+      .offline {
+        display: none;
+      }
+      dialog {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        padding: 0;
+        box-shadow: var(--sh3);
+        border-radius: 16px;
+        margin: auto;
+        max-height: 90dvh;
+      }
+      dialog::backdrop {
+        background: #1118;
+      }
+      dialog header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 60px;
+        padding: 8px 12px 8px 18px;
+        border-bottom: 1px solid var(--line);
+        font-weight: 650;
+      }
+      .hist {
+        width: min(720px, calc(100vw - 32px));
+        height: min(88dvh, 900px);
+      }
+      .hist[open] {
+        display: flex;
+        flex-direction: column;
+      }
+      .hist .log {
+        padding: 18px 20px;
+        scroll-padding: 16px;
+      }
+      .hist .composer {
+        margin: 0 16px max(20px, env(safe-area-inset-bottom));
+      }
+      .chat-return {
+        display: flex;
+        justify-content: flex-end;
+        padding: 0 16px 6px;
+        min-height: 44px;
+        flex: none;
+      }
+      .chat-return button {
+        min-height: 44px;
+        padding: 0 12px;
+        color: var(--gink);
+        font-weight: 600;
+        border-radius: 10px;
+      }
+      .hist .chat-return {
+        display: none;
+      }
+      .set {
+        width: min(500px, calc(100vw - 24px));
+      }
+      .set .body {
+        max-height: calc(90dvh - 70px);
+        overflow: auto;
+        padding: 0 16px 12px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .row .t {
+        flex: 1;
+        min-width: 0;
+      }
+      .row b {
+        font-weight: 600;
+      }
+      .row small {
+        display: block;
+        color: var(--mut);
+        font-size: 13px;
+        margin-top: 3px;
+        line-height: 1.4;
+      }
+      .row small.err {
+        color: var(--red);
+      }
+      .row small.ok {
+        color: var(--gink);
+      }
+      .row .tool {
+        flex: none;
+      }
+      .tool.danger {
+        color: var(--red);
+      }
+      .tool.danger.arm {
+        background: var(--red);
+        color: white;
+      }
+      .sw {
+        appearance: none;
+        width: 48px;
+        height: 44px;
+        flex: none;
+        border-radius: 12px;
+        background: var(--surface2);
+        cursor: pointer;
+        position: relative;
+      }
+      .sw::after {
+        content: 'OFF';
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: var(--mut);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .sw:checked {
+        background: var(--gs);
+      }
+      .sw:checked::after {
+        content: 'ON';
+        color: var(--gink);
+      }
+      .sw:disabled {
+        opacity: 0.4;
+      }
+      .theme {
+        display: flex;
+        background: var(--surface2);
+        border-radius: 10px;
+        padding: 2px;
+      }
+      .theme button {
+        min-height: 44px;
+        padding: 0 9px;
+        border-radius: 8px;
+        font-size: 13px;
+      }
+      .theme button[aria-pressed='true'] {
+        background: var(--surface);
+        box-shadow: var(--sh1);
+      }
+      .advanced summary {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        color: var(--mut);
+        font-size: 14px;
+      }
+      .advanced summary::after {
+        content: '⌄';
+        margin-left: auto;
+      }
+      #chatEvalStatus {
+        white-space: pre-line;
+        max-height: 240px;
+        overflow: auto;
+      }
+      .memory-dialog {
+        padding: 20px;
+        width: min(540px, calc(100vw - 24px));
+        overflow: auto;
+      }
+      .memory-dialog h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+      .memory-dialog p {
+        font-size: 14px;
+        color: var(--mut);
+        margin: 8px 0;
+      }
+      .memory-dialog textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 12px;
+        font: inherit;
+        background: var(--surface2);
+        color: var(--ink);
+        border: 1px solid var(--line2);
+        border-radius: 12px;
+      }
+      .memory-dialog button {
+        min-height: 48px;
+        padding: 10px 16px;
+        border-radius: 12px;
+      }
+      .primary,
+      .memory-dialog .primary {
+        background: var(--btn);
+        color: white;
+        border-radius: 10px;
+        font-weight: 600;
+      }
+      .memory-item {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+        white-space: pre-wrap;
+      }
+      .feedback-check {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 16px 0;
+      }
+      .feedback-check input {
+        width: 24px;
+        height: 24px;
+      }
+      .connect-dialog {
+        background: var(--surface) !important;
+        color: var(--ink) !important;
+        border-color: var(--line) !important;
+        font-family: inherit !important;
+      }
+      .connect-dialog input {
+        background: var(--surface2) !important;
+        color: var(--ink) !important;
+        border-color: var(--line2) !important;
+      }
+      .connect-state {
+        background: var(--surface2) !important;
+      }
+      .connect-qr {
+        background: white !important;
+      }
+      .connect-muted,
+      .connect-state span,
+      .connect-note,
+      .connect-steps {
+        color: var(--mut) !important;
+      }
+      .connect-badge {
+        border-radius: 10px !important;
+        min-height: 44px !important;
+        font-size: 13px !important;
+        font-weight: 600;
+      }
+      .connect-badge[data-state='online'] {
+        color: var(--gink) !important;
+        background: var(--gs) !important;
+      }
+      .connect-badge[data-state='offline'],
+      .connect-badge[data-state='error'] {
+        color: var(--red) !important;
+        background: var(--wbg) !important;
+      }
+      @media (min-width: 900px) {
+        .app {
+          max-width: 1400px;
+          padding: 12px 20px 10px;
+          gap: 12px;
+        }
+        .brandbar {
+          min-height: 44px;
+        }
+        .brand {
+          font-size: 17px;
+          margin-right: 8px;
+        }
+        .desktop-preview {
+          display: inline-flex;
+          align-items: center;
+          min-height: 40px;
+          padding: 0 12px;
+          border: 1px solid var(--line2);
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+        .desktop-preview[aria-pressed='true'] {
+          background: var(--gs);
+          border-color: var(--g);
+          color: var(--gink);
+        }
+        .showmsg {
+          display: none;
+        }
+        .live {
+          min-height: 68px;
+          padding: 6px 8px 6px 16px;
+          border-left-width: 6px;
+          border-color: color-mix(in srgb, var(--g) 65%, var(--line));
+          box-shadow: var(--sh1);
+        }
+        .livebar {
+          min-height: 52px;
+          gap: 12px;
+        }
+        .livecopy {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 3px;
+        }
+        .livebar strong {
+          font-size: 18px;
+          font-weight: 800;
+          width: 100%;
+          letter-spacing: -0.015em;
+        }
+        .livebar small {
+          font-size: 12px;
+          width: 100%;
+          color: var(--ink);
+          opacity: 0.8;
+        }
+        .live-tag {
+          display: inline-block;
+          font-size: 10px;
+          padding: 5px 7px;
+        }
+        .pulse {
+          width: 10px;
+          height: 10px;
+        }
+        .autosw {
+          min-height: 44px;
+        }
+        .live[data-state='off'],
+        .live[data-state='loading'] {
+          border-color: var(--line2);
+        }
+        .live[data-error='1'] {
+          border-color: var(--red);
+        }
+        body .layout,
+        body.nomsg .layout {
+          grid-template-columns: minmax(0, 1fr) 304px;
+          gap: 16px;
+        }
+        body .side,
+        body.nomsg .side {
+          display: contents;
+        }
+        .talk,
+        .msgcard {
+          grid-column: 1;
+          grid-row: 1;
+          height: 100%;
+          min-height: 0;
+        }
+        body:not(.nomsg) .talk {
+          display: none;
+        }
+        .action-rail {
+          grid-column: 2;
+          grid-row: 1;
+          min-height: 0;
+          padding: 16px;
+          background: var(--surface);
+          border: 1px solid var(--line);
+          border-radius: 16px;
+          overflow: auto;
+          overscroll-behavior: contain;
+          scrollbar-width: thin;
+        }
+        .send {
+          padding: 0;
+          border: 0;
+          background: none;
+          gap: 10px;
+        }
+        .send-title {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          margin-bottom: 4px;
+        }
+        .send-title h2 {
+          font-size: 14px;
+          font-weight: 650;
+        }
+        .send-title span {
+          font-size: 12px;
+          color: var(--mut);
+        }
+        .action-rail .camp {
+          margin: 0;
+          padding: 0 0 12px;
+          border-bottom: 1px solid var(--line);
+          flex: none;
+        }
+        .navrow {
+          display: none;
+        }
+        .chips {
+          gap: 8px;
+          padding-top: 14px;
+          margin-top: 4px;
+        }
+        .chips button {
+          font-size: 13px;
+          padding: 8px 6px;
+        }
+        .prim .big,
+        .prim .ghost {
+          font-size: 14px;
+        }
+        .dmrow {
+          grid-template-columns: 1fr;
+        }
+        .dmrow .seg {
+          justify-self: start;
+        }
+        .dmrow input {
+          font-size: 15px;
+        }
+        .dmrow .seg button {
+          font-size: 12px;
+        }
+        .duo {
+          grid-template-columns: 1fr;
+        }
+        .duo .big {
+          order: 0;
+        }
+        .duo .ghost {
+          order: 1;
+        }
+        #groupStatus {
+          margin-top: 8px;
+          max-height: 6em;
+          font-size: 12px;
+        }
+        .talk-title {
+          min-height: 46px;
+          padding: 5px 18px;
+          font-size: 13px;
+        }
+        .talk-title #chatLatest {
+          margin-left: auto;
+        }
+        .talk-title #chatExpand {
+          margin-left: auto;
+        }
+        .talk-title #chatLatest:not([hidden]) + #chatExpand {
+          margin-left: 4px;
+        }
+        .talk-title button {
+          min-height: 32px;
+        }
+        .log {
+          font-size: 15px;
+          line-height: 1.65;
+          padding: 22px max(24px, calc((100% - 78ch) / 2));
+          gap: 14px;
+          scroll-padding-block: 20px;
+        }
+        .e.bot {
+          max-width: 72ch;
+          padding: 14px 18px;
+          border-radius: 14px;
+        }
+        .e.you {
+          max-width: min(80%, 60ch);
+          background: var(--surface2);
+          border: 1px solid var(--line);
+          padding: 9px 14px;
+        }
+        .e.sys {
+          max-width: 72ch;
+        }
+        .reply-feedback {
+          min-height: 28px;
+          font-size: 11px;
+          padding: 3px 8px;
+          margin-top: -11px;
+          margin-left: 10px;
+        }
+        .composer {
+          width: calc(100% - 48px);
+          max-width: 78ch;
+          margin: 8px auto 18px;
+          grid-template-columns: 36px minmax(0, 1fr) 52px;
+          padding: 6px;
+          border-radius: 14px;
+        }
+        .composer .clip {
+          width: 36px;
+          height: 44px;
+        }
+        .composer .go {
+          width: 52px;
+          height: 52px;
+        }
+        .composer textarea {
+          font-size: 15px;
+        }
+        .next-actions {
+          width: calc(100% - 48px);
+          max-width: 78ch;
+          margin-inline: auto;
+          padding: 0 0 4px;
+        }
+        .next-actions button {
+          font-size: 12px;
+          min-height: 36px;
+        }
+        .chat {
+          padding: 20px 24px;
+          margin: 0 14px 14px;
+          background: var(--surface2);
+        }
+        .message {
+          width: fit-content;
+          max-width: min(100%, 72ch);
+          padding: 18px 20px;
+          border-radius: 12px;
+          background: var(--msg);
+        }
+        .message[contenteditable='true'] {
+          width: 100%;
+          max-width: none;
+        }
+        .msgcard .tools {
+          min-height: 56px;
+          padding: 8px 14px;
+        }
+        .foot {
+          align-items: center;
+          min-height: 24px;
+        }
+        .keys {
+          min-height: 28px;
+          padding: 2px 8px;
+          border-radius: 7px;
+        }
+        .keys:hover {
+          background: var(--surface2);
+        }
+        kbd {
+          padding: 1px 4px;
+          border: 1px solid var(--line2);
+          border-radius: 4px;
+          font-size: 11px;
+        }
+        .hist {
+          width: min(900px, calc(100vw - 80px));
+          height: min(90dvh, 1000px);
+        }
+        .hist header #histClose {
+          display: block;
+        }
+        .hist .log {
+          padding: 22px max(24px, calc((100% - 78ch) / 2));
+        }
+        .hist .composer {
+          margin: 8px auto 20px;
+        }
+        .set .body {
+          padding-inline: 20px;
+        }
+        .set .row {
+          padding-block: 12px;
+        }
+      }
+      @media (min-width: 900px) {
+        html,
+        body {
+          height: auto;
+          min-height: 100%;
+        }
+        body {
+          overflow: auto;
+        }
+        .app {
+          height: auto;
+          min-height: 100dvh;
+        }
+        .layout {
+          flex: 1;
+          min-height: calc(100dvh - 210px);
+          align-items: start;
+        }
+        .talk {
+          height: auto;
+          min-height: calc(100dvh - 210px);
+          overflow: visible;
+        }
+        .talk .log {
+          flex: none;
+          overflow: visible;
+          max-height: none;
+          min-height: 120px;
+          padding-block: 16px;
+          gap: 10px;
+        }
+        .talk .composer {
+          position: sticky;
+          bottom: 12px;
+          z-index: 3;
+          box-shadow: var(--sh2);
+          margin-top: auto;
+        }
+        .talk .next-actions {
+          padding-top: 4px;
+        }
+        .action-rail {
+          position: sticky;
+          top: 12px;
+          height: auto;
+          max-height: calc(100dvh - 24px);
+        }
+        .talk .log .e {
+          max-width: 100%;
+        }
+        .talk .log .e.bot {
+          max-width: 72ch;
+        }
+        .talk-title {
+          position: relative;
+        }
+        .hist .log {
+          overflow: auto;
+        }
+        .last-sent {
+          font-size: 11px;
+        }
+        .prim button,
+        .chips button {
+          min-height: 60px;
+        }
+        .msgcard {
+          height: calc(100dvh - 210px);
+        }
+      }
+      @media (min-width: 900px) and (max-width: 1100px) {
+        body .layout,
+        body.nomsg .layout {
+          grid-template-columns: minmax(0, 1fr) 276px;
+          gap: 12px;
+        }
+        .app {
+          padding-inline: 14px;
+        }
+        .action-rail {
+          padding: 12px;
+        }
+        .brandbar {
+          gap: 6px;
+        }
+        .desktop-preview {
+          padding: 0 9px;
+        }
+        .livecopy {
+          gap: 3px;
+        }
+        .livebar strong {
+          font-size: 16px;
+        }
+        .log {
+          padding-inline: 24px;
+        }
+        .next-actions button {
+          font-size: 11.5px;
+        }
+        .connect-badge {
+          font-size: 12px !important;
+        }
+      }
+      .keyboard-dialog {
+        width: min(480px, calc(100vw - 24px));
+      }
+      .keyboard-dialog dl {
+        padding: 14px 22px;
+      }
+      .keyboard-dialog dl > div {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+      }
+      .keyboard-dialog dt {
+        color: var(--mut);
+      }
+      .keyboard-dialog dd {
+        white-space: nowrap;
+      }
+      .keyboard-dialog p {
+        padding: 0 22px 20px;
+        font-size: 12px;
+        color: var(--mut);
+      }
+      @media (max-width: 1100px) {
+        .brand .bname {
+          display: none;
+        }
+        .brand {
+          margin-right: 0;
+        }
+        .ctx span {
+          max-width: 165px;
+        }
+      }
+      @media (max-width: 899px) {
+        .app {
+          padding: 6px 10px max(8px, env(safe-area-inset-bottom));
+          gap: 6px;
+        }
+        .brandbar {
+          gap: 4px;
+          min-height: 44px;
+        }
+        .brand {
+          display: none;
+        }
+        .seg button {
+          padding: 0 14px;
+          min-height: 40px;
+        }
+        .leftchip {
+          font-size: 14px;
+          padding: 0 6px;
+        }
+        .gear {
+          width: 44px;
+        }
+        .lw {
+          display: none;
+        }
+        .live {
+          min-height: 60px;
+          padding: 4px 6px 4px 10px;
+        }
+        .livebar {
+          gap: 7px;
+          min-height: 48px;
+        }
+        .livebar strong {
+          font-size: 14px;
+        }
+        .livebar small {
+          font-size: 11.5px;
+        }
+        .livebar em {
+          display: none;
+        }
+        .autosw {
+          min-width: 58px;
+        }
+        .livebar b {
+          display: none;
+        }
+        .live-tag {
+          display: none;
+          flex: none;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          color: var(--gink);
+          border: 1px solid currentColor;
+          border-radius: 6px;
+          padding: 3px 6px;
+        }
+        .live[data-error='1'] .live-tag {
+          color: var(--red);
+        }
+        .live[data-state='reading'],
+        .live[data-state='sending'] {
+          border-color: var(--g);
+          box-shadow: 0 0 0 1px var(--g);
+        }
+        .brandbar .connect-badge {
+          font-size: 0 !important;
+          width: 44px;
+          min-width: 44px;
+          padding: 0 !important;
+          display: grid;
+          place-items: center;
+        }
+        .brandbar .connect-badge::before {
+          font-size: 12px;
+          font-weight: 700;
+          content: 'WA';
+        }
+        .brandbar .connect-badge[data-state='online']::before {
+          content: 'WA ✓';
+        }
+        .brandbar .connect-badge[data-state='offline']::before,
+        .brandbar .connect-badge[data-state='error']::before {
+          content: 'WA !';
+          font-weight: 700;
+        }
+        .layout {
+          grid-template-columns: 1fr;
+          grid-template-rows: minmax(0, 1fr) auto;
+          gap: 8px;
+        }
+        .side {
+          gap: 6px;
+        }
+        .talk.card {
+          border: 0;
+          background: none;
+          flex: none;
+        }
+        .talk .log,
+        .talk .composer,
+        .talk .next-actions,
+        .talk-title {
+          display: none;
+        }
+        .camp,
+        .att {
+          margin: 0;
+          font-size: 12px;
+        }
+        .att span {
+          max-height: 3em;
+          overflow: hidden;
+        }
+        .msgcard .tools {
+          padding: 6px 8px;
+        }
+        .ctx {
+          font-size: 12px;
+        }
+        .ctx img {
+          width: 24px;
+          height: 24px;
+        }
+        .ctx span {
+          max-width: 120px;
+        }
+        .tools .tool {
+          padding: 0 12px;
+        }
+        .chat {
+          margin: 0 8px 8px;
+          padding: 12px 14px;
+        }
+        .message {
+          font-size: 14px;
+        }
+        .send {
+          padding: 0;
+          border: 0;
+          background: none;
+          gap: 6px;
+        }
+        .big {
+          min-height: 48px;
+        }
+        .prim .main {
+          order: 2;
+        }
+        .navrow {
+          gap: 8px;
+        }
+        .moreg {
+          min-height: 48px;
+        }
+        .chat-open {
+          display: block;
+          min-height: 48px;
+        }
+        .chips {
+          grid-template-columns: 1fr 1fr;
+        }
+        .chips .s {
+          display: none;
+        }
+        .chips .l {
+          display: inline;
+        }
+        .foot {
+          display: none;
+        }
+        .dmrow {
+          grid-template-columns: 1fr 1fr;
+        }
+        .dmrow .seg {
+          grid-column: 2;
+          grid-row: 1;
+        }
+        .dmrow #dmPhone {
+          grid-column: 1/-1;
+        }
+        .duo {
+          grid-template-columns: 1fr 2fr;
+        }
+        .duo #sendDm {
+          order: 2;
+        }
+        dialog.hist {
+          position: fixed;
+          top: var(--chat-top, 0px);
+          left: 0;
+          right: 0;
+          bottom: auto;
+          width: 100%;
+          max-width: 100%;
+          height: var(--chat-height, 100dvh);
+          max-height: var(--chat-height, 100dvh);
+          margin: 0;
+          border: 0;
+          border-radius: 0;
+        }
+        .hist header {
+          min-height: 44px;
+          padding: 6px 16px;
+          font-size: 14px;
+          color: var(--mut);
+        }
+        .hist header #histClose {
+          display: none;
+        }
+        .hist .log {
+          padding: 16px;
+          gap: 18px;
+        }
+        .hist .chat-return {
+          display: flex;
+        }
+        .hist .composer {
+          margin: 0 10px max(24px, env(safe-area-inset-bottom));
+          grid-template-columns: 40px minmax(0, 1fr) 56px;
+          padding: 5px;
+          gap: 4px;
+        }
+        .hist .composer .clip {
+          width: 40px;
+        }
+        .chat-return {
+          padding: 0 10px 2px;
+        }
+        .nomsg .side {
+          justify-content: center;
+          height: auto;
+          align-self: center;
+          max-width: 520px;
+          gap: 10px;
+        }
+        .nomsg .layout {
+          grid-template-rows: 1fr;
+          align-items: center;
+        }
+        .nomsg .talk {
+          display: none;
+        }
+        .nomsg .talk:has(.camp:not([hidden]), .att:not([hidden])) {
+          display: flex;
+        }
+        .nomsg .chips {
+          position: static;
+          transform: none;
+        }
+        .nomsg .layout {
+          overflow: auto;
+        }
+        .nomsg .side {
+          margin-block: auto;
+        }
+        .chat-open {
+          width: 100%;
+          font-size: 15px;
+        }
+        .nomsg .big,
+        .nomsg .ghost,
+        .nomsg .chips button,
+        .nomsg .chat-open {
+          min-height: 48px;
+        }
+      }
+      @media (max-width: 380px) {
+        .ctx span {
+          display: none;
+        }
+        .tools {
+          gap: 4px;
+        }
+        .seg button {
+          padding: 0 12px;
+        }
+        .leftchip {
+          font-size: 13px;
+        }
+        .brandbar {
+          gap: 2px;
+        }
+        .theme button {
+          padding: 0 7px;
+        }
+      }
+      @media (max-width: 899px) and (max-height: 600px) {
+        .app {
+          gap: 4px;
+        }
+        .live {
+          min-height: 56px;
+        }
+        .livebar {
+          min-height: 44px;
+        }
+        .hist header {
+          min-height: 36px;
+        }
+        .hist .composer {
+          margin-bottom: 12px;
+        }
+        .hist .log {
+          padding-top: 10px;
+          padding-bottom: 10px;
+        }
+      }
+      @media (max-width: 899px) and (max-height: 550px) {
+        body[data-view='dm']:has(.dmrow input:focus) .msgcard {
+          display: none;
+        }
+        body[data-view='dm']:has(.dmrow input:focus) .layout {
+          display: flex;
+          flex-direction: column;
+        }
+        body[data-view='dm']:has(.dmrow input:focus) .side {
+          flex: 1;
+          justify-content: flex-end;
+          overflow: auto;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+    <link rel="stylesheet" href="/donors.css" />
+    <link rel="stylesheet" href="/notes.css" />
+    <link rel="stylesheet" href="/studio.css" />
+    <link rel="stylesheet" href="/compact-nav.css" />
+    <link rel="stylesheet" href="/focus-editor.css" />
+    <link rel="stylesheet" href="/comfort.css" />
+  </head>
+  <body class="nomsg" data-view="group">
+    <a class="skip-link" href="#main-workspace">Skip to workspace</a>
+    <div class="app">
+      <span id="liveAnnouncement" class="sr-only" role="status" aria-live="polite"></span>
+      <div class="offline" id="offline" role="status" hidden>
+        <b>No internet.</b> Auto keeps running on the server. Sending works again when you are back
+        online.
+      </div>
+      <header class="brandbar">
+        <h1 class="sr-only">GiveLife message studio</h1>
+        <div class="brand" translate="no">
+          <div class="mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path
+                d="M20.5 5.7c-2.2-2.2-5.4-1.6-8.5 1.4C8.9 4.1 5.7 3.5 3.5 5.7c-2.8 2.8-1.4 6.5 8.5 13.6 9.9-7.1 11.3-10.8 8.5-13.6Z"
+              />
+            </svg>
+          </div>
+          <div class="bname">GiveLife<small>Message studio</small></div>
+        </div>
+        <div class="seg" role="group" aria-label="Message type">
+          <button data-view-button="group" aria-pressed="true" title="Group messages (G)">
+            Group messages
+          </button>
+        </div>
+        <button
+          type="button"
+          id="desktopPreview"
+          class="desktop-preview"
+          aria-controls="card"
+          aria-pressed="false"
+          aria-keyshortcuts="H"
+          title="Show or hide the message preview (H)"
+        >
+          Preview
+        </button>
+        <label
+          class="case-pick"
+          title="Cases: each case keeps its own amount, stars, donated and DM marks"
+          ><span class="sr-only">Case</span
+          ><select id="caseSelect" aria-label="Case">
+            <option>Case…</option>
+          </select></label
+        >
+        <span class="sp"></span>
+        <button id="leftChip" class="leftchip" title="Change the amount left">Rs. …</button
+        ><button id="gear" class="gear" aria-label="Settings" title="Settings">&#9881;</button>
+      </header>
+      <section class="live" id="live" aria-label="Automatic sending" data-on="0">
+        <button type="button" class="livebar" id="liveBar" aria-expanded="false">
+          <i class="pulse"></i><span class="live-tag" aria-hidden="true">LIVE</span
+          ><b id="liveNow">Auto OFF</b
+          ><span class="livecopy"
+            ><strong id="liveMeta">Checking status…</strong
+            ><small id="liveDetail">Connecting to your bot</small></span
+          ><em>&#8964;</em></button
+        ><button
+          type="button"
+          class="autosw"
+          id="auto"
+          disabled
+          role="switch"
+          aria-checked="false"
+          aria-label="Auto mode"
+          title="Switch automatic actions on or off"
+        >
+          <span class="lbl">…</span><i class="knob"></i>
+        </button>
+        <div class="livemore" id="liveMore" hidden></div>
+      </section>
+      <button type="button" class="showmsg" id="showMsg" aria-controls="card" aria-expanded="false">
+        <span>Show message</span
+        ><svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      <main class="layout" id="main-workspace" tabindex="-1">
+        <section class="card msgcard" id="card" aria-label="Message">
+          <div class="tools">
+            <button type="button" id="previewBack" class="preview-back">← Back</button>
+            <div class="ctx">
+              <img id="poster" alt="" width="28" height="28" hidden /><span id="ctx"
+                >Group message · poster attached</span
+              >
+            </div>
+            <span class="sp"></span>
+            <button class="tool" id="edit" title="Edit message (E)">Edit</button
+            ><button class="tool" id="fresh" title="New wording (N)">New</button>
+            <details class="overflow-tools">
+              <summary aria-label="More message actions" title="More message actions">⋯</summary>
+              <div>
+                <button class="tool" id="copy" title="Copy (C)">Copy message</button
+                ><button class="tool" id="hideMsg" title="Hide message (H)">Hide message</button>
+              </div>
+            </details>
+          </div>
+          <div
+            class="chat"
+            id="chat"
+            tabindex="0"
+            aria-label="WhatsApp caption preview. Use Edit to change it."
+          >
+            <div class="message" id="groupPreview"></div>
+            <div class="message" id="dmPreview"></div>
+          </div>
+          <div class="thumb-dock preview-dock">
+            <button type="button" class="tool back-action" id="previewBackBottom">← Back</button>
+          </div>
+        </section>
+        <aside class="side">
+          <section class="card talk" aria-label="Assistant">
+            <div class="talk-title">
+              <button type="button" id="chatLatest" hidden>↓ Latest reply</button
+              ><button type="button" id="chatExpand" aria-label="Open full chat history">
+                Chat history ↗
+              </button>
+            </div>
+            <div
+              class="log"
+              id="log"
+              tabindex="0"
+              role="log"
+              aria-live="off"
+              aria-label="Conversation"
+            ></div>
+            <div class="att" id="att" hidden>
+              <img id="attImg" alt="Attached picture" width="36" height="36" /><span
+                >Picture attached. It will be sent with the next DMs. Say "make it the poster" to
+                use it for groups.</span
+              ><button type="button" class="later" id="attX" aria-label="Remove picture">✕</button>
+            </div>
+            <div
+              class="next-actions"
+              id="chatNextActions"
+              aria-label="Next actions for this draft"
+              hidden
+            ></div>
+            <span id="chatAnnouncement" class="sr-only" role="status" aria-live="polite"></span>
+            <form id="cmdForm" class="cmd composer" autocomplete="off">
+              <textarea
+                id="cmd"
+                name="cmd"
+                rows="1"
+                enterkeyhint="send"
+                aria-label="Tell the app what to do"
+                placeholder="Message GiveLife…"
+              ></textarea>
+              <div class="ctools">
+                <button
+                  type="button"
+                  class="clip"
+                  data-clip
+                  title="Attach a picture"
+                  aria-label="Attach a picture"
+                >
+                  +</button
+                ><span class="sp"></span
+                ><button class="go" type="submit" aria-label="Send">&#8593;</button>
+              </div>
+            </form>
+          </section>
+          <div class="action-rail">
+            <div class="camp" id="camp" hidden>
+              <span id="campText"></span
+              ><button type="button" id="campStop" class="later">Stop</button>
+            </div>
+            <section class="card send group-send" aria-label="Send group message">
+              <div class="send-title">
+                <h2>Send saved message</h2>
+                <span id="sendMode">Poster + caption</span>
+              </div>
+              <div class="group-two" role="group" aria-label="Send groups">
+                <div class="group-drop-wrap">
+                  <button
+                    class="group-main-btn"
+                    data-group="main"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    id="btnGivelife"
+                  >
+                    GiveLife <span class="gd-arrow">▾</span
+                    ><small class="last-sent" data-last-group="main" id="sent-main"></small>
+                  </button>
+                  <div class="group-drop" id="dropGivelife" hidden>
+                    <button data-group="main">
+                      GiveLife main<small class="last-sent" data-last-group="main"></small>
+                    </button>
+                    <button class="ghost" data-test="group">
+                      Test group<small
+                        class="last-sent"
+                        data-last-group="test"
+                        id="sent-test"
+                      ></small>
+                    </button>
+                  </div>
+                </div>
+                <div class="group-drop-wrap">
+                  <button
+                    class="group-free-btn"
+                    data-group="free"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    id="btnFree"
+                  >
+                    All freelance <span class="gd-arrow">▾</span
+                    ><small class="last-sent" data-last-group="free" id="sent-free"></small>
+                  </button>
+                  <div class="group-drop" id="dropFree" hidden>
+                    <button data-group="community">
+                      Upwork Community<small
+                        class="last-sent"
+                        data-last-group="community"
+                        id="sent-community"
+                      ></small>
+                    </button>
+                    <button data-group="fiverr">
+                      Fiverr Course<small
+                        class="last-sent"
+                        data-last-group="fiverr"
+                        id="sent-fiverr"
+                      ></small>
+                    </button>
+                    <button data-group="upwork">
+                      Upwork Course<small
+                        class="last-sent"
+                        data-last-group="upwork"
+                        id="sent-upwork"
+                      ></small>
+                    </button>
+                    <button data-group="uet">
+                      Fiverr UET<small
+                        class="last-sent"
+                        data-last-group="uet"
+                        id="sent-uet"
+                      ></small>
+                    </button>
+                    <button data-group="toprated">
+                      Top Rated<small
+                        class="last-sent"
+                        data-last-group="toprated"
+                        id="sent-toprated"
+                      ></small>
+                    </button>
+                  </div>
+                </div>
+                <button
+                  class="group-all-btn"
+                  id="sendAll"
+                  title="GiveLife + all 5 freelance"
+                  aria-label="Send to all 6 groups"
+                >
+                  <small class="last-sent" data-last-group="all" id="sent-all"></small>All 6
+                </button>
+              </div>
+              <div class="delay-row" id="delayRow" role="group" aria-label="Schedule delay">
+                <span class="delay-label">Send in</span>
+                <button type="button" class="delay-pill" data-delay="15" aria-pressed="false">
+                  15 min
+                </button>
+                <button type="button" class="delay-pill" data-delay="30" aria-pressed="false">
+                  30 min
+                </button>
+                <button type="button" class="delay-pill" data-delay="45" aria-pressed="false">
+                  45 min
+                </button>
+                <button type="button" class="delay-pill" data-delay="60" aria-pressed="false">
+                  1 hr
+                </button>
+              </div>
+              <div id="groupStatus" role="status"></div>
+            </section>
+            <section class="card send dm-send" aria-label="Send direct message">
+              <div class="send-title">
+                <h2>Send a direct message</h2>
+                <label class="dm-poster"
+                  ><input type="checkbox" id="dmPoster" checked /> Attach poster (image +
+                  caption)</label
+                >
+              </div>
+              <div class="dmrow">
+                <label class="dm-field" for="dmName"
+                  >Name (optional)<input
+                    id="dmName"
+                    name="recipient_name"
+                    placeholder="e.g. Ali…"
+                    autocomplete="off"
+                /></label>
+                <div class="seg" id="gender">
+                  <button type="button" data-g="Brother" aria-pressed="true">Bhai</button
+                  ><button type="button" data-g="Sister" aria-pressed="false">Sister</button>
+                </div>
+                <label class="dm-field phone-field" for="dmPhone"
+                  >Private number<input
+                    id="dmPhone"
+                    name="recipient_phone"
+                    type="tel"
+                    inputmode="tel"
+                    placeholder="e.g. 0300 1234567…"
+                    autocomplete="off"
+                    spellcheck="false"
+                /></label>
+              </div>
+              <div class="duo">
+                <button class="big" id="sendDm">Send DM with poster</button
+                ><button class="ghost" data-test="dm">Test</button>
+              </div>
+              <button type="button" class="ghost paste-launch" id="sendMoreDonors">
+                Send to more donors
+              </button>
+            </section>
+            <div class="rail-quick" aria-label="Shortcuts">
+              <button type="button" id="railPreview">Preview</button
+              ><button type="button" id="railDonors">Donors</button>
+            </div>
+          </div>
+          <div class="navrow">
+            <button type="button" class="chat-open" id="chatOpen">Chat ↗</button>
+          </div>
+        </aside>
+      </main>
+      <footer class="foot">
+        <span id="status" class="sr-only" role="status">Loading…</span
+        ><button type="button" class="keys" id="keyboardHelp" title="Keyboard shortcuts (?)">
+          Keyboard shortcuts <kbd>?</kbd>
+        </button>
+      </footer>
     </div>
-    <div id="groupStatus" role="status"></div>
-    <div class="delay-row" id="delayRow" role="group" aria-label="Schedule delay">
-     <span class="delay-label">Send in</span>
-     <button type="button" class="delay-pill" data-delay="15" aria-pressed="false">15 min</button>
-     <button type="button" class="delay-pill" data-delay="30" aria-pressed="false">30 min</button>
-     <button type="button" class="delay-pill" data-delay="45" aria-pressed="false">45 min</button>
-     <button type="button" class="delay-pill" data-delay="60" aria-pressed="false">1 hr</button>
-    </div>
-   </section>
-   <section class="card send dm-send" aria-label="Send direct message">
-    <div class="send-title"><h2>Send a direct message</h2><label class="dm-poster"><input type="checkbox" id="dmPoster" checked> Attach poster (image + caption)</label></div><div class="dmrow"><label class="dm-field" for="dmName">Name (optional)<input id="dmName" name="recipient_name" placeholder="e.g. Ali…" autocomplete="off"></label><div class="seg" id="gender"><button type="button" data-g="Brother" aria-pressed="true">Bhai</button><button type="button" data-g="Sister" aria-pressed="false">Sister</button></div><label class="dm-field phone-field" for="dmPhone">Private number<input id="dmPhone" name="recipient_phone" type="tel" inputmode="tel" placeholder="e.g. 0300 1234567…" autocomplete="off" spellcheck="false"></label></div>
-    <div class="duo"><button class="big" id="sendDm">Send DM with poster</button><button class="ghost" data-test="dm">Test</button></div><button type="button" class="ghost paste-launch" id="sendMoreDonors">Send to more donors</button>
-   </section>
-   <div class="rail-quick" aria-label="Shortcuts"><button type="button" id="railPreview">Preview</button><button type="button" id="railDonors">Donors</button></div>
-   </div>
-   <div class="navrow"><button type="button" class="chat-open" id="chatOpen">Chat ↗</button></div>
-  </aside>
- </main>
- <footer class="foot"><span id="status" class="sr-only" role="status">Loading…</span><button type="button" class="keys" id="keyboardHelp" title="Keyboard shortcuts (?)">Keyboard shortcuts <kbd>?</kbd></button></footer>
-</div>
-<dialog class="hist" id="hist" aria-label="Chat with the GiveLife assistant"><header><span>Chat</span><span class="sp"></span><button type="button" class="tool" id="histClose" autofocus>← Back</button></header><div class="log" id="histLog" tabindex="0" role="log" aria-live="off" aria-label="Conversation"></div><div class="chat-return"><button type="button" id="histLatest" hidden>↓ Latest reply</button><span class="sp"></span><button type="button" id="histMain">← Back</button></div><div class="next-actions" id="histNextActions" aria-label="Next actions for this draft" hidden></div><span id="histAnnouncement" class="sr-only" role="status" aria-live="polite"></span><form id="histForm" class="cmd composer" autocomplete="off"><textarea id="histCmd" name="histCmd" rows="1" enterkeyhint="send" aria-label="Message the assistant" placeholder="Reply to GiveLife…"></textarea><div class="ctools"><button type="button" class="clip" data-clip title="Attach a picture" aria-label="Attach a picture">+</button><span class="sp"></span><button class="go" type="submit" aria-label="Send">&#8593;</button></div></form></dialog>
-<dialog id="keyboardDialog" class="keyboard-dialog" aria-label="Keyboard shortcuts"><header><span>Keyboard shortcuts</span><span class="sp"></span><button type="button" class="tool" id="keyboardClose" autofocus>Done</button></header><dl><div><dt>Focus chat</dt><dd><kbd>/</kbd> or <kbd>Ctrl /</kbd></dd></div><div><dt>Show / hide message</dt><dd><kbd>H</kbd></dd></div><div><dt>Group / DM</dt><dd><kbd>G</kbd> / <kbd>D</kbd></dd></div><div><dt>Edit message</dt><dd><kbd>E</kbd></dd></div><div><dt>New wording</dt><dd><kbd>N</kbd></dd></div><div><dt>Copy message</dt><dd><kbd>C</kbd></dd></div><div><dt>Send chat / new line</dt><dd><kbd>Enter</kbd> / <kbd>Shift Enter</kbd></dd></div><div><dt>Scroll a focused conversation</dt><dd><kbd>PgUp</kbd> / <kbd>PgDn</kbd></dd></div><div><dt>Close dialog / finish editing</dt><dd><kbd>Esc</kbd></dd></div></dl></dialog>
-<dialog class="set" id="set" aria-label="Settings"><header><span>Settings</span><span class="sp"></span><button type="button" class="tool" id="setClose">Done</button></header>
- <div class="body">
-  <div class="row"><div class="t"><b>Appearance</b></div><div class="theme" id="theme"><button type="button" data-t="system">Auto</button><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></div></div>
-  <details class="advanced"><summary>AI checks</summary><div class="row"><div class="t"><b>AI model</b><small id="aiRes"></small></div><button type="button" class="tool" id="aiTest">Test</button></div>
-  <div class="row"><div class="t"><b>Chat checks</b><small id="chatEvalStatus">Test run only; sends nothing</small></div><button type="button" class="tool" id="runChatEval">Run chat checks</button></div>
-  </details>
-  <label class="row"><div class="t"><b>Auto may send DMs</b></div><input type="checkbox" class="sw" id="swDm"></label>
-  <label class="row"><div class="t"><b>Also DM new people</b></div><input type="checkbox" class="sw" id="swNew"></label>
-  <div class="row"><div class="t"><b>Memory &amp; feedback</b></div><button type="button" class="tool" id="openMemory">Review</button></div>
-  <div class="row"><div class="t"><b>University group finder</b></div><a class="tool" href="/group-finder">Find groups</a></div>
-  <div class="row"><div class="t"><b>WhatsApp</b><small id="waRes">Disconnect this number from the studio.</small></div><button type="button" class="tool danger" id="waOut">Log out</button></div>
- </div><div class="thumb-dock"><button type="button" class="tool back-action" id="setCloseBottom">← Back</button></div></dialog>
-<input type="file" id="file" accept="image/*,video/mp4,video/quicktime" hidden><textarea id="group" hidden></textarea><textarea id="dm" hidden></textarea>
-<dialog id="feedbackDialog" class="memory-dialog" aria-label="Correct an assistant response"><h2>What should be different?</h2><form id="feedbackForm"><textarea id="feedbackText" name="feedbackText" aria-label="Your correction" placeholder="Describe the mistake and the correct behaviour…"></textarea><label class="feedback-check"><input type="checkbox" id="feedbackRemember">Remember this correction for future chats</label><p id="feedbackStatus" role="status"></p><button class="primary" type="submit">Save correction</button><button type="button" id="feedbackClose">Cancel</button></form></dialog>
-<dialog id="memoryDialog" class="memory-dialog" aria-label="Memory and feedback"><h2>Memory & feedback</h2><div id="memoryContent"></div><button type="button" id="memoryClose">Close</button></dialog>
-<p id="startupRecovery" role="alert">The screen could not open. <a href="" onclick="location.reload();return false">Reload this screen</a></p><script src="/connection.js"></script><script src="/format.js"></script><script src="/app.js"></script><script src="/donors.js"></script><script src="/replies.js"></script><script src="/notes.js"></script><script src="/compact-nav.js"></script><script src="/focus-editor.js"></script><script src="/comfort.js"></script></body></html>
-
-
-
-
-
+    <dialog class="hist" id="hist" aria-label="Chat with the GiveLife assistant">
+      <header>
+        <span>Chat</span><span class="sp"></span
+        ><button type="button" class="tool" id="histClose" autofocus>← Back</button>
+      </header>
+      <div
+        class="log"
+        id="histLog"
+        tabindex="0"
+        role="log"
+        aria-live="off"
+        aria-label="Conversation"
+      ></div>
+      <div class="chat-return">
+        <button type="button" id="histLatest" hidden>↓ Latest reply</button><span class="sp"></span
+        ><button type="button" id="histMain">← Back</button>
+      </div>
+      <div
+        class="next-actions"
+        id="histNextActions"
+        aria-label="Next actions for this draft"
+        hidden
+      ></div>
+      <span id="histAnnouncement" class="sr-only" role="status" aria-live="polite"></span>
+      <form id="histForm" class="cmd composer" autocomplete="off">
+        <textarea
+          id="histCmd"
+          name="histCmd"
+          rows="1"
+          enterkeyhint="send"
+          aria-label="Message the assistant"
+          placeholder="Reply to GiveLife…"
+        ></textarea>
+        <div class="ctools">
+          <button
+            type="button"
+            class="clip"
+            data-clip
+            title="Attach a picture"
+            aria-label="Attach a picture"
+          >
+            +</button
+          ><span class="sp"></span
+          ><button class="go" type="submit" aria-label="Send">&#8593;</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="keyboardDialog" class="keyboard-dialog" aria-label="Keyboard shortcuts">
+      <header>
+        <span>Keyboard shortcuts</span><span class="sp"></span
+        ><button type="button" class="tool" id="keyboardClose" autofocus>Done</button>
+      </header>
+      <dl>
+        <div>
+          <dt>Focus chat</dt>
+          <dd><kbd>/</kbd> or <kbd>Ctrl /</kbd></dd>
+        </div>
+        <div>
+          <dt>Show / hide message</dt>
+          <dd><kbd>H</kbd></dd>
+        </div>
+        <div>
+          <dt>Group / DM</dt>
+          <dd><kbd>G</kbd> / <kbd>D</kbd></dd>
+        </div>
+        <div>
+          <dt>Edit message</dt>
+          <dd><kbd>E</kbd></dd>
+        </div>
+        <div>
+          <dt>New wording</dt>
+          <dd><kbd>N</kbd></dd>
+        </div>
+        <div>
+          <dt>Copy message</dt>
+          <dd><kbd>C</kbd></dd>
+        </div>
+        <div>
+          <dt>Send chat / new line</dt>
+          <dd><kbd>Enter</kbd> / <kbd>Shift Enter</kbd></dd>
+        </div>
+        <div>
+          <dt>Scroll a focused conversation</dt>
+          <dd><kbd>PgUp</kbd> / <kbd>PgDn</kbd></dd>
+        </div>
+        <div>
+          <dt>Close dialog / finish editing</dt>
+          <dd><kbd>Esc</kbd></dd>
+        </div>
+      </dl>
+    </dialog>
+    <dialog class="set" id="set" aria-label="Settings">
+      <header>
+        <span>Settings</span><span class="sp"></span
+        ><button type="button" class="tool" id="setClose">Done</button>
+      </header>
+      <div class="body">
+        <div class="row">
+          <div class="t"><b>Appearance</b></div>
+          <div class="theme" id="theme">
+            <button type="button" data-t="system">Auto</button
+            ><button type="button" data-t="light">Light</button
+            ><button type="button" data-t="dark">Dark</button>
+          </div>
+        </div>
+        <details class="advanced">
+          <summary>AI checks</summary>
+          <div class="row">
+            <div class="t"><b>AI model</b><small id="aiRes"></small></div>
+            <button type="button" class="tool" id="aiTest">Test</button>
+          </div>
+          <div class="row">
+            <div class="t">
+              <b>Chat checks</b><small id="chatEvalStatus">Test run only; sends nothing</small>
+            </div>
+            <button type="button" class="tool" id="runChatEval">Run chat checks</button>
+          </div>
+        </details>
+        <label class="row"
+          ><div class="t"><b>Auto may send DMs</b></div>
+          <input type="checkbox" class="sw" id="swDm"
+        /></label>
+        <label class="row"
+          ><div class="t"><b>Also DM new people</b></div>
+          <input type="checkbox" class="sw" id="swNew"
+        /></label>
+        <div class="row">
+          <div class="t"><b>Memory &amp; feedback</b></div>
+          <button type="button" class="tool" id="openMemory">Review</button>
+        </div>
+        <div class="row">
+          <div class="t"><b>University group finder</b></div>
+          <a class="tool" href="/group-finder">Find groups</a>
+        </div>
+        <div class="row">
+          <div class="t">
+            <b>WhatsApp</b><small id="waRes">Disconnect this number from the studio.</small>
+          </div>
+          <button type="button" class="tool danger" id="waOut">Log out</button>
+        </div>
+      </div>
+      <div class="thumb-dock">
+        <button type="button" class="tool back-action" id="setCloseBottom">← Back</button>
+      </div>
+    </dialog>
+    <input type="file" id="file" accept="image/*,video/mp4,video/quicktime" hidden /><textarea
+      id="group"
+      hidden
+    ></textarea
+    ><textarea id="dm" hidden></textarea>
+    <dialog id="feedbackDialog" class="memory-dialog" aria-label="Correct an assistant response">
+      <h2>What should be different?</h2>
+      <form id="feedbackForm">
+        <textarea
+          id="feedbackText"
+          name="feedbackText"
+          aria-label="Your correction"
+          placeholder="Describe the mistake and the correct behaviour…"
+        ></textarea
+        ><label class="feedback-check"
+          ><input type="checkbox" id="feedbackRemember" />Remember this correction for future
+          chats</label
+        >
+        <p id="feedbackStatus" role="status"></p>
+        <button class="primary" type="submit">Save correction</button
+        ><button type="button" id="feedbackClose">Cancel</button>
+      </form>
+    </dialog>
+    <dialog id="memoryDialog" class="memory-dialog" aria-label="Memory and feedback">
+      <h2>Memory & feedback</h2>
+      <div id="memoryContent"></div>
+      <button type="button" id="memoryClose">Close</button>
+    </dialog>
+    <p id="startupRecovery" role="alert">
+      The screen could not open.
+      <a
+        href=""
+        onclick="
+          location.reload();
+          return false;
+        "
+        >Reload this screen</a
+      >
+    </p>
+    <script src="/connection.js"></script>
+    <script src="/format.js"></script>
+    <script src="/app.js"></script>
+    <script src="/donors.js"></script>
+    <script src="/replies.js"></script>
+    <script src="/notes.js"></script>
+    <script src="/compact-nav.js"></script>
+    <script src="/focus-editor.js"></script>
+    <script src="/comfort.js"></script>
+  </body>
+</html>

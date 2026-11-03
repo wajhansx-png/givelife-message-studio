@@ -409,3 +409,24 @@ html body .donor-page .donor-tabs{display:grid!important;grid-template-columns:r
 .delay-armed .prim .big,.delay-armed .chips button,.delay-armed #sendAll{border:1.5px solid var(--btn)!important;background:color-mix(in srgb,var(--btn) 8%,var(--surface))!important}
 /* On phone stack the row compactly */
 @media(max-width:600px){.delay-row{gap:4px}.delay-pill{font-size:12px;min-height:34px}}
+
+/* ---- Donor table fullscreen expand ---- */
+.donor-expand-btn{display:grid;place-items:center;width:28px;height:28px;border-radius:6px;border:1px solid var(--line2);background:var(--surface);color:var(--mut);font-size:14px;cursor:pointer;transition:background .15s,color .15s;line-height:1}
+.donor-expand-btn:hover{background:var(--gs);color:var(--ink)}
+/* On phone the column header is hidden, so show the button as a floating pill in the toolbar instead */
+@media(max-width:899px){
+ .donor-columns{display:grid!important}
+ .donor-columns>span:not(:last-child){display:none}
+ .donor-columns>span:last-child{grid-column:1/-1;display:flex;justify-content:flex-end;padding:0 4px}
+ .donor-expand-btn{width:32px;height:26px}
+}
+/* Expanded mode: shrink header/toolbar to bare minimum so the table fills the rest */
+html body #donorsPage.donor-expanded .donor-head{flex-wrap:wrap;min-height:36px}
+html body #donorsPage.donor-expanded .donor-total,
+html body #donorsPage.donor-expanded .donor-message-tablist,
+html body #donorsPage.donor-expanded .donor-bulk{display:none!important}
+html body #donorsPage.donor-expanded .donor-toolbar{flex-direction:row!important;flex-wrap:wrap;gap:4px}
+html body #donorsPage.donor-expanded .donor-tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:3px;flex:1;min-width:0}
+html body #donorsPage.donor-expanded .donor-search{min-height:32px!important;max-width:200px}
+html body #donorsPage.donor-expanded .donor-bottom{gap:4px;padding-top:4px}
+html body #donorsPage.donor-expanded .donor-shell{gap:4px}

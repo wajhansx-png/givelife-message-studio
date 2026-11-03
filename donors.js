@@ -1055,7 +1055,11 @@
         testBtn.disabled = false;
       }
     };
-    actions.append(nav, baseBtn, regen, testBtn, backBottom);
+    /* Regenerate lives in the heading; the bottom row is ← Back · Next →. */
+    regen.classList.add('bank-regen-top');
+    head.append(regen);
+    nav.insertBefore(backBottom, nav.firstChild);
+    actions.append(baseBtn, testBtn, nav);
     grid.append(actions, picker);
     box.append(grid);
     syncBankControls();

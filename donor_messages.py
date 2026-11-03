@@ -111,7 +111,12 @@ class MessageBank:
             # A persisted in-progress job resumes after a service restart. One local
             # worker owns its id; repeated polling never starts duplicate workers.
             self._launch_regeneration(self.cache)
-            return copy.deepcopy(self.cache)
+            out = copy.deepcopy(self.cache)
+            # Saved wordings written before "EASYPAISA ONLY" show (and send) the current payment line.
+            for row in out.get("items") or []:
+                if isinstance(row, dict) and isinstance(row.get("text"), str):
+                    row["text"] = dm_composer.payment_fix(row["text"])
+            return out
 
     def _launch_regeneration(self, data):
         generation = data.get("generation") or {}

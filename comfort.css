@@ -1935,3 +1935,34 @@ html body #donorsPage .donor-dm-badge{position:fixed!important;top:50%!important
 }
 @media (min-width:1251px){html body #donorsPage .donor-toolbar .donor-tabs{flex:0 0 auto!important;overflow:visible!important}}
 @media (min-width:1251px){html body #donorsPage .donor-toolbar .donor-tabs{width:max-content!important;max-width:none!important}}
+
+/* ===== Round 3 polish ===== */
+/* DM Messages: the whole message shows at once in a WhatsApp chat look (no inner scroll). */
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail{background:#0b141a radial-gradient(#ffffff0b 1px,transparent 1.5px) 0 0/18px 18px!important;border:1px solid #ffffff12!important;height:auto!important;max-height:none!important;overflow:visible!important;padding:18px!important}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail :is(.bank-preview,textarea){background:#005c4b!important;color:#e9edef!important;border-radius:4px 14px 14px 14px!important;box-shadow:0 1px 3px #0007!important;max-height:none!important;height:auto!important;overflow:visible!important;width:min(100%,680px)!important;margin:0 auto!important;padding:14px 16px!important;font-size:15.5px!important;line-height:1.45!important;box-sizing:border-box}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail textarea{field-sizing:content;min-height:300px}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-workspace{height:auto!important;max-height:none!important;overflow:visible!important}
+html body dialog#donorsPage[data-panel='messages'] #donorMessages{overflow-y:auto!important}
+/* Status line under the title: small, wraps to fit. */
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading>.bank-generation-state{font-size:11.5px!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;max-width:100%!important;line-height:1.35!important;padding:4px 10px!important}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading{flex-wrap:wrap!important;row-gap:6px!important}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading .bank-regen-top{margin-left:auto!important;min-height:38px!important;padding:0 14px!important;font-size:13px!important;border-radius:10px!important}
+/* Bottom row: ← Back · count · Next →, Next a normal size. */
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination{display:flex!important;justify-content:center!important;align-items:center!important;gap:12px!important;flex:0 0 100%!important}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>button{min-width:120px!important;min-height:44px!important;font-size:15px!important;flex:0 0 auto!important}
+html body #donorsPage[data-panel='messages'] #donorMessages [data-bank-nav='next']{min-width:130px!important}
+@media (max-width:700px){
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>button{flex:1 1 0!important;min-width:0!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions>:is(.bank-base,.bank-test){grid-column:span 2!important}
+}
+/* Live bar: one clean pill (no box inside a box), smaller; Auto glows green when ON. */
+html body #live{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;max-width:760px!important;gap:10px!important}
+html body #live .livebar{border:1px solid #ffffff1c!important;background:#ffffff0d!important;border-radius:999px!important;min-height:42px!important;padding:4px 16px!important;font-size:13.5px!important;box-shadow:none!important}
+html body #live .autosw{border-radius:999px!important;min-height:42px!important;border:1px solid #ffffff1c!important;background:#ffffff0d!important;transition:box-shadow .2s,background .2s}
+html body #live .autosw[aria-checked='true']{background:linear-gradient(135deg,#065f46,#047857)!important;border-color:#34d399!important;box-shadow:0 0 0 3px #34d39933,0 6px 18px #10b98155!important;color:#ecfdf5!important}
+/* Blue gradients: DM ★ Important and All 6. */
+html body #donorsPage #donorSendImportant{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 6px 18px #4f46e555!important}
+html body .group-send .group-all-btn{background:linear-gradient(135deg,#2563eb,#4f46e5 55%,#7c3aed)!important;box-shadow:0 6px 18px #4f46e544!important}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>.bank-back-bottom{display:inline-flex!important;align-items:center;justify-content:center;order:-2}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>span{display:inline!important;font-size:13px;opacity:.75;order:-1}
+html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>[data-bank-nav='next'],html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>button.primary{width:auto!important;min-width:130px!important;max-width:170px!important;min-height:44px!important}

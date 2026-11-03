@@ -370,3 +370,8 @@ html body #messageFocus #focusText{font:14.2px/19px "Segoe UI","Helvetica Neue",
 /* Edit mode keeps the bubble's size: the editor grows with the text instead of filling the screen. */
 html body #messageFocus #focusText{field-sizing:content;height:auto!important;min-height:120px!important;max-height:calc(100dvh - 300px)!important;overflow-y:auto!important;width:min(560px,calc(100% - 20px))!important;padding:8px 10px 10px!important;resize:none}
 @media(min-width:701px){html body #messageFocus #focusText{margin:40px auto 24px!important;width:min(560px,calc(100% - 48px))!important}}
+/* Reading and editing share one identical box, so the text stays in place when Edit is tapped. */
+html body #messageFocus :is(#focusFormatted,#focusText){width:min(560px,calc(100% - 20px))!important;max-width:none!important;border:0!important;outline-offset:0;letter-spacing:0!important;word-spacing:0!important;white-space:pre-wrap!important;overflow-wrap:break-word!important;vertical-align:top}
+html body #messageFocus #focusFormatted .wa-line,html body #messageFocus #focusFormatted .wa-line.blank{min-height:19px!important;height:auto!important;margin:0!important;padding:0!important}
+@media(min-width:701px){html body #messageFocus :is(#focusFormatted,#focusText){width:min(560px,calc(100% - 48px))!important}}
+@media(max-width:700px){html body #messageFocus #focusFormatted :is(.wa-line,.wa-line.blank){min-height:21px!important}}

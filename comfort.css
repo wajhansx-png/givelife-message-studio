@@ -348,3 +348,9 @@ html body #donorsPage #donorResumeStatus #donorResumeNowInline{background:var(--
 /* The toast clears the paused strip instead of covering it */
 html body #donorsPage:has(#donorResumeStatus:not([hidden])) #donorNotice:not(:empty){bottom:calc(max(10px,env(safe-area-inset-bottom)) + 160px)}
 @media(min-width:900px){html body #donorsPage:has(#donorResumeStatus:not([hidden])) #donorNotice:not(:empty){bottom:calc(max(10px,env(safe-area-inset-bottom)) + 150px)}}
+
+/* Saved message: small, quick-to-read text, and the same font when editing as when reading. */
+html body #messageFocus :is(#focusFormatted,#focusText){font:14px/1.45 Arial,system-ui,sans-serif!important;letter-spacing:0!important;padding:14px 18px!important}
+html body #messageFocus #focusFormatted .wa-line{min-height:1.45em}
+html body #messageFocus #focusFormatted .wa-line.blank{height:.5em;min-height:.5em}
+@media(max-width:700px){html body #messageFocus :is(#focusFormatted,#focusText){font-size:16px!important;padding:12px!important}} /* 16px stops iOS zooming into the editor */

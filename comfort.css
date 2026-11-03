@@ -1849,7 +1849,7 @@ html body .brandbar .report-open{min-height:44px;padding:0 14px;border-radius:12
 @media (prefers-reduced-motion:no-preference){
   @keyframes glFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   @keyframes glFade{from{opacity:0}to{opacity:1}}
-  html body dialog[open]{animation:glFadeUp .22s cubic-bezier(.2,.7,.2,1)}
+  html body dialog[open]{animation:glFade .2s ease}
   html body dialog[open]::backdrop{animation:glFade .22s ease}
   html body #donorsPage .donor-table:not([hidden]),html body #donorsPage #donorMessages:not([hidden]),html body #donorsPage #donorVolunteers:not([hidden]){animation:glFadeUp .24s cubic-bezier(.2,.7,.2,1)}
   html body #donorsPage #donorRows>.donor-row{animation:glFade .2s ease both}
@@ -1880,3 +1880,44 @@ html body .replies-dialog .rep-row textarea{width:100%;box-sizing:border-box;min
 html body .replies-dialog .rep-remove{width:40px;min-width:40px;height:40px;min-height:40px;padding:0;border-radius:10px;font-size:16px}
 html body .replies-dialog .donor-form-actions{display:grid!important;grid-template-columns:1fr 1fr 1fr;gap:8px!important}
 html body .replies-dialog .donor-form-actions button{min-height:46px;padding:0 6px;font-size:14px;white-space:normal;line-height:1.15}
+
+/* ===== Phone pass 2 (checked at 390px) ===== */
+@media (max-width:700px){
+  /* DM Messages: tidy 4-column button grid; page navigation on its own row at the bottom. */
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;padding:8px!important;height:auto!important;max-height:none!important;overflow:visible!important;position:static!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions>button{width:100%!important;min-width:0!important;min-height:46px!important;padding:0 4px!important;font-size:14px!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;grid-column:auto!important;flex:none!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions>:is(.bank-base,.bank-regenerate,.bank-test,.bank-back-bottom){grid-column:span 2!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions>.bank-regenerate{font-size:14px!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination{grid-column:1/-1!important;order:10;display:grid!important;grid-template-columns:1fr auto 1fr!important;gap:8px!important;align-items:center!important;width:100%!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>button{display:inline-flex!important;align-items:center;justify-content:center;width:100%!important;min-width:0!important;min-height:48px!important;font-size:15px!important;padding:0 6px!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>span{font-size:13px!important;white-space:nowrap}
+  /* Donor tabs: all six fit on one row. */
+  html body #donorsPage .donor-tabs{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;overflow:visible!important;gap:4px!important}
+  html body #donorsPage .donor-tabs>[role=tab]{min-width:0!important;padding:4px 2px!important;font-size:11px!important;line-height:1.15!important;white-space:normal!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-height:48px!important;text-align:center}
+  html body #donorsPage .donor-tabs>[role=tab] .tab-word{display:none}
+  html body #donorsPage .donor-tabs>[role=tab] .tab-count{font-size:12px!important;padding:0 6px!important;margin:2px 0 0!important}
+  /* Donor head: More keeps its label. */
+  html body #donorsPage .donor-head summary,html body #donorsPage .donor-head .compact-nav-menu>summary{white-space:nowrap!important;min-width:max-content!important;padding:0 10px!important}
+  /* Bigger Top chip for thumbs. */
+  html body .donor-page .donor-row .donor-top-chip{min-height:32px!important;padding:0 10px!important}
+  /* Main top bar: everything fits, the WhatsApp dot stays on screen. */
+  html body .brandbar{gap:6px!important;flex-wrap:nowrap!important}
+  html body .brandbar>*{flex-shrink:1;min-width:0}
+  html body .brandbar #whatsappConnection{flex:0 0 auto}
+}
+@media (max-width:700px){
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination{display:flex!important}
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>button{flex:1 1 0!important}
+  html body #donorsPage .donor-head{flex-wrap:wrap!important;row-gap:8px!important}
+  html body #donorsPage .donor-head>.hide-row{order:20;flex:1 1 100%!important;margin:0!important;justify-content:flex-start}
+  html body #donorsPage .donor-tabs .tab-name{white-space:normal!important;overflow-wrap:anywhere;font-size:10.5px!important;line-height:1.1!important;max-width:100%}
+  html body .donor-page .donor-row .donor-top-chip{font-size:0!important;width:36px;min-width:36px;padding:0!important;display:inline-flex;align-items:center;justify-content:center}
+  html body .donor-page .donor-row .donor-top-chip::before{content:'🏆';font-size:16px;filter:grayscale(1) opacity(.55)}
+  html body .donor-page .donor-row .donor-top-chip[aria-pressed='true']::before{filter:none}
+}
+
+/* Desktop donor list fills the table: the name column stretches, header lines up with rows. */
+@media (min-width:901px){
+  html body #donorsPage .donor-table .donor-row,html body #donorsPage .donor-table .donor-columns{grid-template-columns:44px minmax(0,1fr) 130px 150px 130px 52px!important;width:100%!important;box-sizing:border-box}
+  html body #donorsPage .donor-table .donor-columns>span:nth-child(6){display:flex;justify-content:center}
+}

@@ -327,7 +327,7 @@
       top: 'Top donors',
       donated: 'Donated',
       not_contacted: innerWidth < 560 ? 'Not DMed' : 'Not contacted',
-      volunteers: innerWidth < 360 ? 'Helpers' : 'Volunteers',
+      volunteers: innerWidth < 700 ? 'Helpers' : 'Volunteers',
       messages: 'Messages',
     };
     counts.volunteers = vols.items.length;
@@ -1312,7 +1312,7 @@
       top: 'Top donors',
       donated: 'Donated',
       not_contacted: innerWidth < 560 ? 'Not DMed' : 'Not contacted',
-      volunteers: innerWidth < 360 ? 'Helpers' : 'Volunteers',
+      volunteers: innerWidth < 700 ? 'Helpers' : 'Volunteers',
     };
     for (const b of page.querySelectorAll('[data-tab]')) {
       if (b.dataset.tab === 'messages') {

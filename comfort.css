@@ -1430,3 +1430,15 @@ html body #messageFocus :is(#focusFormatted, #focusText) {
     width: calc(100% - 48px) !important;
   }
 }
+
+/* ---- Delayed send pill row ---- */
+.delay-row{display:flex;align-items:center;gap:6px;padding:8px 0 2px;flex-wrap:wrap}
+.delay-label{font-size:12px;font-weight:600;color:var(--mut);white-space:nowrap;margin-right:2px}
+.delay-pill{flex:1;min-width:54px;min-height:36px;padding:0 8px;border-radius:20px;border:1.5px solid var(--line2);background:var(--surface);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.delay-pill:hover{background:var(--gs)}
+.delay-pill[aria-pressed="true"]{background:var(--btn);border-color:var(--btn);color:#fff}
+.delay-hint{display:block;font-size:10px;font-weight:500;opacity:.8;margin-top:2px;line-height:1.2}
+/* When a delay is active, send buttons show a tinted border to signal scheduled mode */
+.delay-armed .prim .big,.delay-armed .chips button,.delay-armed #sendAll{border:1.5px solid var(--btn)!important;background:color-mix(in srgb,var(--btn) 8%,var(--surface))!important}
+/* On phone stack the row compactly */
+@media(max-width:600px){.delay-row{gap:4px}.delay-pill{font-size:12px;min-height:34px}}

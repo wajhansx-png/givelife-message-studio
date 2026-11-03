@@ -113,6 +113,13 @@ dialog{border:1px solid var(--line);background:var(--surface);color:var(--ink);p
      <button class="big all" id="sendAll" title="GiveLife and all 5 freelance groups" aria-label="Send to all 6 groups" aria-describedby="sent-all"><span class="group-label">Send to all 6 groups</span><small class="last-sent" data-last-group="all" id="sent-all">Checking…</small></button>
     </div>
     <div id="groupStatus" role="status"></div>
+    <div class="delay-row" id="delayRow" role="group" aria-label="Schedule delay">
+     <span class="delay-label">Send in</span>
+     <button type="button" class="delay-pill" data-delay="15" aria-pressed="false">15 min</button>
+     <button type="button" class="delay-pill" data-delay="30" aria-pressed="false">30 min</button>
+     <button type="button" class="delay-pill" data-delay="45" aria-pressed="false">45 min</button>
+     <button type="button" class="delay-pill" data-delay="60" aria-pressed="false">1 hr</button>
+    </div>
    </section>
    <section class="card send dm-send" aria-label="Send direct message">
     <div class="send-title"><h2>Send a direct message</h2><label class="dm-poster"><input type="checkbox" id="dmPoster" checked> Attach poster (image + caption)</label></div><div class="dmrow"><label class="dm-field" for="dmName">Name (optional)<input id="dmName" name="recipient_name" placeholder="e.g. Ali…" autocomplete="off"></label><div class="seg" id="gender"><button type="button" data-g="Brother" aria-pressed="true">Bhai</button><button type="button" data-g="Sister" aria-pressed="false">Sister</button></div><label class="dm-field phone-field" for="dmPhone">Private number<input id="dmPhone" name="recipient_phone" type="tel" inputmode="tel" placeholder="e.g. 0300 1234567…" autocomplete="off" spellcheck="false"></label></div>

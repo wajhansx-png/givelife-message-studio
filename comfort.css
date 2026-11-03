@@ -1734,3 +1734,8 @@ html body #donorsPage.donor-expanded :is(.donor-head,.donor-toolbar,.hide-row,#d
 html body #donorsPage.donor-expanded .donor-table{flex:1 1 0!important;min-height:0!important;height:auto!important;max-height:none!important;overflow:auto!important}
 html body #donorsPage.donor-expanded .donor-bottom{flex:0 0 auto}
 html body #donorsPage.donor-expanded .donor-expand-btn{position:sticky;right:0}
+
+/* Hide / Deselect chips sit in the Donors top bar (no extra row above the list). */
+html body #donorsPage .donor-head>.hide-row{margin:0 0 0 auto!important;padding:0!important;flex:0 1 auto;gap:6px}
+html body #donorsPage .donor-head>.hide-row[hidden]{display:none!important}
+html body #donorsPage .donor-head>.hide-row .hide-chip{min-height:38px;padding:0 12px;white-space:nowrap}

@@ -1960,6 +1960,7 @@ def already_dmed(digest):
 FEMALE = set(
     "ayesha aisha fatima zainab maryam mariam laiba sana hira iqra amna sawaira yusra areeba mahnoor noor kiran sadia saba rabia hina nida mehwish sidra anam anum bushra khadija asma uzma sara sarah zoya alina hajra dania rimsha mehak esha ifra aleena maham momina tehreem eman iman aiman kinza fiza javeria sobia shazia nadia farah rida ramsha warda wajeeha hafsa sumaira tayyaba uswa zara zahra nimra minahil bisma".split()
 )
+FEMALE |= dm_composer.FEMALE_NAMES
 NOT_NAME = re.compile(
     r"(?i)\b(web|develop|graphic|entrepreneur|official|store|shop|studio|agency|design|market|services?|tech|digital|freelanc|admin|group|team|seo|business|donor|member|upwork|fiverr)"
 )
@@ -1977,7 +1978,7 @@ def clean_first_name(name):
 def dm_text(name, tier="member"):
     left = read_left()
     first = clean_first_name(re.sub(r"(?i)\bdonors?\b", "", str(name or "")).strip())
-    who = dm_composer.greeting(first, "Sister" if first.lower() in FEMALE else "Brother")
+    who = dm_composer.greeting(first, dm_composer.gender(name, first) if first else "Brother")
     acct = "📲 *03097458815* — EASYPAISA ONLY\nWajdan Khan (GiveLife Foundation account)"
     if tier == "repeat":
         return f"{who}, JazakAllah for supporting GiveLife before. 🤲\n\nRs. {left:,} is still needed for {active_case_name()}. Could you help once more, or share this case with family and friends?\n\n{acct}"

@@ -516,10 +516,13 @@ class DonorIntegration:
                 "abdul abdullah abdur abid abbas adil adnan aftab ahmad ahmed akhtar ali aman amaan amir ammar arman asad asif awais ayyan basit bilal danish fahad faisal farhan gul habib hafiz hajra hammad hamza haris hashim hashir hassan haseeb haider humza hussain hysam hidayat ibrahim ihtesham imran iqbal ishfaq jawad junaid kashif khurram moeed mohammad mohsin moiz mubeen mudassar muaz muhammad muhammed nadeem nabeel naseeb owais raza rao ramail saif sajid salman samad saqlain shaheer shahid shoaib siraj sohaib syed taha tanveer umair umar usman wajdan wajid waqar yasir yousuf yousaf zaid zain zaryab zeeshan".split()
             )
             | self.app.FEMALE
+            | __import__("dm_composer").FEMALE_NAMES
         )
         if not explicit and first.casefold() not in known:
             first = ""
-        return first, ("Sister" if first.casefold() in self.app.FEMALE else "Brother")
+        import dm_composer
+
+        return first, dm_composer.gender(raw_label, first) if first else "Brother"
 
     def mutate(self, body):
         action = body.get("action")

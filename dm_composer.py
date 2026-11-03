@@ -116,3 +116,36 @@ def complete(text):
             re.I,
         )
     )
+
+
+# Common Pakistani / Muslim female first names (lower case). Kept broad so a woman is never called Bhai.
+FEMALE_NAMES = set(
+    """aiza aiman aimen aisha ayesha aysha alia aliya alishba aleena alina amina amna amber ambreen anam anum anaya
+    anila aniqa anisa aqsa areeba areej arooj arfa arisha asma asia asiya atika atiqa ayat azra bushra benish
+    dania daniya dua duaa durdana eman emaan esha eshal faiza fakhra farah fareeha farhat farida fariha farzana fatima
+    fatimah fiza fizza ghazala gulnaz gulshan habiba hadia hafsa haleema halima hamna hania hareem hiba hina hira
+    huma humaira husna iffat ifra iqra iram isha ishrat javeria jaweria kainat kanwal kashaf kausar kinza kiran
+    komal laiba laila lubna madiha maham mahnoor mahira maira maleeha manahil maria mariam maryam marium mehak
+    mehreen mehwish memoona minahil mishal momina muqaddas munazza nabila nadia naila najma nargis nasreen nausheen
+    nazia nida nimra nisha noor noreen nosheen rabia rabiya rafia rahila rania rida rimsha robina rubina rukhsana
+    rumaisa saba sabahat sabeen sabiha sadaf sadia safia safa sahar saima saira sajida salma samina samira sana
+    saniya sara sarah sawaira seemam shabana shagufta shahida shaista shazia sheeba shumaila sidra sobia sofia sonia
+    sumaira sumbal summaya sundas tabassum tahira tania tanzeela tayyaba tehreem tooba tuba uzma urooj uswa wajiha
+    wajeeha madeeha madiha maheen mehrunisa naseem shamim parveen perveen rukhsar shehnaz shahnaz tasneem zeenat sughra kulsoom kalsoom ruqayya sakina sakeena aamna warda yasmeen yasmin yumna yusra zahra zainab zakia zara zarish zeba zehra zoha zoya zubaida zunaira""".split()
+)
+FEMALE_MARK = re.compile(
+    r"(?i)\b(?:mrs|miss|ms|madam|madame|sister|sis|baji|baaji|apa|aapi|aunty|auntie|begum|bibi|bano|khatoon|"
+    r"khala|phupo|phuppo|nani|dadi|ammi|ammy|mother|wife|daughter|beti|behan|mam)\b"
+)
+MALE_MARK = re.compile(r"(?i)\b(?:mr|bhai|bhaijan|sahab|sahib|uncle|brother|bro|abbu|chacha|mamu|sir|janab)\b")
+
+
+def gender(label="", first=""):
+    """Sister or Brother from the whole saved label ("Mrs Khan", "Ali bhai") and the first name; Brother when unclear."""
+    label = str(label or "")
+    if FEMALE_MARK.search(label):
+        return "Sister"
+    if MALE_MARK.search(label):
+        return "Brother"
+    names = [str(first or "")] + re.findall(r"[A-Za-z]+", label)
+    return "Sister" if any(n.casefold() in FEMALE_NAMES for n in names[:3] if n) else "Brother"

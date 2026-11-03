@@ -71,6 +71,7 @@ def outside_literals(text):
 
 def question_request(text):
  if re.search(r'(?i)(?:[;!?]\s*|\band then\s+)(?:please\s+)?(?:send|resend|post|set|change|write|stop|pause|resume)\b',outside_literals(text)):return False
+ if re.search(r'\?\s*$',outside_literals(text)) or re.match(r'(?i)^\s*(?:kya|kitn[aei]|kab|kyun|kyon|kaise|kaun|kon|kahan|kidhar)\b',outside_literals(text)):return True
  return bool(re.match(r'(?i)^\s*(?:what|why|how|when|where|who|did|have|has|was|were|is(?!\s+(?:message|msg|caption|dm|ko|line|ka|ke|mein|me)\b)|are|should|can i|could i|would it|if i|suppose|imagine)\b',outside_literals(text)) or re.match(r'(?i)^\s*(?:(?:can|could|would|will) you\s+)?(?:please\s+)?(?:tell|show|let) me\s+(?:if|whether|when|why|how|what)\b',outside_literals(text)))
 
 URDU_NO=re.compile(r'(?i)\b(?:mat|nahi|nahin|nhi|mt)\b|\bno\s+(?:need\s+to\s+)?(?:send|post|share|dm|sending|posting)\b')

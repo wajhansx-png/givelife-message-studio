@@ -41,6 +41,15 @@ class RefusalsNeverSend(unittest.TestCase):
   self.assertTrue(chat_policy.intent('bhej do na')['send'])
   self.assertEqual(manual_commands.parse('dobara bhejo')['kind'],'repeat')
 
+class QuestionsAreNotCommands(unittest.TestCase):
+ def test_questions_never_act(self):
+  for phrase in ('kya 5000 aaye?','kya sara paisa aya','3000 left?','send main?','kitne dms gaye','kab bhejoge','kya main me bhej diya','hold?','send main now?'):
+   with self.subTest(phrase=phrase):
+    self.assertIsNone(manual_commands.parse(phrase))
+    self.assertTrue(manual_commands.question_request(phrase))
+  for phrase,kind in (('45k left','amount'),('send main','appeal'),('5000 came','money')):
+   with self.subTest(phrase=phrase):self.assertEqual(manual_commands.parse(phrase)['kind'],kind)
+
 class ComplaintsAreNotAmounts(unittest.TestCase):
  def test_a_complaint_about_a_number_never_sets_it(self):
   for phrase in ('remaining 5000 is wrong','5000 left is wrong','balance 5000 galat hai','5000 old'):

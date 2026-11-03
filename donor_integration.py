@@ -19,7 +19,7 @@ class DonorIntegration:
         self.team=TeamTasks(app)
         from cases import Cases
         self.cases=Cases(app,self)
-        self.revision=0
+        self.revision=0;self._resume_due=None
     def pause_personal(self):
         with self.control_lock:return self._pause_personal()
     def _pause_personal(self):
@@ -81,6 +81,7 @@ class DonorIntegration:
         value=self.app.STORE.get(self.RESUME_KEY,{})
         if isinstance(value,dict) and value.get('state') in ('Pending','Failed','Uncertain'):
             value['state']='Cancelled';self.app.STORE.put(self.RESUME_KEY,value)
+        self._resume_due=False
     def schedule_resume(self,when,request_id=None):
         if not isinstance(when,str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}',when):raise ValueError('Choose a date and clock time in Pakistan time (PKT).')
         try:clock=dt.datetime.fromisoformat(when).replace(tzinfo=dt.timezone(dt.timedelta(hours=5)));due=clock.timestamp()
@@ -95,12 +96,18 @@ class DonorIntegration:
                 if old.get('due')!=due:raise ValueError('That request was already used for another time.')
                 return {'reply':'This resume is already saved.','paused':self.paused,'resume':self.resume_status()}
             value={'id':uuid.uuid4().hex,'request_id':request_id,'due':due,'label':clock.strftime('%d %b %Y, %I:%M %p PKT'),'state':'Pending'}
-            self.app.STORE.put(self.RESUME_KEY,value)
+            self.app.STORE.put(self.RESUME_KEY,value);self._resume_due=due
             return {'reply':'DMs will resume at '+value['label']+' using your saved setup. Nothing sends before then.','paused':True,'resume':self.resume_status()}
     def tick_resume(self,now=None):
+        # The background loop calls this every second. Remember in memory when nothing is scheduled
+        # so the database is not queried (and kept awake) once a second; schedule/cancel update it.
+        if now is None:
+            due=self._resume_due
+            if due is False or (due is not None and due>time.time()):return
         with self.control_lock:
             value=self.app.STORE.get(self.RESUME_KEY,{}) if self.app.STORE else {}
             if not isinstance(value,dict):return
+            if now is None:self._resume_due=value['due'] if value.get('state')=='Pending' and isinstance(value.get('due'),(int,float)) else (None if value.get('state')=='Dispatching' else False)
             if value.get('state')=='Dispatching':
                 value.update(state='Uncertain',error='The service restarted during resume. Check delivery before resuming again.');self.app.STORE.put(self.RESUME_KEY,value);return
             if value.get('state')!='Pending' or value.get('due',0)>(time.time() if now is None else now):return

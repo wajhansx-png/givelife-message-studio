@@ -293,9 +293,11 @@
  }
  let notesRoute='donors/all/notes',notesParentState=null;
  async function open(){
-  const restoring=Nav.path().endsWith('/notes');
+  const restoring=/(^|\/)notes$/.test(Nav.path());
   notesParentState=restoring?window.history.state?.notesParent||null:window.history.state;
-  notesRoute=Nav.path().replace(/\/notes$/,'')+'/notes';
+  const parent=Nav.path().replace(/(^|\/)notes$/,'');
+  notesRoute=parent?parent+'/notes':'notes'; // opened from the main screen: its own `notes` route
+  el('notesBack').setAttribute('aria-label',parent?'Back to Donors':'Back');
   Nav.go(notesRoute);
   if(!restoring)window.history.replaceState({...window.history.state,notesParent:notesParentState},'',location.href);
   if(!page.open)page.showModal();
@@ -476,7 +478,7 @@
   page.close();page.dataset.keyboard='closed';page.dataset.controls='closed';return true;
  }
  el('notesBack').onclick=async()=>{if(await back()){
-  Nav.go(notesRoute.replace(/\/notes$/,''),{replace:true});
+  Nav.go(notesRoute==='notes'?'':notesRoute.replace(/\/notes$/,''),{replace:true});
   if(notesParentState)window.history.replaceState(notesParentState,'',location.href);
   renderNav();
  }};

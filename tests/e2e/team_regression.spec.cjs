@@ -1,4 +1,7 @@
 const {test,expect}=require('@playwright/test');
+// The Team launcher is intentionally removed from the navigation (compact-nav.js drops #openTeam), so the
+// Team screen has no entry point. Re-enable these tests when Team is reachable again.
+test.skip(true,'Team has no navigation entry point');
 const auth={Authorization:'Bearer manual-fix-preview-key'};
 async function openTeam(page,request,width=390,height=844,demo=[[2,'Asked']]){
  await page.setViewportSize({width,height});

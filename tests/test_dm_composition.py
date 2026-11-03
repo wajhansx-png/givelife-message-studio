@@ -106,4 +106,12 @@ class DMFlowTests(unittest.TestCase):
   callbacks['send_message'](to='923001234567',text='Hello Wajdan',with_picture=True)
   self.assertEqual(self.sent[-1]['text'],'Hello Wajdan')
 
+ def test_owner_message_that_already_greets_the_recipient_is_not_greeted_twice(self):
+  for text,name,expected in (('Hi Ali, thank you for your help.','Ali','Hi Ali, thank you for your help.'),
+                             ('Dear Ali,\n\nPlease read.','Ali','Dear Ali,\n\nPlease read.'),
+                             ('Assalamualaikum Ali bhai, please help.','Ali','Assalamualaikum Ali bhai, please help.'),
+                             ('Hi Sara, thanks','Ali','Ali Bhai, Hi Sara, thanks'),
+                             ('Hello, thank you.','Ali','Ali Bhai, Hello, thank you.')):
+   with self.subTest(text=text):self.assertEqual(dm_composer.personalize(text,name,'Brother'),expected)
+
 if __name__=='__main__':unittest.main()

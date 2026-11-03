@@ -8,8 +8,10 @@ for(const width of [1440,390])test('Donor Messages uses focused black Group-styl
  await expect(page.locator('.bank-workspace')).toBeVisible();
  await expect(page.locator('.bank-message.bank-detail')).toBeVisible();
  await expect(page.locator('.bank-actions')).toBeVisible();
- await expect(page.locator('.bank-picker')).toBeVisible();
- await expect(page.locator('.bank-picker [data-bank-id]').first()).toBeVisible();
+ // One message at a time with a single Next: the version list is intentionally not shown.
+ await expect(page.locator('.bank-picker')).toBeHidden();
+ await expect(page.locator('[data-bank-nav=next]')).toBeVisible();
+ await expect(page.locator('[data-bank-nav=previous]')).toBeHidden();
  await expect(page.locator('#donorMessages')).toHaveCSS('background-color','rgb(35, 35, 35)');
  const editor=page.locator('.bank-detail textarea');
  await page.locator('.bank-actions [data-bank-save-id]').click();

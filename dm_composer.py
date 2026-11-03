@@ -21,8 +21,20 @@ def greeting(name, gender='Brother'):
     name = first_name(name)
     return (name + ' ' if name else '') + ('Sister' if name and gender == 'Sister' else 'Bhai')
 
+SALUTATION = re.compile(r"(?i)^[\W_]*(?:hi|hello|hey|dear|salam|assalam\S*|as-?salam\S*|aoa)\b[^\n]{0,30}")
+
+def already_greets(text, name):
+    """True when the owner's own opening already salutes this person by name ("Hi Ali, ...")."""
+    first = first_name(name)
+    if not first:
+        return False
+    match = SALUTATION.match(text)
+    return bool(match and re.search(r'\b' + re.escape(first) + r'\b', match.group(0), re.I))
+
 def personalize(text, name='', gender='Brother'):
     text = str(text).replace('\r\n', '\n').strip()
+    if already_greets(text, name):
+        return text
     match = GREETING.match(text)
     prefix = greeting(name, gender) + ', '
     if match:

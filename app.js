@@ -8,7 +8,7 @@ const Nav={rendering:false,
  path(){try{return decodeURIComponent((location.hash||'').replace(/^#\/?/,''))}catch(e){return ''}},
  top(){return Nav.path().split('/')[0]},
  /* The chat log below owns the name `history`, so the browser's is always reached as window.history. */
- valid(path){return /^(?:chat|settings(?:\/(?:memory|poster))?|keyboard|team|preview|whatsapp|donors\/(?:all|important|donated|not_donated|not_contacted|volunteers|messages)(?:\/(?:notes|add|bulk|pace))?)$/.test(path)},
+ valid(path){return /^(?:chat|notes|settings(?:\/(?:memory|poster))?|keyboard|team|preview|whatsapp|donors\/(?:all|important|donated|not_donated|not_contacted|volunteers|messages)(?:\/(?:notes|add|bulk|pace))?)$/.test(path)},
  go(path,{replace=false}={}){if(Nav.rendering||Nav.path()===path)return;const h=window.history,from=replace?h.state?.from:Nav.path();try{(replace?h.replaceState:h.pushState).call(h,{nav:1,from:Nav.valid(from)?from:''},'',path?'#/'+path:location.pathname+location.search);dispatchEvent(new Event('studio-navigate'))}catch(e){}},
  // Close synchronously. A delayed history.back() can undo the next tap or race a refresh.
  leave(name){if(Nav.rendering||Nav.top()!==name)return;const from=window.history.state?.from;Nav.go(Nav.valid(from)&&from.split('/')[0]!==name?from:'',{replace:true});renderNav()}};
@@ -509,7 +509,7 @@ addEventListener('DOMContentLoaded',()=>{
 let navigationEpoch=0;
 async function renderNav(){
  if($('cloudLogin')?.closest('dialog')?.open)return;
- const epoch=++navigationEpoch,path=Nav.path(),parts=path.split('/'),top=parts[0],notes=top==='donors'&&parts[2]==='notes';
+ const epoch=++navigationEpoch,path=Nav.path(),parts=path.split('/'),top=parts[0],notes=top==='notes'||(top==='donors'&&parts[2]==='notes');
  if(window.FoundationNotes?.isOpen()&&!notes){
   const closed=await window.FoundationNotes.hide(()=>epoch===navigationEpoch);
   if(epoch!==navigationEpoch)return;
@@ -538,6 +538,8 @@ async function renderNav(){
    if(!notes)restoreSmallDialog(path,true);
    if(notes&&!window.FoundationNotes?.isOpen())window.FoundationNotes?.show();
   }
+  /* Notes opened from the main screen has its own route, so a refresh stays on Notes. */
+  if(top==='notes'&&!window.FoundationNotes?.isOpen())window.FoundationNotes?.show();
   if(top==='whatsapp'&&!$('whatsappDialog')?.open)$('whatsappConnection').click();
  }finally{Nav.rendering=false;clearTimeout(window.studioBootTimer);delete document.documentElement.dataset.uiBoot}
 }

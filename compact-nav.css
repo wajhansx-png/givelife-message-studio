@@ -204,3 +204,6 @@ html body #donorsPage[data-panel="messages"] .bank-heading > .bank-generation-st
 @media(max-width:899px){
  html body .app > .foot > #chatOpen{display:flex;align-items:center;justify-content:center;grid-column:1;grid-row:1;justify-self:end;margin:0;min-width:0;min-height:46px;padding:0 14px}
 }
+
+/* Touch targets: the case selector inside More is as tall as the other phone controls. */
+@media(max-width:899px){html body .compact-nav-panel #caseSelect{min-height:44px}}

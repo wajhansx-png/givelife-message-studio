@@ -213,12 +213,13 @@ NON-NEGOTIABLE:
 - VOICE: copy the owner's own voice from the source: same short punchy lines, same
   bold/italic rhythm, same direct "you" address, same simple words. Never sound formal.
 - Make every version emotionally gripping and urgent using ONLY the true facts in the
-  source (the child's condition as written, the amount still needed, how few people it
-  takes). Start with a scroll-stopping hook: a direct question to the reader, a stark
-  small-amount-versus-a-child's-need contrast, or a vivid detail from the source. Use a
-  different emotional angle in each version (a parent's pain, the small amount, "it could
-  be your child", gratitude, sharing helps). Urgency means "needed now because of the
-  amount left", never an invented deadline.
+  source (the patient's situation exactly as written, the amount still needed, how few
+  people it takes). Start with a scroll-stopping hook: a direct question to the reader, a
+  stark small-amount-versus-the-need contrast, or a vivid detail from the source. Use a
+  different emotional angle in each version (the family's pain, the small amount, "it
+  could be someone you love", gratitude, sharing helps). Do not assume the patient's age,
+  gender or relationship: say only what the source says. Urgency means "needed now because
+  of the amount left", never an invented deadline.
 - Return ONLY a JSON array of {count} strings. No commentary, no markdown fences.
 
 SOURCE:

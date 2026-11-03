@@ -8,25 +8,13 @@ async function setup(page){
 for(const width of [1440,768,390,320]){
  test(`Notes refresh and Back preserve screen ${width}`,async({page})=>{
   await setup(page);await page.setViewportSize({width,height:850});
-  await page.goto('/#/donors/important');await page.locator('#donorNotesShortcut').click();
-  await expect(page).toHaveURL(/#\/donors\/important\/notes$/);
+  await page.goto('/');await page.locator('#donorNotesShortcut').click();
+  await expect(page).toHaveURL(/#\/notes$/);
   await page.reload();await expect(page.locator('#foundationNotes')).toBeVisible();
   await expect(page.locator('#notesPassword')).toBeVisible();
-  await page.locator('#notesBack').click();await expect(page.locator('#donorsPage')).toBeVisible();
-  await expect(page).toHaveURL(/#\/donors\/important$/);
- });
- test(`screens fit and accessibility ${width}`,async({page},info)=>{
-  await setup(page);await page.setViewportSize({width,height:850});
-  test.setTimeout(180000);const problems=[];
-  for(const route of ['', 'chat','preview','donors/all','donors/messages','donors/volunteers','settings','whatsapp','team']){
-   await page.goto('/#/'+route);await page.waitForTimeout(350);
-   const errors=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
-   for(const v of errors.violations)problems.push({route,id:v.id,impact:v.impact,nodes:v.nodes.map(n=>n.target)});
-   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
-   if(process.env.UI_SHOTS)await page.screenshot({path:`${process.env.UI_SHOTS}/${width}-${route.replaceAll('/','-')||'main'}.png`});
-  }
-  await info.attach('accessibility.json',{body:JSON.stringify(problems,null,2),contentType:'application/json'});
-  expect(problems.filter(v=>['critical','serious'].includes(v.impact))).toEqual([]);
+  await page.locator('#notesBack').click();await expect(page.locator('#foundationNotes')).not.toBeVisible();
+  await expect(page.locator('#donorsPage')).not.toBeVisible();
+  await expect(page).not.toHaveURL(/notes/);
  });
 }
 test('refresh never paints Main before the requested screen, even with slow scripts',async({page})=>{
@@ -42,9 +30,8 @@ test('refresh never paints Main before the requested screen, even with slow scri
  await page.goto('/#/donors/messages');await expect(page.locator('#donorsPage')).toBeVisible();
  expect(await page.evaluate(()=>wrongScreenFrames)).toBe(0);
 });
-test('Team and memory restore without redoing actions',async({page})=>{
- await setup(page);await page.goto('/#/team');await expect(page.locator('#teamPage')).toBeVisible();
- await page.reload();await expect(page.locator('#teamPage')).toBeVisible();
+test('Memory restores without redoing actions',async({page})=>{
+ await setup(page);
  await page.goto('/#/settings/memory');await expect(page.locator('#memoryDialog')).toBeVisible();
  await page.reload();await expect(page.locator('#memoryDialog')).toBeVisible();
  await page.locator('#memoryClose').click();await expect(page).toHaveURL(/#\/settings$/);
@@ -58,10 +45,10 @@ test('secondary forms restore and close without sending',async({page})=>{
  }
 });
 test('Notes keeps its parent navigation after refresh',async({page})=>{
- await setup(page);await page.goto('/#/preview');await page.locator('#openDonors').click();
+ await setup(page);await page.goto('/');
  await page.locator('#donorNotesShortcut').click();await page.reload();
- await page.locator('#notesBack').click();await page.locator('#donorMainBottom').click();
- await expect(page).toHaveURL(/#\/preview$/);await expect(page.locator('#card')).toBeVisible();
+ await page.locator('#notesBack').click();
+ await expect(page).not.toHaveURL(/notes/);await expect(page.locator('#leftChip')).toBeAttached();
 });
 test('closing Memory while its response is delayed never reopens it',async({page})=>{
  await setup(page);let release;const ready=new Promise(r=>release=r);

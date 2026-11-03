@@ -7,8 +7,9 @@ for(const width of [1440,1024,390,320])test(`compact navigation keeps actions re
  await expect(page.locator('.message-copy').first()).toHaveCSS('font-size','0px');
  const main=page.locator('#mainNavMore');await expect(main).toBeVisible();
  await expect(page.locator('.brandbar #donorNotesShortcut')).toBeVisible();
- await expect(page.locator('#desktopPreview')).toBeVisible();
+ await expect(page.locator('#desktopPreview')).toBeHidden();await expect(page.locator('#gear')).toBeHidden();
  await main.locator('summary').click();await expect(page.locator('#caseSelect')).toBeVisible();
+ await expect(page.locator('#desktopPreview')).toBeVisible();await expect(page.locator('#gear')).toBeVisible();
  await page.keyboard.press('Escape');await expect(main).not.toHaveAttribute('open');
  await main.locator('summary').click();await page.locator('#keyboardHelp').click();
  await expect(page.locator('#keyboardDialog')).toBeVisible();await page.locator('#keyboardClose').click();

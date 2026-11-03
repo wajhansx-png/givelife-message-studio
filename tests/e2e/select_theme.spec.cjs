@@ -14,6 +14,7 @@ for(const [theme,bg,textColor] of [
    await page.goto('/');
    await expect(page.locator('#caseSelect option[value="__new"]')).toHaveText(/New case/);
    await expect(page.locator('#caseSelect option[value="__rename"]')).toHaveText(/Rename/);
+   await page.locator('#mainNavMore > summary').click();
    const colors=await page.locator('#caseSelect').evaluate(select=>{
     const el=document.documentElement;
     el.dataset.theme=window.localStorage.getItem('givelife-theme');
@@ -36,6 +37,7 @@ test('canceling New case does not change the saved current case',async({page})=>
  await page.addInitScript(()=>localStorage.setItem('givelife-cloud-key','manual-fix-preview-key'));
  await page.goto('/');
  await expect(page.locator('#caseSelect option[value="__new"]')).toBeAttached();
+ await page.locator('#mainNavMore > summary').click();
  const old=await page.locator('#caseSelect').inputValue();
  page.on('dialog',dialog=>dialog.dismiss());
  await page.locator('#caseSelect').selectOption('__new');

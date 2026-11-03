@@ -1,6 +1,6 @@
 const {test,expect}=require('@playwright/test');
 test('Group opens editor; manual slots save and send from this screen',async({page,request})=>{
- await page.addInitScript(()=>localStorage.setItem('givelife-cloud-key','manual-fix-preview-key'));await page.goto('/');await page.getByRole('button',{name:'Group',exact:true}).click();
+ await page.addInitScript(()=>localStorage.setItem('givelife-cloud-key','manual-fix-preview-key'));await page.goto('/');await page.getByRole('button',{name:'Group messages',exact:true}).click();
  await expect(page.locator('#messageFocus .group-send')).toBeVisible();await expect(page.locator('#focusFormatted')).not.toHaveText('');
  await page.locator('#focusManual').click();await expect(page.getByRole('dialog',{name:'Manual messages',exact:true})).toBeVisible();
  for(let i=0;i<10;i++){await page.locator('#manualText').fill('Manually approved message '+i);if(i<9)await page.locator('#manualNext').click()}

@@ -130,7 +130,9 @@ class MessageBank:
             generation = {'id': uuid.uuid4().hex, 'source': source, 'target': 20,
                           'accepted': accepted, 'state': 'Generating', 'error': '',
                           'ready': 1 + len(accepted), 'started_at': time.time()}
-            if not retry:
+            # Keep the last complete approved bank as the sending source until this one is done.
+            # A half-finished earlier attempt must not replace a healthy one.
+            if not retry and len(self._sendable(items)) >= self.MIN_VERSIONS:
                 data['previous_items'] = items
             data.update(mode='custom', origin=source, fingerprint=self._fingerprint(source),
                         items=self._entries([source] + accepted), generation=generation,
@@ -162,6 +164,19 @@ class MessageBank:
                 data['items'] = self._entries([source] + values)
                 data['generation'].update(accepted=values, ready=1 + len(values), state=state, error=error)
                 data.update(updated_at=time.time(), warning=error)
+                if state == 'Ready':
+                    data.pop('previous_items', None)
+                elif state == 'Partial' and 1 + len(values) < self.MIN_VERSIONS:
+                    # Too few new versions to send from: the earlier approved bank is what DMs use,
+                    # so show exactly that again. The new versions stay saved for Retry.
+                    earlier = data.get('previous_items')
+                    if len(self._sendable(earlier)) >= self.MIN_VERSIONS:
+                        data['items'] = earlier
+                        data['generation']['error'] = (
+                            (error.rstrip('. ') + '. ') if error else '') + (
+                            f'Your earlier {len(earlier)} messages are in use again; '
+                            f'{len(values)} new version(s) are saved. Press Regenerate to continue.')
+                        data['warning'] = data['generation']['error']
                 accepted[:] = values
                 self._save(data)
                 return True
@@ -199,6 +214,10 @@ class MessageBank:
             raise ValueError('Paste the complete message with its paragraphs, amount and payment details.')
         count = max(1, min(20, int(count or 10)))
         total = max(count, min(20, int(total or 20)))
+        if self.gen_lock.locked():
+            # A background regeneration owns the model for minutes; waiting here would hang the
+            # request until the browser gives up, with no clear result.
+            raise ValueError('Messages are still being written in the background. Wait until they finish, then try again.')
         with self.gen_lock:
             warning = ''
             # Regenerate always uses the current saved Message 1, never the
@@ -299,13 +318,27 @@ class MessageBank:
     ROTATION_KEY = 'donor_single_rotation'
     MIN_VERSIONS = 10
 
+    @staticmethod
+    def _sendable(rows):
+        """Distinct, non-empty, enabled texts from bank rows (order kept)."""
+        return [row['text'] for row in rows or []
+                if isinstance(row, dict) and row.get('enabled', True)
+                and isinstance(row.get('text'), str) and row['text'].strip()]
+
     def _rotation_texts(self):
-        """Validated, enabled Donors > Messages texts (the only source any DM route may use)."""
+        """Validated, enabled Donors > Messages texts (the only source any DM route may use).
+
+        While a regeneration is still writing the new versions, the bank on screen can briefly
+        hold fewer than MIN_VERSIONS. The previously approved bank (kept in `previous_items`
+        until the new one is complete) keeps sending in the meantime, so starting Regenerate
+        never stops DMs; the newly written versions take over as soon as there are enough."""
         bank = self.get()
-        rows = bank.get('items') or []
-        texts = [row['text'] for row in rows
-                 if isinstance(row, dict) and row.get('enabled', True)
-                 and isinstance(row.get('text'), str) and row['text'].strip()]
+        texts = self._sendable(bank.get('items'))
+        generation = bank.get('generation') or {}
+        if len(texts) < self.MIN_VERSIONS and generation.get('state') != 'Ready':
+            earlier = self._sendable(bank.get('previous_items'))
+            if len(earlier) >= self.MIN_VERSIONS and len(earlier) == len(set(earlier)):
+                texts = earlier
         if not texts or len(texts) != len(set(texts)):
             raise ValueError('Saved Donors Messages are missing or duplicated. Nothing was sent.')
         if any(not dm_composer.complete(text) for text in texts):
@@ -313,6 +346,9 @@ class MessageBank:
         if len(texts) < self.MIN_VERSIONS:
             # A one-version bank would send the same wording to everyone (and is what a
             # bank overwritten by another screen looks like). Refuse instead of repeating.
+            if generation.get('state') == 'Generating':
+                raise ValueError(f'Donors > Messages is still being written ({len(texts)} of '
+                                 f'{generation.get("target", 20)} saved). Try again in a minute. Nothing was sent.')
             raise ValueError(f'Donors > Messages has only {len(texts)} saved version(s). '
                              'Open Messages and press Regenerate so at least 10 are ready. Nothing was sent.')
         return texts

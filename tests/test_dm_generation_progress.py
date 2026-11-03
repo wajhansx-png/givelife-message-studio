@@ -92,8 +92,13 @@ class GenerationProgressTests(unittest.TestCase):
         with patch('dm_variants.generate', side_effect=interrupted):
             self.bank.start_regeneration()
             partial = self.wait('Partial')
-        self.assertEqual(len(partial['items']), 3)
+        # Too few new versions to send from: the earlier approved bank is shown (and used) again,
+        # while the two new versions stay saved for the retry.
+        self.assertEqual(len(partial['items']), 20)
+        self.assertEqual(partial['generation']['accepted'], self.versions[:2])
+        self.assertEqual(partial['generation']['ready'], 3)
         self.assertIn('Provider unavailable', partial['generation']['error'])
+        self.assertIn('earlier 20 messages are in use again', partial['generation']['error'])
         restored = MessageBank(self.app)
         self.assertEqual(restored.get()['items'], partial['items'])
         with patch('dm_variants.generate', return_value=self.versions[2:]) as model:
@@ -160,6 +165,105 @@ class GenerationProgressTests(unittest.TestCase):
             result = self.wait('Superseded')
         self.assertIn('23,000', result['items'][0]['text'])
         self.assertNotIn('25,000', result['items'][0]['text'])
+
+    def seed_approved_bank(self):
+        data = self.bank.get()
+        data.update(mode='custom', items=self.bank._entries([self.source] + self.versions))
+        self.bank._save(data)
+
+    def test_sending_keeps_using_the_approved_bank_while_regeneration_writes(self):
+        self.seed_approved_bank()
+        gate, entered = threading.Event(), threading.Event()
+
+        def generate(source, count, **kwargs):
+            entered.set()
+            gate.wait(2)
+            return self.versions
+
+        with patch('dm_variants.generate', side_effect=generate):
+            self.bank.start_regeneration()
+            self.assertTrue(entered.wait(1))
+            try:
+                during = self.bank._rotation_texts()
+            finally:
+                gate.set()
+            ready = self.wait('Ready')
+        self.assertEqual(len(during), 20)
+        self.assertEqual(len(ready['items']), 20)
+        self.assertNotIn('previous_items', ready)
+
+    def test_in_progress_error_is_accurate_when_there_is_no_earlier_bank(self):
+        data = self.bank.get()
+        data.update(mode='custom', items=self.bank._entries([self.source]))
+        self.bank._save(data)
+        gate, entered = threading.Event(), threading.Event()
+
+        def generate(source, count, **kwargs):
+            entered.set()
+            gate.wait(2)
+            return self.versions
+
+        with patch('dm_variants.generate', side_effect=generate):
+            self.bank.start_regeneration()
+            self.assertTrue(entered.wait(1))
+            try:
+                with self.assertRaisesRegex(ValueError, r'still being written \(1 of 20 saved\).*Nothing was sent'):
+                    self.bank._rotation_texts()
+            finally:
+                gate.set()
+            self.wait('Ready')
+
+    def test_half_finished_attempt_never_replaces_the_earlier_approved_bank(self):
+        self.seed_approved_bank()
+
+        def interrupted(source, count, **kwargs):
+            kwargs['progress'](self.versions[:2])
+            raise ValueError('Provider unavailable')
+
+        with patch('dm_variants.generate', side_effect=interrupted):
+            self.bank.start_regeneration()
+            partial = self.wait('Partial')
+        self.assertEqual(len(partial['items']), 20)
+        self.assertEqual(len(self.bank._rotation_texts()), 20)
+        # A second attempt from a different master must not overwrite the healthy earlier bank.
+        edited = self.source.replace('Brother,', 'Bhai,')
+        self.bank.update('wording-01', edited)
+        with patch('dm_variants.generate', side_effect=interrupted):
+            self.bank.start_regeneration()
+            self.wait('Partial')
+        self.assertEqual(len(self.bank.get()['previous_items']), 20)
+        self.assertEqual(len(self.bank._rotation_texts()), 20)
+
+    def test_pasted_generate_is_refused_clearly_while_background_generation_runs(self):
+        gate, entered = threading.Event(), threading.Event()
+
+        def generate(source, count, **kwargs):
+            entered.set()
+            gate.wait(2)
+            return self.versions
+
+        with patch('dm_variants.generate', side_effect=generate):
+            self.bank.start_regeneration()
+            self.assertTrue(entered.wait(1))
+            try:
+                with self.assertRaisesRegex(ValueError, 'still being written'):
+                    self.bank.generate(self.source, 10)
+            finally:
+                gate.set()
+            self.wait('Ready')
+
+    def test_partial_with_enough_new_versions_replaces_the_earlier_bank(self):
+        self.seed_approved_bank()
+
+        def interrupted(source, count, **kwargs):
+            kwargs['progress'](self.versions[:12])
+            raise ValueError('Provider unavailable')
+
+        with patch('dm_variants.generate', side_effect=interrupted):
+            self.bank.start_regeneration()
+            partial = self.wait('Partial')
+        self.assertEqual(len(partial['items']), 13)
+        self.assertEqual(len(self.bank._rotation_texts()), 13)
 
 
 if __name__ == '__main__':

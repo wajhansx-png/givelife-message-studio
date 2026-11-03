@@ -1,8 +1,9 @@
 const {test,expect}=require('@playwright/test');
+const {showDm}=require('./helpers.cjs');
 const auth={Authorization:'Bearer manual-fix-preview-key'};
 test('pasted DM modal validates, deduplicates and starts the first personalized DM',async({page,request})=>{
  await page.addInitScript(()=>localStorage.setItem('givelife-cloud-key','manual-fix-preview-key'));
- await page.goto('/');await page.getByRole('button',{name:'DM',exact:true}).click();
+ await page.goto('/');await showDm(page);
  await page.getByRole('button',{name:'Send to more donors',exact:true}).click();
  const modal=page.getByRole('dialog',{name:'Bulk message',exact:true});await expect(modal).toBeVisible();
  await page.getByLabel('Numbers and names',{exact:true}).fill('03001112222, Ali\nAyesha, 03012223333\n+923001112222, Ali duplicate');
@@ -18,7 +19,7 @@ test('pasted DM modal validates, deduplicates and starts the first personalized 
  const status=await (await request.get('/donor-delivery',{headers:auth})).json();expect(status.total).toBe(2);expect(status.gap_seconds).toBe(180);
  const events=await (await request.get('/__test/events',{headers:auth})).json();
  expect(events.events.filter(e=>e.fields.phone==='923001112222').length).toBe(1);
- expect(events.events.find(e=>e.fields.phone==='923001112222').fields.caption).toMatch(/^Ali Brother/);
+ expect(events.events.find(e=>e.fields.phone==='923001112222').fields.caption).toMatch(/^Ali Bhai/);
  await request.post('/donor-delivery',{headers:auth,data:{stop:true}});
 });
 test('private APIs reject missing authentication and invalid origins',async({request})=>{

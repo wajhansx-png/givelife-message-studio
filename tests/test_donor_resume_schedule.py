@@ -95,3 +95,22 @@ class ResumeScheduleTests(unittest.TestCase):
   self.assertTrue(finished,'Stop must remain responsive while one manual DM is in flight')
 
 if __name__=='__main__':unittest.main()
+
+class ResumeLoopCostTests(unittest.TestCase):
+ """The once-a-second background loop must not query the database while nothing is scheduled."""
+ setUp=ResumeScheduleTests.setUp;tearDown=ResumeScheduleTests.tearDown;NOW=ResumeScheduleTests.NOW;stamp=ResumeScheduleTests.stamp
+ def test_idle_loop_does_not_read_the_store_and_a_new_schedule_is_still_seen(self):
+  hub=app.donors();reads=[];real=app.STORE.get
+  def spy(key,default=None):
+   reads.append(key);return real(key,default)
+  with patch.object(app.STORE,'get',side_effect=spy):
+   for _ in range(50):hub.tick_resume()
+   resume_reads=[k for k in reads if k==hub.RESUME_KEY]
+   self.assertLessEqual(len(resume_reads),1)
+  hub.pause_personal()
+  with patch('donor_integration.time.time',return_value=self.NOW):hub.schedule_resume(self.stamp(60),'loop')
+  with patch('donor_integration.time.time',return_value=self.NOW+30):hub.tick_resume();self.assertTrue(hub.paused)
+  with patch('donor_integration.time.time',return_value=self.NOW+61):hub.tick_resume()
+  self.assertFalse(hub.paused);self.assertEqual(hub.resume_status()['state'],'Completed')
+  with patch('donor_integration.time.time',return_value=self.NOW+62):hub.tick_resume()
+  self.assertFalse(hub._resume_due)

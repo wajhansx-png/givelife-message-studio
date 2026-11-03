@@ -21,4 +21,12 @@ class GuardedTools(unittest.TestCase):
   for phrase,tool in COMMANDS.items():
    with self.subTest(phrase=phrase):self.assertTrue(chat_policy.permitted(tool,phrase))
 
+class SettingsAreNotWording(unittest.TestCase):
+ def test_settings_requests_do_not_unlock_caption_edits(self):
+  for phrase in ('make it faster','make it quiet at night','change the message limit','change dm gap to 5 minutes','remove the dm poster','set dm daily limit 30'):
+   with self.subTest(phrase=phrase):self.assertFalse(chat_policy.permitted('set_message',phrase))
+ def test_a_real_edit_next_to_a_setting_still_edits(self):
+  for phrase in ('Rewrite the group caption and set Fiverr pace to 45 minutes.','rewrite the dm and make the gap 5 minutes','shorten the dm','make the caption faster to read'):
+   with self.subTest(phrase=phrase):self.assertTrue(chat_policy.permitted('set_message',phrase))
+
 if __name__=='__main__':unittest.main()

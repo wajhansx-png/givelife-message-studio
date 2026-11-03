@@ -75,7 +75,11 @@ def preview_request(text):
 def editing_request(text):
  t=re.sub(r'(?i)^(?:please|kindly|can you|could you|would you)\s+','',str(text).strip())
  # Settings talk ("change dm gap to 5 minutes", "remove the poster") never edits the saved wording.
- if re.search(r'(?i)\b(?:gap|limit|daily|interval|pace|speed|delay|batch|chunk|poster|picture|image|timer|resume|rest)\b',t) and not re.search(r'(?i)\b(?:caption|message|wording|lines?|paragraphs?|hook|opening|ending|text|sentence|phrase)\b',t):return False
+ settings=re.search(r'(?i)\b(?:gap|interval|pace|speed|delay|batch|chunk|(?:message|dm|daily|sending|posting) limit)\b',t) or (re.search(r'(?i)\b(?:limit|daily|poster|picture|image|timer|resume|rest|faster|slower|quiet|silent|night|often|frequency|frequent)\b',t) and not re.search(r'(?i)\b(?:caption|message|wording|lines?|paragraphs?|hook|opening|ending|text|sentence|phrase)\b',t))
+ if settings:
+  # Settings talk never edits the wording, but "rewrite the caption and set Fiverr pace to 45 minutes" still contains an edit.
+  parts=[x for x in re.split(r'(?i)\s+(?:and|then|also|aur)\s+|[;,]\s*',t) if x.strip()]
+  return len(parts)>1 and any(editing_request(x) for x in parts)
  if re.match(r'(?i)^(?:bold|bolden|italic|italicize|translate|convert|reformat)\b',t) and not re.search(r'(?i)\b(?:poster|image|picture)\b',t):return True
  if re.search(r'(?i)\b(?:write|make|rewrite|translate|convert|put)\s+(?:it|this|that|the \w+)\s+(?:in|to|into)\s+(?:roman \s*)?(?:urdu|english|hindi)\b',t):return True
  if not re.search(r'\d',t) and re.search(r'(?i)\b(?:message|msg|caption|dm|line|lines|paragraph|amount|wording)\b.*\b(?:karo|kar do|likho|likh do|badlo|hatao|hata do|nikalo|nikal do|dalo|daalo|chh?ota|bada)\b',t):return True

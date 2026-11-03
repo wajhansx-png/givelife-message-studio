@@ -214,6 +214,10 @@ class DonorIntegration:
             notes.append(self.app.ENGINE.set_dms(True, info.get("daily", 30)))
         if self.app.STORE:
             self.app.STORE.put("donor_dm_resume", {})
+        try:
+            self.app.log_resume("Donor DMs")
+        except Exception:
+            pass
         return {"reply": " ".join(notes), "paused": False}
 
     RESUME_KEY = "donor_resume_schedule"

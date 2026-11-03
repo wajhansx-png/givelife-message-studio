@@ -2160,3 +2160,14 @@ html body #donorsPage .dp-show[hidden]{display:none!important}
 }
 /* The Sent / Next list under the sending bar is removed (owner's choice). */
 html body #donorsPage #donorBatchList{display:none!important}
+/* Sending bar and its ⌃ button float over the list (no layout space), above the bottom buttons. */
+html body #donorsPage .donor-shell{position:relative}
+html body #donorsPage #donorProgress:not([hidden]){position:absolute!important;left:12px!important;right:12px!important;bottom:calc(var(--donor-foot,72px) + 10px)!important;z-index:6!important;margin:0!important;background:#0f1a17f2!important;backdrop-filter:blur(8px);box-shadow:0 12px 34px #000b!important}
+html body #donorsPage .dp-show{position:absolute!important;right:14px!important;bottom:calc(var(--donor-foot,72px) + 10px)!important;margin:0!important;z-index:6!important;box-shadow:0 8px 22px #0009}
+@media (min-width:901px){html body #donorsPage #donorProgress:not([hidden]){left:auto!important;width:min(560px,calc(100% - 24px))!important}}
+/* Report: resume list under the lines. */
+html body .report-card .report-resumes{max-height:34dvh;overflow-y:auto;margin-top:6px}
+html body .report-card .report-resume{font-size:clamp(13px,1.6vw,16px);padding:8px 12px;margin:6px 0;border-radius:12px;background:#ffffff12;border:1px solid #ffffff24;color:#e5e7eb}
+html body .report-card .report-resume[data-state=done],html body .report-card .report-resume[data-state=completed]{border-color:#34d39966}
+html body .report-card .report-resume[data-state=pending]{border-color:#facc1566}
+html body .report-card .report-resume[data-state=failed]{border-color:#f8717199}

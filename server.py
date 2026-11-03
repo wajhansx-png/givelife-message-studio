@@ -1005,6 +1005,12 @@ def run_job(job_id, keys, caption, queue=False):
             elif result.get("code") != "COOLDOWN":
                 break  # never retry an uncertain/error result
         sent = sum(r.get("code") == "SUCCESS" for r in job["results"])
+        if sent and job.get("manual"):
+            # Owner-sent and scheduled group posts teach too (Auto posts are recorded by the engine).
+            try:
+                learning_mod.record_text(ENGINE.L, caption)
+            except Exception:
+                pass
         if (
             sent
             and not job.get("manual")
@@ -1989,6 +1995,15 @@ def dm_text(name, tier="member"):
     return dm_composer.personalize(
         donors().messages.reserve_one(), first, "Sister" if first.lower() in FEMALE else "Brother"
     )
+
+
+def log_resume(what):
+    """Remember every immediate resume so the Report can list it."""
+    if not STORE:
+        return
+    items = STORE.get("resume_log", []) or []
+    items.append({"what": what, "at": time.time()})
+    STORE.put("resume_log", items[-30:])
 
 
 def send_dm_test(text, poster=True):
@@ -4818,6 +4833,43 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/drafts":
             ensure_completed_drafts()
             self.reply(DRAFT.read_bytes())
+        elif self.path == "/report":
+            # Every resume (donor DMs and groups) and how many people the Reply feature answered.
+            PKT = datetime.timezone(datetime.timedelta(hours=5))
+            clock = lambda ts: datetime.datetime.fromtimestamp(ts, PKT).strftime("%d %b, %I:%M %p")
+            names = {"main": "GiveLife"}
+            resumes = []
+            try:
+                for t in timed_scheduler().tasks:
+                    if t.get("action") != "resume":
+                        continue
+                    keys = t.get("targets") or []
+                    what = (
+                        "All groups" if set(keys) >= set(GROUPS)
+                        else "Freelance groups" if set(keys) == set(FREELANCE)
+                        else ", ".join(names.get(k, GROUPS.get(k, [k])[0]) for k in keys)
+                    )
+                    resumes.append({"what": what, "when": clock(t.get("due", 0)), "due": t.get("due", 0), "state": str(t.get("state", "")).title()})
+            except Exception:
+                pass
+            try:
+                dr = donors().resume_status()
+                if dr.get("due"):
+                    resumes.append({"what": "Donor DMs", "when": clock(dr["due"]), "due": dr["due"], "state": str(dr.get("state", "")).title()})
+            except Exception:
+                pass
+            for x in (STORE.get("resume_log", []) if STORE else []) or []:
+                resumes.append({"what": x.get("what", ""), "when": clock(x.get("at", 0)), "due": x.get("at", 0), "state": "Done now"})
+            resumes.sort(key=lambda r: -r["due"])
+            day = datetime.datetime.now(PKT).date().isoformat()
+            self.reply({
+                "resumes": resumes[:12],
+                "replies": {
+                    "today": (ENGINE.s.get("reply_people_by_day") or {}).get(day, 0),
+                    "total": ENGINE.s.get("reply_people_total", 0),
+                    "on": bool(reply_setup.get(STORE).get("enabled")),
+                },
+            })
         elif self.path == "/chat-next-actions":
             self.reply({"items": next_chat_actions()})
         elif self.path == "/poster":
@@ -5536,6 +5588,7 @@ class Handler(BaseHTTPRequestHandler):
                     set_hold(False)
                     if not auto_on():
                         set_auto(True)
+                    log_resume({"main": "GiveLife", "free": "Freelance groups", "all": "All groups"}[which])
                     return self.reply({"message": "Resumed " + name + " now."})
                 if not re.fullmatch(r"\d{1,2}:\d{2}", at):
                     raise ValueError("Choose a time like 14:30.")

@@ -113,7 +113,7 @@
   dlg.className = 'report-dialog';
   dlg.setAttribute('aria-label', 'Report');
   dlg.innerHTML =
-    '<div class="report-card"><h2>Right now</h2><p class="report-line" id="reportGroups">Loading…</p><p class="report-line" id="reportDms"></p><button type="button" id="reportClose">Close</button></div>';
+    '<div class="report-card"><h2>Right now</h2><p class="report-line" id="reportGroups">Loading…</p><p class="report-line" id="reportDms"></p><p class="report-line" id="reportReplies"></p><div class="report-resumes" id="reportResumes"></div><button type="button" id="reportClose">Close</button></div>';
   document.body.append(dlg);
   const $ = (id) => document.getElementById(id);
   const clock = (sec) =>
@@ -121,6 +121,8 @@
   async function fill() {
     $('reportGroups').textContent = 'Loading…';
     $('reportDms').textContent = '';
+    $('reportReplies').textContent = '';
+    $('reportResumes').textContent = '';
     try {
       const d = await (await fetch('/autopilot')).json(),
         st = d.status || {},
@@ -159,8 +161,33 @@
       on ? localStorage.setItem('givelife-report-open', '1') : localStorage.removeItem('givelife-report-open');
     } catch (e) {}
   };
+  async function fillExtra() {
+    try {
+      const d = await (await fetch('/report')).json(),
+        r = d.replies || {};
+      $('reportReplies').textContent =
+        '↩️ Replies: ' + (r.today || 0) + ' people answered today · ' + (r.total || 0) + ' in total' + (r.on ? '' : ' · Reply is OFF');
+      const box = $('reportResumes');
+      box.textContent = '';
+      const list = d.resumes || [];
+      const head = document.createElement('p');
+      head.className = 'report-line';
+      head.textContent = '▶️ Resumes: ' + (list.length ? list.length : 'none yet');
+      box.append(head);
+      for (const x of list) {
+        const row = document.createElement('div');
+        row.className = 'report-resume';
+        row.textContent = x.what + ' · ' + x.when + ' · ' + (x.state || '');
+        row.dataset.state = (x.state || '').toLowerCase();
+        box.append(row);
+      }
+    } catch (e) {
+      $('reportReplies').textContent = '↩️ Replies: unavailable right now.';
+    }
+  }
   const open = () => {
     fill();
+    fillExtra();
     if (!dlg.open) dlg.showModal();
     remember(true);
   };

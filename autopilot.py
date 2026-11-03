@@ -796,6 +796,12 @@ class Engine:
                 if not sent:
                     continue
                 by_phone[phone] = now()
+                day = pkt().date().isoformat()
+                per_day = self.s.setdefault("reply_people_by_day", {})
+                per_day[day] = per_day.get(day, 0) + 1
+                for old in sorted(per_day)[:-14]:
+                    per_day.pop(old, None)
+                self.s["reply_people_total"] = self.s.get("reply_people_total", 0) + 1
                 self.log(
                     f'Sent your {sent} saved repl{"y" if sent == 1 else "ies"} to …{phone[-4:]} (picture or "done").'
                 )

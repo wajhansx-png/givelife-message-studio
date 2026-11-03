@@ -43,6 +43,19 @@ def record_post(L, variant, ts=None, text=None):
     L["recent"] = (L["recent"] + [[ts, variant, key]])[-40:]
 
 
+def record_text(L, text, ts=None):
+    """An owner-sent or scheduled post: learn its wording without touching Auto's own variant stats."""
+    if not text or not str(text).strip():
+        return
+    ts = ts or time.time()
+    key = _text_key(text)
+    texts = L.setdefault("texts", {})
+    row = texts.setdefault(key, {"text": str(text)[:2000], "posts": 0, "wins": 0})
+    row["posts"] += 1
+    row["last"] = ts
+    L["text_recent"] = (L.get("text_recent", []) + [[ts, key]])[-40:]
+
+
 def proven_texts(L, limit=2, min_posts=3):
     """Real past wordings that were followed by donations, best first (never invented)."""
     rows = [r for r in L.get("texts", {}).values() if r.get("wins") and r.get("posts", 0) >= min_posts]
@@ -63,6 +76,10 @@ def credit_money(L, ts=None):
             if key and key in L.get("texts", {}):
                 L["texts"][key]["wins"] += 1
             return variant
+    for t, key in reversed(L.get("text_recent", [])):
+        if 0 <= ts - t <= WINDOW and key in L.get("texts", {}):
+            L["texts"][key]["wins"] += 1
+            break
     return None
 
 

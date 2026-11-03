@@ -41,6 +41,13 @@ class RefusalsNeverSend(unittest.TestCase):
   self.assertTrue(chat_policy.intent('bhej do na')['send'])
   self.assertEqual(manual_commands.parse('dobara bhejo')['kind'],'repeat')
 
+class UrduScript(unittest.TestCase):
+ def test_urdu_script_refusal_and_question(self):
+  refusal='\u0645\u062a \u0628\u06be\u06cc\u062c\u0648'  # mat bhejo
+  question='\u06a9\u06cc\u0627 \u0628\u06be\u06cc\u062c \u062f\u06cc\u0627'  # kya bhej diya
+  self.assertTrue(manual_commands.negated_send(refusal))
+  self.assertTrue(manual_commands.question_request(question))
+
 class QuestionsAreNotCommands(unittest.TestCase):
  def test_questions_never_act(self):
   for phrase in ('kya 5000 aaye?','kya sara paisa aya','3000 left?','send main?','kitne dms gaye','kab bhejoge','kya main me bhej diya','hold?','send main now?'):

@@ -240,6 +240,39 @@ async function sendGroup(key){if(!lockSend(key,true))return;let tracked=false;if
 document.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>sendGroup(b.dataset.group));
 function armAll(){return sendGroup('all')}
 $('sendAll').onclick=armAll;
+
+/* ---- delayed send ---- */
+let selectedDelay=0;
+const GN_LABEL={'all':'all 6 groups','free':'all 5 freelance groups','main':'GiveLife main','community':'Upwork Community','fiverr':'Fiverr Course','upwork':'Upwork Course','uet':'Fiverr UET','toprated':'Top Rated'};
+function setDelay(minutes){
+ selectedDelay=selectedDelay===minutes?0:minutes;
+ document.querySelectorAll('.delay-pill').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.delay)===selectedDelay)));
+ const row=$('delayRow');row.classList.toggle('delay-active',selectedDelay>0);row.closest('section').classList.toggle('delay-armed',selectedDelay>0);
+ document.querySelectorAll('[data-group]').forEach(b=>{
+  const base=b.querySelector('.group-label');if(!base)return;
+  const existing=b.querySelector('.delay-hint');if(existing)existing.remove();
+  if(selectedDelay>0){const hint=document.createElement('small');hint.className='delay-hint';hint.textContent='in '+(selectedDelay<60?selectedDelay+' min':'1 hr');b.appendChild(hint)}
+ });
+}
+document.querySelectorAll('.delay-pill').forEach(p=>p.onclick=()=>setDelay(Number(p.dataset.delay)));
+async function scheduleGroup(key){
+ if(!lockSend(key,true))return;busy(true);
+ try{
+  await ensureCaption('group');clearTimeout(timer);await save();
+  const caption=$('group').value;
+  const label=GN_LABEL[key]||key;
+  const delayLabel=selectedDelay<60?selectedDelay+' min':'1 hr';
+  $('groupStatus').textContent='Scheduling for '+label+' in '+delayLabel+'…';
+  const r=await post('/schedule-group',{group:key,message:caption,delay_minutes:selectedDelay,request_id:requestId()}),d=await r.json();
+  if(!r.ok)throw Error(d.error||'Could not schedule');
+  const msg='✓ Scheduled: send to '+label+' in '+delayLabel+'. (Task #'+d.task_id+')';
+  $('groupStatus').textContent=msg;say('app',msg);setLiveNotice(msg,false);
+ }catch(e){$('groupStatus').textContent='✗ '+e.message;say('app',e.message,1)}
+ finally{lockSend(key,false);busy(false)}
+}
+document.querySelectorAll('[data-group]').forEach(b=>{b.onclick=()=>{if(selectedDelay>0)scheduleGroup(b.dataset.group);else sendGroup(b.dataset.group)}});
+$('sendAll').onclick=()=>{if(selectedDelay>0)scheduleGroup('all');else armAll()};
+
 async function fillEmptyCaption(kind){await ensureDrafts();if($(kind)&&!$(kind).value.trim()){const r=await post(kind==='group'?'/next-message':'/next-dm'),d=await r.json();if(r.ok&&typeof d.message==='string'&&d.message.trim()){$(kind).value=d.message;if(kind==='dm')applyGreeting(false);render();await save()}}}
 async function sendTest(kind){const key='test:'+kind;if(!lockSend(key,true))return;setLiveNotice('Sending to test group…');busy(true);try{await fillEmptyCaption(kind);await ensureCaption(kind);clearTimeout(timer);await save();const r=await post('/test',{message:$(kind).value}),d=await r.json();const result=d.code==='SUCCESS'?'✓ Sent to the test group.':'Test failed: '+(d.message||d.error||'');say('app',result,d.code!=='SUCCESS');setLiveNotice(result,d.code!=='SUCCESS')}
  catch(e){say('app',e.message||'Could not send',1)}finally{lockSend(key,false);busy(false)}}

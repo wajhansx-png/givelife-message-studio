@@ -14,7 +14,7 @@
    <section class="notes-shell">
     <header class="notes-head">
      <button class="notes-back" type="button" id="notesBack" aria-label="Back to Donors">← Back</button>
-     <div class="notes-headline"><span class="notes-kicker">GIVELIFE FOUNDATION</span><h1>My Notes</h1></div>
+     <div class="notes-headline"><h1>My Notes</h1></div>
      <span class="notes-sync" id="notesSync" role="status" aria-live="polite"></span>
      <button type="button" class="notes-lock" id="notesLock" hidden>Lock</button>
      <button type="button" class="notes-fullscreen" id="notesFullscreen" aria-pressed="false" title="Hide browser chrome while writing">Full screen</button>
@@ -22,14 +22,11 @@
     <div class="notes-center" id="notesLocked" hidden>
       <div class="notes-unlock">
        <div class="notes-lock-icon" aria-hidden="true">✦</div>
-       <h2>Private ideas, all in one place.</h2>
-       <p>Only you can read or edit this notebook.<span class="wide-only"> Unlock it once on your desktop and it will remember this browser.</span></p>
        <form id="notesUnlockForm" autocomplete="off">
         <label for="notesPassword">Notes password</label>
         <div class="notes-password-row"><input id="notesPassword" type="password" name="notes_password" autocomplete="current-password" required placeholder="Enter password" aria-label="Notes password"><button class="notes-primary" type="submit" id="notesUnlockButton">Unlock notes</button></div>
         <p class="notes-error" id="notesError" role="alert"></p>
        </form>
-       <small>Access is remembered on this browser.<span class="wide-only"> You can lock it manually at any time.</span></small>
       </div>
     </div>
     <section class="notes-workspace" id="notesWorkspace" hidden>

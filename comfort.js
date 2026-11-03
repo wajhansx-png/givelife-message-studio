@@ -61,7 +61,6 @@
   let bar=box.querySelector(':scope > .bank-progress');
   if(!bar){bar=document.createElement('div');bar.className='bank-progress';bar.setAttribute('aria-hidden','true');bar.append(document.createElement('i'));head.after(bar)}
   bar.firstChild.style.width=m?Math.round(+m[1]/+m[2]*100)+'%':'0%';
-  if(!box.querySelector(':scope > .bank-hint')&&box.querySelector('.bank-workspace')){const hint=document.createElement('p');hint.className='bank-hint';hint.textContent='Press → for the next message';box.append(hint)}
   const n=nextBtn();if(n&&!n.title)n.title='Next message (→)';
  }
  if(box){new MutationObserver(()=>requestAnimationFrame(decorateReader)).observe(box,{childList:true});decorateReader()}

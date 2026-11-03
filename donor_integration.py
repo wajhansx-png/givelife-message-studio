@@ -1,5 +1,5 @@
 """Shared donor UI/chat commands and private delivery integration."""
-import re, time, hashlib, threading, uuid
+import re, time, hashlib, threading, uuid, datetime as dt
 from donor_book import DonorBook, normalize_phone, parse_contact, send_request, PHONE
 from donor_delivery import DonorDelivery
 
@@ -8,11 +8,11 @@ class DonorIntegration:
         self.app=app;self.book=DonorBook(app.DATA,app.STORE)
         from donor_messages import MessageBank
         self.messages=MessageBank(app);self.paused=bool(app.STORE.get('donor_dm_pause',False)) if app.STORE else False
-        self.jobs=DonorDelivery(app.DATA,app.STORE,self.book,app.send_custom,lambda:self.messages.captions(1)[0],app.wa_ok,lambda:app.on_hold() or self.paused,self.eligible,self.personal_name,self.messages.captions,lambda:app.read_left()<=0)
+        self.jobs=DonorDelivery(app.DATA,app.STORE,self.book,app.send_custom,lambda:self.messages.captions(1)[0],app.wa_ok,lambda:app.on_hold() or self.paused,self.eligible,self.personal_name,self.messages.captions,lambda:app.read_left()<=0,reserve=self.messages.reserve_round)
         self.jobs.exclusion_reason=self.exclusion_reason
         from donor_paste import PastedDonors
         self.pasted=PastedDonors(self.book,self.jobs,lambda:app.OWNER_PHONE,lambda label:self.personal_name(label,explicit=True),self._start_pasted_batch)
-        self.manual_lock=threading.RLock()
+        self.manual_lock=threading.RLock();self.control_lock=threading.RLock()
         from volunteers import Volunteers
         self.volunteers=Volunteers(app,self.eligible)
         from team_tasks import TeamTasks
@@ -21,16 +21,102 @@ class DonorIntegration:
         self.cases=Cases(app,self)
         self.revision=0
     def pause_personal(self):
+        with self.control_lock:return self._pause_personal()
+    def _pause_personal(self):
+        self.cancel_resume()
+        if not self.paused and self.app.STORE:
+            # Remember what was running so a second press can resume the whole automation.
+            eng=self.app.ENGINE.s;job=self.jobs.status()
+            if not self.jobs.active and not job.get('resumable'):job={}
+            batch={k:job[k] for k in ('scope','gap_seconds','poster','chunk','rests','rest_seconds','jitter') if job.get(k) is not None} if job.get('scope') in ('all','important','donated','not_donated') else None
+            if batch:batch.update(limit=job['total'],resume_id=job['id'],skip_contacted=False)
+            self.app.STORE.put('donor_dm_resume',{'engine':bool(eng.get('dm_enabled')),'daily':eng.get('dm_daily',30),'batch':batch})
         self.revision+=1
         self.paused=True
         if self.app.STORE:self.app.STORE.put('donor_dm_pause',True)
         self.jobs.cancel();self.app.CAMPAIGN['stop']=True;self.app.ENGINE.set_dms(False,self.app.ENGINE.s.get('dm_daily',30))
-        return {'reply':'Personal DMs stopped (paused). Group posting and its timers are unchanged.'}
+        return {'reply':'DMs stopped (paused). Group posting is unchanged. Press Resume DMs to continue everything.','paused':True}
     def resume_personal(self):
+        with self.control_lock:return self._resume_personal()
+    def _resume_personal(self):
+        self.cancel_resume()
         was_paused=self.paused
         self.paused=False
         if self.app.STORE and was_paused:self.app.STORE.put('donor_dm_pause',False)
         return 'Personal DM sending is available again. Group posting is unchanged.'
+    def resume_all(self):
+        with self.control_lock:return self._resume_all()
+    def _resume_all(self):
+        """Second press of Stop DMs: lift the pause, turn Auto DMs back on if they were on, and
+        continue the stopped batch (nobody already sent is repeated)."""
+        if self.jobs.active:raise ValueError('The batch is still stopping. Wait for its current message to finish, then resume.')
+        self.cancel_resume()
+        info=(self.app.STORE.get('donor_dm_resume') if self.app.STORE else None) or {}
+        notes=['DMs resumed.']
+        self.resume_personal()
+        if info.get('batch'):
+            try:
+                batch=dict(info['batch']);jobs=self.jobs.export_jobs().get('jobs',[]);last=jobs[-1] if jobs else {}
+                # Upgrade older pause records using the actual stopped job, not default batch settings.
+                if not batch.get('resume_id'):
+                    if last.get('scope')!=batch.get('scope') or last.get('state') not in ('Stopped','Interrupted','Completed'):raise ValueError('The stopped batch is unavailable. Check delivery before choosing a new batch.')
+                    batch={k:last[k] for k in ('scope','gap_seconds','poster','chunk','rests','rest_seconds','jitter') if last.get(k) is not None}
+                    batch.update(resume_id=last['id'],limit=last['total'],skip_contacted=False)
+                drained=last.get('id')==batch['resume_id'] and bool(last.get('ids')) and set(last['ids'])<=self.jobs._done(last)
+                if drained:notes.append('The stopped batch already finished; nobody was sent again.')
+                else:self.start_batch(**batch,request_id='resume-'+uuid.uuid4().hex);notes.append('The stopped batch continues with its saved settings; nobody already handled is repeated.')
+            except Exception:
+                self.paused=True
+                if self.app.STORE:self.app.STORE.put('donor_dm_pause',True)
+                raise
+        if info.get('engine'):notes.append(self.app.ENGINE.set_dms(True,info.get('daily',30)))
+        if self.app.STORE:self.app.STORE.put('donor_dm_resume',{})
+        return {'reply':' '.join(notes),'paused':False}
+    RESUME_KEY='donor_resume_schedule'
+    def resume_status(self):
+        value=self.app.STORE.get(self.RESUME_KEY,{}) if self.app.STORE else {}
+        return {k:value[k] for k in ('id','due','label','state','error') if k in value} if isinstance(value,dict) else {}
+    def cancel_resume(self):
+        if not self.app.STORE:return
+        value=self.app.STORE.get(self.RESUME_KEY,{})
+        if isinstance(value,dict) and value.get('state') in ('Pending','Failed','Uncertain'):
+            value['state']='Cancelled';self.app.STORE.put(self.RESUME_KEY,value)
+    def schedule_resume(self,when,request_id=None):
+        if not isinstance(when,str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}',when):raise ValueError('Choose a date and clock time in Pakistan time (PKT).')
+        try:clock=dt.datetime.fromisoformat(when).replace(tzinfo=dt.timezone(dt.timedelta(hours=5)));due=clock.timestamp()
+        except ValueError:raise ValueError('Choose a valid date and clock time.') from None
+        now=time.time()
+        if not now<due<=now+366*86400:raise ValueError('Choose a future time within the next year (PKT).')
+        with self.control_lock:
+            if not self.app.STORE:raise ValueError('Persistent storage is unavailable. Nothing was scheduled.')
+            if not self.paused:raise ValueError('Stop DMs before scheduling a resume.')
+            old=self.app.STORE.get(self.RESUME_KEY,{})
+            if request_id and old.get('request_id')==request_id:
+                if old.get('due')!=due:raise ValueError('That request was already used for another time.')
+                return {'reply':'This resume is already saved.','paused':self.paused,'resume':self.resume_status()}
+            value={'id':uuid.uuid4().hex,'request_id':request_id,'due':due,'label':clock.strftime('%d %b %Y, %I:%M %p PKT'),'state':'Pending'}
+            self.app.STORE.put(self.RESUME_KEY,value)
+            return {'reply':'DMs will resume at '+value['label']+' using your saved setup. Nothing sends before then.','paused':True,'resume':self.resume_status()}
+    def tick_resume(self,now=None):
+        with self.control_lock:
+            value=self.app.STORE.get(self.RESUME_KEY,{}) if self.app.STORE else {}
+            if not isinstance(value,dict):return
+            if value.get('state')=='Dispatching':
+                value.update(state='Uncertain',error='The service restarted during resume. Check delivery before resuming again.');self.app.STORE.put(self.RESUME_KEY,value);return
+            if value.get('state')!='Pending' or value.get('due',0)>(time.time() if now is None else now):return
+            if not self.paused:self.cancel_resume();return
+            if self.jobs.active:return  # let an in-flight Stop finish first
+            value['state']='Dispatching';self.app.STORE.put(self.RESUME_KEY,value)
+            try:self.resume_all();value['state']='Completed'
+            except Exception as error:value.update(state='Failed',error=str(error))
+            self.app.STORE.put(self.RESUME_KEY,value)
+    def toggle(self):
+        return self.resume_all() if self.paused else self.pause_personal()
+    def test_dm(self,poster=True):
+        """Send the first saved donor message to the owner's own WhatsApp, marked TEST. Uses no rotation."""
+        if type(poster) is not bool:raise ValueError('Poster must be on or off.')
+        import dm_composer
+        return self.app.send_dm_test(dm_composer.personalize(self.messages._rotation_texts()[0],'','Brother'),poster)
     PREFS_KEY='donor_batch_prefs'
     def prefs(self):
         """How the owner usually runs a donor batch, learned from his last confirmed one."""
@@ -42,6 +128,8 @@ class DonorIntegration:
         keep['skip_contacted']=body.get('skip_contacted',True)
         self.app.STORE.put(self.PREFS_KEY,keep)
     def start_batch(self,**body):
+        with self.control_lock:return self._start_batch(**body)
+    def _start_batch(self,**body):
         self.resume_personal();body.setdefault('gap_seconds',240)
         if not body.get('chunk'):body.setdefault('limit',20)
         result=self.jobs.start(**body)
@@ -66,9 +154,10 @@ class DonorIntegration:
         rows=self.book.recipients('selected',body.get('ids'),None)
         if rows and not any(self.eligible(r['phone']) for r in rows):raise ValueError('Not sent: '+self.exclusion_reason(rows[0]['phone']))
         return self.start_batch(**body)
-    def send_one(self,ident,request_id):
+    def send_one(self,ident,request_id,poster=True):
         """Each explicit click is a new immediate send; repeated request IDs never resend."""
         if not self.app.STORE:raise ValueError('Persistent sending records are unavailable.')
+        if type(poster) is not bool:raise ValueError('Poster must be on or off.')
         self.resume_personal()
         if not isinstance(request_id,str) or not re.fullmatch(r'[a-zA-Z0-9_-]{8,100}',request_id):raise ValueError('Invalid send request. Refresh the donor page.')
         r=self.book.resolve(ident)
@@ -89,7 +178,7 @@ class DonorIntegration:
                 # Source of truth: only the visible saved Donors > Messages versions.
                 # Reserving consumes a version even if delivery becomes uncertain.
                 caption=self.messages.reserve_one()
-                result=self.app.send_custom({'target':'phone','phone':r['phone'],'message':caption,'poster':True,'kind':'donor_manual','name':name,'gender':gender})
+                result=self.app.send_custom({'target':'phone','phone':r['phone'],'message':caption,'poster':poster,'kind':'donor_manual','name':name,'gender':gender})
                 confirmed=isinstance(result,dict) and result.get('code')=='SUCCESS'
                 if confirmed:self.jobs.manual_sent_at=time.time()
                 state='Sent' if confirmed else 'Uncertain';self.book.delivery(r['id'],state)
@@ -236,7 +325,32 @@ class DonorIntegration:
         # A bare "stop" while donor DMs are running can only mean those DMs.
         if self.jobs.active and re.fullmatch(r'(?i)(?:please\s+)?(?:stop|pause|cancel|ruk(?:\s+jao)?|band(?:\s+karo)?|bas)(?:\s+(?:it|this|now|all|sending|everything|the batch|batch|the rest|rest))?[.!]*',t):return self.pause_personal()
         control=manual_commands.dm_control(t)
-        if control=='stop_dms':return self.pause_personal()
+        if control is None and self.paused and re.search(r'(?i)\b(?:schedule|start|begin|run)\b',t) and re.search(r'(?i)\b(?:dms?|dm s|direct messages?)\b',t) and not re.search(r'(?i)\b(?:donors?|important)\b|\d+\s*(?:dms?|people|donors?)',t):
+            control='resume_dms' # "start/schedule dms by 11am" while DMs are stopped means resume them at that time
+        if control=='resume_dms':
+            # "resume DMs by 11 am" means at that time, never right now.
+            import timed_tasks
+            due=timed_tasks.due_time(t)
+            if due is not None:
+                if not self.paused:return {'reply':'DMs are not stopped, so there is nothing to resume at that time. Nothing was changed.','paused':False}
+                return self.schedule_resume(dt.datetime.fromtimestamp(due,timed_tasks.PKT).strftime('%Y-%m-%dT%H:%M'),request_id)
+        if control=='stop_dms':
+            # "pause dms for 1 hour" / "hold dms till 11am" pause now and resume at that time.
+            import timed_tasks
+            span=re.search(r'(?i)\bfor\s+(\d+(?:\.\d+)?)\s*(min\w*|mnts?|hours?|hrs?)\b',t)
+            until=re.search(r'(?i)\b(?:till|until)\b',t) # "stop dms by 11am" is a stop at that time, which is not supported
+            if span or (until and timed_tasks.due_time(t) is not None):
+                due=time.time()+float(span[1])*(3600 if span[2].casefold().startswith('h') else 60) if span else timed_tasks.due_time(t)
+                result=self.pause_personal()
+                try:
+                    stamp=dt.datetime.fromtimestamp(due,timed_tasks.PKT).strftime('%Y-%m-%dT%H:%M')
+                    later=self.schedule_resume(stamp,request_id)
+                except Exception as e:
+                    return {'reply':result['reply']+' I could not schedule the resume: '+str(e)+' Press Resume DMs when ready.','paused':True}
+                return {'reply':'DMs stopped. '+later['reply'],'paused':True,'resume':later.get('resume')}
+            if timed_tasks.due_time(t) is not None:
+                return {'reply':'I did not change anything. Say "stop dms" to stop now, or "hold dms till 11am" to stop now and resume at 11am. Stopping later at a set time is not scheduled.','paused':self.paused}
+            return self.pause_personal()
         if control=='resume_dms':return {'reply':self.resume_personal()}
         if re.fullmatch(r'(?i)(?:please\s+)?(?:(?:send|start|run|do)\s+(?:the\s+|my\s+)?(?:dms?|dm batch(?:es)?|batches|donor dms?)|dm\s+(?:the\s+)?(?:important|them)(?:\s+donors?)?)(?:\s+(?:to\s+)?(?:important(?:\s+donors?)?|them|now|please|again|everyone))*[.!]*',t):
             if self.app.CAMPAIGN.get('running'):raise ValueError('Another DM campaign is running. Stop it before starting a donor batch.')

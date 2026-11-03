@@ -264,8 +264,12 @@ class IntegrationTests(unittest.TestCase):
  def setUp(self):
   from test_manual_sends import app,Store as AppStore
   self.app=app;app.STORE=AppStore();app.DONORS=None;app.CAMPAIGN.update(running=False,stop=False);app.HOLD.write_text('{"on":false}')
+  # Case switches rewrite the shared draft file; restore it so tests stay independent.
+  self.draft_path=app.DRAFT;self.draft=self.draft_path.read_bytes() if self.draft_path.exists() else None
   self.scope=tempfile.TemporaryDirectory();(Path(self.scope.name)/'state.md').write_text('LEFT: 25000\n');self.data=patch.object(app,'DATA',Path(self.scope.name));self.data.start();self.api=patch.object(app,'api',return_value={'results':{'is_connected':True,'is_logged_in':True}});self.api.start()
- def tearDown(self):self.api.stop();self.data.stop();self.scope.cleanup();self.app.DONORS=None
+ def tearDown(self):
+  self.api.stop();self.data.stop();self.scope.cleanup();self.app.DONORS=None
+  if self.draft is not None:self.draft_path.write_bytes(self.draft)
  def test_chat_adds_and_lists_volunteers_without_touching_donors(self):
   app=self.app;r=app.manual_command('add volunteer Sara Khan 0300 1234567','vol-add-1');self.assertTrue(r['handled']);self.assertNotIn('1234567',json.dumps(r))
   v=app.donors().volunteers;self.assertEqual([x['name'] for x in v.book.list('all')['items']],['Sara Khan']);self.assertEqual(app.donors().book.list()['counts']['all'],0)

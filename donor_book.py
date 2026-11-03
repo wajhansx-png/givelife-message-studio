@@ -219,6 +219,10 @@ def send_request(text):
     unit=lambda n,u:float(n)*(3600 if u.lower().startswith('h') else 60)
     pause=re.search(r'(?i)(\d+(?:\.\d+)?)\s*(minutes?|mins?|m|hours?|hrs?|h)\s*(?:break|pause|rest|gap|delay|wait)?\s*between\s+(?:the\s+)?batch(?:es)?|batch(?:es)?\s*(?:gap|pause|rest|delay)\s*(?:of\s*)?(\d+(?:\.\d+)?)\s*(minutes?|mins?|m|hours?|hrs?|h)',t)
     rests=[unit(pause[1] or pause[3],pause[2] or pause[4])] if pause else None
+    if not pause:
+        # "then rest 20 minutes" / "20 min rest" is the pause between batches, never the gap between DMs.
+        pause=re.search(r'(?i)\b(?:rest|break|pause)\s*(?:for|of|=|:)?\s*(?P<n>\d+(?:\.?\d+)?)\s*(?P<u>minutes?|mins?|hours?|hrs?)\b|(?P<n2>\d+(?:\.?\d+)?)\s*(?P<u2>minutes?|mins?|hours?|hrs?)\s+(?:rest|break)\b',t)
+        if pause:rests=[unit(pause['n'] or pause['n2'],pause['u'] or pause['u2'])]
     t_gap=(t[:pause.start()]+' '+t[pause.end():]) if pause else t
     jitter={'min':-10,'max':15} if re.search(r'(?i)\brandom(?:ly|ize|ise|ized|ised)?\b',t) else None
     gap=re.search(r'(?i)(\d+(?:\.\d+)?)\s*(seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|h)\b',t_gap)
@@ -228,5 +232,5 @@ def send_request(text):
     # "send 20 dms" is a round size: the rest of the audience follows by itself. "first 20" is an exact total.
     exact=bool(limit) and limit[1].lower() in ('first','top')
     rounds=20 if n and n>20 else None if exact else n
-    return {'scope':scope,'gap_seconds':seconds,'limit':n if exact or (n and n>20) else None,'chunk':rounds,'rests':rests,'jitter':jitter,'poster':not bool(re.search(r'(?i)\b(?:without|no) (?:poster|picture|image)\b|\btext only\b',t))}
+    return {'scope':scope,'gap_seconds':seconds,'limit':n if exact or (n and n>20) else None,'chunk':rounds,'rests':rests,'jitter':jitter,'poster':not bool(re.search(r'(?i)\b(?:without|no)\s+(?:the\s+)?(?:poster|picture|image|pic)\b|\b(?:poster|picture|image|pic)\s+off\b|\btext only\b',t))}
 

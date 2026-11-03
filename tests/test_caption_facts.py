@@ -10,6 +10,12 @@ class CaptionFactsTests(unittest.TestCase):
  def seed(self):
   app.write_left(25000);app.save_draft('group',SOURCE);app.save_draft('dm','Brother, '+SOURCE)
   app.STORE.put('focus_wording',{k:{'source':app.get_message(k)['text'],'items':[app.get_message(k)['text'].replace('short of funds','unable to pay')],'revision':'old','state':'Ready'} for k in ('group','dm')})
+ def test_dispatch_refreshes_amount_inside_whatsapp_italics(self):
+  # '_' is a regex word character, so a -bounded pattern missed '*_Rs. 25,000 LEFT_*'
+  # and reserved Group versions went out with the old balance.
+  app.write_left(23000)
+  for text in ('*_Rs. 25,000 LEFT_*','_Rs. 25,000 needed_','Rs. 25,000 left.'):
+   with self.subTest(text=text):self.assertIn('23,000',caption_facts.current(app,text))
  def test_amount_updates_every_saved_variant_without_rebuilding_old_case(self):
   self.seed();self.assertTrue(app.manual_command('23k left now')['handled'])
   for row in app.STORE.get('focus_wording').values():

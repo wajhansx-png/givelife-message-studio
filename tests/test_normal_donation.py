@@ -17,7 +17,7 @@ class NormalDonationLine(unittest.TestCase):
   self.assertEqual(lines[first+1],'*_OR 13 people donating Rs. 2,000 as well_*')
   self.assertIn('*_OR 26 people contributing Rs. 1,000_* 🤲',lines)
  def test_no_usual_amount_leaves_the_shared_message_alone(self):
-  self.assertEqual(self.greet(0),'Ali Brother, x\n\n*_Rs. 26,000 LEFT_*\n\n*_Just 13 people donating Rs. 2,000_*\n*_OR 26 people contributing Rs. 1,000_* 🤲\nHook')
+  self.assertEqual(self.greet(0),'Ali Bhai, x\n\n*_Rs. 26,000 LEFT_*\n\n*_Just 13 people donating Rs. 2,000_*\n*_OR 26 people contributing Rs. 1,000_* 🤲\nHook')
  def test_same_amount_as_a_shared_line_is_not_repeated(self):
   text=self.greet(2000);self.assertEqual(text.count('Rs. 2,000'),1);self.assertIn('will save him',text)
   text=self.greet(1000);self.assertEqual(text.count('Rs. 1,000'),1)

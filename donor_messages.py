@@ -1,5 +1,5 @@
 """Instant, editable wording bank from the saved DM or an owner-supplied message."""
-import copy, hashlib, json, threading, time
+import copy, hashlib, json, threading, time, uuid
 
 import dm_composer
 import dm_templates
@@ -14,6 +14,7 @@ class MessageBank:
         self.lock = threading.RLock()
         self.gen_lock = threading.Lock()
         self.cache = None
+        self.regeneration_running = set()
 
     def _source(self):
         return self.app.get_message('dm')['text']
@@ -55,6 +56,9 @@ class MessageBank:
                 changed = True
         data['left'] = current
         if changed:
+            generation = data.get('generation')
+            if isinstance(generation, dict) and generation.get('state') == 'Generating':
+                generation.update(state='Superseded', error='The remaining amount changed. Retry to use the updated message.')
             data['updated_at'] = time.time()
             self._save(data)
 
@@ -91,10 +95,102 @@ class MessageBank:
             # It is only replaced by an explicit regenerate or a new generate.
             if isinstance(self.cache, dict) and self.cache.get('mode') == 'custom':
                 self._sync_amount(self.cache)
-                return copy.deepcopy(self.cache)
-            if not isinstance(self.cache, dict) or self.cache.get('fingerprint') != fingerprint:
+            elif not isinstance(self.cache, dict) or self.cache.get('fingerprint') != fingerprint:
                 self._save(self._build(source))
+            # A persisted in-progress job resumes after a service restart. One local
+            # worker owns its id; repeated polling never starts duplicate workers.
+            self._launch_regeneration(self.cache)
             return copy.deepcopy(self.cache)
+
+    def _launch_regeneration(self, data):
+        generation = data.get('generation') or {}
+        ident = generation.get('id')
+        if generation.get('state') != 'Generating' or not ident or ident in self.regeneration_running:
+            return
+        self.regeneration_running.add(ident)
+        threading.Thread(target=self._regenerate_worker, args=(copy.deepcopy(generation),), daemon=True).start()
+
+    def start_regeneration(self):
+        """Acknowledge immediately; preserve each verified version as it arrives."""
+        with self.lock:
+            data = self.get()
+            items = data.get('items') or []
+            if not items or not isinstance(items[0].get('text'), str):
+                raise ValueError('Save Message 1 before regenerating.')
+            source = items[0]['text']
+            if not dm_composer.complete(source):
+                raise ValueError('Keep the complete message with its paragraphs, amount and payment details.')
+            previous = data.get('generation') or {}
+            if previous.get('state') == 'Generating':
+                return data
+            retry = previous.get('state') == 'Partial' and previous.get('source') == source
+            accepted = list(previous.get('accepted', [])) if retry else []
+            # Keep the existing twenty-message capacity for batches; Message 1 is
+            # the owner's original, with nineteen rewritten versions following it.
+            generation = {'id': uuid.uuid4().hex, 'source': source, 'target': 20,
+                          'accepted': accepted, 'state': 'Generating', 'error': '',
+                          'ready': 1 + len(accepted), 'started_at': time.time()}
+            if not retry:
+                data['previous_items'] = items
+            data.update(mode='custom', origin=source, fingerprint=self._fingerprint(source),
+                        items=self._entries([source] + accepted), generation=generation,
+                        updated_at=time.time(), warning='')
+            self._save(data)
+            self._launch_regeneration(data)
+            return copy.deepcopy(data)
+
+    def _generation_current(self, generation):
+        data = self.cache
+        current = data.get('generation', {}) if isinstance(data, dict) else {}
+        items = data.get('items', []) if isinstance(data, dict) else []
+        return (current.get('id') == generation['id'] and current.get('state') == 'Generating'
+                and bool(items) and items[0].get('text') == generation['source'])
+
+    def _regenerate_worker(self, generation):
+        source, ident = generation['source'], generation['id']
+        accepted = list(generation.get('accepted', []))
+        prior = list(accepted)
+
+        def record(candidates, state='Generating', error=''):
+            with self.lock:
+                if not self._generation_current(generation):
+                    return False
+                values = list(dict.fromkeys(prior + list(candidates)))
+                values = [text for text in values if isinstance(text, str) and text.strip() and text != source]
+                values = values[:generation['target'] - 1]
+                data = copy.deepcopy(self.cache)
+                data['items'] = self._entries([source] + values)
+                data['generation'].update(accepted=values, ready=1 + len(values), state=state, error=error)
+                data.update(updated_at=time.time(), warning=error)
+                accepted[:] = values
+                self._save(data)
+                return True
+
+        try:
+            with self.gen_lock:
+                with self.lock:
+                    if not self._generation_current(generation):
+                        return
+                # Continue productive partial batches automatically, with a finite
+                # budget. Provider failures stop here; no endless background retry.
+                for _ in range(3):
+                    prior = list(accepted)
+                    missing = generation['target'] - 1 - len(prior)
+                    if not missing:
+                        break
+                    result = dm_variants.generate(source, missing, avoid=[source] + prior,
+                                                 progress=record, allow_partial=True)
+                    if not record(result) or not result:
+                        break
+                complete = len(accepted) >= generation['target'] - 1
+                record(accepted[len(prior):], 'Ready' if complete else 'Partial',
+                       '' if complete else 'Some versions are ready. Retry to finish the remaining versions.')
+        except Exception as exc:
+            # The callback already saved accepted work. A failure never resets it.
+            record(accepted[len(prior):], 'Partial', str(exc)[:350])
+        finally:
+            with self.lock:
+                self.regeneration_running.discard(ident)
 
     def generate(self, source, count=10, total=20, master_first=False):
         """Build a bank from a pasted message. Returns the saved bank."""
@@ -170,6 +266,8 @@ class MessageBank:
             if row is None:
                 raise ValueError('Message not found.')
             row['text'] = text
+            if isinstance(data.get('generation'), dict):
+                data['generation'].update(state='Superseded', error='A message changed. Retry regeneration to use your latest edit.')
             if ident == 'wording-01':
                 # An owner-edited master becomes authoritative even when the
                 # main DM draft is later changed in the other app screen.
@@ -198,37 +296,71 @@ class MessageBank:
             raise ValueError('Prepare enough different messages in Messages before starting this batch.')
         return items[:count]
 
-    def reserve_one(self):
-        """Reserve the next saved Donors > Messages version for an explicit DM.
+    ROTATION_KEY = 'donor_single_rotation'
+    MIN_VERSIONS = 10
 
-        Allocate before sending, keep cursor in persistent storage and never
-        silently use the separate main-screen DM draft as a fallback.
-        If delivery is uncertain, the reserved version remains consumed.
+    def _rotation_texts(self):
+        """Validated, enabled Donors > Messages texts (the only source any DM route may use)."""
+        bank = self.get()
+        rows = bank.get('items') or []
+        texts = [row['text'] for row in rows
+                 if isinstance(row, dict) and row.get('enabled', True)
+                 and isinstance(row.get('text'), str) and row['text'].strip()]
+        if not texts or len(texts) != len(set(texts)):
+            raise ValueError('Saved Donors Messages are missing or duplicated. Nothing was sent.')
+        if any(not dm_composer.complete(text) for text in texts):
+            raise ValueError('A saved donor message is incomplete. Edit it in Donors > Messages before sending.')
+        if len(texts) < self.MIN_VERSIONS:
+            # A one-version bank would send the same wording to everyone (and is what a
+            # bank overwritten by another screen looks like). Refuse instead of repeating.
+            raise ValueError(f'Donors > Messages has only {len(texts)} saved version(s). '
+                             'Open Messages and press Regenerate so at least 10 are ready. Nothing was sent.')
+        return texts
+
+    def _reserve(self, count):
+        """Reserve the next `count` saved Donors > Messages versions from the ONE shared
+        cursor used by every donor-DM route: single clicks (reserve_one) and batch/Auto
+        rounds (reserve_round) advance the same persisted pointer, in persistent storage,
+        so nobody gets repeated or near-repeated wording just because a different sending
+        method was used. Uncertain sends stay consumed so a restart never replays them.
+        """
+        if not self.app.STORE:
+            raise ValueError('Saved DM rotation is unavailable. Nothing was sent.')
+        texts = self._rotation_texts()
+        if count > len(texts):
+            raise ValueError('Prepare enough different messages in Messages before starting this batch.')
+        revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
+        saved = self.app.STORE.get(self.ROTATION_KEY, {}) or {}
+        index = int(saved.get('next_index', 0) or 0) % len(texts) if saved.get('revision') == revision else 0
+        last = saved.get('last_text')
+        if len(texts) > 1 and last == texts[index]:
+            index = (index + 1) % len(texts)
+        selected = []
+        for _ in range(count):
+            value = texts[index]
+            selected.append(value)
+            index = (index + 1) % len(texts)
+        self.app.STORE.put(self.ROTATION_KEY, {
+            'revision': revision,
+            'next_index': index,
+            'last_text': selected[-1]
+        })
+        return selected
+
+    def reserve_one(self):
+        """Reserve the next saved Donors > Messages version for an explicit single DM.
+
+        All explicit one-person sends use exactly what the owner sees in
+        Donors > Messages (not get_message('dm') or older templates).
         """
         with self.lock:
-            if not self.app.STORE:
-                raise ValueError('Saved DM rotation is unavailable. Nothing was sent.')
-            bank = self.get()
-            rows = bank.get('items') or []
-            # All explicit one-person sends use exactly what the owner sees in
-            # Donors > Messages (not get_message('dm') or older templates).
-            texts = [row['text'] for row in rows
-                     if isinstance(row, dict) and row.get('enabled', True)
-                     and isinstance(row.get('text'), str) and row['text'].strip()]
-            if not texts or len(texts) != len(set(texts)):
-                raise ValueError('Saved Donors Messages are missing or duplicated. Nothing was sent.')
-            if any(not dm_composer.complete(text) for text in texts):
-                raise ValueError('A saved donor message is incomplete. Edit it in Donors > Messages before sending.')
-            revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
-            saved = self.app.STORE.get('donor_single_rotation', {}) or {}
-            index = int(saved.get('next_index', 0) or 0) % len(texts) if saved.get('revision') == revision else 0
-            last = saved.get('last_text')
-            if len(texts) > 1 and last == texts[index]:
-                index = (index + 1) % len(texts)
-            result = texts[index]
-            self.app.STORE.put('donor_single_rotation', {
-                'revision': revision,
-                'next_index': (index + 1) % len(texts),
-                'last_text': result
-            })
-            return result
+            return self._reserve(1)[0]
+
+    def reserve_round(self, count):
+        """Reserve `count` saved versions for one batch/Auto round, from the same shared
+        cursor as reserve_one. Call this once per round at batch start, not per dispatch:
+        the resulting assignment is fixed for the round and re-amount-synced later via
+        captions()/the bank's own amount refresh, not by reserving again.
+        """
+        with self.lock:
+            return self._reserve(count)

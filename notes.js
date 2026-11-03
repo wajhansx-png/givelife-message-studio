@@ -23,13 +23,13 @@
       <div class="notes-unlock">
        <div class="notes-lock-icon" aria-hidden="true">✦</div>
        <h2>Private ideas, all in one place.</h2>
-       <p>Only you can read or edit this notebook. Unlock it once on your desktop and it will remember this browser.</p>
+       <p>Only you can read or edit this notebook.<span class="wide-only"> Unlock it once on your desktop and it will remember this browser.</span></p>
        <form id="notesUnlockForm" autocomplete="off">
         <label for="notesPassword">Notes password</label>
         <div class="notes-password-row"><input id="notesPassword" type="password" name="notes_password" autocomplete="current-password" required placeholder="Enter password" aria-label="Notes password"><button class="notes-primary" type="submit" id="notesUnlockButton">Unlock notes</button></div>
         <p class="notes-error" id="notesError" role="alert"></p>
        </form>
-       <small>Access is remembered on this browser. You can lock it manually at any time.</small>
+       <small>Access is remembered on this browser.<span class="wide-only"> You can lock it manually at any time.</span></small>
       </div>
     </div>
     <section class="notes-workspace" id="notesWorkspace" hidden>

@@ -5,12 +5,18 @@ from donor_book import hide_numbers
 
 class DonorDelivery:
     KEY='donor_delivery';FILE='donor-delivery.json';KIND='donor_batch';CLAIM='donor_batch_request_'
-    def __init__(self,folder,store,book,send,caption,connected,held,eligible,name_for,variants=None,case_closed=None):
+    def __init__(self,folder,store,book,send,caption,connected,held,eligible,name_for,variants=None,case_closed=None,reserve=None):
         self.path=Path(folder)/self.FILE;self.store=store;self.book=book
         self.send=send;self.caption=caption;self.connected=connected;self.held=held;self.eligible=eligible;self.name_for=name_for
         self.lock=threading.RLock();self.boot=uuid.uuid4().hex;self.stop=threading.Event();self.active=None
         self.manual_sent_at=0;self.manual_inflight=threading.Event()
         self.variants=variants;self.case_closed=case_closed or (lambda:False)
+        # Round selection advances the shared rotation cursor (same one single DMs use);
+        # `variants` stays a pure/deterministic peek, used only for the mid-batch amount
+        # refresh below, so refreshing never re-rotates or skips bank entries. Read both
+        # live (not snapshotted here) so tests that swap `.variants` after construction
+        # still take effect.
+        self.reserve=reserve
         self._cache=None
     def _load(self):
         if self._cache is not None:return copy.deepcopy(self._cache)
@@ -60,9 +66,9 @@ class DonorDelivery:
                 if self.book.resolve(ident).get('delivery')=='Sending':done.add(ident)
             except ValueError:pass
         return done
-    def _remaining(self,j):
+    def _remaining(self,j,allow_expired=False):
         """Who is still waiting in a recently stopped batch, or None when it cannot be continued."""
-        if j.get('state') not in ('Stopped','Interrupted') or time.time()-j.get('updated_at',0)>(self.AUTO_WINDOW if j.get('auto') else self.RESUME_WINDOW):return None
+        if j.get('state') not in ('Stopped','Interrupted') or not allow_expired and time.time()-j.get('updated_at',0)>(self.AUTO_WINDOW if j.get('auto') else self.RESUME_WINDOW):return None
         done=self._done(j);left=[i for i in j.get('ids',[]) if i not in done]
         return left or None
     def _waiting(self,j):
@@ -83,7 +89,7 @@ class DonorDelivery:
         with self.lock:
             data=self._load();j=next(x for x in data['jobs'] if x['id']==ident);j.update(fields,updated_at=time.time());self._save(data)
             return copy.deepcopy(j)
-    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None,chunk=None,rest_seconds=1200,fresh=False,rests=None,jitter=None,skip_contacted=None,hold_until=None,custom_template=None,attachment=None):
+    def start(self,scope='important',gap_seconds=60,ids=None,limit=None,request_id=None,poster=True,run=True,personal_names=None,chunk=None,rest_seconds=1200,fresh=False,rests=None,jitter=None,skip_contacted=None,hold_until=None,custom_template=None,attachment=None,resume_id=None):
         if attachment is not None and (not isinstance(attachment,str) or not re.fullmatch('[a-f0-9]{32}',attachment)):raise ValueError('Choose the attachment again.')
         if custom_template is not None and (scope!='selected' or not isinstance(custom_template,str) or not custom_template.strip() or len(custom_template)>8000):raise ValueError("Write a custom message for selected recipients (up to 8,000 characters).")
         if self.case_closed():raise ValueError('The case is complete (Rs. 0 left), so no donor DMs were started. Set a new amount left first if you need to ask again.')
@@ -119,7 +125,9 @@ class DonorDelivery:
         resumed='';self.status()
         with self.lock:
             jobs=self._load().get('jobs',[]);prev=jobs[-1] if jobs else None
-        left=self._remaining(prev) if prev and not fresh and prev.get('scope')==scope and (scope!='selected' or set(prev.get('ids',[]))&set(ids or [])) else None
+        if resume_id and (not prev or prev.get('id')!=resume_id or prev.get('scope')!=scope or prev.get('state') not in ('Stopped','Interrupted')):raise ValueError('The stopped batch changed. Check its delivery results before resuming.')
+        left=self._remaining(prev,allow_expired=bool(resume_id)) if prev and not fresh and prev.get('scope')==scope and (scope!='selected' or set(prev.get('ids',[]))&set(ids or [])) else None
+        if resume_id and left is None:raise ValueError('Everyone in the stopped batch was already handled. Nothing was sent again.')
         same_batch=prev and not fresh and prev.get('scope')==scope and (scope!='selected' or set(prev.get('ids',[]))&set(ids or []))
         recent=prev and time.time()-prev.get('updated_at',0)<=(self.AUTO_WINDOW if prev.get('auto') else self.RESUME_WINDOW)
         if left is None and same_batch and recent and prev.get('state') in ('Stopped','Interrupted'):
@@ -134,12 +142,15 @@ class DonorDelivery:
                 keep={r['id'] for r in rows};personal_names={k:v for k,v in personal_names.items() if k in keep};ids=[i for i in (ids or []) if i in keep]
             resumed=f'Continuing your stopped batch: {skipped} already handled (sent or unconfirmed) are skipped, {len(rows)} left. '
         if not rows:raise ValueError('Everyone in this audience was already contacted. Tick "include people already contacted" to send again.' if already else 'There are no donors in this audience.')
-        # Each round of up to `chunk` people gets its own different wordings; rounds may reuse them.
+        # Each round of up to `chunk` people reserves its own versions from the shared
+        # rotation cursor, so later rounds (and later batches, and single DMs) continue
+        # forward through the bank instead of reusing the same first few versions.
+        picker=self.reserve or self.variants
         size=chunk or len(rows);captions=[]
         for start in range(0,len(rows),size):
             part=len(rows[start:start+size])
-            texts=self.variants(part) if self.variants and custom_template is None else [caption]*part
-            if self.variants and custom_template is None and (not isinstance(texts,list) or len(texts)!=part or any(not isinstance(text,str) or not text.strip() for text in texts) or len(set(texts))!=part):raise ValueError('Prepare enough different messages in Messages before starting this batch.')
+            texts=picker(part) if picker and custom_template is None else [caption]*part
+            if picker and custom_template is None and (not isinstance(texts,list) or len(texts)!=part or any(not isinstance(text,str) or not text.strip() for text in texts) or len(set(texts))!=part):raise ValueError('Prepare enough different messages in Messages before starting this batch.')
             captions+=texts
         signature=hashlib.sha256(json.dumps([scope,gap,ids,limit,poster,captions,custom_template,attachment,personal_names,chunk,rests,jitter,hold_until,[r['id'] for r in rows]],sort_keys=True).encode()).hexdigest()
         with self.lock:
@@ -159,7 +170,7 @@ class DonorDelivery:
                 return {'job':self._public(existing),'reply':'This donor batch is already tracked. It was not started again.'}
             job={'id':ident,'request_id':rid,'signature':signature,'boot':self.boot,'scope':scope,'gap_seconds':gap,'poster':poster,'ids':[r['id'] for r in rows],'caption':caption,'captions':captions,'state':'Starting','sent':0,'skipped':0,'failed':0,'total':len(rows),'current':'','receipts':[],'created_at':now,'updated_at':now,'next_at':None}
             job.update(auto=True,batch=1,hold_until=hold_until)
-            if chunk and len(rows)>chunk:job.update(chunk=chunk,rest_seconds=rests[0],rests=rests,batches=-(-len(rows)//chunk))
+            if chunk:job.update(chunk=chunk,rest_seconds=rests[0],rests=rests,batches=-(-len(rows)//chunk))
             if jitter:job['jitter']=jitter
             if personal_names is not None:job['personal_names']=copy.deepcopy(personal_names)
             if custom_template is not None:job['custom_template']=custom_template
@@ -208,6 +219,7 @@ class DonorDelivery:
                 while not self.connected():
                     if time.time()>=deadline:raise ValueError('WhatsApp stayed disconnected for 30 minutes. Reconnect it, then press Continue.')
                     if self.stop.wait(15):return None
+            if self.stop.is_set():return None
             return self.send(body)
     def _run(self,j):
         receipts=[];sent=skipped=failed=0;last_completion=None;state='Completed';error='';chunk=j.get('chunk');gap_next=float(j['gap_seconds']);done_here=set()
@@ -216,7 +228,7 @@ class DonorDelivery:
             if hold and hold>time.time():
                 self._update(j['id'],state='Waiting',next_at=hold,next_batch_at=hold,current='Waiting for the next batch time')
                 if self._sleep_until(hold):
-                    self._update(j['id'],state='Stopped',next_at=None,next_batch_at=None,current='');self.active=None;return
+                    state='Stopped';return
             for index,ident in enumerate(j['ids']):
                 if self.stop.is_set():state='Stopped';break
                 if self.held():state='Stopped';error='Sending is on hold.';break
@@ -271,7 +283,7 @@ class DonorDelivery:
         with self.lock:
             self.status();jobs=self._load().get('jobs',[]);j=jobs[-1] if jobs else None
         if not j or not j.get('auto') or j.get('state')!='Interrupted' or not self._remaining(j) or j.get('boot')==self.boot or self.active or time.time()-j.get('updated_at',0)>self.AUTO_WINDOW:return None
-        hold=j.get('next_batch_at') or j.get('next_at')
+        hold=max((j.get(key) or 0 for key in ('hold_until','next_batch_at','next_at')))
         args=dict(scope=j['scope'],gap_seconds=j['gap_seconds'],poster=j.get('poster',True),hold_until=hold if hold and hold>time.time() else None,skip_contacted=False)
         if j.get('chunk'):args.update(chunk=j['chunk'],rests=j.get('rests'))
         if j.get('jitter'):args['jitter']=j['jitter']
@@ -282,3 +294,4 @@ class DonorDelivery:
             args.update(ids=j['ids'],personal_names=j['personal_names'],limit=len(j['ids']))
         return self.start(**args,request_id='auto-'+uuid.uuid4().hex)
     AUTO_WINDOW=36*3600
+

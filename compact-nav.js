@@ -12,13 +12,19 @@
   details.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();details.open=false;summary.focus()}});
   return panel;
  }
+ // Keep both mobile shortcuts in the same bottom row; reuse their handlers.
+ const chatShortcut=document.getElementById('chatOpen'),chatRow=chatShortcut?.parentElement,footer=document.querySelector('.foot'),mobileNav=matchMedia('(max-width:899px)');
+ const placeChatShortcut=()=>{if(!chatShortcut||!footer||!chatRow)return;if(mobileNav.matches)footer.prepend(chatShortcut);else chatRow.append(chatShortcut)};
+ placeChatShortcut();mobileNav.addEventListener('change',placeChatShortcut);
  const bar=document.querySelector('.brandbar');
  if(bar){
   const panel=menu(bar,'mainNavMore','More app options');
   for(const selector of ['.case-pick','#keyboardHelp']){
    const control=document.querySelector(selector);if(control)panel.append(control);
   }
-  const preview=document.getElementById('desktopPreview');if(preview){preview.textContent='Message preview';preview.setAttribute('aria-label','Message preview');preview.title='Message preview';bar.insertBefore(preview,panel.parentElement)}
+  const preview=document.getElementById('desktopPreview');if(preview){preview.textContent='Message preview';preview.setAttribute('aria-label','Message preview');preview.title='Message preview';panel.prepend(preview)}
+  const gear=document.getElementById('gear');if(gear){gear.textContent='Settings';gear.setAttribute('aria-label','Settings');gear.title='Settings';panel.append(gear)}
+  const chip=document.getElementById('leftChip');if(chip){const amount=document.createElement('button');amount.type='button';amount.id='moreAmount';amount.className='more-amount';const sync=()=>{amount.textContent=chip.textContent.trim()};sync();new MutationObserver(sync).observe(chip,{childList:true,characterData:true,subtree:true});amount.onclick=()=>chip.click();panel.prepend(amount)}
   const caseLabel=panel.querySelector('.case-pick .sr-only');if(caseLabel)caseLabel.classList.remove('sr-only');
   const badge=panel.querySelector('.team-badge'),summary=panel.parentElement.querySelector('summary');
   if(badge){const update=()=>{summary.dataset.unread=String(!badge.hidden);summary.setAttribute('aria-label',badge.hidden?'More app options':'More app options, new Team updates')};new MutationObserver(update).observe(badge,{attributes:true,childList:true,subtree:true});update()}
@@ -33,6 +39,9 @@
   messageTools.insertBefore(poster,document.getElementById('edit'));
   const hiddenPoster=overflow?.querySelector('button:not([id])');if(hiddenPoster)hiddenPoster.remove();
  }
+ // Phone peek: tapping the message preview opens the full editor.
+ const card=document.getElementById('card'),showMsg=document.getElementById('showMsg'),phone=matchMedia('(max-width:899px) and (min-height:600px)');
+ if(card&&showMsg)card.addEventListener('click',e=>{if(phone.matches&&document.body.classList.contains('nomsg')&&!e.target.closest('button,a,input,select,textarea,summary')){e.preventDefault();showMsg.click()}});
  document.getElementById('openTeam')?.remove();
  const head=document.querySelector('.donor-head');
  if(head){

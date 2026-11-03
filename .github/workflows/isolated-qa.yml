@@ -52,6 +52,8 @@ jobs:
           node --check donors.js
           node --check connection.js
           node --check notes.js
+      - name: Donor control recovery regressions
+        run: node --test tests/test_donor_control_recovery.js tests/test_volunteer_timing_ui.js
       - name: Frontend dependencies
         run: |
           corepack enable

@@ -3,13 +3,18 @@ from types import SimpleNamespace
 from unittest.mock import patch
 from pathlib import Path
 from focus_bank import FocusBank,valid
+SRC='*Hook A*\n\nThey are worried about burial costs and cannot manage them alone this week, so they are asking people for any help.\n\nPlease read this carefully today and think about what you can give for them.\n\nRs. 50,000 needed\n\n03097458815 Easypaisa / JazzCash Wajdan Khan'
+_H=['Stop scrolling for one minute','Imagine this were your own child','Somebody is waiting on you right now','Look at this family before you move on','A mother is praying tonight','Think of a small child in pain','One quick tap can change this home','You are the answer to their dua','Do not let this be the post you ignore','Their whole family is counting on kind strangers now']
+_B=['Their little one needs urgent care and they cannot pay the bills','A parent is begging for help to cover treatment fees','They have sold what they could and still fall short','The doctors are waiting but the money is not there','This family has nobody else to ask but you','Every single hour without help makes this harder for them','They never thought they would have to ask strangers','A small gift from many hands would lift this burden','They are trying to stay strong for their child','Please do not leave them alone with this']
+_T=['Take two minutes for them now','Send what you can this minute','Help them before the day ends','Be the reason they smile again','Give once and tell one friend','Stand with them today','Share this with your family too','Your kindness reaches them directly','Make this your good deed today','Do it now and thank you']
+_A=['Only Rs. 50,000 is still needed','Rs. 50,000 remains to be raised','We still need Rs. 50,000 together','Rs. 50,000 is the gap left','Just Rs. 50,000 stands between them and care','Rs. 50,000 is all that is missing','Rs. 50,000 more will complete it','Rs. 50,000 left, nothing more','The last Rs. 50,000 is needed','Rs. 50,000 is what remains']
+DEEP=['*%s*\n\n%s.\n\n%s.\n\n%s\n\n03097458815 Easypaisa / JazzCash Wajdan Khan'%(_H[i],_B[i],_T[i],_A[i]) for i in range(10)]
 class Store:
  def __init__(self):self.data={}
  def get(self,k,d=None):return copy.deepcopy(self.data.get(k,d))
  def put(self,k,v):self.data[k]=copy.deepcopy(v)
 class FocusTests(unittest.TestCase):
  def make(self):
-  mocked=patch('structured_wording.variants',return_value=[]);mocked.start();self.addCleanup(mocked.stop)
   self.drafts={'group':'*Please help this family today.*\n\nRs. 50,000 needed\n\n03097458815 Easypaisa / JazzCash Wajdan Khan','dm':'Brother, support this family.'}
   bank=SimpleNamespace(lock=threading.RLock(),_save=lambda d:None,_fingerprint=lambda t:t,_entries=lambda ts:[{'text':t} for t in ts]);self.app=SimpleNamespace(donors=lambda:SimpleNamespace(messages=bank),read_left=lambda:50000,STORE=Store(),LOCK=threading.RLock(),get_message=lambda k:{'text':self.drafts[k]},save_draft=lambda k,v:self.drafts.update({k:v}))
   return FocusBank(self.app)
@@ -20,31 +25,31 @@ class FocusTests(unittest.TestCase):
    b.save('dm','My personal DM',dm['revision']);b.save('group','Different case message',first['revision'])
    self.assertEqual(b.get('dm')['source'],'My personal DM');self.assertEqual(b.get('group')['history'],[first['source']])
    with self.assertRaises(ValueError):b.save('group','stale',first['revision'])
- def test_exact_length_numbers_format_and_payment_are_checked(self):
-  source='*Please help*\n\n50,000 needed\n\n03097458815 Easypaisa'
-  self.assertTrue(valid(source,source.replace('Please','Kindly')))
-  for candidate in (source+'!',source.replace('*','_'),source.replace('50,000','40,000'),source.replace('Easypaisa','JazzCash')):self.assertFalse(valid(source,candidate))
+ def test_numbers_format_payment_and_real_rewrite_are_checked(self):
+  self.assertTrue(valid(SRC,DEEP[0]))
+  # Changing one word is not a rewrite, and facts/format/payment must survive.
+  for candidate in (SRC.replace('Please','Kindly'),SRC.replace('*','_'),DEEP[0].replace('50,000','40,000'),DEEP[0].replace('Easypaisa','JazzCash'),DEEP[0]+'!'*400):self.assertFalse(valid(SRC,candidate))
  def test_failed_generation_keeps_source_and_can_restart_with_new_instance(self):
   b=self.make()
   with patch.object(b,'start'):row=b.save('group',self.drafts['group'])
   with patch('dm_variants.assistant.client',return_value=None):b._generate('group',row,('group',row['revision']))
   newer=FocusBank(self.app);self.assertEqual(newer.get('group')['source'],row['source']);self.assertEqual(newer.get('group')['state'],'Needs retry');self.assertEqual(self.drafts['group'],row['source'])
- def test_ten_distinct_exact_length_versions_and_stale_results(self):
-  b=self.make();source='*Hook A*\n\nRs. 50,000 needed\n\n03097458815 Easypaisa / JazzCash Wajdan Khan'
+ def test_ten_distinct_deep_versions_and_stale_results(self):
+  b=self.make();source=SRC
   with patch.object(b,'start'):row=b.save('group',source)
-  versions=[source.replace('Hook A','Hook '+chr(66+i)) for i in range(10)]
+  versions=list(DEEP)
   with patch('dm_variants.assistant.client',return_value='fake'),patch('dm_variants._call',return_value=versions):b._generate('group',row,('group',row['revision']))
   self.assertEqual(b.get('group')['items'],versions);self.assertEqual(self.drafts['group'],source)
   with patch.object(b,'start'):latest=b.save('group',source+'!',row['revision'])
   with patch('dm_variants.assistant.client',return_value='fake'),patch('dm_variants._call',return_value=versions):b._generate('group',row,('group',row['revision']))
   self.assertEqual(b.get('group')['source'],latest['source']);self.assertEqual(b.get('group')['items'],[])
  def test_partial_versions_are_saved_and_retry_fills_only_missing(self):
-  b=self.make();source='*Hook A*\n\nThey are worried about burial expenses.\n\nRs. 50,000 needed\n\n03097458815 Easypaisa / JazzCash Wajdan Khan'
+  b=self.make();source=SRC
   with patch.object(b,'start'):row=b.save('group',source)
-  candidates=[source.replace('Hook A','Hook '+chr(66+i)).replace('They are',"They're") for i in range(10)]
+  candidates=list(DEEP)
   with patch('dm_variants.assistant.client',return_value='fake'),patch('dm_variants._call',return_value=candidates[:2]):b._generate('group',row,('group',row['revision']))
   partial=b.get('group');self.assertEqual(partial['state'],'Partial');self.assertEqual(len(partial['items']),2)
-  self.assertTrue(all(len(t)==len(source) for t in partial['items']))
+  self.assertTrue(all(valid(source,t) for t in partial['items']))
   with patch('dm_variants.assistant.client',return_value='fake'),patch('dm_variants._call',return_value=candidates[2:]):b._generate('group',partial,('group',row['revision']))
   self.assertEqual(b.get('group')['state'],'Ready');self.assertEqual(len(b.get('group')['items']),10);self.assertEqual(b.get('group')['items'][:2],partial['items'])
  def test_empty_bank_is_repaired_instantly_with_fact_preserving_wordings(self):
@@ -54,10 +59,12 @@ class FocusTests(unittest.TestCase):
   with patch('dm_variants.assistant.client',side_effect=AssertionError('Never call AI for recovery')):
    row=b.ensure_group_ready()
   self.assertEqual(len(row['items']),10)
-  self.assertEqual(row['state'],'Ready')
+  self.assertEqual(row['state'],'Partial')
+  # Ten distinct opening lines AND ten distinct closing lines (not one swapped
+  # clause), while the saved message itself stays byte-for-byte intact inside.
   self.assertEqual(len({x.split('\n')[0] for x in row['items']}),10)
-  self.assertTrue(all(x.split('\n')[0].endswith(source.split('\n')[0].split(' ',1)[-1]) for x in row['items']))
-  self.assertTrue(all(x.split('\n')[1:]==source.split('\n')[1:] for x in row['items']))
+  self.assertEqual(len({x.rsplit('\n',1)[-1] for x in row['items']}),10)
+  self.assertTrue(all(source in x for x in row['items']))
   self.assertTrue(all('47,000' in x and '03097458815' in x for x in row['items']))
   self.assertEqual(self.drafts['group'],source)
   self.assertEqual(b.reserve_groups(source,10),row['items'])
@@ -69,13 +76,13 @@ class FocusTests(unittest.TestCase):
   self.app.STORE.put('focus_wording',{'group':{'source':original,'revision':'stale-gen','items':[],'state':'Needs retry','error':'429 API unavailable','generator':4}})
   with patch('dm_variants.assistant.client',side_effect=AssertionError('Never call AI during recovery')):
    ready=b.ensure_group_ready()
-  self.assertEqual(ready['state'],'Ready')
+  self.assertEqual(ready['state'],'Partial');self.assertEqual(ready['local_fallback'],10);self.assertIn('quick fallbacks',ready['error'])
   self.assertEqual(len(ready['items']),10)
   self.assertFalse(b.record('group','stale-gen',{'items':[],'state':'Needs retry'}))
   self.assertEqual(b.get('group')['items'],ready['items'])
  def test_old_failed_bank_restarts_once_after_generator_upgrade(self):
   b=self.make();source=self.drafts['group'];b.app.STORE.put('focus_wording',{'group':{'source':source,'revision':'old','items':[],'state':'Needs retry','error':'old failure'}})
-  row=b.get('group');self.assertEqual(row['state'],'Generating');self.assertEqual(row['error'],'');self.assertEqual(row['generator'],4)
+  row=b.get('group');self.assertEqual(row['state'],'Generating');self.assertEqual(row['error'],'');self.assertEqual(row['generator'],5)
  def test_manual_messages_are_distinct_and_group_sends_never_reuse(self):
   b=self.make()
   with patch.object(b,'start'):b.save('group',self.drafts['group'])

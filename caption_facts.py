@@ -3,7 +3,9 @@ import re,uuid,copy
 import draft_workflow
 
 TIME=re.compile(r'(?i)\bjanaz[ae]h\s+(?:time\s+)?(?:(?:is|at|will be|now is|is now)\s+)?(?:(today|tomorrow)\s+)?(\d{1,2})(?::([0-5]\d))?\s*(a\.?m\.?|p\.?m\.?)?\s*(today|tomorrow)?\b')
-TOTAL=re.compile(r'(?i)\bRs\.?\s*([\d,]+)\s*(?:urgently\s+)?(?:left|needed|required|remaining)\b')
+# Bound by "not a letter/digit" rather than \b: WhatsApp italics put "_" (a regex
+# word character) on both sides, so \b missed "*_Rs. 25,000 LEFT_*" entirely.
+TOTAL=re.compile(r'(?i)(?<![A-Za-z0-9])Rs\.?\s*([\d,]+)\s*(?:urgently\s+)?(?:left|needed|required|remaining)(?![A-Za-z0-9])')
 JANAZAH=re.compile(r'(?i)\b(?:(?:his|the)\s+)?janaz[ae]h(?:\s+time)?\s+(?:is|has|will|at)[^\n.!?*_]*(?:[.!?]|(?=[*_\n]|$))')
 def parse_time(text):
  if '?' in text or re.search(r"(?i)\b(?:if|suppose|example|don'?t)\b",text):return None

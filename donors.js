@@ -10,7 +10,7 @@
   const page = make('dialog', 'donor-page');
   page.id = 'donorsPage';
   page.setAttribute('aria-label', 'Donor Hub');
-  page.innerHTML = `<div class="donor-shell"><header class="donor-head"><div class="donor-title"><h1>Donors <span class="donor-count" id="donorTotal"></span></h1></div><span class="donor-total"><small>Total donated</small> <strong id="donorTotalAmount">PKR 0</strong></span><span class="donor-total"><small>Normal total</small> <strong id="donorNormalTotal">PKR 0</strong></span><span class="donor-message-tablist" role="tablist" aria-label="Message bank"><button role="tab" class="donor-msgs" id="donorMessagesTab" data-tab="messages" aria-selected="false" aria-label="Messages">Messages</button></span><button class="donor-bulk" id="donorBulk">Bulk message</button><button class="donor-add" id="donorAdd">+ Add</button></header><div class="donor-toolbar"><div class="donor-tabs" role="tablist" aria-label="Donor filters"><button role="tab" data-tab="all" aria-selected="true">All</button><button role="tab" data-tab="important" aria-selected="false">★ Important</button><button role="tab" data-tab="top" aria-selected="false">Top donors</button><button role="tab" data-tab="donated" aria-selected="false">Donated</button><button role="tab" data-tab="not_contacted" aria-selected="false">Not contacted</button><button role="tab" data-tab="volunteers" aria-selected="false">Volunteers</button></div><input class="donor-search" id="donorSearch" name="donor_search" type="search" autocomplete="off" placeholder="Search donors…" aria-label="Search donor names or private numbers"></div><div id="donorHideRow" class="hide-row" hidden><button type="button" id="donorHideSent" class="hide-chip"></button><button type="button" id="donorDeselectAll" class="hide-chip deselect-chip">Deselect all</button></div><div id="donorNotice" class="donor-notice" role="status" aria-live="polite"></div><div class="donor-table" id="donorTable" role="region" aria-label="Donor list" tabindex="0"><div class="donor-columns" aria-hidden="false"><span>★</span><span>Name</span><span>DM</span><span>Status</span><span>PKR</span><span><button type="button" class="donor-expand-btn" id="donorExpand" aria-label="Expand to full screen" title="Expand to full screen">⤢</button></span></div><div id="donorRows"></div></div><section id="donorMessages" class="donor-messages" aria-label="DM wording bank" hidden></section><section id="donorVolunteers" class="donor-volunteers" aria-label="Volunteers" hidden></section><div class="donor-progress" id="donorProgress" hidden><span></span><button id="donorContinue" hidden>Restart</button><button id="donorEditBatch" title="Pause, change the settings, then continue; people already sent are skipped">Edit settings</button><button id="donorStop">Pause</button></div><details id="donorBatchList" class="batch-list" hidden><summary id="donorBatchSummary"></summary><div class="batch-cols"><section><h3>Sent</h3><ol id="batchSent"></ol></section><section><h3>Next</h3><ol id="batchNext"></ol></section></div><p id="batchOther"></p></details><footer class="donor-bottom"><button type="button" class="donor-back-bottom back-action" id="donorMainBottom" aria-label="Back to main screen">← Back</button><button type="button" class="donor-gap" id="donorPace">Gap: 4 min ▾</button><input id="donorGap" type="hidden" value="240"><button type="button" class="donor-mini" id="donorTest" title="Send one clearly marked test DM to your own WhatsApp">Test DM</button><button type="button" class="donor-mini" id="donorToggle" title="Stop all DMs. Press again to resume everything.">Stop DMs</button><label class="donor-poster-toggle" for="donorRowPoster" title="Attach the poster to the single-tap DM button beside each donor"><input type="checkbox" id="donorRowPoster" checked> Poster on DM</label><span class="donor-message-info">Saved DM · Important first</span><button class="send-important" id="donorSendImportant">DM ★ Important</button><button class="send-donors" id="donorSendAll">DM all</button></footer></div>`;
+  page.innerHTML = `<div class="donor-shell"><header class="donor-head"><div class="donor-title"><h1>Donors <span class="donor-count" id="donorTotal"></span></h1></div><span class="donor-total"><small>Total donated</small> <strong id="donorTotalAmount">PKR 0</strong></span><span class="donor-total"><small>Normal total</small> <strong id="donorNormalTotal">PKR 0</strong></span><span class="donor-message-tablist" role="tablist" aria-label="Message bank"><button role="tab" class="donor-msgs" id="donorMessagesTab" data-tab="messages" aria-selected="false" aria-label="Messages">Messages</button></span><button class="donor-bulk" id="donorBulk">Bulk message</button><button class="donor-add" id="donorAdd">+ Add</button></header><div class="donor-toolbar"><div class="donor-tabs" role="tablist" aria-label="Donor filters"><button role="tab" data-tab="all" aria-selected="true">All</button><button role="tab" data-tab="important" aria-selected="false">★ Important</button><button role="tab" data-tab="top" aria-selected="false">Top donors</button><button role="tab" data-tab="donated" aria-selected="false">Donated</button><button role="tab" data-tab="not_contacted" aria-selected="false">Not contacted</button><button role="tab" data-tab="volunteers" aria-selected="false">Volunteers</button></div><input class="donor-search" id="donorSearch" name="donor_search" type="search" autocomplete="off" placeholder="Search donors…" aria-label="Search donor names or private numbers"></div><div id="donorHideRow" class="hide-row" hidden><button type="button" id="donorHideSent" class="hide-chip"></button><button type="button" id="donorDeselectAll" class="hide-chip deselect-chip">Deselect all</button></div><div id="donorNotice" class="donor-notice" role="status" aria-live="polite"></div><div class="donor-table" id="donorTable" role="region" aria-label="Donor list" tabindex="0"><div class="donor-columns" aria-hidden="false"><span>★</span><span>Name</span><span>DM</span><span>Status</span><span>PKR</span><span><button type="button" class="donor-expand-btn" id="donorExpand" aria-label="Expand to full screen" title="Expand to full screen">⤢</button></span></div><div id="donorRows"></div></div><section id="donorMessages" class="donor-messages" aria-label="DM wording bank" hidden></section><section id="donorVolunteers" class="donor-volunteers" aria-label="Volunteers" hidden></section><div class="donor-progress" id="donorProgress" hidden><span></span><button id="donorContinue" hidden>Restart</button><button id="donorEditBatch" title="Edit future sends without pausing the running batch">Edit settings</button><button id="donorStop">Pause</button></div><details id="donorBatchList" class="batch-list" hidden><summary id="donorBatchSummary"></summary><div class="batch-cols"><section><h3>Sent</h3><ol id="batchSent"></ol></section><section><h3>Next</h3><ol id="batchNext"></ol></section></div><p id="batchOther"></p></details><footer class="donor-bottom"><button type="button" class="donor-back-bottom back-action" id="donorMainBottom" aria-label="Back to main screen">← Back</button><button type="button" class="donor-gap" id="donorPace">Gap: 4 min ▾</button><input id="donorGap" type="hidden" value="240"><button type="button" class="donor-mini" id="donorTest" title="Send one clearly marked test DM to your own WhatsApp">Test DM</button><button type="button" class="donor-mini" id="donorToggle" title="Stop all DMs. Press again to resume everything.">Stop DMs</button><label class="donor-poster-toggle" for="donorRowPoster" title="Attach the poster to the single-tap DM button beside each donor"><input type="checkbox" id="donorRowPoster" checked> Poster on DM</label><span class="donor-message-info">Saved DM · Important first</span><button class="send-important" id="donorSendImportant">DM ★ Important</button><button class="send-donors" id="donorSendAll">DM all</button></footer></div>`;
   document.body.append(page);
   /* The Hide / Deselect chips live in the top bar, so showing them never pushes the donor list down. */
   page.querySelector('.donor-head').insertBefore(
@@ -530,6 +530,7 @@
 </form>`;
   picker.id = 'donorBatchPicker';
   document.body.append(picker);
+  let editingJob = null;
   let batchBody = {},
     lastJob = null,
     seenSent = null;
@@ -602,6 +603,8 @@
   }
   let pickerEpoch = 0;
   async function openBatchPicker(scope) {
+    editingJob = null;
+    el('batchIncl').disabled=false;el('batchFresh').disabled=false;
     const epoch = ++pickerEpoch,
       path = Nav.path();
     pickerScope = scope;
@@ -689,7 +692,7 @@
       el('donorDeselectAll').disabled = false;
     }
   };
-  el('donorBatchForm').onsubmit = (e) => {
+  el('donorBatchForm').onsubmit = async (e) => {
     e.preventDefault();
     const mins = Number(el('batchGap').value),
       per = Number(el('batchLimit').value);
@@ -720,6 +723,15 @@
       const lo = Number(el('batchJMin').value) || 0,
         hi = Number(el('batchJMax').value) || 0;
       body.jitter = { min: -Math.abs(lo), max: Math.abs(hi) };
+    }
+    if (editingJob) {
+      const button=el('batchStart');button.disabled=true;
+      try {
+        const result=await api('/donor-delivery',{configure:editingJob,settings:{gap_seconds:mins*60,chunk:per,rests:pauses,poster:body.poster,jitter:body.jitter||null}});
+        editingJob=null;picker.close();notice(result.reply);await poll();
+      } catch(error) { el('batchPlan').textContent=error.message; }
+      finally {button.disabled=false;}
+      return;
     }
     batchBody = body;
     picker.close();
@@ -1800,7 +1812,7 @@
         overall = inScope.length ? inScope.filter((d) => d.dm_sent).length + ' / ' + inScope.length + ' DMed · ' : '';
       el('donorProgress').querySelector('span').textContent =
         overall +
-        `${j.state} · ✓ ${j.sent || 0} sent · ${j.pending ?? Math.max(0, (j.total || 0) - (j.sent || 0) - (j.skipped || 0))} pending · ${j.failed || 0} failed` +
+        `${j.state} · ✓ ${(j.previous_sent || 0)+(j.sent || 0)} / ${j.original_total || j.total || 0} DM sent · ${j.pending ?? Math.max(0, (j.total || 0) - (j.sent || 0) - (j.skipped || 0) - (j.failed || 0))} left · ${j.failed || 0} failed` +
         (j.skipped ? ' · ' + j.skipped + ' skipped' : '') +
         (j.current ? ' · ' + j.current : '') +
         (j.next_at ? ' · ' + Math.max(0, Math.ceil(j.next_at - Date.now() / 1000)) + 's' : '') +
@@ -1813,15 +1825,12 @@
           : '') +
         (j.error ? ' · ' + j.error : '');
       if (!active && j.error && !j.sent) {
-        const reason = (j.receipts || []).find((r) => r.state?.startsWith('Skipped: '));
-        el('donorProgress').querySelector('span').textContent =
-          'Not sent. ' + (reason ? reason.state.slice(9) : j.error);
         el('donorBatchList').open = false;
       }
       const terminal = !active && j.state !== 'Idle';
       const jobKey = JSON.stringify([j.id, j.updated_at, j.state, j.sent, j.error, j.receipts]);
       if (terminal) {
-        el('donorProgress').hidden = true;
+        el('donorProgress').hidden = false;
         el('donorBatchList').hidden = true;
         if (jobKey !== dismissedJob) {
           /* An app update restarts the server mid-batch; the batch continues by itself, so this is news, not an error. */
@@ -2196,9 +2205,20 @@
     b.disabled = true;
     try {
       const job = await api('/donor-delivery').catch(() => ({}));
-      await api('/donor-delivery', { stop: true });
-      notice('Paused to edit. Change the settings and press Start sending; people already sent are skipped.');
+      if (!['Starting','Sending','Waiting'].includes(job.state)) throw Error('Resume the paused batch first, then edit its settings.');
       await openBatchPicker(job.scope === 'top' || job.scope === 'all' ? job.scope : 'important');
+      editingJob=job.id;
+      el('batchGap').value=job.gap_seconds/60;
+      el('batchLimit').value=job.chunk||20;
+      el('batchCount').value=job.total||1;el('batchCount').disabled=true;
+      el('batchIncl').disabled=true;el('batchFresh').disabled=true;
+      el('batchPoster').checked=job.poster!==false;
+      el('batchEach').value=(job.rests||[job.rest_seconds||1200]).map(x=>x/60).join(', ');
+      el('batchRandom').checked=!!job.jitter;
+      if(job.jitter){el('batchJMin').value=Math.abs(job.jitter.min);el('batchJMax').value=job.jitter.max;}
+      paintAudience();
+      el('batchStart').textContent='Save changes';
+      el('batchPlan').textContent='DMs keep sending while you edit. Changes apply to waiting donors when saved.';
     } catch (e) {
       notice(e.message, true);
     } finally {

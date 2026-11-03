@@ -1765,3 +1765,8 @@ html body .group-send .grp-card .free-sw.on{background:#14532d;border-color:#22c
 html body .donor-page #donorToggle[data-paused='false']{background:#7f1d1d!important;border-color:#ef4444!important;color:#fee2e2!important}
 html body .donor-page #donorToggle[data-paused='true']{background:#14532d!important;border-color:#22c55e!important;color:#d1fae5!important}
 html body .donor-page #donorEditBatch{margin-left:auto;margin-right:8px;background:#1e3a8a;border:1px solid #3b82f6;color:#dbeafe;font-weight:800}
+
+/* Compact, dismissible donor feedback; never covers the whole working area. */
+html body #donorsPage #donorNotice:not(:empty){width:min(420px,calc(100vw - 24px));padding:6px 8px 6px 10px!important;font-size:12px!important;line-height:1.35;border-radius:8px!important;box-shadow:none!important;max-height:90px;overflow:auto;}
+html body #donorsPage #donorNotice .donor-notice-close{width:32px!important;min-height:32px!important;flex-basis:32px!important;margin:0;}
+@media(max-width:600px){html body #donorsPage #donorNotice .donor-notice-close{width:44px!important;min-height:44px!important;flex-basis:44px!important;}}

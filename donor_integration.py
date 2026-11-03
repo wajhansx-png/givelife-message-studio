@@ -26,6 +26,8 @@ class DonorIntegration:
             self.messages.captions,
             lambda: app.read_left() <= 0,
             reserve=self.messages.reserve_round,
+            refresh_caption=lambda text,old:app.caption_facts.current(app,app.draft_workflow.update_amount(text,old,app.read_left()) if type(old) is int else text),
+            balance=app.read_left,
         )
         self.jobs.exclusion_reason = self.exclusion_reason
         from donor_paste import PastedDonors
@@ -165,6 +167,8 @@ class DonorIntegration:
                 batch = dict(info["batch"])
                 jobs = self.jobs.export_jobs().get("jobs", [])
                 last = jobs[-1] if jobs else {}
+                if batch.get("resume_id"):
+                    last = next((j for j in jobs if j.get("id") == batch["resume_id"]), {})
                 # Upgrade older pause records using the actual stopped job, not default batch settings.
                 if not batch.get("resume_id"):
                     if last.get("scope") != batch.get("scope") or last.get("state") not in (

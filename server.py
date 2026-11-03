@@ -5094,6 +5094,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(donors().test_dm(body.get("poster", True)))
                 if body.get("toggle"):
                     return self.reply(donors().toggle())
+                if body.get("configure"):
+                    return self.reply(donors().jobs.configure(body['configure'],body.get('settings')))
                 if body.get("stop"):
                     return self.reply(donors().pause_personal())
                 if body.get("resume_at") is not None:

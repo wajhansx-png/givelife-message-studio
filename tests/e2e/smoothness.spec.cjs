@@ -55,16 +55,6 @@ for(const [width,height] of [[1280,720],[1024,600],[390,700],[320,568]])test(`sc
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  if(width<900&&process.env.COMFORT_SHOTS){await page.locator('#chatOpen').click();await page.screenshot({path:path.join(process.env.COMFORT_SHOTS,`smooth-mobile-${width}.png`)})}
 });
-// Preview is now the full-screen focused editor, which has no launcher for another overlay, so there is
-// no overlay to open from it; closing overlays is covered by the Donors, Settings and Back/Forward tests.
-test.skip('closing an overlay after refresh restores its Preview parent visibly as well as in the address',async({page,request})=>{
- test.setTimeout(90000);await open(page,request,1280,720);
- /* In Preview the top bar (Settings, WhatsApp) is hidden, so Donors is the overlay reachable from there. */
- for(const [launch,close] of [['#openDonors','#donorMainBottom']]){
-  await openPreview(page);await expect(page).toHaveURL(/#\/preview$/);await page.locator(launch).click();await page.reload();await page.locator(close).click();
-  await expect(page).toHaveURL(/#\/preview$/);await expect(page.locator('#card')).toBeVisible();await expect(page.locator('body')).not.toHaveClass(/nomsg/);await openPreview(page);
- }
-});
 test('browser Back and Forward restore the visible screen after immediate Close navigation',async({page,request})=>{
  await open(page,request,1280,720);await page.locator('#openDonors').click();await expect(page.locator('#donorsPage')).toBeVisible();
  await page.goBack();await expect(page.locator('#donorsPage')).not.toBeVisible();await page.goForward();await expect(page.locator('#donorsPage')).toBeVisible();await page.locator('#donorMainBottom').click();

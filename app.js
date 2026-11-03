@@ -8,7 +8,7 @@ const Nav={rendering:false,
  path(){try{return decodeURIComponent((location.hash||'').replace(/^#\/?/,''))}catch(e){return ''}},
  top(){return Nav.path().split('/')[0]},
  /* The chat log below owns the name `history`, so the browser's is always reached as window.history. */
- valid(path){return /^(?:chat|notes|settings(?:\/(?:memory|poster))?|keyboard|team|preview|whatsapp|donors\/(?:all|important|donated|not_donated|not_contacted|volunteers|messages)(?:\/(?:notes|add|bulk|pace))?)$/.test(path)},
+ valid(path){return /^(?:chat|notes|settings(?:\/(?:memory|poster))?|keyboard|preview|whatsapp|donors\/(?:all|important|donated|not_donated|not_contacted|volunteers|messages)(?:\/(?:notes|add|bulk|pace))?)$/.test(path)},
  go(path,{replace=false}={}){if(Nav.rendering||Nav.path()===path)return;const h=window.history,from=replace?h.state?.from:Nav.path();try{(replace?h.replaceState:h.pushState).call(h,{nav:1,from:Nav.valid(from)?from:''},'',path?'#/'+path:location.pathname+location.search);dispatchEvent(new Event('studio-navigate'))}catch(e){}},
  // Close synchronously. A delayed history.back() can undo the next tap or race a refresh.
  leave(name){if(Nav.rendering||Nav.top()!==name)return;const from=window.history.state?.from;Nav.go(Nav.valid(from)&&from.split('/')[0]!==name?from:'',{replace:true});renderNav()}};
@@ -522,7 +522,6 @@ async function renderNav(){
   if(top!=='settings'&&$('set').open)$('set').close();
   if(path!=='settings/memory'&&$('memoryDialog').open)$('memoryDialog').close();
   if(top!=='keyboard'&&$('keyboardDialog').open)$('keyboardDialog').close();
-  if(top!=='team'&&window.TeamHub?.isOpen())window.TeamHub.hide();
   if(top!=='donors'&&window.DonorHub?.isOpen())window.DonorHub.hide();
   if(top!=='whatsapp'&&$('whatsappDialog')?.open)$('whatsappDialog').close();
   if(top==='preview'&&document.body.classList.contains('nomsg'))setNoMsg(false);
@@ -532,7 +531,6 @@ async function renderNav(){
   if(path==='settings/memory'&&!$('memoryDialog').open){$('memoryDialog').showModal();showMemory().catch(e=>{$('memoryContent').textContent='Could not load memory. Close and try again.'})}
   if(path==='settings/poster')restoreSmallDialog(path,true);
   if(top==='keyboard'&&!$('keyboardDialog').open)openKeyboardHelp();
-  if(top==='team'&&!window.TeamHub?.isOpen())window.TeamHub?.show();
   if(top==='donors'){
    window.DonorHub?.show(parts[1]||'all');
    if(!notes)restoreSmallDialog(path,true);

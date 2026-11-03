@@ -10,7 +10,7 @@ html body .compact-nav-panel button{display:flex!important;align-items:center;po
 html body #mainNavMore #keyboardHelp{display:flex!important;visibility:visible!important;width:100%;height:auto}
 html body .brandbar,html body .donor-head{position:relative;z-index:50;overflow:visible!important}
 html body .compact-nav-panel .case-pick{display:flex!important;flex-direction:column;gap:5px;width:100%;max-width:100%;font-size:11px;color:var(--mut);order:0;flex:none!important}
-html body .compact-nav-panel .team-launch,html body .compact-nav-panel #desktopPreview{display:flex!important;align-items:center;justify-content:space-between;margin:0}
+html body .compact-nav-panel #desktopPreview{display:flex!important;align-items:center;justify-content:space-between;margin:0}
 html body .compact-nav-panel .donor-message-tablist{display:block}
 html body .brandbar{gap:8px;padding:6px 10px;min-height:50px}
 html body .brandbar .brand{font-size:16px;margin-right:6px}

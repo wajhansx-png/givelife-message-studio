@@ -1,13 +1,5 @@
 const {test,expect}=require('@playwright/test');
 async function setup(page){await page.addInitScript(()=>localStorage.setItem('givelife-cloud-key','manual-fix-preview-key'));await page.goto('/')}
-// Team has no navigation entry point now (compact-nav.js removes #openTeam).
-test.skip('slow Team response cannot reopen a closed screen',async({page})=>{
- await setup(page);let release;const gate=new Promise(r=>release=r);
- await page.route('**/team',async r=>{await gate;await r.continue()});
- await page.locator('#openTeam').click();await expect(page.locator('#teamPage')).toBeVisible();
- await page.goBack();await expect(page.locator('#teamPage')).not.toBeVisible();release();
- await page.waitForTimeout(300);await expect(page.locator('#teamPage')).not.toBeVisible();
-});
 test('slow Gap response cannot reopen a closed donor screen',async({page})=>{
  await setup(page);await page.locator('#openDonors').click();let release;const gate=new Promise(r=>release=r);
  await page.route('**/donor-delivery',async r=>{await gate;await r.continue()});

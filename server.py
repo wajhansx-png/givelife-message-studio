@@ -2138,7 +2138,7 @@ class Handler(BaseHTTPRequestHandler):
   if self.path.split('?')[0] in ('/group-finder','/group-finder.js','/group-finder.css'):
    name=self.path.split('?')[0][1:];name='group-finder.html' if name=='group-finder' else name
    return self.reply((ROOT/name).read_bytes(),'text/html' if name.endswith('.html') else 'text/css' if name.endswith('.css') else 'application/javascript')
-  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/replies.js','/team.js','/notes.js','/notes.css','/donors.css','/studio.css','/compact-nav.js','/compact-nav.css','/focus-editor.js','/focus-editor.css'):
+  if self.path in ('/','/app.js','/format.js','/connection.js','/donors.js','/replies.js','/notes.js','/notes.css','/donors.css','/studio.css','/compact-nav.js','/compact-nav.css','/focus-editor.js','/focus-editor.css'):
    name='index.html' if self.path=='/' else self.path[1:]
    return self.reply((ROOT/name).read_bytes(),'text/html' if self.path=='/' else 'text/css' if self.path.endswith('.css') else 'application/javascript')
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
@@ -2160,7 +2160,6 @@ class Handler(BaseHTTPRequestHandler):
     return self.reply({'locked':False,**notes_store.load(STORE)},extra_headers={'Set-Cookie':notes_store.device_cookie(token,https=self.headers.get('X-Forwarded-Proto','https')!='http')})
    except Exception:return self.reply({'error':'Notes are temporarily unavailable. Your saved notes were not changed.'},status=503)
   if self.path=='/donor-delivery':return self.reply({**donors().jobs.status(),'paused':bool(donors().paused),'resume':donors().resume_status()})
-  if self.path=='/team':return self.reply(donors().team.view())
   if self.path=='/cases':
    try:return self.reply(donors().cases.view())
    except ValueError as e:return self.reply({'error':str(e)},status=400)
@@ -2222,7 +2221,7 @@ class Handler(BaseHTTPRequestHandler):
   global ACTIVE,OWNER_REVISION
   if not self.authorized():return self.reply({'error':'Access key required'},status=401)
   if self.path!='/api/group-finder':ENGINE.touch_owner()
-  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/cases','/team','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
+  if self.path not in ('/chat-log','/rule-text','/assistant','/command','/feedback','/knowledge','/assistant-evaluate','/donors','/volunteers','/cases','/donor-messages','/donor-delivery','/donor-send','/donor-paste','/api/group-finder'):
    with LOCK:OWNER_REVISION+=1
    OWNER_GUARD.revision=OWNER_REVISION
   origin=self.headers.get('Origin');same_origin=origin and urllib.parse.urlparse(origin).netloc==self.headers.get('Host')
@@ -2262,23 +2261,6 @@ class Handler(BaseHTTPRequestHandler):
    except ValueError as e:
     return self.reply({'error':str(e)},status=409 if 'another window' in str(e) else 400)
    except Exception:return self.reply({'error':'Notes could not be saved. Your existing saved notes were preserved.'},status=503)
-  if self.path=='/team':
-   try:
-    t=donors().team;act=body.get('action')
-    if act=='member':return self.reply(t.set_member(body.get('name'),body.get('phone')))
-    if act=='plan':return self.reply(t.plan(body.get('text')))
-    if act=='confirm':return self.reply(t.confirm_plan())
-    if act=='discard':return self.reply(t.discard_plan())
-    if act=='verify':return self.reply(t.verify(body.get('id')))
-    if act=='reject':return self.reply(t.reject(body.get('id'),body.get('note','')))
-    if act=='cancel':return self.reply(t.cancel(body.get('id')))
-    if act=='pause':return self.reply(t.pause(body.get('on')))
-    if act=='read':return self.reply(t.mark_read())
-    if act=='quiet':return self.reply(t.set_quiet(body.get('start'),body.get('end')))
-    if act=='ask':
-     r=t.ask_update(body.get('id') or None);t._pump();return self.reply(r)
-    raise ValueError('Unknown team action.')
-   except ValueError as e:return self.reply({'error':str(e)},status=400)
   if self.path=='/cases':
    try:
     c=donors().cases;act=body.get('action')

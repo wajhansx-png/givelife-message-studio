@@ -26,8 +26,6 @@
   const gear=document.getElementById('gear');if(gear){gear.textContent='Settings';gear.setAttribute('aria-label','Settings');gear.title='Settings';panel.append(gear)}
   const chip=document.getElementById('leftChip');if(chip){const amount=document.createElement('button');amount.type='button';amount.id='moreAmount';amount.className='more-amount';const sync=()=>{amount.textContent=chip.textContent.trim()};sync();new MutationObserver(sync).observe(chip,{childList:true,characterData:true,subtree:true});amount.onclick=()=>chip.click();panel.prepend(amount)}
   const caseLabel=panel.querySelector('.case-pick .sr-only');if(caseLabel)caseLabel.classList.remove('sr-only');
-  const badge=panel.querySelector('.team-badge'),summary=panel.parentElement.querySelector('summary');
-  if(badge){const update=()=>{summary.dataset.unread=String(!badge.hidden);summary.setAttribute('aria-label',badge.hidden?'More app options':'More app options, new Team updates')};new MutationObserver(update).observe(badge,{attributes:true,childList:true,subtree:true});update()}
  }
  // Keep common preview actions visible, retaining their existing handlers.
  const messageTools=document.querySelector('.msgcard .tools');

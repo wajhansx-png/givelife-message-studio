@@ -375,3 +375,12 @@ html body #messageFocus :is(#focusFormatted,#focusText){width:min(560px,calc(100
 html body #messageFocus #focusFormatted .wa-line,html body #messageFocus #focusFormatted .wa-line.blank{min-height:19px!important;height:auto!important;margin:0!important;padding:0!important}
 @media(min-width:701px){html body #messageFocus :is(#focusFormatted,#focusText){width:min(560px,calc(100% - 48px))!important}}
 @media(max-width:700px){html body #messageFocus #focusFormatted :is(.wa-line,.wa-line.blank){min-height:21px!important}}
+
+/* DM Messages reader: the same WhatsApp bubble as the group message; reading and editing share one box. */
+html body .donor-page .bank-message.bank-detail{background:#0b141a radial-gradient(#ffffff0a 1px,transparent 1.5px) 0 0/18px 18px!important;border-color:#ffffff10!important}
+html body .donor-page .bank-message.bank-detail :is(.bank-preview,textarea){box-sizing:border-box!important;display:block;width:min(560px,calc(100% - 20px))!important;max-width:none!important;height:auto!important;min-height:0!important;max-height:calc(100dvh - 330px)!important;overflow-y:auto!important;margin:24px auto!important;padding:8px 10px 10px!important;border:0!important;border-radius:0 8px 8px 8px!important;background:#144d37!important;color:#e9edef!important;box-shadow:0 1px 3px #0007!important;font:14.2px/19px "Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif!important;letter-spacing:0!important;white-space:pre-wrap!important;overflow-wrap:break-word!important;text-align:left!important}
+html body .donor-page .bank-message.bank-detail textarea{field-sizing:content;min-height:120px!important;resize:none}
+html body .donor-page .bank-message.bank-detail :is(.bank-preview,textarea)[hidden]{display:none!important}
+html body .donor-page .bank-message.bank-detail .bank-preview::before{content:none!important}
+html body .donor-page .bank-message.bank-detail .bank-preview :is(.bank-line,.bank-line.blank){min-height:19px!important;height:auto!important;margin:0!important;padding:0!important;font:inherit!important}
+@media(max-width:700px){html body .donor-page .bank-message.bank-detail :is(.bank-preview,textarea){font-size:16px!important;line-height:21px!important;margin:10px auto!important}html body .donor-page .bank-message.bank-detail .bank-preview :is(.bank-line,.bank-line.blank){min-height:21px!important}}

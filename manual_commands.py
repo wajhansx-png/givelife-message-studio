@@ -118,7 +118,7 @@ def dm_control(text):
  if re.search(r'\b(poster|picture|image|pic)\b',t) and re.search(r'\b(on|off|with|without|no|enable|disable|remove)\b',t) and not re.search(r'\b(hold|pause|stop|resume)\b',t):return None
  if re.search(r'\b(and|plus|also|both)\b.*\b(groups?|posts?|everything)\b',t) and not re.search(r'\b(keep|continue|unchanged|running|unaffected)\b',t):return None
  if re.search(r'\b(hold|pause|stop|disable|off|band)\b',t):return 'stop_dms'
- if re.search(r'\b(resume|unhold|enable|restart)\b',t):return 'resume_dms'
+ if re.search(r'\b(resume|unhold|enable|restart|chalu|shuru|dobara)\b',t):return 'resume_dms'
  return None
 
 def parse(text):

@@ -144,7 +144,7 @@
         next = (st.next || [])[0];
       put(
         'reportGroups',
-        (t.posts || 0) + ' posts today',
+        (t.posts || 0) + ' today',
         !d.on
           ? 'Auto is off'
           : next
@@ -162,7 +162,7 @@
       if (active)
         put(
           'reportDms',
-          sent + ' of ' + total + ' sent',
+          sent + ' / ' + total,
           Math.max(0, total - sent) +
             ' left' +
             (j.next_batch_at
@@ -171,7 +171,7 @@
                 ? ' · next in ' + Math.max(0, Math.ceil(j.next_at - Date.now() / 1000)) + 's'
                 : ''),
         );
-      else put('reportDms', 'Not sending', sent ? 'Last batch: ' + sent + ' of ' + total + ' sent' : '');
+      else put('reportDms', 'Idle', sent ? 'Last batch: ' + sent + ' of ' + total + ' sent' : '');
     } catch (e) {
       put('reportDms', 'Unavailable', 'Try again in a moment');
     }
@@ -190,7 +190,7 @@
       put('reportReplies', (r.today || 0) + ' today', (r.total || 0) + ' in total' + (r.on ? '' : ' · Reply is off'));
       put(
         'reportResumes',
-        list.length ? String(list.length) : 'None yet',
+        list.length ? String(list.length) : 'None',
         last ? 'Latest: ' + last.what + ' · ' + last.when + (last.state ? ' · ' + last.state : '') : '',
       );
     } catch (e) {

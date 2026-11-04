@@ -2241,3 +2241,10 @@ html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools{top:50%!im
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) :is(#btnGivelife,#btnFree) .gb-name{text-align:left!important;align-items:flex-start!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnGivelife .gb-name{padding-right:52px!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnFree .gb-name{padding-right:90px!important}
+/* Paused bar inside the bottom row: same height as the buttons, no extra space above the list. */
+html body #donorsPage .donor-bottom>#donorResumeStatus:not([hidden]){margin:0!important;width:auto!important;padding:4px 6px 4px 12px!important;min-height:0!important;flex:0 0 auto}
+html body #donorsPage .donor-bottom>#donorResumeStatus .donor-resume-actions button,html body #donorsPage .donor-bottom>#donorResumeStatus .rs-fold{min-height:36px!important;height:36px!important}
+@media (max-width:700px){
+  html body #donorsPage .donor-bottom{flex-wrap:wrap!important}
+  html body #donorsPage .donor-bottom>#donorResumeStatus:not([hidden]):not(.rs-folded){flex:1 1 100%!important;order:-1}
+}

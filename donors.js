@@ -141,6 +141,9 @@
     const attention = ['Failed', 'Uncertain'].includes(st.resume?.state),
       paused = !!st.paused;
     resumeStatus.hidden = !pending && !attention && !paused;
+    /* The paused bar lives in the bottom button row. */
+    const bottomRow = page.querySelector('.donor-bottom');
+    if (bottomRow && resumeStatus.parentElement !== bottomRow) bottomRow.prepend(resumeStatus);
     /* Folded: the panel shows as a small pill until tapped open again (remembered). */
     let folded = false;
     try {

@@ -1521,6 +1521,16 @@
             if (menuBuilt) return;
             menuBuilt = true;
             const menu = make('div', '');
+            menu.setAttribute('role', 'group');
+            menu.setAttribute('aria-label', 'Options for ' + d.name);
+            const closeMenu = make('button', 'donor-menu-close', 'Close ×');
+            closeMenu.type = 'button';
+            closeMenu.setAttribute('aria-label', 'Close options for ' + d.name);
+            closeMenu.onclick = () => {
+              more.open = false;
+              summary.focus({ preventScroll: true });
+            };
+            menu.append(closeMenu);
             const rename = make('div', 'donor-normal-box');
             const rlabel = make('label', '', 'Name');
             const rinput = make('input', 'donor-normal');
@@ -1643,7 +1653,11 @@
             more.append(menu);
           };
           more.ontoggle = () => {
-            if (more.open) buildMenu();
+            if (!more.open) return;
+            // A phone-sized bottom sheet should never stack on another donor's sheet.
+            for (const other of rows.querySelectorAll('.donor-more[open]'))
+              if (other !== more) other.open = false;
+            buildMenu();
           };
           more.append(summary);
           row.append(star, ident, dm, status, amount, more);

@@ -58,16 +58,14 @@ class GroupRotationTests(unittest.TestCase):
         follow = app.focus_bank().reserve_groups(job["caption"], 1)
         self.assertNotIn(follow[0], job["captions"])
 
-    def test_missing_ten_version_bank_auto_recovers_before_manual_send(self):
+    def test_missing_bank_sends_exact_saved_message_with_no_added_lines(self):
         app.STORE.put("focus_wording", {})
         with patch.object(app.threading.Thread, "start"):
             ident = app.start_send_job(["main"], "legacy template", manual=True)
         job = app.JOBS[ident]
-        self.assertEqual(len(app.focus_bank().get("group")["items"]), 10)
-        self.assertEqual(len(job["captions"]), 1)
-        self.assertNotIn("legacy template", job["captions"][0])
+        self.assertEqual(app.focus_bank().get("group")["items"], [])
+        self.assertEqual(job["captions"], [app.get_message("group")["text"]])
         self.assertEqual(self.sent, [])
-        self.assertIn(app.get_message("group")["text"], job["captions"][0])
 
     def test_uncertain_delivery_consumes_version_without_retrying_it(self):
         with patch.object(app, "send_image", return_value={"code": "UNCERTAIN"}):

@@ -2282,3 +2282,23 @@ html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>.gb-pick::
 html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>button:hover{background:#6c8cff26!important;border-color:#a5b8ff!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>.gb-timer.is-pending{background:#fff!important;color:#2f6fe8!important;border-color:#fff!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-name,html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) :is(#btnGivelife,#btnFree) .gb-name,html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#sendAll) .gb-name{padding-left:34px!important;padding-right:0!important}
+
+/* ===== Send panel: compact (no scroll) and soft colours ===== */
+html body:not(#_):not(#__):not(#___) .group-send{gap:7px!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row{gap:5px!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll){min-height:52px!important;padding:5px 12px!important;border-radius:12px!important;box-shadow:none!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>#sendAll{min-height:56px!important;box-shadow:none!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-name::before{font-size:9px!important;margin-bottom:0!important;opacity:.7}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-name{font-size:15px!important;line-height:1.15!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>#sendAll .gb-name{font-size:15.5px!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-name .last-sent{font-size:10.5px!important;margin-top:0!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-go{width:28px!important;height:28px!important;font-size:13px!important;box-shadow:none!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>button{height:30px!important;min-height:30px!important;font-size:12.5px!important;border-width:1px!important}
+/* Soft palette: muted slate-blue, no glare. */
+html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(#btnGivelife,#btnFree){background:#3d4f8f!important;color:#eef2ff!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>#sendAll{background:linear-gradient(135deg,#40549a,#55508f)!important;color:#eef2ff!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>.test-row{border:1px solid #7d8fc9!important;color:#dfe5f7!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-go{background:#e8ecfb!important;color:#3d4f8f!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>.test-row .gb-go{background:#7d8fc9!important;color:#fff!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>button{border-color:#7d8fc9!important;color:#dfe5f7!important}
+@media (hover:hover){html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll):hover{filter:brightness(1.08)!important;box-shadow:none!important}}

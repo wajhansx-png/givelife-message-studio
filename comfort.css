@@ -2040,3 +2040,18 @@ html body:not(#_):not(#__) .group-send .send-row .row-tools>button{width:32px!im
 html body:not(#_):not(#__) .group-send .send-row[data-tools='1'] .gb-name{margin-right:36px}
 html body:not(#_):not(#__) .group-send .send-row[data-tools='2'] .gb-name{margin-right:74px}
 html body:not(#_):not(#__) .group-send .grp-card .delay-pill{min-height:40px!important}
+
+/* Send buttons follow the Donors page DM button: blue to violet. Progress fills inside the tapped button. */
+html body:not(#_):not(#__) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll){position:relative;overflow:hidden;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 6px 16px -8px #7c3aedaa,inset 0 1px 0 #ffffff26!important}
+html body:not(#_):not(#__) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll):hover{background:linear-gradient(135deg,#2f6cf0,#8648ef)!important}
+html body:not(#_):not(#__) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll)[data-progress]{opacity:1!important;cursor:progress}
+html body:not(#_):not(#__) .group-send .send-row :is(.gb-name,.gb-go){position:relative;z-index:1}
+html body:not(#_):not(#__) .group-send .gb-bar{position:absolute;left:0;top:0;bottom:0;width:0;z-index:0;background:linear-gradient(90deg,#ffffff1f,#ffffff3d);border-right:2px solid #ffffff73;transition-property:width;transition-timing-function:linear;overflow:hidden}
+html body:not(#_):not(#__) .group-send .gb-bar::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,#ffffff40 50%,transparent 70%);background-size:220% 100%;animation:gbShine 1.6s linear infinite}
+@keyframes gbShine{from{background-position:120% 0}to{background-position:-120% 0}}
+html body:not(#_):not(#__) .group-send [data-progress='done'] .gb-bar{background:#ffffff33;border-right:0}
+html body:not(#_):not(#__) .group-send [data-progress='failed'] .gb-bar{background:#ef444466;border-right:0}
+html body:not(#_):not(#__) .group-send [data-progress] .gb-name .last-sent{display:none!important}
+html body:not(#_):not(#__) .group-send .gb-progress{display:block;margin-top:1px;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body:not(#_):not(#__) .group-send [data-progress='done'] .gb-bar::after,html body:not(#_):not(#__) .group-send [data-progress='failed'] .gb-bar::after{animation:none;background:none}
+@media (prefers-reduced-motion: reduce){html body:not(#_):not(#__) .group-send .gb-bar::after{animation:none}}

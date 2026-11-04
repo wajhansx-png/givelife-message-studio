@@ -155,9 +155,10 @@
     const attention = ['Failed', 'Uncertain'].includes(st.resume?.state),
       paused = !!st.paused;
     resumeStatus.hidden = !pending && !attention && !paused;
-    /* The paused bar lives in the bottom button row. */
+    /* Keep status outside the action grid so it cannot stretch the buttons. */
     const bottomRow = page.querySelector('.donor-bottom');
-    if (bottomRow && resumeStatus.parentElement !== bottomRow) bottomRow.prepend(resumeStatus);
+    if (bottomRow && resumeStatus.nextElementSibling !== bottomRow)
+      bottomRow.before(resumeStatus);
     /* Folded: the panel shows as a small pill until tapped open again (remembered). */
     let folded = false;
     try {
@@ -1649,7 +1650,17 @@
               nbox.append(nl, ns);
               menu.append(nbox);
             }
-            menu.append(rename, normal, del);
+            // The compact phone row keeps its amount editor under More.
+            const donatedBox = make('label', 'donor-menu-amount', 'Donated amount (PKR)');
+            const donatedInput = amount.cloneNode();
+            donatedInput.className = 'donor-menu-amount-input';
+            donatedInput.setAttribute('aria-label', 'Edit donated rupees for ' + d.name);
+            donatedInput.onchange = () => {
+              amount.value = donatedInput.value;
+              saveAmount();
+            };
+            donatedBox.append(donatedInput);
+            menu.append(rename, normal, donatedBox, del);
             more.append(menu);
           };
           more.ontoggle = () => {

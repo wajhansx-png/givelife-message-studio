@@ -57,7 +57,6 @@ for (const [width, height] of [
     }
     await assertInside(page, [
       '#donorMessagesTab',
-      '#donorBulk',
       '#donorAdd',
       '#donorSearch',
       '#donorSendImportant',
@@ -67,34 +66,26 @@ for (const [width, height] of [
       '.donor-row .donor-star',
       '.donor-row .donor-dm',
       '.donor-row .donor-status',
-      '.donor-row .donor-amount',
       '.donor-row .donor-more > summary',
     ], width, height);
-    const messageLabel = await page.locator('#donorMessagesTab').evaluate((el) => ({
-      label: el.textContent.trim(), size: parseFloat(getComputedStyle(el).fontSize),
-    }));
-    if (width <= 560) {
-      expect(messageLabel.label).toMatch(/Messages/i);
-      expect(messageLabel.size, 'The Messages button cannot be icon-only blank').toBeGreaterThanOrEqual(11);
-    }
+    await expect(page.locator('#donorMessagesTab')).toHaveAccessibleName('Messages');
+    await expect(page.locator('#donorBulk')).toBeHidden();
     await expect(page.locator('#donorSendAll')).toBeHidden();
     await page.locator('#donorNavMore > summary').click();
     await expect(page.locator('#donorTest')).toBeVisible();
+    await expect(page.locator('#donorBulk')).toBeVisible();
     await expect(page.locator('.donor-poster-toggle')).toBeVisible();
     await page.locator('#donorNavMore > summary').click();
-    if (width <= 390) {
-      const rowLayout = await page.locator('.donor-row').first().evaluate((row) => {
-        const name = row.querySelector('.donor-name').getBoundingClientRect();
-        const dm = row.querySelector('.donor-dm').getBoundingClientRect();
-        const amount = row.querySelector('.donor-amount').getBoundingClientRect();
-        return { nameWidth: name.width, nameTop: name.top, dmTop: dm.top,
-          amountTop: amount.top, amountWidth: amount.width };
-      });
-      expect(rowLayout.nameWidth, width + 'px: donor name must have reading space').toBeGreaterThan(85);
-      expect(rowLayout.dmTop, width + 'px: donor actions belong on second line').toBeGreaterThan(rowLayout.nameTop + 18);
-      expect(rowLayout.amountWidth, width + 'px: editable amount stays visible').toBeGreaterThan(35);
-      expect(rowLayout.amountTop, width + 'px: amount aligns with DM actions').toBeGreaterThan(rowLayout.nameTop + 18);
-    }
+    const rowLayout = await page.locator('.donor-row').first().evaluate((row) => {
+      const name = row.querySelector('.donor-name').getBoundingClientRect();
+      const dm = row.querySelector('.donor-dm').getBoundingClientRect();
+      return { nameWidth: name.width, nameTop: name.top, dmTop: dm.top,
+        rowHeight: row.getBoundingClientRect().height };
+    });
+    expect(rowLayout.nameWidth).toBeGreaterThan(55);
+    expect(Math.abs(rowLayout.dmTop - rowLayout.nameTop)).toBeLessThan(25);
+    expect(rowLayout.rowHeight).toBeLessThanOrEqual(65);
+    await expect(page.locator('.donor-row .donor-amount').first()).toBeHidden();
     expect(await page.locator('#donorTable').evaluate(
       (el) => el.scrollWidth <= el.clientWidth + 2,
     )).toBe(true);
@@ -108,6 +99,7 @@ for (const [width, height] of [
       }),
     );
     expect(tabs).toHaveLength(6);
+    expect(new Set(tabs.map(t => Math.round(t.x))).size).toBe(6);
     for (const t of tabs) {
       expect(t.x).toBeGreaterThanOrEqual(-1);
       expect(t.right).toBeLessThanOrEqual(width + 1);
@@ -184,4 +176,21 @@ test('Donor row editor stays inside a narrow phone and the keyboard can be used'
     body: await page.screenshot({ path: 'mobile-screenshots/donors-add-keyboard-320.png' }),
     contentType: 'image/png',
   });
+});
+
+
+test('Paused status stays outside the compact footer', async ({ page, request }) => {
+  await request.post('/donor-delivery', { headers: AUTH, data: { stop: true } });
+  await openDonors(page, request, 390, 690);
+  await expect(page.locator('#donorResumeStatus')).toBeVisible();
+  expect(await page.locator('.donor-bottom #donorResumeStatus').count()).toBe(0);
+  const footer = await page.locator('.donor-bottom').boundingBox();
+  expect(footer.height).toBeLessThan(75);
+  const back = await page.locator('#donorMainBottom').boundingBox();
+  const toggle = await page.locator('#donorToggle').boundingBox();
+  const dm = await page.locator('#donorSendImportant').boundingBox();
+  expect(back.x).toBeLessThan(toggle.x);
+  expect(toggle.x).toBeLessThan(dm.x);
+  await page.locator('.donor-more > summary').first().click();
+  await expect(page.locator('.donor-menu-amount-input').first()).toBeVisible();
 });

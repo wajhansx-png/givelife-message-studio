@@ -132,9 +132,9 @@
     }
     const normal = document.getElementById('donorNormalTotal')?.closest('.donor-total');
     if (normal) panel.append(normal);
-    // At phone widths, show the two frequently used actions directly instead
-    // of making the user open More. Move the original elements; never clone
-    // buttons or rebind their donor/send handlers.
+    // Keep Messages beside Add on phones; Bulk stays under More so the
+    // header fits on one line. Move the original controls without rebinding
+    // their donor/send handlers.
     const donorPhone = matchMedia('(max-width:560px)');
     const navDetails = document.getElementById('donorNavMore');
     const placeDonorActions = () => {
@@ -143,7 +143,7 @@
       const add = document.getElementById('donorAdd');
       if (donorPhone.matches && add) {
         if (messages) head.insertBefore(messages, add);
-        if (bulk) head.insertBefore(bulk, add);
+        if (bulk) panel.append(bulk);
         if (navDetails) {
           // More still exposes Test DM and Poster settings on phones.
           navDetails.hidden = false;

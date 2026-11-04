@@ -39,7 +39,20 @@
         else if (!enter && document.fullscreenElement) document.exitFullscreen().catch(() => {});
       } catch (e) {}
     }
-    btn.onclick = () => { const entering = !page.classList.contains('donor-expanded'); updateExpandBtn(entering); };
+    /* The button floats over the list's top-right corner, so it shows on phones too (the header row is hidden there). */
+    {
+      const table = page.querySelector('#donorTable'),
+        wrap = document.createElement('div');
+      wrap.className = 'donor-table-wrap';
+      table.parentNode.insertBefore(wrap, table);
+      wrap.append(table, btn);
+    }
+    /* Real browser full screen (browser bar hidden); where a phone browser can't, the list still fills the page. */
+    btn.onclick = () => {
+      const entering = !page.classList.contains('donor-expanded');
+      updateExpandBtn(entering);
+      tryNativeFS(entering);
+    };
     document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && page.classList.contains('donor-expanded')) updateExpandBtn(false); });
   }
 

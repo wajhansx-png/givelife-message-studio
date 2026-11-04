@@ -2248,3 +2248,12 @@ html body #donorsPage .donor-bottom>#donorResumeStatus .donor-resume-actions but
   html body #donorsPage .donor-bottom{flex-wrap:wrap!important}
   html body #donorsPage .donor-bottom>#donorResumeStatus:not([hidden]):not(.rs-folded){flex:1 1 100%!important;order:-1}
 }
+/* Full-screen button: floating corner button over the list, every screen size. */
+html body #donorsPage .donor-table-wrap{position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+html body #donorsPage .donor-table-wrap>#donorTable{flex:1 1 auto;min-height:0}
+html body #donorsPage .donor-table-wrap>.donor-expand-btn{position:absolute!important;top:6px;right:18px;z-index:5;display:grid!important;place-items:center;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;padding:0!important;border-radius:10px!important;font-size:17px!important;line-height:1!important;background:#1f2937e6!important;border:1px solid #ffffff33!important;color:#fff!important;cursor:pointer;box-shadow:0 4px 12px #0006}
+html body #donorsPage .donor-table-wrap>.donor-expand-btn:hover{background:#374151!important}
+html body #donorsPage.donor-expanded .donor-table-wrap{width:min(1100px,100%);margin:0 auto;flex:1 1 0!important}
+html body #donorsPage.donor-expanded .donor-table-wrap>#donorTable{width:100%!important}
+html body #donorsPage:is([data-panel=messages],[data-panel=volunteers]) .donor-table-wrap>.donor-expand-btn{display:none!important}
+@media (max-width:700px){html body #donorsPage .donor-table-wrap>.donor-expand-btn{right:10px;top:8px}}

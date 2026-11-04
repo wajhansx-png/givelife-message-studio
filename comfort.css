@@ -2306,9 +2306,8 @@ html body #donorsPage #donorNotice:not(:empty){position:fixed!important;top:12px
 html body #donorsPage .donor-table-wrap>.donor-expand-btn:active{transform:scale(.92)}
 html body #donorsPage:fullscreen{width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;margin:0!important;background:#0f1117!important}
 
-/* ===== Donors: pure black, one white/grey system (white = on / tap, grey = off / done) ===== */
-html body:not(#_):not(#__) #donorsPage,html body:not(#_):not(#__) #donorsPage .donor-shell,html body:not(#_):not(#__) #donorsPage .donor-table,html body:not(#_):not(#__) #donorsPage.donor-expanded,html body:not(#_):not(#__) #donorsPage:fullscreen{background:#000!important}
-html body:not(#_):not(#__) #donorsPage::backdrop{background:#000!important}
+/* ===== Donor list box only: pure black, one light/grey system (white = on / tap, grey = off / done) ===== */
+html body:not(#_):not(#__) #donorsPage .donor-table{background:#000!important}
 html body:not(#_):not(#__) #donorsPage .donor-table{border:1px solid #1f1f1f!important;box-shadow:none!important}
 html body:not(#_):not(#__) #donorsPage .donor-columns{background:#000!important;color:#8a8a8a!important;border-bottom:1px solid #1f1f1f!important}
 html body:not(#_):not(#__) #donorsPage .donor-row{background:#000!important;border-bottom:1px solid #161616!important;box-shadow:none!important}
@@ -2316,37 +2315,22 @@ html body:not(#_):not(#__) #donorsPage .donor-row:hover{background:#0b0b0b!impor
 html body:not(#_):not(#__) #donorsPage .donor-row :is(.donor-name){color:#f5f5f5!important}
 html body:not(#_):not(#__) #donorsPage .donor-row .donor-name::before{color:#6b6b6b!important}
 /* Star: on = white, off = grey. */
-html body:not(#_):not(#__) #donorsPage .donor-star{color:#4a4a4a!important;background:transparent!important}
-html body:not(#_):not(#__) #donorsPage .donor-star[aria-pressed='true']{color:#e4e4e7!important}
 /* Top: off = grey outline, on = white. */
-html body:not(#_):not(#__) #donorsPage .donor-top-chip{background:transparent!important;border:1px solid #3a3a3a!important;color:#9a9a9a!important;box-shadow:none!important}
-html body:not(#_):not(#__) #donorsPage .donor-top-chip[aria-pressed='true']{background:#e4e4e7!important;border-color:#e4e4e7!important;color:#111!important}
 /* DM: ready = white (tap), already sent = grey. */
-html body:not(#_):not(#__) #donorsPage .donor-dm{background:#e4e4e7!important;color:#111!important;border:1px solid #e4e4e7!important;box-shadow:none!important}
 html body:not(#_):not(#__) #donorsPage .donor-row[data-sent='true'] .donor-dm{background:#1a1a1a!important;color:#9a9a9a!important;border-color:#2e2e2e!important}
 /* Donated: off = grey, on = white. */
-html body:not(#_):not(#__) #donorsPage .donor-status{background:#141414!important;color:#8a8a8a!important;border:1px solid #262626!important;box-shadow:none!important}
-html body:not(#_):not(#__) #donorsPage .donor-status[aria-pressed='true']{background:#e4e4e7!important;color:#111!important;border-color:#e4e4e7!important}
-html body:not(#_):not(#__) #donorsPage .donor-amount{background:#0d0d0d!important;color:#f5f5f5!important;border:1px solid #2a2a2a!important}
 html body:not(#_):not(#__) #donorsPage .donor-row .donor-more summary,html body:not(#_):not(#__) #donorsPage .donor-row .donor-more>button{color:#bdbdbd!important;background:transparent!important}
 /* Full-screen button: white on black. */
 html body:not(#_):not(#__) #donorsPage .donor-table-wrap>.donor-expand-btn{background:#e4e4e7!important;color:#111!important;border-color:#e4e4e7!important}
-/* Donors tabs and buttons: white for the active/main action, grey for the rest. */
-html body:not(#_):not(#__) #donorsPage .donor-tabs{background:#000!important;border-color:#1f1f1f!important}
-html body:not(#_):not(#__) #donorsPage .donor-tabs [role=tab]{background:#111!important;color:#a3a3a3!important;border:1px solid #222!important;box-shadow:none!important}
-html body:not(#_):not(#__) #donorsPage .donor-tabs [role=tab][aria-selected='true']{background:#e4e4e7!important;color:#111!important;border-color:#e4e4e7!important}
-html body:not(#_):not(#__) #donorsPage .donor-tabs [role=tab] :is(span,b,small,em){background:#e4e4e7fff14!important;color:inherit!important}
-html body:not(#_):not(#__) #donorsPage .donor-tabs [role=tab][aria-selected='true'] :is(span,b,small,em){background:#0000001a!important}
-html body:not(#_):not(#__) #donorsPage .donor-search{background:#0d0d0d!important;border-color:#262626!important;color:#f5f5f5!important}
-html body:not(#_):not(#__) #donorsPage .donor-head :is(button,summary){background:#111!important;color:#f5f5f5!important;border:1px solid #2a2a2a!important;box-shadow:none!important}
-html body:not(#_):not(#__) #donorsPage .donor-head :is(#donorMessagesTab,#donorAdd){background:#e4e4e7!important;color:#111!important;border-color:#e4e4e7!important}
-html body:not(#_):not(#__) #donorsPage .donor-bottom #donorSendImportant{background:#e4e4e7!important;color:#111!important;border:1px solid #e4e4e7!important;box-shadow:none!important}
-html body:not(#_):not(#__) #donorsPage .donor-bottom #donorMainBottom{background:#111!important;color:#f5f5f5!important;border:1px solid #2a2a2a!important}
-html body:not(#_):not(#__) #donorsPage .donor-bottom :is(#donorToggle,.donor-mini){background:#111!important;color:#f5f5f5!important;border:1px solid #2a2a2a!important}
-html body:not(#_):not(#__) #donorsPage .donor-bottom{background:#000!important;border-top:1px solid #161616!important}
-html body:not(#_):not(#__):not(#___) #donorsPage :is(#donorSendImportant#donorSendImportant,#donorMessagesTab#donorMessagesTab,#donorAdd#donorAdd){background:#e4e4e7!important;background-image:none!important;color:#111!important;border:1px solid #e4e4e7!important;box-shadow:none!important}
-html body:not(#_):not(#__):not(#___) #donorsPage .donor-head details>summary,html body:not(#_):not(#__):not(#___) #donorsPage .donor-head .donor-more-menu>summary{background:#111!important;background-image:none!important;color:#f5f5f5!important;border:1px solid #2a2a2a!important;box-shadow:none!important}
 /* Phone: the list keeps a small top strip for the full-screen button so it never covers a row. */
 @media (max-width:700px){html body #donorsPage .donor-table-wrap{padding-top:40px!important}html body #donorsPage .donor-table-wrap>.donor-expand-btn{top:2px!important;right:6px!important;width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important}}
 
-html body:not(#_):not(#__):not(#___) #donorsPage #donorNavMore>summary{background:#111!important;background-image:none!important;color:#e4e4e7!important;border:1px solid #2a2a2a!important;box-shadow:none!important}
+html body:not(#_):not(#__) #donorsPage .donor-row .donor-star{color:#4a4a4a!important;background:transparent!important}
+html body:not(#_):not(#__) #donorsPage .donor-row .donor-star[aria-pressed='true']{color:#e4e4e7!important}
+html body:not(#_):not(#__) #donorsPage .donor-row .donor-top-chip{background:transparent!important;border:1px solid #3a3a3a!important;color:#9a9a9a!important;box-shadow:none!important}
+html body:not(#_):not(#__) #donorsPage .donor-row .donor-top-chip[aria-pressed='true']{background:#e4e4e7!important;border-color:#e4e4e7!important;color:#111!important}
+html body:not(#_):not(#__) #donorsPage .donor-row .donor-dm{background:#e4e4e7!important;color:#111!important;border:1px solid #e4e4e7!important;box-shadow:none!important}
+html body:not(#_):not(#__) #donorsPage .donor-row[data-sent='true'] .donor-dm{background:#1a1a1a!important;color:#9a9a9a!important;border-color:#2e2e2e!important}
+html body:not(#_):not(#__) #donorsPage .donor-row .donor-status{background:#141414!important;color:#8a8a8a!important;border:1px solid #262626!important;box-shadow:none!important}
+html body:not(#_):not(#__) #donorsPage .donor-row .donor-status[aria-pressed='true']{background:#e4e4e7!important;color:#111!important;border-color:#e4e4e7!important}
+html body:not(#_):not(#__) #donorsPage .donor-row .donor-amount{background:#0d0d0d!important;color:#f5f5f5!important;border:1px solid #2a2a2a!important}

@@ -312,7 +312,58 @@ def dm_control(text):
     return None
 
 
+# Real misspellings of command words seen in owner chats. Explicit on purpose: loose fuzzy
+# matching would turn "sent" into "send" and invent a send request. Abbreviations the rules
+# already understand (msg, mins, hrs) are deliberately left alone.
+TYPOS = {
+    "snd": "send", "sned": "send", "sedn": "send", "semd": "send", "sendd": "send",
+    "pst": "post", "psot": "post", "shre": "share",
+    "dnors": "donors", "doners": "donors", "donars": "donors", "donros": "donors", "dnor": "donor",
+    "doner": "donor", "donar": "donor", "imporant": "important", "importent": "important",
+    "caes": "case", "csae": "case", "cse": "case",
+    "shrter": "shorter", "shoter": "shorter", "shortr": "shorter", "mke": "make", "mak": "make",
+    "captoin": "caption", "capton": "caption", "caprion": "caption",
+    "mesage": "message", "messge": "message", "massage": "message",
+    "scedule": "schedule", "shedule": "schedule", "schdule": "schedule",
+    "freelanc": "freelance", "frelance": "freelance", "freelence": "freelance",
+    "gropus": "groups", "grups": "groups", "gruops": "groups", "voluntiers": "volunteers",
+    "volunters": "volunteers", "pasue": "pause", "puase": "pause", "remeber": "remember",
+    "rember": "remember", "minuts": "minutes",
+}
+TYPO_WORD = re.compile(r"\b(" + "|".join(sorted(TYPOS, key=len, reverse=True)) + r")\b", re.I)
+QUOTED = re.compile(r'("[^"\n]*"|“[^”\n]*”|```[\s\S]*?```)')
+
+
+def clean_recipient(value):
+    """Who a message goes to, without trailing urgency words: "Ali now" is Ali."""
+    return re.sub(
+        r"(?i)(?:\s+(?:fast|quickly|asap|immediately|right now|now|please|pls|abhi|jaldi))+\s*[!.]*$",
+        "",
+        str(value).strip(),
+    )
+
+
+def fix_typos(text):
+    """Correct known command-word misspellings outside quoted message text."""
+    parts = QUOTED.split(str(text))
+    return "".join(
+        part if i % 2 else TYPO_WORD.sub(lambda m: TYPOS[m.group(1).casefold()], part)
+        for i, part in enumerate(parts)
+    )
+
+
 def parse(text):
+    """Deterministic command, or None. Typos are corrected only when the original matches nothing,
+    so a literal message the owner typed is never altered."""
+    plan = _parse(text)
+    if plan is None:
+        fixed = fix_typos(text)
+        if fixed != str(text):
+            plan = _parse(fixed)
+    return plan
+
+
+def _parse(text):
     t = str(text).strip()
     t = re.sub(
         r"^(?:please|kindly|can you|could you|would you)\s+(?=(?:send|resend|delete|remove|revoke|text|message)\s+\S)",
@@ -375,7 +426,9 @@ def parse(text):
         r"\b(don t|dont|do not|never|stop|disable|no)\b.*\b(dm|dms|direct messages)\b", low
     ) or low in ("dm off", "dms off", "auto dms off"):
         return {"kind": "stop_dms"}
-    if low in (
+    # "stop everything now" / "sab band karo abhi": a trailing urgency word is the same stop.
+    calm = re.sub(r"(?:[\s.!,]+(?:right now|now|please|pls|plz|asap|immediately|abhi|jaldi))+[\s.!]*$", "", low)
+    if calm in (
         "hold",
         "wait",
         "hold on",
@@ -470,7 +523,8 @@ def parse(text):
         + r"?(?:\s+(?:came in|came|received|donated|aya|aaya|aaye|aye|mila|mile))?|(?:rs\.?\s*)?(\d[\d,.]*)\s*"
         + UNIT
         + r"?\s+(?:came in|came|arrived|received|donated|aya|aaya|aye|aaye|ayi|aayi|mila|mile|mil gaye|mil gaya)(?:\s+(?:hain|hai|hue|huay|ho gaye|ho gaya))?",
-        t,
+        # "5000 came from Ali" / "received 3000 from a donor today": who sent it or when does not change the amount.
+        re.sub(r"(?i)(?:\s+(?:from|by)\s+[^\d\n]{1,40}?)?(?:\s+(?:today|now|just now|abhi))?[.!]?$", "", t),
         re.I,
     )
     if arrival:
@@ -497,9 +551,7 @@ def parse(text):
         return {
             "kind": "text",
             "text": q[1],
-            "to": re.sub(
-                r"(?i)\s+(?:fast|quickly|asap|immediately|right now)\s*[!.]*$", "", q[2].strip()
-            ).strip(),
+            "to": clean_recipient(q[2]),
             "literal": True,
         }
     amount = balance_amount(t)
@@ -508,10 +560,7 @@ def parse(text):
         amount = balance_amount(lead[1])
 
     # A trailing speed word does not belong to the recipient's name.
-    def recipient(v):
-        return re.sub(
-            r"(?i)\s+(?:fast|quickly|asap|immediately|right now)\s*[!.]*$", "", str(v).strip()
-        ).strip()
+    recipient = clean_recipient
 
     # "send the same thing to fiverr" points back at an earlier message; the words are not the text to post.
     def back_reference(v):
@@ -665,8 +714,8 @@ def parse(text):
             r"(?i)(?:(?:the|full|current|updated|proper|correct|dm|appeal|message|poster|and|with)\s*)+",
             m[1],
         ):
-            return {"kind": "appeal_to", "to": m[2].strip()}
-        return {"kind": "text", "text": m[1].strip(), "to": m[2].strip(), "literal": True}
+            return {"kind": "appeal_to", "to": clean_recipient(m[2])}
+        return {"kind": "text", "text": m[1].strip(), "to": clean_recipient(m[2]), "literal": True}
     # Unqualified "send jr account" needs contact understanding, never send those words literally.
     # Custom text remains explicit via send <text> to <recipient>, or the assistant with conversation context.
     if target and re.sub(r"\b(group|groups|in|to|on)\b", "", low).strip() in [

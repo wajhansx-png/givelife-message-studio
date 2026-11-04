@@ -32,7 +32,7 @@ STEP_PATTERNS = (
     ("balance", r"\b(?:amount left|remaining|balance|money came|received|donated|rs\.?\s*\d+)\b"),
     (
         "edit",
-        r"\b(?:rewrite|reword|edit|caption|wording|shorten|fix|correct|replace|reformat|draft)\b",
+        r"\b(?:rewrite|reword|edit|caption|wording|shorten|shorter|longer|stronger|simpler|bolder|bold|italic|hook|fix|correct|replace|reformat|draft)\b",
     ),
     (
         "schedule",
@@ -101,7 +101,7 @@ def steps(text):
             "send" in explicit
             and "edit" in explicit
             and not re.search(
-                r"(?i)\b(?:edit|rewrite|correct|shorten|fix|update|change|replace)\b", clause
+                r"(?i)\b(?:edit|rewrite|correct|shorten|shorter|longer|stronger|simpler|bold|fix|update|change|replace)\b", clause
             )
         ):
             explicit.remove("edit")

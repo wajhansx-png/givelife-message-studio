@@ -370,9 +370,14 @@ def _system(memory):
     return SYSTEM
 
 
+def active_model():
+    """The model chat turns actually use (the reasoning override wins over the default)."""
+    return os.environ.get("DEEPSEEK_REASONING_MODEL") or MODEL
+
+
 def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None):
     """One call to DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
-    model = os.environ.get("DEEPSEEK_REASONING_MODEL") or MODEL
+    model = active_model()
     thinking = (
         model in ("deepseek-reasoner", "deepseek-flash", "deepseek-v4-pro")
         or os.environ.get("DEEPSEEK_THINKING") == "enabled"

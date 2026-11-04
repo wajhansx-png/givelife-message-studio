@@ -454,6 +454,13 @@ DONOR_WORDS = re.compile(
 )
 
 
+# A finished case is recorded as Rs. 0 left; there is no separate "close case" action.
+CASE_DONE = re.compile(
+    r"(?i)\b(?:case|appeal|amount|target|fundraising)\b.{0,30}\b(?:complete|completed|done|closed|close|finished|full|pura|poora|mukammal)\b"
+    r"|\b(?:complete|close|finish)\b.{0,15}\b(?:the\s+)?case\b|\b(?:amount|target)\s+(?:is\s+)?(?:collected|reached|met)\b"
+)
+
+
 def permitted(name, text):
     if name in READ:
         return True
@@ -585,6 +592,8 @@ def permitted(name, text):
         )
     if name == "delete_rule":
         return bool(re.search(r"(?i)\b(forget|delete|remove)\b.*\b(rule|memory|preference)\b", t))
+    if name == "set_left" and CASE_DONE.search(t):
+        return True
     if name in ("set_left", "money_came"):
         return any((p.get("kind") == "money") == (name == "money_came") for p in financial_plans(t))
     if name in (

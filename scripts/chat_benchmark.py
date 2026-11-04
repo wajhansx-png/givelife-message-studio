@@ -24,7 +24,7 @@ STATE = {
     "drafts": chat_bench.STATE["drafts"],
     "draft_task": chat_bench.STATE["draft_task"],
     "engine": {"group_intervals": {"main": 15, "fiverr": 30, "upwork": 30}},
-    "schedules": [],
+    "schedules": [{"position": 1, "id": "a1b2c3d4", "state": "pending", "what": "Once · today 09:00 PM PKT · poster + saved caption to main"}],
 }
 
 
@@ -36,8 +36,10 @@ def fake_tools(calls):
                 return {"kind": args.get("kind", "group"), "text": STATE["drafts"].get(args.get("kind", "group"), "")}
             if name == "find_contact":
                 return json.dumps([{"id": "923001234567@s.whatsapp.net", "name": "Ali Khan", "group": False}])
-            if name in ("recent_activity", "list_rules", "app_status", "list_schedules", "search_memory"):
-                return "Auto is on. No send in the last 10 minutes. No pending schedules."
+            if name == "list_schedules":
+                return "1. #a1b2c3d4 · pending · Once · today 09:00 PM PKT · poster + saved caption to main"
+            if name in ("recent_activity", "list_rules", "app_status", "search_memory"):
+                return "Auto is on. Rs. 25,000 left. No send in the last 10 minutes."
             return "Simulated " + name + " succeeded. Nothing was really sent."
 
         return run

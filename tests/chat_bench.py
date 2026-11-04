@@ -63,7 +63,7 @@ CASES = [
     {"id": "money_aya", "text": "2000 aaye hain", "fast": "money"},
     {"id": "new_case", "text": "start a new case for a cancer patient", "tools": {"case_action"}, "forbid": SENDS},
     {"id": "new_case_typo", "text": "new caes for ayesha heart surgery", "tools": {"case_action"}, "forbid": SENDS},
-    {"id": "case_closed", "text": "this case is complete, alhamdulillah", "tools": {"case_action"}, "forbid": SENDS},
+    {"id": "case_closed", "text": "this case is complete, alhamdulillah", "tools": {"set_left"}, "forbid": SENDS},
     # --- scheduling and pacing ---
     {"id": "sched_30", "text": "send to main in 30 minutes", "tools": {"schedule_task"}},
     {"id": "sched_clock", "text": "post in all groups at 9pm", "tools": {"schedule_task"}},
@@ -103,7 +103,7 @@ CASES = [
 
 
 CAPTION = (
-    "🚨 4 hours in Janazah 🚨\n\nYousaf's parents cannot pay for the grave.\n\n"
+    "🚨 4 hours in Janazah 🚨\n\nصرف 2 سال کا بچہ دنیا سے چلا گیا\n\nYousaf's parents cannot pay for the grave.\n\n"
     "Rs. 25,000 STILL NEEDED.\n\n03097458815 EASYPAISA ONLY (Wajdan Khan)"
 )
 STATE = {"drafts": {"group": CAPTION, "dm": "Brother, " + CAPTION}, "draft_task": {"kind": "group", "state": "ready"}}
@@ -170,7 +170,7 @@ HELD_OUT = [
     {"id": "h_italic", "text": "italic the english line", "fast": None, "tools": {"set_message"}, "forbid": SENDS},
     {"id": "h_left_typo", "text": "15000 lft", "forbid": SENDS},
     {"id": "h_money_received", "text": "received 3000 from a donor", "fast": "money"},
-    {"id": "h_case_done", "text": "case complete, close it", "tools": {"case_action"}, "forbid": SENDS},
+    {"id": "h_case_done", "text": "case complete, close it", "tools": {"set_left"}, "forbid": SENDS},
     {"id": "h_sched_tonight", "text": "send in all groups tonight at 10pm", "tools": {"schedule_task"}},
     {"id": "h_sched_45", "text": "freelance in 45 mins", "tools": {"schedule_task"}},
     {"id": "h_pause_all_free", "text": "pause freelance for today", "tools": {"pause_group"}, "forbid": SENDS},

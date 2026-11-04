@@ -2241,3 +2241,31 @@ html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools{top:50%!im
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) :is(#btnGivelife,#btnFree) .gb-name{text-align:left!important;align-items:flex-start!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnGivelife .gb-name{padding-right:52px!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnFree .gb-name{padding-right:90px!important}
+
+/* ===== Send buttons: clear calls to action ===== */
+html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll){height:auto!important;min-height:62px!important;padding:8px 14px!important;cursor:pointer!important;transition:transform .12s ease,filter .12s ease,box-shadow .12s ease!important}
+/* "SEND TO" above every name: the button says what it does. */
+html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-name::before{content:'SEND TO';display:block;font-size:10px;font-weight:800;letter-spacing:.08em;opacity:.75;margin-bottom:1px}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-name{font-size:16px!important;text-align:left!important;align-items:flex-start!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-name .last-sent{font-size:11px!important;opacity:.7;font-weight:500!important}
+/* Bigger arrow in a white circle. */
+html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-go{width:32px;height:32px;border-radius:50%;background:#ffffff;color:#2f6fe8!important;display:grid;place-items:center;font-size:15px!important;box-shadow:0 2px 6px #0004}
+/* Rank: Test = outline check, GiveLife / freelance = solid, All 6 = strongest. */
+html body:not(#_):not(#__):not(#___) .group-send .send-row>.test-row{background:transparent!important;border:1.5px solid #6c8cff!important;color:#dbe4ff!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>.test-row .gb-go{background:#6c8cff;color:#fff!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>.test-row .gb-name::before{content:'TEST · SEND TO'}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>#sendAll{min-height:70px!important;background:linear-gradient(135deg,#2f6fe8,#6d4ef0)!important;box-shadow:0 10px 24px -8px #6d4ef0cc!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>#sendAll .gb-name{font-size:17px!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>#sendAll .gb-go{color:#6d4ef0!important}
+/* Feedback: lift on hover, press-in on tap. */
+@media (hover:hover){html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll):hover{transform:translateY(-2px);filter:brightness(1.1);box-shadow:0 10px 22px -8px #2f6fe8!important}}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll):active{transform:scale(.97);filter:brightness(.95)}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll):focus-visible{outline:2px solid #fff!important;outline-offset:2px}
+/* ⏱ and ▾ are real buttons: white outline, small word under the icon. */
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>button{width:46px!important;min-width:46px!important;height:44px!important;min-height:44px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:1px!important;background:#ffffff1f!important;border:1.5px solid #ffffffb3!important;border-radius:11px!important;font-size:15px!important;line-height:1!important;cursor:pointer!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>.gb-timer::after{content:'Later';font-size:9.5px;font-weight:800}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>.gb-pick::after{content:'Groups';font-size:9.5px;font-weight:800}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>button:hover{background:#ffffff38!important;border-color:#fff!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools{right:48px!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnGivelife .gb-name{padding-right:60px!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnFree .gb-name{padding-right:112px!important}

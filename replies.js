@@ -285,3 +285,9 @@
   if (document.readyState === 'loading') addEventListener('DOMContentLoaded', place);
   else place();
 })();
+
+/* Tooltips for the small send tools. */
+setTimeout(() => {
+  for (const b of document.querySelectorAll('.gb-timer')) b.title = 'Schedule this send for later';
+  for (const b of document.querySelectorAll('.gb-pick')) b.title = 'Choose one freelance group';
+}, 800);

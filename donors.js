@@ -35,7 +35,8 @@
     }
     function tryNativeFS(enter) {
       try {
-        if (enter && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+        // The Donors page is its own top layer, so it is the element that goes full screen.
+        if (enter && !document.fullscreenElement) (page.requestFullscreen ? page.requestFullscreen() : Promise.reject()).catch(() => {});
         else if (!enter && document.fullscreenElement) document.exitFullscreen().catch(() => {});
       } catch (e) {}
     }

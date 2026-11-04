@@ -660,14 +660,18 @@ def set_left(left):
             g = build_group(variant(False), 0)
             d = build_dm(dm_selection(False), 0)
         else:
+            # Keep exactly the owner's saved Group and DM wording (including
+            # medical facts, appeal angle and formatting), changing only
+            # the balance and the calculated people counts. The old branch
+            # rebuilt generic drafts when no special workflow was active.
             g = (
                 draft_workflow.update_amount(before["group"], old, left)
-                if custom == "group" or STORE and STORE.get("focus_wording", {}).get("group")
+                if isinstance(before.get("group"), str) and before["group"].strip()
                 else build_group(variant(False), left)
             )
             d = (
                 draft_workflow.update_amount(before["dm"], old, left)
-                if custom == "dm" or STORE and STORE.get("focus_wording", {}).get("dm")
+                if isinstance(before.get("dm"), str) and before["dm"].strip()
                 else build_dm(dm_selection(False), left)
             )
         save_draft("group", g)

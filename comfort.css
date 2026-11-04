@@ -1512,7 +1512,7 @@ html body #donorsPage .donor-head>.hide-row .hide-chip{min-height:38px;padding:0
 
 /* Right rail: the send panel shows from its top edge; the rail itself scrolls if the window is short. */
 html body .action-rail .group-send{overflow:visible!important}
-html body .action-rail{overflow-y:auto!important;overflow-x:hidden!important;align-content:start}
+html body .action-rail{overflow-y:auto!important;overflow-x:hidden!important;align-content:start;justify-content:flex-start!important}
 
 
 /* Freelance sending switch (full width) and the DM Stop / Resume button colours. */
@@ -2074,11 +2074,25 @@ html body:not(#_):not(#__) .group-send .send-row>:is(.test-row,#btnGivelife,#btn
  html body:not(#_):not(#__) #messageFocus #focusText{field-sizing:content;height:auto!important;min-height:0!important;flex:0 0 auto!important}
 }
 
-/* Send buttons: the name and last-sent time are centred in the button (equal space on both sides of the text). */
-html body:not(#_):not(#__) .group-send .send-row .gb-name{align-items:center!important;text-align:center!important;margin-left:24px}
-html body:not(#_):not(#__) .group-send .send-row[data-tools='1'] .gb-name{margin-left:60px}
-html body:not(#_):not(#__) .group-send .send-row[data-tools='2'] .gb-name{margin-left:98px}
-html body:not(#_):not(#__) .group-send .send-row:has(.gb-timer.is-pending) .gb-name{margin-left:24px}
+/* Send controls share real columns, so timers never sit on top of labels. */
+html body:not(#_):not(#__) .group-send .send-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;container-type:inline-size}
+html body:not(#_):not(#__) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll){grid-column:1/-1;min-width:0;width:100%;height:auto!important;min-height:52px!important;padding:0 10px!important;gap:6px!important;box-sizing:border-box}
+html body:not(#_):not(#__) .group-send .send-row:has(.row-tools)>:is(#btnGivelife,#btnFree){grid-column:1;grid-row:1}
+html body:not(#_):not(#__) .group-send .send-row .row-tools{position:static;grid-column:2;grid-row:1;display:flex;gap:6px;align-items:center}
+html body:not(#_):not(#__) .group-send .send-row .row-tools>button{width:44px!important;height:44px;min-height:44px!important;flex:0 0 auto}
+html body:not(#_):not(#__) .group-send .send-row .gb-name{align-items:center!important;text-align:center!important;margin:0!important;white-space:normal;overflow:visible;overflow-wrap:normal}
+html body:not(#_):not(#__) .group-send .send-row .row-tools>.gb-timer.is-pending{min-width:72px;width:auto!important;white-space:nowrap}
+html body:not(#_):not(#__) .group-send .grp-card .group-drop-wrap{flex:0 0 auto}
+html body:not(#_):not(#__) .group-send .grp-card .delay-pill{min-height:44px!important}
+html body:not(#_):not(#__) .group-send .grp-card .delay-pill.is-pending{flex:0 0 76px!important;min-width:76px!important}
+html body:not(#_):not(#__) .group-send #groupStatus{overflow-wrap:anywhere}
+html body:not(#_):not(#__) .group-send #groupStatus:empty{display:none}
+html body:not(#_):not(#__) .group-send .send-row>.group-drop{grid-column:1/-1;min-width:0;box-sizing:border-box}
+html body:not(#_):not(#__) .group-send .group-drop{max-height:300px;overflow-y:auto;overscroll-behavior:contain}
+@container (max-width:300px){
+ html body:not(#_):not(#__) .group-send .send-row:has(.gb-timer.is-pending)>:is(#btnGivelife,#btnFree){grid-column:1/-1}
+ html body:not(#_):not(#__) .group-send .send-row:has(.gb-timer.is-pending)>.row-tools{grid-column:1/-1;grid-row:2;justify-content:flex-end}
+}
 
 /* One button colour across the message and donor screens (the Donors DM gradient); only Back keeps its own colour. */
 html body:not(#_):not(#__):not(#___) :is(
@@ -2093,12 +2107,6 @@ html body:not(#_):not(#__):not(#___) :is(
   #donorsPage .donor-bottom :is(#donorPace,#donorTest,#donorToggle,#donorSendImportant,#donorSendAll)
 ):hover{background:linear-gradient(135deg,#2f6cf0,#8648ef)!important}
 html body:not(#_):not(#__):not(#___) :is(#messageFocus,#donorsPage) button:disabled:not(.back-action){opacity:.5!important}
-/* Narrow buttons (under 330px, e.g. small phones and the desktop column): centre the label in the space
-   beside the icons, so "All freelance" never clips. Wider buttons centre it on the whole button. */
-html body:not(#_):not(#__) .group-send .send-row{container-type:inline-size}
-@container (max-width: 330px){
- html body:not(#_):not(#__) .group-send .send-row[data-tools] .gb-name{margin-left:0}
-}
 /* Thumb-sized "+ Top" chip on donor rows, and a vertically centred "Find groups" link in Settings. */
 @media (max-width: 899px){html body:not(#_):not(#__) .donor-page .donor-row .donor-top-chip{min-height:34px!important}}
 html body:not(#_) #set .row a.tool{display:inline-flex!important;align-items:center;justify-content:center}

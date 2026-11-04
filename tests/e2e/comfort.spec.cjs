@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openSettings, openDonorMessages } = require('./helpers.cjs');
+const { openSettings, openDonorMessages, showDm } = require('./helpers.cjs');
 const path = require('node:path');
 const auth = { Authorization: 'Bearer manual-fix-preview-key' };
 async function open(page, request, width = 1440, height = 900, theme = 'dark') {
@@ -87,9 +87,9 @@ for (const [width, height, theme] of [
         .toBe(true);
     await page.getByRole('button', { name: 'Back to donors', exact: true }).click();
     await page.locator('#donorMainBottom').click();
-    await page.getByRole('button', { name: 'DM', exact: true }).click();
+    await showDm(page);
     await page.locator('#sendMoreDonors').click();
-    await inside(page, page.getByRole('dialog', { name: 'Send to more donors', exact: true }));
+    await inside(page, page.getByRole('dialog', { name: 'Bulk message', exact: true }));
   });
 }
 test('mobile chat keeps draft, closes keyboard after send and has a reachable return row', async ({
@@ -147,7 +147,7 @@ test('message library switches previews and preserves unsaved edits', async ({ p
   await openDonorMessages(page);
   await page.getByRole('button', { name: 'Message 2', exact: true }).click();
   await expect(page.locator('.bank-detail header')).toContainText('Message 2');
-  await page.locator('.bank-detail').getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.locator('.bank-actions').getByRole('button', { name: 'Edit', exact: true }).click();
   await page.getByLabel('Edit message 2', { exact: true }).fill('Synthetic edited caption.');
   await page.getByRole('button', { name: 'Message 1', exact: true }).click();
   await page.getByRole('button', { name: 'Message 2', exact: true }).click();
@@ -209,7 +209,7 @@ test('typing during a slow save keeps newer text as an unsaved draft', async ({
     }
     await route.continue();
   });
-  await page.locator('.bank-detail').getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.locator('.bank-actions').getByRole('button', { name: 'Edit', exact: true }).click();
   const editor = page.getByLabel('Edit message 1', { exact: true }),
     sentText = (await editor.inputValue()) + '\n\nSynthetic submitted A',
     newerText = sentText + '\nNewer draft B';
@@ -404,6 +404,8 @@ test('delivery refresh updates donor counts without replacing the active editor'
   page,
   request,
 }) => {
+  // The app no longer creates sample DM templates on opening this screen.
+  await page.route('**/donor-messages', (r) => r.fulfill({ json: { items: [{ id: 'layout-editable', text: 'Bhai, this is a synthetic saved DM.' }], generation: {} } }));
   let sent = 12;
   const base = await (await request.get('/donors', { headers: auth })).json();
   await page.route(/\/donors(\?.*)?$/, (r) =>
@@ -428,7 +430,7 @@ test('delivery refresh updates donor counts without replacing the active editor'
   await open(page, request);
   await page.locator('#openDonors').click();
   await openDonorMessages(page);
-  await page.locator('.bank-detail').getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.locator('.bank-actions').getByRole('button', { name: 'Edit', exact: true }).click();
   const editor = page.getByLabel('Edit message 1', { exact: true });
   await editor.fill('Draft must survive a delivery refresh.');
   sent = 13;

@@ -55,27 +55,41 @@ def remaining_amount(text):
 
 
 def update_amount(text, old, left):
-    """Refresh the balance and donor counts; keep case facts and payment lines."""
+    """Refresh only the campaign balance and donor-count options, not other money facts.
+
+    A saved draft or rotated version can have an older amount than the latest state,
+    so balance-labelled amounts are refreshed regardless of which earlier value it had.
+    Never replace the fixed Rs. 2,000 / Rs. 1,000 donation options.
+    """
+    left = max(0, int(left))
     text = str(text or "")
-    left = int(left)
+    balance_line = re.compile(
+        r"(?i)(?<![A-Za-z0-9])(?P<currency>Rs\\.?\\s*)?"
+        r"(?P<number>\\d[\\d,]*)(?P<scale>\\s*k)?"
+        r"(?P<between>\\s*(?:(?:still|urgently|only|more)\\s+)*)"
+        r"(?P<label>left|remaining|needed|required|to\\s+go|to\\s+raise)\\b"
+    )
 
-    def amount(m):
-        if "head" in m.groupdict():
-            return m["head"] + f"{left:,}"
-        prefix = m[0][:m.start("sum") - m.start()]
-        return prefix + f"{left:,}" + m["tail"]
-
-    for pattern in (_BALANCE_AFTER, _BALANCE_BEFORE, _BALANCE_ONLY):
-        text = pattern.sub(amount, text)
-
-    # For legacy captions without 'left/needed', update only the old explicit
-    # rupee figure, and never when it could equal a Rs. 1,000/2,000 giving unit.
-    if isinstance(old, int) and old > 2000:
-        legacy = re.compile(
-            r"(?i)(?<!\w)(?P<head>Rs\.?\s*)(?P<sum>" + re.escape(f"{old:,}")
-            + r"|" + str(old) + r")(?![\d,])"
+    def balance_value(m):
+        value = int(m["number"].replace(",", ""))
+        if m["scale"] and m["scale"].strip().lower() == "k":
+            value *= 1000
+        # "3 people left" is not a monetary balance.
+        if not m["currency"] and value < 1000 and not m["scale"]:
+            return m[0]
+        return (
+            (m["currency"] or "") + f"{left:,}" + m["between"] + m["label"]
         )
-        text = legacy.sub(lambda m: m["head"] + f"{left:,}", text)
+
+    text = balance_line.sub(balance_value, text)
+    # An isolated, styled line like "*_Rs. 25,000_*" is also a balance.
+    # Restrict this to a whole line so amounts inside medical/history text remain intact.
+    text = re.sub(
+        r"(?im)^(?P<lead>\\s*[*_]*\\s*Rs\\.?\\s*)"
+        r"(?P<number>\\d[\\d,]*)(?P<tail>\\s*[*_]*\\s*)$",
+        lambda m: m["lead"] + f"{left:,}" + m["tail"],
+        text,
+    )
 
     def option(m):
         return (
@@ -85,12 +99,12 @@ def update_amount(text, old, left):
         )
 
     text = re.sub(
-        r"(?i)(?<!\d)\d+(?P<body>\s+(?:kind\s+)?people\s+(?:(?:donating|giving|contributing|contributing at|at|of|or)\s+)?(?:Rs\.?\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)",
+        r"(?i)(?<!\\d)\\d+(?P<body>\\s+(?:kind\\s+)?people\\s+(?:(?:donating|giving|contributing|contributing at|at|of|or)\\s+)?(?:Rs\\.?\\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)",
         option,
         text,
     )
     text = re.sub(
-        r"(?i)(?<!\d)\d+(?P<body>\s*[×x]\s*(?:Rs\.?\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)",
+        r"(?i)(?<!\\d)\\d+(?P<body>\\s*[×x]\\s*(?:Rs\\.?\\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)",
         option,
         text,
     )
@@ -98,7 +112,7 @@ def update_amount(text, old, left):
     def reverse(m):
         return m[1] + str(math.ceil(left / int(m[2].replace(",", "").replace(" ", "")))) + m[3]
 
-    return re.sub(r"(?i)((?:Rs\.?\s*)?(2[ ,]?000|1[ ,]?000)\s+by\s+)\d+(\s+people)", reverse, text)
+    return re.sub(r"(?i)((?:Rs\\.?\\s*)?(2[ ,]?000|1[ ,]?000)\\s+by\\s+)\\d+(\\s+people)", reverse, text)
 
 
 def requirements(prompt):

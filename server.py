@@ -682,35 +682,39 @@ def set_left(left):
 
 
 def poster_media(use="group"):
-    """The saved poster: a video when the owner chose one (and it is still on disk), otherwise the picture.
-    DMs have their own poster (use='dm'); without one they use the shared Group poster."""
+    """Return the selected media; never silently send an old image in place of a missing video."""
     for prefix in (("dm-",) if use == "dm" else ()) + ("",):
+        key = "dm_poster" if prefix else "poster"
         kind = DATA / (prefix + "poster-kind.txt")
         video = DATA / (prefix + "poster.mp4")
         picture = DATA / (prefix + "poster.jpg")
         try:
-            chosen = kind.read_text(encoding="utf-8").strip() == "video"
+            selected = kind.read_text(encoding="utf-8").strip()
         except OSError:
-            chosen = False
-        if chosen and video.exists():
+            selected = STORE.get(key + "_kind", "image") if STORE else "image"
+        if selected == "video":
+            if not video.exists() and STORE:
+                encoded = STORE.get(key + "_video_b64")
+                if encoded:
+                    try:
+                        write_atomic(video, base64.b64decode(encoded, validate=True))
+                        write_atomic(kind, b"video")
+                    except (ValueError, OSError, base64.binascii.Error):
+                        pass
+            # Fail closed instead of sending a previous fundraising picture.
             return video
         if picture.exists():
             return picture
-        # A local file can disappear after a cloud restart; recover the saved media.
         if STORE:
-            key = "dm_poster" if prefix else "poster"
-            media_kind = STORE.get(key + "_kind", "image")
-            encoded = STORE.get(key + ("_video_b64" if media_kind == "video" else "_b64"))
+            encoded = STORE.get(key + "_b64")
             if encoded:
-                target = video if media_kind == "video" else picture
                 try:
-                    write_atomic(target, base64.b64decode(encoded, validate=True))
-                    kind.write_text(media_kind, encoding="utf-8")
-                    return target
-                except (ValueError, OSError):
+                    write_atomic(picture, base64.b64decode(encoded, validate=True))
+                    write_atomic(kind, b"image")
+                    return picture
+                except (ValueError, OSError, base64.binascii.Error):
                     pass
     return DATA / "poster.jpg"
-
 
 def post_media(jid, cap, path):
     """Send one picture or MP4 video with its caption file through the WhatsApp gateway."""
@@ -2062,9 +2066,8 @@ if STORE:
     if STORE.get("poster_kind") == "video" and _v:
         (DATA / "poster-kind.txt").write_text("video", encoding="utf-8")
     elif STORE.get("poster_kind") == "video":
-        (DATA / "poster-kind.txt").write_text(
-            "image", encoding="utf-8"
-        )  # a large video is not kept across restarts; fall back to the picture
+        # Preserve the selected media kind. A missing video must not trigger an old poster.
+        (DATA / "poster-kind.txt").write_text("video", encoding="utf-8")
 if STORE:
     # Older versions saved the poster dialog as a DM-only copy, so group posts kept the old poster.
     # That copy is the owner's latest choice: make it the shared poster once.
@@ -2132,14 +2135,13 @@ def save_upload(data_url, use):
         if raw[4:8] != b"ftyp":
             raise ValueError("Use an MP4 video (H.264). Other video types are not accepted.")
         if use == "poster":
+            # Render's local filesystem is temporary. Persist the ENTIRE accepted video
+            # before activating it; otherwise a restart silently loses files over 3 MB.
+            if STORE:
+                STORE.put(key + "_video_b64", base64.b64encode(raw).decode())
+                STORE.put(key + "_kind", "video")
             write_atomic(DATA / (pre + "poster.mp4"), raw)
             write_atomic(DATA / (pre + "poster-kind.txt"), b"video")
-            if STORE:
-                STORE.put(
-                    key + "_video_b64",
-                    base64.b64encode(raw).decode() if len(raw) <= 3_000_000 else "",
-                )
-                STORE.put(key + "_kind", "video")
             clear_dm_poster()
             return "poster"
         aid = uuid.uuid4().hex[:12]
@@ -4850,16 +4852,20 @@ class Handler(BaseHTTPRequestHandler):
             self.reply({"items": next_chat_actions()})
         elif self.path == "/poster":
             img = poster_media()
-            picture = DATA / "poster.jpg"
-            if not picture.is_file():
-                return self.reply({"error": "Poster unavailable. Upload your poster again."}, status=404)
-            self.reply(picture.read_bytes(), "image/jpeg")
+            if not img.is_file():
+                return self.reply({"error": "Selected poster is missing. Upload it again."}, status=404)
+            if img.suffix == ".mp4":
+                # The compact chat icon is an image; never show an outdated JPEG.
+                return self.reply(
+                    b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="2" y="2" width="44" height="44" rx="9" fill="#5c40c9"/><path d="M19 12v24l19-12z" fill="#fff"/></svg>',
+                    "image/svg+xml",
+                )
+            self.reply(img.read_bytes(), "image/jpeg")
         elif self.path == "/dm-poster":
             img = poster_media("dm")
-            self.reply(
-                img.read_bytes() if img.suffix == ".jpg" else (DATA / "poster.jpg").read_bytes(),
-                "image/jpeg",
-            )
+            if not img.is_file():
+                return self.reply({"error": "Selected poster is missing. Upload it again."}, status=404)
+            self.reply(img.read_bytes(), "video/mp4" if img.suffix == ".mp4" else "image/jpeg")
         elif self.path == "/format.js":
             self.reply((ROOT / "format.js").read_bytes(), "application/javascript")
         elif self.path == "/app.js":

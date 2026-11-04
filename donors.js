@@ -273,7 +273,7 @@
   const poster = make('dialog', 'poster-dialog');
   poster.id = 'posterDialog';
   poster.setAttribute('aria-label', 'Change DM poster');
-  poster.innerHTML = `<h2>Poster · groups and DMs</h2><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status"></p><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
+  poster.innerHTML = `<h2>Poster · groups and DMs</h2><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><video id="posterCurrentVideo" controls playsinline preload="metadata" aria-label="Saved campaign video" hidden></video><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status"></p><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
   document.body.append(poster);
   const launch = make('button', 'primary donor-launch donor-launch-foot', 'Donors');
   launch.type = 'button';
@@ -2427,26 +2427,52 @@
       el('donorImportFile').value = '';
     }
   };
+  function showPosterPreview(blob, mime) {
+    if (posterUrl) URL.revokeObjectURL(posterUrl);
+    posterUrl = URL.createObjectURL(blob);
+    const video = String(mime || '').startsWith('video/');
+    el('posterCurrent').hidden = video;
+    el('posterCurrentVideo').hidden = !video;
+    if (video) {
+      el('posterCurrent').removeAttribute('src');
+      el('posterCurrentVideo').src = posterUrl;
+    } else {
+      el('posterCurrentVideo').pause();
+      el('posterCurrentVideo').removeAttribute('src');
+      el('posterCurrent').src = posterUrl;
+    }
+  }
+  async function loadSavedPoster() {
+    const r = await fetch('/dm-poster', { cache: 'no-store' });
+    if (!r.ok) throw Error('The saved poster could not load. Upload it again.');
+    const blob = await r.blob();
+    showPosterPreview(blob, blob.type || r.headers.get('Content-Type'));
+  }
   async function openPoster() {
     posterData = null;
     el('posterSave').disabled = true;
+    el('posterClose').textContent = 'Cancel';
     el('posterNote').textContent = 'Loading saved poster…';
     poster.showModal();
     try {
-      const r = await fetch('/dm-poster');
-      if (!r.ok) throw Error('The poster could not load.');
-      if (posterUrl) URL.revokeObjectURL(posterUrl);
-      posterUrl = URL.createObjectURL(await r.blob());
-      el('posterCurrent').src = posterUrl;
+      await loadSavedPoster();
       el('posterNote').textContent = '';
     } catch (e) {
       el('posterNote').textContent = e.message;
     }
   }
-  el('posterClose').onclick = () => poster.close();
+  el('posterClose').onclick = () => {
+    poster.close();
+    posterData = null;
+    if (posterUrl) URL.revokeObjectURL(posterUrl);
+    posterUrl = null;
+    el('posterCurrentVideo').pause();
+  };
   el('posterFile').onchange = async () => {
     const f = el('posterFile').files[0];
     if (!f) return;
+    posterData = null;
+    el('posterSave').disabled = true;
     try {
       if (f.type.startsWith('video/')) {
         if (f.size > 15000000 || !/mp4|quicktime/.test(f.type))
@@ -2457,24 +2483,7 @@
           r.onerror = () => no(Error('Could not read the video.'));
           r.readAsDataURL(f);
         });
-        const v = document.createElement('video');
-        v.src = URL.createObjectURL(f);
-        v.muted = true;
-        v.onloadeddata = () => {
-          try {
-            v.currentTime = 0.1;
-          } catch (e) {}
-        };
-        v.onseeked = () => {
-          try {
-            const c = document.createElement('canvas');
-            c.width = v.videoWidth;
-            c.height = v.videoHeight;
-            c.getContext('2d').drawImage(v, 0, 0);
-            el('posterCurrent').src = c.toDataURL('image/jpeg', 0.7);
-          } catch (e) {}
-          URL.revokeObjectURL(v.src);
-        };
+        showPosterPreview(f, f.type);
         el('posterNote').textContent =
           'Video chosen (' +
           Math.round((f.size / 1e6) * 10) / 10 +
@@ -2495,6 +2504,11 @@
       ctx.drawImage(bitmap, 0, 0, c.width, c.height);
       bitmap.close();
       posterData = c.toDataURL('image/jpeg', 0.9);
+      if (posterUrl) URL.revokeObjectURL(posterUrl);
+      posterUrl = null;
+      el('posterCurrentVideo').pause();
+      el('posterCurrentVideo').hidden = true;
+      el('posterCurrent').hidden = false;
       el('posterCurrent').src = posterData;
       el('posterNote').textContent = 'Preview only. Save to use this poster for future sends.';
       el('posterSave').disabled = false;
@@ -2507,9 +2521,14 @@
   el('posterSave').onclick = async () => {
     if (!posterData) return;
     el('posterSave').disabled = true;
+    const isVideo = posterData.startsWith('data:video/');
+    el('posterNote').textContent = isVideo ? 'Saving video securely…' : 'Saving poster…';
     try {
-      await api('/upload-image', { use: 'dm_poster', data: posterData });
-      el('posterNote').textContent = 'Poster saved for groups and DMs.';
+      const saved = await api('/upload-image', { use: 'dm_poster', data: posterData });
+      if (saved.id !== 'poster') throw Error('Saving was not confirmed. Try again.');
+      el('posterNote').textContent = isVideo
+        ? 'Video saved for groups and DMs.'
+        : 'Poster saved for groups and DMs.';
       window.dispatchEvent(new Event('poster-changed'));
       posterData = null;
       el('posterClose').textContent = 'Done';

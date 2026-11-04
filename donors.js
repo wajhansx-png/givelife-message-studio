@@ -155,10 +155,10 @@
     const attention = ['Failed', 'Uncertain'].includes(st.resume?.state),
       paused = !!st.paused;
     resumeStatus.hidden = !pending && !attention && !paused;
-    /* Keep status outside the action grid so it cannot stretch the buttons. */
+    /* The status owns a full-width footer row; it never shares a button cell. */
     const bottomRow = page.querySelector('.donor-bottom');
-    if (bottomRow && resumeStatus.nextElementSibling !== bottomRow)
-      bottomRow.before(resumeStatus);
+    if (bottomRow && resumeStatus.parentElement !== bottomRow)
+      bottomRow.prepend(resumeStatus);
     /* Folded: the panel shows as a small pill until tapped open again (remembered). */
     let folded = false;
     try {
@@ -2370,7 +2370,7 @@
       rs = page.querySelector('#donorResumeStatus'),
       sync = () => {
         shell.style.setProperty('--donor-foot', (foot ? foot.offsetHeight : 72) + 'px');
-        shell.style.setProperty('--donor-rs', rs && !rs.hidden && rs.offsetHeight ? rs.offsetHeight + 8 + 'px' : '0px');
+        shell.style.setProperty('--donor-rs', rs && rs.parentElement !== foot && !rs.hidden && rs.offsetHeight ? rs.offsetHeight + 8 + 'px' : '0px');
       };
     if (typeof ResizeObserver !== 'undefined') for (const n of [foot, rs]) if (n) new ResizeObserver(sync).observe(n);
     if (rs) new MutationObserver(sync).observe(rs, { attributes: true, attributeFilter: ['hidden', 'class'] });

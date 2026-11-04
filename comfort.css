@@ -1817,29 +1817,7 @@ html body #donorsPage[data-panel='messages'] #donorMessages{overflow-y:auto!impo
 
 /* ===== Calm palette (owner's choice): no strong colours on the send panel ===== */
 
-/* Notes on phones/tablets: toolbar is one swipeable row on top, the page uses the full width,
-   and the screen follows the visible height so the keyboard never hides the text. */
-@media (max-width:900px){
-  html body #foundationNotes .notes-shell{height:100dvh!important;max-height:100dvh!important}
-  html body #foundationNotes #notesWorkspace{flex-direction:column!important;height:auto!important;flex:1 1 auto!important;min-height:0!important}
-  html body #foundationNotes .notes-toolbar{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;width:100%!important;height:auto!important;max-height:none!important;gap:6px!important;padding:6px 8px!important;position:sticky!important;top:0!important;z-index:3;box-sizing:border-box;scrollbar-width:none;flex:0 0 auto!important}
-  html body #foundationNotes .notes-toolbar::-webkit-scrollbar{display:none}
-  html body #foundationNotes .notes-toolbar>*{flex:0 0 auto!important;width:auto!important;min-width:0!important;margin:0!important}
-  html body #foundationNotes .notes-toolbar :is(button,select){min-height:40px!important;height:40px!important;padding:0 12px!important;font-size:16px!important;white-space:nowrap!important;border-radius:10px!important}
-  html body #foundationNotes .notes-toolbar .notes-select-label{display:flex!important;align-items:center;gap:6px;font-size:12px}
-  html body #foundationNotes .notes-paper-scroll{flex:1 1 auto!important;width:100%!important;min-height:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch}
-  html body #foundationNotes .notes-paper{width:auto!important;max-width:none!important;margin:8px!important;min-height:calc(100dvh - 140px)!important;box-sizing:border-box}
-  html body #foundationNotes [contenteditable]{font-size:16px!important;scroll-margin-bottom:40vh}
-}
-@media (max-width:900px){
-  html body #foundationNotes .notes-paper-scroll{display:block!important}
-  html body #foundationNotes .notes-paper{display:block!important;width:auto!important;flex:none!important}
-  html body #foundationNotes .notes-paper>*{width:100%!important;max-width:none!important;box-sizing:border-box}
-}
-@media (max-width:900px){
-  html body #foundationNotes .notes-paper-scroll{padding:0 0 12px!important}
-  html body #foundationNotes .notes-toolbar select{width:auto!important;min-width:130px!important;padding-right:30px!important}
-}
+/* Notes responsive layout is owned by notes.css; keep the formatting rail beside the editor. */
 /* Report: the block sits in the centre of the screen, its text reads left-aligned. */
 html body .report-card{text-align:left!important;width:min(680px,calc(100vw - 40px))!important;margin:0 auto!important}
 html body .report-card .report-line{display:flex;gap:10px;align-items:flex-start;margin:14px 0!important}
@@ -2236,7 +2214,7 @@ html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#btnGiv
 html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools{position:absolute!important;right:42px!important;top:8px!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) .gb-name{padding-right:88px}
 /* Rows with timer/dropdown icons: small fixed icons, name on the left with room reserved, never overlapping. */
-html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>button{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:0!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>button{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools{top:50%!important;transform:translateY(-50%)!important;right:40px!important;gap:5px!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) :is(#btnGivelife,#btnFree) .gb-name{text-align:left!important;align-items:flex-start!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnGivelife .gb-name{padding-right:52px!important}
@@ -2286,8 +2264,8 @@ html body #messageFocus .group-send h2,html body #messageFocus .group-send .send
 html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll){min-height:44px!important;height:44px!important;padding:0 10px!important;font-size:13px!important}
 html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .gb-name{font-size:13px!important}
 html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .gb-name .last-sent{font-size:10.5px!important}
-html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .row-tools{top:6px!important;right:34px!important}
-html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .row-tools>button{width:30px!important;min-width:30px!important;height:30px!important;min-height:30px!important;font-size:13px!important}
+html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .row-tools{top:50%!important;right:34px!important}
+html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .row-tools>button{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;font-size:13px!important}
 html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .gb-go{font-size:13px!important}
 html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .gb-name{white-space:nowrap!important}
 html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row:has(.row-tools) #btnFree .gb-name{padding-right:96px!important}
@@ -3269,7 +3247,7 @@ html body #donorsPage[data-panel='messages'] .donor-bottom {
 }
 
 /* Reference phone directory: compact chrome, six filters, one donor per row.
-   The paused-status panel is a sibling of the footer, never a grid cell. */
+   Status controls keep their own full-width row in the bottom dock. */
 @media (max-width: 899px) {
   html body:not(#_) #donorsPage#donorsPage:not([data-panel='messages']):not([data-panel='volunteers']) .donor-head {
     display: flex !important;
@@ -3428,4 +3406,106 @@ html body #donorsPage[data-panel='messages'] .donor-bottom {
   html body:not(#_) #donorsPage#donorsPage:is([data-panel='messages'], [data-panel='volunteers']) :is(.donor-bottom, #donorResumeStatus) {
     display: none !important;
   }
+}
+
+
+/* One bottom dock: paused controls span a full row above the main actions. */
+html body #donorsPage .donor-bottom > #donorResumeStatus:not([hidden]) {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+}
+@media (max-width: 899px) {
+  html body:not(#_) #donorsPage#donorsPage .donor-bottom:has(> #donorResumeStatus:not([hidden])) {
+    grid-template-rows: auto 52px !important;
+    row-gap: 6px !important;
+  }
+  html body:not(#_) #donorsPage#donorsPage .donor-bottom > #donorResumeStatus:not([hidden]) {
+    grid-area: 1 / 1 / 2 / -1 !important;
+    align-self: start !important;
+    margin: 0 !important;
+    max-height: min(120px, 25dvh) !important;
+  }
+  html body:not(#_) #donorsPage#donorsPage .donor-bottom:has(> #donorResumeStatus:not([hidden])) > :is(#donorMainBottom, #donorToggle, #donorSendImportant) {
+    grid-row: 2 !important;
+  }
+  html body:not(#_) #donorsPage#donorsPage .donor-bottom > #donorResumeStatus.rs-folded:not([hidden]) {
+    display: flex !important;
+    min-height: 36px !important;
+    max-height: 44px !important;
+    justify-content: flex-end !important;
+  }
+  html body:not(#_) #donorsPage#donorsPage .donor-bottom > #donorResumeStatus .donor-resume-actions {
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+  }
+  html body:not(#_) #donorsPage#donorsPage .donor-bottom > #donorResumeStatus .donor-resume-actions button {
+    min-width: 0 !important;
+    min-height: 40px !important;
+    height: auto !important;
+    padding: 6px 8px !important;
+    line-height: 1.2 !important;
+    overflow-wrap: normal !important;
+  }
+}
+
+/* Short windows and phone landscape still need room to read the donor list. */
+@media (max-width: 899px) and (max-height: 570px) {
+  html body:not(#_) #donorsPage#donorsPage:not([data-panel='messages']):not([data-panel='volunteers']) .donor-shell {
+    gap: 4px !important;
+    padding-top: max(5px, env(safe-area-inset-top)) !important;
+    padding-bottom: max(5px, env(safe-area-inset-bottom)) !important;
+    overflow-y: auto !important;
+  }
+  html body:not(#_) #donorsPage#donorsPage .donor-head {
+    min-height: 40px !important;
+  }
+  html body:not(#_) #donorsPage#donorsPage .donor-search {
+    min-height: 40px !important;
+    height: 40px !important;
+  }
+  html body:not(#_) #donorsPage#donorsPage .donor-tabs button {
+    min-height: 40px !important;
+    height: 40px !important;
+    padding-block: 2px !important;
+  }
+  html body:not(#_) #donorsPage#donorsPage .donor-table-wrap {
+    margin-top: 0 !important;
+    min-height: 80px !important;
+  }
+  html body:not(#_) #donorsPage#donorsPage .donor-table-wrap > #donorExpand {
+    display: none !important;
+  }
+  html body:not(#_) #donorsPage#donorsPage .donor-bottom {
+    position: sticky !important;
+    bottom: 0;
+    z-index: 20;
+    background: var(--bg);
+    max-height: 45dvh;
+    overflow-y: auto;
+  }
+}
+
+
+/* A scheduled clock gets its own tool row rather than covering the group name. */
+html body:not(#_):not(#__):not(#___) :is(#messageFocus, .action-rail) .group-send .send-row:has(.gb-timer.is-pending) .row-tools {
+  position: static !important;
+  transform: none !important;
+  flex: 1 0 100% !important;
+  justify-content: flex-end;
+  padding-bottom: 4px;
+}
+html body:not(#_):not(#__):not(#___) :is(#messageFocus, .action-rail) .group-send .send-row:has(.gb-timer.is-pending) :is(#btnGivelife, #btnFree) .gb-name {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+  white-space: normal !important;
+}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools > .gb-timer.is-pending {
+  width: auto !important;
+  min-width: 72px !important;
+}
+@media (max-width: 720px) {
+  html body #foundationNotes[data-mode='writing'] .notes-toolbar button { font-size: 12px !important; }
 }

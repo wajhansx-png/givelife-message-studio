@@ -179,13 +179,20 @@ test('Donor row editor stays inside a narrow phone and the keyboard can be used'
 });
 
 
-test('Paused status stays outside the compact footer', async ({ page, request }) => {
+test('Paused controls occupy a full-width row inside the bottom dock', async ({ page, request }) => {
   await request.post('/donor-delivery', { headers: AUTH, data: { stop: true } });
   await openDonors(page, request, 390, 690);
   await expect(page.locator('#donorResumeStatus')).toBeVisible();
-  expect(await page.locator('.donor-bottom #donorResumeStatus').count()).toBe(0);
+  expect(await page.locator('.donor-bottom #donorResumeStatus').count()).toBe(1);
   const footer = await page.locator('.donor-bottom').boundingBox();
-  expect(footer.height).toBeLessThan(75);
+  expect(footer.height).toBeLessThan(180);
+  const status = await page.locator('#donorResumeStatus').boundingBox();
+  expect(status.width).toBeGreaterThan(footer.width - 4);
+  await page.locator('#donorResumeStatus .rs-fold').click();
+  await expect(page.locator('#donorResumeStatus')).toHaveClass(/rs-folded/);
+  expect((await page.locator('.donor-bottom').boundingBox()).height).toBeLessThan(115);
+  await page.locator('#donorResumeStatus .rs-pill').click();
+  await expect(page.locator('#donorResumeNowInline')).toBeVisible();
   const back = await page.locator('#donorMainBottom').boundingBox();
   const toggle = await page.locator('#donorToggle').boundingBox();
   const dm = await page.locator('#donorSendImportant').boundingBox();
@@ -194,3 +201,14 @@ test('Paused status stays outside the compact footer', async ({ page, request })
   await page.locator('.donor-more > summary').first().click();
   await expect(page.locator('.donor-menu-amount-input').first()).toBeVisible();
 });
+
+for (const [width, height] of [[320, 420], [740, 360]]) {
+  test(`Short viewport preserves donor reading space and bottom dock ${width}x${height}`, async ({ page, request }) => {
+    await request.post('/donor-delivery', { headers: AUTH, data: { stop: true } });
+    await openDonors(page, request, width, height);
+    const table = await page.locator('#donorTable').boundingBox();
+    expect(table.height).toBeGreaterThanOrEqual(60);
+    await assertInside(page, ['#donorMainBottom', '#donorToggle', '#donorSendImportant'], width, height);
+    await page.screenshot({ path: `mobile-screenshots/short-dock-${width}.png` });
+  });
+}

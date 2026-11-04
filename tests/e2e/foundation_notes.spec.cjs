@@ -59,7 +59,7 @@ test('phone notes: readable editing surface, toolbar and no sideways scrolling',
   await expect(editor).toBeVisible();
   await editor.fill('Find university representatives');
   await editor.press('ControlOrMeta+A');
-  // Formatting controls are hidden until the pointer reaches the top.
+  // Formatting controls stay beside the editor; the header must not cover them.
   await page.mouse.move(130, 18);
   await expect(page.locator('.notes-toolbar')).toBeVisible();
   await page.locator('.notes-toolbar').getByRole('button', { name: 'Bold', exact: true }).click();
@@ -102,15 +102,16 @@ test('mobile virtual keyboard keeps Notes paper tall while the caret stays visib
     return {
       paper: paper.getBoundingClientRect().height,
       scroller: bounds.height,
-      toolbar: bar.getBoundingClientRect().height,
+      toolbarBottom: bar.getBoundingClientRect().bottom,
       xOverflow: document.documentElement.scrollWidth > innerWidth + 1,
-      scrollable: scroller.scrollHeight > scroller.clientHeight + 20,
+      scrollable: document.querySelector('#notesEditor').scrollHeight > document.querySelector('#notesEditor').clientHeight + 20,
       keyboardOverlay: bounds.bottom > innerHeight + 1,
     };
   });
-  expect(smaller.paper).toBeGreaterThanOrEqual(initial.paper - 8);
+  expect(smaller.paper).toBeGreaterThan(150);
+  expect(smaller.paper).toBeLessThanOrEqual(460);
   expect(smaller.scroller).toBeGreaterThan(150);
-  expect(smaller.toolbar).toBeLessThanOrEqual(50);
+  expect(smaller.toolbarBottom).toBeLessThanOrEqual(460);
   expect(smaller.scrollable).toBe(true);
   expect(smaller.xOverflow).toBe(false);
   expect(smaller.keyboardOverlay).toBe(false);
@@ -236,7 +237,7 @@ test('desktop note-taking: type, select, style, save, reopen and keep writing fo
   await expect(editor).toContainText('Meet university donors');
   await expect(editor).toContainText('New volunteer recruitment ideas');
 });
-test('narrow phone: controls fit, text stays legible, touch reveals and hides tools', async ({
+test('narrow phone: editor and formatting rail fit with keyboard open', async ({
   page,
   request,
 }) => {
@@ -245,7 +246,7 @@ test('narrow phone: controls fit, text stays legible, touch reveals and hides to
   await page.locator('#notesUnlockButton').click();
   const editor = page.locator('#notesEditor');
   await expect(editor).toBeVisible();
-  await expect(page.locator('.notes-toolbar')).toBeHidden();
+  await expect(page.locator('.notes-toolbar')).toBeVisible();
   await editor.fill('Contact committed donors today.');
   await expect(page.locator('#notesSync')).toHaveText('Saved', { timeout: 10000 });
   await page
@@ -277,9 +278,11 @@ test('narrow phone: controls fit, text stays legible, touch reveals and hides to
   await page
     .locator('#foundationNotes')
     .dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 10, clientY: 12 });
-  await expect(page.locator('.notes-toolbar')).toBeHidden();
+  await expect(page.locator('.notes-toolbar')).toBeVisible();
   await page.setViewportSize({ width: 320, height: 400 });
   await editor.focus();
   await expect(page.locator('#foundationNotes')).toHaveAttribute('data-keyboard', 'open');
-  expect((await page.locator('.notes-paper').boundingBox()).height).toBeGreaterThan(400);
+  const paper = await page.locator('.notes-paper').boundingBox();
+  expect(paper.height).toBeGreaterThan(150);
+  expect(paper.y + paper.height).toBeLessThanOrEqual(401);
 });

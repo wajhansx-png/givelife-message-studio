@@ -79,12 +79,17 @@ for (const [width, height, theme] of [
     await openDonorMessages(page);
     await expect(page.locator('#donorMessages')).toBeVisible();
     await shot(page, `${width}-${theme}-messages`);
-    if (width >= 390)
-      await expect
-        .poll(() =>
-          page.locator('.bank-preview').evaluate((el) => el.scrollHeight <= el.clientHeight + 2),
-        )
-        .toBe(true);
+    // Long captions scroll inside their reading surface instead of shrinking
+    // the text or pushing the navigation off the screen.
+    const reading = await page.locator('.bank-preview').evaluate((el) => ({
+      fitsWidth: el.scrollWidth <= el.clientWidth + 2,
+      needsScroll: el.scrollHeight > el.clientHeight + 2,
+      overflow: getComputedStyle(el).overflowY,
+      fontSize: parseFloat(getComputedStyle(el).fontSize),
+    }));
+    expect(reading.fitsWidth).toBe(true);
+    expect(reading.fontSize).toBeGreaterThanOrEqual(14);
+    if (reading.needsScroll) expect(['auto', 'scroll']).toContain(reading.overflow);
     await page.getByRole('button', { name: 'Back to donors', exact: true }).click();
     await page.locator('#donorMainBottom').click();
     await showDm(page);

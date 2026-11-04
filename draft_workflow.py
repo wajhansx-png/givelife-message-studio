@@ -27,7 +27,7 @@ def repeat_target(task, text):
 _BALANCE_VALUE = r"(?:Rs\.?\s*)?(?P<sum>\d[\d,]*(?:\.\d+)?)(?:\s*(?P<scale>k|thousand|hazar|hazaar|lakh|lac))?"
 _BALANCE_AFTER = re.compile(
     r"(?i)(?<![A-Za-z0-9])" + _BALANCE_VALUE
-    + r"(?P<tail>\s+(?:(?:still|urgently|only|more)\s+){0,3}(?:left|needed|required|remaining|to\s+raise|to\s+go)\b)"
+    + r"(?P<tail>\s+(?:(?:still|urgently|only|more)\s+){0,3}(?:left|needed|required|remaining|to\s+raise|to\s+go))(?=$|[^A-Za-z0-9])"
 )
 _BALANCE_BEFORE = re.compile(
     r"(?i)(?P<head>\b(?:amount\s+left|remaining\s+amount|remaining|balance|still\s+need|need\s+to\s+raise)"

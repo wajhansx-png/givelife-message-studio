@@ -107,6 +107,27 @@ class FocusBank:
             self.start(k)
         return self.get(kind)
 
+    def owner_style(self, exclude="", limit=3):
+        """The owner's own recent messages, newest first, as style examples for new versions."""
+        with self.lock:
+            data = self._load()
+        out, seen = [], {wording_key(exclude)} if exclude else set()
+        rows = [data.get(k) or {} for k in ("group", "dm")]
+        texts = [r.get("source", "") for r in rows] + [
+            t for r in rows for t in reversed(r.get("history", []))
+        ]
+        for text in texts:
+            if not isinstance(text, str) or not text.strip():
+                continue
+            key = wording_key(text)
+            others = out + ([exclude] if exclude else [])
+            if key not in seen and not any(text.endswith(o) or o.endswith(text) for o in others):
+                out.append(text)
+            seen.add(key)
+            if len(out) >= limit:
+                break
+        return out
+
     def start(self, kind):
         row = self.get(kind)
         with self.app.LOCK, self.lock:

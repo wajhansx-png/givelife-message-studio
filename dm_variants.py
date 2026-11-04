@@ -17,13 +17,14 @@ VERSION = "dm-variants-2026-11-02-deep-rewrite"
 # Allow sentence-level rewrites while keeping each message reasonably compact.
 LENGTH_TOLERANCE = 0.28
 
-SYSTEM = """You are a careful fundraising copy editor for GiveLife Foundation.
-You rewrite one WhatsApp direct message into new versions with the same concept,
-facts and formatting. Return only the JSON array the user asks for. Never add
-commentary, markdown fences, headings or a delivery claim.
-Write English lines in very easy English and Urdu lines in simple, natural Urdu (Urdu script).
-Vary the ENTIRE editable story, not just one hook.
-Do not invent medical details, fundraising deadlines or verified outcomes."""
+SYSTEM = """You are the strongest direct-response fundraising copywriter in the world, writing
+WhatsApp appeals for GiveLife Foundation. Your versions make a reader stop scrolling, feel the
+need in their chest, and send money within a minute. You get that power from the TRUE facts in
+the owner's message and from human psychology, never from invented facts.
+Return only the JSON array the user asks for. Never add commentary, markdown fences, headings
+or a delivery claim. English lines use very easy, punchy English; Urdu lines use simple,
+moving Urdu in Urdu script. Rewrite the ENTIRE message, not just one hook.
+Never invent medical details, deadlines, outcomes, names, numbers or promises."""
 
 
 def clean_source(source):
@@ -185,6 +186,8 @@ def _json_list(raw):
 
 # Set by the server: real past wordings that brought donations (learning.proven_texts).
 PROVEN = lambda: []
+# Set by the server: the owner's own recent saved messages (FocusBank.owner_style).
+OWNER_STYLE = lambda: []
 
 
 def _prompt(source, count, avoid):
@@ -212,6 +215,17 @@ def _prompt(source, count, avoid):
             " structure, opening style, urgency and tone only. Never copy their facts, names,"
             " amounts, times or deadlines; every fact must come from the SOURCE:\n"
             + "\n---\n".join(p[:900] for p in proven)
+        )
+    try:
+        own = [str(t) for t in (OWNER_STYLE() or []) if str(t).strip() != source.strip()][:3]
+    except Exception:
+        own = []
+    if own:
+        avoid_text += (
+            "\n\nOWNER'S OWN MESSAGES (written by the owner for earlier appeals). Learn their voice,"
+            " intensity, hooks and rhythm only. Never copy their facts, names, amounts, times or"
+            " deadlines; every fact must come from the SOURCE:\n"
+            + "\n---\n".join(t[:900] for t in own)
         )
     low, high = length_range(source)
     size = len(source)
@@ -250,20 +264,27 @@ NON-NEGOTIABLE:
   A fact in the first line (for example "22 hours until the Janazah") stays in the first
   line of every version, reworded. Keep each line within about 15% of its source line's
   length. Do not rearrange sections or move facts between lines.
-- PSYCHOLOGY (use the true facts only, a different mix in each version): one named child
-  or person if the source names one; the real time left from the source as the urgency;
-  loss aversion ("what happens if this doesn't reach in time"); a tiny, concrete ask
-  ("just Rs 500"); social proof and scarcity ("only 5 people needed"); a direct
-  yes-question ("Can you send right now?"); the reward of sadqa and dua. The first line
-  must stop the scroll in under two seconds.
-- Make every version emotionally gripping and urgent using ONLY the true facts in the
-  source (the patient's situation exactly as written, the amount still needed, how few
-  people it takes). Start with a scroll-stopping hook: a direct question to the reader, a
-  stark small-amount-versus-the-need contrast, or a vivid detail from the source. Use a
-  different emotional angle in each version (the family's pain, the small amount, "it
-  could be someone you love", gratitude, sharing helps). Do not assume the patient's age,
-  gender or relationship: say only what the source says. Urgency means "needed now because
-  of the amount left", never an invented deadline.
+- PSYCHOLOGY. Every line must earn its place; use a DIFFERENT mix in each version, built only
+  from facts in the source:
+  * Hook (line 1): a pattern interrupt the brain cannot ignore in under two seconds: the real
+    time left, a stark contrast (a whole family's need vs one small gift), or a direct question.
+  * Identifiable victim: name the person the source names and say their exact situation as
+    written. One person moves people more than numbers. Do not assume age, gender or
+    relationship beyond what the source says.
+  * Vivid, concrete detail: turn the source's facts into a picture the reader can see.
+  * Real urgency and loss aversion: what is lost if help does not arrive in the time the
+    source gives. Only the source's own times; if it gives none, urgency is the amount still
+    needed right now.
+  * Make it small and doable: the smallest real ask from the source, and how few people it takes.
+  * Responsibility: break the "someone else will help" bystander effect; "you" are the one.
+  * Social proof and momentum: others are already helping, join them (only if the source
+    implies it).
+  * Reward: sadqa, dua and the reader's own akhirah, in warm words.
+  * Close with an easy yes: one clear action now.
+  Strong, never false: no invented guilt trips, threats, diagnoses, deadlines or outcomes.
+- LEARN FROM THE OWNER: the SOURCE and any OWNER'S OWN MESSAGES below are the owner's voice.
+  Match their intensity, line rhythm, emoji energy, hooks and directness; do not soften them.
+  Never lower the urgency the owner wrote.
 - Return ONLY a JSON array of {count} strings. No commentary, no markdown fences.
 
 SOURCE:

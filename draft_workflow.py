@@ -22,10 +22,60 @@ def repeat_target(task, text):
     return task["target"]
 
 
+# Update only numbers labelled as the balance. Never change a donation unit
+# (for example Rs. 2,000 per donor) when the balance itself is Rs. 2,000.
+_BALANCE_VALUE = r"(?:Rs\.?\s*)?(?P<sum>\d[\d,]*(?:\.\d+)?)(?:\s*(?P<scale>k|thousand|hazar|hazaar|lakh|lac))?"
+_BALANCE_AFTER = re.compile(
+    r"(?i)(?<![A-Za-z0-9])" + _BALANCE_VALUE
+    + r"(?P<tail>\s+(?:(?:still|urgently|only|more)\s+){0,3}(?:left|needed|required|remaining|to\s+raise|to\s+go)\b)"
+)
+_BALANCE_BEFORE = re.compile(
+    r"(?i)(?P<head>\b(?:amount\s+left|remaining\s+amount|remaining|balance|still\s+need|need\s+to\s+raise)"
+    r"\s*(?:is|of|:|=)?\s*(?:Rs\.?\s*)?)"
+    + r"(?P<sum>\d[\d,]*(?:\.\d+)?)(?:\s*(?P<scale>k|thousand|hazar|hazaar|lakh|lac))?\b"
+)
+_BALANCE_ONLY = re.compile(
+    r"(?i)(?P<head>\bonly\s+Rs\.?\s*)(?P<sum>\d[\d,]*(?:\.\d+)?)(?:\s*(?P<scale>k|thousand|hazar|hazaar|lakh|lac))?\b"
+)
+
+
+def remaining_amount(text):
+    """Read an explicitly labelled remaining balance, never a giving option."""
+    for pattern in (_BALANCE_AFTER, _BALANCE_BEFORE, _BALANCE_ONLY):
+        match = pattern.search(str(text or ""))
+        if not match:
+            continue
+        amount = float(match["sum"].replace(",", ""))
+        unit = (match["scale"] or "").lower()
+        multiplier = 1000 if unit in ("k", "thousand", "hazar", "hazaar") else 100000 if unit in ("lakh", "lac") else 1
+        value = amount * multiplier
+        if value.is_integer() and 0 <= value <= 10000000:
+            return int(value)
+    return None
+
+
 def update_amount(text, old, left):
-    text = re.sub(
-        r"(?<!\d)(?:" + re.escape(f"{old:,}") + "|" + str(old) + r")(?!\d)", f"{left:,}", text
-    )
+    """Refresh the balance and donor counts; keep case facts and payment lines."""
+    text = str(text or "")
+    left = int(left)
+
+    def amount(m):
+        if "head" in m.groupdict():
+            return m["head"] + f"{left:,}"
+        prefix = m[0][:m.start("sum") - m.start()]
+        return prefix + f"{left:,}" + m["tail"]
+
+    for pattern in (_BALANCE_AFTER, _BALANCE_BEFORE, _BALANCE_ONLY):
+        text = pattern.sub(amount, text)
+
+    # For legacy captions without 'left/needed', update only the old explicit
+    # rupee figure, and never when it could equal a Rs. 1,000/2,000 giving unit.
+    if isinstance(old, int) and old > 2000:
+        legacy = re.compile(
+            r"(?i)(?<!\w)(?P<head>Rs\.?\s*)(?P<sum>" + re.escape(f"{old:,}")
+            + r"|" + str(old) + r")(?![\d,])"
+        )
+        text = legacy.sub(lambda m: m["head"] + f"{left:,}", text)
 
     def option(m):
         return (

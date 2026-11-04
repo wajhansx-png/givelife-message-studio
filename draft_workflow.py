@@ -32,10 +32,10 @@ _BALANCE_AFTER = re.compile(
 _BALANCE_BEFORE = re.compile(
     r"(?i)(?P<head>\b(?:amount\s+left|remaining\s+amount|remaining|balance|still\s+need|need\s+to\s+raise)"
     r"\s*(?:is|of|:|=)?\s*(?:Rs\.?\s*)?)"
-    + r"(?P<sum>\d[\d,]*(?:\.\d+)?)(?:\s*(?P<scale>k|thousand|hazar|hazaar|lakh|lac))?\b"
+    + r"(?P<sum>\d[\d,]*(?:\.\d+)?)(?:\s*(?P<scale>k|thousand|hazar|hazaar|lakh|lac))?(?![A-Za-z0-9])"
 )
 _BALANCE_ONLY = re.compile(
-    r"(?i)(?P<head>\bonly\s+Rs\.?\s*)(?P<sum>\d[\d,]*(?:\.\d+)?)(?:\s*(?P<scale>k|thousand|hazar|hazaar|lakh|lac))?\b"
+    r"(?i)(?P<head>\bonly\s+Rs\.?\s*)(?P<sum>\d[\d,]*(?:\.\d+)?)(?:\s*(?P<scale>k|thousand|hazar|hazaar|lakh|lac))?(?![A-Za-z0-9])"
 )
 
 

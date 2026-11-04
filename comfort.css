@@ -3254,3 +3254,16 @@ html body #donorsPage[data-panel='messages'] .donor-bottom {
     width: 100% !important;
   }
 }
+
+/* The old icon-only Messages rule set font-size:0, but the mobile layout hides
+   that decorative icon. Restore a visible readable label on the real button. */
+@media (max-width: 560px) {
+  html body #donorsPage .donor-head #donorMessagesTab {
+    font-size: 12px !important;
+    line-height: 1.15 !important;
+    text-indent: 0 !important;
+    letter-spacing: normal !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+}

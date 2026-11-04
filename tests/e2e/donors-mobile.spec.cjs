@@ -75,6 +75,19 @@ for (const [width, height] of [
     await expect(page.locator('#donorTest')).toBeVisible();
     await expect(page.locator('.donor-poster-toggle')).toBeVisible();
     await page.locator('#donorNavMore > summary').click();
+    if (width <= 390) {
+      const rowLayout = await page.locator('.donor-row').first().evaluate((row) => {
+        const name = row.querySelector('.donor-name').getBoundingClientRect();
+        const dm = row.querySelector('.donor-dm').getBoundingClientRect();
+        const amount = row.querySelector('.donor-amount').getBoundingClientRect();
+        return { nameWidth: name.width, nameTop: name.top, dmTop: dm.top,
+          amountTop: amount.top, amountWidth: amount.width };
+      });
+      expect(rowLayout.nameWidth, width + 'px: donor name must have reading space').toBeGreaterThan(85);
+      expect(rowLayout.dmTop, width + 'px: donor actions belong on second line').toBeGreaterThan(rowLayout.nameTop + 18);
+      expect(rowLayout.amountWidth, width + 'px: editable amount stays visible').toBeGreaterThan(35);
+      expect(rowLayout.amountTop, width + 'px: amount aligns with DM actions').toBeGreaterThan(rowLayout.nameTop + 18);
+    }
     expect(await page.locator('#donorTable').evaluate(
       (el) => el.scrollWidth <= el.clientWidth + 2,
     )).toBe(true);
@@ -100,6 +113,12 @@ for (const [width, height] of [
 
     await openDonorMessages(page);
     await expect(page.locator('.bank-detail')).toBeVisible();
+    if (width === 320) {
+      const next = page.locator('#donorMessages [data-bank-nav=next]').first();
+      const box = await next.boundingBox();
+      expect(box, 'Next message must be rendered').not.toBeNull();
+      expect(box.y + box.height, 'Next message must be reachable on a short phone').toBeLessThanOrEqual(height + 2);
+    }
     expect(await page.locator('.bank-detail').evaluate(
       (el) => el.getBoundingClientRect().width,
     )).toBeGreaterThan(width - 35);

@@ -102,8 +102,9 @@ def transform_banks(app, fn):
             for entry in bank.get(field, []):
                 if isinstance(entry, dict) and isinstance(entry.get("text"), str):
                     entry["text"] = fn(entry["text"])
-        if isinstance(bank.get("origin"), str):
-            bank["origin"] = fn(bank["origin"])
+        for field in ("origin", "base"):
+            if isinstance(bank.get(field), str):
+                bank[field] = fn(bank[field])
         generation = bank.get("generation")
         if isinstance(generation, dict) and generation.get("state") == "Generating":
             generation.update(state="Superseded", error="The balance changed. Regenerate with the new amount.")

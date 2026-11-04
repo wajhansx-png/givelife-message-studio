@@ -2082,15 +2082,12 @@ html body:not(#_):not(#__) .group-send .send-row:has(.gb-timer.is-pending) .gb-n
 
 /* One button colour across the message and donor screens (the Donors DM gradient); only Back keeps its own colour. */
 html body:not(#_):not(#__):not(#___) :is(
-  #messageFocus .focus-rail button:not(.back-action):not(#focusRailBack),
-  #messageFocus .focus-actions button:not(.back-action),
   #donorsPage .bank-actions button:not(.back-action):not(.bank-back-bottom),
   #donorsPage .bank-pagination button:not(.back-action):not(.bank-back-bottom),
   #donorsPage .donor-head :is(#donorMessagesTab,#donorAdd,#donorBulk),
   #donorsPage .donor-bottom :is(#donorPace,#donorTest,#donorToggle,#donorSendImportant,#donorSendAll)
 ){background:linear-gradient(135deg,#2563eb,#7c3aed)!important;border:0!important;color:#fff!important;box-shadow:0 6px 16px -10px #7c3aedaa!important}
 html body:not(#_):not(#__):not(#___) :is(
-  #messageFocus .focus-rail button:not(.back-action):not(#focusRailBack),
   #donorsPage .bank-actions button:not(.back-action):not(.bank-back-bottom),
   #donorsPage .donor-head :is(#donorMessagesTab,#donorAdd,#donorBulk),
   #donorsPage .donor-bottom :is(#donorPace,#donorTest,#donorToggle,#donorSendImportant,#donorSendAll)
@@ -2106,3 +2103,10 @@ html body:not(#_):not(#__) .group-send .send-row{container-type:inline-size}
 @media (max-width: 899px){html body:not(#_):not(#__) .donor-page .donor-row .donor-top-chip{min-height:34px!important}}
 html body:not(#_) #set .row a.tool{display:inline-flex!important;align-items:center;justify-content:center}
 html body:not(#_):not(#__):not(#___) #donorsPage #donorNavMore>summary{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;border:0!important;color:#fff!important}
+
+/* Group message screen: Test sits in the top row, Edit · Copy · Test · Next as four equal buttons. */
+html body:not(#_):not(#__) #messageFocus #focusTest{background:linear-gradient(135deg,#7c3aed,#6d28d9)!important;color:#fff!important;border-color:transparent!important;font-weight:700}
+@media (max-width: 899px){
+ html body:not(#_):not(#__) #messageFocus .focus-rail>:is(#focusEdit,#focusCopy,#focusTest,#focusNext){flex:1 1 calc(25% - 6px)!important;min-width:0!important}
+ html body:not(#_):not(#__) #messageFocus:has(#focusText:not([hidden])) #focusTest{display:none!important}
+}

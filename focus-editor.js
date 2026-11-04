@@ -44,6 +44,11 @@
   manualButton.id = 'focusManual';
   manualButton.textContent = 'Manual messages';
   screen.querySelector('.focus-rail').append(manualButton);
+  const testButton = document.createElement('button');
+  testButton.id = 'focusTest';
+  testButton.textContent = 'Test';
+  testButton.title = 'Send this message to the Test group';
+  screen.querySelector('.focus-rail').insertBefore(testButton, $('focusNext'));
   const regen = document.createElement('button');
   regen.id = 'focusRegenerate';
   regen.textContent = 'Regenerate';
@@ -353,6 +358,22 @@
       );
     } catch (e) {
       status(e.message);
+    }
+  };
+  $('focusTest').onclick = async () => {
+    if (actionBusy) return;
+    actionBusy = true;
+    $('focusTest').disabled = true;
+    try {
+      if (editing) edit(false);
+      await save();
+      $('group').value = row?.source || $('focusText').value;
+      await window.sendTest('group');
+    } catch (error) {
+      status(error.message);
+    } finally {
+      actionBusy = false;
+      $('focusTest').disabled = false;
     }
   };
   $('focusPoster').onclick = () => {

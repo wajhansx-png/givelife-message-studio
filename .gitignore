@@ -9,6 +9,7 @@ seed/
 localdata/
 node_modules/
 test-results/
+mobile-screenshots/
 playwright-report/
 .test-data/
 

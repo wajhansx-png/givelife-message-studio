@@ -1,19 +1,32 @@
-name: Donors mobile screenshot QA
+name: Responsive element and mobile screenshot QA
 on:
   pull_request:
     branches: [main]
     paths:
+      - '*.css'
+      - '*.js'
+      - 'index.html'
+      - 'tests/e2e/element-audit.cjs'
+      - 'tests/e2e/responsive-elements.spec.cjs'
       - 'studio.css'
       - 'donors.css'
       - 'donors.js'
       - 'tests/e2e/donors-mobile.spec.cjs'
+      - '.github/workflows/donors-mobile-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - '*.css'
+      - '*.js'
+      - 'index.html'
+      - 'tests/e2e/*'
       - '.github/workflows/donors-mobile-qa.yml'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   fake-donors-mobile:
-    name: Chromium mobile widths and screenshots (fake donor data)
+    name: Responsive surfaces and element geometry (fake transport)
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
@@ -34,11 +47,15 @@ jobs:
         run: corepack pnpm exec playwright install --with-deps chromium
       - name: Inspect real Donors DOM at phone widths (never send)
         run: corepack pnpm exec playwright test tests/e2e/donors-mobile.spec.cjs --reporter=list
+      - name: Audit every rendered element in the existing workspaces
+        env:
+          ELEMENT_AUDIT_SMOKE: '0'
+        run: corepack pnpm exec playwright test tests/e2e/responsive-elements.spec.cjs --reporter=list
       - name: Keep screenshots and failure traces
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: donors-mobile-visual-qa
+          name: responsive-elements-and-mobile-qa
           path: |
             mobile-screenshots/
             test-results/

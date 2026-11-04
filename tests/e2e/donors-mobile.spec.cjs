@@ -212,3 +212,41 @@ for (const [width, height] of [[320, 420], [740, 360]]) {
     await page.screenshot({ path: `mobile-screenshots/short-dock-${width}.png` });
   });
 }
+
+for (const width of [320, 360, 390, 430]) {
+  test(`Long names and paused dock keep usable touch targets at ${width}px`, async ({
+    page,
+    request,
+  }) => {
+    await request.post('/donor-delivery', { headers: AUTH, data: { stop: true } });
+    await page.route('**/donors?**', async (route) => {
+      const response = await route.fetch();
+      const data = await response.json();
+      data.items[0].name = 'Syed Muhammad Abdullah Khan';
+      data.counts.all = 189;
+      await route.fulfill({ response, json: data });
+    });
+    await openDonors(page, request, width, 740);
+    const row = page.locator('.donor-row').first();
+    for (const selector of ['.donor-star', '.donor-dm', '.donor-status', '.donor-more > summary']) {
+      const box = await row.locator(selector).boundingBox();
+      // Browser rectangles can differ from the 44px CSS size by a subpixel.
+      expect(box.width, selector + ' touch width').toBeGreaterThanOrEqual(43.99);
+      expect(box.height, selector + ' touch height').toBeGreaterThanOrEqual(43.99);
+    }
+    const name = await row.locator('.donor-name').boundingBox();
+    expect(name.width).toBeGreaterThanOrEqual(60);
+    expect(name.height).toBeLessThanOrEqual(36);
+    await expect(row.locator('.donor-name')).toContainText('Syed Muhammad Abdullah Khan');
+    const hide = await page.locator('#donorResumeStatus .rs-fold').boundingBox();
+    const resume = await page.locator('#donorResumeNowInline').boundingBox();
+    const clock = await page.locator('#donorResumeAtInline').boundingBox();
+    expect(hide.height).toBeGreaterThanOrEqual(43.99);
+    expect(resume.height).toBeGreaterThanOrEqual(43.99);
+    expect(hide.y + hide.height).toBeLessThanOrEqual(resume.y + 1);
+    expect(hide.y + hide.height).toBeLessThanOrEqual(clock.y + 1);
+    await row.locator('.donor-more > summary').click();
+    if (width <= 360) await expect(row.locator('.donor-menu-top')).toBeVisible();
+    await page.screenshot({ path: `mobile-screenshots/donor-touch-${width}.png` });
+  });
+}

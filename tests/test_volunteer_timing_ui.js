@@ -3,11 +3,7 @@ const { test } = require('node:test'),
   fs = require('node:fs'),
   vm = require('node:vm');
 const source = fs.readFileSync('donors.js', 'utf8');
-const line = (start) => {
-  const a = source.indexOf(start);
-  assert.notEqual(a, -1);
-  return source.slice(a, source.indexOf('\n', a));
-};
+const { extractFunction, extractAssignment } = require('./helpers/source.cjs');
 test('opening timing sends nothing; confirmation queues exactly the chosen delay and poster', async () => {
   const nodes = {
     volStartDelay: { value: '3600' },
@@ -46,13 +42,13 @@ test('opening timing sends nothing; confirmation queues exactly the chosen delay
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(line('function volunteerDelaySeconds('), ctx);
-  vm.runInContext(line('function openVolunteerTiming('), ctx);
+  vm.runInContext(extractFunction(source, 'volunteerDelaySeconds'), ctx);
+  vm.runInContext(extractFunction(source, 'openVolunteerTiming'), ctx);
   ctx.openVolunteerTiming('Please share this.', false);
   assert.equal(shown, 1);
   assert.equal(calls.length, 0);
   nodes.volStartDelay.value = '3600';
-  vm.runInContext(line("el('volTimingForm').onsubmit="), ctx);
+  vm.runInContext(extractAssignment(source, "el('volTimingForm').onsubmit"), ctx);
   const submit = () => nodes.volTimingForm.onsubmit({ preventDefault() {} });
   await Promise.all([submit(), submit()]);
   assert.equal(calls.length, 2, 'one save and one batch request, even after a double tap');
@@ -65,11 +61,9 @@ test('opening timing sends nothing; confirmation queues exactly the chosen delay
   assert.equal(ctx.volTimingPending, false);
 });
 test('volunteer timing accepts the requested presets and rejects malformed choices', () => {
-  const start = source.indexOf('function volunteerDelaySeconds(');
-  assert.notEqual(start, -1, 'timing choice must be validated before sending');
   const ctx = { Number, Error };
   vm.createContext(ctx);
-  vm.runInContext(source.slice(start, source.indexOf('\n', start)), ctx);
+  vm.runInContext(extractFunction(source, 'volunteerDelaySeconds'), ctx);
   for (const seconds of [0, 300, 600, 900, 1800, 3600, 7200])
     assert.equal(ctx.volunteerDelaySeconds(String(seconds)), seconds);
   for (const bad of ['', '5', '301', '-1', 'Infinity', 'abc'])

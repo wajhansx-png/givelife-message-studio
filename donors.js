@@ -301,7 +301,8 @@
     tools.append(b);
   }
   let vols = { items: [], message: '', delivery: null },
-    volPoll = 0;
+    volPoll = 0,
+    volDockObserver = null;
   let drawEpoch = 0;
   const DRAW_CHUNK = 40;
   let tab = 'all',
@@ -1660,7 +1661,10 @@
               saveAmount();
             };
             donatedBox.append(donatedInput);
-            menu.append(rename, normal, donatedBox, del);
+            const topInMenu = make('button', 'donor-menu-top', d.top_donor ? 'Remove from Top donors' : 'Add to Top donors');
+            topInMenu.type = 'button';
+            topInMenu.onclick = () => ident.querySelector('.donor-top-chip').click();
+            menu.append(rename, normal, donatedBox, topInMenu, del);
             more.append(menu);
           };
           more.ontoggle = () => {
@@ -2226,6 +2230,16 @@
     back.onclick = close;
     foot.append(pause, all, back);
     box.append(add, list, msg, prog, foot);
+    // Account for the real sticky footer when scrolling to a message field.
+    const syncVolDock = () => box.style.setProperty('--vol-dock-height', foot.offsetHeight + 'px');
+    if (typeof ResizeObserver !== 'undefined') {
+      if (!volDockObserver) volDockObserver = new ResizeObserver(entries => {
+        for (const entry of entries) box.style.setProperty('--vol-dock-height', entry.target.offsetHeight + 'px');
+      });
+      volDockObserver.disconnect();
+      volDockObserver.observe(foot);
+    }
+    syncVolDock();
     volProgress();
   }
   function selectDonorTab(next) {

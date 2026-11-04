@@ -5,6 +5,25 @@
 
   /* Accessibility: dialog headers/footers are not page landmarks; long previews must be keyboard-reachable. */
   let queued = 0;
+  // Native scrollIntoView must account for sticky modal headers and action bars.
+  const insetBars = new WeakSet();
+  const insetObserver = new ResizeObserver((entries) => {
+    for (const { target } of entries) {
+      const css = getComputedStyle(target);
+      if (!['sticky', 'fixed'].includes(css.position)) continue;
+      const dialog = target.closest('dialog');
+      let scroller = target.parentElement;
+      while (
+        scroller &&
+        scroller !== dialog &&
+        !['auto', 'scroll'].includes(getComputedStyle(scroller).overflowY)
+      )
+        scroller = scroller.parentElement;
+      if (!scroller) continue;
+      const edge = css.bottom !== 'auto' ? 'bottom' : 'top';
+      scroller.style.setProperty('scroll-padding-' + edge, target.offsetHeight + 8 + 'px');
+    }
+  });
   function normalise() {
     queued = 0;
     document
@@ -12,6 +31,16 @@
         'dialog header:not([role]),dialog footer:not([role]),#messageFocus header:not([role]),#messageFocus footer:not([role])',
       )
       .forEach((e) => e.setAttribute('role', 'group'));
+    document
+      .querySelectorAll(
+        'dialog .batch-foot,dialog .donor-form-actions,dialog .dialog-actions,dialog>header,dialog>.head',
+      )
+      .forEach((bar) => {
+        if (!insetBars.has(bar)) {
+          insetBars.add(bar);
+          insetObserver.observe(bar);
+        }
+      });
     document.querySelectorAll('.bank-preview:not([tabindex])').forEach((e) => {
       e.tabIndex = 0;
       if (!e.hasAttribute('aria-label')) e.setAttribute('aria-label', 'Message preview');

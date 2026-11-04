@@ -19,13 +19,13 @@ for (const width of [1440, 390])
     await page.locator('#focusText').evaluate((t) => {
       t.setSelectionRange(1, 7);
     });
-    await page.getByRole('button', { name: 'I Italic', exact: true }).click();
+    await page.getByRole('button', { name: 'Italic', exact: true }).click();
     await expect(page.locator('#focusText')).toHaveValue(text.replace('Please', '_Please_'));
     const after = await page.locator('.focus-paper').boundingBox();
     expect(after.width).toBe(before.width);
-    // Phones switch to a full-height scrolling text box while editing; desktop keeps the exact same surface.
+    // Phones size the editor to its text; desktop keeps the same fixed surface.
     if (width >= 900) expect(after.height).toBe(before.height);
-    else expect(after.height).toBeGreaterThanOrEqual(before.height);
+    else expect(after.height).toBeGreaterThanOrEqual(120);
     await page.locator('#focusEdit').click();
     await expect(page.locator('#focusState')).toContainText('Saved');
     await page.reload();

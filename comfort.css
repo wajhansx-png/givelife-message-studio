@@ -2124,3 +2124,13 @@ html body:not(#_):not(#__) .report-list .rp-v{font-size:22px;font-weight:800;lin
 html body:not(#_):not(#__) .report-list .rp-s{font-size:13px;line-height:1.35;color:#a3a8b4}
 html body:not(#_):not(#__) .report-list .rp-s:empty{display:none}
 html body:not(#_):not(#__) .report-card #reportClose{display:block;width:100%;margin-top:18px!important;min-height:48px;border-radius:14px!important;background:#1c1c22!important;border:1px solid #ffffff1a!important;color:#f2f3f5!important;font-size:15px;font-weight:700;backdrop-filter:none!important;box-shadow:none!important}
+/* Report, simpler: one left-aligned line per point (number · label · value) in a narrow centred block. */
+html body:not(#_):not(#__) .report-card{width:min(300px,calc(100vw - 48px))!important;text-align:left!important}
+html body:not(#_):not(#__) .report-card h2{text-align:left;margin-bottom:14px!important}
+html body:not(#_):not(#__) .report-list{gap:0}
+html body:not(#_):not(#__) .report-list li{flex-direction:row;align-items:center;gap:12px;padding:14px 0;border-radius:0;background:none;border:0;border-bottom:1px solid #ffffff12}
+html body:not(#_):not(#__) .report-list li:last-child{border-bottom:0}
+html body:not(#_):not(#__) .report-list .rp-n{margin:0;flex:none;width:24px;height:24px;font-size:12px}
+html body:not(#_):not(#__) .report-list .rp-t{flex:1;font-size:16px;font-weight:600;letter-spacing:0;text-transform:none;color:#a3a8b4}
+html body:not(#_):not(#__) .report-list .rp-v{font-size:17px;white-space:nowrap}
+html body:not(#_):not(#__) .report-list .rp-s{display:none!important}

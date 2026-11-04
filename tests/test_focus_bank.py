@@ -216,6 +216,30 @@ class FocusTests(unittest.TestCase):
         self.assertEqual(sent, [rewrite, source, rewrite, source])
         self.assertTrue(all("please read:" not in x for x in sent))
 
+    def test_owner_messages_teach_new_versions_their_voice(self):
+        import dm_variants
+
+        b = self.make()
+        with patch.object(b, "start"):
+            b.save("group", "🚨 First appeal.\n\nPlease don't think someone else will help.")
+            b.save("group", "🚨 Second appeal.\n\nOnly you can do this now.")
+            b.save("group", SRC)
+        style = b.owner_style(SRC)
+        self.assertEqual(style[0], "🚨 Second appeal.\n\nOnly you can do this now.")
+        self.assertIn("🚨 First appeal.\n\nPlease don't think someone else will help.", style)
+        self.assertTrue(all(SRC not in t for t in style))
+        saved = dm_variants.OWNER_STYLE
+        dm_variants.OWNER_STYLE = lambda: style
+        try:
+            prompt = dm_variants._prompt(SRC, 3, [])
+        finally:
+            dm_variants.OWNER_STYLE = saved
+        self.assertIn("OWNER'S OWN MESSAGES", prompt)
+        self.assertIn("Only you can do this now.", prompt)
+        self.assertIn("Never copy their facts", prompt)
+        self.assertIn("bystander", prompt)
+        self.assertIn("never from invented facts", dm_variants.SYSTEM)
+
     def test_old_failed_bank_restarts_once_after_generator_upgrade(self):
         b = self.make()
         source = self.drafts["group"]

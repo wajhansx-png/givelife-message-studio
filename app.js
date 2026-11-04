@@ -2683,16 +2683,21 @@ fetch('/left')
       showLeft();
     }
   });
-fetch('/poster')
-  .then((r) => (r.ok ? r.blob() : null))
-  .then((b) => {
-    if (b) {
-      $('poster').src = URL.createObjectURL(b);
-      $('poster').hidden = false;
-      renderSendMode();
-    }
-  })
-  .catch(() => {});
+function loadPoster() {
+  fetch('/poster', { cache: 'no-store' })
+    .then((r) => (r.ok ? r.blob() : null))
+    .then((b) => {
+      if (b) {
+        if ($('poster').src.startsWith('blob:')) URL.revokeObjectURL($('poster').src);
+        $('poster').src = URL.createObjectURL(b);
+        $('poster').hidden = false;
+        renderSendMode();
+      }
+    })
+    .catch(() => {});
+}
+loadPoster();
+window.addEventListener('poster-changed', loadPoster);
 pollAuto();
 setInterval(pollAuto, 5000);
 pollCamp();

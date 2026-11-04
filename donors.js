@@ -256,7 +256,7 @@
   const poster = make('dialog', 'poster-dialog');
   poster.id = 'posterDialog';
   poster.setAttribute('aria-label', 'Change DM poster');
-  poster.innerHTML = `<h2>DM poster</h2><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status"></p><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
+  poster.innerHTML = `<h2>Poster · groups and DMs</h2><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status"></p><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
   document.body.append(poster);
   const launch = make('button', 'primary donor-launch donor-launch-foot', 'Donors');
   launch.type = 'button';
@@ -268,8 +268,8 @@
   if (settings) {
     const row = make('div', 'row');
     const text = make('div', 't');
-    text.append(make('b', '', 'DM poster'));
-    const b = make('button', 'tool', 'Change DM poster');
+    text.append(make('b', '', 'Poster'));
+    const b = make('button', 'tool', 'Change poster');
     b.type = 'button';
     b.onclick = openPoster;
     row.append(text, b);
@@ -277,7 +277,7 @@
   }
   const tools = document.querySelector('.overflow-tools>div');
   if (tools) {
-    const b = make('button', 'tool', 'Change DM poster');
+    const b = make('button', 'tool', 'Change poster');
     b.type = 'button';
     b.onclick = openPoster;
     tools.append(b);
@@ -2474,7 +2474,8 @@
     el('posterSave').disabled = true;
     try {
       await api('/upload-image', { use: 'dm_poster', data: posterData });
-      el('posterNote').textContent = 'Poster saved. Captions unchanged.';
+      el('posterNote').textContent = 'Poster saved for groups and DMs.';
+      window.dispatchEvent(new Event('poster-changed'));
       posterData = null;
       el('posterClose').textContent = 'Done';
     } catch (e) {

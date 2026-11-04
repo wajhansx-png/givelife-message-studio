@@ -256,7 +256,7 @@ for (const width of [1440, 390])
   test(`secondary screens retain accessible exits at ${width}`, async ({ page, request }) => {
     await open(page, request, width, 844);
     await openSettings(page);
-    await page.getByRole('button', { name: 'Change DM poster', exact: true }).click();
+    await page.getByRole('button', { name: 'Change poster', exact: true }).click();
     await inside(page, page.locator('#posterDialog'));
     await shot(page, `${width}-poster`);
     await page.locator('#posterClose').click();

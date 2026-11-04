@@ -2257,3 +2257,38 @@ html body #donorsPage.donor-expanded .donor-table-wrap{width:min(1100px,100%);ma
 html body #donorsPage.donor-expanded .donor-table-wrap>#donorTable{width:100%!important}
 html body #donorsPage:is([data-panel=messages],[data-panel=volunteers]) .donor-table-wrap>.donor-expand-btn{display:none!important}
 @media (max-width:700px){html body #donorsPage .donor-table-wrap>.donor-expand-btn{right:10px;top:8px}}
+/* Full screen: the columns themselves sit in the middle of the screen (header and rows stay aligned). */
+@media (min-width:701px){
+  html body #donorsPage.donor-expanded .donor-table .donor-row,html body #donorsPage.donor-expanded .donor-table .donor-columns{justify-content:center!important}
+  html body #donorsPage.donor-expanded .donor-table-wrap{width:min(1000px,calc(100% - 32px))!important}
+}
+html body #donorsPage.donor-expanded *{transition:none!important}
+/* Full screen: solid background (nothing shows through); the exit button gets its own strip above the list. */
+html body #donorsPage.donor-expanded,html body #donorsPage.donor-expanded .donor-shell{background:#0f1117!important}
+html body #donorsPage.donor-expanded::backdrop{background:#0f1117!important}
+html body #donorsPage.donor-expanded .donor-table-wrap{padding-top:46px!important}
+html body #donorsPage.donor-expanded .donor-table-wrap>.donor-expand-btn{top:6px!important;right:4px!important}
+
+/* ===== Message screen: message dead-centre, slim right columns (this screen only) ===== */
+@media (min-width:1220px){
+  html body #messageFocus .focus-workspace{display:grid!important;grid-template-columns:364px minmax(420px,680px) 120px 230px!important;column-gap:14px!important;justify-content:center!important}
+  html body #messageFocus .focus-workspace>.focus-paper{grid-column:2!important;width:100%!important;max-width:none!important}
+  html body #messageFocus .focus-workspace>.focus-rail{grid-column:3!important;width:120px!important}
+  html body #messageFocus .focus-workspace>.group-send{grid-column:4!important;width:230px!important;padding:14px 12px!important}
+  html body #messageFocus :is(#focusFormatted,#focusText){width:calc(100% - 28px)!important;max-width:600px!important}
+}
+/* Slim action buttons. */
+html body #messageFocus .focus-rail{gap:6px!important}
+html body #messageFocus .focus-rail button{min-height:36px!important;height:auto!important;padding:6px 8px!important;font-size:13px!important;border-radius:10px!important;line-height:1.15!important}
+html body #messageFocus .focus-rail>*:not(button){font-size:12px!important}
+/* Slim send panel. */
+html body #messageFocus .group-send h2,html body #messageFocus .group-send .send-title,html body #messageFocus .group-send>header{font-size:14px!important;margin-bottom:6px!important}
+html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll){min-height:44px!important;height:44px!important;padding:0 10px!important;font-size:13px!important}
+html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .gb-name{font-size:13px!important}
+html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .gb-name .last-sent{font-size:10.5px!important}
+html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .row-tools{top:6px!important;right:34px!important}
+html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .row-tools>button{width:30px!important;min-width:30px!important;height:30px!important;min-height:30px!important;font-size:13px!important}
+html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .gb-go{font-size:13px!important}
+html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .gb-name{white-space:nowrap!important}
+html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row:has(.row-tools) #btnFree .gb-name{padding-right:96px!important}
+html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row:has(.row-tools) #btnGivelife .gb-name{padding-right:62px!important}

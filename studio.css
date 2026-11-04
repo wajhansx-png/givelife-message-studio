@@ -8864,6 +8864,13 @@ html body #donorsPage .donor-table-wrap > #donorExpand {
   }
 }
 
+/* Show the actual Messages and Bulk actions instead of a redundant More button
+   on phones; the compact-nav script reparents the existing action elements. */
+@media (max-width: 560px) {
+  html body #donorsPage #donorNavMore[hidden] {
+    display: none !important;
+  }
+}
 /* The ordinary donor footer must never show behind Volunteers or Messages. */
 html body #donorsPage[data-panel='volunteers'] .donor-bottom,
 html body #donorsPage[data-panel='messages'] .donor-bottom {

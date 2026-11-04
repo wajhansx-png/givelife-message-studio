@@ -262,6 +262,8 @@ test('narrow phone: editor and formatting rail fit with keyboard open', async ({
     return {
       screen: [screen.left, screen.right],
       back: [back.left, back.right],
+      backTop: back.top,
+      lockBottom: lock.bottom,
       lock: [lock.left, lock.right],
       full: [full.left, full.right],
       toolbar: [bar.left, bar.right],
@@ -271,7 +273,8 @@ test('narrow phone: editor and formatting rail fit with keyboard open', async ({
   expect(bounds.back[0]).toBeGreaterThanOrEqual(0);
   expect(bounds.full[1]).toBeLessThanOrEqual(321);
   expect(bounds.lock[1]).toBeLessThanOrEqual(321);
-  expect(bounds.back[1]).toBeLessThan(bounds.lock[0]);
+  expect(bounds.back[0]).toBeGreaterThan(220);
+  expect(bounds.backTop).toBeGreaterThan(bounds.lockBottom);
   expect(bounds.lock[1]).toBeLessThan(bounds.full[0]);
   expect(bounds.toolbar[1]).toBeLessThanOrEqual(321);
   expect(bounds.overflow).toBe(false);

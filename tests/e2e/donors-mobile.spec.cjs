@@ -196,8 +196,8 @@ test('Paused controls occupy a full-width row inside the bottom dock', async ({ 
   const back = await page.locator('#donorMainBottom').boundingBox();
   const toggle = await page.locator('#donorToggle').boundingBox();
   const dm = await page.locator('#donorSendImportant').boundingBox();
-  expect(back.x).toBeLessThan(toggle.x);
   expect(toggle.x).toBeLessThan(dm.x);
+  expect(dm.x).toBeLessThan(back.x);
   await page.locator('.donor-more > summary').first().click();
   await expect(page.locator('.donor-menu-amount-input').first()).toBeVisible();
 });

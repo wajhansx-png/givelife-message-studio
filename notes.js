@@ -63,9 +63,23 @@
       </div>
       <footer class="notes-foot"><span id="notesHint">Your ideas are private · Saved to GiveLife</span><button type="button" id="notesRetry" hidden>Retry save</button></footer>
     </section>
+    <footer class="notes-back-dock" hidden></footer>
    </section>`;
   document.body.append(page);
   const el = (id) => document.getElementById(id);
+  // Keep the same Back control in the phone dock and desktop header.
+  const backHome = document.createComment('Desktop Notes Back position');
+  const notesBack = el('notesBack');
+  notesBack.before(backHome);
+  const backDock = page.querySelector('.notes-back-dock');
+  const phoneBack = matchMedia('(max-width: 899px)');
+  const placeBack = () => {
+    backDock.hidden = !phoneBack.matches;
+    if (phoneBack.matches) backDock.append(notesBack);
+    else backHome.after(notesBack);
+  };
+  placeBack();
+  phoneBack.addEventListener('change', placeBack);
   const editor = el('notesEditor'),
     sync = el('notesSync'),
     retry = el('notesRetry');
@@ -505,7 +519,10 @@
     const BLOCK = /^(P|DIV|H1|H2|H3|H4|UL|OL|LI|BLOCKQUOTE|PRE|HR|TABLE)$/;
     let run = null;
     for (const node of [...editor.childNodes]) {
-      const inline = node.nodeType === 3 ? node.textContent.length > 0 : node.nodeType === 1 && !BLOCK.test(node.tagName);
+      const inline =
+        node.nodeType === 3
+          ? node.textContent.length > 0
+          : node.nodeType === 1 && !BLOCK.test(node.tagName);
       if (inline) {
         if (!run) {
           run = document.createElement('p');
@@ -521,7 +538,8 @@
     }
     for (const p of [...editor.querySelectorAll(':scope > p')]) {
       const only = [...p.childNodes].filter((n) => !(n.nodeType === 3 && !n.textContent.trim()));
-      if (only.length === 1 && /^(UL|OL|H1|H2|H3)$/.test(only[0].tagName || '')) p.replaceWith(only[0]);
+      if (only.length === 1 && /^(UL|OL|H1|H2|H3)$/.test(only[0].tagName || ''))
+        p.replaceWith(only[0]);
     }
   }
   try {

@@ -615,3 +615,21 @@ form p {
     line-height: 1.2;
   }
 }
+
+@media (max-width: 899px) {
+  html {
+    scroll-padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  body {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  .top > a.back {
+    position: fixed;
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    z-index: 30;
+    min-width: 80px;
+    justify-content: center;
+    box-shadow: 0 4px 18px #0008;
+  }
+}

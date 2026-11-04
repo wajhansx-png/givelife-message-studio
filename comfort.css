@@ -2175,3 +2175,63 @@ html body:not(#_):not(#__) .report-list .rp-s{display:none!important}
  html body:not(#_):not(#__) .brandbar>#mainNavMore>summary{width:100%!important;box-sizing:border-box!important;justify-content:center!important}
 }
 @media (min-width: 900px){html body:not(#_):not(#__) .brandbar>.report-open{min-height:40px!important;height:40px!important}}
+
+/* ===== Donors status, final layout ===== */
+/* DMs paused: its own calm blue, compact (only as wide as it needs), one tidy row. */
+html body #donorResumeStatus:not([hidden]){width:fit-content!important;max-width:100%!important;margin:6px auto!important;display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important;padding:6px 8px 6px 14px!important;border-radius:14px!important;background:#172554!important;border:1px solid #3b82f6!important;border-left:1px solid #3b82f6!important;box-shadow:none!important;color:#dbeafe!important;box-sizing:border-box}
+html body #donorResumeStatus>span{flex:0 1 auto!important;padding:0!important;font-size:13px!important;font-weight:800;white-space:normal;color:#dbeafe!important}
+html body #donorResumeStatus>span::before{content:'⏸ '}
+html body #donorResumeStatus .donor-resume-actions{flex:0 0 auto!important;display:flex!important;gap:6px!important;margin:0!important;width:auto!important}
+html body #donorResumeStatus .donor-resume-actions button{flex:0 0 auto!important;min-height:34px!important;padding:0 12px!important;font-size:12.5px!important;border-radius:9px!important;white-space:nowrap!important}
+html body #donorResumeStatus .rs-fold{position:static!important;width:auto!important;height:34px!important;min-width:0!important;padding:0 10px!important;font-size:12px!important;font-weight:700;border-radius:9px!important;background:transparent!important;border:1px solid #3b82f666!important;color:#bfdbfe!important}
+html body #donorResumeStatus.rs-folded{background:transparent!important;border:0!important;padding:0!important}
+html body #donorResumeStatus.rs-folded .rs-pill{background:#172554!important;border:1px solid #3b82f6!important;color:#dbeafe!important}
+@media (max-width:700px){
+  html body #donorResumeStatus:not([hidden]):not(.rs-folded){width:100%!important;flex-wrap:wrap!important}
+  html body #donorResumeStatus>span{flex:1 1 100%!important;padding-right:70px!important}
+  html body #donorResumeStatus .rs-fold{position:absolute!important;top:6px;right:6px}
+  html body #donorResumeStatus .donor-resume-actions{flex:1 1 100%!important}
+  html body #donorResumeStatus .donor-resume-actions button{flex:1 1 0!important;white-space:normal!important}
+}
+/* Sending panel: title row with a clear Hide, plan chips 2 × 2, actions on their own row. */
+html body #donorsPage #donorProgress:not([hidden]){grid-template-columns:1fr auto!important;grid-template-areas:"status hide" "facts facts" "acts acts"!important;bottom:calc(var(--donor-foot,72px) + var(--donor-rs,0px) + 10px)!important;padding:12px!important;border-radius:16px!important;border:1px solid #34d39955!important}
+html body #donorProgress>span{grid-area:status!important;font-size:13px!important}
+html body #donorProgress>.dp-hide{grid-area:hide!important;position:static!important;width:auto!important;height:34px!important;min-width:0!important;padding:0 12px!important;font-size:12.5px!important;font-weight:800!important;border-radius:9px!important}
+html body #donorProgress>.dp-facts{grid-area:facts!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important}
+html body #donorProgress .dp-fact{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:1px!important;white-space:normal!important;border-radius:10px!important;padding:6px 10px!important;min-width:0}
+html body #donorProgress>button:not(.dp-hide){grid-row:3!important;grid-column:auto!important}
+html body #donorProgress:not([hidden])::after{content:'';grid-area:acts}
+html body #donorProgress>:is(#donorContinue,#donorEditBatch,#donorStop){min-height:36px!important;font-size:13px!important}
+html body #donorsPage #donorProgress>:is(#donorContinue,#donorEditBatch,#donorStop):not([hidden]){display:inline-flex!important;align-items:center;justify-content:center}
+html body #donorsPage .dp-show{bottom:calc(var(--donor-foot,72px) + var(--donor-rs,0px) + 10px)!important;background:#14532d!important}
+/* Bottom bar: no repeats. Gap lives in Send DMs, Test lives in Messages, Resume lives in the paused bar. */
+html body #donorsPage .donor-bottom :is(#donorPace,#donorTest){display:none!important}
+html body #donorsPage .donor-bottom #donorToggle[data-paused='true']{display:none!important}
+html body #donorsPage #donorProgress:not([hidden]){display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:8px!important}
+html body #donorsPage #donorProgress:not([hidden])::after{content:none!important}
+html body #donorsPage #donorProgress>span{order:1;flex:1 1 calc(100% - 110px)!important;min-width:0}
+html body #donorsPage #donorProgress>.dp-hide{order:2;flex:0 0 auto!important;align-self:flex-start}
+html body #donorsPage #donorProgress>.dp-facts{order:3;flex:1 1 100%!important}
+html body #donorsPage #donorProgress>button:not(.dp-hide){order:4;flex:1 1 0!important;grid-row:auto!important}
+/* While DMs are paused, the blue paused bar is the only status (no second panel repeating Restart/Resume). */
+html body #donorsPage:has(#donorResumeStatus:not([hidden])) :is(#donorProgress,.dp-show){display:none!important}
+@media (max-width:700px){
+  html body #donorResumeStatus .rs-fold{height:28px!important;min-height:28px!important;top:6px!important;padding:0 10px!important}
+  html body #donorResumeStatus>span{line-height:28px!important}
+}
+
+/* ===== Group message screen ===== */
+/* Whole workspace sits in the centre; the bubble is centred in its box; text stays left-aligned. */
+@media (min-width:901px){
+  html body #messageFocus .focus-workspace{justify-content:center!important}
+  html body #messageFocus .focus-paper{display:flex!important;justify-content:center!important}
+}
+html body #messageFocus :is(#focusFormatted,#focusText){margin-left:auto!important;margin-right:auto!important;max-width:600px!important;width:calc(100% - 32px)!important;text-align:left!important;font-size:15px!important;line-height:1.45!important;box-sizing:border-box}
+@media (max-width:700px){html body #messageFocus :is(#focusFormatted,#focusText){font-size:14.5px!important;width:100%!important}}
+/* Edit tools: plain words, no doubled letters. */
+html body #messageFocus .focus-rail button b,html body #messageFocus .focus-rail button i{font-size:inherit}
+/* Send rows: every button is full width; timer/dropdown icons sit inside the button on the right. */
+html body:not(#_):not(#__):not(#___) .group-send .send-row{display:flex!important;flex-wrap:wrap!important;grid-template-columns:none!important;position:relative!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll){flex:1 0 100%!important;width:100%!important;max-width:none!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools{position:absolute!important;right:42px!important;top:8px!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) .gb-name{padding-right:88px}

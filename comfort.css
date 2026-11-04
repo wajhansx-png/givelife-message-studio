@@ -2026,3 +2026,17 @@ html body:not(#_):not(#__) .group-send .send-row:has(.gb-timer.is-pending)[data-
 html body:not(#_):not(#__) .group-send .send-row:has(.gb-timer.is-pending)[data-tools='2'] .gb-name{margin-right:122px}
 html body:not(#_):not(#__) .group-send .send-row .row-tools>#btnFreePick{background:#ffffff26!important;border:0!important;color:#fff!important}
 html body:not(#_):not(#__) .group-send .send-row .row-tools>#btnFreePick:is(:hover,[aria-expanded='true']){background:#ffffff40!important}
+
+/* Smaller buttons with a one-colour blue gradient; 46px tall keeps them easy to hit with a thumb. */
+html body:not(#_):not(#__) .group-send .group-two{gap:8px!important}
+html body:not(#_):not(#__) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll){min-height:46px!important;height:46px;padding:0 12px!important;border-radius:12px!important;background:linear-gradient(135deg,#5b95f9 0%,#2f6fe8 55%,#2257cc 100%)!important;box-shadow:0 4px 12px -6px #2f6fe8aa,inset 0 1px 0 #ffffff26!important}
+html body:not(#_):not(#__) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll):hover{background:linear-gradient(135deg,#6aa0fa 0%,#3a78ee 55%,#2860d6 100%)!important}
+html body:not(#_):not(#__) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll):active{transform:scale(.98)}
+html body:not(#_):not(#__) .group-send .send-row .gb-name{font-size:14px!important}
+html body:not(#_):not(#__) .group-send .send-row .gb-name .last-sent{font-size:11px!important}
+html body:not(#_):not(#__) .group-send .send-row .gb-go{font-size:14px!important}
+html body:not(#_):not(#__) .group-send .send-row .row-tools{right:36px;top:7px;gap:5px}
+html body:not(#_):not(#__) .group-send .send-row .row-tools>button{width:32px!important;height:32px;min-height:32px!important;border-radius:9px!important;font-size:14px!important}
+html body:not(#_):not(#__) .group-send .send-row[data-tools='1'] .gb-name{margin-right:36px}
+html body:not(#_):not(#__) .group-send .send-row[data-tools='2'] .gb-name{margin-right:74px}
+html body:not(#_):not(#__) .group-send .grp-card .delay-pill{min-height:40px!important}

@@ -3195,3 +3195,62 @@ html body #donorsPage[data-panel='messages'] .donor-bottom {
     min-height: 40px !important;
   }
 }
+
+/* Compact the Messages action toolbar: six full-width buttons were pushing
+   Next past the bottom edge on 320px phones. Two columns preserve 44px taps. */
+@media (max-width: 899px) {
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-content: start !important;
+    align-items: stretch !important;
+    flex: 0 0 auto !important;
+    gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions > button {
+    display: inline-flex !important;
+    grid-column: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: none !important;
+    min-height: 44px !important;
+    height: auto !important;
+    padding: 6px 8px !important;
+    font-size: 13px !important;
+    text-align: center;
+    justify-content: center;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions > .bank-regenerate {
+    font-size: 13px !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions > .bank-regenerate::after {
+    content: none !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination {
+    display: grid !important;
+    grid-column: 1 / -1 !important;
+    flex: none !important;
+    width: 100% !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination > span {
+    display: none !important; /* Message n of N is already in the heading. */
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination > [data-bank-nav='previous'] {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination > [data-bank-nav='next'] {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination > .bank-back-bottom {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+  }
+}

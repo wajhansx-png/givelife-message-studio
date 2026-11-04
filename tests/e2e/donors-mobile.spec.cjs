@@ -70,6 +70,13 @@ for (const [width, height] of [
       '.donor-row .donor-amount',
       '.donor-row .donor-more > summary',
     ], width, height);
+    const messageLabel = await page.locator('#donorMessagesTab').evaluate((el) => ({
+      label: el.textContent.trim(), size: parseFloat(getComputedStyle(el).fontSize),
+    }));
+    if (width <= 560) {
+      expect(messageLabel.label).toMatch(/Messages/i);
+      expect(messageLabel.size, 'The Messages button cannot be icon-only blank').toBeGreaterThanOrEqual(11);
+    }
     await expect(page.locator('#donorSendAll')).toBeHidden();
     await page.locator('#donorNavMore > summary').click();
     await expect(page.locator('#donorTest')).toBeVisible();
@@ -151,6 +158,12 @@ test('Donor row editor stays inside a narrow phone and the keyboard can be used'
   await page.locator('.donor-row .donor-more > summary').first().click();
   const menu = page.locator('.donor-row .donor-more[open] > div').first();
   await expect(menu).toBeVisible();
+  const bg = await menu.evaluate((el) => ({
+    color: getComputedStyle(el).backgroundColor,
+    opacity: Number(getComputedStyle(el).opacity),
+  }));
+  expect(bg.color, 'Options sheet should have a solid background').not.toBe('rgba(0, 0, 0, 0)');
+  expect(bg.opacity).toBe(1);
   const r = await menu.boundingBox();
   expect(r.x).toBeGreaterThanOrEqual(0);
   expect(r.x + r.width).toBeLessThanOrEqual(321);

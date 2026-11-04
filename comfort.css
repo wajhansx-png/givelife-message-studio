@@ -1924,24 +1924,25 @@ html body #donorResumeStatus .donor-resume-actions button{white-space:normal!imp
 
 /* ===== Send card (owner's choice: option 1) =====
    Two ID-weight :not()s outrank the global button:not(#batchStart) rule in studio.css.
-   Test group on top, GiveLife (blue) and Freelance (green) cards, slim timers, Send to all 6 last. */
+   Test group on top, GiveLife and Freelance rows, slim timers, Send to all 6 last.
+   One calm palette: neutral surfaces, a single blue accent for Send, the chosen timer and All 6. */
 html body:not(#_):not(#__) .group-send .group-two{display:flex!important;flex-direction:column!important;gap:10px!important}
-html body:not(#_):not(#__) .group-send .test-row{display:flex;align-items:center;gap:8px;width:100%;min-height:46px;padding:0 14px;border:1.5px dashed #4a4d5a!important;border-radius:12px;background:none!important;box-shadow:none!important;color:#cfd3df!important;font-size:14px;font-weight:650;text-align:left}
+html body:not(#_):not(#__) .group-send .test-row{display:flex;align-items:center;gap:8px;width:100%;min-height:46px;padding:0 14px;border:1px dashed #3a3c48!important;border-radius:12px;background:none!important;box-shadow:none!important;color:#cfd3df!important;font-size:14px;font-weight:650;text-align:left}
 html body:not(#_):not(#__) .group-send .test-row .last-sent{flex:1;font-size:12px;color:var(--mut);margin:0}
 html body:not(#_):not(#__) .group-send .test-row .tr-go{font-size:13px;color:var(--mut);font-weight:600;white-space:nowrap}
 html body:not(#_):not(#__) .group-send .test-row:hover{border-color:#8a8fa0!important;color:var(--ink)!important}
-html body:not(#_):not(#__) .group-send .grp-card{display:flex!important;flex-direction:column!important;gap:8px!important;padding:10px!important;border:1px solid #2a2c35!important;border-radius:18px!important;background:#1b1c24!important}
+html body:not(#_):not(#__) .group-send .grp-card{display:flex!important;flex-direction:column!important;gap:8px!important;padding:0!important;border:0!important;border-radius:0!important;background:none!important}
 html body:not(#_):not(#__) .group-send .group-drop-wrap{position:relative;display:flex;flex-wrap:wrap;gap:6px}
 html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree){flex:1;min-width:0;display:flex!important;align-items:center;gap:10px;min-height:58px!important;padding:6px 14px!important;border:0!important;border-radius:14px!important;color:#fff!important;text-align:left;box-shadow:none!important}
-html body:not(#_):not(#__) .group-send #btnGivelife{background:#2f6fe8!important}
-html body:not(#_):not(#__) .group-send #btnFree{background:#1f8f55!important}
-html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree):hover{filter:brightness(1.08)}
+html body:not(#_):not(#__) .group-send #btnGivelife{background:#23252e!important}
+html body:not(#_):not(#__) .group-send #btnFree{background:#23252e!important}
+html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree,#btnFreePick):hover{background:#2a2d37!important}
 html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree):active{transform:scale(.985)}
 html body:not(#_):not(#__) .group-send .gb-name{flex:1;min-width:0;display:flex;flex-direction:column;font-size:17px;font-weight:800;line-height:1.2}
-html body:not(#_):not(#__) .group-send .gb-name .last-sent{display:block;margin:2px 0 0!important;font-size:12px!important;font-weight:500;color:#ffffffcc!important;opacity:1!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-html body:not(#_):not(#__) .group-send .gb-go{font-size:14px;font-weight:800;white-space:nowrap}
-html body:not(#_):not(#__) .group-send #btnFreePick{flex:none;width:44px;min-height:58px;border:0!important;border-radius:14px;background:#16683e!important;box-shadow:none!important;color:#fff!important;font-size:14px}
-html body:not(#_):not(#__) .group-send #btnFreePick[aria-expanded='true']{background:#0f4d2d!important}
+html body:not(#_):not(#__) .group-send .gb-name .last-sent{display:block;margin:2px 0 0!important;font-size:12px!important;font-weight:500;color:var(--mut)!important;opacity:1!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body:not(#_):not(#__) .group-send .gb-go{font-size:14px;font-weight:700;white-space:nowrap;color:#8fb4ff}
+html body:not(#_):not(#__) .group-send #btnFreePick{flex:none;width:44px;min-height:58px;border:0!important;border-radius:14px;background:#23252e!important;box-shadow:none!important;color:#fff!important;font-size:14px}
+html body:not(#_):not(#__) .group-send #btnFreePick[aria-expanded='true']{background:#2f3340!important}
 html body:not(#_):not(#__) .group-send .group-drop{position:static!important;flex:1 0 100%;display:flex;flex-direction:column;gap:2px;padding:6px;background:#14151c!important;border:1px solid #3a3c48!important;border-radius:14px;box-shadow:none!important}
 html body:not(#_):not(#__) .group-send .group-drop[hidden]{display:none}
 html body:not(#_):not(#__) .group-send .group-drop button{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:0!important;border-radius:10px;background:none!important;box-shadow:none!important;color:var(--ink)!important;font-size:14px;font-weight:650;text-align:left}
@@ -1951,17 +1952,17 @@ html body:not(#_):not(#__) .group-send .grp-card .delay-row{display:flex!importa
 html body:not(#_):not(#__) .group-send .grp-card .delay-label{display:block!important;flex:none;width:20px;margin:0;text-align:center;font-size:14px;color:#8a8fa0}
 html body:not(#_):not(#__) .group-send .grp-card .delay-pill{flex:1 1 0;min-width:0;min-height:36px!important;padding:0 2px!important;border-radius:18px!important;border:1px solid #33353f!important;background:transparent!important;color:#aeb3c2!important;font-size:13px!important;font-weight:650!important;white-space:nowrap;box-shadow:none!important}
 html body:not(#_):not(#__) .group-send .grp-card .delay-pill:hover{color:var(--ink)!important;border-color:#6e7180!important}
-html body:not(#_):not(#__) .group-send .grp-card .delay-pill:is([aria-pressed='true'],.is-pending){background:#f59e0b!important;border-color:#f59e0b!important;color:#1f1300!important;font-weight:800!important}
+html body:not(#_):not(#__) .group-send .grp-card .delay-pill:is([aria-pressed='true'],.is-pending){background:#2f6fe8!important;border-color:#2f6fe8!important;color:#fff!important;font-weight:700!important}
 html body:not(#_):not(#__) .group-send .grp-card .delay-pill::before{content:none!important}
 html body:not(#_):not(#__) .group-send #freeAuto{display:flex!important;align-items:center;justify-content:space-between;width:100%;min-height:40px;padding:0 4px!important;border:0!important;background:none!important;color:#aeb3c2!important;font-size:13px!important;font-weight:600!important;box-shadow:none!important}
 html body:not(#_):not(#__) .group-send #freeAuto::after{content:'';flex:none;width:40px;height:22px;border-radius:11px;background:#3a3c48 radial-gradient(circle at 11px 11px,#fff 7px,transparent 7.5px);transition:background .18s}
-html body:not(#_):not(#__) .group-send #freeAuto[aria-checked='true']::after{background:#22a35a radial-gradient(circle at 29px 11px,#fff 7px,transparent 7.5px)}
-html body:not(#_):not(#__) .group-send #sendAll{display:flex!important;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:56px!important;padding:0 16px!important;border:0!important;border-radius:15px!important;background:linear-gradient(90deg,#2f6fe8,#6d4cf5)!important;color:#fff!important;font-size:17px!important;font-weight:800!important;box-shadow:none!important}
-html body:not(#_):not(#__) .group-send #sendAll .last-sent{margin:0!important;font-size:12px!important;font-weight:500;color:#e3ebff!important;opacity:1!important}
+html body:not(#_):not(#__) .group-send #freeAuto[aria-checked='true']::after{background:#2f6fe8 radial-gradient(circle at 29px 11px,#fff 7px,transparent 7.5px)}
+html body:not(#_):not(#__) .group-send #sendAll{display:flex!important;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:56px!important;padding:0 16px!important;border:0!important;border-radius:15px!important;background:#2f6fe8!important;color:#fff!important;font-size:17px!important;font-weight:750!important;box-shadow:none!important}
+html body:not(#_):not(#__) .group-send #sendAll .last-sent{margin:0!important;font-size:12px!important;font-weight:500;color:#dbe6ff!important;opacity:1!important}
 html body:not(#_):not(#__) .group-send #sendAll:hover{filter:brightness(1.08)}
 html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree,#sendAll,.test-row)[aria-busy='true']{opacity:.6}
 html body:not(#_):not(#__) .group-send #groupStatus{text-align:center;font-size:13px}
-html body:not(#_):not(#__) .group-send #groupStatus.is-timer{color:#f5b84a;font-weight:600}
+html body:not(#_):not(#__) .group-send #groupStatus.is-timer{color:#8fb4ff;font-weight:600}
 html body:not(#_):not(#__) .group-send :is(.gb-name,.gb-name .last-sent,.test-row){text-align:left!important}
 html body:not(#_):not(#__) .group-send .gb-name{align-items:flex-start}
 html body:not(#_):not(#__) .group-send .gb-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1977,3 +1978,6 @@ html body:not(#_):not(#__) .action-rail .group-send .test-row{padding:0 10px;fon
 html body:not(#_):not(#__) .action-rail .group-send .test-row .last-sent{display:none}
 html body:not(#_):not(#__) .action-rail .group-send #sendAll{font-size:15px!important;padding:0 12px!important}
 html body:not(#_):not(#__) .action-rail .group-send .gb-count{display:none}
+html body:not(#_):not(#__) .group-send .grp-card+.grp-card{padding-top:10px!important;border-top:1px solid #ffffff12!important}
+html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree,#btnFreePick){background:#272a34!important;border:1px solid #ffffff17!important}
+html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree,#btnFreePick):hover{background:#2e3240!important;border-color:#ffffff26!important}

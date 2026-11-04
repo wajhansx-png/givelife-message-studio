@@ -1413,3 +1413,47 @@ html body #donorPasteDialog #pastePoster {
 .poster-dialog #posterCurrentVideo[hidden] {
   display: none !important;
 }
+
+/* Poster saving: real upload progress; success only after server confirmation. */
+.poster-dialog .poster-save-progress {
+  margin-top: 12px;
+  display: grid;
+  gap: 7px;
+}
+.poster-dialog .poster-save-progress[hidden] {
+  display: none !important;
+}
+.poster-dialog .poster-save-track {
+  height: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.poster-dialog #posterProgressFill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--btn);
+  border-radius: inherit;
+  transition: width 150ms linear;
+}
+.poster-dialog .poster-save-progress[data-state='saved'] #posterProgressFill {
+  background: var(--ok);
+}
+.poster-dialog .poster-save-progress[data-state='error'] #posterProgressFill {
+  background: var(--red);
+}
+.poster-dialog #posterProgressText {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.poster-dialog .donor-form-actions button:disabled,
+.poster-dialog .poster-choose:has(+ input:disabled) {
+  opacity: .7;
+  cursor: progress;
+}
+@media (prefers-reduced-motion: reduce) {
+  .poster-dialog #posterProgressFill { transition: none; }
+}

@@ -464,6 +464,68 @@ test('the poster dialog and the chat clip accept an MP4 video as well as a pictu
   );
 });
 
+
+test('poster upload shows real progress, stays open until confirmed, and then closes', async ({
+  page,
+  request,
+}) => {
+  await open(page, request, 390, 844);
+  let finishUpload;
+  let authorized = false;
+  await page.route('**/upload-image', async (route) => {
+    authorized = route.request().headers()['authorization'] === 'Bearer manual-fix-preview-key';
+    await new Promise((resolve) => { finishUpload = resolve; });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 'poster' }),
+    });
+  });
+  await page.evaluate(() => window.DonorHub.openPoster());
+  await page.locator('#posterFile').setInputFiles({
+    name: 'sample.mp4',
+    mimeType: 'video/mp4',
+    buffer: Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(12000)]),
+  });
+  await expect(page.locator('#posterSave')).toBeEnabled();
+  await page.locator('#posterSave').click();
+  await expect(page.locator('#posterProgress')).toBeVisible();
+  await expect(page.locator('#posterClose')).toBeDisabled();
+  await expect(page.locator('#posterDialog')).toBeVisible();
+  await expect.poll(() => !!finishUpload).toBe(true);
+  expect(authorized).toBe(true);
+  await expect(page.locator('#posterProgressText')).toContainText('saving securely');
+  finishUpload();
+  await expect(page.locator('#posterDialog')).not.toBeVisible({ timeout: 8000 });
+  await expect(page.locator('#donorNotice')).toContainText('Video saved for groups and DMs.');
+});
+
+test('poster saving errors remain visible and retry can complete', async ({ page, request }) => {
+  await open(page, request, 390, 844);
+  let attempts = 0;
+  await page.route('**/upload-image', async (route) => {
+    attempts++;
+    await route.fulfill({
+      status: attempts === 1 ? 503 : 200,
+      contentType: 'application/json',
+      body: JSON.stringify(attempts === 1 ? { error: 'Storage temporarily unavailable' } : { id: 'poster' }),
+    });
+  });
+  await page.evaluate(() => window.DonorHub.openPoster());
+  await page.locator('#posterFile').setInputFiles({
+    name: 'sample.mp4',
+    mimeType: 'video/mp4',
+    buffer: Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(512)]),
+  });
+  await page.locator('#posterSave').click();
+  await expect(page.locator('#posterNote')).toContainText('Storage temporarily unavailable');
+  await expect(page.locator('#posterDialog')).toBeVisible();
+  await expect(page.locator('#posterSave')).toBeEnabled();
+  await page.locator('#posterSave').click();
+  await expect(page.locator('#posterDialog')).not.toBeVisible({ timeout: 8000 });
+  expect(attempts).toBe(2);
+});
+
 test('on a very wide screen the groups box stays close to the centre of the screen', async ({
   page,
   request,

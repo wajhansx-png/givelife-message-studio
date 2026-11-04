@@ -40,6 +40,19 @@ for (const [width, height] of [
     request,
   }, testInfo) => {
     await openDonors(page, request, width, height);
+    if (width === 320) {
+      const controls = await page.evaluate(() =>
+        ['donorBulk', 'donorMessagesTab', 'donorSendAll', 'donorSendImportant', 'donorTest', 'donorToggle', 'donorMainBottom'].map((id) => {
+          const el = document.getElementById(id);
+          const r = el.getBoundingClientRect();
+          const parent = el.parentElement;
+          return { id, hidden: el.hidden, display: getComputedStyle(el).display,
+            parent: parent?.className, parentDisplay: parent ? getComputedStyle(parent).display : '',
+            x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
+        }),
+      );
+      console.log('Donors mobile control geometry:', JSON.stringify(controls));
+    }
     await assertInside(page, [
       '#donorMessagesTab',
       '#donorBulk',

@@ -2269,16 +2269,3 @@ html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>button:hov
 html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools{right:48px!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnGivelife .gb-name{padding-right:60px!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnFree .gb-name{padding-right:112px!important}
-/* Button text centred on every screen; rows with tools reserve the same space on the left so it stays visually centred. */
-html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-name,html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) :is(#btnGivelife,#btnFree) .gb-name{text-align:center!important;align-items:center!important;justify-content:center!important}
-html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#sendAll) .gb-name{padding-left:32px!important}
-html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnGivelife .gb-name{padding-left:28px!important}
-html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnFree .gb-name{padding-left:74px!important}
-/* Tools move under their button as a labelled row; every send button's text is truly centred. */
-html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools{position:static!important;transform:none!important;flex:1 1 100%!important;display:flex!important;gap:6px!important;margin-top:-1px}
-html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>button{flex:1 1 0!important;width:auto!important;min-width:0!important;height:34px!important;min-height:34px!important;flex-direction:row!important;gap:6px!important;background:transparent!important;border:1.5px solid #6c8cff!important;color:#dbe4ff!important;border-radius:10px!important;font-size:13px!important;font-weight:800!important}
-html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>.gb-timer::after{content:'Later';font-size:12.5px}
-html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>.gb-pick::after{content:'Pick group';font-size:12.5px}
-html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>button:hover{background:#6c8cff26!important;border-color:#a5b8ff!important}
-html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>.gb-timer.is-pending{background:#fff!important;color:#2f6fe8!important;border-color:#fff!important}
-html body:not(#_):not(#__):not(#___) .group-send .send-row .gb-name,html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) :is(#btnGivelife,#btnFree) .gb-name,html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#sendAll) .gb-name{padding-left:34px!important;padding-right:0!important}

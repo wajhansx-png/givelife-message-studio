@@ -1085,84 +1085,69 @@ async function sendGroup(key) {
     busy(false);
   }
 }
-/* ---- delay pills ---- */
-/* Chosen send timers stay selected (also after a reload) until the owner changes them. */
-const delays = (() => {
-  try {
-    const d = JSON.parse(localStorage.getItem('givelife-delays') || '{}');
-    return { main: [15, 30, 45, 60].includes(d.main) ? d.main : 0, free: [15, 30, 45, 60].includes(d.free) ? d.free : 0 };
-  } catch (e) {
-    return { main: 0, free: 0 };
-  }
-})();
-const delayScope = (key) => (key === 'main' ? 'main' : key === 'all' ? (delays.main ? 'main' : 'free') : 'free');
-const delayFor = (key) => delays[delayScope(key)];
+/* ---- send timers ----
+   A group button always sends now. A time pill schedules that group once; the pending
+   time is coloured with its send clock, and tapping it again cancels. */
 const delayText = (m) => (m < 60 ? m + ' min' : m === 60 ? '1 hr' : m / 60 + ' hr');
-function paintDelay(scope) {
-  document.querySelectorAll('.delay-pill[data-delay-scope="' + scope + '"]').forEach((b) => {
-    b.setAttribute('aria-pressed', String(Number(b.dataset.delay) === delays[scope]));
+const clockText = (t) =>
+  new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+let groupTimers = {};
+try {
+  localStorage.removeItem('givelife-delays');
+} catch (e) {}
+function paintTimers(timers) {
+  if (timers && typeof timers === 'object') groupTimers = timers;
+  document.querySelectorAll('.delay-pill').forEach((b) => {
+    const t = groupTimers[b.dataset.delayScope],
+      on = !!t && Number(b.dataset.delay) === t.delay;
+    b.classList.toggle('is-pending', on);
+    b.setAttribute('aria-pressed', String(on));
+    b.textContent = on ? '⏱ ' + clockText(t.due_at) : 'in ' + delayText(Number(b.dataset.delay));
+    b.setAttribute(
+      'aria-label',
+      on ? 'Scheduled at ' + clockText(t.due_at) + '. Tap to cancel' : 'Send in ' + delayText(Number(b.dataset.delay)),
+    );
   });
-  const card = document.querySelector('.grp-card[data-scope="' + scope + '"]');
-  if (card) {
-    card.classList.toggle('delay-armed', delays[scope] > 0);
-    card.querySelectorAll('[data-group]').forEach((b) => {
-      b.querySelector('.delay-hint')?.remove();
-      if (delays[scope] > 0) {
-        const h = document.createElement('small');
-        h.className = 'delay-hint';
-        h.textContent = 'in ' + delayText(delays[scope]);
-        b.append(h);
-      }
-    });
-  }
 }
-/* Each card keeps one timer: choosing a time switches that card's other times off. */
-function setDelay(scope, minutes) {
-  delays[scope] = delays[scope] === minutes ? 0 : minutes;
-  paintDelay('main');
-  paintDelay('free');
-  $('sendAll').classList.toggle('delay-armed', delays.main > 0 || delays.free > 0);
+let timerBusy = false;
+async function timerTap(scope, minutes) {
+  if (timerBusy) return;
+  timerBusy = true;
+  const t = groupTimers[scope],
+    label = GN[scope] || scope;
   try {
-    localStorage.setItem('givelife-delays', JSON.stringify(delays));
-  } catch (e) {}
-}
-document
-  .querySelectorAll('.delay-pill')
-  .forEach((p) => (p.onclick = () => setDelay(p.dataset.delayScope, Number(p.dataset.delay))));
-paintDelay('main');
-paintDelay('free');
-$('sendAll').classList.toggle('delay-armed', delays.main > 0 || delays.free > 0);
-async function scheduleGroup(key) {
-  if (!lockSend(key, true)) return;
-  setLiveNotice('Scheduling ' + (GN[key] || key) + '…');
-  busy(true);
-  try {
-    await fillEmptyCaption('group');
-    await ensureCaption('group');
-    await save();
-    const caption = $('group').value;
-    const label = GN[key] || key;
-    const wait = delayFor(key),
-      delayLabel = delayText(wait);
-    $('groupStatus').textContent = 'Scheduling for ' + label + ' in ' + delayLabel + '…';
-    const r = await post('/schedule-group', {
-      group: key,
-      message: caption,
-      delay_minutes: wait,
-      request_id: requestId(),
-    });
-    const d = await r.json();
-    if (!r.ok) throw Error(d.error || 'Could not schedule');
-    $('groupStatus').textContent =
-      '✓ Scheduled: send to ' + label + ' in ' + delayLabel + '. (Task #' + d.task_id + ')';
+    if (t && t.delay === minutes) {
+      const r = await post('/schedule-group', { cancel: t.id }),
+        d = await r.json();
+      if (!r.ok) throw Error(d.error || 'Could not cancel');
+      delete groupTimers[scope];
+      $('groupStatus').textContent = 'Timer cancelled for ' + label + '.';
+    } else {
+      await fillEmptyCaption('group');
+      await ensureCaption('group');
+      await save();
+      const r = await post('/schedule-group', {
+          group: scope,
+          delay_minutes: minutes,
+          request_id: requestId(),
+        }),
+        d = await r.json();
+      if (!r.ok) throw Error(d.error || 'Could not schedule');
+      groupTimers[scope] = { id: d.task_id, due_at: d.due_at, delay: minutes };
+      $('groupStatus').textContent = '⏱ ' + label + ' sends at ' + clockText(d.due_at) + '.';
+    }
+    paintTimers();
   } catch (e) {
     $('groupStatus').textContent = '✗ ' + e.message;
     say('app', e.message, 1);
   } finally {
-    lockSend(key, false);
-    busy(false);
+    timerBusy = false;
   }
 }
+document
+  .querySelectorAll('.delay-pill')
+  .forEach((p) => (p.onclick = () => timerTap(p.dataset.delayScope, Number(p.dataset.delay))));
+paintTimers();
 /* ---- group dropdowns ---- */
 function toggleGroupDrop(btnId, dropId) {
   const btn = $(btnId),
@@ -1192,16 +1177,14 @@ $('btnGivelife').addEventListener('click', (e) => {
   } else {
     $('dropGivelife').hidden = true;
     $('btnGivelife').setAttribute('aria-expanded', 'false');
-    if (delays.main > 0) scheduleGroup('main');
-    else sendGroup('main');
+    sendGroup('main');
   }
 });
 $('btnFree').addEventListener('click', (e) => {
   if (!e.target.closest('.gd-arrow')) {
     $('dropFree').hidden = true;
     $('btnFree').setAttribute('aria-expanded', 'false');
-    if (delays.free > 0) scheduleGroup('free');
-    else sendGroup('free');
+    sendGroup('free');
   } else {
     toggleGroupDrop('btnFree', 'dropFree');
   }
@@ -1212,8 +1195,7 @@ document.querySelectorAll('.group-drop [data-group]').forEach((b) => {
     b.closest('.group-drop-wrap')
       .querySelector('[aria-haspopup]')
       ?.setAttribute('aria-expanded', 'false');
-    if (delayFor(b.dataset.group) > 0) scheduleGroup(b.dataset.group);
-    else sendGroup(b.dataset.group);
+    sendGroup(b.dataset.group);
   };
 });
 document.querySelectorAll('[data-test]').forEach((b) => {
@@ -1222,10 +1204,7 @@ document.querySelectorAll('[data-test]').forEach((b) => {
 function armAll() {
   return sendGroup('all');
 }
-$('sendAll').onclick = () => {
-  if (delays.main > 0 || delays.free > 0) scheduleGroup('all');
-  else armAll();
-};
+$('sendAll').onclick = armAll;
 async function fillEmptyCaption(kind) {
   await ensureDrafts();
   if ($(kind) && !$(kind).value.trim()) {
@@ -2086,6 +2065,7 @@ async function pollAuto() {
     const d = await r.json();
     checkedAt = Date.now();
     paintGroupTimes(d.last_sent);
+    paintTimers(d.status?.group_timers || {});
     pollError = '';
     aiAvailable = !!d.ai;
     liveSnapshot = d.status || null;

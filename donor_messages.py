@@ -58,9 +58,14 @@ class MessageBank:
             data["left"] = current
             return
         changed = False
-        for row in data.get("items", []):
-            if isinstance(row, dict) and isinstance(row.get("text"), str):
-                row["text"] = draft_workflow.update_amount(row["text"], old, current)
+        for field in ("items", "previous_items"):
+            for row in data.get(field, []):
+                if isinstance(row, dict) and isinstance(row.get("text"), str):
+                    row["text"] = draft_workflow.update_amount(row["text"], old, current)
+                    changed = True
+        for field in ("origin", "base"):
+            if isinstance(data.get(field), str):
+                data[field] = draft_workflow.update_amount(data[field], old, current)
                 changed = True
         data["left"] = current
         if changed:

@@ -828,6 +828,28 @@ function showLeft() {
   $('leftChip').classList.add('bump');
   leftTween = requestAnimationFrame(tick);
 }
+// Read the confirmed balance and both caption previews back after a chat edit.
+// A late response must not replace text that the owner has started editing.
+function syncChatBalanceCaptions() {
+  const expected = JSON.stringify({ group: $('group').value, dm: $('dm').value });
+  fetch('/autopilot', { cache: 'no-store' })
+    .then((r) => {
+      if (!r.ok) throw Error('Cannot refresh saved captions');
+      return r.json();
+    })
+    .then((d) => {
+      if (
+        editing ||
+        JSON.stringify({ group: $('group').value, dm: $('dm').value }) !== expected ||
+        !Number.isFinite(d.left) ||
+        typeof d.drafts?.group !== 'string' ||
+        typeof d.drafts?.dm !== 'string'
+      ) return;
+      applyDrafts({ ...d.drafts, left: d.left });
+    })
+    .catch(() => status('Balance saved; refresh to check captions', 1));
+}
+
 function applyDrafts(d) {
   if (typeof d.group === 'string' && typeof d.dm === 'string') draftsReady = true;
   if (d.dm_identity) {
@@ -1598,7 +1620,12 @@ async function quick(t) {
     direct = await response.json();
   if (!response.ok) throw Error(direct.error || 'Command failed. Nothing was retried.');
   if (direct.handled) {
+    const previousBalance = left;
     applyDrafts(direct);
+    if (direct.left != null && direct.left !== previousBalance) {
+      document.dispatchEvent(new Event('donors-changed'));
+      syncChatBalanceCaptions();
+    }
     if (direct.donors_changed || direct.volunteers_changed || direct.team_changed)
       document.dispatchEvent(new Event('donors-changed'));
     if (direct.job_id) watchGroupJob(direct.job_id, direct.caption || $('group').value);
@@ -1700,7 +1727,12 @@ async function act(text) {
   }
   if (!r.ok) throw Error(d.error || 'The assistant could not answer.');
   if (!d.superseded) {
+    const previousBalance = left;
     applyDrafts(d);
+    if (d.left != null && d.left !== previousBalance) {
+      document.dispatchEvent(new Event('donors-changed'));
+      syncChatBalanceCaptions();
+    }
     if (d.autopilot != null) paintAuto(d.autopilot);
     if (d.donors_changed || d.volunteers_changed || d.team_changed)
       document.dispatchEvent(new Event('donors-changed'));
@@ -2113,8 +2145,10 @@ function paintStatusLine() {
 }
 function refreshLiveDrafts(data, baseline) {
   if (data.left != null && left === baseline.left) {
+    const changed = left !== data.left;
     left = data.left;
     showLeft();
+    if (changed) document.dispatchEvent(new Event('donors-changed'));
   }
   const payload = JSON.stringify({ group: $('group').value, dm: $('dm').value });
   if (

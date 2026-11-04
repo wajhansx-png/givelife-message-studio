@@ -49,6 +49,43 @@ class CaptionFactsTests(unittest.TestCase):
                 self.assertNotIn("fluid", text)
         self.assertIn("passed away", app.get_message("group")["text"])
 
+    def test_chat_balance_updates_both_saved_drafts_and_visible_response(self):
+        self.seed()
+        old_group = app.get_message("group")["text"]
+        old_dm = app.get_message("dm")["text"]
+        result = app.manual_command("23k left now")
+        self.assertTrue(result["handled"])
+        self.assertEqual(result["left"], 23000)
+        for kind, old_text in (("group", old_group), ("dm", old_dm)):
+            updated = app.get_message(kind)["text"]
+            self.assertEqual(result[kind], updated)
+            self.assertIn("23,000 urgently needed", updated)
+            self.assertIn("12 kind people donating Rs. 2,000", updated)
+            self.assertNotIn("25,000 urgently needed", updated)
+            self.assertIn("passed away", updated)
+            self.assertIn("Janazah", updated)
+
+    def test_balance_in_whatsapp_formatting_updates_but_contribution_amount_stays(self):
+        text = (
+            "*_Rs. 2,000 LEFT_*\n\n"
+            "*_1 people donating Rs. 2,000_*\n"
+            "*_OR 2 people donating Rs. 1,000_*\n"
+            "Earlier hospital bill was Rs. 2,000."
+        )
+        updated = draft_workflow.update_amount(text, 2000, 1000)
+        self.assertIn("Rs. 1,000 LEFT", updated)
+        self.assertIn("1 people donating Rs. 2,000", updated)
+        self.assertIn("1 people donating Rs. 1,000", updated)
+        self.assertIn("Earlier hospital bill was Rs. 2,000.", updated)
+
+    def test_stale_balance_can_be_corrected_without_overwriting_other_rupee_facts(self):
+        text = "Previous treatment cost Rs. 25,000.\n\n*_Rs. 30,000 LEFT_*\n\n15 people donating Rs. 2,000"
+        updated = draft_workflow.update_amount(text, 28000, 22000)
+        self.assertIn("Previous treatment cost Rs. 25,000.", updated)
+        self.assertIn("Rs. 22,000 LEFT", updated)
+        self.assertIn("11 people donating Rs. 2,000", updated)
+        self.assertNotIn("30,000 LEFT", updated)
+
     def test_chat_time_updates_both_banks_and_pending_caption(self):
         self.seed()
         result = app.manual_command("Janazah time is 5:30 pm today")

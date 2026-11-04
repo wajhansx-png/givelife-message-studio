@@ -59,11 +59,14 @@ def facts(app):
 def current(app, text):
     if not isinstance(text, str):
         return text
+    old_balance = draft_workflow.remaining_amount(text)
     match = TOTAL.search(text)
-    if match:
-        text = draft_workflow.update_amount(text, int(match[1].replace(",", "")), app.read_left())
+    if old_balance is None and match:
+        old_balance = int(match[1].replace(",", ""))
+    if old_balance is not None and old_balance != app.read_left():
+        text = draft_workflow.update_amount(text, old_balance, app.read_left())
     value = facts(app).get("janazah_time")
-    if value and ("janaz" in text.lower() or match):
+    if value and ("janaz" in text.lower() or old_balance is not None):
         text = update_time(text, value)
     return text
 
@@ -93,11 +96,18 @@ def transform_banks(app, fn):
     # MessageBank has a separate cache. Its next read loads this updated record.
     bank = app.STORE.get("donor_messages")
     if isinstance(bank, dict):
-        for entry in bank.get("items", []):
-            if isinstance(entry, dict) and isinstance(entry.get("text"), str):
-                entry["text"] = fn(entry["text"])
-        if isinstance(bank.get("origin"), str):
-            bank["origin"] = fn(bank["origin"])
+        # Previous approved versions may still be used while regeneration runs.
+        # Update both current and fallback captions before the next donor send.
+        for field in ("items", "previous_items"):
+            for entry in bank.get(field, []):
+                if isinstance(entry, dict) and isinstance(entry.get("text"), str):
+                    entry["text"] = fn(entry["text"])
+        for field in ("origin", "base"):
+            if isinstance(bank.get(field), str):
+                bank[field] = fn(bank[field])
+        generation = bank.get("generation")
+        if isinstance(generation, dict) and generation.get("state") == "Generating":
+            generation.update(state="Superseded", error="The balance changed. Regenerate with the new amount.")
         bank["left"] = app.read_left()
         app.STORE.put("donor_messages", bank)
         if getattr(app, "DONORS", None):

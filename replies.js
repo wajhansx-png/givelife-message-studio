@@ -99,7 +99,7 @@
   window.AutoReplies = { open };
 })();
 
-/* Report: a quick two-line view of what is happening right now (groups, then DMs). */
+/* Report: four numbered facts about what is happening right now, one short line each. */
 (() => {
   const GROUP_NAMES = {
     main: 'GiveLife',
@@ -113,47 +113,67 @@
   dlg.className = 'report-dialog';
   dlg.setAttribute('aria-label', 'Report');
   dlg.innerHTML =
-    '<div class="report-card"><h2>Right now</h2><p class="report-line" id="reportGroups">Loading…</p><p class="report-line" id="reportDms"></p><p class="report-line" id="reportReplies"></p><div class="report-resumes" id="reportResumes"></div><button type="button" id="reportClose">Close</button></div>';
+    '<div class="report-card"><h2>Right now</h2><ol class="report-list">' +
+    [
+      ['Groups', 'reportGroups'],
+      ['DMs', 'reportDms'],
+      ['Replies', 'reportReplies'],
+      ['Resumes', 'reportResumes'],
+    ]
+      .map(
+        ([t, id], i) =>
+          '<li><span class="rp-n" aria-hidden="true">' + (i + 1) + '</span><span class="rp-t">' + t +
+          '</span><b class="rp-v" id="' + id + '">…</b><small class="rp-s" id="' + id + 'Sub"></small></li>',
+      )
+      .join('') +
+    '</ol><button type="button" id="reportClose">Close</button></div>';
   document.body.append(dlg);
   const $ = (id) => document.getElementById(id);
   const clock = (sec) =>
     new Date(sec * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const put = (id, value, sub) => {
+    $(id).textContent = value;
+    $(id + 'Sub').textContent = sub || '';
+  };
   async function fill() {
-    $('reportGroups').textContent = 'Loading…';
-    $('reportDms').textContent = '';
-    $('reportReplies').textContent = '';
-    $('reportResumes').textContent = '';
+    for (const id of ['reportGroups', 'reportDms', 'reportReplies', 'reportResumes']) put(id, '…');
     try {
       const d = await (await fetch('/autopilot')).json(),
         st = d.status || {},
         t = st.today || {},
         next = (st.next || [])[0];
-      $('reportGroups').textContent =
-        '👥 Groups: ' +
-        (t.posts || 0) +
-        ' posts today' +
-        (next ? ' · next ' + (GROUP_NAMES[next.group] || next.group) + (next.in ? ' in ' + next.in + ' min' : ' now') : '') +
-        (d.on ? '' : ' · Auto is OFF');
+      put(
+        'reportGroups',
+        (t.posts || 0) + ' posts today',
+        !d.on
+          ? 'Auto is off'
+          : next
+            ? 'Next: ' + (GROUP_NAMES[next.group] || next.group) + (next.in ? ' in ' + next.in + ' min' : ' now')
+            : 'Nothing due',
+      );
     } catch (e) {
-      $('reportGroups').textContent = '👥 Groups: status unavailable right now.';
+      put('reportGroups', 'Unavailable', 'Try again in a moment');
     }
     try {
       const j = await (await fetch('/donor-delivery')).json(),
         active = ['Starting', 'Sending', 'Waiting'].includes(j.state),
         sent = (j.previous_sent || 0) + (j.sent || 0),
         total = j.original_total || j.total || 0;
-      $('reportDms').textContent = active
-        ? '💬 DMs: ' +
-          sent +
-          ' / ' +
-          total +
-          ' sent · ' +
+      if (active)
+        put(
+          'reportDms',
+          sent + ' of ' + total + ' sent',
           Math.max(0, total - sent) +
-          ' left' +
-          (j.next_batch_at ? ' · next batch at ' + clock(j.next_batch_at) : j.next_at ? ' · next in ' + Math.max(0, Math.ceil(j.next_at - Date.now() / 1000)) + 's' : '')
-        : '💬 DMs: not sending right now' + (sent ? ' · last batch ' + sent + ' / ' + total + ' sent' : '');
+            ' left' +
+            (j.next_batch_at
+              ? ' · next batch ' + clock(j.next_batch_at)
+              : j.next_at
+                ? ' · next in ' + Math.max(0, Math.ceil(j.next_at - Date.now() / 1000)) + 's'
+                : ''),
+        );
+      else put('reportDms', 'Not sending', sent ? 'Last batch: ' + sent + ' of ' + total + ' sent' : '');
     } catch (e) {
-      $('reportDms').textContent = '💬 DMs: status unavailable right now.';
+      put('reportDms', 'Unavailable', 'Try again in a moment');
     }
   }
   const remember = (on) => {
@@ -164,25 +184,18 @@
   async function fillExtra() {
     try {
       const d = await (await fetch('/report')).json(),
-        r = d.replies || {};
-      $('reportReplies').textContent =
-        '↩️ Replies: ' + (r.today || 0) + ' people answered today · ' + (r.total || 0) + ' in total' + (r.on ? '' : ' · Reply is OFF');
-      const box = $('reportResumes');
-      box.textContent = '';
-      const list = d.resumes || [];
-      const head = document.createElement('p');
-      head.className = 'report-line';
-      head.textContent = '▶️ Resumes: ' + (list.length ? list.length : 'none yet');
-      box.append(head);
-      for (const x of list) {
-        const row = document.createElement('div');
-        row.className = 'report-resume';
-        row.textContent = x.what + ' · ' + x.when + ' · ' + (x.state || '');
-        row.dataset.state = (x.state || '').toLowerCase();
-        box.append(row);
-      }
+        r = d.replies || {},
+        list = d.resumes || [],
+        last = list[0];
+      put('reportReplies', (r.today || 0) + ' today', (r.total || 0) + ' in total' + (r.on ? '' : ' · Reply is off'));
+      put(
+        'reportResumes',
+        list.length ? String(list.length) : 'None yet',
+        last ? 'Latest: ' + last.what + ' · ' + last.when + (last.state ? ' · ' + last.state : '') : '',
+      );
     } catch (e) {
-      $('reportReplies').textContent = '↩️ Replies: unavailable right now.';
+      put('reportReplies', 'Unavailable', '');
+      put('reportResumes', 'Unavailable', '');
     }
   }
   const open = () => {

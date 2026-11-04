@@ -2110,3 +2110,17 @@ html body:not(#_):not(#__) #messageFocus #focusTest{background:linear-gradient(1
  html body:not(#_):not(#__) #messageFocus .focus-rail>:is(#focusEdit,#focusCopy,#focusTest,#focusNext){flex:1 1 calc(25% - 6px)!important;min-width:0!important}
  html body:not(#_):not(#__) #messageFocus:has(#focusText:not([hidden])) #focusTest{display:none!important}
 }
+
+/* ===== Report: calm black screen like Notes; four numbered facts in one centred column ===== */
+html body:not(#_):not(#__) dialog.report-dialog::backdrop{background:#0b0b0d!important}
+html body:not(#_):not(#__) dialog.report-dialog[open]{background:#0b0b0d!important;display:flex!important;align-items:center;justify-content:center;overflow-y:auto}
+html body:not(#_):not(#__) .report-card{width:min(420px,calc(100vw - 32px))!important;margin:auto!important;padding:28px 0 calc(24px + env(safe-area-inset-bottom))!important;text-align:center!important;background:none!important;border:0!important;box-shadow:none!important}
+html body:not(#_):not(#__) .report-card h2{margin:0 0 22px!important;font-size:13px!important;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8a8f9c!important;background:none!important;-webkit-text-fill-color:currentColor!important}
+html body:not(#_):not(#__) .report-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+html body:not(#_):not(#__) .report-list li{display:flex;flex-direction:column;align-items:center;gap:3px;padding:16px 16px 14px;border-radius:16px;background:#141418;border:1px solid #ffffff0f}
+html body:not(#_):not(#__) .report-list .rp-n{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-size:13px;font-weight:800;margin-bottom:4px}
+html body:not(#_):not(#__) .report-list .rp-t{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#8a8f9c}
+html body:not(#_):not(#__) .report-list .rp-v{font-size:22px;font-weight:800;line-height:1.2;color:#f2f3f5}
+html body:not(#_):not(#__) .report-list .rp-s{font-size:13px;line-height:1.35;color:#a3a8b4}
+html body:not(#_):not(#__) .report-list .rp-s:empty{display:none}
+html body:not(#_):not(#__) .report-card #reportClose{display:block;width:100%;margin-top:18px!important;min-height:48px;border-radius:14px!important;background:#1c1c22!important;border:1px solid #ffffff1a!important;color:#f2f3f5!important;font-size:15px;font-weight:700;backdrop-filter:none!important;box-shadow:none!important}

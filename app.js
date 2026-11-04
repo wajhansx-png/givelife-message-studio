@@ -988,6 +988,62 @@ const requestId = () =>
   typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
     : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+/* Progress inside the tapped button: fills as each group is confirmed; the second line says what is happening. */
+function progressButton(keys) {
+  const k = keys || [];
+  if (k.length > 5) return $('sendAll');
+  if (k.length === 1 && k[0] === 'main') return $('btnGivelife');
+  if (k.length && k.every((x) => FREE_KEYS.includes(x))) return $('btnFree');
+  return null;
+}
+function setButtonProgress(btn, fraction, text, slow) {
+  if (!btn) return;
+  let bar = btn.querySelector('.gb-bar'),
+    note = btn.querySelector('.gb-progress');
+  if (!bar) {
+    bar = document.createElement('i');
+    bar.className = 'gb-bar';
+    bar.setAttribute('aria-hidden', 'true');
+    btn.prepend(bar);
+  }
+  if (!note) {
+    note = document.createElement('small');
+    note.className = 'gb-progress';
+    btn.querySelector('.gb-name')?.append(note);
+  }
+  btn.dataset.progress = 'on';
+  bar.style.transitionDuration = slow ? '12s' : '1.2s';
+  bar.style.width = Math.round(Math.max(0.04, Math.min(1, fraction)) * 1000) / 10 + '%';
+  if (note.textContent !== text) note.textContent = text;
+}
+function endButtonProgress(btn, text, ok) {
+  if (!btn) return;
+  setButtonProgress(btn, 1, text, false);
+  btn.dataset.progress = ok ? 'done' : 'failed';
+  setTimeout(() => {
+    delete btn.dataset.progress;
+    btn.querySelector('.gb-bar')?.remove();
+    btn.querySelector('.gb-progress')?.remove();
+  }, 3500);
+}
+function jobProgress(job, clock) {
+  const total = Math.max(1, (job.keys || []).length),
+    done = (job.results || []).length,
+    secs = job.next_send_at ? Math.max(0, Math.ceil(job.next_send_at - Date.now() / 1000)) : 0;
+  if (secs > 0) {
+    if (!clock.waitUntil || clock.waitUntil !== job.next_send_at) {
+      clock.waitUntil = job.next_send_at;
+      clock.waitLen = Math.max(1, secs);
+    }
+    const waited = 1 - secs / clock.waitLen;
+    return { fraction: (done + 0.7 * waited) / total, text: done + ' of ' + total + ' sent · next in ' + secs + 's', slow: false };
+  }
+  return {
+    fraction: (done + 0.92) / total,
+    text: total > 1 ? 'Sending ' + Math.min(total, done + 1) + ' of ' + total + '…' : 'Sending…',
+    slow: true,
+  };
+}
 async function watchGroupJob(id, caption) {
   if (watchingJobs.has(id)) return;
   watchingJobs.add(id);
@@ -995,8 +1051,10 @@ async function watchGroupJob(id, caption) {
   busy(true);
   try {
     let done = false,
-      failures = 0;
-    const until = Date.now() + 12 * 60 * 1000;
+      failures = 0,
+      btn = null;
+    const clock = {},
+      until = Date.now() + 12 * 60 * 1000;
     while (!done && Date.now() < until) {
       let job;
       try {
@@ -1010,17 +1068,18 @@ async function watchGroupJob(id, caption) {
         await new Promise((res) => setTimeout(res, 2000));
         continue;
       }
-      if (displayJob === id) {
-        if ($('groupStatus').textContent !== job.message)
-          $('groupStatus').textContent = job.message;
-        $('groupStatus').title = (job.results || [])
-          .map((x) => x.group + ': ' + (x.code === 'SUCCESS' ? 'Confirmed sent' : x.message))
-          .join('\n');
-      }
-      setLiveNotice(job.message, false);
+      btn = btn || progressButton(job.keys);
       done = job.done;
+      if (!done) {
+        const step = jobProgress(job, clock);
+        setButtonProgress(btn, step.fraction, step.text, step.slow);
+      }
       if (done) {
-        const bad = (job.results || []).some((x) => x.code !== 'SUCCESS');
+        const bad = (job.results || []).some((x) => x.code !== 'SUCCESS'),
+          okCount = (job.results || []).filter((x) => x.code === 'SUCCESS').length,
+          total = (job.keys || []).length || okCount;
+        endButtonProgress(btn, bad ? '✗ ' + okCount + ' of ' + total + ' confirmed' : '✓ Sent' + (total > 1 ? ' to all ' + total : ''), !bad);
+        if (bad && displayJob === id) $('groupStatus').textContent = job.message;
         say(
           'app',
           job.message +
@@ -1046,6 +1105,8 @@ async function watchGroupJob(id, caption) {
     }
     if (!done) throw Error('This send is still unconfirmed. Check WhatsApp before sending again.');
   } catch (e) {
+    if (btn) endButtonProgress(btn, '✗ Not confirmed', false);
+    $('groupStatus').textContent = '✗ ' + e.message;
     say('app', e.message, 1);
   } finally {
     watchingJobs.delete(id);
@@ -1058,7 +1119,8 @@ async function sendGroup(key) {
   if (!lockSend(key, true)) return;
   let tracked = false;
   if (editing) setEditing(false);
-  setLiveNotice('Sending to ' + (GN[key] || key) + '…');
+  const btn = progressButton(key === 'all' ? ['main', ...FREE_KEYS] : key === 'free' ? FREE_KEYS : [key]);
+  setButtonProgress(btn, 0.03, 'Starting…', false);
   busy(true);
   try {
     await fillEmptyCaption('group');
@@ -1066,7 +1128,7 @@ async function sendGroup(key) {
     clearTimeout(timer);
     await save();
     const caption = $('group').value;
-    $('groupStatus').textContent = 'Sending now…';
+    $('groupStatus').textContent = '';
     $('groupStatus').classList.remove('is-timer');
     const r = await post('/send-group', { group: key, message: caption, request_id: requestId() }),
       start = await r.json();
@@ -1079,6 +1141,7 @@ async function sendGroup(key) {
     tracked = true;
     watchGroupJob(start.job_id, caption);
   } catch (e) {
+    endButtonProgress(btn, '✗ Not sent', false);
     $('groupStatus').textContent = '✗ ' + e.message;
     say('app', e.message, 1);
   } finally {
@@ -1228,9 +1291,13 @@ async function fillEmptyCaption(kind) {
   }
 }
 async function sendTest(kind) {
-  const key = 'test:' + kind;
+  const key = 'test:' + kind,
+    btn = kind === 'group' ? document.querySelector('.test-row') : null;
   if (!lockSend(key, true)) return;
-  setLiveNotice('Sending to test group…');
+  if (btn) {
+    setButtonProgress(btn, 0.04, 'Sending…', false);
+    requestAnimationFrame(() => setButtonProgress(btn, 0.9, 'Sending…', true));
+  } else setLiveNotice('Sending to test group…');
   busy(true);
   try {
     await fillEmptyCaption(kind);
@@ -1244,8 +1311,10 @@ async function sendTest(kind) {
         ? '✓ Sent to the test group.'
         : 'Test failed: ' + (d.message || d.error || '');
     say('app', result, d.code !== 'SUCCESS');
-    setLiveNotice(result, d.code !== 'SUCCESS');
+    if (btn) endButtonProgress(btn, d.code === 'SUCCESS' ? '✓ Sent' : '✗ Not sent', d.code === 'SUCCESS');
+    else setLiveNotice(result, d.code !== 'SUCCESS');
   } catch (e) {
+    if (btn) endButtonProgress(btn, '✗ Not sent', false);
     say('app', e.message || 'Could not send', 1);
   } finally {
     lockSend(key, false);

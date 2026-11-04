@@ -145,8 +145,8 @@
         if (messages) head.insertBefore(messages, add);
         if (bulk) head.insertBefore(bulk, add);
         if (navDetails) {
-          navDetails.open = false;
-          navDetails.hidden = true;
+          // More still exposes Test DM and Poster settings on phones.
+          navDetails.hidden = false;
         }
       } else {
         if (messages) panel.append(messages);

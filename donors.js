@@ -273,7 +273,7 @@
   const poster = make('dialog', 'poster-dialog');
   poster.id = 'posterDialog';
   poster.setAttribute('aria-label', 'Change DM poster');
-  poster.innerHTML = `<h2>Poster · groups and DMs</h2><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><video id="posterCurrentVideo" controls playsinline preload="metadata" aria-label="Saved campaign video" hidden></video><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status"></p><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
+  poster.innerHTML = `<h2>Poster · groups and DMs</h2><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><video id="posterCurrentVideo" controls playsinline preload="metadata" aria-label="Saved campaign video" hidden></video><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status" aria-live="polite"></p><div id="posterProgress" class="poster-save-progress" hidden><div id="posterProgressTrack" class="poster-save-track" role="progressbar" aria-label="Poster upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="posterProgressFill"></span></div><span id="posterProgressText" role="status" aria-live="polite"></span></div><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
   document.body.append(poster);
   const launch = make('button', 'primary donor-launch donor-launch-foot', 'Donors');
   launch.type = 'button';
@@ -310,6 +310,7 @@
     pollTimer,
     posterData = null,
     posterUrl = null,
+    posterSaving = false,
     noticeTimer;
   let singlePosterOn = true;
   try {
@@ -2448,29 +2449,91 @@
     const blob = await r.blob();
     showPosterPreview(blob, blob.type || r.headers.get('Content-Type'));
   }
+  function setPosterProgress(percent, message, state = 'uploading') {
+    const value = Math.max(0, Math.min(100, Math.round(percent)));
+    el('posterProgress').hidden = false;
+    el('posterProgress').dataset.state = state;
+    el('posterProgressTrack').setAttribute('aria-valuenow', String(value));
+    el('posterProgressFill').style.width = value + '%';
+    el('posterProgressText').textContent = message;
+    el('posterSave').textContent = state === 'saved' ? 'Saved ✓' : state === 'saving' ? 'Finishing…' : 'Saving ' + value + '%';
+  }
+  function resetPosterProgress() {
+    el('posterProgress').hidden = true;
+    el('posterProgress').removeAttribute('data-state');
+    el('posterProgressTrack').setAttribute('aria-valuenow', '0');
+    el('posterProgressFill').style.width = '0%';
+    el('posterProgressText').textContent = '';
+    el('posterSave').textContent = 'Save poster';
+  }
+  // The upload percentage is based on bytes actually sent, not an estimated timer.
+  // Reaching 100% means the server confirmed that it saved the poster.
+  function uploadPosterWithProgress(data, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', (window.GIVELIFE_API || '') + '/upload-image');
+      xhr.timeout = 120000;
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      const key = localStorage.getItem('givelife-cloud-key');
+      if (key) xhr.setRequestHeader('Authorization', 'Bearer ' + key);
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && event.total > 0)
+          onProgress(Math.min(99, Math.floor((event.loaded / event.total) * 99)), false);
+      };
+      xhr.upload.onload = () => onProgress(99, true);
+      xhr.onload = () => {
+        let result;
+        try { result = JSON.parse(xhr.responseText); }
+        catch (e) { reject(Error('Server response was invalid. Check the saved poster before retrying.')); return; }
+        if (xhr.status < 200 || xhr.status >= 300 || result.id !== 'poster') {
+          reject(Error(result.error || (xhr.status === 401 ? 'Session expired. Sign in again.' : 'Saving was not confirmed.')));
+          return;
+        }
+        resolve(result);
+      };
+      xhr.onerror = () => reject(Error('Connection lost. Check the saved poster before retrying.'));
+      xhr.ontimeout = () => reject(Error('Save timed out. Check the saved poster before retrying.'));
+      try { xhr.send(JSON.stringify({ use: 'dm_poster', data })); }
+      catch (e) { reject(Error('Could not start the upload. ' + e.message)); }
+    });
+  }
   async function openPoster() {
     posterData = null;
+    resetPosterProgress();
     el('posterSave').disabled = true;
     el('posterClose').textContent = 'Cancel';
     el('posterNote').textContent = 'Loading saved poster…';
     poster.showModal();
     try {
       await loadSavedPoster();
-      el('posterNote').textContent = '';
+      if (!posterData) el('posterNote').textContent = '';
     } catch (e) {
       el('posterNote').textContent = e.message;
     }
   }
-  el('posterClose').onclick = () => {
+  function closePoster() {
+    if (posterSaving) return;
     poster.close();
     posterData = null;
     if (posterUrl) URL.revokeObjectURL(posterUrl);
     posterUrl = null;
     el('posterCurrentVideo').pause();
-  };
+  }
+  el('posterClose').onclick = closePoster;
+  poster.addEventListener('cancel', (event) => {
+    if (posterSaving) event.preventDefault();
+    else {
+      posterData = null;
+      if (posterUrl) URL.revokeObjectURL(posterUrl);
+      posterUrl = null;
+      el('posterCurrentVideo').pause();
+    }
+  });
   el('posterFile').onchange = async () => {
+    if (posterSaving) return;
     const f = el('posterFile').files[0];
     if (!f) return;
+    resetPosterProgress();
     posterData = null;
     el('posterSave').disabled = true;
     try {
@@ -2519,22 +2582,43 @@
     }
   };
   el('posterSave').onclick = async () => {
-    if (!posterData) return;
+    if (!posterData || posterSaving) return;
+    posterSaving = true;
     el('posterSave').disabled = true;
+    el('posterClose').disabled = true;
+    el('posterFile').disabled = true;
     const isVideo = posterData.startsWith('data:video/');
-    el('posterNote').textContent = isVideo ? 'Saving video securely…' : 'Saving poster…';
+    el('posterNote').textContent = '';
+    setPosterProgress(0, 'Uploading ' + (isVideo ? 'video' : 'picture') + ' · 0%');
     try {
-      const saved = await api('/upload-image', { use: 'dm_poster', data: posterData });
-      if (saved.id !== 'poster') throw Error('Saving was not confirmed. Try again.');
+      await uploadPosterWithProgress(posterData, (percent, uploaded) => {
+        setPosterProgress(
+          percent,
+          uploaded ? 'Upload complete · saving securely…' : 'Uploading · ' + percent + '%',
+          uploaded ? 'saving' : 'uploading',
+        );
+      });
+      setPosterProgress(100, 'Saved successfully', 'saved');
       el('posterNote').textContent = isVideo
         ? 'Video saved for groups and DMs.'
         : 'Poster saved for groups and DMs.';
       window.dispatchEvent(new Event('poster-changed'));
       posterData = null;
-      el('posterClose').textContent = 'Done';
+      // Keep the confirmed 100% visible briefly before closing automatically.
+      await new Promise((resolve) => setTimeout(resolve, 650));
+      posterSaving = false;
+      closePoster();
+      notice(isVideo ? 'Video saved for groups and DMs.' : 'Poster saved for groups and DMs.');
     } catch (e) {
+      el('posterProgress').dataset.state = 'error';
+      el('posterProgressText').textContent = 'Save not confirmed';
       el('posterNote').textContent = e.message;
+      el('posterSave').textContent = 'Retry save';
       el('posterSave').disabled = false;
+    } finally {
+      posterSaving = false;
+      el('posterClose').disabled = false;
+      el('posterFile').disabled = false;
     }
   };
   const paste = make('dialog', 'donor-form-dialog paste-dialog');

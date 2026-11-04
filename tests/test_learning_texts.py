@@ -36,6 +36,16 @@ class LearningTexts(unittest.TestCase):
         L["recent"] = [[1000, 2]]
         self.assertEqual(learning.credit_money(L, ts=1100), 2)
 
+    def test_auto_picks_next_wording_after_posts_with_text(self):
+        import autopilot
+
+        L = learning.new()
+        learning.record_post(L, 1, ts=1000, text="Wording A")
+        L["recent"].insert(0, [900, 0])  # an older saved two-item entry
+        fake = type("A", (), {"L": L, "h": {"variant_pool": lambda: "", "variant_count": lambda: 4}})()
+        base, idx = autopilot.Engine._pick_variant(fake)
+        self.assertNotIn(idx, (0, 1))
+
     def test_prompt_uses_proven_style_but_says_never_copy_facts(self):
         dm_variants.PROVEN = lambda: ["Only 22 hours left. Help now."]
         prompt = dm_variants._prompt("Line one\nRs. 5,000 left", 3, [])

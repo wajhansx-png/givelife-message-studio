@@ -519,7 +519,7 @@ class Engine:
     def _pick_variant(self):
         """(learning id, index) of the next appeal wording: the one that brought most money, but varied."""
         base = 100 if self.h["variant_pool"]() == "a" else 0
-        recent = [v - base for _, v in self.L["recent"][-2:] if base <= v < base + 100]
+        recent = [e[1] - base for e in self.L["recent"][-2:] if base <= e[1] < base + 100]
         idx = learning.pick_variant(self.L, self.h["variant_count"](), avoid=recent)
         return base + idx, idx
 

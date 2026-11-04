@@ -2205,3 +2205,12 @@ html body #donorResumeStatus.rs-folded{background:transparent!important;border:0
 html body #donorResumeStatus.rs-folded>:not(.rs-pill){display:none!important}
 html body #donorResumeStatus.rs-folded .rs-pill{display:inline-flex;align-items:center;min-height:34px;padding:0 14px;border-radius:999px;background:#3b2f12;border:1px solid #facc1566;color:#fde68a;font-weight:800;font-size:13px}
 html body #donorResumeStatus .donor-resume-actions button{white-space:normal!important;line-height:1.1!important}
+
+/* ---- Send timers: a group button sends now; a time pill schedules once ---- */
+html body .group-send .grp-card .delay-pill{background:transparent!important;border:1px solid var(--line2)!important;color:var(--mut)!important;font-weight:600!important}
+html body .group-send .grp-card .delay-pill:hover{color:var(--ink)!important;border-color:var(--ink)!important}
+html body .group-send .grp-card .delay-pill[aria-pressed='true'],
+html body .group-send .grp-card .delay-pill.is-pending{background:#f59e0b!important;border-color:#f59e0b!important;color:#1f1300!important;font-weight:750!important}
+html body .group-send .grp-card.delay-armed{border-color:var(--line)!important;background:none!important}
+html body .group-send .delay-hint{display:none!important}
+html body .group-send .grp-card .delay-pill[aria-pressed='true']::before{content:none!important}

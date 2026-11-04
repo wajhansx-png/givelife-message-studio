@@ -4606,6 +4606,11 @@ def live_snapshot():
                 else "Resume Auto"
             )
             status["scheduled"] = {"due_at": t["due"], "label": label}
+        status["group_timers"] = {
+            t["scope"]: {"id": t["id"], "due_at": t["due"], "delay": t.get("delay")}
+            for t in upcoming
+            if t.get("scope") and t["action"] == "send"
+        }
     with LOCK:
         current = {"left": read_left(), "drafts": json.loads(DRAFT.read_text(encoding="utf-8"))}
     return {
@@ -5537,6 +5542,17 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply({"job_id": ident})
             except ValueError as e:
                 self.reply({"error": str(e)}, status=400)
+        elif self.path == "/schedule-group" and body.get("cancel"):
+            sched = timed_scheduler()
+            with sched.lock:
+                task = next(
+                    (x for x in sched.tasks if x.get("id") == body.get("cancel") and x.get("scope")),
+                    None,
+                )
+                if not task or task["state"] != "pending":
+                    return self.reply({"error": "That timer already ran or was cancelled."}, status=400)
+                sched.cancel_task(task)
+            self.reply({"cancelled": True})
         elif self.path == "/schedule-group":
             if not isinstance(body.get("group"), str):
                 return self.reply({"error": "Group must be text."}, status=400)
@@ -5562,9 +5578,13 @@ class Handler(BaseHTTPRequestHandler):
                     "daily": False, "clock": when.strftime("%H:%M"),
                     "id": uuid.uuid4().hex[:8], "state": "pending", "created": time.time(),
                     "request_id": body.get("request_id"), "signature": "ui-" + uuid.uuid4().hex,
+                    "scope": key, "delay": delay,
                 }
                 sched = timed_scheduler()
                 with sched.lock:
+                    # One timer per group button: a new time replaces the pending one.
+                    for old_task in [x for x in sched.tasks if x.get("scope") == key and x["state"] == "pending"]:
+                        sched.cancel_task(old_task)
                     if sum(x["state"] in ("pending", "running", "dispatching") for x in sched.tasks) >= 100:
                         raise ValueError("Too many pending schedules. Cancel one first.")
                     sched.tasks.append(task)

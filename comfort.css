@@ -2055,3 +2055,21 @@ html body:not(#_):not(#__) .group-send [data-progress] .gb-name .last-sent{displ
 html body:not(#_):not(#__) .group-send .gb-progress{display:block;margin-top:1px;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html body:not(#_):not(#__) .group-send [data-progress='done'] .gb-bar::after,html body:not(#_):not(#__) .group-send [data-progress='failed'] .gb-bar::after{animation:none;background:none}
 @media (prefers-reduced-motion: reduce){html body:not(#_):not(#__) .group-send .gb-bar::after{animation:none}}
+
+/* Phone message text: WhatsApp-sized (14px on 19px lines) for faster reading. Reading and editing
+   use the identical box, so the text never jumps when Edit is tapped; a blank line is one full line in both. */
+@media (max-width: 700px){
+ html body:not(#_):not(#__) #messageFocus :is(#focusFormatted,#focusText),
+ html body:not(#_):not(#__) #donorsPage #donorMessages :is(.bank-preview,textarea){font-size:14px!important;line-height:19px!important;padding:10px 12px!important;letter-spacing:0!important}
+ html body:not(#_):not(#__) #messageFocus #focusFormatted :is(strong,em,b,i,.wa-line){font-size:inherit!important;line-height:inherit!important}
+ html body:not(#_):not(#__) #donorsPage #donorMessages .bank-preview .bank-line{font-size:inherit!important;line-height:inherit!important;min-height:19px!important}
+ html body:not(#_):not(#__) #donorsPage #donorMessages .bank-preview .bank-line.blank{min-height:19px!important;height:19px!important}
+}
+/* The folded "DMs sending" pill never floats over the Messages screen buttons. */
+html body:not(#_):not(#__) #donorsPage[data-panel='messages'] #donorResumeStatus{display:none!important}
+/* The phone message screen hosts the same send card: keep its buttons in their row layout there too. */
+html body:not(#_):not(#__) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll){flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;text-align:left!important}
+html body:not(#_):not(#__) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll) .gb-go{margin-left:auto}
+@media (max-width: 700px){
+ html body:not(#_):not(#__) #messageFocus #focusText{field-sizing:content;height:auto!important;min-height:0!important;flex:0 0 auto!important}
+}

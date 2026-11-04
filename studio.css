@@ -8896,3 +8896,22 @@ html body #donorsPage[data-panel='messages'] .donor-bottom {
     text-align: right;
   }
 }
+
+/* Row editor must paint above neighbouring virtualized rows, not behind them.
+   content-visibility:auto previously gave each row its own paint containment. */
+@media (max-width: 560px) {
+  html body #donorsPage .donor-row {
+    content-visibility: visible !important;
+    contain: none !important;
+  }
+  html body #donorsPage .donor-row:has(> .donor-more[open]) {
+    position: relative;
+    z-index: 110;
+  }
+  html body #donorsPage .donor-row > .donor-more[open] {
+    z-index: 120;
+  }
+  html body #donorsPage .donor-row > .donor-more[open] > div {
+    z-index: 121;
+  }
+}

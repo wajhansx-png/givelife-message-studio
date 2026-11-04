@@ -2235,3 +2235,9 @@ html body:not(#_):not(#__):not(#___) .group-send .send-row{display:flex!importan
 html body:not(#_):not(#__):not(#___) .group-send .send-row>:is(.test-row,#btnGivelife,#btnFree,#sendAll){flex:1 0 100%!important;width:100%!important;max-width:none!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools{position:absolute!important;right:42px!important;top:8px!important}
 html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) .gb-name{padding-right:88px}
+/* Rows with timer/dropdown icons: small fixed icons, name on the left with room reserved, never overlapping. */
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools>button{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:0!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools{top:50%!important;transform:translateY(-50%)!important;right:40px!important;gap:5px!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) :is(#btnGivelife,#btnFree) .gb-name{text-align:left!important;align-items:flex-start!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnGivelife .gb-name{padding-right:52px!important}
+html body:not(#_):not(#__):not(#___) .group-send .send-row:has(.row-tools) #btnFree .gb-name{padding-right:90px!important}

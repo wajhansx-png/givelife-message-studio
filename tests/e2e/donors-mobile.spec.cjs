@@ -59,8 +59,7 @@ for (const [width, height] of [
       '#donorAdd',
       '#donorSearch',
       '#donorSendImportant',
-      '#donorSendAll',
-      '#donorTest',
+      '#donorNavMore > summary',
       '#donorToggle',
       '#donorMainBottom',
       '.donor-row .donor-star',
@@ -69,6 +68,11 @@ for (const [width, height] of [
       '.donor-row .donor-amount',
       '.donor-row .donor-more > summary',
     ], width, height);
+    await expect(page.locator('#donorSendAll')).toBeHidden();
+    await page.locator('#donorNavMore > summary').click();
+    await expect(page.locator('#donorTest')).toBeVisible();
+    await expect(page.locator('.donor-poster-toggle')).toBeVisible();
+    await page.locator('#donorNavMore > summary').click();
     expect(await page.locator('#donorTable').evaluate(
       (el) => el.scrollWidth <= el.clientWidth + 2,
     )).toBe(true);

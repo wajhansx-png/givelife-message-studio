@@ -58,6 +58,14 @@ def refinement(text):
         t,
     ):
         return True
+    # A correction that points the same edit at another line: "no not that line, the second one".
+    if re.fullmatch(
+        r"(?i)(?:no+[\s,]+)?(?:not\s+(?:that|this)(?:\s+(?:one|line|paragraph))?[\s,]*)?(?:i\s+mean(?:t)?\s+)?"
+        r"(?:the\s+)?(?:first|second|third|fourth|fifth|last|other|next|previous|top|bottom|urdu|english|\d(?:st|nd|rd|th)?)"
+        r"\s+(?:one|line|paragraph|sentence|wali\s+line)|(?:no[\s,]+)?(?:wrong|galat)\s+line",
+        t,
+    ):
+        return True
     if re.match(
         r"(?i)^"
         + LEAD
@@ -106,7 +114,8 @@ def contextual_edit(text, history, state):
     return bool(
         editing_request(prior)
         and re.search(
-            r"(?i)\b(?:group|dm|message|caption|draft|hook|paragraph|line|wording)\b", prior
+            r"(?i)\b(?:group|dm|message|caption|draft|hook|paragraph|line|wording|amount|urdu|english|opening|ending|bold|italic|emoji)\b",
+            prior,
         )
     )
 

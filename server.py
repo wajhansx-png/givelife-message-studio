@@ -3938,7 +3938,7 @@ def assistant_task(body):
                     "done": [],
                     "jobs": [],
                     "diagnostics": {
-                        "model": assistant.MODEL,
+                        "model": assistant.active_model(),
                         "iterations": 0,
                         "duration_ms": 0,
                         "tools": [],
@@ -4022,7 +4022,7 @@ def assistant_task(body):
                 if tip:
                     output["reply"] = (output.get("reply", "") + "\n\n" + tip).strip()
             KNOWLEDGE.archive("app", output.get("reply", ""), output["turn_id"])
-            KNOWLEDGE.trace({"request_id": ident, **output.get("diagnostics", {})})
+            KNOWLEDGE.trace({"request_id": ident, "route": "model", **output.get("diagnostics", {})})
             ASSIST_TASKS[ident].update(done=True, result=output)
         except Exception as e:
             ASSIST_TASKS[ident].update(
@@ -4455,45 +4455,7 @@ def dm_identity():
     return None
 
 
-def fast_command_eligible(text):
-    text = str(text).strip()
-    if not text or len(text) > 10000:
-        return False
-    if re.fullmatch(
-        r"(?i)(?:show|list|view|my)?\s*(?:scheduled?\s+(?:tasks|messages|sends)|schedules|scheduler)",
-        text,
-    ):
-        return True
-    try:
-        if (timed_tasks.parse(text) or {}).get("command") == "list":
-            return True
-    except ValueError:
-        pass
-    if manual_commands.question_request(text):
-        return False
-    if draft_flow.editing_request(chat_policy.owner_text(text)) and (
-        manual_commands.parse(text) or {}
-    ).get("kind") not in ("donation_order", "remove_arrival_line"):
-        return False
-    if re.match(
-        r"(?i)^(?:please\s+)?(?:show|preview|draft|summarize|summarise|analyse|analyze|explain|review|read|check|tell me)\b",
-        text,
-    ):
-        return False
-    if text.startswith(('"', "“", "'", "```", ">")) or re.search(
-        r"(?i)\b(transcript|message says|text says|summarize|analyse|analyze|see fn remove)\s*:",
-        text,
-    ):
-        return False
-    if re.search(r"(?i);|\band then\b|\n(?:you|assistant|app):", text):
-        return False
-    if re.search(
-        r"(?i)\band\s+(?:set|change|write|delete|remove|remember|pause|enable|disable)\b", text
-    ):
-        return False
-    if re.search(r"(?i)\band\s+(?:then\s+)?(?:send|post|share)\b", text):
-        return False
-    return True
+fast_command_eligible = chat_policy.fast_command_eligible
 
 
 def set_group_pace(target, minutes):
@@ -5495,6 +5457,15 @@ class Handler(BaseHTTPRequestHandler):
                     text, body.get("request_id"), mapping(body.get("screen")).get("view", "group")
                 )
                 if direct.get("handled"):
+                    plan = manual_commands.parse(text) or {}
+                    KNOWLEDGE.trace(
+                        {
+                            "request_id": safe_text(body.get("request_id"), 100),
+                            "route": "command",
+                            "intent": [plan.get("kind") or "draft"],
+                            "ok": not direct.get("error"),
+                        }
+                    )
                     return self.reply(direct)
                 ident = assistant_task(body)
                 self.reply({"task_id": ident})

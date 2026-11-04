@@ -216,6 +216,36 @@ def context_messages(text, history, state, memory, decision=None, follow=None):
     return msgs
 
 
+def offered_tools(text, history, state):
+    """The tools the model may use for this owner turn: the single source for chat and benchmarks."""
+    import assistant
+
+    ptext = chat_policy.followup(text, history)["text"]
+    selection = draft_flow.selected_option(text, valid_history(history))
+    reviewing = conversation_insights.wants_review(text)
+    # Retrospective suggestions are read-only. Historical "send" commands in
+    # archived messages must never become executable instructions.
+    referential_edit = (not reviewing) and contextual_draft_fix(text, history, state)
+    tools = (
+        []
+        if chat_policy.smalltalk(text) or reviewing
+        else [
+            t
+            for t in assistant.CHAT_TOOLS
+            if chat_policy.permitted(t["function"]["name"], ptext)
+            or (not chat_policy.task_assignment_only(ptext))
+            and (selection is not None or referential_edit)
+            and t["function"]["name"] == "set_message"
+        ]
+    )
+    return {
+        "tools": tools,
+        "selection": selection,
+        "reviewing": reviewing,
+        "referential_edit": referential_edit,
+    }
+
+
 def run_chat(text, history, state, memory, do):
     import assistant
 
@@ -242,22 +272,12 @@ def run_chat(text, history, state, memory, do):
     if key is None:
         return None
     msgs = context_messages(text, history, state, memory, ptext, follow)
-    selection = draft_flow.selected_option(text, valid_history(history))
-    reviewing = conversation_insights.wants_review(text)
-    # Retrospective suggestions are read-only. Historical "send" commands in
-    # archived messages must never become executable instructions.
-    referential_edit = (not reviewing) and contextual_draft_fix(text, history, state)
-    tools = (
-        []
-        if chat_policy.smalltalk(text) or reviewing
-        else [
-            t
-            for t in assistant.CHAT_TOOLS
-            if chat_policy.permitted(t["function"]["name"], ptext)
-            or (not chat_policy.task_assignment_only(ptext))
-            and (selection is not None or referential_edit)
-            and t["function"]["name"] == "set_message"
-        ]
+    offer = offered_tools(text, history, state)
+    selection, reviewing, referential_edit, tools = (
+        offer["selection"],
+        offer["reviewing"],
+        offer["referential_edit"],
+        offer["tools"],
     )
     request_steps = task_intent.steps(chat_policy.owner_text(ptext))
     requested_kinds = {x["kind"] for x in request_steps}
@@ -616,9 +636,14 @@ def run_chat(text, history, state, memory, do):
         "done": done,
         "jobs": jobs,
         "diagnostics": {
-            "model": assistant.MODEL,
+            "model": assistant.active_model(),
             "iterations": iteration + 1,
             "duration_ms": round((time.monotonic() - started) * 1000),
+            # What the app understood and allowed, so a missed action can be traced to its cause.
+            # Kinds and tool names only: no owner text, donor names or numbers.
+            "intent": sorted(requested_kinds),
+            "offered": sorted(schemas),
+            "context_chars": sum(len(str(m.get("content") or "")) for m in msgs),
             "tools": outcomes,
             "errors": errors[-3:],
         },

@@ -259,11 +259,11 @@ def variant_request(text):
         return False
     return bool(
         re.search(
-            r"(?i)\b(?:generate|make|create|write|rewrite|give|show|prepare|produce)\b.{0,120}\b(?:10|ten|\d{1,2})\b.{0,50}\b(?:versions?|variants?|wordings?|rewrites?)\b",
+            r"(?i)\b(?:generate|make|create|write|rewrite|give|show|prepare|produce)\b.{0,120}\b(?:10|ten|\d{1,2})\b(?!\s*(?:min\w*|hours?|hrs?|am|pm|baje)\b).{0,50}\b(?:versions?|variants?|wordings?|rewrites)\b",
             t,
         )
         or re.search(
-            r"(?i)\b(?:10|ten|\d{1,2})\b.{0,40}\b(?:versions?|variants?|wordings?|rewrites?)\b", t
+            r"(?i)\b(?:10|ten|\d{1,2})\b(?!\s*(?:min\w*|hours?|hrs?|am|pm|baje)\b).{0,40}\b(?:versions?|variants?|wordings?|rewrites)\b", t
         )
     )
 
@@ -278,7 +278,7 @@ def owner_text(text):
         text,
         maxsplit=1,
     )[0]
-    return text
+    return manual_commands.fix_typos(text)
 
 
 HOLD_OBJ = r"(?:everything|ev\w*thing|all|sending|posting|posts?|messages?|dms?|whatsapp|auto(?:pilot)?|now|please|immediately|asap|it all|sab|sab kuch)"
@@ -291,7 +291,7 @@ PACE_VERB = r"(?i)\b(?:every|after|pace|speed|slow|fast|pause|resume|quiet|enabl
 ON_OFF = r"(?i)\b(?:dms?|auto\w*|posting|sending)\s+(?:on|off)\b|\b(?:on|off)\s+(?:dms?|auto\w*|posting)\b|\b(?:turn|switch)\s+(?:on|off)\b"
 PACE_SCOPE = r"(?i)\b(?:post\w*|send\w*|groups?|main|fiverr|upwork|uet|community|toprated|top rated|freelance|dms?|donors?|auto\w*|pace|gap|interval|quiet|hours?|minutes?|mins?)\b"
 QUIET = re.compile(
-    r"(?i)\b(?:quiet|silent|no (?:posting|sending|posts)|don.?t (?:post|send)|nothing (?:posts|sends))\b.*\b\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:to|till|until|se|-)\s*\d{1,2}"
+    r"(?i)\b(?:quiet|silent|no (?:posting|sending|posts|messages)|don.?t (?:post|send)|nothing (?:posts|sends))\b.*\b\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:to|till|until|se|-|and)\s*\d{1,2}"
 )
 TO_ME = re.compile(
     r"(?i)\b(?:send|post|share|text|dm|message|bhej\w*)\s+(?:it |that |this |the \w+ |a \w+ |me )?(?:to )?me\b|\b(?:share|send|post)\b.{0,30}\bwith me\b|^\s*(?:can|could|would|will) you (?:please )?(?:send|post|share)\s*[?!.]*\s*$"
@@ -447,13 +447,27 @@ def task_assignment_only(text):
     return task_only and not independent
 
 
+# Donors in the owner's own words: "people who gave", "givers", "supporters", "top donors".
+DONOR_WORDS = re.compile(
+    r"(?i)\b(?:donors?|important|donated|donation list|givers?|supporters?|contributors?)\b"
+    r"|\b(?:people|those|everyone|all|ones|log|logon|jinhon)\b.{0,25}\b(?:who\s+)?(?:gave|give|donated|paid|helped|diye|diya)\b"
+)
+
+
+# A finished case is recorded as Rs. 0 left; there is no separate "close case" action.
+CASE_DONE = re.compile(
+    r"(?i)\b(?:case|appeal|amount|target|fundraising)\b.{0,30}\b(?:complete|completed|done|closed|close|finished|full|pura|poora|mukammal)\b"
+    r"|\b(?:complete|close|finish)\b.{0,15}\b(?:the\s+)?case\b|\b(?:amount|target)\s+(?:is\s+)?(?:collected|reached|met)\b"
+)
+
+
 def permitted(name, text):
     if name in READ:
         return True
     if task_assignment_only(text) and name != "team_action":
         return False
     if name == "donor_action":
-        return bool(re.search(r"(?i)\b(donor|donors|important|donated)\b", owner_text(text)))
+        return bool(DONOR_WORDS.search(owner_text(text)))
     if name == "shortcut_action":
         return bool(re.search(r"(?i)\b(shortcuts?|when i say|macro)\b", owner_text(text)))
     if name == "team_action":
@@ -516,7 +530,7 @@ def permitted(name, text):
     if name in ("send_appeal", "send_dm_appeal") and literal_text_to_person(t):
         return False  # "send hi to Ali" is those words only, never the poster and saved appeal
     if name == "dm_donors":
-        return i["send"] and bool(re.search(r"(?i)\bdonors?\b", t))
+        return i["send"] and bool(DONOR_WORDS.search(t))
     if name == "dm_group":
         return i["send"] and bool(re.search(r"(?i)\b(members?|group)\b", t))
     if name == "dm_list":
@@ -578,6 +592,8 @@ def permitted(name, text):
         )
     if name == "delete_rule":
         return bool(re.search(r"(?i)\b(forget|delete|remove)\b.*\b(rule|memory|preference)\b", t))
+    if name == "set_left" and CASE_DONE.search(t):
+        return True
     if name in ("set_left", "money_came"):
         return any((p.get("kind") == "money") == (name == "money_came") for p in financial_plans(t))
     if name in (
@@ -679,3 +695,45 @@ def validate_args(schema, args, path="arguments"):
                 check(s.get("items", {}), x, p + "[" + str(j) + "]")
 
     check(schema, args, path)
+
+
+def fast_command_eligible(text):
+    """True when a deterministic command may run without the model: one clear, single-step order."""
+    text = str(text).strip()
+    if not text or len(text) > 10000:
+        return False
+    if re.fullmatch(
+        r"(?i)(?:show|list|view|my)?\s*(?:scheduled?\s+(?:tasks|messages|sends)|schedules|scheduler)",
+        text,
+    ):
+        return True
+    try:
+        if (timed_tasks.parse(text) or {}).get("command") == "list":
+            return True
+    except ValueError:
+        pass
+    if manual_commands.question_request(text):
+        return False
+    if draft_flow.editing_request(owner_text(text)) and (
+        manual_commands.parse(text) or {}
+    ).get("kind") not in ("donation_order", "remove_arrival_line"):
+        return False
+    if re.match(
+        r"(?i)^(?:please\s+)?(?:show|preview|draft|summarize|summarise|analyse|analyze|explain|review|read|check|tell me)\b",
+        text,
+    ):
+        return False
+    if text.startswith(('"', "“", "'", "```", ">")) or re.search(
+        r"(?i)\b(transcript|message says|text says|summarize|analyse|analyze|see fn remove)\s*:",
+        text,
+    ):
+        return False
+    if re.search(r"(?i);|\band then\b|\n(?:you|assistant|app):", text):
+        return False
+    if re.search(
+        r"(?i)\band\s+(?:set|change|write|delete|remove|remember|pause|enable|disable)\b", text
+    ):
+        return False
+    if re.search(r"(?i)\band\s+(?:then\s+)?(?:send|post|share)\b", text):
+        return False
+    return True

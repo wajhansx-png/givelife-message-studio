@@ -696,11 +696,26 @@ def poster_media(use="group"):
             return video
         if picture.exists():
             return picture
+        # A local file can disappear after a cloud restart; recover the saved media.
+        if STORE:
+            key = "dm_poster" if prefix else "poster"
+            media_kind = STORE.get(key + "_kind", "image")
+            encoded = STORE.get(key + ("_video_b64" if media_kind == "video" else "_b64"))
+            if encoded:
+                target = video if media_kind == "video" else picture
+                try:
+                    write_atomic(target, base64.b64decode(encoded, validate=True))
+                    kind.write_text(media_kind, encoding="utf-8")
+                    return target
+                except (ValueError, OSError):
+                    pass
     return DATA / "poster.jpg"
 
 
 def post_media(jid, cap, path):
     """Send one picture or MP4 video with its caption file through the WhatsApp gateway."""
+    if not Path(path).is_file():
+        raise ValueError("The saved poster is missing. Please upload the poster again before sending.")
     video = str(path).endswith(".mp4")
     return subprocess.run(
         [
@@ -4834,7 +4849,11 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/chat-next-actions":
             self.reply({"items": next_chat_actions()})
         elif self.path == "/poster":
-            self.reply((DATA / "poster.jpg").read_bytes(), "image/jpeg")
+            img = poster_media()
+            picture = DATA / "poster.jpg"
+            if not picture.is_file():
+                return self.reply({"error": "Poster unavailable. Upload your poster again."}, status=404)
+            self.reply(picture.read_bytes(), "image/jpeg")
         elif self.path == "/dm-poster":
             img = poster_media("dm")
             self.reply(

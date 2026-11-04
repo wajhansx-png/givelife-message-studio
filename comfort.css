@@ -3066,3 +3066,132 @@ html body #donorsPage[data-panel='messages'] .donor-bottom {
     content: none !important;
   }
 }
+
+/* Visual QA corrections: the narrow-phone row must use two real lines
+   (legacy !important grid areas were squeezing names into a 40px cell). */
+@media (max-width: 560px) {
+  html body #donorsPage#donorsPage .donor-row > .donor-star {
+    grid-area: 1 / 1 !important;
+  }
+  html body #donorsPage#donorsPage .donor-row > .donor-identity {
+    grid-area: 1 / 2 / 2 / 5 !important;
+    min-width: 0 !important;
+  }
+  html body #donorsPage#donorsPage .donor-row > .donor-more {
+    grid-area: 1 / 5 !important;
+  }
+  html body #donorsPage#donorsPage .donor-row > .donor-dm {
+    grid-area: 2 / 2 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  html body #donorsPage#donorsPage .donor-row > .donor-status {
+    grid-area: 2 / 3 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  html body #donorsPage#donorsPage .donor-row > .donor-amount {
+    grid-area: 2 / 4 !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  html body #donorsPage#donorsPage .donor-row .donor-name {
+    min-width: 0 !important;
+    font-size: 13px !important;
+  }
+  /* Opaque, touch-friendly popup: no underlying donor rows through its text. */
+  html body:not(#_):not(#__) #donorsPage#donorsPage .donor-row .donor-more[open] > div {
+    background: #25262e !important;
+    background-color: #25262e !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid #444652 !important;
+    box-shadow: 0 18px 54px rgba(0,0,0,.75) !important;
+  }
+  html body:not(#_):not(#__) #donorsPage#donorsPage .donor-row .donor-more[open] > div .donor-normal-box {
+    background: #25262e !important;
+  }
+}
+/* Messages: keep the editor and Next/Back available without scrolling
+   past a full-height preview on a short 320px phone. The message scrolls inside
+   the card, while actions follow immediately below it. */
+@media (max-width: 899px) {
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading {
+    flex: none !important;
+    min-width: 0 !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-workspace {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    gap: 8px !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail {
+    order: 1 !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    height: clamp(145px, 35dvh, 340px) !important;
+    min-height: 145px !important;
+    max-height: 40dvh !important;
+    overflow: hidden !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail .bank-preview,
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail textarea {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 12px 14px 16px !important;
+    overflow-y: auto !important;
+    font-size: 16px !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    order: 2 !important;
+    flex: 0 0 auto !important;
+    align-self: stretch !important;
+    width: 100% !important;
+    max-height: none !important;
+    gap: 6px !important;
+    overflow: visible !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination {
+    display: grid !important;
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    align-items: stretch;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination > .bank-back-bottom {
+    grid-column: 1 / -1 !important;
+    min-height: 44px !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-picker {
+    order: 3 !important;
+    flex: 0 0 auto !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    min-width: 0 !important;
+    max-height: 128px !important;
+    overflow: auto !important;
+    padding: 8px !important;
+    gap: 5px !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-picker > .bank-picker-title {
+    grid-column: 1 / -1 !important;
+  }
+  html body #donorsPage[data-panel='messages'] #donorMessages .bank-picker button {
+    min-width: 0 !important;
+    min-height: 40px !important;
+  }
+}

@@ -2142,3 +2142,36 @@ html body:not(#_):not(#__) .report-list .rp-n{margin:0;flex:none;width:24px;heig
 html body:not(#_):not(#__) .report-list .rp-t{flex:1;font-size:16px;font-weight:600;letter-spacing:0;text-transform:none;color:#a3a8b4}
 html body:not(#_):not(#__) .report-list .rp-v{font-size:17px;white-space:nowrap}
 html body:not(#_):not(#__) .report-list .rp-s{display:none!important}
+
+/* Top bar on phones and tablets: every button gets an equal share of the row; the WhatsApp dot stays a circle. */
+@media (max-width: 899px){
+ html body:not(#_):not(#__) .brandbar{display:flex!important;flex-wrap:nowrap!important;gap:6px!important}
+ html body:not(#_):not(#__) .brandbar>:not(.sr-only):not(#whatsappConnection){flex:1 1 0!important;min-width:0!important;width:auto!important;max-width:none!important;margin:0!important;box-sizing:border-box!important;padding-left:0!important;padding-right:0!important}
+ html body:not(#_):not(#__) .brandbar>:is(.seg,details){padding:0!important}
+ html body:not(#_):not(#__) .brandbar>#whatsappConnection{flex:0 0 44px!important;width:44px!important;order:99;margin:0!important}
+ html body:not(#_):not(#__) .brandbar>.seg{display:flex!important;padding:0!important}
+ html body:not(#_):not(#__) .brandbar>.seg>button{flex:1 1 auto!important;width:100%!important;min-width:0!important;padding:0 4px!important}
+ html body:not(#_):not(#__) .brandbar>details>summary{width:100%!important;min-width:0!important;justify-content:center!important;padding:0 4px!important}
+ html body:not(#_):not(#__) .brandbar>:is(button,.seg,details,.leftchip){min-height:44px}
+ html body:not(#_):not(#__) .brandbar .seg button[data-view-button='group']{font-size:0!important}
+ html body:not(#_):not(#__) .brandbar .seg button[data-view-button='group']::after{content:'Groups';font-size:14px;font-weight:700}
+}
+@media (max-width: 360px){html body:not(#_):not(#__) .brandbar .seg button[data-view-button='group']::after{font-size:13px}}
+@media (max-width: 899px){
+ html body:not(#_):not(#__) .brandbar>.seg{background:none!important;border:0!important;box-shadow:none!important;gap:0!important}
+ html body:not(#_):not(#__) .brandbar>.seg>button{margin:0!important;height:44px!important;min-height:44px!important}
+ html body:not(#_):not(#__) .brandbar>details{display:flex!important}
+ html body:not(#_):not(#__) .brandbar>details>summary{flex:1 1 auto!important;box-sizing:border-box!important;height:44px!important;min-height:44px!important;gap:4px!important;white-space:nowrap;overflow:hidden}
+}
+@media (max-width: 360px){
+ html body:not(#_):not(#__) .brandbar>details>summary{font-size:13px!important}
+}
+@media (max-width: 899px){html body:not(#_):not(#__) .brandbar>span:empty:not(.sr-only){display:none!important}}
+@media (max-width: 360px){html body:not(#_):not(#__) .brandbar>.seg>button{padding:0!important}}
+/* Desktop top bar: the right-hand buttons share one width. */
+@media (min-width: 900px){
+ html body:not(#_):not(#__) .brandbar>:is(#leftChip,#donorNotesShortcut,.report-open){flex:0 0 112px!important;width:112px!important;min-width:112px!important;box-sizing:border-box!important;padding-left:6px!important;padding-right:6px!important;justify-content:center;text-align:center}
+ html body:not(#_):not(#__) .brandbar>#mainNavMore{flex:0 0 112px!important;width:112px!important}
+ html body:not(#_):not(#__) .brandbar>#mainNavMore>summary{width:100%!important;box-sizing:border-box!important;justify-content:center!important}
+}
+@media (min-width: 900px){html body:not(#_):not(#__) .brandbar>.report-open{min-height:40px!important;height:40px!important}}

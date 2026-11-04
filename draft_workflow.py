@@ -75,10 +75,17 @@ def update_amount(text, old, left):
 
     for pattern in (_BALANCE_AFTER, _BALANCE_BEFORE, _BALANCE_ONLY):
         text = pattern.sub(change_balance, text)
-    # Also support a standalone WhatsApp-styled balance: "*_Rs. 25,000_*".
+    # Only replace a standalone currency amount when it equals the previous
+    # balance and cannot be a standalone Rs. 1,000/2,000 donation choice.
+    def standalone(m):
+        previous = int(m["number"].replace(",", ""))
+        if not isinstance(old, int) or old <= 2000 or previous != old:
+            return m[0]
+        return m["head"] + f"{left:,}" + m["tail"]
+
     text = re.sub(
         r"(?im)^(?P<head>[ \t]*[*_]*[ \t]*Rs\.?[ \t]*)(?P<number>\d[\d,]*)(?P<tail>[ \t]*[*_]*[ \t]*)$",
-        lambda m: m["head"] + f"{left:,}" + m["tail"],
+        standalone,
         text,
     )
 

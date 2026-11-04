@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const fs = require('node:fs');
+fs.mkdirSync('mobile-screenshots', { recursive: true });
 const { openDonorMessages } = require('./helpers.cjs');
 
 // The local preview server contains synthetic donors and cannot send real WhatsApp messages.
@@ -92,7 +94,7 @@ for (const [width, height] of [
       expect(t.height).toBeGreaterThanOrEqual(40);
     }
     await testInfo.attach('donors-list-' + width + '.png', {
-      body: await page.locator('#donorsPage').screenshot(),
+      body: await page.locator('#donorsPage').screenshot({ path: 'mobile-screenshots/donors-list-' + width + '.png' }),
       contentType: 'image/png',
     });
 
@@ -105,7 +107,7 @@ for (const [width, height] of [
       (el) => el.scrollWidth <= el.clientWidth + 2,
     )).toBe(true);
     await testInfo.attach('donors-messages-' + width + '.png', {
-      body: await page.locator('#donorsPage').screenshot(),
+      body: await page.locator('#donorsPage').screenshot({ path: 'mobile-screenshots/donors-messages-' + width + '.png' }),
       contentType: 'image/png',
     });
     await page.locator('.bank-back-bottom').scrollIntoViewIfNeeded();
@@ -116,7 +118,7 @@ for (const [width, height] of [
     await expect(page.locator('.donor-bottom')).toBeHidden();
     await assertInside(page, ['#volName', '#volPhone'], width, height);
     await testInfo.attach('donors-volunteers-' + width + '.png', {
-      body: await page.locator('#donorsPage').screenshot(),
+      body: await page.locator('#donorsPage').screenshot({ path: 'mobile-screenshots/donors-volunteers-' + width + '.png' }),
       contentType: 'image/png',
     });
   });
@@ -136,7 +138,7 @@ test('Donor row editor stays inside a narrow phone and the keyboard can be used'
   expect(r.y).toBeGreaterThanOrEqual(0);
   expect(r.y + r.height).toBeLessThanOrEqual(569);
   await testInfo.attach('donors-row-editor-320.png', {
-    body: await page.locator('#donorsPage').screenshot(),
+    body: await page.locator('#donorsPage').screenshot({ path: 'mobile-screenshots/donors-row-editor-320.png' }),
     contentType: 'image/png',
   });
   await page.locator('.donor-row .donor-menu-close').first().click();
@@ -147,7 +149,7 @@ test('Donor row editor stays inside a narrow phone and the keyboard can be used'
   await page.locator('#donorAddSave').scrollIntoViewIfNeeded();
   await expect(page.locator('#donorAddSave')).toBeVisible();
   await testInfo.attach('donors-add-keyboard-320.png', {
-    body: await page.screenshot(),
+    body: await page.screenshot({ path: 'mobile-screenshots/donors-add-keyboard-320.png' }),
     contentType: 'image/png',
   });
 });

@@ -211,7 +211,7 @@
       b.className = 'report-open';
       b.title = 'Report';
       b.setAttribute('aria-label', 'Report');
-      b.textContent = '📊 Report';
+      b.textContent = 'Report';
       b.onclick = open;
       const more = bar.querySelector('#mainNavMore');
       more ? bar.insertBefore(b, more) : bar.append(b);

@@ -1981,3 +1981,36 @@ html body:not(#_):not(#__) .action-rail .group-send .gb-count{display:none}
 html body:not(#_):not(#__) .group-send .grp-card+.grp-card{padding-top:10px!important;border-top:1px solid #ffffff12!important}
 html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree,#btnFreePick){background:#272a34!important;border:1px solid #ffffff17!important}
 html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree,#btnFreePick):hover{background:#2e3240!important;border-color:#ffffff26!important}
+
+/* ===== One colour (owner's choice): neutral greys plus a single blue, #2f6fe8 ===== */
+:root{--grad:linear-gradient(#2f6fe8,#2f6fe8);--grad-h:linear-gradient(#2a63d6,#2a63d6);--r-head:var(--ink)}
+:root[data-theme='dark']{--page:#14151c}
+@media (prefers-color-scheme: dark){:root:not([data-theme='light']){--page:#14151c}}
+html body .brandbar :is(.connect-badge,#whatsappConnection){--ok:#2f6fe8}
+html body:not(#_) #live .autosw[aria-checked='true']{background:#2f6fe8!important;border-color:#2f6fe8!important}
+html:root:not(.no-theme):not(.x) body :is(.talk,.hist) .e.bot.bot{background:var(--sheet)!important;border:1px solid #ffffff14!important;border-left:3px solid #2f6fe8!important;backdrop-filter:none}
+html:root:not(.no-theme):not(.x) body :is(.talk,.hist) .e.bot.bot .r-head{border-image:none!important;border-left-color:#2f6fe8!important}
+html:root:not(.no-theme):not(.x) body :is(.talk,.hist) .e.bot.bot .rn{background:#2f6fe8!important}
+html body:not(#_) .brandbar .report-open{background:var(--fill)!important;border:1px solid #ffffff17!important;color:var(--ink)!important}
+html body:not(#_) .brandbar .report-open::before{content:''!important;display:inline-block;width:18px;height:18px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 20V10h3v10H4zm6.5 0V4h3v16h-3zM17 20v-7h3v7h-3z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 20V10h3v10H4zm6.5 0V4h3v16h-3zM17 20v-7h3v7h-3z'/%3E%3C/svg%3E") center/contain no-repeat}
+html body:not(#_):not(#__) .group-send .gb-go{color:var(--ink)!important}
+html body:not(#_):not(#__) .group-send #groupStatus.is-timer{color:var(--ink)!important}
+/* Fewer buttons: one coloured Send per destination; timers fold behind a small ⏱ button. */
+html body:not(#_):not(#__) .group-send .grp-card .delay-row[hidden]{display:none!important}
+html body:not(#_):not(#__) .group-send .grp-card+.grp-card{padding-top:0!important;border-top:0!important}
+html body:not(#_):not(#__) .group-send :is(.test-row,#btnGivelife,#btnFree){background:#2f6fe8!important;border:0!important;color:#fff!important}
+html body:not(#_):not(#__) .group-send :is(.test-row,#btnGivelife,#btnFree):hover{background:#2a63d6!important}
+html body:not(#_):not(#__) .group-send .test-row{min-height:48px;border-radius:14px}
+html body:not(#_):not(#__) .group-send :is(.test-row .tr-go,.gb-go){color:#fff!important}
+html body:not(#_):not(#__) .group-send :is(.gb-name .last-sent,.test-row .last-sent){color:#ffffffc7!important}
+html body:not(#_):not(#__) .group-send .gb-timer{flex:none;width:52px;min-height:58px;padding:0;border:1px solid #ffffff17!important;border-radius:14px;background:#272a34!important;box-shadow:none!important;color:var(--ink)!important;font-size:17px;font-weight:700}
+html body:not(#_):not(#__) .group-send .gb-timer:hover{background:#2e3240!important}
+html body:not(#_):not(#__) .group-send .gb-timer[aria-expanded='true']{border-color:#ffffff40!important}
+html body:not(#_):not(#__) .group-send .gb-timer.is-pending{font-size:12px;border:2px solid #2f6fe8!important}
+html body:not(#_):not(#__) .group-send #dropFree #freeAuto{margin-top:4px;padding:0 12px!important;border-top:1px solid #ffffff14!important;border-radius:0}
+@media (min-width: 900px){
+ html body:not(#_):not(#__) .action-rail .group-send :is(#btnGivelife,#btnFree) .gb-go{font-size:0!important}
+ html body:not(#_):not(#__) .action-rail .group-send :is(#btnGivelife,#btnFree) .gb-go::after{content:'➤';font-size:15px}
+ html body:not(#_):not(#__) .action-rail .group-send .gb-timer{width:42px}
+ html body:not(#_):not(#__) .action-rail .group-send #btnFreePick{width:38px}
+}

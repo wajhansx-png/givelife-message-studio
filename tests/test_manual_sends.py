@@ -110,7 +110,7 @@ class SendTests(unittest.TestCase):
                 "group": {
                     "source": source,
                     "revision": "fixture-bank",
-                    "items": [f"*Version {i:02d}*\n" + source for i in range(1, 11)],
+                    "items": [source.replace("\n", f" (v{i:02d})\n", 1) for i in range(1, 11)],
                     "state": "Ready",
                 }
             },

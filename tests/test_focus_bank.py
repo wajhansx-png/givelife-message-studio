@@ -1,7 +1,7 @@
 import unittest, threading, copy
 from types import SimpleNamespace
 from unittest.mock import patch
-from focus_bank import FocusBank, reject_reason
+from focus_bank import GEN, FocusBank, reject_reason
 
 
 def valid(source, text, existing=()):
@@ -180,7 +180,7 @@ class FocusTests(unittest.TestCase):
         self.assertEqual(len(b.get("group")["items"]), 10)
         self.assertEqual(b.get("group")["items"][:2], partial["items"])
 
-    def test_empty_bank_is_repaired_instantly_with_fact_preserving_wordings(self):
+    def test_empty_bank_sends_the_exact_saved_message_with_no_added_lines(self):
         b = self.make()
         source = "💔 2-year-old Yousaf has passed away.\n\nHis parents need burial support.\n\nRs. 47,000 STILL NEEDED.\n\n03097458815 — Easypaisa / JazzCash - Wajdan Khan"
         self.drafts["group"] = source
@@ -188,46 +188,33 @@ class FocusTests(unittest.TestCase):
             "dm_variants.assistant.client", side_effect=AssertionError("Never call AI for recovery")
         ):
             row = b.ensure_group_ready()
-        self.assertEqual(len(row["items"]), 10)
-        self.assertEqual(row["state"], "Partial")
-        # Ten distinct opening lines AND ten distinct closing lines (not one swapped
-        # clause), while the saved message itself stays byte-for-byte intact inside.
-        self.assertEqual(len({x.split("\n")[0] for x in row["items"]}), 10)
-        self.assertEqual(len({x.rsplit("\n", 1)[-1] for x in row["items"]}), 10)
-        self.assertTrue(all(source in x for x in row["items"]))
-        self.assertTrue(all("47,000" in x and "03097458815" in x for x in row["items"]))
+            self.assertEqual(row["items"], [])
+            self.assertEqual(b.reserve_groups(source, 6), [source] * 6)
         self.assertEqual(self.drafts["group"], source)
-        self.assertEqual(b.reserve_groups(source, 10), row["items"])
-        restarted = FocusBank(self.app)
-        self.assertEqual(restarted.reserve_groups(source, 1), [row["items"][0]])
 
-    def test_failed_generation_can_be_recovered_without_network(self):
+    def test_old_wrapped_fallbacks_are_removed_and_never_sent(self):
         b = self.make()
-        original = self.drafts["group"]
+        source = self.drafts["group"]
+        rewrite = DEEP[0]
         self.app.STORE.put(
             "focus_wording",
             {
                 "group": {
-                    "source": original,
-                    "revision": "stale-gen",
-                    "items": [],
-                    "state": "Needs retry",
-                    "error": "429 API unavailable",
-                    "generator": 4,
+                    "source": source,
+                    "revision": "r1",
+                    "items": [rewrite, "For everyone in this group, please read:\n\n" + source + "\n\nThank you."],
+                    "state": "Partial",
+                    "local_fallback": 1,
+                    "generator": GEN,
                 }
             },
         )
-        with patch(
-            "dm_variants.assistant.client",
-            side_effect=AssertionError("Never call AI during recovery"),
-        ):
-            ready = b.ensure_group_ready()
-        self.assertEqual(ready["state"], "Partial")
-        self.assertEqual(ready["local_fallback"], 10)
-        self.assertIn("quick fallbacks", ready["error"])
-        self.assertEqual(len(ready["items"]), 10)
-        self.assertFalse(b.record("group", "stale-gen", {"items": [], "state": "Needs retry"}))
-        self.assertEqual(b.get("group")["items"], ready["items"])
+        row = b.get("group")
+        self.assertEqual(row["items"], [rewrite])
+        self.assertNotIn("local_fallback", row)
+        sent = b.reserve_groups(source, 4)
+        self.assertEqual(sent, [rewrite, source, rewrite, source])
+        self.assertTrue(all("please read:" not in x for x in sent))
 
     def test_old_failed_bank_restarts_once_after_generator_upgrade(self):
         b = self.make()

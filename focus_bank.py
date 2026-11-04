@@ -34,6 +34,15 @@ class FocusBank:
                 row.update(generator=GEN, state="Generating", error="")
                 data[kind] = row
                 self._put(data)
+            if row and any(is_wrapped(row.get("source", ""), x) for x in row.get("items", [])):
+                row["items"] = clean_items(row["source"], row["items"])
+                row.pop("local_fallback", None)
+                if row.get("state") == "Ready" and len(row["items"]) < 10:
+                    row["state"] = "Partial"
+                if row.get("state") == "Partial":
+                    row["error"] = f"{len(row['items'])} rewrites ready. Press Retry for more."
+                data[kind] = row
+                self._put(data)
             current = self.app.get_message(kind)["text"]
             changed = bool(row and current != row["source"] and current not in row.get("items", []))
             result = copy.deepcopy(
@@ -265,11 +274,10 @@ class FocusBank:
         return self.get(kind)
 
     def ensure_group_ready(self):
-        """Instantly recover missing Group versions without relying on an LLM.
+        """Group versions ready to send, without an LLM: the AI rewrites plus the saved message itself.
 
-        Local versions only prepend different appeals to the exact saved message.
-        No patient facts, monetary amounts, formatting, emojis, or payment details change.
-        This also invalidates in-flight older AI results before they can overwrite the bank.
+        Every version keeps the owner's exact lines; nothing is ever added above or below.
+        Older quick fallbacks that wrapped the message in extra lines are dropped.
         """
         with self.app.LOCK, self.lock:
             if not self.app.STORE:
@@ -278,56 +286,18 @@ class FocusBank:
             if not row.get("source", "").strip():
                 raise ValueError("Save a Group message before sending. Nothing sent.")
             data = self._load()
-            if not data.get("group"):
-                row = {
+            saved = data.get("group")
+            if not saved:
+                saved = {
                     "source": row["source"],
                     "items": [],
                     "revision": hashlib.sha256(row["source"].encode()).hexdigest(),
-                    "state": "Generating",
+                    "state": "Not generated",
                     "generator": GEN,
                 }
-                data["group"] = row
-            pool = []
-            seen = set()
-            for value in row.get("items", []):
-                if not isinstance(value, str) or not value.strip():
-                    continue
-                key = wording_key(value)
-                if key not in seen:
-                    pool.append(value)
-                    seen.add(key)
-            if len(pool) < 10:
-                full = len(pool)
-                for value in safe_local_versions(row["source"]):
-                    key = wording_key(value)
-                    if key not in seen:
-                        pool.append(value)
-                        seen.add(key)
-                    if len(pool) >= 10:
-                        break
-                if len(pool) < 10:
-                    raise ValueError(
-                        "Could not safely create 10 distinct Group versions. Check the saved message. Nothing sent."
-                    )
-                if any(k[0] == "group" for k in self.running):
-                    # The AI is still writing the real versions. Use a temporary top-up for this send only:
-                    # never change the revision (that would cancel the generation) or save fallbacks as results.
-                    view = copy.deepcopy(row)
-                    view["items"] = pool[:10]
-                    return view
-                note = f"{full} full rewrites ready; {10 - full} are quick fallbacks (your message with a different opening and closing line). Press Retry for full rewrites."
-                row.update(
-                    items=pool[:10],
-                    revision=uuid.uuid4().hex,
-                    state="Partial",
-                    error=note,
-                    generator=GEN,
-                    progress=10,
-                    local_fallback=10 - full,
-                )
-                data["group"] = row
+                data["group"] = saved
                 self._put(data)
-            return copy.deepcopy(row)
+            return copy.deepcopy(saved)
 
     def reserve_groups(self, caption, count):
         """Reserve only saved Group-tab versions, cycling all ten across Auto/manual sends.
@@ -342,19 +312,13 @@ class FocusBank:
             items = row.get("items", [])
             pool = []
             seen = set()
-            for value in items:
-                if not isinstance(value, str) or not value.strip():
-                    continue
+            for value in clean_items(row["source"], items):
                 signature = wording_key(value)
                 if signature not in seen:
                     pool.append(value)
                     seen.add(signature)
-            if len(pool) != 10:
-                raise ValueError(
-                    "Group tab has "
-                    + str(len(pool))
-                    + "/10 distinct saved versions. Finish generating or save all 10 before sending. Nothing sent."
-                )
+            if len(pool) < 10 and wording_key(row["source"]) not in seen:
+                pool.append(row["source"])
             saved = self.app.STORE.get("focus_group_rotation", {}) or {}
             revision = row.get("revision")
             cursor = (
@@ -453,54 +417,18 @@ def reject_reason(source, text, existing=()):
     return ""
 
 
-def safe_local_versions(source):
-    """Ten immediately available, genuinely varied local versions.
+def is_wrapped(source, value):
+    """An old quick fallback: the saved message verbatim with lines added around it."""
+    return isinstance(value, str) and value.strip() != str(source).strip() and str(source).strip() in value
 
-    The owner's saved message is never edited: each version wraps it, intact and
-    verbatim, between a different short opening line and a different short
-    closing line (ten distinct pairs, not one swapped clause), so the versions
-    read as distinct without touching a single fact, amount, payment detail,
-    emoji or formatting mark inside the saved message itself.
-    """
-    if not isinstance(source, str) or not source.strip():
-        return []
-    body = source.strip("\n")
-    openers = (
-        "Please take a moment to read this:",
-        "Before you scroll past, please read this:",
-        "Something important for everyone here:",
-        "Please read this with care:",
-        "A message that deserves your full attention:",
-        "Please don't skip this one:",
-        "For everyone in this group, please read:",
-        "A few minutes of your time, please:",
-        "Something we are asking you to read:",
-        "Please take this message seriously:",
-    )
-    closers = (
-        "Thank you to everyone who has already helped.",
-        "Every contribution, large or small, makes a difference.",
-        "If you can't give today, please share this with someone who can.",
-        "Thank you for reading this far.",
-        "Your attention to this means a lot.",
-        "Please consider this before you move on.",
-        "Every person who helps makes the next step possible.",
-        "Thank you for taking this seriously.",
-        "If you have questions, please ask before deciding.",
-        "Thank you, from all of us.",
-    )
-    out = []
-    for opener, closer in zip(openers, closers):
-        value = opener + "\n\n" + body + "\n\n" + closer
-        # The saved message must stay byte-for-byte intact inside the wrapper, and
-        # the wrapper text itself must add no numbers or emojis (no invented
-        # urgency, deadlines or figures) beyond what the owner already wrote.
-        if source not in value:
+
+def clean_items(source, items):
+    out, seen = [], set()
+    for value in items or []:
+        if not isinstance(value, str) or not value.strip() or is_wrapped(source, value):
             continue
-        if dm_variants._numbers(source) != dm_variants._numbers(value):
-            continue
-        if dm_variants._emojis(source) != dm_variants._emojis(value):
-            continue
-        if wording_key(value) not in {wording_key(x) for x in out}:
+        key = wording_key(value)
+        if key not in seen:
             out.append(value)
+            seen.add(key)
     return out

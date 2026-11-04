@@ -55,39 +55,30 @@ def remaining_amount(text):
 
 
 def update_amount(text, old, left):
-    """Refresh only the campaign balance and donor-count options, not other money facts.
-
-    A saved draft or rotated version can have an older amount than the latest state,
-    so balance-labelled amounts are refreshed regardless of which earlier value it had.
-    Never replace the fixed Rs. 2,000 / Rs. 1,000 donation options.
-    """
+    """Keep saved balances and donor math current without changing historical expenses."""
     left = max(0, int(left))
     text = str(text or "")
-    balance_line = re.compile(
-        r"(?i)(?<![A-Za-z0-9])(?P<currency>Rs\\.?\\s*)?"
-        r"(?P<number>\\d[\\d,]*)(?P<scale>\\s*k)?"
-        r"(?P<between>\\s*(?:(?:still|urgently|only|more)\\s+)*)"
-        r"(?P<label>left|remaining|needed|required|to\\s+go|to\\s+raise)\\b"
-    )
+    # A message can be older than the last balance change; use its own labelled
+    # balance rather than assuming its previous amount equals 'old'.
+    def change_balance(match):
+        number = float(match["sum"].replace(",", ""))
+        scale = (match["scale"] or "").lower()
+        if scale in ("k", "thousand", "hazar", "hazaar"):
+            number *= 1000
+        elif scale in ("lakh", "lac"):
+            number *= 100000
+        if number < 1000 and not scale and not re.search(r"(?i)rs\.?", match[0]):
+            return match[0]  # "3 left" is a count, not a donation balance
+        start = match.start("sum") - match.start()
+        end = match.end("scale") - match.start() if match["scale"] else match.end("sum") - match.start()
+        return match[0][:start] + f"{left:,}" + match[0][end:]
 
-    def balance_value(m):
-        value = int(m["number"].replace(",", ""))
-        if m["scale"] and m["scale"].strip().lower() == "k":
-            value *= 1000
-        # "3 people left" is not a monetary balance.
-        if not m["currency"] and value < 1000 and not m["scale"]:
-            return m[0]
-        return (
-            (m["currency"] or "") + f"{left:,}" + m["between"] + m["label"]
-        )
-
-    text = balance_line.sub(balance_value, text)
-    # An isolated, styled line like "*_Rs. 25,000_*" is also a balance.
-    # Restrict this to a whole line so amounts inside medical/history text remain intact.
+    for pattern in (_BALANCE_AFTER, _BALANCE_BEFORE, _BALANCE_ONLY):
+        text = pattern.sub(change_balance, text)
+    # Also support a standalone WhatsApp-styled balance: "*_Rs. 25,000_*".
     text = re.sub(
-        r"(?im)^(?P<lead>\\s*[*_]*\\s*Rs\\.?\\s*)"
-        r"(?P<number>\\d[\\d,]*)(?P<tail>\\s*[*_]*\\s*)$",
-        lambda m: m["lead"] + f"{left:,}" + m["tail"],
+        r"(?im)^(?P<head>[ \t]*[*_]*[ \t]*Rs\.?[ \t]*)(?P<number>\d[\d,]*)(?P<tail>[ \t]*[*_]*[ \t]*)$",
+        lambda m: m["head"] + f"{left:,}" + m["tail"],
         text,
     )
 
@@ -99,12 +90,12 @@ def update_amount(text, old, left):
         )
 
     text = re.sub(
-        r"(?i)(?<!\\d)\\d+(?P<body>\\s+(?:kind\\s+)?people\\s+(?:(?:donating|giving|contributing|contributing at|at|of|or)\\s+)?(?:Rs\\.?\\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)",
+        r"(?i)(?<!\d)\d+(?P<body>\s+(?:kind\s+)?people\s+(?:(?:donating|giving|contributing|contributing at|at|of|or)\s+)?(?:Rs\.?\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)",
         option,
         text,
     )
     text = re.sub(
-        r"(?i)(?<!\\d)\\d+(?P<body>\\s*[×x]\\s*(?:Rs\\.?\\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)",
+        r"(?i)(?<!\d)\d+(?P<body>\s*[×x]\s*(?:Rs\.?\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)",
         option,
         text,
     )
@@ -112,7 +103,7 @@ def update_amount(text, old, left):
     def reverse(m):
         return m[1] + str(math.ceil(left / int(m[2].replace(",", "").replace(" ", "")))) + m[3]
 
-    return re.sub(r"(?i)((?:Rs\\.?\\s*)?(2[ ,]?000|1[ ,]?000)\\s+by\\s+)\\d+(\\s+people)", reverse, text)
+    return re.sub(r"(?i)((?:Rs\.?\s*)?(2[ ,]?000|1[ ,]?000)\s+by\s+)\d+(\s+people)", reverse, text)
 
 
 def requirements(prompt):

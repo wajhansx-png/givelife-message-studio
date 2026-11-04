@@ -1598,7 +1598,10 @@ async function quick(t) {
     direct = await response.json();
   if (!response.ok) throw Error(direct.error || 'Command failed. Nothing was retried.');
   if (direct.handled) {
+    const previousBalance = left;
     applyDrafts(direct);
+    if (direct.left != null && direct.left !== previousBalance)
+      document.dispatchEvent(new Event('donors-changed'));
     if (direct.donors_changed || direct.volunteers_changed || direct.team_changed)
       document.dispatchEvent(new Event('donors-changed'));
     if (direct.job_id) watchGroupJob(direct.job_id, direct.caption || $('group').value);
@@ -1700,7 +1703,10 @@ async function act(text) {
   }
   if (!r.ok) throw Error(d.error || 'The assistant could not answer.');
   if (!d.superseded) {
+    const previousBalance = left;
     applyDrafts(d);
+    if (d.left != null && d.left !== previousBalance)
+      document.dispatchEvent(new Event('donors-changed'));
     if (d.autopilot != null) paintAuto(d.autopilot);
     if (d.donors_changed || d.volunteers_changed || d.team_changed)
       document.dispatchEvent(new Event('donors-changed'));
@@ -2113,8 +2119,10 @@ function paintStatusLine() {
 }
 function refreshLiveDrafts(data, baseline) {
   if (data.left != null && left === baseline.left) {
+    const changed = left !== data.left;
     left = data.left;
     showLeft();
+    if (changed) document.dispatchEvent(new Event('donors-changed'));
   }
   const payload = JSON.stringify({ group: $('group').value, dm: $('dm').value });
   if (

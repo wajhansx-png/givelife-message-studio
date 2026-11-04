@@ -67,15 +67,21 @@
       headers = new Headers(options.headers || {});
     if (token) headers.set('Authorization', 'Bearer ' + token);
     try {
-      return await raw(base + path, {
+      const response = await raw(base + path, {
         ...options,
         headers,
         credentials: path === '/notes' ? 'same-origin' : 'omit',
         signal: controller.signal,
       });
+      const type = response.headers.get('content-type') || '';
+      if (type.includes('text/html')) {
+        // A host error/wake-up page is not an API response. Never retry a send here.
+        throw Error('The cloud is restarting or unavailable. Sending was not confirmed; check WhatsApp before retrying.');
+      }
+      return response;
     } catch (e) {
       throw Error(
-        e.name === 'AbortError'
+        e.message.startsWith('The cloud is restarting') ? e.message : e.name === 'AbortError'
           ? 'The cloud is taking too long. Tap Try again.'
           : 'Could not reach the cloud. Check your internet and try again.',
       );

@@ -51,6 +51,17 @@ class VideoPoster(unittest.TestCase):
         self.assertEqual(server.poster_media("group").read_bytes(), new)
         self.assertEqual([x.name for x in self.d.glob("*.tmp")], [])
 
+    def test_missing_local_poster_is_restored_from_saved_data(self):
+        store = type("Store", (), {"get": lambda self, key, default=None: {"poster_b64": base64.b64encode(JPG).decode(), "poster_kind": "image"}.get(key, default)})()
+        with patch.object(server, "STORE", store):
+            self.assertEqual(server.poster_media().read_bytes(), JPG)
+
+    def test_missing_poster_is_reported_before_any_gateway_call(self):
+        with patch.object(server.subprocess, "run") as run:
+            with self.assertRaisesRegex(ValueError, "poster.*upload|poster.*attach"):
+                server.post_media("test@g.us", self.d / "caption.txt", self.d / "missing.jpg")
+            run.assert_not_called()
+
     def test_missing_video_file_falls_back_to_the_picture(self):
         (self.d / "poster.jpg").write_bytes(JPG)
         (self.d / "poster-kind.txt").write_text("video")
@@ -72,6 +83,8 @@ class VideoPoster(unittest.TestCase):
 
     def test_the_gateway_video_endpoint_is_used_for_video_and_image_endpoint_for_pictures(self):
         seen = []
+        (self.d / "poster.mp4").write_bytes(MP4)
+        (self.d / "poster.jpg").write_bytes(JPG)
         with patch.object(
             server.subprocess,
             "run",

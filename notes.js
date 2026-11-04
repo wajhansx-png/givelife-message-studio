@@ -412,6 +412,7 @@
       }
       if (!dirty || !loaded) {
         editor.innerHTML = r.html || '';
+        normalizeBlocks();
         revision = r.revision || 0;
         dirty = false;
         loaded = true;
@@ -485,6 +486,7 @@
       el('notesPassword').value = '';
       revision = r.revision || 0;
       editor.innerHTML = r.html || '';
+      normalizeBlocks();
       dirty = false;
       loaded = true;
       screen(false);
@@ -495,6 +497,54 @@
       el('notesError').textContent = err.message;
     } finally {
       submit.disabled = false;
+    }
+  });
+  /* Every line is its own paragraph, so Heading / Bullets / Numbers change only the chosen line,
+     never a whole block of loose text. */
+  function normalizeBlocks() {
+    const BLOCK = /^(P|DIV|H1|H2|H3|H4|UL|OL|LI|BLOCKQUOTE|PRE|HR|TABLE)$/;
+    let run = null;
+    for (const node of [...editor.childNodes]) {
+      const inline = node.nodeType === 3 ? node.textContent.length > 0 : node.nodeType === 1 && !BLOCK.test(node.tagName);
+      if (inline) {
+        if (!run) {
+          run = document.createElement('p');
+          editor.insertBefore(run, node);
+        }
+        run.append(node);
+      } else run = null;
+    }
+    for (const div of [...editor.children].filter((n) => n.tagName === 'DIV' && !n.className)) {
+      const p = document.createElement('p');
+      while (div.firstChild) p.append(div.firstChild);
+      div.replaceWith(p);
+    }
+    for (const p of [...editor.querySelectorAll(':scope > p')]) {
+      const only = [...p.childNodes].filter((n) => !(n.nodeType === 3 && !n.textContent.trim()));
+      if (only.length === 1 && /^(UL|OL|H1|H2|H3)$/.test(only[0].tagName || '')) p.replaceWith(only[0]);
+    }
+  }
+  try {
+    document.execCommand('defaultParagraphSeparator', false, 'p');
+  } catch (e) {}
+  editor.addEventListener('focus', () => {
+    try {
+      document.execCommand('defaultParagraphSeparator', false, 'p');
+    } catch (e) {}
+    if (!editor.firstElementChild && !editor.textContent.trim()) editor.innerHTML = '<p><br></p>';
+  });
+  editor.addEventListener('input', () => {
+    if ([...editor.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) {
+      const sel = window.getSelection(),
+        r = sel.rangeCount ? sel.getRangeAt(0) : null,
+        node = r?.startContainer,
+        offset = r?.startOffset;
+      normalizeBlocks();
+      if (node && editor.contains(node)) {
+        try {
+          sel.collapse(node, offset);
+        } catch (e) {}
+      }
     }
   });
   editor.addEventListener('input', rememberDirty);
@@ -526,12 +576,15 @@
   page.querySelectorAll('[data-command]').forEach((b) =>
     b.addEventListener('click', () => {
       restoreSelection();
+      normalizeBlocks();
       document.execCommand(b.dataset.command, false, null);
+      normalizeBlocks();
       rememberDirty();
     }),
   );
   const applyBlock = (tag) => {
     restoreSelection();
+    normalizeBlocks();
     document.execCommand('formatBlock', false, tag);
     rememberDirty();
   };

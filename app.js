@@ -1098,6 +1098,11 @@ try {
 } catch (e) {}
 function paintTimers(timers) {
   if (timers && typeof timers === 'object') groupTimers = timers;
+  document.querySelectorAll('.gb-timer').forEach((b) => {
+    const t = groupTimers[b.dataset.timer];
+    b.classList.toggle('is-pending', !!t);
+    b.textContent = t ? clockText(t.due_at) : '⏱';
+  });
   document.querySelectorAll('.delay-pill').forEach((b) => {
     const t = groupTimers[b.dataset.delayScope],
       on = !!t && Number(b.dataset.delay) === t.delay;
@@ -1147,9 +1152,21 @@ async function timerTap(scope, minutes) {
     timerBusy = false;
   }
 }
+function showTimerRow(b, open) {
+  const row = $(b.getAttribute('aria-controls'));
+  row.hidden = !open;
+  b.setAttribute('aria-expanded', String(open));
+}
 document
-  .querySelectorAll('.delay-pill')
-  .forEach((p) => (p.onclick = () => timerTap(p.dataset.delayScope, Number(p.dataset.delay))));
+  .querySelectorAll('.gb-timer')
+  .forEach((b) => (b.onclick = () => showTimerRow(b, b.getAttribute('aria-expanded') !== 'true')));
+document.querySelectorAll('.delay-pill').forEach(
+  (p) =>
+    (p.onclick = async () => {
+      await timerTap(p.dataset.delayScope, Number(p.dataset.delay));
+      showTimerRow(document.querySelector('.gb-timer[data-timer="' + p.dataset.delayScope + '"]'), false);
+    }),
+);
 paintTimers();
 /* ---- group dropdowns ---- */
 function toggleGroupDrop(btnId, dropId) {

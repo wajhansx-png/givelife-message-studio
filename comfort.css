@@ -2292,3 +2292,11 @@ html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .gb-go{
 html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row .gb-name{white-space:nowrap!important}
 html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row:has(.row-tools) #btnFree .gb-name{padding-right:96px!important}
 html body:not(#_):not(#__):not(#___) #messageFocus .group-send .send-row:has(.row-tools) #btnGivelife .gb-name{padding-right:62px!important}
+/* Message screen, desktop: small, fast-reading text with tight spacing. */
+@media (min-width:701px){
+  html body #messageFocus :is(#focusFormatted,#focusText){font-size:13px!important;line-height:1.4!important;max-width:520px!important;padding:16px 18px!important}
+  html body #messageFocus #focusFormatted :is(p,div,li){margin-top:0!important;margin-bottom:7px!important;font-size:13px!important;line-height:1.4!important}
+  html body #messageFocus #focusFormatted :is(b,strong,h1,h2,h3){font-size:13px!important}
+  html body #messageFocus #focusFormatted ul{margin:0 0 7px!important;padding-left:18px!important}
+}
+@media (min-width:701px){html body #messageFocus #focusFormatted{height:auto!important;min-height:0!important;flex:0 0 auto!important;align-self:center!important}}

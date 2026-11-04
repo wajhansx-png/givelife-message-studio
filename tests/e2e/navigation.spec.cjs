@@ -561,7 +561,7 @@ test('tapping a donor name stars it, every screen has one "Back" and it is the l
   await expect(page.locator('.donor-sub')).toHaveCount(0);
 });
 
-test('Volunteers tab: all five tabs fit on one line, add by name and number, save the message and DM one volunteer', async ({
+test('Volunteers tab: filters stay readable on phones and add, save and manage a volunteer', async ({
   page,
   request,
 }) => {
@@ -577,7 +577,18 @@ test('Volunteers tab: all five tabs fit on one line, add by name and number, sav
       .evaluateAll((els) => [
         ...new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))),
       ]);
-    expect(tops.length, `${w}px: tabs on one line`).toBe(1);
+    expect(tops.length, `${w}px: at most two visible filter rows`).toBeLessThanOrEqual(2);
+    const bounds = await page.locator('.donor-tabs button').evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const box = button.getBoundingClientRect();
+        return { left: box.left, right: box.right, height: box.height };
+      }),
+    );
+    for (const box of bounds) {
+      expect(box.left).toBeGreaterThanOrEqual(-1);
+      expect(box.right).toBeLessThanOrEqual(w + 1);
+      if (w <= 899) expect(box.height).toBeGreaterThanOrEqual(40);
+    }
     await page.locator('[data-tab=volunteers]').click();
     await expect(page.locator('#donorVolunteers')).toBeVisible();
     await expect(page.locator('.donor-bottom')).toBeHidden();

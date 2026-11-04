@@ -132,6 +132,30 @@
     }
     const normal = document.getElementById('donorNormalTotal')?.closest('.donor-total');
     if (normal) panel.append(normal);
+    // At phone widths, show the two frequently used actions directly instead
+    // of making the user open More. Move the original elements; never clone
+    // buttons or rebind their donor/send handlers.
+    const donorPhone = matchMedia('(max-width:560px)');
+    const navDetails = document.getElementById('donorNavMore');
+    const placeDonorActions = () => {
+      const messages = document.querySelector('.donor-message-tablist');
+      const bulk = document.getElementById('donorBulk');
+      const add = document.getElementById('donorAdd');
+      if (donorPhone.matches && add) {
+        if (messages) head.insertBefore(messages, add);
+        if (bulk) head.insertBefore(bulk, add);
+        if (navDetails) {
+          navDetails.open = false;
+          navDetails.hidden = true;
+        }
+      } else {
+        if (messages) panel.append(messages);
+        if (bulk) panel.append(bulk);
+        if (navDetails) navDetails.hidden = false;
+      }
+    };
+    placeDonorActions();
+    donorPhone.addEventListener('change', placeDonorActions);
   }
   document.addEventListener('pointerdown', (e) => {
     for (const m of menus) if (m.open && !m.contains(e.target)) m.open = false;

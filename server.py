@@ -2091,6 +2091,13 @@ def clear_dm_poster():
             STORE.put(k, "")
 
 
+def write_atomic(path, raw):
+    """Replace a file in one step, so a send in progress reads the old or the new poster, never half."""
+    temp = path.with_name(path.name + "." + uuid.uuid4().hex + ".tmp")
+    temp.write_bytes(raw)
+    temp.replace(path)
+
+
 def save_upload(data_url, use):
     if use == "bulk":
         import batch_media
@@ -2110,15 +2117,8 @@ def save_upload(data_url, use):
         if raw[4:8] != b"ftyp":
             raise ValueError("Use an MP4 video (H.264). Other video types are not accepted.")
         if use == "poster":
-            if (
-                (DONORS and DONORS.jobs.active)
-                or CAMPAIGN.get("running")
-                or ACTIVE
-                and not mapping(JOBS.get(ACTIVE)).get("done")
-            ):
-                raise ValueError("Wait until the active send finishes before changing the poster.")
-            (DATA / (pre + "poster.mp4")).write_bytes(raw)
-            (DATA / (pre + "poster-kind.txt")).write_text("video", encoding="utf-8")
+            write_atomic(DATA / (pre + "poster.mp4"), raw)
+            write_atomic(DATA / (pre + "poster-kind.txt"), b"video")
             if STORE:
                 STORE.put(
                     key + "_video_b64",
@@ -2133,13 +2133,6 @@ def save_upload(data_url, use):
     if len(raw) > 8_000_000:
         raise ValueError("Picture is too big (max 8 MB).")
     if use == "poster":
-        if (
-            (DONORS and DONORS.jobs.active)
-            or CAMPAIGN.get("running")
-            or ACTIVE
-            and not mapping(JOBS.get(ACTIVE)).get("done")
-        ):
-            raise ValueError("Wait until the active send finishes before changing the poster.")
         if not raw.startswith(b"\xff\xd8\xff"):
             raise ValueError(
                 "Choose a JPEG poster. The upload control converts your picture automatically."
@@ -2147,8 +2140,8 @@ def save_upload(data_url, use):
         if STORE:
             STORE.put(key + "_b64", base64.b64encode(raw).decode())
             STORE.put(key + "_kind", "image")
-        (DATA / (pre + "poster.jpg")).write_bytes(raw)
-        (DATA / (pre + "poster-kind.txt")).write_text("image", encoding="utf-8")
+        write_atomic(DATA / (pre + "poster.jpg"), raw)
+        write_atomic(DATA / (pre + "poster-kind.txt"), b"image")
         clear_dm_poster()
         return "poster"
     aid = uuid.uuid4().hex[:12]
@@ -2265,8 +2258,8 @@ def dm_campaign(people, gap, image, vary, message, start_after, rest_every, rest
                 if c["stop"]:
                     return
                 time.sleep(2)
-        img = image_path(image)
         for i, p in enumerate(people):
+            img = image_path(image)  # a poster changed mid-batch applies to the next person
             if c["stop"]:
                 c["log"].append("Stopped by owner.")
                 return

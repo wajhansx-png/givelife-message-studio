@@ -8875,7 +8875,17 @@ html body #donorsPage[data-panel='messages'] .donor-bottom {
     color: var(--ink);
     border: 1px solid var(--line2);
   }
-  html body #donorsPage .donor-page .donor-row > .donor-more {
+  html body #donorsPage .donor-row > .donor-more {
     z-index: 40;
+  }
+  html body #donorsPage .donor-more[open] .donor-menu-close {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: 7px 9px;
+    border-radius: 8px;
+    background: var(--surface2);
+    color: var(--ink);
+    text-align: right;
   }
 }

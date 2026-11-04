@@ -2241,105 +2241,36 @@
                 <span id="sendMode">Poster + caption</span>
               </div>
               <div class="group-two" role="group" aria-label="Send groups">
+                <button type="button" class="test-row" data-test="group" aria-label="Send to Test group">
+                  <span class="tr-name">🧪 Test group</span
+                  ><small class="last-sent" data-last-group="test" id="sent-test"></small
+                  ><span class="tr-go">Send test ➤</span>
+                </button>
                 <div class="grp-card" data-scope="main">
-                  <div class="group-drop-wrap">
-                  <button
-                    class="group-main-btn"
-                    data-group="main"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                    id="btnGivelife"
-                  >
-                    GiveLife <span class="gd-arrow">▾</span
-                    ><small class="last-sent" data-last-group="main" id="sent-main"></small>
+                  <button class="group-main-btn" data-group="main" id="btnGivelife" aria-label="Send to GiveLife">
+                    <span class="gb-name">GiveLife<small class="last-sent" data-last-group="main" id="sent-main"></small></span
+                    ><span class="gb-go">Send ➤</span>
                   </button>
-                  <div class="group-drop" id="dropGivelife" hidden>
-                    <button data-group="main">
-                      GiveLife main<small class="last-sent" data-last-group="main"></small>
-                    </button>
-                    <button class="ghost" data-test="group">
-                      Test group<small
-                        class="last-sent"
-                        data-last-group="test"
-                        id="sent-test"
-                      ></small>
-                    </button>
-                  </div>
-                </div>
                   <div class="delay-row" role="group" aria-label="GiveLife timer">
-                    <span class="delay-label">Later</span>
-                    <button type="button" class="delay-pill" data-delay="15" data-delay-scope="main" aria-pressed="false">in 15 min</button>
-                    <button type="button" class="delay-pill" data-delay="30" data-delay-scope="main" aria-pressed="false">in 30 min</button>
-                    <button type="button" class="delay-pill" data-delay="45" data-delay-scope="main" aria-pressed="false">in 45 min</button>
-                    <button type="button" class="delay-pill" data-delay="60" data-delay-scope="main" aria-pressed="false">in 1 hr</button>
+                    <span class="delay-label" aria-hidden="true">⏱</span><button type="button" class="delay-pill" data-delay="15" data-delay-scope="main" aria-pressed="false">15m</button><button type="button" class="delay-pill" data-delay="30" data-delay-scope="main" aria-pressed="false">30m</button><button type="button" class="delay-pill" data-delay="45" data-delay-scope="main" aria-pressed="false">45m</button><button type="button" class="delay-pill" data-delay="60" data-delay-scope="main" aria-pressed="false">1h</button>
                   </div>
                 </div>
                 <div class="grp-card" data-scope="free">
                   <div class="group-drop-wrap">
-                  <button
-                    class="group-free-btn"
-                    data-group="free"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                    id="btnFree"
-                  >
-                    All freelance <span class="gd-arrow">▾</span
-                    ><small class="last-sent" data-last-group="free" id="sent-free"></small>
-                  </button>
-                  <div class="group-drop" id="dropFree" hidden>
-                    <button data-group="community">
-                      Upwork Community<small
-                        class="last-sent"
-                        data-last-group="community"
-                        id="sent-community"
-                      ></small>
-                    </button>
-                    <button data-group="fiverr">
-                      Fiverr Course<small
-                        class="last-sent"
-                        data-last-group="fiverr"
-                        id="sent-fiverr"
-                      ></small>
-                    </button>
-                    <button data-group="upwork">
-                      Upwork Course<small
-                        class="last-sent"
-                        data-last-group="upwork"
-                        id="sent-upwork"
-                      ></small>
-                    </button>
-                    <button data-group="uet">
-                      Fiverr UET<small
-                        class="last-sent"
-                        data-last-group="uet"
-                        id="sent-uet"
-                      ></small>
-                    </button>
-                    <button data-group="toprated">
-                      Top Rated<small
-                        class="last-sent"
-                        data-last-group="toprated"
-                        id="sent-toprated"
-                      ></small>
-                    </button>
+                    <button class="group-free-btn" data-group="free" id="btnFree" aria-label="Send to all 5 freelance groups">
+                      <span class="gb-name"><span>All freelance<span class="gb-count"> · 5</span></span><small class="last-sent" data-last-group="free" id="sent-free"></small></span
+                      ><span class="gb-go">Send ➤</span>
+                    </button
+                    ><button type="button" class="gb-pick" id="btnFreePick" aria-haspopup="true" aria-expanded="false" aria-label="Choose one freelance group">▾</button>
+                    <div class="group-drop" id="dropFree" hidden><button data-group="community">Upwork Community<small class="last-sent" data-last-group="community" id="sent-community"></small></button><button data-group="fiverr">Fiverr Course<small class="last-sent" data-last-group="fiverr" id="sent-fiverr"></small></button><button data-group="upwork">Upwork Course<small class="last-sent" data-last-group="upwork" id="sent-upwork"></small></button><button data-group="uet">Fiverr UET<small class="last-sent" data-last-group="uet" id="sent-uet"></small></button><button data-group="toprated">Top Rated<small class="last-sent" data-last-group="toprated" id="sent-toprated"></small></button></div>
                   </div>
-                </div>
                   <div class="delay-row" role="group" aria-label="Freelance timer">
-                    <span class="delay-label">Later</span>
-                    <button type="button" class="delay-pill" data-delay="15" data-delay-scope="free" aria-pressed="false">in 15 min</button>
-                    <button type="button" class="delay-pill" data-delay="30" data-delay-scope="free" aria-pressed="false">in 30 min</button>
-                    <button type="button" class="delay-pill" data-delay="45" data-delay-scope="free" aria-pressed="false">in 45 min</button>
-                    <button type="button" class="delay-pill" data-delay="60" data-delay-scope="free" aria-pressed="false">in 1 hr</button>
+                    <span class="delay-label" aria-hidden="true">⏱</span><button type="button" class="delay-pill" data-delay="15" data-delay-scope="free" aria-pressed="false">15m</button><button type="button" class="delay-pill" data-delay="30" data-delay-scope="free" aria-pressed="false">30m</button><button type="button" class="delay-pill" data-delay="45" data-delay-scope="free" aria-pressed="false">45m</button><button type="button" class="delay-pill" data-delay="60" data-delay-scope="free" aria-pressed="false">1h</button>
                   </div>
-                  <button type="button" class="free-sw on" id="freeAuto" role="switch" aria-checked="true">Freelance sending: ON</button>
+                  <button type="button" class="free-sw on" id="freeAuto" role="switch" aria-checked="true"><span>Freelance auto-sending</span></button>
                 </div>
-                <button
-                  class="group-all-btn"
-                  id="sendAll"
-                  title="GiveLife + all 5 freelance"
-                  aria-label="Send to all 6 groups"
-                >
-                  <small class="last-sent" data-last-group="all" id="sent-all"></small>All 6
+                <button class="group-all-btn" id="sendAll" aria-label="Send to all 6 groups">
+                  <span>Send to all 6 ➤</span><small class="last-sent" data-last-group="all" id="sent-all"></small>
                 </button>
               </div>
               <div id="groupStatus" role="status"></div>

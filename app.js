@@ -1067,6 +1067,7 @@ async function sendGroup(key) {
     await save();
     const caption = $('group').value;
     $('groupStatus').textContent = 'Sending now…';
+    $('groupStatus').classList.remove('is-timer');
     const r = await post('/send-group', { group: key, message: caption, request_id: requestId() }),
       start = await r.json();
     if (!r.ok) throw Error(start.error || 'Could not start');
@@ -1102,7 +1103,7 @@ function paintTimers(timers) {
       on = !!t && Number(b.dataset.delay) === t.delay;
     b.classList.toggle('is-pending', on);
     b.setAttribute('aria-pressed', String(on));
-    b.textContent = on ? '⏱ ' + clockText(t.due_at) : 'in ' + delayText(Number(b.dataset.delay));
+    b.textContent = on ? clockText(t.due_at) : String(b.dataset.delay === '60' ? '1h' : b.dataset.delay + 'm');
     b.setAttribute(
       'aria-label',
       on ? 'Scheduled at ' + clockText(t.due_at) + '. Tap to cancel' : 'Send in ' + delayText(Number(b.dataset.delay)),
@@ -1122,6 +1123,7 @@ async function timerTap(scope, minutes) {
       if (!r.ok) throw Error(d.error || 'Could not cancel');
       delete groupTimers[scope];
       $('groupStatus').textContent = 'Timer cancelled for ' + label + '.';
+      $('groupStatus').classList.remove('is-timer');
     } else {
       await fillEmptyCaption('group');
       await ensureCaption('group');
@@ -1134,7 +1136,8 @@ async function timerTap(scope, minutes) {
         d = await r.json();
       if (!r.ok) throw Error(d.error || 'Could not schedule');
       groupTimers[scope] = { id: d.task_id, due_at: d.due_at, delay: minutes };
-      $('groupStatus').textContent = '⏱ ' + label + ' sends at ' + clockText(d.due_at) + '.';
+      $('groupStatus').textContent = '⏱ ' + label + ' sends at ' + clockText(d.due_at) + ' · tap the time to cancel';
+      $('groupStatus').classList.add('is-timer');
     }
     paintTimers();
   } catch (e) {
@@ -1171,24 +1174,13 @@ document.addEventListener('click', (e) => {
       .forEach((b) => b.setAttribute('aria-expanded', 'false'));
   }
 });
-$('btnGivelife').addEventListener('click', (e) => {
-  if (e.target.closest('.gd-arrow')) {
-    toggleGroupDrop('btnGivelife', 'dropGivelife');
-  } else {
-    $('dropGivelife').hidden = true;
-    $('btnGivelife').setAttribute('aria-expanded', 'false');
-    sendGroup('main');
-  }
-});
-$('btnFree').addEventListener('click', (e) => {
-  if (!e.target.closest('.gd-arrow')) {
-    $('dropFree').hidden = true;
-    $('btnFree').setAttribute('aria-expanded', 'false');
-    sendGroup('free');
-  } else {
-    toggleGroupDrop('btnFree', 'dropFree');
-  }
-});
+$('btnGivelife').onclick = () => sendGroup('main');
+$('btnFree').onclick = () => {
+  $('dropFree').hidden = true;
+  $('btnFreePick').setAttribute('aria-expanded', 'false');
+  sendGroup('free');
+};
+$('btnFreePick').onclick = () => toggleGroupDrop('btnFreePick', 'dropFree');
 document.querySelectorAll('.group-drop [data-group]').forEach((b) => {
   b.onclick = () => {
     b.closest('.group-drop').hidden = true;
@@ -1860,7 +1852,7 @@ function paintFreeAuto(sum) {
   const sw = $('freeAuto');
   if (!sw) return;
   sw.setAttribute('aria-checked', String(on));
-  sw.textContent = on ? 'Freelance sending: ON' : 'Freelance sending: OFF (paused)';
+  sw.title = on ? 'Freelance auto-sending is on' : 'Freelance auto-sending is paused';
   sw.classList.toggle('on', on);
   document
     .querySelectorAll('.every-pill')

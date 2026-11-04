@@ -1431,62 +1431,6 @@ html body #messageFocus :is(#focusFormatted, #focusText) {
   }
 }
 
-/* ---- Delayed send pill row ---- */
-.delay-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 0 2px;
-  flex-wrap: wrap;
-}
-.delay-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mut);
-  white-space: nowrap;
-  margin-right: 2px;
-}
-.delay-pill {
-  flex: 1;
-  min-width: 54px;
-  min-height: 36px;
-  padding: 0 8px;
-  border-radius: 20px;
-  border: 1.5px solid var(--line2);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    color 0.15s;
-}
-.delay-pill:hover {
-  background: var(--gs);
-}
-.delay-pill[aria-pressed='true'] {
-  background: var(--btn);
-  border-color: var(--btn);
-  color: #fff;
-}
-.delay-hint {
-  display: block;
-  font-size: 10px;
-  font-weight: 500;
-  opacity: 0.8;
-  margin-top: 2px;
-  line-height: 1.2;
-}
-/* Legacy selector kept for any remaining .prim/.chips refs; new layout handled below */
-.delay-armed .prim .big,
-.delay-armed .chips button {
-  border: 1.5px solid var(--btn) !important;
-  background: color-mix(in srgb, var(--btn) 8%, var(--surface)) !important;
-}
-/* On phone stack the row compactly */
-@media(max-width:600px){.delay-row{gap:4px}.delay-pill{font-size:12px;min-height:34px}}
 
 /* Important tab: "Deselect all" sits beside the contacted chip, in a quiet red so it is not tapped by mistake. */
 html body .donor-page .hide-row{display:flex;gap:8px;flex-wrap:wrap}
@@ -1503,140 +1447,7 @@ html body .donor-page .deselect-chip{color:#ffb4b4!important;border-color:#ff6b6
 html body .donor-page .bank-format{min-width:44px;font-weight:800}
 html body .donor-page .bank-test{background:#14532d!important;color:#d1fae5!important}
 html body .donor-page .bank-base{background:#3a2a0c!important;color:#ffd27a!important}
-@media (max-width: 600px) {
-  .delay-row {
-    gap: 4px;
-  }
-  .delay-pill {
-    font-size: 12px;
-    min-height: 34px;
-  }
-}
 
-/* ---- Simplified group-send two-button layout ---- */
-.group-two {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-  flex-wrap: wrap;
-}
-.group-drop-wrap {
-  position: relative;
-  flex: 1;
-  min-width: 130px;
-}
-.group-main-btn,
-.group-free-btn {
-  width: 100%;
-  min-height: 44px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: none;
-  background: var(--btn);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  text-align: left;
-  position: relative;
-}
-.group-main-btn .gd-arrow,
-.group-free-btn .gd-arrow {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 12px;
-  opacity: 0.7;
-  pointer-events: auto;
-  padding: 4px 2px;
-}
-.group-main-btn .last-sent,
-.group-free-btn .last-sent {
-  font-size: 10px;
-  font-weight: 400;
-  opacity: 0.8;
-  line-height: 1.2;
-}
-.group-free-btn {
-  background: var(--surface2);
-  color: var(--ink);
-  border: 1.5px solid var(--line2);
-}
-.group-all-btn {
-  min-height: 44px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1.5px solid var(--line2);
-  background: var(--surface2);
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-.group-all-btn .last-sent {
-  font-size: 10px;
-  font-weight: 400;
-  opacity: 0.7;
-}
-.group-drop {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 200;
-  background: var(--surface);
-  border: 1px solid var(--line2);
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-  overflow: hidden;
-}
-.group-drop button {
-  width: 100%;
-  padding: 11px 14px;
-  border: none;
-  background: transparent;
-  color: var(--ink);
-  font-size: 14px;
-  text-align: left;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.group-drop button:hover {
-  background: var(--gs);
-}
-.group-drop button .last-sent {
-  font-size: 11px;
-  opacity: 0.6;
-}
-/* armed tint on the two main buttons when delay is active */
-.delay-armed .group-main-btn,
-.delay-armed .group-free-btn,
-.delay-armed .group-all-btn {
-  outline: 2px solid var(--btn);
-  outline-offset: 2px;
-}
-@media (max-width: 480px) {
-  .group-two {
-    gap: 6px;
-  }
-  .group-main-btn,
-  .group-free-btn {
-    font-size: 14px;
-    min-height: 42px;
-  }
-}
 
 /* Send DMs dialog: one simple column, clear rows, big Start button. Loads last so it wins over older rules. */
 html body #donorBatchPicker{width:min(460px,calc(100vw - 24px))!important;max-height:calc(100dvh - 24px)!important;padding:18px!important;overflow:auto!important}
@@ -1658,20 +1469,6 @@ html body #donorBatchForm .batch-foot{position:sticky!important;bottom:-18px!imp
 html body #donorBatchForm .donor-form-actions{display:grid!important;grid-template-columns:1fr 2fr!important;gap:10px!important}
 html body #donorBatchForm .donor-form-actions button{min-height:50px!important;font-size:16px!important;font-weight:800!important}
 
-/* Main page: GiveLife and Freelance each get their own card, timer and (freelance) auto control. */
-html body .group-send .group-two{display:grid!important;grid-template-columns:1fr 1fr;gap:10px!important}
-html body .group-send .grp-card{display:flex;flex-direction:column;gap:6px;min-width:0;padding:8px;border:1px solid #ffffff1a;border-radius:14px}
-html body .group-send .grp-card .group-drop-wrap{min-width:0!important}
-html body .group-send .grp-card .delay-row{padding:2px 0!important;gap:5px!important}
-html body .group-send .grp-card .delay-label{flex:0 0 100%;font-size:11px}
-html body .group-send .grp-card .delay-pill,html body .group-send .grp-card .every-pill{flex:1;min-width:0!important;min-height:38px!important;padding:0 4px!important;font-size:12px!important;border-radius:10px!important;border:1.5px solid var(--line2);background:var(--surface);color:var(--ink);font-weight:700}
-html body .group-send .grp-card .every-pill[aria-pressed=true]{background:var(--btn);border-color:var(--btn);color:#fff}
-html body .group-send .free-auto{align-items:center}
-html body .group-send .free-auto .delay-label{flex:0 0 auto}
-html body .group-send .free-sw{min-height:38px;min-width:64px;padding:0 12px;border-radius:19px;border:1.5px solid var(--line2);background:var(--surface);color:var(--ink);font-weight:800;font-size:13px}
-html body .group-send .free-sw.on{background:#16a34a;border-color:#16a34a;color:#fff}
-html body .group-send .group-all-btn{grid-column:1/-1;min-height:44px}
-@media(max-width:520px){html body .group-send .group-two{grid-template-columns:1fr}}
 
 /* DM Messages action bar: on a phone the buttons wrap into tidy rows instead of overlapping. */
 @media (max-width: 700px) {
@@ -1681,37 +1478,16 @@ html body .group-send .group-all-btn{grid-column:1/-1;min-height:44px}
   html body .donor-page .bank-actions .bank-regenerate,html body .donor-page .bank-actions .bank-base,html body .donor-page .bank-actions .bank-test{grid-column:span 2!important}
 }
 
-/* Main page send panel: the two cards stack in one column so every timer button has room. */
-html body .group-send .group-two{grid-template-columns:1fr!important}
-html body .group-send .grp-card .delay-row:not(.free-auto){flex-wrap:nowrap!important}
-html body .group-send .grp-card .delay-row:not(.free-auto) .delay-label{flex:0 0 auto!important;max-width:30%}
-html body .group-send .grp-card .delay-pill,html body .group-send .grp-card .every-pill{white-space:nowrap!important;min-height:40px!important}
-html body .group-send .grp-card .free-auto{flex-wrap:wrap!important}
-html body .group-send .grp-card .group-main-btn,html body .group-send .grp-card .group-free-btn{flex-direction:row!important;flex-wrap:wrap;align-items:center!important;justify-content:space-between;min-height:48px!important}
 
 /* Top donors: rank number beside each name on the Important and Top tabs, and the quick "+ Top" chip. */
 html body #donorsPage:is([data-panel='important'],[data-panel='top']) .donor-name[data-rank]:not([data-rank=''])::before{content:'#' attr(data-rank) ' ';font-weight:800;color:#ffd27a}
 html body .donor-page .donor-top-chip{margin-top:4px;min-height:28px;padding:0 10px;border-radius:14px;border:1px solid #ffd27a66;background:#3a2a0c;color:#ffd27a;font-size:12px;font-weight:800;cursor:pointer}
 html body .donor-page .donor-top-chip[aria-pressed='true']{background:#ffd27a;color:#3a2a0c}
 
-/* Main send panel, final spacing: every label gets its own line, timer pills share a clean row, nothing overlaps. */
-html body .group-send .grp-card .delay-row .delay-label{flex:0 0 100%!important;max-width:none!important;margin:0!important}
-html body .group-send .grp-card .delay-row{flex-wrap:wrap!important;gap:6px!important}
-html body .group-send .grp-card .delay-pill,html body .group-send .grp-card .every-pill{flex:1 1 0!important;min-width:56px!important;font-size:13px!important;white-space:nowrap!important}
-html body .group-send .grp-card .free-auto .free-sw{flex:1 1 0!important;min-width:0!important}
-html body .group-send .grp-card .free-auto .delay-label:first-child{flex:0 0 auto!important}
-html body .group-send .grp-card .group-main-btn,html body .group-send .grp-card .group-free-btn{padding-right:32px!important;gap:6px!important}
-html body .group-send .grp-card .gd-arrow{position:absolute;right:12px;top:50%;transform:translateY(-50%)}
-html body .group-send .grp-card .last-sent{margin-left:auto;font-size:11px;opacity:.7;white-space:nowrap}
-@media(max-width:380px){html body .group-send .grp-card .delay-pill,html body .group-send .grp-card .every-pill{font-size:12px!important;min-width:48px!important}}
 
 /* Selected timer / interval pill is clearly coloured; the right rail never overflows. */
-html body .group-send .grp-card .delay-pill[aria-pressed='true'],html body .group-send .grp-card .every-pill[aria-pressed='true']{background:#2563eb!important;border-color:#60a5fa!important;color:#fff!important;box-shadow:0 0 0 2px #2563eb55}
-html body .group-send .grp-card.delay-armed{border-color:#2563eb!important;background:#2563eb14}
 html body .action-rail,html body .action-rail .group-send,html body .action-rail .grp-card{box-sizing:border-box;min-width:0;max-width:100%}
 html body .action-rail .group-send{overflow:hidden}
-html body .group-send .grp-card .group-drop-wrap,html body .group-send .grp-card .group-main-btn,html body .group-send .grp-card .group-free-btn{width:100%;box-sizing:border-box}
-html body .group-send .group-all-btn{width:100%;box-sizing:border-box}
 
 /* Donor rows: the "+ Top" chip sits on the same line as the name, so rows keep their height and never overlap. */
 html body .donor-page .donor-row .donor-identity{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important;min-width:0!important;overflow:hidden!important}
@@ -1719,13 +1495,6 @@ html body .donor-page .donor-row .donor-identity .donor-name{flex:1 1 auto;min-w
 html body .donor-page .donor-row .donor-identity .donor-normal-tag{display:none!important}
 html body .donor-page .donor-row .donor-top-chip{flex:0 0 auto;margin:0!important;min-height:26px!important;padding:0 8px!important;line-height:1;font-size:11px!important;white-space:nowrap}
 
-/* Timer rows: four equal buttons that always fit inside the card, never clipped. */
-html body .group-send .grp-card .delay-row:not(.free-auto){display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
-html body .group-send .grp-card .delay-row:not(.free-auto) .delay-label{grid-column:1/-1}
-html body .group-send .grp-card .free-auto{display:grid!important;grid-template-columns:auto repeat(3,minmax(0,1fr))!important;gap:6px!important;align-items:center}
-html body .group-send .grp-card .free-auto .free-sw{grid-column:2/-1}
-html body .group-send .grp-card .free-auto .delay-label:nth-of-type(2){grid-column:1/-1}
-html body .group-send .grp-card .delay-pill,html body .group-send .grp-card .every-pill{min-width:0!important;padding:0 2px!important;font-size:13px!important}
 
 /* Full screen on the Donors page: only the donor list box fills the screen (header, tabs and search step aside). */
 html body #donorsPage.donor-expanded{inset:0!important;width:100vw!important;max-width:none!important;height:100dvh!important;max-height:none!important;margin:0!important;padding:0!important;border-radius:0!important}
@@ -1740,28 +1509,13 @@ html body #donorsPage .donor-head>.hide-row{margin:0 0 0 auto!important;padding:
 html body #donorsPage .donor-head>.hide-row[hidden]{display:none!important}
 html body #donorsPage .donor-head>.hide-row .hide-chip{min-height:38px;padding:0 12px;white-space:nowrap}
 
-/* The Auto interval is a saved setting, not a send timer: green, so it never looks like a second timer choice. */
-html body .group-send .grp-card .every-pill[aria-pressed='true']{background:#14532d!important;border-color:#22c55e!important;color:#d1fae5!important;box-shadow:none!important}
-html body .group-send .grp-card .free-auto{border-top:1px dashed #ffffff22;padding-top:8px!important;margin-top:4px}
 
 /* Right rail: the send panel shows from its top edge; the rail itself scrolls if the window is short. */
 html body .action-rail .group-send{overflow:visible!important}
 html body .action-rail{overflow-y:auto!important;overflow-x:hidden!important;align-content:start}
-html body .group-send .grp-card .delay-hint{display:none!important}
 
-/* Compact send panel: no repeated labels, tight cards, pills sized to the narrow desktop rail. */
-html body .group-send .grp-card .delay-row .delay-label{display:none!important}
-html body .group-send .grp-card{padding:6px!important;gap:6px!important;border-radius:12px!important}
-html body .group-send .group-two{gap:8px!important}
-html body .group-send .grp-card .group-main-btn,html body .group-send .grp-card .group-free-btn{min-height:44px!important;padding:6px 30px 6px 12px!important}
-html body .group-send .grp-card .delay-pill{min-height:38px!important;font-size:12.5px!important;padding:0!important;letter-spacing:-.2px;border-radius:9px!important}
-html body .group-send .grp-card .delay-row:not(.free-auto){gap:5px!important}
-html body .group-send .send-title{margin-bottom:6px!important}
-html body .group-send .group-all-btn{min-height:44px!important}
 
 /* Freelance sending switch (full width) and the DM Stop / Resume button colours. */
-html body .group-send .grp-card .free-sw{width:100%;min-height:42px;border-radius:12px;font-size:14px;font-weight:800;background:#7f1d1d;border:1.5px solid #ef4444;color:#fee2e2}
-html body .group-send .grp-card .free-sw.on{background:#14532d;border-color:#22c55e;color:#d1fae5}
 html body .donor-page #donorToggle[data-paused='false']{background:#7f1d1d!important;border-color:#ef4444!important;color:#fee2e2!important}
 html body .donor-page #donorToggle[data-paused='true']{background:#14532d!important;border-color:#22c55e!important;color:#d1fae5!important}
 html body .donor-page #donorEditBatch{margin-left:auto;margin-right:8px;background:#1e3a8a;border:1px solid #3b82f6;color:#dbeafe;font-weight:800}
@@ -1809,16 +1563,6 @@ html body #donorsPage.donor-expanded :is(.donor-bottom,#donorProgress,#donorBatc
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions button{transition:transform .12s ease,filter .12s ease}
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions button:hover{transform:translateY(-1px);filter:brightness(1.12)}
 
-/* ===== Main page: colourful send buttons, compact live bar, nicer reply bubble ===== */
-html body .group-send .grp-card .group-main-btn{background:linear-gradient(135deg,#059669,#0d9488 55%,#0284c7)!important;border:0!important;color:#fff!important;box-shadow:0 6px 18px #05966944!important}
-html body .group-send .grp-card .group-free-btn{background:linear-gradient(135deg,#7c3aed,#4f46e5 55%,#2563eb)!important;border:0!important;color:#fff!important;box-shadow:0 6px 18px #4f46e544!important}
-html body .group-send .grp-card :is(.group-main-btn,.group-free-btn) .last-sent{color:#ffffffcc!important;opacity:1!important}
-html body .group-send .group-all-btn{background:linear-gradient(135deg,#f59e0b,#ea580c)!important;border:0!important;color:#fff!important;box-shadow:0 6px 18px #ea580c44!important}
-html body .group-send .group-all-btn .last-sent{color:#ffffffd9!important}
-html body .group-send .grp-card[data-scope=main]{border-color:#10b98133!important;background:#10b9810a!important}
-html body .group-send .grp-card[data-scope=free]{border-color:#7c3aed33!important;background:#7c3aed0a!important}
-html body .group-send :is(.group-main-btn,.group-free-btn,.group-all-btn,.delay-pill){transition:transform .12s ease,filter .12s ease}
-html body .group-send :is(.group-main-btn,.group-free-btn,.group-all-btn,.delay-pill):hover{transform:translateY(-1px);filter:brightness(1.1)}
 /* Live bar: narrower, one tidy line; the details panel is compact and readable at a glance. */
 html body #live{max-width:820px!important;margin-left:auto!important;margin-right:auto!important}
 html body #live .livebar{min-height:46px!important;padding:6px 14px!important;font-size:14px!important}
@@ -1962,7 +1706,6 @@ html body #live .autosw{border-radius:999px!important;min-height:42px!important;
 html body #live .autosw[aria-checked='true']{background:linear-gradient(135deg,#065f46,#047857)!important;border-color:#34d399!important;box-shadow:0 0 0 3px #34d39933,0 6px 18px #10b98155!important;color:#ecfdf5!important}
 /* Blue gradients: DM ★ Important and All 6. */
 html body #donorsPage #donorSendImportant{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 6px 18px #4f46e555!important}
-html body .group-send .group-all-btn{background:linear-gradient(135deg,#2563eb,#4f46e5 55%,#7c3aed)!important;box-shadow:0 6px 18px #4f46e544!important}
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>.bank-back-bottom{display:inline-flex!important;align-items:center;justify-content:center;order:-2}
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>span{display:inline!important;font-size:13px;opacity:.75;order:-1}
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>[data-bank-nav='next'],html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>button.primary{width:auto!important;min-width:130px!important;max-width:170px!important;min-height:44px!important}
@@ -2031,11 +1774,6 @@ html body #card .chat{border:0!important;box-shadow:none!important}
   html body #live .livebar{flex:1 1 auto!important;min-width:0!important;width:auto!important}
   html body #live .autosw{flex:0 0 auto!important}
 }
-/* GiveLife, Freelance and All 6 are always coloured (ids beat every older rule). */
-html body #btnGivelife{background:linear-gradient(135deg,#059669,#0d9488 55%,#0284c7)!important;color:#fff!important;border:0!important}
-html body #btnFree{background:linear-gradient(135deg,#7c3aed,#4f46e5 55%,#2563eb)!important;color:#fff!important;border:0!important}
-html body #sendAll{background:linear-gradient(135deg,#2563eb,#4f46e5 55%,#7c3aed)!important;color:#fff!important;border:0!important}
-html body :is(#btnGivelife,#btnFree,#sendAll) .last-sent{color:#ffffffd9!important;opacity:1!important}
 /* Top bar on phones: everything fits, WhatsApp dot fully visible. */
 @media (max-width:700px){
   html body .brandbar{gap:4px!important;padding-left:6px!important;padding-right:6px!important;overflow:hidden}
@@ -2056,25 +1794,14 @@ html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>.ba
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>span{order:2!important}
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination>:is([data-bank-nav='next'],button.primary){order:3!important}
 /* Doubled ids outrank the old phone "button:not(...)" reset in studio.css. */
-html body #btnGivelife#btnGivelife{background:linear-gradient(135deg,#059669,#0d9488 55%,#0284c7)!important;color:#fff!important;box-shadow:0 6px 18px #05966944!important}
-html body #btnFree#btnFree{background:linear-gradient(135deg,#7c3aed,#4f46e5 55%,#2563eb)!important;color:#fff!important;box-shadow:0 6px 18px #4f46e544!important}
-html body #sendAll#sendAll{background:linear-gradient(135deg,#2563eb,#4f46e5 55%,#7c3aed)!important;color:#fff!important;box-shadow:0 6px 18px #4f46e544!important}
-html body #freeAuto#freeAuto{background:#7f1d1d!important;color:#fee2e2!important;border:1.5px solid #ef4444!important}
-html body #freeAuto#freeAuto.on{background:#14532d!important;color:#d1fae5!important;border-color:#22c55e!important}
 html body #donorStop#donorStop{background:#7f1d1d!important;color:#fee2e2!important}
 html body dialog.report-dialog.report-dialog[open]{transform:none!important;translate:none!important;scale:none!important}
 
 /* ===== Audit round ===== */
-/* Selected timers: solid blue on every screen size; the matching group button gets a white ring. */
-html body .group-send .delay-pill[aria-pressed='true'][aria-pressed='true']{background:#2563eb!important;border-color:#93c5fd!important;color:#fff!important;box-shadow:0 0 0 2px #2563eb66!important}
-html body .grp-card.delay-armed :is(#btnGivelife#btnGivelife,#btnFree#btnFree){box-shadow:0 0 0 3px #ffffffd9,0 8px 22px #0007!important}
-html body #sendAll#sendAll.delay-armed{box-shadow:0 0 0 3px #ffffffd9,0 8px 22px #0007!important}
 /* DM bubble grows with its text: no flex squeezing; the Messages area scrolls as a whole. */
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail .bank-preview,html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail textarea{flex:0 0 auto!important}
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail,html body #donorsPage[data-panel='messages'] #donorMessages .bank-workspace{flex:0 0 auto!important}
 html body #donorsPage[data-panel='messages'] #donorMessages{overflow-y:auto!important;-webkit-overflow-scrolling:touch}
-/* GiveLife, All freelance and All 6 share the Donors button colour. */
-html body #btnGivelife#btnGivelife,html body #btnFree#btnFree,html body #sendAll#sendAll{background:linear-gradient(135deg,#0e7490 0%,#2f6fe8 52%,#6d4ef0 100%)!important;color:#fff!important;box-shadow:inset 0 1px 0 #ffffff2e,0 8px 20px -10px #2f6fe8e6!important}
 /* WhatsApp dot: never clipped on phones. */
 @media (max-width:700px){
   html body .brandbar{overflow:visible!important;padding-right:10px!important}
@@ -2089,17 +1816,6 @@ html body #btnGivelife#btnGivelife,html body #btnFree#btnFree,html body #sendAll
 }
 
 /* ===== Calm palette (owner's choice): no strong colours on the send panel ===== */
-/* GiveLife, All freelance, All 6: a slightly lighter grey than ordinary buttons. */
-html body #btnGivelife#btnGivelife,html body #btnFree#btnFree,html body #sendAll#sendAll{background:#2e333d!important;color:#f1f5f9!important;border:1px solid #ffffff2e!important;box-shadow:none!important}
-html body :is(#btnGivelife,#btnFree,#sendAll) .last-sent{color:#cbd5e1!important}
-html body .group-send .grp-card[data-scope]{background:transparent!important;border-color:#ffffff14!important}
-/* Freelance sending switch: neutral, the word ON/OFF says it all. */
-html body #freeAuto#freeAuto,html body #freeAuto#freeAuto.on{background:#262a33!important;color:#e5e7eb!important;border:1px solid #ffffff26!important;box-shadow:none!important}
-/* Timers: plain grey; the chosen one is a brighter grey with a light border and a tick. */
-html body .group-send .delay-pill{background:#22262e!important;color:#cbd5e1!important;border:1px solid #ffffff1f!important;box-shadow:none!important}
-html body .group-send .delay-pill[aria-pressed='true'][aria-pressed='true']{background:#454b57!important;color:#fff!important;border:1.5px solid #e2e8f0!important;box-shadow:none!important;font-weight:900!important}
-html body .group-send .delay-pill[aria-pressed='true']::before{content:'✓ ';font-weight:900}
-html body .grp-card.delay-armed :is(#btnGivelife#btnGivelife,#btnFree#btnFree),html body #sendAll#sendAll.delay-armed{box-shadow:0 0 0 1.5px #e2e8f0!important}
 
 /* Notes on phones/tablets: toolbar is one swipeable row on top, the page uses the full width,
    and the screen follows the visible height so the keyboard never hides the text. */
@@ -2206,11 +1922,58 @@ html body #donorResumeStatus.rs-folded>:not(.rs-pill){display:none!important}
 html body #donorResumeStatus.rs-folded .rs-pill{display:inline-flex;align-items:center;min-height:34px;padding:0 14px;border-radius:999px;background:#3b2f12;border:1px solid #facc1566;color:#fde68a;font-weight:800;font-size:13px}
 html body #donorResumeStatus .donor-resume-actions button{white-space:normal!important;line-height:1.1!important}
 
-/* ---- Send timers: a group button sends now; a time pill schedules once ---- */
-html body .group-send .grp-card .delay-pill{background:transparent!important;border:1px solid var(--line2)!important;color:var(--mut)!important;font-weight:600!important}
-html body .group-send .grp-card .delay-pill:hover{color:var(--ink)!important;border-color:var(--ink)!important}
-html body .group-send .grp-card .delay-pill[aria-pressed='true'],
-html body .group-send .grp-card .delay-pill.is-pending{background:#f59e0b!important;border-color:#f59e0b!important;color:#1f1300!important;font-weight:750!important}
-html body .group-send .grp-card.delay-armed{border-color:var(--line)!important;background:none!important}
-html body .group-send .delay-hint{display:none!important}
-html body .group-send .grp-card .delay-pill[aria-pressed='true']::before{content:none!important}
+/* ===== Send card (owner's choice: option 1) =====
+   Two ID-weight :not()s outrank the global button:not(#batchStart) rule in studio.css.
+   Test group on top, GiveLife (blue) and Freelance (green) cards, slim timers, Send to all 6 last. */
+html body:not(#_):not(#__) .group-send .group-two{display:flex!important;flex-direction:column!important;gap:10px!important}
+html body:not(#_):not(#__) .group-send .test-row{display:flex;align-items:center;gap:8px;width:100%;min-height:46px;padding:0 14px;border:1.5px dashed #4a4d5a!important;border-radius:12px;background:none!important;box-shadow:none!important;color:#cfd3df!important;font-size:14px;font-weight:650;text-align:left}
+html body:not(#_):not(#__) .group-send .test-row .last-sent{flex:1;font-size:12px;color:var(--mut);margin:0}
+html body:not(#_):not(#__) .group-send .test-row .tr-go{font-size:13px;color:var(--mut);font-weight:600;white-space:nowrap}
+html body:not(#_):not(#__) .group-send .test-row:hover{border-color:#8a8fa0!important;color:var(--ink)!important}
+html body:not(#_):not(#__) .group-send .grp-card{display:flex!important;flex-direction:column!important;gap:8px!important;padding:10px!important;border:1px solid #2a2c35!important;border-radius:18px!important;background:#1b1c24!important}
+html body:not(#_):not(#__) .group-send .group-drop-wrap{position:relative;display:flex;flex-wrap:wrap;gap:6px}
+html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree){flex:1;min-width:0;display:flex!important;align-items:center;gap:10px;min-height:58px!important;padding:6px 14px!important;border:0!important;border-radius:14px!important;color:#fff!important;text-align:left;box-shadow:none!important}
+html body:not(#_):not(#__) .group-send #btnGivelife{background:#2f6fe8!important}
+html body:not(#_):not(#__) .group-send #btnFree{background:#1f8f55!important}
+html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree):hover{filter:brightness(1.08)}
+html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree):active{transform:scale(.985)}
+html body:not(#_):not(#__) .group-send .gb-name{flex:1;min-width:0;display:flex;flex-direction:column;font-size:17px;font-weight:800;line-height:1.2}
+html body:not(#_):not(#__) .group-send .gb-name .last-sent{display:block;margin:2px 0 0!important;font-size:12px!important;font-weight:500;color:#ffffffcc!important;opacity:1!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body:not(#_):not(#__) .group-send .gb-go{font-size:14px;font-weight:800;white-space:nowrap}
+html body:not(#_):not(#__) .group-send #btnFreePick{flex:none;width:44px;min-height:58px;border:0!important;border-radius:14px;background:#16683e!important;box-shadow:none!important;color:#fff!important;font-size:14px}
+html body:not(#_):not(#__) .group-send #btnFreePick[aria-expanded='true']{background:#0f4d2d!important}
+html body:not(#_):not(#__) .group-send .group-drop{position:static!important;flex:1 0 100%;display:flex;flex-direction:column;gap:2px;padding:6px;background:#14151c!important;border:1px solid #3a3c48!important;border-radius:14px;box-shadow:none!important}
+html body:not(#_):not(#__) .group-send .group-drop[hidden]{display:none}
+html body:not(#_):not(#__) .group-send .group-drop button{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:0!important;border-radius:10px;background:none!important;box-shadow:none!important;color:var(--ink)!important;font-size:14px;font-weight:650;text-align:left}
+html body:not(#_):not(#__) .group-send .group-drop button:hover{background:#ffffff10!important}
+html body:not(#_):not(#__) .group-send .group-drop .last-sent{font-size:12px;color:var(--mut)}
+html body:not(#_):not(#__) .group-send .grp-card .delay-row{display:flex!important;align-items:center;gap:6px!important;padding:0!important;flex-wrap:nowrap!important}
+html body:not(#_):not(#__) .group-send .grp-card .delay-label{display:block!important;flex:none;width:20px;margin:0;text-align:center;font-size:14px;color:#8a8fa0}
+html body:not(#_):not(#__) .group-send .grp-card .delay-pill{flex:1 1 0;min-width:0;min-height:36px!important;padding:0 2px!important;border-radius:18px!important;border:1px solid #33353f!important;background:transparent!important;color:#aeb3c2!important;font-size:13px!important;font-weight:650!important;white-space:nowrap;box-shadow:none!important}
+html body:not(#_):not(#__) .group-send .grp-card .delay-pill:hover{color:var(--ink)!important;border-color:#6e7180!important}
+html body:not(#_):not(#__) .group-send .grp-card .delay-pill:is([aria-pressed='true'],.is-pending){background:#f59e0b!important;border-color:#f59e0b!important;color:#1f1300!important;font-weight:800!important}
+html body:not(#_):not(#__) .group-send .grp-card .delay-pill::before{content:none!important}
+html body:not(#_):not(#__) .group-send #freeAuto{display:flex!important;align-items:center;justify-content:space-between;width:100%;min-height:40px;padding:0 4px!important;border:0!important;background:none!important;color:#aeb3c2!important;font-size:13px!important;font-weight:600!important;box-shadow:none!important}
+html body:not(#_):not(#__) .group-send #freeAuto::after{content:'';flex:none;width:40px;height:22px;border-radius:11px;background:#3a3c48 radial-gradient(circle at 11px 11px,#fff 7px,transparent 7.5px);transition:background .18s}
+html body:not(#_):not(#__) .group-send #freeAuto[aria-checked='true']::after{background:#22a35a radial-gradient(circle at 29px 11px,#fff 7px,transparent 7.5px)}
+html body:not(#_):not(#__) .group-send #sendAll{display:flex!important;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:56px!important;padding:0 16px!important;border:0!important;border-radius:15px!important;background:linear-gradient(90deg,#2f6fe8,#6d4cf5)!important;color:#fff!important;font-size:17px!important;font-weight:800!important;box-shadow:none!important}
+html body:not(#_):not(#__) .group-send #sendAll .last-sent{margin:0!important;font-size:12px!important;font-weight:500;color:#e3ebff!important;opacity:1!important}
+html body:not(#_):not(#__) .group-send #sendAll:hover{filter:brightness(1.08)}
+html body:not(#_):not(#__) .group-send :is(#btnGivelife,#btnFree,#sendAll,.test-row)[aria-busy='true']{opacity:.6}
+html body:not(#_):not(#__) .group-send #groupStatus{text-align:center;font-size:13px}
+html body:not(#_):not(#__) .group-send #groupStatus.is-timer{color:#f5b84a;font-weight:600}
+html body:not(#_):not(#__) .group-send :is(.gb-name,.gb-name .last-sent,.test-row){text-align:left!important}
+html body:not(#_):not(#__) .group-send .gb-name{align-items:flex-start}
+html body:not(#_):not(#__) .group-send .gb-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body:not(#_):not(#__) .group-send .test-row{align-items:center}
+html body:not(#_):not(#__) .group-send .test-row :is(.tr-name,.tr-go){white-space:nowrap}
+html body:not(#_):not(#__) .group-send .test-row .tr-go{margin-left:auto}
+html body:not(#_):not(#__) .group-send .test-row .last-sent{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Desktop right rail is narrow (about 300px): slightly smaller type keeps every label on one line. */
+html body:not(#_):not(#__) .action-rail .group-send :is(#btnGivelife,#btnFree){padding:6px 10px!important;gap:6px}
+html body:not(#_):not(#__) .action-rail .group-send .gb-name{font-size:14px}
+html body:not(#_):not(#__) .action-rail .group-send .gb-go{font-size:12px}
+html body:not(#_):not(#__) .action-rail .group-send .test-row{padding:0 10px;font-size:13px}
+html body:not(#_):not(#__) .action-rail .group-send .test-row .last-sent{display:none}
+html body:not(#_):not(#__) .action-rail .group-send #sendAll{font-size:15px!important;padding:0 12px!important}
+html body:not(#_):not(#__) .action-rail .group-send .gb-count{display:none}

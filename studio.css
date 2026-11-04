@@ -8633,7 +8633,7 @@ html body #donorsPage .donor-table-wrap > #donorExpand {
 }
 /* Donors' Messages editor on phones: one full-width reading column.
    A tiny 82px action column previously squeezed the actual message to 200px. */
-@media (max-width: 850px) {
+@media (max-width: 899px) {
   html body #donorsPage[data-panel='messages'] .donor-shell {
     padding: max(8px, env(safe-area-inset-top))
       max(8px, env(safe-area-inset-right))
@@ -8861,5 +8861,21 @@ html body #donorsPage .donor-table-wrap > #donorExpand {
   }
   html body #donorsPage[data-panel='messages'] .bank-picker {
     max-height: 90px;
+  }
+}
+
+/* The ordinary donor footer must never show behind Volunteers or Messages. */
+html body #donorsPage[data-panel='volunteers'] .donor-bottom,
+html body #donorsPage[data-panel='messages'] .donor-bottom {
+  display: none !important;
+}
+@media (max-width: 560px) {
+  html body #donorsPage .donor-row .donor-more[open] > div {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line2);
+  }
+  html body #donorsPage .donor-page .donor-row > .donor-more {
+    z-index: 40;
   }
 }

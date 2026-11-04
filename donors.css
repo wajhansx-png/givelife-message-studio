@@ -1398,3 +1398,18 @@ html body #donorPasteDialog #pastePoster {
   margin-top: 12px;
   color: var(--ink);
 }
+
+/* Both saved pictures and videos fit the Poster dialog without stretching on phones. */
+.poster-dialog #posterCurrentVideo {
+  display: block;
+  max-width: 100%;
+  max-height: 38dvh;
+  width: auto;
+  height: auto;
+  margin-inline: auto;
+  border-radius: 10px;
+}
+.poster-dialog #posterCurrent[hidden],
+.poster-dialog #posterCurrentVideo[hidden] {
+  display: none !important;
+}

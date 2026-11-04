@@ -41,6 +41,16 @@ class VideoPoster(unittest.TestCase):
         server.save_upload(url(JPG, "image/jpeg"), "poster")
         self.assertEqual(server.poster_media().name, "poster.jpg")
 
+    def test_poster_changes_during_an_active_send_and_the_next_message_uses_it(self):
+        (self.d / "poster.jpg").write_bytes(JPG)
+        busy = type("D", (), {"jobs": type("J", (), {"active": True})()})()
+        new = b"\xff\xd8\xff\xe1" + b"\x01" * 64
+        with patch.object(server, "DONORS", busy), patch.dict(server.CAMPAIGN, {"running": True}):
+            self.assertEqual(server.save_upload(url(new, "image/jpeg"), "dm_poster"), "poster")
+        self.assertEqual(server.poster_media("dm").read_bytes(), new)
+        self.assertEqual(server.poster_media("group").read_bytes(), new)
+        self.assertEqual([x.name for x in self.d.glob("*.tmp")], [])
+
     def test_missing_video_file_falls_back_to_the_picture(self):
         (self.d / "poster.jpg").write_bytes(JPG)
         (self.d / "poster-kind.txt").write_text("video")

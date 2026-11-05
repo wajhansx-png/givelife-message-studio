@@ -672,7 +672,8 @@ def next_message():
         items = bank.get("items", [])
         if not items:
             return get_message("group")["text"]
-        text = items[int(time.time()) % len(items)]
+        # same amount refresh as a real send, so the preview never shows an old balance
+        text = caption_facts.current(sys.modules[__name__], items[int(time.time()) % len(items)])
         save_draft("group", text)
         return text
     with LOCK:
@@ -1093,9 +1094,15 @@ def _group_attempt(job, jid, outgoing):
     except urllib.error.URLError as exc:
         if isinstance(getattr(exc, "reason", None), ConnectionRefusedError):
             return {"code": "ERROR", "message": "WhatsApp disconnected. Nothing was sent."}
-        return {"code": "UNCERTAIN", "message": "Send not confirmed. Check WhatsApp before retrying."}
+        return {
+            "code": "UNCERTAIN",
+            "message": "Send not confirmed. Check WhatsApp before retrying.",
+        }
     except Exception:
-        return {"code": "UNCERTAIN", "message": "Send not confirmed. Check WhatsApp before retrying."}
+        return {
+            "code": "UNCERTAIN",
+            "message": "Send not confirmed. Check WhatsApp before retrying.",
+        }
 
 
 def run_job(job_id, keys, caption, queue=False):
@@ -1140,7 +1147,9 @@ def run_job(job_id, keys, caption, queue=False):
                 if not _not_sent_disconnected(result) or attempt == GROUP_RECONNECT_TRIES:
                     break
                 # Nothing left the phone, so waiting and trying this same group again is safe.
-                job.update(message="WhatsApp is reconnecting. " + name + " is sent when it is back.")
+                job.update(
+                    message="WhatsApp is reconnecting. " + name + " is sent when it is back."
+                )
                 save_job(job_id)
                 if event.wait(15):
                     stop_all = True
@@ -5340,7 +5349,7 @@ class Handler(BaseHTTPRequestHandler):
             "/donor-paste",
             "/api/group-finder",
             "/api/case-plan",
-            ):
+        ):
             with LOCK:
                 OWNER_REVISION += 1
             OWNER_GUARD.revision = OWNER_REVISION
@@ -6167,9 +6176,42 @@ def resume_batches_after_restart(wait=10, tries=90, sleep=time.sleep):
     return resumed
 
 
+_TOPUP_TRIES = {}
+
+
+def wording_topup(bank=None, tries=_TOPUP_TRIES, max_tries=5):
+    """Called every few minutes: a wording bank stuck below 10 versions asks the AI for the missing
+    ones again (retry keeps what is accepted). Bounded, so it can never loop on a rejecting model."""
+    bank = bank or focus_bank()
+    started = []
+    for kind in ("group", "dm"):
+        try:
+            row = bank.get(kind)
+            key = (kind, row.get("revision"))
+            if row.get("state") in ("Partial", "Needs retry") and tries.get(key, 0) < max_tries:
+                tries[key] = tries.get(key, 0) + 1
+                bank.retry(kind)
+                started.append(kind)
+        except Exception as e:  # one bank failing must not stop the other
+            print("wording top-up", kind, "skipped:", type(e).__name__, flush=True)
+    return started
+
+
+def wording_topup_loop():
+    time.sleep(300)
+    while True:
+        try:
+            if STORE and assistant.client():
+                wording_topup()
+        except Exception as e:
+            print("wording top-up skipped:", type(e).__name__, flush=True)
+        time.sleep(900)
+
+
 ensure_dm_structure()
 if __name__ == "__main__":
     threading.Thread(target=resume_batches_after_restart, daemon=True, name="dm-resume").start()
+    threading.Thread(target=wording_topup_loop, daemon=True, name="wording-topup").start()
     threading.Thread(target=recover_group_research, daemon=True, name="research-recovery").start()
     threading.Thread(target=donor_autopilot, daemon=True).start()
     # Team was removed from the interface. Retain records without hidden outreach.

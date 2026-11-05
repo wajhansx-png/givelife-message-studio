@@ -96,6 +96,25 @@ def _meaningful_changes(source, candidate):
     )
 
 
+_URDU = re.compile(r"[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]")
+_LATIN = re.compile(r"[A-Za-z]")
+
+
+def _script(line):
+    u, l = len(_URDU.findall(line)), len(_LATIN.findall(line))
+    return "urdu" if u > l else "latin" if l else ""
+
+
+def language_changed(source, text):
+    """True when a version adds Urdu to an English message or changes any line's script."""
+    a, b = source.split("\n"), text.split("\n")
+    if "urdu" not in map(_script, a) and "urdu" in map(_script, b):
+        return True
+    return len(a) == len(b) and any(
+        _script(x) and _script(y) and _script(x) != _script(y) for x, y in zip(a, b)
+    )
+
+
 def validate(source, text, existing=()):
     """Return an error string, or '' when the version is safe to save."""
     if not isinstance(text, str):
@@ -108,6 +127,8 @@ def validate(source, text, existing=()):
         return "too long"
     if text == source:
         return "same as the source"
+    if language_changed(source, text):
+        return "language changed; keep English lines English and Urdu lines Urdu"
     low, high = length_range(source)
     if not low <= len(text) <= high:
         return (
@@ -243,6 +264,8 @@ NON-NEGOTIABLE:
   approaches across versions. No invented time pressure, medical progression,
   consequences, deadlines, promises, or extra diagnoses.
 - Rewrite each editable paragraph into genuinely different, very easy English.
+- LANGUAGE: every version keeps the source's language line by line. Never add Urdu to an
+  English line and never turn Urdu into English; Urdu only where the owner asked for it.
 - URDU: a line written in Urdu stays in Urdu script and is reworded in simple, moving Urdu
   (never translated to English, never transliterated). A Quran verse, hadith or its
   reference, e.g. (سورة المائدہ: 2), is copied exactly, word for word.

@@ -3,14 +3,65 @@
   const C = { Active: '#10a37f', Working: '#e8b04a', Idle: '#8f8f8f', Error: '#ef6b6b' };
   let key = localStorage.getItem('givelife-cloud-key') || '',
     data = null,
-    pick = localStorage.getItem('givelife-agent') || 'auto',
+    pick = localStorage.getItem('givelife-agent') || 'manager',
     fixing = null;
+
+  const CHIPS = {
+    manager: [
+      'Ask all agents for their progress',
+      'Ask Writer to draft a group appeal',
+      'Ask Checker to verify latest message',
+      'Tell Volunteer Guide to check volunteers',
+      'Recover and retry failed tasks',
+    ],
+    writer: [
+      'Draft a sincere group appeal',
+      'Write a warm DM to an existing donor',
+      'Write a volunteer poster ask',
+      'Improve tone to be softer and more compassionate',
+    ],
+    checker: [
+      'Audit all saved group versions',
+      'Check message: Please help if you can danger Rs 5000',
+      'Audit current case facts and math',
+    ],
+    auto: [
+      'What is the next group scheduled?',
+      'Check posting intervals and group rules',
+    ],
+    volunteers: [
+      'Check pending volunteer outreach',
+      'How many volunteers are ready to share?',
+    ],
+    plan: [
+      'Switch to slow mode',
+      'Switch to normal mode',
+      'What is the remaining case balance?',
+    ],
+  };
+
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
     if (text != null) n.textContent = text;
     return n;
   };
+
+  function formatText(text) {
+    if (!text) return '';
+    // Format basic markdown: code blocks, inline code, bold, italic
+    let html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    html = html.replace(/\*([^*]+)\*/g, '<i>$1</i>');
+    html = html.replace(/\n/g, '<br>');
+    return html;
+  }
+
   async function call(method, body) {
     const r = await fetch('/api/agents', {
       method,
@@ -25,16 +76,77 @@
     if (!r.ok) throw new Error(d.error || 'Something went wrong.');
     return d;
   }
+
   const say = (t, bad) => {
     $('msg').textContent = t || '';
     $('msg').className = 'msg' + (bad ? ' bad' : '');
   };
+
   const clock = (t) =>
     t ? new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+
+  function getChatHistory(agentId) {
+    try {
+      return JSON.parse(localStorage.getItem('givelife-chat-' + agentId) || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  function saveChatHistory(agentId, list) {
+    try {
+      localStorage.setItem('givelife-chat-' + agentId, JSON.stringify(list.slice(-30)));
+    } catch {}
+  }
+
+  function renderChat() {
+    const history = getChatHistory(pick);
+    const container = $('chatThread');
+    container.innerHTML = '';
+
+    if (!history.length) {
+      const welcome = el('div', 'bubble bot');
+      if (pick === 'manager') {
+        welcome.innerHTML =
+          '<b>GiveLife AI Manager</b><br>I supervise and coordinate all 7 agents. You can talk to me directly, give instructions to any agent, or ask: <i>"Ask all agents for their progress"</i>.';
+      } else if (pick === 'writer') {
+        welcome.innerHTML =
+          '<b>Conversational Writer</b><br>I write and refine honest, respectful fundraising messages following your exact taste and verified case facts.';
+      } else if (pick === 'checker') {
+        welcome.innerHTML =
+          '<b>Quality Checker</b><br>I detect wrong amounts, invented medical details, panic urgency, and formatting errors.';
+      } else {
+        welcome.innerHTML = `Connected to <b>${pick.toUpperCase()}</b>. How can I help?`;
+      }
+      container.append(welcome);
+    } else {
+      for (const m of history) {
+        const b = el('div', 'bubble ' + (m.role === 'user' ? 'user' : 'bot'));
+        b.innerHTML = formatText(m.text);
+        container.append(b);
+      }
+    }
+
+    // Render chips
+    const chipsContainer = $('chips');
+    chipsContainer.innerHTML = '';
+    const suggestions = CHIPS[pick] || CHIPS['manager'];
+    for (const s of suggestions) {
+      const btn = el('button', 'chip', s);
+      btn.type = 'button';
+      btn.onclick = () => {
+        $('inp').value = s;
+        sendMessage(s);
+      };
+      chipsContainer.append(btn);
+    }
+  }
+
   function render() {
     if (!data) return;
     const a = data.agents.find((x) => x.id === pick) || data.agents[0];
     pick = a.id;
+
     $('list').replaceChildren(
       ...data.agents.map((x) => {
         const b = el('button', 'agent');
@@ -42,7 +154,7 @@
         b.setAttribute('aria-current', String(x.id === a.id));
         b.append(el('span', 'dot ' + x.status));
         const t = el('span', '', x.name);
-        t.append(el('small', '', x.status + ' · ' + x.now));
+        t.append(el('small', '', x.status + ' · ' + (x.now || 'Ready')));
         b.append(t);
         b.onclick = () => {
           pick = x.id;
@@ -52,26 +164,31 @@
         return b;
       }),
     );
+
     const on = data.auto === true;
     $('modeManual').setAttribute('aria-pressed', String(!on));
     $('modeAuto').setAttribute('aria-pressed', String(on));
     $('modeText').textContent = on
       ? 'Auto: the agents post, read and reply on their own.'
       : 'Manual: nothing runs by itself. You send from the main page.';
+
     $('name').textContent = a.name;
     $('pill').textContent = a.status;
-    $('pill').style.background = C[a.status];
-    $('now').textContent = a.now;
+    $('pill').style.background = C[a.status] || '#10a37f';
+    $('now').textContent = a.now || '';
     $('role').textContent = a.role;
+
     const p = a.progress || {};
     $('pLabel').textContent = p.label || '';
     $('pText').textContent = p.max ? `${p.value} / ${p.max}` : String(p.value ?? '');
     $('pBar').style.width =
       (p.max ? Math.min(100, (100 * p.value) / p.max) : p.value ? 100 : 0) + '%';
-    $('pBar').style.background = C[a.status];
-    $('facts').replaceChildren(...a.facts.map((f) => el('li', '', f)));
+    $('pBar').style.background = C[a.status] || '#10a37f';
+
+    $('facts').replaceChildren(...(a.facts || []).map((f) => el('li', '', f)));
+
     $('errors').replaceChildren(
-      ...a.errors.map((e) => {
+      ...(a.errors || []).map((e) => {
         const box = el('div', e.info ? 'err info' : 'err');
         box.append(el('b', '', e.text), el('span', '', e.fix));
         if (e.action) {
@@ -88,6 +205,7 @@
         return box;
       }),
     );
+
     const own = a.id === 'auto' ? data.rules : [];
     $('rules').hidden = !own.length;
     $('ruleList').replaceChildren(
@@ -102,8 +220,9 @@
         return li;
       }),
     );
+
     $('feed').replaceChildren(
-      ...(a.feed.length
+      ...((a.feed && a.feed.length)
         ? a.feed
             .slice()
             .reverse()
@@ -120,11 +239,19 @@
               };
               return b;
             })
-        : [el('div', 'empty', 'No activity yet this session.')]),
+        : [el('div', 'empty', 'No recent activity.')]),
     );
-    $('inp').placeholder = 'Ask the assistant, or add a rule like: never post in fiverr at night';
+
+    $('inp').placeholder =
+      pick === 'manager'
+        ? 'Ask Manager anything, or: "Ask Writer to...", "Tell Volunteer Guide to..."'
+        : `Talk directly to ${a.name}…`;
+
     $('live').textContent = 'Updated ' + clock(data.updated);
+
+    renderChat();
   }
+
   async function load() {
     if (!key) return $('accessDialog').showModal();
     try {
@@ -134,6 +261,7 @@
       say(e.message, true);
     }
   }
+
   async function act(body) {
     try {
       const d = await call('POST', body);
@@ -146,6 +274,7 @@
       return false;
     }
   }
+
   document.querySelectorAll('[data-mode]').forEach((b) => {
     b.onclick = async () => {
       const want = b.dataset.mode === 'auto';
@@ -155,65 +284,51 @@
       document.querySelectorAll('[data-mode]').forEach((x) => (x.disabled = false));
     };
   });
-  // Not a rule? Ask the same assistant as the main page chat (same safety checks, same access key).
-  async function assistant(text) {
-    const h = { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' };
-    $('answer').hidden = false;
-    $('ansQ').textContent = 'You: ' + text;
-    $('ansText').textContent = 'Thinking…';
-    let r = await fetch('/assistant', {
-      method: 'POST',
-      headers: h,
-      body: JSON.stringify({
-        text,
-        request_id: 'agents-' + Date.now() + '-' + Math.random().toString(36).slice(2),
-        history: [],
-        screen: { view: 'agents' },
-      }),
-    });
-    let d = await r.json().catch(() => ({}));
-    if (r.ok && d.task_id) {
-      const until = Date.now() + 4 * 60 * 1000;
-      for (;;) {
-        if (Date.now() > until) throw new Error('No answer yet. Nothing was repeated.');
-        await new Promise((res) => setTimeout(res, 700));
-        const c = await fetch('/assistant-status/' + d.task_id, { headers: h });
-        const t = await c.json().catch(() => ({}));
-        if (!c.ok) throw new Error(t.error || 'The request is no longer tracked.');
-        if (t.done) {
-          if (t.error) throw new Error(t.error);
-          d = t.result || {};
-          break;
-        }
-      }
-    } else if (r.status === 503) {
-      throw new Error('The AI is not connected. Set DEEPSEEK_API_KEY on Render.');
-    } else if (!r.ok) throw new Error(d.error || 'The assistant could not answer.');
-    $('ansText').textContent = d.reply || 'Done.';
-    $('answer').scrollIntoView({ block: 'nearest' });
-  }
-  $('ask').onsubmit = async (e) => {
-    e.preventDefault();
-    const text = $('inp').value.trim();
+
+  async function sendMessage(text) {
+    text = (text || '').trim();
     if (!text) return;
-    try {
-      const d = await call('POST', { action: 'instruct', agent: pick, text });
-      data = d;
-      render();
-      say(d.reply);
-      $('inp').value = '';
-      return;
-    } catch (err) {
-      if (!/could not turn this into a rule/.test(err.message)) return say(err.message, true);
-    }
+
+    const hist = getChatHistory(pick);
+    hist.push({ role: 'user', text });
+    saveChatHistory(pick, hist);
+    renderChat();
+
+    // Show temporary thinking bubble
+    const container = $('chatThread');
+    const thinking = el('div', 'bubble bot', 'Thinking…');
+    container.append(thinking);
+    thinking.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
     $('inp').value = '';
     say('');
+
     try {
-      await assistant(text);
+      const res = await call('POST', {
+        action: 'chat',
+        agent: pick,
+        text,
+        history: hist.slice(-8),
+      });
+
+      thinking.remove();
+      data = res;
+      hist.push({ role: 'bot', text: res.reply || 'Done.' });
+      saveChatHistory(pick, hist);
+      renderChat();
+
+      const lastBubble = container.lastElementChild;
+      if (lastBubble) lastBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (err) {
-      $('ansText').textContent = err.message;
+      thinking.textContent = '⚠️ ' + err.message;
     }
+  }
+
+  $('ask').onsubmit = (e) => {
+    e.preventDefault();
+    sendMessage($('inp').value);
   };
+
   $('fix').addEventListener('close', () => {
     if ($('fix').returnValue === 'ok' && fixing)
       act({
@@ -223,6 +338,7 @@
         remember: $('fixMem').checked,
       });
   });
+
   $('accessForm').onsubmit = (e) => {
     e.preventDefault();
     key = $('accessKey').value.trim();
@@ -230,6 +346,7 @@
     $('accessDialog').close();
     load();
   };
+
   load();
   setInterval(() => document.hidden || load(), 5000);
 })();

@@ -1,3 +1,6 @@
+from pathlib import Path
+import sqlite3
+import json
 import os, queue, threading, time
 from contextlib import contextmanager
 
@@ -172,6 +175,166 @@ class CloudStore:
             (data / file).write_text(self.get(key), encoding="utf-8")
 
 
+class SqliteStore:
+    """Zero-dependency, thread-safe, crash-resilient store when cloud Postgres/Neon is absent.
+    Preserves all knowledge, drafts, notes, and leases across restarts."""
+
+    def __init__(self, db_path):
+        self.db_path = str(db_path)
+        self._lock = threading.RLock()
+        self._pending = {}
+
+    @contextmanager
+    def _conn(self):
+        conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=NORMAL")
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
+    def initialize(self):
+        with self._lock, self._conn() as conn:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS givelife_studio_state ("
+                "key TEXT PRIMARY KEY, "
+                "value TEXT NOT NULL, "
+                "updated_at REAL NOT NULL)"
+            )
+            # Automatic recovery: restore existing assistant-knowledge, drafts, etc.
+            self._recover_records(conn)
+
+    def _recover_records(self, conn):
+        try:
+            parent = Path(self.db_path).parent
+            # 1. Recover assistant-knowledge
+            row = conn.execute("SELECT 1 FROM givelife_studio_state WHERE key='assistant_knowledge'").fetchone()
+            if not row:
+                for cand in (parent / "assistant-knowledge.json", parent.parent / "assistant-knowledge.json"):
+                    if cand.exists():
+                        raw = cand.read_text(encoding="utf-8").strip()
+                        if raw:
+                            conn.execute(
+                                "INSERT INTO givelife_studio_state (key, value, updated_at) VALUES (?, ?, ?)",
+                                ("assistant_knowledge", raw, time.time())
+                            )
+                            break
+        except Exception:
+            pass
+
+    def get(self, key, default=None):
+        with self._lock, self._conn() as conn:
+            row = conn.execute("SELECT value FROM givelife_studio_state WHERE key=?", (key,)).fetchone()
+            if not row:
+                return default
+            val = row[0]
+            try:
+                return json.loads(val)
+            except Exception:
+                return val
+
+    def get_many(self, keys):
+        if not keys:
+            return {}
+        with self._lock, self._conn() as conn:
+            q = ",".join("?" for _ in keys)
+            rows = conn.execute(f"SELECT key, value FROM givelife_studio_state WHERE key IN ({q})", list(keys)).fetchall()
+            out = {}
+            for k, v in rows:
+                try:
+                    out[k] = json.loads(v)
+                except Exception:
+                    out[k] = v
+            return out
+
+    def put(self, key, value):
+        raw = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+        now = time.time()
+        with self._lock, self._conn() as conn:
+            conn.execute(
+                "INSERT INTO givelife_studio_state (key, value, updated_at) VALUES (?, ?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                (key, raw, now)
+            )
+
+    def seed(self, key, value):
+        raw = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+        now = time.time()
+        with self._lock, self._conn() as conn:
+            conn.execute(
+                "INSERT INTO givelife_studio_state (key, value, updated_at) VALUES (?, ?, ?) "
+                "ON CONFLICT(key) DO NOTHING",
+                (key, raw, now)
+            )
+
+    def claim(self, key, value):
+        raw = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+        now = time.time()
+        with self._lock, self._conn() as conn:
+            try:
+                conn.execute(
+                    "INSERT INTO givelife_studio_state (key, value, updated_at) VALUES (?, ?, ?)",
+                    (key, raw, now)
+                )
+                return True
+            except sqlite3.IntegrityError:
+                return False
+
+    def lease_acquire(self, key, owner, ttl=45):
+        now = time.time()
+        raw = json.dumps({"owner": owner})
+        with self._lock, self._conn() as conn:
+            row = conn.execute("SELECT value, updated_at FROM givelife_studio_state WHERE key=?", (key,)).fetchone()
+            if not row:
+                conn.execute("INSERT INTO givelife_studio_state (key, value, updated_at) VALUES (?, ?, ?)", (key, raw, now))
+                return True
+            cur_val, updated_at = row
+            try:
+                cur_owner = json.loads(cur_val).get("owner")
+            except Exception:
+                cur_owner = None
+            if cur_owner == owner or (now - updated_at) >= float(ttl):
+                conn.execute("UPDATE givelife_studio_state SET value=?, updated_at=? WHERE key=?", (raw, now, key))
+                return True
+            return False
+
+    def lease_release(self, key, owner):
+        with self._lock, self._conn() as conn:
+            conn.execute("UPDATE givelife_studio_state SET updated_at=0 WHERE key=? AND value LIKE ?", (key, f'%"owner": "{owner}"%'))
+
+    def put_retry(self, key, value, every=15):
+        self.put(key, value)
+
+    @property
+    def pending_writes(self):
+        return 0
+
+    def restore(self, data, root):
+        self.initialize()
+        for file, key in [
+            ("drafts.json", "drafts"),
+            ("state.md", "campaign"),
+            ("variant-state.json", "variants"),
+        ]:
+            seed = (
+                (root / file).read_text(encoding="utf-8")
+                if (root / file).exists()
+                else '{"index":0}'
+            )
+            self.seed(key, seed)
+            (data / file).write_text(str(self.get(key) or seed), encoding="utf-8")
+
+
 def configured_store():
     uri = os.environ.get("DB_URI")
-    return CloudStore(uri) if uri else None
+    if uri:
+        return CloudStore(uri)
+    # Resilient local persistent SQLite store when Neon/cloud Postgres was removed
+    data_dir = Path(os.environ.get("DATA_DIR", Path(__file__).resolve().parent / "data"))
+    data_dir.mkdir(parents=True, exist_ok=True)
+    db_file = data_dir / "studio_state.sqlite"
+    store = SqliteStore(db_file)
+    store.initialize()
+    return store

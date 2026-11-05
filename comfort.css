@@ -3660,3 +3660,16 @@ html body #donorsPage .donor-volunteers {
     transform: translateY(-50%) !important;
   }
 }
+
+/* Groups: all four labels start on the same left edge (two were centred, two left). Alignment only. */
+html body:not(#_):not(#__):not(#___):not(#____):not(#_____) .group-send .send-row > :is(.test-row, #btnGivelife, #btnFree, #sendAll) .gb-name {
+  text-align: left !important;
+  align-items: flex-start !important;
+}
+
+/* Phone: ⏱ / ▾ sit on the vertical centre of the 52px group button (were 3px high). */
+@media (max-width: 720px) {
+  html body:not(#_):not(#__):not(#___):not(#____):not(#_____) .group-send .send-row[data-tools] .row-tools {
+    top: 26px !important;
+  }
+}

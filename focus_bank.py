@@ -34,8 +34,10 @@ class FocusBank:
                 row.update(generator=GEN, state="Generating", error="")
                 data[kind] = row
                 self._put(data)
-            if row and any(is_wrapped(row.get("source", ""), x) for x in row.get("items", [])):
-                row["items"] = clean_items(row["source"], row["items"])
+            if row and clean_items(
+                row.get("source", ""), row.get("items", []), row.get("manual")
+            ) != [x for x in row.get("items", []) if isinstance(x, str) and x.strip()]:
+                row["items"] = clean_items(row["source"], row["items"], row.get("manual"))
                 row.pop("local_fallback", None)
                 if row.get("state") == "Ready" and len(row["items"]) < 10:
                     row["state"] = "Partial"
@@ -334,7 +336,7 @@ class FocusBank:
             items = row.get("items", [])
             pool = []
             seen = set()
-            for value in clean_items(row["source"], items):
+            for value in clean_items(row["source"], items, row.get("manual")):
                 signature = wording_key(value)
                 if signature not in seen:
                     pool.append(value)
@@ -454,10 +456,15 @@ def is_wrapped(source, value):
     )
 
 
-def clean_items(source, items):
+def clean_items(source, items, manual=()):
+    """Saved versions safe to show or send: no wrapped copies, no duplicates, and no version the
+    AI moved into another language (Urdu or Roman Urdu for an English message). Versions the
+    owner wrote by hand are kept as written."""
     out, seen = [], set()
     for value in items or []:
         if not isinstance(value, str) or not value.strip() or is_wrapped(source, value):
+            continue
+        if value not in (manual or ()) and dm_variants.language_changed(source, value):
             continue
         key = wording_key(value)
         if key not in seen:

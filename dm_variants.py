@@ -100,19 +100,37 @@ _URDU = re.compile(r"[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]")
 _LATIN = re.compile(r"[A-Za-z]")
 
 
-def _script(line):
+# Roman Urdu words that are not normal English words. Two or more in one line (and at least
+# a quarter of its words) mean the line is Roman Urdu, even though it uses English letters.
+_ROMAN = frozenset(
+    """hai hain ka ki ke ko se ne nahi nahin nai aur yeh ye woh wo mein kar karo karna karein
+    karen kare dein den diya diye hua hui huay gaya gayi gaye aaj abhi agar sirf log logon baqi
+    raqam qarz wapas walidain waldain chahiye chahye taake takay jaise jaisay tarah paani pani aag
+    sakti sakta sakte bhi kya hum aap unka uska unki uski unke uske liye apne apni apna bacha
+    bachay bachy madad paise paisay paisy farmaya rasool dafan kafan tadfeen gunahon gunah bujha
+    deta dete ab tak hoga hogi kyun kyunke lekin magar phir jab tab wala wali walay""".split()
+)
+
+
+def _lang(line):
     u, l = len(_URDU.findall(line)), len(_LATIN.findall(line))
-    return "urdu" if u > l else "latin" if l else ""
+    if u > l:
+        return "urdu"
+    if not l:
+        return ""
+    words = re.findall(r"[a-z]+", line.lower())
+    hits = sum(w in _ROMAN for w in words)
+    return "roman" if hits >= 2 and hits * 4 >= len(words) else "english"
 
 
 def language_changed(source, text):
-    """True when a version adds Urdu to an English message or changes any line's script."""
+    """True when a version changes language: English must stay English (not Urdu script and
+    not Roman Urdu), and Urdu or Roman Urdu lines must keep their language."""
     a, b = source.split("\n"), text.split("\n")
-    if "urdu" not in map(_script, a) and "urdu" in map(_script, b):
+    la, lb = [_lang(x) for x in a], [_lang(y) for y in b]
+    if "english" in la and not {"urdu", "roman"} & set(la) and {"urdu", "roman"} & set(lb):
         return True
-    return len(a) == len(b) and any(
-        _script(x) and _script(y) and _script(x) != _script(y) for x, y in zip(a, b)
-    )
+    return len(a) == len(b) and any(x and y and x != y for x, y in zip(la, lb))
 
 
 def validate(source, text, existing=()):
@@ -264,8 +282,9 @@ NON-NEGOTIABLE:
   approaches across versions. No invented time pressure, medical progression,
   consequences, deadlines, promises, or extra diagnoses.
 - Rewrite each editable paragraph into genuinely different, very easy English.
-- LANGUAGE: every version keeps the source's language line by line. Never add Urdu to an
-  English line and never turn Urdu into English; Urdu only where the owner asked for it.
+- LANGUAGE: every version keeps the source's language line by line. An English line stays
+  plain English: never Urdu script and never Roman Urdu (Urdu in English letters, like "Aaj hai
+  qarz"). Never turn Urdu into English. Urdu only where the owner asked for it.
 - URDU: a line written in Urdu stays in Urdu script and is reworded in simple, moving Urdu
   (never translated to English, never transliterated). A Quran verse, hadith or its
   reference, e.g. (سورة المائدہ: 2), is copied exactly, word for word.

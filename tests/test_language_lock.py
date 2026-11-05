@@ -28,6 +28,19 @@ class LanguageLock(unittest.TestCase):
             )
         )
 
+    def test_english_becomes_roman_urdu(self):
+        src = "*Today is the last day to repay the debt.* 💔\nIf just 10 people give Rs. 2,000, it can be paid."
+        roman = "*Aaj hai qarz utaarne ki aakhri tareekh.* 💔\nAgar sirf 10 log Rs. 2,000 dein, to ada ho sakti hai."
+        self.assertTrue(dm_variants.language_changed(src, roman))
+        self.assertTrue(dm_variants.language_changed(roman, src))
+
+    def test_saved_bad_versions_are_not_shown_or_sent(self):
+        src = "Today is the last day\nPlease help the family"
+        roman = "Aaj aakhri din hai\nFamily ki madad karein"
+        good = "This is the final day\nKindly help the family"
+        self.assertEqual(focus_bank.clean_items(src, [roman, good]), [good])
+        self.assertEqual(focus_bank.clean_items(src, [roman, good], manual=[roman]), [roman, good])
+
     def test_same_language_ok(self):
         self.assertFalse(
             dm_variants.language_changed("Hello friends\nPlease help", "Hi all\nKindly help")

@@ -1177,7 +1177,7 @@ def chat_get(n=300):
         return []
 
 
-def chat_add(who, text, err=False, turn_id=None):
+def chat_add(who, text, err=False, turn_id=None, model=""):
     who = who if who in ("you", "app", "auto") else "app"
     text = str(text)[:4000]
     if not text.strip():
@@ -1188,7 +1188,14 @@ def chat_add(who, text, err=False, turn_id=None):
         if any(x.get("id") == ident for x in items):
             return ident
         items.append(
-            {"id": ident, "who": who, "text": text, "err": bool(err), "t": int(time.time() * 1000)}
+            {
+                "id": ident,
+                "who": who,
+                "text": text,
+                "err": bool(err),
+                "t": int(time.time() * 1000),
+                **({"model": assistant.LABEL} if who == "app" and model == assistant.LABEL else {}),
+            }
         )
         CHATLOG.write_text(json.dumps(items[-300:], ensure_ascii=False), encoding="utf-8")
         persist_file("chat", CHATLOG)
@@ -2728,6 +2735,27 @@ def outreach(caps):
 
 
 def ai_test():
+    if assistant.claude_key():
+        # Direct Sonnet 5.5 check: no fallback here, so a wrong key or model name is shown plainly.
+        t0 = time.time()
+        try:
+            out = assistant._claude_raw(
+                "Reply with one word only.",
+                [{"role": "user", "content": "Reply with exactly: OK"}],
+                1024,
+            )
+            return {
+                "ok": True,
+                "provider": assistant.LABEL,
+                "ms": round((time.time() - t0) * 1000),
+                "reply": out["content"][:40],
+            }
+        except Exception as e:
+            return {
+                "ok": False,
+                "error": f"{assistant.LABEL} failed: {str(e)[:100]}. The app uses DeepSeek meanwhile."
+                + (" Check the model name (CLAUDE_MODEL)." if "HTTP 4" in str(e) else ""),
+            }
     key = assistant.client()
     if not key:
         return {
@@ -4170,6 +4198,7 @@ def assistant_task(body):
             ):
                 output["donors_changed"] = True
             output["turn_id"] = uuid.uuid4().hex
+            output["model"] = assistant.served_label()
             diag = mapping(output.get("diagnostics"))
             for t in diag.get("tools", []):
                 if isinstance(t, dict) and t.get("status") in ("rejected", "failed", "error"):
@@ -5732,7 +5761,11 @@ class Handler(BaseHTTPRequestHandler):
                 {
                     "ok": True,
                     "turn_id": chat_add(
-                        body.get("who"), body.get("text", ""), body.get("err"), body.get("turn_id")
+                        body.get("who"),
+                        body.get("text", ""),
+                        body.get("err"),
+                        body.get("turn_id"),
+                        body.get("model", ""),
                     ),
                 }
             )

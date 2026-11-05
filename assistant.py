@@ -59,15 +59,27 @@ def _notify_fallback(reason):
         )
 
 
-def _claude_raw(system, messages, max_tokens):
-    """Text-only call to Claude. Raises on any failure so the caller can fall back to DeepSeek."""
+_SERVED = threading.local()
+LABEL = "Sonnet 5.5"
+
+
+def served_label():
+    """'Sonnet 5.5' when the latest model call in this thread was answered by Claude, else ''."""
+    return getattr(_SERVED, "label", "")
+
+
+def _claude_raw(system, messages, max_tokens, tools=None):
+    """Call Claude. Raises on any failure so the caller can fall back to DeepSeek."""
     limit = max(1024, min(8192, int(max_tokens)))
     if _via_poe():
+        clean = [{k: v for k, v in m.items() if k != "reasoning_content"} for m in messages]
         body = {
             "model": claude_model(),
-            "messages": [{"role": "system", "content": system}] + messages,
+            "messages": [{"role": "system", "content": system}] + clean,
             "max_tokens": limit,
         }
+        if tools:
+            body.update(tools=tools, tool_choice="auto")
         url, headers = POE_URL, {"Authorization": "Bearer " + (claude_key() or "")}
     else:
         body = {
@@ -93,8 +105,12 @@ def _claude_raw(system, messages, max_tokens):
         ) from None
     if _via_poe():
         choice = mapping((data.get("choices") or [{}])[0])
-        text = str(mapping(choice.get("message")).get("content") or "").strip()
+        msg = mapping(choice.get("message"))
+        text = str(msg.get("content") or "").strip()
         cut = choice.get("finish_reason") == "length"
+        if msg.get("tool_calls") and not cut:
+            msg["content"] = text
+            return msg
     else:
         parts = [
             b.get("text", "")
@@ -472,19 +488,22 @@ def active_model():
 def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None):
     """One call to the model. Text-only calls go to Claude first and fall back to DeepSeek with a notice;
     tool calls stay on DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
+    _SERVED.label = ""
+    plain = all(
+        isinstance(m, dict)
+        and m.get("role") in ("user", "assistant")
+        and isinstance(m.get("content"), str)
+        for m in messages
+    )
     if (
-        not tools
-        and claude_key()
+        claude_key()
         and time.time() >= _CLAUDE["down_until"]
-        and all(
-            isinstance(m, dict)
-            and m.get("role") in ("user", "assistant")
-            and isinstance(m.get("content"), str)
-            for m in messages
-        )
+        and ((not tools and plain) or _via_poe())
     ):
         try:
-            return _claude_raw(system, messages, max_tokens or 4096)
+            out = _claude_raw(system, messages, max_tokens or 4096, tools)
+            _SERVED.label = LABEL
+            return out
         except Exception as e:
             _notify_fallback(str(e)[:80])
     if key == "claude-only":

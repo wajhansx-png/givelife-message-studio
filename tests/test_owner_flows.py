@@ -246,3 +246,55 @@ class ClaudeFallback(unittest.TestCase):
         n = self.a.ai_notice()
         self.assertEqual(n["id"], 1)
         self.assertIn("Shifting to DeepSeek", n["text"])
+
+
+class ClaudeChat(unittest.TestCase):
+    def test_tool_chat_uses_claude_via_poe_and_labels_it(self):
+        import os, io, json
+        import assistant as a
+
+        env = dict(os.environ)
+        try:
+            os.environ["POE_API_KEY"] = "sk-poe-abc"
+            a._CLAUDE["down_until"] = 0.0
+            tc = [
+                {"id": "1", "type": "function", "function": {"name": "nothing", "arguments": "{}"}}
+            ]
+            reply = io.BytesIO(
+                json.dumps(
+                    {
+                        "choices": [
+                            {
+                                "message": {"content": None, "tool_calls": tc},
+                                "finish_reason": "tool_calls",
+                            }
+                        ]
+                    }
+                ).encode()
+            )
+            msgs = [
+                {"role": "user", "content": "x"},
+                {"role": "assistant", "content": "", "reasoning_content": "r"},
+            ]
+            with patch.object(a.urllib.request, "urlopen", return_value=reply) as op:
+                out = a._chat_raw("ds", "s", [a.tool("nothing", "d", {}, [])], msgs)
+            self.assertEqual(out["tool_calls"][0]["id"], "1")
+            self.assertEqual(a.served_label(), "Sonnet 5.5")
+            sent = json.loads(op.call_args[0][0].data)
+            self.assertNotIn("reasoning_content", json.dumps(sent["messages"]))
+            self.assertIn("tools", sent)
+            a._CLAUDE["down_until"] = (
+                __import__("time").time() + 99
+            )  # Claude down: DeepSeek answers, no label
+            ds = io.BytesIO(
+                json.dumps(
+                    {"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
+                ).encode()
+            )
+            with patch.object(a.urllib.request, "urlopen", return_value=ds):
+                a._chat_raw("ds", "s", [], [{"role": "user", "content": "x"}])
+            self.assertEqual(a.served_label(), "")
+        finally:
+            os.environ.clear()
+            os.environ.update(env)
+            a._CLAUDE["down_until"] = 0.0

@@ -113,6 +113,62 @@ def api_messages(path):
     return [x for x in data if isinstance(x, dict)] if isinstance(data, list) else []
 
 
+_CHAT_STAMPS = {"at": 0.0, "map": {}}
+_CHAT_CACHE = {}  # jid -> (stamp, messages, fetched_at)
+_CHAT_LOCK = threading.Lock()
+
+
+def _chat_stamps():
+    """last_message_time per chat from one small list call, refreshed at most every 15 s."""
+    with _CHAT_LOCK:
+        if time.time() - _CHAT_STAMPS["at"] < 15:
+            return _CHAT_STAMPS["map"]
+    try:
+        data = api_result("/chats?limit=100").get("data", [])
+    except Exception:
+        return {}
+    stamps = {
+        str(c.get("jid")): str(c.get("last_message_time") or "")
+        for c in data
+        if isinstance(c, dict) and c.get("jid")
+    }
+    with _CHAT_LOCK:
+        _CHAT_STAMPS.update(at=time.time(), map=stamps)
+    return stamps
+
+
+def _seconds_since(stamp):
+    try:
+        t = datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=datetime.timezone.utc)
+        return (datetime.datetime.now(datetime.timezone.utc) - t).total_seconds()
+    except Exception:
+        return None
+
+
+def scan_messages(jid):
+    """Reply-scan read of a chat. A chat nobody has written in since we last read it is served
+    from memory: every read is a remote database query, and re-reading ~60 idle chats every two
+    minutes used up the free database transfer quota. A chat is only reused when its last
+    message was already 3+ minutes old when read, so a new message can never be missed.
+    Sending and delete checks never use this; they always read live."""
+    path = "/chat/" + urllib.parse.quote(jid, safe="") + "/messages?limit=20"
+    stamp = _chat_stamps().get(jid)
+    if stamp:
+        with _CHAT_LOCK:
+            hit = _CHAT_CACHE.get(jid)
+        if hit and hit[0] == stamp and time.time() - hit[2] < 900:
+            return list(hit[1])
+    messages = api_messages(path)
+    if stamp:
+        settled = _seconds_since(stamp)
+        if settled is not None and settled >= 180:
+            with _CHAT_LOCK:
+                _CHAT_CACHE[jid] = (stamp, messages, time.time())
+    return messages
+
+
 def custom_recipient(body):
     target = str(body.get("target", ""))
     if target == "test":
@@ -2898,7 +2954,7 @@ ENGINE = autopilot.Engine(
         "caption": lambda: json.loads(DRAFT.read_text(encoding="utf-8")).get("group", ""),
         "start_job": start_auto_group_job,
         "last_results": last_results,
-        "messages": group_messages,
+        "messages": scan_messages,
         "poster_left": poster_left,
         "sender_phone": sender_phone,
         "send_papers": send_papers,

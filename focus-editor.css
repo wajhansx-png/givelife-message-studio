@@ -558,50 +558,6 @@ body.message-focus-open > .foot {
     padding: 6px 8px !important;
   }
 }
-@media (max-width: 899px) {
-  #messageFocus #focusRetry {
-    background: transparent;
-    color: #cfcfcf;
-  }
-  #messageFocus #focusPoster,
-  #messageFocus #focusManual,
-  #messageFocus #focusRegenerate,
-  #messageFocus #focusRetry {
-    flex: 1 1 0 !important;
-    min-width: 0 !important;
-    min-height: 40px !important;
-    font-size: 0 !important;
-    padding: 4px !important;
-    white-space: nowrap;
-  }
-  #messageFocus #focusPoster::after,
-  #messageFocus #focusManual::after,
-  #messageFocus #focusRegenerate::after,
-  #messageFocus #focusRetry::after {
-    font-size: 12px;
-    font-weight: 600;
-  }
-  #messageFocus #focusPoster::after {
-    content: 'Poster';
-  }
-  #messageFocus #focusManual::after {
-    content: 'Manual';
-  }
-  #messageFocus #focusRegenerate::after {
-    content: 'Regenerate';
-  }
-  #messageFocus #focusRetry::after {
-    content: 'Retry';
-  }
-  #messageFocus #focusNext {
-    font-size: 0 !important;
-  }
-  #messageFocus #focusNext::after {
-    content: 'Next →';
-    font-size: 15px;
-  }
-}
-
 /* Phone edit mode: the text box scrolls and fills the screen; only Done, Copy and four formatting buttons show. */
 @media (max-width: 899px) {
   #messageFocus header {
@@ -658,4 +614,44 @@ body.message-focus-open > .foot {
     max-height: none;
     min-height: 56px;
   }
+}
+
+/* Most-used actions together at the top, the rest below, Back last. Same order on phone and desktop. */
+#messageFocus #focusEdit {
+  order: 1;
+}
+#messageFocus #focusSave {
+  order: 2;
+}
+#messageFocus #focusTest {
+  order: 3;
+}
+#messageFocus #focusRetry {
+  order: 4;
+}
+#messageFocus #focusNext {
+  order: 5;
+}
+#messageFocus #focusVersion {
+  order: 6;
+}
+#messageFocus .focus-rail [data-mark],
+#messageFocus .focus-rail [data-emoji] {
+  order: 10;
+}
+#messageFocus #focusCopy {
+  order: 20;
+  margin-top: 10px;
+}
+#messageFocus #focusPoster {
+  order: 21;
+}
+#messageFocus #focusManual {
+  order: 22;
+}
+#messageFocus #focusRegenerate {
+  order: 23;
+}
+#messageFocus #focusBack {
+  order: 30;
 }

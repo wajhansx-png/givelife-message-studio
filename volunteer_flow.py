@@ -23,6 +23,56 @@ def ask_text(name, giki=False):
     )
 
 
+_MONEY = re.compile(
+    r"(?i)\b(rs\.?|rupees?|pkr|money|payment|account|easypaisa|donat\w*|paid|pay)\b"
+)
+
+
+def valid_wording(base, text, name):
+    """Code check for an AI-reworded ask. It must be the same ask in other words: same name, still a share
+    request ending in the poster question, no numbers, links or money words, and a similar length."""
+    if not isinstance(text, str):
+        return False
+    text = text.strip()
+    low = text.lower()
+    return bool(
+        text
+        and name.lower() in low
+        and "share" in low
+        and "poster" in low
+        and text.rstrip().endswith("?")
+        and not re.search(r"\d|https?:|www\.|@", text)
+        and not _MONEY.search(text)
+        and 0.7 * len(base) <= len(text) <= 1.4 * len(base)
+        and text.isascii()
+        and not __import__("quality").hard_reason(base, text)
+    )
+
+
+def natural_ask(engine, phone, name, giki=False):
+    """The fixed ask, or for about one volunteer in three a natural rewording that passed valid_wording.
+    Any problem (no AI, bad answer) gives the fixed text. The send itself still goes through the DM Guard."""
+    base = ask_text(name, giki)
+    chat = engine.h.get("ai_chat")
+    if not chat or sum(map(ord, phone)) % 3:
+        return base
+    try:
+        import ai_call
+
+        data = ai_call.json_of(
+            chat(
+                "Reword this WhatsApp message to a volunteer so it sounds warm and natural. Keep the same greeting "
+                "with the name, the same request to share the case, and the final question about the poster. "
+                "Add no facts, numbers, links, money requests or promises. "
+                'Answer ONLY JSON: {"message": "..."}\n\n' + base
+            )
+        )
+        out = str((data or {}).get("message", "")).strip()
+    except Exception:
+        return base
+    return out if valid_wording(base, out, name) else base
+
+
 def start_round(engine, volunteers, case_id, limit=1):
     """Send the first personal ask to at most `limit` volunteers not yet asked for this case."""
     flow = engine.s.setdefault("vol_flow", {})
@@ -33,7 +83,7 @@ def start_round(engine, volunteers, case_id, limit=1):
             continue
         name = (str(v.get("name") or "").split() or ["Brother"])[0].capitalize()
         giki = "giki" in str(v.get("name", "")).lower() or "giki" in str(v.get("tags", "")).lower()
-        if _send(engine, phone, ask_text(name, giki)):
+        if _send(engine, phone, natural_ask(engine, phone, name, giki)):
             flow[phone] = {
                 "step": "asked",
                 "at": time.time(),
@@ -80,7 +130,14 @@ def tick(engine, now=None):
         if new:
             m = new[-1]
             st["seen"] = (st["seen"] + [x.get("id") for x in new])[-50:]
-            react(engine, phone, st, str(m.get("content") or ""), m.get("media_type", ""))
+            react(
+                engine,
+                phone,
+                st,
+                str(m.get("content") or ""),
+                m.get("media_type", ""),
+                reply_intent.history_from(msgs, m.get("id")),
+            )
         elif st["step"] == "poster" and not st.get("checked") and now - st["at"] > CHECK_AFTER:
             if _send(engine, phone, "Brother, are you done?"):
                 st.update(checked=True, at=now)
@@ -94,7 +151,7 @@ def tick(engine, now=None):
             st["step"] = "done"  # no reply: never chase further for this case
 
 
-def react(engine, phone, st, text, media=""):
+def react(engine, phone, st, text, media="", history=None):
     tail = phone[-4:]
     label, why = reply_intent.classify(text, media, "share" if st["step"] == "poster" else "")
     if st["step"] == "asked" and label in ("ack", "other") and YES.match(text):
@@ -102,7 +159,9 @@ def react(engine, phone, st, text, media=""):
             st.update(step="poster", at=time.time())
         return
     if label == "other" and text.strip() and engine.h.get("ai_chat"):
-        label, why = reply_intent.ai_classify(engine.h["ai_chat"], text, [("them", text)])
+        label, why = reply_intent.ai_classify(
+            engine.h["ai_chat"], text, history or [("them", text)]
+        )
     jid = phone + "@s.whatsapp.net"
     if label in ("shared", "both", "donated"):
         if label in ("donated", "both"):

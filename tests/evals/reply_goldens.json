@@ -1,0 +1,197 @@
+{
+ "note": "Synthetic cases written from the owner's reported reply patterns. They are NOT real chats. To add real ones: anonymize (no names or numbers), confirm the right label, append here.",
+ "cases": [
+  {
+   "text": "Send me your easypaisa number",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "question"
+  },
+  {
+   "text": "What is the jazzcash account?",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "question"
+  },
+  {
+   "text": "bhai account number bhejo",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "question"
+  },
+  {
+   "text": "I will pay 500 tomorrow",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "later"
+  },
+  {
+   "text": "Rs 500 kal bhej dunga",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "later"
+  },
+  {
+   "text": "I will share it",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "later"
+  },
+  {
+   "text": "I'll donate insha allah",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "later"
+  },
+  {
+   "text": "paid?",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "other"
+  },
+  {
+   "text": "Maine kal 1000 bheje the, mila?",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "other"
+  },
+  {
+   "text": "I paid yesterday, will send more tomorrow",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "other"
+  },
+  {
+   "text": "Have you received my payment?",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "question"
+  },
+  {
+   "text": "Who is this?",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "question"
+  },
+  {
+   "text": "kitna chahiye?",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "question"
+  },
+  {
+   "text": "no",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "not_done"
+  },
+  {
+   "text": "nahi",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "not_done"
+  },
+  {
+   "text": "Can't donate now sorry",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "not_done"
+  },
+  {
+   "text": "not interested",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "opt_out"
+  },
+  {
+   "text": "Stop sending",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "opt_out"
+  },
+  {
+   "text": "Paid",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "donated"
+  },
+  {
+   "text": "Sent 1000",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "donated"
+  },
+  {
+   "text": "2000 bhej diye",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "donated"
+  },
+  {
+   "text": "Transferred",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "donated"
+  },
+  {
+   "text": "",
+   "last_outgoing": "",
+   "media": "image",
+   "expect": "donated"
+  },
+  {
+   "text": "Done bhai",
+   "last_outgoing": "Please donate if you can",
+   "media": "",
+   "expect": "donated"
+  },
+  {
+   "text": "Done",
+   "last_outgoing": "Could you share it in your groups?",
+   "media": "",
+   "expect": "shared"
+  },
+  {
+   "text": "I shared it in 3 groups",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "shared"
+  },
+  {
+   "text": "shared with friends and donated 500",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "both"
+  },
+  {
+   "text": "okay",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "ack"
+  },
+  {
+   "text": "Jazakallah",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "ack"
+  },
+  {
+   "text": "yes",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "other"
+  },
+  {
+   "text": "sent",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "other"
+  },
+  {
+   "text": "Sorry wrong number",
+   "last_outgoing": "",
+   "media": "",
+   "expect": "other"
+  }
+ ]
+}

@@ -42,7 +42,9 @@ def review(chat, source, versions, examples=(), corrections=()):
         "Review WhatsApp charity appeal versions against the OWNER'S approved style.\n"
         "Score each 1-5: owner = sounds like the owner's examples; natural = sounds like a real person,"
         " not a robot; calm = emotional but not over the top; follows = obeys every correction.\n"
-        'Answer ONLY JSON: {"scores":[{"i":0,"owner":5,"natural":5,"calm":5,"follows":5,"reason":"short"}]}\n'
+        "Also copy, word for word, any phrase in a version that states a fact (a person, age, illness, place, date,"
+        " amount or promise) that is NOT in the SOURCE; use an empty string when there is none.\n"
+        'Answer ONLY JSON: {"scores":[{"i":0,"owner":5,"natural":5,"calm":5,"follows":5,"invented":"","reason":"short"}]}\n'
         + (
             "\nOWNER EXAMPLES:\n" + "\n---\n".join(e[:700] for e in list(examples)[:3])
             if examples
@@ -63,6 +65,15 @@ def review(chat, source, versions, examples=(), corrections=()):
             i = int(row["i"])
             low = [k for k in ("owner", "natural", "calm", "follows") if int(row.get(k, 5)) < 4]
         except (KeyError, TypeError, ValueError):
+            continue
+        invented = str(row.get("invented") or "").strip()
+        if (
+            0 <= i < len(versions)
+            and invented
+            and invented.lower() in versions[i].lower()
+            and invented.lower() not in source.lower()
+        ):
+            keep[i] = 'review: new fact not in the source: "' + invented[:80] + '"'
             continue
         if 0 <= i < len(versions) and low:
             keep[i] = "review: " + (

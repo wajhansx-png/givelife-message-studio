@@ -290,7 +290,7 @@ function drawLog() {
       wanted = [];
     items.forEach((h) => {
       const key = turnKey(h),
-        signature = JSON.stringify([h.who, h.text, !!h.err, h.model || '']);
+        signature = JSON.stringify([h.who, h.text, !!h.err]);
       let d = existing.get(key);
       if (!d) {
         d = document.createElement('div');
@@ -338,12 +338,6 @@ function drawLog() {
           }
         };
         d.append(copy);
-        if (h.who === 'app' && h.model) {
-          const tag = document.createElement('div');
-          tag.className = 'model-tag';
-          tag.textContent = h.model;
-          d.append(tag);
-        }
       }
       wanted.push(d);
     });
@@ -2921,32 +2915,3 @@ $('caseSelect')?.addEventListener('change', async (e) => {
   }
 });
 loadCases();
-
-// Claude is the main writer; when it fails the server shifts to DeepSeek and we say so once.
-(() => {
-  let seen = Number(sessionStorage.getItem('givelife-ai-notice') || 0);
-  async function check() {
-    if (document.hidden) return;
-    try {
-      const d = await (await fetch('/autopilot', { cache: 'no-store' })).json();
-      const n = d && d.ai_notice;
-      if (!n || !n.id || n.id <= seen) return;
-      seen = n.id;
-      sessionStorage.setItem('givelife-ai-notice', String(seen));
-      let dlg = document.getElementById('aiNotice');
-      if (!dlg) {
-        dlg = document.createElement('dialog');
-        dlg.id = 'aiNotice';
-        dlg.setAttribute('aria-labelledby', 'aiNoticeTitle');
-        dlg.style.cssText = 'max-width:min(420px,92vw);border-radius:14px;padding:20px';
-        dlg.innerHTML =
-          '<h2 id="aiNoticeTitle" style="margin:0 0 8px;font-size:18px">Shifting to DeepSeek</h2><p id="aiNoticeText" style="margin:0 0 16px"></p><form method="dialog"><button autofocus style="min-height:44px;padding:0 20px">OK</button></form>';
-        document.body.append(dlg);
-      }
-      document.getElementById('aiNoticeText').textContent = n.text;
-      if (!dlg.open) dlg.showModal();
-    } catch (e) {}
-  }
-  setInterval(check, 15000);
-  setTimeout(check, 3000);
-})();

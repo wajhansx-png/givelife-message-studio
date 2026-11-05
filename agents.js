@@ -130,18 +130,9 @@
     try {
       data = await call('GET');
       render();
-      notice(data.ai_notice);
     } catch (e) {
       say(e.message, true);
     }
-  }
-  let seenNotice = Number(sessionStorage.getItem('givelife-ai-notice') || 0);
-  function notice(n) {
-    if (!n || !n.id || n.id <= seenNotice) return;
-    seenNotice = n.id;
-    sessionStorage.setItem('givelife-ai-notice', String(n.id));
-    $('noticeText').textContent = n.text;
-    if (!$('notice').open) $('notice').showModal();
   }
   async function act(body) {
     try {

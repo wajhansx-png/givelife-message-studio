@@ -21,6 +21,13 @@ python -m unittest discover -s tests -p test_policy_goldens.py -v
 python -m unittest discover -s tests -v
 ```
 
+### Agent reply goldens (no API usage)
+
+`tests/evals/reply_goldens.json` holds 32 reply cases for the Reply Reader, checked by
+`tests/test_agent_quality.py`. They are **synthetic**, written from the reply patterns the
+owner reported. To add real ones: remove names and numbers, confirm the right label, and
+append `{text, last_outgoing, media, expect}`. Never commit raw chats.
+
 ### Open-source Promptfoo evaluation (optional)
 
 [Promptfoo](https://github.com/promptfoo/promptfoo) evaluates and red-teams LLM

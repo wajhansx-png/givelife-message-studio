@@ -1,7 +1,7 @@
 """Owner's real conversation patterns: reply reading, volunteer steps, quality rules, TEST readiness.
 All fake transports; no real WhatsApp sends."""
 
-import time, unittest
+import json, time, unittest
 from unittest.mock import patch
 import test_manual_sends  # noqa: F401  (sets the import path)
 import reply_intent as R
@@ -184,117 +184,31 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class ClaudeFallback(unittest.TestCase):
-    def setUp(self):
+class DeepSeekOnly(unittest.TestCase):
+    def test_other_ai_keys_are_ignored_and_only_deepseek_is_called(self):
+        import io, os
         import assistant
-
-        self.a = assistant
-        self.env = dict(__import__("os").environ)
-        self.a._CLAUDE["down_until"] = 0.0
-        self.a.NOTICE.update(id=0, text="", time=0.0)
-
-    def tearDown(self):
-        import os
-
-        os.environ.clear()
-        os.environ.update(self.env)
-        self.a._CLAUDE["down_until"] = 0.0
-
-    def test_poe_key_typo_is_fixed_and_claude_is_used_first(self):
-        import os, io, json
-
-        os.environ["POE_API_KEY"] = "gotsk-poe-abc"
-        os.environ["DEEPSEEK_API_KEY"] = "ds"
-        self.assertEqual(self.a.claude_key(), "sk-poe-abc")
-        reply = io.BytesIO(
-            json.dumps(
-                {"choices": [{"message": {"content": "hi"}, "finish_reason": "stop"}]}
-            ).encode()
-        )
-        with patch.object(self.a.urllib.request, "urlopen", return_value=reply) as op:
-            msg = self.a._chat_raw("ds", "sys", [], [{"role": "user", "content": "x"}])
-        self.assertEqual(msg["content"], "hi")
-        self.assertIn("api.poe.com", op.call_args[0][0].full_url)
-        self.assertEqual(self.a.ai_notice()["id"], 0)
-
-    def test_failure_shifts_to_deepseek_with_a_notice_and_cooldown(self):
-        import os
-
-        os.environ["POE_API_KEY"] = "sk-poe-abc"
-        os.environ["DEEPSEEK_API_KEY"] = "ds"
-        calls = []
-
-        def fake(req, timeout=0):
-            calls.append(req.full_url)
-            if "poe.com" in req.full_url:
-                raise OSError("down")
-            import io, json
-
-            return io.BytesIO(
-                json.dumps(
-                    {"choices": [{"message": {"content": "ds"}, "finish_reason": "stop"}]}
-                ).encode()
-            )
-
-        with patch.object(self.a.urllib.request, "urlopen", side_effect=fake):
-            first = self.a._chat_raw("ds", "s", [], [{"role": "user", "content": "x"}])
-            second = self.a._chat_raw("ds", "s", [], [{"role": "user", "content": "y"}])
-        self.assertEqual((first["content"], second["content"]), ("ds", "ds"))
-        self.assertEqual(
-            sum("poe.com" in c for c in calls), 1
-        )  # cooldown: Claude not retried at once
-        n = self.a.ai_notice()
-        self.assertEqual(n["id"], 1)
-        self.assertIn("Shifting to DeepSeek", n["text"])
-
-
-class ClaudeChat(unittest.TestCase):
-    def test_tool_chat_uses_claude_via_poe_and_labels_it(self):
-        import os, io, json
-        import assistant as a
 
         env = dict(os.environ)
         try:
-            os.environ["POE_API_KEY"] = "sk-poe-abc"
-            a._CLAUDE["down_until"] = 0.0
-            tc = [
-                {"id": "1", "type": "function", "function": {"name": "nothing", "arguments": "{}"}}
-            ]
+            os.environ.update(POE_API_KEY="sk-poe-abc", ANTHROPIC_API_KEY="sk-ant-abc")
+            os.environ.pop("DEEPSEEK_API_KEY", None)
+            self.assertIsNone(
+                assistant.client()
+            )  # no DeepSeek key means no AI, never another provider
+            os.environ["DEEPSEEK_API_KEY"] = "ds"
             reply = io.BytesIO(
-                json.dumps(
-                    {
-                        "choices": [
-                            {
-                                "message": {"content": None, "tool_calls": tc},
-                                "finish_reason": "tool_calls",
-                            }
-                        ]
-                    }
-                ).encode()
-            )
-            msgs = [
-                {"role": "user", "content": "x"},
-                {"role": "assistant", "content": "", "reasoning_content": "r"},
-            ]
-            with patch.object(a.urllib.request, "urlopen", return_value=reply) as op:
-                out = a._chat_raw("ds", "s", [a.tool("nothing", "d", {}, [])], msgs)
-            self.assertEqual(out["tool_calls"][0]["id"], "1")
-            self.assertEqual(a.served_label(), "Sonnet 5.5")
-            sent = json.loads(op.call_args[0][0].data)
-            self.assertNotIn("reasoning_content", json.dumps(sent["messages"]))
-            self.assertIn("tools", sent)
-            a._CLAUDE["down_until"] = (
-                __import__("time").time() + 99
-            )  # Claude down: DeepSeek answers, no label
-            ds = io.BytesIO(
                 json.dumps(
                     {"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
                 ).encode()
             )
-            with patch.object(a.urllib.request, "urlopen", return_value=ds):
-                a._chat_raw("ds", "s", [], [{"role": "user", "content": "x"}])
-            self.assertEqual(a.served_label(), "")
+            with patch.object(assistant.urllib.request, "urlopen", return_value=reply) as call:
+                out = assistant._chat_raw("ds", "s", [], [{"role": "user", "content": "x"}])
+            self.assertEqual(out["content"], "ok")
+            self.assertEqual(call.call_count, 1)
+            self.assertIn("deepseek", call.call_args[0][0].full_url)
         finally:
             os.environ.clear()
             os.environ.update(env)
-            a._CLAUDE["down_until"] = 0.0
+        for name in ("claude_key", "_claude_raw", "served_label", "ai_notice", "POE_URL"):
+            self.assertFalse(hasattr(assistant, name), name)

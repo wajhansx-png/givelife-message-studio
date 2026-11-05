@@ -24,10 +24,13 @@ def repeat_target(task, text):
 
 # Update only numbers labelled as the balance. Never change a donation unit
 # (for example Rs. 2,000 per donor) when the balance itself is Rs. 2,000.
-_BALANCE_VALUE = r"(?:Rs\.?\s*)?(?P<sum>\d[\d,]*(?:\.\d+)?)(?:\s*(?P<scale>k|thousand|hazar|hazaar|lakh|lac))?"
+_BALANCE_VALUE = (
+    r"(?:Rs\.?\s*)?(?P<sum>\d[\d,]*(?:\.\d+)?)(?:\s*(?P<scale>k|thousand|hazar|hazaar|lakh|lac))?"
+)
 _BALANCE_AFTER = re.compile(
-    r"(?i)(?<![A-Za-z0-9])" + _BALANCE_VALUE
-    + r"(?P<tail>\s+(?:(?:still|urgently|only|more)\s+){0,3}(?:left|needed|required|remaining|to\s+raise|to\s+go))(?=$|[^A-Za-z0-9])"
+    r"(?i)(?<![A-Za-z0-9])"
+    + _BALANCE_VALUE
+    + r"(?P<tail>\s+(?:(?:is|are)\s+)?(?:(?:still|urgently|only|more)\s+){0,3}(?:left|needed|required|remaining|to\s+raise|to\s+go))(?=$|[^A-Za-z0-9])"
 )
 _BALANCE_BEFORE = re.compile(
     r"(?i)(?P<head>\b(?:amount\s+left|remaining\s+amount|remaining|balance|still\s+need|need\s+to\s+raise)"
@@ -47,7 +50,13 @@ def remaining_amount(text):
             continue
         amount = float(match["sum"].replace(",", ""))
         unit = (match["scale"] or "").lower()
-        multiplier = 1000 if unit in ("k", "thousand", "hazar", "hazaar") else 100000 if unit in ("lakh", "lac") else 1
+        multiplier = (
+            1000
+            if unit in ("k", "thousand", "hazar", "hazaar")
+            else 100000
+            if unit in ("lakh", "lac")
+            else 1
+        )
         value = amount * multiplier
         if value.is_integer() and 0 <= value <= 10000000:
             return int(value)
@@ -58,6 +67,7 @@ def update_amount(text, old, left):
     """Keep saved balances and donor math current without changing historical expenses."""
     left = max(0, int(left))
     text = str(text or "")
+
     # A message can be older than the last balance change; use its own labelled
     # balance rather than assuming its previous amount equals 'old'.
     def change_balance(match):
@@ -70,11 +80,22 @@ def update_amount(text, old, left):
         if number < 1000 and not scale and not re.search(r"(?i)rs\.?", match[0]):
             return match[0]  # "3 left" is a count, not a donation balance
         start = match.start("sum") - match.start()
-        end = match.end("scale") - match.start() if match["scale"] else match.end("sum") - match.start()
+        end = (
+            match.end("scale") - match.start()
+            if match["scale"]
+            else match.end("sum") - match.start()
+        )
         return match[0][:start] + f"{left:,}" + match[0][end:]
 
     for pattern in (_BALANCE_AFTER, _BALANCE_BEFORE, _BALANCE_ONLY):
         text = pattern.sub(change_balance, text)
+    # DM templates mark the balance line with 💰 and word it many ways ("remains", "stands between").
+    text = re.sub(
+        r"(?m)^(💰[^\d\n]*?Rs\.?\s*)\d[\d,]*",
+        lambda m: m[1] + f"{left:,}",
+        text,
+    )
+
     # Only replace a standalone currency amount when it equals the previous
     # balance and cannot be a standalone Rs. 1,000/2,000 donation choice.
     def standalone(m):
@@ -97,7 +118,7 @@ def update_amount(text, old, left):
         )
 
     text = re.sub(
-        r"(?i)(?<!\d)\d+(?P<body>\s+(?:kind\s+)?people\s+(?:(?:donating|giving|contributing|contributing at|at|of|or)\s+)?(?:Rs\.?\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)",
+        r"(?i)(?<!\d)\d+(?P<body>\s+(?:more\s+)?(?:kind\s+)?(?:people|donors)\s+(?:(?:donating|giving|contributing|contributing at|at|of|or)\s+)?(?:Rs\.?\s*)?)(?P<unit>2[ ,]?000|1[ ,]?000)",
         option,
         text,
     )

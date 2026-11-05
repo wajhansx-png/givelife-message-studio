@@ -15,7 +15,7 @@
 - Own sent group messages can be revoked through WhatsApp; claim deletion only after confirmation. Ask for the sender when another person's identity is unclear.
 
 # OWNER PLAYBOOK (Wajdan) - what he does in each situation
-# Purpose: so Claude can run the foundation alone exactly like him. Append EVERY owner action below (time, situation, what he did, why if said).
+# Purpose: so the assistant can run the foundation alone exactly like him. Append EVERY owner action below (time, situation, what he did, why if said).
 
 ## A. WHEN DONATIONS ARE SLOW (no money for 40+ min) - what the owner does
 1. Makes the wording stronger and more psychological: new opening line every post, never the same hook twice, never the word "DANGER". Only confirmed facts.
@@ -24,7 +24,7 @@
 4. DMs warm people: past donors / contacts saved with "Donor", GiveLife main members, people who read a post (Message info list). Greeting "Name Brother" / "Name Sister" / "Brother" if no name. Poster image + caption. Every line re-worded per person (same concept). 1.5-2 min gaps, rests, stop on any warning.
 5. Asks "who else can we DM?" -> expects a ranked list from what is visible (donor-labelled contacts first, then main members, freelance groups last).
 6. Removes limits when he decides to push (removed the 50 DMs/day cap at 21:46 after being warned) but still wants safety (gap 1.5 min).
-7. After 3 posts with no money: needs a new photo/update from the family (rule from CLAUDE.md); poster must match the amount LEFT.
+7. After 3 posts with no money: needs a new photo/update from the family (owner's rule); poster must match the amount LEFT.
 8. Keeps posting 24h, no night pause (owner 18:10).
 
 ## B. WHEN A DONATION ARRIVES

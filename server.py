@@ -1194,7 +1194,6 @@ def chat_add(who, text, err=False, turn_id=None, model=""):
                 "text": text,
                 "err": bool(err),
                 "t": int(time.time() * 1000),
-                **({"model": assistant.LABEL} if who == "app" and model == assistant.LABEL else {}),
             }
         )
         CHATLOG.write_text(json.dumps(items[-300:], ensure_ascii=False), encoding="utf-8")
@@ -2496,6 +2495,17 @@ def optout(phone):
     BLOCKED.add(d)
 
 
+def is_opted_out(phone):
+    """True when this person asked not to be messaged (either stored form of the key)."""
+    if not STORE:
+        return False
+    keys = (
+        "optout_" + hashlib.sha256((phone + "@s.whatsapp.net").encode()).hexdigest(),
+        "optout_" + hashlib.sha256(str(phone).encode()).hexdigest(),
+    )
+    return any(STORE.get(k) for k in keys)
+
+
 def saved_auto_group_caption():
     """One authoritative source: the saved Group editor and its version bank."""
     caption = get_message("group")["text"]
@@ -2735,27 +2745,6 @@ def outreach(caps):
 
 
 def ai_test():
-    if assistant.claude_key():
-        # Direct Sonnet 5.5 check: no fallback here, so a wrong key or model name is shown plainly.
-        t0 = time.time()
-        try:
-            out = assistant._claude_raw(
-                "Reply with one word only.",
-                [{"role": "user", "content": "Reply with exactly: OK"}],
-                1024,
-            )
-            return {
-                "ok": True,
-                "provider": assistant.LABEL,
-                "ms": round((time.time() - t0) * 1000),
-                "reply": out["content"][:40],
-            }
-        except Exception as e:
-            return {
-                "ok": False,
-                "error": f"{assistant.LABEL} failed: {str(e)[:100]}. The app uses DeepSeek meanwhile."
-                + (" Check the model name (CLAUDE_MODEL)." if "HTTP 4" in str(e) else ""),
-            }
     key = assistant.client()
     if not key:
         return {
@@ -2918,6 +2907,7 @@ ENGINE = autopilot.Engine(
         "recent_dms": recent_dms,
         "note_dm": note_dm,
         "optout": optout,
+        "is_opted_out": is_opted_out,
         "group_link": lambda: (
             os.environ.get("FOUNDATION_GROUP_LINK", "")
             or str((STORE.get("foundation_group_link") if STORE else "") or "")
@@ -4198,7 +4188,6 @@ def assistant_task(body):
             ):
                 output["donors_changed"] = True
             output["turn_id"] = uuid.uuid4().hex
-            output["model"] = assistant.served_label()
             diag = mapping(output.get("diagnostics"))
             for t in diag.get("tools", []):
                 if isinstance(t, dict) and t.get("status") in ("rejected", "failed", "error"):
@@ -4763,7 +4752,6 @@ def live_snapshot():
     return {
         "on": on,
         "ai": bool(assistant.client()),
-        "ai_notice": assistant.ai_notice(),
         "log": AUTOLOG[-20:],
         "summary": summary,
         "status": status,
@@ -4954,7 +4942,6 @@ def agents_view():
         "rules": ENGINE.rule_list(),
         "auto": bool(snap["on"]),
         "updated": time.time(),
-        "ai_notice": assistant.ai_notice(),
     }
 
 

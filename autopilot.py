@@ -800,7 +800,15 @@ class Engine:
             if not mid or mid in seen or m.get("is_from_me") or _stamp(m) < sent_at:
                 continue
             seen.add(mid)
-            self._dm_message(phone, jid, m, str(m.get("content") or ""), name, _last_ours(msgs, m))
+            self._dm_message(
+                phone,
+                jid,
+                m,
+                str(m.get("content") or ""),
+                name,
+                _last_ours(msgs, m),
+                reply_intent.history_from(msgs, mid),
+            )
         self.s["seen"] = list(seen)[-1000:]
 
     def share_thanks(self, phone, jid):
@@ -815,13 +823,13 @@ class Engine:
             sent.append(phone)
         self._reply(jid, text)
 
-    def _dm_message(self, phone, jid, m, text, name, last_ours=""):
+    def _dm_message(self, phone, jid, m, text, name, last_ours="", history=None):
         tail, mid = phone[-4:], m.get("id")
         first = name.split(" ")[0] if name else ""
         label, why = reply_intent.classify(text, m.get("media_type", ""), last_ours)
         if label == "other" and text.strip() and self.h.get("ai_chat"):
             label, why = reply_intent.ai_classify(
-                self.h["ai_chat"], text, [("us", last_ours), ("them", text)]
+                self.h["ai_chat"], text, history or [("us", last_ours), ("them", text)]
             )
         if label == "ack":
             return
@@ -830,7 +838,9 @@ class Engine:
             self.log(f"…{tail} shared the case ({why}). Thanked them.")
         elif label == "opt_out":
             self.h["optout"](phone)
-            self._reply(jid, "Sorry for the disturbance. We will not message you again. 🤲")
+            self._reply(
+                jid, "Sorry for the disturbance. We will not message you again. 🤲", goodbye=True
+            )
             self.log(f"…{tail} asked not to be messaged. Removed for good.")
         elif label in ("donated", "both"):
             self._donor_signal(
@@ -909,6 +919,10 @@ class Engine:
                     continue
                 done.append(mid)  # decided once, whatever happens next: never answered twice
                 label, _ = reply_intent.classify(text, m.get("media_type", ""), _last_ours(msgs, m))
+                if label == "other" and text.strip() and self.h.get("ai_chat"):
+                    label, _ = reply_intent.ai_classify(
+                        self.h["ai_chat"], text, reply_intent.history_from(msgs, mid)
+                    )
                 if label == "opt_out":
                     self.h.get("optout", lambda p: None)(phone)
                     continue
@@ -919,7 +933,7 @@ class Engine:
                     continue
                 if label not in ("donated", "both"):
                     continue
-                if now() - by_phone.get(phone, 0) < 6 * 3600:
+                if now() - by_phone.get(phone, 0) < 6 * 3600 or self._opted_out(jid):
                     continue
                 # Every saved reply goes, each as its own message, in the order written.
                 sent = 0
@@ -943,8 +957,19 @@ class Engine:
                 )
         self.s["reply_seen"] = done[-1000:]
 
-    def _reply(self, jid, text):
+    def _opted_out(self, jid):
+        """DM Guard (code only): never auto-message someone who opted out. If the check fails, do not send."""
+        if not str(jid).endswith("@s.whatsapp.net"):
+            return False  # a group, not a person
+        try:
+            return bool(self.h.get("is_opted_out", lambda p: False)(str(jid).split("@")[0]))
+        except Exception:
+            return True
+
+    def _reply(self, jid, text, goodbye=False):
         if not self.s.get("dm_enabled") or self.h.get("on_hold", lambda: False)():
+            return
+        if not goodbye and self._opted_out(jid):
             return
         try:
             self.h["send_text"](jid, text)

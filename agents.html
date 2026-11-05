@@ -22,13 +22,14 @@
    </section>
    <section id="errors"></section>
    <section id="rules" class="card" hidden><div class="muted">Saved rules this agent follows</div><ul id="ruleList" class="facts"></ul></section>
+   <section id="answer" class="card" hidden aria-live="polite"><div class="muted small" id="ansQ"></div><div id="ansText" class="answer"></div></section>
    <div class="muted small">Activity · tap a line to correct it</div>
    <div id="feed" class="feed"></div>
   </div></div>
   <form id="ask" class="ask" autocomplete="off">
    <p id="msg" class="msg" role="status" aria-live="polite"></p>
-   <div class="box"><label for="inp" class="sr">Rule for this agent</label><input id="inp" maxlength="300" placeholder="Give a standing rule, e.g. never post in fiverr at night"><button aria-label="Save rule" class="send">↑</button></div>
-   <div class="hint">Saved only if it is a clear rule. Safety limits always apply.</div>
+   <div class="box"><label for="inp" class="sr">Ask the assistant or add a rule</label><input id="inp" maxlength="300" placeholder="Ask the assistant, or add a rule like: never post in fiverr at night"><button aria-label="Send" class="send">↑</button></div>
+   <div class="hint">Clear rules are saved. Anything else goes to the assistant. Safety limits always apply.</div>
   </form>
  </main>
 </div>

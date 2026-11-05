@@ -10,6 +10,10 @@
   <div id="live" class="live" role="status" aria-live="polite">Loading…</div>
  </nav>
  <main class="main">
+  <div class="mode" role="group" aria-label="Mode">
+   <div class="seg"><button type="button" id="modeManual" data-mode="manual">Manual</button><button type="button" id="modeAuto" data-mode="auto">Auto</button></div>
+   <span id="modeText" class="muted small"></span>
+  </div>
   <header class="head"><h1 id="name">…</h1><span id="pill" class="pill"></span><span id="now" class="now"></span></header>
   <div class="scroll"><div class="col">
    <section class="card"><div class="muted" id="role"></div>

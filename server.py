@@ -4891,11 +4891,17 @@ def agents_view():
         "status": "Working"
         if "Donor DMs" in st.get("now", "")
         else "Active"
-        if sm.get("dm_enabled")
+        if sm.get("dm_enabled") and snap["on"]
         else "Idle",
         "now": st.get("now", "")
         if "DM" in st.get("now", "")
-        else ("DMs on" if sm.get("dm_enabled") else "DMs off"),
+        else (
+            "DMs on"
+            if sm.get("dm_enabled") and snap["on"]
+            else "DMs set, waiting for Auto"
+            if sm.get("dm_enabled")
+            else "DMs off"
+        ),
         "progress": {
             "label": "DMs today",
             "value": sm.get("dms_today", 0),
@@ -4946,6 +4952,7 @@ def agents_view():
     return {
         "agents": agents,
         "rules": ENGINE.rule_list(),
+        "auto": bool(snap["on"]),
         "updated": time.time(),
         "ai_notice": assistant.ai_notice(),
     }
@@ -5002,6 +5009,8 @@ def agents_mutate(body):
         return {"reply": set_hold(False), **agents_view()}
     if act == "auto_on":
         return {"reply": set_auto(True), **agents_view()}
+    if act == "auto_off":
+        return {"reply": set_auto(False), **agents_view()}
     if act == "retry_writer":
         focus_bank().retry("group")
         return {"reply": "Writing versions again.", **agents_view()}

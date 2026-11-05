@@ -52,6 +52,12 @@
         return b;
       }),
     );
+    const on = data.auto === true;
+    $('modeManual').setAttribute('aria-pressed', String(!on));
+    $('modeAuto').setAttribute('aria-pressed', String(on));
+    $('modeText').textContent = on
+      ? 'Auto: the agents post, read and reply on their own.'
+      : 'Manual: nothing runs by itself. You send from the main page.';
     $('name').textContent = a.name;
     $('pill').textContent = a.status;
     $('pill').style.background = C[a.status];
@@ -148,6 +154,15 @@
       return false;
     }
   }
+  document.querySelectorAll('[data-mode]').forEach((b) => {
+    b.onclick = async () => {
+      const want = b.dataset.mode === 'auto';
+      if (!data || data.auto === want) return;
+      document.querySelectorAll('[data-mode]').forEach((x) => (x.disabled = true));
+      await act({ action: want ? 'auto_on' : 'auto_off' });
+      document.querySelectorAll('[data-mode]').forEach((x) => (x.disabled = false));
+    };
+  });
   $('ask').onsubmit = async (e) => {
     e.preventDefault();
     const text = $('inp').value.trim();

@@ -71,8 +71,15 @@ class CommandTests(unittest.TestCase):
         self.assertLess(elapsed / 1000, 0.01)
 
 
+_PRISTINE_DRAFT = app.DRAFT.read_text(encoding="utf-8") if app.DRAFT.exists() else None
+
+
 class SendTests(unittest.TestCase):
     def setUp(self):
+        if (
+            _PRISTINE_DRAFT is not None
+        ):  # an earlier test's saved drafts must not leak into this one
+            app.DRAFT.write_text(_PRISTINE_DRAFT, encoding="utf-8")
         self.gowa = patch.object(app, "GOWA_URL", "http://127.0.0.1:1")
         self.gowa.start()
         app.cancel_jobs("test reset")

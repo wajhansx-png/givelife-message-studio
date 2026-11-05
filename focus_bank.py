@@ -408,6 +408,8 @@ def reject_reason(source, text, existing=()):
         or wording_key(text) in {wording_key(t) for t in [source, *existing]}
     ):
         return "repeated wording"
+    if dm_variants.language_changed(source, text):
+        return "language changed; keep English lines English and Urdu lines Urdu"
     if message_rules.is_pdf_message(source):
         bad = message_rules.problems(text)
         if bad:

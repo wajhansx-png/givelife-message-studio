@@ -8203,3 +8203,10 @@ html
   margin: 8px 0 0;
   min-height: 48px;
 }
+
+.model-tag {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--mut);
+  letter-spacing: 0.01em;
+}

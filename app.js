@@ -290,7 +290,7 @@ function drawLog() {
       wanted = [];
     items.forEach((h) => {
       const key = turnKey(h),
-        signature = JSON.stringify([h.who, h.text, !!h.err]);
+        signature = JSON.stringify([h.who, h.text, !!h.err, h.model || '']);
       let d = existing.get(key);
       if (!d) {
         d = document.createElement('div');
@@ -338,6 +338,12 @@ function drawLog() {
           }
         };
         d.append(copy);
+        if (h.who === 'app' && h.model) {
+          const tag = document.createElement('div');
+          tag.className = 'model-tag';
+          tag.textContent = h.model;
+          d.append(tag);
+        }
       }
       wanted.push(d);
     });
@@ -395,7 +401,7 @@ function think(on) {
   drawLog();
 }
 let logChain = Promise.resolve();
-function say(who, text, err, turnId) {
+function say(who, text, err, turnId, model) {
   if (typeof text !== 'string' || !text.trim()) return;
   const item = {
     id: turnId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
@@ -403,6 +409,7 @@ function say(who, text, err, turnId) {
     text,
     err: !!err,
     t: Date.now(),
+    model: who === 'app' && model ? model : '',
   };
   history.push(item);
   history = history.slice(-80);
@@ -415,7 +422,7 @@ function say(who, text, err, turnId) {
   }
   if (who !== 'auto')
     logChain = logChain
-      .then(() => post('/chat-log', { who, text, err: !!err, turn_id: item.id }))
+      .then(() => post('/chat-log', { who, text, err: !!err, turn_id: item.id, model: item.model }))
       .catch(() => {});
   try {
     localStorage.setItem('givelife-chat', JSON.stringify(history));
@@ -430,9 +437,14 @@ async function syncChat() {
     await logChain;
     const d = await (await fetch('/chat')).json();
     if (d.items && d.items.length) {
-      history = d.items
-        .slice(-80)
-        .map((x) => ({ id: x.turn_id || x.id, who: x.who, text: x.text, err: !!x.err, t: x.t }));
+      history = d.items.slice(-80).map((x) => ({
+        id: x.turn_id || x.id,
+        who: x.who,
+        text: x.text,
+        err: !!x.err,
+        t: x.t,
+        model: x.model || '',
+      }));
       try {
         localStorage.setItem('givelife-chat', JSON.stringify(history));
       } catch (e) {}
@@ -844,7 +856,8 @@ function syncChatBalanceCaptions() {
         !Number.isFinite(d.left) ||
         typeof d.drafts?.group !== 'string' ||
         typeof d.drafts?.dm !== 'string'
-      ) return;
+      )
+        return;
       applyDrafts({ ...d.drafts, left: d.left });
     })
     .catch(() => status('Balance saved; refresh to check captions', 1));
@@ -1058,7 +1071,11 @@ function jobProgress(job, clock) {
       clock.waitLen = Math.max(1, secs);
     }
     const waited = 1 - secs / clock.waitLen;
-    return { fraction: (done + 0.7 * waited) / total, text: done + ' of ' + total + ' sent · next in ' + secs + 's', slow: false };
+    return {
+      fraction: (done + 0.7 * waited) / total,
+      text: done + ' of ' + total + ' sent · next in ' + secs + 's',
+      slow: false,
+    };
   }
   return {
     fraction: (done + 0.92) / total,
@@ -1100,7 +1117,13 @@ async function watchGroupJob(id, caption) {
         const bad = (job.results || []).some((x) => x.code !== 'SUCCESS'),
           okCount = (job.results || []).filter((x) => x.code === 'SUCCESS').length,
           total = (job.keys || []).length || okCount;
-        endButtonProgress(btn, bad ? '✗ ' + okCount + ' of ' + total + ' confirmed' : '✓ Sent' + (total > 1 ? ' to all ' + total : ''), !bad);
+        endButtonProgress(
+          btn,
+          bad
+            ? '✗ ' + okCount + ' of ' + total + ' confirmed'
+            : '✓ Sent' + (total > 1 ? ' to all ' + total : ''),
+          !bad,
+        );
         if (bad && displayJob === id) $('groupStatus').textContent = job.message;
         say(
           'app',
@@ -1141,7 +1164,9 @@ async function sendGroup(key) {
   if (!lockSend(key, true)) return;
   let tracked = false;
   if (editing) setEditing(false);
-  const btn = progressButton(key === 'all' ? ['main', ...FREE_KEYS] : key === 'free' ? FREE_KEYS : [key]);
+  const btn = progressButton(
+    key === 'all' ? ['main', ...FREE_KEYS] : key === 'free' ? FREE_KEYS : [key],
+  );
   setButtonProgress(btn, 0.03, 'Starting…', false);
   busy(true);
   try {
@@ -1193,10 +1218,14 @@ function paintTimers(timers) {
       on = !!t && Number(b.dataset.delay) === t.delay;
     b.classList.toggle('is-pending', on);
     b.setAttribute('aria-pressed', String(on));
-    b.textContent = on ? clockText(t.due_at) : String(b.dataset.delay === '60' ? '1h' : b.dataset.delay + 'm');
+    b.textContent = on
+      ? clockText(t.due_at)
+      : String(b.dataset.delay === '60' ? '1h' : b.dataset.delay + 'm');
     b.setAttribute(
       'aria-label',
-      on ? 'Scheduled at ' + clockText(t.due_at) + '. Tap to cancel' : 'Send in ' + delayText(Number(b.dataset.delay)),
+      on
+        ? 'Scheduled at ' + clockText(t.due_at) + '. Tap to cancel'
+        : 'Send in ' + delayText(Number(b.dataset.delay)),
     );
   });
 }
@@ -1226,7 +1255,8 @@ async function timerTap(scope, minutes) {
         d = await r.json();
       if (!r.ok) throw Error(d.error || 'Could not schedule');
       groupTimers[scope] = { id: d.task_id, due_at: d.due_at, delay: minutes };
-      $('groupStatus').textContent = '⏱ ' + label + ' sends at ' + clockText(d.due_at) + ' · tap the time to cancel';
+      $('groupStatus').textContent =
+        '⏱ ' + label + ' sends at ' + clockText(d.due_at) + ' · tap the time to cancel';
       $('groupStatus').classList.add('is-timer');
     }
     paintTimers();
@@ -1249,7 +1279,10 @@ document.querySelectorAll('.delay-pill').forEach(
   (p) =>
     (p.onclick = async () => {
       await timerTap(p.dataset.delayScope, Number(p.dataset.delay));
-      showTimerRow(document.querySelector('.gb-timer[data-timer="' + p.dataset.delayScope + '"]'), false);
+      showTimerRow(
+        document.querySelector('.gb-timer[data-timer="' + p.dataset.delayScope + '"]'),
+        false,
+      );
     }),
 );
 paintTimers();
@@ -1333,7 +1366,8 @@ async function sendTest(kind) {
         ? '✓ Sent to the test group.'
         : 'Test failed: ' + (d.message || d.error || '');
     say('app', result, d.code !== 'SUCCESS');
-    if (btn) endButtonProgress(btn, d.code === 'SUCCESS' ? '✓ Sent' : '✗ Not sent', d.code === 'SUCCESS');
+    if (btn)
+      endButtonProgress(btn, d.code === 'SUCCESS' ? '✓ Sent' : '✗ Not sent', d.code === 'SUCCESS');
     else setLiveNotice(result, d.code !== 'SUCCESS');
   } catch (e) {
     if (btn) endButtonProgress(btn, '✗ Not sent', false);
@@ -1737,7 +1771,7 @@ async function act(text) {
     if (d.donors_changed || d.volunteers_changed || d.team_changed)
       document.dispatchEvent(new Event('donors-changed'));
   }
-  say('app', d.reply, false, d.turn_id);
+  say('app', d.reply, false, d.turn_id, d.model);
   if (d.job_id) watchGroupJob(d.job_id, d.caption || $('group').value);
   for (const j of d.jobs || []) watchGroupJob(j.job_id, j.caption || $('group').value);
   refreshNextActions();
@@ -1966,7 +2000,9 @@ function paintFreeAuto(sum) {
   if (!freeSummary) return;
   const paused = freeSummary.paused || {},
     on = !FREE_KEYS.some((k) => paused[k] > 0),
-    every = Number((freeSummary.group_intervals || {}).community || freeSummary.freelance_every || 0);
+    every = Number(
+      (freeSummary.group_intervals || {}).community || freeSummary.freelance_every || 0,
+    );
   const sw = $('freeAuto');
   if (!sw) return;
   sw.setAttribute('aria-checked', String(on));
@@ -1983,24 +2019,25 @@ async function freeAutoCall(body) {
   if (d.summary) freeSummary = d.summary;
   return d;
 }
-if ($('freeAuto')) $('freeAuto').onclick = async () => {
-  const sw = $('freeAuto'),
-    turnOn = sw.getAttribute('aria-checked') !== 'true';
-  sw.disabled = true;
-  try {
-    for (const k of FREE_KEYS)
-      await freeAutoCall(
-        turnOn ? { action: 'resume', key: k } : { action: 'pause', key: k, hours: 720 },
-      );
-    paintFreeAuto();
-    say('app', turnOn ? 'Freelance sending is ON.' : 'Freelance sending is paused.');
-  } catch (e) {
-    say('app', e.message, 1);
-  } finally {
-    sw.disabled = false;
-    pollAuto();
-  }
-};
+if ($('freeAuto'))
+  $('freeAuto').onclick = async () => {
+    const sw = $('freeAuto'),
+      turnOn = sw.getAttribute('aria-checked') !== 'true';
+    sw.disabled = true;
+    try {
+      for (const k of FREE_KEYS)
+        await freeAutoCall(
+          turnOn ? { action: 'resume', key: k } : { action: 'pause', key: k, hours: 720 },
+        );
+      paintFreeAuto();
+      say('app', turnOn ? 'Freelance sending is ON.' : 'Freelance sending is paused.');
+    } catch (e) {
+      say('app', e.message, 1);
+    } finally {
+      sw.disabled = false;
+      pollAuto();
+    }
+  };
 document.querySelectorAll('.every-pill').forEach((p) => {
   p.onclick = async () => {
     try {
@@ -2802,7 +2839,9 @@ document
 document
   .getElementById('railDonors')
   ?.addEventListener('click', () => document.getElementById('openDonors')?.click());
-document.getElementById('openCasePlan')?.addEventListener('click', () => (location.href = '/case-plan'));
+document
+  .getElementById('openCasePlan')
+  ?.addEventListener('click', () => (location.href = '/case-plan'));
 /* Desktop: Settings sits in the centred footer beside Keyboard shortcuts instead of the far corner. */
 
 /* ---- Cases: save a finished case, open an old one, start a new one from zero ---- */

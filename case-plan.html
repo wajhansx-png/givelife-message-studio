@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#141b1d"><title>Case plan · GiveLife</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/group-finder.css"><link rel="stylesheet" href="/case-plan.css"></head>
+<body>
+<a class="skip" href="#planMain">Skip to case plan</a>
+<header class="top"><a class="back" href="/">← Back</a><div><h1>Case plan</h1></div></header>
+<main id="planMain" tabindex="-1">
+ <section class="activity" aria-label="Case plan status"><div><strong id="planState">Loading…</strong><span id="planDetail"></span></div></section>
+ <p id="feedback" class="feedback" role="status" aria-live="polite" aria-atomic="true"></p>
+ <form id="factsForm" class="panel" autocomplete="off" hidden>
+  <h2>Case facts</h2>
+  <p>Type only true facts. The app writes the messages from the PDF prompts and checks every line.</p>
+  <div class="grid">
+   <label>Patient name<input name="name" required maxlength="40" placeholder="Yousaf…"></label>
+   <label>Age<input name="age" required inputmode="numeric" pattern="[0-9]{1,3}" placeholder="2…"></label>
+   <label>Boy or girl<select name="gender" required><option value="boy">Boy</option><option value="girl">Girl</option></select></label>
+   <label>What happened<input name="what_happened" required maxlength="80" placeholder="has passed away…"></label>
+   <label>Money is for<input name="money_for" required maxlength="80" placeholder="Janazah, kafan, burial fees…"></label>
+   <label>Real deadline (leave empty if none)<input name="deadline" maxlength="60" placeholder="Janazah at 4 PM tomorrow…"></label>
+   <label>Hadith for the Slow message<select name="hadith"><option value="1">1 · Sahih Muslim 2699</option><option value="2">2 · Sahih Bukhari 481</option><option value="3">3 · Sunan Tirmidhi 2616</option></select></label>
+  </div>
+  <div class="actions"><button type="submit" class="primary">Make messages</button></div>
+ </form>
+ <p id="planNote" class="note" hidden></p>
+ <section id="preview" hidden>
+  <div id="messages" class="msgs"></div>
+ </section>
+ <div id="actions" class="actions sticky" hidden>
+  <button type="button" id="approve" class="primary" hidden>Approve and start</button>
+  <button type="button" id="resume" hidden>Resume</button>
+  <button type="button" id="stop" class="danger" hidden>Stop</button>
+  <button type="button" id="clear" hidden>New case</button>
+ </div>
+</main>
+<dialog id="accessDialog" aria-labelledby="accessTitle"><header><h2 id="accessTitle">Open your GiveLife case plan</h2></header><form id="accessForm" class="dialog-body"><label for="accessKey">Private cloud access key</label><input type="password" id="accessKey" name="password" autocomplete="current-password" required><p id="accessNote" role="status"></p><button type="submit" class="primary">Unlock</button></form></dialog>
+<script src="/case-plan.js"></script>
+</body>
+</html>

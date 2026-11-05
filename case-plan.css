@@ -1,0 +1,114 @@
+/* Case plan page: reuses the Group finder tokens and controls. */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.panel h2,
+.msg h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.grid input,
+.grid select {
+  width: 100%;
+  color: var(--text);
+}
+.msgs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+.msg {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 0;
+}
+.msg pre {
+  margin: 12px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  unicode-bidi: plaintext;
+}
+.msg .ok {
+  color: var(--accent);
+  margin: 0;
+}
+.msg ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--bad);
+}
+.msg .now {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 650;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.actions button {
+  flex: 1 1 160px;
+}
+.actions.sticky {
+  position: sticky;
+  bottom: 0;
+  margin: 16px 0 0;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 720px) {
+  .top,
+  main {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  /* The shared phone layout floats Back at the bottom right: keep the action buttons clear of it. */
+  .actions.sticky {
+    margin: 16px -16px 0;
+    padding-left: 16px;
+    padding-right: 108px;
+  }
+  .actions.sticky button {
+    flex-basis: 96px;
+    padding-inline: 8px;
+  }
+  .msgs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.note {
+  border-left: 4px solid var(--warning);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--warning);
+  font-size: 14px;
+  margin: 0 0 16px;
+}

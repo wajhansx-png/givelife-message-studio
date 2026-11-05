@@ -1,7 +1,7 @@
 """Factual caption updates shared by drafts, version banks and dispatch."""
 
 import re, uuid
-import draft_workflow
+import draft_workflow, message_rules
 
 TIME = re.compile(
     r"(?i)\bjanaz[ae]h\s+(?:time\s+)?(?:(?:is|at|will be|now is|is now)\s+)?(?:(today|tomorrow)\s+)?(\d{1,2})(?::([0-5]\d))?\s*(a\.?m\.?|p\.?m\.?)?\s*(today|tomorrow)?\b"
@@ -68,6 +68,9 @@ def current(app, text):
     value = facts(app).get("janazah_time")
     if value and ("janaz" in text.lower() or old_balance is not None):
         text = update_time(text, value)
+    if message_rules.is_pdf_message(text):
+        # PDF line 3 has no "Rs. X left" label, so keep its donor math on the live amount here.
+        text = message_rules.refresh_amount(text, app.read_left())
     return text
 
 

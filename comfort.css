@@ -2093,7 +2093,10 @@ html body:not(#_):not(#__):not(#___) #donorsPage #donorNavMore>summary{backgroun
 /* Group message screen: Test sits in the top row, Edit · Copy · Test · Next as four equal buttons. */
 html body:not(#_):not(#__) #messageFocus #focusTest{background:linear-gradient(135deg,#7c3aed,#6d28d9)!important;color:#fff!important;border-color:transparent!important;font-weight:700}
 @media (max-width: 899px){
- html body:not(#_):not(#__) #messageFocus .focus-rail>:is(#focusEdit,#focusCopy,#focusTest,#focusNext){flex:1 1 calc(25% - 6px)!important;min-width:0!important}
+ /* Phone dock: row 1 Edit · Save Base Message · Test, row 2 Generate 5 Versions · Next, then the less-used four and Back (thumb side). */
+ html body:not(#_):not(#__) #messageFocus .focus-rail>:is(#focusEdit,#focusSave,#focusTest){flex:1 1 calc(33.3% - 6px)!important;min-width:0!important;min-height:48px!important;font-size:14px!important}
+ html body:not(#_):not(#__) #messageFocus .focus-rail>:is(#focusRetry,#focusNext){flex:1 1 calc(50% - 6px)!important;min-width:0!important;min-height:48px!important;font-size:14px!important}
+ html body:not(#_):not(#__) #messageFocus .focus-rail>:is(#focusCopy,#focusPoster,#focusManual,#focusRegenerate){flex:1 1 0!important;min-width:0!important;min-height:44px!important;margin-top:0!important;padding:4px 2px!important;font-size:12px!important;line-height:1.15!important;white-space:normal!important}
  html body:not(#_):not(#__) #messageFocus:has(#focusText:not([hidden])) #focusTest{display:none!important}
 }
 
@@ -3481,7 +3484,7 @@ html body #donorsPage .donor-row .donor-more .donor-menu-top {
     body:not(#_):not(#__)
     #messageFocus:has(#focusText:not([hidden]))
     .focus-rail
-    > :is(#focusEdit, #focusCopy) {
+    > :is(#focusEdit, #focusSave) {
     flex: 1 1 calc(50% - 6px) !important;
   }
   html

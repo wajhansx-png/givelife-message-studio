@@ -1184,8 +1184,15 @@ def run_job(job_id, keys, caption, queue=False):
             ),
             quiet=bool(job.get("manual")),
         )
-    except Exception:
-        job.update(done=True, message="Send not confirmed. Check WhatsApp before trying again.")
+    except Exception as exc:
+        from group_delivery import summarize
+
+        detail = (
+            " Reason: " + safe_text(str(exc), 180)
+            if isinstance(exc, ValueError)
+            else " The app encountered an unexpected send error; check server logs."
+        )
+        job.update(done=True, message=summarize(job.get("results", []), keys) + detail)
         save_job(job_id)
     finally:
         with LOCK:

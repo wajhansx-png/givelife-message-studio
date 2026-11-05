@@ -39,6 +39,27 @@ class AgentsPageTests(unittest.TestCase):
         self.assertEqual(auto["status"], "Error")
         self.assertEqual(auto["errors"][0]["action"], "open_home")
 
+    def test_mode_toggle_switches_auto_both_ways_and_view_reports_it(self):
+        with patch.object(app, "set_auto", side_effect=lambda on: "on" if on else "off") as sa:
+            self.assertEqual(app.agents_mutate({"action": "auto_on"})["reply"], "on")
+            self.assertEqual(app.agents_mutate({"action": "auto_off"})["reply"], "off")
+            self.assertEqual([c.args[0] for c in sa.call_args_list], [True, False])
+        for on in (True, False):
+            with patch.object(app, "auto_on", return_value=on):
+                self.assertIs(app.agents_view()["auto"], on)
+
+    def test_dm_sender_is_not_active_while_auto_is_off(self):
+        with patch.object(app.ENGINE, "summary", return_value={"dm_enabled": True}):
+            for on, status in ((False, "Idle"), (True, "Active")):
+                with patch.object(app, "auto_on", return_value=on):
+                    dms = {a["id"]: a for a in app.agents_view()["agents"]}["dms"]
+                self.assertEqual(dms["status"], status)
+            with patch.object(app, "auto_on", return_value=False):
+                self.assertIn(
+                    "waiting for Auto",
+                    {a["id"]: a for a in app.agents_view()["agents"]}["dms"]["now"],
+                )
+
     def test_instruction_saved_only_when_valid(self):
         with self.assertRaises(ValueError):
             app.agents_mutate({"action": "instruct", "text": "hello there"})
@@ -49,6 +70,12 @@ class AgentsPageTests(unittest.TestCase):
         self.assertTrue(out["rules"])
         with self.assertRaises(ValueError):
             app.agents_mutate({"action": "instruct", "text": "never post in fiverr at night"})
+
+    def test_free_word_and_note_label(self):
+        out = app.agents_mutate({"action": "instruct", "text": "post in free every 45 min"})
+        self.assertIn({"gap"}, [{r["kind"]} for r in out["rules"]])
+        out = app.agents_mutate({"action": "instruct", "text": "always use a polite tone"})
+        self.assertIn("note", [r["kind"] for r in out["rules"]])
 
     def test_correction_saved_and_optionally_remembered(self):
         before = len(app.KNOWLEDGE.data["feedback"])

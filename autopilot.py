@@ -359,6 +359,9 @@ class Engine:
     def add_rule(self, rule):
         rule = dict(rule)
         rule["id"] = int(now() * 1000) % 10_000_000
+        used = {r.get("id") for r in self.rules()}
+        while rule["id"] in used:  # two rules saved in the same millisecond must not share an id
+            rule["id"] = (rule["id"] + 1) % 10_000_000
         if rule["kind"] in (
             "gap",
             "quiet",
@@ -386,7 +389,7 @@ class Engine:
 
     def rule_list(self):
         return [
-            {"id": r["id"], "text": rules.describe(r)}
+            {"id": r["id"], "text": rules.describe(r), "kind": r["kind"]}
             for r in self.rules()
             if r["kind"] != "pause" or r["until"] > now()
         ]

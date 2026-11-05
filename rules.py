@@ -152,7 +152,7 @@ def parse(text, now=None):
     )
     if (
         m
-        and re.search(r"\b(no|not|dont|don\'t|do not|stop|quiet|silent|avoid|nahi)\b", low)
+        and re.search(r"\b(no|not|never|dont|don\'t|do not|stop|quiet|silent|avoid|nahi)\b", low)
         and re.search(r"\b(post|posting|send|sending|dm|dms|message|quiet)\b", low)
     ):
         a, b = _hour(m.group(1), m.group(2)), _hour(m.group(3), m.group(4))
@@ -164,7 +164,7 @@ def parse(text, now=None):
         }, f"No sending in {group or 'any group'} from {a:02d}:00 to {b:02d}:00."
     if (
         re.search(r"\b(night|raat)\b", low)
-        and re.search(r"\b(no|not|dont|don\'t|do not|stop|avoid|nahi)\b", low)
+        and re.search(r"\b(no|not|never|dont|don\'t|do not|stop|avoid|nahi)\b", low)
         and re.search(r"\b(post|posting|send|sending|dm|dms|message)\b", low)
     ):
         return {

@@ -6,6 +6,10 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store
 import manual_commands
 import dm_composer, reply_setup
+import ai_call
+
+DM_DAILY_CAP = 40  # ceiling, not a target
+DM_MIN_GAP = 180  # seconds between automatic/batch DMs
 import dm_templates
 from state_shapes import mapping, memories, history as valid_history
 import chat_policy
@@ -195,7 +199,7 @@ def send_custom(body):
     if not STORE:
         raise ValueError("Persistent send records are unavailable. Try again later.")
     manual = body.get("kind") in ("donor_manual", "team_msg", "owner_text")
-    explicit_batch = body.get("kind") in ("donor_batch", "volunteer_batch")
+    explicit_batch = body.get("kind") in ("donor_batch", "volunteer_batch", "volunteer_flow")
     if not SEND_LOCK.acquire(blocking=manual or explicit_batch):
         raise ValueError("Another send is running. Please wait for it to finish.")
     try:
@@ -254,14 +258,19 @@ def send_custom(body):
             )
             if ledger.get("day") != day:
                 ledger = {"day": day, "count": 0, "last": ledger.get("last", 0)}
-            if ledger["count"] >= 50 and not manual and not explicit_batch:
-                raise ValueError("The 50-DM daily limit has been reached.")
+            # DM Guard: one ceiling for every batch and Auto path; only a one-person owner send is not blocked (but counts).
+            if not manual and ledger["count"] >= DM_DAILY_CAP:
+                raise ValueError(
+                    f"The {DM_DAILY_CAP}-DM daily limit has been reached. More tomorrow."
+                )
+            if not manual and ledger.get("optouts", 0) >= 2:
+                raise ValueError("DMs paused for today: 2 people asked not to be messaged.")
             if (
                 not manual
                 and not (explicit_batch and body.get("first_in_batch") is True)
-                and now - ledger.get("last", 0) < 60
+                and now - ledger.get("last", 0) < DM_MIN_GAP
             ):
-                raise ValueError("Wait at least 60 seconds between DMs.")
+                raise ValueError(f"Wait at least {DM_MIN_GAP // 60} minutes between DMs.")
             ledger.update(count=ledger["count"] + 1, last=now)
             STORE.put("dm_daily", ledger)
             STORE.put("dm_recipient_" + digest, {"state": "uncertain", "time": now})
@@ -720,10 +729,13 @@ def poster_media(use="group"):
                     pass
     return DATA / "poster.jpg"
 
+
 def post_media(jid, cap, path):
     """Send one picture or MP4 video with its caption file through the WhatsApp gateway."""
     if not Path(path).is_file():
-        raise ValueError("The saved poster is missing. Please upload the poster again before sending.")
+        raise ValueError(
+            "The saved poster is missing. Please upload the poster again before sending."
+        )
     video = str(path).endswith(".mp4")
     return subprocess.run(
         [
@@ -2332,7 +2344,7 @@ def dm_campaign(people, gap, image, vary, message, start_after, rest_every, rest
             note_dm(phone)
             c["log"].append(f"✓ {(name + ' ') if name else ''}{gender} …{phone[-4:]}")
             if i < len(people) - 1:
-                wait = _random.uniform(gap, gap * 1.25)
+                wait = _random.uniform(max(gap, 180), max(gap, 420))
                 if rest_every and c["sent"] % rest_every == 0:
                     wait = max(wait, rest_minutes * 60)
                     c["log"].append(f"Resting {rest_minutes} min after {c['sent']} messages")
@@ -2469,6 +2481,10 @@ def recent_dms():
 def optout(phone):
     d = hashlib.sha256((phone + "@s.whatsapp.net").encode()).hexdigest()
     if STORE:
+        if not STORE.get("optout_" + d):
+            ledger = STORE.get("dm_daily", {}) or {}
+            ledger["optouts"] = ledger.get("optouts", 0) + 1
+            STORE.put("dm_daily", ledger)
         STORE.put("optout_" + d, True)
     BLOCKED.add(d)
 
@@ -2785,7 +2801,9 @@ def plan_view():
             text = case_plan.message_for(plan, mode, left)
             checks[mode] = {
                 "text": text,
-                "problems": message_rules.problems(text, left=left, facts=plan["facts"], exact=False),
+                "problems": message_rules.problems(
+                    text, left=left, facts=plan["facts"], exact=False
+                ),
             }
     return {
         "plan": plan,
@@ -2872,6 +2890,19 @@ ENGINE = autopilot.Engine(
         "recent_dms": recent_dms,
         "note_dm": note_dm,
         "optout": optout,
+        "group_link": lambda: (
+            os.environ.get("FOUNDATION_GROUP_LINK", "")
+            or str((STORE.get("foundation_group_link") if STORE else "") or "")
+        ),
+        "ai_chat": ai_call.chat,
+        "send_custom": send_custom,
+        "poster_caption": lambda: get_message("group")["text"],
+        "volunteers": lambda: [
+            r
+            for r in donors().volunteers.book._load()["records"]
+            if r.get("phone") and not r.get("deleted")
+        ],
+        "case_id": lambda: active_case_name() or "case",
         "send_scheduled": send_scheduled,
         "donor_answer": lambda q: assistant.donor_reply(q, read_left()),
         "already_dmed": already_dmed,
@@ -2894,8 +2925,14 @@ ENGINE = autopilot.Engine(
         "outreach": outreach,
     }
 )
-__import__("dm_variants").OWNER_STYLE = lambda: focus_bank().owner_style(get_message("group")["text"])
-__import__("dm_variants").PROVEN = lambda: (learning_mod.proven_texts(ENGINE.L, 1) + donors().book.proven_dm_texts(1)) or learning_mod.proven_texts(ENGINE.L)
+__import__("dm_variants").OWNER_STYLE = lambda: focus_bank().owner_style(
+    get_message("group")["text"]
+)
+__import__("dm_variants").CORRECTIONS = lambda: [m.get("rule", "") for m in mem_get()][-15:]
+__import__("dm_variants").PROVEN = lambda: (
+    (learning_mod.proven_texts(ENGINE.L, 1) + donors().book.proven_dm_texts(1))
+    or learning_mod.proven_texts(ENGINE.L)
+)
 
 
 def engine_do(auto_review=False):
@@ -4146,7 +4183,9 @@ def assistant_task(body):
                 if tip:
                     output["reply"] = (output.get("reply", "") + "\n\n" + tip).strip()
             KNOWLEDGE.archive("app", output.get("reply", ""), output["turn_id"])
-            KNOWLEDGE.trace({"request_id": ident, "route": "model", **output.get("diagnostics", {})})
+            KNOWLEDGE.trace(
+                {"request_id": ident, "route": "model", **output.get("diagnostics", {})}
+            )
             ASSIST_TASKS[ident].update(done=True, result=output)
         except Exception as e:
             ASSIST_TASKS[ident].update(
@@ -4704,6 +4743,236 @@ def live_snapshot():
     }
 
 
+AGENT_WORDS = (
+    ("writer", r"(?i)\bversions?\b|saved group message|wording"),
+    ("plan", r"(?i)case plan"),
+    ("dms", r"(?i)\bdms?\b|donor dm"),
+    ("volunteers", r"(?i)volunteer"),
+    ("replies", r"(?i)repl|answered|asked not to|said later|reminder|money noticed|thank"),
+)
+
+
+def _agent_of(text):
+    return next((a for a, w in AGENT_WORDS if re.search(w, text or "")), "auto")
+
+
+def agents_view():
+    """Real status of each working part of the app, for the Agents page. No mock data."""
+    snap = live_snapshot()
+    st, sm = snap["status"], snap["summary"]
+    feed = {}
+    for e in AUTOLOG[-50:]:
+        feed.setdefault(_agent_of(e.get("text")), []).append(
+            {"id": str(e.get("time")), "time": e.get("time"), "text": e.get("text", "")}
+        )
+    err = st.get("errors") or []
+    wa = st.get("state") != "offline"
+    auto = {
+        "id": "auto",
+        "name": "Group Poster",
+        "role": "Posts saved versions in groups on the timers and reads money signals.",
+        "status": "Error"
+        if not wa or err
+        else "Working"
+        if st.get("state") in ("sending", "reading")
+        else "Active"
+        if snap["on"] and not snap["hold"]
+        else "Idle",
+        "now": st.get("now", ""),
+        "progress": {"label": "Posts today", "value": sm.get("posts_today", 0)},
+        "facts": [
+            f"Pace {sm.get('pace', '')}: GiveLife every {sm.get('main_every', '?')} min, freelance every {sm.get('freelance_every', '?')} min"
+        ]
+        + [f"Next: {n['group']} in {n['in']} min" for n in st.get("next", [])],
+        "errors": [
+            {
+                "text": "WhatsApp is not connected.",
+                "fix": "Open the main page and scan the WhatsApp QR code.",
+                "action": "open_home",
+            }
+        ]
+        * (not wa)
+        + [{"text": e.get("text", ""), "fix": "It retries by itself.", "action": ""} for e in err]
+        + (
+            [{"text": "Everything is on hold.", "fix": "Resume when ready.", "action": "resume"}]
+            if snap["hold"]
+            else []
+        )
+        + (
+            [
+                {
+                    "text": "Automatic posting is off.",
+                    "fix": "Turn Auto on when you want timed posts.",
+                    "action": "auto_on",
+                    "info": True,
+                }
+            ]
+            if not snap["on"]
+            else []
+        ),
+    }
+    try:
+        g = focus_bank().get("group")
+    except Exception as e:
+        g = {"state": "Needs retry", "error": str(e)[:150], "items": []}
+    n = len(g.get("items") or [])
+    writer = {
+        "id": "writer",
+        "name": "Writer",
+        "role": "Writes 10 different versions of your saved Group message.",
+        "status": "Working"
+        if g.get("state") == "Generating"
+        else "Error"
+        if g.get("state") == "Needs retry"
+        else "Active"
+        if n
+        else "Idle",
+        "now": f"{g.get('state', 'Not generated')}: {n} of 10 versions",
+        "progress": {"label": "Versions ready", "value": n, "max": 10},
+        "facts": [],
+        "errors": [
+            {
+                "text": g.get("error") or "Versions could not be made.",
+                "fix": "Try again.",
+                "action": "retry_writer",
+            }
+        ]
+        if g.get("state") == "Needs retry"
+        else [],
+    }
+    rs = reply_setup.get(STORE) if STORE else {}
+    replies = {
+        "id": "replies",
+        "name": "Reply Reader",
+        "role": "Reads replies to posts and DMs and sends your saved thank-you replies.",
+        "status": "Active" if snap["on"] and rs.get("enabled") else "Idle",
+        "now": "Auto replies on" if rs.get("enabled") else "Auto replies off",
+        "progress": {
+            "label": "Donation signals today",
+            "value": sm.get("possible_donations_today", 0),
+        },
+        "facts": [f"Last reply check: {_ago(st.get('last_reply_read'))}"],
+        "errors": [],
+    }
+    dms = {
+        "id": "dms",
+        "name": "DM Sender",
+        "role": "Sends DMs to donors and contacts within the daily limit.",
+        "status": "Working"
+        if "Donor DMs" in st.get("now", "")
+        else "Active"
+        if sm.get("dm_enabled")
+        else "Idle",
+        "now": st.get("now", "")
+        if "DM" in st.get("now", "")
+        else ("DMs on" if sm.get("dm_enabled") else "DMs off"),
+        "progress": {
+            "label": "DMs today",
+            "value": sm.get("dms_today", 0),
+            "max": sm.get("dm_daily") or None,
+        },
+        "facts": [],
+        "errors": [],
+    }
+    try:
+        v = donors().volunteers.view()
+        vd = v.get("delivery") or {}
+        vol = {
+            "count": len(v.get("items") or []),
+            "state": str(vd.get("state") or "Idle"),
+            "sent": vd.get("sent", 0),
+            "total": vd.get("total", 0),
+        }
+    except Exception:
+        vol = {"count": 0, "state": "Unavailable", "sent": 0, "total": 0}
+    volunteers = {
+        "id": "volunteers",
+        "name": "Volunteers",
+        "role": "Asks your volunteers to share the case.",
+        "status": "Working" if vol["total"] and vol["sent"] < vol["total"] else "Idle",
+        "now": f"{vol['count']} volunteers · {vol['state']}",
+        "progress": {
+            "label": "Asked this round",
+            "value": vol["sent"],
+            "max": vol["total"] or None,
+        },
+        "facts": [],
+        "errors": [],
+    }
+    plan = plan_get()
+    case = {
+        "id": "plan",
+        "name": "Case Plan",
+        "role": "Switches between Normal and Slow messages from the case facts.",
+        "status": "Active" if plan and plan["state"] in case_plan.ACTIVE else "Idle",
+        "now": (plan or {}).get("state", "No case plan"),
+        "progress": {"label": "Amount left (Rs.)", "value": read_left()},
+        "facts": [],
+        "errors": [],
+    }
+    agents = [auto, writer, replies, dms, volunteers, case]
+    for a in agents:
+        a["feed"] = feed.get(a["id"], [])[-15:]
+    return {"agents": agents, "rules": ENGINE.rule_list(), "updated": time.time()}
+
+
+def _ago(t):
+    if not t:
+        return "never"
+    m = int((time.time() - t) // 60)
+    return "just now" if m < 1 else f"{m} min ago"
+
+
+def agents_mutate(body):
+    act = body.get("action")
+    if act == "instruct":
+        import rules
+
+        text = str(body.get("text", "")).strip()[:300]
+        rule, description = rules.parse(text)
+        if not rule:
+            raise ValueError(
+                'Not saved: I could not turn this into a rule. Try "never post in fiverr at night" or "post in main every 20 min".'
+            )
+        if rule["kind"] == "schedule":
+            raise ValueError("Not saved: sends are done from chat, not as agent rules.")
+        if any(r["text"].casefold() == rules.describe(rule).casefold() for r in ENGINE.rule_list()):
+            raise ValueError("Already saved.")
+        ENGINE.add_rule(rule)
+        return {"reply": description, **agents_view()}
+    if act == "delete_rule":
+        ENGINE.delete_rule(body.get("id"))
+        return {"reply": "Rule removed.", **agents_view()}
+    if act == "correct":
+        text = str(body.get("text", "")).strip()[:500]
+        if not text:
+            raise ValueError("Type what was wrong.")
+        decision = str(body.get("decision", ""))[:300]
+        with KNOWLEDGE.lock:
+            KNOWLEDGE.data["feedback"].append(
+                {
+                    "id": uuid.uuid4().hex,
+                    "correction": safe_text(
+                        f'{body.get("agent", "")}: "{decision}" -> {text}', 1500
+                    ),
+                    "category": "agent_decision",
+                    "status": "reported_needs_review",
+                    "time": time.time(),
+                }
+            )
+            KNOWLEDGE.save()
+        reply = mem_add(text) if body.get("remember") is True else "Correction saved."
+        return {"reply": reply, **agents_view()}
+    if act == "resume":
+        return {"reply": set_hold(False), **agents_view()}
+    if act == "auto_on":
+        return {"reply": set_auto(True), **agents_view()}
+    if act == "retry_writer":
+        focus_bank().retry("group")
+        return {"reply": "Writing versions again.", **agents_view()}
+    raise ValueError("Unknown action.")
+
+
 DONORS = None
 GROUP_RESEARCH = None
 
@@ -4797,9 +5066,12 @@ class Handler(BaseHTTPRequestHandler):
             "/case-plan",
             "/case-plan.js",
             "/case-plan.css",
+            "/agents",
+            "/agents.js",
+            "/agents.css",
         ):
             name = self.path.split("?")[0][1:]
-            name = name + ".html" if name in ("group-finder", "case-plan") else name
+            name = name + ".html" if name in ("group-finder", "case-plan", "agents") else name
             return self.reply(
                 (ROOT / name).read_bytes(),
                 "text/html"
@@ -4839,6 +5111,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply({"error": "Access key required"}, status=401)
         if self.path.split("?")[0] == "/api/case-plan":
             return self.reply(plan_view())
+        if self.path.split("?")[0] == "/api/agents":
+            return self.reply(agents_view())
         if self.path.split("?")[0] == "/api/group-finder":
             try:
                 return self.reply(group_research().snapshot(self.path))
@@ -4939,37 +5213,64 @@ class Handler(BaseHTTPRequestHandler):
                         continue
                     keys = t.get("targets") or []
                     what = (
-                        "All groups" if set(keys) >= set(GROUPS)
-                        else "Freelance groups" if set(keys) == set(FREELANCE)
+                        "All groups"
+                        if set(keys) >= set(GROUPS)
+                        else "Freelance groups"
+                        if set(keys) == set(FREELANCE)
                         else ", ".join(names.get(k, GROUPS.get(k, [k])[0]) for k in keys)
                     )
-                    resumes.append({"what": what, "when": clock(t.get("due", 0)), "due": t.get("due", 0), "state": str(t.get("state", "")).title()})
+                    resumes.append(
+                        {
+                            "what": what,
+                            "when": clock(t.get("due", 0)),
+                            "due": t.get("due", 0),
+                            "state": str(t.get("state", "")).title(),
+                        }
+                    )
             except Exception:
                 pass
             try:
                 dr = donors().resume_status()
                 if dr.get("due"):
-                    resumes.append({"what": "Donor DMs", "when": clock(dr["due"]), "due": dr["due"], "state": str(dr.get("state", "")).title()})
+                    resumes.append(
+                        {
+                            "what": "Donor DMs",
+                            "when": clock(dr["due"]),
+                            "due": dr["due"],
+                            "state": str(dr.get("state", "")).title(),
+                        }
+                    )
             except Exception:
                 pass
             for x in (STORE.get("resume_log", []) if STORE else []) or []:
-                resumes.append({"what": x.get("what", ""), "when": clock(x.get("at", 0)), "due": x.get("at", 0), "state": "Done now"})
+                resumes.append(
+                    {
+                        "what": x.get("what", ""),
+                        "when": clock(x.get("at", 0)),
+                        "due": x.get("at", 0),
+                        "state": "Done now",
+                    }
+                )
             resumes.sort(key=lambda r: -r["due"])
             day = datetime.datetime.now(PKT).date().isoformat()
-            self.reply({
-                "resumes": resumes[:12],
-                "replies": {
-                    "today": (ENGINE.s.get("reply_people_by_day") or {}).get(day, 0),
-                    "total": ENGINE.s.get("reply_people_total", 0),
-                    "on": bool(reply_setup.get(STORE).get("enabled")),
-                },
-            })
+            self.reply(
+                {
+                    "resumes": resumes[:12],
+                    "replies": {
+                        "today": (ENGINE.s.get("reply_people_by_day") or {}).get(day, 0),
+                        "total": ENGINE.s.get("reply_people_total", 0),
+                        "on": bool(reply_setup.get(STORE).get("enabled")),
+                    },
+                }
+            )
         elif self.path == "/chat-next-actions":
             self.reply({"items": next_chat_actions()})
         elif self.path == "/poster":
             img = poster_media()
             if not img.is_file():
-                return self.reply({"error": "Selected poster is missing. Upload it again."}, status=404)
+                return self.reply(
+                    {"error": "Selected poster is missing. Upload it again."}, status=404
+                )
             if img.suffix == ".mp4":
                 # The compact chat icon is an image; never show an outdated JPEG.
                 return self.reply(
@@ -4980,7 +5281,9 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/dm-poster":
             img = poster_media("dm")
             if not img.is_file():
-                return self.reply({"error": "Selected poster is missing. Upload it again."}, status=404)
+                return self.reply(
+                    {"error": "Selected poster is missing. Upload it again."}, status=404
+                )
             self.reply(img.read_bytes(), "video/mp4" if img.suffix == ".mp4" else "image/jpeg")
         elif self.path == "/format.js":
             self.reply((ROOT / "format.js").read_bytes(), "application/javascript")
@@ -5097,6 +5400,7 @@ class Handler(BaseHTTPRequestHandler):
             "/donor-paste",
             "/api/group-finder",
             "/api/case-plan",
+            "/api/agents",
         ):
             with LOCK:
                 OWNER_REVISION += 1
@@ -5117,6 +5421,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/case-plan":
             try:
                 return self.reply(plan_mutate(body))
+            except ValueError as e:
+                return self.reply({"error": str(e)[:300]}, status=400)
+        if self.path == "/api/agents":
+            try:
+                return self.reply(agents_mutate(body))
             except ValueError as e:
                 return self.reply({"error": str(e)[:300]}, status=400)
         if self.path == "/api/group-finder":
@@ -5256,7 +5565,9 @@ class Handler(BaseHTTPRequestHandler):
                 if body.get("toggle"):
                     return self.reply(donors().toggle())
                 if body.get("configure"):
-                    return self.reply(donors().jobs.configure(body['configure'],body.get('settings')))
+                    return self.reply(
+                        donors().jobs.configure(body["configure"], body.get("settings"))
+                    )
                 if body.get("stop"):
                     return self.reply(donors().pause_personal())
                 if body.get("resume_at") is not None:
@@ -5657,11 +5968,17 @@ class Handler(BaseHTTPRequestHandler):
             sched = timed_scheduler()
             with sched.lock:
                 task = next(
-                    (x for x in sched.tasks if x.get("id") == body.get("cancel") and x.get("scope")),
+                    (
+                        x
+                        for x in sched.tasks
+                        if x.get("id") == body.get("cancel") and x.get("scope")
+                    ),
                     None,
                 )
                 if not task or task["state"] != "pending":
-                    return self.reply({"error": "That timer already ran or was cancelled."}, status=400)
+                    return self.reply(
+                        {"error": "That timer already ran or was cancelled."}, status=400
+                    )
                 sched.cancel_task(task)
             self.reply({"cancelled": True})
         elif self.path == "/schedule-group":
@@ -5685,24 +6002,62 @@ class Handler(BaseHTTPRequestHandler):
                 when = datetime.datetime.fromtimestamp(due, PKT)
                 # The saved message is read when the send is due, so a changed amount left is never sent stale.
                 task = {
-                    "action": "send", "targets": keys, "text": None, "due": due,
-                    "daily": False, "clock": when.strftime("%H:%M"),
-                    "id": uuid.uuid4().hex[:8], "state": "pending", "created": time.time(),
-                    "request_id": body.get("request_id"), "signature": "ui-" + uuid.uuid4().hex,
-                    "scope": key, "delay": delay,
+                    "action": "send",
+                    "targets": keys,
+                    "text": None,
+                    "due": due,
+                    "daily": False,
+                    "clock": when.strftime("%H:%M"),
+                    "id": uuid.uuid4().hex[:8],
+                    "state": "pending",
+                    "created": time.time(),
+                    "request_id": body.get("request_id"),
+                    "signature": "ui-" + uuid.uuid4().hex,
+                    "scope": key,
+                    "delay": delay,
                 }
                 sched = timed_scheduler()
                 with sched.lock:
                     # One timer per group button: a new time replaces the pending one.
-                    for old_task in [x for x in sched.tasks if x.get("scope") == key and x["state"] == "pending"]:
+                    for old_task in [
+                        x for x in sched.tasks if x.get("scope") == key and x["state"] == "pending"
+                    ]:
                         sched.cancel_task(old_task)
-                    if sum(x["state"] in ("pending", "running", "dispatching") for x in sched.tasks) >= 100:
+                    if (
+                        sum(
+                            x["state"] in ("pending", "running", "dispatching") for x in sched.tasks
+                        )
+                        >= 100
+                    ):
                         raise ValueError("Too many pending schedules. Cancel one first.")
                     sched.tasks.append(task)
                     sched.save()
-                name = "all 6 groups" if key == "all" else "all 5 freelance groups" if key == "free" else (GROUPS[key][0] if key in GROUPS else key)
-                mins_label = str(delay) + " min" if delay < 60 else ("1 hour" if delay == 60 else str(delay // 60) + " hr")
-                self.reply({"scheduled": True, "task_id": task["id"], "due_at": due, "message": "Scheduled: send to " + name + " in " + mins_label + ". (Task #" + task["id"] + ")"})
+                name = (
+                    "all 6 groups"
+                    if key == "all"
+                    else "all 5 freelance groups"
+                    if key == "free"
+                    else (GROUPS[key][0] if key in GROUPS else key)
+                )
+                mins_label = (
+                    str(delay) + " min"
+                    if delay < 60
+                    else ("1 hour" if delay == 60 else str(delay // 60) + " hr")
+                )
+                self.reply(
+                    {
+                        "scheduled": True,
+                        "task_id": task["id"],
+                        "due_at": due,
+                        "message": "Scheduled: send to "
+                        + name
+                        + " in "
+                        + mins_label
+                        + ". (Task #"
+                        + task["id"]
+                        + ")",
+                    }
+                )
             except ValueError as e:
                 self.reply({"error": str(e)}, status=400)
         elif self.path == "/schedule-resume":
@@ -5720,7 +6075,9 @@ class Handler(BaseHTTPRequestHandler):
                     set_hold(False)
                     if not auto_on():
                         set_auto(True)
-                    log_resume({"main": "GiveLife", "free": "Freelance groups", "all": "All groups"}[which])
+                    log_resume(
+                        {"main": "GiveLife", "free": "Freelance groups", "all": "All groups"}[which]
+                    )
                     return self.reply({"message": "Resumed " + name + " now."})
                 if not re.fullmatch(r"\d{1,2}:\d{2}", at):
                     raise ValueError("Choose a time like 14:30.")
@@ -5733,16 +6090,31 @@ class Handler(BaseHTTPRequestHandler):
                 if when <= now:
                     when += datetime.timedelta(days=1)
                 task = {
-                    "action": "resume", "targets": keys, "due": when.timestamp(),
-                    "daily": False, "clock": when.strftime("%H:%M"),
-                    "id": uuid.uuid4().hex[:8], "state": "pending", "created": time.time(),
-                    "request_id": body.get("request_id"), "signature": "ui-resume-" + uuid.uuid4().hex,
+                    "action": "resume",
+                    "targets": keys,
+                    "due": when.timestamp(),
+                    "daily": False,
+                    "clock": when.strftime("%H:%M"),
+                    "id": uuid.uuid4().hex[:8],
+                    "state": "pending",
+                    "created": time.time(),
+                    "request_id": body.get("request_id"),
+                    "signature": "ui-resume-" + uuid.uuid4().hex,
                 }
                 sched = timed_scheduler()
                 with sched.lock:
                     sched.tasks.append(task)
                     sched.save()
-                self.reply({"message": "Resume " + name + " at " + when.strftime("%I:%M %p").lstrip("0") + (" tomorrow" if when.date() > now.date() else "") + " (Pakistan time)."})
+                self.reply(
+                    {
+                        "message": "Resume "
+                        + name
+                        + " at "
+                        + when.strftime("%I:%M %p").lstrip("0")
+                        + (" tomorrow" if when.date() > now.date() else "")
+                        + " (Pakistan time)."
+                    }
+                )
             except ValueError as e:
                 self.reply({"error": str(e)}, status=400)
         elif self.path == "/test":
@@ -5751,6 +6123,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply({"error": "Message is empty"}, status=400)
             try:
                 options = workflow().options("group", caption)
+                from focus_bank import clean_items, wording_key
+
+                row = focus_bank().get("group")
+                ready = len(
+                    {
+                        wording_key(t)
+                        for t in clean_items(
+                            row.get("source", ""), row.get("items", []), row.get("manual")
+                        )
+                    }
+                )
+                if row.get("source", "").strip() and ready < 2:
+                    raise ValueError(
+                        f"Versions not ready yet ({ready} of 10). TEST would repeat the same wording. Nothing sent."
+                    )
                 with SEND_LOCK:
                     try:
                         caption = focus_bank().reserve_groups(caption, 1)[0]

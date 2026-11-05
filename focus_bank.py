@@ -1,6 +1,7 @@
 """Owner-source wording banks. Generated text never replaces the saved original."""
 
 import copy, hashlib, threading, time, uuid, re
+import quality, ai_call
 import dm_variants, message_rules
 
 
@@ -115,9 +116,12 @@ class FocusBank:
             data = self._load()
         out, seen = [], {wording_key(exclude)} if exclude else set()
         rows = [data.get(k) or {} for k in ("group", "dm")]
-        texts = [r.get("source", "") for r in rows] + [
-            t for r in rows for t in reversed(r.get("history", []))
-        ]
+        # Approved = what the owner wrote or hand-edited; hand edits come first, they show taste best.
+        texts = (
+            [t for r in rows for t in r.get("manual", []) or []]
+            + [r.get("source", "") for r in rows]
+            + [t for r in rows for t in reversed(r.get("history", []))]
+        )
         for text in texts:
             if not isinstance(text, str) or not text.strip():
                 continue
@@ -181,11 +185,25 @@ class FocusBank:
                     if any(code in last_error for code in ("401", "403", "429")):
                         raise
                     continue
+                passed = []
                 for text in candidates:
                     text = text.replace("\r\n", "\n").strip() if isinstance(text, str) else ""
-                    reason = reject_reason(source, text, items)
+                    reason = reject_reason(source, text, items + passed)
                     if reason:
                         last_error = reason
+                        continue
+                    passed.append(text)
+                # One batched AI review of naturalness/taste for versions that passed every code rule.
+                verdicts = quality.review(
+                    ai_call.chat,
+                    source,
+                    passed,
+                    self.owner_style(exclude=source),
+                    dm_variants.CORRECTIONS() or [],
+                )
+                for text, verdict in zip(passed, verdicts):
+                    if verdict:
+                        last_error = verdict
                         continue
                     items.append(text)
                     if len(items) >= 10:
@@ -351,18 +369,27 @@ class FocusBank:
                 else 0
             )
             last = saved.get("last_key")
+            # Wording already sent is remembered by its text, not its position, so versions arriving
+            # mid-generation or a new revision can never bring back a recently sent wording.
+            recent = [k for k in saved.get("recent", []) if isinstance(k, str)] or (
+                [last] if last else []
+            )
+            window = len(pool) - 1
             selected = []
             for _ in range(count):
-                # A new bank revision may share wording with the previous one.
-                if last and wording_key(pool[cursor]) == last:
-                    cursor = (cursor + 1) % len(pool)
+                blocked = set(recent[-window:]) if window > 0 else set()
+                for step in range(len(pool)):
+                    if wording_key(pool[(cursor + step) % len(pool)]) not in blocked:
+                        cursor = (cursor + step) % len(pool)
+                        break
                 value = pool[cursor]
                 selected.append(value)
                 last = wording_key(value)
+                recent = (recent + [last])[-20:]
                 cursor = (cursor + 1) % len(pool)
             self.app.STORE.put(
                 "focus_group_rotation",
-                {"revision": revision, "next_index": cursor, "last_key": last},
+                {"revision": revision, "next_index": cursor, "last_key": last, "recent": recent},
             )
             return selected
 
@@ -404,6 +431,9 @@ def reject_reason(source, text, existing=()):
         return "empty text"
     source = str(source).replace("\r\n", "\n").strip()
     text = text.replace("\r\n", "\n").strip()
+    hard = quality.hard_reason(source, text)
+    if hard:
+        return hard
     if (
         text == source
         or text in existing

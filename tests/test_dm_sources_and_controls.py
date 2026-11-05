@@ -39,7 +39,9 @@ class SourceAndControlTests(unittest.TestCase):
 
     def test_main_screen_dm_rotates_through_its_own_saved_versions(self):
         fb = app.focus_bank()
-        items = ["Brother, version %d. Rs. 5 left." % i for i in range(4)]
+        items = [
+            "Brother, version %s. Rs. 5 left." % w for w in ("alpha", "beta", "gamma", "delta")
+        ]
         app.save_draft("dm", items[0])
         app.STORE.put(
             "focus_wording",

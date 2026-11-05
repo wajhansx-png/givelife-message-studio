@@ -3,7 +3,7 @@
   const screen = document.createElement('section');
   screen.id = 'messageFocus';
   screen.hidden = true;
-  screen.innerHTML = `<header><span id="focusState" role="status" aria-live="polite"></span></header><div class="focus-workspace"><main class="focus-paper"><div id="focusFormatted" tabindex="0" aria-label="Message preview"></div><textarea id="focusText" aria-label="Edit WhatsApp message" spellcheck="true" hidden></textarea></main><aside class="focus-rail" aria-label="Message tools"><button id="focusEdit">Edit</button><button id="focusCopy">Copy</button><button id="focusNext">Next version</button><small id="focusVersion">Original</small><button id="focusPoster">Change poster</button><button data-mark="*"><b>Bold</b></button><button data-mark="_"><i>Italic</i></button><button data-emoji="💔">💔 Heart</button><button data-emoji="🤲">🤲 Dua</button><button id="focusRetry" hidden>Retry versions</button></aside></div>`;
+  screen.innerHTML = `<header><span id="focusState" role="status" aria-live="polite"></span></header><div class="focus-workspace"><main class="focus-paper"><div id="focusFormatted" tabindex="0" aria-label="Message preview"></div><textarea id="focusText" aria-label="Edit WhatsApp message" spellcheck="true" hidden></textarea></main><aside class="focus-rail" aria-label="Message tools"><button id="focusEdit">Edit</button><button id="focusCopy">Copy</button><button id="focusNext">Next version</button><small id="focusVersion">Original</small><button id="focusPoster">Change poster</button><button data-mark="*"><b>Bold</b></button><button data-mark="_"><i>Italic</i></button><button data-emoji="💔">💔 Heart</button><button data-emoji="🤲">🤲 Dua</button><button id="focusRetry">Generate 5 Versions</button></aside></div>`;
   document.body.append(screen);
   // Scroll targets must clear the sticky tool dock at every viewport size.
   const focusDock = screen.querySelector('.focus-rail');
@@ -60,7 +60,8 @@
   screen.querySelector('.focus-rail').insertBefore(testButton, $('focusNext'));
   const regen = document.createElement('button');
   regen.id = 'focusRegenerate';
-  regen.textContent = 'Regenerate';
+  regen.textContent = 'Replace with fresh 5';
+  regen.title = 'Remove the saved versions and write a fresh 5';
   screen.querySelector('.focus-rail').append(regen);
   const backBottom = document.createElement('button');
   backBottom.id = 'focusBack';
@@ -110,7 +111,7 @@
       row = await api({ action: 'manual', messages: slots });
       manual.close();
       status(row.items.length + ' manual messages ready');
-      $('focusRetry').hidden = row.items.length === 10;
+      genButton();
     } catch (e) {
       $('manualState').textContent = e.message;
     } finally {
@@ -122,7 +123,8 @@
       if (editing) edit(false);
       await save();
       row = await api({ action: 'regenerate' });
-      status('Generating fresh versions…');
+      status('Writing 5 fresh versions…');
+      genButton();
       watch();
     } catch (e) {
       status(e.message);
@@ -193,6 +195,13 @@
     for (const k of ['group', 'dm'])
       if (typeof data?.drafts?.[k] === 'string') $(k).value = data.drafts[k];
   }
+  // One batch at a time: the button waits while versions are being written.
+  function genButton() {
+    const b = $('focusRetry'),
+      busy = row?.state === 'Generating';
+    b.disabled = busy;
+    b.textContent = busy ? 'Writing 5…' : 'Generate 5 Versions';
+  }
   function status(text) {
     $('focusState').textContent = text;
   }
@@ -208,7 +217,7 @@
     $('focusText').value = text;
     $('focusFormatted').innerHTML = window.waFormat(text);
     $('focusVersion').textContent =
-      index < 0 ? 'Original' : index + 1 + ' / ' + (row?.items?.length || 10);
+      index < 0 ? 'Original' : index + 1 + ' / ' + (row?.items?.length || 0);
     requestAnimationFrame(fit);
   }
   function edit(on) {
@@ -239,8 +248,8 @@
           if ($('focusText').value === text) sessionStorage.removeItem('focus-draft-' + kind);
           index = -1;
           $(kind).value = text;
-          status('Saved · generating 10 versions…');
-          watch();
+          status('Saved base message · TEST works · tap Generate 5 Versions for versions');
+          genButton();
         } catch (e) {
           dirty = true;
           status(e.message);
@@ -259,10 +268,12 @@
         row = d;
         status(
           d.state === 'Ready'
-            ? 'Saved · 10 versions ready'
-            : d.error || 'Saved · ' + (d.items?.length || 0) + '/10 versions ready…',
+            ? (d.items?.length || 0) + ' versions ready'
+            : d.state === 'Generating'
+              ? 'Writing 5 more · ' + (d.items?.length || 0) + ' ready so far…'
+              : d.error || (d.items?.length || 0) + ' versions ready',
         );
-        $('focusRetry').hidden = !['Needs retry', 'Partial'].includes(d.state);
+        genButton();
         watch();
       } catch (e) {
         status('Original saved. Could not refresh versions.');
@@ -296,17 +307,19 @@
         status(
           row.error ||
             (row.state === 'Ready'
-              ? '10 versions ready'
+              ? row.items.length + ' versions ready'
               : row.state === 'Generating'
-                ? 'Generating 10 versions…'
-                : 'Your saved message'),
+                ? 'Writing 5 more versions…'
+                : row.items?.length
+                  ? row.items.length + ' versions ready'
+                  : 'Saved base message · TEST works without versions'),
         );
       }
       if (!row.revision && !dirty) {
         dirty = true;
         await save();
       }
-      $('focusRetry').hidden = !['Needs retry', 'Partial'].includes(row.state);
+      genButton();
       watch();
     } catch (e) {
       status(e.message);
@@ -355,7 +368,7 @@
       await save();
       row = await api();
       if (!row.items?.length) {
-        status(row.error || '10 versions are still generating. Your original is kept.');
+        status(row.error || 'No versions yet. Tap Generate 5 Versions. TEST works without them.');
         return;
       }
       index = ((index + 2) % (row.items.length + 1)) - 1;
@@ -391,8 +404,11 @@
   };
   $('focusRetry').onclick = async () => {
     try {
-      row = await api({ action: 'retry' });
-      $('focusRetry').hidden = true;
+      if (editing) edit(false);
+      await save();
+      row = await api({ action: 'generate' });
+      status('Writing 5 versions…');
+      genButton();
       watch();
     } catch (e) {
       status(e.message);

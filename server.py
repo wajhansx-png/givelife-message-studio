@@ -642,6 +642,9 @@ def save_draft(key, text):
 _FOCUS_BANK = None
 
 
+from focus_bank import VersionsPaused
+
+
 def focus_bank():
     global _FOCUS_BANK
     if _FOCUS_BANK is None:
@@ -987,7 +990,7 @@ def start_send_job(keys, caption, manual=False, request_id=None, with_picture=Tr
     bank = focus_bank().get("group")
     caption = bank.get("source", "")
     if not caption.strip():
-        raise ValueError("Save the Group message and its 10 versions first.")
+        raise ValueError("Save the Group message first.")
     if read_left() <= 0:
         if completed_case_appeal(caption) or any(
             completed_case_appeal(v) for v in bank.get("items", [])
@@ -1022,7 +1025,13 @@ def start_send_job(keys, caption, manual=False, request_id=None, with_picture=Tr
             if not manual:
                 return None
             cancel_jobs()
-        captions = focus_bank().reserve_groups(caption, len(keys))
+        try:
+            captions = focus_bank().reserve_groups(caption, len(keys), auto=not manual)
+        except VersionsPaused as exc:
+            if manual:
+                raise
+            ENGINE.notify("versions-paused", str(exc), 3 * 3600)
+            return None
         ident = uuid.uuid4().hex
         JOBS[ident] = {
             "done": False,
@@ -2855,7 +2864,9 @@ def plan_apply(text, plan=None):
     if bad:
         return " ".join(bad)
     if get_message("group")["text"] != text:
-        focus_bank().save("group", text)  # 10 versions regenerate under the same PDF checks
+        focus_bank().save(
+            "group", text
+        )  # the new message is saved; versions come from the Generate button
     return ""
 
 
@@ -4896,7 +4907,7 @@ def agents_view():
     writer = {
         "id": "writer",
         "name": "Writer",
-        "role": "Writes 10 different versions of your saved Group message.",
+        "role": "Writes 5 more versions of your saved Group message each time you click Generate 5 Versions.",
         "status": "Working"
         if g.get("state") == "Generating"
         else "Error"
@@ -4904,8 +4915,8 @@ def agents_view():
         else "Active"
         if n
         else "Idle",
-        "now": f"{g.get('state', 'Not generated')}: {n} of 10 versions",
-        "progress": {"label": "Versions ready", "value": n, "max": 10},
+        "now": f"{g.get('state', 'Not generated')}: {n} versions",
+        "progress": {"label": "Versions ready", "value": n},
         "facts": [],
         "errors": [
             {
@@ -5703,6 +5714,8 @@ class Handler(BaseHTTPRequestHandler):
                 action = body.get("action")
                 if action == "manual":
                     return self.reply(bank.manual(kind, body.get("messages")))
+                if action == "generate":
+                    return self.reply(bank.generate(kind))
                 if action in ("retry", "regenerate"):
                     return self.reply(bank.retry(kind, fresh=action == "regenerate"))
                 return self.reply(bank.save(kind, body.get("text"), body.get("revision")))

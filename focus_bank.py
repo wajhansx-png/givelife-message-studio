@@ -5,6 +5,15 @@ import quality, ai_call
 import dm_variants, message_rules
 
 
+BATCH = 5  # versions written per click, and per background top-up while sending
+MAX_VERSIONS = 40  # ceiling for one message's saved versions
+TOP_UP_AT = 2  # when this few unused versions remain in a round, the next batch starts
+
+
+class VersionsPaused(ValueError):
+    """An automatic send must wait: every saved version was used and the next batch is not ready."""
+
+
 class FocusBank:
     def __init__(self, app):
         self.app = app
@@ -23,16 +32,9 @@ class FocusBank:
         with self.app.LOCK, self.lock:
             data = self._load()
             row = data.get(kind)
-            if (
-                row
-                and row.get("generator", 0) < GEN
-                and (
-                    row.get("state") == "Needs retry"
-                    or row.get("state") == "Partial"
-                    and not row.get("manual")
-                )
-            ):
-                row.update(generator=GEN, state="Generating", error="")
+            if row and row.get("state") == "Generating" and not row.get("batch"):
+                # Saved by the old workflow, which wrote versions on every save. Never generate on its own.
+                row.update(state="Ready" if row.get("items") else "Not generated", error="")
                 data[kind] = row
                 self._put(data)
             if row and clean_items(
@@ -40,14 +42,14 @@ class FocusBank:
             ) != [x for x in row.get("items", []) if isinstance(x, str) and x.strip()]:
                 row["items"] = clean_items(row["source"], row["items"], row.get("manual"))
                 row.pop("local_fallback", None)
-                if row.get("state") == "Ready" and len(row["items"]) < 10:
-                    row["state"] = "Partial"
-                if row.get("state") == "Partial":
-                    row["error"] = f"{len(row['items'])} rewrites ready. Press Retry for more."
+                if not row["items"] and row.get("state") in ("Ready", "Partial"):
+                    row["state"] = "Not generated"
                 data[kind] = row
                 self._put(data)
             current = self.app.get_message(kind)["text"]
             changed = bool(row and current != row["source"] and current not in row.get("items", []))
+            if row:
+                self._spawn(kind, row)  # a batch the owner started that a restart interrupted
             result = copy.deepcopy(
                 row or {"source": current, "items": [], "state": "Not generated", "revision": ""}
             )
@@ -81,7 +83,7 @@ class FocusBank:
                 "source": text,
                 "revision": ident,
                 "items": [],
-                "state": "Generating",
+                "state": "Not generated",
                 "generator": GEN,
                 "history": history,
                 "updated": time.time(),
@@ -95,7 +97,7 @@ class FocusBank:
                     "source": dm,
                     "revision": hashlib.sha256(dm.encode()).hexdigest(),
                     "items": [],
-                    "state": "Generating",
+                    "state": "Not generated",
                     "generator": GEN,
                     "history": [],
                     "updated": time.time(),
@@ -103,12 +105,7 @@ class FocusBank:
             if kind == "dm":
                 row["custom"] = True
             self._put(data)
-            kinds = [kind] + (
-                ["dm"] if kind == "group" and not data.get("dm", {}).get("custom") else []
-            )
-        for k in kinds:
-            self.start(k)
-        return self.get(kind)
+        return self.get(kind)  # saving never writes versions; that is the Generate button
 
     def owner_style(self, exclude="", limit=3):
         """The owner's own recent messages, newest first, as style examples for new versions."""
@@ -135,17 +132,44 @@ class FocusBank:
         return out
 
     def start(self, kind):
-        row = self.get(kind)
+        self._spawn(kind, self.get(kind))
+
+    def _spawn(self, kind, row):
         with self.app.LOCK, self.lock:
-            key = (kind, row["revision"])
-            if row["state"] != "Generating" or key in self.running:
+            key = (kind, row.get("revision"))
+            if row.get("state") != "Generating" or not row.get("batch") or key in self.running:
                 return
             self.running.add(key)
         threading.Thread(target=self._generate, args=(kind, row, key), daemon=True).start()
 
+    def generate(self, kind, auto=False):
+        """Write the next BATCH versions. Only the owner's click or the sending top-up starts this."""
+        with self.app.LOCK, self.lock:
+            data = self._load()
+            row = data.get(kind)
+            if not row or not str(row.get("source", "")).strip():
+                raise ValueError("Save your message first.")
+            if row.get("state") == "Generating":
+                return self.get(kind)  # one batch at a time, never doubled
+            items = clean_items(row["source"], row.get("items", []), row.get("manual"))
+            if len(items) >= MAX_VERSIONS:
+                raise ValueError(f"{len(items)} versions are saved already. That is the limit.")
+            row.update(
+                items=items,
+                state="Generating",
+                error="",
+                batch={"goal": len(items) + BATCH, "auto": bool(auto), "at": time.time()},
+                auto_failed=False if not auto else row.get("auto_failed", False),
+            )
+            self._put(data)
+        self.start(kind)
+        return self.get(kind)
+
     def _generate(self, kind, row, key):
         source = row["source"]
         prior = row.get("items", [])
+        goal = int((row.get("batch") or {}).get("goal") or len(prior) + BATCH)
+        auto = bool((row.get("batch") or {}).get("auto"))
         items = [
             t
             for i, t in enumerate(prior)
@@ -154,7 +178,7 @@ class FocusBank:
         last_error = ""
         try:
             api = dm_variants.assistant.client()
-            if api is None and len(items) < 10:
+            if api is None and len(items) < goal:
                 raise ValueError(
                     "AI is not connected. Your original is saved; retry when connected."
                 )
@@ -162,14 +186,14 @@ class FocusBank:
             # facts, payment lines, formatting and real difference. Accepted versions are saved at once, so
             # a later failure never loses them and a retry only asks for what is missing.
             for attempt in range(6):
-                if len(items) >= 10:
+                if len(items) >= goal:
                     break
                 if not self.current(kind, row["revision"]):
                     with self.lock:
                         self.running.discard(key)
                     return
                 prompt = dm_variants._prompt(
-                    source, min(5, 10 - len(items)), row.get("avoid", []) + items
+                    source, min(5, goal - len(items)), row.get("avoid", []) + items
                 )
                 prompt += message_rules.version_rules(source)
                 if last_error:
@@ -206,27 +230,35 @@ class FocusBank:
                         last_error = verdict
                         continue
                     items.append(text)
-                    if len(items) >= 10:
+                    if len(items) >= goal:
                         break
                 # Keep every accepted version even when a later model call fails.
                 if not self.record(kind, row["revision"], {"items": items, "progress": len(items)}):
                     with self.lock:
                         self.running.discard(key)
                     return
-            if len(items) != 10:
+            if len(items) < goal:
                 raise ValueError(
-                    str(len(items))
-                    + "/10 versions ready. "
+                    f"{len(items) - (goal - BATCH)} of {BATCH} new versions passed every check. "
                     + (last_error or "The AI did not return enough different versions.")
-                    + " Original kept; press Retry."
+                    + " Your original and the versions already saved are kept."
                 )
-            result = {"items": items, "state": "Ready", "error": "", "generator": GEN}
+            result = {
+                "items": items,
+                "state": "Ready",
+                "error": "",
+                "generator": GEN,
+                "batch": None,
+                "auto_failed": False,
+            }
         except Exception as exc:
             result = {
                 "items": items,
                 "state": "Partial" if items else "Needs retry",
                 "error": str(exc)[:350],
                 "generator": GEN,
+                "batch": None,
+                "auto_failed": auto,
             }
         try:
             print(
@@ -254,6 +286,30 @@ class FocusBank:
             self._put(data)
             return True
 
+    @staticmethod
+    def _unused(keys, recent, span=None):
+        """How many of these versions have not been sent in the current round."""
+        used = set(recent[-(span or len(keys)) :]) if keys else set()
+        return len([k for k in keys if k not in used])
+
+    def _top_up(self, kind, row, count, unused):
+        """While sending: when few unused versions remain, write the next batch in the background."""
+        if (
+            not count
+            or count >= MAX_VERSIONS
+            or unused > TOP_UP_AT
+            or row.get("state") == "Generating"
+            or row.get(
+                "auto_failed"
+            )  # a failed top-up is not retried every minute; the owner clicks
+            or dm_variants.assistant.client() is None
+        ):
+            return
+        try:
+            self.generate(kind, auto=True)
+        except Exception:
+            pass  # sending must never break because a top-up could not start
+
     def next_dm_version(self):
         """Next saved main-screen DM version, from a persisted cursor (never the clock)."""
         with self.app.LOCK, self.lock:
@@ -262,7 +318,9 @@ class FocusBank:
             row = self.get("dm")
             pool = []
             seen = set()
-            for value in row.get("items", []):
+            for value in verified_items(
+                row.get("source", ""), row.get("items", []), row.get("manual")
+            ):
                 if isinstance(value, str) and value.strip() and wording_key(value) not in seen:
                     pool.append(value)
                     seen.add(wording_key(value))
@@ -277,14 +335,23 @@ class FocusBank:
             if len(pool) > 1 and saved.get("last_key") == wording_key(pool[cursor]):
                 cursor = (cursor + 1) % len(pool)
             value = pool[cursor]
+            keys = [wording_key(v) for v in pool]
+            recent = (
+                [k for k in saved.get("recent", []) if isinstance(k, str)]
+                if saved.get("revision") == row.get("revision")
+                else []
+            )
+            recent = (recent + [wording_key(value)])[-40:]
             self.app.STORE.put(
                 "focus_dm_rotation",
                 {
                     "revision": row.get("revision"),
                     "next_index": (cursor + 1) % len(pool),
                     "last_key": wording_key(value),
+                    "recent": recent,
                 },
             )
+            self._top_up("dm", row, len(pool), self._unused(keys, recent))
             return value
 
     def manual(self, kind, texts):
@@ -308,8 +375,9 @@ class FocusBank:
                 manual=texts,
                 items=texts,
                 revision=uuid.uuid4().hex,
-                state="Ready" if len(texts) == 10 else "Partial",
+                state="Ready",
                 error="",
+                batch=None,
                 generator=GEN,
             )
             self._put(data)
@@ -341,7 +409,7 @@ class FocusBank:
                 self._put(data)
             return copy.deepcopy(saved)
 
-    def reserve_groups(self, caption, count):
+    def reserve_groups(self, caption, count, auto=False):
         """Reserve only saved Group-tab versions, cycling all ten across Auto/manual sends.
 
         The persisted cursor is shared by every group sender. Uncertain sends stay
@@ -354,11 +422,12 @@ class FocusBank:
             items = row.get("items", [])
             pool = []
             seen = set()
-            for value in clean_items(row["source"], items, row.get("manual")):
+            for value in verified_items(row["source"], items, row.get("manual")):
                 signature = wording_key(value)
                 if signature not in seen:
                     pool.append(value)
                     seen.add(signature)
+            written = [wording_key(v) for v in pool]
             if len(pool) < 10 and wording_key(row["source"]) not in seen:
                 pool.append(row["source"])
             saved = self.app.STORE.get("focus_group_rotation", {}) or {}
@@ -374,6 +443,15 @@ class FocusBank:
             recent = [k for k in saved.get("recent", []) if isinstance(k, str)] or (
                 [last] if last else []
             )
+            if auto and written:
+                unused = self._unused(written, recent, len(pool))
+                if not unused and (row.get("state") == "Generating" or row.get("auto_failed")):
+                    raise VersionsPaused(
+                        "Every saved version was used and the next 5 are not ready. This send waits."
+                        if row.get("state") == "Generating"
+                        else "Every saved version was used and the next 5 could not be made. "
+                        "Auto posting is paused for Group; press Generate 5 Versions."
+                    )
             window = len(pool) - 1
             selected = []
             for _ in range(count):
@@ -391,25 +469,29 @@ class FocusBank:
                 "focus_group_rotation",
                 {"revision": revision, "next_index": cursor, "last_key": last, "recent": recent},
             )
+            self._top_up("group", row, len(written), self._unused(written, recent, len(pool)))
             return selected
 
     def retry(self, kind, fresh=False):
+        """Try again = the next batch of 5. Regenerate = drop the saved versions and write a fresh 5."""
         with self.lock:
             data = self._load()
             if kind not in data:
                 raise ValueError("Save your message first.")
+            row = data[kind]
             if fresh:
-                row = data[kind]
                 row["avoid"] = list(dict.fromkeys(row.get("avoid", []) + row.get("items", [])))[
                     -100:
                 ]
-                row["items"] = row.get("manual", [])[:]
-                row["revision"] = uuid.uuid4().hex
-            data[kind]["state"] = "Generating"
-            data[kind]["error"] = ""
+                row.update(
+                    items=row.get("manual", [])[:],
+                    revision=uuid.uuid4().hex,
+                    state="Not generated",
+                    batch=None,
+                )
+            row["auto_failed"] = False
             self._put(data)
-        self.start(kind)
-        return self.get(kind)
+        return self.generate(kind)
 
 
 def wording_key(text):
@@ -421,7 +503,7 @@ def wording_key(text):
 GEN = 5
 
 
-def reject_reason(source, text, existing=()):
+def reject_reason(source, text, existing=(), novelty=True):
     """'' when a reworded version is safe to save, else the plain reason it was rejected.
 
     Judged on meaning and structure, not character count: the same facts, amounts, payment lines,
@@ -434,7 +516,7 @@ def reject_reason(source, text, existing=()):
     hard = quality.hard_reason(source, text)
     if hard:
         return hard
-    if (
+    if novelty and (
         text == source
         or text in existing
         or wording_key(text) in {wording_key(t) for t in [source, *existing]}
@@ -464,6 +546,8 @@ def reject_reason(source, text, existing=()):
             and line.strip() not in text
         ):
             return "a payment line changed"
+    if not novelty:
+        return ""  # sending only re-checks facts, amounts, language and format; variety was checked at writing
     minimum = 2 if len(dm_variants._editable_lines(source)) >= 3 else 1
     if (
         dm_variants._meaningful_changes(source, text) < minimum
@@ -475,6 +559,16 @@ def reject_reason(source, text, existing=()):
     ):
         return "too similar to another version"
     return ""
+
+
+def verified_items(source, items, manual=()):
+    """Saved versions that still pass every fact, amount, language and format check against the original.
+    Re-run before a send, so a version that was changed or damaged after saving is never used."""
+    return [
+        v
+        for v in clean_items(source, items, manual)
+        if v in (manual or ()) or not reject_reason(source, v, novelty=False)
+    ]
 
 
 def is_wrapped(source, value):

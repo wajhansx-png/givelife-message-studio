@@ -792,6 +792,48 @@ def poster_media(use="group"):
     return DATA / "poster.jpg"
 
 
+_PREKEY_RECOVERY_LOCK = threading.Lock()
+_PREKEY_RECONNECT_AT = 0.0
+
+
+def recover_prekey_timeout(result):
+    """Recover the linked device after a prekey/database timeout, never replay the send."""
+    global _PREKEY_RECONNECT_AT
+    if not isinstance(result, dict) or result.get("code") == "SUCCESS":
+        return result
+    details = str(result.get("message") or result.get("error") or "")
+    lowered = details.lower()
+    if not (
+        "context deadline exceeded" in lowered
+        and ("prekey" in lowered or "identity is trusted" in lowered)
+    ):
+        return result
+    reconnect_requested = False
+    with _PREKEY_RECOVERY_LOCK:
+        now = time.monotonic()
+        if now - _PREKEY_RECONNECT_AT >= 300:
+            _PREKEY_RECONNECT_AT = now
+            try:
+                reconnect_requested = api("/app/reconnect").get("code") == "SUCCESS"
+            except Exception:
+                pass
+    instruction = (
+        "A WhatsApp reconnect was requested."
+        if reconnect_requested
+        else "Open WhatsApp connection and tap Reconnect."
+    )
+    return {
+        **result,
+        "code": "ERROR",
+        "message": (
+            "WhatsApp encryption-key/database lookup timed out. "
+            + instruction
+            + " This send was NOT confirmed. Check WhatsApp before manually retrying; "
+            "it will not be resent automatically."
+        ),
+    }
+
+
 def post_media(jid, cap, path):
     """Send one picture or MP4 video with its caption file through the WhatsApp gateway."""
     if not Path(path).is_file():
@@ -804,7 +846,7 @@ def post_media(jid, cap, path):
             "curl",
             "-s",
             "--max-time",
-            "150" if video else "60",
+            "150" if video or str(jid).endswith("@g.us") else "60",
             "-X",
             "POST",
             GOWA_URL + ("/send/video" if video else "/send/image"),
@@ -903,6 +945,7 @@ def send_image(jid, caption, check_gap=False, _retry=True):
         result = mapping(json.loads(r.stdout))
     except Exception:
         result = {"code": "ERROR", "message": "Send not confirmed. Check WhatsApp before retrying."}
+    result = recover_prekey_timeout(result)
     if STORE:
         receipt = {
             "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -2286,7 +2329,7 @@ def send_with_image(jid, caption, img):
     r = post_media(jid, cap, img)
     cap.unlink(missing_ok=True)
     try:
-        return json.loads(r.stdout)
+        return recover_prekey_timeout(mapping(json.loads(r.stdout)))
     except Exception:
         return {"code": "ERROR", "message": "Send not confirmed. Check WhatsApp before retrying."}
 

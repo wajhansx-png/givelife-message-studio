@@ -94,7 +94,7 @@ os.environ.pop("DEEPSEEK_API_KEY", None)
 os.environ.setdefault("NOTES_PASSWORD", "test-preview-only-pin")
 os.environ.update(
     GOWA_URL="http://127.0.0.1:" + str(fake.server_port),
-    UI_ACCESS_KEY=os.environ.get("UI_ACCESS_KEY", "Rwp3ukx/crSBiJ2bVHkd9zONnbiw22VXRtNAm96dyTg="),
+    UI_ACCESS_KEY="manual-fix-preview-key",
     WHATSAPP_DEVICE_ID="fake-device",
 )
 folder = tempfile.TemporaryDirectory()
@@ -244,21 +244,6 @@ def preview_post(self):
     return original_post(self)
 
 
-orig_authorized = server.Handler.authorized
-def preview_authorized(self):
-    hdr = self.headers.get("Authorization", "")
-    allowed = {
-        "Bearer manual-fix-preview-key",
-        "Bearer Rwp3ukx/crSBiJ2bVHkd9zONnbiw22VXRtNAm96dyTg=",
-    }
-    env_k = os.environ.get("UI_ACCESS_KEY")
-    if env_k:
-        allowed.add("Bearer " + env_k)
-    if hdr in allowed:
-        return True
-    return orig_authorized(self)
-
-server.Handler.authorized = preview_authorized
 server.Handler.do_GET = preview_get
 server.Handler.do_POST = preview_post
 port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 3003

@@ -1165,11 +1165,13 @@ def run_job(job_id, keys, caption, queue=False):
             and json.loads(DRAFT.read_text(encoding="utf-8")).get("group") == caption
         ):
             job["next_caption"] = next_message()
+        from group_delivery import summarize
+
         job["message"] = (
-            job.get("cancel_reason", "Stopped by owner.") + " "
+            (job.get("cancel_reason", "Stopped by owner.") + " ")
             if event.is_set() or on_hold()
             else ""
-        ) + f"Confirmed sent to {sent}/{len(keys)} groups."
+        ) + summarize(job["results"], keys)
         job["done"] = True
         save_job(job_id)
         auto_log(
@@ -1182,8 +1184,15 @@ def run_job(job_id, keys, caption, queue=False):
             ),
             quiet=bool(job.get("manual")),
         )
-    except Exception:
-        job.update(done=True, message="Send not confirmed. Check WhatsApp before trying again.")
+    except Exception as exc:
+        from group_delivery import summarize
+
+        detail = (
+            " Reason: " + safe_text(str(exc), 180)
+            if isinstance(exc, ValueError)
+            else " The app encountered an unexpected send error; check server logs."
+        )
+        job.update(done=True, message=summarize(job.get("results", []), keys) + detail)
         save_job(job_id)
     finally:
         with LOCK:

@@ -1108,9 +1108,9 @@ async function watchGroupJob(id, caption) {
         setButtonProgress(btn, step.fraction, step.text, step.slow);
       }
       if (done) {
-        const bad = (job.results || []).some((x) => x.code !== 'SUCCESS'),
-          okCount = (job.results || []).filter((x) => x.code === 'SUCCESS').length,
-          total = (job.keys || []).length || okCount;
+        const okCount = (job.results || []).filter((x) => x.code === 'SUCCESS').length,
+          total = (job.keys || []).length || Math.max(1, (job.results || []).length),
+          bad = okCount !== total;
         endButtonProgress(
           btn,
           bad

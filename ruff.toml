@@ -1,0 +1,7 @@
+line-length = 100
+target-version = "py313"
+extend-exclude = ["node_modules"]
+
+[lint]
+# Real defects only: syntax errors, undefined names, unused imports and variables.
+select = ["E9", "F"]

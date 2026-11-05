@@ -47,13 +47,27 @@ class DonorBook:
         if raw is None: raw={'version':1,'records':[]}
         if not isinstance(raw,dict) or not isinstance(raw.get('records'),list):
             raise ValueError('Donor records are unavailable. No changes were made.')
+        if self._ensure_rankings(raw):self._save(raw)
         self._cache=copy.deepcopy(raw);return copy.deepcopy(raw)
+    def _ensure_rankings(self,raw):
+        changed=False
+        counters=raw.setdefault('ranking_next',{})
+        for flag,field in (('important','important_order'),('top_donor','top_order')):
+            last=max([int(counters.get(flag,0) or 0)]+[r[field] for r in raw['records'] if type(r.get(field)) is int and r[field]>0])
+            # Historical marking times were never recorded. Seed legacy members
+            # once in their existing display order, then append every new member.
+            for row in sorted(raw['records'],key=self.queue_key):
+                if row.get(flag) and not (type(row.get(field)) is int and row[field]>0):
+                    last+=1;row[field]=last;changed=True
+            if counters.get(flag)!=last:counters[flag]=last;changed=True
+        return changed
     def _save(self,data):
+        self._ensure_rankings(data)
         if self.store: self.store.put(self.KEY,data)
         self._cache=copy.deepcopy(data)
         tmp=self.path.with_suffix('.tmp'); tmp.write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8');tmp.replace(self.path)
     def _public(self,r):
-        keys=('id','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted')
+        keys=('id','top_donor','top_order','important_order','top_rank','important_rank','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted')
         # A confirmed DM is never forgotten: a later failed or pending attempt cannot erase "DM sent".
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
         return {**{k:r.get(k) for k in keys},'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'has_number':bool(r.get('phone')),'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
@@ -62,21 +76,22 @@ class DonorBook:
         return bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
     @staticmethod
     def queue_key(r):
-        """The one order used on screen and for sending: Important first, people not yet sent before people already sent,
-        so the top of the list is always the next person; sent people sink in the order they were sent."""
+        """Default order for unranked audiences; Important and Top use their saved orders."""
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
-        return (not r['important'],sent,float(r.get('last_sent_at') or 0) if sent else 0.0,name_key(r['name']),r['id'])
+        return (not r['important'],sent,float(r.get('last_sent_at') or 0) if sent else 0.0,(r.get('important_order') or 0) if r['important'] else 0,name_key(r['name']),r['id']) # Important in the order they were starred
     def list(self,tab='all',query=''):
-        if tab not in ('all','important','donated','not_donated','not_contacted'): raise ValueError('Choose a donor tab.')
+        if tab not in ('all','important','top','donated','not_donated','not_contacted'): raise ValueError('Choose a donor tab.')
         with self.lock:
             records=[r for r in self._load()['records'] if not r.get('deleted')]
-            counts={'all':len(records),'important':sum(bool(r['important']) for r in records),'donated':sum(bool(r['donated']) for r in records)}
+            counts={'top':sum(bool(r.get('top_donor')) for r in records),'all':len(records),'important':sum(bool(r['important']) for r in records),'donated':sum(bool(r['donated']) for r in records)}
             counts['not_donated']=counts['all']-counts['donated']
             counts['not_contacted']=sum(not r['donated'] and not self.contacted(r) for r in records)
             counts['donated_amount']=float(sum((Decimal(str(r.get('amount',0) or 0)) for r in records if r.get('donated')),Decimal(0)))
+            for flag,field,rank in (('important','important_order','important_rank'),('top_donor','top_order','top_rank')):
+                for index,row in enumerate(sorted((r for r in records if r.get(flag)),key=lambda r:(r.get(field) or 0,r['id'])),1):row[rank]=index
             q=str(query).strip().casefold(); digits=re.sub(r'\D','',q)
-            rows=[r for r in records if (tab=='all' or tab=='important' and r['important'] or tab=='donated' and r['donated'] or tab=='not_donated' and not r['donated'] or tab=='not_contacted' and not r['donated'] and not self.contacted(r)) and (not q or q in r['name'].casefold() or q in r.get('notes','').casefold() or len(digits)>=4 and digits in r['phone'])]
-            rows.sort(key=self.queue_key)
+            rows=[r for r in records if (tab=='all' or tab=='important' and r['important'] or tab=='top' and r.get('top_donor') or tab=='donated' and r['donated'] or tab=='not_donated' and not r['donated'] or tab=='not_contacted' and not r['donated'] and not self.contacted(r)) and (not q or q in r['name'].casefold() or q in r.get('notes','').casefold() or len(digits)>=4 and digits in r['phone'])]
+            rows.sort(key=(lambda r:(r.get('top_order' if tab in ('important','top') else 'important_order') or 0,r['id'])) if tab=='top' else self.queue_key)
             return {'items':[self._public(r) for r in rows],'counts':counts}
     def add(self,name='',phone='',text='',source='Added in studio'):
         if text: name,phone=parse_contact(text,name)
@@ -129,9 +144,9 @@ class DonorBook:
             if len(exact)!=1: raise ValueError('More than one donor matches. Use the donor page to select one.' if exact else 'No donor matches that name. Search the Donors page or add them first.')
             return copy.deepcopy(exact[0])
     def update(self,donor,expected_updated_at=None,**changes):
-        allowed={'name','important','donated','amount','normal_amount','notes','phone'}
+        allowed={'top_donor','name','important','donated','amount','normal_amount','notes','phone'}
         if not changes or set(changes)-allowed: raise ValueError('Choose a donor field to update.')
-        if any(k in changes and not isinstance(changes[k],bool) for k in ('important','donated')): raise ValueError('Use true or false for donor status.')
+        if any(k in changes and not isinstance(changes[k],bool) for k in ('important','top_donor','donated')): raise ValueError('Use true or false for donor status.')
         if 'amount' in changes and (type(changes['amount']) not in (int,float) or not math.isfinite(changes['amount']) or not 0<=changes['amount']<=100000000): raise ValueError('Enter a valid donated amount.')
         if 'normal_amount' in changes and (type(changes['normal_amount']) not in (int,float) or not math.isfinite(changes['normal_amount']) or not 0<=changes['normal_amount']<=100000000): raise ValueError('Enter a valid normal donation amount.')
         if 'name' in changes and (not isinstance(changes['name'],str) or not 1<=len(changes['name'].strip())<=120): raise ValueError('Use a name of 1–120 characters.')
@@ -148,6 +163,15 @@ class DonorBook:
             if changes.get('phone') and any(x['id']!=row['id'] and x.get('phone')==changes['phone'] and not x.get('deleted') for x in data['records']):raise ValueError('Another donor already has this number.')
             if expected_updated_at is not None and expected_updated_at!=row.get('updated_at'):
                 raise ValueError('This donor changed since you opened it. Refresh before saving your edit.')
+            if changes.get('top_donor') and not row.get('top_donor') and not row.get('important'):
+                raise ValueError('Mark this donor Important before adding them to Top donors.')
+            for flag,field in (('important','important_order'),('top_donor','top_order')):
+                if changes.get(flag) is True and not row.get(flag):
+                    counters=data.setdefault('ranking_next',{});counters[flag]=int(counters.get(flag,0))+1;changes[field]=counters[flag]
+                elif changes.get(flag) is False:changes[field]=None
+            if changes.get('donated') is True and not row.get('donated') and row.get('last_dm_key') and time.time()-float(row.get('last_sent_at') or 0)<=self.DM_CREDIT_WINDOW:
+                learned=data.get('dm_learning',{}).get(row['last_dm_key'])
+                if learned:learned['wins']=int(learned.get('wins',0))+1
             row.update(changes,updated_at=max(time.time(),math.nextafter(float(row.get('updated_at',0)),math.inf)));self._save(data)
             return {'donor':self._public(row),'reply':'Updated '+hide_numbers(row['name'])+'.'}
     def delete(self,donor):
@@ -162,6 +186,16 @@ class DonorBook:
         with self.lock:
             data=self._load();row=next((r for r in data['records'] if r.get('phone')==phone and not r.get('deleted')),None)
         return int(row.get('normal_amount') or 0) if row else 0
+    def clear_important(self):
+        """Deselect every Important (and Top) donor at once; the next stars start a fresh send order."""
+        with self.lock:
+            data=self._load();now=time.time();n=0
+            for r in data['records']:
+                if r.get('important') and not r.get('deleted'):
+                    r.update(important=False,important_order=None,top_donor=False,top_order=None,updated_at=max(now,math.nextafter(float(r.get('updated_at',0)),math.inf)));n+=1
+            data.setdefault('ranking_next',{}).update(important=0,top_donor=0)
+            self._save(data)
+            return {'cleared':n,'reply':f'Deselected {n} Important donor'+('' if n==1 else 's')+'.'}
     def restore(self,ident):
         with self.lock:
             data=self._load();r=next((r for r in data['records'] if r['id']==ident),None)
@@ -185,12 +219,12 @@ class DonorBook:
             self._save(data)
         return {'added':added,'reply':f'Imported {added} contacts. Existing statuses and notes were preserved.'}
     def recipients(self,scope='important',ids=None,limit=None):
-        if scope not in ('all','important','donated','not_donated','selected'):raise ValueError('Choose an audience.')
+        if scope not in ('all','important','top','donated','not_donated','selected'):raise ValueError('Choose an audience.')
         with self.lock:
-            rows=[r for r in self._load()['records'] if not r.get('deleted') and r.get('phone') and (scope=='all' or scope=='selected' and r['id'] in (ids or []) or scope=='important' and r['important'] or scope=='donated' and r['donated'] or scope=='not_donated' and not r['donated'])]
-            rows.sort(key=self.queue_key)
+            rows=[r for r in self._load()['records'] if not r.get('deleted') and r.get('phone') and (scope=='all' or scope=='selected' and r['id'] in (ids or []) or scope=='important' and r['important'] or scope=='top' and r.get('top_donor') or scope=='donated' and r['donated'] or scope=='not_donated' and not r['donated'])]
+            rows.sort(key=(lambda r:(r.get('top_order' if scope=='top' else 'important_order') or 0,r['id'])) if scope=='top' else self.queue_key)
             return copy.deepcopy(rows[:limit] if limit else rows)
-    CASE_FIELDS={'important':False,'donated':False,'amount':0,'delivery':'Not contacted','last_sent_at':None,'sent_count':0,'dm_sent':False}
+    CASE_FIELDS={'top_donor':False,'top_order':None,'important_order':None,'important':False,'donated':False,'amount':0,'delivery':'Not contacted','last_sent_at':None,'sent_count':0,'dm_sent':False}
     def export_case_fields(self):
         with self.lock:return {r['id']:{k:copy.deepcopy(r.get(k,d)) for k,d in self.CASE_FIELDS.items()} for r in self._load()['records']}
     def import_case_fields(self,fields=None):
@@ -201,24 +235,47 @@ class DonorBook:
                 for k,d in self.CASE_FIELDS.items():r[k]=copy.deepcopy(fields.get(r['id'],{}).get(k,d))
                 r['updated_at']=time.time()
             self._save(data)
-    def delivery(self,ident,state,stamp=None):
+    def delivery(self,ident,state,stamp=None,text=None):
         with self.lock:
             data=self._load();r=next((r for r in data['records'] if r['id']==ident),None)
             if not r:return
             r['delivery']=state
             if state=='Sent':
                 r['last_sent_at']=stamp or time.time();r['dm_sent']=True;r['sent_count']=int(r.get('sent_count') or 0)+1
+                if text and str(text).strip():
+                    # Remember which wording this person got, so a later donation teaches future DMs.
+                    key=dm_text_key(text);r['last_dm_key']=key
+                    learn=data.setdefault('dm_learning',{});row=learn.setdefault(key,{'text':str(text)[:2000],'sent':0,'wins':0})
+                    row['sent']+=1;row['last']=r['last_sent_at']
+                    if len(learn)>80:
+                        for old in sorted(learn,key=lambda k:learn[k].get('last',0))[:len(learn)-80]:learn.pop(old,None)
             self._save(data)
+
+    DM_CREDIT_WINDOW=7*86400
+    def proven_dm_texts(self,limit=2,min_sent=5):
+        """Real DM wordings that donors answered with a donation, best first."""
+        with self.lock:
+            rows=[r for r in self._load().get('dm_learning',{}).values() if r.get('wins') and r.get('sent',0)>=min_sent]
+        rows.sort(key=lambda r:-((r['wins']+1)/(r['sent']+2)))
+        return [r['text'] for r in rows[:limit]]
+
+def dm_text_key(text):
+    import hashlib
+    return hashlib.sha1(' '.join(str(text).split()).encode('utf-8')).hexdigest()[:16]
 
 def send_request(text):
     """Only direct registry batches; content edits and schedules stay in the AI workflow."""
     t=str(text).strip()
     if not re.match(r'(?i)^(?:please\s+)?(?:send|dm|message|sned|sebd)\b',t) or not re.search(r'(?i)\bdonors?\b',t):return None
     if re.search(r"(?i)\b(dont|don't|do not|never|tomorrow|schedule|at|every day|write|rewrite|make|create|draft|emotional|urgent|urgency|caption|say|saying)\b|[\"“]",t):return None
-    scope='important' if re.search(r'(?i)\bimportant\b',t) else 'not_donated' if re.search(r'(?i)\b(?:not donated|undonated)\b',t) else 'donated' if re.search(r'(?i)\bdonated\b',t) else 'all'
+    scope='top' if re.search(r'(?i)\btop donors?\b',t) else 'important' if re.search(r'(?i)\bimportant\b',t) else 'not_donated' if re.search(r'(?i)\b(?:not donated|undonated)\b',t) else 'donated' if re.search(r'(?i)\bdonated\b',t) else 'all'
     unit=lambda n,u:float(n)*(3600 if u.lower().startswith('h') else 60)
     pause=re.search(r'(?i)(\d+(?:\.\d+)?)\s*(minutes?|mins?|m|hours?|hrs?|h)\s*(?:break|pause|rest|gap|delay|wait)?\s*between\s+(?:the\s+)?batch(?:es)?|batch(?:es)?\s*(?:gap|pause|rest|delay)\s*(?:of\s*)?(\d+(?:\.\d+)?)\s*(minutes?|mins?|m|hours?|hrs?|h)',t)
     rests=[unit(pause[1] or pause[3],pause[2] or pause[4])] if pause else None
+    if not pause:
+        # "then rest 20 minutes" / "20 min rest" is the pause between batches, never the gap between DMs.
+        pause=re.search(r'(?i)\b(?:rest|break|pause)\s*(?:for|of|=|:)?\s*(?P<n>\d+(?:\.?\d+)?)\s*(?P<u>minutes?|mins?|hours?|hrs?)\b|(?P<n2>\d+(?:\.?\d+)?)\s*(?P<u2>minutes?|mins?|hours?|hrs?)\s+(?:rest|break)\b',t)
+        if pause:rests=[unit(pause['n'] or pause['n2'],pause['u'] or pause['u2'])]
     t_gap=(t[:pause.start()]+' '+t[pause.end():]) if pause else t
     jitter={'min':-10,'max':15} if re.search(r'(?i)\brandom(?:ly|ize|ise|ized|ised)?\b',t) else None
     gap=re.search(r'(?i)(\d+(?:\.\d+)?)\s*(seconds?|secs?|sec|s|minutes?|mins?|min|m|hours?|hrs?|h)\b',t_gap)
@@ -228,5 +285,5 @@ def send_request(text):
     # "send 20 dms" is a round size: the rest of the audience follows by itself. "first 20" is an exact total.
     exact=bool(limit) and limit[1].lower() in ('first','top')
     rounds=20 if n and n>20 else None if exact else n
-    return {'scope':scope,'gap_seconds':seconds,'limit':n if exact or (n and n>20) else None,'chunk':rounds,'rests':rests,'jitter':jitter,'poster':not bool(re.search(r'(?i)\b(?:without|no) (?:poster|picture|image)\b|\btext only\b',t))}
+    return {'scope':scope,'gap_seconds':seconds,'limit':n if exact or (n and n>20) else None,'chunk':rounds,'rests':rests,'jitter':jitter,'poster':not bool(re.search(r'(?i)\b(?:without|no)\s+(?:the\s+)?(?:poster|picture|image|pic)\b|\b(?:poster|picture|image|pic)\s+off\b|\btext only\b',t))}
 

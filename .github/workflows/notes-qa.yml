@@ -1,0 +1,54 @@
+name: Foundation Notes focused QA
+on:
+  push:
+    branches:
+      - main
+      - feat/foundation-notes-private-editor-20261031
+      - feature/notes-distraction-free-20261101
+    paths:
+      - notes_store.py
+      - notes.js
+      - notes.css
+      - connection.js
+      - server.py
+      - index.html
+      - tests/test_foundation_notes.py
+      - tests/e2e/foundation_notes.spec.cjs
+      - tests/preview_fake.py
+      - .github/workflows/notes-qa.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install backend
+        run: pip install -r requirements.txt
+      - name: Python notes privacy and persistence
+        run: python -m unittest discover -s tests -p test_foundation_notes.py -v
+      - name: Check editor script
+        run: node --check notes.js
+      - name: Browser dependencies
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm exec playwright install --with-deps chromium
+      - name: Notes desktop and mobile browser tests (fake data only)
+        run: corepack pnpm exec playwright test tests/e2e/foundation_notes.spec.cjs
+      - name: Diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundation-notes-failures
+          path: |
+            test-results/
+            playwright-report/

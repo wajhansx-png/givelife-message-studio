@@ -1,0 +1,49 @@
+{
+  "mode": "offline_synthetic_state_and_stubbed_model",
+  "real_messages_sent": false,
+  "results": [
+    {
+      "dimension": "context_and_persistence",
+      "suite": "test_context_followthrough.py",
+      "tests": 13,
+      "passed": true
+    },
+    {
+      "dimension": "multi_step_completion",
+      "suite": "test_one_prompt_engine.py",
+      "tests": 10,
+      "passed": true
+    },
+    {
+      "dimension": "draft_edits_and_typing",
+      "suite": "test_draft_followups.py",
+      "tests": 15,
+      "passed": true
+    },
+    {
+      "dimension": "schedule_state_and_cancellation",
+      "suite": "test_schedule_context.py",
+      "tests": 27,
+      "passed": true
+    },
+    {
+      "dimension": "injection_and_malformed_responses",
+      "suite": "test_ai_architecture.py",
+      "tests": 55,
+      "passed": true
+    },
+    {
+      "dimension": "literal_routing_and_send_guards",
+      "suite": "test_manual_sends.py",
+      "tests": 41,
+      "passed": true
+    },
+    {
+      "dimension": "draft_constraints_and_targets",
+      "suite": "test_draft_workflow.py",
+      "tests": 13,
+      "passed": true
+    }
+  ],
+  "all_passed": true
+}

@@ -1,10 +1,64 @@
-const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const source=fs.readFileSync('app.js','utf8');
-const begin=source.indexOf('function save(){'),end=source.indexOf('function saveSoon()',begin);
-let posts=0,loads=0;
-const fields={group:{value:''},dm:{value:''}};
-const ctx={Promise,JSON,Error,$:id=>fields[id],post:async()=>{posts++;return {ok:true}},status(){},cached(){},fetch:async()=>{loads++;return {ok:true,json:async()=>({group:'Complete group caption',dm:'Complete DM caption'})}}};
+const {
+  extractFunction,
+  extractFunctions,
+  extractDeclaration,
+  compact,
+} = require('./helpers/source.cjs');
+const fs = require('node:fs'),
+  vm = require('node:vm'),
+  assert = require('node:assert/strict');
+const source = fs.readFileSync('app.js', 'utf8');
+const saveCode = extractFunctions(source, 'save', 'ensureDrafts', 'ensureCaption');
+let posts = 0,
+  loads = 0;
+const fields = { group: { value: '' }, dm: { value: '' } };
+const ctx = {
+  Promise,
+  JSON,
+  Error,
+  $: (id) => fields[id],
+  post: async () => {
+    posts++;
+    return { ok: true };
+  },
+  status() {},
+  cached() {},
+  fetch: async () => {
+    loads++;
+    return {
+      ok: true,
+      json: async () => ({ group: 'Complete group caption', dm: 'Complete DM caption' }),
+    };
+  },
+};
 vm.createContext(ctx);
-vm.runInContext("let draftsReady=false,draftsLoad=null,draftSaved=null,saveChain=Promise.resolve();function applyDrafts(d){fields=d;draftsReady=true;this.latest=d;}".replace('fields=d;','')+source.slice(begin,end)+";this.save=save;this.load=ensureDrafts;this.caption=ensureCaption;",ctx);
-ctx.applyDrafts=d=>{fields.group.value=d.group;fields.dm.value=d.dm;vm.runInContext('draftsReady=true',ctx)};
-(async()=>{await ctx.save();assert.equal(posts,0,'Loading must not save blank drafts');await Promise.all([ctx.load(),ctx.load()]);assert.equal(loads,1,'Loads must coalesce');await ctx.caption('group');await ctx.save();assert.equal(posts,1);fields.group.value='';await assert.rejects(ctx.caption('group'),/caption is empty/);assert.equal(posts,1);console.log('Draft loading gate passed: no blank saves, shared load, empty sends blocked.');})().catch(e=>{console.error(e);process.exitCode=1});
+vm.runInContext(
+  'let draftsReady=false,draftsLoad=null,draftSaved=null,saveChain=Promise.resolve();function applyDrafts(d){fields=d;draftsReady=true;this.latest=d;}'.replace(
+    'fields=d;',
+    '',
+  ) +
+    saveCode +
+    ';this.save=save;this.load=ensureDrafts;this.caption=ensureCaption;',
+  ctx,
+);
+ctx.applyDrafts = (d) => {
+  fields.group.value = d.group;
+  fields.dm.value = d.dm;
+  vm.runInContext('draftsReady=true', ctx);
+};
+(async () => {
+  await ctx.save();
+  assert.equal(posts, 0, 'Loading must not save blank drafts');
+  await Promise.all([ctx.load(), ctx.load()]);
+  assert.equal(loads, 1, 'Loads must coalesce');
+  await ctx.caption('group');
+  await ctx.save();
+  assert.equal(posts, 1);
+  fields.group.value = '';
+  await assert.rejects(ctx.caption('group'), /caption is empty/);
+  assert.equal(posts, 1);
+  console.log('Draft loading gate passed: no blank saves, shared load, empty sends blocked.');
+})().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});

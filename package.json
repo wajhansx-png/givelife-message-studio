@@ -11,12 +11,16 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:groups": "playwright test -c playwright.group-finder.config.cjs",
-    "test:python": "python -m unittest discover -s tests -q"
+    "test:python": "python -m unittest discover -s tests -q",
+    "format": "prettier --write \"**/*.{js,cjs,mjs,css}\" && ruff format .",
+    "lint": "prettier --check \"**/*.{js,cjs,mjs,css}\" && ruff check . && ruff format --check ."
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.64.1",
+    "acorn": "^8.19.0",
     "fast-check": "^4.10.2",
+    "prettier": "^3.9.10",
     "vitest": "^5.0.5"
   }
 }
-

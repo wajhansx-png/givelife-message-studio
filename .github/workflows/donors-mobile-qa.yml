@@ -1,0 +1,65 @@
+name: Responsive element and mobile screenshot QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '*.css'
+      - '*.js'
+      - 'index.html'
+      - 'tests/e2e/element-audit.cjs'
+      - 'tests/e2e/responsive-elements.spec.cjs'
+      - 'studio.css'
+      - 'donors.css'
+      - 'donors.js'
+      - 'tests/e2e/donors-mobile.spec.cjs'
+      - 'tests/e2e/donor-message-phone.spec.cjs'
+      - 'tests/e2e/mobile-back-thumb.spec.cjs'
+      - '.github/workflows/donors-mobile-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - '*.css'
+      - '*.js'
+      - 'index.html'
+      - 'tests/e2e/*'
+      - '.github/workflows/donors-mobile-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fake-donors-mobile:
+    name: Responsive surfaces and element geometry (fake transport)
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install backend test dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Install frontend test dependencies
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+      - name: Install headless Chromium
+        run: corepack pnpm exec playwright install --with-deps chromium
+      - name: Inspect real Donors DOM at phone widths (never send)
+        run: corepack pnpm exec playwright test tests/e2e/donors-mobile.spec.cjs tests/e2e/donor-message-phone.spec.cjs tests/e2e/mobile-back-thumb.spec.cjs --reporter=list
+      - name: Audit every rendered element in the existing workspaces
+        env:
+          ELEMENT_AUDIT_SMOKE: '0'
+        run: corepack pnpm exec playwright test tests/e2e/responsive-elements.spec.cjs --reporter=list
+      - name: Keep screenshots and failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: responsive-elements-and-mobile-qa
+          path: |
+            mobile-screenshots/
+            test-results/
+            playwright-report/
+          retention-days: 7

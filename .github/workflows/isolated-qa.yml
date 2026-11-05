@@ -1,5 +1,14 @@
 name: Isolated GiveLife V1 QA
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/isolated-qa.yml'
+      - '*.py'
+      - '*.js'
+      - '*.css'
+      - 'index.html'
+      - 'tests/**'
   push:
     branches: [main]
     paths:
@@ -30,6 +39,11 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: Validate every Python module compiles
         run: python -m compileall -q -f .
+      - name: Python lint and formatting
+        run: |
+          python -m pip install ruff
+          ruff check .
+          ruff format --check .
       - name: Python logic and failure-simulation tests
         id: python
         continue-on-error: true
@@ -42,10 +56,15 @@ jobs:
           node --check team.js
           node --check donors.js
           node --check connection.js
+          node --check notes.js
+      - name: Donor control recovery regressions
+        run: node --test tests/test_donor_control_recovery.js tests/test_volunteer_timing_ui.js
       - name: Frontend dependencies
         run: |
           corepack enable
           corepack pnpm install --frozen-lockfile
+      - name: JavaScript and CSS formatting
+        run: corepack pnpm exec prettier --check "**/*.{js,cjs,mjs,css}"
       - name: JS unit tests
         id: jsunit
         continue-on-error: true

@@ -1,0 +1,431 @@
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const screen = document.createElement('section');
+  screen.id = 'messageFocus';
+  screen.hidden = true;
+  screen.innerHTML = `<header><span id="focusState" role="status" aria-live="polite"></span></header><div class="focus-workspace"><main class="focus-paper"><div id="focusFormatted" tabindex="0" aria-label="Message preview"></div><textarea id="focusText" aria-label="Edit WhatsApp message" spellcheck="true" hidden></textarea></main><aside class="focus-rail" aria-label="Message tools"><button id="focusEdit">Edit</button><button id="focusCopy">Copy</button><button id="focusNext">Next version</button><small id="focusVersion">Original</small><button id="focusPoster">Change poster</button><button data-mark="*"><b>Bold</b></button><button data-mark="_"><i>Italic</i></button><button data-emoji="💔">💔 Heart</button><button data-emoji="🤲">🤲 Dua</button><button id="focusRetry" hidden>Retry versions</button></aside></div>`;
+  document.body.append(screen);
+  // Scroll targets must clear the sticky tool dock at every viewport size.
+  const focusDock = screen.querySelector('.focus-rail');
+  new ResizeObserver(() => {
+    screen.style.setProperty('--focus-dock-height', focusDock.offsetHeight + 'px');
+    screen.style.setProperty(
+      '--focus-header-height',
+      screen.querySelector('header').offsetHeight + 'px',
+    );
+  }).observe(focusDock);
+  const dmPanel = document.querySelector('.dm-send'),
+    dmAnchor = document.createComment('DM sending panel home');
+  if (dmPanel) dmPanel.before(dmAnchor);
+  function placeDmPanel(on) {
+    screen.classList.toggle('with-dm', on);
+    if (!dmPanel) return;
+    if (on) screen.querySelector('.focus-workspace').append(dmPanel);
+    else if (dmAnchor.parentNode) dmAnchor.after(dmPanel);
+  }
+  const groupPanel = document.querySelector('.group-send'),
+    groupAnchor = document.createComment('Group sending panel home');
+  if (groupPanel) groupPanel.before(groupAnchor);
+  function placeGroupPanel(on) {
+    screen.classList.toggle('with-group', on);
+    if (!groupPanel) return;
+    if (on) screen.querySelector('.focus-workspace').append(groupPanel);
+    else if (groupAnchor.parentNode) groupAnchor.after(groupPanel);
+  }
+  for (const button of groupPanel?.querySelectorAll('[data-group],#sendAll,[data-test]') || []) {
+    const original = button.onclick;
+    button.onclick = async (e) => {
+      if (actionBusy) return;
+      actionBusy = true;
+      try {
+        if (editing) edit(false);
+        await save();
+        $('group').value = row?.source || $('focusText').value;
+        await original?.call(button, e);
+      } catch (error) {
+        status(error.message);
+      } finally {
+        actionBusy = false;
+      }
+    };
+  }
+  const manualButton = document.createElement('button');
+  manualButton.id = 'focusManual';
+  manualButton.textContent = 'Manual messages';
+  screen.querySelector('.focus-rail').append(manualButton);
+  const testButton = document.createElement('button');
+  testButton.id = 'focusTest';
+  testButton.textContent = 'Test';
+  testButton.title = 'Send this message to the Test group';
+  screen.querySelector('.focus-rail').insertBefore(testButton, $('focusNext'));
+  const regen = document.createElement('button');
+  regen.id = 'focusRegenerate';
+  regen.textContent = 'Regenerate';
+  screen.querySelector('.focus-rail').append(regen);
+  const backBottom = document.createElement('button');
+  backBottom.id = 'focusBack';
+  backBottom.className = 'back-action';
+  backBottom.textContent = '← Back';
+  screen.querySelector('.focus-rail').append(backBottom);
+  const manual = document.createElement('dialog');
+  manual.id = 'manualMessages';
+  manual.setAttribute('aria-label', 'Manual messages');
+  manual.innerHTML =
+    '<header><b>Add your messages</b><button id="manualClose" aria-label="Close manual messages">×</button></header><div class="manual-nav"><button id="manualPrev">←</button><span id="manualSlot"></span><button id="manualNext">→</button></div><textarea id="manualText" aria-label="Manual message" rows="10" maxlength="10000"></textarea><p id="manualState" role="status"></p><button id="manualSave">Save messages</button>';
+  document.body.append(manual);
+  let slots = [],
+    slot = 0;
+  function slotShow() {
+    $('manualSlot').textContent = 'Message ' + (slot + 1) + ' / 10';
+    $('manualText').value = slots[slot] || '';
+  }
+  manualButton.onclick = async () => {
+    try {
+      if (editing) edit(false);
+      await save();
+      row = await api();
+      slots = Array.from({ length: 10 }, (_, i) => row.manual?.[i] || '');
+      slot = 0;
+      slotShow();
+      $('manualState').textContent = '';
+      manual.showModal();
+    } catch (e) {
+      status(e.message);
+    }
+  };
+  for (const [id, step] of [
+    ['manualPrev', -1],
+    ['manualNext', 1],
+  ])
+    $(id).onclick = () => {
+      slots[slot] = $('manualText').value;
+      slot = (slot + step + 10) % 10;
+      slotShow();
+    };
+  $('manualClose').onclick = () => manual.close();
+  $('manualSave').onclick = async () => {
+    slots[slot] = $('manualText').value;
+    $('manualSave').disabled = true;
+    try {
+      row = await api({ action: 'manual', messages: slots });
+      manual.close();
+      status(row.items.length + ' manual messages ready');
+      $('focusRetry').hidden = row.items.length === 10;
+    } catch (e) {
+      $('manualState').textContent = e.message;
+    } finally {
+      $('manualSave').disabled = false;
+    }
+  };
+  regen.onclick = async () => {
+    try {
+      if (editing) edit(false);
+      await save();
+      row = await api({ action: 'regenerate' });
+      status('Generating fresh versions…');
+      watch();
+    } catch (e) {
+      status(e.message);
+    }
+  };
+  const groupTab = document.querySelector('[data-view-button="group"]');
+  if (groupTab) {
+    const original = groupTab.onclick;
+    groupTab.onclick = (e) => {
+      original?.call(groupTab, e);
+      location.hash = 'preview';
+    };
+  }
+  let actionBusy = false;
+  for (const button of dmPanel?.querySelectorAll('#sendDm,[data-test="dm"]') || []) {
+    const original = button.onclick;
+    button.onclick = async (e) => {
+      if (actionBusy) return;
+      actionBusy = true;
+      try {
+        if (editing) edit(false);
+        await save();
+        $('dm').value = $('focusText').value;
+        await original?.call(button, e);
+      } catch (error) {
+        status(error.message);
+      } finally {
+        actionBusy = false;
+      }
+    };
+  }
+  const log = $('log');
+  if (log)
+    new MutationObserver(() => {
+      if (!screen.hidden) {
+        const last = log.querySelector('.e:last-of-type');
+        if (last) {
+          const text = last.cloneNode(true);
+          text.querySelectorAll('.message-copy,.reply-feedback').forEach((n) => n.remove());
+          status(text.textContent);
+        }
+      }
+    }).observe(log, { childList: true, subtree: true });
+  let kind = 'group',
+    row = null,
+    index = -1,
+    editing = false,
+    dirty = false,
+    loading = 0,
+    timer,
+    saveChain = Promise.resolve();
+  async function api(body) {
+    const r = await fetch(
+      '/focus-bank' + (body ? '' : '?kind=' + kind),
+      body
+        ? {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind, ...body }),
+          }
+        : {},
+    );
+    const d = await r.json();
+    if (!r.ok) throw Error(d.error || 'Could not save. Your text is still here.');
+    return d;
+  }
+  function syncSavedDrafts(data) {
+    for (const k of ['group', 'dm'])
+      if (typeof data?.drafts?.[k] === 'string') $(k).value = data.drafts[k];
+  }
+  function status(text) {
+    $('focusState').textContent = text;
+  }
+  function fit() {
+    const p = $('focusFormatted');
+    if (editing) return;
+    p.style.fontSize = '20px';
+    for (let n = 20; n > 14 && p.scrollHeight > p.clientHeight + 2; n--)
+      p.style.fontSize = n - 1 + 'px';
+    $('focusText').style.fontSize = p.style.fontSize;
+  }
+  function paint(text) {
+    $('focusText').value = text;
+    $('focusFormatted').innerHTML = window.waFormat(text);
+    $('focusVersion').textContent =
+      index < 0 ? 'Original' : index + 1 + ' / ' + (row?.items?.length || 10);
+    requestAnimationFrame(fit);
+  }
+  function edit(on) {
+    editing = on;
+    $('focusText').hidden = !on;
+    $('focusFormatted').hidden = on;
+    $('focusEdit').textContent = on ? 'Done' : 'Edit';
+    if (on) clearTimeout(timer);
+    if (on) $('focusText').focus({ preventScroll: true });
+    else {
+      if (dirty) save();
+      $('focusFormatted').innerHTML = window.waFormat($('focusText').value);
+      fit();
+    }
+  }
+  async function save() {
+    if (!dirty) return saveChain;
+    const text = $('focusText').value,
+      rev = row?.revision;
+    dirty = false;
+    status('Saving…');
+    saveChain = saveChain
+      .catch(() => {})
+      .then(async () => {
+        try {
+          row = await api({ action: 'save', text, revision: rev });
+          syncSavedDrafts(row);
+          if ($('focusText').value === text) sessionStorage.removeItem('focus-draft-' + kind);
+          index = -1;
+          $(kind).value = text;
+          status('Saved · generating 10 versions…');
+          watch();
+        } catch (e) {
+          dirty = true;
+          status(e.message);
+          throw e;
+        }
+      });
+    return saveChain;
+  }
+  function watch() {
+    clearTimeout(timer);
+    if (screen.hidden || row?.state !== 'Generating') return;
+    timer = setTimeout(async () => {
+      try {
+        const d = await api();
+        if (screen.hidden || editing) return;
+        row = d;
+        status(
+          d.state === 'Ready'
+            ? 'Saved · 10 versions ready'
+            : d.error || 'Saved · ' + (d.items?.length || 0) + '/10 versions ready…',
+        );
+        $('focusRetry').hidden = !['Needs retry', 'Partial'].includes(d.state);
+        watch();
+      } catch (e) {
+        status('Original saved. Could not refresh versions.');
+      }
+    }, 2500);
+  }
+  async function open() {
+    const epoch = ++loading;
+    screen.hidden = false;
+    document.body.classList.add('message-focus-open');
+    kind = document.body.dataset.view === 'dm' ? 'dm' : 'group';
+    placeDmPanel(kind === 'dm');
+    placeGroupPanel(kind === 'group');
+    status('Loading saved message…');
+    try {
+      row = await api();
+      syncSavedDrafts(row);
+      if (epoch !== loading || screen.hidden) return;
+      index = -1;
+      editing = false;
+      dirty = false;
+      paint(row.source);
+      const pending = sessionStorage.getItem('focus-draft-' + kind);
+      if (pending && pending !== row.source) {
+        paint(pending);
+        dirty = true;
+        status('Unsaved text restored. Tap Done to save.');
+        edit(true);
+      } else {
+        edit(false);
+        status(
+          row.error ||
+            (row.state === 'Ready'
+              ? '10 versions ready'
+              : row.state === 'Generating'
+                ? 'Generating 10 versions…'
+                : 'Your saved message'),
+        );
+      }
+      if (!row.revision && !dirty) {
+        dirty = true;
+        await save();
+      }
+      $('focusRetry').hidden = !['Needs retry', 'Partial'].includes(row.state);
+      watch();
+    } catch (e) {
+      status(e.message);
+    }
+  }
+  function sync() {
+    if (location.hash.replace(/^#\/?/, '') === 'preview') {
+      if (screen.hidden) open();
+    } else if (!screen.hidden) {
+      screen.hidden = true;
+      placeDmPanel(false);
+      placeGroupPanel(false);
+      document.body.classList.remove('message-focus-open');
+      clearTimeout(timer);
+      ++loading;
+    }
+  }
+  $('focusText').oninput = () => {
+    dirty = true;
+    sessionStorage.setItem('focus-draft-' + kind, $('focusText').value);
+    status('Editing · saved when you tap Done');
+  };
+  $('focusEdit').onclick = () => edit(!editing);
+  $('focusFormatted').ondblclick = () => edit(true);
+  $('focusBack').onclick = async () => {
+    try {
+      if (editing) edit(false);
+      await save();
+      sessionStorage.removeItem('focus-draft-' + kind);
+      location.hash = '';
+    } catch (e) {
+      status(e.message);
+    }
+  };
+  $('focusCopy').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText($('focusText').value);
+      status('Copied');
+    } catch (e) {
+      status('Could not copy. Select the text and copy.');
+    }
+  };
+  $('focusNext').onclick = async () => {
+    try {
+      if (editing) edit(false);
+      await save();
+      row = await api();
+      if (!row.items?.length) {
+        status(row.error || '10 versions are still generating. Your original is kept.');
+        return;
+      }
+      index = ((index + 2) % (row.items.length + 1)) - 1;
+      paint(index < 0 ? row.source : row.items[index]);
+      status(
+        index < 0
+          ? 'Original'
+          : 'Version ' + (index + 1) + ' · edit and Done to save as your message',
+      );
+    } catch (e) {
+      status(e.message);
+    }
+  };
+  $('focusTest').onclick = async () => {
+    if (actionBusy) return;
+    actionBusy = true;
+    $('focusTest').disabled = true;
+    try {
+      if (editing) edit(false);
+      await save();
+      $('group').value = row?.source || $('focusText').value;
+      await window.sendTest('group');
+    } catch (error) {
+      status(error.message);
+    } finally {
+      actionBusy = false;
+      $('focusTest').disabled = false;
+    }
+  };
+  $('focusPoster').onclick = () => {
+    $('posterDialog').dataset.returnRoute = 'preview';
+    window.DonorHub.openPoster();
+  };
+  $('focusRetry').onclick = async () => {
+    try {
+      row = await api({ action: 'retry' });
+      $('focusRetry').hidden = true;
+      watch();
+    } catch (e) {
+      status(e.message);
+    }
+  };
+  screen.querySelectorAll('[data-mark],[data-emoji]').forEach((b) => {
+    b.onmousedown = (e) => e.preventDefault();
+    b.onclick = () => {
+      if (!editing) edit(true);
+      const t = $('focusText'),
+        a = t.selectionStart,
+        z = t.selectionEnd,
+        m = b.dataset.mark;
+      let start = a,
+        end = z;
+      if (m && a === z) {
+        start = t.value.lastIndexOf('\n', a - 1) + 1;
+        end = t.value.indexOf('\n', a);
+        if (end < 0) end = t.value.length;
+      }
+      const selected = t.value.slice(start, end),
+        value = m ? m + selected + m : b.dataset.emoji;
+      t.setRangeText(value, start, end, 'select');
+      t.dispatchEvent(new Event('input'));
+      t.focus({ preventScroll: true });
+    };
+  });
+  addEventListener('studio-navigate', sync);
+  addEventListener('popstate', sync);
+  addEventListener('hashchange', sync);
+  addEventListener('resize', fit);
+  addEventListener('beforeunload', () => {
+    if (dirty) sessionStorage.setItem('focus-draft-' + kind, $('focusText').value);
+  });
+  sync();
+})();

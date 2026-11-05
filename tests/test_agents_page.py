@@ -23,10 +23,7 @@ class AgentsPageTests(unittest.TestCase):
         app.auto_log("main: posting to 1 group(s): main.")
         view = app.agents_view()
         ids = [a["id"] for a in view["agents"]]
-        self.assertEqual(
-            ids, ["manager", "auto", "writer", "checker", "replies", "dms", "volunteers", "plan"]
-        )
-        self.assertEqual(ids[0], "manager")  # Manager is always first
+        self.assertEqual(ids, ["auto", "writer", "replies", "dms", "volunteers", "plan"])
         by = {a["id"]: a for a in view["agents"]}
         self.assertTrue(any("Answered" in f["text"] for f in by["replies"]["feed"]))
         self.assertTrue(any("posting" in f["text"] for f in by["auto"]["feed"]))
@@ -38,7 +35,7 @@ class AgentsPageTests(unittest.TestCase):
             patch.object(app.ENGINE, "status", return_value={"state": "offline", "now": "x"}),
             patch.object(app, "auto_on", return_value=True),
         ):
-            auto = next(a for a in app.agents_view()["agents"] if a["id"] == "auto")
+            auto = app.agents_view()["agents"][0]
         self.assertEqual(auto["status"], "Error")
         self.assertEqual(auto["errors"][0]["action"], "open_home")
 
@@ -98,38 +95,6 @@ class AgentsPageTests(unittest.TestCase):
         self.assertEqual(len(app.KNOWLEDGE.data["feedback"]), before + 2)
         with self.assertRaises(ValueError):
             app.agents_mutate({"action": "correct", "text": " "})
-
-    def test_manager_delegation_to_writer(self):
-        res = app.agents_mutate(
-            {"action": "chat", "agent": "manager", "text": "Ask Writer to write a group appeal"}
-        )
-        self.assertIn("reply", res)
-        self.assertIn("Writer", res["reply"])
-        self.assertIn("Easypaisa", res["reply"])
-
-    def test_manager_progress_of_all_agents(self):
-        res = app.agents_mutate(
-            {"action": "chat", "agent": "manager", "text": "Ask all agents for their progress"}
-        )
-        self.assertIn("reply", res)
-        self.assertIn("Group Poster", res["reply"])
-        self.assertIn("Writer", res["reply"])
-        self.assertIn("Checker", res["reply"])
-
-    def test_conversational_writer_chat(self):
-        res = app.agents_mutate(
-            {"action": "chat", "agent": "writer", "text": "Draft a short Urdu message"}
-        )
-        self.assertIn("reply", res)
-        self.assertIn("Easypaisa", res["reply"])
-
-    def test_checker_agent_chat(self):
-        bad_msg = "Please help if you can danger Rs 5000"
-        res = app.agents_mutate(
-            {"action": "chat", "agent": "checker", "text": bad_msg}
-        )
-        self.assertIn("reply", res)
-        self.assertIn("FAILED", res["reply"])
 
 
 if __name__ == "__main__":

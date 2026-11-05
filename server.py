@@ -1194,7 +1194,6 @@ def chat_add(who, text, err=False, turn_id=None, model=""):
                 "text": text,
                 "err": bool(err),
                 "t": int(time.time() * 1000),
-                **({"model": assistant.LABEL} if who == "app" and model == assistant.LABEL else {}),
             }
         )
         CHATLOG.write_text(json.dumps(items[-300:], ensure_ascii=False), encoding="utf-8")
@@ -2746,27 +2745,6 @@ def outreach(caps):
 
 
 def ai_test():
-    if assistant.claude_key():
-        # Direct Sonnet 5.5 check: no fallback here, so a wrong key or model name is shown plainly.
-        t0 = time.time()
-        try:
-            out = assistant._claude_raw(
-                "Reply with one word only.",
-                [{"role": "user", "content": "Reply with exactly: OK"}],
-                1024,
-            )
-            return {
-                "ok": True,
-                "provider": assistant.LABEL,
-                "ms": round((time.time() - t0) * 1000),
-                "reply": out["content"][:40],
-            }
-        except Exception as e:
-            return {
-                "ok": False,
-                "error": f"{assistant.LABEL} failed: {str(e)[:100]}. The app uses DeepSeek meanwhile."
-                + (" Check the model name (CLAUDE_MODEL)." if "HTTP 4" in str(e) else ""),
-            }
     key = assistant.client()
     if not key:
         return {
@@ -4210,7 +4188,6 @@ def assistant_task(body):
             ):
                 output["donors_changed"] = True
             output["turn_id"] = uuid.uuid4().hex
-            output["model"] = assistant.served_label()
             diag = mapping(output.get("diagnostics"))
             for t in diag.get("tools", []):
                 if isinstance(t, dict) and t.get("status") in ("rejected", "failed", "error"):
@@ -4775,7 +4752,6 @@ def live_snapshot():
     return {
         "on": on,
         "ai": bool(assistant.client()),
-        "ai_notice": assistant.ai_notice(),
         "log": AUTOLOG[-20:],
         "summary": summary,
         "status": status,
@@ -4966,7 +4942,6 @@ def agents_view():
         "rules": ENGINE.rule_list(),
         "auto": bool(snap["on"]),
         "updated": time.time(),
-        "ai_notice": assistant.ai_notice(),
     }
 
 

@@ -7,7 +7,7 @@ References reviewed for this app:
 - [Adobe Spectrum layout](https://react-spectrum.adobe.com/v3/layout.html): flex/grid arrangements that adapt to available space and preserve functionality.
 - [WCAG reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html) and [target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html). The AA minimum is 24 CSS px with documented exceptions; this app aims for 44px primary phone controls.
 
-These are references for the existing vanilla JS/CSS app, not claims about Claude's private implementation or a certification of accessibility.
+These are references for the existing vanilla JS/CSS app, not claims about any product's private implementation or a certification of accessibility.
 
 ## Contracts
 

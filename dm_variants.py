@@ -243,6 +243,8 @@ NON-NEGOTIABLE:
   approaches across versions. No invented time pressure, medical progression,
   consequences, deadlines, promises, or extra diagnoses.
 - Rewrite each editable paragraph into genuinely different, very easy English.
+- LANGUAGE: every version keeps the source's language line by line. Never add Urdu to an
+  English line and never turn Urdu into English; Urdu only where the owner asked for it.
 - URDU: a line written in Urdu stays in Urdu script and is reworded in simple, moving Urdu
   (never translated to English, never transliterated). A Quran verse, hadith or its
   reference, e.g. (سورة المائدہ: 2), is copied exactly, word for word.

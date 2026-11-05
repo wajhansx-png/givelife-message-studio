@@ -117,7 +117,10 @@ class SendTests(unittest.TestCase):
                 "group": {
                     "source": source,
                     "revision": "fixture-bank",
-                    "items": [source.replace("\n", f" (v{i:02d})\n", 1) for i in range(1, 11)],
+                    "items": [
+                        source.replace("\n", f" ({tag})\n", 1)
+                        for tag in "alpha beta gamma delta epsilon zeta eta theta iota kappa".split()
+                    ],
                     "state": "Ready",
                 }
             },

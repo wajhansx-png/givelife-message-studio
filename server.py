@@ -2496,6 +2496,17 @@ def optout(phone):
     BLOCKED.add(d)
 
 
+def is_opted_out(phone):
+    """True when this person asked not to be messaged (either stored form of the key)."""
+    if not STORE:
+        return False
+    keys = (
+        "optout_" + hashlib.sha256((phone + "@s.whatsapp.net").encode()).hexdigest(),
+        "optout_" + hashlib.sha256(str(phone).encode()).hexdigest(),
+    )
+    return any(STORE.get(k) for k in keys)
+
+
 def saved_auto_group_caption():
     """One authoritative source: the saved Group editor and its version bank."""
     caption = get_message("group")["text"]
@@ -2918,6 +2929,7 @@ ENGINE = autopilot.Engine(
         "recent_dms": recent_dms,
         "note_dm": note_dm,
         "optout": optout,
+        "is_opted_out": is_opted_out,
         "group_link": lambda: (
             os.environ.get("FOUNDATION_GROUP_LINK", "")
             or str((STORE.get("foundation_group_link") if STORE else "") or "")

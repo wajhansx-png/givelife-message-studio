@@ -26,6 +26,11 @@ for (const width of [1440, 390])
     // Phones size the editor to its text; desktop keeps the same fixed surface.
     if (width >= 900) expect(after.height).toBe(before.height);
     else expect(after.height).toBeGreaterThanOrEqual(120);
+    await page.locator('#focusSave').click();
+    await expect(page.locator('#focusState')).toContainText('Saved base message');
+    await expect(page.locator('#focusText')).toBeHidden();
+    await expect(page.locator('#focusRetry')).toHaveText('Generate 5 Versions');
+    await page.locator('#focusEdit').click();
     await page.locator('#focusEdit').click();
     await expect(page.locator('#focusState')).toContainText('Saved');
     await page.reload();

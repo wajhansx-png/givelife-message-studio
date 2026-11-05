@@ -49,6 +49,21 @@
       }
     };
   }
+  const saveBase = document.createElement('button');
+  saveBase.id = 'focusSave';
+  saveBase.textContent = 'Save Base Message';
+  saveBase.title = 'Save this message only. No versions are written.';
+  screen.querySelector('.focus-rail').insertBefore(saveBase, $('focusCopy'));
+  saveBase.onclick = async () => {
+    try {
+      if (editing) edit(false);
+      const changed = dirty;
+      await save();
+      if (!changed) status('Saved base message · nothing changed');
+    } catch (e) {
+      status(e.message);
+    }
+  };
   const manualButton = document.createElement('button');
   manualButton.id = 'focusManual';
   manualButton.textContent = 'Manual messages';

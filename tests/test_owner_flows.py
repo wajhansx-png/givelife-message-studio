@@ -182,3 +182,67 @@ class ServerGuards(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ClaudeFallback(unittest.TestCase):
+    def setUp(self):
+        import assistant
+
+        self.a = assistant
+        self.env = dict(__import__("os").environ)
+        self.a._CLAUDE["down_until"] = 0.0
+        self.a.NOTICE.update(id=0, text="", time=0.0)
+
+    def tearDown(self):
+        import os
+
+        os.environ.clear()
+        os.environ.update(self.env)
+        self.a._CLAUDE["down_until"] = 0.0
+
+    def test_poe_key_typo_is_fixed_and_claude_is_used_first(self):
+        import os, io, json
+
+        os.environ["POE_API_KEY"] = "gotsk-poe-abc"
+        os.environ["DEEPSEEK_API_KEY"] = "ds"
+        self.assertEqual(self.a.claude_key(), "sk-poe-abc")
+        reply = io.BytesIO(
+            json.dumps(
+                {"choices": [{"message": {"content": "hi"}, "finish_reason": "stop"}]}
+            ).encode()
+        )
+        with patch.object(self.a.urllib.request, "urlopen", return_value=reply) as op:
+            msg = self.a._chat_raw("ds", "sys", [], [{"role": "user", "content": "x"}])
+        self.assertEqual(msg["content"], "hi")
+        self.assertIn("api.poe.com", op.call_args[0][0].full_url)
+        self.assertEqual(self.a.ai_notice()["id"], 0)
+
+    def test_failure_shifts_to_deepseek_with_a_notice_and_cooldown(self):
+        import os
+
+        os.environ["POE_API_KEY"] = "sk-poe-abc"
+        os.environ["DEEPSEEK_API_KEY"] = "ds"
+        calls = []
+
+        def fake(req, timeout=0):
+            calls.append(req.full_url)
+            if "poe.com" in req.full_url:
+                raise OSError("down")
+            import io, json
+
+            return io.BytesIO(
+                json.dumps(
+                    {"choices": [{"message": {"content": "ds"}, "finish_reason": "stop"}]}
+                ).encode()
+            )
+
+        with patch.object(self.a.urllib.request, "urlopen", side_effect=fake):
+            first = self.a._chat_raw("ds", "s", [], [{"role": "user", "content": "x"}])
+            second = self.a._chat_raw("ds", "s", [], [{"role": "user", "content": "y"}])
+        self.assertEqual((first["content"], second["content"]), ("ds", "ds"))
+        self.assertEqual(
+            sum("poe.com" in c for c in calls), 1
+        )  # cooldown: Claude not retried at once
+        n = self.a.ai_notice()
+        self.assertEqual(n["id"], 1)
+        self.assertIn("Shifting to DeepSeek", n["text"])

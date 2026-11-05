@@ -4734,6 +4734,7 @@ def live_snapshot():
     return {
         "on": on,
         "ai": bool(assistant.client()),
+        "ai_notice": assistant.ai_notice(),
         "log": AUTOLOG[-20:],
         "summary": summary,
         "status": status,
@@ -4913,7 +4914,12 @@ def agents_view():
     agents = [auto, writer, replies, dms, volunteers, case]
     for a in agents:
         a["feed"] = feed.get(a["id"], [])[-15:]
-    return {"agents": agents, "rules": ENGINE.rule_list(), "updated": time.time()}
+    return {
+        "agents": agents,
+        "rules": ENGINE.rule_list(),
+        "updated": time.time(),
+        "ai_notice": assistant.ai_notice(),
+    }
 
 
 def _ago(t):

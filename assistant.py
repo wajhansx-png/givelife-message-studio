@@ -12,9 +12,100 @@ PKT = datetime.timezone(datetime.timedelta(hours=5))
 GROUP_KEYS = ["main", "community", "fiverr", "upwork", "uet", "toprated", "free", "all", "test"]
 
 
+POE_URL = "https://api.poe.com/v1/chat/completions"
+CLAUDE_URL = os.environ.get("ANTHROPIC_URL", "https://api.anthropic.com/v1/messages")
+CLAUDE_COOLDOWN = 600  # seconds to stay on DeepSeek after Claude fails
+_CLAUDE = {"down_until": 0.0}
+NOTICE = {"id": 0, "text": "", "time": 0.0}
+_NLOCK = threading.Lock()
+
+
+def claude_key():
+    """Key for Claude: POE_API_KEY (Poe, OpenAI-style) or ANTHROPIC_API_KEY (Anthropic native)."""
+    key = (os.environ.get("POE_API_KEY") or os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    return (key[3:] if key.startswith("gotsk-") else key) or None  # tolerate a stray "got" typo
+
+
+def _via_poe():
+    return bool(os.environ.get("POE_API_KEY")) or str(claude_key() or "").startswith("sk-poe")
+
+
+def claude_model():
+    if _via_poe():
+        return os.environ.get("CLAUDE_MODEL", "Claude-Sonnet-5.5")
+    return os.environ.get("CLAUDE_MODEL") or os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+
+
 def client():
-    """Returns the API key when the assistant is configured, else None."""
-    return os.environ.get("DEEPSEEK_API_KEY") or None
+    """Returns the API key when the assistant is configured, else None.
+    A Claude-only setup returns a marker; tool chats then need DeepSeek and say so."""
+    return os.environ.get("DEEPSEEK_API_KEY") or ("claude-only" if claude_key() else None)
+
+
+def ai_notice():
+    with _NLOCK:
+        return dict(NOTICE)
+
+
+def _notify_fallback(reason):
+    with _NLOCK:
+        _CLAUDE["down_until"] = time.time() + CLAUDE_COOLDOWN
+        NOTICE.update(
+            id=NOTICE["id"] + 1,
+            time=time.time(),
+            text="Claude is not responding"
+            + (f" ({reason})" if reason else "")
+            + ". Shifting to DeepSeek for now.",
+        )
+
+
+def _claude_raw(system, messages, max_tokens):
+    """Text-only call to Claude. Raises on any failure so the caller can fall back to DeepSeek."""
+    limit = max(1024, min(8192, int(max_tokens)))
+    if _via_poe():
+        body = {
+            "model": claude_model(),
+            "messages": [{"role": "system", "content": system}] + messages,
+            "max_tokens": limit,
+        }
+        url, headers = POE_URL, {"Authorization": "Bearer " + (claude_key() or "")}
+    else:
+        body = {
+            "model": claude_model(),
+            "system": system,
+            "messages": messages,
+            "max_tokens": limit,
+        }
+        url = CLAUDE_URL
+        headers = {"x-api-key": claude_key() or "", "anthropic-version": "2023-06-01"}
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        method="POST",
+        headers={"Content-Type": "application/json", **headers},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=45) as r:
+            data = mapping(json.load(r))
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(
+            f"HTTP {e.code}" + (", check the Claude API key" if e.code in (401, 403) else "")
+        ) from None
+    if _via_poe():
+        choice = mapping((data.get("choices") or [{}])[0])
+        text = str(mapping(choice.get("message")).get("content") or "").strip()
+        cut = choice.get("finish_reason") == "length"
+    else:
+        parts = [
+            b.get("text", "")
+            for b in data.get("content") or []
+            if isinstance(b, dict) and b.get("type") == "text"
+        ]
+        text = "".join(parts).strip()
+        cut = data.get("stop_reason") == "max_tokens"
+    if not text or cut:
+        raise RuntimeError("incomplete answer")
+    return {"role": "assistant", "content": text}
 
 
 def playbook():
@@ -58,7 +149,10 @@ CHAT_TOOLS = [
             "donated": {"type": "boolean"},
             "amount": {"type": "number"},
             "notes": {"type": "string"},
-            "scope": {"type": "string", "enum": ["all", "important", "top", "donated", "not_donated"]},
+            "scope": {
+                "type": "string",
+                "enum": ["all", "important", "top", "donated", "not_donated"],
+            },
             "gap_seconds": {"type": "number"},
         },
         ["action"],
@@ -376,7 +470,25 @@ def active_model():
 
 
 def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None):
-    """One call to DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
+    """One call to the model. Text-only calls go to Claude first and fall back to DeepSeek with a notice;
+    tool calls stay on DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
+    if (
+        not tools
+        and claude_key()
+        and time.time() >= _CLAUDE["down_until"]
+        and all(
+            isinstance(m, dict)
+            and m.get("role") in ("user", "assistant")
+            and isinstance(m.get("content"), str)
+            for m in messages
+        )
+    ):
+        try:
+            return _claude_raw(system, messages, max_tokens or 4096)
+        except Exception as e:
+            _notify_fallback(str(e)[:80])
+    if key == "claude-only":
+        raise RuntimeError("DeepSeek is not configured and Claude is not available right now.")
     model = active_model()
     thinking = (
         model in ("deepseek-reasoner", "deepseek-flash", "deepseek-v4-pro")

@@ -92,7 +92,10 @@ BLOCKED = set(CAMPAIGN_CONTACTED)
 
 def persist_file(key, path):
     if STORE:
-        STORE.put(key, path.read_text(encoding="utf-8"))
+        write = getattr(
+            STORE, "put_retry", STORE.put
+        )  # retries in the background if the database blips
+        write(key, path.read_text(encoding="utf-8"))
 
 
 def api(path):

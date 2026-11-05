@@ -1,4 +1,4 @@
-import os, queue, threading
+import os, queue, threading, time
 from contextlib import contextmanager
 
 try:
@@ -13,6 +13,7 @@ class CloudStore:
         self.uri = uri
         self._pool = queue.LifoQueue(maxsize=6)
         self._slots = threading.BoundedSemaphore(6)
+        self._pending, self._wlock, self._retrying = {}, threading.RLock(), False
 
     @contextmanager
     def connection(self):
@@ -97,6 +98,63 @@ class CloudStore:
                 (key, Jsonb(value)),
             ).fetchone()
         return row is not None
+
+    def lease_acquire(self, key, owner, ttl):
+        """Take or refresh a single-owner lease. True if `owner` holds it now.
+        Uses the database clock, so instances with different clocks agree."""
+        with self.connection() as db:
+            row = db.execute(
+                "INSERT INTO givelife_studio_state AS s (key,value) VALUES (%s,%s) "
+                "ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW() "
+                "WHERE s.value->>'owner'=%s OR s.updated_at < NOW() - %s::float8 * INTERVAL '1 second' "
+                "RETURNING key",
+                (key, Jsonb({"owner": owner}), owner, float(ttl)),
+            ).fetchone()
+        return row is not None
+
+    def lease_release(self, key, owner):
+        with self.connection() as db:
+            db.execute(
+                "UPDATE givelife_studio_state SET updated_at=to_timestamp(0) WHERE key=%s AND value->>'owner'=%s",
+                (key, owner),
+            )
+
+    def put_retry(self, key, value, every=15):
+        """put(), but a failed write is kept (latest value per key wins) and retried in
+        the background until the database accepts it. Still raises so callers can report it."""
+        with self._wlock:
+            try:
+                self.put(key, value)
+            except Exception:
+                self._pending[key] = value
+                if not self._retrying:
+                    self._retrying = True
+                    threading.Thread(
+                        target=self._retry_loop, args=(every,), daemon=True, name="db-retry"
+                    ).start()
+                raise
+            self._pending.pop(key, None)  # a newer successful write supersedes older ones
+
+    @property
+    def pending_writes(self):
+        return len(self._pending)
+
+    def _retry_loop(self, every):
+        while True:
+            time.sleep(every)
+            for key in list(self._pending):
+                with self._wlock:
+                    if key not in self._pending:
+                        continue
+                    try:
+                        self.put(key, self._pending[key])
+                    except Exception:
+                        break
+                    self._pending.pop(key, None)
+            with self._wlock:
+                if not self._pending:
+                    self._retrying = False
+                    return
 
     def restore(self, data, root):
         self.initialize()

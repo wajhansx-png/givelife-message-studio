@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#171717"><title>Agents · GiveLife</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/agents.css"></head>
+<body>
+<div class="app">
+ <nav class="side" aria-label="Agents">
+  <a class="brand" href="/">← GiveLife</a>
+  <div class="label">Agents</div>
+  <div id="list" class="list"></div>
+  <div id="live" class="live" role="status" aria-live="polite">Loading…</div>
+ </nav>
+ <main class="main">
+  <header class="head"><h1 id="name">…</h1><span id="pill" class="pill"></span><span id="now" class="now"></span></header>
+  <div class="scroll"><div class="col">
+   <section class="card"><div class="muted" id="role"></div>
+    <div class="prog"><div class="pl"><span id="pLabel"></span><span id="pText"></span></div><div class="bar"><i id="pBar"></i></div></div>
+    <ul id="facts" class="facts"></ul>
+   </section>
+   <section id="errors"></section>
+   <section id="rules" class="card" hidden><div class="muted">Saved rules this agent follows</div><ul id="ruleList" class="facts"></ul></section>
+   <div class="muted small">Activity · tap a line to correct it</div>
+   <div id="feed" class="feed"></div>
+  </div></div>
+  <form id="ask" class="ask" autocomplete="off">
+   <p id="msg" class="msg" role="status" aria-live="polite"></p>
+   <div class="box"><label for="inp" class="sr">Rule for this agent</label><input id="inp" maxlength="300" placeholder="Give a standing rule, e.g. never post in fiverr at night"><button aria-label="Save rule" class="send">↑</button></div>
+   <div class="hint">Saved only if it is a clear rule. Safety limits always apply.</div>
+  </form>
+ </main>
+</div>
+<dialog id="fix"><form method="dialog" id="fixForm"><h2>Correct this</h2><p id="fixWhat" class="muted"></p><label for="fixText">What should it have done?</label><textarea id="fixText" rows="3" maxlength="500" required></textarea><label class="chk"><input type="checkbox" id="fixMem"> Remember for the future</label><div class="row"><button value="cancel" formnovalidate class="ghost">Cancel</button><button value="ok" class="primary">Save</button></div></form></dialog>
+<dialog id="accessDialog"><form id="accessForm"><h2>Open GiveLife agents</h2><label for="accessKey">Private cloud access key</label><input type="password" id="accessKey" autocomplete="current-password" required><button class="primary">Unlock</button></form></dialog>
+<script src="/agents.js"></script>
+</body>
+</html>

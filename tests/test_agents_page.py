@@ -1,0 +1,74 @@
+"""Agents page API: real state only, validated rules, corrections saved. No real WhatsApp calls."""
+
+import unittest
+from unittest.mock import patch
+import test_manual_sends as fixture
+from test_manual_sends import app
+
+
+class AgentsPageTests(unittest.TestCase):
+    def setUp(self):
+        fixture.SendTests.setUp(self)
+        self._rules = list(app.ENGINE.rules())
+        self._feedback = list(app.KNOWLEDGE.data["feedback"])
+
+    def tearDown(self):
+        app.ENGINE.s["rules"] = self._rules
+        app.ENGINE.save()
+        app.KNOWLEDGE.data["feedback"][:] = self._feedback
+        fixture.SendTests.tearDown(self)
+
+    def test_view_lists_real_agents_and_routes_log_lines(self):
+        app.auto_log("Answered …1234: hello")
+        app.auto_log("main: posting to 1 group(s): main.")
+        view = app.agents_view()
+        ids = [a["id"] for a in view["agents"]]
+        self.assertEqual(ids, ["auto", "writer", "replies", "dms", "volunteers", "plan"])
+        by = {a["id"]: a for a in view["agents"]}
+        self.assertTrue(any("Answered" in f["text"] for f in by["replies"]["feed"]))
+        self.assertTrue(any("posting" in f["text"] for f in by["auto"]["feed"]))
+        for a in view["agents"]:
+            self.assertIn(a["status"], ("Active", "Working", "Idle", "Error"))
+
+    def test_offline_whatsapp_shows_error_with_recovery(self):
+        with (
+            patch.object(app.ENGINE, "status", return_value={"state": "offline", "now": "x"}),
+            patch.object(app, "auto_on", return_value=True),
+        ):
+            auto = app.agents_view()["agents"][0]
+        self.assertEqual(auto["status"], "Error")
+        self.assertEqual(auto["errors"][0]["action"], "open_home")
+
+    def test_instruction_saved_only_when_valid(self):
+        with self.assertRaises(ValueError):
+            app.agents_mutate({"action": "instruct", "text": "hello there"})
+        with self.assertRaises(ValueError):
+            app.agents_mutate({"action": "instruct", "text": "send poster to main at 9pm"})
+        out = app.agents_mutate({"action": "instruct", "text": "never post in fiverr at night"})
+        self.assertTrue(out["reply"])
+        self.assertTrue(out["rules"])
+        with self.assertRaises(ValueError):
+            app.agents_mutate({"action": "instruct", "text": "never post in fiverr at night"})
+
+    def test_correction_saved_and_optionally_remembered(self):
+        before = len(app.KNOWLEDGE.data["feedback"])
+        with patch.object(app, "mem_add", return_value="Saved for the future: x") as mem:
+            app.agents_mutate(
+                {
+                    "action": "correct",
+                    "agent": "Reply Reader",
+                    "decision": "d",
+                    "text": "was sharing",
+                    "remember": True,
+                }
+            )
+            mem.assert_called_once_with("was sharing")
+            app.agents_mutate({"action": "correct", "decision": "d", "text": "no memory"})
+            self.assertEqual(mem.call_count, 1)
+        self.assertEqual(len(app.KNOWLEDGE.data["feedback"]), before + 2)
+        with self.assertRaises(ValueError):
+            app.agents_mutate({"action": "correct", "text": " "})
+
+
+if __name__ == "__main__":
+    unittest.main()

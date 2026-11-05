@@ -447,7 +447,11 @@ def reject_reason(source, text, existing=()):
 
 def is_wrapped(source, value):
     """An old quick fallback: the saved message verbatim with lines added around it."""
-    return isinstance(value, str) and value.strip() != str(source).strip() and str(source).strip() in value
+    return (
+        isinstance(value, str)
+        and value.strip() != str(source).strip()
+        and str(source).strip() in value
+    )
 
 
 def clean_items(source, items):

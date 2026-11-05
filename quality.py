@@ -20,6 +20,25 @@ def hard_reason(source, text):
     return ""
 
 
+FACT_WORDS = re.compile(
+    r"(?i)\b(mother|father|parents?|brother|sister|wife|husband|son|daughter|family|orphan|widow|"
+    r"years?|months?|age|old|surgery|operation|cancer|tumou?r|kidney|heart|liver|brain|blood|"
+    r"hospital|icu|ventilator|doctor|died|dead|death|passed|janazah|burial|accident|disease|ill|sick|"
+    r"today|tonight|tomorrow|deadline|hours?|days?)\b"
+)
+
+
+def new_fact(source, phrase):
+    """True when a quoted phrase holds something the source does not: a number, a capitalised name or
+    place, or a case-fact word (family, age, illness, time). Plain rewording is not a new fact."""
+    low = source.lower()
+    if any(n not in source for n in re.findall(r"\d[\d,]*", phrase)):
+        return True
+    if any(w not in source for i, w in enumerate(re.findall(r"\b[A-Z][a-z]{2,}\b", phrase)) if i):
+        return True
+    return any(w.lower() not in low for w in FACT_WORDS.findall(phrase))
+
+
 def corrections_block(corrections):
     items = [str(c).strip()[:200] for c in corrections or [] if str(c).strip()][:15]
     if not items:
@@ -72,6 +91,7 @@ def review(chat, source, versions, examples=(), corrections=()):
             and invented
             and invented.lower() in versions[i].lower()
             and invented.lower() not in source.lower()
+            and new_fact(source, invented)
         ):
             keep[i] = 'review: new fact not in the source: "' + invented[:80] + '"'
             continue

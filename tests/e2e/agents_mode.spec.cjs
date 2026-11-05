@@ -29,6 +29,14 @@ test('agents page: Manual/Auto toggle switches the real mode and every agent sti
     await page.locator('#list .agent', { hasText: name }).click();
     await expect(page.locator('#name')).toHaveText(name);
   }
+  await page.locator('#list .agent', { hasText: 'Writer' }).click();
+  await expect(page.locator('#rules')).toBeHidden();
+  await page.locator('#inp').fill('hi');
+  await page.locator('#ask .send').click();
+  await expect(page.locator('#answer')).toBeVisible();
+  await expect(page.locator('#ansQ')).toHaveText('You: hi');
+  await expect(page.locator('#ansText')).not.toHaveText('Thinking…', { timeout: 15000 });
+  await expect(page.locator('#msg')).not.toContainText('Not saved');
   await manual.click();
   await expect(manual).toHaveAttribute('aria-pressed', 'true');
   await expect(manual).toBeEnabled();

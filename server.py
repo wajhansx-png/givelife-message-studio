@@ -4851,11 +4851,11 @@ def agents_view():
         "errors": [
             {
                 "text": g.get("error") or "Versions could not be made.",
-                "fix": "Try again.",
+                "fix": "Try again. Versions already made are kept.",
                 "action": "retry_writer",
             }
         ]
-        if g.get("state") == "Needs retry"
+        if g.get("state") in ("Needs retry", "Partial")
         else [],
     }
     rs = reply_setup.get(STORE) if STORE else {}

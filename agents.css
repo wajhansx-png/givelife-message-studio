@@ -187,6 +187,13 @@ body {
   flex-direction: column;
   gap: 18px;
 }
+[hidden] {
+  display: none !important;
+}
+.answer {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
 .card {
   background: var(--card);
   border-radius: 16px;

@@ -220,6 +220,19 @@ class CheckerAndWriter(unittest.TestCase):
             calls([{"i": 0, "invented": "needs treatment"}])[0], ""
         )  # already in the source
 
+    def test_plain_rewording_flagged_by_ai_is_not_treated_as_a_new_fact(self):
+        versions = [
+            "Please do not scroll past. Rs. 25,000 left.",
+            "His mother is ill. Rs. 25,000 left.",
+        ]
+        rows = [
+            {"i": 0, "invented": "Please do not scroll past"},
+            {"i": 1, "invented": "His mother is ill"},
+        ]
+        out = quality.review(lambda p: json.dumps({"scores": rows}), self.SOURCE, versions)
+        self.assertEqual(out[0], "")
+        self.assertIn("new fact", out[1])
+
     def test_bad_review_output_keeps_versions(self):
         self.assertEqual(quality.review(lambda p: "garbage", self.SOURCE, ["A", "B"]), ["", ""])
         self.assertEqual(quality.review(lambda p: "", self.SOURCE, ["A"]), [""])

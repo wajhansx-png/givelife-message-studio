@@ -122,7 +122,7 @@
             })
         : [el('div', 'empty', 'No activity yet this session.')]),
     );
-    $('inp').placeholder = 'Add a rule (not a chat), e.g. never post in fiverr at night';
+    $('inp').placeholder = 'Ask the assistant, or add a rule like: never post in fiverr at night';
     $('live').textContent = 'Updated ' + clock(data.updated);
   }
   async function load() {
@@ -155,10 +155,64 @@
       document.querySelectorAll('[data-mode]').forEach((x) => (x.disabled = false));
     };
   });
+  // Not a rule? Ask the same assistant as the main page chat (same safety checks, same access key).
+  async function assistant(text) {
+    const h = { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' };
+    $('answer').hidden = false;
+    $('ansQ').textContent = 'You: ' + text;
+    $('ansText').textContent = 'Thinking…';
+    let r = await fetch('/assistant', {
+      method: 'POST',
+      headers: h,
+      body: JSON.stringify({
+        text,
+        request_id: 'agents-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+        history: [],
+        screen: { view: 'agents' },
+      }),
+    });
+    let d = await r.json().catch(() => ({}));
+    if (r.ok && d.task_id) {
+      const until = Date.now() + 4 * 60 * 1000;
+      for (;;) {
+        if (Date.now() > until) throw new Error('No answer yet. Nothing was repeated.');
+        await new Promise((res) => setTimeout(res, 700));
+        const c = await fetch('/assistant-status/' + d.task_id, { headers: h });
+        const t = await c.json().catch(() => ({}));
+        if (!c.ok) throw new Error(t.error || 'The request is no longer tracked.');
+        if (t.done) {
+          if (t.error) throw new Error(t.error);
+          d = t.result || {};
+          break;
+        }
+      }
+    } else if (r.status === 503) {
+      throw new Error('The AI is not connected. Set DEEPSEEK_API_KEY on Render.');
+    } else if (!r.ok) throw new Error(d.error || 'The assistant could not answer.');
+    $('ansText').textContent = d.reply || 'Done.';
+    $('answer').scrollIntoView({ block: 'nearest' });
+  }
   $('ask').onsubmit = async (e) => {
     e.preventDefault();
     const text = $('inp').value.trim();
-    if (text && (await act({ action: 'instruct', agent: pick, text }))) $('inp').value = '';
+    if (!text) return;
+    try {
+      const d = await call('POST', { action: 'instruct', agent: pick, text });
+      data = d;
+      render();
+      say(d.reply);
+      $('inp').value = '';
+      return;
+    } catch (err) {
+      if (!/could not turn this into a rule/.test(err.message)) return say(err.message, true);
+    }
+    $('inp').value = '';
+    say('');
+    try {
+      await assistant(text);
+    } catch (err) {
+      $('ansText').textContent = err.message;
+    }
   };
   $('fix').addEventListener('close', () => {
     if ($('fix').returnValue === 'ok' && fixing)

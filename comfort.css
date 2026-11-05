@@ -3634,3 +3634,29 @@ html body #donorsPage .donor-volunteers {
     margin: 0;
   }
 }
+
+/* Phone: a saved clock stays on the same row as its group button (same spot as the ⏱ icon),
+   instead of dropping onto an empty row of its own. Alignment only. */
+@media (max-width: 720px) {
+  html body:not(#_):not(#__):not(#___):not(#____):not(#_____) .group-send .send-row:has(.gb-timer.is-pending) .row-tools {
+    position: absolute !important;
+    flex: none !important;
+    padding-bottom: 0 !important;
+  }
+  html body:not(#_):not(#__):not(#___):not(#____):not(#_____) .group-send .send-row:has(.gb-timer.is-pending) #btnGivelife .gb-name {
+    padding-right: 0 !important;
+    margin-right: 80px !important;
+  }
+  html body:not(#_):not(#__):not(#___):not(#____):not(#_____) .group-send .send-row:has(.gb-timer.is-pending) #btnFree .gb-name {
+    padding-right: 0 !important;
+    margin-right: 118px !important;
+  }
+}
+
+/* Phone: keep ⏱ and ▾ centred on their button, not on the whole row, when the freelance list is open. */
+@media (max-width: 720px) {
+  html body:not(#_):not(#__):not(#___):not(#____):not(#_____) .group-send .send-row[data-tools] .row-tools {
+    top: 23px !important;
+    transform: translateY(-50%) !important;
+  }
+}

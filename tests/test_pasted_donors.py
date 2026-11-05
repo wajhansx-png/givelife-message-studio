@@ -205,7 +205,8 @@ class PastedDonorTests(unittest.TestCase):
         self.assertEqual([b["name"] for b in self.sent], ["Michael", "Anne"])
         self.assertEqual([b["message"] for b in self.sent], ["Saved wording 0", "Saved wording 1"])
         self.assertTrue(self.sent[0]["first_in_batch"])
-        self.assertEqual(self.times, [1000.0, 1240.0])
+        self.assertEqual(self.times[0], 1000.0)
+        self.assertTrue(1240.0 <= self.times[1] <= 1420.0, self.times)
         saved = self.book.resolve(existing["id"])
         self.assertEqual(
             (saved["name"], saved["amount"], saved["notes"]), ("Saved label", 2000, "Keep")
@@ -333,7 +334,8 @@ class PastedNameIntegrationTests(unittest.TestCase):
                 .date()
                 .isoformat()
             )
-            app.STORE.put("dm_daily", {"day": day, "count": 50, "last": 0})
+            # The old 50 cap is gone; the DM Guard ceiling (40) applies to every batch, so 39 still sends.
+            app.STORE.put("dm_daily", {"day": day, "count": app.DM_DAILY_CAP - 1, "last": 0})
             preview = registry.pasted.preview("Michael,03001234567")
             with patch("donor_delivery.threading.Thread.start"):
                 registry.pasted.start(preview["token"], request_id="no-daily-cap-pasted-test")

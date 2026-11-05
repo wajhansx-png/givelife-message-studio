@@ -6,6 +6,10 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store
 import manual_commands
 import dm_composer, reply_setup
+import ai_call
+
+DM_DAILY_CAP = 40  # ceiling, not a target
+DM_MIN_GAP = 180  # seconds between automatic/batch DMs
 import dm_templates
 from state_shapes import mapping, memories, history as valid_history
 import chat_policy
@@ -195,7 +199,7 @@ def send_custom(body):
     if not STORE:
         raise ValueError("Persistent send records are unavailable. Try again later.")
     manual = body.get("kind") in ("donor_manual", "team_msg", "owner_text")
-    explicit_batch = body.get("kind") in ("donor_batch", "volunteer_batch")
+    explicit_batch = body.get("kind") in ("donor_batch", "volunteer_batch", "volunteer_flow")
     if not SEND_LOCK.acquire(blocking=manual or explicit_batch):
         raise ValueError("Another send is running. Please wait for it to finish.")
     try:
@@ -254,14 +258,19 @@ def send_custom(body):
             )
             if ledger.get("day") != day:
                 ledger = {"day": day, "count": 0, "last": ledger.get("last", 0)}
-            if ledger["count"] >= 50 and not manual and not explicit_batch:
-                raise ValueError("The 50-DM daily limit has been reached.")
+            # DM Guard: one ceiling for every batch and Auto path; only a one-person owner send is not blocked (but counts).
+            if not manual and ledger["count"] >= DM_DAILY_CAP:
+                raise ValueError(
+                    f"The {DM_DAILY_CAP}-DM daily limit has been reached. More tomorrow."
+                )
+            if not manual and ledger.get("optouts", 0) >= 2:
+                raise ValueError("DMs paused for today: 2 people asked not to be messaged.")
             if (
                 not manual
                 and not (explicit_batch and body.get("first_in_batch") is True)
-                and now - ledger.get("last", 0) < 60
+                and now - ledger.get("last", 0) < DM_MIN_GAP
             ):
-                raise ValueError("Wait at least 60 seconds between DMs.")
+                raise ValueError(f"Wait at least {DM_MIN_GAP // 60} minutes between DMs.")
             ledger.update(count=ledger["count"] + 1, last=now)
             STORE.put("dm_daily", ledger)
             STORE.put("dm_recipient_" + digest, {"state": "uncertain", "time": now})
@@ -2335,7 +2344,7 @@ def dm_campaign(people, gap, image, vary, message, start_after, rest_every, rest
             note_dm(phone)
             c["log"].append(f"✓ {(name + ' ') if name else ''}{gender} …{phone[-4:]}")
             if i < len(people) - 1:
-                wait = _random.uniform(gap, gap * 1.25)
+                wait = _random.uniform(max(gap, 180), max(gap, 420))
                 if rest_every and c["sent"] % rest_every == 0:
                     wait = max(wait, rest_minutes * 60)
                     c["log"].append(f"Resting {rest_minutes} min after {c['sent']} messages")
@@ -2472,6 +2481,10 @@ def recent_dms():
 def optout(phone):
     d = hashlib.sha256((phone + "@s.whatsapp.net").encode()).hexdigest()
     if STORE:
+        if not STORE.get("optout_" + d):
+            ledger = STORE.get("dm_daily", {}) or {}
+            ledger["optouts"] = ledger.get("optouts", 0) + 1
+            STORE.put("dm_daily", ledger)
         STORE.put("optout_" + d, True)
     BLOCKED.add(d)
 
@@ -2877,6 +2890,19 @@ ENGINE = autopilot.Engine(
         "recent_dms": recent_dms,
         "note_dm": note_dm,
         "optout": optout,
+        "group_link": lambda: (
+            os.environ.get("FOUNDATION_GROUP_LINK", "")
+            or str((STORE.get("foundation_group_link") if STORE else "") or "")
+        ),
+        "ai_chat": ai_call.chat,
+        "send_custom": send_custom,
+        "poster_caption": lambda: get_message("group")["text"],
+        "volunteers": lambda: [
+            r
+            for r in donors().volunteers.book._load()["records"]
+            if r.get("phone") and not r.get("deleted")
+        ],
+        "case_id": lambda: active_case_name() or "case",
         "send_scheduled": send_scheduled,
         "donor_answer": lambda q: assistant.donor_reply(q, read_left()),
         "already_dmed": already_dmed,
@@ -2902,6 +2928,7 @@ ENGINE = autopilot.Engine(
 __import__("dm_variants").OWNER_STYLE = lambda: focus_bank().owner_style(
     get_message("group")["text"]
 )
+__import__("dm_variants").CORRECTIONS = lambda: [m.get("rule", "") for m in mem_get()][-15:]
 __import__("dm_variants").PROVEN = lambda: (
     (learning_mod.proven_texts(ENGINE.L, 1) + donors().book.proven_dm_texts(1))
     or learning_mod.proven_texts(ENGINE.L)
@@ -6096,6 +6123,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply({"error": "Message is empty"}, status=400)
             try:
                 options = workflow().options("group", caption)
+                from focus_bank import clean_items, wording_key
+
+                row = focus_bank().get("group")
+                ready = len(
+                    {
+                        wording_key(t)
+                        for t in clean_items(
+                            row.get("source", ""), row.get("items", []), row.get("manual")
+                        )
+                    }
+                )
+                if row.get("source", "").strip() and ready < 2:
+                    raise ValueError(
+                        f"Versions not ready yet ({ready} of 10). TEST would repeat the same wording. Nothing sent."
+                    )
                 with SEND_LOCK:
                     try:
                         caption = focus_bank().reserve_groups(caption, 1)[0]

@@ -80,7 +80,10 @@ def _editable_lines(text):
 
 def _similarity(a, b):
     def normalized(text):
-        return " ".join(re.findall(r"[a-z]+", "\n".join(_editable_lines(text)).lower()))
+        # Urdu (Arabic-script) words count too, so an Urdu hook is judged like an English one.
+        return " ".join(
+            re.findall(r"[a-z]+|[\u0600-\u06FF]+", "\n".join(_editable_lines(text)).lower())
+        )
 
     return difflib.SequenceMatcher(None, normalized(a), normalized(b), autojunk=False).ratio()
 
@@ -227,6 +230,7 @@ def _json_list(raw):
 PROVEN = lambda: []
 # Set by the server: the owner's own recent saved messages (FocusBank.owner_style).
 OWNER_STYLE = lambda: []
+CORRECTIONS = lambda: []  # the owner's saved wording corrections; set by the server
 
 
 def _prompt(source, count, avoid):
@@ -266,6 +270,12 @@ def _prompt(source, count, avoid):
             " deadlines; every fact must come from the SOURCE:\n"
             + "\n---\n".join(t[:900] for t in own)
         )
+    try:
+        import quality
+
+        avoid_text += quality.corrections_block(CORRECTIONS() or [])
+    except Exception:
+        pass
     low, high = length_range(source)
     size = len(source)
     return f"""Rewrite the source message below into exactly {count} DISTINCT, fully reworded versions.

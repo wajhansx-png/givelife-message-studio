@@ -6,7 +6,7 @@ Everything it needs from the outside world arrives through `h`, a dict of helper
 """
 
 import json, re, time, datetime, threading, hashlib, os, urllib.request
-import rules, learning, team_rules, case_plan, message_rules
+import rules, learning, team_rules, case_plan, message_rules, reply_intent, volunteer_flow
 from state_shapes import mapping, records
 
 PKT = datetime.timezone(datetime.timedelta(hours=5))
@@ -90,7 +90,7 @@ class Engine:
             "last_dm_batch": 0,
             "dm_daily": int(os.environ.get("AUTO_DM_DAILY", "30")),
             "dm_enabled": True,
-            "dm_new": True,
+            "dm_new": False,  # cold contacts off by default: consent first
             "last_scan": 0,
             "last_dm_scan": 0,
             "last_chat_scan": 0,
@@ -316,6 +316,7 @@ class Engine:
             ("last_dm_scan", 120, self.scan_dm_replies),
             ("last_chat_scan", 120, self.scan_saved_chats),
             ("last_reply_scan", 60, self.scan_reply_setup),
+            ("last_volunteer_scan", 180, self.volunteer_step),
         ):
             if now() - self.s.get(key, 0) >= every:
                 self.s[key] = now()
@@ -325,6 +326,7 @@ class Engine:
                         "last_dm_scan": "Reading donor replies",
                         "last_chat_scan": "Checking saved chats",
                         "last_reply_scan": "Checking new chats",
+                        "last_volunteer_scan": "Checking volunteer replies",
                     }[key],
                     "started": now(),
                 }
@@ -471,16 +473,22 @@ class Engine:
         if new == "done":
             plan["state"] = "done"
             self.h["plan_put"](plan)
-            return self._plan_alert("plan_done", "The case plan is done: nothing is left to collect.")
+            return self._plan_alert(
+                "plan_done", "The case plan is done: nothing is left to collect."
+            )
         if new == "stopped":
             case_plan.stop(plan, "The active case changed, so this plan no longer matches it.")
             self.h["plan_put"](plan)
             return self._plan_alert("plan_stop", plan["reason"] + " Nothing more will be sent.")
-        bad = self.h["plan_apply"](case_plan.message_for(plan, "slow" if new == "slow" else "normal", left), plan)
+        bad = self.h["plan_apply"](
+            case_plan.message_for(plan, "slow" if new == "slow" else "normal", left), plan
+        )
         if bad:
             case_plan.stop(plan, bad)
             self.h["plan_put"](plan)
-            return self._plan_alert("plan_check", "Stopped: the case message failed its check. " + bad[:150])
+            return self._plan_alert(
+                "plan_check", "Stopped: the case message failed its check. " + bad[:150]
+            )
         plan["state"] = new
         self.h["plan_put"](plan)
         self.log(f"Case plan: {new} message is now the saved Group message.")
@@ -496,7 +504,9 @@ class Engine:
         if not plan or plan.get("state") not in ("normal", "slow"):
             return True
         text = self.h["caption_now"](caption) if self.h.get("caption_now") else caption
-        bad = message_rules.problems(text, left=self.h["read_left"](), facts=plan["facts"], exact=False)
+        bad = message_rules.problems(
+            text, left=self.h["read_left"](), facts=plan["facts"], exact=False
+        )
         if not bad:
             return True
         case_plan.stop(plan, " ".join(bad))
@@ -579,7 +589,9 @@ class Engine:
         if not self._plan_gate(caption):
             return
         if self.h["start_job"](keys, caption):
-            learning.record_post(self.L, variant[0], text=caption if isinstance(caption, str) else None)
+            learning.record_post(
+                self.L, variant[0], text=caption if isinstance(caption, str) else None
+            )
             self.s["pending_post"] = now()
             self.s["posts_today"] += len(keys)
             by = self.s.setdefault("posts_by", {})
@@ -717,9 +729,10 @@ class Engine:
     @staticmethod
     def _group_donation(key, text, m):
         """Freelance groups are busy with other talk and pictures: there a donation needs a clear money word."""
+        label, _ = reply_intent.classify(text, m.get("media_type", ""))
         if key == "main":
-            return bool(DONE.search(text)) or m.get("media_type") == "image"
-        return bool(DONE.search(text)) and bool(MONEY_HINT.search(text))
+            return label in ("donated", "both")
+        return label in ("donated", "both") and bool(MONEY_HINT.search(text))
 
     def _donor_signal(self, phone, name, what, mid):
         """Someone says they donated: remember them, thank them privately, ask them to share, tell the owner."""
@@ -740,6 +753,16 @@ class Engine:
             return
         self.s["thanked"][phone] = day
         self._reply(phone + "@s.whatsapp.net", self.h["thank_text"]())
+
+    def volunteer_step(self):
+        """Volunteer Guide: read replies and take one step each; when slow, ask one more volunteer."""
+        if self.h.get("on_hold", lambda: False)() or "send_custom" not in self.h:
+            return
+        volunteer_flow.tick(self)
+        if self.level()[0] in ("L3", "L4") and self.h["read_left"]() > 0 and not self.quiet_now():
+            volunteer_flow.start_round(
+                self, self.h.get("volunteers", lambda: [])(), self.h.get("case_id", lambda: "")()
+            )
 
     def scan_dm_replies(self):
         for phone, sent_at in self.h["recent_dms"]():
@@ -774,20 +797,47 @@ class Engine:
             if not mid or mid in seen or m.get("is_from_me") or _stamp(m) < sent_at:
                 continue
             seen.add(mid)
-            self._dm_message(phone, jid, m, str(m.get("content") or ""), name)
+            self._dm_message(phone, jid, m, str(m.get("content") or ""), name, _last_ours(msgs, m))
         self.s["seen"] = list(seen)[-1000:]
 
-    def _dm_message(self, phone, jid, m, text, name):
+    def share_thanks(self, phone, jid):
+        """Thank someone who shared; the foundation group link goes to each person only once ever."""
+        sent = self.s.setdefault("group_link_sent", [])
+        link = self.h.get("group_link", lambda: "")()
+        text = "Jazakallah, please be a part of our foundation group.\n\nJust your presence and sharing are enough."
+        if phone in sent:
+            text = "Jazakallah brother, your share means a lot. 🤲"
+        elif link:
+            text += "\n\n" + link
+            sent.append(phone)
+        self._reply(jid, text)
+
+    def _dm_message(self, phone, jid, m, text, name, last_ours=""):
         tail, mid = phone[-4:], m.get("id")
         first = name.split(" ")[0] if name else ""
-        if OPT_OUT.search(text) and not DONE.search(text):
+        label, why = reply_intent.classify(text, m.get("media_type", ""), last_ours)
+        if label == "other" and text.strip() and self.h.get("ai_chat"):
+            label, why = reply_intent.ai_classify(
+                self.h["ai_chat"], text, [("us", last_ours), ("them", text)]
+            )
+        if label == "ack":
+            return
+        if label == "shared":
+            self.share_thanks(phone, jid)
+            self.log(f"…{tail} shared the case ({why}). Thanked them.")
+        elif label == "opt_out":
             self.h["optout"](phone)
             self._reply(jid, "Sorry for the disturbance. We will not message you again. 🤲")
             self.log(f"…{tail} asked not to be messaged. Removed for good.")
-        elif DONE.search(text) or m.get("media_type") == "image":
+        elif label in ("donated", "both"):
             self._donor_signal(
-                phone, first, f'…{tail} replied "{text[:60] or "a picture"}" to our DM', mid
+                phone,
+                first,
+                f'…{tail} replied "{text[:60] or "a picture"}" to our DM (says donated, not verified)',
+                mid,
             )
+            if label == "both":
+                self._reply(jid, "And JazakAllah for sharing it too. 🤲")
         elif PAPERS.search(text):
             sent = self.h["send_papers"](phone)
             if not sent:
@@ -802,13 +852,17 @@ class Engine:
                 ),
                 3600,
             )
-        elif LATER.search(text):
+        elif label in ("later", "not_done"):
             if learning.add_followup(self.L, phone, first, learning.tomorrow_at(11)):
                 self._reply(jid, "JazakAllah, take your time. 🤲")
                 self.log(f"…{tail} said later. I will remind them gently tomorrow.")
         else:
             replied = self.s.setdefault("replied", {})
-            if now() - replied.get(phone, 0) > 3600:
+            if label == "other":
+                self.notify(
+                    "dmq-" + str(mid), f'…{tail} replied: "{text[:120]}". Please answer them.', 0
+                )
+            elif now() - replied.get(phone, 0) > 3600:
                 replied[phone] = now()
                 answer = self.h["donor_answer"](text)
                 if answer:
@@ -851,9 +905,16 @@ class Engine:
                 ):
                     continue
                 done.append(mid)  # decided once, whatever happens next: never answered twice
-                if OPT_OUT.search(text) and not DONE.search(text):
+                label, _ = reply_intent.classify(text, m.get("media_type", ""), _last_ours(msgs, m))
+                if label == "opt_out":
+                    self.h.get("optout", lambda p: None)(phone)
                     continue
-                if not (DONE.search(text) or m.get("media_type") == "image"):
+                if label == "shared":
+                    if self.s.setdefault("shared_thanked", {}).get(phone) != self.s["day"]:
+                        self.s["shared_thanked"][phone] = self.s["day"]
+                        self.share_thanks(phone, jid)
+                    continue
+                if label not in ("donated", "both"):
                     continue
                 if now() - by_phone.get(phone, 0) < 6 * 3600:
                     continue
@@ -1249,6 +1310,13 @@ class Engine:
             "dms_today": self.s["dms_today"],
             "dm_daily": self.s["dm_daily"],
             "dm_enabled": self.s["dm_enabled"],
-            "dm_new": self.s.get("dm_new", True),
+            "dm_new": self.s.get("dm_new", False),
             "possible_donations_today": self.s["done_today"],
         }
+
+
+def _last_ours(msgs, m):
+    """Our latest message before this reply, so "done" after a share request means shared."""
+    t = _stamp(m)
+    ours = [x for x in msgs or [] if x.get("is_from_me") and _stamp(x) <= t]
+    return str((max(ours, key=_stamp) if ours else {}).get("content") or "")

@@ -217,7 +217,7 @@ class DeliveryTests(RegistryTests):
         self.assertGreaterEqual(times[2] - times[1], 1200)
         self.assertLess(times[2] - times[1], 1300)
         self.assertGreaterEqual(times[3] - times[2], 120)
-        self.assertLess(times[3] - times[2], 200)
+        self.assertLessEqual(times[3] - times[2], 421)  # DM Guard: random 3-7 min
         self.assertGreaterEqual(times[4] - times[3], 1200)
         self.assertEqual([b["message"] for b, _ in self.sent], ["w0", "w1", "w0", "w1", "w0"])
         self.assertEqual(self.jobs.status()["state"], "Completed")
@@ -427,7 +427,7 @@ class DeliveryTests(RegistryTests):
         self.assertTrue(1200 <= t[20] - t[19] < 1300, t[20] - t[19])
         self.assertTrue(1800 <= t[40] - t[39] < 1900, t[40] - t[39])
         self.assertTrue(
-            all(120 <= t[i + 1] - t[i] < 130 for i in list(range(19)) + list(range(21, 39)))
+            all(180 <= t[i + 1] - t[i] <= 421 for i in list(range(19)) + list(range(21, 39)))
         )
         self.assertEqual(len({b["phone"] for b, _ in self.sent}), 45, "nobody twice")
         self.assertEqual(self.jobs.status()["state"], "Completed")
@@ -443,19 +443,16 @@ class DeliveryTests(RegistryTests):
 
     def test_random_gap_varies_inside_the_chosen_range_and_never_below_60s(self):
         self._many(6)
-        steps = iter([-5, 12, 4, -300, 9])
-        with patch("donor_delivery.random.uniform", side_effect=lambda lo, hi: next(steps)):
-            r = self.jobs.start("important", 180, jitter={"min": -5, "max": 15}, run=False)
-            self.run_job(r)
+        r = self.jobs.start("important", 180, jitter={"min": -300, "max": 15}, run=False)
+        self.run_job(r)
         gaps = [round(self.sent[i + 1][1] - self.sent[i][1]) for i in range(5)]
-        self.assertEqual(gaps, [175, 192, 184, 60, 189])
+        self.assertTrue(all(180 <= g <= 436 for g in gaps), gaps)  # DM Guard floor is 3 min
 
     def test_random_gap_off_keeps_the_exact_gap(self):
         self._many(3)
         self.run_job(self.jobs.start("important", 180, run=False))
-        self.assertEqual(
-            [round(self.sent[i + 1][1] - self.sent[i][1]) for i in range(2)], [180, 180]
-        )
+        gaps = [round(self.sent[i + 1][1] - self.sent[i][1]) for i in range(2)]
+        self.assertTrue(all(180 <= g <= 420 for g in gaps), gaps)
 
     def test_bad_random_gap_is_refused(self):
         self._many(2)
@@ -831,8 +828,8 @@ class IntegrationTests(unittest.TestCase):
             .date()
             .isoformat()
         )
-        app.STORE.put("dm_daily", {"day": day, "count": 50, "last": 0})
-        with self.assertRaisesRegex(ValueError, "50-DM"):
+        app.STORE.put("dm_daily", {"day": day, "count": app.DM_DAILY_CAP, "last": 0})
+        with self.assertRaisesRegex(ValueError, "40-DM"):
             app.send_custom(
                 {
                     "target": "phone",

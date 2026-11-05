@@ -107,6 +107,7 @@ class AutoScanCadence(unittest.TestCase):
             "last_scan": 0,
             "last_dm_scan": 0,
             "last_chat_scan": 0,
+            "last_volunteer_scan": 0,
         }
         engine.h = {"on_hold": lambda: False, "read_left": lambda: 25000, "wa_ok": lambda: True}
         engine.activity = None
@@ -127,6 +128,7 @@ class AutoScanCadence(unittest.TestCase):
             "dm_if_due",
             "_owner_todo",
             "daily_report",
+            "volunteer_step",
         ):
             setattr(engine, name, Mock())
         with patch.object(autopilot, "now", return_value=timestamp):

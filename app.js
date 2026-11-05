@@ -2291,7 +2291,7 @@ async function loadSet() {
   try {
     const s = (await (await fetch('/autopilot')).json()).summary || {};
     $('swDm').checked = !!s.dm_enabled;
-    $('swNew').checked = s.dm_new !== false;
+    $('swNew').checked = s.dm_new === true;
     $('swNew').disabled = !s.dm_enabled;
     $('set').dataset.daily = s.dm_daily || 30;
   } catch (e) {}

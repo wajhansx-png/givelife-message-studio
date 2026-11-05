@@ -25,6 +25,11 @@ env.update(
     MCP_ENABLED="false",
     WHATSAPP_AUTO_DOWNLOAD_MEDIA="false",
     TZ="Asia/Karachi",
+    # Render free plan has 512 MB for everything. Go keeps freed memory until its heap doubles,
+    # so cap the WhatsApp gateway; glibc gives each Python thread its own arena, so limit those.
+    GOMEMLIMIT=os.environ.get("GOMEMLIMIT", "220MiB"),
+    GOGC=os.environ.get("GOGC", "50"),
+    MALLOC_ARENA_MAX=os.environ.get("MALLOC_ARENA_MAX", "2"),
 )
 parsed = urllib.parse.urlsplit(env["DB_URI"])
 query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)

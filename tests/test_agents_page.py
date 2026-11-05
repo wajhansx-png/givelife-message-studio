@@ -71,6 +71,12 @@ class AgentsPageTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             app.agents_mutate({"action": "instruct", "text": "never post in fiverr at night"})
 
+    def test_free_word_and_note_label(self):
+        out = app.agents_mutate({"action": "instruct", "text": "post in free every 45 min"})
+        self.assertIn({"gap"}, [{r["kind"]} for r in out["rules"]])
+        out = app.agents_mutate({"action": "instruct", "text": "always use a polite tone"})
+        self.assertIn("note", [r["kind"] for r in out["rules"]])
+
     def test_correction_saved_and_optionally_remembered(self):
         before = len(app.KNOWLEDGE.data["feedback"])
         with patch.object(app, "mem_add", return_value="Saved for the future: x") as mem:

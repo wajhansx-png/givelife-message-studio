@@ -4971,7 +4971,8 @@ def agents_mutate(body):
         import rules
 
         text = str(body.get("text", "")).strip()[:300]
-        rule, description = rules.parse(text)
+        # The rule list names the freelance groups "free", so accept that word here too.
+        rule, description = rules.parse(re.sub(r"(?i)\bfree\b", "freelance", text))
         if not rule:
             raise ValueError(
                 'Not saved: I could not turn this into a rule. Try "never post in fiverr at night" or "post in main every 20 min".'

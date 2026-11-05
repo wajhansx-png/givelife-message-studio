@@ -93,6 +93,8 @@
     $('ruleList').replaceChildren(
       ...own.map((r) => {
         const li = el('li', '', r.text);
+        if (r.kind === 'note')
+          li.append(el('small', 'muted', ' · AI note only, not enforced by the timers'));
         const x = el('button', 'x', '✕');
         x.setAttribute('aria-label', 'Remove rule: ' + r.text);
         x.onclick = () => act({ action: 'delete_rule', id: r.id });
@@ -120,8 +122,7 @@
             })
         : [el('div', 'empty', 'No activity yet this session.')]),
     );
-    $('inp').placeholder =
-      'Give ' + a.name + ' a standing rule, e.g. never post in fiverr at night';
+    $('inp').placeholder = 'Add a rule (not a chat), e.g. never post in fiverr at night';
     $('live').textContent = 'Updated ' + clock(data.updated);
   }
   async function load() {

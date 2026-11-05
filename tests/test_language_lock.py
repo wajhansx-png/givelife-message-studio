@@ -12,6 +12,11 @@ class LanguageLock(unittest.TestCase):
     def test_urdu_becomes_english(self):
         self.assertTrue(dm_variants.language_changed("*بچہ چلا گیا* 💔\nDetails", "*Child passed* 💔\nDetails"))
 
+    def test_english_with_pbuh_sign(self):
+        src = "Today is the last day\nThe Prophet \ufdfa said: charity"
+        self.assertTrue(dm_variants.language_changed(src, "آج آخری دن ہے\nنبی کریم \ufdfa نے فرمایا"))
+        self.assertFalse(dm_variants.language_changed(src, "This is the final day\nThe Prophet \ufdfa said: give"))
+
     def test_same_language_ok(self):
         self.assertFalse(dm_variants.language_changed("Hello friends\nPlease help", "Hi all\nKindly help"))
 

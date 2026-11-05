@@ -107,9 +107,9 @@ def _script(line):
 
 def language_changed(source, text):
     """True when a version adds Urdu to an English message or changes any line's script."""
-    if not _URDU.search(source) and _URDU.search(text):
-        return True
     a, b = source.split("\n"), text.split("\n")
+    if "urdu" not in map(_script, a) and "urdu" in map(_script, b):
+        return True
     return len(a) == len(b) and any(
         _script(x) and _script(y) and _script(x) != _script(y) for x, y in zip(a, b)
     )

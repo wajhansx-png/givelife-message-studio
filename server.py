@@ -1,5 +1,5 @@
 import sys
-import caption_facts
+import caption_facts, case_plan, message_rules, team_rules
 import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, datetime, math, re, secrets, os, base64, hashlib
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -2739,6 +2739,102 @@ def ai_test():
     return {"ok": True, "ms": round((time.time() - t0) * 1000), "reply": text[:40]}
 
 
+# ---- case plan (verified facts -> PDF messages -> automatic Normal/Slow) ----
+def plan_get():
+    plan = STORE.get("case_plan") if STORE else None
+    return plan if isinstance(plan, dict) and plan.get("state") in case_plan.STATES else None
+
+
+def plan_put(plan):
+    if not STORE:
+        raise ValueError("Persistent storage is unavailable. Nothing was changed.")
+    STORE.put("case_plan", plan)
+
+
+def plan_active():
+    plan = plan_get()
+    return bool(plan) and plan["state"] in case_plan.ACTIVE
+
+
+def plan_apply(text, plan=None):
+    """Make `text` the saved Group message, only if it passes every PDF check. '' = done, else the reason."""
+    plan = plan or plan_get()
+    bad = message_rules.problems(text, left=read_left(), facts=plan["facts"], exact=False)
+    if bad:
+        return " ".join(bad)
+    if get_message("group")["text"] != text:
+        focus_bank().save("group", text)  # 10 versions regenerate under the same PDF checks
+    return ""
+
+
+def alert_jids():
+    """Extra people to alert about the case plan: only numbers the owner put in AUTO_ALERT_PHONES."""
+    out = []
+    for raw in os.environ.get("AUTO_ALERT_PHONES", "").split(","):
+        phone = norm_phone(raw.strip()) if raw.strip() else ""
+        if phone and phone != norm_phone(OWNER_PHONE):
+            out.append(phone + "@s.whatsapp.net")
+    return out
+
+
+def plan_view():
+    plan, left = plan_get(), read_left()
+    checks = {}
+    if plan and plan["state"] != "done":
+        for mode in ("normal", "slow"):
+            text = case_plan.message_for(plan, mode, left)
+            checks[mode] = {
+                "text": text,
+                "problems": message_rules.problems(text, left=left, facts=plan["facts"], exact=False),
+            }
+    return {
+        "plan": plan,
+        "checks": checks,
+        "left": left,
+        "case": active_case_name(),
+        "rounding": (
+            f"Rs. {left:,} is not a multiple of Rs. 2,000, so line 3 rounds up "
+            f"({-(-left // 2000)} people × Rs. 2,000 or {-(-left // 1000)} × Rs. 1,000), as the app always does."
+            if left > 0 and left % team_rules.BIG_GIFT
+            else ""
+        ),
+        "in_work_hours": team_rules.in_work_hours(),
+        "work_hours": team_rules.WORK_HOURS_TEXT,
+        "auto_on": bool(auto_on()),
+        "team_alerts": len(alert_jids()),
+        "slow_after": team_rules.SLOW_AFTER_MINUTES,
+        "minutes_since_money": int(ENGINE.level()[3]),
+    }
+
+
+def plan_mutate(body):
+    action = str(body.get("action", ""))
+    with LOCK:
+        plan, left = plan_get(), read_left()
+        if action == "create":
+            if plan and plan["state"] in case_plan.ACTIVE:
+                raise ValueError("Stop the running case plan before starting a new one.")
+            plan = case_plan.new_case(body.get("facts"), left, active_case_name())
+        elif action == "approve":
+            plan = case_plan.approve(plan, left)
+        elif action == "stop":
+            if not plan or plan["state"] not in case_plan.ACTIVE:
+                raise ValueError("No running case plan to stop.")
+            plan = case_plan.stop(plan, "Stopped by the owner.")
+        elif action == "resume":
+            plan = case_plan.resume(plan)
+        elif action == "clear":
+            if plan and plan["state"] in case_plan.ACTIVE:
+                raise ValueError("Stop the case plan before clearing it.")
+            plan = {"state": "cleared"}
+        else:
+            raise ValueError("Unknown action.")
+        plan_put(plan)
+    if action in ("approve", "resume"):
+        ENGINE.plan_tick()  # applies the right message now; never sends anything
+    return plan_view()
+
+
 ENGINE = autopilot.Engine(
     {
         "DATA": DATA,
@@ -2747,6 +2843,13 @@ ENGINE = autopilot.Engine(
         "log": auto_log,
         "send_text": send_text,
         "owner_jid": lambda: OWNER_PHONE + "@s.whatsapp.net",
+        "plan_get": plan_get,
+        "plan_put": plan_put,
+        "plan_active": plan_active,
+        "plan_apply": plan_apply,
+        "alert_jids": alert_jids,
+        "case_name": lambda: active_case_name(),
+        "caption_now": lambda text: caption_facts.current(sys.modules[__name__], text),
         "enabled": auto_on,
         "read_left": read_left,
         "wa_ok": wa_ok,
@@ -4687,9 +4790,16 @@ class Handler(BaseHTTPRequestHandler):
         icon = SITE_ICONS.get(self.path.split("?")[0])
         if icon:
             return self.reply((ROOT / "icons" / icon[0]).read_bytes(), icon[1])
-        if self.path.split("?")[0] in ("/group-finder", "/group-finder.js", "/group-finder.css"):
+        if self.path.split("?")[0] in (
+            "/group-finder",
+            "/group-finder.js",
+            "/group-finder.css",
+            "/case-plan",
+            "/case-plan.js",
+            "/case-plan.css",
+        ):
             name = self.path.split("?")[0][1:]
-            name = "group-finder.html" if name == "group-finder" else name
+            name = name + ".html" if name in ("group-finder", "case-plan") else name
             return self.reply(
                 (ROOT / name).read_bytes(),
                 "text/html"
@@ -4727,6 +4837,8 @@ class Handler(BaseHTTPRequestHandler):
             )
         if not self.authorized():
             return self.reply({"error": "Access key required"}, status=401)
+        if self.path.split("?")[0] == "/api/case-plan":
+            return self.reply(plan_view())
         if self.path.split("?")[0] == "/api/group-finder":
             try:
                 return self.reply(group_research().snapshot(self.path))
@@ -4984,6 +5096,7 @@ class Handler(BaseHTTPRequestHandler):
             "/donor-send",
             "/donor-paste",
             "/api/group-finder",
+            "/api/case-plan",
         ):
             with LOCK:
                 OWNER_REVISION += 1
@@ -5001,6 +5114,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply({"error": "Invalid request"}, status=400)
         if not isinstance(body, dict):
             return self.reply({"error": "Request must be a JSON object."}, status=400)
+        if self.path == "/api/case-plan":
+            try:
+                return self.reply(plan_mutate(body))
+            except ValueError as e:
+                return self.reply({"error": str(e)[:300]}, status=400)
         if self.path == "/api/group-finder":
             from group_finder import Conflict
             from group_research import ResearchError

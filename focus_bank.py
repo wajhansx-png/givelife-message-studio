@@ -1,7 +1,7 @@
 """Owner-source wording banks. Generated text never replaces the saved original."""
 
 import copy, hashlib, threading, time, uuid, re
-import dm_variants
+import dm_variants, message_rules
 
 
 class FocusBank:
@@ -165,6 +165,7 @@ class FocusBank:
                 prompt = dm_variants._prompt(
                     source, min(5, 10 - len(items)), row.get("avoid", []) + items
                 )
+                prompt += message_rules.version_rules(source)
                 if last_error:
                     prompt += (
                         "\nThe previous attempt was rejected because: "
@@ -407,6 +408,10 @@ def reject_reason(source, text, existing=()):
         or wording_key(text) in {wording_key(t) for t in [source, *existing]}
     ):
         return "repeated wording"
+    if message_rules.is_pdf_message(source):
+        bad = message_rules.problems(text)
+        if bad:
+            return "PDF rule: " + bad[0]
     low, high = dm_variants.length_range(source)
     if not low <= len(text) <= high:
         return f"length {len(text)} is outside {low}-{high} characters"

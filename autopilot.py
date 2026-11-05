@@ -5,8 +5,8 @@ and keeps WhatsApp's safety floors (15 minutes per group, 45 seconds between DMs
 Everything it needs from the outside world arrives through `h`, a dict of helpers supplied by server.py.
 """
 
-import json, re, time, datetime, threading, random, hashlib, os, urllib.request
-import rules, learning
+import json, re, time, datetime, threading, hashlib, os, urllib.request
+import rules, learning, team_rules, case_plan, message_rules
 from state_shapes import mapping, records
 
 PKT = datetime.timezone(datetime.timedelta(hours=5))
@@ -140,15 +140,21 @@ class Engine:
     def log(self, text, quiet=False):
         self.h["log"](text)
 
-    def notify(self, key, text, every=3600):
-        """A WhatsApp message to the owner's own number, at most once per `every` seconds for each key."""
+    def notify(self, key, text, every=3600, team=False):
+        """A WhatsApp message to the owner's own number, at most once per `every` seconds for each key.
+
+        team=True also tells the people the owner listed in AUTO_ALERT_PHONES (nobody by default)."""
         if now() - self.s["notified"].get(key, 0) < every:
             return
         self.s["notified"][key] = now()
-        try:
-            self.h["send_text"](self.h["owner_jid"](), "GiveLife autopilot: " + text)
-        except Exception:
-            pass
+        targets = [self.h["owner_jid"]()]
+        if team:
+            targets += [j for j in self.h.get("alert_jids", lambda: [])() if j not in targets]
+        for jid in targets:
+            try:
+                self.h["send_text"](jid, "GiveLife autopilot: " + text)
+            except Exception:
+                pass
         self.log("Told owner: " + text)
 
     @property
@@ -237,6 +243,10 @@ class Engine:
     def tick(self):
         if self.h.get("on_hold", lambda: False)():
             return  # owner said hold: nothing is read, sent or alerted
+        try:
+            self.plan_tick()
+        except Exception as e:
+            self.log("Case plan check failed: " + str(e)[:150])
         if self.h["read_left"]() <= 0:
             return  # completed case: no more automatic appeals or donor outreach
         today = pkt().date().isoformat()
@@ -432,7 +442,67 @@ class Engine:
 
     def quiet_now(self):
         q = self.s.get("quiet")
-        return bool(q) and rules.in_quiet(q[0], q[1], pkt().hour)
+        if q and rules.in_quiet(q[0], q[1], pkt().hour):
+            return True
+        # Team rule: while a case plan is running, nothing goes out outside the working hours.
+        return self._plan_on() and not team_rules.in_work_hours()
+
+    # ------------------------------------------------------------- case plan
+    def _plan_on(self):
+        try:
+            return bool(self.h.get("plan_active", lambda: False)())
+        except Exception:
+            return False
+
+    def _plan_alert(self, key, text):
+        self.notify(key, text, 3600, team=True)
+
+    def plan_tick(self):
+        """Move the case plan to the state the facts call for. Never sends a group post by itself."""
+        get = self.h.get("plan_get")
+        plan = get() if get else None
+        if not plan or plan.get("state") not in case_plan.ACTIVE:
+            return
+        left = self.h["read_left"]()
+        mins = self.level()[3]
+        new = case_plan.advance(plan, left, mins, self.h["case_name"]())
+        if new == plan["state"]:
+            return
+        if new == "done":
+            plan["state"] = "done"
+            self.h["plan_put"](plan)
+            return self._plan_alert("plan_done", "The case plan is done: nothing is left to collect.")
+        if new == "stopped":
+            case_plan.stop(plan, "The active case changed, so this plan no longer matches it.")
+            self.h["plan_put"](plan)
+            return self._plan_alert("plan_stop", plan["reason"] + " Nothing more will be sent.")
+        bad = self.h["plan_apply"](case_plan.message_for(plan, "slow" if new == "slow" else "normal", left), plan)
+        if bad:
+            case_plan.stop(plan, bad)
+            self.h["plan_put"](plan)
+            return self._plan_alert("plan_check", "Stopped: the case message failed its check. " + bad[:150])
+        plan["state"] = new
+        self.h["plan_put"](plan)
+        self.log(f"Case plan: {new} message is now the saved Group message.")
+        if new == "slow":
+            self._plan_alert(
+                "plan_slow",
+                f"Donations are slow ({int(mins)} min without money). Switched to the Slow message: Urdu hook and hadith, GiveLife every 15 min, freelance every 30 min.",
+            )
+
+    def _plan_gate(self, caption):
+        """True when nothing blocks the send. A failed check stops the plan and alerts, never sends."""
+        plan = self.h["plan_get"]() if self.h.get("plan_get") else None
+        if not plan or plan.get("state") not in ("normal", "slow"):
+            return True
+        text = self.h["caption_now"](caption) if self.h.get("caption_now") else caption
+        bad = message_rules.problems(text, left=self.h["read_left"](), facts=plan["facts"], exact=False)
+        if not bad:
+            return True
+        case_plan.stop(plan, " ".join(bad))
+        self.h["plan_put"](plan)
+        self._plan_alert("plan_check", "Stopped before sending: " + plan["reason"][:170])
+        return False
 
     def run_scheduled(self):
         for r in self.rules():
@@ -506,6 +576,8 @@ class Engine:
             return
         variant = self._pick_variant()
         caption = self.h["caption_variant"](variant[1])
+        if not self._plan_gate(caption):
+            return
         if self.h["start_job"](keys, caption):
             learning.record_post(self.L, variant[0], text=caption if isinstance(caption, str) else None)
             self.s["pending_post"] = now()
@@ -894,7 +966,7 @@ class Engine:
                 self.s["dms_today"] += 1
                 self.h["note_dm"](phone)
                 learning.mark_dm(self.L, phone)
-                time.sleep(random.uniform(100, 150))
+                time.sleep(team_rules.DM_GAP_SECONDS)  # Focus Guide: 7 minutes between DMs
             if sent:
                 self.log(
                     f"Sent {sent} DM(s): "
@@ -1117,7 +1189,12 @@ class Engine:
             now_text = errors[-1]["text"]
         elif self.quiet_now():
             state = "paused"
-            now_text = f"Quiet hours until {self.s['quiet'][1]:02d}:00"
+            q = self.s.get("quiet")
+            now_text = (
+                f"Quiet hours until {q[1]:02d}:00"
+                if q and rules.in_quiet(q[0], q[1], pkt().hour)
+                else "Outside sending hours (" + team_rules.WORK_HOURS_TEXT + ")"
+            )
         else:
             now_text = "Waiting for next reply check"
         last, nxt = self.h["last_sent"](), []

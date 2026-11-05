@@ -429,9 +429,9 @@ input#donorRowPoster {
     gap: 10px;
     padding-inline: 0;
   }
-  html body .app > .foot > :is(#chatOpen, #openDonors) {
-    flex: 0 0 min(200px, calc((100% - 10px) / 2)) !important;
-    width: min(200px, calc((100% - 10px) / 2)) !important;
+  html body .app > .foot > :is(#chatOpen, #openDonors, #openCasePlan) {
+    flex: 0 0 min(200px, calc((100% - 20px) / 3)) !important;
+    width: min(200px, calc((100% - 20px) / 3)) !important;
     max-width: 200px;
     padding: 0 12px !important;
     box-sizing: border-box;
@@ -442,7 +442,7 @@ input#donorRowPoster {
     justify-content: center;
     font-size: 17px;
   }
-  html body .app > .foot > :not(#chatOpen):not(#openDonors):not(.sr-only) {
+  html body .app > .foot > :not(#chatOpen):not(#openDonors):not(#openCasePlan):not(.sr-only) {
     display: none !important;
   }
 }
@@ -3671,5 +3671,17 @@ html body:not(#_):not(#__):not(#___):not(#____):not(#_____) .group-send .send-ro
 @media (max-width: 720px) {
   html body:not(#_):not(#__):not(#___):not(#____):not(#_____) .group-send .send-row[data-tools] .row-tools {
     top: 26px !important;
+  }
+}
+
+/* Desktop: the Case plan shortcut is a normal button beside Donors, not a stretched bar. */
+@media (min-width: 900px) {
+  html body .app > .foot > #openCasePlan {
+    justify-self: end;
+    margin-right: 10px;
+    width: auto;
+    min-height: 44px;
+    padding: 0 24px;
+    font-weight: 700;
   }
 }

@@ -519,7 +519,7 @@ class DonorIntegration:
             address = label.get("dm_salutation")
             if isinstance(preferred, str) and address in ("Brother", "Sister", "Neutral"):
                 first = self.app.clean_first_name(preferred)
-                return first, address if first else "Brother"
+                return first, address if first or address == "Sister" else "Brother"
             label = label.get("name", "")
         raw_label = str(label)
         label = re.sub(r"(?i)\b(?:donors?|donir|donkr|donoe|good|best|new|perm|member|giki|gikii|volun|expert|developer|fast|ambas|main)\b", " ", raw_label)

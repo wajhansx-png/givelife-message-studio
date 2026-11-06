@@ -85,6 +85,20 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(len(self.sys.approved), 1)
         self.assertIn("Nothing was sent", msg)
 
+    def test_group_save_shortcut_cannot_bypass_review(self):
+        self.sys.ctx["draft"] = "Unreviewed draft"
+        self.sys.state["writer_preview"] = None
+        ok, reason = self.writer.ask("save this as Group")
+        self.assertFalse(ok)
+        self.assertIn("awaiting approval", reason)
+        self.assertEqual(self.sys.app.bank.saves, 0)
+
+    def test_typing_approved_saves_only_pending_group(self):
+        ok, reason = self.writer.ask("Approved")
+        self.assertTrue(ok, reason)
+        self.assertEqual(self.sys.app.bank.saves, 1)
+        self.assertIn("Nothing was sent", reason)
+
     def test_stale_id_and_double_approval_cannot_save(self):
         self.assertFalse(self.writer.approve("wrong-id")[0])
         self.assertEqual(self.sys.app.bank.saves, 0)

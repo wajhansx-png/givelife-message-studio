@@ -41,7 +41,16 @@ class GenerateTwentyTest(unittest.TestCase):
             "generation": {},
         }
         self.launched = []
-        self.bank._launch_regeneration = lambda data: self.launched.append(copy.deepcopy(data))
+        self.worker_ids = set()
+
+        def fake_launch(data):
+            generation = data.get("generation") or {}
+            job_id = generation.get("id")
+            if generation.get("state") == "Generating" and job_id not in self.worker_ids:
+                self.worker_ids.add(job_id)
+                self.launched.append(copy.deepcopy(data))
+
+        self.bank._launch_regeneration = fake_launch
 
     def test_generate_20_starts_from_saved_message_one(self):
         with patch("donor_messages.dm_composer.complete", return_value=True):

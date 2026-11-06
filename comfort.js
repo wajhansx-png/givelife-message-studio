@@ -189,3 +189,60 @@
     { passive: true },
   );
 })();
+
+/* Full screen: one button, only on a user tap (browsers refuse otherwise). The whole page goes full screen, so it stays on while
+   the app moves between screens. Where a browser cannot (e.g. iPhone Safari) the button is hidden; nothing is faked. */
+(() => {
+  const root = document.documentElement,
+    can = !!(root.requestFullscreen || root.webkitRequestFullscreen),
+    isOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement),
+    btn = document.createElement('button'),
+    note = document.createElement('div');
+  let timer = 0;
+  btn.type = 'button';
+  btn.id = 'fsToggle';
+  btn.className = 'fs-toggle';
+  btn.hidden = !can;
+  note.className = 'fs-note';
+  note.setAttribute('role', 'status');
+  const say = (t) => {
+    note.textContent = t;
+    note.classList.add('on');
+    clearTimeout(timer);
+    timer = setTimeout(() => note.classList.remove('on'), 3500);
+  };
+  const paint = () => {
+    const on = isOn();
+    btn.dataset.on = on;
+    btn.setAttribute('aria-label', on ? 'Exit full screen' : 'Enter full screen');
+    btn.title = on ? 'Exit full screen' : 'Full screen';
+    btn.innerHTML = on
+      ? '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  };
+  async function toggle() {
+    try {
+      if (isOn()) await (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else if (root.requestFullscreen) await root.requestFullscreen({ navigationUI: 'hide' });
+      else root.webkitRequestFullscreen();
+    } catch (e) {
+      say('This browser did not allow full screen.');
+    }
+    paint();
+  }
+  btn.onclick = toggle;
+  for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, paint);
+  document.addEventListener('fullscreenerror', () => say('This browser did not allow full screen.'));
+  window.NativeFS = { supported: can, isOn, toggle };
+  paint();
+  (document.querySelector('.brandbar') || document.body).append(btn);
+  document.body.append(note);
+  /* Keyboard: keep the field being typed in on screen once the keyboard has resized the view. */
+  addEventListener('focusin', (e) => {
+    const t = e.target;
+    if (t?.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable=true]'))
+      setTimeout(() => {
+        if (document.activeElement === t) t.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }, 320);
+  });
+})();

@@ -62,7 +62,7 @@ async function main() {
       new Promise((resolve, reject) => calls.push({ url, body, resolve, reject })),
   };
   vm.createContext(ctx);
-  vm.runInContext(part('applyFilters', 'paintHideRow'), ctx);
+  vm.runInContext(part('topCmp', 'applyFilters', 'paintHideRow'), ctx);
   vm.runInContext(part('selectDonorTab'), ctx);
   vm.runInContext(part('change'), ctx);
   ctx.cancelAmount = (id) => {

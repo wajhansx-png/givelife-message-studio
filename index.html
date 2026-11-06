@@ -23,14 +23,14 @@
       }
     </script>
     <script>
-      document.documentElement.dataset.uiBoot = 'loading';
+      /* The main screen paints at once ('soft'); only a deep link (Donors, Notes, Settings…) waits for its route, with no loader text. */
+      document.documentElement.dataset.uiBoot = /^#\/?(donors|notes|settings|keyboard|whatsapp)/.test(location.hash) ? 'loading' : 'soft';
       window.studioBootTimer = setTimeout(function () {
-        if (document.documentElement.dataset.uiBoot === 'loading')
-          document.documentElement.dataset.uiBoot = 'error';
+        if (document.documentElement.dataset.uiBoot) document.documentElement.dataset.uiBoot = 'error';
       }, 10000);
     </script>
     <style>
-      html[data-ui-boot] .app {
+      html[data-ui-boot='loading'] .app {
         visibility: hidden;
       }
       #startupRecovery {
@@ -43,14 +43,6 @@
         text-align: center;
         color: var(--ink);
         z-index: 9999;
-      }
-      html[data-ui-boot='loading']::after {
-        content: 'Opening your screen…';
-        position: fixed;
-        inset: 45% 16px auto;
-        text-align: center;
-        color: var(--mut);
-        font: 15px system-ui;
       }
     </style>
     <title>GiveLife · Message studio</title>
@@ -243,8 +235,8 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
-        padding: 12px max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
-          max(16px, env(safe-area-inset-left));
+        padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+          max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
       }
       .brandbar {
         display: flex;

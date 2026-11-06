@@ -4883,19 +4883,6 @@ def live_snapshot():
     }
 
 
-_AGENTS = None
-
-
-def agents():
-    """Manager and the seven agents (agents_system.py)."""
-    global _AGENTS
-    if _AGENTS is None:
-        from agents_system import Manager
-
-        _AGENTS = Manager(sys.modules[__name__])
-    return _AGENTS
-
-
 DONORS = None
 GROUP_RESEARCH = None
 
@@ -4989,12 +4976,9 @@ class Handler(BaseHTTPRequestHandler):
             "/case-plan",
             "/case-plan.js",
             "/case-plan.css",
-            "/agents",
-            "/agents.js",
-            "/agents.css",
         ):
             name = self.path.split("?")[0][1:]
-            name = name + ".html" if name in ("group-finder", "case-plan", "agents") else name
+            name = name + ".html" if name in ("group-finder", "case-plan") else name
             return self.reply(
                 (ROOT / name).read_bytes(),
                 "text/html"
@@ -5034,8 +5018,6 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply({"error": "Access key required"}, status=401)
         if self.path.split("?")[0] == "/api/case-plan":
             return self.reply(plan_view())
-        if self.path.split("?")[0] == "/api/agents":
-            return self.reply(agents().view())
         if self.path.split("?")[0] == "/api/group-finder":
             try:
                 return self.reply(group_research().snapshot(self.path))
@@ -5323,8 +5305,7 @@ class Handler(BaseHTTPRequestHandler):
             "/donor-paste",
             "/api/group-finder",
             "/api/case-plan",
-            "/api/agents",
-        ):
+            ):
             with LOCK:
                 OWNER_REVISION += 1
             OWNER_GUARD.revision = OWNER_REVISION
@@ -5344,11 +5325,6 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/case-plan":
             try:
                 return self.reply(plan_mutate(body))
-            except ValueError as e:
-                return self.reply({"error": str(e)[:300]}, status=400)
-        if self.path == "/api/agents":
-            try:
-                return self.reply(agents().act(body))
             except ValueError as e:
                 return self.reply({"error": str(e)[:300]}, status=400)
         if self.path == "/api/group-finder":
@@ -6137,6 +6113,5 @@ if __name__ == "__main__":
         threading.Thread(target=team_loop, daemon=True, name="team-loop").start()
     PILOT.start()
     ENGINE.start()
-    agents().start()
     threading.Thread(target=timed_loop, daemon=True).start()
     ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "10000"))), Handler).serve_forever()

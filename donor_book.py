@@ -66,11 +66,19 @@ class DonorBook:
         if self.store: self.store.put(self.KEY,data)
         self._cache=copy.deepcopy(data)
         tmp=self.path.with_suffix('.tmp'); tmp.write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8');tmp.replace(self.path)
+    @staticmethod
+    def worth(r):
+        """Known giving only: this case's amount (if donated) + saved usual amount. Unknown stays None, never 0."""
+        cur=float(r.get('amount') or 0) if r.get('donated') else 0.0;hist=float(r.get('normal_amount') or 0)
+        return {'current_amount':cur or None,'historical_amount':hist or None,'known_total':(cur+hist) or None,'activity':int(cur>0)+int(hist>0)+int(bool(r.get('donated')) and not cur and not hist)}
+    @classmethod
+    def rank_key(cls,r):
+        w=cls.worth(r);return (-(w['known_total'] or 0),-w['activity'],r.get('top_order') or 10**9,r['id'])
     def _public(self,r):
-        keys=('id','top_donor','top_order','important_order','top_rank','important_rank','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted')
+        keys=('id','top_donor','top_order','important_order','top_rank','important_rank','donor_rank','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted')
         # A confirmed DM is never forgotten: a later failed or pending attempt cannot erase "DM sent".
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
-        return {**{k:r.get(k) for k in keys},'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'has_number':bool(r.get('phone')),'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
+        return {**{k:r.get(k) for k in keys},**self.worth(r),'unverified':not self.worth(r)['known_total'],'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'has_number':bool(r.get('phone')),'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
     @staticmethod
     def contacted(r):
         return bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
@@ -88,10 +96,11 @@ class DonorBook:
             counts['not_contacted']=sum(not r['donated'] and not self.contacted(r) for r in records)
             counts['donated_amount']=float(sum((Decimal(str(r.get('amount',0) or 0)) for r in records if r.get('donated')),Decimal(0)))
             for flag,field,rank in (('important','important_order','important_rank'),('top_donor','top_order','top_rank')):
-                for index,row in enumerate(sorted((r for r in records if r.get(flag)),key=lambda r:(r.get(field) or 0,r['id'])),1):row[rank]=index
+                for index,row in enumerate(sorted((r for r in records if r.get(flag)),key=(self.rank_key if flag=='top_donor' else lambda r:(r.get(field) or 0,r['id']))),1):row[rank]=index
+            for index,row in enumerate(sorted(records,key=self.rank_key),1):row['donor_rank']=index
             q=str(query).strip().casefold(); digits=re.sub(r'\D','',q)
             rows=[r for r in records if (tab=='all' or tab=='important' and r['important'] or tab=='top' and r.get('top_donor') or tab=='donated' and r['donated'] or tab=='not_donated' and not r['donated'] or tab=='not_contacted' and not r['donated'] and not self.contacted(r)) and (not q or q in r['name'].casefold() or q in r.get('notes','').casefold() or len(digits)>=4 and digits in r['phone'])]
-            rows.sort(key=(lambda r:(r.get('top_order' if tab in ('important','top') else 'important_order') or 0,r['id'])) if tab=='top' else self.queue_key)
+            rows.sort(key=self.rank_key if tab=='top' else self.queue_key)
             return {'items':[self._public(r) for r in rows],'counts':counts}
     def add(self,name='',phone='',text='',source='Added in studio'):
         if text: name,phone=parse_contact(text,name)
@@ -222,7 +231,7 @@ class DonorBook:
         if scope not in ('all','important','top','donated','not_donated','selected'):raise ValueError('Choose an audience.')
         with self.lock:
             rows=[r for r in self._load()['records'] if not r.get('deleted') and r.get('phone') and (scope=='all' or scope=='selected' and r['id'] in (ids or []) or scope=='important' and r['important'] or scope=='top' and r.get('top_donor') or scope=='donated' and r['donated'] or scope=='not_donated' and not r['donated'])]
-            rows.sort(key=(lambda r:(r.get('top_order' if scope=='top' else 'important_order') or 0,r['id'])) if scope=='top' else self.queue_key)
+            rows.sort(key=self.rank_key if scope=='top' else self.queue_key)
             return copy.deepcopy(rows[:limit] if limit else rows)
     CASE_FIELDS={'top_donor':False,'top_order':None,'important_order':None,'important':False,'donated':False,'amount':0,'delivery':'Not contacted','last_sent_at':None,'sent_count':0,'dm_sent':False}
     def export_case_fields(self):

@@ -448,6 +448,12 @@
     if (document.activeElement !== amount) amount.value = d.amount || '';
     paintDelivery(row, d.delivery || 'Not contacted');
   }
+  /* Top donors: highest known total first, then more records, then the saved manual order. */
+  const topCmp = (a, b) =>
+    (b.known_total || 0) - (a.known_total || 0) ||
+    (b.activity || 0) - (a.activity || 0) ||
+    (a.top_order ?? Number.MAX_SAFE_INTEGER) - (b.top_order ?? Number.MAX_SAFE_INTEGER) ||
+    (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   /* Sort = the server's sending order: Important first, not-yet-sent before sent, sent sink in the order sent; the top row is always next. */
   function applyFilters() {
     page.dataset.panel = tab;
@@ -471,7 +477,11 @@
     ])
       allDonors
         .filter((d) => d[flag])
-        .sort((a, b) => (a[field] ?? Number.MAX_SAFE_INTEGER) - (b[field] ?? Number.MAX_SAFE_INTEGER))
+        .sort(
+          field === 'top_order'
+            ? topCmp
+            : (a, b) => (a[field] ?? Number.MAX_SAFE_INTEGER) - (b[field] ?? Number.MAX_SAFE_INTEGER),
+        )
         .forEach((d, i) => (d[rank] = i + 1));
     el('donorSendImportant').textContent = tab === 'top' ? 'DM Top donors' : 'DM ★ Important';
     const q = el('donorSearch').value.trim().toLocaleLowerCase();
@@ -490,9 +500,7 @@
       )
       .sort(
         (a, b) =>
-          (tab === 'top'
-            ? (a.top_order ?? Number.MAX_SAFE_INTEGER) - (b.top_order ?? Number.MAX_SAFE_INTEGER)
-            : 0) ||
+          (tab === 'top' ? topCmp(a, b) : 0) ||
           Number(b.important) - Number(a.important) ||
           Number(!!a.dm_sent) - Number(!!b.dm_sent) ||
           (a.dm_sent ? (a.last_sent_at || 0) - (b.last_sent_at || 0) : 0) ||
@@ -1463,6 +1471,18 @@
                 'small',
                 'donor-normal-tag',
                 'Usually Rs. ' + Number(d.normal_amount).toLocaleString('en-PK'),
+              ),
+            );
+          if (tab === 'top')
+            ident.append(
+              make(
+                'small',
+                'donor-known',
+                d.known_total
+                  ? 'Rs. ' +
+                      Number(d.known_total).toLocaleString('en-PK') +
+                      (d.activity > 1 ? ' · ' + d.activity + ' records' : '')
+                  : 'Unverified',
               ),
             );
           ident.title = d.name + ' · ' + when(d.last_sent_at);

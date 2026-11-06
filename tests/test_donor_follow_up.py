@@ -105,3 +105,32 @@ class FollowUpTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GapSecondsTests(unittest.TestCase):
+    setUp, tearDown, jobs = FollowUpTests.setUp, FollowUpTests.tearDown, FollowUpTests.jobs
+    """Seconds-level gaps: accepted, honoured, and still bounded."""
+
+    def test_short_gaps_are_accepted_and_bounded(self):
+        jobs = self.jobs()
+        jobs.start("top", 30, run=False, skip_contacted=False)
+        self.assertEqual(jobs._load()["jobs"][-1]["gap_seconds"], 30)
+        for bad in (0, 4, 601, float("nan")):
+            with self.assertRaises(ValueError):
+                self.jobs().start("top", bad, run=False, skip_contacted=False)
+
+    def test_wait_follows_the_chosen_short_gap(self):
+        jobs = self.jobs()
+        for _ in range(50):
+            self.assertTrue(30 <= jobs._gap({"gap_seconds": 30}) <= 37.5)
+            self.assertTrue(180 <= jobs._gap({"gap_seconds": 240}) <= 420)
+        self.assertGreaterEqual(jobs._gap({"gap_seconds": 10, "jitter": {"min": -50, "max": -40}}), 5.0)
+
+    def test_configure_accepts_seconds(self):
+        jobs = self.jobs()
+        jobs.start("top", 240, run=False, skip_contacted=False)
+        job_id = jobs._load()["jobs"][-1]["id"]
+        jobs.configure(job_id, {"gap_seconds": 20})
+        self.assertEqual(jobs._load()["jobs"][-1]["gap_seconds"], 20)
+        with self.assertRaises(ValueError):
+            jobs.configure(job_id, {"gap_seconds": 3})

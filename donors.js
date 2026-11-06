@@ -1098,11 +1098,12 @@
         testBtn.disabled = false;
       }
     };
-    /* Regenerate lives in the heading; the bottom row is ← Back · Next →. */
-    regen.classList.add('bank-regen-top');
-    head.append(regen);
+    // Keep Generate 20 in the visible action area on phones as well as desktop.
+    // Progress is derived from the saved backend generation, never a fake timer.
+    const regenProgress = make('span', 'bank-regenerate-progress', bankGenerationLabel());
+    regenProgress.setAttribute('role', 'status');
     nav.insertBefore(backBottom, nav.firstChild);
-    actions.append(baseBtn, testBtn, nav);
+    actions.append(baseBtn, testBtn, regen, regenProgress, nav);
     grid.append(actions, picker);
     box.append(grid);
     syncBankControls();
@@ -1117,9 +1118,17 @@
   }
   function syncBankControls() {
     const box = el('donorMessages');
-    for (const b of box.querySelectorAll('.bank-regenerate'))
-      b.disabled =
-        bankRegenerating || bankSaves.size > 0 || bankData?.generation?.state === 'Generating';
+    for (const b of box.querySelectorAll('.bank-regenerate')) {
+      const generating = bankData?.generation?.state === 'Generating';
+      b.disabled = bankRegenerating || bankSaves.size > 0 || generating;
+      b.textContent = generating
+        ? 'Generating 20…'
+        : (bankData?.items?.length || 0) > 1
+          ? 'Regenerate 20 versions'
+          : 'Generate 20 versions';
+    }
+    const progress = box.querySelector('.bank-regenerate-progress');
+    if (progress) progress.textContent = bankGenerationLabel();
     for (const b of box.querySelectorAll('[data-bank-save-id]')) {
       b.disabled = bankRegenerating || bankSaves.has(b.dataset.bankSaveId);
       const input = box.querySelector('.bank-detail textarea');

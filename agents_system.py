@@ -238,6 +238,7 @@ class Writer(Agent):
                 else ""
             )
             + self.sys.draft_lessons()
+            + self.sys.context_for("writer")
         )
         history = [
             {"role": "user" if m["who"] == "you" else "assistant", "content": m["text"][:1500]}
@@ -618,6 +619,7 @@ class Manager:
             "drafts": [],
             "metrics": {},
             "regressions": [],
+            "summaries": {},
         }
         try:
             saved = self.app.STORE.get("agents_state") if self.app.STORE else None
@@ -705,6 +707,10 @@ class Manager:
                     self._route(step, forced)
                 except Exception as e:
                     self._say("manager", "That did not work: " + str(e)[:200], forced or "manager")
+            try:
+                self.summarize(forced or self.ctx.get("agent") or "manager")
+            except Exception:
+                pass
             self.save()
             return self.state["chat"][start:]
 
@@ -766,6 +772,18 @@ class Manager:
             done = poster.rule(text)
             if done:
                 return self._run("auto", text, lambda: done)
+        if re.search(
+            r"\b(send|post|dm|bhejo|bhej do)\b.*\b(now|abhi|right now|today)\b", low
+        ) and not re.search(r"\b(versions?|draft|write|improve|check)\b", low):
+            return self._run(
+                target or "manager",
+                text,
+                lambda: (
+                    True,
+                    "I did not send anything. Sending happens on the Groups or Donors screen, or in the main Chat,"
+                    " where the WhatsApp safety checks run. Agents here prepare, check and track.",
+                ),
+            )
         if not target and (self.REMEMBER.match(low) or low.startswith("if ")):
             return self._run("writer", text, lambda: self._remember(text, low.startswith("if ")))
         writer = self.agents["writer"]
@@ -806,6 +824,7 @@ class Manager:
             " WhatsApp messages or change settings from this chat: if asked to, say which screen or agent does it."
             " Never say a task is done unless the facts show it. Owner preferences:\n"
             + "\n".join("- " + str(c)[:200] for c in self._preferences())
+            + self.context_for(agent.id)
             + "\n\nLIVE FACTS:\n"
             + facts
         )
@@ -823,14 +842,119 @@ class Manager:
             answer = ""
         return (True, answer) if answer else (True, "The AI did not answer. Real facts: " + facts)
 
+    def context_for(self, agent_id):
+        """What an agent sees besides its own last messages (Agents SDK handoff + Letta-style summary):
+        a summary of its older messages and the latest turns of the whole conversation."""
+        summary = self.state.get("summaries", {}).get(agent_id, {}).get("text", "")
+        recent = [
+            f"{m['who']}: {m['text'][:200]}"
+            for m in self.state["chat"][-7:-1]
+            if m.get("agent") != agent_id and m["who"] != "manager"
+        ]
+        out = ""
+        if summary:
+            out += (
+                "\n\nEARLIER CONVERSATION (summary, decisions still apply unless changed later):\n"
+                + summary
+            )
+        if recent:
+            out += "\n\nRECENT CONVERSATION WITH OTHER AGENTS:\n" + "\n".join(recent)
+        return out
+
+    def summarize(self, agent_id, keep=8, every=12):
+        """When an agent's chat grows, older messages become a short summary instead of being forgotten."""
+        import assistant, ai_call
+
+        mine = [m for m in self.state["chat"] if m.get("agent") == agent_id]
+        sums = self.state.setdefault("summaries", {})
+        done = sums.get(agent_id, {}).get("upto", 0)
+        old = [m for m in mine[:-keep] if m["at"] > done]
+        if len(old) < every or not assistant.client():
+            return
+        try:
+            raw = ai_call.chat(
+                "Summarise this part of a charity app conversation for later. Keep every owner decision,"
+                " preference, correction, fact and open task. Newer decisions replace older ones. Do not add"
+                ' anything that is not written. Answer ONLY JSON: {"summary": "short bullet points"}\n\n'
+                + (
+                    "PREVIOUS SUMMARY:\n" + sums.get(agent_id, {}).get("text", "") + "\n\n"
+                    if done
+                    else ""
+                )
+                + "\n".join(f"{m['who']}: {m['text'][:400]}" for m in old)
+            )
+        except Exception:
+            return
+        data = ai_call.json_of(raw)
+        text = str((data or {}).get("summary") or "").strip()
+        if text:
+            sums[agent_id] = {"text": text[:2000], "upto": old[-1]["at"]}
+
     def _preferences(self):
         try:
             return [str(c) for c in (__import__("dm_variants").CORRECTIONS() or [])][-8:]
         except Exception:
             return []
 
+    def _reconcile(self, text):
+        """Mem0 pattern: compare the new preference with the active ones (numbered, so the AI cannot invent
+        ids) and decide ADD / UPDATE / DELETE / NONE. Returns (add_new, entries_to_retire).
+        Without AI, the shared memory's same-topic rule still retires an older preference."""
+        import assistant, ai_call
+
+        entries = [
+            e
+            for e in getattr(getattr(self.app, "KNOWLEDGE", None), "data", {}).get("entries", [])
+            if e.get("active")
+        ][-40:]
+        if not entries or not assistant.client():
+            return True, []
+        listing = "\n".join(f"{i}: {e.get('text', '')[:200]}" for i, e in enumerate(entries))
+        try:
+            raw = ai_call.chat(
+                "You manage the owner's saved preferences for a charity messaging app.\n"
+                "Compare the NEW preference with the EXISTING ones. For each existing one it replaces or contradicts,"
+                ' return {"id": number, "event": "UPDATE"} (same topic, new wording or opposite decision) or'
+                ' {"id": number, "event": "DELETE"} (no longer true). If the new one is already saved, return'
+                ' {"event": "NONE"}. Otherwise {"event": "ADD"}. Never change unrelated preferences.\n'
+                'Answer ONLY JSON: {"memory": [ ... ]}\n\nEXISTING:\n'
+                + listing
+                + "\n\nNEW: "
+                + text[:400]
+            )
+        except Exception:
+            return True, []  # AI trouble never blocks saving; the same-topic rule still applies
+        data = ai_call.json_of(raw) or {}
+        events = (
+            [m for m in data.get("memory", []) if isinstance(m, dict)]
+            if isinstance(data.get("memory"), list)
+            else []
+        )
+        if not events:
+            return True, []
+        retire = [
+            entries[int(m["id"])]
+            for m in events
+            if m.get("event") in ("UPDATE", "DELETE")
+            and str(m.get("id", "")).isdigit()
+            and int(m["id"]) < len(entries)
+        ]
+        add = not any(m.get("event") == "NONE" for m in events) or bool(retire)
+        return add, retire
+
     def _remember(self, text, condition=False):
+        add, retire = self._reconcile(text)
+        if not add:
+            return True, "That preference is already saved. Nothing changed."
         saved = self.app.mem_add(text)
+        knowledge = getattr(self.app, "KNOWLEDGE", None)
+        if retire and knowledge:
+            with knowledge.lock:
+                for e in retire:
+                    if e.get("text") != text.strip():
+                        e["active"] = False
+                        e["superseded_by"] = "owner: " + text[:80]
+                knowledge.save()
         entries = getattr(getattr(self.app, "KNOWLEDGE", None), "data", {}).get("entries", [])
         ok = bool(saved) and (
             not entries or any(e.get("active") and e.get("text") == text.strip() for e in entries)

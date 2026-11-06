@@ -25,6 +25,9 @@ class Base(unittest.TestCase):
         self.m = app.agents()
         self.patches = [
             patch("assistant.client", return_value="k"),
+            patch(
+                "ai_call.chat", return_value=""
+            ),  # memory and summary judges: no network in tests
             patch.object(app, "send_custom", side_effect=AssertionError("agents must not send")),
             patch.object(app, "send_text", side_effect=AssertionError("agents must not send")),
         ]
@@ -368,3 +371,76 @@ class Talking(Base):
             self.assertLess(time.time() - t0, 1.0)  # the page got its data at once
             self.assertTrue(started.wait(2))  # while the real checks ran in the background
         self.assertEqual([a["id"] for a in view["agents"]][0], "manager")
+
+
+class StudiedPatterns(Base):
+    """Mem0 memory events, Agents SDK handoff context and input guardrail, Letta-style summaries."""
+
+    def entries(self, word):
+        return [
+            e["text"]
+            for e in app.KNOWLEDGE.data["entries"]
+            if e.get("active") and word in e["text"]
+        ]
+
+    def test_memory_ai_updates_a_reworded_decision(self):
+        self.say("Always open slow messages with a hadith")
+        with (
+            patch(
+                "ai_call.chat", return_value='{"memory": [{"id": 0, "event": "UPDATE"}]}'
+            ) as judge,
+            patch.object(app.KNOWLEDGE, "data", app.KNOWLEDGE.data),
+        ):
+            app.KNOWLEDGE.data["entries"] = [
+                e for e in app.KNOWLEDGE.data["entries"] if "hadith" in e["text"]
+            ]
+            self.say(
+                "Remember: slow messages should start with the Urdu hook, the hadith comes after"
+            )
+        self.assertTrue(judge.called)
+        self.assertEqual(
+            self.entries("hadith"),
+            ["Remember: slow messages should start with the Urdu hook, the hadith comes after"],
+        )
+
+    def test_memory_ai_none_means_nothing_saved_and_bad_ids_are_ignored(self):
+        self.say("Always keep the payment line last")
+        before = len(app.KNOWLEDGE.data["entries"])
+        with patch("ai_call.chat", return_value='{"memory": [{"event": "NONE"}]}'):
+            out = self.say("Remember to keep the payment line last")
+        self.assertIn("already saved", out[-1]["text"])
+        self.assertEqual(len(app.KNOWLEDGE.data["entries"]), before)
+        with patch(
+            "ai_call.chat", return_value='{"memory": [{"id": 99, "event": "DELETE"}, {"id": "x"}]}'
+        ):
+            self.say("Always mention the Easypaisa number twice")
+        self.assertTrue(self.entries("payment line last"))  # an invented id never deletes anything
+
+    def test_handoff_gives_the_agent_the_recent_conversation(self):
+        self.say("status", "dms")
+        with ai("Use the DM numbers above.") as call:
+            self.say("based on that, what should I do?", "volunteers")
+        self.assertIn("RECENT CONVERSATION WITH OTHER AGENTS", call.call_args.args[1])
+        self.assertIn("between DMs", call.call_args.args[1])
+
+    def test_send_now_is_stopped_before_any_agent_acts(self):
+        for text in ("send the poster to givelife now", "abhi dm bhejo sab ko now"):
+            out = self.say(text)
+            self.assertIn("I did not send anything", out[-1]["text"])
+        out = self.say("Ask Writer to write versions to send now")
+        self.assertNotIn("I did not send anything", out[-1]["text"])  # writing work is not blocked
+
+    def test_long_agent_chat_is_summarised_not_forgotten(self):
+        for i in range(12):
+            self.say(f"status number {i}", "dms")
+        with patch(
+            "ai_call.chat",
+            return_value='{"summary": "- Owner checked DM limits 12 times; cap is 40."}',
+        ):
+            self.say("status again please", "dms")
+        self.assertIn("cap is 40", self.m.state["summaries"]["dms"]["text"])
+        with ai("ok") as call:
+            self.say("any advice?", "dms")
+        self.assertIn("EARLIER CONVERSATION", call.call_args.args[1])
+        again = Manager(app)
+        self.assertIn("dms", again.state["summaries"])  # survives a restart

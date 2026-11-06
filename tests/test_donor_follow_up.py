@@ -36,8 +36,14 @@ class FollowUpTests(unittest.TestCase):
             return replies.pop(0) if replies else {"code": "SUCCESS"}
 
         return DonorDelivery(
-            self.tmp.name, self.store, self.book, send, lambda: "Case caption",
-            lambda: True, lambda: False, eligible or (lambda p: True),
+            self.tmp.name,
+            self.store,
+            self.book,
+            send,
+            lambda: "Case caption",
+            lambda: True,
+            lambda: False,
+            eligible or (lambda p: True),
             lambda name: ("Sohaib", "Brother"),
         )
 
@@ -65,7 +71,7 @@ class FollowUpTests(unittest.TestCase):
     def test_no_follow_up_when_first_message_not_confirmed(self):
         job = self.run_job(self.jobs([{"code": "FAILED"}]), follow_up="Hello {name}")
         self.assertEqual(len(self.sent), 1)
-        self.assertEqual(job["state"], "Stopped")
+        self.assertEqual(job["receipts"][0]["state"], "Uncertain")
         self.assertIsNone(self.book.list("all")["items"][0].get("follow_up_state"))
 
     def test_opt_out_before_follow_up_skips_it(self):
@@ -124,7 +130,9 @@ class GapSecondsTests(unittest.TestCase):
         for _ in range(50):
             self.assertTrue(30 <= jobs._gap({"gap_seconds": 30}) <= 37.5)
             self.assertTrue(180 <= jobs._gap({"gap_seconds": 240}) <= 420)
-        self.assertGreaterEqual(jobs._gap({"gap_seconds": 10, "jitter": {"min": -50, "max": -40}}), 5.0)
+        self.assertGreaterEqual(
+            jobs._gap({"gap_seconds": 10, "jitter": {"min": -50, "max": -40}}), 5.0
+        )
 
     def test_configure_accepts_seconds(self):
         jobs = self.jobs()

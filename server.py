@@ -262,7 +262,10 @@ def send_custom(body):
     if not SEND_LOCK.acquire(blocking=manual or explicit_batch):
         raise ValueError("Another send is running. Please wait for it to finish.")
     try:
-        status = api_result("/devices/" + DEVICE + "/status")
+        try:
+            status = api_result("/devices/" + DEVICE + "/status")
+        except Exception:
+            status = {}  # the WhatsApp service is restarting or unreachable: nothing was sent
         if not status.get("is_connected") or not status.get("is_logged_in"):
             raise ValueError("WhatsApp is disconnected. Tap WhatsApp to reconnect.")
         now = time.time()
@@ -913,7 +916,10 @@ def send_image(jid, caption, check_gap=False, _retry=True):
         return {"code": "ERROR", "message": "On hold: you told me to wait."}
     if jid in NEVER_GROUPS:
         return {"code": "ERROR", "message": "This group is never used."}
-    status = api_result("/devices/" + DEVICE + "/status")
+    try:
+        status = api_result("/devices/" + DEVICE + "/status")
+    except Exception:
+        status = {}  # gateway restarting or unreachable: nothing was sent
     if not status.get("is_connected") or not status.get("is_logged_in"):
         return {"code": "ERROR", "message": "WhatsApp disconnected. Log in again."}
     if check_gap:
@@ -1100,11 +1106,47 @@ def start_send_job(keys, caption, manual=False, request_id=None, with_picture=Tr
     return ident
 
 
+GROUP_RECONNECT_TRIES = 40  # x 15 s: wait up to 10 minutes for WhatsApp before giving up on a group
+
+
+def _not_sent_disconnected(result):
+    return (
+        isinstance(result, dict)
+        and result.get("code") == "ERROR"
+        and str(result.get("message", "")).startswith("WhatsApp disconnected")
+    )
+
+
+def _group_attempt(job, jid, outgoing):
+    """One try at one group. Transport trouble becomes a result, never an exception that ends the job."""
+    try:
+        if job.get("with_picture", True):
+            return send_image(jid, outgoing, not job.get("manual", False))
+        result = send_text(jid, outgoing)
+        if result.get("code") == "SUCCESS":
+            record_delivery(jid, outgoing, result)
+            LAST_LOCAL[jid] = time.time()
+            if STORE:
+                saved = STORE.get("last_sent", {})
+                saved[jid] = time.time()
+                STORE.put("last_sent", saved)
+        return result
+    except ValueError:
+        raise  # hold, missing poster: a clear reason for the whole job
+    except urllib.error.URLError as exc:
+        if isinstance(getattr(exc, "reason", None), ConnectionRefusedError):
+            return {"code": "ERROR", "message": "WhatsApp disconnected. Nothing was sent."}
+        return {"code": "UNCERTAIN", "message": "Send not confirmed. Check WhatsApp before retrying."}
+    except Exception:
+        return {"code": "UNCERTAIN", "message": "Send not confirmed. Check WhatsApp before retrying."}
+
+
 def run_job(job_id, keys, caption, queue=False):
     global ACTIVE
     job = JOBS[job_id]
     event = JOB_CANCEL.setdefault(job_id, threading.Event())
     last_send = None
+    failed_in_row = 0
     try:
         for index, key in enumerate(keys):
             outgoing = caption_facts.current(
@@ -1124,33 +1166,40 @@ def run_job(job_id, keys, caption, queue=False):
                 save_job(job_id)
                 if event.wait(max(0, 60 - (time.monotonic() - last_send))):
                     break
-            with SEND_LOCK:
-                if event.is_set() or on_hold():
+            result, stop_all = None, False
+            for attempt in range(GROUP_RECONNECT_TRIES + 1):
+                with SEND_LOCK:
+                    if event.is_set() or on_hold():
+                        stop_all = True
+                        break
+                    job.update(message="Sending to " + name, next_send_at=None, next_target=key)
+                    save_job(job_id)
+                    outgoing = caption_facts.current(sys.modules[__name__], outgoing)
+                    OWNER_GUARD.cancel_event = event
+                    try:
+                        result = _group_attempt(job, jid, outgoing)
+                    finally:
+                        OWNER_GUARD.cancel_event = None
+                if not _not_sent_disconnected(result) or attempt == GROUP_RECONNECT_TRIES:
                     break
-                job.update(message="Sending to " + name, next_send_at=None, next_target=key)
+                # Nothing left the phone, so waiting and trying this same group again is safe.
+                job.update(message="WhatsApp is reconnecting. " + name + " is sent when it is back.")
                 save_job(job_id)
-                outgoing = caption_facts.current(sys.modules[__name__], outgoing)
-                OWNER_GUARD.cancel_event = event
-                try:
-                    if job.get("with_picture", True):
-                        result = send_image(jid, outgoing, not job.get("manual", False))
-                    else:
-                        result = send_text(jid, outgoing)
-                        if result.get("code") == "SUCCESS":
-                            record_delivery(jid, outgoing, result)
-                            LAST_LOCAL[jid] = time.time()
-                            if STORE:
-                                saved = STORE.get("last_sent", {})
-                                saved[jid] = time.time()
-                                STORE.put("last_sent", saved)
-                finally:
-                    OWNER_GUARD.cancel_event = None
+                if event.wait(15):
+                    stop_all = True
+                    break
+            if stop_all:
+                break
             job["results"].append({"group": name, **result})
             save_job(job_id)
             if result.get("code") == "SUCCESS":
                 last_send = time.monotonic()
+                failed_in_row = 0
             elif result.get("code") != "COOLDOWN":
-                break  # never retry an uncertain/error result
+                # Never retry an uncertain/error result for this group; carry on with the others.
+                failed_in_row += 1
+                if failed_in_row >= 3 or _not_sent_disconnected(result):
+                    break
         sent = sum(r.get("code") == "SUCCESS" for r in job["results"])
         if sent and job.get("manual"):
             # Owner-sent and scheduled group posts teach too (Auto posts are recorded by the engine).

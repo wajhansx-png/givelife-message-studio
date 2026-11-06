@@ -1,5 +1,6 @@
 """Explicit donor batches, saved receipts and no automatic replay after restart."""
 
+import traceback
 import copy, hashlib, json, math, random, re, threading, time, uuid
 from pathlib import Path
 from donor_book import hide_numbers
@@ -775,11 +776,20 @@ class DonorDelivery:
             return "Uncertain", "Follow-up was not confirmed. Check WhatsApp. No automatic retry."
         return "Sent", ""
 
+    TRANSIENT = (
+        "WhatsApp is disconnected",
+        "WhatsApp disconnected",
+        "Persistent send records are unavailable",
+        "Another send is running",
+    )
+    # Problems with one person, never with the batch: record Skipped and carry on.
+    PER_RECIPIENT = ("This recipient", "Your own account", "Enter a valid phone")
+
     def _dispatch(self, j, body, receipts, sent, skipped):
-        """Send one DM. Waits for WhatsApp to come back instead of giving up."""
+        """Send one DM. Waits for WhatsApp / storage to come back instead of giving up (30 min)."""
+        deadline = time.time() + 1800
         while True:
             if not self.connected():
-                deadline = time.time() + 1800
                 self._update(
                     j["id"],
                     state="Waiting",
@@ -798,12 +808,30 @@ class DonorDelivery:
                         return None
             if self.stop.is_set():
                 return None
-            return self.send(body)
+            try:
+                result = self.send(body)
+            except ValueError as e:
+                if str(e).startswith(self.TRANSIENT) and time.time() < deadline:
+                    if self.stop.wait(15):
+                        return None
+                    continue
+                raise
+            message = str(result.get("message", "")) if isinstance(result, dict) else ""
+            if isinstance(result, dict) and result.get("code") == "ERROR":
+                # Refused before anything left the phone, so it is safe to wait and try this person again.
+                if message.startswith("WhatsApp disconnected") and time.time() < deadline:
+                    if self.stop.wait(15):
+                        return None
+                    continue
+                if message.startswith("On hold"):
+                    return None
+            return result
 
     def _run(self, j):
         self.running_job = j
         receipts = []
         sent = skipped = failed = 0
+        uncertain_run = 0
         last_completion = None
         state = "Completed"
         error = ""
@@ -977,7 +1005,7 @@ class DonorDelivery:
                     )
                 except ValueError as e:
                     self.book.delivery(ident, "Not sent")
-                    if str(e).startswith("This recipient"):
+                    if str(e).startswith(self.PER_RECIPIENT):
                         # One blocked / opted-out / already-contacted person never stops the batch.
                         skipped += 1
                         done_here.add(ident)
@@ -995,12 +1023,19 @@ class DonorDelivery:
                 except Exception:
                     self.book.delivery(ident, "Uncertain")
                     failed += 1
+                    uncertain_run += 1
+                    last_completion = time.time()
+                    gap_next = self._gap(j)
+                    done_here.add(ident)
                     receipts.append(
                         {"id": ident, "name": hide_numbers(r["name"]), "state": "Uncertain"}
                     )
-                    state = "Stopped"
-                    error = "Delivery was not confirmed. Check WhatsApp. No automatic retry."
-                    break
+                    if uncertain_run >= self.UNCERTAIN_STOP:
+                        state = "Stopped"
+                        error = f"{uncertain_run} deliveries in a row were not confirmed. Check WhatsApp. Those people are never retried."
+                        break
+                    self._update(j["id"], failed=failed, receipts=receipts)
+                    continue
                 if result is None:
                     self.book.delivery(ident, "Not sent")
                     state = "Stopped"
@@ -1011,12 +1046,17 @@ class DonorDelivery:
                 if not isinstance(result, dict) or result.get("code") != "SUCCESS":
                     self.book.delivery(ident, "Uncertain")
                     failed += 1
+                    uncertain_run += 1
                     receipts.append(
                         {"id": ident, "name": hide_numbers(r["name"]), "state": "Uncertain"}
                     )
-                    state = "Stopped"
-                    error = "Delivery was not confirmed. Check WhatsApp. No automatic retry."
-                    break
+                    if uncertain_run >= self.UNCERTAIN_STOP:
+                        state = "Stopped"
+                        error = f"{uncertain_run} deliveries in a row were not confirmed. Check WhatsApp. Those people are never retried."
+                        break
+                    self._update(j["id"], failed=failed, receipts=receipts)
+                    continue
+                uncertain_run = 0
                 sent += 1
                 self.book.delivery(ident, "Sent", last_completion, text=caption_now)
                 receipts.append(
@@ -1039,6 +1079,7 @@ class DonorDelivery:
                         error = fu_error
                         break
         except Exception:
+            traceback.print_exc()
             state = "Stopped"
             error = "The batch could not continue reliably. Check receipts before starting again."
         finally:
@@ -1123,3 +1164,4 @@ class DonorDelivery:
         return self.start(**args, request_id="auto-" + uuid.uuid4().hex)
 
     AUTO_WINDOW = 36 * 3600
+    UNCERTAIN_STOP = 3  # consecutive unconfirmed deliveries before a batch pauses

@@ -6,6 +6,7 @@ only the wording, and deterministic checks reject any version that changes the
 line structure, emojis, bold/italic markers, numbers or payment details.
 """
 
+import time
 import difflib, json, re
 
 import assistant
@@ -388,6 +389,35 @@ def _call(key, prompt):
     return _json_list(content)
 
 
+AI_BACKOFF = (5, 15, 30)  # seconds to wait after a rate limit / server hiccup before retrying
+_sleep = time.sleep
+
+
+def ai_fatal(message):
+    """A key or account problem: retrying cannot help."""
+    return bool(
+        re.search(
+            r"(?i)\b(401|402|403)\b|not connected|api key|unauthori[sz]ed|insufficient",
+            str(message),
+        )
+    )
+
+
+def ai_transient(message):
+    """Busy, rate limited, timed out or a server error: worth one more try after a short wait."""
+    return bool(
+        re.search(
+            r"(?i)\b(429|500|502|503|504|529)\b|timed? ?out|timeout|temporar|overload|connection|reset|unavailable",
+            str(message),
+        )
+    )
+
+
+def top_reasons(tally, limit=3):
+    top = sorted(tally.items(), key=lambda kv: -kv[1])[:limit]
+    return "; ".join(f"{r} ({n}x)" if n > 1 else r for r, n in top)
+
+
 def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False):
     """Validate every rewrite, report accepted batches, and optionally retain partial results."""
     source = clean_source(source)
@@ -406,7 +436,11 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
             "The AI is not connected, so I cannot reword a custom message. The built-in structured DM still works."
         )
     last_error = ""
-    for _ in range(5):
+    reasons = {}
+    waits = list(AI_BACKOFF)
+    for attempt in range(5 + len(AI_BACKOFF)):
+        if attempt - (len(AI_BACKOFF) - len(waits)) >= 5:
+            break  # extra rounds only make up for rate-limit waits
         need = count - len(out)
         if need <= 0:
             break
@@ -422,18 +456,26 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
             candidates = _call(key, prompt)
         except Exception as exc:
             last_error = str(exc)
-            if re.search(r"(?i)returned (?:401|402|403|429)|not connected|api key", last_error):
+            if ai_fatal(last_error):
                 break
+            if ai_transient(last_error) and waits:
+                _sleep(waits.pop(0))  # busy or briefly down: wait, then try again
             continue
         before = len(out)
+        tried = {}
         for candidate in candidates:
+            if isinstance(candidate, str):
+                candidate = repair(source, candidate.replace("\r\n", "\n").strip())
             reason = validate(source, candidate, existing + out)
             if reason:
-                last_error = reason
+                tried[reason] = tried.get(reason, 0) + 1
+                reasons[reason] = reasons.get(reason, 0) + 1
                 continue
             out.append(candidate.strip())
             if len(out) >= count:
                 break
+        if tried:
+            last_error = top_reasons(tried)
         if progress is not None and len(out) > before:
             if progress(list(out)) is False:
                 raise ValueError(
@@ -442,7 +484,8 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
     if allow_partial and out:
         return out[:count]
     if len(out) < count:
-        detail = (" The last problem was: " + last_error) if last_error else ""
+        summary = top_reasons(reasons) or last_error
+        detail = (" Rejected because: " + summary + ".") if summary else ""
         raise ValueError(
             f"The AI returned only {len(out)} sufficiently different versions that kept the facts and formatting.{detail} "
             "The saved DM and the message bank were not changed."

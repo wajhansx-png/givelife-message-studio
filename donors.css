@@ -1494,3 +1494,19 @@ html body #donorPasteDialog #pastePoster {
 #donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate-progress:empty {
   display: none;
 }
+
+/* Donation screenshot ranking is separate from current-case donated amount. */
+.donor-receipt-total {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #71b7dd;
+  line-height: 1.2;
+  font-size: 10px;
+  font-weight: 600;
+}
+@media (max-width: 899px) {
+  .donor-receipt-total { font-size: 9px; }
+}

@@ -67,7 +67,7 @@ class DonorBook:
         self._cache=copy.deepcopy(data)
         tmp=self.path.with_suffix('.tmp'); tmp.write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8');tmp.replace(self.path)
     def _public(self,r):
-        keys=('id','top_donor','top_order','important_order','top_rank','important_rank','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted','dm_name','dm_salutation','dm_profile_source')
+        keys=('id','top_donor','top_order','important_order','top_rank','important_rank','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted','dm_name','dm_salutation','dm_profile_source','receipt_total','receipt_rank','receipt_source','receipt_report_date')
         # A confirmed DM is never forgotten: a later failed or pending attempt cannot erase "DM sent".
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
         return {**{k:(hide_numbers(r.get(k,'')) if k=='dm_name' else r.get(k)) for k in keys},'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'has_number':bool(r.get('phone')),'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
@@ -87,6 +87,8 @@ class DonorBook:
             counts['not_donated']=counts['all']-counts['donated']
             counts['not_contacted']=sum(not r['donated'] and not self.contacted(r) for r in records)
             counts['donated_amount']=float(sum((Decimal(str(r.get('amount',0) or 0)) for r in records if r.get('donated')),Decimal(0)))
+            counts['receipt_ranked']=sum(type(r.get('receipt_rank')) is int for r in records)
+            counts['receipt_total']=sum(int(r.get('receipt_total') or 0) for r in records)
             for flag,field,rank in (('important','important_order','important_rank'),('top_donor','top_order','top_rank')):
                 for index,row in enumerate(sorted((r for r in records if r.get(flag)),key=lambda r:(r.get(field) or 0,r['id'])),1):row[rank]=index
             q=str(query).strip().casefold(); digits=re.sub(r'\D','',q)

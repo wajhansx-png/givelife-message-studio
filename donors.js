@@ -1448,6 +1448,15 @@
           const ident = make('div', 'donor-identity');
           ident.onclick = () => star.click();
           ident.append(make('div', 'donor-name', d.name));
+          if (d.receipt_rank && d.receipt_total > 0) {
+            const total = make(
+              'small',
+              'donor-receipt-total',
+              'Receipt evidence · Rs. ' + Number(d.receipt_total).toLocaleString('en-PK'),
+            );
+            total.title = 'Reported across cases from donor-shared screenshots; not bank-verified.';
+            ident.append(total);
+          }
           ident.firstChild.dataset.rank =
             tab === 'top' ? d.top_rank || '' : tab === 'important' ? d.important_rank || '' : '';
           {

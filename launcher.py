@@ -101,7 +101,18 @@ def safe_logs(proc):
 
 def start_gowa():
     proc = subprocess.Popen(
-        ["/usr/local/bin/whatsapp", "rest"],
+        [
+            "/usr/local/bin/whatsapp",
+            "rest",
+            # Big groups need hundreds of encryption-key lookups per send. On the remote database
+            # they time out ("context deadline exceeded ... prekey"), so the key cache lives in a
+            # local SQLite file. The login session itself stays in the persistent database.
+            "--db-keys-uri="
+            + os.environ.get(
+                "GOWA_DB_KEYS_URI",
+                "file:" + str(gowa_data / "whatsapp-keys.db") + "?_foreign_keys=on",
+            ),
+        ],
         cwd=gowa_data,
         env=env,
         stdout=subprocess.PIPE,

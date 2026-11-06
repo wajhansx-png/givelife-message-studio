@@ -1452,9 +1452,9 @@
             const total = make(
               'small',
               'donor-receipt-total',
-              'Receipt evidence · Rs. ' + Number(d.receipt_total).toLocaleString('en-PK'),
+              'Past recorded support · Rs. ' + Number(d.receipt_total).toLocaleString('en-PK'),
             );
-            total.title = 'Reported across cases from donor-shared screenshots; not bank-verified.';
+            total.title = 'Partial historical support record. Receipts are NOT required to add or rank this donor; earlier gifts without screenshots may be missing.';
             ident.append(total);
           }
           ident.firstChild.dataset.rank =

@@ -105,8 +105,23 @@
         ? (a.facts || []).filter((f) => !/^Writer: \d/.test(f)).map((t) => ({ text: t }))
         : []),
     ];
+    // Display issues on demand, never as repeating red cards above the conversation.
+    // Paused groups stay paused; this only groups their notices for readability.
+    const paused = notes.filter((n) => /^Group Poster: .+ is paused for [0-9.]+ more hours[.]$/.test(n.text));
+    const visible = notes.filter((n) => !paused.includes(n));
+    if (paused.length) {
+      visible.push({
+        text: 'Group Poster: ' + paused.length + ' group(s) paused. ' +
+          paused.map((n) => n.text.replace(/^Group Poster: /, '')).join(' · '),
+      });
+    }
+    const unique = [...new Map(visible.map((n) => [n.text, n])).values()];
+    const panel = $('issuesPanel');
+    panel.hidden = !unique.length;
+    if (!unique.length) panel.open = false;
+    $('issuesSummary').textContent = unique.length + (unique.length === 1 ? ' issue' : ' issues') + ' · View details';
     $('notes').replaceChildren(
-      ...notes.map((n) => {
+      ...unique.map((n) => {
         const box = el('div', 'note');
         box.append(el('span', '', n.text));
         if (n.action) {

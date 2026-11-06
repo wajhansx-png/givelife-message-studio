@@ -17,7 +17,10 @@
     pick = localStorage.getItem('givelife-agent') || 'manager',
     data = null,
     shown = '',
-    typing = false;
+    typing = false,
+    previewHiddenId = sessionStorage.getItem('givelife-writer-preview-dismissed') || '',
+    previewShownId = '',
+    previewBusy = false;
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -91,11 +94,39 @@
     row.append(body);
     return row;
   }
+  function fitPreview() {
+    const stage = $('draftStage'), paper = $('draftPaper');
+    if ($('draftPreview').hidden || !stage.clientHeight || !paper.offsetHeight) return;
+    paper.style.setProperty('--draft-scale', '1');
+    const availableH = Math.max(1, stage.clientHeight - 24);
+    const availableW = Math.max(1, stage.clientWidth - 20);
+    const scale = Math.min(1, availableH / paper.offsetHeight, availableW / paper.offsetWidth);
+    paper.style.setProperty('--draft-scale', String(scale));
+  }
+  function showWriterPreview() {
+    const p = data?.writer_preview;
+    const pending = pick === 'writer' && p?.status === 'pending'
+      && p.kind === 'group' && typeof p.text === 'string' && !!p.text;
+    $('reviewStrip').hidden = !pending;
+    const visible = pending && p.id !== previewHiddenId;
+    $('draftPreview').hidden = !visible;
+    if (!visible) return;
+    if (previewShownId !== p.id) {
+      previewShownId = p.id;
+      if (window.waFormat) $('draftText').innerHTML = window.waFormat(p.text);
+      else $('draftText').textContent = p.text;
+      $('draftError').hidden = true;
+      $('draftError').textContent = '';
+    }
+    if (document.activeElement === $('inp')) $('inp').blur();
+    requestAnimationFrame(fitPreview);
+  }
   function render() {
     chips();
     $('name').textContent = NAMES[pick];
     $('inp').placeholder = 'Message ' + NAMES[pick];
     if (!data) return;
+    showWriterPreview();
     const a = data.agents.find((x) => x.id === pick) || data.agents[0];
     $('modeAuto').setAttribute('aria-checked', String(!!data.auto));
     // Only what needs attention: problems with a fix, and Manager's issues. Everything else lives in chat.
@@ -249,8 +280,56 @@
     if (!(await send(text))) $('inp').value = text;
     $('inp').disabled = false;
     grow();
-    $('inp').focus();
+    if ($('draftPreview').hidden) $('inp').focus();
   };
+  $('reviewDraft').onclick = () => {
+    previewHiddenId = '';
+    sessionStorage.removeItem('givelife-writer-preview-dismissed');
+    showWriterPreview();
+  };
+  $('draftClose').onclick = () => {
+    const p = data?.writer_preview;
+    if (p?.id) {
+      previewHiddenId = p.id;
+      sessionStorage.setItem('givelife-writer-preview-dismissed', p.id);
+    }
+    showWriterPreview();
+  };
+  async function previewAction(action) {
+    const p = data?.writer_preview;
+    if (!p?.id || previewBusy) return;
+    previewBusy = true;
+    const next = $('draftNext'), approve = $('draftApprove');
+    next.disabled = approve.disabled = true;
+    const oldNext = next.textContent, oldApprove = approve.textContent;
+    if (action === 'writer_next') next.textContent = 'Writing…';
+    else approve.textContent = 'Saving…';
+    $('draftError').hidden = true;
+    try {
+      const result = await call('POST', { action, preview_id: p.id });
+      if (action === 'writer_next' && result.writer_preview?.id === p.id)
+        throw Error('No different checked draft was generated. Your previous draft is kept.');
+      data = result;
+      if (action === 'writer_approve') {
+        previewHiddenId = '';
+        previewShownId = '';
+        sessionStorage.removeItem('givelife-writer-preview-dismissed');
+        say(result.reply || 'Saved to Group Messages. Nothing sent.');
+      }
+      render();
+    } catch (e) {
+      $('draftError').hidden = false;
+      $('draftError').textContent = e.message || 'Unable to finish. The current draft is unchanged.';
+    } finally {
+      previewBusy = false;
+      next.disabled = approve.disabled = false;
+      next.textContent = oldNext;
+      approve.textContent = oldApprove;
+    }
+  }
+  $('draftNext').onclick = () => previewAction('writer_next');
+  $('draftApprove').onclick = () => previewAction('writer_approve');
+  window.addEventListener('resize', fitPreview);
   $('modeAuto').onclick = () => data && act({ action: 'auto', on: !data.auto });
   $('accessForm').onsubmit = (e) => {
     e.preventDefault();

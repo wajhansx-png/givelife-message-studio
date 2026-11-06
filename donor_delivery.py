@@ -890,7 +890,7 @@ class DonorDelivery:
                 name, gender = (
                     j["personal_names"][ident]
                     if "personal_names" in j
-                    else self.name_for(r)
+                    else self.name_for(r if r.get("dm_salutation") else r["name"])
                 )
                 self._update(
                     j["id"],

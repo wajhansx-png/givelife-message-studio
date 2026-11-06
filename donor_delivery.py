@@ -230,7 +230,12 @@ class DonorDelivery:
         custom_template=None,
         attachment=None,
         resume_id=None,
+        follow_up=None,
     ):
+        if follow_up is not None and (
+            not isinstance(follow_up, str) or not follow_up.strip() or len(follow_up) > 2000
+        ):
+            raise ValueError("Write the follow-up message first (up to 2,000 characters).")
         if attachment is not None and (
             not isinstance(attachment, str) or not re.fullmatch("[a-f0-9]{32}", attachment)
         ):
@@ -550,6 +555,8 @@ class DonorDelivery:
                 job["personal_names"] = copy.deepcopy(personal_names)
             if custom_template is not None:
                 job["custom_template"] = custom_template
+            if follow_up:
+                job["follow_up"] = follow_up.strip()
             if attachment:
                 job["attachment"] = attachment
             data["jobs"].append(job)
@@ -720,6 +727,46 @@ class DonorDelivery:
             )
         except Exception:
             return saved
+
+    @staticmethod
+    def follow_text(template, name, gender):
+        """'{name}' becomes the saved greeting: Sohaib Bhai / Areeba Sister / just the name."""
+        word = "Sister" if gender == "Sister" else "" if gender == "Neutral" and name else "Bhai"
+        return template.replace("{name}", (name + " " + word).strip() if name else word or "Bhai")
+
+    def _send_follow_up(self, j, r, name, gender, receipts, sent, skipped):
+        """Only after the poster DM was confirmed. Never retried; an uncertain follow-up stops the batch."""
+        if self.stop.is_set() or self.held():
+            return "Cancelled", ""
+        if not self.eligible(r["phone"]):
+            return "Skipped: opted out or blocked", ""
+        try:
+            res = self._dispatch(
+                j,
+                {
+                    "target": "phone",
+                    "phone": r["phone"],
+                    "message": self.follow_text(j["follow_up"], name, gender),
+                    "poster": False,
+                    "kind": "owner_text",
+                    "attachment": None,
+                    "first_in_batch": False,
+                    "name": name,
+                    "gender": gender,
+                },
+                receipts,
+                sent,
+                skipped,
+            )
+        except ValueError as e:
+            return "Not sent", hide_numbers(e)
+        except Exception:
+            return "Uncertain", "Follow-up was not confirmed. Check WhatsApp. No automatic retry."
+        if res is None:
+            return "Cancelled", ""
+        if not isinstance(res, dict) or res.get("code") != "SUCCESS":
+            return "Uncertain", "Follow-up was not confirmed. Check WhatsApp. No automatic retry."
+        return "Sent", ""
 
     def _dispatch(self, j, body, receipts, sent, skipped):
         """Send one DM. Waits for WhatsApp to come back instead of giving up."""
@@ -962,6 +1009,16 @@ class DonorDelivery:
                     }
                 )
                 self._update(j["id"], sent=sent, skipped=skipped, receipts=receipts)
+                if j.get("follow_up"):
+                    fu, fu_error = self._send_follow_up(j, r, name, gender, receipts, sent, skipped)
+                    receipts[-1]["follow_up"] = fu
+                    self.book.follow_up(ident, fu)
+                    last_completion = time.time()
+                    self._update(j["id"], sent=sent, skipped=skipped, receipts=receipts)
+                    if fu_error:
+                        state = "Stopped"
+                        error = fu_error
+                        break
         except Exception:
             state = "Stopped"
             error = "The batch could not continue reliably. Check receipts before starting again."
@@ -1038,6 +1095,8 @@ class DonorDelivery:
             args["custom_template"] = j["custom_template"]
         if j.get("attachment"):
             args["attachment"] = j["attachment"]
+        if j.get("follow_up"):
+            args["follow_up"] = j["follow_up"]
         if j["scope"] == "selected":
             if not j.get("personal_names"):
                 return None

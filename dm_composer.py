@@ -35,7 +35,7 @@ def greeting(name, gender="Brother"):
     name = first_name(name)
     if name and gender == "Neutral":
         return name  # Name only: no gender assumption.
-    return (name + " " if name else "") + ("Sister" if name and gender == "Sister" else "Bhai")
+    return (name + " " if name else "") + ("Sister" if gender == "Sister" else "Bhai")
 
 
 SALUTATION = re.compile(

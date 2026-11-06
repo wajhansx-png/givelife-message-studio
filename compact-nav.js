@@ -15,6 +15,14 @@
     menus.push(details);
     details.addEventListener('toggle', () => {
       if (details.open) for (const other of menus) if (other !== details) other.open = false;
+      /* Keep the panel fully on screen (it can sit past the left or right edge on 320 px phones). */
+      panel.style.translate = '';
+      if (details.open)
+        requestAnimationFrame(() => {
+          const r = panel.getBoundingClientRect();
+          const dx = r.left < 8 ? 8 - r.left : r.right > innerWidth - 8 ? innerWidth - 8 - r.right : 0;
+          if (dx) panel.style.translate = Math.round(dx) + 'px 0';
+        });
     });
     panel.addEventListener('click', (e) => {
       if (e.target.closest('button')) details.open = false;

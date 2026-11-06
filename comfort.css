@@ -3808,3 +3808,10 @@ html body .focus-base-dialog p{margin:0 0 14px;font-size:14px;line-height:1.4}
 html body .focus-base-actions{display:grid;grid-template-columns:1fr 2fr;gap:8px}
 html body .focus-base-actions button{min-height:44px;border-radius:12px;font-weight:800}
 html body #messageFocus #focusFormatted{padding-right:46px!important;box-sizing:border-box}
+
+/* ===== Case list: compact anchored popover instead of the native option list ===== */
+.case-pop{position:fixed;z-index:60;overflow:auto;display:grid;gap:2px;padding:6px;border-radius:14px;background:#171923;border:1px solid #ffffff2a;box-shadow:0 12px 32px #000a}
+.case-pop button{min-height:44px;padding:0 12px;border-radius:10px;text-align:left;font-size:15px;color:#f3f4f6;background:transparent;border:0;cursor:pointer}
+.case-pop button:hover,.case-pop button:focus-visible{background:#ffffff14;outline:none}
+.case-pop .case-pop-cur{font-weight:800;background:#3b6cf633}
+.case-pop .case-pop-act{color:#c4b5fd;border-top:1px solid #ffffff14;border-radius:0 0 10px 10px}

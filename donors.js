@@ -52,6 +52,7 @@
       box.type = 'checkbox';
       box.id = 'donorFollowUp';
       box.name = 'send_follow_up';
+      box.checked = true;
       box.onchange = () => (followUpOn = box.checked);
       opt.id = 'donorFollowUpOpt';
       opt.append(box, make('span', '', 'Send with follow-up'));
@@ -69,7 +70,7 @@
   }
 
   let msgSub = 'dm'; /* Messages sub-tab: 'dm' versions or 'follow' up */
-  let followUpOn = false; /* off by default; lasts until the page reloads */
+  let followUpOn = true; /* defaults on as requested; can be switched off on the donor screen */
   const resumeStatus = make('div', 'donor-resume-status');
   resumeStatus.id = 'donorResumeStatus';
   resumeStatus.hidden = true;
@@ -601,7 +602,8 @@
 <small id="batchGapNote" class="batch-hint" hidden>Under 1 minute can get a number restricted by WhatsApp.</small>
 <label class="batch-fresh bm-poster"><input type="checkbox" id="batchPoster" checked> Attach poster</label>
 <details class="batch-more">
-  <summary>More options</summary>
+  <summary>Advanced settings</summary>
+  <div class="batch-options">
   <label for="batchPause">Rest between batches</label>
   <select id="batchPause" name="pause"><option value="20">20 min</option><option value="30">30 min</option><option value="60">1 hour</option><option value="custom">Custom…</option></select>
   <input id="batchPauseCustom" type="number" min="1" max="1440" inputmode="numeric" placeholder="Minutes" aria-label="Custom minutes between batches" hidden>
@@ -615,7 +617,7 @@
   </div>
   <label for="batchEach">Different rest after each batch (optional)</label>
   <input id="batchEach" name="each" type="text" inputmode="text" placeholder="e.g. 20, 30, 60" autocomplete="off">
-</details>
+</div></details>
 <div class="batch-foot">
   <p id="batchPlan" class="batch-plan" role="status" aria-live="polite"></p>
   <div class="donor-form-actions">
@@ -664,11 +666,8 @@
     ).length;
     el('batchAudience').textContent = !scope
       ? ''
-      : free +
-        ' not contacted yet' +
-        (!el('batchIncl').checked && hidden
-          ? ' · ' + hidden + ' already contacted are left out'
-          : '');
+      : free + ' ready' +
+        (!el('batchIncl').checked && hidden ? ' · ' + hidden + ' already contacted (excluded)' : '');
     const count = Number(el('batchCount').value) || 0,
       per = Math.max(1, Math.min(20, Number(el('batchLimit').value) || 20)),
       gap = gapSecs() / 60 || 4,
@@ -714,6 +713,7 @@
     const epoch = ++pickerEpoch,
       path = Nav.path();
     pickerScope = scope;
+    picker.querySelector('.batch-more').open = false;
     el('batchFresh').checked = false;
     el('batchResume').hidden = true;
     try {
@@ -733,7 +733,7 @@
     el('batchPoster').checked = el('donorRowPoster') ? el('donorRowPoster').checked : true;
     setGap(Math.max(5, Math.min(600, Number(el('donorGap').value) || 240)));
     el('batchIncl').checked = false;
-    el('batchCount').value = scope ? Math.min(1000, batchAvailable()) || '' : '';
+    el('batchCount').value = scope ? String(Math.min(1000, batchAvailable())) : '';
     el('batchCount').disabled = !scope;
     paintAudience();
     highlightGapBtn();
@@ -745,6 +745,20 @@
   el('batchLimit').oninput = paintAudience;
   el('batchLimit').onchange = paintAudience;
   el('batchCancel').onclick = () => picker.close();
+  picker.addEventListener('click', (event) => {
+    if (event.target === picker) picker.close();
+  });
+  document.addEventListener('pointerdown', (event) => {
+    const advanced = picker.querySelector('.batch-more');
+    if (picker.open && advanced.open && !advanced.contains(event.target)) advanced.open = false;
+  }, true);
+  picker.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && picker.querySelector('.batch-more').open) {
+      event.preventDefault();
+      event.stopPropagation();
+      picker.querySelector('.batch-more').open = false;
+    }
+  });
   let customGap = false;
   function highlightGapBtn() {
     const v = String(el('batchGap').value),

@@ -216,7 +216,10 @@ class Writer(Agent):
         """Explicit owner approval: save the selected, checked Group draft; never send."""
         preview = self.sys.state.get("writer_preview") or {}
         if not preview_id or preview.get("id") != preview_id or preview.get("status") != "pending":
-            return False, "That Group preview is no longer awaiting approval. Review the newest draft."
+            return (
+                False,
+                "That Group preview is no longer awaiting approval. Review the newest draft.",
+            )
         text = str(preview.get("text") or "")
         if preview.get("kind") != "group" or not text:
             return False, "Only a pending Group draft can be approved here."
@@ -334,7 +337,8 @@ class Writer(Agent):
                 final_issues.append("too similar to the previous draft")
             if final_issues:
                 return False, (
-                    "No new preview: Checker rejected the draft: " + "; ".join(final_issues)
+                    "No new preview: Checker rejected the draft: "
+                    + "; ".join(final_issues)
                     + ". The previous draft is still available."
                 )
             self.sys.ctx["draft"] = draft
@@ -1355,7 +1359,9 @@ class Manager:
         return {
             "agents": [boss] + cards,
             "chat": chat,
-            "writer_preview": preview if isinstance(preview, dict) and preview.get("status") == "pending" else None,
+            "writer_preview": preview
+            if isinstance(preview, dict) and preview.get("status") == "pending"
+            else None,
             "auto": bool(app.auto_on()),
             "updated": _now(),
         }
@@ -1369,9 +1375,8 @@ class Manager:
         if action in ("writer_next", "writer_approve"):
             with self.lock:
                 preview = self.state.get("writer_preview") or {}
-                if (
-                    preview.get("status") != "pending"
-                    or body.get("preview_id") != preview.get("id")
+                if preview.get("status") != "pending" or body.get("preview_id") != preview.get(
+                    "id"
                 ):
                     raise ValueError("This preview has changed. Review the current draft.")
                 if action == "writer_approve":
@@ -1392,13 +1397,16 @@ class Manager:
                 start = len(self.state["chat"])
                 self._say("you", "Next version", "writer")
                 self._run(
-                    "writer", instruction,
+                    "writer",
+                    instruction,
                     lambda: self.agents["writer"].chat(instruction, kind="group"),
                 )
                 self.save()
                 new_preview = self.state.get("writer_preview") or {}
                 if new_preview.get("id") == before:
-                    raise ValueError("Writer could not create a different checked draft. Your previous draft is kept.")
+                    raise ValueError(
+                        "Writer could not create a different checked draft. Your previous draft is kept."
+                    )
                 return {"messages": self.state["chat"][start:], **self.view()}
         if action == "auto":
             reply = app.set_auto(bool(body.get("on")))

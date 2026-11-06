@@ -1,6 +1,6 @@
 (() => {
   const $ = (id) => document.getElementById(id);
-  const COLOR = { Active: '#10a37f', Working: '#e8b04a', Idle: '#8f8f8f', Error: '#ef6b6b' };
+  const COLOR = { Active: '#10a37f', Working: '#e8b04a', Idle: '#6b6b6b', Error: '#ef6b6b' };
   const ROSTER = [
     ['manager', 'Manager'],
     ['writer', 'Writer'],
@@ -11,18 +11,30 @@
     ['volunteers', 'Volunteer Guide'],
     ['plan', 'Case Plan'],
   ];
+  const NAMES = Object.fromEntries(ROSTER);
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let key = localStorage.getItem('givelife-cloud-key') || '',
     pick = localStorage.getItem('givelife-agent') || 'manager',
     data = null,
-    shown = '';
+    shown = '',
+    typing = false;
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
     if (text != null) n.textContent = text;
     return n;
   };
-  const clock = (t) =>
-    t ? new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  // Agent replies use Markdown (**bold**); drafts use WhatsApp (*bold*). Both render, nothing shows as symbols.
+  const md = (t) =>
+    String(t || '')
+      .replace(/^#{1,6}\s+(.+)$/gm, '*$1*')
+      .replace(/\*\*([^*\n]+)\*\*/g, '*$1*')
+      .replace(/__([^_\n]+)__/g, '_$1_')
+      .replace(/^(\s*)[-•]\s+/gm, '$1* ');
+  const rich = (node, text) => {
+    node.innerHTML = window.waFormat ? window.waFormat(md(text)) : '';
+    if (!window.waFormat) node.textContent = text;
+  };
   const say = (t, bad) => {
     $('msg').textContent = t || '';
     $('msg').className = 'msg' + (bad ? ' bad' : '');
@@ -49,75 +61,61 @@
     return d;
   }
   function chips() {
+    const states = Object.fromEntries((data?.agents || []).map((a) => [a.id, a.state]));
     $('list').replaceChildren(
       ...ROSTER.map(([id, name]) => {
         const b = el('button', 'agent');
         b.type = 'button';
         b.setAttribute('aria-current', String(id === pick));
-        b.append(el('span', 'dot'), el('span', 'nm', name));
+        const dot = el('span', 'dot');
+        dot.style.background = COLOR[states[id]] || '#6b6b6b';
+        b.append(dot, el('span', '', name));
         b.onclick = () => {
+          if (pick === id) return;
           pick = id;
-          localStorage.setItem('givelife-agent', pick);
-          data ? render() : chips();
-        };
-        return b;
-      }),
-    );
-    $('name').textContent = (ROSTER.find((r) => r[0] === pick) || ROSTER[0])[1];
-  }
-  chips();
-  function render() {
-    if (!data) return;
-    const a = data.agents.find((x) => x.id === pick) || data.agents[0];
-    pick = a.id;
-    const names = Object.fromEntries(data.agents.map((x) => [x.id, x.name]));
-    $('list').replaceChildren(
-      ...data.agents.map((x) => {
-        const b = el('button', 'agent');
-        b.type = 'button';
-        b.setAttribute('aria-current', String(x.id === a.id));
-        b.append(
-          el('span', 'dot'),
-          el('span', 'nm', x.name),
-          el('small', '', x.state + ' · ' + x.now),
-        );
-        b.firstChild.style.background = COLOR[x.state];
-        b.onclick = () => {
-          pick = x.id;
+          shown = '';
           localStorage.setItem('givelife-agent', pick);
           render();
+          b.scrollIntoView({ block: 'nearest', inline: 'center' });
         };
         return b;
       }),
     );
-    $('modeManual').setAttribute('aria-pressed', String(!data.auto));
-    $('modeAuto').setAttribute('aria-pressed', String(data.auto));
-    $('modeText').textContent = data.auto
-      ? 'Auto: agents post, read and reply on their own.'
-      : 'Manual: nothing runs by itself.';
-    $('name').textContent = a.name;
-    $('pill').textContent = a.state;
-    $('pill').style.background = COLOR[a.state];
-    $('now').textContent = a.now;
-    $('role').textContent = a.role;
-    const p = a.progress || {};
-    $('pLabel').textContent = p.label || '';
-    $('pText').textContent = p.max ? p.value + ' / ' + p.max : String(p.value ?? '');
-    $('pBar').style.width =
-      (p.max ? Math.min(100, (100 * p.value) / p.max) : p.value ? 100 : 0) + '%';
-    $('pBar').style.background = COLOR[a.state];
-    $('facts').replaceChildren(...(a.facts || []).map((f) => el('li', '', f)));
-    $('errors').replaceChildren(
-      ...(a.errors || []).map((e) => {
-        const box = el('div', 'err');
-        box.append(el('b', '', e.text), el('span', '', e.fix));
-        if (e.action) {
-          const b = el('button', '', e.action === 'open_home' ? 'Open main page' : 'Fix now');
+  }
+  function bubble(m) {
+    const me = m.who === 'you',
+      row = el('div', 'bubble ' + (me ? 'me' : 'them'));
+    if (!me && m.who !== pick) row.append(el('b', 'who', NAMES[m.who] || m.who));
+    const body = el('div', 'txt');
+    me ? (body.textContent = m.text) : rich(body, m.text);
+    row.append(body);
+    return row;
+  }
+  function render() {
+    chips();
+    $('name').textContent = NAMES[pick];
+    $('inp').placeholder = 'Message ' + NAMES[pick];
+    if (!data) return;
+    const a = data.agents.find((x) => x.id === pick) || data.agents[0];
+    $('modeAuto').setAttribute('aria-checked', String(!!data.auto));
+    // Only what needs attention: problems with a fix, and Manager's issues. Everything else lives in chat.
+    const notes = [
+      ...(a.errors || []).map((e) => ({ text: e.text, action: e.action })),
+      ...(a.id === 'manager'
+        ? (a.facts || []).filter((f) => !/^Writer: \d/.test(f)).map((t) => ({ text: t }))
+        : []),
+    ];
+    $('notes').replaceChildren(
+      ...notes.map((n) => {
+        const box = el('div', 'note');
+        box.append(el('span', '', n.text));
+        if (n.action) {
+          const b = el('button', '', n.action === 'open_home' ? 'Open' : 'Fix');
           b.type = 'button';
           b.onclick = () =>
-            e.action === 'open_home'
+            n.action === 'open_home'
               ? (location.href = '/')
-              : act({ action: 'fix', fix: e.action });
+              : act({ action: 'fix', fix: n.action });
           box.append(b);
         }
         return box;
@@ -125,100 +123,120 @@
     );
     const rules = a.rules || [];
     $('rules').hidden = !rules.length;
-    $('ruleList').replaceChildren(
+    $('rules').replaceChildren(
       ...rules.map((r) => {
-        const li = el('li', '', r.text);
+        const c = el('span', 'rule', r.text);
         const x = el('button', 'x', '✕');
         x.type = 'button';
         x.setAttribute('aria-label', 'Remove rule: ' + r.text);
         x.onclick = () => act({ action: 'rule_delete', id: r.id });
-        li.append(x);
-        return li;
+        c.append(x);
+        return c;
       }),
     );
-    const lines = (data.chat || []).filter((m) => a.id === 'manager' || m.agent === a.id);
+    if (typing) return; // never redraw the conversation while a reply is being typed out
+    const lines = (data.chat || []).filter((m) => pick === 'manager' || m.agent === pick);
+    const sig = pick + ':' + lines.length + ':' + (lines.at(-1)?.id || '');
+    if (sig === shown) return;
+    shown = sig;
     $('thread').replaceChildren(
       ...(lines.length
-        ? lines.map((m) => {
-            const row = el('div', 'bubble ' + (m.who === 'you' ? 'me' : 'them'));
-            row.append(
-              el('b', '', m.who === 'you' ? 'You' : names[m.who] || m.who),
-              el('div', 'txt', m.text),
-            );
-            return row;
-          })
-        : [
-            el(
-              'p',
-              'muted',
-              a.id === 'manager'
-                ? 'Ask me anything, or say "ask all agents for their progress".'
-                : 'Ask ' + a.name + ' something.',
-            ),
-          ]),
+        ? lines.map(bubble)
+        : [el('p', 'empty', 'Ask ' + NAMES[pick] + ' anything.')]),
     );
-    if (shown !== a.id + lines.length) {
-      shown = a.id + lines.length;
-      $('thread').lastElementChild?.scrollIntoView({ block: 'nearest' });
+    end();
+  }
+  const end = () => requestAnimationFrame(() => ($('scroll').scrollTop = $('scroll').scrollHeight));
+  // Claude-style reply: a typing indicator while waiting, then the text writes itself out.
+  async function typeOut(node, text) {
+    if (calm) return rich(node, text);
+    const words = String(text).split(/(\s+)/);
+    let out = '';
+    for (let i = 0; i < words.length; i += 3) {
+      out += words.slice(i, i + 3).join('');
+      rich(node, out);
+      end();
+      await new Promise((r) => setTimeout(r, 18));
     }
-    $('feed').replaceChildren(
-      ...((a.feed || []).length
-        ? a.feed
-            .slice()
-            .reverse()
-            .map((f) => {
-              const r = el('div', 'ev');
-              r.append(el('time', '', clock(f.time)), el('span', '', f.text));
-              return r;
-            })
-        : [el('p', 'muted', 'No activity yet.')]),
-    );
-    $('inp').placeholder =
-      a.id === 'manager'
-        ? 'Message Manager, e.g. ask Writer to improve the group message'
-        : 'Message ' + a.name;
-    $('live').textContent = 'Updated ' + clock(data.updated);
+    rich(node, text);
   }
   async function load() {
     if (!key) return $('accessDialog').showModal();
     try {
       data = await call('GET');
       render();
-      if (!$('inp').disabled) say('');
+      if (!typing) say('');
     } catch (e) {
       say(e.message, true);
-      $('now').textContent = e.message;
     }
   }
   async function act(body) {
     try {
       data = await call('POST', body);
       render();
-      say(data.reply || '');
+      say(data.reply && body.action !== 'say' ? data.reply : '');
       return true;
     } catch (e) {
       say(e.message, true);
       return false;
     }
   }
-  $('modeManual').onclick = () => data?.auto && act({ action: 'auto', on: false });
-  $('modeAuto').onclick = () => data && !data.auto && act({ action: 'auto', on: true });
-  $('ask').onsubmit = async (e) => {
-    e.preventDefault();
-    const text = $('inp').value.trim();
-    if (!text || $('inp').disabled) return;
-    $('inp').disabled = true;
-    say((data?.agents.find((x) => x.id === pick)?.name || 'Manager') + ' is working…');
-    if (await act({ action: 'say', text, agent: pick })) $('inp').value = '';
-    $('inp').disabled = false;
-    $('inp').focus();
+  async function send(text) {
+    typing = true;
+    if ($('thread').querySelector('.empty')) $('thread').replaceChildren();
+    $('thread').append(bubble({ who: 'you', text }));
+    const wait = el('div', 'bubble them');
+    wait.append(el('div', 'dots'));
+    wait.firstChild.append(el('i'), el('i'), el('i'));
+    $('thread').append(wait);
+    end();
+    try {
+      const d = await call('POST', { action: 'say', text, agent: pick });
+      data = d;
+      wait.remove();
+      for (const m of (d.messages || []).filter((x) => x.who !== 'you')) {
+        const row = bubble({ ...m, text: '' });
+        $('thread').append(row);
+        await typeOut(row.querySelector('.txt'), m.text);
+      }
+      return true;
+    } catch (e) {
+      wait.remove();
+      say(e.message, true);
+      return false;
+    } finally {
+      typing = false;
+      shown = '';
+      render();
+    }
+  }
+  const grow = () => {
+    const t = $('inp');
+    t.style.height = 'auto';
+    t.style.height = Math.min(t.scrollHeight, 160) + 'px';
+    $('ask').querySelector('.send').disabled = !t.value.trim() || t.disabled;
   };
+  $('inp').addEventListener('input', grow);
   $('inp').onkeydown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       $('ask').requestSubmit();
     }
   };
+  $('ask').onsubmit = async (e) => {
+    e.preventDefault();
+    const text = $('inp').value.trim();
+    if (!text || $('inp').disabled) return;
+    $('inp').value = '';
+    $('inp').disabled = true;
+    grow();
+    say('');
+    if (!(await send(text))) $('inp').value = text;
+    $('inp').disabled = false;
+    grow();
+    $('inp').focus();
+  };
+  $('modeAuto').onclick = () => data && act({ action: 'auto', on: !data.auto });
   $('accessForm').onsubmit = (e) => {
     e.preventDefault();
     key = $('accessKey').value.trim();
@@ -226,6 +244,7 @@
     $('accessDialog').close();
     load();
   };
+  render();
   load();
-  setInterval(() => document.hidden || $('inp').disabled || load(), 8000);
+  setInterval(() => document.hidden || typing || load(), 8000);
 })();

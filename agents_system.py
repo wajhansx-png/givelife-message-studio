@@ -187,8 +187,10 @@ class Writer(Agent):
             return self.approve(preview.get("id"))
         if self.SAVE.search(low):
             preview = self.sys.state.get("writer_preview") or {}
-            if kind == "group" and preview.get("status") == "pending":
-                return self.approve(preview.get("id"))
+            if kind == "group":
+                if preview.get("status") == "pending":
+                    return self.approve(preview.get("id"))
+                return False, "No checked Group draft is awaiting approval. Ask Writer to draft one first."
             draft = self.sys.ctx.get("draft")
             if not draft:
                 return False, "There is no draft from me yet. Ask me to write one first."

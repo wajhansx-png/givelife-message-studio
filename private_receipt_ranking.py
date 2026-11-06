@@ -6,7 +6,6 @@ The importer never changes current-case donated flags, current-case amounts, or 
 import base64
 import copy
 import json
-import math
 import time
 import zlib
 

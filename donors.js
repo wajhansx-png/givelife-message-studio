@@ -357,6 +357,14 @@
     clearTimeout(amountTimers.get(id));
     amountTimers.delete(id);
   }
+  /* Cached once and updated on resize: reading sizes during a DOM change forces a full page layout. */
+  const narrow560 = { matches: false },
+    narrow700 = { matches: false };
+  for (const [flag, q] of [[narrow560, '(max-width:559.98px)'], [narrow700, '(max-width:699.98px)']]) {
+    const mq = matchMedia(q);
+    flag.matches = mq.matches;
+    mq.addEventListener('change', (e) => (flag.matches = e.matches));
+  }
   function updateCounts() {
     const counts = {
       all: allDonors.length,
@@ -382,15 +390,18 @@
       important: '★ Important',
       top: 'Top donors',
       donated: 'Donated',
-      not_contacted: innerWidth < 560 ? 'Not DMed' : 'Not contacted',
-      volunteers: innerWidth < 700 ? 'Helpers' : 'Volunteers',
+      // matchMedia, not innerWidth: reading innerWidth right after a DOM change forces a full page layout.
+      not_contacted: narrow560.matches ? 'Not DMed' : 'Not contacted',
+      volunteers: narrow700.matches ? 'Helpers' : 'Volunteers',
       messages: 'Messages',
     };
     counts.volunteers = vols.items.length;
     for (const b of page.querySelectorAll('[data-tab]')) {
       paintTab(b, labels[b.dataset.tab], counts[b.dataset.tab]);
       b.setAttribute('aria-selected', String(tab === b.dataset.tab));
-      b.tabIndex = b.dataset.tab === 'messages' || tab === b.dataset.tab ? 0 : -1;
+      // setAttribute (only on change), not .tabIndex: the property forces a synchronous style recalc per tab.
+      const ti = b.dataset.tab === 'messages' || tab === b.dataset.tab ? '0' : '-1';
+      if (b.getAttribute('tabindex') !== ti) b.setAttribute('tabindex', ti);
       b.setAttribute(
         'aria-label',
         {
@@ -572,18 +583,23 @@
   <p id="batchResumeText" class="batch-hint"></p>
   <label class="batch-fresh"><input type="checkbox" id="batchFresh"> Start from the beginning</label>
 </div>
-<label for="batchCount">How many people?</label>
-<input id="batchCount" name="count" type="number" min="1" max="1000" inputmode="numeric" required>
+<div class="bm-row"><label for="batchCount">People</label>
+<input id="batchCount" name="count" type="number" min="1" max="1000" inputmode="numeric" required></div>
 <p id="batchAudience" class="batch-hint"></p>
-<label>Time between each message</label>
-<div class="batch-gap-row">
+<div class="bm-row bm-gap"><label id="batchGapLabel">Wait between DMs</label>
+<div class="batch-gap-row" role="group" aria-labelledby="batchGapLabel">
   <button type="button" class="batch-gap-btn" data-gap="2">2 min</button>
   <button type="button" class="batch-gap-btn" data-gap="4">4 min</button>
   <button type="button" class="batch-gap-btn" data-gap="6">6 min</button>
   <button type="button" class="batch-gap-btn" data-gap="8">8 min</button>
-  <input id="batchGap" name="gap_value" type="number" min="1" max="600" inputmode="numeric" value="4" aria-label="Custom gap" placeholder="or type"><select id="batchGapUnit" name="gap_unit" aria-label="Gap unit"><option value="60">minutes</option><option value="1">seconds</option></select><small id="batchGapNote" class="batch-hint" hidden>Under 1 minute can get a number restricted by WhatsApp.</small>
+  <button type="button" class="batch-gap-btn" data-gap="custom">Custom</button>
+</div></div>
+<div id="batchGapCustom" class="bm-custom" hidden>
+  <input id="batchGap" name="gap_value" type="number" min="1" max="600" inputmode="numeric" value="4" aria-label="Custom gap">
+  <select id="batchGapUnit" name="gap_unit" aria-label="Gap unit"><option value="60">minutes</option><option value="1">seconds</option></select>
 </div>
-<label class="batch-fresh"><input type="checkbox" id="batchPoster" checked> Attach poster</label>
+<small id="batchGapNote" class="batch-hint" hidden>Under 1 minute can get a number restricted by WhatsApp.</small>
+<label class="batch-fresh bm-poster"><input type="checkbox" id="batchPoster" checked> Attach poster</label>
 <details class="batch-more">
   <summary>More options</summary>
   <label for="batchPause">Rest between batches</label>
@@ -670,16 +686,17 @@
     let secs = (count - 1) * gap * 60;
     for (let i = 0; i < batches - 1; i++) secs += pauses[Math.min(i, pauses.length - 1)];
     plan.textContent =
+      'Send to ' +
       count +
-      ' people · ' +
-      batches +
-      ' batch' +
-      (batches === 1 ? '' : 'es') +
-      ' of up to ' +
-      per +
-      ' · first DM now · done by about ' +
+      (count === 1 ? ' person' : ' people') +
+      '. Wait ' +
+      gapText(gapSecs()) +
+      ' between each. Poster ' +
+      (el('batchPoster').checked ? 'on' : 'off') +
+      '. Done by about ' +
       clock(new Date(Date.now() + secs * 1000)) +
-      '. Runs by itself, even with the app closed.';
+      (batches > 1 ? ' (' + batches + ' batches, with rests)' : '') +
+      '. Runs even if the app is closed.';
   }
   let pickerEpoch = 0;
   /* Gap = number + unit (minutes or seconds). Stored as seconds everywhere else. */
@@ -712,6 +729,8 @@
         'Your last batch stopped. ' +
         left +
         ' people are still waiting; the ones already sent will be skipped.';
+    customGap = false;
+    el('batchPoster').checked = el('donorRowPoster') ? el('donorRowPoster').checked : true;
     setGap(Math.max(5, Math.min(600, Number(el('donorGap').value) || 240)));
     el('batchIncl').checked = false;
     el('batchCount').value = scope ? Math.min(1000, batchAvailable()) || '' : '';
@@ -726,18 +745,33 @@
   el('batchLimit').oninput = paintAudience;
   el('batchLimit').onchange = paintAudience;
   el('batchCancel').onclick = () => picker.close();
+  let customGap = false;
   function highlightGapBtn() {
     const v = String(el('batchGap').value),
-      min = el('batchGapUnit').value === '60';
+      min = el('batchGapUnit').value === '60',
+      preset = min && ['2', '4', '6', '8'].includes(v),
+      custom = customGap || !preset;
     for (const b of picker.querySelectorAll('.batch-gap-btn'))
-      b.setAttribute('aria-pressed', String(min && b.dataset.gap === v));
+      b.setAttribute(
+        'aria-pressed',
+        String(b.dataset.gap === 'custom' ? custom : !custom && b.dataset.gap === v),
+      );
+    el('batchGapCustom').hidden = !custom;
     el('batchGapNote').hidden = !(gapSecs() > 0 && gapSecs() < 60);
   }
   for (const b of picker.querySelectorAll('.batch-gap-btn'))
     b.onclick = () => {
-      el('batchGapUnit').value = '60';
-      el('batchGap').value = b.dataset.gap;
-      highlightGapBtn();
+      if (b.dataset.gap === 'custom') {
+        customGap = true;
+        highlightGapBtn();
+        el('batchGap').focus();
+        el('batchGap').select();
+      } else {
+        customGap = false;
+        el('batchGapUnit').value = '60';
+        el('batchGap').value = b.dataset.gap;
+        highlightGapBtn();
+      }
       paintAudience();
     };
   for (const id of [
@@ -758,6 +792,14 @@
         : paintAudience;
   el('batchGapUnit').onchange = () => {
     highlightGapBtn();
+    paintAudience();
+  };
+  el('batchPoster').onchange = () => {
+    /* One poster choice for the app: the switch here also sets the single-tap DM poster. */
+    if (!editingJob && el('donorRowPoster') && el('donorRowPoster').checked !== el('batchPoster').checked) {
+      el('donorRowPoster').checked = el('batchPoster').checked;
+      el('donorRowPoster').dispatchEvent(new Event('change'));
+    }
     paintAudience();
   };
   for (const id of ['batchPause', 'batchRandom', 'batchIncl'])
@@ -836,16 +878,31 @@
   let bankRegenerating = false,
     bankGenerationTimer = null;
   const bankSaves = new Set();
+  /* One short status. The full reason (with the AI's detail) shows when the status is tapped. */
+  function bankGenerationDetail() {
+    const g = bankData?.generation;
+    return g && g.state !== 'Generating' && g.state !== 'Ready' && g.error ? g.error : '';
+  }
   function bankGenerationLabel() {
     const g = bankData?.generation;
     if (!g) return '';
-    return g.state === 'Generating'
-      ? `Generating DMs · ${g.ready}/${g.target} saved`
-      : g.state === 'Ready'
-        ? `${g.ready} DM messages ready`
-        : g.error
-          ? `${g.ready}/${g.target} saved · ${g.error}`
-          : '';
+    if (g.state === 'Generating') return `Generating · ${g.ready}/${g.target} saved`;
+    if (g.state === 'Ready') return `${g.ready} ready`;
+    if (!g.error) return '';
+    const missing = Math.max(0, g.target - g.ready);
+    return `${g.ready} ready · ${missing} need review ⓘ`;
+  }
+  function wireStatus(node) {
+    const detail = bankGenerationDetail();
+    node.title = detail;
+    node.tabIndex = detail ? 0 : -1;
+    node.onclick = () => {
+      if (!detail) return;
+      const open = node.dataset.open === '1';
+      node.dataset.open = open ? '' : '1';
+      node.textContent = open ? bankGenerationLabel() : detail;
+    };
+    node.onkeydown = (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), node.onclick());
   }
   function queueBankGenerationPoll() {
     clearTimeout(bankGenerationTimer);
@@ -985,6 +1042,7 @@
     }
     const generationState = make('span', 'bank-generation-state', bankGenerationLabel());
     generationState.setAttribute('role', 'status');
+    wireStatus(generationState);
     head.append(generationState);
     queueBankGenerationPoll();
     let selected;
@@ -1205,6 +1263,22 @@
     nav.insertBefore(backBottom, nav.firstChild);
     actions.append(baseBtn, testBtn, regen, regenProgress, nav);
     grid.append(actions, picker);
+    {
+      const cardEl = grid.querySelector('.bank-detail');
+      if (cardEl) {
+        const arrow = make('button', 'bank-next-arrow', '›');
+        arrow.type = 'button';
+        arrow.title = 'Next message';
+        arrow.setAttribute('aria-label', 'Next message');
+        arrow.onclick = () => box.querySelector('[data-bank-nav=next]')?.click();
+        const gen = make('button', 'bank-gen-icon', '↻');
+        gen.type = 'button';
+        gen.title = 'Regenerate versions';
+        gen.setAttribute('aria-label', 'Regenerate versions');
+        gen.onclick = () => box.querySelector('.bank-regenerate')?.click();
+        cardEl.append(arrow, gen);
+      }
+    }
     box.append(grid);
     syncBankControls();
     if (typeof ResizeObserver !== 'undefined') {
@@ -1467,8 +1541,8 @@
       important: '★ Important',
       top: 'Top donors',
       donated: 'Donated',
-      not_contacted: innerWidth < 560 ? 'Not DMed' : 'Not contacted',
-      volunteers: innerWidth < 700 ? 'Helpers' : 'Volunteers',
+      not_contacted: narrow560.matches ? 'Not DMed' : 'Not contacted',
+      volunteers: narrow700.matches ? 'Helpers' : 'Volunteers',
     };
     for (const b of page.querySelectorAll('[data-tab]')) {
       if (b.dataset.tab === 'messages') {
@@ -1834,6 +1908,15 @@
             for (const other of rows.querySelectorAll('.donor-more[open]'))
               if (other !== more) other.open = false;
             buildMenu();
+            /* Desktop: the menu never runs off the bottom of the screen; it scrolls inside instead. */
+            requestAnimationFrame(() => {
+              const m = more.querySelector(':scope > div');
+              if (!m || !more.open || innerWidth <= 560) return;
+              m.style.maxHeight = '';
+              const top = m.getBoundingClientRect().top;
+              m.style.maxHeight = Math.max(200, innerHeight - Math.max(top, 8) - 8) + 'px';
+              m.style.overflowY = 'auto';
+            });
           };
           more.append(summary);
           row.append(star, ident, dm, status, amount, more);
@@ -1876,7 +1959,9 @@
     el('donorMessagesTab').tabIndex = 0;
     for (const b of page.querySelectorAll('[data-tab]')) {
       b.setAttribute('aria-selected', String(tab === b.dataset.tab));
-      b.tabIndex = b.dataset.tab === 'messages' || tab === b.dataset.tab ? 0 : -1;
+      // setAttribute (only on change), not .tabIndex: the property forces a synchronous style recalc per tab.
+      const ti = b.dataset.tab === 'messages' || tab === b.dataset.tab ? '0' : '-1';
+      if (b.getAttribute('tabindex') !== ti) b.setAttribute('tabindex', ti);
     }
     el('donorTable').hidden = tab === 'messages' || tab === 'volunteers';
     if (el('donorFollowUpOpt')) el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
@@ -2095,16 +2180,24 @@
         if (j.batches > 1 && rests.length) items.push(['Rest between batches', [...new Set(rests)].join(' / ')]);
         if (j.gap_seconds) items.push(['Gap between messages', j.gap_seconds < 60 ? gapText(j.gap_seconds) : mins(j.gap_seconds)]);
         facts.textContent = '';
-        for (const [k, v] of items) {
-          const chip = make('span', 'dp-fact');
-          chip.append(make('small', '', k), make('b', '', v));
-          facts.append(chip);
+        if (items.length) {
+          const short = { Batches: 'batch', 'Per batch': 'per batch', 'Rest between batches': 'rest', 'Gap between messages': 'gap' };
+          facts.append(
+            make(
+              'small',
+              'dp-plan',
+              items
+                .map(([k, v]) => (k === 'Batches' ? 'Batch ' + v : k === 'Per batch' ? v.replace(' people', '') + ' per batch' : short[k] + ' ' + v))
+                .join(' · '),
+            ),
+          );
         }
         facts.hidden = !items.length;
       }
       el('donorProgress').querySelector('span').textContent =
-        overall +
-        `${j.state} · ✓ ${(j.previous_sent || 0)+(j.sent || 0)} / ${j.original_total || j.total || 0} DM sent · ${j.pending ?? Math.max(0, (j.total || 0) - (j.sent || 0) - (j.skipped || 0) - (j.failed || 0))} left · ${j.failed || 0} failed` +
+        `${j.state}: ${(j.previous_sent || 0) + (j.sent || 0)} of ${j.original_total || j.total || 0} sent` +
+        ` · ${j.pending ?? Math.max(0, (j.total || 0) - (j.sent || 0) - (j.skipped || 0) - (j.failed || 0))} left` +
+        (j.failed ? ` · ${j.failed} not confirmed` : '') +
         (j.skipped ? ' · ' + j.skipped + ' skipped' : '') +
         (j.current ? ' · ' + j.current : '') +
         (j.next_at ? ' · ' + Math.max(0, Math.ceil(j.next_at - Date.now() / 1000)) + 's' : '') +
@@ -2553,18 +2646,59 @@
       paintProgressHidden();
     };
   new MutationObserver(paintProgressHidden).observe(el('donorProgress'), { attributes: true, attributeFilter: ['hidden'] });
+  /* Hide sits at the bottom of the box, within thumb reach. */
+  el('donorProgress').append(el('donorProgressHide'));
+  const foldProgress = () => {
+    if (el('donorProgress').hidden || progressHidden) return false;
+    progressHidden = true;
+    try {
+      localStorage.setItem('givelife-progress-hidden', '1');
+    } catch (e) {}
+    paintProgressHidden();
+    return true;
+  };
+  /* Outside click or Escape closes the progress box (it stays visible as the small chip) and a row's menu. */
+  document.addEventListener('pointerdown', (e) => {
+    if (!page.open) return;
+    const box = el('donorProgress');
+    if (!box.hidden && !progressHidden && !box.contains(e.target) && !el('donorProgressShow').contains(e.target) && e.target.closest('dialog') === page)
+      foldProgress();
+    for (const m of page.querySelectorAll('.donor-more[open]')) if (!m.contains(e.target)) m.open = false;
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || e.defaultPrevented || !page.open || [...document.querySelectorAll('dialog[open]')].some((d) => d !== page)) return;
+    const menu = page.querySelector('.donor-more[open]');
+    if (menu) {
+      menu.open = false;
+      menu.querySelector('summary')?.focus({ preventScroll: true });
+      e.preventDefault();
+    } else if (foldProgress()) e.preventDefault();
+  });
   paintProgressHidden();
   /* The sending panel floats above the bottom buttons (and above the paused bar), so the donor list keeps its height. */
   {
     const foot = page.querySelector('.donor-bottom'),
       shell = page.querySelector('.donor-shell'),
       rs = page.querySelector('#donorResumeStatus'),
+      heights = new Map(),
+      size = (n) => (heights.has(n) ? heights.get(n) : n.offsetHeight),
       sync = () => {
-        shell.style.setProperty('--donor-foot', (foot ? foot.offsetHeight : 72) + 'px');
-        shell.style.setProperty('--donor-rs', rs && rs.parentElement !== foot && !rs.hidden && rs.offsetHeight ? rs.offsetHeight + 8 + 'px' : '0px');
+        /* Write only when a value changes: rewriting the same variable re-styles the whole donor screen.
+           Sizes come from the ResizeObserver entries, so no extra forced layout. */
+        const footPx = (foot ? size(foot) : 72) + 'px',
+          rsH = rs ? size(rs) : 0,
+          rsPx = rs && rs.parentElement !== foot && !rs.hidden && rsH ? rsH + 8 + 'px' : '0px';
+        if (shell.style.getPropertyValue('--donor-foot') !== footPx) shell.style.setProperty('--donor-foot', footPx);
+        if (shell.style.getPropertyValue('--donor-rs') !== rsPx) shell.style.setProperty('--donor-rs', rsPx);
       };
-    if (typeof ResizeObserver !== 'undefined') for (const n of [foot, rs]) if (n) new ResizeObserver(sync).observe(n);
-    if (rs) new MutationObserver(sync).observe(rs, { attributes: true, attributeFilter: ['hidden', 'class'] });
+    if (typeof ResizeObserver !== 'undefined')
+      for (const n of [foot, rs])
+        if (n)
+          new ResizeObserver((entries) => {
+            for (const e of entries) heights.set(e.target, Math.round(e.borderBoxSize?.[0]?.blockSize ?? e.target.offsetHeight));
+            sync();
+          }).observe(n);
+    if (rs) new MutationObserver(() => (heights.delete(rs), sync())).observe(rs, { attributes: true, attributeFilter: ['hidden', 'class'] });
     sync();
   }
   el('donorStop').onclick = async () => {

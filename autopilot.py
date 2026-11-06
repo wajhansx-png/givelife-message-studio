@@ -5,6 +5,7 @@ and keeps WhatsApp's safety floors (15 minutes per group, 45 seconds between DMs
 Everything it needs from the outside world arrives through `h`, a dict of helpers supplied by server.py.
 """
 
+import reply_setup
 import json, re, time, datetime, threading, hashlib, os, urllib.request
 import rules, learning, team_rules, case_plan, message_rules, reply_intent, volunteer_flow
 from state_shapes import mapping, records
@@ -898,7 +899,7 @@ class Engine:
         setup = self.h.get("reply_setup", lambda: {})()
         if (
             not setup.get("enabled")
-            or not setup.get("replies")
+            or not (setup.get("replies") or setup.get("new_replies"))
             or self.h.get("on_hold", lambda: False)()
         ):
             return
@@ -941,7 +942,11 @@ class Engine:
                     continue
                 # Every saved reply goes, each as its own message, in the order written.
                 sent = 0
-                for reply in setup["replies"]:
+                try:
+                    known = bool(self.h.get("known_contact", lambda p: False)(phone))
+                except Exception:
+                    known = False
+                for reply in reply_setup.replies_for(setup, known):
                     try:
                         self.h["send_text"](jid, reply)
                         sent += 1

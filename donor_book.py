@@ -200,6 +200,12 @@ class DonorBook:
         with self.lock:
             data=self._load();row=next(x for x in data['records'] if x['id']==r['id']);row.update(deleted=True,updated_at=time.time());self._save(data)
         return {'id':r['id'],'reply':'Removed '+hide_numbers(r['name'])+' from the active donor list.','undo_available':True}
+    def has_phone(self,phone):
+        """True when this number is a saved (not deleted) contact in the donor book."""
+        try:phone=normalize_phone(phone)
+        except ValueError:return False
+        with self.lock:
+            return any(r.get('phone')==phone and not r.get('deleted') for r in self._load()['records'])
     def normal_amount_for_phone(self,phone):
         if not phone:return 0
         try:phone=normalize_phone(phone)

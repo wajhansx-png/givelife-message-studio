@@ -771,7 +771,8 @@ const surfaceAnimations = new WeakMap();
 function moveSurface(surface) {
   if (
     !surface ||
-    !surface.getClientRects().length ||
+    surface.hidden ||
+    !surface.isConnected ||
     !surface.animate ||
     matchMedia('(prefers-reduced-motion: reduce)').matches
   )
@@ -2891,6 +2892,10 @@ $('caseSelect')?.addEventListener('change', async (e) => {
         return;
       }
       const n = Number(String(left).replace(/[^\d.]/g, ''));
+      if (!confirm('Start "' + name.trim() + '" with Rs. ' + n.toLocaleString('en-PK') + ' needed? The current case is saved first and stays in the case list.')) {
+        await loadCases();
+        return;
+      }
       await caseAct({ action: 'new', name, left: n });
       location.reload();
       return;
@@ -2911,4 +2916,65 @@ $('caseSelect')?.addEventListener('change', async (e) => {
     await loadCases();
   }
 });
+/* The native option list is huge on phones and covers the screen. A compact anchored list replaces it. */
+(() => {
+  const sel = $('caseSelect');
+  if (!sel) return;
+  let pop = null;
+  const close = () => {
+    pop?.remove();
+    pop = null;
+  };
+  const open = () => {
+    close();
+    pop = document.createElement('div');
+    pop.className = 'case-pop';
+    pop.setAttribute('role', 'listbox');
+    for (const o of sel.options) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('role', 'option');
+      b.className = o.value.startsWith('__') ? 'case-pop-act' : o.selected ? 'case-pop-cur' : '';
+      b.setAttribute('aria-selected', String(o.selected));
+      b.textContent = (o.selected && !o.value.startsWith('__') ? '✓ ' : '') + o.textContent;
+      b.onclick = () => {
+        const chosen = o.value;
+        close();
+        if (!o.selected || o.value.startsWith('__')) {
+          sel.value = chosen;
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      };
+      pop.append(b);
+    }
+    document.body.append(pop);
+    const r = sel.getBoundingClientRect(),
+      w = Math.min(Math.max(r.width, 240), innerWidth - 16);
+    pop.style.width = w + 'px';
+    pop.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+    const below = innerHeight - r.bottom - 8;
+    pop.style.maxHeight = Math.max(160, Math.min(320, below > 180 ? below : r.top - 16)) + 'px';
+    pop.style.top = (below > 180 ? r.bottom + 4 : Math.max(8, r.top - 4 - Math.min(pop.scrollHeight, 320))) + 'px';
+    pop.querySelector('button')?.focus();
+  };
+  sel.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    pop ? close() : open();
+  });
+  sel.addEventListener('keydown', (e) => {
+    if (['Enter', ' ', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      open();
+    }
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (pop && !pop.contains(e.target) && e.target !== sel) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && pop) {
+      close();
+      sel.focus();
+    }
+  });
+})();
 loadCases();

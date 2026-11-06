@@ -178,6 +178,41 @@ class AutoReplyTests(unittest.TestCase):
         e.scan_reply_setup()
         self.assertEqual(sent, [])
 
+    def scan_for(self, known, existing, new, opted_out=False):
+        s = self.store()
+        reply_setup.save(s, True, existing, new)
+        s.d["reply_setup"]["since"] = 0
+        e, sent = self.engine(
+            s, [{"id": "a", "content": "done", "timestamp": "2026-11-03T10:00:00Z"}]
+        )
+        e.h["known_contact"] = lambda phone: known
+        e.h["is_opted_out"] = lambda phone: opted_out
+        e.scan_reply_setup()
+        return [text for _, text in sent]
+
+    def test_saved_contacts_and_new_numbers_get_their_own_replies(self):
+        self.assertEqual(
+            self.scan_for(True, ["Please share in your groups"], ["Join GiveLife"]),
+            ["Please share in your groups"],
+        )
+        self.assertEqual(
+            self.scan_for(False, ["Please share in your groups"], ["Join GiveLife"]),
+            ["Join GiveLife"],
+        )
+
+    def test_an_empty_audience_falls_back_to_the_other_list(self):
+        self.assertEqual(self.scan_for(False, ["Thanks"], []), ["Thanks"])
+        self.assertEqual(self.scan_for(True, [], ["Welcome"]), ["Welcome"])
+
+    def test_opted_out_number_gets_no_reply(self):
+        self.assertEqual(self.scan_for(False, ["a"], ["b"], opted_out=True), [])
+
+    def test_saving_keeps_new_contacts_list_when_not_sent(self):
+        s = self.store()
+        reply_setup.save(s, True, ["a"], ["b"])
+        reply_setup.save(s, True, ["c"])  # an older client that only knows one list
+        self.assertEqual(reply_setup.get(s)["new_replies"], ["b"])
+
 
 if __name__ == "__main__":
     unittest.main()

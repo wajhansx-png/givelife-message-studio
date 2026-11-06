@@ -114,8 +114,11 @@
       head.insertBefore(tabs, document.getElementById('donorAdd') || more);
     const panel = more.querySelector('.compact-nav-panel');
     if (phone.matches && panel) {
-      if (test) panel.prepend(test);
-      if (poster) panel.append(poster);
+      /* More keeps only Bulk message. Test DM lives in the Send DMs setup (More options) and the
+         poster choice is the Attach poster switch there; the bottom-bar switch stays hidden. */
+      const setup = document.querySelector('#donorBatchPicker .batch-more');
+      if (test) (setup || panel).append(test);
+      if (poster) bottom.append(poster);
     } else if (toggle) {
       if (test) bottom.insertBefore(test, toggle);
       if (poster) toggle.after(poster);

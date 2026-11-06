@@ -72,9 +72,10 @@ for (const [width, height] of [
     await expect(page.locator('#donorBulk')).toBeHidden();
     await expect(page.locator('#donorSendAll')).toBeHidden();
     await page.locator('#donorNavMore > summary').click();
-    await expect(page.locator('#donorTest')).toBeVisible();
+    // More holds only Bulk message; Test DM and the poster choice live in the Send DMs setup.
     await expect(page.locator('#donorBulk')).toBeVisible();
-    await expect(page.locator('.donor-poster-toggle')).toBeVisible();
+    await expect(page.locator('#donorNavMore #donorTest')).toHaveCount(0);
+    await expect(page.locator('#donorBatchPicker #donorTest')).toHaveCount(1);
     await page.locator('#donorNavMore > summary').click();
     const rowLayout = await page.locator('.donor-row').first().evaluate((row) => {
       const name = row.querySelector('.donor-name').getBoundingClientRect();
@@ -113,7 +114,7 @@ for (const [width, height] of [
     await openDonorMessages(page);
     await expect(page.locator('.bank-detail')).toBeVisible();
     if (width === 320) {
-      const next = page.locator('#donorMessages [data-bank-nav=next]').first();
+      const next = page.locator('#donorMessages .bank-next-arrow').first();
       const box = await next.boundingBox();
       expect(box, 'Next message must be rendered').not.toBeNull();
       expect(box.y + box.height, 'Next message must be reachable on a short phone').toBeLessThanOrEqual(height + 2);
@@ -222,7 +223,7 @@ for (const width of [320, 360, 390, 430]) {
     await page.route('**/donors?**', async (route) => {
       const response = await route.fetch();
       const data = await response.json();
-      data.items[0].name = 'Syed Muhammad Abdullah Khan';
+      for (const item of data.items) item.name = 'Syed Muhammad Abdullah Khan'; // whichever row sorts first
       data.counts.all = 189;
       await route.fulfill({ response, json: data });
     });

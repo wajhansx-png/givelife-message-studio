@@ -3099,6 +3099,7 @@ ENGINE = autopilot.Engine(
         "dm_text": dm_text,
         "send_dm": send_dm,
         "reply_setup": lambda: reply_setup.get(STORE),
+        "known_contact": lambda phone: donors().book.has_phone(phone),
         "reply_take": lambda: reply_setup.take(STORE),
         "caption_variant": caption_variant,
         "variant_count": variant_count,
@@ -5784,7 +5785,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(
                     {
                         **reply_setup.save(
-                            STORE, bool(body.get("enabled")), body.get("replies", [])
+                            STORE,
+                            bool(body.get("enabled")),
+                            body.get("replies", []),
+                            body.get("new_replies"),
                         ),
                         "autopilot": auto_on(),
                     }

@@ -166,6 +166,97 @@ class FocusTests(unittest.TestCase):
         self.assertEqual(b.get("group")["source"], latest["source"])
         self.assertEqual(b.get("group")["items"], [])
 
+    def test_mixed_urdu_message_keeps_verse_and_still_makes_five(self):
+        """The AI flips the Urdu hook to English and alters the verse; the app restores both."""
+        hook = "*آپ کے صرف 1,000 روپے ایک مجبور باپ کی مدد کر سکتے ہیں۔*"
+        verse = [
+            "*اللّٰہ تعالیٰ کا ارشاد ہے:*",
+            '"تم جو کچھ بھی (اللہ کی راہ میں) خرچ کرو گے، وہ اس کا بدل دے گا۔"',
+            "(سورۃ سبا: 39)",
+        ]
+        source = "\n".join(
+            [
+                "🚨----- Latest update ----",
+                "",
+                hook,
+                "_People are now coming to Yousaf's father's home, asking him to repay the money he borrowed for his little son's Janazah.💔_",
+                "",
+                "He has already lost his 2-year-old son, and Rs. 17,000 is still unpaid..",
+                "",
+                "",
+                *verse,
+                "",
+                "🔴 Rs. 16,000 LEFT ONLY",
+                "",
+                "• _Just your 1,000 rs donation and 16 people can clear what remains._",
+                "",
+                "03097458815 Easypaisa / JazzCash Wajdan Khan",
+            ]
+        )
+        b = self.make()
+        with patch.object(b, "_spawn"):
+            row = b.save("group", source)
+            b.generate("group")
+        a = [
+            "Lenders keep knocking at the door of Yousaf's father. He borrowed that money to lay his small son to rest.",
+            "Yousaf's father borrowed to bury his little boy, and now the lenders are at his gate.",
+            "A grieving father is being chased for the money he spent on his young son's Janazah.",
+            "Right now, people stand outside Yousaf's father's house asking for the loan he took for his boy's funeral.",
+            "The loan for his little boy's Janazah is now being demanded back from Yousaf's father at his own door.",
+        ]
+        c = [
+            "One loss was already too much: his 2-year-old is gone, and Rs. 17,000 is still left to repay..",
+            "His 2-year-old has passed away, and still Rs. 17,000 of that debt stays unpaid..",
+            "He buried his 2-year-old son. Today Rs. 17,000 of the cost is still waiting to be repaid..",
+            "After losing a 2-year-old child, he is left holding Rs. 17,000 that he cannot repay..",
+            "His boy was just 2 years old, and Rs. 17,000 of the burial debt is still open..",
+        ]
+        d = [
+            "A gift of only 1,000 rs from 16 of us closes this debt for good.",
+            "If each of us gives 1,000 rs, just 16 of us leave nothing owing.",
+            "A 1,000 rs gift, from just 16 of us, can finish what remains today.",
+            "Just 1,000 rs from 16 hands, and this father is free of the loan.",
+            "It takes only 1,000 rs from 16 donors to clear the last of it.",
+        ]
+        lines = source.split("\n")
+        versions = []
+        for i in range(5):
+            v = list(lines)
+            v[3] = "_" + a[i] + "💔_"
+            v[5] = c[i]
+            v[14] = "• _" + d[i] + "_"
+            v[2] = (
+                "*Only 1,000 rupees can help a helpless father today.*"  # language flipped by the AI
+            )
+            v[9] = '"Whatever you spend in the way of Allah, He will replace it."'  # verse altered
+            versions.append("\n".join(v))
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch("dm_variants._call", return_value=versions),
+        ):
+            b._generate("group", b.get("group"), ("group", row["revision"]))
+        got = b.get("group")
+        self.assertEqual((got["state"], len(got["items"])), ("Ready", 5), got.get("error"))
+        for text in got["items"]:
+            self.assertIn(hook, text)
+            for line in verse:
+                self.assertIn(line, text)
+
+    def test_failed_generation_names_the_reasons(self):
+        b = self.make()
+        with patch.object(b, "_spawn"):
+            row = b.save("group", self.drafts["group"])
+            b.generate("group")
+        junk = ["same text"] * 5
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch("dm_variants._call", return_value=junk),
+        ):
+            b._generate("group", b.get("group"), ("group", row["revision"]))
+        err = b.get("group")["error"]
+        self.assertIn("0 of 5 new versions passed every check.", err)
+        self.assertRegex(err, r"\(\d+x\)")  # how often each reason happened
+
     def test_partial_batch_keeps_valid_versions_and_retry_adds_the_next_five(self):
         b = self.make()
         source = SRC

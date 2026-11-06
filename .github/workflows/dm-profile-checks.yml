@@ -1,0 +1,39 @@
+name: Donor DM greeting profile tests
+on:
+  push:
+    paths:
+      - dm_profile_import.py
+      - donor_book.py
+      - donor_integration.py
+      - donor_delivery.py
+      - dm_composer.py
+      - donors.js
+      - launcher.py
+      - tests/test_dm_profile_import.py
+      - .github/workflows/dm-profile-checks.yml
+  pull_request:
+    paths:
+      - dm_profile_import.py
+      - donor_book.py
+      - donor_integration.py
+      - donor_delivery.py
+      - dm_composer.py
+      - donors.js
+      - launcher.py
+      - tests/test_dm_profile_import.py
+      - .github/workflows/dm-profile-checks.yml
+jobs:
+  offline-greeting:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Offline tests with synthetic contacts, no WhatsApp calls
+        run: python -m unittest discover -s tests -p "test_dm_profile_import.py" -v
+      - name: Syntax check changed Python and JS
+        run: |
+          python -m py_compile dm_profile_import.py donor_book.py donor_integration.py donor_delivery.py dm_composer.py launcher.py
+          node --check donors.js

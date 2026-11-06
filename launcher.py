@@ -38,6 +38,24 @@ if os.environ.get("GIVELIFE_DONOR_IMPORT_B64"):
         # Never log the private payload or contact details on failure.
         print("[donor-import] failed: " + type(exc).__name__, flush=True)
 
+# One-time private, owner-correctable DM salutation suggestions.
+# All 103 phone/name matches are supplied privately at deploy time; never in GitHub.
+if os.environ.get("GIVELIFE_DM_PROFILES_B64"):
+    try:
+        from dm_profile_import import import_profiles
+
+        stats = import_profiles(
+            store, DATA, os.environ["GIVELIFE_DM_PROFILES_B64"]
+        )
+        print(
+            "[dm-profile-import] verified "
+            + " ".join(f"{k}={v}" for k, v in stats.items()),
+            flush=True,
+        )
+    except Exception as exc:
+        # No real numbers, names, or private payloads enter logs.
+        print("[dm-profile-import] failed: " + type(exc).__name__, flush=True)
+
 # Only one instance may be logged in to WhatsApp. While Render overlaps old and new instances,
 # wait here (answering /health) until the old one has stopped and released the lease.
 OWNER = uuid.uuid4().hex

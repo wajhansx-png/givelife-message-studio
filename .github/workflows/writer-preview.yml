@@ -1,0 +1,27 @@
+name: Writer preview checks
+on:
+  push:
+    paths:
+      - "agents_system.py"
+      - "agents.js"
+      - "tests/test_writer_review.py"
+      - ".github/workflows/writer-preview.yml"
+  pull_request:
+    paths:
+      - "agents_system.py"
+      - "agents.js"
+      - "tests/test_writer_review.py"
+      - ".github/workflows/writer-preview.yml"
+jobs:
+  offline-writer-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Python unit tests - no network or WhatsApp
+        run: python -m unittest discover -s tests -p "test_writer_review.py" -v
+      - name: Browser JavaScript syntax
+        run: node --check agents.js

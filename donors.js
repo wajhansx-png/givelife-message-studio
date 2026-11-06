@@ -1290,7 +1290,10 @@
         gen.title = 'Regenerate versions';
         gen.setAttribute('aria-label', 'Regenerate versions');
         gen.onclick = () => box.querySelector('.bank-regenerate')?.click();
-        cardEl.append(arrow, gen);
+        // A single saved version has no Next destination; keep Regenerate reachable.
+        if (position >= 0 && position + 1 < bankData.items.length) cardEl.append(arrow);
+        else cardEl.classList.add('bank-single-version');
+        cardEl.append(gen);
       }
     }
     box.append(grid);

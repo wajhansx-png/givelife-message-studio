@@ -20,6 +20,24 @@ if not supervisor.wait_for_db(store):
     raise SystemExit("Database unreachable after 10 minutes.")
 store.restore(DATA, ROOT)
 
+# One-time, private bulk contact import. No outgoing WhatsApp messages.
+# Payload is held temporarily in Render env only, never in this repository.
+if os.environ.get("GIVELIFE_DONOR_IMPORT_B64"):
+    try:
+        from private_donor_import import import_from_environment
+
+        receipt = import_from_environment(
+            store, DATA, os.environ["GIVELIFE_DONOR_IMPORT_B64"]
+        )
+        print(
+            "[donor-import] verified "
+            + " ".join(f"{k}={v}" for k, v in receipt.items()),
+            flush=True,
+        )
+    except Exception as exc:
+        # Never log the private payload or contact details on failure.
+        print("[donor-import] failed: " + type(exc).__name__, flush=True)
+
 # Only one instance may be logged in to WhatsApp. While Render overlaps old and new instances,
 # wait here (answering /health) until the old one has stopped and released the lease.
 OWNER = uuid.uuid4().hex

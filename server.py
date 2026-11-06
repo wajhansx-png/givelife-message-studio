@@ -6083,17 +6083,10 @@ def team_loop():
 
 
 def donor_autopilot():
-    """Keeps confirmed donor batches going: resumes one after a restart, and keeps a free host awake while one runs."""
+    """Keeps a free host awake while a batch the owner started is running. Never resumes a batch by itself."""
     import urllib.request
 
-    time.sleep(20)
-    for _ in range(20):
-        try:
-            donors().jobs.recover()
-            donors().volunteers.jobs.recover()
-            break
-        except Exception:
-            time.sleep(30)
+    # Owner rule: no DM starts by itself. An interrupted batch stays stopped until the owner taps Resume.
     url = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
     while True:
         time.sleep(540)

@@ -4174,3 +4174,46 @@ html body:not(#_):not(#__) #donorsPage#donorsPage[data-panel='messages'] #donorM
     overscroll-behavior: contain;
   }
 }
+
+
+/* Single-version DM: the regenerate control occupies the arrow's centre. */
+html body:not(#_):not(#__) #donorsPage#donorsPage .bank-single-version .bank-gen-icon {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+html body:not(#_):not(#__) #donorsPage#donorsPage .bank-single-version .bank-gen-icon:hover {
+  transform: translateY(-50%) rotate(90deg) !important;
+}
+@media (max-width: 899px) and (max-height: 570px) {
+  /* Space is scarce when the phone keyboard is open / landscape; prioritize
+     the donor list over decorative margins. */
+  html body:not(#_):not(#__) #donorsPage#donorsPage:not([data-panel='messages']):not([data-panel='volunteers']) .donor-shell {
+    gap: 2px !important;
+    padding-block: 3px !important;
+  }
+  html body:not(#_):not(#__) #donorsPage#donorsPage .donor-head {
+    min-height: 36px !important;
+  }
+  html body:not(#_):not(#__) #donorsPage#donorsPage .donor-search {
+    min-height: 36px !important;
+    height: 36px !important;
+  }
+  html body:not(#_):not(#__) #donorsPage#donorsPage .donor-tabs button {
+    min-height: 40px !important;
+    height: 40px !important;
+    padding-block: 2px !important;
+  }
+  html body:not(#_):not(#__) #donorsPage#donorsPage .donor-table-wrap {
+    margin-top: 0 !important;
+    flex: 1 1 0 !important;
+    min-height: 90px !important;
+    overflow: hidden;
+  }
+  html body:not(#_):not(#__) #donorsPage#donorsPage .donor-fu-opt {
+    min-height: 22px !important;
+    padding-bottom: 0 !important;
+  }
+  html body:not(#_):not(#__) #donorsPage#donorsPage .donor-bottom {
+    padding-top: 2px !important;
+  }
+}

@@ -3834,3 +3834,28 @@ html body:not(#_) .replies-dialog .rep-actions{display:grid;grid-template-column
 html body:not(#_) .replies-dialog .rep-actions button{min-height:46px;font-weight:800}
 html body:not(#_) .replies-dialog .rep-actions{position:sticky;bottom:-14px;margin:0 -16px -14px;padding:8px 16px 14px;background:linear-gradient(transparent,#14151cf2 22%,#14151c);z-index:2}
 @media (max-height:620px){html body:not(#_) .replies-dialog .rep-row textarea{min-height:44px}html body:not(#_) .replies-dialog .rep-hint{display:none}}
+
+/* ===== DM Messages: no donor tabs, one small status, arrow + ↻ on the card, compact action rail ===== */
+html body:not(#_) #donorsPage#donorsPage[data-panel='messages'] .donor-toolbar,html body:not(#_) #donorsPage#donorsPage[data-panel='messages'] #donorHideRow{display:none!important}
+html body:not(#_) #donorsPage#donorsPage .bank-generation-state{font-size:12px!important;line-height:1.3;padding:3px 8px;border-radius:999px;background:#ffffff0f;cursor:pointer;max-width:100%}
+html body:not(#_) #donorsPage#donorsPage .bank-generation-state[data-open='1']{white-space:normal;border-radius:10px}
+html body:not(#_) #donorsPage#donorsPage .bank-top-info,html body:not(#_) #donorsPage#donorsPage .bank-regenerate-progress,html body:not(#_) #donorsPage#donorsPage .bank-actions .bank-regenerate,html body:not(#_) #donorsPage#donorsPage .bank-pagination [data-bank-nav='next']{display:none!important}
+html body:not(#_) #donorsPage#donorsPage .bank-detail{position:relative}
+html body:not(#_) #donorsPage#donorsPage .bank-next-arrow{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:38px;height:54px;padding:0;border-radius:19px;font-size:28px;line-height:1;font-weight:800;color:#fff;background:linear-gradient(135deg,#4f6df5,#7c3aed);border:1px solid #a78bfa88;box-shadow:0 4px 14px #0007;z-index:3;cursor:pointer}
+html body:not(#_) #donorsPage#donorsPage .bank-gen-icon{position:absolute;right:10px;top:calc(50% + 38px);width:30px;height:30px;padding:0;border-radius:50%;font-size:17px;color:#d6ccff;background:#ffffff14;border:1px solid #ffffff2e;z-index:3;cursor:pointer}
+html body:not(#_) #donorsPage#donorsPage .bank-detail .bank-preview{padding-right:46px!important}
+
+/* ===== Next arrow + Generate (↻): one friendly, easy-to-tap design on Group preview and DM Messages ===== */
+html body:not(#_) :is(#messageFocus .focus-next-arrow,#donorsPage .bank-next-arrow){width:44px!important;height:64px!important;right:6px!important;border-radius:22px!important;font-size:32px!important;font-weight:700!important;color:#fff!important;background:linear-gradient(160deg,#6d7cff 0%,#7c5cf5 55%,#6a3fe0 100%)!important;border:1px solid #c4b5fd66!important;box-shadow:0 6px 18px #4c1d9555,inset 0 1px 0 #ffffff40!important;opacity:.92;transition:transform .15s ease,opacity .15s ease,box-shadow .15s ease;display:grid;place-items:center;padding:0 0 3px 2px!important;-webkit-tap-highlight-color:transparent}
+html body:not(#_) :is(#messageFocus .focus-next-arrow,#donorsPage .bank-next-arrow):hover{opacity:1;box-shadow:0 8px 24px #6d28d977,inset 0 1px 0 #ffffff55!important}
+html body:not(#_) :is(#messageFocus .focus-next-arrow,#donorsPage .bank-next-arrow):active{transform:translateY(-50%) scale(.94)!important}
+html body:not(#_) :is(#messageFocus .focus-gen-icon,#donorsPage .bank-gen-icon){width:40px!important;height:40px!important;right:8px!important;top:calc(50% + 42px)!important;border-radius:50%!important;font-size:20px!important;color:#e9e3ff!important;background:#1e1b2ecc!important;border:1px solid #a78bfa77!important;box-shadow:0 4px 12px #0006!important;backdrop-filter:blur(6px);display:grid;place-items:center;padding:0!important;transition:transform .25s ease,background .15s ease}
+html body:not(#_) :is(#messageFocus .focus-gen-icon,#donorsPage .bank-gen-icon):hover{background:#2d2550ee!important;transform:rotate(90deg)}
+html body:not(#_) :is(#messageFocus .focus-gen-icon,#donorsPage .bank-gen-icon):active{transform:rotate(180deg) scale(.92)}
+html body:not(#_) :is(.focus-next-arrow,.bank-next-arrow,.focus-gen-icon,.bank-gen-icon):focus-visible{outline:3px solid #c4b5fd!important;outline-offset:2px}
+html body:not(#_) #messageFocus #focusFormatted,html body:not(#_) #donorsPage#donorsPage .bank-detail .bank-preview{padding-right:54px!important}
+@media (prefers-reduced-motion:reduce){html body:not(#_) :is(.focus-gen-icon,.bank-gen-icon,.focus-next-arrow,.bank-next-arrow){transition:none!important}}
+/* Arrows live in a gutter beside the green message, never on top of its words. */
+html body:not(#_) #messageFocus #focusFormatted,html body:not(#_) #donorsPage#donorsPage .bank-detail .bank-preview{padding-right:revert-layer!important;margin-right:52px!important;width:auto!important;max-width:calc(100% - 52px)!important}
+html body:not(#_) :is(#messageFocus .focus-next-arrow,#donorsPage .bank-next-arrow){right:4px!important}
+html body:not(#_) :is(#messageFocus .focus-gen-icon,#donorsPage .bank-gen-icon){right:6px!important}

@@ -867,16 +867,31 @@
   let bankRegenerating = false,
     bankGenerationTimer = null;
   const bankSaves = new Set();
+  /* One short status. The full reason (with the AI's detail) shows when the status is tapped. */
+  function bankGenerationDetail() {
+    const g = bankData?.generation;
+    return g && g.state !== 'Generating' && g.state !== 'Ready' && g.error ? g.error : '';
+  }
   function bankGenerationLabel() {
     const g = bankData?.generation;
     if (!g) return '';
-    return g.state === 'Generating'
-      ? `Generating DMs · ${g.ready}/${g.target} saved`
-      : g.state === 'Ready'
-        ? `${g.ready} DM messages ready`
-        : g.error
-          ? `${g.ready}/${g.target} saved · ${g.error}`
-          : '';
+    if (g.state === 'Generating') return `Generating · ${g.ready}/${g.target} saved`;
+    if (g.state === 'Ready') return `${g.ready} ready`;
+    if (!g.error) return '';
+    const missing = Math.max(0, g.target - g.ready);
+    return `${g.ready} ready · ${missing} need review ⓘ`;
+  }
+  function wireStatus(node) {
+    const detail = bankGenerationDetail();
+    node.title = detail;
+    node.tabIndex = detail ? 0 : -1;
+    node.onclick = () => {
+      if (!detail) return;
+      const open = node.dataset.open === '1';
+      node.dataset.open = open ? '' : '1';
+      node.textContent = open ? bankGenerationLabel() : detail;
+    };
+    node.onkeydown = (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), node.onclick());
   }
   function queueBankGenerationPoll() {
     clearTimeout(bankGenerationTimer);
@@ -1016,6 +1031,7 @@
     }
     const generationState = make('span', 'bank-generation-state', bankGenerationLabel());
     generationState.setAttribute('role', 'status');
+    wireStatus(generationState);
     head.append(generationState);
     queueBankGenerationPoll();
     let selected;
@@ -1236,6 +1252,22 @@
     nav.insertBefore(backBottom, nav.firstChild);
     actions.append(baseBtn, testBtn, regen, regenProgress, nav);
     grid.append(actions, picker);
+    {
+      const cardEl = grid.querySelector('.bank-detail');
+      if (cardEl) {
+        const arrow = make('button', 'bank-next-arrow', '›');
+        arrow.type = 'button';
+        arrow.title = 'Next message';
+        arrow.setAttribute('aria-label', 'Next message');
+        arrow.onclick = () => box.querySelector('[data-bank-nav=next]')?.click();
+        const gen = make('button', 'bank-gen-icon', '↻');
+        gen.type = 'button';
+        gen.title = 'Regenerate versions';
+        gen.setAttribute('aria-label', 'Regenerate versions');
+        gen.onclick = () => box.querySelector('.bank-regenerate')?.click();
+        cardEl.append(arrow, gen);
+      }
+    }
     box.append(grid);
     syncBankControls();
     if (typeof ResizeObserver !== 'undefined') {

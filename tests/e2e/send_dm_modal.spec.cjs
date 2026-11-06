@@ -62,6 +62,8 @@ for (const [width, height] of [
     expect(posts).toHaveLength(0);
     // Start sends exactly the chosen settings.
     await page.locator('#donorSendImportant').click();
+    await expect(page.locator('#batchPoster')).not.toBeChecked(); // one poster setting, remembered
+    await page.locator('#batchPoster').check();
     await modal.locator('.batch-gap-btn[data-gap="2"]').click();
     await page.locator('#batchStart').click();
     await expect.poll(() => posts.length).toBeGreaterThan(0);

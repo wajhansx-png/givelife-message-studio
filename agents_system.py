@@ -109,8 +109,13 @@ class Agent:
     def status(self):
         raise NotImplementedError
 
+    STATUS = re.compile(r"\b(status|progress|report|how many|kitne|kya haal)\b")
+    talks = False  # agents that use AI can hold a conversation (Writer has its own; Checker is code only)
+
     def ask(self, text):
-        return True, self.status()["now"]
+        if self.talks and not self.STATUS.search(intent_text(text)):
+            return self.sys.agent_chat(self, text)
+        return self.report()
 
     def report(self):
         s = self.status()
@@ -382,6 +387,7 @@ class GroupPoster(Agent):
     id, name = "auto", "Group Poster"
     role = "Posts saved versions to the groups on the timers, never repeating a wording in a round."
     words = r"\bgroup ?poster\b"
+    talks = True
 
     def status(self):
         app = self.app
@@ -431,10 +437,6 @@ class GroupPoster(Agent):
             "rules": app.ENGINE.rule_list(),
         }
 
-    def ask(self, text):
-        s = self.status()
-        return True, s["now"] + ". " + "; ".join(s["facts"]) + "."
-
     def rule(self, text):
         """A clear standing rule ("post in main every 20 min") saved to the real rule list. None = not a rule."""
         import rules
@@ -457,6 +459,7 @@ class DMGuard(Agent):
     id, name = "dms", "DM Guard"
     role = "Sends donor DMs only within the limits: 40 a day, 3+ minutes apart, consent and opt-outs first."
     words = r"\bdm ?(?:guard|sender)\b"
+    talks = True
     log_words = r"(?i)\bdms?\b|donor dm"
 
     def status(self):
@@ -483,16 +486,13 @@ class DMGuard(Agent):
             ],
         }
 
-    def ask(self, text):
-        s = self.status()
-        return True, s["now"] + ". " + "; ".join(s["facts"]) + "."
-
 
 # ---------------------------------------------------------------------------- Reply Reader
 class ReplyReader(Agent):
     id, name = "replies", "Reply Reader"
     role = "Reads replies: donation claims, shares, questions, promises, opt-outs. A payment is never treated as verified."
     words = r"\breply ?reader\b"
+    talks = True
     log_words = r"(?i)repl|answered|asked not to|said later|reminder|money noticed|thank"
 
     def status(self):
@@ -519,8 +519,7 @@ class ReplyReader(Agent):
                 True,
                 f'"{q[:80]}" reads as: {label} ({why}). A payment is never treated as verified.',
             )
-        s = self.status()
-        return True, s["now"] + ". " + "; ".join(s["facts"]) + "."
+        return super().ask(text)
 
 
 # ---------------------------------------------------------------------------- Volunteer Guide
@@ -528,6 +527,7 @@ class VolunteerGuide(Agent):
     id, name = "volunteers", "Volunteer Guide"
     role = "Asks volunteers to share, one message at a time: ask, poster, 'Share this brother.', check, thanks."
     words = r"\bvolunteer(?: guide)?s?\b"
+    talks = True
     log_words = r"(?i)volunteer"
 
     def status(self):
@@ -549,10 +549,6 @@ class VolunteerGuide(Agent):
             "facts": ["Waiting for YOUR answer: " + ", ".join(waiting[:10])] if waiting else [],
         }
 
-    def ask(self, text):
-        s = self.status()
-        return True, s["now"] + (". " + s["facts"][0] if s["facts"] else "") + "."
-
 
 # ---------------------------------------------------------------------------- Case Plan
 class CasePlan(Agent):
@@ -561,6 +557,7 @@ class CasePlan(Agent):
         "Switches between the Normal and Slow messages from the case facts and donation progress."
     )
     words = r"\bcase ?plan\b"
+    talks = True
     log_words = r"(?i)case plan"
 
     def status(self):
@@ -582,7 +579,7 @@ class CasePlan(Agent):
             ],
         }
 
-    def ask(self, text):
+    def report(self):
         s = self.status()
         return True, f"{s['now']}; Rs. {s['progress']['value']:,} left; " + s["facts"][0] + "."
 
@@ -604,6 +601,7 @@ class Manager:
         self.agents = {cls.id: cls(self) for cls in self.ORDER}
         self.state = self._load()
         self.thread = None
+        self._icache, self._irunning = (0.0, []), False
 
     @property
     def ctx(self):
@@ -787,6 +785,50 @@ class Manager:
         agent = self.agents[target]
         self._run(target, text, lambda: agent.ask(text))
 
+    def agent_chat(self, agent, text):
+        """Free conversation with one agent, grounded ONLY in its real status and role. It can explain and
+        advise; it never claims an action happened (actions go through the agent's real functions)."""
+        import assistant
+
+        ok, facts = agent.report()
+        key = assistant.client()
+        if not key:
+            return True, "The AI is not connected, so here are the real facts: " + facts
+        history = [
+            {"role": "user" if m["who"] == "you" else "assistant", "content": m["text"][:800]}
+            for m in self.state["chat"][-8:-1]
+            if m.get("agent") == agent.id and m["who"] in ("you", agent.id)
+        ]
+        system = (
+            f"You are {agent.name} in the GiveLife charity app: {agent.role}\n"
+            "Talk with the owner in short, plain English (he may write Roman Urdu; answer in the same language)."
+            " Use ONLY the live facts below. If something is not in them, say you do not know. You cannot send"
+            " WhatsApp messages or change settings from this chat: if asked to, say which screen or agent does it."
+            " Never say a task is done unless the facts show it. Owner preferences:\n"
+            + "\n".join("- " + str(c)[:200] for c in self._preferences())
+            + "\n\nLIVE FACTS:\n"
+            + facts
+        )
+        try:
+            msg = assistant._chat_raw(
+                key,
+                system,
+                [],
+                history + [{"role": "user", "content": text}],
+                max_tokens=700,
+                thinking_mode=False,
+            )
+            answer = str(msg.get("content", "")).strip() if isinstance(msg, dict) else ""
+        except Exception:
+            answer = ""
+        return (True, answer) if answer else (True, "The AI did not answer. Real facts: " + facts)
+
+    def _preferences(self):
+        try:
+            return [str(c) for c in (__import__("dm_variants").CORRECTIONS() or [])][-8:]
+        except Exception:
+            return []
+
     def _remember(self, text, condition=False):
         saved = self.app.mem_add(text)
         entries = getattr(getattr(self.app, "KNOWLEDGE", None), "data", {}).get("entries", [])
@@ -886,6 +928,21 @@ class Manager:
             }
         return {"ok": True, "text": "Memory is saved in the database."}
 
+    def issues_cached(self):
+        """What the page shows. The real checks (WhatsApp, database, groups) are slow, so they run in the
+        background and the page never waits for them."""
+        if _now() - self._icache[0] > 90 and not self._irunning:
+            self._irunning = True
+
+            def refresh():
+                try:
+                    self.issues()
+                finally:
+                    self._irunning = False
+
+            threading.Thread(target=refresh, daemon=True, name="agents-issues").start()
+        return self._icache[1]
+
     def issues(self):
         app, out = self.app, []
 
@@ -961,6 +1018,7 @@ class Manager:
                 fn()
             except Exception as e:
                 add("check-" + fn.__name__, "warn", f"Could not check {fn.__name__}: {str(e)[:80]}")
+        self._icache = (_now(), out)
         return out
 
     def quality_facts(self):
@@ -1060,7 +1118,7 @@ class Manager:
             ][-15:]
             cards.append(c)
         with self.lock:
-            issues = self.issues()
+            issues = self.issues_cached()
             running = any(t.get("status") == "running" for t in self.state["tasks"][-20:])
             boss = {
                 "id": "manager",

@@ -1,4 +1,5 @@
 """No network/WhatsApp access: approval and selection regression tests."""
+
 import threading
 import unittest
 
@@ -45,11 +46,14 @@ class FakeSystem:
         self.app = FakeApp()
         self.state = {
             "writer_preview": {
-                "id": "review-one", "status": "pending", "kind": "group",
+                "id": "review-one",
+                "status": "pending",
+                "kind": "group",
                 "text": "*Help this family*\nRs. 20,000 still needed.",
-                "base_revision": "r1"
+                "base_revision": "r1",
             },
-            "chat": [], "ctx": {}
+            "chat": [],
+            "ctx": {}
         }
         self.ctx = self.state["ctx"]
         self.agents = {"checker": Checker()}
@@ -127,13 +131,15 @@ class ReviewTests(unittest.TestCase):
         mgr._say = lambda *args: None
         mgr.save = lambda: None
         mgr.view = lambda: {"writer_preview": mgr.state.get("writer_preview")}
+
         def run(agent, prompt, fn):
             self.assertIn("Change BOTH the opening and body", prompt)
             mgr.state["writer_preview"] = {
                 **mgr.state["writer_preview"],
                 "id": "review-two",
-                "text": "*Another hook*\nSame confirmed facts"
+                "text": "*Another hook*\nSame confirmed facts",
             }
+
         mgr._run = run
         result = mgr.act({"action": "writer_next", "preview_id": "review-one"})
         self.assertEqual(result["writer_preview"]["id"], "review-two")

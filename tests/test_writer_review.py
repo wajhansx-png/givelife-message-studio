@@ -53,7 +53,7 @@ class FakeSystem:
                 "base_revision": "r1",
             },
             "chat": [],
-            "ctx": {}
+            "ctx": {},
         }
         self.ctx = self.state["ctx"]
         self.agents = {"checker": Checker()}

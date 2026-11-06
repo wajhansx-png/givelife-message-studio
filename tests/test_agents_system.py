@@ -107,7 +107,7 @@ class Writing(Base):
         self.assertIn("Writer revised it and it now passes", out[-1]["text"])
         self.assertEqual(app.get_message("group")["text"], before)
         out = self.say("save this as the group message")
-        self.assertIn("Saved as the GROUP base message", out[-1]["text"])
+        self.assertIn("Saved as your GROUP message", out[-1]["text"])
         self.assertEqual(app.get_message("group")["text"], good["draft"])
 
     def test_follow_up_keeps_the_writer_conversation(self):
@@ -311,7 +311,7 @@ class Learning(Base):
         with ai(same, same, same):
             self.say("Ask Writer to write a group message")
             out = self.say("Ask Writer to rewrite it")
-        self.assertIn("almost the same as the last draft", out[-1]["text"])
+        self.assertIn("almost the same as an earlier draft", out[-1]["text"])
         self.assertIn("passed Checker first time", " ".join(self.m.quality_facts()))
 
     def test_a_restart_never_shows_an_unfinished_task_as_done(self):

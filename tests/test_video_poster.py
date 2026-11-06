@@ -52,7 +52,16 @@ class VideoPoster(unittest.TestCase):
         self.assertEqual([x.name for x in self.d.glob("*.tmp")], [])
 
     def test_missing_local_poster_is_restored_from_saved_data(self):
-        store = type("Store", (), {"get": lambda self, key, default=None: {"poster_b64": base64.b64encode(JPG).decode(), "poster_kind": "image"}.get(key, default)})()
+        store = type(
+            "Store",
+            (),
+            {
+                "get": lambda self, key, default=None: {
+                    "poster_b64": base64.b64encode(JPG).decode(),
+                    "poster_kind": "image",
+                }.get(key, default)
+            },
+        )()
         with patch.object(server, "STORE", store):
             self.assertEqual(server.poster_media().read_bytes(), JPG)
 
@@ -72,8 +81,10 @@ class VideoPoster(unittest.TestCase):
     def test_video_over_3mb_is_durable_and_restored_without_reverting_to_picture(self):
         class MemoryStore:
             values = {}
+
             def put(self, key, value):
                 self.values[key] = value
+
             def get(self, key, default=None):
                 return self.values.get(key, default)
 
@@ -91,6 +102,7 @@ class VideoPoster(unittest.TestCase):
         class BrokenStore:
             def put(self, key, value):
                 raise RuntimeError("Database unavailable")
+
             def get(self, key, default=None):
                 return default
 

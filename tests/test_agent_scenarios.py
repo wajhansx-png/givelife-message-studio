@@ -9,6 +9,7 @@ proves what the AI was actually given, and what the app actually did. Fake AI an
 import json, unittest
 from unittest.mock import patch
 from test_agents_system import Base, app
+from agents_system import Manager
 
 
 class Spy:
@@ -211,3 +212,125 @@ class Scenarios(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ApproveFlow(Base):
+    """Writer shows one draft card; you read it; "approved" (any phrasing) puts it in the Group message."""
+
+    def write(self, draft=None, reply="Here you go."):
+        left = app.read_left()
+        draft = draft or f"*A calm hook.* Rs. {left:,} left. 03097458815 EASYPAISA ONLY"
+        spy = Spy({"reply": reply, "draft": draft})
+        with patch("assistant._chat_raw", side_effect=spy):
+            out = self.say("Ask Writer to write a group message")
+        return draft, out[-1], spy
+
+    def test_the_draft_is_a_card_not_chat_text_and_nothing_is_saved_yet(self):
+        before = app.get_message("group")["text"]
+        draft, item, _ = self.write()
+        self.assertEqual(item["draft"]["text"], draft)
+        self.assertEqual(item["draft"]["kind"], "group")
+        self.assertNotIn(draft, item["text"])  # the text is only Writer's comment
+        self.assertEqual(app.get_message("group")["text"], before)  # read first, then approve
+        self.assertEqual(self.m.view()["pending"], item["draft"]["id"])
+
+    def test_many_ways_of_saying_approved_save_it_to_the_group_message(self):
+        for phrase in (
+            "approved",
+            "Approve",
+            "ok",
+            "okay save it",
+            "theek hai",
+            "haan perfect",
+            "bilkul sahi hai",
+            "yes",
+            "daal do group mein",
+            "love it",
+        ):
+            with self.subTest(phrase=phrase):
+                draft, item, _ = self.write(
+                    f"*Hook for {phrase.replace(' ', '-')}.* Rs. {app.read_left():,} left. 03097458815"
+                )
+                out = self.say(phrase)
+                self.assertIn("Saved as your GROUP message", out[-1]["text"])
+                self.assertEqual(app.get_message("group")["text"], draft)
+                self.assertEqual(self.m.view()["pending"], "")
+                saved = next(
+                    m
+                    for m in self.m.state["chat"]
+                    if (m.get("draft") or {}).get("id") == item["draft"]["id"]
+                )
+                self.assertEqual(saved["draft"]["saved"], "group")
+                self.m.state["chat"].clear()
+
+    def test_feedback_is_never_mistaken_for_approval(self):
+        before = app.get_message("group")["text"]
+        for phrase in (
+            "ok but make it shorter",
+            "haan lekin hook badlo",
+            "no",
+            "not good",
+            "approved but change the ending",
+        ):
+            with self.subTest(phrase=phrase):
+                self.write()
+                with patch(
+                    "assistant._chat_raw", side_effect=Spy({"reply": "Changed.", "draft": ""})
+                ):
+                    self.say(phrase)
+                self.assertEqual(app.get_message("group")["text"], before)
+
+    def test_next_option_is_genuinely_different_and_remembers_what_was_shown(self):
+        first, item1, _ = self.write()
+        left = app.read_left()
+        second = (
+            f"Imagine his parents tonight. Rs. {left:,} is still needed. 03097458815 EASYPAISA ONLY"
+        )
+        spy = Spy({"reply": "Another angle.", "draft": second})
+        with patch("assistant._chat_raw", side_effect=spy):
+            out = self.say("next option")
+        self.assertEqual(out[-1]["draft"]["text"], second)
+        self.assertIn("OPTIONS ALREADY SHOWN", spy.last["system"])
+        self.assertIn("A calm hook", spy.last["system"])
+        self.assertNotEqual(out[-1]["draft"]["id"], item1["draft"]["id"])
+        self.assertEqual(self.m.view()["pending"], out[-1]["draft"]["id"])
+        self.say("approved")
+        self.assertEqual(
+            app.get_message("group")["text"], second
+        )  # approving saves the option you are looking at
+
+    def test_next_option_that_repeats_is_revised_before_you_see_it(self):
+        first, _, _ = self.write()
+        spy = Spy(
+            {"reply": "Again.", "draft": first},
+            {"reply": "Fresh.", "draft": f"A new angle. Rs. {app.read_left():,} left. 03097458815"},
+        )
+        with patch("assistant._chat_raw", side_effect=spy):
+            out = self.say("another one")
+        self.assertIn("A new angle", out[-1]["draft"]["text"])
+        self.assertEqual(len(spy.calls), 2)
+
+    def test_dm_draft_is_approved_into_the_dm_message(self):
+        left = app.read_left()
+        draft = f"Brother, please read. Rs. {left:,} left. 03097458815"
+        with patch("assistant._chat_raw", side_effect=Spy({"reply": "DM.", "draft": draft})):
+            out = self.say("Ask Writer to write a dm for past donors")
+        self.assertEqual(out[-1]["draft"]["kind"], "dm")
+        self.say("approved")
+        self.assertEqual(app.get_message("dm")["text"], draft)
+
+    def test_a_draft_with_a_problem_is_not_saved_on_approval(self):
+        self.write()
+        self.m.ctx["draft"] = "Help. Rs. 99,999 left."  # something changed it behind the card
+        out = self.say("approved")
+        self.assertIn("I will not save it", out[-1]["text"])
+        self.assertNotEqual(app.get_message("group")["text"], "Help. Rs. 99,999 left.")
+
+    def test_approving_with_no_draft_does_not_pretend_and_pending_survives_restart(self):
+        out = self.say("approved")
+        self.assertNotIn("Saved as your", out[-1]["text"])
+        self.write()
+        again = Manager(app)
+        self.assertTrue(again.ctx["draft_pending"])
+        out = again.handle("approved")
+        self.assertIn("Saved as your GROUP message", out[-1]["text"])

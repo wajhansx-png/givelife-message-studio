@@ -82,13 +82,71 @@
       }),
     );
   }
-  function bubble(m) {
+  // The draft exactly as it will look in WhatsApp, sized to fit the screen so it never needs scrolling.
+  const fit = (card) => {
+    const block = card.closest('.draft');
+    if (!block) return;
+    // Everything the owner must see at once: the card and its buttons, between the top bar and the input.
+    const room = () =>
+      $('ask').getBoundingClientRect().top -
+      document.querySelector('.top').getBoundingClientRect().bottom -
+      28;
+    let size = 17;
+    card.style.fontSize = size + 'px';
+    card.style.lineHeight = '1.45';
+    while (size > 10 && block.getBoundingClientRect().height > room()) {
+      size -= 0.5;
+      card.style.fontSize = size + 'px';
+      if (size <= 12) card.style.lineHeight = '1.3';
+    }
+  };
+  function draftCard(d, pendingId) {
+    const wrap = el('div', 'draft');
+    const wall = el('div', 'wa-wall');
+    const card = el('div', 'wa-bubble');
+    const text = el('div', 'wa-text');
+    text.innerHTML = window.waFormat ? window.waFormat(d.text) : '';
+    if (!window.waFormat) text.textContent = d.text;
+    card.append(text, el('div', 'wa-time', (d.kind === 'dm' ? 'DM' : 'Group') + ' · preview  ✓✓'));
+    wall.append(card);
+    wrap.append(wall);
+    if (d.saved) {
+      wrap.append(
+        el('div', 'saved', '✓ Saved as your ' + (d.saved === 'dm' ? 'DM' : 'Group') + ' message'),
+      );
+    } else if (d.id === pendingId) {
+      const row = el('div', 'choices');
+      for (const [label, say, cls] of [
+        ['Approve ✓', 'Approved', 'yes'],
+        ['Next option →', 'Next option', ''],
+      ]) {
+        const b = el('button', cls, label);
+        b.type = 'button';
+        b.onclick = () => {
+          if ($('inp').disabled) return;
+          $('inp').value = say;
+          $('ask').requestSubmit();
+        };
+        row.append(b);
+      }
+      wrap.append(row);
+    }
+    requestAnimationFrame(() => fit(card));
+    return wrap;
+  }
+  function bubble(m, pendingId) {
     const me = m.who === 'you',
       row = el('div', 'bubble ' + (me ? 'me' : 'them'));
     if (!me && m.who !== pick) row.append(el('b', 'who', NAMES[m.who] || m.who));
-    const body = el('div', 'txt');
-    me ? (body.textContent = m.text) : rich(body, m.text);
-    row.append(body);
+    if (m.text || me) {
+      const body = el('div', 'txt');
+      me ? (body.textContent = m.text) : rich(body, m.text);
+      row.append(body);
+    }
+    if (m.draft) {
+      row.classList.add('has-draft');
+      row.append(draftCard(m.draft, pendingId));
+    }
     return row;
   }
   function render() {
@@ -136,15 +194,25 @@
     );
     if (typing) return; // never redraw the conversation while a reply is being typed out
     const lines = (data.chat || []).filter((m) => pick === 'manager' || m.agent === pick);
-    const sig = pick + ':' + lines.length + ':' + (lines.at(-1)?.id || '');
+    const sig =
+      pick +
+      ':' +
+      lines.length +
+      ':' +
+      (lines.at(-1)?.id || '') +
+      ':' +
+      data.pending +
+      ':' +
+      (lines.at(-1)?.draft?.saved || '');
     if (sig === shown) return;
     shown = sig;
     $('thread').replaceChildren(
       ...(lines.length
-        ? lines.map(bubble)
+        ? lines.map((m) => bubble(m, data.pending))
         : [el('p', 'empty', 'Ask ' + NAMES[pick] + ' anything.')]),
     );
-    end();
+    const card = $('thread').querySelector('.bubble.has-draft:last-child .draft');
+    card ? card.scrollIntoView({ block: 'start' }) : end();
   }
   const end = () => requestAnimationFrame(() => ($('scroll').scrollTop = $('scroll').scrollHeight));
   // Claude-style reply: a typing indicator while waiting, then the text writes itself out.
@@ -195,9 +263,9 @@
       data = d;
       wait.remove();
       for (const m of (d.messages || []).filter((x) => x.who !== 'you')) {
-        const row = bubble({ ...m, text: '' });
+        const row = bubble({ ...m, text: m.text ? ' ' : '', draft: null });
         $('thread').append(row);
-        await typeOut(row.querySelector('.txt'), m.text);
+        if (m.text) await typeOut(row.querySelector('.txt'), m.text);
       }
       return true;
     } catch (e) {
@@ -244,6 +312,7 @@
     $('accessDialog').close();
     load();
   };
+  addEventListener('resize', () => document.querySelectorAll('.wa-bubble').forEach(fit));
   render();
   load();
   setInterval(() => document.hidden || typing || load(), 8000);

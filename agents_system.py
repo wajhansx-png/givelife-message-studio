@@ -51,6 +51,20 @@ VOCAB = "writer checker poster guard reader volunteer volunteers plan manager ag
 ACTION = re.compile(
     r"\?\s*$|\b(how many|kitne|dms?|case|posts?|replies|writer|checker|poster|guard|reader|volunteers?|plan|agents|improve|rewrite|generate|versions|progress|status|remember|always|never|check|save|write|draft|post|tell|ask)\b"
 )
+# Approving a draft in plain words (English, Roman Urdu, typos). A "but / shorter / change" in the same
+# message means it is NOT an approval: it is feedback and goes back to Writer.
+APPROVE = re.compile(
+    r"^\W*(approved?|approv\w*|ok(?:ay|ey|k)?|yes|yep|yeah|haan|han|ji|theek|thik|perfect|good|great|nice|"
+    r"bilkul|sahi|final|done|love it|use (?:it|this)|save (?:it|this)|put (?:it|this)|daal|laga|rakh|add (?:it|this))\b"
+)
+NOT_APPROVAL = re.compile(
+    r"\b(but|lekin|magar|however|change|shorter|longer|more|less|instead|again|wrong|not|dont|don't|no|nahi|nope|"
+    r"fix|improve|rewrite|different|another|next)\b"
+)
+NEXT = re.compile(
+    r"^\W*(next(?: option| one)?|another(?: one| option)?|different(?: one| option)?|dusra|doosra|aur ek|one more|"
+    r"new one|show (?:me )?(?:another|more)|try again)\W*$"
+)
 REJECT = re.compile(r"^\W*(no|nope|wrong|not good|weak|bad|don'?t like|dont like)\b")
 
 
@@ -173,21 +187,53 @@ class Writer(Agent):
             "errors": errors,
         }
 
+    def approve(self, text=""):
+        """Approved: the draft you read becomes the Group (or DM) base message. Checker re-checks it first."""
+        ctx, bank = self.sys.ctx, self.app.focus_bank()
+        draft = ctx.get("draft")
+        if not draft:
+            return False, "There is no draft from me yet. Ask me to write one first."
+        low = intent_text(text)
+        kind = (
+            "dm"
+            if re.search(r"\bdms?\b", low)
+            else "group"
+            if re.search(r"\bgroup\b", low)
+            else ctx.get("draft_kind", "group")
+        )
+        bad = self.sys.agents["checker"].problems(draft, kind)
+        if bad:
+            return False, "I will not save it: " + "; ".join(
+                bad
+            ) + ". Say what to change and I will fix it."
+        ok = bank.save(kind, draft).get("source") == draft
+        if not ok:
+            return False, "Saving failed. Nothing was changed."
+        self.sys.note_draft("approved", draft)
+        ctx["draft_pending"] = False
+        for m in reversed(self.sys.state["chat"]):
+            if (m.get("draft") or {}).get("id") == ctx.get("draft_id"):
+                m["draft"].update(saved=kind)
+                break
+        return (
+            True,
+            f"Saved as your {kind.upper()} message. Say Generate 5 Versions to make versions from it.",
+        )
+
+    def next_option(self):
+        """Another genuinely different option; the ones already shown are listed so they are not repeated."""
+        if not self.sys.ctx.get("draft"):
+            return False, "There is no draft yet. Tell me what to write."
+        return self.chat(
+            "Write another option for the same purpose: a genuinely different hook and wording, the same verified facts."
+        )
+
     def ask(self, text):
         bank = self.app.focus_bank()
         low = intent_text(text)
         kind = "dm" if re.search(r"\bdms?\b", low) else "group"
         if self.SAVE.search(low):
-            draft = self.sys.ctx.get("draft")
-            if not draft:
-                return False, "There is no draft from me yet. Ask me to write one first."
-            bad = self.sys.agents["checker"].problems(draft, kind)
-            if bad:
-                return False, "I will not save it: " + "; ".join(bad)
-            ok = bank.save(kind, draft).get("source") == draft
-            if ok:
-                self.sys.note_draft("approved", draft)
-            return ok, f"Saved as the {kind.upper()} base message." if ok else "Saving failed."
+            return self.approve(text)
         if self.GENERATE.search(low):
             before = len(bank.get(kind).get("items") or [])
             row = bank.generate(kind)
@@ -239,6 +285,12 @@ class Writer(Agent):
                 else ""
             )
             + self.sys.draft_lessons()
+            + (
+                "\n\nOPTIONS ALREADY SHOWN (write something genuinely different from all of them):\n"
+                + "\n---\n".join(o[:700] for o in self.sys.ctx.get("options", [])[-3:])
+                if self.sys.ctx.get("options")
+                else ""
+            )
             + self.sys.context_for("writer")
         )
         history = [
@@ -257,9 +309,10 @@ class Writer(Agent):
         if draft:
             checker = self.sys.agents["checker"]
             prev = self.sys.ctx.get("draft") or ""
+            shown = ([prev] if prev else []) + list(self.sys.ctx.get("options", []))
             same = (
-                ["almost the same as the last draft; write it genuinely differently"]
-                if prev and difflib.SequenceMatcher(None, prev, draft).ratio() > 0.92
+                ["almost the same as an earlier draft; write it genuinely differently"]
+                if any(difflib.SequenceMatcher(None, o, draft).ratio() > 0.9 for o in shown)
                 else []
             )
             bad = checker.problems(draft) + same
@@ -294,13 +347,20 @@ class Writer(Agent):
                         else ", but problems remain: " + "; ".join(still) + ".)"
                     )
                 )
-            self.sys.ctx["draft"] = draft
-        out = (
-            str(data.get("reply") or "").strip() + ("\n\n" + draft if draft else "") + note
-        ).strip()
-        if draft:
-            out += '\n\nSay "save this as the Group message" (or DM) to use it.'
-        return True, out or "No answer."
+            ctx = self.sys.ctx
+            ctx["options"] = (ctx.get("options", []) + [draft])[-6:]
+            ctx.update(
+                draft=draft,
+                draft_id=uuid.uuid4().hex[:10],
+                draft_pending=True,
+                draft_kind="dm"
+                if re.search(r"\bdms?\b", intent_text(text))
+                else ctx.get("draft_kind", "group"),
+            )
+        # The draft is shown as its own WhatsApp-style card; the chat text is only what Writer says about it.
+        return True, (str(data.get("reply") or "").strip() + note).strip() or (
+            "Here is the draft." if draft else "No answer."
+        )
 
 
 # ---------------------------------------------------------------------------- Checker
@@ -658,7 +718,7 @@ class Manager:
             except Exception:
                 pass  # the file copy keeps working; memory_status() reports the database problem
 
-    def _say(self, who, text, agent, task=None):
+    def _say(self, who, text, agent, task=None, draft=None):
         item = {
             "id": uuid.uuid4().hex,
             "at": _now(),
@@ -668,6 +728,8 @@ class Manager:
         }
         if task:
             item["task"] = task
+        if draft:
+            item["draft"] = draft
         self.state["chat"].append(item)
 
     def _run(self, agent_id, text, fn):
@@ -679,6 +741,7 @@ class Manager:
             "status": "running",
         }
         self.state["tasks"].append(t)
+        before = self.ctx.get("draft_id")
         try:
             ok, reply = fn()
         except Exception as e:  # one broken agent never stops the others
@@ -689,7 +752,20 @@ class Manager:
             verified=bool(ok),
             done=_now(),
         )
-        self._say(agent_id, reply, agent_id, t["id"])
+        new = self.ctx.get("draft_id") != before and agent_id == "writer"
+        self._say(
+            agent_id,
+            reply,
+            agent_id,
+            t["id"],
+            draft={
+                "id": self.ctx["draft_id"],
+                "text": self.ctx["draft"],
+                "kind": self.ctx.get("draft_kind", "group"),
+            }
+            if new
+            else None,
+        )
 
     # -------------------------------------------------------------- conversation
     def handle(self, text, agent=None):
@@ -758,6 +834,15 @@ class Manager:
 
     def _route(self, text, forced):
         low = intent_text(text)
+        if self.ctx.get("draft_pending") and forced in (None, "manager", "writer"):
+            words = len(low.split())
+            writer = self.agents["writer"]
+            if NEXT.match(low):
+                self.ctx["agent"] = "writer"
+                return self._run("writer", text, writer.next_option)
+            if APPROVE.match(low) and words <= 10 and not NOT_APPROVAL.search(low):
+                self.ctx["agent"] = "writer"
+                return self._run("writer", text, lambda: writer.approve(text))
         if self.ctx.get("draft") and REJECT.match(low) and forced in (None, "writer"):
             self._learn_rejection(text)
             forced = "writer"  # Writer revises with the reason; Checker reviews again
@@ -1287,6 +1372,7 @@ class Manager:
         return {
             "agents": [boss] + cards,
             "chat": chat,
+            "pending": self.ctx.get("draft_id") if self.ctx.get("draft_pending") else "",
             "auto": bool(app.auto_on()),
             "updated": _now(),
         }

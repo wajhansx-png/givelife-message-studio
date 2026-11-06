@@ -366,3 +366,76 @@ dialog input {
     padding: 16px 20px 8px;
   }
 }
+
+/* The draft as it will appear in WhatsApp: one card, sized to fit the screen, no scrolling. */
+.draft {
+  margin-top: 10px;
+}
+.wa-wall {
+  background: #0b141a;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+.wa-bubble {
+  position: relative;
+  max-width: 100%;
+  background: #005c4b;
+  color: #e9edef;
+  border-radius: 12px 12px 4px 12px;
+  padding: 8px 10px 6px 12px;
+  text-align: left;
+  line-height: 1.45;
+  overflow: hidden;
+}
+.wa-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.wa-text strong {
+  font-weight: 700;
+}
+.wa-time {
+  margin-top: 2px;
+  text-align: right;
+  font-size: 11px;
+  color: #ffffff99;
+}
+.choices {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.choices button {
+  flex: 1;
+  min-height: 48px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  font-weight: 600;
+}
+.choices button.yes {
+  background: var(--accent);
+  border-color: transparent;
+  color: #07130f;
+}
+.saved {
+  margin-top: 10px;
+  text-align: center;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+@media (max-width: 400px) {
+  .wa-wall {
+    padding: 8px;
+  }
+  .choices {
+    margin-top: 8px;
+  }
+  .choices button {
+    min-height: 44px;
+  }
+}

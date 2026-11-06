@@ -39,9 +39,7 @@ class VariantTests(unittest.TestCase):
         )
         self.assertIn(
             "payment",
-            dm_variants.validate(
-                source, near_copy.replace("EASYPAISA ONLY", "EASYPAISA or Cash")
-            ),
+            dm_variants.validate(source, near_copy.replace("EASYPAISA ONLY", "EASYPAISA or Cash")),
         )
         self.assertIn("duplicate", dm_variants.validate(source, near_copy, [near_copy]))
 

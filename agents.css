@@ -531,3 +531,14 @@ dialog input {
   .draft-actions { gap: 8px; padding-left: 10px; padding-right: 10px; }
   .draft-actions button { font-size: 13px; }
 }
+
+.draft-error {
+  margin: 0;
+  padding: 6px 14px;
+  color: #ffb3b3;
+  background: #372323;
+  font-size: 12px;
+  line-height: 1.4;
+  max-height: 68px;
+  overflow: hidden;
+}

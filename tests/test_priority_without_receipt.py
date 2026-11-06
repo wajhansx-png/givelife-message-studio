@@ -39,7 +39,7 @@ class PriorityWithoutReceiptTests(unittest.TestCase):
         self.assertIn("change(d.id, { top_donor: true })", js)
         self.assertIn("Top is an owner-controlled priority, not a receipt requirement.", js)
         self.assertNotIn("Receipt evidence · Rs.", js)
-        self.assertIn("Past recorded support · Rs.", js)
+        self.assertNotIn("Past recorded support · Rs.", js)  # owner: no receipt labels
 
 
 if __name__ == "__main__":

@@ -63,6 +63,10 @@ def _stamp(m):
         return now()
 
 
+# Owner rule: no DM leaves this app unless the owner starts it. The automatic senders below stay off.
+AUTO_DMS_ALLOWED = False
+
+
 class Engine:
     def __init__(self, h):
         self.h = h
@@ -967,7 +971,7 @@ class Engine:
             return True
 
     def _reply(self, jid, text, goodbye=False):
-        if not self.s.get("dm_enabled") or self.h.get("on_hold", lambda: False)():
+        if not AUTO_DMS_ALLOWED or not self.s.get("dm_enabled") or self.h.get("on_hold", lambda: False)():
             return
         if not goodbye and self._opted_out(jid):
             return
@@ -979,7 +983,8 @@ class Engine:
     def run_followups(self):
         """Gentle reminders for people who said they would donate later."""
         if (
-            not self.s.get("dm_enabled")
+            not AUTO_DMS_ALLOWED
+            or not self.s.get("dm_enabled")
             or self.quiet_now()
             or rules.in_quiet(DM_QUIET[0], DM_QUIET[1], pkt().hour)
         ):
@@ -996,7 +1001,8 @@ class Engine:
 
     def dm_if_due(self):
         if (
-            not self.s.get("dm_enabled")
+            not AUTO_DMS_ALLOWED
+            or not self.s.get("dm_enabled")
             or self.dm_running
             or self._dm_quiet()
             or self.level()[0] not in VERY_SLOW

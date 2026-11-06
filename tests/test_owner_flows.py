@@ -113,7 +113,9 @@ class VolunteerGuide(unittest.TestCase):
 
     def test_check_once_and_questions_go_to_owner(self):
         e = FakeEngine()
-        e.s["vol_flow"] = {"92300": {"step": "poster", "at": 0, "case": "c", "seen": []}}
+        e.s["vol_flow"] = {
+            "92300": {"step": "poster", "at": 0, "case": "c", "seen": [], "nudged": True}
+        }
         V.tick(e, V.CHECK_AFTER + 10)
         V.tick(e, V.CHECK_AFTER + 20)
         self.assertEqual([b["message"] for b in e.sent], ["Brother, are you done?"])

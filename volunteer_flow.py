@@ -11,6 +11,7 @@ import reply_intent
 
 YES = re.compile(r"(?i)^\W*(yes|yeah|yup|ok(?:ay|ies)?|sure|send|haan|han|ji|jee|g|theek|thik)\b")
 CHECK_AFTER = 4 * 3600
+NUDGE_AFTER = 180  # the DM Guard keeps at least 3 minutes between messages
 GIVE_UP_AFTER = 24 * 3600
 
 
@@ -138,6 +139,9 @@ def tick(engine, now=None):
                 m.get("media_type", ""),
                 reply_intent.history_from(msgs, m.get("id")),
             )
+        elif st["step"] == "poster" and not st.get("nudged") and now - st["at"] >= NUDGE_AFTER:
+            if _send(engine, phone, "Share this brother."):
+                st["nudged"] = True
         elif st["step"] == "poster" and not st.get("checked") and now - st["at"] > CHECK_AFTER:
             if _send(engine, phone, "Brother, are you done?"):
                 st.update(checked=True, at=now)

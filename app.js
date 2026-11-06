@@ -2835,7 +2835,7 @@ document
   ?.addEventListener('click', () => document.getElementById('openDonors')?.click());
 document
   .getElementById('openCasePlan')
-  ?.addEventListener('click', () => (location.href = '/case-plan'));
+  ?.addEventListener('click', () => (location.href = '/agents'));
 /* Desktop: Settings sits in the centred footer beside Keyboard shortcuts instead of the far corner. */
 
 /* ---- Cases: save a finished case, open an old one, start a new one from zero ---- */

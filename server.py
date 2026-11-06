@@ -4883,248 +4883,17 @@ def live_snapshot():
     }
 
 
-AGENT_WORDS = (
-    ("writer", r"(?i)\bversions?\b|saved group message|wording"),
-    ("plan", r"(?i)case plan"),
-    ("dms", r"(?i)\bdms?\b|donor dm"),
-    ("volunteers", r"(?i)volunteer"),
-    ("replies", r"(?i)repl|answered|asked not to|said later|reminder|money noticed|thank"),
-)
+_AGENTS = None
 
 
-def _agent_of(text):
-    return next((a for a, w in AGENT_WORDS if re.search(w, text or "")), "auto")
+def agents():
+    """Manager and the seven agents (agents_system.py)."""
+    global _AGENTS
+    if _AGENTS is None:
+        from agents_system import Manager
 
-
-def agents_view():
-    """Real status of each working part of the app, for the Agents page. No mock data."""
-    snap = live_snapshot()
-    st, sm = snap["status"], snap["summary"]
-    feed = {}
-    for e in AUTOLOG[-50:]:
-        feed.setdefault(_agent_of(e.get("text")), []).append(
-            {"id": str(e.get("time")), "time": e.get("time"), "text": e.get("text", "")}
-        )
-    err = st.get("errors") or []
-    wa = st.get("state") != "offline"
-    auto = {
-        "id": "auto",
-        "name": "Group Poster",
-        "role": "Posts saved versions in groups on the timers and reads money signals.",
-        "status": "Error"
-        if not wa or err
-        else "Working"
-        if st.get("state") in ("sending", "reading")
-        else "Active"
-        if snap["on"] and not snap["hold"]
-        else "Idle",
-        "now": st.get("now", ""),
-        "progress": {"label": "Posts today", "value": sm.get("posts_today", 0)},
-        "facts": [
-            f"Pace {sm.get('pace', '')}: GiveLife every {sm.get('main_every', '?')} min, freelance every {sm.get('freelance_every', '?')} min"
-        ]
-        + [f"Next: {n['group']} in {n['in']} min" for n in st.get("next", [])],
-        "errors": [
-            {
-                "text": "WhatsApp is not connected.",
-                "fix": "Open the main page and scan the WhatsApp QR code.",
-                "action": "open_home",
-            }
-        ]
-        * (not wa)
-        + [{"text": e.get("text", ""), "fix": "It retries by itself.", "action": ""} for e in err]
-        + (
-            [{"text": "Everything is on hold.", "fix": "Resume when ready.", "action": "resume"}]
-            if snap["hold"]
-            else []
-        )
-        + (
-            [
-                {
-                    "text": "Automatic posting is off.",
-                    "fix": "Turn Auto on when you want timed posts.",
-                    "action": "auto_on",
-                    "info": True,
-                }
-            ]
-            if not snap["on"]
-            else []
-        ),
-    }
-    try:
-        g = focus_bank().get("group")
-    except Exception as e:
-        g = {"state": "Needs retry", "error": str(e)[:150], "items": []}
-    n = len(g.get("items") or [])
-    writer = {
-        "id": "writer",
-        "name": "Writer",
-        "role": "Writes 5 more versions of your saved Group message each time you click Generate 5 Versions.",
-        "status": "Working"
-        if g.get("state") == "Generating"
-        else "Error"
-        if g.get("state") == "Needs retry"
-        else "Active"
-        if n
-        else "Idle",
-        "now": f"{g.get('state', 'Not generated')}: {n} versions",
-        "progress": {"label": "Versions ready", "value": n},
-        "facts": [],
-        "errors": [
-            {
-                "text": g.get("error") or "Versions could not be made.",
-                "fix": "Try again. Versions already made are kept.",
-                "action": "retry_writer",
-            }
-        ]
-        if g.get("state") in ("Needs retry", "Partial")
-        else [],
-    }
-    rs = reply_setup.get(STORE) if STORE else {}
-    replies = {
-        "id": "replies",
-        "name": "Reply Reader",
-        "role": "Reads replies to posts and DMs and sends your saved thank-you replies.",
-        "status": "Active" if snap["on"] and rs.get("enabled") else "Idle",
-        "now": "Auto replies on" if rs.get("enabled") else "Auto replies off",
-        "progress": {
-            "label": "Donation signals today",
-            "value": sm.get("possible_donations_today", 0),
-        },
-        "facts": [f"Last reply check: {_ago(st.get('last_reply_read'))}"],
-        "errors": [],
-    }
-    dms = {
-        "id": "dms",
-        "name": "DM Sender",
-        "role": "Sends DMs to donors and contacts within the daily limit.",
-        "status": "Working"
-        if "Donor DMs" in st.get("now", "")
-        else "Active"
-        if sm.get("dm_enabled") and snap["on"]
-        else "Idle",
-        "now": st.get("now", "")
-        if "DM" in st.get("now", "")
-        else (
-            "DMs on"
-            if sm.get("dm_enabled") and snap["on"]
-            else "DMs set, waiting for Auto"
-            if sm.get("dm_enabled")
-            else "DMs off"
-        ),
-        "progress": {
-            "label": "DMs today",
-            "value": sm.get("dms_today", 0),
-            "max": sm.get("dm_daily") or None,
-        },
-        "facts": [],
-        "errors": [],
-    }
-    try:
-        v = donors().volunteers.view()
-        vd = v.get("delivery") or {}
-        vol = {
-            "count": len(v.get("items") or []),
-            "state": str(vd.get("state") or "Idle"),
-            "sent": vd.get("sent", 0),
-            "total": vd.get("total", 0),
-        }
-    except Exception:
-        vol = {"count": 0, "state": "Unavailable", "sent": 0, "total": 0}
-    volunteers = {
-        "id": "volunteers",
-        "name": "Volunteers",
-        "role": "Asks your volunteers to share the case.",
-        "status": "Working" if vol["total"] and vol["sent"] < vol["total"] else "Idle",
-        "now": f"{vol['count']} volunteers · {vol['state']}",
-        "progress": {
-            "label": "Asked this round",
-            "value": vol["sent"],
-            "max": vol["total"] or None,
-        },
-        "facts": [],
-        "errors": [],
-    }
-    plan = plan_get()
-    case = {
-        "id": "plan",
-        "name": "Case Plan",
-        "role": "Switches between Normal and Slow messages from the case facts.",
-        "status": "Active" if plan and plan["state"] in case_plan.ACTIVE else "Idle",
-        "now": (plan or {}).get("state", "No case plan"),
-        "progress": {"label": "Amount left (Rs.)", "value": read_left()},
-        "facts": [],
-        "errors": [],
-    }
-    agents = [auto, writer, replies, dms, volunteers, case]
-    for a in agents:
-        a["feed"] = feed.get(a["id"], [])[-15:]
-    return {
-        "agents": agents,
-        "rules": ENGINE.rule_list(),
-        "auto": bool(snap["on"]),
-        "updated": time.time(),
-    }
-
-
-def _ago(t):
-    if not t:
-        return "never"
-    m = int((time.time() - t) // 60)
-    return "just now" if m < 1 else f"{m} min ago"
-
-
-def agents_mutate(body):
-    act = body.get("action")
-    if act == "instruct":
-        import rules
-
-        text = str(body.get("text", "")).strip()[:300]
-        # The rule list names the freelance groups "free", so accept that word here too.
-        rule, description = rules.parse(re.sub(r"(?i)\bfree\b", "freelance", text))
-        if not rule:
-            raise ValueError(
-                'Not saved: I could not turn this into a rule. Try "never post in fiverr at night" or "post in main every 20 min".'
-            )
-        if rule["kind"] == "schedule":
-            raise ValueError("Not saved: sends are done from chat, not as agent rules.")
-        if any(r["text"].casefold() == rules.describe(rule).casefold() for r in ENGINE.rule_list()):
-            raise ValueError("Already saved.")
-        ENGINE.add_rule(rule)
-        return {"reply": description, **agents_view()}
-    if act == "delete_rule":
-        ENGINE.delete_rule(body.get("id"))
-        return {"reply": "Rule removed.", **agents_view()}
-    if act == "correct":
-        text = str(body.get("text", "")).strip()[:500]
-        if not text:
-            raise ValueError("Type what was wrong.")
-        decision = str(body.get("decision", ""))[:300]
-        with KNOWLEDGE.lock:
-            KNOWLEDGE.data["feedback"].append(
-                {
-                    "id": uuid.uuid4().hex,
-                    "correction": safe_text(
-                        f'{body.get("agent", "")}: "{decision}" -> {text}', 1500
-                    ),
-                    "category": "agent_decision",
-                    "status": "reported_needs_review",
-                    "time": time.time(),
-                }
-            )
-            KNOWLEDGE.save()
-        reply = mem_add(text) if body.get("remember") is True else "Correction saved."
-        return {"reply": reply, **agents_view()}
-    if act == "resume":
-        return {"reply": set_hold(False), **agents_view()}
-    if act == "auto_on":
-        return {"reply": set_auto(True), **agents_view()}
-    if act == "auto_off":
-        return {"reply": set_auto(False), **agents_view()}
-    if act == "retry_writer":
-        focus_bank().retry("group")
-        return {"reply": "Writing versions again.", **agents_view()}
-    raise ValueError("Unknown action.")
+        _AGENTS = Manager(sys.modules[__name__])
+    return _AGENTS
 
 
 DONORS = None
@@ -5266,7 +5035,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.split("?")[0] == "/api/case-plan":
             return self.reply(plan_view())
         if self.path.split("?")[0] == "/api/agents":
-            return self.reply(agents_view())
+            return self.reply(agents().view())
         if self.path.split("?")[0] == "/api/group-finder":
             try:
                 return self.reply(group_research().snapshot(self.path))
@@ -5579,7 +5348,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply({"error": str(e)[:300]}, status=400)
         if self.path == "/api/agents":
             try:
-                return self.reply(agents_mutate(body))
+                return self.reply(agents().act(body))
             except ValueError as e:
                 return self.reply({"error": str(e)[:300]}, status=400)
         if self.path == "/api/group-finder":
@@ -6283,21 +6052,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply({"error": "Message is empty"}, status=400)
             try:
                 options = workflow().options("group", caption)
-                from focus_bank import clean_items, wording_key
-
-                row = focus_bank().get("group")
-                ready = len(
-                    {
-                        wording_key(t)
-                        for t in clean_items(
-                            row.get("source", ""), row.get("items", []), row.get("manual")
-                        )
-                    }
-                )
-                if row.get("source", "").strip() and ready < 2:
-                    raise ValueError(
-                        f"Versions not ready yet ({ready} of 10). TEST would repeat the same wording. Nothing sent."
-                    )
                 with SEND_LOCK:
                     try:
                         caption = focus_bank().reserve_groups(caption, 1)[0]
@@ -6383,5 +6137,6 @@ if __name__ == "__main__":
         threading.Thread(target=team_loop, daemon=True, name="team-loop").start()
     PILOT.start()
     ENGINE.start()
+    agents().start()
     threading.Thread(target=timed_loop, daemon=True).start()
     ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "10000"))), Handler).serve_forever()

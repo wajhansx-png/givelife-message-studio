@@ -74,3 +74,48 @@ class GroupSendTimesTests(unittest.TestCase):
         finally:
             http.shutdown()
             http.server_close()
+
+
+class TestButtonTests(unittest.TestCase):
+    """TEST works at once with zero versions, and 4 presses send 4 different wordings."""
+
+    setUp = fixture.SendTests.setUp
+    tearDown = fixture.SendTests.tearDown
+
+    def press(self, port):
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/test",
+            data=json.dumps({"message": app.get_message("group")["text"]}).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "Bearer test-only-studio-access-key",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=5) as r:
+            return json.load(r)
+
+    def test_zero_versions_then_four_different_wordings(self):
+        sent = []
+        http = app.ThreadingHTTPServer(("127.0.0.1", 0), app.Handler)
+        threading.Thread(target=http.serve_forever, daemon=True).start()
+        fake = lambda jid, text: (
+            sent.append(text) or {"code": "SUCCESS", "results": {"message_id": "f"}}
+        )
+        try:
+            with (
+                patch.object(app.workflow(), "options", return_value={"poster": False}),
+                patch.object(app, "send_text", side_effect=fake),
+                patch.object(app.focus_bank(), "_top_up"),
+            ):
+                bank = app.STORE.get("focus_wording")
+                app.STORE.put("focus_wording", {})
+                self.assertEqual(self.press(http.server_port)["code"], "SUCCESS")  # no versions yet
+                self.assertEqual(sent[-1], app.get_message("group")["text"])
+                app.STORE.put("focus_wording", bank)  # the fixture's saved versions
+                sent.clear()
+                for _ in range(4):
+                    self.assertEqual(self.press(http.server_port)["code"], "SUCCESS")
+            self.assertEqual(len(set(sent)), 4)
+        finally:
+            http.shutdown()
+            http.server_close()

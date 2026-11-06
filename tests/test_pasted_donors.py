@@ -334,8 +334,8 @@ class PastedNameIntegrationTests(unittest.TestCase):
                 .date()
                 .isoformat()
             )
-            # The old 50 cap is gone; the DM Guard ceiling (40) applies to every batch, so 39 still sends.
-            app.STORE.put("dm_daily", {"day": day, "count": app.DM_DAILY_CAP - 1, "last": 0})
+            # There is no daily DM limit any more: even after many sends today a batch still goes out.
+            app.STORE.put("dm_daily", {"day": day, "count": 500, "last": 0})
             preview = registry.pasted.preview("Michael,03001234567")
             with patch("donor_delivery.threading.Thread.start"):
                 registry.pasted.start(preview["token"], request_id="no-daily-cap-pasted-test")

@@ -8,7 +8,7 @@ import manual_commands
 import dm_composer, reply_setup
 import ai_call
 
-DM_DAILY_CAP = 40  # ceiling, not a target
+DM_DAILY_CAP = 0  # 0 = no daily DM limit (old 40 ceiling removed)
 DM_MIN_GAP = 180  # seconds between automatic/batch DMs
 import dm_templates
 from state_shapes import mapping, memories, history as valid_history
@@ -317,8 +317,8 @@ def send_custom(body):
             )
             if ledger.get("day") != day:
                 ledger = {"day": day, "count": 0, "last": ledger.get("last", 0)}
-            # DM Guard: one ceiling for every batch and Auto path; only a one-person owner send is not blocked (but counts).
-            if not manual and ledger["count"] >= DM_DAILY_CAP:
+            # DM Guard: optional ceiling (DM_DAILY_CAP, off when 0) for every batch and Auto path; owner one-person sends are never blocked (but count).
+            if DM_DAILY_CAP and not manual and ledger["count"] >= DM_DAILY_CAP:
                 raise ValueError(
                     f"The {DM_DAILY_CAP}-DM daily limit has been reached. More tomorrow."
                 )

@@ -190,7 +190,33 @@ body {
 [hidden] {
   display: none !important;
 }
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.msg-row {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 10px 14px;
+  max-width: 92%;
+  min-width: 0;
+}
+.msg-row.me {
+  align-self: flex-end;
+  background: #2f2f2f;
+}
+.msg-row b {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #10a37f;
+}
+.msg-row.me b {
+  color: var(--mut);
+}
 .answer {
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
   line-height: 1.5;
 }

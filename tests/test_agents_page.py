@@ -23,7 +23,7 @@ class AgentsPageTests(unittest.TestCase):
         app.auto_log("main: posting to 1 group(s): main.")
         view = app.agents_view()
         ids = [a["id"] for a in view["agents"]]
-        self.assertEqual(ids, ["auto", "writer", "replies", "dms", "volunteers", "plan"])
+        self.assertEqual(ids, ["manager", "auto", "writer", "replies", "dms", "volunteers", "plan"])
         by = {a["id"]: a for a in view["agents"]}
         self.assertTrue(any("Answered" in f["text"] for f in by["replies"]["feed"]))
         self.assertTrue(any("posting" in f["text"] for f in by["auto"]["feed"]))
@@ -35,7 +35,7 @@ class AgentsPageTests(unittest.TestCase):
             patch.object(app.ENGINE, "status", return_value={"state": "offline", "now": "x"}),
             patch.object(app, "auto_on", return_value=True),
         ):
-            auto = app.agents_view()["agents"][0]
+            auto = app.agents_view()["agents"][1]
         self.assertEqual(auto["status"], "Error")
         self.assertEqual(auto["errors"][0]["action"], "open_home")
 

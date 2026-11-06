@@ -1,9 +1,10 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const C = { Active: '#10a37f', Working: '#e8b04a', Idle: '#8f8f8f', Error: '#ef6b6b' };
+  let lastThread = '';
   let key = localStorage.getItem('givelife-cloud-key') || '',
     data = null,
-    pick = localStorage.getItem('givelife-agent') || 'auto',
+    pick = localStorage.getItem('givelife-agent') || 'manager',
     fixing = null;
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
@@ -122,7 +123,31 @@
             })
         : [el('div', 'empty', 'No activity yet this session.')]),
     );
-    $('inp').placeholder = 'Ask the assistant, or add a rule like: never post in fiverr at night';
+    // Manager: one conversation with every agent's real replies.
+    const boss = a.id === 'manager';
+    $('thread').hidden = !boss;
+    if (boss) {
+      const who = (w) => (w === 'you' ? 'You' : a.names?.[w] || w);
+      $('thread').replaceChildren(
+        ...(a.chat?.length
+          ? a.chat.map((m) => {
+              const row = el('div', 'msg-row ' + (m.who === 'you' ? 'me' : 'them'));
+              row.append(el('b', '', who(m.who)), el('div', 'answer', m.text));
+              return row;
+            })
+          : [el('div', 'empty', 'Ask me anything, or say "ask all agents for their progress".')]),
+      );
+      if (pick !== lastThread) $('thread').lastElementChild?.scrollIntoView({ block: 'nearest' });
+    }
+    lastThread = pick;
+    $('activityLabel').textContent = boss
+      ? "Manager's checks and actions"
+      : 'Activity · tap a line to correct it';
+    $('inp').placeholder = boss
+      ? 'Talk to Manager, e.g. ask Writer to improve the group message'
+      : a.id === 'auto'
+        ? 'Ask Group Poster, or add a rule like: never post in fiverr at night'
+        : 'Ask ' + a.name;
     $('live').textContent = 'Updated ' + clock(data.updated);
   }
   async function load() {
@@ -155,63 +180,35 @@
       document.querySelectorAll('[data-mode]').forEach((x) => (x.disabled = false));
     };
   });
-  // Not a rule? Ask the same assistant as the main page chat (same safety checks, same access key).
-  async function assistant(text) {
-    const h = { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' };
-    $('answer').hidden = false;
-    $('ansQ').textContent = 'You: ' + text;
-    $('ansText').textContent = 'Thinking…';
-    let r = await fetch('/assistant', {
-      method: 'POST',
-      headers: h,
-      body: JSON.stringify({
-        text,
-        request_id: 'agents-' + Date.now() + '-' + Math.random().toString(36).slice(2),
-        history: [],
-        screen: { view: 'agents' },
-      }),
-    });
-    let d = await r.json().catch(() => ({}));
-    if (r.ok && d.task_id) {
-      const until = Date.now() + 4 * 60 * 1000;
-      for (;;) {
-        if (Date.now() > until) throw new Error('No answer yet. Nothing was repeated.');
-        await new Promise((res) => setTimeout(res, 700));
-        const c = await fetch('/assistant-status/' + d.task_id, { headers: h });
-        const t = await c.json().catch(() => ({}));
-        if (!c.ok) throw new Error(t.error || 'The request is no longer tracked.');
-        if (t.done) {
-          if (t.error) throw new Error(t.error);
-          d = t.result || {};
-          break;
-        }
-      }
-    } else if (r.status === 503) {
-      throw new Error('The AI is not connected. Set DEEPSEEK_API_KEY on Render.');
-    } else if (!r.ok) throw new Error(d.error || 'The assistant could not answer.');
-    $('ansText').textContent = d.reply || 'Done.';
-    $('answer').scrollIntoView({ block: 'nearest' });
-  }
+  // Every message goes to Manager, which passes it to the right agent and returns the agent's real reply.
   $('ask').onsubmit = async (e) => {
     e.preventDefault();
     const text = $('inp').value.trim();
-    if (!text) return;
+    if (!text || $('inp').disabled) return;
+    $('inp').disabled = true;
+    say(
+      pick === 'manager'
+        ? 'Manager is working…'
+        : (data?.agents.find((x) => x.id === pick)?.name || 'Agent') + ' is working…',
+    );
     try {
-      const d = await call('POST', { action: 'instruct', agent: pick, text });
+      const d = await call('POST', { action: 'manager', text, agent: pick });
       data = d;
-      render();
-      say(d.reply);
       $('inp').value = '';
-      return;
+      render();
+      say('');
+      if (pick === 'manager') $('thread').lastElementChild?.scrollIntoView({ block: 'nearest' });
+      if (pick !== 'manager') {
+        const replies = (d.messages || []).filter((m) => m.who !== 'you');
+        $('answer').hidden = false;
+        $('ansQ').textContent = 'You: ' + text;
+        $('ansText').textContent = replies.map((m) => m.text).join('\n\n') || 'No reply.';
+      }
     } catch (err) {
-      if (!/could not turn this into a rule/.test(err.message)) return say(err.message, true);
-    }
-    $('inp').value = '';
-    say('');
-    try {
-      await assistant(text);
-    } catch (err) {
-      $('ansText').textContent = err.message;
+      say(err.message, true);
+    } finally {
+      $('inp').disabled = false;
+      $('inp').focus();
     }
   };
   $('fix').addEventListener('close', () => {

@@ -4996,7 +4996,7 @@ def agents_view():
     }
     dms = {
         "id": "dms",
-        "name": "DM Sender",
+        "name": "DM Guard",
         "role": "Sends DMs to donors and contacts within the daily limit.",
         "status": "Working"
         if "Donor DMs" in st.get("now", "")
@@ -5033,7 +5033,7 @@ def agents_view():
         vol = {"count": 0, "state": "Unavailable", "sent": 0, "total": 0}
     volunteers = {
         "id": "volunteers",
-        "name": "Volunteers",
+        "name": "Volunteer Guide",
         "role": "Asks your volunteers to share the case.",
         "status": "Working" if vol["total"] and vol["sent"] < vol["total"] else "Idle",
         "now": f"{vol['count']} volunteers · {vol['state']}",
@@ -5059,6 +5059,22 @@ def agents_view():
     agents = [auto, writer, replies, dms, volunteers, case]
     for a in agents:
         a["feed"] = feed.get(a["id"], [])[-15:]
+    try:
+        boss = manager().view()
+    except Exception as e:  # Manager trouble never hides the other agents
+        boss = {
+            "id": "manager",
+            "name": "Manager",
+            "role": "",
+            "status": "Error",
+            "now": str(e)[:120],
+            "progress": {},
+            "facts": [],
+            "errors": [],
+            "feed": [],
+            "chat": [],
+        }
+    agents.insert(0, boss)
     return {
         "agents": agents,
         "rules": ENGINE.rule_list(),
@@ -5074,8 +5090,23 @@ def _ago(t):
     return "just now" if m < 1 else f"{m} min ago"
 
 
+_MANAGER = None
+
+
+def manager():
+    global _MANAGER
+    if _MANAGER is None:
+        from manager import Manager
+
+        _MANAGER = Manager(sys.modules[__name__])
+    return _MANAGER
+
+
 def agents_mutate(body):
     act = body.get("action")
+    if act == "manager":
+        items = manager().handle(body.get("text"), body.get("agent"))
+        return {"reply": items[-1]["text"] if items else "", "messages": items, **agents_view()}
     if act == "instruct":
         import rules
 
@@ -6383,5 +6414,6 @@ if __name__ == "__main__":
         threading.Thread(target=team_loop, daemon=True, name="team-loop").start()
     PILOT.start()
     ENGINE.start()
+    manager().start()
     threading.Thread(target=timed_loop, daemon=True).start()
     ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "10000"))), Handler).serve_forever()

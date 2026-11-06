@@ -4241,3 +4241,17 @@ html body:not(#_):not(#__) #donorBatchPicker .batch-options > #donorTest {
     display:none !important;
   }
 }
+
+
+/* Group send clock / dropdown must be real top-layer buttons, not covered
+   by the full-width primary send button underneath. */
+html body:not(#_):not(#__) #messageFocus .group-send .send-row .row-tools {
+  z-index: 8 !important;
+  pointer-events: auto !important;
+  isolation: isolate;
+}
+html body:not(#_):not(#__) #messageFocus .group-send .send-row .row-tools > button {
+  position: relative !important;
+  z-index: 9 !important;
+  pointer-events: auto !important;
+}

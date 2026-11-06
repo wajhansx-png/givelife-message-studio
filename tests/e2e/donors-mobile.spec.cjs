@@ -223,7 +223,7 @@ for (const width of [320, 360, 390, 430]) {
     await page.route('**/donors?**', async (route) => {
       const response = await route.fetch();
       const data = await response.json();
-      data.items[0].name = 'Syed Muhammad Abdullah Khan';
+      for (const item of data.items) item.name = 'Syed Muhammad Abdullah Khan'; // whichever row sorts first
       data.counts.all = 189;
       await route.fulfill({ response, json: data });
     });

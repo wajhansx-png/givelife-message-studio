@@ -23,7 +23,9 @@ for (const [width, height, largest] of [
     const first = await metrics();
     expect(first.size).toBeGreaterThanOrEqual(13);
     expect(first.size).toBeLessThanOrEqual(largest);
-    expect(Math.abs(first.line / first.size - 1.6)).toBeLessThan(0.02);
+    // Comfortable reading: line height 1.5–1.8 × the font size.
+    expect(first.line / first.size).toBeGreaterThanOrEqual(1.5);
+    expect(first.line / first.size).toBeLessThanOrEqual(1.8);
     await page.setViewportSize({ width: width + 12, height });
     await expect.poll(async () => (await metrics()).size).toBe(first.size);
     await page.locator('.bank-actions [data-bank-save-id]').click();

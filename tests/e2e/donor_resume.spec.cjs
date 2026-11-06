@@ -8,7 +8,10 @@ for (const width of [1440, 390])
         localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
       );
       await page.goto('/#/donors/all');
-      await page.locator('#donorToggle').filter({ hasText: 'Stop DMs' }).click();
+      // Start from a known state: an earlier test may have left DMs paused.
+      await expect(page.locator('#donorToggle')).toBeVisible();
+      if ((await page.locator('#donorToggle').innerText()).includes('Stop DMs'))
+        await page.locator('#donorToggle').click();
       await expect(page.locator('#donorToggle')).toHaveText('Resume DMs');
       await page.locator('#donorToggle').click();
       const dialog = page.getByRole('dialog', { name: 'Resume donor DMs' });

@@ -357,6 +357,14 @@
     clearTimeout(amountTimers.get(id));
     amountTimers.delete(id);
   }
+  /* Cached once and updated on resize: reading sizes during a DOM change forces a full page layout. */
+  const narrow560 = { matches: false },
+    narrow700 = { matches: false };
+  for (const [flag, q] of [[narrow560, '(max-width:559.98px)'], [narrow700, '(max-width:699.98px)']]) {
+    const mq = matchMedia(q);
+    flag.matches = mq.matches;
+    mq.addEventListener('change', (e) => (flag.matches = e.matches));
+  }
   function updateCounts() {
     const counts = {
       all: allDonors.length,
@@ -382,15 +390,18 @@
       important: '★ Important',
       top: 'Top donors',
       donated: 'Donated',
-      not_contacted: innerWidth < 560 ? 'Not DMed' : 'Not contacted',
-      volunteers: innerWidth < 700 ? 'Helpers' : 'Volunteers',
+      // matchMedia, not innerWidth: reading innerWidth right after a DOM change forces a full page layout.
+      not_contacted: narrow560.matches ? 'Not DMed' : 'Not contacted',
+      volunteers: narrow700.matches ? 'Helpers' : 'Volunteers',
       messages: 'Messages',
     };
     counts.volunteers = vols.items.length;
     for (const b of page.querySelectorAll('[data-tab]')) {
       paintTab(b, labels[b.dataset.tab], counts[b.dataset.tab]);
       b.setAttribute('aria-selected', String(tab === b.dataset.tab));
-      b.tabIndex = b.dataset.tab === 'messages' || tab === b.dataset.tab ? 0 : -1;
+      // setAttribute (only on change), not .tabIndex: the property forces a synchronous style recalc per tab.
+      const ti = b.dataset.tab === 'messages' || tab === b.dataset.tab ? '0' : '-1';
+      if (b.getAttribute('tabindex') !== ti) b.setAttribute('tabindex', ti);
       b.setAttribute(
         'aria-label',
         {
@@ -1530,8 +1541,8 @@
       important: '★ Important',
       top: 'Top donors',
       donated: 'Donated',
-      not_contacted: innerWidth < 560 ? 'Not DMed' : 'Not contacted',
-      volunteers: innerWidth < 700 ? 'Helpers' : 'Volunteers',
+      not_contacted: narrow560.matches ? 'Not DMed' : 'Not contacted',
+      volunteers: narrow700.matches ? 'Helpers' : 'Volunteers',
     };
     for (const b of page.querySelectorAll('[data-tab]')) {
       if (b.dataset.tab === 'messages') {
@@ -1948,7 +1959,9 @@
     el('donorMessagesTab').tabIndex = 0;
     for (const b of page.querySelectorAll('[data-tab]')) {
       b.setAttribute('aria-selected', String(tab === b.dataset.tab));
-      b.tabIndex = b.dataset.tab === 'messages' || tab === b.dataset.tab ? 0 : -1;
+      // setAttribute (only on change), not .tabIndex: the property forces a synchronous style recalc per tab.
+      const ti = b.dataset.tab === 'messages' || tab === b.dataset.tab ? '0' : '-1';
+      if (b.getAttribute('tabindex') !== ti) b.setAttribute('tabindex', ti);
     }
     el('donorTable').hidden = tab === 'messages' || tab === 'volunteers';
     if (el('donorFollowUpOpt')) el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
@@ -2667,12 +2680,25 @@
     const foot = page.querySelector('.donor-bottom'),
       shell = page.querySelector('.donor-shell'),
       rs = page.querySelector('#donorResumeStatus'),
+      heights = new Map(),
+      size = (n) => (heights.has(n) ? heights.get(n) : n.offsetHeight),
       sync = () => {
-        shell.style.setProperty('--donor-foot', (foot ? foot.offsetHeight : 72) + 'px');
-        shell.style.setProperty('--donor-rs', rs && rs.parentElement !== foot && !rs.hidden && rs.offsetHeight ? rs.offsetHeight + 8 + 'px' : '0px');
+        /* Write only when a value changes: rewriting the same variable re-styles the whole donor screen.
+           Sizes come from the ResizeObserver entries, so no extra forced layout. */
+        const footPx = (foot ? size(foot) : 72) + 'px',
+          rsH = rs ? size(rs) : 0,
+          rsPx = rs && rs.parentElement !== foot && !rs.hidden && rsH ? rsH + 8 + 'px' : '0px';
+        if (shell.style.getPropertyValue('--donor-foot') !== footPx) shell.style.setProperty('--donor-foot', footPx);
+        if (shell.style.getPropertyValue('--donor-rs') !== rsPx) shell.style.setProperty('--donor-rs', rsPx);
       };
-    if (typeof ResizeObserver !== 'undefined') for (const n of [foot, rs]) if (n) new ResizeObserver(sync).observe(n);
-    if (rs) new MutationObserver(sync).observe(rs, { attributes: true, attributeFilter: ['hidden', 'class'] });
+    if (typeof ResizeObserver !== 'undefined')
+      for (const n of [foot, rs])
+        if (n)
+          new ResizeObserver((entries) => {
+            for (const e of entries) heights.set(e.target, Math.round(e.borderBoxSize?.[0]?.blockSize ?? e.target.offsetHeight));
+            sync();
+          }).observe(n);
+    if (rs) new MutationObserver(() => (heights.delete(rs), sync())).observe(rs, { attributes: true, attributeFilter: ['hidden', 'class'] });
     sync();
   }
   el('donorStop').onclick = async () => {

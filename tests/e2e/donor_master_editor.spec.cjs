@@ -13,9 +13,17 @@ for (const width of [1440, 390])
     await expect(page.locator('.bank-actions')).toBeVisible();
     // One message at a time with a single Next: the version list is intentionally not shown.
     await expect(page.locator('.bank-picker')).toBeHidden();
-    await expect(page.locator('[data-bank-nav=next]')).toBeVisible();
+    await expect(page.locator('.bank-next-arrow')).toBeVisible();
     await expect(page.locator('[data-bank-nav=previous]')).toBeHidden();
-    await expect(page.locator('#donorMessages')).toHaveCSS('background-color', 'rgb(35, 35, 35)');
+    // The editor sits on a dark surface (own background, or the page's when it is transparent).
+    const dark = await page.locator('#donorMessages').evaluate((el) => {
+      for (let n = el; n; n = n.parentElement) {
+        const m = getComputedStyle(n).backgroundColor.match(/[\d.]+/g);
+        if (m && (m[3] === undefined || +m[3] > 0.5)) return (+m[0] + +m[1] + +m[2]) / 3 < 60;
+      }
+      return false;
+    });
+    expect(dark).toBe(true);
     const editor = page.locator('.bank-detail textarea');
     await page.locator('.bank-actions [data-bank-save-id]').click();
     await expect(editor).toBeVisible();

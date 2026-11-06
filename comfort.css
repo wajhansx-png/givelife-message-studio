@@ -3859,3 +3859,13 @@ html body:not(#_) #messageFocus #focusFormatted,html body:not(#_) #donorsPage#do
 html body:not(#_) #messageFocus #focusFormatted,html body:not(#_) #donorsPage#donorsPage .bank-detail .bank-preview{padding-right:revert-layer!important;margin-right:52px!important;width:auto!important;max-width:calc(100% - 52px)!important}
 html body:not(#_) :is(#messageFocus .focus-next-arrow,#donorsPage .bank-next-arrow){right:4px!important}
 html body:not(#_) :is(#messageFocus .focus-gen-icon,#donorsPage .bank-gen-icon){right:6px!important}
+
+/* ===== Light theme: readable pressed gap button, Back on preview, empty donor star ===== */
+html[data-theme='light'] body:not(#_) #donorBatchPicker .batch-gap-btn[aria-pressed='true']{background:#3b5bdb!important;color:#fff!important;border-color:#3b5bdb!important}
+html[data-theme='light'] body:not(#_) #donorBatchPicker .batch-gap-btn[aria-pressed='false']{background:#fff!important;color:#1f2937!important;border:1px solid #cbd5e1!important}
+html[data-theme='light'] body:not(#_) #messageFocus .back-action{color:#b42318!important;border-color:#e4a29b!important;background:#fff!important}
+html[data-theme='light'] body:not(#_) #donorsPage#donorsPage .donor-row .donor-star{color:#e5e7eb!important;-webkit-text-fill-color:#e5e7eb!important;opacity:1!important}
+html[data-theme='light'] body:not(#_) #donorsPage#donorsPage .donor-row .donor-star[aria-pressed='true']{color:#fbbf24!important;-webkit-text-fill-color:#fbbf24!important}
+/* DM message text: comfortable reading line height. */
+html body:not(#_) #donorsPage#donorsPage .bank-detail .bank-preview{line-height:1.6!important}
+html body:not(#_) #donorsPage#donorsPage .bank-detail textarea{font-size:16px!important}

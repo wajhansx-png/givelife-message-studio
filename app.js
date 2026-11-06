@@ -771,7 +771,8 @@ const surfaceAnimations = new WeakMap();
 function moveSurface(surface) {
   if (
     !surface ||
-    !surface.getClientRects().length ||
+    surface.hidden ||
+    !surface.isConnected ||
     !surface.animate ||
     matchMedia('(prefers-reduced-motion: reduce)').matches
   )

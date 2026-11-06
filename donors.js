@@ -1571,6 +1571,42 @@
               }
             };
             rename.append(rlabel, rsave);
+            // DM greeting is editable: a name is not proof of someone's gender.
+            const dmProfile = make('div', 'donor-normal-box donor-dm-profile');
+            const dmNameLabel = make('label', '', 'DM first name');
+            const dmFirst = make('input', 'donor-normal');
+            dmFirst.type = 'text';
+            dmFirst.maxLength = 30;
+            dmFirst.value = d.dm_name || '';
+            dmFirst.placeholder = 'Name, or blank';
+            dmNameLabel.append(dmFirst);
+            const dmTitleLabel = make('label', '', 'DM greeting');
+            const dmTitle = make('select', 'donor-normal');
+            for (const [value, title] of [
+              ['Brother', 'Bhai'],
+              ['Sister', 'Sister'],
+              ['Neutral', 'Name only'],
+            ]) {
+              const option = make('option', '', title);
+              option.value = value;
+              dmTitle.append(option);
+            }
+            dmTitle.value = d.dm_salutation || 'Brother';
+            dmTitleLabel.append(dmTitle);
+            const dmPreview = make('small', '', 'Suggested from contact name; please correct if needed.');
+            const dmSave = make('button', 'donor-normal-save', 'Save DM greeting');
+            dmSave.type = 'button';
+            dmSave.onclick = () => {
+              const first = dmFirst.value.trim();
+              if (first && !/^[A-Za-z][A-Za-z'-]{1,24}$/.test(first)) {
+                notice('Enter one simple first name, or leave it blank.', true);
+                dmFirst.focus();
+                return;
+              }
+              change(d.id, { dm_name: first, dm_salutation: dmTitle.value });
+              more.open = false;
+            };
+            dmProfile.append(dmNameLabel, dmTitleLabel, dmPreview, dmSave);
             const normal = make('div', 'donor-normal-box');
             const nlabel = make('label', '', 'Usually donates (Rs.)');
             const ninput = make('input', 'donor-normal');

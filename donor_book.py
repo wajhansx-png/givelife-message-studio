@@ -75,7 +75,7 @@ class DonorBook:
     def rank_key(cls,r):
         w=cls.worth(r);return (-(w['known_total'] or 0),-w['activity'],r.get('top_order') or 10**9,r['id'])
     def _public(self,r):
-        keys=('id','top_donor','top_order','important_order','top_rank','important_rank','donor_rank','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted','dm_name','dm_salutation','dm_profile_source','receipt_total','receipt_rank','receipt_source','receipt_report_date')
+        keys=('id','top_donor','top_order','important_order','top_rank','important_rank','donor_rank','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted','follow_up_state','dm_name','dm_salutation','dm_profile_source','receipt_total','receipt_rank','receipt_source','receipt_report_date')
         # A confirmed DM is never forgotten: a later failed or pending attempt cannot erase "DM sent".
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
         return {**{k:(hide_numbers(r.get(k,'')) if k=='dm_name' else r.get(k)) for k in keys},**self.worth(r),'unverified':not self.worth(r)['known_total'],'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'has_number':bool(r.get('phone')),'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
@@ -245,7 +245,7 @@ class DonorBook:
             rows=[r for r in self._load()['records'] if not r.get('deleted') and r.get('phone') and (scope=='all' or scope=='selected' and r['id'] in (ids or []) or scope=='important' and r['important'] or scope=='top' and r.get('top_donor') or scope=='donated' and r['donated'] or scope=='not_donated' and not r['donated'])]
             rows.sort(key=self.rank_key if scope=='top' else self.queue_key)
             return copy.deepcopy(rows[:limit] if limit else rows)
-    CASE_FIELDS={'top_donor':False,'top_order':None,'important_order':None,'important':False,'donated':False,'amount':0,'delivery':'Not contacted','last_sent_at':None,'sent_count':0,'dm_sent':False}
+    CASE_FIELDS={'follow_up_state':None,'top_donor':False,'top_order':None,'important_order':None,'important':False,'donated':False,'amount':0,'delivery':'Not contacted','last_sent_at':None,'sent_count':0,'dm_sent':False}
     def export_case_fields(self):
         with self.lock:return {r['id']:{k:copy.deepcopy(r.get(k,d)) for k,d in self.CASE_FIELDS.items()} for r in self._load()['records']}
     def import_case_fields(self,fields=None):
@@ -256,6 +256,10 @@ class DonorBook:
                 for k,d in self.CASE_FIELDS.items():r[k]=copy.deepcopy(fields.get(r['id'],{}).get(k,d))
                 r['updated_at']=time.time()
             self._save(data)
+    def follow_up(self,ident,state):
+        with self.lock:
+            data=self._load();r=next((r for r in data['records'] if r['id']==ident),None)
+            if r:r['follow_up_state']=state;r['follow_up_at']=time.time();self._save(data)
     def delivery(self,ident,state,stamp=None,text=None):
         with self.lock:
             data=self._load();r=next((r for r in data['records'] if r['id']==ident),None)

@@ -361,7 +361,32 @@ class DonorIntegration:
         with self.control_lock:
             return self._start_batch(**body)
 
+    FOLLOW_KEY = "donor_follow_up"
+
+    def follow_up_text(self):
+        saved = self.app.STORE.get(self.FOLLOW_KEY) if self.app.STORE else None
+        return str((saved or {}).get("text", "")) if isinstance(saved, dict) else ""
+
+    def set_follow_up(self, text):
+        if not isinstance(text, str) or len(text) > 2000:
+            raise ValueError("Keep the follow-up under 2,000 characters.")
+        if not self.app.STORE:
+            raise ValueError("Persistent storage is unavailable.")
+        self.app.STORE.put(self.FOLLOW_KEY, {"text": text.strip()})
+        return {"follow_up": text.strip(), "reply": "Follow-up message saved."}
+
+    def _follow_up_for(self, wanted):
+        if wanted is not True:
+            return None
+        text = self.follow_up_text()
+        if not text:
+            raise ValueError("Write the follow-up in Messages → Follow-Up Message first.")
+        return text
+
     def _start_batch(self, **body):
+        body["follow_up"] = self._follow_up_for(body.get("follow_up"))
+        if body["follow_up"] is None:
+            body.pop("follow_up")
         self.resume_personal()
         body.setdefault("gap_seconds", 240)
         if not body.get("chunk"):
@@ -412,12 +437,13 @@ class DonorIntegration:
             raise ValueError("Not sent: " + self.exclusion_reason(rows[0]["phone"]))
         return self.start_batch(**body)
 
-    def send_one(self, ident, request_id, poster=True):
+    def send_one(self, ident, request_id, poster=True, follow_up=False):
         """Each explicit click is a new immediate send; repeated request IDs never resend."""
         if not self.app.STORE:
             raise ValueError("Persistent sending records are unavailable.")
         if type(poster) is not bool:
             raise ValueError("Poster must be on or off.")
+        follow_text = self._follow_up_for(True if follow_up is True else None)
         self.resume_personal()
         if not isinstance(request_id, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{8,100}", request_id):
             raise ValueError("Invalid send request. Refresh the donor page.")
@@ -464,12 +490,17 @@ class DonorIntegration:
                     self.jobs.manual_sent_at = time.time()
                 state = "Sent" if confirmed else "Uncertain"
                 self.book.delivery(r["id"], state, text=caption if state == "Sent" else None)
+                fu = None
+                if follow_text and confirmed:
+                    fu = self._single_follow_up(r, name, gender, follow_text)
+                    self.book.follow_up(r["id"], fu)
                 output = {
                     "id": r["id"],
                     "code": "SUCCESS" if confirmed else "UNCERTAIN",
                     "reply": "WhatsApp confirmed the DM."
                     if confirmed
                     else "Delivery not confirmed. Check WhatsApp before another manual send.",
+                    **({"follow_up": fu} if fu else {}),
                 }
                 self.app.STORE.put(key, output)
                 return output
@@ -482,6 +513,30 @@ class DonorIntegration:
                 raise
             finally:
                 self.jobs.manual_inflight.clear()
+
+    def _single_follow_up(self, r, name, gender, template):
+        """Second message only after the first was confirmed. Never retried."""
+        from donor_delivery import DonorDelivery
+
+        if self.exclusion_reason(r["phone"]):
+            return "Skipped: opted out or blocked"
+        try:
+            res = self.app.send_custom(
+                {
+                    "target": "phone",
+                    "phone": r["phone"],
+                    "message": DonorDelivery.follow_text(template, name, gender),
+                    "poster": False,
+                    "kind": "owner_text",
+                    "name": name,
+                    "gender": gender,
+                }
+            )
+        except ValueError:
+            return "Not sent"
+        except Exception:
+            return "Uncertain"
+        return "Sent" if isinstance(res, dict) and res.get("code") == "SUCCESS" else "Uncertain"
 
     def eligible(self, phone):
         return not self.exclusion_reason(phone)

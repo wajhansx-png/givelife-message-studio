@@ -3696,3 +3696,18 @@ html body:not(#_) #donorsPage#donorsPage[data-panel='top'] .donor-row .donor-ide
 @media (max-width:359px){html body:not(#_) #donorsPage#donorsPage .donor-tabs button{font-size:9px!important;padding-inline:1px!important;letter-spacing:-.2px}}
 html body:not(#_) #donorsPage#donorsPage[data-panel='top'] .donor-row{height:auto!important;min-height:68px!important;padding-block:4px!important}
 html body:not(#_) #donorsPage#donorsPage .donor-head > .donor-total{display:none!important}
+
+/* Send with follow-up: checkbox above the list; follow-up status line under a name. */
+html body #donorsPage .donor-table-wrap{position:relative}
+html body #donorsPage .donor-fu-opt{position:absolute;top:-30px;left:2px;display:flex;align-items:center;gap:8px;min-height:30px;font-size:13px;font-weight:700;color:#cfd6e4;cursor:pointer;z-index:1}
+html body #donorsPage .donor-fu-opt input{width:20px;height:20px;margin:0;accent-color:#3b82f6}
+html body #donorsPage .donor-fu-opt[hidden]{display:none}
+html body:not(#_) #donorsPage#donorsPage .donor-row[data-fu]{height:auto!important;min-height:60px!important}
+html body #donorsPage .donor-fu{flex:1 0 100%;order:4;font-size:11px;font-weight:700;color:#8fd19e}
+html body #donorsPage .donor-row[data-fu='Uncertain'] .donor-fu,html body #donorsPage .donor-row[data-fu='Not sent'] .donor-fu{color:#ffb86b}
+html body #donorsPage .bank-followup{margin:0 0 12px}
+html body #donorsPage .bank-followup-btn{width:100%;min-height:44px}
+html body #donorsPage .bank-followup-panel{display:grid;gap:8px;margin-top:8px}
+html body #donorsPage .bank-followup-panel[hidden]{display:none}
+html body #donorsPage .bank-followup-panel textarea{width:100%;min-height:84px;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid #ffffff2a;background:#0d1117;color:inherit;font:inherit;resize:vertical}
+html body #donorsPage .bank-followup-panel small{opacity:.75;line-height:1.35}

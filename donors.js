@@ -47,6 +47,17 @@
       wrap.className = 'donor-table-wrap';
       table.parentNode.insertBefore(wrap, table);
       wrap.append(table, btn);
+      const opt = make('label', 'donor-fu-opt'),
+        box = make('input');
+      box.type = 'checkbox';
+      box.id = 'donorFollowUp';
+      box.name = 'send_follow_up';
+      box.onchange = () => (followUpOn = box.checked);
+      opt.id = 'donorFollowUpOpt';
+      opt.append(box, make('span', '', 'Send with follow-up'));
+      wrap.prepend(opt);
+    }
+    {
     }
     /* Real browser full screen (browser bar hidden); where a phone browser can't, the list still fills the page. */
     btn.onclick = () => {
@@ -57,6 +68,7 @@
     document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && page.classList.contains('donor-expanded')) updateExpandBtn(false); });
   }
 
+  let followUpOn = false; /* off by default; lasts until the page reloads */
   const resumeStatus = make('div', 'donor-resume-status');
   resumeStatus.id = 'donorResumeStatus';
   resumeStatus.hidden = true;
@@ -461,6 +473,7 @@
     const epoch = ++filterEpoch;
     updateCounts();
     el('donorTable').hidden = tab === 'messages' || tab === 'volunteers';
+    el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
     el('donorMessages').hidden = tab !== 'messages';
     el('donorVolunteers').hidden = tab !== 'volunteers';
     if (tab === 'volunteers') {
@@ -897,6 +910,46 @@
       }
     };
     box.append(head);
+    {
+      const fuWrap = make('div', 'bank-followup'),
+        fuBtn = make('button', 'tool bank-followup-btn', 'Follow-Up Message'),
+        fuPanel = make('div', 'bank-followup-panel'),
+        fuText = make('textarea'),
+        fuSave = make('button', 'tool', 'Save follow-up'),
+        fuNote = make(
+          'small',
+          '',
+          'Sent as a separate message after the poster DM, only when "Send with follow-up" is ticked. {name} becomes e.g. "Sohaib Bhai".',
+        );
+      fuBtn.type = fuSave.type = 'button';
+      fuBtn.setAttribute('aria-expanded', 'false');
+      fuPanel.hidden = true;
+      fuText.name = 'follow_up_text';
+      fuText.maxLength = 2000;
+      fuText.rows = 3;
+      fuText.placeholder = '{name}, please do consider helping.';
+      fuText.value = bankData.follow_up || '';
+      fuBtn.onclick = () => {
+        fuPanel.hidden = !fuPanel.hidden;
+        fuBtn.setAttribute('aria-expanded', String(!fuPanel.hidden));
+        if (!fuPanel.hidden) fuText.focus();
+      };
+      fuSave.onclick = async () => {
+        fuSave.disabled = true;
+        try {
+          const r = await api('/donor-messages', { action: 'follow_up', text: fuText.value });
+          bankData.follow_up = r.follow_up;
+          notice(r.reply);
+        } catch (e) {
+          notice(e.message, true);
+        } finally {
+          fuSave.disabled = false;
+        }
+      };
+      fuPanel.append(fuText, fuNote, fuSave);
+      fuWrap.append(fuBtn, fuPanel);
+      box.prepend(fuWrap);
+    }
     const generationState = make('span', 'bank-generation-state', bankGenerationLabel());
     generationState.setAttribute('role', 'status');
     head.append(generationState);
@@ -1500,6 +1553,10 @@
                   : 'Unverified',
               ),
             );
+          if (d.follow_up_state) {
+            row.dataset.fu = d.follow_up_state;
+            ident.append(make('small', 'donor-fu', 'Follow-up: ' + d.follow_up_state.toLowerCase()));
+          }
           ident.title = d.name + ' · ' + when(d.last_sent_at);
           const status = make('button', 'donor-status', d.donated ? 'Donated ✓' : 'Not donated');
           status.type = 'button';
@@ -1789,6 +1846,7 @@
       b.tabIndex = b.dataset.tab === 'messages' || tab === b.dataset.tab ? 0 : -1;
     }
     el('donorTable').hidden = tab === 'messages' || tab === 'volunteers';
+    el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
     el('donorMessages').hidden = tab !== 'messages';
     el('donorVolunteers').hidden = tab !== 'volunteers';
     if (tab === 'messages' && !el('donorMessages').textContent)
@@ -1845,7 +1903,10 @@
           id: ids[0],
           request_id: requestId(),
           poster: singlePosterOn,
+          ...(followUpOn ? { follow_up: true } : {}),
         });
+        if (result.follow_up && result.follow_up !== 'Sent')
+          notice('Follow-up ' + result.follow_up.toLowerCase() + '. Check WhatsApp before resending.', true);
         if (result.code === 'SUCCESS') {
           const mine = allDonors.find((x) => x.id === ids[0]);
           if (mine) {
@@ -1870,6 +1931,7 @@
         gap_seconds: gap,
         request_id: requestId(),
         poster: batchBody.poster !== false,
+        ...(followUpOn ? { follow_up: true } : {}),
         ...(fresh ? { fresh: true } : {}),
       });
       if (scope !== 'selected') notice(r.reply);
@@ -1911,7 +1973,11 @@
         ol.append(li);
       }
     };
-    fill('batchSent', done, (r) => r.name + (r.time ? ' · ' + clock(new Date(r.time * 1000)) : ''));
+    fill('batchSent', done, (r) =>
+      r.name +
+      (r.time ? ' · ' + clock(new Date(r.time * 1000)) : '') +
+      (r.follow_up ? ' · follow-up: ' + r.follow_up.toLowerCase() : ''),
+    );
     fill('batchNext', next, (n) => n);
     const nb = j.next_batch_at
       ? ' · next batch ' +

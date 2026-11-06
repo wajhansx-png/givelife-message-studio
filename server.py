@@ -5095,7 +5095,7 @@ class Handler(BaseHTTPRequestHandler):
             )  # resume generation if needed; never rewrite the bank just because the tab opened
             return self.reply(bank.get(kind))
         if self.path == "/donor-messages":
-            return self.reply(donors().messages.get())
+            return self.reply({**donors().messages.get(), "follow_up": donors().follow_up_text()})
         if self.path == "/wa-status":
             try:
                 return self.reply(api("/devices/" + DEVICE + "/status"))
@@ -5443,7 +5443,10 @@ class Handler(BaseHTTPRequestHandler):
                 if self.path == "/donor-send":
                     return self.reply(
                         donors().send_one(
-                            body.get("id"), body.get("request_id"), poster=body.get("poster", True)
+                            body.get("id"),
+                            body.get("request_id"),
+                            poster=body.get("poster", True),
+                            follow_up=body.get("follow_up") is True,
                         )
                     )
                 if self.path == "/donor-messages":
@@ -5454,6 +5457,8 @@ class Handler(BaseHTTPRequestHandler):
                         if not source.strip():
                             raise ValueError("Paste the complete message you want versions of.")
                         return self.reply(donors().messages.generate(source, body.get("count", 10)))
+                    if body.get("action") == "follow_up":
+                        return self.reply(donors().set_follow_up(body.get("text")))
                     if body.get("action") == "base":
                         return self.reply(donors().messages.set_base(body.get("text")))
                     if body.get("action") == "test":
@@ -5496,6 +5501,7 @@ class Handler(BaseHTTPRequestHandler):
                                 "rests",
                                 "jitter",
                                 "skip_contacted",
+                                "follow_up",
                             )
                         }
                     )

@@ -3737,3 +3737,20 @@ html body #donorBatchForm .batch-gap-row #batchGapNote[hidden]{display:none!impo
 
 /* Folded sending bar: must beat every "#donorsPage #donorProgress:not([hidden])" display rule above. */
 html body #donorsPage #donorProgress.dp-collapsed:not([hidden]){display:none!important}
+
+/* Names never collapse: a follow-up line wraps under the name instead of squeezing it to 0 px. */
+html body:not(#_) #donorsPage#donorsPage .donor-row[data-fu] > .donor-identity{flex-wrap:wrap!important;align-content:center}
+html body:not(#_) #donorsPage#donorsPage .donor-row[data-fu] > .donor-identity > .donor-name{flex:1 1 120px!important;min-width:min(120px,100%)!important}
+html body:not(#_) #donorsPage#donorsPage .donor-row[data-fu] > .donor-identity > .donor-fu{flex:1 0 100%!important;order:4}
+/* The follow-up checkbox sits in the page flow above the list, never over the filter tabs. */
+html body:not(#_) #donorsPage#donorsPage .donor-fu-opt{position:static!important;top:auto!important;left:auto!important;display:flex;margin:0;padding:2px 4px 6px;min-height:30px}
+
+/* Very narrow phones: all six tabs stay on screen and keep whole words (tighter padding and type). */
+@media (max-width:380px){
+  html body:not(#_) #donorsPage#donorsPage .donor-tabs>button{min-width:0!important;padding-inline:2px!important;font-size:10px!important;word-break:keep-all!important;overflow-wrap:normal!important;hyphens:none!important}
+}
+/* Short screens: the follow-up checkbox row is compact so the list keeps its reading space. */
+@media (max-height:520px){
+  html body:not(#_) #donorsPage#donorsPage .donor-fu-opt{min-height:18px;padding:0 4px;font-size:12px;line-height:1}
+  html body:not(#_) #donorsPage#donorsPage .donor-fu-opt input{width:14px;height:14px}
+}

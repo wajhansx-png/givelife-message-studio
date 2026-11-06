@@ -46,6 +46,21 @@ def tokens(text):
     )
 
 
+_STOP = set(
+    "always never remember from now future the and use please writer feedback draft dont don not should must every message messages with for this that".split()
+)
+
+
+def _topic(text):
+    return {w for w in re.findall(r"[a-z]{3,}", str(text).lower()) if w not in _STOP}
+
+
+def same_topic(old, new):
+    """'Always put the Urdu hook first' and 'Never put the Urdu hook first' are one decision: newest wins."""
+    a, b = _topic(old), _topic(new)
+    return bool(a and b) and len(a & b) / len(a | b) >= 0.6
+
+
 def preference_key(text):
     return (
         "format:markup"
@@ -147,11 +162,13 @@ class Knowledge:
                 "active": True,
                 "key": key,
             }
-            if key:
-                for e in self.data["entries"]:
-                    if e.get("key") == key and e.get("active"):
-                        e["active"] = False
-                        e["superseded_by"] = item["id"]
+            for e in self.data["entries"]:
+                if e.get("active") and (
+                    (key and e.get("key") == key)
+                    or (not key and same_topic(e.get("text", ""), text))
+                ):
+                    e["active"] = False
+                    e["superseded_by"] = item["id"]
             self.data["entries"].append(item)
             self.save()
             return item

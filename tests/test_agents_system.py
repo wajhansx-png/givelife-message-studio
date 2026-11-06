@@ -67,7 +67,7 @@ class Delegation(Base):
         out = self.say("post in main every 20 min")
         self.assertIn("Saved rule", out[-1]["text"])
         self.assertIn("Post in main every 20 min", [r["text"] for r in app.ENGINE.rule_list()])
-        self.assertIn("Already saved", self.say("post in main every 20 min")[-1]["text"])
+        self.assertIn("Already saved", self.say("Post in main every 20 min.")[-1]["text"])
 
     def test_preference_is_saved_permanently(self):
         with patch.object(app, "mem_add", return_value="Saved for the future.") as mem:
@@ -241,3 +241,79 @@ class PageAndMemory(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Understanding(Base):
+    def test_roman_urdu_and_typos_reach_the_right_agent(self):
+        out = self.say("sab agents ka progress batao")
+        self.assertEqual(len([m for m in out if m["who"] not in ("you", "manager")]), 7)
+        with ai({"reply": "Better now.", "draft": ""}):
+            out = self.say("ask writter to improv the group message")
+        self.assertEqual(out[-1]["who"], "writer")
+
+    def test_several_instructions_run_in_order(self):
+        out = self.say("post in main every 20 min; then ask DM Guard for status")
+        self.assertIn("2 steps", out[1]["text"])
+        self.assertEqual([m["who"] for m in out if m["who"] in ("auto", "dms")], ["auto", "dms"])
+        self.assertIn("Post in main every 20 min", [r["text"] for r in app.ENGINE.rule_list()])
+
+    def test_a_changed_decision_replaces_the_old_one(self):
+        self.say("Always put the Urdu hook first in slow messages")
+        self.say("Never put the Urdu hook first in slow messages")
+        active = [
+            e["text"]
+            for e in app.KNOWLEDGE.data["entries"]
+            if e.get("active") and "Urdu hook" in e["text"]
+        ]
+        self.assertEqual(active, ["Never put the Urdu hook first in slow messages"])
+
+    def test_condition_is_saved_honestly(self):
+        out = self.say("agar donations slow hon to Urdu hook use karo")
+        self.assertIn("do not run automatic actions on conditions", out[-1]["text"])
+
+    def test_double_tap_is_handled_once(self):
+        self.say("ask DM Guard for status")
+        self.assertEqual(self.say("ask DM Guard for status"), [])
+
+
+class Learning(Base):
+    def test_rejection_is_learned_saved_and_becomes_a_regression_case(self):
+        left = app.read_left()
+        wrong = f"Help. Rs. {left:,} left. 3 people giving Rs. 2,000 cover it. 03097458815"
+        self.m.ctx["draft"] = wrong
+        fixed = {"reply": "Shorter.", "draft": f"Help today. Rs. {left:,} left. 03097458815"}
+        with ai(fixed), patch.object(app, "mem_add", return_value="Saved.") as mem:
+            out = self.say("no, the math is wrong and it is too long")
+        self.assertEqual(out[-1]["who"], "writer")  # Writer revised it with the reason
+        self.assertIn("math is wrong", mem.call_args.args[0])
+        self.assertEqual(self.m.state["drafts"][-1]["status"], "rejected")
+        self.assertTrue(self.m.state["regressions"])  # Checker saw the math mistake
+        self.assertEqual(self.m.regression_failures(), [])  # and still catches it
+
+    def test_math_and_repeated_drafts_are_caught(self):
+        from agents_system import math_problem
+
+        self.assertIn("math", math_problem("Rs. 17,500 needed. 5 people giving Rs. 2,000 each"))
+        self.assertEqual(
+            math_problem(
+                "Rs. 17,500 needed. Only 10 people giving Rs. 2,000, or 20 people giving Rs. 1,000"
+            ),
+            "",
+        )
+        left = app.read_left()
+        same = {
+            "reply": "Again.",
+            "draft": f"Help now. Rs. {left:,} left. 03097458815 EASYPAISA ONLY",
+        }
+        with ai(same, same, same):
+            self.say("Ask Writer to write a group message")
+            out = self.say("Ask Writer to rewrite it")
+        self.assertIn("almost the same as the last draft", out[-1]["text"])
+        self.assertIn("passed Checker first time", " ".join(self.m.quality_facts()))
+
+    def test_a_restart_never_shows_an_unfinished_task_as_done(self):
+        self.m.state["tasks"].append({"id": "t1", "status": "running", "agent": "writer"})
+        self.m.save()
+        again = Manager(app)
+        self.assertEqual(again.state["tasks"][-1]["status"], "interrupted")
+        self.assertFalse(again.state["tasks"][-1]["verified"])

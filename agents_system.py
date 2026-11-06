@@ -8,7 +8,7 @@ ones in the app; agents never send WhatsApp messages themselves and never bypass
 hold or approval. Code decides rules, limits and checks; AI only writes and judges wording.
 """
 
-import json, math, re, threading, time, uuid
+import difflib, json, math, re, threading, time, uuid
 
 TRANSIENT = re.compile(r"(?i)timed? ?out|timeout|429|50\d|temporar|connection|reset|unavailable")
 KEEP = 200
@@ -28,6 +28,74 @@ def _ago(t):
 def _quoted(text):
     m = re.search(r'["“]([\s\S]{3,}?)["”]', text) or re.search(r":\s*\n?([\s\S]{8,})$", text)
     return m.group(1).strip() if m else ""
+
+
+# Owner language: Roman Urdu phrases and typos are mapped to intent words. Only routing reads this;
+# the AI always receives the owner's original words.
+ROMAN = (
+    (r"\b(yaad rakh(?:o|na)|yad rakho)\b", "remember"),
+    (r"\bhamesha\b", "always"),
+    (r"\bkabhi (?:bhi )?nahi?\b", "never"),
+    (r"\b(sab|saray|saare|sare) agents?\b", "all agents"),
+    (r"\b(behtar|acha|achha) (?:karo|kar do|bana do)\b", "improve"),
+    (r"\b(chhota|chota) (?:karo|kar do)\b", "shorter"),
+    (r"\b(likho|likh do)\b", "write"),
+    (r"\b(save karo|save kar do|rakh lo)\b", "save"),
+    (r"\b(check karo|check kar do)\b", "check"),
+    (r"\b(galat|ghalat|bekar|bakwas|pasand nahi)\b", "wrong"),
+    (r"\b(kya haal|kahan tak|progress batao)\b", "progress"),
+    (r"\b(phir|uske baad|us ke baad)\b", "then"),
+    (r"\bagar\b", "if"),
+)
+VOCAB = "writer checker poster guard reader volunteer volunteers plan manager agents improve rewrite generate versions progress status remember always never check save shorter longer write draft".split()
+ACTION = re.compile(
+    r"\b(writer|checker|poster|guard|reader|volunteers?|plan|agents|improve|rewrite|generate|versions|progress|status|remember|always|never|check|save|write|draft|post|tell|ask)\b"
+)
+REJECT = re.compile(r"^\W*(no|nope|wrong|not good|weak|bad|don'?t like|dont like)\b")
+
+
+def intent_text(text):
+    low = " ".join(str(text).lower().split())
+    for pat, word in ROMAN:
+        low = re.sub(pat, word, low)
+    return re.sub(
+        r"[a-z]{4,}", lambda m: (difflib.get_close_matches(m[0], VOCAB, 1, 0.82) or [m[0]])[0], low
+    )
+
+
+def split_instructions(text):
+    """'Ask Writer to improve it; then check it' -> two steps, in order. Message text is never split."""
+    if re.search(r'["“]', text):
+        return [text]
+    parts = [
+        p.strip()
+        for p in re.split(
+            r"\n\s*(?:\d+[.)]|[-•])\s+|\s*;\s*|\s+(?:and then|then|phir|uske baad)\s+",
+            "\n" + text.strip(),
+        )
+        if p and p.strip()
+    ]
+    if len(parts) > 1 and all(ACTION.search(intent_text(p)) for p in parts):
+        return parts
+    return [text]
+
+
+def math_problem(text):
+    """'N people giving Rs. 2,000' must cover the amount still needed in the same message."""
+    amounts = [int(a.replace(",", "")) for a in re.findall(r"(?i)rs\.?\s*(\d[\d,]{3,})", text)]
+    big = [a for a in amounts if a not in (1000, 2000)]
+    if not big:
+        return ""
+    total = max(big)
+    for n, unit in re.findall(
+        r"(?i)\b(\d{1,4})\s+(?:\w+\s+){0,2}(?:people|donors|log)\b[^\n]{0,40}?rs\.?\s*([12],?000)\b",
+        text,
+    ):
+        n, unit = int(n), int(unit.replace(",", ""))
+        need = math.ceil(total / unit)
+        if n * unit < total or n > need + 3:
+            return f"math: {n} people × Rs. {unit:,} does not match Rs. {total:,} (needs {need})"
+    return ""
 
 
 class Agent:
@@ -101,8 +169,9 @@ class Writer(Agent):
 
     def ask(self, text):
         bank = self.app.focus_bank()
-        kind = "dm" if re.search(r"(?i)\bdms?\b", text) else "group"
-        if self.SAVE.search(text):
+        low = intent_text(text)
+        kind = "dm" if re.search(r"\bdms?\b", low) else "group"
+        if self.SAVE.search(low):
             draft = self.sys.ctx.get("draft")
             if not draft:
                 return False, "There is no draft from me yet. Ask me to write one first."
@@ -110,8 +179,10 @@ class Writer(Agent):
             if bad:
                 return False, "I will not save it: " + "; ".join(bad)
             ok = bank.save(kind, draft).get("source") == draft
+            if ok:
+                self.sys.note_draft("approved", draft)
             return ok, f"Saved as the {kind.upper()} base message." if ok else "Saving failed."
-        if self.GENERATE.search(text):
+        if self.GENERATE.search(low):
             before = len(bank.get(kind).get("items") or [])
             row = bank.generate(kind)
             ok = row.get("state") == "Generating" or len(row.get("items") or []) > before
@@ -120,7 +191,7 @@ class Writer(Agent):
                 if ok
                 else f"Could not start: {row.get('error') or row.get('state')}"
             )
-        if re.search(r"(?i)\b(progress|status)\b", text) and not self.WRITE.search(text):
+        if re.search(r"\b(progress|status)\b", low) and not self.WRITE.search(low):
             return True, self.status()["now"] + "."
         return self.chat(text)
 
@@ -157,10 +228,11 @@ class Writer(Agent):
                 else ""
             )
             + (
-                "\n\nOWNER PREFERENCES:\n" + "\n".join("- " + c for c in corrections)
+                "\n\nOWNER PREFERENCES (newest wins):\n" + "\n".join("- " + c for c in corrections)
                 if corrections
                 else ""
             )
+            + self.sys.draft_lessons()
         )
         history = [
             {"role": "user" if m["who"] == "you" else "assistant", "content": m["text"][:1500]}
@@ -177,7 +249,16 @@ class Writer(Agent):
         draft, note = str(data.get("draft") or "").strip(), ""
         if draft:
             checker = self.sys.agents["checker"]
-            bad = checker.problems(draft)
+            prev = self.sys.ctx.get("draft") or ""
+            same = (
+                ["almost the same as the last draft; write it genuinely differently"]
+                if prev and difflib.SequenceMatcher(None, prev, draft).ratio() > 0.92
+                else []
+            )
+            bad = checker.problems(draft) + same
+            m = self.sys.state["metrics"]
+            m["drafts"] = m.get("drafts", 0) + 1
+            m["first_pass"] = m.get("first_pass", 0) + (not bad)
             if bad:  # Manager's quality gate: one revision with Checker's exact reasons
                 fixed = self.sys.ai_json(
                     key,
@@ -266,6 +347,8 @@ class Checker(Agent):
             reason = check()
             if reason:
                 out.append(reason)
+        if math_problem(text):
+            out.append(math_problem(text))
         if source and message_rules.is_pdf_message(source):
             out += ["PDF rule: " + p for p in message_rules.problems(text)[:2]]
         try:
@@ -528,7 +611,16 @@ class Manager:
 
     # -------------------------------------------------------------- memory: database first, file copy
     def _load(self):
-        base = {"chat": [], "tasks": [], "decisions": [], "ctx": {}, "retries": {}}
+        base = {
+            "chat": [],
+            "tasks": [],
+            "decisions": [],
+            "ctx": {},
+            "retries": {},
+            "drafts": [],
+            "metrics": {},
+            "regressions": [],
+        }
         try:
             saved = self.app.STORE.get("agents_state") if self.app.STORE else None
             if not saved and self.file.exists():
@@ -537,10 +629,17 @@ class Manager:
                 base.update({k: saved[k] for k in base if k in saved})
         except Exception:
             pass
+        for t in base["tasks"]:
+            if t.get("status") == "running":  # a restart stopped it: never shown as done
+                t.update(
+                    status="interrupted",
+                    result="Stopped by a restart before it finished. Ask again.",
+                    verified=False,
+                )
         return base
 
     def save(self):
-        for k in ("chat", "tasks", "decisions"):
+        for k in ("chat", "tasks", "decisions", "drafts", "regressions"):
             self.state[k] = self.state[k][-KEEP:]
         raw = json.dumps(self.state, ensure_ascii=False)
         try:
@@ -595,18 +694,65 @@ class Manager:
             raise ValueError("Type a message.")
         forced = agent if agent in self.agents else None
         with self.lock:
+            last = next((m for m in reversed(self.state["chat"]) if m["who"] == "you"), None)
+            if last and last["text"] == text and _now() - last["at"] < 15:
+                return []  # a double tap: the first one is already being handled, never twice
             start = len(self.state["chat"])
             self._say("you", text, forced or "manager")
-            try:
-                self._route(text, forced)
-            except Exception as e:
-                self._say("manager", "That did not work: " + str(e)[:200], forced or "manager")
+            steps = split_instructions(text)
+            if len(steps) > 1:
+                self._say("manager", f"{len(steps)} steps, done in order.", forced or "manager")
+            for step in steps:
+                try:
+                    self._route(step, forced)
+                except Exception as e:
+                    self._say("manager", "That did not work: " + str(e)[:200], forced or "manager")
             self.save()
             return self.state["chat"][start:]
 
+    def note_draft(self, status, draft, reason=""):
+        self.state["drafts"].append(
+            {"at": _now(), "status": status, "draft": draft[:3000], "reason": reason[:300]}
+        )
+        m = self.state["metrics"]
+        m[status] = m.get(status, 0) + 1
+
+    def draft_lessons(self):
+        """Approved drafts teach the style; rejected ones, with the owner's reason, what to avoid."""
+        ok = [d for d in self.state["drafts"] if d["status"] == "approved"][-2:]
+        no = [d for d in self.state["drafts"] if d["status"] == "rejected"][-3:]
+        out = ""
+        if ok:
+            out += "\n\nDRAFTS THE OWNER APPROVED:\n" + "\n---\n".join(d["draft"][:900] for d in ok)
+        if no:
+            out += "\n\nDRAFTS THE OWNER REJECTED (avoid what the reason says):\n" + "\n---\n".join(
+                f"REASON: {d['reason']}\n{d['draft'][:600]}" for d in no
+            )
+        return out
+
+    def _learn_rejection(self, reason):
+        """The owner rejected the last draft: keep the lesson, save the correction, and turn any mistake
+        the Checker can see into a regression case that is re-checked on every watch."""
+        draft = self.ctx.get("draft") or ""
+        self.note_draft("rejected", draft, reason)
+        bad = self.agents["checker"].problems(draft)
+        if bad:
+            self.state["regressions"].append({"draft": draft[:3000], "problems": bad})
+        try:
+            self.app.mem_add("Writer feedback on a draft: " + reason[:300])
+        except Exception:
+            pass
+
+    def regression_failures(self):
+        checker = self.agents["checker"]
+        return [r for r in self.state["regressions"] if not checker.problems(r["draft"])]
+
     def _route(self, text, forced):
-        low = text.lower()
-        if not forced and self.ALL.search(text):
+        low = intent_text(text)
+        if self.ctx.get("draft") and REJECT.match(low) and forced in (None, "writer"):
+            self._learn_rejection(text)
+            forced = "writer"  # Writer revises with the reason; Checker reviews again
+        if not forced and self.ALL.search(low):
             self._say("manager", "Asking every agent for its progress.", "manager")
             for a in self.agents.values():
                 self._run(a.id, text, a.report)
@@ -615,21 +761,18 @@ class Manager:
             (a.id for a in self.agents.values() if a.id != "checker" and re.search(a.words, low)),
             None,
         )
-        if not target and self.FOLLOW.search(text) and self.ctx.get("agent"):
+        if not target and self.FOLLOW.search(low) and self.ctx.get("agent"):
             target = self.ctx["agent"]  # "tell it to make it shorter"
         poster = self.agents["auto"]
         if target in (None, "auto"):
             done = poster.rule(text)
             if done:
                 return self._run("auto", text, lambda: done)
-        if not target and self.REMEMBER.match(text):
-            saved = self.app.mem_add(text)
-            return self._run(
-                "writer", text, lambda: (bool(saved), f"{saved} I use it in every new message.")
-            )
+        if not target and (self.REMEMBER.match(low) or low.startswith("if ")):
+            return self._run("writer", text, lambda: self._remember(text, low.startswith("if ")))
         writer = self.agents["writer"]
         if not target and (
-            writer.WRITE.search(text) or writer.GENERATE.search(text) or writer.SAVE.search(text)
+            writer.WRITE.search(low) or writer.GENERATE.search(low) or writer.SAVE.search(low)
         ):
             target = "writer"
         if not target and re.search(self.agents["checker"].words, low):
@@ -643,6 +786,21 @@ class Manager:
             self._say("manager", f"Passing this to {self.agents[target].name}.", "manager")
         agent = self.agents[target]
         self._run(target, text, lambda: agent.ask(text))
+
+    def _remember(self, text, condition=False):
+        saved = self.app.mem_add(text)
+        entries = getattr(getattr(self.app, "KNOWLEDGE", None), "data", {}).get("entries", [])
+        ok = bool(saved) and (
+            not entries or any(e.get("active") and e.get("text") == text.strip() for e in entries)
+        )
+        note = (
+            " I apply it when writing; I do not run automatic actions on conditions."
+            if condition
+            else " I use it in every new message; it replaces any older preference on the same topic."
+        )
+        return ok, (
+            str(saved) + note
+        ) if ok else "I could not confirm it was saved. Please say it again."
 
     def _answer(self, text):
         import assistant
@@ -805,6 +963,18 @@ class Manager:
                 add("check-" + fn.__name__, "warn", f"Could not check {fn.__name__}: {str(e)[:80]}")
         return out
 
+    def quality_facts(self):
+        m = self.state["metrics"]
+        out = []
+        if m.get("drafts"):
+            out.append(
+                f"Writer: {m.get('first_pass', 0)}/{m['drafts']} drafts passed Checker first time; {m.get('approved', 0)} approved, {m.get('rejected', 0)} rejected"
+            )
+        broken = self.regression_failures()
+        if broken:
+            out.append(f"Checker no longer catches {len(broken)} past mistake(s)")
+        return out
+
     def watch(self):
         with self.lock:
             seen = {
@@ -902,7 +1072,7 @@ class Manager:
                 if running
                 else "Active",
                 "now": f"{len(issues)} thing(s) need attention" if issues else "All agents checked",
-                "facts": [i["text"] for i in issues],
+                "facts": [i["text"] for i in issues] + self.quality_facts(),
                 "errors": [],
                 "progress": {
                     "label": "Tasks done today",

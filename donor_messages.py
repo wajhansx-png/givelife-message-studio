@@ -469,4 +469,31 @@ class MessageBank:
         captions()/the bank's own amount refresh, not by reserving again.
         """
         with self.lock:
-            return self._reserve(count)
+            picked = self._reserve(count)
+        self._top_up()
+        return picked
+
+    TARGET_VERSIONS = 20
+    TOP_UP_COOLDOWN = 300  # seconds; a failing provider is tried once per batch start, not per round
+
+    def _top_up(self):
+        """Sending never waits for all 20 versions. When an earlier regeneration stopped part-way
+        (state Partial, e.g. 14 of 20 ready), finish the rest in the background while this batch
+        goes out. Only the retry path is used, so every saved version is kept; the batch in
+        flight rotates the versions it already has, and later rounds pick up the new ones."""
+        try:
+            with self.lock:
+                data = self.get()
+                generation = data.get("generation") or {}
+                items = data.get("items") or []
+                if generation.get("state") != "Partial" or not items:
+                    return
+                if generation.get("source") != items[0].get("text"):
+                    return
+                if len(set(self._sendable(items))) >= self.TARGET_VERSIONS:
+                    return
+                if time.time() - float(generation.get("started_at") or 0) < self.TOP_UP_COOLDOWN:
+                    return
+                self.start_regeneration()
+        except Exception:
+            pass  # topping up is best effort and must never stop a send

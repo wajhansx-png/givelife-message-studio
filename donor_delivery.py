@@ -425,6 +425,9 @@ class DonorDelivery:
                 captions += [preserved[r["id"]] for r in rows[start : start + size]]
                 continue
             texts = picker(part) if picker and custom_template is None else [caption] * part
+            # Start with whatever versions are ready (even fewer than the round size). The
+            # shared cursor rotates through them in order, so a round larger than the bank
+            # reuses earlier versions, never back to back. Missing ones fill in behind.
             if (
                 picker
                 and custom_template is None
@@ -432,11 +435,11 @@ class DonorDelivery:
                     not isinstance(texts, list)
                     or len(texts) != part
                     or any(not isinstance(text, str) or not text.strip() for text in texts)
-                    or len(set(texts)) != part
+                    or (part > 1 and len(set(texts)) < 2)
                 )
             ):
                 raise ValueError(
-                    "Prepare enough different messages in Messages before starting this batch."
+                    "Save at least 2 different messages in Messages before starting this batch."
                 )
             captions += texts
         signature = hashlib.sha256(

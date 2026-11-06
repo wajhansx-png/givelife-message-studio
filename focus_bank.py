@@ -176,6 +176,12 @@ class FocusBank:
             if t in row.get("manual", []) or not reject_reason(source, t, prior[:i])
         ]
         last_error = ""
+        reasons = {}  # why candidates were rejected, over the whole run (shown if it falls short)
+
+        def why(tally):
+            top = sorted(tally.items(), key=lambda kv: -kv[1])[:3]
+            return "; ".join(f"{r} ({n}x)" if n > 1 else r for r, n in top)
+
         try:
             api = dm_variants.assistant.client()
             if api is None and len(items) < goal:
@@ -202,21 +208,28 @@ class FocusBank:
                         + last_error
                         + " Correct that and keep everything else."
                     )
+                last_error = ""
+                tried = {}
                 try:
                     candidates = dm_variants._call(api, prompt)
                 except Exception as exc:
                     last_error = str(exc)[:180]
+                    reasons[last_error] = reasons.get(last_error, 0) + 1
                     if any(code in last_error for code in ("401", "403", "429")):
                         raise
                     continue
                 passed = []
                 for text in candidates:
                     text = text.replace("\r\n", "\n").strip() if isinstance(text, str) else ""
+                    # The app, not the AI, keeps Quran/payment lines and each line's language.
+                    text = dm_variants.repair(source, text) if text else text
                     reason = reject_reason(source, text, items + passed)
                     if reason:
-                        last_error = reason
+                        tried[reason] = tried.get(reason, 0) + 1
+                        reasons[reason] = reasons.get(reason, 0) + 1
                         continue
                     passed.append(text)
+                last_error = why(tried)
                 # One batched AI review of naturalness/taste for versions that passed every code rule.
                 verdicts = quality.review(
                     ai_call.chat,
@@ -228,6 +241,7 @@ class FocusBank:
                 for text, verdict in zip(passed, verdicts):
                     if verdict:
                         last_error = verdict
+                        reasons[verdict] = reasons.get(verdict, 0) + 1
                         continue
                     items.append(text)
                     if len(items) >= goal:
@@ -240,7 +254,8 @@ class FocusBank:
             if len(items) < goal:
                 raise ValueError(
                     f"{len(items) - (goal - BATCH)} of {BATCH} new versions passed every check. "
-                    + (last_error or "The AI did not return enough different versions.")
+                    + (why(reasons) or "The AI did not return enough different versions.")
+                    + "."
                     + " Your original and the versions already saved are kept."
                 )
             result = {

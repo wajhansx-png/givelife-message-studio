@@ -136,6 +136,40 @@ def language_changed(source, text):
     return len(a) == len(b) and any(x and y and x != y for x, y in zip(la, lb))
 
 
+_SCRIPTURE = re.compile(r"ارشاد|فرمان|سور[ةۃہ]|حدیث|آیت|قرآن")
+_PAYMENT = re.compile(r"(?i)easypaisa|jazzcash|account|03097458815|wajdan")
+
+
+def is_fixed_line(line):
+    """A line the app copies word for word and never lets the AI touch: a payment line, a Quran
+    verse or hadith, its reference, or a quoted line written in Urdu script."""
+    s = str(line or "").strip()
+    if not s:
+        return False
+    if _PAYMENT.search(s):
+        return True
+    if _lang(s) != "urdu":
+        return False
+    first = s.lstrip("*_ ")[:1]
+    return bool(_SCRIPTURE.search(s)) or (bool(first) and first in '"“«')
+
+
+def repair(source, text):
+    """Put back what the app is responsible for keeping, so one slip does not waste a whole version.
+    When the line count matches, every fixed line (see is_fixed_line) and every line whose language
+    flipped is replaced by the source's own line. The caller still runs every safety check after this,
+    so a version that is not different enough, or has any other problem, is rejected as before."""
+    a = str(source or "").replace("\r\n", "\n").strip().split("\n")
+    b = str(text or "").replace("\r\n", "\n").strip().split("\n")
+    if len(a) != len(b):
+        return text
+    out = []
+    for x, y in zip(a, b):
+        flipped = _lang(x) and _lang(y) and _lang(x) != _lang(y)
+        out.append(x if x.strip() and (is_fixed_line(x) or flipped) else y)
+    return "\n".join(out)
+
+
 def validate(source, text, existing=()):
     """Return an error string, or '' when the version is safe to save."""
     if not isinstance(text, str):

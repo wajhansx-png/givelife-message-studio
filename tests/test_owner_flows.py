@@ -153,8 +153,11 @@ class ServerGuards(unittest.TestCase):
             .date()
             .isoformat()
         )
-        app.STORE.put("dm_daily", {"day": day, "count": app.DM_DAILY_CAP, "last": 0})
-        with self.assertRaisesRegex(ValueError, "daily limit"):
+        app.STORE.put("dm_daily", {"day": day, "count": 40, "last": 0})
+        with (
+            patch.object(app, "DM_DAILY_CAP", 40),
+            self.assertRaisesRegex(ValueError, "daily limit"),
+        ):
             app.send_custom(
                 {
                     "target": "phone",

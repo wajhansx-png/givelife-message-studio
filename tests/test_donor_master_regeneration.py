@@ -49,6 +49,73 @@ class DonorMasterTests(unittest.TestCase):
             for i in range(count)
         ]
 
+    def partial_bank(self, ready=14, age=1000):
+        """Message 1 plus rewrites, stopped part-way (Partial), as after a provider hiccup."""
+        bank = self.approved_bank()
+        data = bank.get()
+        texts = [r["text"] for r in data["items"]][:ready]
+        data.update(
+            mode="custom",
+            origin=texts[0],
+            fingerprint=bank._fingerprint(texts[0]),
+            items=bank._entries(texts),
+            generation={
+                "id": "partial-test",
+                "source": texts[0],
+                "target": 20,
+                "accepted": texts[1:],
+                "state": "Partial",
+                "error": "Some versions are ready. Retry to finish the remaining versions.",
+                "ready": ready,
+                "started_at": time.time() - age,
+            },
+        )
+        data.pop("previous_items", None)
+        bank._save(data)
+        return bank, texts
+
+    def test_round_bigger_than_the_bank_rotates_instead_of_blocking(self):
+        bank, texts = self.partial_bank(age=0)  # fresh attempt: no background top-up here
+        picked = bank.reserve_round(20)
+        self.assertEqual(len(picked), 20)
+        self.assertTrue(all(t in texts for t in picked))
+        self.assertEqual(len(set(picked)), 14)
+        self.assertTrue(all(a != b for a, b in zip(picked, picked[1:])))
+
+    def test_partial_bank_finishes_in_background_while_sending(self):
+        bank, texts = self.partial_bank()
+        with patch("dm_variants.generate", side_effect=self.fake_variants) as gen:
+            picked = bank.reserve_round(20)
+            deadline = time.monotonic() + 5
+            while bank.regeneration_running and time.monotonic() < deadline:
+                time.sleep(0.005)
+        self.assertEqual(len(picked), 20)  # sending did not wait for generation
+        self.assertTrue(gen.called)
+        data = bank.get()
+        self.assertEqual(data["generation"]["state"], "Ready")
+        self.assertEqual(len(data["items"]), 20)
+        self.assertEqual([r["text"] for r in data["items"]][:14], texts)  # kept, not replaced
+
+    def test_failed_top_up_is_not_retried_on_every_round(self):
+        bank, _ = self.partial_bank(age=10)
+        with patch("dm_variants.generate", side_effect=ValueError("down")) as gen:
+            bank.reserve_round(5)
+        self.assertFalse(gen.called)
+
+    def test_batch_start_accepts_fourteen_versions_for_twenty_donors(self):
+        bank, texts = self.partial_bank(age=0)
+        h = app.donors()
+        h.jobs.import_jobs({"jobs": []})
+        h.book._save({"version": 1, "records": []})
+        for i in range(20):
+            h.book.add("Synthetic " + str(i), "9230012300" + str(i).zfill(2))
+        with patch.object(h.jobs, "connected", return_value=True):
+            h.start_batch(scope="all", limit=20, run=False)
+        job = h.jobs.export_jobs()["jobs"][-1]
+        self.assertEqual(len(job["captions"]), 20)
+        self.assertEqual(len(set(job["captions"])), 14)
+        self.assertTrue(all(c in texts for c in job["captions"]))
+
     def test_saved_first_is_master_including_changed_angle_and_bold_italic(self):
         bank = app.donors().messages
         before = bank.get()

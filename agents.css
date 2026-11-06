@@ -125,20 +125,41 @@ button {
 .auto[aria-checked='true']::after {
   background: var(--accent) radial-gradient(circle at 21px 9px, #fff 6px, transparent 7px);
 }
-.notes {
+.issues-panel {
   max-width: 900px;
   margin: 0 auto;
-  padding: 0 10px;
+  padding: 0 10px 6px;
+}
+.issues-panel[hidden] {
+  display: none;
+}
+.issues-panel summary {
+  cursor: pointer;
+  color: var(--mut);
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 8px;
+}
+.issues-panel summary:hover {
+  background: var(--card);
+}
+.issues-panel[open] summary {
+  margin-bottom: 7px;
+}
+.notes {
+  max-height: 35vh;
+  overflow-y: auto;
 }
 .note {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 8px;
+  margin: 0 0 7px;
   padding: 8px 12px;
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: #3a2626;
-  font-size: 14px;
+  background: var(--card);
+  font-size: 13px;
 }
 .note span {
   flex: 1;

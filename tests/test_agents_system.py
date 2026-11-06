@@ -317,3 +317,54 @@ class Learning(Base):
         again = Manager(app)
         self.assertEqual(again.state["tasks"][-1]["status"], "interrupted")
         self.assertFalse(again.state["tasks"][-1]["verified"])
+
+
+class Talking(Base):
+    def test_every_ai_agent_answers_free_questions_from_its_real_facts(self):
+        for agent, words in (
+            ("replies", "Reply Reader"),
+            ("volunteers", "Volunteer Guide"),
+            ("auto", "Group Poster"),
+            ("dms", "DM Guard"),
+            ("plan", "Case Plan"),
+        ):
+            with ai(f"{words} here: all good.") as call:
+                out = self.say(f"tell me, what should I watch today in {agent}?", agent)
+            self.assertEqual(out[-1]["who"], agent)
+            self.assertIn("here: all good", out[-1]["text"])
+            system = call.call_args.args[1]
+            self.assertIn("LIVE FACTS", system)
+            self.assertIn("Never say a task is done", system)
+
+    def test_follow_up_with_an_agent_keeps_its_own_history(self):
+        with ai("Two volunteers are waiting.", "Ask them one at a time.") as call:
+            self.say("who is waiting?", "volunteers")
+            self.say("what should I do about it?", "volunteers")
+        sent = call.call_args.args[3]
+        self.assertTrue(any("who is waiting" in m["content"] for m in sent))
+
+    def test_status_words_stay_real_and_no_ai_falls_back_to_facts(self):
+        out = self.say("status", "dms")
+        self.assertIn("between DMs", out[-1]["text"])  # no AI needed for a status
+        with patch("assistant.client", return_value=None):
+            out = self.say("explain how you protect WhatsApp", "dms")
+        self.assertIn("AI is not connected", out[-1]["text"])
+        self.assertIn("between DMs", out[-1]["text"])
+
+    def test_page_data_never_waits_for_slow_checks(self):
+        import threading, time
+
+        started = threading.Event()
+
+        def slow():
+            started.set()
+            time.sleep(1.5)
+            return []
+
+        self.m._icache = (0.0, [])
+        with patch.object(self.m, "issues", side_effect=slow):
+            t0 = time.time()
+            view = self.m.view()
+            self.assertLess(time.time() - t0, 1.0)  # the page got its data at once
+            self.assertTrue(started.wait(2))  # while the real checks ran in the background
+        self.assertEqual([a["id"] for a in view["agents"]][0], "manager")

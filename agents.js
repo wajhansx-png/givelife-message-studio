@@ -1,6 +1,16 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const COLOR = { Active: '#10a37f', Working: '#e8b04a', Idle: '#8f8f8f', Error: '#ef6b6b' };
+  const ROSTER = [
+    ['manager', 'Manager'],
+    ['writer', 'Writer'],
+    ['checker', 'Checker'],
+    ['auto', 'Group Poster'],
+    ['dms', 'DM Guard'],
+    ['replies', 'Reply Reader'],
+    ['volunteers', 'Volunteer Guide'],
+    ['plan', 'Case Plan'],
+  ];
   let key = localStorage.getItem('givelife-cloud-key') || '',
     pick = localStorage.getItem('givelife-agent') || 'manager',
     data = null,
@@ -22,6 +32,13 @@
       method,
       headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(method === 'GET' ? 20000 : 150000),
+    }).catch((e) => {
+      throw new Error(
+        e.name === 'TimeoutError'
+          ? 'The server is slow. Retrying…'
+          : 'Cannot reach the server. Retrying…',
+      );
     });
     if (r.status === 401) {
       $('accessDialog').showModal();
@@ -31,6 +48,24 @@
     if (!r.ok) throw new Error(d.error || 'Something went wrong.');
     return d;
   }
+  function chips() {
+    $('list').replaceChildren(
+      ...ROSTER.map(([id, name]) => {
+        const b = el('button', 'agent');
+        b.type = 'button';
+        b.setAttribute('aria-current', String(id === pick));
+        b.append(el('span', 'dot'), el('span', 'nm', name));
+        b.onclick = () => {
+          pick = id;
+          localStorage.setItem('givelife-agent', pick);
+          data ? render() : chips();
+        };
+        return b;
+      }),
+    );
+    $('name').textContent = (ROSTER.find((r) => r[0] === pick) || ROSTER[0])[1];
+  }
+  chips();
   function render() {
     if (!data) return;
     const a = data.agents.find((x) => x.id === pick) || data.agents[0];
@@ -149,8 +184,10 @@
     try {
       data = await call('GET');
       render();
+      if (!$('inp').disabled) say('');
     } catch (e) {
       say(e.message, true);
+      $('now').textContent = e.message;
     }
   }
   async function act(body) {
@@ -190,5 +227,5 @@
     load();
   };
   load();
-  setInterval(() => document.hidden || $('inp').disabled || load(), 5000);
+  setInterval(() => document.hidden || $('inp').disabled || load(), 8000);
 })();

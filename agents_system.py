@@ -825,6 +825,15 @@ class Manager:
                 self._run(a.id, text, a.report)
             return
         writer = self.agents["writer"]
+        # A plain "Approved" in Manager or Writer chat is an explicit save request,
+        # but ONLY when a checked Group preview is actually pending.
+        preview = self.state.get("writer_preview") or {}
+        if (
+            preview.get("status") == "pending"
+            and writer.APPROVE.fullmatch(low)
+            and forced in (None, "writer")
+        ):
+            return self._run("writer", text, lambda: writer.approve(preview["id"]))
         # Order matters: a named agent, then what you ask for, then the topic, then "it/this" follow-up.
         target = forced or next(
             (a.id for a in self.agents.values() if a.id != "checker" and re.search(a.words, low)),

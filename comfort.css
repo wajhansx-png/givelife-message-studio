@@ -1832,8 +1832,8 @@ html body #donorProgress .dp-fact{display:inline-flex;align-items:baseline;gap:6
 html body #donorProgress .dp-fact small{opacity:.75;font-size:11px}
 html body #donorProgress .dp-fact b{font-weight:800}
 html body #donorProgress>.dp-hide{order:3;width:36px;height:36px;min-width:36px;padding:0;border-radius:10px;font-size:18px;line-height:1;background:#ffffff10;border:1px solid #ffffff26;color:#e5e7eb}
-html body #donorProgress.dp-collapsed{display:none!important}
-html body #donorsPage .dp-show{position:sticky;bottom:8px;margin:6px 0 6px auto;display:flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:999px;background:#14532d;border:1px solid #34d39966;color:#d1fae5;font-weight:800;font-size:13px;z-index:4;width:max-content}
+html body #donorProgress.dp-collapsed:not([hidden]){display:none!important}
+html body #donorsPage .dp-show{position:sticky;bottom:8px;margin:6px 0 6px auto;display:flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:999px;background:#14532d;border:1px solid #34d39966;color:#d1fae5;font-weight:800;font-size:12.5px;z-index:4;width:max-content;max-width:100%}
 html body #donorsPage .dp-show[hidden]{display:none!important}
 @media (max-width:700px){
   html body #donorProgress:not([hidden]){grid-template-columns:1fr 1fr 36px!important;padding:8px 10px!important}
@@ -3734,3 +3734,6 @@ html body #donorBatchForm .batch-gap-row #batchGap{grid-column:1/3!important}
 html body #donorBatchForm .batch-gap-row #batchGapUnit{grid-column:3/-1!important;width:100%;min-height:44px}
 html body #donorBatchForm .batch-gap-row #batchGapNote{grid-column:1/-1!important;margin:0}
 html body #donorBatchForm .batch-gap-row #batchGapNote[hidden]{display:none!important}
+
+/* Folded sending bar: must beat every "#donorsPage #donorProgress:not([hidden])" display rule above. */
+html body #donorsPage #donorProgress.dp-collapsed:not([hidden]){display:none!important}

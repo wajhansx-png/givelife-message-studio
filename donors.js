@@ -2152,6 +2152,13 @@
         el('donorNotice').textContent = '';
       }
       el('donorProgress').querySelector('span').title = 'Tap to see who was sent and who is next';
+      /* Folded away, the bar is one small chip: sent / total (e.g. 5/20). */
+      {
+        const shown = (j.previous_sent || 0) + (j.sent || 0),
+          whole = j.original_total || j.total || 0;
+        el('donorProgressShow').textContent = '⌃ ' + shown + '/' + whole;
+        el('donorProgressShow').setAttribute('aria-label', 'Show sending details: ' + shown + ' of ' + whole + ' sent');
+      }
       if (!active && j.state !== 'Idle') await refresh(true);
       if (active && seenSent !== null && j.sent !== seenSent) await refresh(true);
       seenSent = j.sent || 0;

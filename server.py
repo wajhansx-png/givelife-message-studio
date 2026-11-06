@@ -6119,7 +6119,6 @@ def donor_autopilot():
     """Keeps a free host awake while a batch the owner started is running. Never resumes a batch by itself."""
     import urllib.request
 
-    # Owner rule: no DM starts by itself. An interrupted batch stays stopped until the owner taps Resume.
     url = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
     while True:
         time.sleep(540)
@@ -6130,8 +6129,36 @@ def donor_autopilot():
             pass
 
 
+def resume_batches_after_restart(wait=10, tries=90, sleep=time.sleep):
+    """A deploy or restart must not stop a DM batch that was running. Once WhatsApp is connected again,
+    carry on with each batch that was in flight (donor and volunteer). Anyone already sent, unconfirmed or
+    caught mid-send is skipped, so nobody gets a second DM; batches the owner stopped stay stopped.
+    Returns the number of batches resumed."""
+    registries = []
+    for pick in (lambda: donors().jobs, lambda: donors().volunteers.jobs):
+        try:
+            registries.append(pick())
+        except Exception:
+            pass
+    resumed = 0
+    for _ in range(tries):
+        pending = [jobs for jobs in registries if jobs.connected()]
+        for jobs in pending:
+            try:
+                if jobs.recover():
+                    resumed += 1
+            except Exception as exc:
+                print("[resume] " + type(exc).__name__, flush=True)
+            registries.remove(jobs)
+        if not registries:
+            break
+        sleep(wait)
+    return resumed
+
+
 ensure_dm_structure()
 if __name__ == "__main__":
+    threading.Thread(target=resume_batches_after_restart, daemon=True, name="dm-resume").start()
     threading.Thread(target=recover_group_research, daemon=True, name="research-recovery").start()
     threading.Thread(target=donor_autopilot, daemon=True).start()
     # Team was removed from the interface. Retain records without hidden outreach.

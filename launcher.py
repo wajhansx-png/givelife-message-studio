@@ -56,6 +56,23 @@ if os.environ.get("GIVELIFE_DM_PROFILES_B64"):
         # No real numbers, names, or private payloads enter logs.
         print("[dm-profile-import] failed: " + type(exc).__name__, flush=True)
 
+# Private one-time historical receipt rankings; never commit contact labels.
+# Do not change current-case donation totals or outgoing WhatsApp messages.
+if os.environ.get("GIVELIFE_RECEIPT_RANKINGS_B64"):
+    try:
+        from private_receipt_ranking import import_rankings
+
+        receipt = import_rankings(
+            store, DATA, os.environ["GIVELIFE_RECEIPT_RANKINGS_B64"]
+        )
+        print(
+            "[receipt-ranking] verified "
+            + " ".join(f"{key}={value}" for key, value in receipt.items()),
+            flush=True,
+        )
+    except Exception as exc:
+        print("[receipt-ranking] failed: " + type(exc).__name__, flush=True)
+
 # Only one instance may be logged in to WhatsApp. While Render overlaps old and new instances,
 # wait here (answering /health) until the old one has stopped and released the lease.
 OWNER = uuid.uuid4().hex

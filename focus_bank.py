@@ -1,10 +1,20 @@
 """Owner-source wording banks. Generated text never replaces the saved original."""
 
 import copy, hashlib, threading, time, uuid, re
+from concurrent.futures import ThreadPoolExecutor
 import quality, ai_call
 import dm_variants, message_rules
 
 
+PARALLEL_CALLS = 3  # AI calls made at the same time for one round of rewrites
+ANGLES = (
+    "open with a direct question to the reader",
+    "open with the most striking fact from the source",
+    "open with the person the source names and their exact situation",
+    "open with how small and doable the ask is",
+    "open by speaking to the reader's own part (you)",
+    "open with warm dua or sadqa wording",
+)
 BATCH = 5  # versions written per click, and per background top-up while sending
 MAX_VERSIONS = 40  # ceiling for one message's saved versions
 TOP_UP_AT = 2  # when this few unused versions remain in a round, the next batch starts
@@ -201,20 +211,16 @@ class FocusBank:
                     with self.lock:
                         self.running.discard(key)
                     return
-                prompt = dm_variants._prompt(
-                    source, min(5, goal - len(items)), row.get("avoid", []) + items
-                )
-                prompt += message_rules.version_rules(source)
-                if last_error:
-                    prompt += (
-                        "\nThe previous attempt was rejected because: "
-                        + last_error
-                        + " Correct that and keep everything else."
-                    )
-                last_error = ""
-                tried = {}
+                last_note, last_error, tried = last_error, "", {}
                 try:
-                    candidates = dm_variants._call(api, prompt)
+                    candidates = self._candidates(
+                        api,
+                        source,
+                        row.get("avoid", []) + items,
+                        goal - len(items),
+                        last_note,
+                        attempt,
+                    )
                 except Exception as exc:
                     last_error = str(exc)[:180]
                     reasons[last_error] = reasons.get(last_error, 0) + 1
@@ -292,6 +298,38 @@ class FocusBank:
         finally:
             with self.lock:
                 self.running.discard(key)
+
+    def _candidates(self, api, source, avoid, need, last_note, attempt):
+        """Rewrites from several AI calls made at the same time, each with a different opening
+        angle. One slow call used to be followed by the next, so a batch took minutes when most
+        rewrites were rejected; now a round costs one call. Errors in some calls are tolerated."""
+        calls = PARALLEL_CALLS if need > 2 else 2
+        per = 3 if need > 1 else 2
+        prompts = []
+        for i in range(calls):
+            p = dm_variants._prompt(source, per, avoid) + message_rules.version_rules(source)
+            p += _exact_numbers(source)
+            p += "\nFOR THIS SET: " + ANGLES[(attempt * calls + i) % len(ANGLES)] + "."
+            if last_note:
+                p += (
+                    "\nThe previous attempt was rejected because: "
+                    + last_note
+                    + " Correct that and keep everything else."
+                )
+            prompts.append(p)
+        found, errors = [], []
+        with ThreadPoolExecutor(max_workers=calls) as pool:
+            for future in [pool.submit(dm_variants._call, api, p) for p in prompts]:
+                try:
+                    found.extend(future.result())
+                except Exception as exc:
+                    errors.append(exc)
+        for exc in errors:
+            if dm_variants.ai_fatal(str(exc)):
+                raise exc
+        if not found and errors:
+            raise errors[0]
+        return list(dict.fromkeys(t for t in found if isinstance(t, str)))
 
     def current(self, kind, revision):
         with self.lock:
@@ -533,6 +571,17 @@ def format_problem(source, text, bullets=True):
     if count(text) != count(source):
         return "a bullet line was lost or added"
     return ""
+
+
+def _exact_numbers(source):
+    """Rewrites were often rejected for changing a number; tell the AI the exact sequence."""
+    nums = re.findall(r"\d[\d,]*", str(source))
+    if not nums:
+        return ""
+    return (
+        "\nEXACT NUMBERS: the digits in each version must be exactly these, in this order, and "
+        "nothing else numeric: " + ", ".join(nums) + ". Never spell a number in words or add one."
+    )
 
 
 def wording_key(text):

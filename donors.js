@@ -1709,7 +1709,7 @@
             const topInMenu = make('button', 'donor-menu-top', d.top_donor ? 'Remove from Top donors' : 'Add to Top donors');
             topInMenu.type = 'button';
             topInMenu.onclick = () => ident.querySelector('.donor-top-chip').click();
-            menu.append(rename, normal, donatedBox, topInMenu, del);
+            menu.append(rename, dmProfile, normal, donatedBox, topInMenu, del);
             more.append(menu);
           };
           more.ontoggle = () => {

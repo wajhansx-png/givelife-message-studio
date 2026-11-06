@@ -3754,3 +3754,41 @@ html body:not(#_) #donorsPage#donorsPage .donor-fu-opt{position:static!important
   html body:not(#_) #donorsPage#donorsPage .donor-fu-opt{min-height:18px;padding:0 4px;font-size:12px;line-height:1}
   html body:not(#_) #donorsPage#donorsPage .donor-fu-opt input{width:14px;height:14px}
 }
+
+/* ===== Send DMs: one compact screen (People, Wait, Poster, summary, Cancel / Start) ===== */
+html body:not(#_) #donorBatchPicker{width:min(400px,calc(100vw - 20px))!important;max-height:calc(100dvh - 16px)!important;overflow:auto;padding:14px 16px!important;border-radius:18px}
+html body:not(#_) #donorBatchPicker h2{font-size:18px!important;margin:0 0 8px!important;line-height:1.2}
+html body:not(#_) #donorBatchPicker form{display:grid!important;gap:8px!important}
+html body:not(#_) #donorBatchPicker .bm-row{display:grid!important;gap:4px}
+html body:not(#_) #donorBatchPicker .bm-row>label{font-size:13px!important;font-weight:700;margin:0!important}
+html body:not(#_) #donorBatchPicker #batchCount{min-height:44px!important;font-size:18px!important;font-weight:800;margin:0!important}
+html body:not(#_) #donorBatchPicker .batch-hint{margin:0!important;font-size:12px!important;line-height:1.3}
+html body:not(#_) #donorBatchPicker .batch-gap-row{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important}
+html body:not(#_) #donorBatchPicker .batch-gap-btn{min-height:44px!important;font-size:14px!important;padding:0 2px!important;border-radius:12px;white-space:nowrap!important}
+html body:not(#_) #donorBatchPicker .bm-custom:not([hidden]){display:grid!important;grid-template-columns:1fr 1.4fr;gap:6px}
+html body:not(#_) #donorBatchPicker .bm-custom input,html body:not(#_) #donorBatchPicker .bm-custom select{min-height:44px!important;margin:0!important;width:100%}
+html body:not(#_) #donorBatchPicker .bm-poster{display:flex!important;align-items:center;gap:10px;min-height:40px;margin:0!important;font-size:15px!important}
+html body:not(#_) #donorBatchPicker .batch-more>summary{min-height:40px;display:flex;align-items:center;font-size:14px}
+html body:not(#_) #donorBatchPicker .batch-foot{display:grid;gap:8px}
+html body:not(#_) #donorBatchPicker .batch-plan{margin:0!important;font-size:13px!important;line-height:1.35!important;padding:8px 10px!important}
+html body:not(#_) #donorBatchPicker .donor-form-actions{display:grid!important;grid-template-columns:1fr 2fr;gap:8px;margin:0!important}
+html body:not(#_) #donorBatchPicker .donor-form-actions button{min-height:46px!important;font-size:16px!important;font-weight:800}
+html body:not(#_) #donorBatchPicker .bm-row{grid-template-columns:minmax(0,1fr)!important}
+html body:not(#_) #donorBatchPicker .batch-gap-row{width:100%!important;max-width:none!important;margin:0!important}
+html body:not(#_) #donorBatchPicker .batch-gap-btn{width:100%!important;min-width:0!important;max-width:none!important;flex:none!important}
+html body:not(#_) #donorBatchPicker form{grid-template-columns:minmax(0,1fr)!important}
+html body:not(#_) #donorBatchPicker form>*{min-width:0!important;max-width:100%!important}
+html body:not(#_) #donorBatchPicker .bm-row{width:100%!important;justify-self:stretch!important}
+
+/* Test DM inside the Send DMs setup. */
+html body:not(#_) #donorBatchPicker #donorTest{display:flex!important;align-items:center;justify-content:center;width:100%;min-height:44px;margin-top:8px;font-size:14px!important}
+
+/* ===== DM sending box: one clear line, one plan line, actions, Hide at the bottom ===== */
+html body:not(#_) #donorsPage#donorsPage #donorProgress:not([hidden]):not(.dp-collapsed){display:flex!important;flex-flow:row wrap!important;align-items:center;gap:6px 8px!important;padding:10px 12px!important;grid-template-areas:none!important}
+html body:not(#_) #donorsPage#donorsPage #donorProgress:not([hidden])>span{flex:1 1 100%!important;order:1;font-size:14px!important;font-weight:700;line-height:1.35}
+html body:not(#_) #donorsPage#donorsPage #donorProgress:not([hidden])>.dp-facts{flex:1 1 100%!important;order:2;display:block!important}
+html body:not(#_) #donorsPage#donorsPage #donorProgress .dp-plan{font-size:12px;opacity:.8}
+html body:not(#_) #donorsPage#donorsPage #donorProgress:not([hidden])>:is(#donorContinue,#donorEditBatch,#donorStop):not([hidden]){order:3;flex:1 1 30%!important;grid-column:auto!important;min-height:40px!important}
+html body:not(#_) #donorsPage#donorsPage #donorProgress:not([hidden])>.dp-hide{order:9;flex:1 1 100%!important;grid-column:auto!important;grid-row:auto!important;width:auto!important;height:34px!important;min-width:0!important;border-radius:10px;font-size:13px!important;background:#ffffff0f}
+/* The collapsed chip matches the purple primary buttons. */
+html body #donorsPage .dp-show{background:linear-gradient(135deg,#4f6df5,#7c3aed)!important;border-color:#a78bfa88!important;color:#fff!important}

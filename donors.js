@@ -572,18 +572,23 @@
   <p id="batchResumeText" class="batch-hint"></p>
   <label class="batch-fresh"><input type="checkbox" id="batchFresh"> Start from the beginning</label>
 </div>
-<label for="batchCount">How many people?</label>
-<input id="batchCount" name="count" type="number" min="1" max="1000" inputmode="numeric" required>
+<div class="bm-row"><label for="batchCount">People</label>
+<input id="batchCount" name="count" type="number" min="1" max="1000" inputmode="numeric" required></div>
 <p id="batchAudience" class="batch-hint"></p>
-<label>Time between each message</label>
-<div class="batch-gap-row">
+<div class="bm-row bm-gap"><label id="batchGapLabel">Wait between DMs</label>
+<div class="batch-gap-row" role="group" aria-labelledby="batchGapLabel">
   <button type="button" class="batch-gap-btn" data-gap="2">2 min</button>
   <button type="button" class="batch-gap-btn" data-gap="4">4 min</button>
   <button type="button" class="batch-gap-btn" data-gap="6">6 min</button>
   <button type="button" class="batch-gap-btn" data-gap="8">8 min</button>
-  <input id="batchGap" name="gap_value" type="number" min="1" max="600" inputmode="numeric" value="4" aria-label="Custom gap" placeholder="or type"><select id="batchGapUnit" name="gap_unit" aria-label="Gap unit"><option value="60">minutes</option><option value="1">seconds</option></select><small id="batchGapNote" class="batch-hint" hidden>Under 1 minute can get a number restricted by WhatsApp.</small>
+  <button type="button" class="batch-gap-btn" data-gap="custom">Custom</button>
+</div></div>
+<div id="batchGapCustom" class="bm-custom" hidden>
+  <input id="batchGap" name="gap_value" type="number" min="1" max="600" inputmode="numeric" value="4" aria-label="Custom gap">
+  <select id="batchGapUnit" name="gap_unit" aria-label="Gap unit"><option value="60">minutes</option><option value="1">seconds</option></select>
 </div>
-<label class="batch-fresh"><input type="checkbox" id="batchPoster" checked> Attach poster</label>
+<small id="batchGapNote" class="batch-hint" hidden>Under 1 minute can get a number restricted by WhatsApp.</small>
+<label class="batch-fresh bm-poster"><input type="checkbox" id="batchPoster" checked> Attach poster</label>
 <details class="batch-more">
   <summary>More options</summary>
   <label for="batchPause">Rest between batches</label>
@@ -670,16 +675,17 @@
     let secs = (count - 1) * gap * 60;
     for (let i = 0; i < batches - 1; i++) secs += pauses[Math.min(i, pauses.length - 1)];
     plan.textContent =
+      'Send to ' +
       count +
-      ' people · ' +
-      batches +
-      ' batch' +
-      (batches === 1 ? '' : 'es') +
-      ' of up to ' +
-      per +
-      ' · first DM now · done by about ' +
+      (count === 1 ? ' person' : ' people') +
+      '. Wait ' +
+      gapText(gapSecs()) +
+      ' between each. Poster ' +
+      (el('batchPoster').checked ? 'on' : 'off') +
+      '. Done by about ' +
       clock(new Date(Date.now() + secs * 1000)) +
-      '. Runs by itself, even with the app closed.';
+      (batches > 1 ? ' (' + batches + ' batches, with rests)' : '') +
+      '. Runs even if the app is closed.';
   }
   let pickerEpoch = 0;
   /* Gap = number + unit (minutes or seconds). Stored as seconds everywhere else. */
@@ -712,6 +718,8 @@
         'Your last batch stopped. ' +
         left +
         ' people are still waiting; the ones already sent will be skipped.';
+    customGap = false;
+    el('batchPoster').checked = el('donorRowPoster') ? el('donorRowPoster').checked : true;
     setGap(Math.max(5, Math.min(600, Number(el('donorGap').value) || 240)));
     el('batchIncl').checked = false;
     el('batchCount').value = scope ? Math.min(1000, batchAvailable()) || '' : '';
@@ -726,18 +734,33 @@
   el('batchLimit').oninput = paintAudience;
   el('batchLimit').onchange = paintAudience;
   el('batchCancel').onclick = () => picker.close();
+  let customGap = false;
   function highlightGapBtn() {
     const v = String(el('batchGap').value),
-      min = el('batchGapUnit').value === '60';
+      min = el('batchGapUnit').value === '60',
+      preset = min && ['2', '4', '6', '8'].includes(v),
+      custom = customGap || !preset;
     for (const b of picker.querySelectorAll('.batch-gap-btn'))
-      b.setAttribute('aria-pressed', String(min && b.dataset.gap === v));
+      b.setAttribute(
+        'aria-pressed',
+        String(b.dataset.gap === 'custom' ? custom : !custom && b.dataset.gap === v),
+      );
+    el('batchGapCustom').hidden = !custom;
     el('batchGapNote').hidden = !(gapSecs() > 0 && gapSecs() < 60);
   }
   for (const b of picker.querySelectorAll('.batch-gap-btn'))
     b.onclick = () => {
-      el('batchGapUnit').value = '60';
-      el('batchGap').value = b.dataset.gap;
-      highlightGapBtn();
+      if (b.dataset.gap === 'custom') {
+        customGap = true;
+        highlightGapBtn();
+        el('batchGap').focus();
+        el('batchGap').select();
+      } else {
+        customGap = false;
+        el('batchGapUnit').value = '60';
+        el('batchGap').value = b.dataset.gap;
+        highlightGapBtn();
+      }
       paintAudience();
     };
   for (const id of [
@@ -758,6 +781,14 @@
         : paintAudience;
   el('batchGapUnit').onchange = () => {
     highlightGapBtn();
+    paintAudience();
+  };
+  el('batchPoster').onchange = () => {
+    /* One poster choice for the app: the switch here also sets the single-tap DM poster. */
+    if (!editingJob && el('donorRowPoster') && el('donorRowPoster').checked !== el('batchPoster').checked) {
+      el('donorRowPoster').checked = el('batchPoster').checked;
+      el('donorRowPoster').dispatchEvent(new Event('change'));
+    }
     paintAudience();
   };
   for (const id of ['batchPause', 'batchRandom', 'batchIncl'])
@@ -1834,6 +1865,15 @@
             for (const other of rows.querySelectorAll('.donor-more[open]'))
               if (other !== more) other.open = false;
             buildMenu();
+            /* Desktop: the menu never runs off the bottom of the screen; it scrolls inside instead. */
+            requestAnimationFrame(() => {
+              const m = more.querySelector(':scope > div');
+              if (!m || !more.open || innerWidth <= 560) return;
+              m.style.maxHeight = '';
+              const top = m.getBoundingClientRect().top;
+              m.style.maxHeight = Math.max(200, innerHeight - Math.max(top, 8) - 8) + 'px';
+              m.style.overflowY = 'auto';
+            });
           };
           more.append(summary);
           row.append(star, ident, dm, status, amount, more);
@@ -2095,16 +2135,24 @@
         if (j.batches > 1 && rests.length) items.push(['Rest between batches', [...new Set(rests)].join(' / ')]);
         if (j.gap_seconds) items.push(['Gap between messages', j.gap_seconds < 60 ? gapText(j.gap_seconds) : mins(j.gap_seconds)]);
         facts.textContent = '';
-        for (const [k, v] of items) {
-          const chip = make('span', 'dp-fact');
-          chip.append(make('small', '', k), make('b', '', v));
-          facts.append(chip);
+        if (items.length) {
+          const short = { Batches: 'batch', 'Per batch': 'per batch', 'Rest between batches': 'rest', 'Gap between messages': 'gap' };
+          facts.append(
+            make(
+              'small',
+              'dp-plan',
+              items
+                .map(([k, v]) => (k === 'Batches' ? 'Batch ' + v : k === 'Per batch' ? v.replace(' people', '') + ' per batch' : short[k] + ' ' + v))
+                .join(' · '),
+            ),
+          );
         }
         facts.hidden = !items.length;
       }
       el('donorProgress').querySelector('span').textContent =
-        overall +
-        `${j.state} · ✓ ${(j.previous_sent || 0)+(j.sent || 0)} / ${j.original_total || j.total || 0} DM sent · ${j.pending ?? Math.max(0, (j.total || 0) - (j.sent || 0) - (j.skipped || 0) - (j.failed || 0))} left · ${j.failed || 0} failed` +
+        `${j.state}: ${(j.previous_sent || 0) + (j.sent || 0)} of ${j.original_total || j.total || 0} sent` +
+        ` · ${j.pending ?? Math.max(0, (j.total || 0) - (j.sent || 0) - (j.skipped || 0) - (j.failed || 0))} left` +
+        (j.failed ? ` · ${j.failed} not confirmed` : '') +
         (j.skipped ? ' · ' + j.skipped + ' skipped' : '') +
         (j.current ? ' · ' + j.current : '') +
         (j.next_at ? ' · ' + Math.max(0, Math.ceil(j.next_at - Date.now() / 1000)) + 's' : '') +
@@ -2553,6 +2601,34 @@
       paintProgressHidden();
     };
   new MutationObserver(paintProgressHidden).observe(el('donorProgress'), { attributes: true, attributeFilter: ['hidden'] });
+  /* Hide sits at the bottom of the box, within thumb reach. */
+  el('donorProgress').append(el('donorProgressHide'));
+  const foldProgress = () => {
+    if (el('donorProgress').hidden || progressHidden) return false;
+    progressHidden = true;
+    try {
+      localStorage.setItem('givelife-progress-hidden', '1');
+    } catch (e) {}
+    paintProgressHidden();
+    return true;
+  };
+  /* Outside click or Escape closes the progress box (it stays visible as the small chip) and a row's menu. */
+  document.addEventListener('pointerdown', (e) => {
+    if (!page.open) return;
+    const box = el('donorProgress');
+    if (!box.hidden && !progressHidden && !box.contains(e.target) && !el('donorProgressShow').contains(e.target) && e.target.closest('dialog') === page)
+      foldProgress();
+    for (const m of page.querySelectorAll('.donor-more[open]')) if (!m.contains(e.target)) m.open = false;
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || e.defaultPrevented || !page.open || [...document.querySelectorAll('dialog[open]')].some((d) => d !== page)) return;
+    const menu = page.querySelector('.donor-more[open]');
+    if (menu) {
+      menu.open = false;
+      menu.querySelector('summary')?.focus({ preventScroll: true });
+      e.preventDefault();
+    } else if (foldProgress()) e.preventDefault();
+  });
   paintProgressHidden();
   /* The sending panel floats above the bottom buttons (and above the paused bar), so the donor list keeps its height. */
   {

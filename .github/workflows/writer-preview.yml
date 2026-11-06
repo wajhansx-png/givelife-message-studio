@@ -21,6 +21,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Changed Python files lint and formatting
+        run: |
+          python -m pip install ruff
+          ruff check agents_system.py tests/test_writer_review.py
+          ruff format --check agents_system.py tests/test_writer_review.py
       - name: Python unit tests - no network or WhatsApp
         run: python -m unittest discover -s tests -p "test_writer_review.py" -v
       - name: Browser JavaScript syntax

@@ -1,0 +1,27 @@
+name: Donor Generate 20 button checks
+on:
+  push:
+    paths:
+      - donors.js
+      - donors.css
+      - tests/test_donor_generate_twenty.py
+      - .github/workflows/donor-generate-twenty.yml
+  pull_request:
+    paths:
+      - donors.js
+      - donors.css
+      - tests/test_donor_generate_twenty.py
+      - .github/workflows/donor-generate-twenty.yml
+jobs:
+  generate-20:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Offline backend and mobile placement tests
+        run: python -m unittest discover -s tests -p "test_donor_generate_twenty.py" -v
+      - name: Browser JS syntax
+        run: node --check donors.js

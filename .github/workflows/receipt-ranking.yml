@@ -1,0 +1,35 @@
+name: Screenshot donor ranking checks
+on:
+  push:
+    paths:
+      - private_receipt_ranking.py
+      - donor_book.py
+      - donors.js
+      - donors.css
+      - launcher.py
+      - tests/test_receipt_ranking.py
+      - .github/workflows/receipt-ranking.yml
+  pull_request:
+    paths:
+      - private_receipt_ranking.py
+      - donor_book.py
+      - donors.js
+      - donors.css
+      - launcher.py
+      - tests/test_receipt_ranking.py
+      - .github/workflows/receipt-ranking.yml
+jobs:
+  offline-ranking:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Test private rankings, safe data and idempotency
+        run: python -m unittest discover -s tests -p "test_receipt_ranking.py" -v
+      - name: Syntax only
+        run: |
+          python -m py_compile private_receipt_ranking.py donor_book.py launcher.py
+          node --check donors.js

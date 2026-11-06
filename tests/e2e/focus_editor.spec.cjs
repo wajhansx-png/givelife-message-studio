@@ -27,6 +27,7 @@ for (const width of [1440, 390])
     if (width >= 900) expect(after.height).toBe(before.height);
     else expect(after.height).toBeGreaterThanOrEqual(120);
     await page.locator('#focusSave').click();
+    await page.locator('#focusBaseSave').click();
     await expect(page.locator('#focusState')).toContainText('Saved base message');
     await expect(page.locator('#focusText')).toBeHidden();
     await expect(page.locator('#focusRetry')).toHaveText('Generate 5 Versions');

@@ -54,13 +54,34 @@
   saveBase.textContent = 'Save Base Message';
   saveBase.title = 'Save this message only. No versions are written.';
   screen.querySelector('.focus-rail').insertBefore(saveBase, $('focusCopy'));
-  saveBase.onclick = async () => {
+  saveBase.textContent = 'Save Base';
+  const baseDialog = document.createElement('dialog');
+  baseDialog.id = 'focusBaseDialog';
+  baseDialog.className = 'focus-base-dialog';
+  baseDialog.setAttribute('aria-label', 'Save base message');
+  baseDialog.innerHTML =
+    '<h2>Save base message?</h2><p id="focusBaseNote"></p><div class="focus-base-actions"><button type="button" id="focusBaseCancel">Cancel</button><button type="button" class="primary" id="focusBaseSave">Save</button></div>';
+  document.body.append(baseDialog);
+  saveBase.onclick = () => {
+    if (editing) edit(false);
+    const hasVersions = (row?.items?.length || 0) > 0;
+    $('focusBaseNote').textContent = !dirty
+      ? 'Nothing has changed. This is already your base message.'
+      : hasVersions
+        ? 'This becomes your base message. The ' + row.items.length + ' saved versions were written from the old text, so they are cleared. Press Generate 5 Versions for new ones.'
+        : 'This becomes your base message. No versions are written.';
+    $('focusBaseSave').textContent = dirty ? 'Save' : 'OK';
+    baseDialog.showModal();
+  };
+  $('focusBaseCancel').onclick = () => baseDialog.close();
+  $('focusBaseSave').onclick = async () => {
     try {
-      if (editing) edit(false);
       const changed = dirty;
       await save();
-      if (!changed) status('Saved base message · nothing changed');
+      baseDialog.close();
+      status(changed ? 'Saved base message ✓' : 'Saved base message · nothing changed');
     } catch (e) {
+      baseDialog.close();
       status(e.message);
     }
   };
@@ -357,7 +378,42 @@
     sessionStorage.setItem('focus-draft-' + kind, $('focusText').value);
     status('Editing · saved when you tap Done');
   };
+  /* Clicking outside the editor saves the edit and leaves editing (buttons in the tool rail keep their own behaviour). */
+  document.addEventListener('pointerdown', (e) => {
+    if (screen.hidden || !editing || baseDialog.open) return;
+    if ($('focusText').contains(e.target) || e.target.closest('.focus-rail, dialog')) return;
+    edit(false);
+  });
   $('focusEdit').onclick = () => edit(!editing);
+  /* A small purple arrow on the card's right edge moves to the next version; the big Next button is retired. */
+  {
+    const arrow = document.createElement('button');
+    arrow.id = 'focusNextArrow';
+    arrow.className = 'focus-next-arrow';
+    arrow.type = 'button';
+    arrow.textContent = '›';
+    arrow.title = 'Next version';
+    arrow.setAttribute('aria-label', 'Next version');
+    arrow.onclick = () => $('focusNext').click();
+    const gen = document.createElement('button');
+    gen.id = 'focusGenIcon';
+    gen.className = 'focus-gen-icon';
+    gen.type = 'button';
+    gen.textContent = '↻';
+    gen.title = 'Generate 5 versions';
+    gen.setAttribute('aria-label', 'Generate 5 versions');
+    gen.onclick = () => $('focusRetry').click();
+    $('focusFormatted').parentElement.append(arrow, gen);
+    const more = document.createElement('details');
+    more.className = 'focus-rail-more';
+    more.innerHTML = '<summary>More</summary><div></div>';
+    for (const id of ['focusPoster', 'focusManual', 'focusRetry', 'focusRegenerate'])
+      more.lastChild.append($(id));
+    screen.querySelector('.focus-rail').insertBefore(more, $('focusBack'));
+    document.addEventListener('pointerdown', (e) => {
+      if (more.open && !more.contains(e.target)) more.open = false;
+    });
+  }
   $('focusFormatted').ondblclick = () => edit(true);
   $('focusBack').onclick = async () => {
     try {

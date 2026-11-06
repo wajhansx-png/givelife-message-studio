@@ -10,6 +10,7 @@ test('Group opens editor; manual slots save and send from this screen', async ({
   await page.getByRole('button', { name: 'Group messages', exact: true }).click();
   await expect(page.locator('#messageFocus .group-send')).toBeVisible();
   await expect(page.locator('#focusFormatted')).not.toHaveText('');
+  await page.locator('.focus-rail-more > summary').click();
   await page.locator('#focusManual').click();
   await expect(page.getByRole('dialog', { name: 'Manual messages', exact: true })).toBeVisible();
   for (let i = 0; i < 10; i++) {

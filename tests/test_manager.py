@@ -206,3 +206,14 @@ class GroupMembership(unittest.TestCase):
     def test_a_pending_database_write_is_reported_not_crashing(self):
         with patch.object(type(app.STORE), "pending_writes", 3, create=True):
             self.assertIn("3 saves are waiting", self.m.memory_status()["text"])
+
+
+class Preferences(unittest.TestCase):
+    setUp = ManagerTests.setUp
+    tearDown = ManagerTests.tearDown
+
+    def test_preference_is_saved_permanently_and_reaches_writer(self):
+        with patch.object(app, "mem_add", return_value="Saved for the future.") as mem:
+            out = self.m.handle("Always put the Urdu hook first in slow messages")
+        mem.assert_called_once()
+        self.assertIn("Writer uses it", out[-1]["text"])

@@ -6314,21 +6314,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply({"error": "Message is empty"}, status=400)
             try:
                 options = workflow().options("group", caption)
-                from focus_bank import clean_items, wording_key
-
-                row = focus_bank().get("group")
-                ready = len(
-                    {
-                        wording_key(t)
-                        for t in clean_items(
-                            row.get("source", ""), row.get("items", []), row.get("manual")
-                        )
-                    }
-                )
-                if row.get("source", "").strip() and ready < 2:
-                    raise ValueError(
-                        f"Versions not ready yet ({ready} of 10). TEST would repeat the same wording. Nothing sent."
-                    )
                 with SEND_LOCK:
                     try:
                         caption = focus_bank().reserve_groups(caption, 1)[0]

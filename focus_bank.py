@@ -494,6 +494,25 @@ class FocusBank:
         return self.generate(kind)
 
 
+def _unbalanced(line):
+    body = re.sub(r"^\s*[*•-]\s+", "", line)  # a leading "* " is a WhatsApp bullet, not bold
+    if "http" in body:
+        return False
+    return any(body.count(m) % 2 for m in "*_~")
+
+
+def format_problem(source, text):
+    """'' unless WhatsApp formatting broke: an unpaired * _ ~ marker, or a bullet line lost or added."""
+    if any(_unbalanced(x) for x in text.split("\n")) and not any(
+        _unbalanced(x) for x in source.split("\n")
+    ):
+        return "a bold/italic marker is unpaired (broken formatting)"
+    bullets = lambda t: sum(bool(re.match(r"^\s*[*•-]\s+\S", x)) for x in t.split("\n"))
+    if bullets(text) != bullets(source):
+        return "a bullet line was lost or added"
+    return ""
+
+
 def wording_key(text):
     return hashlib.sha256(
         re.sub(r"\s+", " ", re.sub(r"[*_]", "", text)).strip().casefold().encode()
@@ -531,6 +550,9 @@ def reject_reason(source, text, existing=(), novelty=True):
     low, high = dm_variants.length_range(source)
     if not low <= len(text) <= high:
         return f"length {len(text)} is outside {low}-{high} characters"
+    bad = format_problem(source, text)
+    if bad:
+        return bad
     if dm_variants._shape(text) != dm_variants._shape(source):
         return "line breaks, blank lines or bold/italic markers changed"
     if dm_variants._emojis(text) != dm_variants._emojis(source):

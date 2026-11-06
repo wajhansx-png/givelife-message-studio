@@ -449,3 +449,20 @@ class SendingWorkflow(unittest.TestCase):
         with patch.object(b, "_top_up"):
             sent = [b.reserve_groups("x", 1)[0] for _ in range(6)]
         self.assertNotIn(bad, sent)
+
+
+class FormatChecks(unittest.TestCase):
+    def test_broken_markers_and_lost_bullets_are_rejected(self):
+        from focus_bank import format_problem
+
+        src = "*Hook*\n\n* Rs. 17,500 is still needed\n_Details here_"
+        self.assertEqual(
+            format_problem(src, "*New hook*\n\n* Rs. 17,500 is still needed\n_Other details_"), ""
+        )
+        self.assertIn(
+            "unpaired", format_problem(src, "*New hook\n\n* Rs. 17,500 is still needed\n_x_")
+        )
+        self.assertIn(
+            "bullet", format_problem(src, "*New hook*\n\nRs. 17,500 is still needed\n_x_")
+        )
+        self.assertIn("unpaired", reject_reason(SRC, DEEP[0].replace("*Stop", "Stop", 1)))

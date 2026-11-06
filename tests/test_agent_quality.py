@@ -7,7 +7,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import dm_variants, quality, reply_intent, volunteer_flow
-from test_agent_logic import Base
+from test_agent_logic import Base, Clock
 
 GOLDENS = json.loads((Path(__file__).parent / "evals" / "reply_goldens.json").read_text("utf-8"))[
     "cases"
@@ -172,6 +172,19 @@ class Agents(Base):
             self.assertEqual(volunteer_flow.natural_ask(self.e, ai_phone, "Ali"), base)
         self.h["ai_chat"] = lambda p: 1 / 0
         self.assertEqual(volunteer_flow.natural_ask(self.e, ai_phone, "Ali"), base)
+
+    def test_volunteer_gets_share_this_brother_once_after_the_poster(self):
+        self.e.s["vol_flow"] = {
+            "9231": {"step": "poster", "at": Clock.t - 200, "seen": [], "case": "c"}
+        }
+        volunteer_flow.tick(self.e, now=Clock.t)
+        volunteer_flow.tick(self.e, now=Clock.t + 60)
+        self.assertEqual(self.out, [("9231", "Share this brother.")])
+        self.e.s["vol_flow"] = {
+            "9232": {"step": "poster", "at": Clock.t - 60, "seen": [], "case": "c"}
+        }
+        volunteer_flow.tick(self.e, now=Clock.t)
+        self.assertEqual(len(self.out), 1)  # not before the 3-minute DM gap
 
     def test_volunteer_states_and_ai_for_complex_replies(self):
         st = lambda: {"step": "asked", "at": 0, "seen": [], "case": "c"}

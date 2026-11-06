@@ -143,6 +143,16 @@ class Manager:
         if not target and CHECK.search(text):
             target = "checker"
         rule = self._rule(text) if target in (None, "auto") else None
+        if (
+            not rule
+            and not target
+            and re.match(r"(?i)\s*(remember|always|never|from now|in future)\b", text)
+        ):
+            t = self._task("manager", text)
+            saved = self.app.mem_add(text)
+            self._finish(t, bool(saved), saved)
+            self._say("manager", f"{saved} Writer uses it in every new message.")
+            return
         if rule:
             return
         if not target:

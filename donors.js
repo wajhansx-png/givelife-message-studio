@@ -36,8 +36,8 @@
     function tryNativeFS(enter) {
       try {
         // The Donors page is its own top layer, so it is the element that goes full screen.
-        if (enter && !document.fullscreenElement) (page.requestFullscreen ? page.requestFullscreen() : Promise.reject()).catch(() => {});
-        else if (!enter && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        if (enter && !window.NativeFS?.isOn()) window.NativeFS?.toggle();
+        else if (!enter && window.NativeFS?.isOn()) window.NativeFS.toggle();
       } catch (e) {}
     }
     /* The button floats over the list's top-right corner, so it shows on phones too (the header row is hidden there). */
@@ -68,6 +68,7 @@
     document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && page.classList.contains('donor-expanded')) updateExpandBtn(false); });
   }
 
+  let msgSub = 'dm'; /* Messages sub-tab: 'dm' versions or 'follow' up */
   let followUpOn = false; /* off by default; lasts until the page reloads */
   const resumeStatus = make('div', 'donor-resume-status');
   resumeStatus.id = 'donorResumeStatus';
@@ -461,11 +462,14 @@
     paintDelivery(row, d.delivery || 'Not contacted');
   }
   /* Top donors: highest known total first, then more records, then the saved manual order. */
-  const topCmp = (a, b) =>
-    (b.known_total || 0) - (a.known_total || 0) ||
-    (b.activity || 0) - (a.activity || 0) ||
-    (a.top_order ?? Number.MAX_SAFE_INTEGER) - (b.top_order ?? Number.MAX_SAFE_INTEGER) ||
-    (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  function topCmp(a, b) {
+    return (
+      (b.known_total || 0) - (a.known_total || 0) ||
+      (b.activity || 0) - (a.activity || 0) ||
+      (a.top_order ?? Number.MAX_SAFE_INTEGER) - (b.top_order ?? Number.MAX_SAFE_INTEGER) ||
+      (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+    );
+  }
   /* Sort = the server's sending order: Important first, not-yet-sent before sent, sent sink in the order sent; the top row is always next. */
   function applyFilters() {
     page.dataset.panel = tab;
@@ -473,7 +477,7 @@
     const epoch = ++filterEpoch;
     updateCounts();
     el('donorTable').hidden = tab === 'messages' || tab === 'volunteers';
-    el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
+    if (el('donorFollowUpOpt')) el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
     el('donorMessages').hidden = tab !== 'messages';
     el('donorVolunteers').hidden = tab !== 'volunteers';
     if (tab === 'volunteers') {
@@ -912,7 +916,7 @@
     box.append(head);
     {
       const fuWrap = make('div', 'bank-followup'),
-        fuBtn = make('button', 'tool bank-followup-btn', 'Follow-Up Message'),
+        tabs = make('div', 'bank-subtabs'),
         fuPanel = make('div', 'bank-followup-panel'),
         fuText = make('textarea'),
         fuSave = make('button', 'tool', 'Save follow-up'),
@@ -921,19 +925,32 @@
           '',
           'Sent as a separate message after the poster DM, only when "Send with follow-up" is ticked. {name} becomes e.g. "Sohaib Bhai".',
         );
-      fuBtn.type = fuSave.type = 'button';
-      fuBtn.setAttribute('aria-expanded', 'false');
-      fuPanel.hidden = true;
+      tabs.setAttribute('role', 'tablist');
+      tabs.setAttribute('aria-label', 'Message type');
+      box.dataset.sub = msgSub;
+      for (const [id, label] of [
+        ['dm', 'DM messages'],
+        ['follow', 'Follow-up'],
+      ]) {
+        const t = make('button', '', label);
+        t.type = 'button';
+        t.setAttribute('role', 'tab');
+        t.dataset.sub = id;
+        t.setAttribute('aria-selected', String(msgSub === id));
+        t.onclick = () => {
+          msgSub = id;
+          box.dataset.sub = id;
+          tabs.querySelectorAll('button').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.sub === id)));
+          if (id === 'follow') fuText.focus({ preventScroll: true });
+        };
+        tabs.append(t);
+      }
+      fuSave.type = 'button';
       fuText.name = 'follow_up_text';
       fuText.maxLength = 2000;
-      fuText.rows = 3;
+      fuText.rows = 4;
       fuText.placeholder = '{name}, please do consider helping.';
       fuText.value = bankData.follow_up || '';
-      fuBtn.onclick = () => {
-        fuPanel.hidden = !fuPanel.hidden;
-        fuBtn.setAttribute('aria-expanded', String(!fuPanel.hidden));
-        if (!fuPanel.hidden) fuText.focus();
-      };
       fuSave.onclick = async () => {
         fuSave.disabled = true;
         try {
@@ -947,7 +964,7 @@
         }
       };
       fuPanel.append(fuText, fuNote, fuSave);
-      fuWrap.append(fuBtn, fuPanel);
+      fuWrap.append(tabs, fuPanel);
       box.prepend(fuWrap);
     }
     const generationState = make('span', 'bank-generation-state', bankGenerationLabel());
@@ -1846,7 +1863,7 @@
       b.tabIndex = b.dataset.tab === 'messages' || tab === b.dataset.tab ? 0 : -1;
     }
     el('donorTable').hidden = tab === 'messages' || tab === 'volunteers';
-    el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
+    if (el('donorFollowUpOpt')) el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
     el('donorMessages').hidden = tab !== 'messages';
     el('donorVolunteers').hidden = tab !== 'volunteers';
     if (tab === 'messages' && !el('donorMessages').textContent)

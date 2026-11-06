@@ -1,6 +1,6 @@
 import sys
 import caption_facts, case_plan, message_rules, team_rules
-import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, datetime, math, re, secrets, os, base64, hashlib
+import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, datetime, math, re, secrets, os, base64, hashlib, gzip
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store
@@ -4938,7 +4938,8 @@ class Handler(BaseHTTPRequestHandler):
             data = json.dumps(data, ensure_ascii=False)
         self.send_response(status)
         self.send_header("Content-Type", kind + "; charset=utf-8")
-        self.send_header("Cache-Control", "no-store")
+        if "Cache-Control" not in (extra_headers or {}):
+            self.send_header("Cache-Control", "no-store")
         origin = self.headers.get("Origin")
         if origin in self.remote_config().get("origins", []):
             self.send_header("Access-Control-Allow-Origin", origin)
@@ -4950,6 +4951,32 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header(name, value)
         self.end_headers()
         self.wfile.write(data if isinstance(data, bytes) else data.encode())
+
+    _STATIC = {}
+
+    def reply_file(self, name, kind):
+        """App files: revalidated every time (ETag, so a new deploy shows at once) and gzipped, so repeat opens are tiny."""
+        path = ROOT / name
+        st = path.stat()
+        key = (st.st_mtime_ns, st.st_size)
+        hit = Handler._STATIC.get(name)
+        if not hit or hit[0] != key:
+            raw = path.read_bytes()
+            etag = '"' + hashlib.sha1(raw).hexdigest()[:24] + '"'
+            gz = gzip.compress(raw, 6) if len(raw) > 1024 else None
+            hit = Handler._STATIC[name] = (key, raw, etag, gz)
+        _, raw, etag, gz = hit
+        head = {"Cache-Control": "no-cache", "ETag": etag, "Vary": "Accept-Encoding"}
+        if self.headers.get("If-None-Match") == etag:
+            self.response_sent = True
+            self.send_response(304)
+            for k, v in head.items():
+                self.send_header(k, v)
+            self.end_headers()
+            return
+        if gz and "gzip" in self.headers.get("Accept-Encoding", ""):
+            return self.reply(gz, kind, extra_headers={**head, "Content-Encoding": "gzip"})
+        return self.reply(raw, kind, extra_headers=head)
 
     def do_GET(self):
         if self.path == "/health":
@@ -4979,8 +5006,8 @@ class Handler(BaseHTTPRequestHandler):
         ):
             name = self.path.split("?")[0][1:]
             name = name + ".html" if name in ("group-finder", "case-plan") else name
-            return self.reply(
-                (ROOT / name).read_bytes(),
+            return self.reply_file(
+                name,
                 "text/html"
                 if name.endswith(".html")
                 else "text/css"
@@ -5006,8 +5033,8 @@ class Handler(BaseHTTPRequestHandler):
             "/comfort.css",
         ):
             name = "index.html" if self.path == "/" else self.path[1:]
-            return self.reply(
-                (ROOT / name).read_bytes(),
+            return self.reply_file(
+                name,
                 "text/html"
                 if self.path == "/"
                 else "text/css"

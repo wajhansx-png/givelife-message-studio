@@ -3706,8 +3706,26 @@ html body:not(#_) #donorsPage#donorsPage .donor-row[data-fu]{height:auto!importa
 html body #donorsPage .donor-fu{flex:1 0 100%;order:4;font-size:11px;font-weight:700;color:#8fd19e}
 html body #donorsPage .donor-row[data-fu='Uncertain'] .donor-fu,html body #donorsPage .donor-row[data-fu='Not sent'] .donor-fu{color:#ffb86b}
 html body #donorsPage .bank-followup{margin:0 0 12px}
-html body #donorsPage .bank-followup-btn{width:100%;min-height:44px}
-html body #donorsPage .bank-followup-panel{display:grid;gap:8px;margin-top:8px}
-html body #donorsPage .bank-followup-panel[hidden]{display:none}
-html body #donorsPage .bank-followup-panel textarea{width:100%;min-height:84px;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid #ffffff2a;background:#0d1117;color:inherit;font:inherit;resize:vertical}
+html body #donorsPage .bank-subtabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+html body #donorsPage .bank-subtabs button{min-height:44px;border-radius:12px;border:1px solid #ffffff22;background:#161b26;color:#cfd6e4;font:inherit;font-weight:700;cursor:pointer}
+html body #donorsPage .bank-subtabs button[aria-selected='true']{background:#2563eb;border-color:#2563eb;color:#fff}
+html body #donorsPage .bank-followup-panel{display:grid;gap:8px;margin-top:10px}
+html body #donorsPage #donorMessages[data-sub='dm'] .bank-followup-panel{display:none}
+html body #donorsPage #donorMessages[data-sub='follow'] > :not(.bank-followup){display:none!important}
+html body #donorsPage .bank-followup-panel textarea{width:100%;min-height:110px;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid #ffffff2a;background:#0d1117;color:inherit;font:inherit;resize:vertical}
 html body #donorsPage .bank-followup-panel small{opacity:.75;line-height:1.35}
+
+/* ---- Native app feel ---- */
+html{overscroll-behavior-y:contain;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overscroll-behavior-y:contain}
+button,summary,select,label,a,[role='button'],[role='tab']{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button{transition:scale .08s ease,filter .12s ease,background-color .15s ease,border-color .15s ease,opacity .15s ease}
+button:not(:disabled):active{scale:.97;filter:brightness(1.12)}
+@media (prefers-reduced-motion:reduce){button:not(:disabled):active{scale:1}}
+html body #donorsPage{padding-top:env(safe-area-inset-top)}
+.fs-toggle{position:fixed;z-index:50;top:max(6px,env(safe-area-inset-top));right:max(6px,env(safe-area-inset-right));width:34px;height:34px;padding:0;display:grid;place-items:center;border-radius:10px;border:1px solid #ffffff2e;background:#0d1020b8;color:#e6ebf5;backdrop-filter:blur(6px);cursor:pointer}
+.fs-toggle[hidden]{display:none}
+html body .brandbar>.fs-toggle{position:static;flex:0 0 40px;width:40px;min-width:40px;height:40px;min-height:40px;margin-left:auto;order:99;z-index:auto;backdrop-filter:none;background:transparent}
+:root[data-theme='light'] .fs-toggle{background:#ffffffd0;color:#1c1c1a;border-color:#0000002e}
+.fs-note{position:fixed;z-index:51;top:max(46px,calc(env(safe-area-inset-top) + 40px));right:10px;max-width:min(260px,calc(100vw - 20px));padding:8px 12px;border-radius:10px;background:#1b2233;color:#fff;font:13px system-ui;opacity:0;pointer-events:none;transition:opacity .2s}
+.fs-note.on{opacity:1}

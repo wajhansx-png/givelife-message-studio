@@ -58,7 +58,7 @@ assert(
   'Donation status toggles in one click',
 );
 assert(
-  /api\('\/donor-send',\{id:ids\[0\],request_id:requestId\(\),poster:singlePosterOn,?\}\)/.test(
+  /api\('\/donor-send',\{id:ids\[0\],request_id:requestId\(\),poster:singlePosterOn,?(?:\.\.\.\(followUpOn\?\{follow_up:true\}:\{\}\),?)?\}\)/.test(
     flat,
   ),
   'Individual DM uses the immediate explicit-send endpoint and respects the visible poster toggle',

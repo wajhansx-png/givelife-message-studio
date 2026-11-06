@@ -49,7 +49,7 @@ ROMAN = (
 )
 VOCAB = "writer checker poster guard reader volunteer volunteers plan manager agents improve rewrite generate versions progress status remember always never check save shorter longer write draft".split()
 ACTION = re.compile(
-    r"\b(writer|checker|poster|guard|reader|volunteers?|plan|agents|improve|rewrite|generate|versions|progress|status|remember|always|never|check|save|write|draft|post|tell|ask)\b"
+    r"\?\s*$|\b(how many|kitne|dms?|case|posts?|replies|writer|checker|poster|guard|reader|volunteers?|plan|agents|improve|rewrite|generate|versions|progress|status|remember|always|never|check|save|write|draft|post|tell|ask)\b"
 )
 REJECT = re.compile(r"^\W*(no|nope|wrong|not good|weak|bad|don'?t like|dont like)\b")
 
@@ -101,6 +101,7 @@ def math_problem(text):
 class Agent:
     id = name = role = ""
     words = r"$^"  # owner words that clearly mean this agent
+    topics = r"$^"  # what the owner talks about when he does not name the agent
     log_words = r"$^"  # activity-log lines that belong to this agent
 
     def __init__(self, system):
@@ -388,6 +389,7 @@ class GroupPoster(Agent):
     id, name = "auto", "Group Poster"
     role = "Posts saved versions to the groups on the timers, never repeating a wording in a round."
     words = r"\bgroup ?poster\b"
+    topics = r"\bnext (?:group )?post|\bposting\b|\bgroup posts?\b|\bschedule\b|\bpace\b"
     talks = True
 
     def status(self):
@@ -460,6 +462,7 @@ class DMGuard(Agent):
     id, name = "dms", "DM Guard"
     role = "Sends donor DMs only within the limits: 40 a day, 3+ minutes apart, consent and opt-outs first."
     words = r"\bdm ?(?:guard|sender)\b"
+    topics = r"\bdms?\b|direct messages?|opt.?outs?"
     talks = True
     log_words = r"(?i)\bdms?\b|donor dm"
 
@@ -493,6 +496,7 @@ class ReplyReader(Agent):
     id, name = "replies", "Reply Reader"
     role = "Reads replies: donation claims, shares, questions, promises, opt-outs. A payment is never treated as verified."
     words = r"\breply ?reader\b"
+    topics = r"\brepl(?:y|ied|ies)\b|\bdonated\b|\bthank"
     talks = True
     log_words = r"(?i)repl|answered|asked not to|said later|reminder|money noticed|thank"
 
@@ -558,6 +562,7 @@ class CasePlan(Agent):
         "Switches between the Normal and Slow messages from the case facts and donation progress."
     )
     words = r"\bcase ?plan\b"
+    topics = r"\bcase\b|\bpaise\b|reh gaye|amount left|\bhow much\b.*\bleft\b|\bslow message"
     talks = True
     log_words = r"(?i)case plan"
 
@@ -761,11 +766,26 @@ class Manager:
             for a in self.agents.values():
                 self._run(a.id, text, a.report)
             return
+        writer = self.agents["writer"]
+        # Order matters: a named agent, then what you ask for, then the topic, then "it/this" follow-up.
         target = forced or next(
             (a.id for a in self.agents.values() if a.id != "checker" and re.search(a.words, low)),
             None,
         )
-        if not target and self.FOLLOW.search(low) and self.ctx.get("agent"):
+        pref = not forced and (self.REMEMBER.match(low) or low.startswith("if "))
+        if pref:
+            target = None  # a preference or condition is saved first, never mistaken for a task
+        elif not target and re.search(r"\bchecker\b|^\W*(check|verify|review)\b", low):
+            target = "checker"
+        if (
+            not target
+            and not pref
+            and (writer.WRITE.search(low) or writer.GENERATE.search(low) or writer.SAVE.search(low))
+        ):
+            target = "writer"
+        if not target and not pref:
+            target = next((a.id for a in self.agents.values() if re.search(a.topics, low)), None)
+        if not target and not pref and self.FOLLOW.search(low) and self.ctx.get("agent"):
             target = self.ctx["agent"]  # "tell it to make it shorter"
         poster = self.agents["auto"]
         if target in (None, "auto"):
@@ -786,13 +806,6 @@ class Manager:
             )
         if not target and (self.REMEMBER.match(low) or low.startswith("if ")):
             return self._run("writer", text, lambda: self._remember(text, low.startswith("if ")))
-        writer = self.agents["writer"]
-        if not target and (
-            writer.WRITE.search(low) or writer.GENERATE.search(low) or writer.SAVE.search(low)
-        ):
-            target = "writer"
-        if not target and re.search(self.agents["checker"].words, low):
-            target = "checker"
         if not target:
             return self._answer(text)
         self.ctx["agent"] = target
@@ -849,7 +862,9 @@ class Manager:
         recent = [
             f"{m['who']}: {m['text'][:200]}"
             for m in self.state["chat"][-7:-1]
-            if m.get("agent") != agent_id and m["who"] != "manager"
+            if m.get("agent") != agent_id
+            and m["who"] != "manager"
+            and not (m["who"] == "you" and self.REMEMBER.match(intent_text(m["text"])))
         ]
         out = ""
         if summary:

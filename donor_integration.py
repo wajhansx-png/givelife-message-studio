@@ -441,7 +441,7 @@ class DonorIntegration:
                     return self.app.STORE.get(key, reservation)
             else:
                 self.app.STORE.put(key, reservation)
-            name, gender = self.personal_name(r["name"])
+            name, gender = self.personal_name(r)
             self.jobs.manual_inflight.set()
             try:
                 self.book.delivery(r["id"], "Sending")
@@ -512,10 +512,20 @@ class DonorIntegration:
         return ""
 
     def personal_name(self, label, explicit=False):
-        # Donor labels are metadata. Random/business labels fall back to Brother.
+        # A saved donor row is authoritative for the chosen form of address;
+        # labels are only hints. Suggested titles do NOT verify gender.
+        if isinstance(label, dict):
+            preferred = label.get("dm_name")
+            address = label.get("dm_salutation")
+            if isinstance(preferred, str) and address in ("Brother", "Sister", "Neutral"):
+                first = self.app.clean_first_name(preferred)
+                return first, address if first else "Brother"
+            label = label.get("name", "")
         raw_label = str(label)
-        label = re.sub(r"(?i)\b(?:donors?|donir|donkr|donoe|good|best|new|perm)\b", " ", str(label))
-        label = re.sub(r"[^\w\s\'-]", " ", label).strip()
+        label = re.sub(r"(?i)\b(?:donors?|donir|donkr|donoe|good|best|new|perm|member|giki|gikii|volun|expert|developer|fast|ambas|main)\b", " ", raw_label)
+        label = re.sub(r"[^\w\s\'-]", " ", label)
+        label = re.sub(r"\d+(?:[.,]\d+)?(?:k)?", " ", label)
+        label = " ".join(label.split())
         first = self.app.clean_first_name(raw_label if explicit else label)
         if explicit and re.search(r"(?i)\b(?:preview|demo|sample|random)\b", raw_label):
             first = ""

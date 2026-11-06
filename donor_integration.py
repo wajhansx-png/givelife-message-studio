@@ -412,7 +412,7 @@ class DonorIntegration:
         result = self.start_batch(**plan, request_id=request_id)
         pause = ", ".join(f"{x / 60:g}" for x in (plan.get("rests") or [1200]))
         how = (
-            f"Using your usual way: {plan['chunk']} per batch, {plan['gap_seconds'] / 60:g} min between DMs, {pause} min pause between batches"
+            f"Using your usual way: {plan['chunk']} per batch, {(str(round(plan['gap_seconds'])) + ' sec') if plan['gap_seconds'] < 60 else format(plan['gap_seconds'] / 60, 'g') + ' min'} between DMs, {pause} min pause between batches"
             + (", random gaps" if plan.get("jitter") else "")
             + (". " if saved else " (first time, standard settings). ")
         )

@@ -419,7 +419,7 @@ class DeliveryTests(RegistryTests):
 
     def test_100_contacts_split_into_batches_of_20_with_different_pauses(self):
         self._many(45)
-        r = self.jobs.start("important", 120, chunk=20, limit=45, rests=[1200, 1800], run=False)
+        r = self.jobs.start("important", 240, chunk=20, limit=45, rests=[1200, 1800], run=False)
         self.assertEqual((r["job"]["total"], r["job"]["batches"]), (45, 3))
         self.run_job(r)
         t = [x for _, x in self.sent]
@@ -654,7 +654,7 @@ class DeliveryTests(RegistryTests):
     def test_minimum_cap_and_no_phone_in_job(self):
         self.add()
         r = self.jobs.start("all", 20, run=False)
-        self.assertEqual(r["job"]["gap_seconds"], 60)
+        self.assertEqual(r["job"]["gap_seconds"], 20)
         self.assertNotIn("923001234567", json.dumps(r))
         self.assertNotIn("caption", r["job"])
 

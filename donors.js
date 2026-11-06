@@ -575,13 +575,13 @@
 <label for="batchCount">How many people?</label>
 <input id="batchCount" name="count" type="number" min="1" max="1000" inputmode="numeric" required>
 <p id="batchAudience" class="batch-hint"></p>
-<label>Minutes between each message</label>
+<label>Time between each message</label>
 <div class="batch-gap-row">
   <button type="button" class="batch-gap-btn" data-gap="2">2 min</button>
   <button type="button" class="batch-gap-btn" data-gap="4">4 min</button>
   <button type="button" class="batch-gap-btn" data-gap="6">6 min</button>
   <button type="button" class="batch-gap-btn" data-gap="8">8 min</button>
-  <input id="batchGap" name="gap_minutes" type="number" min="1" max="10" inputmode="numeric" value="4" aria-label="Custom minutes" placeholder="or type">
+  <input id="batchGap" name="gap_value" type="number" min="1" max="600" inputmode="numeric" value="4" aria-label="Custom gap" placeholder="or type"><select id="batchGapUnit" name="gap_unit" aria-label="Gap unit"><option value="60">minutes</option><option value="1">seconds</option></select><small id="batchGapNote" class="batch-hint" hidden>Under 1 minute can get a number restricted by WhatsApp.</small>
 </div>
 <label class="batch-fresh"><input type="checkbox" id="batchPoster" checked> Attach poster</label>
 <details class="batch-more">
@@ -655,7 +655,7 @@
           : '');
     const count = Number(el('batchCount').value) || 0,
       per = Math.max(1, Math.min(20, Number(el('batchLimit').value) || 20)),
-      gap = Number(el('batchGap').value) || 4,
+      gap = gapSecs() / 60 || 4,
       pauses = batchPauses();
     const plan = el('batchPlan');
     if (!scope) {
@@ -682,6 +682,15 @@
       '. Runs by itself, even with the app closed.';
   }
   let pickerEpoch = 0;
+  /* Gap = number + unit (minutes or seconds). Stored as seconds everywhere else. */
+  const gapSecs = () => Number(el('batchGap').value) * Number(el('batchGapUnit').value);
+  const gapText = (s) => (s < 60 ? Math.round(s) + ' sec' : s / 60 + ' min');
+  function setGap(s) {
+    const whole = s % 60 === 0;
+    el('batchGapUnit').value = whole ? '60' : '1';
+    el('batchGap').value = whole ? s / 60 : s;
+    highlightGapBtn();
+  }
   async function openBatchPicker(scope) {
     editingJob = null;
     el('batchIncl').disabled=false;el('batchFresh').disabled=false;
@@ -703,8 +712,7 @@
         'Your last batch stopped. ' +
         left +
         ' people are still waiting; the ones already sent will be skipped.';
-    const min = Number(el('donorGap').value) / 60;
-    el('batchGap').value = Math.max(1, Math.min(10, min || 4));
+    setGap(Math.max(5, Math.min(600, Number(el('donorGap').value) || 240)));
     el('batchIncl').checked = false;
     el('batchCount').value = scope ? Math.min(1000, batchAvailable()) || '' : '';
     el('batchCount').disabled = !scope;
@@ -719,12 +727,15 @@
   el('batchLimit').onchange = paintAudience;
   el('batchCancel').onclick = () => picker.close();
   function highlightGapBtn() {
-    const v = String(el('batchGap').value);
+    const v = String(el('batchGap').value),
+      min = el('batchGapUnit').value === '60';
     for (const b of picker.querySelectorAll('.batch-gap-btn'))
-      b.setAttribute('aria-pressed', String(b.dataset.gap === v));
+      b.setAttribute('aria-pressed', String(min && b.dataset.gap === v));
+    el('batchGapNote').hidden = !(gapSecs() > 0 && gapSecs() < 60);
   }
   for (const b of picker.querySelectorAll('.batch-gap-btn'))
     b.onclick = () => {
+      el('batchGapUnit').value = '60';
       el('batchGap').value = b.dataset.gap;
       highlightGapBtn();
       paintAudience();
@@ -745,6 +756,10 @@
             paintAudience();
           }
         : paintAudience;
+  el('batchGapUnit').onchange = () => {
+    highlightGapBtn();
+    paintAudience();
+  };
   for (const id of ['batchPause', 'batchRandom', 'batchIncl'])
     el(id).onchange = () => {
       if (id === 'batchIncl' && pickerScope)
@@ -774,14 +789,15 @@
   };
   el('donorBatchForm').onsubmit = async (e) => {
     e.preventDefault();
-    const mins = Number(el('batchGap').value),
+    const secs = gapSecs(),
       per = Number(el('batchLimit').value);
-    if (!(mins >= 1 && mins <= 10)) {
+    if (!(secs >= 5 && secs <= 600)) {
       el('batchGap').focus();
+      el('batchPlan').textContent = 'Choose a gap from 5 seconds to 10 minutes.';
       return;
     }
-    el('donorGap').value = mins * 60;
-    el('donorPace').textContent = 'Gap: ' + mins + ' min ▾';
+    el('donorGap').value = secs;
+    el('donorPace').textContent = 'Gap: ' + gapText(secs) + ' ▾';
     if (!pickerScope) {
       picker.close();
       return;
@@ -807,7 +823,7 @@
     if (editingJob) {
       const button=el('batchStart');button.disabled=true;
       try {
-        const result=await api('/donor-delivery',{configure:editingJob,settings:{gap_seconds:mins*60,chunk:per,rests:pauses,poster:body.poster,jitter:body.jitter||null}});
+        const result=await api('/donor-delivery',{configure:editingJob,settings:{gap_seconds:secs,chunk:per,rests:pauses,poster:body.poster,jitter:body.jitter||null}});
         editingJob=null;picker.close();notice(result.reply);await poll();
       } catch(error) { el('batchPlan').textContent=error.message; }
       finally {button.disabled=false;}
@@ -1939,8 +1955,8 @@
         return;
       }
       const gap = Number(el('donorGap').value);
-      if (!Number.isFinite(gap) || gap < 60 || gap > 600)
-        throw Error('Choose a gap from 1 to 10 minutes.');
+      if (!Number.isFinite(gap) || gap < 5 || gap > 600)
+        throw Error('Choose a gap from 5 seconds to 10 minutes.');
       const r = await api('/donor-delivery', {
         scope,
         ids,
@@ -2077,7 +2093,7 @@
         }
         if (j.chunk) items.push(['Per batch', j.chunk + ' people']);
         if (j.batches > 1 && rests.length) items.push(['Rest between batches', [...new Set(rests)].join(' / ')]);
-        if (j.gap_seconds) items.push(['Gap between messages', mins(j.gap_seconds)]);
+        if (j.gap_seconds) items.push(['Gap between messages', j.gap_seconds < 60 ? gapText(j.gap_seconds) : mins(j.gap_seconds)]);
         facts.textContent = '';
         for (const [k, v] of items) {
           const chip = make('span', 'dp-fact');
@@ -2494,7 +2510,7 @@
       if (!['Starting','Sending','Waiting'].includes(job.state)) throw Error('Resume the paused batch first, then edit its settings.');
       await openBatchPicker(job.scope === 'top' || job.scope === 'all' ? job.scope : 'important');
       editingJob=job.id;
-      el('batchGap').value=job.gap_seconds/60;
+      setGap(job.gap_seconds);
       el('batchLimit').value=job.chunk||20;
       el('batchCount').value=job.total||1;el('batchCount').disabled=true;
       el('batchIncl').disabled=true;el('batchFresh').disabled=true;

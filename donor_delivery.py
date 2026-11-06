@@ -256,9 +256,9 @@ class DonorDelivery:
         if (
             type(gap_seconds) not in (float, int)
             or not math.isfinite(gap_seconds)
-            or not 0 < gap_seconds <= 600
+            or not 5 <= gap_seconds <= 600
         ):
-            raise ValueError("Choose a gap from 1 to 10 minutes. Suggested: 3–5 minutes.")
+            raise ValueError("Choose a gap from 5 seconds to 10 minutes. Suggested: 3–5 minutes.")
         if limit is not None and (type(limit) is not int or not 1 <= limit <= 1000):
             raise ValueError("Choose a recipient count of 1–1,000.")
         if type(poster) is not bool:
@@ -302,7 +302,7 @@ class DonorDelivery:
         caption = custom_template if custom_template is not None else self.caption()
         if not isinstance(caption, str) or not caption.strip():
             raise ValueError("The saved DM message is empty. Edit it first.")
-        gap = max(60, float(gap_seconds))
+        gap = max(5.0, float(gap_seconds))
         rid = str(request_id or uuid.uuid4().hex)
         if not 1 <= len(rid) <= 100:
             raise ValueError("Invalid send request.")
@@ -582,9 +582,9 @@ class DonorDelivery:
         return {
             "job": self._public(job),
             "reply": resumed
-            + f"Started {len(rows)} {scope.replace('_', ' ')} donor DMs. First sends now; next DMs {gap / 60:g} min apart, with different wording for each person. Prior confirmed sends do not prevent this explicit batch."
+            + f"Started {len(rows)} {scope.replace('_', ' ')} donor DMs. First sends now; next DMs {(f'{gap:g} sec' if gap < 60 else f'{gap / 60:g} min')} apart, with different wording for each person. Prior confirmed sends do not prevent this explicit batch."
             + rounds
-            + (" The minimum gap is 1 minute." if gap_seconds < 60 else ""),
+            + (" Short gaps can get a number restricted by WhatsApp." if gap < 60 else ""),
         }
 
     def configure(self, ident, settings):
@@ -596,9 +596,9 @@ class DonorDelivery:
         if "gap_seconds" in values and (
             type(values["gap_seconds"]) not in (int, float)
             or not math.isfinite(values["gap_seconds"])
-            or not 60 <= values["gap_seconds"] <= 600
+            or not 5 <= values["gap_seconds"] <= 600
         ):
-            raise ValueError("Choose a gap from 1 to 10 minutes.")
+            raise ValueError("Choose a gap from 5 seconds to 10 minutes.")
         if "chunk" in values and (
             type(values["chunk"]) is not int or not 1 <= values["chunk"] <= 20
         ):
@@ -671,11 +671,15 @@ class DonorDelivery:
             self._save(copy.deepcopy(data))
 
     def _gap(self, j):
-        """The wait before the next DM: the chosen gap, varied a little when random gaps are on. Never under 60 s."""
-        lo = max(180.0, float(j["gap_seconds"]))
-        x = random.uniform(lo, max(lo, 420.0))  # 3-7 min, random: never a fixed robotic rhythm
+        """The wait before the next DM. 3 min or more: random from the chosen gap up to 7 min (never a robotic rhythm).
+        Under 3 min (the owner chose seconds or a short gap): the chosen gap, varied up to 25% so it is not exact."""
+        base = float(j["gap_seconds"])
+        if base >= 180.0:
+            x, floor = random.uniform(base, max(base, 420.0)), 180.0
+        else:
+            x, floor = random.uniform(base, base * 1.25), 5.0
         jit = j.get("jitter")
-        return max(180.0, x + random.uniform(jit["min"], jit["max"])) if jit else x
+        return max(floor, x + random.uniform(jit["min"], jit["max"])) if jit else x
 
     def _rest(self, j, batch):
         rests = j.get("rests") or [j.get("rest_seconds", 1200)]

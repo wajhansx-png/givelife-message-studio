@@ -143,6 +143,11 @@ class Writer(Agent):
     SAVE = re.compile(
         r"(?i)\b(save|use)\b.*\b(draft|this|it)\b.*\b(group|dm)\b|\b(group|dm)\b.*\b(save|use)\b.*\b(draft|this|it)\b"
     )
+    APPROVE = re.compile(
+        r"(?i)^(?:i\s+)?approve(?:d)?(?:\s+(?:it|this|this message))?"
+        r"(?:\s*[,;:]?\s*(?:and\s+)?(?:save|put)\s+(?:it|this)"
+        r"\s+(?:to|in|as)\s+(?:the\s+)?group(?:\s+messages?)?)?[.!\s]*$"
+    )
 
     def status(self):
         bank = self.app.focus_bank()
@@ -177,7 +182,18 @@ class Writer(Agent):
         bank = self.app.focus_bank()
         low = intent_text(text)
         kind = "dm" if re.search(r"\bdms?\b", low) else "group"
+        if self.APPROVE.fullmatch(low):
+            preview = self.sys.state.get("writer_preview") or {}
+            return self.approve(preview.get("id"))
         if self.SAVE.search(low):
+            preview = self.sys.state.get("writer_preview") or {}
+            if kind == "group":
+                if preview.get("status") == "pending":
+                    return self.approve(preview.get("id"))
+                return (
+                    False,
+                    "No checked Group draft is awaiting approval. Ask Writer to draft one first.",
+                )
             draft = self.sys.ctx.get("draft")
             if not draft:
                 return False, "There is no draft from me yet. Ask me to write one first."
@@ -199,9 +215,36 @@ class Writer(Agent):
             )
         if re.search(r"\b(progress|status)\b", low) and not self.WRITE.search(low):
             return True, self.status()["now"] + "."
-        return self.chat(text)
+        return self.chat(text, kind)
 
-    def chat(self, text):
+    def approve(self, preview_id):
+        """Explicit owner approval: save the selected, checked Group draft; never send."""
+        preview = self.sys.state.get("writer_preview") or {}
+        if not preview_id or preview.get("id") != preview_id or preview.get("status") != "pending":
+            return (
+                False,
+                "That Group preview is no longer awaiting approval. Review the newest draft.",
+            )
+        text = str(preview.get("text") or "")
+        if preview.get("kind") != "group" or not text:
+            return False, "Only a pending Group draft can be approved here."
+        issues = self.sys.agents["checker"].problems(text, "group")
+        if issues:
+            return False, "Not saved. Checker found: " + "; ".join(issues)
+        try:
+            bank = self.app.focus_bank()
+            row = bank.save("group", text, revision=preview.get("base_revision"))
+            ok = row.get("source") == text and self.app.get_message("group")["text"] == text
+        except ValueError as exc:
+            return False, "Not saved: " + str(exc)
+        if not ok:
+            return False, "Saving could not be verified. No message was approved."
+        self.sys.note_draft("approved", text)
+        self.sys.state["writer_preview"] = None
+        self.sys.ctx.pop("draft", None)
+        return True, "Approved and saved to Group Messages. Nothing was sent to WhatsApp."
+
+    def chat(self, text, kind="group"):
         """Conversation like ChatGPT, grounded in verified facts; Checker reviews every draft once more."""
         import assistant
 
@@ -262,7 +305,7 @@ class Writer(Agent):
                 if prev and difflib.SequenceMatcher(None, prev, draft).ratio() > 0.92
                 else []
             )
-            bad = checker.problems(draft) + same
+            bad = checker.problems(draft, kind) + same
             m = self.sys.state["metrics"]
             m["drafts"] = m.get("drafts", 0) + 1
             m["first_pass"] = m.get("first_pass", 0) + (not bad)
@@ -283,7 +326,7 @@ class Writer(Agent):
                 )
                 if fixed and str(fixed.get("draft") or "").strip():
                     data, draft = fixed, str(fixed["draft"]).strip()
-                still = checker.problems(draft)
+                still = checker.problems(draft, kind)
                 note = (
                     "\n\n(Checker found "
                     + "; ".join(bad)
@@ -294,12 +337,35 @@ class Writer(Agent):
                         else ", but problems remain: " + "; ".join(still) + ".)"
                     )
                 )
+            final_issues = checker.problems(draft, kind)
+            if prev and difflib.SequenceMatcher(None, prev, draft).ratio() > 0.92:
+                final_issues.append("too similar to the previous draft")
+            if final_issues:
+                return False, (
+                    "No new preview: Checker rejected the draft: "
+                    + "; ".join(final_issues)
+                    + ". The previous draft is still available."
+                )
             self.sys.ctx["draft"] = draft
+            if kind == "group":
+                base = self.app.focus_bank().get("group")
+                self.sys.state["writer_preview"] = {
+                    "id": uuid.uuid4().hex[:14],
+                    "kind": "group",
+                    "text": draft,
+                    "status": "pending",
+                    "base_revision": base.get("revision", ""),
+                    "created": _now(),
+                }
         out = (
             str(data.get("reply") or "").strip() + ("\n\n" + draft if draft else "") + note
         ).strip()
         if draft:
-            out += '\n\nSay "save this as the Group message" (or DM) to use it.'
+            out += (
+                "\n\nReview the WhatsApp-style preview, then choose Next or Approve."
+                if kind == "group"
+                else '\n\nSay "save this as the DM message" to use it.'
+            )
         return True, out or "No answer."
 
 
@@ -622,6 +688,7 @@ class Manager:
             "ctx": {},
             "retries": {},
             "drafts": [],
+            "writer_preview": None,
             "metrics": {},
             "regressions": [],
             "summaries": {},
@@ -767,6 +834,15 @@ class Manager:
                 self._run(a.id, text, a.report)
             return
         writer = self.agents["writer"]
+        # A plain "Approved" in Manager or Writer chat is an explicit save request,
+        # but ONLY when a checked Group preview is actually pending.
+        preview = self.state.get("writer_preview") or {}
+        if (
+            preview.get("status") == "pending"
+            and writer.APPROVE.fullmatch(low)
+            and forced in (None, "writer")
+        ):
+            return self._run("writer", text, lambda: writer.approve(preview["id"]))
         # Order matters: a named agent, then what you ask for, then the topic, then "it/this" follow-up.
         target = forced or next(
             (a.id for a in self.agents.values() if a.id != "checker" and re.search(a.words, low)),
@@ -1284,9 +1360,13 @@ class Manager:
                 ],
             }
             chat = self.state["chat"][-120:]
+        preview = self.state.get("writer_preview")
         return {
             "agents": [boss] + cards,
             "chat": chat,
+            "writer_preview": preview
+            if isinstance(preview, dict) and preview.get("status") == "pending"
+            else None,
             "auto": bool(app.auto_on()),
             "updated": _now(),
         }
@@ -1297,6 +1377,42 @@ class Manager:
         if action == "say":
             items = self.handle(body.get("text"), body.get("agent"))
             return {"messages": items, **self.view()}
+        if action in ("writer_next", "writer_approve"):
+            with self.lock:
+                preview = self.state.get("writer_preview") or {}
+                if preview.get("status") != "pending" or body.get("preview_id") != preview.get(
+                    "id"
+                ):
+                    raise ValueError("This preview has changed. Review the current draft.")
+                if action == "writer_approve":
+                    ok, reply = self.agents["writer"].approve(preview["id"])
+                    if not ok:
+                        raise ValueError(reply)
+                    self._say("writer", reply, "writer")
+                    self.save()
+                    return {"reply": reply, **self.view()}
+                before = preview["id"]
+                instruction = (
+                    "Write the NEXT alternative GROUP message to the draft below. "
+                    "Change BOTH the opening and body substantially, use a different truthful hook, "
+                    "but preserve every verified fact, current amount, payment line, language and "
+                    "the owner's formatting preferences. Return a complete new draft, no sending or saving.\n\n"
+                    "PREVIOUS DRAFT:\n" + preview["text"][:3000]
+                )
+                start = len(self.state["chat"])
+                self._say("you", "Next version", "writer")
+                self._run(
+                    "writer",
+                    instruction,
+                    lambda: self.agents["writer"].chat(instruction, kind="group"),
+                )
+                self.save()
+                new_preview = self.state.get("writer_preview") or {}
+                if new_preview.get("id") == before:
+                    raise ValueError(
+                        "Writer could not create a different checked draft. Your previous draft is kept."
+                    )
+                return {"messages": self.state["chat"][start:], **self.view()}
         if action == "auto":
             reply = app.set_auto(bool(body.get("on")))
         elif action == "rule_delete":

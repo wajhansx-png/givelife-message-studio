@@ -1,34 +1,26 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#171717"><title>Agents · GiveLife</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/agents.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><meta name="theme-color" content="#171717"><title>Agents · GiveLife</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/agents.css"></head>
 <body>
-<div class="app">
- <nav class="side" aria-label="Agents">
-  <a class="brand" href="/">← GiveLife</a>
-  <div id="list" class="list"></div>
-  <div id="live" class="muted small" role="status" aria-live="polite">Loading…</div>
- </nav>
- <main class="main">
-  <div class="mode" role="group" aria-label="Mode">
-   <div class="seg"><button type="button" id="modeManual">Manual</button><button type="button" id="modeAuto">Auto</button></div>
-   <span id="modeText" class="muted small"></span>
-  </div>
-  <header class="head"><h1 id="name">…</h1><span id="pill" class="pill"></span><span id="now" class="now"></span></header>
-  <div class="scroll" id="scroll"><div class="col">
-   <section class="card"><p class="muted" id="role"></p><div class="prog"><span id="pLabel"></span><span id="pText"></span></div><div class="bar"><i id="pBar"></i></div><ul id="facts" class="facts"></ul></section>
-   <section id="errors"></section>
-   <section id="rules" class="card" hidden><p class="muted">Saved rules</p><ul id="ruleList" class="facts"></ul></section>
-   <section id="thread" class="thread" aria-live="polite"></section>
-   <details class="card"><summary class="muted">Activity</summary><div id="feed" class="feed"></div></details>
-  </div></div>
-  <form id="ask" class="ask" autocomplete="off">
-   <p id="msg" class="msg" role="status" aria-live="polite"></p>
-   <div class="box"><label for="inp" class="sr">Message</label><textarea id="inp" rows="1" maxlength="2000" placeholder="Message an agent"></textarea><button class="send" aria-label="Send">↑</button></div>
-   <p class="hint">Manager passes your message to the right agent and shows its real reply. Safety limits always apply.</p>
-  </form>
- </main>
-</div>
+<header class="top">
+ <div class="bar">
+  <a class="back" href="/" aria-label="Back to GiveLife">←</a>
+  <nav id="list" class="list" aria-label="Agents"></nav>
+  <button type="button" id="modeAuto" class="auto" role="switch" aria-checked="false" title="Auto: agents post, read and reply on their own">Auto</button>
+ </div>
+ <div id="notes" class="notes" aria-live="polite"></div>
+</header>
+<main class="chat" id="scroll">
+ <h1 id="name" class="sr"></h1>
+ <div id="rules" class="rules" hidden></div>
+ <section id="thread" class="thread" aria-live="polite"></section>
+</main>
+<form id="ask" class="ask" autocomplete="off">
+ <p id="msg" class="msg" role="status" aria-live="polite"></p>
+ <div class="box"><label for="inp" class="sr">Message</label><textarea id="inp" rows="1" maxlength="2000" placeholder="Message Manager" enterkeyhint="send"></textarea><button class="send" aria-label="Send" disabled>↑</button></div>
+</form>
 <dialog id="accessDialog"><form id="accessForm"><h2>Open GiveLife agents</h2><label for="accessKey">Private cloud access key</label><input type="password" id="accessKey" autocomplete="current-password" required><button class="primary">Unlock</button></form></dialog>
+<script src="/format.js"></script>
 <script src="/agents.js"></script>
 </body>
 </html>

@@ -107,7 +107,7 @@
     ];
     // Display issues on demand, never as repeating red cards above the conversation.
     // Paused groups stay paused; this only groups their notices for readability.
-    const paused = notes.filter((n) => /^Group Poster: .+ is paused for [\\d.]+ more hours\\.$/.test(n.text));
+    const paused = notes.filter((n) => /^Group Poster: .+ is paused for [0-9.]+ more hours[.]$/.test(n.text));
     const visible = notes.filter((n) => !paused.includes(n));
     if (paused.length) {
       visible.push({

@@ -977,6 +977,18 @@ class DonorDelivery:
                     )
                 except ValueError as e:
                     self.book.delivery(ident, "Not sent")
+                    if str(e).startswith("This recipient"):
+                        # One blocked / opted-out / already-contacted person never stops the batch.
+                        skipped += 1
+                        done_here.add(ident)
+                        receipts.append(
+                            {
+                                "id": ident,
+                                "name": hide_numbers(r["name"]),
+                                "state": "Skipped: " + hide_numbers(e).rstrip("."),
+                            }
+                        )
+                        continue
                     state = "Stopped"
                     error = hide_numbers(e)
                     break

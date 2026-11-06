@@ -3691,6 +3691,8 @@ html body:not(#_):not(#__):not(#___):not(#____):not(#_____) .group-send .send-ro
 
 html body .donor-page .donor-row .donor-known{display:block;font-size:11px;color:#9ab;font-weight:700;white-space:nowrap}
 html body:not(#_) #donorsPage#donorsPage[data-panel='top'] .donor-row > .donor-identity{display:flex!important;flex-wrap:wrap!important;align-content:center;align-items:center;gap:1px 3px!important;min-width:0}
-html body:not(#_) #donorsPage#donorsPage[data-panel='top'] .donor-row .donor-identity > .donor-name{flex:1 1 0!important;min-width:0!important;-webkit-line-clamp:1!important;max-height:1.25em!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel='top'] .donor-row .donor-identity > .donor-name{flex:1 1 0!important;min-width:0!important;-webkit-line-clamp:3!important;max-height:3.75em!important}
 html body:not(#_) #donorsPage#donorsPage[data-panel='top'] .donor-row .donor-identity > .donor-known{order:3;flex:1 0 100%;margin:0;line-height:1.1;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:359px){html body:not(#_) #donorsPage#donorsPage .donor-tabs button{font-size:9px!important;padding-inline:1px!important;letter-spacing:-.2px}}
+html body:not(#_) #donorsPage#donorsPage[data-panel='top'] .donor-row{height:auto!important;min-height:68px!important;padding-block:4px!important}
+html body:not(#_) #donorsPage#donorsPage .donor-head > .donor-total{display:none!important}

@@ -583,7 +583,7 @@ html body .donor-page .donor-head #donorMessagesTab[aria-selected='true'] {
     font-size: 0 !important;
   }
   html body .donor-page .donor-bottom > #donorSendImportant::after {
-    content: 'DM ★';
+    content: attr(data-short, 'DM ★');
     font-size: 14px;
     font-weight: 700;
   }

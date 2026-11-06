@@ -484,6 +484,7 @@
         )
         .forEach((d, i) => (d[rank] = i + 1));
     el('donorSendImportant').textContent = tab === 'top' ? 'DM Top donors' : 'DM ★ Important';
+    el('donorSendImportant').dataset.short = tab === 'top' ? 'DM Top donors' : 'DM ★ Important';
     const q = el('donorSearch').value.trim().toLocaleLowerCase();
     data.items = allDonors
       .filter(

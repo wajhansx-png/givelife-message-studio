@@ -237,7 +237,7 @@ class PastedDonorTests(unittest.TestCase):
             self.start(helper, preview)
         self.assertFalse(self.sent)
 
-    def test_dispatch_rechecks_exclusions_and_stops_at_uncertain_without_retry(self):
+    def test_dispatch_rechecks_exclusions_and_never_retries_uncertain(self):
         helper = self.helper()
         preview = helper.preview("Michael,03001234567\nAnne,03011234567\nZaid,03021234567")
         self.start(helper, preview)
@@ -249,12 +249,12 @@ class PastedDonorTests(unittest.TestCase):
 
         self.jobs.send = uncertain
         self.run_job()
-        self.assertEqual(len(self.sent), 1)
-        self.assertEqual(self.sent[0]["name"], "Anne")
-        self.assertEqual(self.jobs.status()["failed"], 1)
+        # Excluded Michael is skipped; an unconfirmed person never stops the others (3 in a row would).
+        self.assertEqual([b["name"] for b in self.sent], ["Anne", "Zaid"])
+        self.assertEqual(self.jobs.status()["failed"], 2)
         self.assertEqual(self.jobs.status()["skipped"], 1)
         self.start(helper, preview)
-        self.assertEqual(len(self.sent), 1)
+        self.assertEqual(len(self.sent), 2)  # nobody unconfirmed is ever sent again
 
     def test_duplicate_saved_wording_is_rejected_instead_of_reusing_a_caption(self):
         helper = self.helper()

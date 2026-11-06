@@ -319,31 +319,58 @@ class MessageBank:
         the owner presses Generate 20 versions (start_regeneration)."""
         text = dm_variants.clean_source(text) if isinstance(text, str) else text
         if not isinstance(text, str) or len(text) > 10000 or not dm_composer.complete(text):
-            raise ValueError('Keep the complete base message: paragraphs, remaining amount and payment details.')
+            raise ValueError(
+                "Keep the complete base message: paragraphs, remaining amount and payment details."
+            )
         with self.lock:
             data = self.get()
-            if (data.get('generation') or {}).get('state') == 'Generating':
-                data['generation'].update(state='Superseded', error='A new base message was saved. Press Generate 20 versions.')
-            data.update(mode='custom', origin=text, fingerprint=self._fingerprint(text), base=text,
-                        items=self._entries([text]), previous_items=data.get('items') or [],
-                        generation={}, updated_at=time.time(), warning='',
-                        source='Base message; press Generate 20 versions to create the others')
+            if (data.get("generation") or {}).get("state") == "Generating":
+                data["generation"].update(
+                    state="Superseded",
+                    error="A new base message was saved. Press Generate 20 versions.",
+                )
+            data.update(
+                mode="custom",
+                origin=text,
+                fingerprint=self._fingerprint(text),
+                base=text,
+                items=self._entries([text]),
+                previous_items=data.get("items") or [],
+                generation={},
+                updated_at=time.time(),
+                warning="",
+                source="Base message; press Generate 20 versions to create the others",
+            )
             self._save(data)
             return copy.deepcopy(data)
 
-    TEST_KEY = 'donor_test_rotation'
+    TEST_KEY = "donor_test_rotation"
 
     def next_test(self):
         """The next saved version for a Test DM. One version repeats; with twenty, each test is the next one."""
         with self.lock:
-            texts = [row['text'] for row in self.get().get('items') or []
-                     if isinstance(row, dict) and row.get('enabled', True) and isinstance(row.get('text'), str) and row['text'].strip()]
+            texts = [
+                row["text"]
+                for row in self.get().get("items") or []
+                if isinstance(row, dict)
+                and row.get("enabled", True)
+                and isinstance(row.get("text"), str)
+                and row["text"].strip()
+            ]
             if not texts:
-                raise ValueError('Save a base message first. Nothing was sent.')
+                raise ValueError("Save a base message first. Nothing was sent.")
             revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
-            saved = (self.app.STORE.get(self.TEST_KEY, {}) if self.app.STORE else self.__dict__.get('_test_cursor', {})) or {}
-            index = int(saved.get('next_index', 0) or 0) % len(texts) if saved.get('revision') == revision else 0
-            cursor = {'revision': revision, 'next_index': (index + 1) % len(texts)}
+            saved = (
+                self.app.STORE.get(self.TEST_KEY, {})
+                if self.app.STORE
+                else self.__dict__.get("_test_cursor", {})
+            ) or {}
+            index = (
+                int(saved.get("next_index", 0) or 0) % len(texts)
+                if saved.get("revision") == revision
+                else 0
+            )
+            cursor = {"revision": revision, "next_index": (index + 1) % len(texts)}
             if self.app.STORE:
                 self.app.STORE.put(self.TEST_KEY, cursor)
             else:
@@ -413,14 +440,21 @@ class MessageBank:
             earlier = self._sendable(bank.get("previous_items"))
             if len(earlier) >= self.MIN_VERSIONS and len(earlier) == len(set(earlier)):
                 texts = earlier
-        texts = list(dict.fromkeys(texts))  # a repeated wording is sent once per round, never an error
+        texts = list(
+            dict.fromkeys(texts)
+        )  # a repeated wording is sent once per round, never an error
         if not texts:
-            raise ValueError("Saved Donors Messages are missing. Open Messages and save one. Nothing was sent.")
-        if any(not dm_composer.complete(text) for text in texts):
+            raise ValueError(
+                "Saved Donors Messages are missing. Open Messages and save one. Nothing was sent."
+            )
+        # One damaged version must not block every DM: send from the complete ones, and only
+        # refuse when none is complete.
+        complete = [text for text in texts if dm_composer.complete(text)]
+        if not complete:
             raise ValueError(
                 "A saved donor message is incomplete. Edit it in Donors > Messages before sending."
             )
-        return texts
+        return complete
 
     def _reserve(self, count):
         """Reserve the next `count` saved Donors > Messages versions from the ONE shared
@@ -474,7 +508,9 @@ class MessageBank:
         return picked
 
     TARGET_VERSIONS = 20
-    TOP_UP_COOLDOWN = 300  # seconds; a failing provider is tried once per batch start, not per round
+    TOP_UP_COOLDOWN = (
+        300  # seconds; a failing provider is tried once per batch start, not per round
+    )
 
     def _top_up(self):
         """Sending never waits for all 20 versions. When an earlier regeneration stopped part-way

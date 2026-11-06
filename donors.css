@@ -1457,3 +1457,56 @@ html body #donorPasteDialog #pastePoster {
 @media (prefers-reduced-motion: reduce) {
   .poster-dialog #posterProgressFill { transition: none; }
 }
+
+/* The 20-version generator belongs beside the visible Donors > Messages actions,
+   not in the cramped mobile heading (where it became unreachable). */
+#donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate {
+  display: block !important;
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 50px;
+  margin: 7px 0 0;
+  padding: 11px 12px;
+  border: 1px solid #5269f3;
+  border-radius: 12px;
+  background: linear-gradient(110deg, #315fdc, #7936e7);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  flex: none;
+}
+#donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate:disabled {
+  opacity: .68;
+  cursor: progress;
+}
+#donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate-progress {
+  display: block;
+  grid-column: 1 / -1;
+  min-height: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #bfcce8;
+  overflow-wrap: anywhere;
+}
+#donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate-progress:empty {
+  display: none;
+}
+
+/* Donation screenshot ranking is separate from current-case donated amount. */
+.donor-receipt-total {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #71b7dd;
+  line-height: 1.2;
+  font-size: 10px;
+  font-weight: 600;
+}
+@media (max-width: 899px) {
+  .donor-receipt-total { font-size: 9px; }
+}

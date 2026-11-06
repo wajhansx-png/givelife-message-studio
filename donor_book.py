@@ -69,16 +69,16 @@ class DonorBook:
     @staticmethod
     def worth(r):
         """Known giving only: this case's amount (if donated) + saved usual amount. Unknown stays None, never 0."""
-        cur=float(r.get('amount') or 0) if r.get('donated') else 0.0;hist=float(r.get('normal_amount') or 0)
+        cur=float(r.get('amount') or 0) if r.get('donated') else 0.0;hist=float(r.get('receipt_total') or 0) or float(r.get('normal_amount') or 0)
         return {'current_amount':cur or None,'historical_amount':hist or None,'known_total':(cur+hist) or None,'activity':int(cur>0)+int(hist>0)+int(bool(r.get('donated')) and not cur and not hist)}
     @classmethod
     def rank_key(cls,r):
         w=cls.worth(r);return (-(w['known_total'] or 0),-w['activity'],r.get('top_order') or 10**9,r['id'])
     def _public(self,r):
-        keys=('id','top_donor','top_order','important_order','top_rank','important_rank','donor_rank','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted')
+        keys=('id','top_donor','top_order','important_order','top_rank','important_rank','donor_rank','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted','dm_name','dm_salutation','dm_profile_source','receipt_total','receipt_rank','receipt_source','receipt_report_date')
         # A confirmed DM is never forgotten: a later failed or pending attempt cannot erase "DM sent".
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
-        return {**{k:r.get(k) for k in keys},**self.worth(r),'unverified':not self.worth(r)['known_total'],'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'has_number':bool(r.get('phone')),'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
+        return {**{k:(hide_numbers(r.get(k,'')) if k=='dm_name' else r.get(k)) for k in keys},**self.worth(r),'unverified':not self.worth(r)['known_total'],'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'has_number':bool(r.get('phone')),'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
     @staticmethod
     def contacted(r):
         return bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
@@ -95,6 +95,8 @@ class DonorBook:
             counts['not_donated']=counts['all']-counts['donated']
             counts['not_contacted']=sum(not r['donated'] and not self.contacted(r) for r in records)
             counts['donated_amount']=float(sum((Decimal(str(r.get('amount',0) or 0)) for r in records if r.get('donated')),Decimal(0)))
+            counts['receipt_ranked']=sum(type(r.get('receipt_rank')) is int for r in records)
+            counts['receipt_total']=sum(int(r.get('receipt_total') or 0) for r in records)
             for flag,field,rank in (('important','important_order','important_rank'),('top_donor','top_order','top_rank')):
                 for index,row in enumerate(sorted((r for r in records if r.get(flag)),key=(self.rank_key if flag=='top_donor' else lambda r:(r.get(field) or 0,r['id']))),1):row[rank]=index
             for index,row in enumerate(sorted(records,key=self.rank_key),1):row['donor_rank']=index
@@ -153,7 +155,7 @@ class DonorBook:
             if len(exact)!=1: raise ValueError('More than one donor matches. Use the donor page to select one.' if exact else 'No donor matches that name. Search the Donors page or add them first.')
             return copy.deepcopy(exact[0])
     def update(self,donor,expected_updated_at=None,**changes):
-        allowed={'top_donor','name','important','donated','amount','normal_amount','notes','phone'}
+        allowed={'top_donor','name','important','donated','amount','normal_amount','notes','phone','dm_name','dm_salutation'}
         if not changes or set(changes)-allowed: raise ValueError('Choose a donor field to update.')
         if any(k in changes and not isinstance(changes[k],bool) for k in ('important','top_donor','donated')): raise ValueError('Use true or false for donor status.')
         if 'amount' in changes and (type(changes['amount']) not in (int,float) or not math.isfinite(changes['amount']) or not 0<=changes['amount']<=100000000): raise ValueError('Enter a valid donated amount.')
@@ -163,6 +165,12 @@ class DonorBook:
         if expected_updated_at is not None and (type(expected_updated_at) not in (int,float) or not math.isfinite(expected_updated_at) or expected_updated_at<0):
             raise ValueError('Invalid donor update version. Refresh the donor page.')
         if 'phone' in changes: changes['phone']=normalize_phone(changes['phone'])
+        if 'dm_name' in changes:
+            from dm_profile_import import valid_dm_name
+            if not valid_dm_name(changes['dm_name']):
+                raise ValueError('Choose a simple first name, or leave DM name empty.')
+        if 'dm_salutation' in changes and changes['dm_salutation'] not in ('Brother','Sister','Neutral'):
+            raise ValueError('Choose Bhai, Sister or name only.')
         if changes.get('donated') is False: changes['amount']=0
         with self.lock:
             r=self.resolve(donor)
@@ -181,6 +189,10 @@ class DonorBook:
             if changes.get('donated') is True and not row.get('donated') and row.get('last_dm_key') and time.time()-float(row.get('last_sent_at') or 0)<=self.DM_CREDIT_WINDOW:
                 learned=data.get('dm_learning',{}).get(row['last_dm_key'])
                 if learned:learned['wins']=int(learned.get('wins',0))+1
+            if 'name' in changes and changes['name']!=row.get('name') and row.get('dm_profile_source')=='name_based_suggestion':
+                row.update(dm_name='',dm_salutation='',dm_profile_source='')
+            if 'dm_name' in changes or 'dm_salutation' in changes:
+                changes['dm_profile_source']='owner'
             row.update(changes,updated_at=max(time.time(),math.nextafter(float(row.get('updated_at',0)),math.inf)));self._save(data)
             return {'donor':self._public(row),'reply':'Updated '+hide_numbers(row['name'])+'.'}
     def delete(self,donor):

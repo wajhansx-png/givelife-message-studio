@@ -20,6 +20,59 @@ if not supervisor.wait_for_db(store):
     raise SystemExit("Database unreachable after 10 minutes.")
 store.restore(DATA, ROOT)
 
+# One-time, private bulk contact import. No outgoing WhatsApp messages.
+# Payload is held temporarily in Render env only, never in this repository.
+if os.environ.get("GIVELIFE_DONOR_IMPORT_B64"):
+    try:
+        from private_donor_import import import_from_environment
+
+        receipt = import_from_environment(
+            store, DATA, os.environ["GIVELIFE_DONOR_IMPORT_B64"]
+        )
+        print(
+            "[donor-import] verified "
+            + " ".join(f"{k}={v}" for k, v in receipt.items()),
+            flush=True,
+        )
+    except Exception as exc:
+        # Never log the private payload or contact details on failure.
+        print("[donor-import] failed: " + type(exc).__name__, flush=True)
+
+# One-time private, owner-correctable DM salutation suggestions.
+# All 103 phone/name matches are supplied privately at deploy time; never in GitHub.
+if os.environ.get("GIVELIFE_DM_PROFILES_B64"):
+    try:
+        from dm_profile_import import import_profiles
+
+        stats = import_profiles(
+            store, DATA, os.environ["GIVELIFE_DM_PROFILES_B64"]
+        )
+        print(
+            "[dm-profile-import] verified "
+            + " ".join(f"{k}={v}" for k, v in stats.items()),
+            flush=True,
+        )
+    except Exception as exc:
+        # No real numbers, names, or private payloads enter logs.
+        print("[dm-profile-import] failed: " + type(exc).__name__, flush=True)
+
+# Private one-time historical receipt rankings; never commit contact labels.
+# Do not change current-case donation totals or outgoing WhatsApp messages.
+if os.environ.get("GIVELIFE_RECEIPT_RANKINGS_B64"):
+    try:
+        from private_receipt_ranking import import_rankings
+
+        receipt = import_rankings(
+            store, DATA, os.environ["GIVELIFE_RECEIPT_RANKINGS_B64"]
+        )
+        print(
+            "[receipt-ranking] verified "
+            + " ".join(f"{key}={value}" for key, value in receipt.items()),
+            flush=True,
+        )
+    except Exception as exc:
+        print("[receipt-ranking] failed: " + type(exc).__name__, flush=True)
+
 # Only one instance may be logged in to WhatsApp. While Render overlaps old and new instances,
 # wait here (answering /health) until the old one has stopped and released the lease.
 OWNER = uuid.uuid4().hex

@@ -502,6 +502,11 @@
         (a, b) =>
           (tab === 'top' ? topCmp(a, b) : 0) ||
           Number(b.important) - Number(a.important) ||
+          // Top is an owner-controlled priority, not a receipt requirement.
+          (tab === 'all' ? Number(!!b.top_donor) - Number(!!a.top_donor) : 0) ||
+          (tab === 'all' && a.top_donor && b.top_donor
+            ? (a.top_order ?? Number.MAX_SAFE_INTEGER) - (b.top_order ?? Number.MAX_SAFE_INTEGER)
+            : 0) ||
           Number(!!a.dm_sent) - Number(!!b.dm_sent) ||
           (a.dm_sent ? (a.last_sent_at || 0) - (b.last_sent_at || 0) : 0) ||
           (a.important_order ?? Number.MAX_SAFE_INTEGER) - (b.important_order ?? Number.MAX_SAFE_INTEGER) ||
@@ -1106,11 +1111,12 @@
         testBtn.disabled = false;
       }
     };
-    /* Regenerate lives in the heading; the bottom row is ← Back · Next →. */
-    regen.classList.add('bank-regen-top');
-    head.append(regen);
+    // Keep Generate 20 in the visible action area on phones as well as desktop.
+    // Progress is derived from the saved backend generation, never a fake timer.
+    const regenProgress = make('span', 'bank-regenerate-progress', bankGenerationLabel());
+    regenProgress.setAttribute('role', 'status');
     nav.insertBefore(backBottom, nav.firstChild);
-    actions.append(baseBtn, testBtn, nav);
+    actions.append(baseBtn, testBtn, regen, regenProgress, nav);
     grid.append(actions, picker);
     box.append(grid);
     syncBankControls();
@@ -1125,9 +1131,17 @@
   }
   function syncBankControls() {
     const box = el('donorMessages');
-    for (const b of box.querySelectorAll('.bank-regenerate'))
-      b.disabled =
-        bankRegenerating || bankSaves.size > 0 || bankData?.generation?.state === 'Generating';
+    for (const b of box.querySelectorAll('.bank-regenerate')) {
+      const generating = bankData?.generation?.state === 'Generating';
+      b.disabled = bankRegenerating || bankSaves.size > 0 || generating;
+      b.textContent = generating
+        ? 'Generating 20…'
+        : (bankData?.items?.length || 0) > 1
+          ? 'Regenerate 20 versions'
+          : 'Generate 20 versions';
+    }
+    const progress = box.querySelector('.bank-regenerate-progress');
+    if (progress) progress.textContent = bankGenerationLabel();
     for (const b of box.querySelectorAll('[data-bank-save-id]')) {
       b.disabled = bankRegenerating || bankSaves.has(b.dataset.bankSaveId);
       const input = box.querySelector('.bank-detail textarea');
@@ -1582,6 +1596,42 @@
               }
             };
             rename.append(rlabel, rsave);
+            // DM greeting is editable: a name is not proof of someone's gender.
+            const dmProfile = make('div', 'donor-normal-box donor-dm-profile');
+            const dmNameLabel = make('label', '', 'DM first name');
+            const dmFirst = make('input', 'donor-normal');
+            dmFirst.type = 'text';
+            dmFirst.maxLength = 30;
+            dmFirst.value = d.dm_name || '';
+            dmFirst.placeholder = 'Name, or blank';
+            dmNameLabel.append(dmFirst);
+            const dmTitleLabel = make('label', '', 'DM greeting');
+            const dmTitle = make('select', 'donor-normal');
+            for (const [value, title] of [
+              ['Brother', 'Bhai'],
+              ['Sister', 'Sister'],
+              ['Neutral', 'Name only'],
+            ]) {
+              const option = make('option', '', title);
+              option.value = value;
+              dmTitle.append(option);
+            }
+            dmTitle.value = d.dm_salutation || 'Brother';
+            dmTitleLabel.append(dmTitle);
+            const dmPreview = make('small', '', 'Suggested from contact name; please correct if needed.');
+            const dmSave = make('button', 'donor-normal-save', 'Save DM greeting');
+            dmSave.type = 'button';
+            dmSave.onclick = () => {
+              const first = dmFirst.value.trim();
+              if (first && !/^[A-Za-z][A-Za-z'-]{1,24}$/.test(first)) {
+                notice('Enter one simple first name, or leave it blank.', true);
+                dmFirst.focus();
+                return;
+              }
+              change(d.id, { dm_name: first, dm_salutation: dmTitle.value });
+              more.open = false;
+            };
+            dmProfile.append(dmNameLabel, dmTitleLabel, dmPreview, dmSave);
             const normal = make('div', 'donor-normal-box');
             const nlabel = make('label', '', 'Usually donates (Rs.)');
             const ninput = make('input', 'donor-normal');
@@ -1684,7 +1734,7 @@
             const topInMenu = make('button', 'donor-menu-top', d.top_donor ? 'Remove from Top donors' : 'Add to Top donors');
             topInMenu.type = 'button';
             topInMenu.onclick = () => ident.querySelector('.donor-top-chip').click();
-            menu.append(rename, normal, donatedBox, topInMenu, del);
+            menu.append(rename, dmProfile, normal, donatedBox, topInMenu, del);
             more.append(menu);
           };
           more.ontoggle = () => {

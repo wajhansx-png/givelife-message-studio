@@ -9,7 +9,7 @@ import dm_composer, reply_setup
 import ai_call
 
 DM_DAILY_CAP = 0  # 0 = no daily DM limit (old 40 ceiling removed)
-DM_MIN_GAP = 180  # seconds between automatic/batch DMs
+DM_MIN_GAP = 0  # 0 = no server-side minimum; the gap the owner picks for a batch is what is used
 import dm_templates
 from state_shapes import mapping, memories, history as valid_history
 import chat_policy
@@ -325,7 +325,8 @@ def send_custom(body):
             if not manual and ledger.get("optouts", 0) >= 2:
                 raise ValueError("DMs paused for today: 2 people asked not to be messaged.")
             if (
-                not manual
+                DM_MIN_GAP
+                and not manual
                 and not (explicit_batch and body.get("first_in_batch") is True)
                 and now - ledger.get("last", 0) < DM_MIN_GAP
             ):

@@ -51,3 +51,38 @@ class ResumeAfterRestartTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BatchErrorTests(unittest.TestCase):
+    """One bad recipient never stops a batch, and the chosen gap is never overridden."""
+
+    def setUp(self):
+        fixture.SendTests.setUp(self)
+        app.donors().jobs.import_jobs({"jobs": []})
+        app.donors().book._save({"version": 1, "records": []})
+
+    tearDown = fixture.SendTests.tearDown
+
+    def test_blocked_recipient_is_skipped_and_the_rest_still_send(self):
+        h = app.donors()
+        for i in range(3):
+            h.book.add("Synthetic " + str(i), "92300123000" + str(i))
+        replies = [
+            ValueError("This recipient is blocked or opted out."),
+            {"code": "SUCCESS"},
+            {"code": "SUCCESS"},
+        ]
+        with patch.object(h.jobs, "connected", return_value=True):
+            job = h.start_batch(scope="all", limit=3, run=False)["job"]
+            with (
+                patch.object(h.jobs, "_dispatch", side_effect=replies),
+                patch.object(h.jobs, "_gap", return_value=0),
+            ):
+                h.jobs._run(h.jobs._load()["jobs"][-1])
+        status = h.jobs.status()
+        self.assertEqual((status["sent"], status["skipped"]), (2, 1), status.get("error"))
+        self.assertNotEqual(status["state"], "Stopped")
+        self.assertTrue(job)
+
+    def test_no_minimum_gap_between_batch_sends(self):
+        self.assertEqual(app.DM_MIN_GAP, 0)

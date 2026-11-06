@@ -167,7 +167,11 @@ class ServerGuards(unittest.TestCase):
                 }
             )
         app.STORE.put("dm_daily", {"day": day, "count": 1, "last": time.time()})
-        with self.assertRaisesRegex(ValueError, "minutes between DMs"):
+        # The server no longer imposes its own minimum gap: only the owner's chosen gap applies.
+        with (
+            patch.object(app, "DM_MIN_GAP", 180),
+            self.assertRaisesRegex(ValueError, "minutes between DMs"),
+        ):
             app.send_custom(
                 {
                     "target": "phone",
@@ -176,6 +180,7 @@ class ServerGuards(unittest.TestCase):
                     "kind": "volunteer_flow",
                 }
             )
+        self.assertEqual(app.DM_MIN_GAP, 0)
 
     def test_test_button_refuses_to_repeat_when_versions_missing(self):
         app = self.app

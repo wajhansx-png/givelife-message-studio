@@ -9,24 +9,34 @@
   const dlg = make('dialog', 'donor-form-dialog replies-dialog');
   dlg.setAttribute('aria-label', 'Auto replies');
   dlg.innerHTML =
-    '<h2>Reply</h2><p style="margin:0 0 6px;font-size:13px;opacity:.75">When someone sends a picture or says done / donated, every reply below goes to them as its own message. WhatsApp is checked every minute.</p><label style="display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:600"><input type="checkbox" id="repEnabled" style="width:20px;height:20px;min-height:0;flex:none"> Turn ON</label><div id="repList"></div><p id="repNote" role="status"></p><div class="donor-form-actions"><button type="button" id="repAdd">+ Add another reply</button><button type="button" id="repClose">Close</button><button type="button" class="primary" id="repSave">Save</button></div>';
+    '<h2>Reply</h2><p class="rep-hint">When someone sends a payment picture or says “done”, these go out by themselves (only while Auto is on).</p>' +
+    '<label class="rep-switch"><input type="checkbox" id="repEnabled" role="switch"><span>Replies ON</span></label>' +
+    '<section class="rep-group"><h3>Saved contacts</h3><small>Numbers already in Donors. Ask them to share the case.</small><div id="repList"></div><button type="button" class="rep-add" id="repAdd">+ Add</button></section>' +
+    '<section class="rep-group"><h3>New contacts</h3><small>Numbers not in Donors. Ask them to join GiveLife and share.</small><div id="repNewList"></div><button type="button" class="rep-add" id="repAddNew">+ Add</button></section>' +
+    '<p id="repNote" role="status" aria-live="polite"></p><div class="rep-actions"><button type="button" id="repClose">Close</button><button type="button" class="primary" id="repSave">Save</button></div>';
   document.body.append(dlg);
   const $ = (id) => document.getElementById(id);
-  const row = (text) => {
+  let dirty = false;
+  dlg.addEventListener('input', () => (dirty = true));
+  const row = (text, list = 'repList') => {
     const box = make('div', 'rep-row');
-    box.style.cssText = 'display:flex;gap:8px;align-items:flex-start;margin:6px 0';
     const ta = make('textarea', '');
-    ta.style.flex = '1';
     ta.rows = 2;
     ta.maxLength = 1000;
-    ta.placeholder = 'Write a reply, e.g. JazakAllah, we will confirm and update you soon. 🤲';
+    ta.placeholder =
+      list === 'repList'
+        ? 'e.g. JazakAllah! Please share this case in your groups. 🤲'
+        : 'e.g. JazakAllah! Join GiveLife and share: <group link>';
     ta.value = text || '';
     const rm = make('button', 'tool rep-remove', '✕');
     rm.setAttribute('aria-label', 'Remove this reply');
     rm.type = 'button';
-    rm.onclick = () => box.remove();
+    rm.onclick = () => {
+      box.remove();
+      dirty = true;
+    };
     box.append(ta, rm);
-    $('repList').append(box);
+    $(list).append(box);
   };
   const note = (t, bad) => {
     $('repNote').textContent = t;
@@ -36,48 +46,49 @@
     try {
       const r = await fetch('/reply-setup');
       const d = await r.json();
-      $('repEnabled').checked = !!d.enabled;
+      // Never set up before: start ON, so the owner only has to write the replies and Save.
+      $('repEnabled').checked = d.configured ? !!d.enabled : true;
       $('repList').textContent = '';
-      const saved = d.replies && d.replies.length ? d.replies : [];
-      (saved.length >= 2 ? saved : [...saved, '', ''].slice(0, 2)).forEach(row);
-      note(
-        d.autopilot ? '' : 'Auto is off. Replies are saved but only sent while Auto is on.',
-        false,
-      );
+      $('repNewList').textContent = '';
+      (d.replies && d.replies.length ? d.replies : ['']).forEach((t) => row(t, 'repList'));
+      (d.new_replies && d.new_replies.length ? d.new_replies : ['']).forEach((t) => row(t, 'repNewList'));
+      dirty = false;
+      note(d.autopilot ? '' : 'Auto is off. Replies are saved and go out once Auto is on.', false);
     } catch (e) {
       note('Could not load your replies.', true);
     }
   }
-  $('repAdd').onclick = () => row('');
-  $('repEnabled').onchange = () => $('repSave').click();
-  $('repClose').onclick = () => dlg.close();
-  $('repSave').onclick = async () => {
-    const replies = [...dlg.querySelectorAll('textarea')]
-      .map((t) => t.value.trim())
-      .filter(Boolean);
+  const texts = (list) => [...$(list).querySelectorAll('textarea')].map((t) => t.value.trim()).filter(Boolean);
+  async function save(close) {
     $('repSave').disabled = true;
     try {
       const r = await fetch('/reply-setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: $('repEnabled').checked, replies }),
+        body: JSON.stringify({ enabled: $('repEnabled').checked, replies: texts('repList'), new_replies: texts('repNewList') }),
       });
       const d = await r.json();
       if (!r.ok) throw Error(d.error || 'Could not save.');
-      note(
-        'Saved ' +
-          d.replies.length +
-          ' repl' +
-          (d.replies.length === 1 ? 'y' : 'ies') +
-          (d.enabled ? ' · on' : ' · off'),
-        false,
-      );
+      dirty = false;
+      note('Saved ✓' + (d.enabled ? ' · replies ON' : ' · replies OFF'), false);
+      if (close) setTimeout(() => dlg.open && !dirty && dlg.close(), 700);
     } catch (e) {
-      note(e.message, true);
+      note(e.message, true); // the typed text stays in the boxes
     } finally {
       $('repSave').disabled = false;
     }
+  }
+  $('repAdd').onclick = () => row('', 'repList');
+  $('repAddNew').onclick = () => row('', 'repNewList');
+  $('repEnabled').onchange = () => save(false);
+  $('repSave').onclick = () => save(true);
+  $('repClose').onclick = () => {
+    if (dirty && !confirm('Close without saving your changes?')) return;
+    dlg.close();
   };
+  dlg.addEventListener('cancel', (e) => {
+    if (dirty && !confirm('Close without saving your changes?')) e.preventDefault();
+  });
   const open = () => {
     load();
     dlg.showModal();

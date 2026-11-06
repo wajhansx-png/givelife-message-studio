@@ -35,16 +35,21 @@ def get(store):
     return {
         "enabled": bool(data.get("enabled")),
         "replies": [r for r in data.get("replies", []) if isinstance(r, str)],
+        "new_replies": [r for r in data.get("new_replies", []) if isinstance(r, str)],
+        "configured": bool(data),
         "since": data.get("since", 0),
         "next": int(data.get("next", 0) or 0),
     }
 
 
-def save(store, enabled, replies):
+def save(store, enabled, replies, new_replies=None):
+    """`replies` go to saved contacts (numbers in the donor book); `new_replies` to new numbers.
+    Leaving one list empty makes the other list cover both audiences."""
     if not store:
         raise ValueError("Saving is unavailable right now. Nothing was changed.")
     replies = clean(replies)
-    if enabled and not replies:
+    new_replies = clean(new_replies if new_replies is not None else get(store)["new_replies"])
+    if enabled and not (replies or new_replies):
         raise ValueError("Write at least one reply before turning this on.")
     old = get(store)
     since = (
@@ -53,6 +58,7 @@ def save(store, enabled, replies):
     data = {
         "enabled": bool(enabled),
         "replies": replies,
+        "new_replies": new_replies,
         "since": since,
         "next": old["next"] % max(1, len(replies)),
     }
@@ -68,3 +74,11 @@ def take(store):
     index = data["next"] % len(data["replies"])
     store.put(KEY, {**data, "next": (index + 1) % len(data["replies"])})
     return data["replies"][index]
+
+
+def replies_for(setup, known):
+    """The replies for one sender: saved contacts get `replies`, new numbers get `new_replies`;
+    an empty list falls back to the other one."""
+    own = setup.get("replies") or []
+    new = setup.get("new_replies") or []
+    return (own or new) if known else (new or own)

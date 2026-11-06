@@ -501,14 +501,16 @@ def _unbalanced(line):
     return any(body.count(m) % 2 for m in "*_~")
 
 
-def format_problem(source, text):
+def format_problem(source, text, bullets=True):
     """'' unless WhatsApp formatting broke: an unpaired * _ ~ marker, or a bullet line lost or added."""
     if any(_unbalanced(x) for x in text.split("\n")) and not any(
         _unbalanced(x) for x in source.split("\n")
     ):
         return "a bold/italic marker is unpaired (broken formatting)"
-    bullets = lambda t: sum(bool(re.match(r"^\s*[*•-]\s+\S", x)) for x in t.split("\n"))
-    if bullets(text) != bullets(source):
+    if not bullets:  # a free draft may change its layout; versions must keep it
+        return ""
+    count = lambda t: sum(bool(re.match(r"^\s*[*•-]\s+\S", x)) for x in t.split("\n"))
+    if count(text) != count(source):
         return "a bullet line was lost or added"
     return ""
 

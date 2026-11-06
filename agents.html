@@ -5,36 +5,29 @@
 <div class="app">
  <nav class="side" aria-label="Agents">
   <a class="brand" href="/">← GiveLife</a>
-  <div class="label">Agents</div>
   <div id="list" class="list"></div>
-  <div id="live" class="live" role="status" aria-live="polite">Loading…</div>
+  <div id="live" class="muted small" role="status" aria-live="polite">Loading…</div>
  </nav>
  <main class="main">
   <div class="mode" role="group" aria-label="Mode">
-   <div class="seg"><button type="button" id="modeManual" data-mode="manual">Manual</button><button type="button" id="modeAuto" data-mode="auto">Auto</button></div>
+   <div class="seg"><button type="button" id="modeManual">Manual</button><button type="button" id="modeAuto">Auto</button></div>
    <span id="modeText" class="muted small"></span>
   </div>
   <header class="head"><h1 id="name">…</h1><span id="pill" class="pill"></span><span id="now" class="now"></span></header>
-  <div class="scroll"><div class="col">
-   <section class="card"><div class="muted" id="role"></div>
-    <div class="prog"><div class="pl"><span id="pLabel"></span><span id="pText"></span></div><div class="bar"><i id="pBar"></i></div></div>
-    <ul id="facts" class="facts"></ul>
-   </section>
+  <div class="scroll" id="scroll"><div class="col">
+   <section class="card"><p class="muted" id="role"></p><div class="prog"><span id="pLabel"></span><span id="pText"></span></div><div class="bar"><i id="pBar"></i></div><ul id="facts" class="facts"></ul></section>
    <section id="errors"></section>
-   <section id="rules" class="card" hidden><div class="muted">Saved rules this agent follows</div><ul id="ruleList" class="facts"></ul></section>
-   <section id="answer" class="card" hidden aria-live="polite"><div class="muted small" id="ansQ"></div><div id="ansText" class="answer"></div></section>
-   <section id="thread" class="thread" hidden aria-live="polite"></section>
-   <div class="muted small" id="activityLabel">Activity · tap a line to correct it</div>
-   <div id="feed" class="feed"></div>
+   <section id="rules" class="card" hidden><p class="muted">Saved rules</p><ul id="ruleList" class="facts"></ul></section>
+   <section id="thread" class="thread" aria-live="polite"></section>
+   <details class="card"><summary class="muted">Activity</summary><div id="feed" class="feed"></div></details>
   </div></div>
   <form id="ask" class="ask" autocomplete="off">
    <p id="msg" class="msg" role="status" aria-live="polite"></p>
-   <div class="box"><label for="inp" class="sr">Ask the assistant or add a rule</label><input id="inp" maxlength="300" placeholder="Ask the assistant, or add a rule like: never post in fiverr at night"><button aria-label="Send" class="send">↑</button></div>
-   <div class="hint">Manager passes your message to the right agent and shows its real reply. Safety limits always apply.</div>
+   <div class="box"><label for="inp" class="sr">Message</label><textarea id="inp" rows="1" maxlength="2000"></textarea><button class="send" aria-label="Send">↑</button></div>
+   <p class="hint">Manager passes your message to the right agent and shows its real reply. Safety limits always apply.</p>
   </form>
  </main>
 </div>
-<dialog id="fix"><form method="dialog" id="fixForm"><h2>Correct this</h2><p id="fixWhat" class="muted"></p><label for="fixText">What should it have done?</label><textarea id="fixText" rows="3" maxlength="500" required></textarea><label class="chk"><input type="checkbox" id="fixMem"> Remember for the future</label><div class="row"><button value="cancel" formnovalidate class="ghost">Cancel</button><button value="ok" class="primary">Save</button></div></form></dialog>
 <dialog id="accessDialog"><form id="accessForm"><h2>Open GiveLife agents</h2><label for="accessKey">Private cloud access key</label><input type="password" id="accessKey" autocomplete="current-password" required><button class="primary">Unlock</button></form></dialog>
 <script src="/agents.js"></script>
 </body>

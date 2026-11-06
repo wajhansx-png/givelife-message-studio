@@ -494,6 +494,11 @@
             ? (a.top_order ?? Number.MAX_SAFE_INTEGER) - (b.top_order ?? Number.MAX_SAFE_INTEGER)
             : 0) ||
           Number(b.important) - Number(a.important) ||
+          // Top is an owner-controlled priority, not a receipt requirement.
+          (tab === 'all' ? Number(!!b.top_donor) - Number(!!a.top_donor) : 0) ||
+          (tab === 'all' && a.top_donor && b.top_donor
+            ? (a.top_order ?? Number.MAX_SAFE_INTEGER) - (b.top_order ?? Number.MAX_SAFE_INTEGER)
+            : 0) ||
           Number(!!a.dm_sent) - Number(!!b.dm_sent) ||
           (a.dm_sent ? (a.last_sent_at || 0) - (b.last_sent_at || 0) : 0) ||
           (a.important_order ?? Number.MAX_SAFE_INTEGER) - (b.important_order ?? Number.MAX_SAFE_INTEGER) ||
@@ -1452,9 +1457,9 @@
             const total = make(
               'small',
               'donor-receipt-total',
-              'Receipt evidence · Rs. ' + Number(d.receipt_total).toLocaleString('en-PK'),
+              'Past recorded support · Rs. ' + Number(d.receipt_total).toLocaleString('en-PK'),
             );
-            total.title = 'Reported across cases from donor-shared screenshots; not bank-verified.';
+            total.title = 'Partial historical support record. Receipts are NOT required to add or rank this donor; earlier gifts without screenshots may be missing.';
             ident.append(total);
           }
           ident.firstChild.dataset.rank =

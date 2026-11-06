@@ -191,7 +191,10 @@ class FocusBank:
             # Whole-message rewrites in small batches (big batches get truncated), each one checked for
             # facts, payment lines, formatting and real difference. Accepted versions are saved at once, so
             # a later failure never loses them and a retry only asks for what is missing.
-            for attempt in range(6):
+            waits = list(dm_variants.AI_BACKOFF)
+            for attempt in range(6 + len(waits)):
+                if attempt - (len(dm_variants.AI_BACKOFF) - len(waits)) >= 6:
+                    break  # extra rounds only make up for rate-limit waits
                 if len(items) >= goal:
                     break
                 if not self.current(kind, row["revision"]):
@@ -215,8 +218,10 @@ class FocusBank:
                 except Exception as exc:
                     last_error = str(exc)[:180]
                     reasons[last_error] = reasons.get(last_error, 0) + 1
-                    if any(code in last_error for code in ("401", "403", "429")):
+                    if dm_variants.ai_fatal(last_error):
                         raise
+                    if dm_variants.ai_transient(last_error) and waits:
+                        dm_variants._sleep(waits.pop(0))  # rate limit / server hiccup: wait, retry
                     continue
                 passed = []
                 for text in candidates:

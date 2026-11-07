@@ -76,6 +76,7 @@ class Engine:
         self.post_lock = threading.Lock()
         self.s = self._load()
         self.dm_running = False
+        self._dm_start = threading.Lock()
         self.activity = None
         self.worker_errors = {}
 
@@ -1018,7 +1019,21 @@ class Engine:
         if self.s["dms_today"] >= self.s["dm_daily"] or now() - self.s["last_dm_batch"] < 45 * 60:
             return
         self.s["last_dm_batch"] = now()
-        threading.Thread(target=self.dm_batch, daemon=True).start()
+        self._start_dm_batch()
+
+    def _start_dm_batch(self):
+        """Claim the run before the worker starts: the timer and a chat command can arrive together,
+        and two workers would send to the same people."""
+        with self._dm_start:
+            if self.dm_running:
+                return False
+            self.dm_running = True
+        try:
+            threading.Thread(target=self.dm_batch, daemon=True).start()
+        except Exception:
+            self.dm_running = False
+            raise
+        return True
 
     def dm_batch(self):
         """Up to 5 people per batch: past donors first, then donor-labelled contacts, group members, saved chats."""
@@ -1253,10 +1268,9 @@ class Engine:
                 return "Asking the main group to share the poster now."
             return "Another send is running. Try again in a minute."
         if action == "dm_batch":
-            if self.dm_running:
+            if not self._start_dm_batch():
                 return "DMs are already being sent."
             self.s["last_dm_batch"] = now()
-            threading.Thread(target=self.dm_batch, daemon=True).start()
             return "Sending up to 5 DMs now, about 2 minutes apart."
         return None
 

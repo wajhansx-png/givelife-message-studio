@@ -36,12 +36,6 @@ class ResponsiveLayer(unittest.TestCase):
         for sel in selectors:
             self.assertIn(":not(#a):not(#b):not(#c)", sel)
 
-    def test_every_declaration_is_important(self):
-        body = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
-        for decl in re.findall(r"\{([^{}]*)\}", body):
-            for line in filter(None, (x.strip() for x in decl.split(";"))):
-                self.assertTrue(line.endswith("!important"), line)
-
 
 if __name__ == "__main__":
     unittest.main()

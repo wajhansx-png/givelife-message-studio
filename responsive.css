@@ -409,20 +409,33 @@
    follow-up rows are no taller than other rows, so many more donors fit without scrolling. The expanded
    (full screen) list keeps its own layout. */
 @media (min-width: 900px) {
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d):not(.donor-expanded) .donor-table-wrap {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d):not(.donor-expanded)
+    .donor-table-wrap {
     position: static !important;
     margin-top: 0 !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d).donor-expanded .donor-table-wrap {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d).donor-expanded
+    .donor-table-wrap {
     margin-top: 34px !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d):not(.donor-expanded) .donor-fu-opt {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d):not(.donor-expanded)
+    .donor-fu-opt {
     position: absolute !important;
     top: 25px !important;
     left: 14px !important;
     z-index: 51 !important; /* above the title row (z 50) so it stays clickable */
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d):not(.donor-expanded) .donor-table-wrap > .donor-expand-btn {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d):not(.donor-expanded)
+    .donor-table-wrap
+    > .donor-expand-btn {
     top: 23px !important;
     right: 14px !important;
     z-index: 51 !important;
@@ -436,19 +449,34 @@
    The panel no longer scrolls: only the message bubble scrolls when a message is long, and the action
    buttons (bigger) plus Back always stay on screen on one row right under the message. */
 @media (min-width: 900px) {
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d)[data-panel='messages'] #donorMessages {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)[data-panel='messages']
+    #donorMessages {
     overflow: hidden !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d)[data-panel='messages'] #donorMessages .bank-workspace {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)[data-panel='messages']
+    #donorMessages
+    .bank-workspace {
     flex: 0 1 auto !important;
     min-height: 0 !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d)[data-panel='messages'] #donorMessages .bank-detail {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)[data-panel='messages']
+    #donorMessages
+    .bank-detail {
     flex: 0 1 auto !important;
     min-height: 0 !important;
     overflow-y: auto !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d)[data-panel='messages'] #donorMessages .bank-actions {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)[data-panel='messages']
+    #donorMessages
+    .bank-actions {
     flex: 0 0 auto !important;
     flex-wrap: wrap !important;
     justify-content: center !important;
@@ -456,13 +484,29 @@
     gap: 10px !important;
     padding: 8px 12px !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d)[data-panel='messages'] #donorMessages .bank-actions > button,
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d)[data-panel='messages'] #donorMessages .bank-actions .bank-pagination > button {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)[data-panel='messages']
+    #donorMessages
+    .bank-actions
+    > button,
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)[data-panel='messages']
+    #donorMessages
+    .bank-actions
+    .bank-pagination
+    > button {
     min-height: 48px !important;
     padding: 0 14px !important;
     font-size: 15px !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d)[data-panel='messages'] #donorMessages .bank-actions > .bank-pagination {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)[data-panel='messages']
+    #donorMessages
+    .bank-actions
+    > .bank-pagination {
     flex: 0 0 auto !important;
     width: auto !important;
     margin: 0 !important;
@@ -946,4 +990,33 @@ html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-group-he
   min-width: 12px !important;
   height: 1px !important;
   background: #ffd27a55 !important;
+}
+
+/* ---- Wide screens: the follow-up option and the expand button sit in their own thin strip above the
+   list, so no width (hide chips, Messages, Add, More, narrow 900px) can make them touch the title or columns ---- */
+@media (min-width: 900px) {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d):not(.donor-expanded)
+    .donor-table-wrap {
+    position: relative !important;
+    padding-top: 36px !important;
+    box-sizing: border-box !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d):not(.donor-expanded)
+    .donor-fu-opt {
+    top: 3px !important;
+    left: 6px !important;
+    right: auto !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d):not(.donor-expanded)
+    .donor-table-wrap
+    > .donor-expand-btn {
+    top: 0 !important;
+    right: 4px !important;
+  }
 }

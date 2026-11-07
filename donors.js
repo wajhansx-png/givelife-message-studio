@@ -613,8 +613,14 @@
   <p id="batchResumeText" class="batch-hint"></p>
   <label class="batch-fresh"><input type="checkbox" id="batchFresh"> Start from the beginning</label>
 </div>
-<div class="bm-row"><label for="batchCount">People</label>
-<input id="batchCount" name="count" type="number" min="1" max="1000" inputmode="numeric" required></div>
+<div class="bm-grid2">
+  <div class="bm-row"><label for="batchCount">People</label>
+  <input id="batchCount" name="count" type="number" min="1" max="1000" inputmode="numeric" required></div>
+  <div class="bm-row"><label for="batchLimit">Per batch</label>
+  <select id="batchLimit" name="batch_size"><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="20" selected>20</option></select></div>
+<div class="bm-row"><label for="batchPause">Rest</label>
+<select id="batchPause" name="pause"><option value="20">20 min</option><option value="30">30 min</option><option value="60">1 hour</option><option value="custom">Custom…</option><option value="each">Different each…</option></select></div>
+</div>
 <p id="batchAudience" class="batch-hint"></p>
 <div class="bm-row bm-gap"><label id="batchGapLabel">Wait between DMs</label>
 <div class="batch-gap-row" role="group" aria-labelledby="batchGapLabel">
@@ -629,24 +635,20 @@
   <select id="batchGapUnit" name="gap_unit" aria-label="Gap unit"><option value="60">minutes</option><option value="1">seconds</option></select>
 </div>
 <small id="batchGapNote" class="batch-hint" hidden>Under 1 minute can get a number restricted by WhatsApp.</small>
-<label class="batch-fresh bm-poster"><input type="checkbox" id="batchPoster" checked> Attach poster</label>
-<label class="batch-fresh bm-poster"><input type="checkbox" id="batchFollowUp"> Send follow-up message too</label>
-<details class="batch-more">
-  <summary>More options</summary>
-  <label for="batchPause">Rest between batches</label>
-  <select id="batchPause" name="pause"><option value="20">20 min</option><option value="30">30 min</option><option value="60">1 hour</option><option value="custom">Custom…</option></select>
-  <input id="batchPauseCustom" type="number" min="1" max="1440" inputmode="numeric" placeholder="Minutes" aria-label="Custom minutes between batches" hidden>
-  <label for="batchLimit">People per batch</label>
-  <select id="batchLimit" name="batch_size"><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="20" selected>20</option></select>
-  <label class="batch-fresh"><input type="checkbox" id="batchIncl"> Include already-contacted people</label>
-  <label class="batch-fresh"><input type="checkbox" id="batchRandom"> Vary the gap slightly</label>
-  <div id="batchRandomRow" hidden>
-    <div><label for="batchJMin">Short by up to (s)</label><input id="batchJMin" type="number" min="0" max="300" inputmode="numeric" value="10"></div>
-    <div><label for="batchJMax">Long by up to (s)</label><input id="batchJMax" type="number" min="0" max="600" inputmode="numeric" value="15"></div>
-  </div>
-  <label for="batchEach">Different rest after each batch (optional)</label>
-  <input id="batchEach" name="each" type="text" inputmode="text" placeholder="e.g. 20, 30, 60" autocomplete="off">
-</details>
+
+<input id="batchPauseCustom" type="number" min="1" max="1440" inputmode="numeric" placeholder="Minutes" aria-label="Custom minutes between batches" hidden>
+<div id="batchEachRow" class="bm-row" hidden><label for="batchEach">Rest after each batch (minutes, e.g. 20, 30, 60)</label>
+<input id="batchEach" name="each" type="text" inputmode="text" placeholder="20, 30, 60" autocomplete="off"></div>
+<div id="batchRandomRow" class="bm-jit" hidden>
+  <div><label for="batchJMin">Shorter by up to (s)</label><input id="batchJMin" type="number" min="0" max="300" inputmode="numeric" value="10"></div>
+  <div><label for="batchJMax">Longer by up to (s)</label><input id="batchJMax" type="number" min="0" max="600" inputmode="numeric" value="15"></div>
+</div>
+<div class="bm-chips" id="batchChips">
+  <label class="bm-chip"><input type="checkbox" id="batchPoster" checked><span>Poster</span></label>
+  <label class="bm-chip"><input type="checkbox" id="batchFollowUp"><span>Follow-up</span></label>
+  <label class="bm-chip"><input type="checkbox" id="batchIncl"><span>Include contacted</span></label>
+  <label class="bm-chip"><input type="checkbox" id="batchRandom"><span>Vary gap</span></label>
+</div>
 <div class="batch-foot">
   <p id="batchPlan" class="batch-plan" role="status" aria-live="polite"></p>
   <div class="donor-form-actions">
@@ -671,8 +673,8 @@
     ).length;
   }
   function batchPauses() {
-    const each = el('batchEach')
-      .value.split(/[,\s]+/)
+    const each = (el('batchPause').value === 'each' ? el('batchEach').value : '')
+      .split(/[,\s]+/)
       .filter(Boolean)
       .map(Number);
     if (each.length) {
@@ -687,6 +689,7 @@
   function paintAudience() {
     const scope = pickerScope;
     el('batchPauseCustom').hidden = el('batchPause').value !== 'custom';
+    el('batchEachRow').hidden = el('batchPause').value !== 'each';
     el('batchRandomRow').hidden = !el('batchRandom').checked;
     const free = batchAvailable();
     const hidden = allDonors.filter(
@@ -722,7 +725,9 @@
     const batches = Math.ceil(count / per);
     let secs = (count - 1) * gap * 60;
     for (let i = 0; i < batches - 1; i++) secs += pauses[Math.min(i, pauses.length - 1)];
-    plan.textContent =
+    /* No long summary line in the modal: it lives in Start's tooltip. Only warnings show as text. */
+    plan.textContent = '';
+    el('batchStart').title =
       'Send to ' +
       count +
       (count === 1 ? ' person' : ' people') +
@@ -768,7 +773,6 @@
         ' people are still waiting; the ones already sent will be skipped.';
     customGap = false;
     el('batchFollowUp').checked = followUpOn;
-    picker.querySelector('.batch-more').open = false;
     el('batchPoster').checked = el('donorRowPoster') ? el('donorRowPoster').checked : true;
     setGap(Math.max(5, Math.min(600, Number(el('donorGap').value) || 240)));
     el('batchIncl').checked = false;
@@ -2656,6 +2660,7 @@
       el('batchIncl').disabled=true;el('batchFresh').disabled=true;
       el('batchPoster').checked=job.poster!==false;
       el('batchEach').value=(job.rests||[job.rest_seconds||1200]).map(x=>x/60).join(', ');
+      el('batchPause').value='each';
       el('batchRandom').checked=!!job.jitter;
       if(job.jitter){el('batchJMin').value=Math.abs(job.jitter.min);el('batchJMax').value=job.jitter.max;}
       paintAudience();

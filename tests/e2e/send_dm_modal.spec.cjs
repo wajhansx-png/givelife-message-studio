@@ -45,14 +45,20 @@ for (const [width, height] of [
     );
     await expect(page.locator('#batchGapCustom')).toBeHidden();
     await modal.locator('.batch-gap-btn[data-gap="6"]').click();
-    await expect(page.locator('#batchPlan')).toContainText('Wait 6 min between each');
+    await expect(page.locator('#batchStart')).toHaveAttribute(
+      'title',
+      new RegExp('Wait 6 min between each'),
+    );
     await modal.locator('.batch-gap-btn[data-gap="custom"]').click();
     await expect(page.locator('#batchGapCustom')).toBeVisible();
     await page.locator('#batchGap').fill('25');
     await page.locator('#batchGapUnit').selectOption('1');
-    await expect(page.locator('#batchPlan')).toContainText('Wait 25 sec between each');
+    await expect(page.locator('#batchStart')).toHaveAttribute(
+      'title',
+      new RegExp('Wait 25 sec between each'),
+    );
     await page.locator('#batchPoster').uncheck();
-    await expect(page.locator('#batchPlan')).toContainText('Poster off');
+    await expect(page.locator('#batchStart')).toHaveAttribute('title', new RegExp('Poster off'));
     // Escape and Cancel close without sending.
     await page.keyboard.press('Escape');
     await expect(modal).toBeHidden();

@@ -51,10 +51,13 @@ for (const [width, height] of [
     await page.locator('#donorSendImportant').click();
     const modal = page.locator('#donorBatchPicker');
     await expect(modal).toBeVisible();
-    await modal.locator('.batch-more > summary').click();
-    await page.keyboard.press('Escape');
-    await page.locator('#donorSendImportant').click();
-    await expect(modal.locator('.batch-more')).not.toHaveAttribute('open', '');
+    // Every option is visible at once: no hidden "More options".
+    await expect(modal.locator('#batchPause')).toBeVisible();
+    await expect(modal.locator('#batchIncl')).toBeVisible();
+    await expect(modal.locator('#batchRandom')).toBeVisible();
+    expect(await modal.evaluate((d) => d.querySelectorAll('details').length)).toBe(0);
+    const half = await modal.evaluate((d) => d.getBoundingClientRect().height / innerHeight);
+    if (height >= 800) expect(half).toBeLessThan(0.55);
     const fit = await modal.evaluate((d) => {
       const r = d.getBoundingClientRect();
       const s = document.getElementById('batchStart').getBoundingClientRect();

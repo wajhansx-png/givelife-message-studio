@@ -9,7 +9,7 @@ from donor_book import DonorBook, name_key
 IMPORT_ID = 'giki_top_names_2026_11_07'
 
 
-def import_top_names(store, folder, payload):
+def import_top_names(store, folder, payload, import_id=IMPORT_ID):
     names = json.loads(payload)
     if not isinstance(names, list) or not 1 <= len(names) <= 100:
         raise ValueError('Expected a list of 1-100 names.')
@@ -22,7 +22,7 @@ def import_top_names(store, folder, payload):
     book = DonorBook(folder, store)
     with book.lock:
         data = book._load()
-        if IMPORT_ID in data.get('applied_name_imports', []):
+        if import_id in data.get('applied_name_imports', []):
             return {'input': len(names), 'added': 0, 'matched': 0, 'ambiguous': 0, 'already_applied': 1}
         added = matched = ambiguous = 0
         now = time.time()
@@ -48,6 +48,6 @@ def import_top_names(store, folder, payload):
                 added += 1
             row['important'] = True
             row['top_donor'] = True
-        data.setdefault('applied_name_imports', []).append(IMPORT_ID)
+        data.setdefault('applied_name_imports', []).append(import_id)
         book._save(data)
         return {'input': len(names), 'added': added, 'matched': matched, 'ambiguous': ambiguous, 'already_applied': 0}

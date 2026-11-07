@@ -14,6 +14,11 @@ async function open(page, request, width = 1280, height = 800) {
   await page.locator('#donorNotesShortcut').click();
   await expect(page.locator('#foundationNotes')).toBeVisible();
 }
+/* The edit tools hide in a side panel; a slim handle on either screen edge opens it. */
+async function openTools(page, side = 'right') {
+  await page.locator('.notes-edge[data-side="' + side + '"]').click();
+  await expect(page.locator('.notes-toolbar')).toBeVisible();
+}
 test('private notes: password, autosave, reload, desktop remembrance and lock', async ({
   page,
   request,
@@ -59,9 +64,8 @@ test('phone notes: readable editing surface, toolbar and no sideways scrolling',
   await expect(editor).toBeVisible();
   await editor.fill('Find university representatives');
   await editor.press('ControlOrMeta+A');
-  // Formatting controls stay beside the editor; the header must not cover them.
-  await page.mouse.move(130, 18);
-  await expect(page.locator('.notes-toolbar')).toBeVisible();
+  // Formatting controls live in the side panel opened by the edge handle.
+  await openTools(page);
   await page.locator('.notes-toolbar').getByRole('button', { name: 'Bold', exact: true }).click();
   await expect(editor.locator('b,strong')).toContainText('Find university representatives');
   await page.locator('#notesStyle').selectOption('h2');
@@ -155,16 +159,15 @@ test('quiet Notes keeps only writing visible; top-edge reveals controls and full
     };
   });
   expect(colors.page).toBe('rgb(36, 36, 36)');
-  expect(colors.paper).toBe('rgba(0, 0, 0, 0)');
   expect(colors.editor).toBe('rgba(0, 0, 0, 0)');
-  expect(colors.border).toBe('0px'); /* no box around the writing column */
+  expect(colors.border).toBe('1px'); /* a hairline border frames the writing column */
   expect(colors.outline).toBe('none');
-  expect(colors.shadow).toBe('none');
+  expect(colors.shadow).not.toBe('none');
   await page.locator('#notesEditor').fill('A focused foundation idea');
   await expect(toolbar).toBeHidden();
   await page.mouse.move(100, 18);
   await expect(head).toBeVisible();
-  await expect(toolbar).toBeHidden(); /* the format bar belongs to selected text only */
+  await expect(toolbar).toBeHidden(); /* the tools only open from a side handle */
   await expect(page.getByRole('button', { name: 'Full screen', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Full screen', exact: true }).click();
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
@@ -173,8 +176,7 @@ test('quiet Notes keeps only writing visible; top-edge reveals controls and full
   await expect(toolbar).toBeHidden();
   await page.keyboard.press('Alt+t');
   await expect(head).toBeVisible();
-  await page.locator('#notesEditor').press('ControlOrMeta+A');
-  await expect(toolbar).toBeVisible();
+  await expect(toolbar).toBeVisible(); /* Alt+T also opens the side tools */
   await page.keyboard.press('Escape');
   await expect(toolbar).toBeHidden();
 });
@@ -194,6 +196,7 @@ test('mobile Notes opens a hidden toolbar by tapping top edge without shrinking 
   await expect(page.locator('.notes-head')).toBeVisible();
   await page.locator('#notesEditor').fill('Volunteer outreach');
   await page.locator('#notesEditor').press('ControlOrMeta+A');
+  await openTools(page);
   await page.locator('[data-block="h2"]').click();
   await expect(page.locator('#notesEditor h2')).toHaveText('Volunteer outreach');
   expect((await page.locator('.notes-paper').boundingBox()).height).toBeGreaterThanOrEqual(
@@ -219,21 +222,20 @@ test('desktop note-taking: type, select, style, save, reopen and keep writing fo
   await expect(page.locator('.notes-toolbar')).toBeHidden();
   await editor.focus();
   await editor.press('ControlOrMeta+A');
-  await page.mouse.move(160, 18);
+  await openTools(page);
   await page.locator('.notes-toolbar').getByRole('button', { name: 'Bold', exact: true }).click();
   const selectedHtml = await editor.innerHTML();
   expect(selectedHtml, 'Bold must apply visibly to the selected note text').toMatch(
     /<(?:b|strong)\b|font-weight\s*:\s*(?:bold|700)/i,
   );
   await expect(page.locator('#notesSync')).toHaveText('Saved', { timeout: 10000 });
-  await editor.press('End'); /* nothing selected any more: the bar goes away */
-  await expect(page.locator('.notes-toolbar')).toBeHidden();
   const editorHeight = (await editor.boundingBox()).height;
   await editor.focus();
   await editor.press('End');
   await editor.press('Enter');
   await editor.type('New volunteer recruitment ideas');
   await expect(editor).toContainText('New volunteer recruitment ideas');
+  await expect(page.locator('.notes-toolbar')).toBeHidden(); /* typing puts the tools away */
   await expect(page.locator('#notesSync')).toHaveText('Saved', { timeout: 10000 });
   expect((await editor.boundingBox()).height).toBeGreaterThanOrEqual(editorHeight - 2);
   await page.mouse.move(110, 18);
@@ -251,14 +253,14 @@ test('narrow phone: editor and formatting rail fit with keyboard open', async ({
   await page.locator('#notesUnlockButton').click();
   const editor = page.locator('#notesEditor');
   await expect(editor).toBeVisible();
-  await expect(page.locator('.notes-toolbar')).toBeHidden(); /* shown only for selected text */
+  await expect(page.locator('.notes-toolbar')).toBeHidden(); /* opens only from a side handle */
   await editor.fill('Contact committed donors today.');
   await expect(page.locator('#notesSync')).toHaveText('Saved', { timeout: 10000 });
   await editor.press('ControlOrMeta+A');
   await page
     .locator('#foundationNotes')
     .dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 10, clientY: 12 });
-  await expect(page.locator('.notes-toolbar')).toBeVisible();
+  await openTools(page);
   const bounds = await page.evaluate(() => {
     const screen = document.getElementById('foundationNotes').getBoundingClientRect();
     const back = document.getElementById('notesBack').getBoundingClientRect();
@@ -296,21 +298,23 @@ test('narrow phone: editor and formatting rail fit with keyboard open', async ({
   expect(paper.y + paper.height).toBeLessThanOrEqual(401);
 });
 
-test('notes are big, centered and offer H1-H3 as buttons', async ({ page, request }) => {
+test('notes use a calm 18px column, start high, centred, with H1-H3 as buttons', async ({ page, request }) => {
   await open(page, request, 1920, 1080);
   await page.locator('#notesPassword').fill('test-preview-only-pin');
   await page.locator('#notesUnlockButton').click();
   const editor = page.locator('#notesEditor');
   await editor.click();
   await page.keyboard.type('Plan outreach');
-  await expect(editor).toHaveCSS('font-size', '27px');
+  await expect(editor).toHaveCSS('font-size', '18px');
   const paper = await page.locator('.notes-paper').boundingBox();
   expect(Math.abs(paper.x + paper.width / 2 - 960)).toBeLessThan(3);
-  await expect(page.locator('.notes-toolbar')).toBeHidden(); /* no selection, no bar */
+  await expect(page.locator('.notes-toolbar')).toBeHidden(); /* tools stay out of the way */
   const line = await editor.locator('> *').first().boundingBox();
-  expect(line.y).toBeGreaterThan(150);
+  expect(line.y).toBeGreaterThan(90);
+  expect(line.y).toBeLessThan(220); /* starts high, not at screen centre */
   await page.keyboard.press('Home');
   await page.keyboard.press('Shift+End');
+  await openTools(page);
   await page.locator('[data-block="h2"]').click();
   await expect(editor.locator('h2')).toHaveText('Plan outreach');
   await expect(page.locator('[data-block="h2"]')).toHaveAttribute('aria-pressed', 'true');

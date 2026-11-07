@@ -83,10 +83,10 @@
   const editor = el('notesEditor'),
     sync = el('notesSync'),
     retry = el('notesRetry');
-  /* Big by default: easy on the eyes. */
-  let fontSize = matchMedia('(max-width: 720px)').matches ? 23 : 27;
+  /* Calm, quick-to-read size by default (A−/A+ still adjust it and are remembered). */
+  let fontSize = matchMedia('(max-width: 720px)').matches ? 17 : 18;
   try {
-    const stored = Number(localStorage.getItem('givelife-notes-font-size-v2'));
+    const stored = Number(localStorage.getItem('givelife-notes-font-size-v3'));
     if (Number.isInteger(stored) && stored >= 14 && stored <= 36) fontSize = stored;
   } catch {}
   const paintFont = () => {
@@ -104,7 +104,7 @@
       fontSize = Math.max(14, Math.min(36, fontSize + delta));
       paintFont();
       try {
-        localStorage.setItem('givelife-notes-font-size-v2', String(fontSize));
+        localStorage.setItem('givelife-notes-font-size-v3', String(fontSize));
       } catch {}
     };
   paintFont();
@@ -153,56 +153,58 @@
   notesToolbar.querySelectorAll('.notes-separator').forEach((e) => e.remove());
   notesToolbar.append(
     heading,
-    notesToolbar.querySelector('[data-command="insertOrderedList"]'),
-    notesToolbar.querySelector('[data-command="insertUnorderedList"]'),
-    el('notesChecklist'),
     notesToolbar.querySelector('[data-command="bold"]'),
     notesToolbar.querySelector('[data-command="italic"]'),
+    notesToolbar.querySelector('[data-command="insertUnorderedList"]'),
+    notesToolbar.querySelector('[data-command="insertOrderedList"]'),
+    el('notesChecklist'),
     el('notesFontDown'),
     el('notesFontUp'),
     colorLabel,
   );
-  /* The format bar appears only while text is selected, just below it (above if there is no room). */
-  let selectionRect = null;
-  function alignRail() {
-    if (!page.open || page.dataset.mode !== 'writing') return;
-    const selection = getSelection();
-    const selected =
-      selection?.rangeCount &&
-      !selection.isCollapsed &&
-      editor.contains(selection.anchorNode) &&
-      selection.toString().trim() !== '';
-    if (selected) selectionRect = selection.getRangeAt(0).getBoundingClientRect();
-    const keep = notesToolbar.contains(document.activeElement); /* e.g. the Color list is open */
-    if (!selectionRect || (!selected && !keep)) {
-      notesToolbar.dataset.open = 'false';
-      if (!selected) selectionRect = null;
-      return;
-    }
-    const w = notesToolbar.offsetWidth,
-      h = notesToolbar.offsetHeight;
-    let top = selectionRect.bottom + 12;
-    if (top + h > innerHeight - 8) top = selectionRect.top - h - 12;
-    top = Math.max(8, Math.min(top, innerHeight - h - 8));
-    const left = Math.max(
-      8,
-      Math.min(selectionRect.left + selectionRect.width / 2 - w / 2, innerWidth - w - 8),
-    );
-    notesToolbar.style.left = left + 'px';
-    notesToolbar.style.top = top + 'px';
-    notesToolbar.dataset.open = 'true';
-  }
-  editor.addEventListener('scroll', alignRail);
-  new ResizeObserver(alignRail).observe(page.querySelector('.notes-paper'));
-  document.addEventListener('selectionchange', alignRail);
-  window.addEventListener('resize', alignRail);
-  // Keep the same formatting controls beside the editor at every screen size.
+  /* Edit tools live in a hidden side panel. Slim handles on both screen edges open it (mouse or
+     thumb, either side); Esc, the handle, outside taps on narrow screens and typing close it. */
   const wideNotes = matchMedia('(min-width:1100px)');
-  function placeToolbar() {
-    el('notesWorkspace').prepend(notesToolbar);
+  notesToolbar.id = 'notesTools';
+  const edges = ['left', 'right'].map((side) => {
+    const b = make('button', 'notes-edge', 'Aa');
+    b.type = 'button';
+    b.dataset.side = side;
+    b.title = 'Text tools';
+    b.setAttribute('aria-controls', 'notesTools');
+    b.setAttribute('aria-expanded', 'false');
+    b.setAttribute('aria-label', 'Text tools, ' + side + ' side');
+    // Keep the selection and the on-screen keyboard.
+    b.addEventListener('mousedown', (e) => e.preventDefault());
+    b.onclick = () => {
+      const open = page.dataset.tools === 'open' && page.dataset.toolsSide === side;
+      setTools(open ? 'closed' : 'open', side);
+    };
+    return b;
+  });
+  page.dataset.tools = 'closed';
+  page.dataset.toolsSide = 'right';
+  function setTools(state, side) {
+    if (page.dataset.mode !== 'writing') state = 'closed';
+    if (side) page.dataset.toolsSide = side;
+    page.dataset.tools = state;
+    for (const b of edges) {
+      const on = state === 'open' && b.dataset.side === page.dataset.toolsSide;
+      b.setAttribute('aria-expanded', String(on));
+      b.textContent = on ? '✕' : 'Aa';
+      b.title = on ? 'Close text tools' : 'Text tools';
+    }
   }
-  placeToolbar();
-  wideNotes.addEventListener('change', placeToolbar);
+  editor.addEventListener('beforeinput', (e) => {
+    const typing = /^insert(Text|Paragraph|LineBreak|FromPaste|Replacement)$/.test(e.inputType);
+    if (page.dataset.tools === 'open' && typing) setTools('closed');
+  });
+  editor.addEventListener('pointerdown', () => {
+    if (page.dataset.tools === 'open' && !wideNotes.matches) setTools('closed');
+  });
+  // Keep the same formatting controls beside the editor at every screen size.
+  el('notesWorkspace').prepend(notesToolbar);
+  el('notesWorkspace').append(...edges);
   page.dataset.mode = 'loading';
   page.dataset.controls = 'closed';
   function revealControls() {
@@ -250,7 +252,7 @@
     shortcutFocusPending = false;
     requestAnimationFrame(() => {
       if (page.open && page.dataset.mode === 'writing' && page.dataset.controls === 'open')
-        el('notesStyle').focus({ preventScroll: true });
+        notesToolbar.querySelector('button:not([disabled])')?.focus({ preventScroll: true });
     });
   });
   document.addEventListener('keydown', (event) => {
@@ -258,6 +260,7 @@
     if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 't') {
       event.preventDefault();
       page.dataset.controls = page.dataset.controls === 'open' ? 'closed' : 'open';
+      setTools(page.dataset.controls === 'open' ? 'open' : 'closed');
       // Alt keyup is the reliable moment: Chromium may restore the editor's
       // focus when the modifier is released, undoing focus set on keydown.
       shortcutFocusPending = page.dataset.controls === 'open';
@@ -268,15 +271,16 @@
         // from any subsequent pointer interaction.
         setTimeout(() => {
           if (page.open && revision === shortcutFocusRevision && page.dataset.controls === 'open')
-            el('notesStyle').focus({ preventScroll: true });
+            notesToolbar.querySelector('button:not([disabled])')?.focus({ preventScroll: true });
         }, 140);
       }
     }
-    if (event.key === 'Escape' && notesToolbar.dataset.open === 'true') {
-      /* Escape puts the format bar away by clearing the selection. */
-      getSelection().collapseToEnd();
+    if (event.key === 'Escape' && page.dataset.tools === 'open') {
+      event.preventDefault();
+      event.stopPropagation();
+      setTools('closed');
       editor.focus({ preventScroll: true });
-      alignRail();
+      return;
     }
     if (event.key === 'Escape' && page.dataset.controls === 'open' && !document.fullscreenElement) {
       event.preventDefault();
@@ -447,8 +451,8 @@
     el('notesWorkspace').hidden = locked;
     el('notesLock').hidden = locked;
     page.dataset.mode = locked ? 'locked' : 'writing';
-    placeToolbar();
     page.dataset.controls = 'closed';
+    setTools('closed');
   }
   async function load() {
     setStatus('Loading…');
@@ -601,6 +605,25 @@
       }
     }
   });
+  /* A new paragraph starts in the default colour. Text that was coloured before is left alone;
+     only the empty colour wrapper the browser carries over to the new line is removed. */
+  editor.addEventListener('input', (e) => {
+    if (e.inputType !== 'insertParagraph') return;
+    const sel = getSelection();
+    let block = sel?.anchorNode;
+    if (block?.nodeType === 3) block = block.parentElement;
+    block = block?.closest?.('p,li,h1,h2,h3,div');
+    if (!block || !editor.contains(block) || block === editor || block.textContent.trim() !== '') return;
+    const wrappers = [...block.querySelectorAll('font[color],span[style*="color"]')];
+    if (!wrappers.length) return;
+    for (const w of wrappers) w.replaceWith(...w.childNodes);
+    if (!block.querySelector('br') && !block.textContent) block.append(document.createElement('br'));
+    const range = document.createRange();
+    range.setStart(block, 0);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
   editor.addEventListener('input', rememberDirty);
   // Paste text safely rather than allowing clipboard HTML to execute in the editor.
   editor.addEventListener('paste', (e) => {
@@ -714,6 +737,7 @@
     page.close();
     page.dataset.keyboard = 'closed';
     page.dataset.controls = 'closed';
+    setTools('closed');
     return true;
   }
   el('notesBack').onclick = async () => {

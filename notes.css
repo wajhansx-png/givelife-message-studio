@@ -204,80 +204,7 @@ html body .brandbar #caseSelect {
   flex: 1;
   min-height: 0;
 }
-.notes-toolbar {
-  min-height: 62px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  align-items: center;
-  padding: 10px max(18px, calc((100vw - 890px) / 2));
-  border-bottom: 1px solid #333948;
-  flex-shrink: 0;
-  background: #20242d;
-}
-.notes-toolbar button,
-.notes-toolbar select {
-  height: 38px;
-  min-width: 38px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: #e2e6ed;
-  font-size: 14px;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-.notes-toolbar button:hover,
-.notes-toolbar select:hover {
-  background: #2b303d;
-  border-color: #454e5f;
-}
-.notes-toolbar select {
-  border-color: #3b4555;
-  max-width: 138px;
-  min-width: 115px;
-  background: #262b36;
-}
-.notes-separator {
-  height: 23px;
-  border-left: 1px solid #3d4554;
-  margin: 0 5px;
-}
-.notes-paper-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  padding: 14px 20px 18px;
-  scrollbar-width: thin;
-  display: flex;
-  justify-content: center;
-}
-.notes-paper {
-  width: min(100%, 1000px);
-  min-height: 100%;
-  margin: 0 auto;
-  background: #242424;
-  border: 1px solid #363636;
-  border-radius: 12px;
-  box-shadow: none;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-}
-.notes-editor {
-  padding: 32px 45px;
-  min-height: 100%;
-  flex: 1;
-  outline: none;
-  font-size: 16px;
-  line-height: 1.8;
-  color: #ededed;
-  background: #242424;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-  caret-color: #b2c8d9;
-}
+
 .notes-editor:empty:before {
   content: attr(data-placeholder);
   white-space: pre-wrap;
@@ -394,41 +321,20 @@ html body .brandbar #caseSelect {
     font-size: 8px;
   }
   .notes-back,
-  .notes-lock {
+.notes-lock {
     min-height: 42px;
     padding: 8px 10px;
   }
   .notes-sync {
     font-size: 11px;
   }
-  .notes-toolbar {
-    padding: 8px 11px;
-    gap: 3px;
-  }
-  .notes-toolbar button {
-    min-width: 38px;
-  }
-  .notes-toolbar select {
-    min-width: 94px;
-    max-width: 112px;
-    font-size: 12px;
-  }
-  .notes-separator {
-    margin: 0 1px;
-  }
-  .notes-paper-scroll {
-    padding: 8px 8px 10px;
-  }
-  .notes-paper {
-    border: 1px solid #363636;
-    border-radius: 10px;
-    box-shadow: none;
-  }
-  .notes-editor {
-    font-size: 16px;
-    padding: 22px 20px;
-    min-height: 100%;
-  }
+  
+  
+  
+  
+  
+  
+  
   .notes-foot {
     padding: 0;
   }
@@ -466,14 +372,8 @@ html body .brandbar #caseSelect {
 /* Mobile writing mode: the keyboard shortens the visible viewport, not the
    document itself. The paper remains full-sized and scrolls behind the caret. */
 @media (max-width: 720px) {
-  .foundation-notes {
-    height: var(--notes-visible-height, 100dvh);
-    max-height: none;
-    top: var(--notes-visible-top, 0px);
-    bottom: auto;
-  }
   .notes-shell,
-  .notes-workspace {
+.notes-workspace {
     min-height: 0;
   }
   .notes-head {
@@ -484,53 +384,12 @@ html body .brandbar #caseSelect {
     padding: 5px 10px;
     gap: 8px;
   }
-  .notes-toolbar {
-    min-height: 49px;
-    max-height: 49px;
-    flex-wrap: nowrap;
-    flex-shrink: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    gap: 5px;
-    padding: 5px 10px;
-  }
-  .notes-toolbar::-webkit-scrollbar {
-    display: none;
-  }
-  .notes-toolbar button,
-  .notes-toolbar select,
-  .notes-toolbar label {
-    flex-shrink: 0;
-  }
-  .notes-paper-scroll {
-    min-height: 0;
-    display: block;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    scroll-padding-top: 16px;
-    scroll-padding-bottom: 56px;
-    padding: 7px 8px 9px;
-  }
-  .notes-paper {
-    display: block;
-    width: 100%;
-    min-height: var(--notes-paper-min-height, 460px);
-    flex-shrink: 0;
-    margin: 0 auto;
-  }
-  .notes-editor {
-    display: block;
-    box-sizing: border-box;
-    min-height: var(--notes-paper-min-height, 460px);
-    height: auto;
-    padding: 22px 20px;
-    line-height: 1.65;
-  }
+  
+  
+  
+  
+  
+  
   .foundation-notes[data-keyboard='open'] .notes-head {
     height: 46px;
     min-height: 46px;
@@ -544,20 +403,9 @@ html body .brandbar #caseSelect {
   .foundation-notes[data-keyboard='open'] .notes-headline h1 {
     font-size: 16px;
   }
-  .foundation-notes[data-keyboard='open'] .notes-toolbar {
-    height: 43px;
-    min-height: 43px;
-    max-height: 43px;
-    padding: 3px 9px;
-  }
-  .foundation-notes[data-keyboard='open'] .notes-toolbar button,
-  .foundation-notes[data-keyboard='open'] .notes-toolbar select {
-    height: 35px;
-  }
-  .foundation-notes[data-keyboard='open'] .notes-paper-scroll {
-    padding-top: 4px;
-    padding-bottom: 4px;
-  }
+  
+  
+  
 }
 
 /* Distraction-free writing: solid Calmly-style charcoal throughout.
@@ -565,10 +413,7 @@ html body .brandbar #caseSelect {
 .foundation-notes,
 .foundation-notes::backdrop,
 .foundation-notes .notes-shell,
-.foundation-notes .notes-workspace,
-.foundation-notes .notes-paper-scroll,
-.foundation-notes .notes-paper,
-.foundation-notes .notes-editor {
+.foundation-notes .notes-workspace {
   background: #242424;
   background-image: none;
   box-shadow: none;
@@ -581,15 +426,13 @@ html body .brandbar #caseSelect {
 .foundation-notes::backdrop {
   background: #242424;
 }
-.foundation-notes .notes-head,
-.foundation-notes .notes-toolbar {
+.foundation-notes .notes-head {
   background: #242424;
   background-image: none;
   border: 0;
   box-shadow: none;
 }
-.foundation-notes[data-mode='writing'] .notes-head,
-.foundation-notes[data-mode='writing'] .notes-toolbar {
+.foundation-notes[data-mode='writing'] .notes-head {
   position: absolute;
   left: 0;
   right: 0;
@@ -611,23 +454,8 @@ html body .brandbar #caseSelect {
   padding-top: 6px;
   padding-bottom: 6px;
 }
-.foundation-notes[data-mode='writing'] .notes-toolbar {
-  top: 56px;
-  min-height: 50px;
-  height: 50px;
-  max-height: 50px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  padding-top: 5px;
-  padding-bottom: 5px;
-}
-.foundation-notes[data-mode='writing'] .notes-toolbar::-webkit-scrollbar {
-  display: none;
-}
+
 .foundation-notes[data-mode='writing'][data-controls='open'] .notes-head,
-.foundation-notes[data-mode='writing'][data-controls='open'] .notes-toolbar,
 .foundation-notes[data-mode='writing']:has(.notes-sync[data-error='true']) .notes-head {
   opacity: 1;
   visibility: visible;
@@ -659,53 +487,20 @@ html body .brandbar #caseSelect {
 }
 .foundation-notes .notes-back:hover,
 .foundation-notes .notes-lock:hover,
-.foundation-notes .notes-fullscreen:hover,
-.foundation-notes .notes-toolbar button:hover,
-.foundation-notes .notes-toolbar select:hover {
+.foundation-notes .notes-fullscreen:hover {
   background: #393939;
   border-color: #4a4a4a;
 }
-.foundation-notes .notes-toolbar button,
-.foundation-notes .notes-toolbar select {
-  color: #ececec;
-  background: #303030;
-  border-color: #3d3d3d;
-}
+
 .foundation-notes .notes-toolbar button:focus-visible,
 .foundation-notes .notes-toolbar select:focus-visible,
 .foundation-notes .notes-head button:focus-visible {
   outline: 2px solid #b7b7b7;
   outline-offset: 2px;
 }
-.foundation-notes .notes-separator {
-  border-color: #424242;
-}
-.foundation-notes .notes-paper-scroll {
-  display: flex;
-  justify-content: center;
-  padding: 76px 20px 16px;
-}
-.foundation-notes .notes-paper {
-  width: min(100%, 860px);
-  min-height: 100%;
-  flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: transparent;
-}
-.foundation-notes .notes-editor {
-  padding: 24px 48px 40px;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  outline: none;
-  color: #ededed;
-  caret-color: #d8d8d8;
-}
+
 .foundation-notes .notes-editor:focus,
-.foundation-notes .notes-editor:focus-visible,
-.foundation-notes .notes-editor:active {
+.foundation-notes .notes-editor:focus-visible {
   border: 0;
   box-shadow: none;
   outline: none;
@@ -753,69 +548,28 @@ html body .brandbar #caseSelect {
   .foundation-notes[data-mode='writing'] .notes-kicker {
     display: none;
   }
-  .foundation-notes[data-mode='writing'] .notes-toolbar {
-    top: 48px;
-    height: 44px;
-    min-height: 44px;
-    max-height: 44px;
-    padding: 4px 8px;
-  }
-  .foundation-notes[data-mode='writing'] .notes-toolbar button,
-  .foundation-notes[data-mode='writing'] .notes-toolbar select {
-    height: 36px;
-  }
+  
+  
   .foundation-notes .notes-back,
-  .foundation-notes .notes-lock,
-  .foundation-notes .notes-fullscreen {
+.foundation-notes .notes-lock,
+.foundation-notes .notes-fullscreen {
     min-height: 38px;
     padding: 6px 9px;
     font-size: 12px;
   }
-  .foundation-notes .notes-paper-scroll {
-    display: block;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 57px 7px 14px;
-    scroll-padding-top: 18px;
-    scroll-padding-bottom: 36px;
-  }
-  .foundation-notes .notes-paper {
-    display: block;
-    width: 100%;
-    min-height: var(--notes-paper-min-height, 460px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    box-shadow: none;
-  }
-  .foundation-notes .notes-editor {
-    display: block;
-    box-sizing: border-box;
-    min-height: var(--notes-paper-min-height, 460px);
-    height: auto;
-    flex: none;
-    padding: 16px 16px 40px;
-    font-size: 16px;
-    line-height: 1.68;
-  }
-  .foundation-notes[data-keyboard='open'] .notes-paper-scroll {
-    padding-top: 40px;
-    padding-bottom: 8px;
-  }
+  
+  
+  
+  
   .foundation-notes[data-keyboard='open'] .notes-head {
     height: 43px;
     min-height: 43px;
     max-height: 43px;
   }
-  .foundation-notes[data-keyboard='open'] .notes-toolbar {
-    top: 43px;
-    height: 43px;
-    min-height: 43px;
-    max-height: 43px;
-  }
+  
 }
 @media (prefers-reduced-motion: reduce) {
-  .foundation-notes .notes-head,
-  .foundation-notes .notes-toolbar {
+  .foundation-notes .notes-head {
     transition: none;
   }
 }
@@ -888,34 +642,10 @@ html body #foundationNotes #notesSync[data-error='true'] {
     padding: 8px max(20px, calc((100vw - 1440px) / 2));
     gap: 12px;
   }
-  .foundation-notes[data-mode='writing'] .notes-head .notes-toolbar {
-    position: static;
-    flex: 1;
-    min-width: 0;
-    width: auto;
-    height: 44px;
-    min-height: 44px;
-    max-height: 44px;
-    padding: 0;
-    opacity: 1;
-    visibility: inherit;
-    pointer-events: inherit;
-    transform: none;
-    gap: 4px;
-    overflow-x: auto;
-  }
-  .foundation-notes[data-mode='writing'] .notes-toolbar button,
-  .foundation-notes[data-mode='writing'] .notes-toolbar select {
-    height: 36px;
-    font-size: 13px;
-  }
-  .foundation-notes[data-mode='writing'] .notes-toolbar select {
-    min-width: 90px;
-    max-width: 120px;
-  }
-  .foundation-notes[data-mode='writing'] .notes-toolbar label {
-    flex-shrink: 0;
-  }
+  
+  
+  
+  
   .foundation-notes[data-mode='writing'] .notes-sync {
     flex-shrink: 0;
     max-width: 160px;
@@ -930,15 +660,7 @@ html body #foundationNotes #notesSync[data-error='true'] {
     font-size: 19px;
   }
 }
-@media (min-width: 721px) and (max-width: 1099px) {
-  .foundation-notes .notes-paper-scroll {
-    padding-top: 112px;
-  }
-}
 
-html body #foundationNotes .notes-editor {
-  caret-color: #60a5fa !important;
-}
 @keyframes notes-caret-blink {
   0%,
   100% {
@@ -950,185 +672,16 @@ html body #foundationNotes .notes-editor {
 }
 
 /* Keep the page still; long notes scroll within their writing surface. */
-html body #foundationNotes .notes-editor {
-  font-size: var(--notes-font-size, 22px) !important;
-}
+
 html:has(#foundationNotes[open]),
 body:has(#foundationNotes[open]) {
   overflow: hidden !important;
 }
-html body #foundationNotes .notes-paper-scroll {
-  overflow: hidden !important;
-  display: flex;
-  min-height: 0;
-}
-html body #foundationNotes .notes-paper {
-  display: flex !important;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0 !important;
-  max-height: 100%;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-html body #foundationNotes .notes-editor {
-  height: 100%;
-  min-height: 0 !important;
-  flex: 1 !important;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  box-sizing: border-box;
-}
 
 /* One predictable formatting rail beside the writing surface. */
-html body #foundationNotes[data-mode='writing'] .notes-toolbar {
-  position: absolute;
-  left: auto;
-  top: 72px;
-  bottom: 18px;
-  right: max(12px, calc((100vw - 1180px) / 2));
-  width: 104px;
-  min-width: 0;
-  height: auto;
-  min-height: 0;
-  max-height: none;
-  display: flex;
-  flex-direction: column;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  padding: 6px;
-  gap: 4px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: none;
-  background: #292929;
-  border: 1px solid #ffffff12;
-  border-radius: 10px;
-}
-html body #foundationNotes[data-mode='writing'] .notes-toolbar button,
-html body #foundationNotes[data-mode='writing'] .notes-toolbar select {
-  width: 100%;
-  min-width: 0;
-  max-width: none;
-  height: 34px;
-  min-height: 34px;
-  flex-shrink: 0;
-  padding: 3px 5px;
-  font-size: 12px;
-  box-sizing: border-box;
-}
-html body #foundationNotes[data-mode='writing'] .notes-toolbar label {
-  display: block;
-  flex-shrink: 0;
-  width: 100%;
-}
-html body #foundationNotes[data-mode='writing'] .notes-separator {
-  height: 0;
-  min-height: 0;
-  width: 100%;
-  border: 0;
-  border-top: 1px solid #ffffff12;
-  margin: 2px 0;
-}
-html body #foundationNotes[data-mode='writing'] .notes-paper-scroll {
-  padding: 60px 132px 18px 20px;
-}
-@media (max-width: 720px) {
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar {
-    top: 54px;
-    bottom: 12px;
-    right: 6px;
-    width: 82px;
-    padding: 3px;
-    gap: 2px;
-  }
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar button,
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar select {
-    height: 44px;
-    min-height: 44px;
-    font-size: 11px;
-  }
-  html body #foundationNotes[data-mode='writing'] .notes-paper-scroll {
-    padding: 52px 96px 12px 8px;
-  }
-  html body #foundationNotes[data-mode='writing'] .notes-editor {
-    padding: 16px 12px 28px;
-  }
-}
-
-html body #foundationNotes[data-mode='writing'] .notes-toolbar {
-  right: auto;
-  bottom: auto;
-  width: 168px;
-  height: auto;
-  max-height: calc(100dvh - 76px);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
-  padding: 6px;
-  border-color: #ffffff10;
-  background: #262626;
-  align-content: start;
-}
-html body #foundationNotes[data-mode='writing'] .notes-toolbar label,
-html body #foundationNotes[data-mode='writing'] .notes-toolbar [data-command='insertOrderedList'] {
-  grid-column: 1/-1;
-}
-html body #foundationNotes[data-mode='writing'] .notes-toolbar button {
-  font-size: 12px;
-  border-color: #ffffff0c;
-  background: #303030;
-}
-.notes-rail-label {
-  display: block;
-  font-size: 13px;
-  color: #cecece;
-  padding: 1px 3px 4px;
-}
-html body #foundationNotes[data-mode='writing'] .notes-paper-scroll {
-  padding-right: 198px;
-}
-@media (max-width: 720px) {
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar {
-    width: 100px;
-    padding: 4px;
-    gap: 3px;
-  }
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar button {
-    font-size: 10px;
-    padding: 3px 1px;
-  }
-  html
-    body
-    #foundationNotes[data-mode='writing']
-    .notes-toolbar
-    [data-command='insertUnorderedList'],
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar #notesChecklist {
-    grid-column: 1/-1;
-  }
-  html body #foundationNotes[data-mode='writing'] .notes-paper-scroll {
-    padding-right: 120px;
-  }
-}
 
 /* Eye comfort: big text, centered column with no box, text at eye level. */
-html body #foundationNotes[data-mode='writing'] .notes-editor {
-  padding-top: clamp(32px, 16vh, 200px);
-  line-height: 1.75;
-}
-html body #foundationNotes[data-mode='writing'] .notes-paper-scroll {
-  padding: 60px 20px 18px;
-}
-html body #foundationNotes .notes-paper {
-  border: 0 !important;
-  border-radius: 0;
-  width: min(100%, 900px);
-}
+
 html body #foundationNotes .notes-style-hidden {
   position: absolute !important;
   width: 1px !important;
@@ -1139,78 +692,256 @@ html body #foundationNotes .notes-style-hidden {
   pointer-events: none !important;
 }
 /* Format bar: a floating row under the selected text. Hidden when nothing is selected. */
-html body #foundationNotes[data-mode='writing'] .notes-toolbar {
-  position: absolute;
-  right: auto;
-  bottom: auto;
-  z-index: 30;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: max-content;
-  max-width: calc(100vw - 16px);
-  height: auto;
-  min-height: 0;
-  max-height: none;
-  padding: 8px;
-  overflow: visible;
-  background: #2c2c2c;
-  border: 1px solid #ffffff22;
-  border-radius: 14px;
-  box-shadow: 0 12px 32px #000a;
-}
-html body #foundationNotes[data-mode='writing'] .notes-toolbar:not([data-open='true']) {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-html body #foundationNotes[data-mode='writing'] .notes-heading-box,
-html body #foundationNotes[data-mode='writing'] .notes-heading-row {
-  display: contents;
-}
-html body #foundationNotes[data-mode='writing'] .notes-rail-label {
-  display: none;
-}
-html body #foundationNotes[data-mode='writing'] .notes-toolbar label {
-  width: auto;
-  display: block;
-  flex: 0 0 auto;
-}
-html body #foundationNotes[data-mode='writing'] .notes-toolbar button,
-html body #foundationNotes[data-mode='writing'] .notes-toolbar select {
-  width: auto;
-  min-width: 56px;
-  max-width: none;
-  height: 44px;
-  min-height: 44px;
-  padding: 4px 12px;
-  font-size: 15px;
-  font-weight: 700;
-  flex: 0 0 auto;
-}
-html body #foundationNotes[data-mode='writing'] .notes-toolbar select {
-  min-width: 92px;
-  font-weight: 600;
-}
+
 html body #foundationNotes[data-mode='writing'] .notes-toolbar button[aria-pressed='true'] {
   background: #35557f;
   border-color: #60a5fa;
   color: #fff;
 }
+
+
+/* ===== Writing layout: single source of truth =====
+   One centred reading column (~18px text), starting high, with hairline borders.
+   Edit tools hide in a side panel opened from slim handles on both screen edges. */
+.foundation-notes {
+  --n-measure: clamp(560px, 48vw, 780px);
+  --n-gutter: clamp(10px, 3vw, 28px);
+  --n-top: 64px;
+  --n-rail: 168px;
+  --n-line: #ffffff17;
+}
+.foundation-notes .notes-paper-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  padding: var(--n-top) var(--n-gutter) clamp(10px, 2.4vh, 22px);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.foundation-notes .notes-paper {
+  width: min(100%, var(--n-measure));
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid var(--n-line);
+  border-radius: 16px;
+  background: #ffffff05;
+  box-shadow: inset 0 1px 0 #ffffff08, 0 10px 30px -20px #000;
+  transition: border-color 0.15s ease;
+}
+.foundation-notes .notes-paper:focus-within {
+  border-color: #ffffff2a;
+}
+.foundation-notes .notes-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff2e transparent;
+  box-sizing: border-box;
+  padding: clamp(28px, 9vh, 80px) clamp(18px, 4.5vw, 40px) clamp(40px, 10vh, 96px);
+  font-size: var(--notes-font-size, 18px);
+  line-height: 1.65;
+  color: #ededed;
+  caret-color: #60a5fa;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+.foundation-notes .notes-editor li + li {
+  margin-top: 0.15em;
+}
+
+/* Side handles: slim, quiet, reachable by mouse and thumb. */
+.foundation-notes .notes-edge {
+  display: none;
+  position: absolute;
+  top: 58%;
+  transform: translateY(-50%);
+  z-index: 32;
+  width: 28px;
+  height: 80px;
+  padding: 0;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #cfcfcf;
+  background: #2b2b2b;
+  border: 1px solid var(--n-line);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, background 0.15s ease, left 0.18s ease, right 0.18s ease;
+}
+.foundation-notes[data-mode='writing'] .notes-edge {
+  display: grid;
+}
+.foundation-notes .notes-edge[data-side='left'] {
+  left: 0;
+  border-left: 0;
+  border-radius: 0 12px 12px 0;
+}
+.foundation-notes .notes-edge[data-side='right'] {
+  right: 0;
+  border-right: 0;
+  border-radius: 12px 0 0 12px;
+}
+.foundation-notes .notes-edge::after {
+  content: '';
+  position: absolute;
+  inset: -12px -10px;
+}
+.foundation-notes .notes-edge:hover,
+.foundation-notes .notes-edge:focus-visible,
+.foundation-notes .notes-edge[aria-expanded='true'] {
+  opacity: 1;
+  background: #363636;
+  color: #fff;
+}
+.foundation-notes .notes-edge:focus-visible {
+  outline: 2px solid #b7b7b7;
+  outline-offset: 2px;
+}
+.foundation-notes[data-tools='open'][data-tools-side='left'] .notes-edge[data-side='left'] {
+  left: calc(var(--n-rail) + 8px);
+}
+.foundation-notes[data-tools='open'][data-tools-side='right'] .notes-edge[data-side='right'] {
+  right: calc(var(--n-rail) + 8px);
+}
+
+/* The side panel (the formatting toolbar). Hidden until a handle opens it. */
+.foundation-notes[data-mode='writing'] .notes-toolbar {
+  position: absolute;
+  top: var(--n-top);
+  bottom: auto;
+  max-height: calc(100% - var(--n-top) - 12px);
+  width: var(--n-rail);
+  z-index: 31;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  align-content: start;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  background: #292929;
+  border: 1px solid var(--n-line);
+  border-radius: 16px;
+  box-shadow: 0 18px 44px -14px #000e;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.16s ease, visibility 0.16s;
+}
+.foundation-notes[data-tools-side='left'] .notes-toolbar {
+  left: 8px;
+  right: auto;
+}
+.foundation-notes[data-tools-side='right'] .notes-toolbar {
+  right: 8px;
+  left: auto;
+}
+.foundation-notes[data-mode='writing'][data-tools='open'] .notes-toolbar {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.foundation-notes .notes-toolbar button,
+.foundation-notes .notes-toolbar select {
+  min-width: 0;
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  padding: 4px 2px;
+  font-size: 13px;
+  font-weight: 650;
+  color: #ececec;
+  background: #333;
+  border: 1px solid var(--n-line);
+  border-radius: 10px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.foundation-notes .notes-toolbar button:hover,
+.foundation-notes .notes-toolbar select:hover {
+  background: #3b3b3b;
+}
+.foundation-notes .notes-toolbar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.foundation-notes .notes-heading-box {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+}
+.foundation-notes .notes-heading-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.foundation-notes .notes-rail-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9a9a9a;
+  padding: 0 2px;
+}
+.foundation-notes .notes-toolbar #notesChecklist,
+.foundation-notes .notes-toolbar .notes-color-wrap {
+  grid-column: 1 / -1;
+}
+.foundation-notes .notes-toolbar .notes-color-wrap {
+  display: block;
+}
+
 @media (max-width: 720px) {
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar {
-    gap: 4px;
-    padding: 6px;
+  .foundation-notes {
+    --n-top: 56px;
+    --n-gutter: 10px;
+    --n-rail: 160px;
   }
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar button,
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar select {
-    min-width: 44px;
-    height: 40px;
-    min-height: 40px;
-    padding: 3px 8px;
-    font-size: 13px;
+  .foundation-notes .notes-paper {
+    border-radius: 14px;
   }
+  .foundation-notes .notes-edge {
+    width: 24px;
+    height: 88px;
+    top: 62%;
+  }
+  .foundation-notes .notes-toolbar button,
+  .foundation-notes .notes-toolbar select {
+    height: 46px;
+    min-height: 46px;
+  }
+}
+/* Keyboard open: the dialog already shrinks to the visible area; keep the tools inside it. */
+.foundation-notes[data-keyboard='open'] {
+  --n-top: 48px;
+}
+.foundation-notes[data-keyboard='open'] .notes-edge {
+  top: 50%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .foundation-notes .notes-toolbar,
+  .foundation-notes .notes-edge,
+  .foundation-notes .notes-paper {
+    transition: none;
+  }
+}
+
+/* Open keyboard (any screen width): the dialog is exactly the visible area, so nothing hides behind the keys. */
+.foundation-notes {
+  height: var(--notes-visible-height, 100dvh);
+  max-height: none;
+  top: var(--notes-visible-top, 0px);
+  bottom: auto;
 }

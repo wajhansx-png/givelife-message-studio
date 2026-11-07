@@ -472,52 +472,6 @@
   }
 }
 
-/* ---- Notes (<= 720px): calm for the eyes, easy for the thumb ----
-   Full-width page and relaxed text. The format bar keeps its own design (shown under selected text). */
-@media (max-width: 720px) {
-  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) #notesWorkspace {
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: 0 !important;
-  }
-  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-paper-scroll {
-    order: 1 !important;
-    flex: 1 1 0 !important;
-    min-height: 0 !important;
-    padding: 8px 8px 0 !important;
-  }
-  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-paper {
-    width: 100% !important;
-    max-width: none !important;
-    border-radius: 14px !important;
-  }
-  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-editor {
-    padding: 14px 16px !important;
-    line-height: 1.55 !important;
-    letter-spacing: 0.1px !important;
-  }
-  html
-    body:not(#a):not(#b):not(#c)
-    #foundationNotes#foundationNotes:not(#d)
-    .notes-editor
-    :is(p, div, li) {
-    margin: 0 0 6px !important;
-    line-height: 1.55 !important;
-  }
-  html
-    body:not(#a):not(#b):not(#c)
-    #foundationNotes#foundationNotes:not(#d)
-    .notes-editor
-    :is(ul, ol) {
-    margin: 4px 0 8px !important;
-    padding-left: 24px !important;
-  }
-  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-foot {
-    order: 3 !important;
-    padding: 4px 8px 8px !important;
-  }
-}
-
 /* ---- Message focus screen (<= 700px): dock buttons readable at a glance (message text auto-fits its card) ---- */
 @media (max-width: 700px) {
   html body:not(#a):not(#b):not(#c) #messageFocus#messageFocus:not(#d) .focus-rail button {

@@ -39,22 +39,9 @@
     </div>
     <section class="notes-workspace" id="notesWorkspace" hidden>
       <div class="notes-toolbar" role="toolbar" aria-label="Format your notes">
-        <button type="button" id="notesFontDown" aria-label="Decrease notes font size" title="Smaller text">A−</button>
-        <button type="button" id="notesFontUp" aria-label="Increase notes font size" title="Larger text">A+</button>
-        <label class="notes-select-label"><span class="sr-only">Text style</span><select id="notesStyle" aria-label="Text style"><option value="p">Normal text</option><option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option></select></label>
-        <span class="notes-separator" aria-hidden="true"></span>
-        <button type="button" data-command="bold" aria-label="Bold" title="Bold (Ctrl+B)"><b>B</b></button>
-        <button type="button" data-command="italic" aria-label="Italic" title="Italic (Ctrl+I)"><i>I</i></button>
-        <span class="notes-separator" aria-hidden="true"></span>
-        <button type="button" data-command="insertUnorderedList" aria-label="Bulleted list" title="Bulleted list">☷</button>
-        <button type="button" data-command="insertOrderedList" aria-label="Numbered list" title="Numbered list">1.</button>
-        <button type="button" id="notesChecklist" aria-label="Checklist" title="Checklist">☑</button>
-        <span class="notes-separator" aria-hidden="true"></span>
-        <label class="notes-color-wrap" title="Text color"><span class="sr-only">Text color</span><select id="notesColor" aria-label="Text color">
-         <option value="">Color</option><option value="#ededed">White (default)</option><option value="#d5d9e0">Slate</option><option value="#85b7f6">Blue</option>
-         <option value="#8ddfba">Green</option><option value="#efc389">Amber</option><option value="#f4a4ad">Red</option>
-         <option value="#c7aff6">Purple</option>
-        </select></label>
+        <button type="button" id="notesChecklist" aria-label="Checklist" title="Checklist">Checklist</button>
+        <button type="button" data-command="insertUnorderedList" aria-label="Bulleted list" title="Bulleted list">Bullets</button>
+        <button type="button" id="notesRed" class="notes-red" aria-label="Red text" aria-pressed="false" title="Red text">Red</button>
       </div>
       <div class="notes-paper-scroll">
        <main class="notes-paper">
@@ -83,31 +70,7 @@
   const editor = el('notesEditor'),
     sync = el('notesSync'),
     retry = el('notesRetry');
-  /* Calm, quick-to-read size by default (A−/A+ still adjust it and are remembered). */
-  let fontSize = matchMedia('(max-width: 720px)').matches ? 17 : 18;
-  try {
-    const stored = Number(localStorage.getItem('givelife-notes-font-size-v3'));
-    if (Number.isInteger(stored) && stored >= 14 && stored <= 36) fontSize = stored;
-  } catch {}
-  const paintFont = () => {
-    editor.style.setProperty('--notes-font-size', fontSize + 'px');
-    el('notesFontDown').disabled = fontSize <= 14;
-    el('notesFontUp').disabled = fontSize >= 36;
-    el('notesFontUp').title = 'Larger text · ' + fontSize + 'px';
-    el('notesFontDown').title = 'Smaller text · ' + fontSize + 'px';
-  };
-  for (const [id, delta] of [
-    ['notesFontDown', -1],
-    ['notesFontUp', 1],
-  ])
-    el(id).onclick = () => {
-      fontSize = Math.max(14, Math.min(36, fontSize + delta));
-      paintFont();
-      try {
-        localStorage.setItem('givelife-notes-font-size-v3', String(fontSize));
-      } catch {}
-    };
-  paintFont();
+  /* Text size (18px, 17px on phones) is plain CSS: no controls, nothing to remember. */
   let revision = 0,
     loaded = false,
     dirty = false,
@@ -119,55 +82,12 @@
   const notesHead = page.querySelector('.notes-head'),
     notesToolbar = page.querySelector('.notes-toolbar');
   const fullscreenButton = el('notesFullscreen');
-  const railLabels = {
-    insertOrderedList: 'Numbers',
-    insertUnorderedList: 'Bullets',
-    bold: 'Bold',
-    italic: 'Italic',
-  };
-  for (const [command, label] of Object.entries(railLabels))
-    notesToolbar.querySelector('[data-command="' + command + '"]').textContent = label;
-  el('notesChecklist').textContent = 'Checklist';
-  el('notesFontDown').textContent = 'Smaller';
-  el('notesFontUp').textContent = 'Larger';
-  const styleLabel = el('notesStyle').closest('label'),
-    colorLabel = el('notesColor').closest('label'),
-    heading = make('div', 'notes-heading-box'),
-    headingRow = make('div', 'notes-heading-row');
-  /* The select stays for keyboard use; H1-H3 are buttons now. */
-  styleLabel.classList.add('notes-style-hidden');
-  for (const [tag, label] of [
-    ['h1', 'H1'],
-    ['h2', 'H2'],
-    ['h3', 'H3'],
-    ['p', 'Text'],
-  ]) {
-    const b = make('button', '', label);
-    b.type = 'button';
-    b.dataset.block = tag;
-    b.title = tag === 'p' ? 'Normal text' : 'Heading ' + tag[1];
-    b.setAttribute('aria-pressed', String(tag === 'p'));
-    headingRow.append(b);
-  }
-  heading.append(make('span', 'notes-rail-label', 'Heading'), headingRow, styleLabel);
-  notesToolbar.querySelectorAll('.notes-separator').forEach((e) => e.remove());
-  notesToolbar.append(
-    heading,
-    notesToolbar.querySelector('[data-command="bold"]'),
-    notesToolbar.querySelector('[data-command="italic"]'),
-    notesToolbar.querySelector('[data-command="insertUnorderedList"]'),
-    notesToolbar.querySelector('[data-command="insertOrderedList"]'),
-    el('notesChecklist'),
-    el('notesFontDown'),
-    el('notesFontUp'),
-    colorLabel,
-  );
   /* Edit tools live in a hidden side panel. Slim handles on both screen edges open it (mouse or
      thumb, either side); Esc, the handle, outside taps on narrow screens and typing close it. */
-  const wideNotes = matchMedia('(min-width:1100px)');
+  const wideNotes = matchMedia('(min-width: 900px)'); // at this width the tools sit beside the box
   notesToolbar.id = 'notesTools';
   const edges = ['left', 'right'].map((side) => {
-    const b = make('button', 'notes-edge', 'Aa');
+    const b = make('button', 'notes-edge', '⋮');
     b.type = 'button';
     b.dataset.side = side;
     b.title = 'Text tools';
@@ -191,7 +111,7 @@
     for (const b of edges) {
       const on = state === 'open' && b.dataset.side === page.dataset.toolsSide;
       b.setAttribute('aria-expanded', String(on));
-      b.textContent = on ? '✕' : 'Aa';
+      b.textContent = on ? '✕' : '⋮';
       b.title = on ? 'Close text tools' : 'Text tools';
     }
   }
@@ -637,12 +557,7 @@
     const selection = window.getSelection();
     if (selection?.rangeCount && editor.contains(selection.anchorNode)) {
       savedRange = selection.getRangeAt(0).cloneRange();
-      /* Light up the heading button that matches the line being edited. */
-      let node = selection.anchorNode;
-      if (node.nodeType === 3) node = node.parentElement;
-      const tag = node?.closest('h1,h2,h3')?.tagName.toLowerCase() || 'p';
-      for (const b of notesToolbar.querySelectorAll('[data-block]'))
-        b.setAttribute('aria-pressed', String(b.dataset.block === tag));
+      paintRed();
     }
   });
   const restoreSelection = () => {
@@ -666,29 +581,24 @@
       rememberDirty();
     }),
   );
-  const applyBlock = (tag) => {
+  /* Red: one tap colours the selection (or what you type next); tap again to go back to white. */
+  const redButton = el('notesRed'),
+    RED = '#f4a4ad',
+    isRed = () => {
+      try {
+        return document.queryCommandValue('foreColor').replace(/\s/g, '') === 'rgb(244,164,173)';
+      } catch {
+        return false;
+      }
+    };
+  function paintRed() {
+    redButton.setAttribute('aria-pressed', String(isRed()));
+  }
+  redButton.addEventListener('click', () => {
     restoreSelection();
-    normalizeBlocks();
-    document.execCommand('formatBlock', false, tag);
+    document.execCommand('foreColor', false, isRed() ? '#ededed' : RED);
     rememberDirty();
-  };
-  el('notesStyle').addEventListener('change', (e) => {
-    applyBlock(e.target.value);
-    e.target.value = 'p';
-  });
-  notesToolbar.querySelectorAll('[data-block]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const tag = b.dataset.block;
-      /* Tapping the active heading again goes back to normal text. */
-      applyBlock(tag !== 'p' && b.getAttribute('aria-pressed') === 'true' ? 'p' : tag);
-    }),
-  );
-  el('notesColor').addEventListener('change', (e) => {
-    if (!e.target.value) return;
-    restoreSelection();
-    document.execCommand('foreColor', false, e.target.value);
-    e.target.value = '';
-    rememberDirty();
+    paintRed();
   });
   const findList = () => {
     let node = window.getSelection()?.anchorNode;

@@ -66,10 +66,8 @@ test('phone notes: readable editing surface, toolbar and no sideways scrolling',
   await editor.press('ControlOrMeta+A');
   // Formatting controls live in the side panel opened by the edge handle.
   await openTools(page);
-  await page.locator('.notes-toolbar').getByRole('button', { name: 'Bold', exact: true }).click();
-  await expect(editor.locator('b,strong')).toContainText('Find university representatives');
-  await page.locator('#notesStyle').selectOption('h2');
-  await expect(editor.locator('h2')).toHaveCount(1);
+  await page.locator('.notes-toolbar').getByRole('button', { name: 'Bullets', exact: true }).click();
+  await expect(editor.locator('ul li')).toContainText('Find university representatives');
   await expect(page.locator('#notesSync')).toHaveText('Saved', { timeout: 10000 });
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
   expect(wide).toBe(false);
@@ -197,8 +195,8 @@ test('mobile Notes opens a hidden toolbar by tapping top edge without shrinking 
   await page.locator('#notesEditor').fill('Volunteer outreach');
   await page.locator('#notesEditor').press('ControlOrMeta+A');
   await openTools(page);
-  await page.locator('[data-block="h2"]').click();
-  await expect(page.locator('#notesEditor h2')).toHaveText('Volunteer outreach');
+  await page.locator('.notes-toolbar').getByRole('button', { name: 'Bullets', exact: true }).click();
+  await expect(page.locator('#notesEditor li')).toHaveText('Volunteer outreach');
   expect((await page.locator('.notes-paper').boundingBox()).height).toBeGreaterThanOrEqual(
     height - 2,
   );
@@ -223,10 +221,10 @@ test('desktop note-taking: type, select, style, save, reopen and keep writing fo
   await editor.focus();
   await editor.press('ControlOrMeta+A');
   await openTools(page);
-  await page.locator('.notes-toolbar').getByRole('button', { name: 'Bold', exact: true }).click();
+  await page.locator('#notesRed').click();
   const selectedHtml = await editor.innerHTML();
-  expect(selectedHtml, 'Bold must apply visibly to the selected note text').toMatch(
-    /<(?:b|strong)\b|font-weight\s*:\s*(?:bold|700)/i,
+  expect(selectedHtml, 'Red must apply visibly to the selected note text').toMatch(
+    /<font[^>]*color="#f4a4ad"/i,
   );
   await expect(page.locator('#notesSync')).toHaveText('Saved', { timeout: 10000 });
   const editorHeight = (await editor.boundingBox()).height;
@@ -298,7 +296,7 @@ test('narrow phone: editor and formatting rail fit with keyboard open', async ({
   expect(paper.y + paper.height).toBeLessThanOrEqual(401);
 });
 
-test('notes use a calm 18px column, start high, centred, with H1-H3 as buttons', async ({ page, request }) => {
+test('notes use a calm 18px column, start high, centred, with Bullets in the side tools', async ({ page, request }) => {
   await open(page, request, 1920, 1080);
   await page.locator('#notesPassword').fill('test-preview-only-pin');
   await page.locator('#notesUnlockButton').click();
@@ -310,14 +308,13 @@ test('notes use a calm 18px column, start high, centred, with H1-H3 as buttons',
   expect(Math.abs(paper.x + paper.width / 2 - 960)).toBeLessThan(3);
   await expect(page.locator('.notes-toolbar')).toBeHidden(); /* tools stay out of the way */
   const line = await editor.locator('> *').first().boundingBox();
-  expect(line.y).toBeGreaterThan(90);
-  expect(line.y).toBeLessThan(220); /* starts high, not at screen centre */
+  expect(line.y).toBeGreaterThan(30);
+  expect(line.y).toBeLessThan(120); /* starts near the top, not at screen centre */
   await page.keyboard.press('Home');
   await page.keyboard.press('Shift+End');
   await openTools(page);
-  await page.locator('[data-block="h2"]').click();
-  await expect(editor.locator('h2')).toHaveText('Plan outreach');
-  await expect(page.locator('[data-block="h2"]')).toHaveAttribute('aria-pressed', 'true');
-  await page.locator('[data-block="h2"]').click();
-  await expect(editor.locator('h2')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Bullets', exact: true }).click();
+  await expect(editor.locator('ul li')).toHaveText('Plan outreach');
+  await page.getByRole('button', { name: 'Bullets', exact: true }).click();
+  await expect(editor.locator('ul')).toHaveCount(0);
 });

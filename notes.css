@@ -701,13 +701,18 @@ html body #foundationNotes[data-mode='writing'] .notes-toolbar button[aria-press
 
 
 /* ===== Writing layout: single source of truth =====
-   One centred reading column (~18px text), starting high, with hairline borders.
-   Edit tools hide in a side panel opened from slim handles on both screen edges. */
+   One centred reading column (18px text) that starts near the top, with hairline borders.
+   Tools (Checklist, Bullets, Red) hide in a tiny panel that sits flush against the box; slim
+   handles on both sides of the box open it. On narrow screens the panel overlays the box edge. */
 .foundation-notes {
   --n-measure: clamp(560px, 48vw, 780px);
   --n-gutter: clamp(10px, 3vw, 28px);
-  --n-top: 64px;
-  --n-rail: 168px;
+  --n-top: 26px;
+  --n-pw: min(calc(100vw - 2 * var(--n-gutter)), var(--n-measure)); /* box width */
+  --n-edge: calc((100vw - var(--n-pw)) / 2); /* screen edge to box edge */
+  --n-rail: 96px; /* panel width */
+  --n-hw: 26px; /* handle width */
+  --n-hy: 56%; /* handle and panel height: the thumb zone */
   --n-line: #ffffff17;
 }
 .foundation-notes .notes-paper-scroll {
@@ -720,7 +725,7 @@ html body #foundationNotes[data-mode='writing'] .notes-toolbar button[aria-press
   box-sizing: border-box;
 }
 .foundation-notes .notes-paper {
-  width: min(100%, var(--n-measure));
+  width: var(--n-pw);
   height: 100%;
   min-height: 0;
   display: flex;
@@ -745,8 +750,8 @@ html body #foundationNotes[data-mode='writing'] .notes-toolbar button[aria-press
   scrollbar-width: thin;
   scrollbar-color: #ffffff2e transparent;
   box-sizing: border-box;
-  padding: clamp(28px, 9vh, 80px) clamp(18px, 4.5vw, 40px) clamp(40px, 10vh, 96px);
-  font-size: var(--notes-font-size, 18px);
+  padding: clamp(14px, 3.4vh, 30px) clamp(18px, 4.5vw, 40px) clamp(40px, 10vh, 96px);
+  font-size: 18px;
   line-height: 1.65;
   color: #ededed;
   caret-color: #60a5fa;
@@ -758,44 +763,33 @@ html body #foundationNotes[data-mode='writing'] .notes-toolbar button[aria-press
   margin-top: 0.15em;
 }
 
-/* Side handles: slim, quiet, reachable by mouse and thumb. */
+/* Handles: slim tabs on the outer edges of the box. */
 .foundation-notes .notes-edge {
   display: none;
   position: absolute;
-  top: 58%;
+  top: var(--n-hy);
   transform: translateY(-50%);
   z-index: 32;
-  width: 28px;
-  height: 80px;
+  width: var(--n-hw);
+  height: 76px;
   padding: 0;
   place-items: center;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-size: 17px;
+  line-height: 1;
   color: #cfcfcf;
   background: #2b2b2b;
   border: 1px solid var(--n-line);
   cursor: pointer;
-  opacity: 0.5;
-  transition: opacity 0.15s ease, background 0.15s ease, left 0.18s ease, right 0.18s ease;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
 }
 .foundation-notes[data-mode='writing'] .notes-edge {
   display: grid;
 }
-.foundation-notes .notes-edge[data-side='left'] {
-  left: 0;
-  border-left: 0;
-  border-radius: 0 12px 12px 0;
-}
-.foundation-notes .notes-edge[data-side='right'] {
-  right: 0;
-  border-right: 0;
-  border-radius: 12px 0 0 12px;
-}
 .foundation-notes .notes-edge::after {
   content: '';
   position: absolute;
-  inset: -12px -10px;
+  inset: -12px -8px;
 }
 .foundation-notes .notes-edge:hover,
 .foundation-notes .notes-edge:focus-visible,
@@ -808,59 +802,44 @@ html body #foundationNotes[data-mode='writing'] .notes-toolbar button[aria-press
   outline: 2px solid #b7b7b7;
   outline-offset: 2px;
 }
-.foundation-notes[data-tools='open'][data-tools-side='left'] .notes-edge[data-side='left'] {
-  left: calc(var(--n-rail) + 8px);
-}
-.foundation-notes[data-tools='open'][data-tools-side='right'] .notes-edge[data-side='right'] {
-  right: calc(var(--n-rail) + 8px);
-}
 
-/* The side panel (the formatting toolbar). Hidden until a handle opens it. */
+/* The panel: three small buttons, hidden until a handle opens it. */
 .foundation-notes[data-mode='writing'] .notes-toolbar {
   position: absolute;
-  top: var(--n-top);
-  bottom: auto;
-  max-height: calc(100% - var(--n-top) - 12px);
-  width: var(--n-rail);
+  top: var(--n-hy);
+  transform: translateY(-50%);
   z-index: 31;
+  width: var(--n-rail);
+  max-height: calc(100% - 16px);
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 6px;
   align-content: start;
-  padding: 10px;
+  padding: 8px;
   box-sizing: border-box;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
   background: #292929;
   border: 1px solid var(--n-line);
-  border-radius: 16px;
-  box-shadow: 0 18px 44px -14px #000e;
+  box-shadow: 0 14px 34px -14px #000d;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition: opacity 0.16s ease, visibility 0.16s;
-}
-.foundation-notes[data-tools-side='left'] .notes-toolbar {
-  left: 8px;
-  right: auto;
-}
-.foundation-notes[data-tools-side='right'] .notes-toolbar {
-  right: 8px;
-  left: auto;
 }
 .foundation-notes[data-mode='writing'][data-tools='open'] .notes-toolbar {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
-.foundation-notes .notes-toolbar button,
-.foundation-notes .notes-toolbar select {
-  min-width: 0;
+.foundation-notes .notes-toolbar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
-  height: 44px;
-  min-height: 44px;
-  padding: 4px 2px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 6px;
   font-size: 13px;
   font-weight: 650;
   color: #ececec;
@@ -870,65 +849,106 @@ html body #foundationNotes[data-mode='writing'] .notes-toolbar button[aria-press
   box-sizing: border-box;
   cursor: pointer;
 }
-.foundation-notes .notes-toolbar button:hover,
-.foundation-notes .notes-toolbar select:hover {
-  background: #3b3b3b;
+.foundation-notes .notes-toolbar button:hover {
+  background: #3d3d3d;
 }
-.foundation-notes .notes-toolbar button:disabled {
-  opacity: 0.4;
-  cursor: default;
+.foundation-notes .notes-toolbar button[aria-pressed='true'] {
+  border-color: #60a5fa;
+  background: #35557f;
 }
-.foundation-notes .notes-heading-box {
-  grid-column: 1 / -1;
-  display: grid;
-  gap: 6px;
-}
-.foundation-notes .notes-heading-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.foundation-notes .notes-rail-label {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #9a9a9a;
-  padding: 0 2px;
-}
-.foundation-notes .notes-toolbar #notesChecklist,
-.foundation-notes .notes-toolbar .notes-color-wrap {
-  grid-column: 1 / -1;
-}
-.foundation-notes .notes-toolbar .notes-color-wrap {
-  display: block;
+.foundation-notes .notes-red::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f4a4ad;
 }
 
+/* Wide screens: handle and panel sit outside the box, touching its border. */
+@media (min-width: 900px) {
+  .foundation-notes .notes-edge[data-side='left'] {
+    left: calc(var(--n-edge) - var(--n-hw));
+    border-right: 0;
+    border-radius: 12px 0 0 12px;
+  }
+  .foundation-notes .notes-edge[data-side='right'] {
+    right: calc(var(--n-edge) - var(--n-hw));
+    border-left: 0;
+    border-radius: 0 12px 12px 0;
+  }
+  .foundation-notes[data-tools='open'][data-tools-side='left'] .notes-edge[data-side='left'] {
+    left: calc(var(--n-edge) - var(--n-rail) - var(--n-hw));
+  }
+  .foundation-notes[data-tools='open'][data-tools-side='right'] .notes-edge[data-side='right'] {
+    right: calc(var(--n-edge) - var(--n-rail) - var(--n-hw));
+  }
+  .foundation-notes[data-tools-side='left'] .notes-toolbar {
+    left: calc(var(--n-edge) - var(--n-rail));
+    border-right: 0;
+    border-radius: 14px 0 0 14px;
+  }
+  .foundation-notes[data-tools-side='right'] .notes-toolbar {
+    right: calc(var(--n-edge) - var(--n-rail));
+    border-left: 0;
+    border-radius: 0 14px 14px 0;
+  }
+}
+/* Narrow screens: no room beside the box, so handle and panel sit just inside its edge. */
+@media (max-width: 899px) {
+  .foundation-notes {
+    --n-hw: 22px;
+    --n-rail: 92px;
+  }
+  .foundation-notes .notes-edge[data-side='left'] {
+    left: calc(var(--n-edge) + 1px);
+    border-left: 0;
+    border-radius: 0 12px 12px 0;
+  }
+  .foundation-notes .notes-edge[data-side='right'] {
+    right: calc(var(--n-edge) + 1px);
+    border-right: 0;
+    border-radius: 12px 0 0 12px;
+  }
+  .foundation-notes[data-tools='open'][data-tools-side='left'] .notes-edge[data-side='left'] {
+    left: calc(var(--n-edge) + 1px + var(--n-rail));
+  }
+  .foundation-notes[data-tools='open'][data-tools-side='right'] .notes-edge[data-side='right'] {
+    right: calc(var(--n-edge) + 1px + var(--n-rail));
+  }
+  .foundation-notes[data-tools-side='left'] .notes-toolbar {
+    left: calc(var(--n-edge) + 1px);
+    border-left: 0;
+    border-radius: 0 14px 14px 0;
+  }
+  .foundation-notes[data-tools-side='right'] .notes-toolbar {
+    right: calc(var(--n-edge) + 1px);
+    border-right: 0;
+    border-radius: 14px 0 0 14px;
+  }
+  .foundation-notes .notes-editor {
+    padding-left: max(26px, 4.5vw);
+    padding-right: max(26px, 4.5vw);
+    font-size: 17px;
+  }
+}
 @media (max-width: 720px) {
   .foundation-notes {
-    --n-top: 56px;
     --n-gutter: 10px;
-    --n-rail: 160px;
   }
   .foundation-notes .notes-paper {
     border-radius: 14px;
   }
-  .foundation-notes .notes-edge {
-    width: 24px;
-    height: 88px;
-    top: 62%;
-  }
-  .foundation-notes .notes-toolbar button,
-  .foundation-notes .notes-toolbar select {
-    height: 46px;
-    min-height: 46px;
-  }
 }
-/* Keyboard open: the dialog already shrinks to the visible area; keep the tools inside it. */
+/* Open keyboard (any screen width): the dialog is exactly the visible area, so nothing hides behind the keys. */
+.foundation-notes {
+  height: var(--notes-visible-height, 100dvh);
+  max-height: none;
+  top: var(--notes-visible-top, 0px);
+  bottom: auto;
+}
 .foundation-notes[data-keyboard='open'] {
-  --n-top: 48px;
-}
-.foundation-notes[data-keyboard='open'] .notes-edge {
-  top: 50%;
+  --n-top: 16px;
+  --n-hy: 50%;
 }
 @media (prefers-reduced-motion: reduce) {
   .foundation-notes .notes-toolbar,
@@ -936,12 +956,4 @@ html body #foundationNotes[data-mode='writing'] .notes-toolbar button[aria-press
   .foundation-notes .notes-paper {
     transition: none;
   }
-}
-
-/* Open keyboard (any screen width): the dialog is exactly the visible area, so nothing hides behind the keys. */
-.foundation-notes {
-  height: var(--notes-visible-height, 100dvh);
-  max-height: none;
-  top: var(--notes-visible-top, 0px);
-  bottom: auto;
 }

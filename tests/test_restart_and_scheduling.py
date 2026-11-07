@@ -160,6 +160,14 @@ class SchedulerTests(unittest.TestCase):
             self.eng.posting_step()
         self.assertEqual(self.started, [app.FREELANCE])
 
+    def test_status_does_not_list_a_group_whose_owner_timer_is_waiting(self):
+        self.last = {k: 10000 for k in app.GROUPS}  # every group is overdue for Auto
+        self.eng.h["timer_waiting"] = lambda k: k == "main"
+        with patch.object(autopilot, "now", return_value=20000):
+            groups = [n["group"] for n in self.eng.status()["next"]]
+        self.assertNotIn("main", groups)  # its timer sends it, so Auto is not "next" for it
+        self.assertTrue(groups)  # the other groups are still listed
+
     def test_posting_independent_of_reply_scan_lock(self):
         self.last["main"] = 11800
         self.eng.lock.acquire()

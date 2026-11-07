@@ -1020,3 +1020,10 @@ html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-group-he
     right: 4px !important;
   }
 }
+
+/* ---- Timer presets (all widths): the chosen one (15m / 30m / 45m / 1h) is filled blue ---- */
+html body:not(#a):not(#b):not(#c) .group-send .grp-card .delay-pill:is([aria-pressed='true'], .is-pending) {
+  background: #2f6fe8 !important;
+  border-color: #2f6fe8 !important;
+  color: #fff !important;
+}

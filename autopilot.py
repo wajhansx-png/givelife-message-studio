@@ -1318,7 +1318,8 @@ class Engine:
             now_text = "Waiting for next reply check"
         last, nxt = self.h["last_sent"](), []
         for key in self.h["groups"]():
-            if self.blocked(key):
+            # A group with an owner timer waiting is not "next" for Auto: its timer sends it.
+            if self.blocked(key) or self.h.get("timer_waiting", lambda k: False)(key):
                 continue
             gap = self.gap_for(key, main_gap if key == "main" else free_gap)
             left_min = 0 if not last.get(key) else max(0, round(gap - (now() - last[key]) / 60))

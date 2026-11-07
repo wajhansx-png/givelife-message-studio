@@ -746,4 +746,15 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row > .row-t
   min-width: 36px !important;
   padding: 0 8px !important;
   white-space: nowrap !important;
+
+/* ---- Timer pills: a waiting time is a quiet outlined chip, not a solid blue button ---- */
+html
+  body:not(#a):not(#b):not(#c)
+  .group-send
+  .grp-card
+  .delay-pill:is([aria-pressed='true'], .is-pending) {
+  background: transparent !important;
+  border: 1px solid #2f6fe8 !important;
+  color: #8fb4ff !important;
+  font-weight: 650 !important;
 }

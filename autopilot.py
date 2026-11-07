@@ -585,7 +585,8 @@ class Engine:
         last = self.h["last_sent"]()
         keys = []
         for key in self.h["groups"]():
-            if self.blocked(key):
+            # A timer the owner set (e.g. 45m) is the only thing that sends to this group until its time.
+            if self.blocked(key) or self.h.get("timer_waiting", lambda k: False)(key):
                 continue
             gap = self.gap_for(key, main_gap if key == "main" else free_gap)
             mins = (now() - last[key]) / 60 if last.get(key) else 9999
@@ -977,7 +978,11 @@ class Engine:
             return True
 
     def _reply(self, jid, text, goodbye=False):
-        if not AUTO_DMS_ALLOWED or not self.s.get("dm_enabled") or self.h.get("on_hold", lambda: False)():
+        if (
+            not AUTO_DMS_ALLOWED
+            or not self.s.get("dm_enabled")
+            or self.h.get("on_hold", lambda: False)()
+        ):
             return
         if not goodbye and self._opted_out(jid):
             return

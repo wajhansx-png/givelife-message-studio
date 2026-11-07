@@ -12,12 +12,11 @@ let editing = false,
   seenAuto = 0;
 const view = () => document.body.dataset.view,
   fmt = (n) => Number(n).toLocaleString('en-US');
-const post = (url, body, signal) =>
+const post = (url, body) =>
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body || {}),
-    signal,
   });
 /* Where you are lives in the address (#/donors/important). A refresh stays put and the phone's Back button steps out one screen. */
 const Nav = {
@@ -1004,11 +1003,41 @@ function lockSend(key, on) {
                 : '[data-group="' + key + '"]',
             ),
           ];
-  for (const b of buttons) {
-    b.disabled = on && !key.startsWith('test:'); /* Test stays tappable: a second tap stops it. */
-    b.setAttribute('aria-busy', String(on));
+  /* Send buttons stay tappable while busy: a second tap is Stop (see tapStop). */
+  for (const b of buttons) b.setAttribute('aria-busy', String(on));
+  if (!on) stops.delete(key);
+  return true;
+}
+/* Stop: tapping a busy send button again stops it before anything is uploaded. */
+const stops = new Map(),
+  stoppedJobs = new Set();
+function beginStop(key) {
+  const s = { id: requestId(), stopped: false, job: null, onStop: null };
+  stops.set(key, s);
+  return s;
+}
+function tapStop(key) {
+  const s = stops.get(key);
+  if (!s) return false;
+  if (!s.stopped) {
+    s.stopped = true;
+    if (s.job) stoppedJobs.add(s.job);
+    post('/stop-send', s.job ? { job_id: s.job } : { stop_id: s.id }).catch(() => {});
+    if (s.onStop) s.onStop();
   }
   return true;
+}
+function stopCheck(s) {
+  if (s.stopped) throw Object.assign(Error('Sending stopped.'), { stopped: true });
+}
+function setButtonNote(btn, text) {
+  const note = btn && btn.querySelector('.gb-progress');
+  if (note) note.textContent = text;
+}
+function showStopped(btn) {
+  if (btn) endButtonProgress(btn, 'Stopped', false);
+  else setLiveNotice('Sending stopped.', true);
+  say('app', 'Sending stopped. Nothing was sent.');
 }
 function releaseJob(id) {
   for (const key of jobLocks.get(id) || []) lockSend(key, false);
@@ -1107,19 +1136,28 @@ async function watchGroupJob(id, caption) {
       done = job.done;
       if (!done) {
         const step = jobProgress(job, clock);
-        setButtonProgress(btn, step.fraction, step.text, step.slow);
+        setButtonProgress(
+          btn,
+          step.fraction,
+          stoppedJobs.has(id) ? 'Stopping…' : step.text + ' · tap to stop',
+          step.slow,
+        );
       }
       if (done) {
         const okCount = (job.results || []).filter((x) => x.code === 'SUCCESS').length,
           total = (job.keys || []).length || Math.max(1, (job.results || []).length),
-          bad = okCount !== total;
+          stopped = !!job.cancel_reason || stoppedJobs.has(id),
+          bad = okCount !== total && !stopped;
         endButtonProgress(
           btn,
-          bad
-            ? '✗ ' + okCount + ' of ' + total + ' confirmed'
-            : '✓ Sent' + (total > 1 ? ' to all ' + total : ''),
-          !bad,
+          stopped
+            ? 'Stopped · ' + okCount + ' sent'
+            : bad
+              ? '✗ ' + okCount + ' of ' + total + ' confirmed'
+              : '✓ Sent' + (total > 1 ? ' to all ' + total : ''),
+          !bad && !stopped,
         );
+        stoppedJobs.delete(id);
         if (bad && displayJob === id) $('groupStatus').textContent = job.message;
         say(
           'app',
@@ -1142,7 +1180,7 @@ async function watchGroupJob(id, caption) {
           render();
         }
       }
-      if (!done) await new Promise((res) => setTimeout(res, 1200));
+      if (!done) await new Promise((res) => setTimeout(res, 600));
     }
     if (!done) throw Error('This send is still unconfirmed. Check WhatsApp before sending again.');
   } catch (e) {
@@ -1157,19 +1195,24 @@ async function watchGroupJob(id, caption) {
   }
 }
 async function sendGroup(key) {
+  if (tapStop(key)) return;
   if (!lockSend(key, true)) return;
+  const st = beginStop(key);
   let tracked = false;
   if (editing) setEditing(false);
   const btn = progressButton(
     key === 'all' ? ['main', ...FREE_KEYS] : key === 'free' ? FREE_KEYS : [key],
   );
-  setButtonProgress(btn, 0.03, 'Starting…', false);
+  st.onStop = () => setButtonNote(btn, 'Stopping…');
+  setButtonProgress(btn, 0.03, 'Starting… tap to stop', false);
   busy(true);
   try {
     await fillEmptyCaption('group');
     await ensureCaption('group');
+    stopCheck(st);
     clearTimeout(timer);
     await save();
+    stopCheck(st);
     const caption = $('group').value;
     $('groupStatus').textContent = '';
     $('groupStatus').classList.remove('is-timer');
@@ -1182,11 +1225,23 @@ async function sendGroup(key) {
     keys.add(key);
     jobLocks.set(start.job_id, keys);
     tracked = true;
+    st.job = start.job_id;
+    if (st.stopped) {
+      /* Stop was tapped while the send was starting: stop the job before its first message. */
+      stoppedJobs.add(start.job_id);
+      post('/stop-send', { job_id: start.job_id }).catch(() => {});
+    }
     watchGroupJob(start.job_id, caption);
   } catch (e) {
-    endButtonProgress(btn, '✗ Not sent', false);
-    $('groupStatus').textContent = '✗ ' + e.message;
-    say('app', e.message, 1);
+    if (e.stopped) {
+      endButtonProgress(btn, 'Stopped', false);
+      $('groupStatus').textContent = 'Sending stopped. Nothing was sent.';
+      say('app', 'Sending stopped. Nothing was sent.');
+    } else {
+      endButtonProgress(btn, '✗ Not sent', false);
+      $('groupStatus').textContent = '✗ ' + e.message;
+      say('app', e.message, 1);
+    }
   } finally {
     if (!tracked) lockSend(key, false);
     busy(false);
@@ -1341,47 +1396,42 @@ async function fillEmptyCaption(kind) {
     }
   }
 }
-const testAborts = new Map();
 async function sendTest(kind) {
   const key = 'test:' + kind,
     btn = kind === 'group' ? document.querySelector('.test-row') : null;
-  if (testAborts.has(key)) return testAborts.get(key).abort(); /* second tap = stop */
+  if (tapStop(key)) return;
   if (!lockSend(key, true)) return;
-  const ctl = new AbortController();
-  testAborts.set(key, ctl);
+  const st = beginStop(key);
+  st.onStop = () => (btn ? setButtonNote(btn, 'Stopping…') : setLiveNotice('Stopping…'));
   if (btn) {
-    setButtonProgress(btn, 0.04, 'Sending…', false);
-    requestAnimationFrame(() => setButtonProgress(btn, 0.9, 'Sending…', true));
-  } else setLiveNotice('Sending to test group…');
+    setButtonProgress(btn, 0.04, 'Sending… tap to stop', false);
+    requestAnimationFrame(() => setButtonProgress(btn, 0.9, 'Sending… tap to stop', true));
+  } else setLiveNotice('Sending to test group… tap again to stop');
   busy(true);
   try {
     await fillEmptyCaption(kind);
     await ensureCaption(kind);
-    if (ctl.signal.aborted) throw new DOMException('Stopped', 'AbortError');
+    stopCheck(st);
     clearTimeout(timer);
     /* The message travels in the request, so do not wait for the draft save. */
     save().catch(() => status('Save failed', 1));
-    const r = await post('/test', { message: $(kind).value }, ctl.signal),
+    const r = await post('/test', { message: $(kind).value, stop_id: st.id }),
       d = await r.json();
-    const result =
-      d.code === 'SUCCESS'
-        ? '✓ Sent to the test group.'
+    if (d.code === 'STOPPED') return showStopped(btn);
+    const ok = d.code === 'SUCCESS',
+      result = ok
+        ? '✓ Sent to the test group.' + (st.stopped ? ' Too late to stop.' : '')
         : 'Test failed: ' + (d.message || d.error || '');
-    say('app', result, d.code !== 'SUCCESS');
-    if (btn)
-      endButtonProgress(btn, d.code === 'SUCCESS' ? '✓ Sent' : '✗ Not sent', d.code === 'SUCCESS');
-    else setLiveNotice(result, d.code !== 'SUCCESS');
+    say('app', result, !ok);
+    if (btn) endButtonProgress(btn, ok ? '✓ Sent' : '✗ Not sent', ok);
+    else setLiveNotice(result, !ok);
   } catch (e) {
-    if (ctl.signal.aborted) {
-      if (btn) endButtonProgress(btn, 'Stopped', false);
-      else setLiveNotice('Sending stopped.', true);
-      say('app', 'Sending stopped. If it already reached WhatsApp, it may still arrive.');
-    } else {
+    if (e.stopped) showStopped(btn);
+    else {
       if (btn) endButtonProgress(btn, '✗ Not sent', false);
       say('app', e.message || 'Could not send', 1);
     }
   } finally {
-    testAborts.delete(key);
     lockSend(key, false);
     busy(false);
   }
@@ -1399,7 +1449,9 @@ function cleanPhone(p) {
   if (/^03\d{9}$/.test(p)) p = '92' + p.slice(1);
   return /^[1-9]\d{7,14}$/.test(p) ? p : '';
 }
+let wordingPending = null;
 $('sendDm').onclick = async () => {
+  if (tapStop('dm')) return;
   if (editing) setEditing(false);
   const phone = cleanPhone($('dmPhone').value);
   if (!phone) {
@@ -1408,13 +1460,19 @@ $('sendDm').onclick = async () => {
     return;
   }
   if (!lockSend('dm', true)) return;
+  const st = beginStop('dm');
+  st.onStop = () => setLiveNotice('Stopping…');
+  setLiveNotice('Sending DM… tap again to stop');
   busy(true);
   try {
+    await wordingPending; /* next person's wording is made in the background; never reuse the old one */
     await fillEmptyCaption('dm');
     await ensureCaption('dm');
+    stopCheck(st);
     applyGreeting(false);
     clearTimeout(timer);
-    await save();
+    /* The message travels in the request, so do not wait for the draft save. */
+    save().catch(() => status('Save failed', 1));
     const r = await post('/send-custom', {
         target: 'phone',
         phone,
@@ -1423,21 +1481,26 @@ $('sendDm').onclick = async () => {
         kind: 'dm_appeal',
         name: $('dmName').value,
         gender,
+        stop_id: st.id,
       }),
       d = await r.json();
+    if (d.code === 'STOPPED') return showStopped(null);
     if (!r.ok) throw Error(d.error || 'Could not send');
     if (d.code === 'SUCCESS') {
-      const result = '✓ DM sent to ' + greet() + '.';
+      const result = '✓ DM sent to ' + greet() + '.' + (st.stopped ? ' Too late to stop.' : '');
       say('app', result + ' New wording is ready for the next person.');
       setLiveNotice(result);
       $('dmPhone').value = '';
       $('dmName').value = '';
       setGender('Brother');
-      await freshWording();
+      wordingPending = freshWording()
+        .catch(() => status('Could not prepare new wording', 1))
+        .finally(() => (wordingPending = null));
     } else
       say('app', 'Not confirmed: ' + (d.message || '') + ' Check WhatsApp before retrying.', 1);
   } catch (e) {
-    say('app', e.message, 1);
+    if (e.stopped) showStopped(null);
+    else say('app', e.message, 1);
   } finally {
     lockSend('dm', false);
     busy(false);

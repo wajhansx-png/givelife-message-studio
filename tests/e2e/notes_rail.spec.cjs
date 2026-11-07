@@ -22,7 +22,8 @@ for (const width of [1440, 390, 320])
     await rail.getByLabel('Text color', { exact: true }).selectOption('#f4a4ad');
     await rail.getByLabel('Text color', { exact: true }).selectOption('#ededed');
     await rail.getByRole('button', { name: 'Increase notes font size' }).click();
-    await expect(editor).toHaveCSS('font-size', '19px');
+    /* Default is 20 on phones and 22 on desktop; one tap adds 1. */
+    await expect(editor).toHaveCSS('font-size', (width <= 720 ? 21 : 23) + 'px');
     const box = await page.locator('.notes-paper').boundingBox(),
       tools = await rail.boundingBox();
     expect(box.y).toBeLessThanOrEqual(72);

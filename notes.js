@@ -83,7 +83,8 @@
   const editor = el('notesEditor'),
     sync = el('notesSync'),
     retry = el('notesRetry');
-  let fontSize = 18;
+  /* Big by default: easy on the eyes. */
+  let fontSize = matchMedia('(max-width: 720px)').matches ? 20 : 22;
   try {
     const stored = Number(localStorage.getItem('givelife-notes-font-size'));
     if (Number.isInteger(stored) && stored >= 14 && stored <= 28) fontSize = stored;
@@ -129,9 +130,26 @@
   el('notesChecklist').textContent = 'Checklist';
   el('notesFontDown').textContent = 'Smaller';
   el('notesFontUp').textContent = 'Larger';
-  const heading = el('notesStyle').closest('label'),
-    colorLabel = el('notesColor').closest('label');
-  heading.prepend(make('span', 'notes-rail-label', 'Heading'));
+  const styleLabel = el('notesStyle').closest('label'),
+    colorLabel = el('notesColor').closest('label'),
+    heading = make('div', 'notes-heading-box'),
+    headingRow = make('div', 'notes-heading-row');
+  /* The select stays for keyboard use; H1-H3 are buttons now. */
+  styleLabel.classList.add('notes-style-hidden');
+  for (const [tag, label] of [
+    ['h1', 'H1'],
+    ['h2', 'H2'],
+    ['h3', 'H3'],
+    ['p', 'Normal text'],
+  ]) {
+    const b = make('button', '', label);
+    b.type = 'button';
+    b.dataset.block = tag;
+    b.title = tag === 'p' ? 'Normal text' : 'Heading ' + tag[1];
+    b.setAttribute('aria-pressed', String(tag === 'p'));
+    headingRow.append(b);
+  }
+  heading.append(make('span', 'notes-rail-label', 'Heading'), headingRow, styleLabel);
   notesToolbar.querySelectorAll('.notes-separator').forEach((e) => e.remove());
   notesToolbar.append(
     heading,
@@ -576,8 +594,15 @@
   document.addEventListener('selectionchange', () => {
     if (!page.open || !loaded) return;
     const selection = window.getSelection();
-    if (selection?.rangeCount && editor.contains(selection.anchorNode))
+    if (selection?.rangeCount && editor.contains(selection.anchorNode)) {
       savedRange = selection.getRangeAt(0).cloneRange();
+      /* Light up the heading button that matches the line being edited. */
+      let node = selection.anchorNode;
+      if (node.nodeType === 3) node = node.parentElement;
+      const tag = node?.closest('h1,h2,h3')?.tagName.toLowerCase() || 'p';
+      for (const b of notesToolbar.querySelectorAll('[data-block]'))
+        b.setAttribute('aria-pressed', String(b.dataset.block === tag));
+    }
   });
   const restoreSelection = () => {
     editor.focus();
@@ -610,6 +635,13 @@
     applyBlock(e.target.value);
     e.target.value = 'p';
   });
+  notesToolbar.querySelectorAll('[data-block]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const tag = b.dataset.block;
+      /* Tapping the active heading again goes back to normal text. */
+      applyBlock(tag !== 'p' && b.getAttribute('aria-pressed') === 'true' ? 'p' : tag);
+    }),
+  );
   el('notesColor').addEventListener('change', (e) => {
     if (!e.target.value) return;
     restoreSelection();

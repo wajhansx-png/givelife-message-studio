@@ -621,7 +621,7 @@
   html
     body:not(#a):not(#b):not(#c):not(#e):not(#f)
     #donorsPage#donorsPage:not(#d)
-    #donorProgress:not([hidden]) {
+    #donorProgress:not([hidden]):not(.dp-collapsed) {
     display: flex !important;
     flex-wrap: wrap !important;
     gap: 6px !important;

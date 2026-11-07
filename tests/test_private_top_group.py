@@ -6,7 +6,12 @@ import tempfile
 import unittest
 
 from donor_book import DonorBook
-from private_top_names import import_top_group, import_top_names
+from private_top_names import (
+    import_top_group,
+    import_top_names,
+    merge_top_group,
+    parse_numbered_list,
+)
 
 
 def payload(*pairs):
@@ -66,6 +71,21 @@ class TopGroup(unittest.TestCase):
         with self.assertRaises(ValueError):
             import_top_group(None, self.dir, payload(("A", "12"), ("B", "+92 300 2220002")))
         self.assertEqual(self.book.list("all")["items"], [])
+
+    def test_pasted_numbered_list_fills_name_only_donors_in_order(self):
+        import_top_names(None, self.dir, json.dumps(["Alpha Giki", "Beta Giki"]), import_id="n1")
+        pasted = "1. Beta Giki \u2014 +92 300 2220002\n2. Alpha Giki - 0300 2220001\n\n3. Fresh Giki \u2014 +974 5055 7391"
+        prepared = parse_numbered_list(pasted)
+        self.assertEqual([n for n, _ in prepared], ["Beta Giki", "Alpha Giki", "Fresh Giki"])
+        book = self.fresh()
+        receipt = merge_top_group(book, prepared, "GIKI")
+        self.assertEqual((receipt["matched"], receipt["added"]), (2, 1))
+        names = [r["name"] for r in self.fresh().list("top")["items"]]
+        self.assertEqual(names, ["Beta Giki", "Alpha Giki", "Fresh Giki"])
+
+    def test_pasted_list_rejects_a_line_without_a_number(self):
+        with self.assertRaises(ValueError):
+            parse_numbered_list("1. Name only")
 
 
 if __name__ == "__main__":

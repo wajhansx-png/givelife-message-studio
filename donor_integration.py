@@ -628,6 +628,22 @@ class DonorIntegration:
             return self.book.restore(body.get("id", ""))
         if action == "import":
             return self.book.import_contacts(body.get("records"), self.app.OWNER_PHONE)
+        if action == "group_numbers":
+            # Owner pastes "1. Name - number" lines; numbers go to the matching name-only donors (no duplicates).
+            from private_top_names import merge_top_group, parse_numbered_list
+
+            group = str(body.get("group") or "GIKI").strip()[:30] or "GIKI"
+            prepared = parse_numbered_list(body.get("text"))
+            own = normalize_phone(self.app.OWNER_PHONE)
+            if any(phone == own for _, phone in prepared):
+                raise ValueError("Your own account cannot be in this list.")
+            r = merge_top_group(self.book, prepared, group)
+            return {
+                **r,
+                "reply": f"{r['matched']} numbers saved to existing donors"
+                + (f", {r['added']} new added" if r["added"] else "")
+                + f" under {group} Donors.",
+            }
         if action == "clear_important":
             return self.book.clear_important()
         raise ValueError("Unknown donor action.")

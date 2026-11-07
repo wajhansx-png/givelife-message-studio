@@ -3375,9 +3375,6 @@ html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools > .gb-time
   width: auto !important;
   min-width: 72px !important;
 }
-@media (max-width: 720px) {
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar button { font-size: 12px !important; }
-}
 
 
 /* Expanded resume controls have real header/action rows, not an overlapping Hide. */
@@ -3495,11 +3492,6 @@ html body #donorsPage .donor-row .donor-more .donor-menu-top {
     flex: 1 1 calc(25% - 6px) !important;
     min-width: 56px !important;
     white-space: normal;
-  }
-}
-@media (max-width: 720px) {
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar {
-    width: 108px;
   }
 }
 
@@ -3627,9 +3619,6 @@ html body #donorsPage .donor-volunteers {
     overflow-y: auto;
     align-items: safe center;
     scroll-padding-block: 8px;
-  }
-  html body #foundationNotes[data-mode='writing'] .notes-toolbar {
-    bottom: calc(70px + env(safe-area-inset-bottom));
   }
   html body #foundationNotes .notes-back-dock #notesBack {
     min-height: 44px !important;

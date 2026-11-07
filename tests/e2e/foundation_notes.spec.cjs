@@ -104,7 +104,9 @@ test('mobile virtual keyboard keeps Notes paper tall while the caret stays visib
       scroller: bounds.height,
       toolbarBottom: bar.getBoundingClientRect().bottom,
       xOverflow: document.documentElement.scrollWidth > innerWidth + 1,
-      scrollable: document.querySelector('#notesEditor').scrollHeight > document.querySelector('#notesEditor').clientHeight + 20,
+      scrollable:
+        document.querySelector('#notesEditor').scrollHeight >
+        document.querySelector('#notesEditor').clientHeight + 20,
       keyboardOverlay: bounds.bottom > innerHeight + 1,
     };
   });
@@ -155,14 +157,14 @@ test('quiet Notes keeps only writing visible; top-edge reveals controls and full
   expect(colors.page).toBe('rgb(36, 36, 36)');
   expect(colors.paper).toBe('rgba(0, 0, 0, 0)');
   expect(colors.editor).toBe('rgba(0, 0, 0, 0)');
-  expect(colors.border).toBe('1px');
+  expect(colors.border).toBe('0px'); /* no box around the writing column */
   expect(colors.outline).toBe('none');
   expect(colors.shadow).toBe('none');
   await page.locator('#notesEditor').fill('A focused foundation idea');
   await expect(toolbar).toBeHidden();
   await page.mouse.move(100, 18);
   await expect(head).toBeVisible();
-  await expect(toolbar).toBeVisible();
+  await expect(toolbar).toBeHidden(); /* the format bar belongs to selected text only */
   await expect(page.getByRole('button', { name: 'Full screen', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Full screen', exact: true }).click();
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
@@ -170,8 +172,9 @@ test('quiet Notes keeps only writing visible; top-edge reveals controls and full
   await page.mouse.move(920, 600);
   await expect(toolbar).toBeHidden();
   await page.keyboard.press('Alt+t');
+  await expect(head).toBeVisible();
+  await page.locator('#notesEditor').press('ControlOrMeta+A');
   await expect(toolbar).toBeVisible();
-  await expect(page.locator('#notesStyle')).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(toolbar).toBeHidden();
 });
@@ -188,16 +191,18 @@ test('mobile Notes opens a hidden toolbar by tapping top edge without shrinking 
   await page
     .locator('#foundationNotes')
     .dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 12, clientY: 16 });
-  await expect(page.locator('.notes-toolbar')).toBeVisible();
-  await page.locator('#notesStyle').selectOption('h2');
+  await expect(page.locator('.notes-head')).toBeVisible();
   await page.locator('#notesEditor').fill('Volunteer outreach');
+  await page.locator('#notesEditor').press('ControlOrMeta+A');
+  await page.locator('[data-block="h2"]').click();
+  await expect(page.locator('#notesEditor h2')).toHaveText('Volunteer outreach');
   expect((await page.locator('.notes-paper').boundingBox()).height).toBeGreaterThanOrEqual(
     height - 2,
   );
   await page
     .locator('#foundationNotes')
     .dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 12, clientY: 16 });
-  await expect(page.locator('.notes-toolbar')).toBeHidden();
+  await expect(page.locator('.notes-head')).toBeHidden();
 });
 
 test('desktop note-taking: type, select, style, save, reopen and keep writing focus', async ({
@@ -221,7 +226,7 @@ test('desktop note-taking: type, select, style, save, reopen and keep writing fo
     /<(?:b|strong)\b|font-weight\s*:\s*(?:bold|700)/i,
   );
   await expect(page.locator('#notesSync')).toHaveText('Saved', { timeout: 10000 });
-  await page.mouse.move(900, 610);
+  await editor.press('End'); /* nothing selected any more: the bar goes away */
   await expect(page.locator('.notes-toolbar')).toBeHidden();
   const editorHeight = (await editor.boundingBox()).height;
   await editor.focus();
@@ -246,9 +251,10 @@ test('narrow phone: editor and formatting rail fit with keyboard open', async ({
   await page.locator('#notesUnlockButton').click();
   const editor = page.locator('#notesEditor');
   await expect(editor).toBeVisible();
-  await expect(page.locator('.notes-toolbar')).toBeVisible();
+  await expect(page.locator('.notes-toolbar')).toBeHidden(); /* shown only for selected text */
   await editor.fill('Contact committed donors today.');
   await expect(page.locator('#notesSync')).toHaveText('Saved', { timeout: 10000 });
+  await editor.press('ControlOrMeta+A');
   await page
     .locator('#foundationNotes')
     .dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 10, clientY: 12 });
@@ -297,9 +303,10 @@ test('notes are big, centered and offer H1-H3 as buttons', async ({ page, reques
   const editor = page.locator('#notesEditor');
   await editor.click();
   await page.keyboard.type('Plan outreach');
-  await expect(editor).toHaveCSS('font-size', '22px');
+  await expect(editor).toHaveCSS('font-size', '27px');
   const paper = await page.locator('.notes-paper').boundingBox();
   expect(Math.abs(paper.x + paper.width / 2 - 960)).toBeLessThan(3);
+  await expect(page.locator('.notes-toolbar')).toBeHidden(); /* no selection, no bar */
   const line = await editor.locator('> *').first().boundingBox();
   expect(line.y).toBeGreaterThan(150);
   await page.keyboard.press('Home');

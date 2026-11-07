@@ -84,15 +84,15 @@
     sync = el('notesSync'),
     retry = el('notesRetry');
   /* Big by default: easy on the eyes. */
-  let fontSize = matchMedia('(max-width: 720px)').matches ? 20 : 22;
+  let fontSize = matchMedia('(max-width: 720px)').matches ? 23 : 27;
   try {
-    const stored = Number(localStorage.getItem('givelife-notes-font-size'));
-    if (Number.isInteger(stored) && stored >= 14 && stored <= 28) fontSize = stored;
+    const stored = Number(localStorage.getItem('givelife-notes-font-size-v2'));
+    if (Number.isInteger(stored) && stored >= 14 && stored <= 36) fontSize = stored;
   } catch {}
   const paintFont = () => {
     editor.style.setProperty('--notes-font-size', fontSize + 'px');
     el('notesFontDown').disabled = fontSize <= 14;
-    el('notesFontUp').disabled = fontSize >= 28;
+    el('notesFontUp').disabled = fontSize >= 36;
     el('notesFontUp').title = 'Larger text · ' + fontSize + 'px';
     el('notesFontDown').title = 'Smaller text · ' + fontSize + 'px';
   };
@@ -101,10 +101,10 @@
     ['notesFontUp', 1],
   ])
     el(id).onclick = () => {
-      fontSize = Math.max(14, Math.min(28, fontSize + delta));
+      fontSize = Math.max(14, Math.min(36, fontSize + delta));
       paintFont();
       try {
-        localStorage.setItem('givelife-notes-font-size', String(fontSize));
+        localStorage.setItem('givelife-notes-font-size-v2', String(fontSize));
       } catch {}
     };
   paintFont();
@@ -140,7 +140,7 @@
     ['h1', 'H1'],
     ['h2', 'H2'],
     ['h3', 'H3'],
-    ['p', 'Normal text'],
+    ['p', 'Text'],
   ]) {
     const b = make('button', '', label);
     b.type = 'button';
@@ -162,25 +162,37 @@
     el('notesFontUp'),
     colorLabel,
   );
+  /* The format bar appears only while text is selected, just below it (above if there is no room). */
+  let selectionRect = null;
   function alignRail() {
     if (!page.open || page.dataset.mode !== 'writing') return;
-    const paper = page.querySelector('.notes-paper').getBoundingClientRect();
-    const mobile = innerWidth <= 720;
-    let top = paper.top + (mobile ? 2 : 120);
     const selection = getSelection();
-    if (
-      !mobile &&
+    const selected =
       selection?.rangeCount &&
       !selection.isCollapsed &&
-      editor.contains(selection.anchorNode)
-    ) {
-      const rect = selection.getRangeAt(0).getBoundingClientRect();
-      if (rect.height) top = rect.top;
+      editor.contains(selection.anchorNode) &&
+      selection.toString().trim() !== '';
+    if (selected) selectionRect = selection.getRangeAt(0).getBoundingClientRect();
+    const keep = notesToolbar.contains(document.activeElement); /* e.g. the Color list is open */
+    if (!selectionRect || (!selected && !keep)) {
+      notesToolbar.dataset.open = 'false';
+      if (!selected) selectionRect = null;
+      return;
     }
-    top = Math.max(paper.top, Math.min(top, innerHeight - notesToolbar.scrollHeight - 12));
-    notesToolbar.style.left = paper.right + 8 + 'px';
+    const w = notesToolbar.offsetWidth,
+      h = notesToolbar.offsetHeight;
+    let top = selectionRect.bottom + 12;
+    if (top + h > innerHeight - 8) top = selectionRect.top - h - 12;
+    top = Math.max(8, Math.min(top, innerHeight - h - 8));
+    const left = Math.max(
+      8,
+      Math.min(selectionRect.left + selectionRect.width / 2 - w / 2, innerWidth - w - 8),
+    );
+    notesToolbar.style.left = left + 'px';
     notesToolbar.style.top = top + 'px';
+    notesToolbar.dataset.open = 'true';
   }
+  editor.addEventListener('scroll', alignRail);
   new ResizeObserver(alignRail).observe(page.querySelector('.notes-paper'));
   document.addEventListener('selectionchange', alignRail);
   window.addEventListener('resize', alignRail);
@@ -259,6 +271,12 @@
             el('notesStyle').focus({ preventScroll: true });
         }, 140);
       }
+    }
+    if (event.key === 'Escape' && notesToolbar.dataset.open === 'true') {
+      /* Escape puts the format bar away by clearing the selection. */
+      getSelection().collapseToEnd();
+      editor.focus({ preventScroll: true });
+      alignRail();
     }
     if (event.key === 'Escape' && page.dataset.controls === 'open' && !document.fullscreenElement) {
       event.preventDefault();

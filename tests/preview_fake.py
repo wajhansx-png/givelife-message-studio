@@ -146,6 +146,10 @@ if "--giki" in sys.argv:
         book.update(row["id"], top_donor=True)
         if i < 5:
             book.update(row["id"], normal_amount=(5 - i) * 1000)
+    for i in range(3):  # name-only donors, waiting for their numbers (use "Add numbers")
+        row = book.add("Name only Giki " + str(i + 1), "")["donor"]
+        book.update(row["id"], important=True)
+        book.update(row["id"], top_donor=True)
     data = book._load()
     for n, r in enumerate([x for x in data["records"] if x["top_donor"]][5:], 1):
         r["group"], r["group_order"] = "GIKI", 15 - n

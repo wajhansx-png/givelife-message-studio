@@ -134,7 +134,7 @@
   const head = document.querySelector('.donor-head');
   if (head) {
     const panel = menu(head, 'donorNavMore', 'More donor options');
-    for (const selector of ['.donor-message-tablist', '#donorBulk']) {
+    for (const selector of ['.donor-message-tablist', '#donorBulk', '#donorNumbers']) {
       const control = head.querySelector(selector);
       if (control) panel.append(control);
     }
@@ -148,10 +148,12 @@
     const placeDonorActions = () => {
       const messages = document.querySelector('.donor-message-tablist');
       const bulk = document.getElementById('donorBulk');
+      const numbers = document.getElementById('donorNumbers');
       const add = document.getElementById('donorAdd');
       if (donorPhone.matches && add) {
         if (messages) head.insertBefore(messages, add);
         if (bulk) panel.append(bulk);
+        if (numbers) panel.append(numbers);
         if (navDetails) {
           // More still exposes Test DM and Poster settings on phones.
           navDetails.hidden = false;
@@ -159,6 +161,7 @@
       } else {
         if (messages) panel.append(messages);
         if (bulk) panel.append(bulk);
+        if (numbers) panel.append(numbers);
         if (navDetails) navDetails.hidden = false;
       }
     };

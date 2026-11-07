@@ -257,6 +257,25 @@ class FocusTests(unittest.TestCase):
         self.assertIn("0 of 5 new versions passed every check.", err)
         self.assertRegex(err, r"\(\d+x\)")  # how often each reason happened
 
+    def test_a_batch_that_keeps_timing_out_gives_up_on_time_and_says_why(self):
+        import focus_bank
+
+        b = self.make()
+        with patch.object(b, "_spawn"):
+            row = b.save("group", self.drafts["group"])
+            b.generate("group")
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch("dm_variants._call", side_effect=RuntimeError("The AI service timed out")),
+            patch("dm_variants._sleep"),
+            patch.object(focus_bank, "MAX_RUN_SECONDS", 0),
+        ):
+            b._generate("group", b.get("group"), ("group", row["revision"]))
+        got = b.get("group")
+        self.assertNotEqual(got["state"], "Generating")  # never left "Writing 5 more…" forever
+        self.assertEqual(got["note"], "")
+        self.assertIn("0 of 5 new versions passed every check", got["error"])
+
     def test_partial_batch_keeps_valid_versions_and_retry_adds_the_next_five(self):
         b = self.make()
         source = SRC

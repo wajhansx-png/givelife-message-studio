@@ -68,7 +68,9 @@
     $('focusBaseNote').textContent = !dirty
       ? 'Nothing has changed. This is already your base message.'
       : hasVersions
-        ? 'This becomes your base message. The ' + row.items.length + ' saved versions were written from the old text, so they are cleared. Press Generate 5 Versions for new ones.'
+        ? 'This becomes your base message. The ' +
+          row.items.length +
+          ' saved versions were written from the old text, so they are cleared. Press Generate 5 Versions for new ones.'
         : 'This becomes your base message. No versions are written.';
     $('focusBaseSave').textContent = dirty ? 'Save' : 'OK';
     baseDialog.showModal();
@@ -223,7 +225,13 @@
           }
         : {},
     );
-    const d = await r.json();
+    let d;
+    try {
+      d = await r.json();
+    } catch (e) {
+      /* An empty reply means the server is restarting; the saved text is safe. */
+      throw Object.assign(Error('The server is restarting. Checking again…'), { restarting: true });
+    }
     if (!r.ok) throw Error(d.error || 'Could not save. Your text is still here.');
     return d;
   }
@@ -336,13 +344,19 @@
           d.state === 'Ready'
             ? (d.items?.length || 0) + ' versions ready'
             : d.state === 'Generating'
-              ? 'Writing 5 more · ' + (d.items?.length || 0) + ' ready so far…'
+              ? 'Writing 5 more · ' +
+                (d.items?.length || 0) +
+                ' ready so far…' +
+                (d.note ? ' · ' + d.note : '')
               : d.error || (d.items?.length || 0) + ' versions ready',
         );
         genButton();
         watch();
       } catch (e) {
-        status('Original saved. Could not refresh versions.');
+        if (e.restarting) {
+          status(e.message);
+          watch();
+        } else status('Original saved. Could not refresh versions.');
       }
     }, 2500);
   }

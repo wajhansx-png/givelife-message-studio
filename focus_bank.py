@@ -18,6 +18,9 @@ ANGLES = (
 BATCH = 5  # versions written per click, and per background top-up while sending
 MAX_VERSIONS = 40  # ceiling for one message's saved versions
 TOP_UP_AT = 2  # when this few unused versions remain in a round, the next batch starts
+MAX_RUN_SECONDS = (
+    270  # one batch gives up after this long and says why; never hangs for ten minutes
+)
 RETRY_AFTER = (
     120,
     300,
@@ -193,6 +196,7 @@ class FocusBank:
             if t in row.get("manual", []) or not reject_reason(source, t, prior[:i])
         ]
         last_error = ""
+        started = time.time()
         reasons = {}  # why candidates were rejected, over the whole run (shown if it falls short)
 
         def why(tally):
@@ -212,7 +216,7 @@ class FocusBank:
             for attempt in range(6 + len(waits)):
                 if attempt - (len(dm_variants.AI_BACKOFF) - len(waits)) >= 6:
                     break  # extra rounds only make up for rate-limit waits
-                if len(items) >= goal:
+                if len(items) >= goal or time.time() - started > MAX_RUN_SECONDS:
                     break
                 if not self.current(kind, row["revision"]):
                     with self.lock:
@@ -265,7 +269,11 @@ class FocusBank:
                     if len(items) >= goal:
                         break
                 # Keep every accepted version even when a later model call fails.
-                if not self.record(kind, row["revision"], {"items": items, "progress": len(items)}):
+                if not self.record(
+                    kind,
+                    row["revision"],
+                    {"items": items, "progress": len(items), "note": last_error[:160]},
+                ):
                     with self.lock:
                         self.running.discard(key)
                     return
@@ -282,6 +290,7 @@ class FocusBank:
                 "error": "",
                 "generator": GEN,
                 "batch": None,
+                "note": "",
                 "auto_failed": False,
                 "auto_fails": 0,
             }
@@ -294,6 +303,7 @@ class FocusBank:
                 "error": str(exc)[:350],
                 "generator": GEN,
                 "batch": None,
+                "note": "",
                 "auto_failed": auto,
                 "auto_fails": fails + 1 if auto else 0,
                 "auto_failed_at": time.time() if auto else 0,

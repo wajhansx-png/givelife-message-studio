@@ -750,7 +750,7 @@ html body #foundationNotes[data-mode='writing'] .notes-toolbar button[aria-press
   scrollbar-width: thin;
   scrollbar-color: #ffffff2e transparent;
   box-sizing: border-box;
-  padding: clamp(14px, 3.4vh, 30px) clamp(18px, 4.5vw, 40px) clamp(40px, 10vh, 96px);
+  padding: 34px clamp(18px, 4.5vw, 40px) clamp(40px, 10vh, 96px);
   font-size: 18px;
   line-height: 1.65;
   color: #ededed;
@@ -926,6 +926,7 @@ html body #foundationNotes[data-mode='writing'] .notes-toolbar button[aria-press
     border-radius: 14px 0 0 14px;
   }
   .foundation-notes .notes-editor {
+    padding-top: 24px;
     padding-left: max(26px, 4.5vw);
     padding-right: max(26px, 4.5vw);
     font-size: 17px;

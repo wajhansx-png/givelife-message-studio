@@ -36,9 +36,10 @@ def chat(prompt, max_tokens=800):
         if COUNT["day"] != _today():
             COUNT.update(day=_today(), calls=0)
         COUNT["calls"] += 1
-        _CACHE[key] = text
-        if len(_CACHE) > 500:
-            _CACHE.pop(next(iter(_CACHE)))
+        if text:  # an empty answer is a failure, never remembered as the answer
+            _CACHE[key] = text
+            if len(_CACHE) > 500:
+                _CACHE.pop(next(iter(_CACHE)))
     return text
 
 

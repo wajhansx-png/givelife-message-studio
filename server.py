@@ -166,6 +166,49 @@ def persist_file(key, path):
         write(key, path.read_text(encoding="utf-8"))
 
 
+_DRAFT_REPAIR = threading.Lock()
+
+
+def read_drafts():
+    """The saved messages. A damaged file is set aside (never deleted) and the last database copy is
+    restored in its place, so one bad write can never break every screen that shows a draft."""
+    try:
+        data = json.loads(DRAFT.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            return data
+        raise ValueError("drafts file is not an object")
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError):
+        pass
+    with _DRAFT_REPAIR:
+        try:
+            data = json.loads(DRAFT.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data  # another request already repaired it
+        except (OSError, ValueError):
+            pass
+        restored = {}
+        try:
+            if STORE:
+                copy = STORE.get("drafts") or ""
+                copy = json.loads(copy) if isinstance(copy, str) else copy
+                restored = copy if isinstance(copy, dict) else {}
+        except Exception:
+            restored = {}
+        try:
+            os.replace(DRAFT, DRAFT.with_name(DRAFT.name + ".corrupt"))
+        except OSError:
+            pass
+        if restored:
+            try:
+                atomic_write(DRAFT, json.dumps(restored, ensure_ascii=False))
+            except OSError:
+                pass
+        print("[drafts] damaged file set aside; " + ("restored from database" if restored else "starting empty"), flush=True)
+        return restored
+
+
 def api(path):
     req = urllib.request.Request(GOWA_URL + path, headers={"X-Device-Id": DEVICE})
     with urllib.request.urlopen(req, timeout=12) as r:
@@ -569,7 +612,7 @@ def active_case_name():
         # A legacy case had no title. Preserve its saved Yousuf draft instead of
         # unexpectedly replacing that existing message during a balance update.
         try:
-            saved = json.loads(DRAFT.read_text(encoding="utf-8"))
+            saved = read_drafts()
             if re.search(r"(?i)\bYousuf\b", str(saved.get("group", ""))):
                 return "Yousuf"
         except (OSError, ValueError, TypeError):
@@ -634,7 +677,10 @@ def build_dm(sel, left, case_name=None):
 
 def variant(advance):
     file = DATA / "variant-state.json"
-    n = json.loads(file.read_text()).get("index", 0) if file.exists() else 0
+    try:
+        n = int(json.loads(file.read_text()).get("index", 0)) if file.exists() else 0
+    except (OSError, ValueError, TypeError, AttributeError):
+        n = 0  # a damaged counter only restarts the rotation
     if advance:
         atomic_write(file, json.dumps({"index": n + 1}))
         persist_file("variants", file)
@@ -693,7 +739,7 @@ def ensure_completed_drafts():
     if read_left() > 0 or not DRAFT.exists():
         return
     with LOCK:
-        drafts = json.loads(DRAFT.read_text(encoding="utf-8"))
+        drafts = read_drafts()
         changed = False
         for kind in ("group", "dm"):
             if completed_case_appeal(drafts.get(kind, "")):
@@ -719,7 +765,7 @@ def save_draft(key, text):
             raise ValueError(
                 "This case is completed. A saved caption cannot request new donations or show Rs. 0 LEFT. Use a completion or thank-you message instead. Nothing was saved."
             )
-        draft = json.loads(DRAFT.read_text(encoding="utf-8"))
+        draft = read_drafts()
         draft[key] = text
         atomic_write(DRAFT, json.dumps(draft, ensure_ascii=False))
         persist_file("drafts", DRAFT)
@@ -750,7 +796,7 @@ def get_message(kind):
         raise ValueError("Choose group or DM.")
     with LOCK:
         ensure_completed_drafts()
-        return {"kind": kind, "text": json.loads(DRAFT.read_text(encoding="utf-8"))[kind]}
+        return {"kind": kind, "text": read_drafts()[kind]}
 
 
 def next_message():
@@ -786,7 +832,7 @@ def next_dm():
 def regenerate_drafts(left, case_name=None):
     """Fresh captions for this case only; do not inherit another patient's medical facts."""
     with LOCK:
-        draft = json.loads(DRAFT.read_text(encoding="utf-8")) if DRAFT.exists() else {}
+        draft = read_drafts() if DRAFT.exists() else {}
         draft["group"] = build_group(variant(False), left, case_name)
         draft["dm"] = build_dm(dm_selection(False), left, case_name)
         atomic_write(DRAFT, json.dumps(draft, ensure_ascii=False))
@@ -799,7 +845,7 @@ def set_left(left):
         if revision is not None and revision != OWNER_REVISION:
             raise ValueError("Superseded by your newer instruction. The amount was not changed.")
         old = read_left()
-        before = json.loads(DRAFT.read_text(encoding="utf-8")) if DRAFT.exists() else {}
+        before = read_drafts() if DRAFT.exists() else {}
         task = workflow()
         custom = next((k for k in ("group", "dm") if task.current(k, before.get(k, ""))), None)
         write_left(left)
@@ -1148,6 +1194,8 @@ def start_send_job(keys, caption, manual=False, request_id=None, with_picture=Tr
         LAST_JOB["id"] = ident
         if request_id:
             REQUEST_JOBS[request_id] = ident
+            while len(REQUEST_JOBS) > 500:  # the store keeps every request id; memory need not
+                REQUEST_JOBS.pop(next(iter(REQUEST_JOBS)), None)
             if STORE:
                 STORE.put("manual_request_" + request_id, {"job_id": ident})
         save_job(ident)
@@ -1269,7 +1317,7 @@ def run_job(job_id, keys, caption, queue=False):
             and not job.get("manual")
             and not event.is_set()
             and ACTIVE == job_id
-            and json.loads(DRAFT.read_text(encoding="utf-8")).get("group") == caption
+            and read_drafts().get("group") == caption
         ):
             job["next_caption"] = next_message()
         from group_delivery import summarize
@@ -1506,7 +1554,11 @@ def check_hold():
 def set_hold(on):
     """Hold = nothing is sent anywhere (no posts, DMs, alerts) and Auto is paused until the owner says resume."""
     on = bool(on)
-    prev = json.loads(HOLD.read_text(encoding="utf-8")) if HOLD.exists() else {}
+    try:
+        prev = json.loads(HOLD.read_text(encoding="utf-8")) if HOLD.exists() else {}
+        prev = prev if isinstance(prev, dict) else {}
+    except (OSError, ValueError):
+        prev = {"on": True} if HOLD.exists() else {}  # unreadable hold counts as on (as on_hold does), so "resume" can clear it
     if on and not prev.get("on"):
         was = auto_on()
         atomic_write(HOLD, json.dumps({"on": True, "was_auto": was, "since": time.time()}))
@@ -1531,7 +1583,10 @@ def set_hold(on):
 
 
 def auto_on():
-    return bool(json.loads(AUTO.read_text()).get("on")) if AUTO.exists() else False
+    try:
+        return bool(json.loads(AUTO.read_text()).get("on")) if AUTO.exists() else False
+    except (OSError, ValueError, AttributeError):
+        return False  # unreadable setting: Auto stays off rather than failing every screen
 
 
 def set_auto(on):
@@ -1852,11 +1907,11 @@ def send_scheduled(target, text):
         else None
     )
     if keys:
-        caption = text or json.loads(DRAFT.read_text(encoding="utf-8")).get("group", "")
+        caption = text or read_drafts().get("group", "")
         if not start_keys_job(keys, caption):
             raise ValueError("another send is running")
         return
-    send_free(t, text or json.loads(DRAFT.read_text(encoding="utf-8")).get("group", ""), True)
+    send_free(t, text or read_drafts().get("group", ""), True)
 
 
 def rule_from_text(text):
@@ -1884,7 +1939,7 @@ def send_appeal(target, request_id=None):
         raise ValueError(
             "WhatsApp is not connected. Link it from the WhatsApp button, then send again."
         )
-    caption = json.loads(DRAFT.read_text(encoding="utf-8")).get("group", "")
+    caption = read_drafts().get("group", "")
     work = workflow()
     options = work.options("group", caption)
     if work.data.get("kind") == "group" and work.data.get("state") == "editing":
@@ -1977,7 +2032,7 @@ def timed_scheduler():
                     raise ValueError(
                         "Not sent: the case is complete (Rs. 0 left). Set a new amount left first."
                     )
-                caption = task.get("text") or json.loads(DRAFT.read_text(encoding="utf-8"))["group"]
+                caption = task.get("text") or read_drafts()["group"]
                 # A due scheduled send does not preempt the owner's current manual batch.
                 with LOCK:
                     if ACTIVE:
@@ -2050,9 +2105,12 @@ def timed_loop():
                 _loop_failure("heal", "Wording top-up check failed", exc)
         try:
             timed_scheduler().tick()
-        except Exception:
-            auto_log(
-                "Timed scheduler could not read or save its records. No automatic retry of dispatched actions."
+            _loop_failed.discard("timed")
+        except Exception as exc:
+            _loop_failure(
+                "timed",
+                "Timed scheduler could not read or save its records. No automatic retry of dispatched actions",
+                exc,
             )
             time.sleep(60)
         time.sleep(1)
@@ -3143,7 +3201,7 @@ ENGINE = autopilot.Engine(
         "last_sent": last_sent_by_key,
         "groups": lambda: list(GROUPS),
         "group_jids": lambda: {k: v[1] for k, v in GROUPS.items()},
-        "caption": lambda: json.loads(DRAFT.read_text(encoding="utf-8")).get("group", ""),
+        "caption": lambda: read_drafts().get("group", ""),
         "start_job": start_auto_group_job,
         "last_results": last_results,
         "messages": scan_messages,
@@ -3339,7 +3397,7 @@ def ensure_dm_structure():
     """Put the canonical structured DM on the screen once, without replacing a custom complete draft."""
     try:
         with LOCK:
-            draft = json.loads(DRAFT.read_text(encoding="utf-8"))
+            draft = read_drafts()
             dm = draft.get("dm", "")
             if (
                 isinstance(dm, str)
@@ -3360,7 +3418,7 @@ def ensure_dm_structure():
 
 
 def current_dm_caption(name="", gender="Brother"):
-    text = json.loads(DRAFT.read_text(encoding="utf-8")).get("dm", "")
+    text = read_drafts().get("dm", "")
     # Repair old incomplete/flattened model output, keeping the structured saved draft otherwise.
     if not dm_composer.complete(text):
         text = build_dm(dm_selection(False), read_left())
@@ -3803,7 +3861,7 @@ def chat_callbacks(
     variant = chat_policy.variant_request(owner["text"])
     draft_state = {
         "draft_task": dict(workflow().data),
-        "drafts": json.loads(DRAFT.read_text(encoding="utf-8")),
+        "drafts": read_drafts(),
         "screen": mapping(screen),
     }
     contextual_edit = draft_flow.contextual_edit(owner["text"], history or [], draft_state)
@@ -4332,7 +4390,7 @@ def assistant_task(body):
                 chat_get(40),
                 {
                     "draft_task": workflow().data,
-                    "drafts": json.loads(DRAFT.read_text(encoding="utf-8")),
+                    "drafts": read_drafts(),
                 },
             )
             or chat_policy.intent(effective)["negative"]
@@ -4405,7 +4463,7 @@ def assistant_task(body):
                     draft_flow.active_task(
                         {
                             "draft_task": workflow().data,
-                            "drafts": json.loads(DRAFT.read_text(encoding="utf-8")),
+                            "drafts": read_drafts(),
                         }
                     ),
                 )
@@ -4416,7 +4474,7 @@ def assistant_task(body):
                         **studio_state(),
                         "last_recipient": manual_recipient(),
                         "draft_task": workflow().data,
-                        "drafts": json.loads(DRAFT.read_text(encoding="utf-8")),
+                        "drafts": read_drafts(),
                         "recipient_names": DM_NAMES,
                         "retrieved": KNOWLEDGE.retrieve(retrieval_query)
                         + KNOWLEDGE.lessons_for(retrieval_query),
@@ -4446,7 +4504,7 @@ def assistant_task(body):
                 )
                 return
             output.update(
-                **json.loads(DRAFT.read_text(encoding="utf-8")),
+                **read_drafts(),
                 left=read_left(),
                 autopilot=auto_on(),
                 dm_identity=dm_identity(),
@@ -4500,7 +4558,7 @@ def assistant_task(body):
 
 def edit_donation_order():
     left = read_left()
-    drafts = json.loads(DRAFT.read_text(encoding="utf-8"))
+    drafts = read_drafts()
     updated = {}
     work = workflow()
     custom = next((k for k, v in drafts.items() if work.current(k, v)), None)
@@ -4535,7 +4593,7 @@ def edit_donation_order():
 
 
 def remove_arrival_line():
-    drafts = json.loads(DRAFT.read_text(encoding="utf-8"))
+    drafts = read_drafts()
     work = workflow()
     custom = next((k for k, v in drafts.items() if work.current(k, v)), None)
     for kind, text in drafts.items():
@@ -4563,7 +4621,7 @@ def send_selected_groups(targets, request_id=None):
     remember_manual({"kind": "appeals", "targets": targets})
     if not wa_ok():
         raise ValueError("WhatsApp is not connected. Link it first.")
-    caption = json.loads(DRAFT.read_text(encoding="utf-8")).get("group", "")
+    caption = read_drafts().get("group", "")
     options = workflow().options("group", caption)
     ident = start_send_job(
         keys,
@@ -4617,7 +4675,7 @@ def execute_manual_command(text, request_id=None, message_kind="group"):
                 {
                     "screen": {"view": message_kind},
                     "draft_task": workflow().data,
-                    "drafts": json.loads(DRAFT.read_text(encoding="utf-8")),
+                    "drafts": read_drafts(),
                 },
             )
             if preview == "current"
@@ -4770,7 +4828,7 @@ def execute_manual_command(text, request_id=None, message_kind="group"):
         task_target = draft_workflow.repeat_target(task, get_message("group")["text"])
         if task_target:
             out.update(send_appeal(task_target, request_id))
-            out.update(**json.loads(DRAFT.read_text(encoding="utf-8")), left=read_left())
+            out.update(**read_drafts(), left=read_left())
             return out
         if not LAST_MANUAL:
             raise ValueError("Who should receive it? Name a group or contact.")
@@ -4822,7 +4880,7 @@ def execute_manual_command(text, request_id=None, message_kind="group"):
             raise ValueError("Who should receive this text? Give a name, number or group.")
         send_free(target, plan["text"], False, literal=True)
         out["reply"] = "WhatsApp confirmed the message."
-    drafts = json.loads(DRAFT.read_text(encoding="utf-8"))
+    drafts = read_drafts()
     out.update(group=drafts["group"], dm=drafts["dm"], left=read_left())
     return out
 
@@ -5020,7 +5078,7 @@ def live_snapshot():
             if t.get("scope") and t["action"] == "send"
         }
     with LOCK:
-        current = {"left": read_left(), "drafts": json.loads(DRAFT.read_text(encoding="utf-8"))}
+        current = {"left": read_left(), "drafts": read_drafts()}
     return {
         "on": on,
         "ai": bool(assistant.client()),
@@ -5305,7 +5363,7 @@ class Handler(BaseHTTPRequestHandler):
                 )
         if self.path == "/drafts":
             ensure_completed_drafts()
-            self.reply(DRAFT.read_bytes())
+            self.reply(read_drafts())  # a damaged file is repaired first, never passed to the browser
         elif self.path == "/report":
             # Every resume (donor DMs and groups) and how many people the Reply feature answered.
             PKT = datetime.timezone(datetime.timedelta(hours=5))
@@ -6119,7 +6177,7 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("Delay must be 1–1440 minutes.")
                 caption = str(body.get("message") or "")
                 if not caption.strip():
-                    caption = json.loads(DRAFT.read_text(encoding="utf-8")).get("group", "")
+                    caption = read_drafts().get("group", "")
                 if not caption.strip():
                     raise ValueError("Save a group message first, then schedule.")
                 keys = list(GROUPS) if key == "all" else FREELANCE if key == "free" else [key]
@@ -6352,13 +6410,23 @@ def resume_batches_after_restart(wait=10, tries=90, sleep=time.sleep):
 
 ensure_dm_structure()
 if __name__ == "__main__":
-    threading.Thread(target=resume_batches_after_restart, daemon=True, name="dm-resume").start()
-    threading.Thread(target=recover_group_research, daemon=True, name="research-recovery").start()
-    threading.Thread(target=donor_autopilot, daemon=True).start()
+    # One background worker failing to start must never keep the website itself from starting.
+    def start_worker(name, start):
+        try:
+            start()
+        except Exception as exc:
+            print("[startup] " + name + " did not start: " + type(exc).__name__, flush=True)
+
+    def spawn(target, name):
+        start_worker(name, threading.Thread(target=target, daemon=True, name=name).start)
+
+    spawn(resume_batches_after_restart, "dm-resume")
+    spawn(recover_group_research, "research-recovery")
+    spawn(donor_autopilot, "keep-awake")
     # Team was removed from the interface. Retain records without hidden outreach.
     if os.environ.get("GIVELIFE_TEAM_ENABLED") == "1":
-        threading.Thread(target=team_loop, daemon=True, name="team-loop").start()
-    PILOT.start()
-    ENGINE.start()
-    threading.Thread(target=timed_loop, daemon=True).start()
+        spawn(team_loop, "team-loop")
+    start_worker("autopilot advisor", PILOT.start)
+    start_worker("auto engine", ENGINE.start)
+    spawn(timed_loop, "timed-tasks")
     ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "10000"))), Handler).serve_forever()

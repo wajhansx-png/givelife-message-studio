@@ -1,6 +1,7 @@
 """Volunteers: people who help share the case. A name and a private number, one message the owner writes, and the same
 safe batch sending as donors (gaps, saved receipts, never twice) but with their own list, their own records and no appeal rules."""
 
+from persist import atomic_write
 import re, threading, time
 from donor_book import DonorBook, normalize_phone
 from donor_delivery import DonorDelivery
@@ -57,7 +58,7 @@ class Volunteers:
         text = text.replace("\r\n", "\n").strip()
         if self.app.STORE:
             self.app.STORE.put(self.MESSAGE_KEY, text)
-        self.path.write_text(text, encoding="utf-8")
+        atomic_write(self.path, text)
         return {"message": text}
 
     def view(self, query=""):

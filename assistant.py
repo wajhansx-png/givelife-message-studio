@@ -421,6 +421,13 @@ def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None)
                 f"DeepSeek returned {e.code}"
                 + (" (check the API key)" if e.code in (401, 403) else "")
             ) from None
+        except (urllib.error.URLError, OSError, ValueError):
+            # A dropped connection, a timeout or a cut-off reply. Asking the AI has no side effects,
+            # so one more try is safe; after that it is a clear error, not a raw network exception.
+            if attempt == 0:
+                time.sleep(0.5)
+                continue
+            raise RuntimeError("The AI service could not be reached. Nothing was changed.") from None
     choices = data.get("choices")
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
         raise RuntimeError("DeepSeek returned an incomplete response. No action was confirmed.")

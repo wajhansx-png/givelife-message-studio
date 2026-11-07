@@ -51,21 +51,28 @@
       $('repList').textContent = '';
       $('repNewList').textContent = '';
       (d.replies && d.replies.length ? d.replies : ['']).forEach((t) => row(t, 'repList'));
-      (d.new_replies && d.new_replies.length ? d.new_replies : ['']).forEach((t) => row(t, 'repNewList'));
+      (d.new_replies && d.new_replies.length ? d.new_replies : ['']).forEach((t) =>
+        row(t, 'repNewList'),
+      );
       dirty = false;
       note(d.autopilot ? '' : 'Auto is off. Replies are saved and go out once Auto is on.', false);
     } catch (e) {
       note('Could not load your replies.', true);
     }
   }
-  const texts = (list) => [...$(list).querySelectorAll('textarea')].map((t) => t.value.trim()).filter(Boolean);
+  const texts = (list) =>
+    [...$(list).querySelectorAll('textarea')].map((t) => t.value.trim()).filter(Boolean);
   async function save(close) {
     $('repSave').disabled = true;
     try {
       const r = await fetch('/reply-setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: $('repEnabled').checked, replies: texts('repList'), new_replies: texts('repNewList') }),
+        body: JSON.stringify({
+          enabled: $('repEnabled').checked,
+          replies: texts('repList'),
+          new_replies: texts('repNewList'),
+        }),
       });
       const d = await r.json();
       if (!r.ok) throw Error(d.error || 'Could not save.');
@@ -133,11 +140,18 @@
     ]
       .map(
         ([t, id], i) =>
-          '<li><span class="rp-n" aria-hidden="true">' + (i + 1) + '</span><span class="rp-t">' + t +
-          '</span><b class="rp-v" id="' + id + '">…</b><small class="rp-s" id="' + id + 'Sub"></small></li>',
+          '<li><span class="rp-n" aria-hidden="true">' +
+          (i + 1) +
+          '</span><span class="rp-t">' +
+          t +
+          '</span><b class="rp-v" id="' +
+          id +
+          '">…</b><small class="rp-s" id="' +
+          id +
+          'Sub"></small></li>',
       )
       .join('') +
-    '</ol><button type="button" id="reportClose">Close</button></div>';
+    '</ol><section id="autoControls" class="auto-controls" aria-label="Auto controls"><h3>Auto</h3><div id="autoCards"></div><p id="autoMsg" class="auto-msg" role="alert"></p></section><button type="button" id="reportClose">Close</button></div>';
   document.body.append(dlg);
   const $ = (id) => document.getElementById(id);
   const clock = (sec) =>
@@ -159,7 +173,9 @@
         !d.on
           ? 'Auto is off'
           : next
-            ? 'Next: ' + (GROUP_NAMES[next.group] || next.group) + (next.in ? ' in ' + next.in + ' min' : ' now')
+            ? 'Next: ' +
+              (GROUP_NAMES[next.group] || next.group) +
+              (next.in ? ' in ' + next.in + ' min' : ' now')
             : 'Nothing due',
       );
     } catch (e) {
@@ -189,7 +205,9 @@
   }
   const remember = (on) => {
     try {
-      on ? localStorage.setItem('givelife-report-open', '1') : localStorage.removeItem('givelife-report-open');
+      on
+        ? localStorage.setItem('givelife-report-open', '1')
+        : localStorage.removeItem('givelife-report-open');
     } catch (e) {}
   };
   async function fillExtra() {
@@ -198,24 +216,211 @@
         r = d.replies || {},
         list = d.resumes || [],
         last = list[0];
-      put('reportReplies', (r.today || 0) + ' today', (r.total || 0) + ' in total' + (r.on ? '' : ' · Reply is off'));
+      put(
+        'reportReplies',
+        (r.today || 0) + ' today',
+        (r.total || 0) + ' in total' + (r.on ? '' : ' · Reply is off'),
+      );
       put(
         'reportResumes',
         list.length ? String(list.length) : 'None',
-        last ? 'Latest: ' + last.what + ' · ' + last.when + (last.state ? ' · ' + last.state : '') : '',
+        last
+          ? 'Latest: ' + last.what + ' · ' + last.when + (last.state ? ' · ' + last.state : '')
+          : '',
       );
     } catch (e) {
       put('reportReplies', 'Unavailable', '');
       put('reportResumes', 'Unavailable', '');
     }
   }
+  /* ---- Auto: Group Auto, Donor DM Auto, Important Donors Auto. Each card only talks to /auto-controls;
+     the server runs everything, so closing the browser changes nothing. ---- */
+  const cards = {};
+  let autoTimer = 0,
+    autoBusy = false;
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  const autoSay = (text) => ($('autoMsg').textContent = text || '');
+  async function autoCall(body) {
+    const r = await fetch('/auto-controls', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw Error(d.error || 'That did not work. Nothing was changed.');
+    return d;
+  }
+  function buildCard(c) {
+    const card = el('article', 'auto-card'),
+      head = el('div', 'auto-head'),
+      sw = el('button', 'auto-switch'),
+      stats = el('dl', 'auto-stats'),
+      note = el('p', 'auto-note'),
+      edit = el('button', 'auto-edit', 'Edit Settings'),
+      form = el('form', 'auto-form');
+    card.dataset.control = c.id;
+    head.append(el('h4', '', c.title), sw);
+    sw.type = edit.type = 'button';
+    sw.setAttribute('role', 'switch');
+    sw.setAttribute('aria-label', c.title);
+    for (const [k, label] of [
+      ['recipients', 'Recipients'],
+      ['sent', 'Sent'],
+      ['pending', 'Pending'],
+      ['next', 'Next send'],
+    ]) {
+      const row = el('div');
+      row.append(el('dt', '', label), el('dd', '', '—'));
+      row.dataset.stat = k;
+      stats.append(row);
+    }
+    form.hidden = true;
+    form.append(el('p', 'auto-error'));
+    card.append(head, stats, note, edit, form);
+    cards[c.id] = { card, sw, stats, note, edit, form, fields: c.fields, filled: false };
+    sw.onclick = () => toggle(c.id);
+    edit.onclick = () => {
+      form.hidden = !form.hidden;
+      if (!form.hidden) fillForm(c.id);
+    };
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      saveForm(c.id);
+    };
+    $('autoCards').append(card);
+  }
+  function fillForm(id) {
+    const x = cards[id],
+      view = x.last;
+    x.form.replaceChildren(el('p', 'auto-error'));
+    for (const f of x.fields) {
+      const label = el('label'),
+        text = el('span', '', f.label);
+      let input;
+      if (f.type === 'select') {
+        input = el('select');
+        for (const o of f.options) input.append(new Option(o.replace('_', ' '), o));
+      } else {
+        input = el('input');
+        input.type = f.type === 'check' ? 'checkbox' : 'number';
+        if (f.type === 'number') {
+          input.min = f.min;
+          input.max = f.max;
+          input.step = 'any';
+        }
+      }
+      input.name = f.key;
+      const value = view.settings[f.key];
+      if (f.type === 'check') input.checked = !!value;
+      else input.value = value == null ? '' : value;
+      label.className = f.type === 'check' ? 'auto-check' : '';
+      label.append(...(f.type === 'check' ? [input, text] : [text, input]));
+      x.form.append(label);
+    }
+    const save = el('button', 'auto-save', 'Save'),
+      cancel = el('button', '', 'Cancel');
+    save.type = 'submit';
+    cancel.type = 'button';
+    cancel.onclick = () => (x.form.hidden = true);
+    x.form.append(save, cancel);
+  }
+  async function saveForm(id) {
+    const x = cards[id],
+      settings = {};
+    for (const f of x.fields) {
+      const input = x.form.elements[f.key];
+      if (!input) continue;
+      settings[f.key] =
+        f.type === 'check'
+          ? input.checked
+          : f.type === 'number'
+            ? input.value === ''
+              ? null
+              : Number(input.value)
+            : input.value;
+    }
+    try {
+      x.form.querySelector('.auto-error').textContent = '';
+      paint(await autoCall({ control: id, settings }));
+      x.form.hidden = true;
+      autoSay(
+        'Saved. Active sends use the new settings from the next send; nothing was restarted.',
+      );
+    } catch (e) {
+      x.form.querySelector('.auto-error').textContent = e.message;
+    }
+  }
+  async function toggle(id) {
+    const x = cards[id];
+    if (autoBusy) return;
+    const turningOn = !x.last.on && x.last.state !== 'STOPPING';
+    if (turningOn && id !== 'group') {
+      const s = x.last.settings,
+        what =
+          id === 'important'
+            ? 'up to ' + s.count + ' Important donors, ' + s.gap_minutes + ' minutes apart'
+            : 'your ' +
+              (s.scope || 'important').replace('_', ' ') +
+              ' donors the way you usually send';
+      if (!confirm('Switch ' + x.last.title + ' ON? It will DM ' + what + '.')) return;
+    }
+    autoBusy = true;
+    x.sw.disabled = true;
+    autoSay('');
+    try {
+      paint(await autoCall({ control: id, on: turningOn }));
+    } catch (e) {
+      autoSay(e.message);
+    } finally {
+      autoBusy = false;
+      x.sw.disabled = false;
+    }
+  }
+  function paint(view) {
+    for (const c of Object.values(view.controls || {})) {
+      if (!cards[c.id]) buildCard(c);
+      const x = cards[c.id];
+      x.last = c;
+      x.sw.textContent = c.state === 'STOPPING' ? 'STOPPING' : c.on ? 'ON' : 'OFF';
+      x.sw.setAttribute('aria-checked', c.on ? 'true' : 'false');
+      x.card.dataset.state = c.state;
+      const v = {
+        recipients: c.recipients,
+        sent: c.sent,
+        pending: c.pending,
+        next: c.next_at ? clock(c.next_at) : '—',
+      };
+      for (const row of x.stats.children) row.lastChild.textContent = v[row.dataset.stat];
+      x.note.textContent = c.note || '';
+    }
+  }
+  async function autoRefresh() {
+    try {
+      paint(await (await fetch('/auto-controls')).json());
+    } catch (e) {
+      autoSay('Auto controls are unavailable right now. Nothing was changed.');
+    }
+  }
   const open = () => {
     fill();
     fillExtra();
+    autoRefresh();
+    clearInterval(autoTimer);
+    autoTimer = setInterval(() => {
+      if (dlg.open && !document.hidden) autoRefresh();
+    }, 2500);
     if (!dlg.open) dlg.showModal();
     remember(true);
   };
-  dlg.addEventListener('close', () => remember(false));
+  dlg.addEventListener('close', () => {
+    clearInterval(autoTimer);
+    remember(false);
+  });
   /* Reopening the app returns to the Report if it was open. */
   try {
     if (localStorage.getItem('givelife-report-open') === '1') setTimeout(open, 600);
@@ -257,7 +462,7 @@
   const $ = (id) => document.getElementById(id);
   async function go(at) {
     const note = $('rgNote');
-    if (at === '' ) return (note.textContent = 'Pick a time first, or press Resume now.');
+    if (at === '') return (note.textContent = 'Pick a time first, or press Resume now.');
     note.textContent = 'Working…';
     for (const b of dlg.querySelectorAll('button')) b.disabled = true;
     try {
@@ -266,7 +471,9 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ which: $('rgWhich').value, at: at || '' }),
         }),
-        d = await r.json().catch(() => ({ error: 'The app is restarting. Try again in a minute.' }));
+        d = await r
+          .json()
+          .catch(() => ({ error: 'The app is restarting. Try again in a minute.' }));
       if (!r.ok) throw Error(d.error || 'Could not resume.');
       note.textContent = '✓ ' + d.message;
       setTimeout(() => dlg.open && dlg.close(), 1600);

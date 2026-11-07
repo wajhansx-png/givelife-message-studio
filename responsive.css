@@ -1027,3 +1027,42 @@ html body:not(#a):not(#b):not(#c) .group-send .grp-card .delay-pill:is([aria-pre
   border-color: #2f6fe8 !important;
   color: #fff !important;
 }
+
+/* ---- Message buttons (Urdu + English, More Trigger, English, English Trigger): two by two on phones ---- */
+@media (max-width: 380px) {
+  html body:not(#a):not(#b):not(#c) #messageFocus .focus-styles {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    width: 100% !important;
+    margin-inline-start: 0 !important;
+    gap: 5px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #messageFocus .focus-styles button {
+    min-width: 0 !important;
+    padding: 4px 4px !important;
+    font-size: 11px !important;
+    white-space: normal !important;
+    line-height: 1.15 !important;
+  }
+}
+@media (min-width: 381px) and (max-width: 899px) {
+  html body:not(#a):not(#b):not(#c) #messageFocus .focus-styles {
+    width: 100% !important;
+    margin-inline-start: 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c) #messageFocus .focus-styles button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding: 4px 6px !important;
+  }
+}
+
+/* ---- Reports > Auto cards: four numbers fit one row on phones ---- */
+@media (max-width: 380px) {
+  html body:not(#a):not(#b):not(#c) .auto-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  html body:not(#a):not(#b):not(#c) .report-card {
+    padding: 14px 10px !important;
+  }
+}

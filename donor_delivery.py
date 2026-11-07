@@ -232,6 +232,7 @@ class DonorDelivery:
         attachment=None,
         resume_id=None,
         follow_up=None,
+        owner=None,
     ):
         if follow_up is not None and (
             not isinstance(follow_up, str) or not follow_up.strip() or len(follow_up) > 2000
@@ -535,13 +536,13 @@ class DonorDelivery:
                 confirmed_ids = {
                     r["id"] for r in prev.get("receipts", []) if r.get("state") == "Sent"
                 }
-                for ident in prev["ids"]:
+                for previous_id in prev["ids"]:
                     try:
-                        record = self.book.resolve(ident)
+                        record = self.book.resolve(previous_id)
                         if record.get("last_sent_at") and record["last_sent_at"] >= prev.get(
                             "created_at", float("inf")
                         ):
-                            confirmed_ids.add(ident)
+                            confirmed_ids.add(previous_id)
                     except ValueError:
                         pass
                 job.update(
@@ -561,6 +562,8 @@ class DonorDelivery:
                 job["custom_template"] = custom_template
             if follow_up:
                 job["follow_up"] = follow_up.strip()
+            if owner:
+                job["owner"] = str(owner)[:40]  # which Reports > Auto control started this batch
             if attachment:
                 job["attachment"] = attachment
             data["jobs"].append(job)
@@ -593,7 +596,7 @@ class DonorDelivery:
 
     def configure(self, ident, settings):
         """Change only future dispatch settings of this exact existing job."""
-        allowed = {"gap_seconds", "chunk", "rests", "poster", "jitter"}
+        allowed = {"gap_seconds", "chunk", "rests", "poster", "jitter", "follow_up"}
         if not isinstance(settings, dict) or not settings or set(settings) - allowed:
             raise ValueError("Choose gap, batch size, pauses or poster settings.")
         values = copy.deepcopy(settings)
@@ -609,6 +612,14 @@ class DonorDelivery:
             raise ValueError("Choose 1 to 20 people per batch.")
         if "poster" in values and type(values["poster"]) is not bool:
             raise ValueError("Poster must be on or off.")
+        if "follow_up" in values:
+            text = values["follow_up"]
+            if text in (None, "", False):
+                values["follow_up"] = None  # follow-up off for the sends still to come
+            elif not isinstance(text, str) or not text.strip() or len(text) > 2000:
+                raise ValueError("Write the follow-up message first (up to 2,000 characters).")
+            else:
+                values["follow_up"] = text.strip()
         if "rests" in values and (
             not isinstance(values["rests"], list)
             or not 1 <= len(values["rests"]) <= 50
@@ -1182,6 +1193,8 @@ class DonorDelivery:
             args["attachment"] = j["attachment"]
         if j.get("follow_up"):
             args["follow_up"] = j["follow_up"]
+        if j.get("owner"):
+            args["owner"] = j["owner"]
         if j["scope"] == "selected":
             if not j.get("personal_names"):
                 return None

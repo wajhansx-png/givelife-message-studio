@@ -1,0 +1,111 @@
+/* Reports > Auto: three cards inside the Report dialog. */
+.report-card {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}
+.auto-controls {
+  margin-top: 18px;
+  text-align: start;
+}
+.auto-controls h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+.auto-card {
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  border: 1px solid #ffffff2e;
+  border-radius: 14px;
+  background: #ffffff12;
+}
+.auto-card[data-state='ON'] {
+  border-color: #34d399aa;
+}
+.auto-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.auto-head h4 {
+  margin: 0;
+  font-size: 16px;
+}
+.auto-card .auto-switch {
+  min-width: 76px;
+  margin: 0;
+  padding: 0 14px;
+}
+.auto-card[data-state='ON'] .auto-switch {
+  background: #047857 !important;
+}
+.auto-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 10px 0 6px;
+}
+.auto-stats div {
+  min-width: 0;
+}
+.auto-stats dt {
+  font-size: 11px;
+  opacity: 0.75;
+}
+.auto-stats dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.auto-note {
+  margin: 4px 0 8px;
+  font-size: 13px;
+  opacity: 0.9;
+}
+.auto-card .auto-edit {
+  margin-top: 0;
+  min-height: 36px;
+  padding: 0 14px;
+}
+.auto-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.auto-form label {
+  display: grid;
+  gap: 3px;
+  font-size: 13px;
+}
+.auto-form .auto-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.auto-form input:not([type='checkbox']),
+.auto-form select {
+  min-height: 38px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid #ffffff40;
+  background: #0b1020;
+  color: inherit;
+  font: inherit;
+}
+.auto-form button {
+  margin-top: 0;
+  min-height: 38px;
+}
+.auto-error,
+.auto-msg {
+  margin: 4px 0 0;
+  min-height: 1em;
+  font-size: 13px;
+  color: #fca5a5;
+}
+.auto-msg:empty,
+.auto-error:empty {
+  display: none;
+}

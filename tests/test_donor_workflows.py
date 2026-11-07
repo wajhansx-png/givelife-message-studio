@@ -200,7 +200,7 @@ class WorkflowTests(unittest.TestCase):
         result = registry.start_batch(scope="important", run=False, request_id="default-gap")
         self.assertEqual(result["job"]["gap_seconds"], 240)
         registry.jobs.active = None
-        with self.assertRaisesRegex(ValueError, "1 to 10"):
+        with self.assertRaisesRegex(ValueError, "5 seconds to 10 minutes"):
             registry.start_batch(scope="important", gap_seconds=601, run=False)
 
     def test_book_reads_are_cached_and_status_survives_restart(self):

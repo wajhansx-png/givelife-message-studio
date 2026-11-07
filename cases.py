@@ -1,6 +1,7 @@
 """Cases: each case (for example "Yousuf") keeps its own amount, captions, stars, donated marks, DM-sent marks and batch history.
 Closing one saves it; a new case starts from zero; any saved case can be opened again. Donor and volunteer names and numbers are shared."""
 
+from persist import atomic_write
 import base64, json, re, threading, time, uuid
 
 
@@ -31,9 +32,7 @@ class Cases:
     def _save(self, data):
         if self.app.STORE:
             self.app.STORE.put(self.KEY, data)
-        (self.app.DATA / "cases.json").write_text(
-            json.dumps(data, ensure_ascii=False), encoding="utf-8"
-        )
+        atomic_write(self.app.DATA / "cases.json", json.dumps(data, ensure_ascii=False))
 
     # --- what a case holds
     def _capture(self):
@@ -83,10 +82,10 @@ class Cases:
         h = self.hub
         a = self.app
         if snap:
-            (a.DATA / "state.md").write_text(snap["state"], encoding="utf-8")
+            atomic_write((a.DATA / "state.md"), snap["state"])
             a.persist_file("campaign", a.DATA / "state.md")
             if snap.get("drafts"):
-                a.DRAFT.write_text(snap["drafts"], encoding="utf-8")
+                atomic_write(a.DRAFT, snap["drafts"])
                 a.persist_file("drafts", a.DRAFT)
             h.book.import_case_fields(snap.get("donors"))
             h.volunteers.book.import_case_fields(snap.get("volunteers"))
@@ -102,7 +101,7 @@ class Cases:
                     if re.search(r"^" + key + ":", state, re.M)
                     else key + ": " + str(left) + "\n" + state
                 )
-            (a.DATA / "state.md").write_text(state, encoding="utf-8")
+            atomic_write((a.DATA / "state.md"), state)
             a.persist_file("campaign", a.DATA / "state.md")
             h.book.import_case_fields(None)
             h.volunteers.book.import_case_fields(None)
@@ -129,8 +128,8 @@ class Cases:
             (a.DATA / "poster.jpg").write_bytes(base64.b64decode(picture))
         if video:
             (a.DATA / "poster.mp4").write_bytes(base64.b64decode(video))
-        (a.DATA / "poster-kind.txt").write_text(
-            "video" if kind == "video" and video else "image", encoding="utf-8"
+        atomic_write(
+            a.DATA / "poster-kind.txt", "video" if kind == "video" and video else "image"
         )
         for i, encoded in enumerate(papers[:6]):
             if isinstance(encoded, str):

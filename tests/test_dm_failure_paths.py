@@ -51,6 +51,24 @@ class DmFailurePaths(unittest.TestCase):
         st = h.jobs.status()
         return st, calls
 
+    def test_a_failed_final_save_never_leaves_the_registry_stuck_busy(self):
+        real = self.h.jobs._update
+
+        def update(ident, **fields):
+            if fields.get("state") in ("Completed", "Stopped"):
+                raise ValueError("Persistent send records are unavailable.")
+            return real(ident, **fields)
+
+        with (
+            patch.object(self.h.jobs, "_update", side_effect=update),
+            patch.object(app.time, "sleep"),  # the settle retries must not slow the test
+            patch.object(__import__("donor_delivery").time, "sleep"),
+        ):
+            st, calls = self.batch([])
+        self.assertEqual(len(calls), 3)  # the sends themselves all happened exactly once
+        self.assertIsNone(self.h.jobs.active)  # and a new batch can start
+        self.assertEqual(self.h.jobs.status()["state"], "Completed")  # the screen tells the truth
+
     def test_whatsapp_blips_are_waited_out_not_fatal(self):
         st, calls = self.batch([ValueError("WhatsApp is disconnected. Tap WhatsApp to reconnect.")])
         self.assertEqual((st["state"], st["sent"]), ("Completed", 3), st.get("error"))

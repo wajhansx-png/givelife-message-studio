@@ -1052,8 +1052,8 @@ class DonorIntegration:
                 if k in ("name", "top_donor", "important", "donated", "amount", "notes")
             }
             if "top_donor" in changes:
-                if not re.search(r"(?i)top donors?", owner) or changes["top_donor"] != (
-                    not bool(re.search(r"(?i)(remove|not|unmark)", owner))
+                if not re.search(r"(?i)\btop donors?\b", owner) or changes["top_donor"] != (
+                    not bool(re.search(r"(?i)\b(remove|not|unmark)\b", owner))
                 ):
                     raise ValueError("Top donor membership does not match your instruction.")
             if "important" in changes:

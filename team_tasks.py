@@ -10,6 +10,7 @@ Rules that keep it honest:
 - "Done" from the teammate is only a report. "Not done", "almost done", "will be done by 5" are NOT reports.
 - Network calls never run while the lock is held, so the owner's screen never waits on WhatsApp."""
 
+from persist import atomic_write
 import datetime, hashlib, re, threading, time, uuid
 from donor_book import normalize_phone
 
@@ -334,9 +335,7 @@ class TeamTasks:
         if self.app.STORE:
             self.app.STORE.put(self.KEY, d)
         try:
-            (self.app.DATA / "team.json").write_text(
-                json.dumps(d, ensure_ascii=False), encoding="utf-8"
-            )
+            atomic_write(self.app.DATA / "team.json", json.dumps(d, ensure_ascii=False))
         except OSError:
             pass
 

@@ -3256,14 +3256,8 @@ Ayesha, +92 301 1234567" aria-describedby="pasteResult"></textarea><div id="past
         : text,
   };
   function wrapMark(input, mark) {
-    const a = input.selectionStart, b = input.selectionEnd, v = input.value;
-    if (a === b) { input.focus(); return; }
-    const picked = v.slice(a, b), lead = picked.match(/^\s*/)[0], tail = picked.match(/\s*$/)[0], core = picked.trim();
-    const on = core.startsWith(mark) && core.endsWith(mark) && core.length > 1;
-    const out = lead + (on ? core.slice(1, -1) : mark + core + mark) + tail;
-    input.setRangeText(out, a, b, 'select');
-    input.focus();
-    input.dispatchEvent(new Event('input'));
+    if (input.selectionStart === input.selectionEnd) return input.focus();
+    window.waMark.apply(input, mark);
   }
 
   function openBaseMessage() {

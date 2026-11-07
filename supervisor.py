@@ -163,7 +163,14 @@ class Child:
         if len(self.crashes) >= self.max_crashes:
             return "giveup"
         self.sleep(self.backoff.next())
-        self.proc = self.start()
+        try:
+            self.proc = self.start()
+        except Exception as exc:
+            # The restart itself failed (no process slot, file gone). That is one more crash, not a reason
+            # to take the supervisor down: try again next round, and give up only when it keeps failing.
+            self.log("[launcher] %s could not start (%s)" % (self.name, type(exc).__name__))
+            self.crashes.append(self.clock())
+            return "giveup" if len(self.crashes) >= self.max_crashes else "failed"
         return "restarted"
 
 

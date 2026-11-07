@@ -1802,12 +1802,25 @@ async function act(text) {
     });
     d = await r.json().catch(() => ({}));
     if (r.ok && d.task_id) {
-      let finished = false;
+      let finished = false,
+        blips = 0;
       const until = Date.now() + 4 * 60 * 1000;
       while (!finished && Date.now() < until) {
         await new Promise((res) => setTimeout(res, 500));
-        const check = await fetch('/assistant-status/' + d.task_id),
+        let check, task;
+        try {
+          check = await fetch('/assistant-status/' + d.task_id);
           task = await check.json();
+        } catch (e) {
+          /* A short network blip must not abandon a request the server is still running; only status is re-read, never the action. */
+          if (++blips >= 4)
+            throw Error(
+              'Lost contact while waiting. Check recent activity; I will not repeat the action.',
+            );
+          await new Promise((res) => setTimeout(res, 1500));
+          continue;
+        }
+        blips = 0;
         if (!check.ok) throw Error(task.error || 'Request no longer tracked. Nothing was retried.');
         if (task.done) {
           if (task.error) throw Error(task.error);

@@ -1086,8 +1086,7 @@ class DonorDelivery:
             if not sent and skipped == len(j["ids"]) and state == "Completed":
                 state = "Nothing sent"
                 error = "All selected recipients were excluded. See the recipient results; this batch did not send any DM."
-            self._update(
-                j["id"],
+            final = dict(
                 state=state,
                 error=error,
                 sent=sent,
@@ -1101,8 +1100,34 @@ class DonorDelivery:
                 captions=[],
                 personal_names={},
             )
-            with self.lock:
-                self.active = None
+            try:
+                self._settle(j["id"], final)
+            finally:
+                with self.lock:
+                    self.active = None  # always freed, so one storage failure can never block every later batch
+
+    SETTLE_TRIES = 3
+
+    def _settle(self, ident, final):
+        """Record how a batch ended. If the database is briefly unavailable, retry a few times, then at
+        least correct the in-memory record so the screen shows the truth and a later restart marks it
+        Interrupted. Never raises: this runs while the worker is shutting down."""
+        for attempt in range(self.SETTLE_TRIES):
+            try:
+                self._update(ident, **final)
+                return True
+            except Exception:
+                if attempt + 1 < self.SETTLE_TRIES:
+                    time.sleep(0.5 * (attempt + 1))
+        with self.lock:
+            try:
+                for job in (self._cache or {}).get("jobs", []):
+                    if job.get("id") == ident:
+                        job.update(final, updated_at=time.time())
+            except Exception:
+                pass
+        print("[donor-delivery] final state could not be saved; kept in memory", flush=True)
+        return False
 
     def recover(self):
         """After a restart, carry on with a batch the owner already confirmed. People sent, unconfirmed or caught

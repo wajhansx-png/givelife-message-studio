@@ -1421,10 +1421,18 @@
   try {
     dismissedJob = sessionStorage.getItem('givelife-dismissed-batch') || '';
   } catch (e) {}
+  /* A finished batch stays on screen as the small 5/5 chip until the owner hides it; Hide then closes it for good. */
+  let closedJob = '',
+    terminalKey = '';
+  try {
+    closedJob = localStorage.getItem('givelife-closed-batch') || '';
+  } catch (e) {}
   function dismissBatch(key) {
     dismissedJob = key;
+    closedJob = key;
     try {
       sessionStorage.setItem('givelife-dismissed-batch', key);
+      localStorage.setItem('givelife-closed-batch', key);
     } catch (e) {}
     el('donorNotice').textContent = '';
     el('donorProgress').hidden = true;
@@ -2262,8 +2270,9 @@
       }
       const terminal = !active && j.state !== 'Idle';
       const jobKey = JSON.stringify([j.id, j.updated_at, j.state, j.sent, j.error, j.receipts]);
+      terminalKey = terminal ? jobKey : '';
       if (terminal) {
-        el('donorProgress').hidden = false;
+        el('donorProgress').hidden = jobKey === closedJob;
         el('donorBatchList').hidden = true;
         if (jobKey !== dismissedJob) {
           /* An app update restarts the server mid-batch; the batch continues by itself, so this is news, not an error. */
@@ -2688,6 +2697,7 @@
   }
   for (const [id, hide] of [['donorProgressHide', true], ['donorProgressShow', false]])
     el(id).onclick = () => {
+      if (hide && terminalKey) return dismissBatch(terminalKey);
       progressHidden = hide;
       try {
         localStorage.setItem('givelife-progress-hidden', hide ? '1' : '0');

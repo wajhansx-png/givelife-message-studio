@@ -1,0 +1,403 @@
+/* Final responsive layer. Loaded LAST and written to out-rank the older layered rules in comfort.css.
+   Breakpoints, smallest first: <=359 small phone | 360-479 phone | 480-699 large phone | 700-899 tablet.
+   Each rule describes the layout in full (display, columns, sizes) so a screen never depends on an
+   older override. Verify with tests/responsive_sweep.js: no SIDEWAYS-SCROLL, OFF-SCREEN, OVERLAP, TEXT-CUT.
+   Selector prefix: html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage  (5 ids of specificity). */
+
+@media (max-width: 899px) {
+  /* ---- Donors: title bar ---- */
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    row-gap: 6px !important;
+    height: auto !important;
+    min-height: 44px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head > .donor-title {
+    flex: 1 1 56px !important;
+    min-width: 0 !important;
+    width: auto !important;
+    order: 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head > .donor-total {
+    display: none !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    > :is(.donor-message-tablist, #donorAdd, #donorNavMore, #donorBulk) {
+    flex: 0 0 auto !important;
+    order: 2 !important;
+    margin: 0 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    :is(#donorMessagesTab, #donorAdd, #donorNavMore > summary) {
+    height: 42px !important;
+    min-height: 42px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head #donorMessagesTab {
+    width: 42px !important;
+    min-width: 42px !important;
+  }
+  /* Hide / Deselect chips: a full row of their own under the title bar. */
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    > .hide-row:not([hidden]) {
+    display: flex !important;
+    flex: 1 1 100% !important;
+    order: 20 !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    justify-content: flex-start !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    > .hide-row
+    .hide-chip {
+    flex: 1 1 auto !important;
+    height: auto !important;
+    min-height: 34px !important;
+    padding: 4px 10px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+  }
+
+  /* ---- Donors: rows = star | name + small trophy | DM | status | more ---- */
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row {
+    display: grid !important;
+    grid-template-columns: 36px minmax(0, 1fr) 38px 68px 34px !important;
+    grid-template-rows: auto !important;
+    align-items: center !important;
+    gap: 4px !important;
+    height: auto !important;
+    min-height: 54px !important;
+    padding: 4px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-star {
+    grid-area: 1 / 1 !important;
+    width: 36px !important;
+    min-width: 36px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-identity {
+    grid-area: 1 / 2 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    min-width: 0 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-row
+    .donor-identity
+    > .donor-name {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    font-size: 13.5px !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-row
+    .donor-identity
+    > .donor-top-chip {
+    flex: 0 0 auto !important;
+    width: 28px !important;
+    min-width: 28px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    border-radius: 8px !important;
+    padding: 0 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-row
+    .donor-identity
+    > .donor-top-chip::before {
+    font-size: 13px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-dm {
+    grid-area: 1 / 3 !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-status {
+    grid-area: 1 / 4 !important;
+    width: 68px !important;
+    min-width: 0 !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 4px !important;
+    font-size: 10.5px !important;
+    line-height: 1.1 !important;
+    white-space: normal !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-amount {
+    display: none !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-more,
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-row
+    > .donor-more
+    > summary {
+    width: 34px !important;
+    min-width: 34px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-more {
+    grid-area: 1 / 5 !important;
+  }
+
+  /* ---- Donors: bottom dock = [status line] then Resume/Stop | DM Important | Back, one equal row ---- */
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-bottom {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 50px !important;
+    grid-template-rows: auto 46px !important;
+    gap: 6px !important;
+    align-items: stretch !important;
+    height: auto !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-bottom
+    > #donorResumeStatus {
+    grid-area: 1 / 1 / 2 / 4 !important;
+    width: auto !important;
+    margin: 0 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-bottom
+    > :is(#donorToggle, #donorSendImportant, #donorMainBottom) {
+    grid-row: 2 !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    min-width: 0 !important;
+    padding: 0 6px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-bottom > #donorToggle {
+    grid-column: 1 !important;
+    font-size: 13px !important;
+    text-overflow: ellipsis !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-bottom
+    > #donorSendImportant {
+    grid-column: 2 !important;
+    font-size: 0 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-bottom
+    > #donorSendImportant::after {
+    font-size: 13px !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-bottom
+    > #donorMainBottom {
+    grid-column: 3 !important;
+    font-size: 0 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-bottom
+    > #donorMainBottom::after {
+    font-size: 22px !important;
+  }
+}
+
+/* ---- Small phone (<= 359px) ---- */
+@media (max-width: 359px) {
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row {
+    grid-template-columns: 30px minmax(0, 1fr) 34px 56px 30px !important;
+    gap: 2px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-star {
+    width: 30px !important;
+    min-width: 30px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-dm {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-status {
+    width: 56px !important;
+    font-size: 9.5px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-more,
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-row
+    > .donor-more
+    > summary {
+    width: 30px !important;
+    min-width: 30px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-tabs button {
+    font-size: 10px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-bottom > #donorToggle {
+    font-size: 12px !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-bottom
+    > #donorSendImportant::after {
+    font-size: 12px !important;
+  }
+}
+
+/* ---- Volunteers screen (<= 899px): one flowing page, no sticky dock covering the message box ---- */
+@media (max-width: 899px) {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)[data-panel='volunteers']
+    .donor-bottom {
+    display: none !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers {
+    padding-bottom: 12px !important;
+    scroll-padding-bottom: 12px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .vol-msg textarea {
+    min-height: 120px !important;
+    height: auto !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .vol-msg-actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .vol-msg-actions > label {
+    flex: 1 1 150px !important;
+    min-width: 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .vol-msg-actions > button {
+    flex: 0 0 auto !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .vol-foot {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 8px !important;
+    align-items: center !important;
+    margin-top: 8px !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .vol-foot
+    > :is(.primary, #volProgress) {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+/* ---- Filter tabs on small phones: whole words, never broken mid-word ---- */
+@media (max-width: 380px) {
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-tabs > button {
+    padding: 4px 1px !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-tabs
+    :is(.tab-name, .tab-word) {
+    font-size: 9px !important;
+    letter-spacing: -0.2px !important;
+    overflow-wrap: normal !important;
+    word-break: keep-all !important;
+    hyphens: none !important;
+  }
+}
+
+/* ---- Desktop / wide tablet (>= 900px): the Top chip keeps a comfortable tap size ---- */
+@media (min-width: 900px) {
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row .donor-top-chip {
+    min-height: 32px !important;
+  }
+}
+
+/* ---- Main top bar on small phones (<= 359px): labels stay whole, nothing is clipped ---- */
+@media (max-width: 359px) {
+  html body:not(#a):not(#b):not(#c) .brandbar {
+    gap: 3px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+  html body:not(#a):not(#b):not(#c) .brandbar > .seg {
+    flex: 1.5 1 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c) .brandbar :is(#donorNotesShortcut, #mainNavMore > summary) {
+    font-size: 11px !important;
+    padding: 0 2px !important;
+    letter-spacing: -0.2px !important;
+  }
+}
+@media (max-width: 359px) {
+  html body:not(#a):not(#b):not(#c) .brandbar .seg > button {
+    font-size: 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c) .brandbar .seg > button::after {
+    content: 'Groups' !important;
+    font-size: 11px !important;
+    letter-spacing: -0.2px !important;
+  }
+}
+
+/* ---- Wide screens (>= 900px): room above the list for the follow-up option and expand button ---- */
+@media (min-width: 900px) {
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-table-wrap {
+    margin-top: 34px !important;
+  }
+}
+
+/* ---- Phones <= 380px: filter tab words and the main More menu always fit ---- */
+@media (max-width: 380px) {
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-tabs > button {
+    font-size: 9px !important;
+  }
+}
+@media (max-width: 299px) {
+  html body:not(#a):not(#b):not(#c) .brandbar #mainNavMore > summary {
+    padding: 0 1px !important;
+    font-size: 10px !important;
+    gap: 1px !important;
+  }
+  html body:not(#a):not(#b):not(#c) .brandbar #mainNavMore > summary::after {
+    display: none !important;
+  }
+}

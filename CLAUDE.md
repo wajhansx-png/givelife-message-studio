@@ -22,3 +22,7 @@ Goal: Minimize total token usage without sacrificing code quality, accuracy or s
 18. Never send real messages, modify production data, or deploy without permission.
 
 Apply these rules automatically to every coding task.
+
+# RESPONSIVE UI RULES
+- Layout fixes go in `responsive.css` (loaded last), one rule block per width band: <=299, <=359, <=380, <=899, >=900.
+- Before finishing any UI change run `python tests/responsive_dashboard.py` (needs `tests/preview_fake.py --port 3003`), open `/dash`, press "Find errors": every screen and width must show no errors.

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Responsive workbench</title>
+    <style>
+      :root { color-scheme: dark; --bg:#0d1117; --card:#161b22; --line:#30363d; --txt:#e6edf3; --dim:#8b949e; --bad:#ff7b72; --ok:#3fb950; --warn:#d29922; }
+      * { box-sizing: border-box; }
+      body { margin:0; background:var(--bg); color:var(--txt); font:14px/1.4 system-ui,sans-serif; }
+      header { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:5; }
+      header h1 { font-size:15px; margin:0 8px 0 0; }
+      select, button, input { background:var(--card); color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font:inherit; }
+      button { cursor:pointer; } button.primary { background:#238636; border-color:#2ea043; }
+      .row { display:flex; flex-wrap:wrap; gap:14px; padding:14px; align-items:flex-start; }
+      .pane { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; }
+      .pane h2 { font-size:13px; margin:0 0 8px; display:flex; justify-content:space-between; gap:8px; }
+      .tag { font-size:12px; padding:2px 8px; border-radius:99px; background:#30363d; }
+      .tag.bad { background:#5a1e1b; color:var(--bad); } .tag.ok { background:#12361d; color:var(--ok); }
+      .stage { overflow:hidden; border-radius:8px; border:1px solid var(--line); background:#000; }
+      .stage iframe { border:0; transform-origin:0 0; display:block; background:#0b0b10; }
+      #report { flex:1 1 360px; min-width:300px; max-height:calc(100vh - 90px); overflow:auto; }
+      table { border-collapse:collapse; width:100%; font-size:12px; }
+      th, td { padding:3px 6px; border-bottom:1px solid var(--line); text-align:right; } th:first-child, td:first-child { text-align:left; }
+      td.bad { color:var(--bad); font-weight:600; } td.ok { color:var(--ok); }
+      ul { margin:6px 0 0; padding-left:16px; font:12px/1.5 ui-monospace,monospace; color:var(--dim); } li b { color:var(--bad); }
+      #status { color:var(--dim); font-size:12px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Responsive workbench</h1>
+      <label>Screen <select id="route"></select></label>
+      <label>Width <input id="w" type="range" min="260" max="1440" step="1" value="390" /> <b id="wv">390</b>px</label>
+      <span id="presets"></span>
+      <button class="primary" id="run">Find errors</button>
+      <button id="reload">Reload frames</button>
+      <span id="status"></span>
+    </header>
+    <div class="row">
+      <div class="pane"><h2><span>Live screen</span><span class="tag ok" id="aTag">–</span></h2><div class="stage" id="sa"><iframe id="fa"></iframe></div></div>
+      <div class="pane" id="report"><h2><span>Errors by width</span></h2><div id="table">Press “Find errors”.</div><div id="faults"></div></div>
+    </div>
+    <script src="/tests/responsive_sweep.js"></script>
+    <script>
+      const KEY = 'manual-fix-preview-key'; // the preview server's own test key (tests/preview_fake.py)
+      try { localStorage.setItem('givelife-cloud-key', KEY); } catch (e) {}
+      window.__sweepBase = '/';
+      const ROUTES = [
+        ['Donors · All', 'donors/all', '#donorsPage'], ['Donors · Important', 'donors/important', '#donorsPage'],
+        ['Donors · Volunteers', 'donors/volunteers', '#donorsPage'], ['Donors · Messages', 'donors/messages', '#donorsPage'],
+        ['Main (groups)', '', ''], ['Notes', 'notes', '#foundationNotes'], ['Chat', 'chat', '#hist'], ['Settings', 'settings', '#set'],
+      ];
+      const WIDTHS = [280, 320, 360, 390, 430, 540, 768, 1024, 1440];
+      const $ = (id) => document.getElementById(id);
+      for (const [n, r] of ROUTES) $('route').add(new Option(n, r));
+      for (const p of [280, 320, 360, 390, 430, 540, 768, 1024]) { const b = document.createElement('button'); b.textContent = p; b.onclick = () => { $('w').value = p; draw(); }; $('presets').append(b); }
+      function draw(reload) {
+        const w = +$('w').value, h = Math.min(innerHeight - 140, 820), scale = Math.min(1, 520 / w);
+        $('wv').textContent = w;
+        for (const k of ['a']) {
+          const f = $('f' + k), s = $('s' + k);
+          f.style.width = w + 'px'; f.style.height = h / scale + 'px'; f.style.transform = `scale(${scale})`;
+          s.style.width = w * scale + 'px'; s.style.height = h + 'px';
+          const url = '/#/' + $('route').value;
+          if (reload || !f.dataset.src) { f.dataset.src = url; f.src = '/?' + Date.now() + url; }
+        }
+      }
+      $('w').oninput = () => draw(); $('route').onchange = () => draw(true); $('reload').onclick = () => draw(true);
+      const count = (fs, wd) => fs.filter((l) => l.includes('@' + wd + ' ') && !/TALL-WRAP/.test(l)).length;
+      $('run').onclick = async () => {
+        $('run').disabled = true;
+        const rows = {}, all = [];
+        for (const [n, r, root] of ROUTES) {
+          $('status').textContent = `checking ${n}…`;
+          const found = [];
+          for (let i = 0; i < WIDTHS.length; i += 4) found.push(...(await sweep([[r, root]], WIDTHS.slice(i, i + 4), 3500)));
+          rows[n] = found.filter((l) => !/TALL-WRAP/.test(l)); all.push(...rows[n]);
+        }
+        let html = '<table><tr><th>Screen</th>' + WIDTHS.map((x) => `<th>${x}</th>`).join('') + '</tr>';
+        for (const [n] of ROUTES)
+          html += `<tr><td>${n}</td>` + WIDTHS.map((x) => { const c = rows[n].filter((l) => l.includes('@' + x + ' ')).length; return `<td class="${c ? 'bad' : 'ok'}">${c || '✓'}</td>`; }).join('') + '</tr>';
+        $('table').innerHTML = html + '</table>';
+        $('aTag').textContent = all.length ? all.length + ' errors' : 'no errors'; $('aTag').className = 'tag ' + (all.length ? 'bad' : 'ok');
+        const left = sweepSummary(all).slice(0, 80);
+        $('faults').innerHTML = '<h2><span>Errors to fix</span></h2>' + (left.length ? '<ul>' + left.map((l) => `<li><b>${l.split(' ')[1]}</b> ${l.replace(/^\S+ \S+ /, '')} <i>${l.split(' ')[0]}</i></li>`).join('') + '</ul>' : '<p>Nothing left.</p>');
+        $('status').textContent = 'updated ' + new Date().toLocaleTimeString(); $('run').disabled = false;
+      };
+      draw(true);
+    </script>
+  </body>
+</html>

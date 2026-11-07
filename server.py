@@ -5048,6 +5048,7 @@ class Handler(BaseHTTPRequestHandler):
             "/focus-editor.css",
             "/comfort.js",
             "/comfort.css",
+            "/responsive.css",
         ):
             name = "index.html" if self.path == "/" else self.path[1:]
             return self.reply_file(

@@ -24,6 +24,27 @@
   dmBadge.hidden = true;
   dmBadge.setAttribute('role', 'status');
   page.querySelector('.donor-shell').append(dmBadge);
+  /* Follow-up: ON by default once a follow-up message is saved (the owner can switch it off; the choice is remembered). */
+  let followUpOn = false;
+  try {
+    const stored = localStorage.getItem('givelife-follow-up');
+    if (stored !== null) followUpOn = stored === '1';
+    else
+      api('/donor-messages')
+        .then((d) => {
+          if (stored === null && d && String(d.follow_up || '').trim()) setFollowUp(true, false);
+        })
+        .catch(() => {});
+  } catch (e) {}
+  function setFollowUp(on, remember = true) {
+    followUpOn = !!on;
+    if (el('donorFollowUp')) el('donorFollowUp').checked = followUpOn;
+    if (el('batchFollowUp')) el('batchFollowUp').checked = followUpOn;
+    if (remember)
+      try {
+        localStorage.setItem('givelife-follow-up', followUpOn ? '1' : '0');
+      } catch (e) {}
+  }
   /* ---- fullscreen expand ---- */
   {
     const btn = page.querySelector('#donorExpand');
@@ -47,14 +68,24 @@
       wrap.className = 'donor-table-wrap';
       table.parentNode.insertBefore(wrap, table);
       wrap.append(table, btn);
+      /* On phones the full-screen icon sits in the header beside the title, not floating over the list. */
+      const headMq = matchMedia('(max-width:700px)');
+      const placeExpand = () => {
+        const title = page.querySelector('.donor-title');
+        if (headMq.matches && title) title.append(btn);
+        else wrap.append(btn);
+      };
+      placeExpand();
+      headMq.addEventListener('change', placeExpand);
       const opt = make('label', 'donor-fu-opt'),
         box = make('input');
       box.type = 'checkbox';
       box.id = 'donorFollowUp';
       box.name = 'send_follow_up';
-      box.onchange = () => (followUpOn = box.checked);
+      box.onchange = () => setFollowUp(box.checked);
       opt.id = 'donorFollowUpOpt';
       opt.append(box, make('span', '', 'Send with follow-up'));
+      box.checked = followUpOn;
       wrap.prepend(opt);
     }
     {
@@ -69,7 +100,6 @@
   }
 
   let msgSub = 'dm'; /* Messages sub-tab: 'dm' versions or 'follow' up */
-  let followUpOn = false; /* off by default; lasts until the page reloads */
   const resumeStatus = make('div', 'donor-resume-status');
   resumeStatus.id = 'donorResumeStatus';
   resumeStatus.hidden = true;
@@ -600,6 +630,7 @@
 </div>
 <small id="batchGapNote" class="batch-hint" hidden>Under 1 minute can get a number restricted by WhatsApp.</small>
 <label class="batch-fresh bm-poster"><input type="checkbox" id="batchPoster" checked> Attach poster</label>
+<label class="batch-fresh bm-poster"><input type="checkbox" id="batchFollowUp"> Send follow-up message too</label>
 <details class="batch-more">
   <summary>More options</summary>
   <label for="batchPause">Rest between batches</label>
@@ -669,6 +700,8 @@
         (!el('batchIncl').checked && hidden
           ? ' · ' + hidden + ' already contacted are left out'
           : '');
+    const empty = !!scope && free === 0 && !editingJob;
+    el('batchStart').disabled = empty;
     const count = Number(el('batchCount').value) || 0,
       per = Math.max(1, Math.min(20, Number(el('batchLimit').value) || 20)),
       gap = gapSecs() / 60 || 4,
@@ -679,7 +712,11 @@
       return;
     }
     if (!count || !pauses) {
-      plan.textContent = !pauses ? 'Check the pause between batches.' : '';
+      plan.textContent = empty
+        ? 'Everyone here was already contacted. Tick “Include already-contacted people” in More options to send again.'
+        : !pauses
+          ? 'Check the pause between batches.'
+          : '';
       return;
     }
     const batches = Math.ceil(count / per);
@@ -730,6 +767,8 @@
         left +
         ' people are still waiting; the ones already sent will be skipped.';
     customGap = false;
+    el('batchFollowUp').checked = followUpOn;
+    picker.querySelector('.batch-more').open = false;
     el('batchPoster').checked = el('donorRowPoster') ? el('donorRowPoster').checked : true;
     setGap(Math.max(5, Math.min(600, Number(el('donorGap').value) || 240)));
     el('batchIncl').checked = false;
@@ -794,6 +833,7 @@
     highlightGapBtn();
     paintAudience();
   };
+  el('batchFollowUp').onchange = () => setFollowUp(el('batchFollowUp').checked);
   el('batchPoster').onchange = () => {
     /* One poster choice for the app: the switch here also sets the single-tap DM poster. */
     if (!editingJob && el('donorRowPoster') && el('donorRowPoster').checked !== el('batchPoster').checked) {

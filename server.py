@@ -5352,6 +5352,7 @@ class Handler(BaseHTTPRequestHandler):
                     **donors().jobs.status(),
                     "paused": bool(donors().paused),
                     "resume": donors().resume_status(),
+                    "auto": donors().auto.status(),
                 }
             )
         if self.path == "/cases":
@@ -5755,9 +5756,22 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(donors().test_dm(body.get("poster", True)))
                 if body.get("toggle"):
                     return self.reply(donors().toggle())
+                if type(body.get("auto")) is bool:
+                    return self.reply(
+                        donors().auto.set(
+                            body["auto"],
+                            body.get("follow_up") is True,
+                            body.get("poster") is not False,
+                        )
+                    )
+                if isinstance(body.get("auto_options"), dict):
+                    opts = body["auto_options"]
+                    return self.reply(
+                        donors().auto.set_options(opts.get("follow_up"), opts.get("poster"))
+                    )
                 if body.get("configure"):
                     return self.reply(
-                        donors().jobs.configure(body["configure"], body.get("settings"))
+                        donors().configure_job(body["configure"], body.get("settings"))
                     )
                 if body.get("stop"):
                     return self.reply(donors().pause_personal())
@@ -6410,6 +6424,16 @@ def donor_autopilot():
             pass
 
 
+def donor_auto_loop():
+    """Follows the Donors Auto switch: switches it off when its batch ends or stops. Never starts a new audience."""
+    while True:
+        time.sleep(15)
+        try:
+            donors().auto.tick()
+        except Exception as exc:
+            print("[donor-auto] " + type(exc).__name__, flush=True)
+
+
 def resume_batches_after_restart(wait=10, tries=90, sleep=time.sleep):
     """A deploy or restart must not stop a DM batch that was running. Once WhatsApp is connected again,
     carry on with each batch that was in flight (donor and volunteer). Anyone already sent, unconfirmed or
@@ -6452,6 +6476,7 @@ if __name__ == "__main__":
     spawn(resume_batches_after_restart, "dm-resume")
     spawn(recover_group_research, "research-recovery")
     spawn(donor_autopilot, "keep-awake")
+    spawn(donor_auto_loop, "donor-auto")
     # Team was removed from the interface. Retain records without hidden outreach.
     if os.environ.get("GIVELIFE_TEAM_ENABLED") == "1":
         spawn(team_loop, "team-loop")

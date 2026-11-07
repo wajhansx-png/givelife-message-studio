@@ -232,6 +232,7 @@ class DonorDelivery:
         attachment=None,
         resume_id=None,
         follow_up=None,
+        origin=None,
     ):
         if follow_up is not None and (
             not isinstance(follow_up, str) or not follow_up.strip() or len(follow_up) > 2000
@@ -312,7 +313,12 @@ class DonorDelivery:
         rows = self.book.recipients(scope, ids, None)
         already = 0
         if skip and scope != "selected":
-            fresh_rows = [r for r in rows if not self.book.contacted(r)]
+            # Someone whose last DM was unconfirmed or caught mid-send is never asked again by a skip-contacted batch.
+            fresh_rows = [
+                r
+                for r in rows
+                if not self.book.contacted(r) and r.get("delivery") not in ("Uncertain", "Sending")
+            ]
             already = len(rows) - len(fresh_rows)
             rows = fresh_rows
         rows = rows[:cap]
@@ -527,6 +533,8 @@ class DonorDelivery:
                 "next_at": None,
             }
             job.update(auto=True, batch=1, hold_until=hold_until)
+            if origin:
+                job["origin"] = origin
             if self.balance:
                 job["caption_balance"] = (
                     prev.get("caption_balance", self.balance()) if preserved else self.balance()
@@ -535,13 +543,15 @@ class DonorDelivery:
                 confirmed_ids = {
                     r["id"] for r in prev.get("receipts", []) if r.get("state") == "Sent"
                 }
-                for ident in prev["ids"]:
+                for donor_id in prev[
+                    "ids"
+                ]:  # not `ident`: that is this batch's own id (self.active below)
                     try:
-                        record = self.book.resolve(ident)
+                        record = self.book.resolve(donor_id)
                         if record.get("last_sent_at") and record["last_sent_at"] >= prev.get(
                             "created_at", float("inf")
                         ):
-                            confirmed_ids.add(ident)
+                            confirmed_ids.add(donor_id)
                     except ValueError:
                         pass
                 job.update(
@@ -593,7 +603,7 @@ class DonorDelivery:
 
     def configure(self, ident, settings):
         """Change only future dispatch settings of this exact existing job."""
-        allowed = {"gap_seconds", "chunk", "rests", "poster", "jitter"}
+        allowed = {"gap_seconds", "chunk", "rests", "poster", "jitter", "follow_up"}
         if not isinstance(settings, dict) or not settings or set(settings) - allowed:
             raise ValueError("Choose gap, batch size, pauses or poster settings.")
         values = copy.deepcopy(settings)
@@ -609,6 +619,11 @@ class DonorDelivery:
             raise ValueError("Choose 1 to 20 people per batch.")
         if "poster" in values and type(values["poster"]) is not bool:
             raise ValueError("Poster must be on or off.")
+        if "follow_up" in values:
+            fu = values["follow_up"]
+            if fu is not None and (not isinstance(fu, str) or not fu.strip() or len(fu) > 2000):
+                raise ValueError("Write the follow-up message first (up to 2,000 characters).")
+            values["follow_up"] = fu.strip() if fu else None
         if "rests" in values and (
             not isinstance(values["rests"], list)
             or not 1 <= len(values["rests"]) <= 50
@@ -678,7 +693,9 @@ class DonorDelivery:
         """The wait before the next DM. 3 min or more: random from the chosen gap up to 7 min (never a robotic rhythm).
         Under 3 min (the owner chose seconds or a short gap): the chosen gap, varied up to 25% so it is not exact."""
         base = float(j["gap_seconds"])
-        if base >= 180.0:
+        if j.get("origin") == "auto_toggle" and j.get("jitter"):
+            x, floor = base, 5.0  # Auto: exactly the chosen gap, varied only by the chosen seconds
+        elif base >= 180.0:
             x, floor = random.uniform(base, max(base, 420.0)), 180.0
         else:
             x, floor = random.uniform(base, base * 1.25), 5.0
@@ -1129,7 +1146,7 @@ class DonorDelivery:
         print("[donor-delivery] final state could not be saved; kept in memory", flush=True)
         return False
 
-    def recover(self):
+    def recover(self, allow_stopped=False):
         """After a restart, carry on with a batch the owner already confirmed. People sent, unconfirmed or caught
         mid-send are skipped, so nobody gets a second DM. Returns the started job or None."""
         with self.lock:
@@ -1139,9 +1156,10 @@ class DonorDelivery:
         if (
             not j
             or not j.get("auto")
-            or j.get("state") != "Interrupted"
+            or j.get("state")
+            not in (("Interrupted", "Stopped") if allow_stopped else ("Interrupted",))
             or not self._remaining(j)
-            or j.get("boot") == self.boot
+            or (j.get("boot") == self.boot and not allow_stopped)
             or self.active
             or time.time() - j.get("updated_at", 0) > self.AUTO_WINDOW
         ):
@@ -1182,6 +1200,8 @@ class DonorDelivery:
             args["attachment"] = j["attachment"]
         if j.get("follow_up"):
             args["follow_up"] = j["follow_up"]
+        if j.get("origin"):
+            args["origin"] = j["origin"]
         if j["scope"] == "selected":
             if not j.get("personal_names"):
                 return None

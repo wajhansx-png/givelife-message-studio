@@ -11,6 +11,7 @@ from private_top_names import (
     import_top_names,
     merge_top_group,
     parse_numbered_list,
+    remove_group,
 )
 
 
@@ -82,6 +83,48 @@ class TopGroup(unittest.TestCase):
         self.assertEqual((receipt["matched"], receipt["added"]), (2, 1))
         names = [r["name"] for r in self.fresh().list("top")["items"]]
         self.assertEqual(names, ["Beta Giki", "Alpha Giki", "Fresh Giki"])
+
+    def test_remove_group_clears_the_import_so_it_can_be_pasted_again_without_repeats(self):
+        import_top_names(
+            None, self.dir, json.dumps(["Alpha Test", "Beta Test", "Gamma Test"]), import_id="n1"
+        )
+        keep = self.book.add(name="Delta Test", phone="923001110001")["donor"]
+        merge_top_group(
+            self.book,
+            [
+                ("Alpha Test", "923002220001"),
+                ("Beta Test", "923002220002"),
+                ("Gamma Test", "923002220003"),
+                ("Delta Test", "923001110001"),
+            ],
+        )
+        self.assertEqual(len(self.fresh().list("top")["items"]), 4)
+        # Gamma Test was paid by a donor: history, so it must be kept (only taken out of the group).
+        data = self.book._load()
+        next(r for r in data["records"] if r["name"] == "Gamma Test").update(
+            donated=True, amount=500
+        )
+        self.book._save(data)
+        result = remove_group(self.book, "GIKI")
+        self.assertEqual(
+            result, {"removed": 2, "kept": 2}
+        )  # Alpha, Beta gone; Gamma and Delta ungrouped
+        names = {r["name"]: r for r in self.fresh().list("all")["items"]}
+        self.assertEqual(sorted(names), ["Delta Test", "Gamma Test"])
+        self.assertIsNone(names["Gamma Test"].get("group"))
+        self.assertEqual(names["Delta Test"]["id"], keep["id"])  # an older donor is never deleted
+        # Pasting the same list again: no repeats of the kept ones, the removed ones come back once.
+        again = merge_top_group(
+            self.book,
+            [
+                ("Alpha Test", "923002220001"),
+                ("Beta Test", "923002220002"),
+                ("Gamma Test", "923002220003"),
+                ("Delta Test", "923001110001"),
+            ],
+        )
+        self.assertEqual((again["added"], again["matched"]), (2, 2))
+        self.assertEqual(len(self.fresh().list("all")["items"]), 4)
 
     def test_pasted_list_rejects_a_line_without_a_number(self):
         with self.assertRaises(ValueError):

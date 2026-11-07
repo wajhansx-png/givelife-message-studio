@@ -3068,6 +3068,38 @@
     el('numbersText').focus({ preventScroll: true });
   };
   el('numbersCancel').onclick = () => numbers.close();
+  /* Remove all GIKI: two taps, so it is never done by accident. Donors with history are kept. */
+  const removeGiki = make('button', 'numbers-remove', 'Remove all GIKI donors');
+  removeGiki.type = 'button';
+  numbers.querySelector('.donor-form-actions').before(removeGiki);
+  let removeArmed = 0;
+  removeGiki.onclick = async () => {
+    if (!removeArmed) {
+      removeGiki.textContent = 'Tap again to remove all GIKI';
+      removeGiki.dataset.armed = '1';
+      removeArmed = setTimeout(() => {
+        removeArmed = 0;
+        removeGiki.textContent = 'Remove all GIKI donors';
+        delete removeGiki.dataset.armed;
+      }, 4000);
+      return;
+    }
+    clearTimeout(removeArmed);
+    removeArmed = 0;
+    delete removeGiki.dataset.armed;
+    removeGiki.textContent = 'Remove all GIKI donors';
+    removeGiki.disabled = true;
+    el('numbersResult').textContent = 'Removing…';
+    try {
+      const r = await api('/donors', { action: 'remove_group', group: 'GIKI' });
+      el('numbersResult').textContent = '✓ ' + r.reply;
+      await refresh(true);
+    } catch (e) {
+      el('numbersResult').textContent = e.message;
+    } finally {
+      removeGiki.disabled = false;
+    }
+  };
   el('numbersSave').onclick = async () => {
     const b = el('numbersSave');
     if (!el('numbersText').value.trim()) return;

@@ -1510,3 +1510,24 @@ html body #donorPasteDialog #pastePoster {
 @media (max-width: 899px) {
   .donor-receipt-total { font-size: 9px; }
 }
+
+/* Add numbers dialog: a quiet, full-width "Remove all GIKI donors" button above Close / Save. */
+.numbers-dialog .numbers-remove {
+  width: 100%;
+  min-height: 44px;
+  margin: 4px 0 8px;
+  padding: 0 12px;
+  border: 1px solid #ff6b6b66;
+  border-radius: 12px;
+  background: transparent;
+  color: #ff9a9a;
+  font-weight: 700;
+  cursor: pointer;
+}
+.numbers-dialog .numbers-remove[data-armed='1'] {
+  background: #ff6b6b;
+  color: #1a0a0a;
+}
+.numbers-dialog .numbers-remove:disabled {
+  opacity: 0.5;
+}

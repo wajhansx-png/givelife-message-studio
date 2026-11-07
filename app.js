@@ -12,11 +12,12 @@ let editing = false,
   seenAuto = 0;
 const view = () => document.body.dataset.view,
   fmt = (n) => Number(n).toLocaleString('en-US');
-const post = (url, body) =>
+const post = (url, body, signal) =>
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body || {}),
+    signal,
   });
 /* Where you are lives in the address (#/donors/important). A refresh stays put and the phone's Back button steps out one screen. */
 const Nav = {
@@ -1004,7 +1005,7 @@ function lockSend(key, on) {
             ),
           ];
   for (const b of buttons) {
-    b.disabled = on;
+    b.disabled = on && !key.startsWith('test:'); /* Test stays tappable: a second tap stops it. */
     b.setAttribute('aria-busy', String(on));
   }
   return true;
@@ -1340,10 +1341,14 @@ async function fillEmptyCaption(kind) {
     }
   }
 }
+const testAborts = new Map();
 async function sendTest(kind) {
   const key = 'test:' + kind,
     btn = kind === 'group' ? document.querySelector('.test-row') : null;
+  if (testAborts.has(key)) return testAborts.get(key).abort(); /* second tap = stop */
   if (!lockSend(key, true)) return;
+  const ctl = new AbortController();
+  testAborts.set(key, ctl);
   if (btn) {
     setButtonProgress(btn, 0.04, 'Sending…', false);
     requestAnimationFrame(() => setButtonProgress(btn, 0.9, 'Sending…', true));
@@ -1352,9 +1357,11 @@ async function sendTest(kind) {
   try {
     await fillEmptyCaption(kind);
     await ensureCaption(kind);
+    if (ctl.signal.aborted) throw new DOMException('Stopped', 'AbortError');
     clearTimeout(timer);
-    await save();
-    const r = await post('/test', { message: $(kind).value }),
+    /* The message travels in the request, so do not wait for the draft save. */
+    save().catch(() => status('Save failed', 1));
+    const r = await post('/test', { message: $(kind).value }, ctl.signal),
       d = await r.json();
     const result =
       d.code === 'SUCCESS'
@@ -1365,9 +1372,16 @@ async function sendTest(kind) {
       endButtonProgress(btn, d.code === 'SUCCESS' ? '✓ Sent' : '✗ Not sent', d.code === 'SUCCESS');
     else setLiveNotice(result, d.code !== 'SUCCESS');
   } catch (e) {
-    if (btn) endButtonProgress(btn, '✗ Not sent', false);
-    say('app', e.message || 'Could not send', 1);
+    if (ctl.signal.aborted) {
+      if (btn) endButtonProgress(btn, 'Stopped', false);
+      else setLiveNotice('Sending stopped.', true);
+      say('app', 'Sending stopped. If it already reached WhatsApp, it may still arrive.');
+    } else {
+      if (btn) endButtonProgress(btn, '✗ Not sent', false);
+      say('app', e.message || 'Could not send', 1);
+    }
   } finally {
+    testAborts.delete(key);
     lockSend(key, false);
     busy(false);
   }

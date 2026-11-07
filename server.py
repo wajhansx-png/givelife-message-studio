@@ -1,5 +1,6 @@
 import sys
 import caption_facts, case_plan, message_rules, team_rules
+import select, socket
 import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, datetime, math, re, secrets, os, base64, hashlib, gzip
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -44,6 +45,19 @@ ACTIVE = None
 WIRE_LOCK = threading.RLock()
 OWNER_REVISION = 0
 OWNER_GUARD = threading.local()
+REQUEST_STOP = threading.local()  # .fn() is True once the browser dropped this request
+
+
+class SendStopped(Exception):
+    pass
+
+
+def check_stop():
+    stop = getattr(REQUEST_STOP, "fn", None)
+    if stop and stop():
+        raise SendStopped()
+
+
 ASSIST_TASKS = {}
 EVAL_TASKS = {}
 
@@ -944,6 +958,7 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                     "code": "COOLDOWN",
                     "message": f"Posted recently. Try in {math.ceil((900 - age) / 60)} min.",
                 }
+    check_stop()
     cap = DATA / ("caption-" + uuid.uuid4().hex + ".txt")
     cap.write_text(caption, encoding="utf-8")
     r = post_media(jid, cap, poster_media("group" if str(jid).endswith("@g.us") else "dm"))
@@ -2100,6 +2115,7 @@ TEST_DM_PHONE = os.environ.get("TEST_DM_PHONE", "923097458815")  # Test DMs go t
 def send_text(jid, text):
     text = dm_composer.payment_fix(text)
     check_hold()
+    check_stop()
     req = urllib.request.Request(
         GOWA_URL + "/send/message",
         data=json.dumps({"phone": jid, "message": text}).encode(),
@@ -4983,6 +4999,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.reply({})
 
+    def client_gone(self):
+        try:
+            if not select.select([self.connection], [], [], 0)[0]:
+                return False
+            return self.connection.recv(1, socket.MSG_PEEK) == b""
+        except OSError:
+            return True
+
     def reply(self, data, kind="application/json", status=200, extra_headers=None):
         self.response_sent = True
         if not isinstance(data, (str, bytes)):
@@ -6114,8 +6138,10 @@ class Handler(BaseHTTPRequestHandler):
             if not caption.strip():
                 return self.reply({"error": "Message is empty"}, status=400)
             try:
+                REQUEST_STOP.fn = self.client_gone
                 options = workflow().options("group", caption)
                 with SEND_LOCK:
+                    check_stop()
                     try:
                         caption = focus_bank().reserve_groups(caption, 1)[0]
                     except ValueError as e:
@@ -6149,8 +6175,12 @@ class Handler(BaseHTTPRequestHandler):
                             saved[jid] = stamp
                             STORE.put("last_sent", saved)
                 self.reply(result)
+            except SendStopped:
+                pass  # the browser stopped this test before anything was uploaded
             except Exception as e:
                 self.reply({"code": "ERROR", "message": str(e)})
+            finally:
+                REQUEST_STOP.fn = None
         else:
             self.reply({}, status=404)
 

@@ -74,8 +74,11 @@ class DonorBook:
     @classmethod
     def rank_key(cls,r):
         w=cls.worth(r);return (-(w['known_total'] or 0),-w['activity'],r.get('top_order') or 10**9,r['id'])
+    @staticmethod
+    def group_key(r):
+        return (str(r.get('group') or ''),r.get('group_order') or 10**9,r['id'])
     def _public(self,r):
-        keys=('id','top_donor','top_order','important_order','top_rank','important_rank','donor_rank','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted','follow_up_state','dm_name','dm_salutation','dm_profile_source','receipt_total','receipt_rank','receipt_source','receipt_report_date')
+        keys=('id','group','group_order','top_donor','top_order','important_order','top_rank','important_rank','donor_rank','important','donated','amount','normal_amount','source','created_at','updated_at','last_sent_at','delivery','deleted','follow_up_state','dm_name','dm_salutation','dm_profile_source','receipt_total','receipt_rank','receipt_source','receipt_report_date')
         # A confirmed DM is never forgotten: a later failed or pending attempt cannot erase "DM sent".
         sent=bool(r.get('dm_sent') or r.get('delivery')=='Sent' or r.get('last_sent_at'))
         return {**{k:(hide_numbers(r.get(k,'')) if k=='dm_name' else r.get(k)) for k in keys},**self.worth(r),'unverified':not self.worth(r)['known_total'],'name':hide_numbers(r['name']),'notes':hide_numbers(r.get('notes','')),'number_hidden':True,'has_number':bool(r.get('phone')),'dm_sent':sent,'sent_count':int(r.get('sent_count') or (1 if sent else 0))}
@@ -98,11 +101,13 @@ class DonorBook:
             counts['receipt_ranked']=sum(type(r.get('receipt_rank')) is int for r in records)
             counts['receipt_total']=sum(int(r.get('receipt_total') or 0) for r in records)
             for flag,field,rank in (('important','important_order','important_rank'),('top_donor','top_order','top_rank')):
-                for index,row in enumerate(sorted((r for r in records if r.get(flag)),key=(self.rank_key if flag=='top_donor' else lambda r:(r.get(field) or 0,r['id']))),1):row[rank]=index
+                for index,row in enumerate(sorted((r for r in records if r.get(flag) and not (flag=='top_donor' and r.get('group'))),key=(self.rank_key if flag=='top_donor' else lambda r:(r.get(field) or 0,r['id']))),1):row[rank]=index
+            # A named group (e.g. GIKI) is numbered 1.. in its own saved order, under its own heading.
+            for index,row in enumerate(sorted((r for r in records if r.get('top_donor') and r.get('group')),key=self.group_key),1):row['top_rank']=index
             for index,row in enumerate(sorted(records,key=self.rank_key),1):row['donor_rank']=index
             q=str(query).strip().casefold(); digits=re.sub(r'\D','',q)
             rows=[r for r in records if (tab=='all' or tab=='important' and r['important'] or tab=='top' and r.get('top_donor') or tab=='donated' and r['donated'] or tab=='not_donated' and not r['donated'] or tab=='not_contacted' and not r['donated'] and not self.contacted(r)) and (not q or q in r['name'].casefold() or q in r.get('notes','').casefold() or len(digits)>=4 and digits in r['phone'])]
-            rows.sort(key=self.rank_key if tab=='top' else self.queue_key)
+            rows.sort(key=(lambda r:((1,)+self.group_key(r)) if r.get('group') else (0,)+self.rank_key(r)) if tab=='top' else self.queue_key)
             return {'items':[self._public(r) for r in rows],'counts':counts}
     def add(self,name='',phone='',text='',source='Added in studio'):
         if text: name,phone=parse_contact(text,name)

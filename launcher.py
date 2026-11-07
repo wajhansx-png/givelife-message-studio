@@ -42,6 +42,15 @@ if os.environ.get("GIVELIFE_TOP_NAMES_EXTRA_JSON"):
     except Exception as exc:
         print("[top-names-extra] failed: " + type(exc).__name__, flush=True)
 
+# Private, one-time GIKI Top-donor group (names + numbers, in order). Held only in a Render env var.
+if os.environ.get("GIVELIFE_GIKI_GROUP_B64"):
+    try:
+        from private_top_names import import_top_group
+        receipt = import_top_group(store, DATA, os.environ["GIVELIFE_GIKI_GROUP_B64"])
+        print("[giki-group-import] " + " ".join(f"{k}={v}" for k, v in receipt.items()), flush=True)
+    except Exception as exc:
+        print("[giki-group-import] failed: " + type(exc).__name__, flush=True)
+
 # One-time, private bulk contact import. No outgoing WhatsApp messages.
 # Payload is held temporarily in Render env only, never in this repository.
 if os.environ.get("GIVELIFE_DONOR_IMPORT_B64"):

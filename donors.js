@@ -541,6 +541,23 @@
             : (a, b) => (a[field] ?? Number.MAX_SAFE_INTEGER) - (b[field] ?? Number.MAX_SAFE_INTEGER),
         )
         .forEach((d, i) => (d[rank] = i + 1));
+    /* A named group (e.g. GIKI) sits under its own heading and is numbered 1.. in its own order. */
+    {
+      const byGroup = (a, b) =>
+        (a.group_order ?? Number.MAX_SAFE_INTEGER) - (b.group_order ?? Number.MAX_SAFE_INTEGER);
+      let n = 0;
+      allDonors
+        .filter((d) => d.top_donor && !d.group)
+        .sort(topCmp)
+        .forEach((d) => (d.top_rank = ++n));
+      for (const g of [...new Set(allDonors.filter((d) => d.top_donor && d.group).map((d) => d.group))]) {
+        n = 0;
+        allDonors
+          .filter((d) => d.top_donor && d.group === g)
+          .sort(byGroup)
+          .forEach((d) => (d.top_rank = ++n));
+      }
+    }
     el('donorSendImportant').textContent = tab === 'top' ? 'DM Top donors' : 'DM ★ Important';
     el('donorSendImportant').dataset.short = tab === 'top' ? 'DM Top donors' : 'DM ★ Important';
     const q = el('donorSearch').value.trim().toLocaleLowerCase();
@@ -559,7 +576,14 @@
       )
       .sort(
         (a, b) =>
-          (tab === 'top' ? topCmp(a, b) : 0) ||
+          (tab === 'top'
+            ? Number(!!a.group) - Number(!!b.group) ||
+              (a.group || '').localeCompare(b.group || '') ||
+              (a.group
+                ? (a.group_order ?? Number.MAX_SAFE_INTEGER) -
+                  (b.group_order ?? Number.MAX_SAFE_INTEGER)
+                : topCmp(a, b))
+            : 0) ||
           Number(b.important) - Number(a.important) ||
           // Top is an owner-controlled priority, not a receipt requirement.
           (tab === 'all' ? Number(!!b.top_donor) - Number(!!a.top_donor) : 0) ||
@@ -1661,6 +1685,8 @@
         if (epoch !== drawEpoch) return;
         for (const end = Math.min(next + DRAW_CHUNK, items.length); next < end; next++) {
           const d = items[next];
+          if (tab === 'top' && d.group && (next === 0 || items[next - 1].group !== d.group))
+            rows.append(make('div', 'donor-group-head', d.group + ' Donors'));
           const row = make('article', 'donor-row');
           row.dataset.donorId = d.id;
           row.dataset.important = !!d.important;

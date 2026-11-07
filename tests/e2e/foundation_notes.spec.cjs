@@ -289,3 +289,24 @@ test('narrow phone: editor and formatting rail fit with keyboard open', async ({
   expect(paper.height).toBeGreaterThan(150);
   expect(paper.y + paper.height).toBeLessThanOrEqual(401);
 });
+
+test('notes are big, centered and offer H1-H3 as buttons', async ({ page, request }) => {
+  await open(page, request, 1920, 1080);
+  await page.locator('#notesPassword').fill('test-preview-only-pin');
+  await page.locator('#notesUnlockButton').click();
+  const editor = page.locator('#notesEditor');
+  await editor.click();
+  await page.keyboard.type('Plan outreach');
+  await expect(editor).toHaveCSS('font-size', '22px');
+  const paper = await page.locator('.notes-paper').boundingBox();
+  expect(Math.abs(paper.x + paper.width / 2 - 960)).toBeLessThan(3);
+  const line = await editor.locator('> *').first().boundingBox();
+  expect(line.y).toBeGreaterThan(150);
+  await page.keyboard.press('Home');
+  await page.keyboard.press('Shift+End');
+  await page.locator('[data-block="h2"]').click();
+  await expect(editor.locator('h2')).toHaveText('Plan outreach');
+  await expect(page.locator('[data-block="h2"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-block="h2"]').click();
+  await expect(editor.locator('h2')).toHaveCount(0);
+});

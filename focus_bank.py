@@ -18,6 +18,12 @@ ANGLES = (
 BATCH = 5  # versions written per click, and per background top-up while sending
 MAX_VERSIONS = 40  # ceiling for one message's saved versions
 TOP_UP_AT = 2  # when this few unused versions remain in a round, the next batch starts
+RETRY_AFTER = (
+    120,
+    300,
+    900,
+    1800,
+)  # seconds to wait before retrying a failed top-up (last one repeats)
 
 
 class VersionsPaused(ValueError):
@@ -170,6 +176,7 @@ class FocusBank:
                 error="",
                 batch={"goal": len(items) + BATCH, "auto": bool(auto), "at": time.time()},
                 auto_failed=False if not auto else row.get("auto_failed", False),
+                auto_fails=0 if not auto else row.get("auto_fails", 0),
             )
             self._put(data)
         self.start(kind)
@@ -276,8 +283,11 @@ class FocusBank:
                 "generator": GEN,
                 "batch": None,
                 "auto_failed": False,
+                "auto_fails": 0,
             }
         except Exception as exc:
+            with self.lock:
+                fails = int((self._load().get(kind) or {}).get("auto_fails", 0) or 0)
             result = {
                 "items": items,
                 "state": "Partial" if items else "Needs retry",
@@ -285,6 +295,8 @@ class FocusBank:
                 "generator": GEN,
                 "batch": None,
                 "auto_failed": auto,
+                "auto_fails": fails + 1 if auto else 0,
+                "auto_failed_at": time.time() if auto else 0,
             }
         try:
             print(
@@ -350,6 +362,34 @@ class FocusBank:
         used = set(recent[-(span or len(keys)) :]) if keys else set()
         return len([k for k in keys if k not in used])
 
+    @staticmethod
+    def _retry_due(row):
+        """A failed automatic top-up tries again on its own after a growing wait (2, 5, 15, 30 min)."""
+        fails = max(1, int(row.get("auto_fails", 0) or 0))
+        wait = RETRY_AFTER[min(fails, len(RETRY_AFTER)) - 1]
+        return time.time() - float(row.get("auto_failed_at", 0) or 0) >= wait
+
+    def heal(self):
+        """No clicks needed: start the next 5 whenever few unused versions remain, and retry failures."""
+        if not self.app.STORE:
+            return
+        for kind in ("group", "dm"):
+            with self.app.LOCK, self.lock:
+                row = self._load().get(kind)
+                if not row or row.get("state") == "Generating":
+                    continue
+                items = verified_items(
+                    row.get("source", ""), row.get("items", []), row.get("manual")
+                )
+                keys = list(
+                    dict.fromkeys(wording_key(v) for v in items if isinstance(v, str) and v.strip())
+                )
+                saved = self.app.STORE.get("focus_" + kind + "_rotation", {}) or {}
+                recent = [k for k in saved.get("recent", []) if isinstance(k, str)]
+                if kind == "dm" and saved.get("revision") != row.get("revision"):
+                    recent = []
+                self._top_up(kind, row, len(keys), self._unused(keys, recent))
+
     def _top_up(self, kind, row, count, unused):
         """While sending: when few unused versions remain, write the next batch in the background."""
         if (
@@ -357,9 +397,7 @@ class FocusBank:
             or count >= MAX_VERSIONS
             or unused > TOP_UP_AT
             or row.get("state") == "Generating"
-            or row.get(
-                "auto_failed"
-            )  # a failed top-up is not retried every minute; the owner clicks
+            or (row.get("auto_failed") and not self._retry_due(row))  # backed off, not every minute
             or dm_variants.assistant.client() is None
         ):
             return
@@ -504,11 +542,16 @@ class FocusBank:
             if auto and written:
                 unused = self._unused(written, recent, len(pool))
                 if not unused and (row.get("state") == "Generating" or row.get("auto_failed")):
+                    if row.get("state") != "Generating":
+                        self._top_up(
+                            "group", row, len(written), unused
+                        )  # retries by itself when due
+                        row = self.ensure_group_ready()
                     raise VersionsPaused(
                         "Every saved version was used and the next 5 are not ready. This send waits."
                         if row.get("state") == "Generating"
                         else "Every saved version was used and the next 5 could not be made. "
-                        "Auto posting is paused for Group; press Generate 5 Versions."
+                        "Auto posting is paused for Group and retries on its own."
                     )
             window = len(pool) - 1
             selected = []

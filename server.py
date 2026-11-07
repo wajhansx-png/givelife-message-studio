@@ -44,6 +44,56 @@ ACTIVE = None
 WIRE_LOCK = threading.RLock()
 OWNER_REVISION = 0
 OWNER_GUARD = threading.local()
+REQUEST_STOP = threading.local()  # .fn() is True once the owner tapped Stop for this request
+STOP_EVENTS = {}  # stop_id -> Event, set by /stop-send
+
+
+class SendStopped(Exception):
+    pass
+
+
+def check_stop():
+    stop = getattr(REQUEST_STOP, "fn", None)
+    if stop and stop():
+        raise SendStopped()
+
+
+def _stop_id(sid):
+    return sid if isinstance(sid, str) and re.fullmatch(r"[A-Za-z0-9_-]{8,100}", sid) else None
+
+
+def stop_event(sid):
+    with LOCK:
+        while len(STOP_EVENTS) > 200 and sid not in STOP_EVENTS:
+            STOP_EVENTS.pop(next(iter(STOP_EVENTS)))
+        return STOP_EVENTS.setdefault(sid, threading.Event())
+
+
+def watch_stop(sid):
+    """Make check_stop() honour Stop for this request thread (only when the page sent a stop_id)."""
+    sid = _stop_id(sid)
+    REQUEST_STOP.fn = stop_event(sid).is_set if sid else None
+
+
+def unwatch_stop(sid):
+    REQUEST_STOP.fn = None
+    sid = _stop_id(sid)
+    if sid:
+        with LOCK:
+            STOP_EVENTS.pop(sid, None)
+
+
+def stop_job(ident):
+    """Stop a manual group job: nothing further is sent. A message already uploading cannot be recalled."""
+    with LOCK:
+        job, event = JOBS.get(ident), JOB_CANCEL.get(ident)
+        if not job or not event or job.get("done"):
+            return False
+        event.set()
+        job["cancel_reason"] = "Stopped by owner."
+        return True
+
+
 ASSIST_TASKS = {}
 EVAL_TASKS = {}
 
@@ -334,6 +384,9 @@ def send_custom(body):
                 and now - ledger.get("last", 0) < DM_MIN_GAP
             ):
                 raise ValueError(f"Wait at least {DM_MIN_GAP // 60} minutes between DMs.")
+            check_stop()  # last point where Stop leaves no trace
+            prior_ledger = dict(ledger)
+            prior_recipient = records.get("dm_recipient_" + digest) or {}
             ledger.update(count=ledger["count"] + 1, last=now)
             STORE.put("dm_daily", ledger)
             STORE.put("dm_recipient_" + digest, {"state": "uncertain", "time": now})
@@ -347,6 +400,7 @@ def send_custom(body):
             elif body.get("poster") is True:
                 result = send_image(jid, message)
             else:
+                check_stop()
                 req = urllib.request.Request(
                     GOWA_URL + "/send/message",
                     data=json.dumps({"phone": jid, "message": message}).encode(),
@@ -355,6 +409,12 @@ def send_custom(body):
                 )
                 with urllib.request.urlopen(req, timeout=40) as response:
                     result = mapping(json.load(response))
+        except SendStopped:
+            # Nothing was uploaded: undo the "contacted" reservation so this person can be sent to later.
+            if not is_group:
+                STORE.put("dm_daily", prior_ledger)
+                STORE.put("dm_recipient_" + digest, prior_recipient)
+            raise
         except Exception:
             result = {
                 "code": "UNCERTAIN",
@@ -903,6 +963,7 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                     "code": "COOLDOWN",
                     "message": f"Posted recently. Try in {math.ceil((900 - age) / 60)} min.",
                 }
+    check_stop()
     cap = DATA / ("caption-" + uuid.uuid4().hex + ".txt")
     cap.write_text(caption, encoding="utf-8")
     r = post_media(jid, cap, poster_media("group" if str(jid).endswith("@g.us") else "dm"))
@@ -1931,11 +1992,19 @@ def timed_chat_command(text, request_id=None):
 
 
 def timed_loop():
+    next_heal = 0.0
     while True:
         try:
             donors().tick_resume()
         except Exception:
             pass
+        if time.monotonic() >= next_heal:
+            next_heal = time.monotonic() + 60
+            try:
+                if STORE:
+                    focus_bank().heal()  # keeps saved versions topped up with no button press
+            except Exception:
+                pass
         try:
             timed_scheduler().tick()
         except Exception:
@@ -2066,6 +2135,7 @@ TEST_DM_PHONE = os.environ.get("TEST_DM_PHONE", "923097458815")  # Test DMs go t
 def send_text(jid, text):
     text = dm_composer.payment_fix(text)
     check_hold()
+    check_stop()
     req = urllib.request.Request(
         GOWA_URL + "/send/message",
         data=json.dumps({"phone": jid, "message": text}).encode(),
@@ -5625,9 +5695,18 @@ class Handler(BaseHTTPRequestHandler):
                 )
             finally:
                 SEND_LOCK.release()
+        elif self.path == "/stop-send":
+            if _stop_id(body.get("stop_id")):
+                stop_event(body["stop_id"]).set()
+            if isinstance(body.get("job_id"), str):
+                stop_job(body["job_id"])
+            self.reply({"ok": True})
         elif self.path == "/send-custom":
             try:
+                watch_stop(body.get("stop_id"))
                 self.reply(send_custom(body))
+            except SendStopped:
+                self.reply({"code": "STOPPED", "message": "Sending stopped. Nothing was sent."})
             except ValueError as e:
                 self.reply({"error": str(e)}, status=400)
             except Exception:
@@ -5635,6 +5714,8 @@ class Handler(BaseHTTPRequestHandler):
                     {"error": "Could not prepare this send. No automatic retry will occur."},
                     status=502,
                 )
+            finally:
+                unwatch_stop(body.get("stop_id"))
         elif self.path == "/wa-login":
             try:
                 data = api("/devices/" + DEVICE + "/login")
@@ -6081,8 +6162,10 @@ class Handler(BaseHTTPRequestHandler):
             if not caption.strip():
                 return self.reply({"error": "Message is empty"}, status=400)
             try:
+                watch_stop(body.get("stop_id"))
                 options = workflow().options("group", caption)
                 with SEND_LOCK:
+                    check_stop()
                     try:
                         caption = focus_bank().reserve_groups(caption, 1)[0]
                     except ValueError as e:
@@ -6116,8 +6199,12 @@ class Handler(BaseHTTPRequestHandler):
                             saved[jid] = stamp
                             STORE.put("last_sent", saved)
                 self.reply(result)
+            except SendStopped:
+                self.reply({"code": "STOPPED", "message": "Sending stopped. Nothing was sent."})
             except Exception as e:
                 self.reply({"code": "ERROR", "message": str(e)})
+            finally:
+                unwatch_stop(body.get("stop_id"))
         else:
             self.reply({}, status=404)
 

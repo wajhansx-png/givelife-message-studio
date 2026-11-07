@@ -644,6 +644,18 @@ class DonorIntegration:
                 + (f", {r['added']} new added" if r["added"] else "")
                 + f" under {group} Donors.",
             }
+        if action == "remove_group":
+            # Owner clears a named Top group (GIKI) so the list can be pasted again with no repeats.
+            from private_top_names import remove_group
+
+            group = str(body.get("group") or "GIKI").strip()[:30] or "GIKI"
+            r = remove_group(self.book, group)
+            return {
+                **r,
+                "reply": f"{r['removed']} {group} donors removed"
+                + (f"; {r['kept']} kept (they have history) and taken out of the group" if r["kept"] else "")
+                + ". Paste the list again to add them back.",
+            }
         if action == "clear_important":
             return self.book.clear_important()
         raise ValueError("Unknown donor action.")

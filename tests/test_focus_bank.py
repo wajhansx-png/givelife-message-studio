@@ -276,6 +276,68 @@ class FocusTests(unittest.TestCase):
         self.assertEqual(got["note"], "")
         self.assertIn("0 of 5 new versions passed every check", got["error"])
 
+    def test_deep_reasoning_mode_starts_after_near_copies(self):
+        b = self.make()
+        with patch.object(b, "_spawn"):
+            row = b.save("group", self.drafts["group"])
+            b.generate("group")
+        source = b.get("group")["source"]
+        flags = []
+
+        def copies(api, prompt, deep=False):
+            flags.append(deep)
+            return [source, source, source]  # the AI hands back the original
+
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch("dm_variants._call", side_effect=copies),
+            patch("dm_variants._sleep"),
+        ):
+            b._generate("group", b.get("group"), ("group", row["revision"]))
+        self.assertFalse(flags[0])  # the first round is the normal, fast writer
+        self.assertTrue(any(flags[3:]))  # after near-copies the next round reads in depth
+        self.assertIn("repeated wording", b.get("group")["error"])
+
+    def test_a_real_rewrite_of_a_verse_and_payment_message_is_not_called_too_similar(self):
+        src = (
+            "صرف 4 لوگوں کے 1,000 روپے ایک مجبور باپ کو اس قرض سے نجات دلا سکتے ہیں 🚨\n\n"
+            "_People are now coming to Yousaf's father's home, asking him to repay the money he "
+            "borrowed for his little son's Janazah._💔\n\n"
+            "He has already lost his 2-year-old son, and Rs. 17,000 is still unpaid..\n\n\n"
+            "*اللہ تعالیٰ کا ارشاد ہے:*\n"
+            '"تم جو کچھ بھی (اللہ کی راہ میں) خرچ کرو گے، وہ اس کا بدلہ دے گا۔"\n'
+            "(سورۃ سبا: 39)\n\n"
+            "🔴 Rs. 4,000 LEFT ONLY\n\n"
+            "• *_Just your 1,000 rs donstion and 4 people donating Rs. 1,000 can relief helpless "
+            "father's pain._* 🤲\n\n\n"
+            "03097458815\nEasypaisa / JazzCash (Wajdan Khan)\n\n— GiveLife Foundation"
+        )
+        rewrite = (
+            src.replace(
+                "صرف 4 لوگوں کے 1,000 روپے ایک مجبور باپ کو اس قرض سے نجات دلا سکتے ہیں",
+                "صرف 4 لوگ مل کر 1,000 روپے دیں تو ایک بے بس باپ قرض کے بوجھ سے آزاد ہو سکتا ہے",
+            )
+            .replace(
+                "People are now coming to Yousaf's father's home, asking him to repay the money he "
+                "borrowed for his little son's Janazah.",
+                "Right now, people stand at Yousaf's father's door, demanding the money he borrowed "
+                "to bury his little boy.",
+            )
+            .replace(
+                "He has already lost his 2-year-old son, and Rs. 17,000 is still unpaid..",
+                "He has already lost his 2-year-old child. Rs. 17,000 of that debt is still waiting "
+                "to be paid..",
+            )
+            .replace(
+                "Just your 1,000 rs donstion and 4 people donating Rs. 1,000 can relief helpless "
+                "father's pain.",
+                "Your 1,000 rs plus 4 people giving Rs. 1,000 each can lift this helpless father's pain.",
+            )
+        )
+        self.assertEqual(reject_reason(src, rewrite), "")
+        light = src.replace("He has already lost", "He already lost")
+        self.assertIn("not deeply rewritten", reject_reason(src, light))
+
     def test_partial_batch_keeps_valid_versions_and_retry_adds_the_next_five(self):
         b = self.make()
         source = SRC

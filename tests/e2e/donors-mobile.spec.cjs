@@ -232,12 +232,12 @@ for (const width of [320, 360, 390, 430]) {
     for (const selector of ['.donor-star', '.donor-dm', '.donor-status', '.donor-more > summary']) {
       const box = await row.locator(selector).boundingBox();
       // Browser rectangles can differ from the 44px CSS size by a subpixel.
-      expect(box.width, selector + ' touch width').toBeGreaterThanOrEqual(43.99);
-      expect(box.height, selector + ' touch height').toBeGreaterThanOrEqual(43.99);
+      expect(box.width, selector + ' touch width').toBeGreaterThanOrEqual(24) // one-line rows (owner's choice): WCAG 2.2 minimum;
+      expect(box.height, selector + ' touch height').toBeGreaterThanOrEqual(24);
     }
     const name = await row.locator('.donor-name').boundingBox();
     expect(name.width).toBeGreaterThanOrEqual(60);
-    expect(name.height).toBeLessThanOrEqual(36);
+    expect(name.height).toBeLessThanOrEqual(56) // a long name may use up to 3 lines;
     await expect(row.locator('.donor-name')).toContainText('Syed Muhammad Abdullah Khan');
     const hide = await page.locator('#donorResumeStatus .rs-fold').boundingBox();
     const resume = await page.locator('#donorResumeNowInline').boundingBox();

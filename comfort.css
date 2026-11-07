@@ -3947,3 +3947,42 @@ html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-identity>
 html body:not(#_) #donorBatchPicker .batch-plan:empty{display:none!important}
 html body:not(#_) #donorBatchPicker .bm-chip span{word-break:normal!important;overflow-wrap:normal!important;hyphens:none!important}
 @media (max-width:360px){html body:not(#_) #donorBatchPicker .bm-chips{grid-template-columns:repeat(2,minmax(0,1fr))!important}html body:not(#_) #donorBatchPicker .batch-gap-btn{font-size:12.5px!important}}
+
+/* ===== Donors phone v3: no follow-up line, quiet trophy, expand icon on the title line, no gap above the list ===== */
+html body:not(#_) #donorsPage#donorsPage .donor-table-wrap{margin-top:6px!important}
+html body:not(#_) #donorsPage#donorsPage .donor-row .donor-fu{display:none!important}
+html body:not(#_) #donorsPage#donorsPage .donor-title{display:flex!important;align-items:center!important;gap:8px;flex-wrap:nowrap!important;min-width:0}
+html body:not(#_) #donorsPage#donorsPage .donor-title h1{margin:0!important;white-space:nowrap}
+html body:not(#_) #donorsPage .donor-title #donorExpand{width:32px!important;height:32px!important;min-width:32px!important;min-height:0!important;margin:0!important;font-size:15px!important;border-radius:9px!important}
+@media (max-width:700px){
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row{grid-template-areas:"star name name name name more" "star chip . dm status more" "star known known known known more"!important;grid-template-rows:auto auto auto!important;row-gap:4px!important;padding:8px 6px 8px 2px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-identity>.donor-top-chip{width:30px!important;height:30px!important;max-height:30px!important;background:transparent!important;border:1px solid #ffffff22!important;box-shadow:none!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-identity>.donor-top-chip[aria-pressed='true']{background:#f59e0b22!important;border-color:#f59e0b88!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-identity>.donor-top-chip::before{font-size:15px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row>.donor-dm{width:40px!important;min-width:40px!important;height:40px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row>.donor-status{height:40px!important}
+}
+html body:not(#_):not(#__) #donorsPage#donorsPage .donor-head .donor-title{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;gap:8px!important;flex-wrap:nowrap!important}
+html body:not(#_):not(#__) #donorsPage#donorsPage .donor-head .donor-title #donorExpand{position:static!important;display:inline-grid!important;flex:none!important}
+@media (max-width:380px){html body:not(#_):not(#__) #donorsPage#donorsPage .donor-tabs>button :is(.tab-name,.tab-word){font-size:10px!important;word-break:keep-all!important;overflow-wrap:normal!important;white-space:normal!important}}
+
+/* ===== Donors phone v4: one line per donor: star | name | trophy | Sent | status | menu ===== */
+@media (max-width:700px){
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row{grid-template-columns:30px minmax(0,1fr) 30px 40px auto 34px!important;grid-template-areas:"star name chip dm status more" "star known known known known more"!important;grid-template-rows:auto auto!important;column-gap:5px!important;row-gap:0!important;padding:6px 4px 6px 2px!important;min-height:52px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row>.donor-star{width:30px!important;min-width:30px!important;height:40px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-identity>.donor-name{align-self:center;font-size:14.5px!important;line-height:1.2!important;padding:0!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;overflow-wrap:break-word}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row>.donor-more,html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-more>summary{width:34px!important;min-width:34px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row>.donor-status{max-width:84px;padding:0 6px!important;font-size:11.5px!important}
+}
+@media (max-width:380px){html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row>.donor-status{max-width:66px;font-size:10.5px!important}}
+@media (max-width:380px){
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row{grid-template-columns:24px minmax(0,1fr) 26px 34px auto 28px!important;column-gap:4px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row>.donor-star{width:24px!important;min-width:24px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-identity>.donor-top-chip{width:26px!important;height:26px!important;max-height:26px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-identity>.donor-top-chip::before{font-size:13px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row>.donor-dm{width:34px!important;min-width:34px!important;height:34px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row>.donor-status{max-width:58px;height:36px!important;padding:0 4px!important;font-size:9.5px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row>.donor-more,html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-more>summary{width:28px!important;min-width:28px!important}
+html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-identity>.donor-name{font-size:13.5px!important;-webkit-line-clamp:3!important}
+}
+@media (max-width:700px){html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-identity>.donor-name{-webkit-line-clamp:3!important}}

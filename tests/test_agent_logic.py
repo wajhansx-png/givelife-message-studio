@@ -18,6 +18,10 @@ class Clock:
 
 class Base(unittest.TestCase):
     def setUp(self):
+        # Automatic DMs are off in production; these tests exercise the logic itself.
+        patcher = patch.object(autopilot, "AUTO_DMS_ALLOWED", True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.tmp = tempfile.TemporaryDirectory()
         Clock.t = T0
         self.ps = [
@@ -237,10 +241,39 @@ class DMs(Base):
                 with patch.object(autopilot.threading, "Thread") as th:
                     e.dm_if_due()
                 self.assertEqual(th.called, ok)
+                e.dm_running = False  # the mocked worker never ran to clear its claim
         e.s["last_dm_batch"] = Clock.t - 44 * 60
         with patch.object(autopilot.threading, "Thread") as th:
             e.dm_if_due()
         th.assert_not_called()  # 45 min between batches
+
+    def test_two_start_requests_at_once_start_one_worker(self):
+        import threading as real
+
+        e, started, go = self.e, [], real.Event()
+
+        def worker():
+            started.append(1)
+            go.wait(3)
+            e.dm_running = False
+
+        with patch.object(e, "dm_batch", worker):
+            results = []
+            threads = [
+                real.Thread(target=lambda: results.append(e._start_dm_batch())) for _ in range(8)
+            ]
+            [t.start() for t in threads]
+            [t.join(3) for t in threads]
+            go.set()
+        self.assertEqual(sum(results), 1)  # one claim wins; nobody else starts a second sender
+        self.assertEqual(len(started) <= 1, True)
+        e.dm_running = False
+
+    def test_a_worker_that_cannot_start_releases_its_claim(self):
+        with patch.object(autopilot.threading, "Thread", side_effect=RuntimeError("no threads")):
+            with self.assertRaises(RuntimeError):
+                self.e._start_dm_batch()
+        self.assertFalse(self.e.dm_running)
 
     def test_batch_limits(self):
         e = self.e

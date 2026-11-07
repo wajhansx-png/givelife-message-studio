@@ -32,8 +32,8 @@ class DMPosterAndGreeting(unittest.TestCase):
     def test_female_and_unknown_greeting_without_duplicate_salutation(self):
         body = app.get_message("dm")["text"]
         self.assertEqual(dm_composer.greeting("Ayesha Khan", "Sister"), "Ayesha Sister")
-        self.assertEqual(dm_composer.greeting("Unknown", "Sister"), "Bhai")
-        self.assertEqual(dm_composer.greeting("", "Sister"), "Bhai")
+        self.assertEqual(dm_composer.greeting("Unknown", "Sister"), "Sister")
+        self.assertEqual(dm_composer.greeting("", "Sister"), "Sister")
         original = dm_composer.personalize(body, "Ayesha", "Sister")
         self.assertEqual(dm_composer.personalize(original, "Ayesha", "Sister"), original)
         self.assertTrue(original.startswith("Ayesha Sister, "))

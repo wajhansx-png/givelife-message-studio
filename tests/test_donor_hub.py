@@ -787,6 +787,17 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(app.donors().personal_name("Ali Donor"), ("Ali", "Brother"))
         self.assertEqual(app.donors().personal_name("Ayesha Donor"), ("Ayesha", "Sister"))
 
+    def test_chat_top_donor_update_matches_the_owner_words(self):
+        app = self.app
+        d = app.donors().book.add("Ali", "03001234567")["donor"]
+        app.donors().book.update(d["id"], important=True)  # Top donors must be Important first
+        cb = app.chat_callbacks("make Ali a top donor")
+        cb["donor_action"](action="update", id=d["id"], top_donor=True)  # was always refused
+        with self.assertRaises(ValueError):  # mismatched words are still refused
+            app.chat_callbacks("make Ali important")["donor_action"](
+                action="update", id=d["id"], top_donor=True
+            )
+
     def test_http_auth_and_hidden_number_contract(self):
         import urllib.request, urllib.error
 

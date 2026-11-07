@@ -11,6 +11,21 @@ except ImportError:  # local preview without the cloud database
     psycopg = Jsonb = None
 
 
+
+def atomic_write(path, text):
+    """Write a state file so a crash or restart mid-write can never leave a truncated file:
+    the new content goes to a temporary file first, then replaces the old one in one step."""
+    path = Path(path)
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+    try:
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, path)
+    finally:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+
 class CloudStore:
     def __init__(self, uri):
         self.uri = uri
@@ -143,21 +158,24 @@ class CloudStore:
         return len(self._pending)
 
     def _retry_loop(self, every):
-        while True:
-            time.sleep(every)
-            for key in list(self._pending):
+        try:
+            while True:
+                time.sleep(every)
+                for key in list(self._pending):
+                    with self._wlock:
+                        if key not in self._pending:
+                            continue
+                        try:
+                            self.put(key, self._pending[key])
+                        except Exception:
+                            break
+                        self._pending.pop(key, None)
                 with self._wlock:
-                    if key not in self._pending:
-                        continue
-                    try:
-                        self.put(key, self._pending[key])
-                    except Exception:
-                        break
-                    self._pending.pop(key, None)
-            with self._wlock:
-                if not self._pending:
-                    self._retrying = False
-                    return
+                    if not self._pending:
+                        self._retrying = False
+                        return
+        finally:
+            self._retrying = False  # if this thread ever dies, the next failed write starts a new one
 
     def restore(self, data, root):
         self.initialize()
@@ -305,11 +323,39 @@ class SqliteStore:
             conn.execute("UPDATE givelife_studio_state SET updated_at=0 WHERE key=? AND value LIKE ?", (key, f'%"owner": "{owner}"%'))
 
     def put_retry(self, key, value, every=15):
-        self.put(key, value)
+        """put(), but a failed write (disk briefly full or locked) is kept and retried in the background."""
+        with self._lock:
+            try:
+                self.put(key, value)
+            except Exception:
+                self._pending[key] = value
+                if not getattr(self, "_retrying", False):
+                    self._retrying = True
+                    threading.Thread(
+                        target=self._retry_loop, args=(every,), daemon=True, name="db-retry"
+                    ).start()
+                raise
+            self._pending.pop(key, None)
 
     @property
     def pending_writes(self):
-        return 0
+        return len(self._pending)
+
+    def _retry_loop(self, every):
+        try:
+            while True:
+                time.sleep(every)
+                with self._lock:
+                    for key in list(self._pending):
+                        try:
+                            self.put(key, self._pending[key])
+                        except Exception:
+                            break
+                        self._pending.pop(key, None)
+                    if not self._pending:
+                        return
+        finally:
+            self._retrying = False
 
     def restore(self, data, root):
         self.initialize()

@@ -25,6 +25,30 @@ class DonorMasterTests(unittest.TestCase):
         self.assertFalse(bank.regeneration_running, "regeneration did not finish")
         return bank.get()
 
+    def test_a_storage_blip_while_recording_a_failure_cannot_leave_it_generating(self):
+        bank = self.approved_bank()
+        saves = []
+        real_save = bank._save
+
+        def flaky_save(data):
+            state = (data.get("generation") or {}).get("state")
+            if state == "Partial" and not saves:
+                saves.append(1)
+                raise ValueError("Persistent records are unavailable.")  # the first "stop" save fails
+            return real_save(data)
+
+        def boom(*a, **k):
+            raise ValueError("provider down")
+
+        with (
+            patch.object(bank, "_save", side_effect=flaky_save),
+            patch("dm_variants.generate", side_effect=boom),
+            patch("donor_messages.time.sleep"),
+        ):
+            result = self.regenerate(bank)
+        self.assertNotEqual(result["generation"]["state"], "Generating")  # no endless relaunch
+        self.assertEqual(len(saves), 1)  # the failed save really happened, and was retried
+
     def approved_bank(self):
         """A healthy saved bank of twenty versions, whatever an earlier test left behind."""
         bank = app.donors().messages

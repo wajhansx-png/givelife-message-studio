@@ -56,6 +56,21 @@ class Agent(unittest.TestCase):
         self.assertEqual({b["kind"] for b in self.sent}, {"owner_text"})
         self.assertEqual(self.said, ["Your message went to 3 of 3 numbers. All delivered."])
 
+    def test_second_list_cannot_start_while_one_is_sending_and_a_crash_is_reported(self):
+        prompt = 'send "Meeting at 5" to 03001234567'
+        self.app.TEXT_LIST_JOBS.clear()
+        self.app.TEXT_LIST_JOBS["running"] = {"done": False}
+        with self.assertRaisesRegex(ValueError, "already sending"):
+            self.cb(prompt)["send_text_list"](text="Meeting at 5", phones=["03001234567"])
+        self.assertEqual(self.sent, [])
+        self.app.TEXT_LIST_JOBS.clear()
+        with patch.object(self.app, "on_hold", side_effect=[False, RuntimeError("boom")]):
+            self.cb(prompt)["send_text_list"](text="Meeting at 5", phones=["03001234567"])
+            self.wait()
+        self.assertTrue(all(j["done"] for j in self.app.TEXT_LIST_JOBS.values()))
+        self.assertIn("stopped unexpectedly", self.said[-1])
+        self.assertEqual(self.sent, [])
+
     def test_reworded_text_unknown_numbers_and_no_send_request_are_refused(self):
         prompt = 'send "Meeting at 5" to 03001234567'
         with self.assertRaisesRegex(ValueError, "exact words"):

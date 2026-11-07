@@ -1,5 +1,6 @@
 """Instant, editable wording bank from the saved DM or an owner-supplied message."""
 
+from persist import atomic_write
 import copy, hashlib, json, threading, time, uuid
 
 import dm_composer
@@ -39,7 +40,7 @@ class MessageBank:
         if self.app.STORE:
             self.app.STORE.put("donor_messages", data)
         self.cache = copy.deepcopy(data)
-        self.path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        atomic_write(self.path, json.dumps(data, ensure_ascii=False))
 
     def _entries(self, texts):
         return [
@@ -261,8 +262,15 @@ class MessageBank:
                     else "Some versions are ready. Retry to finish the remaining versions.",
                 )
         except Exception as exc:
-            # The callback already saved accepted work. A failure never resets it.
-            record(accepted[len(prior) :], "Partial", str(exc)[:350])
+            # The callback already saved accepted work. A failure never resets it. If even recording the
+            # stop fails (storage blip), try again a few times: a record left on "Generating" would make
+            # every status poll start this worker again.
+            for attempt in range(3):
+                try:
+                    record(accepted[len(prior) :], "Partial", str(exc)[:350])
+                    break
+                except Exception:
+                    time.sleep(0.5 * (attempt + 1))
         finally:
             with self.lock:
                 self.regeneration_running.discard(ident)

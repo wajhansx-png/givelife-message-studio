@@ -121,7 +121,8 @@ class WaitingTests(unittest.TestCase):
                 self.assertEqual(c.getresponse().status, code, path)
         finally:
             waiting.close()
-        with socket.socket() as s:  # port is free again for the real server
+        with socket.socket() as s:  # port is free again for the real server (which reuses addresses)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind(("127.0.0.1", port))
 
 
@@ -149,6 +150,33 @@ class ChildTests(unittest.TestCase):
         child = self.make([FakeProc(1)] * 10, max_crashes=3)
         results = [child.check() for _ in range(3)]
         self.assertEqual(results, ["restarted", "restarted", "giveup"])
+
+    def test_a_failed_restart_is_retried_and_eventually_gives_up(self):
+        calls = []
+
+        def start():
+            calls.append(1)
+            if len(calls) == 1:
+                return FakeProc(1)  # the first process starts, then dies
+            if len(calls) == 2:
+                raise OSError("no process slot")
+            return FakeProc()
+
+        child = supervisor.Child("x", start, sleep=lambda _: None, log=lambda *_: None)
+        self.assertEqual(child.check(), "failed")  # the restart itself failed; nothing raised
+        self.assertEqual(child.check(), "restarted")  # next round it starts again
+        self.assertEqual(child.check(), "ok")
+
+        def never():
+            if not calls_forever:
+                calls_forever.append(1)
+                return FakeProc(1)
+            raise OSError("gone")
+
+        calls_forever = []
+        loop = supervisor.Child("y", never, max_crashes=3, sleep=lambda _: None, log=lambda *_: None)
+        results = [loop.check() for _ in range(3)]
+        self.assertEqual(results[-1], "giveup")
 
     def test_old_crashes_do_not_count_forever(self):
         now = [0.0]

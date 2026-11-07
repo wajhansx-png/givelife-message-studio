@@ -420,3 +420,142 @@
     min-width: 38px !important;
   }
 }
+
+/* ---- Donor rows (<= 899px): ONE clean line each = star | name | trophy | DM | status | more ---- */
+@media (max-width: 899px) {
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row {
+    min-height: 52px !important;
+    height: 52px !important;
+    padding: 0 4px !important;
+    align-items: center !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-identity {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-row
+    .donor-identity
+    > .donor-name {
+    display: block !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    max-height: none !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    -webkit-line-clamp: unset !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-row
+    .donor-identity
+    > :is(.donor-normal-tag, .donor-known, .donor-fu) {
+    display: none !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-row > .donor-status {
+    white-space: nowrap !important;
+    font-size: 10.5px !important;
+    line-height: 1 !important;
+    padding: 0 2px !important;
+  }
+}
+
+/* ---- Notes (<= 720px): calm for the eyes, easy for the thumb ----
+   Full-width page, relaxed text, and the formatting tools in ONE strip at the bottom (thumb zone). */
+@media (max-width: 720px) {
+  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) #notesWorkspace {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-paper-scroll {
+    order: 1 !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    padding: 8px 8px 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-paper {
+    width: 100% !important;
+    max-width: none !important;
+    border-radius: 14px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-editor {
+    padding: 14px 16px !important;
+    line-height: 1.55 !important;
+    letter-spacing: 0.1px !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #foundationNotes#foundationNotes:not(#d)
+    .notes-editor
+    :is(p, div, li) {
+    margin: 0 0 6px !important;
+    line-height: 1.55 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #foundationNotes#foundationNotes:not(#d)
+    .notes-editor
+    :is(ul, ol) {
+    margin: 4px 0 8px !important;
+    padding-left: 24px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-toolbar {
+    order: 2 !important;
+    position: static !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 8px 8px 6px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x proximity !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #foundationNotes#foundationNotes:not(#d)
+    .notes-toolbar::-webkit-scrollbar {
+    display: none !important;
+  }
+  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-toolbar > * {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 52px !important;
+    min-height: 48px !important;
+    padding: 0 12px !important;
+    font-size: 14px !important;
+    scroll-snap-align: start !important;
+  }
+  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-foot {
+    order: 3 !important;
+    padding: 4px 8px 8px !important;
+  }
+}
+
+/* ---- Message focus screen (<= 700px): dock buttons readable at a glance (message text auto-fits its card) ---- */
+@media (max-width: 700px) {
+  html body:not(#a):not(#b):not(#c) #messageFocus#messageFocus:not(#d) .focus-rail button {
+    font-size: 14px !important;
+    min-height: 48px !important;
+  }
+}

@@ -131,8 +131,13 @@ window.sweep = async function sweep(
         );
         // a small control sitting inside a big one is a split button (main + timer), not a collision
         if (ox > 4 && oy > 4 && ox * oy > 60 && ox * oy < 0.9 * small) {
-          const fa = w.getComputedStyle(a).position === 'fixed',
-            fb = w.getComputedStyle(b).position === 'fixed';
+          const layer = (el) => {
+            for (let p = el; p && p !== d.body; p = p.parentElement)
+              if (/^(fixed|sticky)$/.test(w.getComputedStyle(p).position)) return p;
+            return null;
+          };
+          const fa = layer(a),
+            fb = layer(b);
           if (
             fa !== fb ||
             w.getComputedStyle(a).position === 'absolute' ||

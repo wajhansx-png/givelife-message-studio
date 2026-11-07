@@ -1,0 +1,48 @@
+/* Tiny Bold / Italic toolbar shown under selected text in the message editors. */
+#waMarkBar {
+  position: fixed;
+  z-index: 2147483000;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface, #fff);
+  color: var(--ink, #14201b);
+  border: 1px solid var(--line2, #82918a);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.22);
+}
+#waMarkBar[hidden] {
+  display: none;
+}
+#waMarkBar button {
+  min-width: 44px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line, #dde6e1);
+  border-radius: 7px;
+  background: var(--surface2, #eef3f0);
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#waMarkBar button:hover {
+  border-color: var(--ring, #0b7a5c);
+}
+#waMarkBar button:focus-visible {
+  outline: 2px solid var(--ring, #0b7a5c);
+  outline-offset: 1px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  #waMarkBar:not([hidden]) {
+    animation: waMarkIn 0.12s ease-out;
+  }
+}
+@keyframes waMarkIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}

@@ -2591,6 +2591,9 @@ def normal_donation_line(text, normal, left):
     return "\n".join(out)
 
 
+CAMPAIGN_START = threading.Lock()
+
+
 def dm_campaign(people, gap, image, vary, message, start_after, rest_every, rest_minutes):
     c = CAMPAIGN
     c.update(
@@ -2680,8 +2683,6 @@ def dm_campaign(people, gap, image, vary, message, start_after, rest_every, rest
 def start_campaign(body):
     if DONORS and DONORS.jobs.active:
         raise ValueError("A donor batch is already running. Stop it first or wait.")
-    if CAMPAIGN["running"]:
-        raise ValueError("A DM list is already sending. Stop it first or wait.")
     people = [p for p in body.get("people", []) if isinstance(p, dict)][:300]
     if not people:
         raise ValueError("No phone numbers found.")
@@ -2696,7 +2697,17 @@ def start_campaign(body):
         int(body.get("rest_every", 10)),
         float(body.get("rest_minutes", 10)),
     )
-    threading.Thread(target=dm_campaign, args=args, daemon=True).start()
+    # Claim the run before the worker starts: two quick requests must never both pass the check
+    # and start two lists that send to the same people.
+    with CAMPAIGN_START:
+        if CAMPAIGN["running"]:
+            raise ValueError("A DM list is already sending. Stop it first or wait.")
+        CAMPAIGN["running"] = True
+    try:
+        threading.Thread(target=dm_campaign, args=args, daemon=True).start()
+    except Exception:
+        CAMPAIGN["running"] = False
+        raise
     return (
         f"Sending to {len(people)} people, about {round(gap / 60, 1)} min apart"
         + (f", starting in {round(args[5] / 60, 1)} min" if args[5] else "")
@@ -5258,6 +5269,8 @@ class Handler(BaseHTTPRequestHandler):
             "/compact-nav.js",
             "/compact-nav.css",
             "/focus-editor.js",
+            "/format-toolbar.js",
+            "/format-toolbar.css",
             "/focus-editor.css",
             "/comfort.js",
             "/comfort.css",

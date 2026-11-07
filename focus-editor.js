@@ -411,7 +411,8 @@
   /* Clicking outside the editor saves the edit and leaves editing (buttons in the tool rail keep their own behaviour). */
   document.addEventListener('pointerdown', (e) => {
     if (screen.hidden || !editing || baseDialog.open) return;
-    if ($('focusText').contains(e.target) || e.target.closest('.focus-rail, dialog')) return;
+    if ($('focusText').contains(e.target) || e.target.closest('.focus-rail, dialog, #waMarkBar'))
+      return;
     edit(false);
   });
   $('focusEdit').onclick = () => edit(!editing);
@@ -519,20 +520,13 @@
     b.onmousedown = (e) => e.preventDefault();
     b.onclick = () => {
       if (!editing) edit(true);
-      const t = $('focusText'),
-        a = t.selectionStart,
-        z = t.selectionEnd,
-        m = b.dataset.mark;
-      let start = a,
-        end = z;
-      if (m && a === z) {
-        start = t.value.lastIndexOf('\n', a - 1) + 1;
-        end = t.value.indexOf('\n', a);
-        if (end < 0) end = t.value.length;
+      const t = $('focusText');
+      if (b.dataset.mark) {
+        /* Nothing selected: the line the cursor is on, as before. */
+        window.waMark.apply(t, b.dataset.mark, { lineIfEmpty: true });
+        return;
       }
-      const selected = t.value.slice(start, end),
-        value = m ? m + selected + m : b.dataset.emoji;
-      t.setRangeText(value, start, end, 'select');
+      t.setRangeText(b.dataset.emoji, t.selectionStart, t.selectionEnd, 'select');
       t.dispatchEvent(new Event('input'));
       t.focus({ preventScroll: true });
     };

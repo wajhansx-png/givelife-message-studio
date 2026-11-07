@@ -163,6 +163,39 @@ class StoreRecovery(unittest.TestCase):
             self.assertEqual(store.pending_writes, 0)
 
 
+class NoDoubleStart(unittest.TestCase):
+    def test_two_quick_dm_list_requests_start_only_one_list(self):
+        import threading, time
+
+        started, gate, results = [], threading.Event(), []
+
+        def slow_list(*args):
+            started.append(1)
+            gate.wait(5)
+            app.CAMPAIGN["running"] = False
+
+        body = {"people": [{"phone": "923001234567", "name": "Synthetic"}], "gap_seconds": 90}
+
+        def go():
+            try:
+                results.append(app.start_campaign(dict(body)))
+            except ValueError as exc:
+                results.append(str(exc))
+
+        with (
+            patch.object(app, "dm_campaign", slow_list),
+            patch.object(app, "DONORS", None),
+            patch.dict(app.CAMPAIGN, {"running": False}),
+        ):
+            threads = [threading.Thread(target=go) for _ in range(6)]
+            [t.start() for t in threads]
+            [t.join(5) for t in threads]
+            time.sleep(0.1)
+            gate.set()
+        self.assertEqual(len(started), 1)  # one list, never two sending to the same people
+        self.assertEqual(sum("already sending" in r for r in results), 5)
+
+
 class SourceHygiene(unittest.TestCase):
     def test_no_stray_control_characters_in_python_source(self):
         # A literal backspace inside a regex (instead of \\b) silently never matched.

@@ -296,3 +296,22 @@
   if (document.readyState === 'loading') addEventListener('DOMContentLoaded', place);
   else place();
 })();
+
+/* Phone main screen: Chat | Group messages | Donors along the bottom (the top copy is hidden by CSS). */
+(() => {
+  const place = () => {
+    const foot = document.querySelector('.app > .foot'),
+      top = document.querySelector('.brandbar .seg button');
+    if (!foot || !top || foot.querySelector('#navGroups')) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.id = 'navGroups';
+    b.className = 'ghost';
+    b.textContent = 'Group messages';
+    b.onclick = () => top.click();
+    const donors = foot.querySelector('#openDonors');
+    donors ? donors.before(b) : foot.append(b);
+  };
+  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', place);
+  else place();
+})();

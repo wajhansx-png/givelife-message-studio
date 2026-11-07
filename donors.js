@@ -1177,6 +1177,10 @@
       button.onclick = async () => {
         if (bankRegenerating || bankSaves.has(item.id)) return;
         if (edit.hidden) {
+          /* The editor looks exactly like the message it replaces: same font, size and spacing. */
+          const look = getComputedStyle(preview);
+          for (const prop of ['font-family', 'font-size', 'line-height', 'letter-spacing', 'padding'])
+            edit.style.setProperty(prop, look.getPropertyValue(prop), 'important');
           edit.hidden = false;
           preview.hidden = true;
           button.textContent = 'Save';

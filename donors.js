@@ -3068,38 +3068,60 @@
     el('numbersText').focus({ preventScroll: true });
   };
   el('numbersCancel').onclick = () => numbers.close();
-  /* Remove all GIKI: two taps, so it is never done by accident. Donors with history are kept. */
-  const removeGiki = make('button', 'numbers-remove', 'Remove all GIKI donors');
-  removeGiki.type = 'button';
-  numbers.querySelector('.donor-form-actions').before(removeGiki);
-  let removeArmed = 0;
-  removeGiki.onclick = async () => {
-    if (!removeArmed) {
-      removeGiki.textContent = 'Tap again to remove all GIKI';
-      removeGiki.dataset.armed = '1';
-      removeArmed = setTimeout(() => {
-        removeArmed = 0;
-        removeGiki.textContent = 'Remove all GIKI donors';
-        delete removeGiki.dataset.armed;
-      }, 4000);
+  /* Destructive buttons need two taps, so they are never pressed by accident. */
+  function twoTap(label, armedLabel, run) {
+    const btn = make('button', 'numbers-remove', label);
+    btn.type = 'button';
+    let armed = 0;
+    const reset = () => {
+      armed = 0;
+      btn.textContent = label;
+      delete btn.dataset.armed;
+    };
+    btn.onclick = async () => {
+      if (!armed) {
+        btn.textContent = armedLabel;
+        btn.dataset.armed = '1';
+        armed = setTimeout(reset, 4000);
+        return;
+      }
+      clearTimeout(armed);
+      reset();
+      btn.disabled = true;
+      try {
+        await run();
+      } catch (e) {
+        el('numbersResult').textContent = e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    numbers.querySelector('.donor-form-actions').before(btn);
+    return btn;
+  }
+  /* One step for "delete and add everything again": the pasted list is checked first, so a bad paste changes nothing. */
+  twoTap('Replace GIKI list with the pasted one', 'Tap again to replace the GIKI list', async () => {
+    if (!el('numbersText').value.trim()) {
+      el('numbersResult').textContent = 'Paste the list first.';
       return;
     }
-    clearTimeout(removeArmed);
-    removeArmed = 0;
-    delete removeGiki.dataset.armed;
-    removeGiki.textContent = 'Remove all GIKI donors';
-    removeGiki.disabled = true;
+    el('numbersResult').textContent = 'Replacing…';
+    const r = await api('/donors', {
+      action: 'group_numbers',
+      text: el('numbersText').value,
+      group: 'GIKI',
+      replace: true,
+    });
+    el('numbersText').value = '';
+    el('numbersResult').textContent = '✓ ' + r.reply;
+    await refresh(true);
+  });
+  twoTap('Remove all GIKI donors', 'Tap again to remove all GIKI', async () => {
     el('numbersResult').textContent = 'Removing…';
-    try {
-      const r = await api('/donors', { action: 'remove_group', group: 'GIKI' });
-      el('numbersResult').textContent = '✓ ' + r.reply;
-      await refresh(true);
-    } catch (e) {
-      el('numbersResult').textContent = e.message;
-    } finally {
-      removeGiki.disabled = false;
-    }
-  };
+    const r = await api('/donors', { action: 'remove_group', group: 'GIKI' });
+    el('numbersResult').textContent = '✓ ' + r.reply;
+    await refresh(true);
+  });
   el('numbersSave').onclick = async () => {
     const b = el('numbersSave');
     if (!el('numbersText').value.trim()) return;

@@ -697,3 +697,46 @@
     padding-right: 6px !important;
   }
 }
+
+/* ---- Desktop/tablet: no phone-only Group button; send rows keep their labels clear of the time/dropdown buttons ---- */
+@media (min-width: 701px) {
+  html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g) .app > .foot > #navGroups {
+    display: none !important;
+  }
+}
+html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row:has(.gb-timer.is-pending) #btnGivelife .gb-name {
+  padding-right: 100px !important;
+}
+html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row #btnGivelife .gb-name {
+  padding-right: 70px !important;
+}
+html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row #btnFree .gb-name {
+  padding-right: 120px !important;
+}
+html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row:has(.gb-timer.is-pending) #btnFree .gb-name {
+  padding-right: 150px !important;
+}
+
+/* ---- Send rows: the time/dropdown buttons always sit inside their row, even when the time is wider ---- */
+html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row {
+  position: relative !important;
+}
+html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row > .row-tools {
+  position: absolute !important;
+  right: 44px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  display: flex !important;
+  gap: 5px !important;
+  align-items: center !important;
+  z-index: 3 !important;
+}
+html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row > .row-tools > button {
+  position: static !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  width: auto !important;
+  min-width: 36px !important;
+  padding: 0 8px !important;
+  white-space: nowrap !important;
+}

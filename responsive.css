@@ -473,7 +473,7 @@
 }
 
 /* ---- Notes (<= 720px): calm for the eyes, easy for the thumb ----
-   Full-width page, relaxed text, and the formatting tools in ONE strip at the bottom (thumb zone). */
+   Full-width page and relaxed text. The format bar keeps its own design (shown under selected text). */
 @media (max-width: 720px) {
   html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) #notesWorkspace {
     display: flex !important;
@@ -511,40 +511,6 @@
     :is(ul, ol) {
     margin: 4px 0 8px !important;
     padding-left: 24px !important;
-  }
-  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-toolbar {
-    order: 2 !important;
-    position: static !important;
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    align-items: center !important;
-    gap: 6px !important;
-    width: auto !important;
-    max-width: none !important;
-    height: auto !important;
-    max-height: none !important;
-    padding: 8px 8px 6px !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    scroll-snap-type: x proximity !important;
-    scrollbar-width: none !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-  html
-    body:not(#a):not(#b):not(#c)
-    #foundationNotes#foundationNotes:not(#d)
-    .notes-toolbar::-webkit-scrollbar {
-    display: none !important;
-  }
-  html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-toolbar > * {
-    flex: 0 0 auto !important;
-    width: auto !important;
-    min-width: 52px !important;
-    min-height: 48px !important;
-    padding: 0 12px !important;
-    font-size: 14px !important;
-    scroll-snap-align: start !important;
   }
   html body:not(#a):not(#b):not(#c) #foundationNotes#foundationNotes:not(#d) .notes-foot {
     order: 3 !important;

@@ -401,3 +401,22 @@
     display: none !important;
   }
 }
+
+/* ---- Very small phones (<= 299px): the Donors title bar keeps every button clear of its neighbour ---- */
+@media (max-width: 299px) {
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head {
+    gap: 3px !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    :is(#donorAdd, #donorNavMore > summary) {
+    padding: 0 6px !important;
+    font-size: 11px !important;
+  }
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head #donorMessagesTab {
+    width: 38px !important;
+    min-width: 38px !important;
+  }
+}

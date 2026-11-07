@@ -2096,7 +2096,7 @@ def timed_loop():
         except Exception as exc:
             _loop_failure("resume", "Donor batch resume check failed", exc)
         if time.monotonic() >= next_heal:
-            next_heal = time.monotonic() + 60
+            next_heal = time.monotonic() + 10
             try:
                 if STORE:
                     focus_bank().heal()  # keeps saved versions topped up with no button press

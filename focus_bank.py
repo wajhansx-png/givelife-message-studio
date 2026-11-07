@@ -1,7 +1,7 @@
 """Owner-source wording banks. Generated text never replaces the saved original."""
 
 import copy, hashlib, threading, time, uuid, re
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import quality, ai_call
 import dm_variants, message_rules
 
@@ -20,6 +20,7 @@ MAX_VERSIONS = 40  # ceiling for one message's saved versions
 TOP_UP_AT = 2  # when this few unused versions remain in a round, the next batch starts
 # One batch gives up after this long and says why (room for a deep, reasoning-model retry).
 MAX_RUN_SECONDS = 480
+FAST_RETRY = (10, 30, 90, 300, 900)  # seconds before a failed batch tries again by itself
 RETRY_AFTER = (
     120,
     300,
@@ -179,6 +180,7 @@ class FocusBank:
                 batch={"goal": len(items) + BATCH, "auto": bool(auto), "at": time.time()},
                 auto_failed=False if not auto else row.get("auto_failed", False),
                 auto_fails=0 if not auto else row.get("auto_fails", 0),
+                retry=False,
             )
             self._put(data)
         self.start(kind)
@@ -224,7 +226,7 @@ class FocusBank:
                     return
                 last_note, last_error, tried = last_error, "", {}
                 try:
-                    candidates = self._candidates(
+                    for candidates in self._rounds(
                         api,
                         source,
                         row.get("avoid", []) + items,
@@ -232,7 +234,51 @@ class FocusBank:
                         last_note,
                         attempt,
                         samples,
-                    )
+                    ):
+                        passed = []
+                        for text in candidates:
+                            text = text.replace("\r\n", "\n").strip()
+                            # The app, not the AI, keeps Quran/payment lines and each line's language.
+                            text = dm_variants.repair(source, text) if text else text
+                            reason = reject_reason(source, text, items + passed)
+                            if reason:
+                                if (
+                                    re.search(r"repeated wording|not deeply|too similar", reason)
+                                    and text
+                                ):
+                                    samples.append(text[:140].replace("\n", " "))
+                                tried[reason] = tried.get(reason, 0) + 1
+                                reasons[reason] = reasons.get(reason, 0) + 1
+                                continue
+                            passed.append(text)
+                        last_error = why(tried)
+                        # One batched AI review of naturalness/taste for versions that passed every code rule.
+                        verdicts = quality.review(
+                            ai_call.chat,
+                            source,
+                            passed,
+                            self.owner_style(exclude=source),
+                            dm_variants.CORRECTIONS() or [],
+                        )
+                        for text, verdict in zip(passed, verdicts):
+                            if verdict:
+                                last_error = verdict
+                                reasons[verdict] = reasons.get(verdict, 0) + 1
+                                continue
+                            items.append(text)
+                            if len(items) >= goal:
+                                break
+                        # Keep every accepted version at once: the screen shows 1/5, 2/5, ...
+                        if not self.record(
+                            kind,
+                            row["revision"],
+                            {"items": items, "progress": len(items), "note": last_error[:160]},
+                        ):
+                            with self.lock:
+                                self.running.discard(key)
+                            return
+                        if len(items) >= goal:
+                            break
                 except Exception as exc:
                     last_error = str(exc)[:180]
                     reasons[last_error] = reasons.get(last_error, 0) + 1
@@ -241,45 +287,6 @@ class FocusBank:
                     if dm_variants.ai_transient(last_error) and waits:
                         dm_variants._sleep(waits.pop(0))  # rate limit / server hiccup: wait, retry
                     continue
-                passed = []
-                for text in candidates:
-                    text = text.replace("\r\n", "\n").strip() if isinstance(text, str) else ""
-                    # The app, not the AI, keeps Quran/payment lines and each line's language.
-                    text = dm_variants.repair(source, text) if text else text
-                    reason = reject_reason(source, text, items + passed)
-                    if reason:
-                        if re.search(r"repeated wording|not deeply|too similar", reason) and text:
-                            samples.append(text[:140].replace("\n", " "))
-                        tried[reason] = tried.get(reason, 0) + 1
-                        reasons[reason] = reasons.get(reason, 0) + 1
-                        continue
-                    passed.append(text)
-                last_error = why(tried)
-                # One batched AI review of naturalness/taste for versions that passed every code rule.
-                verdicts = quality.review(
-                    ai_call.chat,
-                    source,
-                    passed,
-                    self.owner_style(exclude=source),
-                    dm_variants.CORRECTIONS() or [],
-                )
-                for text, verdict in zip(passed, verdicts):
-                    if verdict:
-                        last_error = verdict
-                        reasons[verdict] = reasons.get(verdict, 0) + 1
-                        continue
-                    items.append(text)
-                    if len(items) >= goal:
-                        break
-                # Keep every accepted version even when a later model call fails.
-                if not self.record(
-                    kind,
-                    row["revision"],
-                    {"items": items, "progress": len(items), "note": last_error[:160]},
-                ):
-                    with self.lock:
-                        self.running.discard(key)
-                    return
             if len(items) < goal:
                 raise ValueError(
                     f"{len(items) - (goal - BATCH)} of {BATCH} new versions passed every check. "
@@ -294,6 +301,7 @@ class FocusBank:
                 "generator": GEN,
                 "batch": None,
                 "note": "",
+                "retry": False,
                 "auto_failed": False,
                 "auto_fails": 0,
             }
@@ -307,9 +315,12 @@ class FocusBank:
                 "generator": GEN,
                 "batch": None,
                 "note": "",
+                "retry": not (
+                    "not connected" in str(exc) or dm_variants.ai_fatal(str(exc))
+                ),  # keeps trying by itself
                 "auto_failed": auto,
-                "auto_fails": fails + 1 if auto else 0,
-                "auto_failed_at": time.time() if auto else 0,
+                "auto_fails": fails + 1,
+                "auto_failed_at": time.time(),
             }
         try:
             print(
@@ -324,10 +335,10 @@ class FocusBank:
             with self.lock:
                 self.running.discard(key)
 
-    def _candidates(self, api, source, avoid, need, last_note, attempt, samples=()):
+    def _rounds(self, api, source, avoid, need, last_note, attempt, samples=()):
         """Rewrites from several AI calls made at the same time, each with a different opening
-        angle. One slow call used to be followed by the next, so a batch took minutes when most
-        rewrites were rejected; now a round costs one call. Errors in some calls are tolerated."""
+        angle. Each call's rewrites are handed over the moment that call finishes, so progress shows
+        right away and a slow call never holds back the quick ones. Errors in some calls are tolerated."""
         calls = PARALLEL_CALLS if need > 2 else 2
         per = 3 if need > 1 else 2
         prompts = []
@@ -349,19 +360,30 @@ class FocusBank:
             prompts.append(p)
         # Near-copies last time: read the message in depth with the reasoning model this time.
         deep = bool(re.search(r"repeated wording|not deeply|too similar", last_note or ""))
-        found, errors = [], []
-        with ThreadPoolExecutor(max_workers=calls) as pool:
-            for future in [pool.submit(dm_variants._call, api, p, deep) for p in prompts]:
+        pool = ThreadPoolExecutor(max_workers=calls)
+        errors, got = [], False
+        try:
+            futures = [pool.submit(dm_variants._call, api, p, deep) for p in prompts]
+            for future in as_completed(futures):
                 try:
-                    found.extend(future.result())
+                    found = [t for t in future.result() if isinstance(t, str)]
                 except Exception as exc:
+                    if dm_variants.ai_fatal(str(exc)):
+                        raise
                     errors.append(exc)
-        for exc in errors:
-            if dm_variants.ai_fatal(str(exc)):
-                raise exc
-        if not found and errors:
+                    continue
+                got = got or bool(found)
+                yield list(dict.fromkeys(found))
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)  # never wait on calls we no longer need
+        if not got and errors:
             raise errors[0]
-        return list(dict.fromkeys(t for t in found if isinstance(t, str)))
+
+    def _candidates(self, api, source, avoid, need, last_note, attempt, samples=()):
+        found = []
+        for batch in self._rounds(api, source, avoid, need, last_note, attempt, samples):
+            found.extend(batch)
+        return list(dict.fromkeys(found))
 
     def current(self, kind, revision):
         with self.lock:
@@ -397,6 +419,15 @@ class FocusBank:
             with self.app.LOCK, self.lock:
                 row = self._load().get(kind)
                 if not row or row.get("state") == "Generating":
+                    continue
+                if row.get("retry") and dm_variants.assistant.client() is not None:
+                    fails = max(1, int(row.get("auto_fails", 0) or 0))
+                    wait = FAST_RETRY[min(fails, len(FAST_RETRY)) - 1]
+                    if time.time() - float(row.get("auto_failed_at", 0) or 0) >= wait:
+                        try:
+                            self.generate(kind, auto=True)
+                        except Exception:
+                            pass
                     continue
                 items = verified_items(
                     row.get("source", ""), row.get("items", []), row.get("manual")

@@ -161,7 +161,7 @@
       if (editing) edit(false);
       await save();
       row = await api({ action: 'regenerate' });
-      status('Writing 5 fresh versions…');
+      showProgress(0);
       genButton();
       watch();
     } catch (e) {
@@ -247,11 +247,59 @@
     b.textContent = busy ? 'Writing 5…' : 'Generate 5 Versions';
   }
   /* One short line. A long generation message shows as "1 of 5 ready ⓘ"; tap it for the full reason. */
+  /* Writing versions shows calm progress only (1/5, 2/5 ...), never an error: the app keeps trying by itself. */
+  const BATCH_SIZE = 5;
+  const isBusy = (d) => d?.state === 'Generating' || (!!d?.retry && d?.state !== 'Ready');
+  function progressDone(d) {
+    const n = d?.items?.length || 0,
+      goal = d?.batch?.goal;
+    return goal ? Math.max(0, Math.min(BATCH_SIZE, n - (goal - BATCH_SIZE))) : 0;
+  }
+  function showProgress(done) {
+    const node = $('focusState');
+    node.dataset.open = '';
+    node.title = '';
+    node.onclick = null;
+    node.removeAttribute('tabindex');
+    if (node.dataset.mode !== 'busy') {
+      node.textContent = '';
+      const label = document.createElement('span'),
+        pips = document.createElement('span'),
+        count = document.createElement('b');
+      label.className = 'fx-label';
+      label.textContent = 'Writing versions';
+      pips.className = 'fx-pips';
+      pips.setAttribute('aria-hidden', 'true');
+      for (let i = 0; i < BATCH_SIZE; i++) pips.append(document.createElement('i'));
+      count.className = 'fx-count';
+      node.append(label, pips, count);
+      node.dataset.mode = 'busy';
+    }
+    node.querySelectorAll('.fx-pips i').forEach((pip, i) => {
+      pip.className = i < done ? 'on' : i === done ? 'next' : '';
+    });
+    const count = node.querySelector('.fx-count'),
+      text = done + '/' + BATCH_SIZE;
+    if (count.textContent !== text) {
+      count.textContent = text;
+      count.classList.remove('pop');
+      void count.offsetWidth; /* restart the little pop animation */
+      count.classList.add('pop');
+    }
+    node.setAttribute('aria-label', 'Writing versions ' + done + ' of ' + BATCH_SIZE);
+  }
+  function rowStatus(d) {
+    if (isBusy(d)) return showProgress(progressDone(d));
+    const n = d?.items?.length || 0;
+    status(n ? n + ' versions ready' : 'Original');
+  }
   function status(text) {
     const node = $('focusState'),
       full = String(text || ''),
       m = /^(\d+) of (\d+) new versions passed every check\.?\s*(.*)$/s.exec(full);
     node.dataset.open = '';
+    node.dataset.mode = '';
+    node.removeAttribute('aria-label');
     if (m) {
       node.textContent = m[1] + ' of ' + m[2] + ' new versions ready ⓘ';
       node.title = full;
@@ -334,31 +382,21 @@
   }
   function watch() {
     clearTimeout(timer);
-    if (screen.hidden || row?.state !== 'Generating') return;
+    if (screen.hidden || !isBusy(row)) return;
     timer = setTimeout(async () => {
       try {
         const d = await api();
         if (screen.hidden || editing) return;
         row = d;
-        status(
-          d.state === 'Ready'
-            ? (d.items?.length || 0) + ' versions ready'
-            : d.state === 'Generating'
-              ? 'Writing 5 more · ' +
-                (d.items?.length || 0) +
-                ' ready so far…' +
-                (d.note ? ' · ' + d.note : '')
-              : d.error || (d.items?.length || 0) + ' versions ready',
-        );
+        rowStatus(d);
         genButton();
         watch();
       } catch (e) {
-        if (e.restarting) {
-          status(e.message);
-          watch();
-        } else status('Original saved. Could not refresh versions.');
+        /* A hiccup or a restarting server: stay calm, keep the progress on screen, look again. */
+        showProgress(progressDone(row));
+        watch();
       }
-    }, 2500);
+    }, 1000);
   }
   async function open() {
     const epoch = ++loading;
@@ -384,16 +422,13 @@
         edit(true);
       } else {
         edit(false);
-        status(
-          row.error ||
-            (row.state === 'Ready'
+        if (isBusy(row)) rowStatus(row);
+        else
+          status(
+            row.items?.length
               ? row.items.length + ' versions ready'
-              : row.state === 'Generating'
-                ? 'Writing 5 more versions…'
-                : row.items?.length
-                  ? row.items.length + ' versions ready'
-                  : 'Saved base message · TEST works without versions'),
-        );
+              : 'Saved base message · TEST works without versions',
+          );
       }
       if (!row.revision && !dirty) {
         dirty = true;
@@ -484,7 +519,8 @@
       await save();
       row = await api();
       if (!row.items?.length) {
-        status(row.error || 'No versions yet. Tap Generate 5 Versions. TEST works without them.');
+        if (isBusy(row)) rowStatus(row);
+        else status('No versions yet. Tap Generate 5 Versions. TEST works without them.');
         return;
       }
       index = ((index + 2) % (row.items.length + 1)) - 1;
@@ -523,7 +559,7 @@
       if (editing) edit(false);
       await save();
       row = await api({ action: 'generate' });
-      status('Writing 5 versions…');
+      showProgress(0);
       genButton();
       watch();
     } catch (e) {

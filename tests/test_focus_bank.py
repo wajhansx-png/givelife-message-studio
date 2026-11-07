@@ -571,6 +571,63 @@ class SendingWorkflow(unittest.TestCase):
             b.generate("group")  # the owner's click clears the pause and starts the next 5
         self.assertFalse(b._load()["group"]["auto_failed"])
 
+    def test_progress_is_saved_as_each_ai_call_finishes(self):
+        b = self.make()
+        with patch.object(b, "_spawn"):
+            row = b.save("group", SRC)
+            b.generate("group")
+        answers = iter([DEEP[0:2], DEEP[2:4], DEEP[4:6]])
+        seen, real = [], b.record
+
+        def spy(kind, revision, values):
+            seen.append(len(values.get("items", [])))
+            return real(kind, revision, values)
+
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch("dm_variants._call", side_effect=lambda *a, **k: next(answers, [])),
+            patch(
+                "quality.review", side_effect=lambda c, src, passed, *a, **k: [None] * len(passed)
+            ),
+            patch.object(b, "record", side_effect=spy),
+            patch.object(b, "_spawn"),  # get() must not start a second, competing run
+        ):
+            b._generate("group", b.get("group"), ("group", row["revision"]))
+        self.assertEqual(seen[:3], [2, 4, 5])  # 2/5, 4/5, 5/5: shown as they arrive, not at the end
+        self.assertEqual(b.get("group")["state"], "Ready")
+
+    def test_a_failed_batch_retries_by_itself_unless_the_ai_is_unusable(self):
+        import time
+
+        b = self.make()
+        with patch.object(b, "_spawn"):
+            row = b.save("group", SRC)
+            b.generate("group")
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch("dm_variants._call", side_effect=RuntimeError("The AI service timed out")),
+            patch("dm_variants._sleep"),
+            patch("focus_bank.MAX_RUN_SECONDS", 0),
+        ):
+            b._generate("group", b.get("group"), ("group", row["revision"]))
+        got = b.get("group")
+        self.assertTrue(got["retry"])  # the owner never has to press anything again
+        data = b._load()
+        data["group"]["auto_failed_at"] = time.time() - 60  # the 10 s wait is over
+        b._put(data)
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch.object(b, "generate") as gen,
+        ):
+            b.heal()
+        gen.assert_called_once_with("group", auto=True)
+        with (
+            patch("dm_variants.assistant.client", return_value=None),
+            patch.object(b, "generate") as gen,
+        ):
+            b.heal()
+        gen.assert_not_called()  # AI not connected: nothing to retry with
+
     def test_a_failed_top_up_waits_then_retries_by_itself(self):
         import time
 

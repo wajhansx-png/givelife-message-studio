@@ -378,7 +378,7 @@ def active_model():
     return os.environ.get("DEEPSEEK_REASONING_MODEL") or MODEL
 
 
-def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None):
+def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None, timeout=45):
     """One call to DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
     model = active_model()
     thinking = (
@@ -410,7 +410,7 @@ def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None)
     )
     for attempt in range(2):
         try:
-            with urllib.request.urlopen(req, timeout=45) as r:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
                 data = mapping(json.load(r))
             break
         except urllib.error.HTTPError as e:
@@ -427,7 +427,9 @@ def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None)
             if attempt == 0:
                 time.sleep(0.5)
                 continue
-            raise RuntimeError("The AI service could not be reached. Nothing was changed.") from None
+            raise RuntimeError(
+                "The AI service could not be reached. Nothing was changed."
+            ) from None
     choices = data.get("choices")
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
         raise RuntimeError("DeepSeek returned an incomplete response. No action was confirmed.")

@@ -637,12 +637,26 @@ class DonorIntegration:
             own = normalize_phone(self.app.OWNER_PHONE)
             if any(phone == own for _, phone in prepared):
                 raise ValueError("Your own account cannot be in this list.")
+            gone = None
+            if body.get("replace") is True:
+                from private_top_names import remove_group
+
+                gone = remove_group(self.book, group)  # the pasted list was checked first: nothing lost
             r = merge_top_group(self.book, prepared, group)
+            with self.book.lock:
+                live = [x for x in self.book._load()["records"] if not x.get("deleted")]
+            have = sum(1 for x in live if x.get("group") == group and x.get("phone"))
+            total = sum(1 for x in live if x.get("group") == group)
+            head = (
+                f"Replaced the {group} list ({gone['removed']} removed): {r['added'] + r['matched']} donors saved"
+                if gone is not None
+                else f"{r['matched']} numbers saved to existing donors"
+                + (f", {r['added']} new added" if r["added"] else "")
+            )
             return {
                 **r,
-                "reply": f"{r['matched']} numbers saved to existing donors"
-                + (f", {r['added']} new added" if r["added"] else "")
-                + f" under {group} Donors.",
+                "removed": gone["removed"] if gone is not None else 0,
+                "reply": head + f" under {group} Donors. {have} of {total} now have their number saved.",
             }
         if action == "remove_group":
             # Owner clears a named Top group (GIKI) so the list can be pasted again with no repeats.

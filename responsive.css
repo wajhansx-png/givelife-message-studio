@@ -391,6 +391,13 @@
     font-size: 9px !important;
   }
 }
+/* 360-380px: the main "More" label was 1-3px wider than its button. The <=359 band keeps its own size. */
+@media (min-width: 360px) and (max-width: 380px) {
+  html body:not(#a):not(#b):not(#c) .brandbar #mainNavMore > summary {
+    font-size: 12px !important;
+    letter-spacing: -0.2px !important;
+  }
+}
 @media (max-width: 299px) {
   html body:not(#a):not(#b):not(#c) .brandbar #mainNavMore > summary {
     padding: 0 1px !important;

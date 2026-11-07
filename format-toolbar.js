@@ -242,6 +242,9 @@
   };
 
   document.addEventListener('selectionchange', schedule);
+  /* Some browsers only report a textarea's selection through select / input, not selectionchange. */
+  document.addEventListener('select', schedule, true);
+  document.addEventListener('input', schedule, true);
   document.addEventListener('pointerdown', (e) => {
     if (bar.contains(e.target)) return;
     pointerDown = !!e.target.closest?.(TARGETS);

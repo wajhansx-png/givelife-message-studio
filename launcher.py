@@ -20,6 +20,16 @@ if not supervisor.wait_for_db(store):
     raise SystemExit("Database unreachable after 10 minutes.")
 store.restore(DATA, ROOT)
 
+# Private, one-time name-only Top donors import. Never log or commit names or numbers.
+if os.environ.get("GIVELIFE_TOP_NAMES_JSON"):
+    try:
+        from private_top_names import import_top_names
+        receipt = import_top_names(store, DATA, os.environ["GIVELIFE_TOP_NAMES_JSON"])
+        print("[top-names-import] " + " ".join(f"{k}={v}" for k, v in receipt.items()), flush=True)
+    except Exception as exc:
+        print("[top-names-import] failed: " + type(exc).__name__, flush=True)
+
+
 # One-time, private bulk contact import. No outgoing WhatsApp messages.
 # Payload is held temporarily in Render env only, never in this repository.
 if os.environ.get("GIVELIFE_DONOR_IMPORT_B64"):

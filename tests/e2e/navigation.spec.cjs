@@ -217,18 +217,22 @@ test('the batch dialog plans batches of 20, pauses, per-batch pauses and random 
   await page.locator('#donorSendAll').click();
   await expect(page.locator('#batchCount')).toHaveValue(/\d+/);
   await page.locator('#batchCount').fill('100');
-  await expect(page.locator('#batchPlan')).toContainText('100 people · 5 batches of up to 20');
+  await expect(page.locator('#batchStart')).toHaveAttribute(
+    'title',
+    new RegExp('Send to 100 people'),
+  );
+  await expect(page.locator('#batchStart')).toHaveAttribute('title', new RegExp('5 batches'));
   await page.locator('#batchPause').selectOption('custom');
   await expect(page.locator('#batchPauseCustom')).toBeVisible();
   await page.locator('#batchPauseCustom').fill('45');
-  await expect(page.locator('#batchPlan')).toContainText('5 batches');
-  await page.locator('.batch-more summary').click();
+  await expect(page.locator('#batchStart')).toHaveAttribute('title', new RegExp('5 batches'));
+  await page.locator('#batchPause').selectOption('each');
   await page.locator('#batchEach').fill('20, 30, 60');
   await expect(page.locator('#batchRandomRow')).toBeHidden();
   await page.locator('#batchRandom').check();
   await expect(page.locator('#batchJMin')).toBeVisible();
   await page.locator('#batchEach').fill('0');
-  await expect(page.locator('#batchPlan')).toContainText('Check the pause');
+  await expect(page.locator('#batchStart')).toHaveAttribute('title', new RegExp('Check the pause'));
   const box = await page.locator('.batch-dialog').boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(391);
@@ -251,7 +255,7 @@ test('starting sends one confirmed request with batches, pauses and random gap',
   await page.locator('#batchCount').fill('45');
   await page.locator('#batchGap').fill('3');
   await page.locator('#batchPause').selectOption('30');
-  await page.locator('.batch-more summary').click();
+  await page.locator('#batchPause').selectOption('each');
   await page.locator('#batchEach').fill('20, 40');
   await page.locator('#batchRandom').check();
   await page.locator('#batchJMin').fill('5');
@@ -464,7 +468,6 @@ test('the poster dialog and the chat clip accept an MP4 video as well as a pictu
   );
 });
 
-
 test('poster upload shows real progress, stays open until confirmed, and then closes', async ({
   page,
   request,
@@ -474,7 +477,9 @@ test('poster upload shows real progress, stays open until confirmed, and then cl
   let authorized = false;
   await page.route('**/upload-image', async (route) => {
     authorized = route.request().headers()['authorization'] === 'Bearer manual-fix-preview-key';
-    await new Promise((resolve) => { finishUpload = resolve; });
+    await new Promise((resolve) => {
+      finishUpload = resolve;
+    });
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -485,7 +490,11 @@ test('poster upload shows real progress, stays open until confirmed, and then cl
   await page.locator('#posterFile').setInputFiles({
     name: 'sample.mp4',
     mimeType: 'video/mp4',
-    buffer: Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(12000)]),
+    buffer: Buffer.concat([
+      Buffer.from([0, 0, 0, 24]),
+      Buffer.from('ftypmp42'),
+      Buffer.alloc(12000),
+    ]),
   });
   await expect(page.locator('#posterSave')).toBeEnabled();
   await page.locator('#posterSave').click();
@@ -508,7 +517,9 @@ test('poster saving errors remain visible and retry can complete', async ({ page
     await route.fulfill({
       status: attempts === 1 ? 503 : 200,
       contentType: 'application/json',
-      body: JSON.stringify(attempts === 1 ? { error: 'Storage temporarily unavailable' } : { id: 'poster' }),
+      body: JSON.stringify(
+        attempts === 1 ? { error: 'Storage temporarily unavailable' } : { id: 'poster' },
+      ),
     });
   });
   await page.evaluate(() => window.DonorHub.openPoster());

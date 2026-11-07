@@ -52,11 +52,11 @@ for (const [width, height] of [
     await rows.nth(0).locator('.donor-more > summary').click();
     const open = page.locator('.donor-more[open]');
     await expect(open).toHaveCount(1);
-    const inside = await open.locator('> div').evaluate((m) => {
-      const r = m.getBoundingClientRect();
-      return r.bottom <= innerHeight + 1;
-    });
-    expect(inside).toBe(true);
+    await expect
+      .poll(() =>
+        open.locator('> div').evaluate((m) => m.getBoundingClientRect().bottom <= innerHeight + 1),
+      )
+      .toBe(true);
     await page.keyboard.press('Escape');
     await expect(open).toHaveCount(0);
     await rows.nth(0).locator('.donor-more > summary').click();

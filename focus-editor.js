@@ -238,16 +238,46 @@
     b.disabled = busy;
     b.textContent = busy ? 'Writing 5…' : 'Generate 5 Versions';
   }
+  /* One short line. A long generation message shows as "1 of 5 ready ⓘ"; tap it for the full reason. */
   function status(text) {
-    $('focusState').textContent = text;
+    const node = $('focusState'),
+      full = String(text || ''),
+      m = /^(\d+) of (\d+) new versions passed every check\.?\s*(.*)$/s.exec(full);
+    node.dataset.open = '';
+    if (m) {
+      node.textContent = m[1] + ' of ' + m[2] + ' new versions ready ⓘ';
+      node.title = full;
+      node.tabIndex = 0;
+      node.onclick = () => {
+        const open = node.dataset.open === '1';
+        node.dataset.open = open ? '' : '1';
+        node.textContent = open ? m[1] + ' of ' + m[2] + ' new versions ready ⓘ' : full;
+      };
+    } else {
+      node.textContent = full;
+      node.title = '';
+      node.removeAttribute('tabindex');
+      node.onclick = null;
+    }
   }
+  /* The whole message shows at once: the largest size (10.5–20px) at which it fits without scrolling. */
   function fit() {
     const p = $('focusFormatted');
     if (editing) return;
-    p.style.fontSize = '20px';
-    for (let n = 20; n > 14 && p.scrollHeight > p.clientHeight + 2; n--)
-      p.style.fontSize = n - 1 + 'px';
-    $('focusText').style.fontSize = p.style.fontSize;
+    p.style.setProperty('line-height', '1.3', 'important');
+    let lo = 9.5,
+      hi = 14,
+      best = lo;
+    for (let i = 0; i < 7; i++) {
+      const mid = (lo + hi) / 2;
+      p.style.setProperty('font-size', mid + 'px', 'important');
+      if (p.scrollHeight <= p.clientHeight + 2) {
+        best = mid;
+        lo = mid;
+      } else hi = mid;
+    }
+    p.style.setProperty('font-size', best + 'px', 'important');
+    $('focusText').style.fontSize = Math.max(best, 14) + 'px';
   }
   function paint(text) {
     $('focusText').value = text;

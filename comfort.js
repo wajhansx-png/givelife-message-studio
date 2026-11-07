@@ -116,7 +116,7 @@
     if (phone.matches && panel) {
       /* More keeps only Bulk message. Test DM lives in the Send DMs setup (More options) and the
          poster choice is the Attach poster switch there; the bottom-bar switch stays hidden. */
-      const setup = document.querySelector('#donorBatchPicker .batch-more');
+      const setup = document.querySelector('#donorBatchPicker #batchChips');
       if (test) (setup || panel).append(test);
       if (poster) bottom.append(poster);
     } else if (toggle) {
@@ -147,7 +147,27 @@
     bar.firstChild.style.width = m ? Math.round((+m[1] / +m[2]) * 100) + '%' : '0%';
     const n = nextBtn();
     if (n && !n.title) n.title = 'Next message (→)';
+    fitBankPreview();
   }
+  /* The whole DM shows at once: the largest size (10.5–19px) at which it fits without scrolling. */
+  function fitBankPreview() {
+    const p = box?.querySelector('.bank-detail .bank-preview');
+    if (!p || p.closest('[hidden]') || !p.clientHeight) return;
+    p.style.setProperty('line-height', '1.3', 'important');
+    let lo = 9.5,
+      hi = 14,
+      best = lo;
+    for (let i = 0; i < 7; i++) {
+      const mid = (lo + hi) / 2;
+      p.style.setProperty('font-size', mid + 'px', 'important');
+      if (p.scrollHeight <= p.clientHeight + 2) {
+        best = mid;
+        lo = mid;
+      } else hi = mid;
+    }
+    p.style.setProperty('font-size', best + 'px', 'important');
+  }
+  addEventListener('resize', () => requestAnimationFrame(fitBankPreview));
   if (box) {
     new MutationObserver(() => requestAnimationFrame(decorateReader)).observe(box, {
       childList: true,

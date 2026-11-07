@@ -2026,11 +2026,19 @@ def timed_chat_command(text, request_id=None):
 
 
 def timed_loop():
+    next_heal = 0.0
     while True:
         try:
             donors().tick_resume()
         except Exception:
             pass
+        if time.monotonic() >= next_heal:
+            next_heal = time.monotonic() + 60
+            try:
+                if STORE:
+                    focus_bank().heal()  # keeps saved versions topped up with no button press
+            except Exception:
+                pass
         try:
             timed_scheduler().tick()
         except Exception:

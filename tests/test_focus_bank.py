@@ -490,16 +490,89 @@ class SendingWorkflow(unittest.TestCase):
             b.generate("group")  # the owner's click clears the pause and starts the next 5
         self.assertFalse(b._load()["group"]["auto_failed"])
 
-    def test_a_failed_top_up_is_not_retried_every_minute(self):
+    def test_a_failed_top_up_waits_then_retries_by_itself(self):
+        import time
+
         b = self.ready(5)
-        data = b._load()
-        data["group"]["auto_failed"] = True
-        b._put(data)
+
+        def failed(ago, fails=1):
+            data = b._load()
+            data["group"].update(
+                auto_failed=True, auto_fails=fails, auto_failed_at=time.time() - ago
+            )
+            b._put(data)
+            return b._load()["group"]
+
         with (
             patch("dm_variants.assistant.client", return_value="fake"),
             patch.object(b, "generate") as gen,
         ):
-            b._top_up("group", b._load()["group"], 5, 0)
+            b._top_up("group", failed(30), 5, 0)  # failed 30 s ago: not every minute
+            gen.assert_not_called()
+            b._top_up("group", failed(121), 5, 0)  # first wait (2 min) is over
+            self.assertEqual(gen.call_count, 1)
+            gen.reset_mock()
+            b._top_up("group", failed(400, fails=2), 5, 0)  # second wait is 5 min: 400 s is enough
+            self.assertEqual(gen.call_count, 1)
+            gen.reset_mock()
+            b._top_up("group", failed(400, fails=3), 5, 0)  # third wait is 15 min: too soon
+            gen.assert_not_called()
+            row = failed(0)
+            del row["auto_failed_at"]
+            data = b._load()
+            data["group"].pop("auto_failed_at")
+            b._put(data)
+            b._top_up("group", b._load()["group"], 5, 0)  # an older stuck record heals at once
+            self.assertEqual(gen.call_count, 1)
+
+    def test_paused_send_starts_the_retry_itself_and_never_asks_for_a_click(self):
+        import time
+        from focus_bank import VersionsPaused
+
+        b = self.ready(5)
+        with patch.object(b, "_top_up"):
+            for _ in range(6):
+                b.reserve_groups("x", 1, auto=True)
+        data = b._load()
+        data["group"].update(
+            state="Partial", auto_failed=True, auto_fails=1, auto_failed_at=time.time() - 500
+        )
+        b._put(data)
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch.object(b, "_spawn"),
+            self.assertRaisesRegex(VersionsPaused, "not ready"),
+        ):
+            b.reserve_groups("x", 1, auto=True)  # the wait is over: a new batch is started
+        self.assertEqual(b._load()["group"]["state"], "Generating")
+        data = b._load()
+        data["group"].update(
+            state="Partial", auto_failed=True, auto_fails=1, auto_failed_at=time.time()
+        )
+        b._put(data)
+        with self.assertRaises(VersionsPaused) as ctx:
+            b.reserve_groups("x", 1, auto=True)
+        self.assertIn("retries on its own", str(ctx.exception))
+        self.assertNotIn("press", str(ctx.exception).lower())
+
+    def test_heal_tops_up_low_banks_without_a_click(self):
+        b = self.ready(5)
+        with patch.object(b, "_top_up"):
+            for _ in range(4):
+                b.reserve_groups("x", 1, auto=True)  # 5 versions + base: 2 unused left
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch.object(b, "generate") as gen,
+        ):
+            b.heal()
+        self.assertEqual(gen.call_args.args[0], "group")
+        self.assertEqual(gen.call_args.kwargs, {"auto": True})
+        full = self.ready(10)  # a full, unused bank needs nothing
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch.object(full, "generate") as gen,
+        ):
+            full.heal()
         gen.assert_not_called()
 
     def test_group_and_dm_keep_their_own_versions_and_rotation(self):

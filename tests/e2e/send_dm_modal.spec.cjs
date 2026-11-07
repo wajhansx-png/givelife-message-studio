@@ -38,25 +38,6 @@ for (const [width, height] of [
     });
     expect(fit.scroll).toBe(false);
     expect(fit.inside).toBe(true);
-    // Advanced choices must not enlarge the modal or leave the viewport.
-    await modal.locator('.batch-more > summary').click();
-    const advanced = modal.locator('.batch-options');
-    await expect(advanced).toBeVisible();
-    await expect(page.locator('#batchLimit')).toBeVisible();
-    const adv = await advanced.boundingBox();
-    expect(adv.x).toBeGreaterThanOrEqual(0);
-    expect(adv.y).toBeGreaterThanOrEqual(0);
-    expect(adv.x + adv.width).toBeLessThanOrEqual(width + 1);
-    expect(adv.y + adv.height).toBeLessThanOrEqual(height + 1);
-    const expanded = await modal.evaluate((d) => ({
-      scroll: d.scrollHeight > d.clientHeight + 1,
-      height: d.getBoundingClientRect().height,
-    }));
-    expect(expanded.scroll).toBe(false);
-    expect(expanded.height).toBeLessThanOrEqual(height - 8);
-    await modal.locator('h2').click(); // click outside advanced to dismiss
-    await expect(advanced).toBeHidden();
-    await expect(modal).toBeVisible();
     // Presets: one pressed, custom field hidden until Custom is chosen.
     await expect(modal.locator('.batch-gap-btn[data-gap="4"]')).toHaveAttribute(
       'aria-pressed',

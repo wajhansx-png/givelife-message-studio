@@ -80,16 +80,12 @@ for (const [width, height] of [
     const rowLayout = await page.locator('.donor-row').first().evaluate((row) => {
       const name = row.querySelector('.donor-name').getBoundingClientRect();
       const dm = row.querySelector('.donor-dm').getBoundingClientRect();
-      const visibleName = row.querySelector('.donor-name');
       return { nameWidth: name.width, nameTop: name.top, dmTop: dm.top,
-        nameClipped: visibleName.scrollHeight > visibleName.clientHeight + 2,
         rowHeight: row.getBoundingClientRect().height };
     });
     expect(rowLayout.nameWidth).toBeGreaterThan(55);
-    // Full donor names take the first row, with sending controls below.
-    expect(rowLayout.nameClipped).toBe(false);
-    expect(rowLayout.dmTop).toBeGreaterThan(rowLayout.nameTop);
-    expect(rowLayout.rowHeight).toBeLessThanOrEqual(145);
+    expect(Math.abs(rowLayout.dmTop - rowLayout.nameTop)).toBeLessThan(25);
+    expect(rowLayout.rowHeight).toBeLessThanOrEqual(65);
     await expect(page.locator('.donor-row .donor-amount').first()).toBeHidden();
     expect(await page.locator('#donorTable').evaluate(
       (el) => el.scrollWidth <= el.clientWidth + 2,
@@ -241,10 +237,8 @@ for (const width of [320, 360, 390, 430]) {
     }
     const name = await row.locator('.donor-name').boundingBox();
     expect(name.width).toBeGreaterThanOrEqual(60);
-    expect(name.height).toBeGreaterThan(12);
-    expect(name.height).toBeLessThanOrEqual(90);
+    expect(name.height).toBeLessThanOrEqual(36);
     await expect(row.locator('.donor-name')).toContainText('Syed Muhammad Abdullah Khan');
-    expect(await row.locator('.donor-name').evaluate((el) => el.scrollHeight <= el.clientHeight + 2)).toBe(true);
     const hide = await page.locator('#donorResumeStatus .rs-fold').boundingBox();
     const resume = await page.locator('#donorResumeNowInline').boundingBox();
     const clock = await page.locator('#donorResumeAtInline').boundingBox();

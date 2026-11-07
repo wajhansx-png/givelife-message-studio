@@ -6,13 +6,8 @@
     details.id = id;
     details.className = 'compact-nav-menu';
     const summary = document.createElement('summary');
+    summary.textContent = 'More';
     summary.setAttribute('aria-label', label);
-    // A real glyph (not hidden "More" text) keeps the phone icon accessible
-    // without creating a text-overflow box inside its 44px touch target.
-    const mobileMore = matchMedia('(max-width:899px)');
-    const paintMore = () => { summary.textContent = mobileMore.matches ? '⋯' : 'More'; };
-    paintMore();
-    mobileMore.addEventListener('change', paintMore);
     const panel = document.createElement('div');
     panel.className = 'compact-nav-panel';
     details.append(summary, panel);

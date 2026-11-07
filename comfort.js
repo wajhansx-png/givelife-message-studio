@@ -116,7 +116,7 @@
     if (phone.matches && panel) {
       /* More keeps only Bulk message. Test DM lives in the Send DMs setup (More options) and the
          poster choice is the Attach poster switch there; the bottom-bar switch stays hidden. */
-      const setup = document.querySelector('#donorBatchPicker .batch-options');
+      const setup = document.querySelector('#donorBatchPicker .batch-more');
       if (test) (setup || panel).append(test);
       if (poster) bottom.append(poster);
     } else if (toggle) {

@@ -1259,6 +1259,9 @@ try {
 } catch (e) {}
 function paintTimers(timers) {
   if (timers && typeof timers === 'object') groupTimers = timers;
+  // A timer whose time has passed has sent (or is sending): show it as plain again, not as pending.
+  for (const k of Object.keys(groupTimers))
+    if (groupTimers[k].due_at <= Date.now() / 1000) delete groupTimers[k];
   document.querySelectorAll('.gb-timer').forEach((b) => {
     const t = groupTimers[b.dataset.timer];
     b.classList.toggle('is-pending', !!t);
@@ -2982,7 +2985,15 @@ $('caseSelect')?.addEventListener('change', async (e) => {
         return;
       }
       const n = Number(String(left).replace(/[^\d.]/g, ''));
-      if (!confirm('Start "' + name.trim() + '" with Rs. ' + n.toLocaleString('en-PK') + ' needed? The current case is saved first and stays in the case list.')) {
+      if (
+        !confirm(
+          'Start "' +
+            name.trim() +
+            '" with Rs. ' +
+            n.toLocaleString('en-PK') +
+            ' needed? The current case is saved first and stays in the case list.',
+        )
+      ) {
         await loadCases();
         return;
       }
@@ -3044,7 +3055,9 @@ $('caseSelect')?.addEventListener('change', async (e) => {
     pop.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
     const below = innerHeight - r.bottom - 8;
     pop.style.maxHeight = Math.max(160, Math.min(320, below > 180 ? below : r.top - 16)) + 'px';
-    pop.style.top = (below > 180 ? r.bottom + 4 : Math.max(8, r.top - 4 - Math.min(pop.scrollHeight, 320))) + 'px';
+    pop.style.top =
+      (below > 180 ? r.bottom + 4 : Math.max(8, r.top - 4 - Math.min(pop.scrollHeight, 320))) +
+      'px';
     pop.querySelector('button')?.focus();
   };
   sel.addEventListener('mousedown', (e) => {

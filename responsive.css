@@ -537,26 +537,52 @@
 /* ---- Donors status bars (<= 899px): slim single lines, never two tall panels ---- */
 @media (max-width: 899px) {
   /* While DMs are paused the blue bar is the only status and holds Resume; hide the duplicates. */
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden])) :is(#donorProgress, .dp-show) {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden]))
+    :is(#donorProgress, .dp-show) {
     display: none !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden])) .donor-bottom > #donorToggle {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden]))
+    .donor-bottom
+    > #donorToggle {
     display: none !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden])) .donor-bottom {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden]))
+    .donor-bottom {
     grid-template-columns: minmax(0, 1fr) 50px !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden])) .donor-bottom > #donorResumeStatus {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden]))
+    .donor-bottom
+    > #donorResumeStatus {
     grid-area: 1 / 1 / 2 / 3 !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden])) .donor-bottom > #donorSendImportant {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden]))
+    .donor-bottom
+    > #donorSendImportant {
     grid-column: 1 !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden])) .donor-bottom > #donorMainBottom {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d):has(#donorResumeStatus:not([hidden]))
+    .donor-bottom
+    > #donorMainBottom {
     grid-column: 2 !important;
   }
   /* Paused bar: one 44px line. */
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) .donor-bottom > #donorResumeStatus:not([hidden]):not(.rs-folded) {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    .donor-bottom
+    > #donorResumeStatus:not([hidden]):not(.rs-folded) {
     display: flex !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
@@ -566,7 +592,11 @@
     padding: 4px 6px 4px 10px !important;
     box-sizing: border-box !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) #donorResumeStatus > span {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    #donorResumeStatus
+    > span {
     flex: 1 1 auto !important;
     min-width: 0 !important;
     padding: 0 !important;
@@ -576,15 +606,28 @@
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) #donorResumeStatus .donor-resume-actions {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    #donorResumeStatus
+    .donor-resume-actions {
     flex: 0 0 auto !important;
     display: flex !important;
     gap: 6px !important;
     width: auto !important;
     margin: 0 !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) #donorResumeStatus .donor-resume-actions button,
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) #donorResumeStatus .rs-fold {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    #donorResumeStatus
+    .donor-resume-actions
+    button,
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    #donorResumeStatus
+    .rs-fold {
     position: static !important;
     flex: 0 0 auto !important;
     width: auto !important;
@@ -596,14 +639,21 @@
     white-space: nowrap !important;
   }
   /* Sending panel (while a batch runs): status line + one row of small actions. */
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) #donorProgress:not([hidden]) {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    #donorProgress:not([hidden]):not(.dp-collapsed) {
     display: flex !important;
     flex-wrap: wrap !important;
     gap: 6px !important;
     padding: 6px 8px !important;
     border-radius: 12px !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) #donorProgress > span {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    #donorProgress
+    > span {
     order: 1;
     flex: 1 1 0 !important;
     min-width: 0 !important;
@@ -613,14 +663,22 @@
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) #donorProgress > .dp-hide {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    #donorProgress
+    > .dp-hide {
     order: 2;
     height: 30px !important;
     min-height: 30px !important;
     padding: 0 8px !important;
     font-size: 12px !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) #donorProgress > .dp-facts {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    #donorProgress
+    > .dp-facts {
     order: 3;
     flex: 1 1 100% !important;
     display: flex !important;
@@ -629,7 +687,11 @@
     overflow-x: auto !important;
     font-size: 11px !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) #donorProgress .dp-fact {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    #donorProgress
+    .dp-fact {
     display: inline-flex !important;
     flex-direction: row !important;
     gap: 4px !important;
@@ -638,7 +700,11 @@
     background: none !important;
     white-space: nowrap !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) #donorProgress > :is(#donorContinue, #donorEditBatch, #donorStop):not([hidden]) {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    #donorProgress
+    > :is(#donorContinue, #donorEditBatch, #donorStop):not([hidden]) {
     order: 4;
     flex: 1 1 0 !important;
     height: 32px !important;
@@ -650,7 +716,11 @@
 
 /* ---- Donor rows: the star is centred on the same line as the number and name ---- */
 @media (max-width: 899px) {
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) .donor-row > .donor-star {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    .donor-row
+    > .donor-star {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -658,7 +728,11 @@
     margin: 0 !important;
     align-self: center !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) .donor-row > .donor-star::before {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    .donor-row
+    > .donor-star::before {
     display: block !important;
     margin: 0 !important;
     transform: none !important;
@@ -691,7 +765,11 @@
     padding-right: 10px !important;
     box-sizing: border-box !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g) .app > .foot > :is(#chatOpen, #navGroups, #openDonors) {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g)
+    .app
+    > .foot
+    > :is(#chatOpen, #navGroups, #openDonors) {
     grid-row: 1 !important;
     width: auto !important;
     min-width: 0 !important;
@@ -700,13 +778,23 @@
     font-size: 14px !important;
     padding: 0 6px !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g) .app > .foot > #chatOpen { grid-column: 1 !important; }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g) .app > .foot > #navGroups { grid-column: 2 !important; }
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g) .app > .foot > #openDonors { grid-column: 3 !important; }
+  html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g) .app > .foot > #chatOpen {
+    grid-column: 1 !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g) .app > .foot > #navGroups {
+    grid-column: 2 !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g) .app > .foot > #openDonors {
+    grid-column: 3 !important;
+  }
 }
 
 @media (max-width: 899px) {
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f) #donorsPage#donorsPage:not(#d) .donor-row > .donor-dm::after {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#d)
+    .donor-row
+    > .donor-dm::after {
     font-size: 10.5px !important;
     font-weight: 800 !important;
     white-space: nowrap !important;
@@ -714,7 +802,11 @@
 }
 
 @media (max-width: 359px) {
-  html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g) .app > .foot > :is(#chatOpen, #navGroups, #openDonors) {
+  html
+    body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g)
+    .app
+    > .foot
+    > :is(#chatOpen, #navGroups, #openDonors) {
     font-size: 12px !important;
     padding: 0 3px !important;
   }
@@ -732,7 +824,12 @@
     display: none !important;
   }
 }
-html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row:has(.gb-timer.is-pending) #btnGivelife .gb-name {
+html
+  body:not(#a):not(#b):not(#c):not(#e):not(#f)
+  .group-send
+  .send-row:has(.gb-timer.is-pending)
+  #btnGivelife
+  .gb-name {
   padding-right: 100px !important;
 }
 html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row #btnGivelife .gb-name {
@@ -741,7 +838,12 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row #btnGive
 html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row #btnFree .gb-name {
   padding-right: 120px !important;
 }
-html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row:has(.gb-timer.is-pending) #btnFree .gb-name {
+html
+  body:not(#a):not(#b):not(#c):not(#e):not(#f)
+  .group-send
+  .send-row:has(.gb-timer.is-pending)
+  #btnFree
+  .gb-name {
   padding-right: 150px !important;
 }
 
@@ -767,4 +869,16 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row > .row-t
   min-width: 36px !important;
   padding: 0 8px !important;
   white-space: nowrap !important;
+}
+
+/* ---- Timer pills: a waiting time is a quiet outlined chip, not a solid blue button ---- */
+html
+  body:not(#a):not(#b):not(#c)
+  .group-send
+  .grp-card
+  .delay-pill:is([aria-pressed='true'], .is-pending) {
+  background: transparent !important;
+  border: 1px solid #2f6fe8 !important;
+  color: #8fb4ff !important;
+  font-weight: 650 !important;
 }

@@ -145,6 +145,21 @@ class SchedulerTests(unittest.TestCase):
             self.eng.posting_step()
         self.assertEqual(self.started, [app.FREELANCE])
 
+    def test_waiting_timer_blocks_auto_for_its_groups_only(self):
+        self.last = {k: 0 for k in app.GROUPS}
+        waiting = set(app.FREELANCE)
+        self.eng.h["timer_waiting"] = lambda k: k in waiting
+        with patch.object(autopilot, "now", return_value=20000):
+            self.eng.posting_step()
+        self.assertEqual(self.started, [["main"]])
+        self.started.clear()
+        self.last["main"] = 20000
+        self.eng.s["pending_post"] = 0
+        waiting.clear()  # the timer sent or was cancelled: auto resumes by its own gaps
+        with patch.object(autopilot, "now", return_value=20000):
+            self.eng.posting_step()
+        self.assertEqual(self.started, [app.FREELANCE])
+
     def test_posting_independent_of_reply_scan_lock(self):
         self.last["main"] = 11800
         self.eng.lock.acquire()

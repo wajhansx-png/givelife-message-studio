@@ -3190,9 +3190,25 @@ def plan_mutate(body):
     return plan_view()
 
 
+def group_timer_waiting(key):
+    """True while a timer button (15m/30m/45m/1h) is waiting to send to this group.
+    Auto must stay quiet for that group until the timer's time, then the timer sends."""
+    if _TIMED is None or _TIMED_STORE is not STORE:
+        return False
+    with _TIMED.lock:
+        return any(
+            t["state"] in ("pending", "dispatching")
+            and t.get("scope")
+            and t["action"] == "send"
+            and key in t.get("targets", [])
+            for t in _TIMED.tasks
+        )
+
+
 ENGINE = autopilot.Engine(
     {
         "DATA": DATA,
+        "timer_waiting": group_timer_waiting,
         "store_get": lambda k: STORE.get(k) if STORE else None,
         "persist": persist_file,
         "log": auto_log,

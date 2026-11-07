@@ -1272,9 +1272,8 @@ function paintTimers(timers) {
       on = !!t && Number(b.dataset.delay) === t.delay;
     b.classList.toggle('is-pending', on);
     b.setAttribute('aria-pressed', String(on));
-    b.textContent = on
-      ? clockText(t.due_at)
-      : String(b.dataset.delay === '60' ? '1h' : b.dataset.delay + 'm');
+    /* The chosen time keeps its own label (e.g. 1h) and is coloured; the clock shows on the group button. */
+    b.textContent = String(b.dataset.delay === '60' ? '1h' : b.dataset.delay + 'm');
     b.setAttribute(
       'aria-label',
       on

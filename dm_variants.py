@@ -70,12 +70,14 @@ def _emojis(text):
 
 
 def _editable_lines(text):
-    # Exclude exact payment/contact lines from variation scoring.
+    # Exclude the lines the app copies word for word (payment/contact, Quran verse and its reference)
+    # from variation scoring: they can never change, so they must not make a real rewrite look too similar.
     return [
         line.strip()
         for line in str(text).split("\n")
         if line.strip()
         and not re.search(r"(?i)easypaisa|jazzcash|wajdan khan|reply \*done\*|03097458815", line)
+        and not is_fixed_line(line)
     ]
 
 
@@ -323,6 +325,11 @@ NON-NEGOTIABLE:
   more important than matching the original number of letters.
 - Rewrite the entire message: change the opening AND at least two other meaningful
   prose lines. Do NOT only change two words, replace synonyms, or reorder a sentence.
+- IN-DEPTH REWRITE: first read the whole source and understand its story and what each line does.
+  Then write every version fresh, as a new message by the same author: a new opening idea, new
+  sentence structure and new words in EVERY prose line. Returning the source, or any line that
+  keeps more than about a third of its words from the source line, is a failed answer. Only the
+  Quran verse, its reference and the payment lines are copied exactly (the app restores them).
 - Maintain the same core concept and verified urgency; use different clear, emotional
   approaches across versions. No invented time pressure, medical progression,
   consequences, deadlines, promises, or extra diagnoses.
@@ -381,15 +388,18 @@ SOURCE>>>{avoid_text}
 """
 
 
-def _call(key, prompt):
+def _call(key, prompt, deep=False):
+    """One writing call. deep=True uses the reasoning model: slower, but it reads the message in depth."""
     message = assistant._chat_raw(
         key,
         SYSTEM,
         [],
         [{"role": "user", "content": prompt}],
-        max_tokens=8192,
-        thinking_mode=False,
-        timeout=90,  # five full messages can take longer than the default 45 s
+        max_tokens=16000 if deep else 8192,
+        thinking_mode=None if deep else False,
+        timeout=180 if deep else 90,  # five full messages take longer than the default 45 s
+        temperature=1.1,
+        deep=deep,
     )
     content = message.get("content") if isinstance(message, dict) else ""
     return _json_list(content)

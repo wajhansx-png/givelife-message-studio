@@ -378,7 +378,17 @@ def active_model():
     return os.environ.get("DEEPSEEK_REASONING_MODEL") or MODEL
 
 
-def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None, timeout=45):
+def _chat_raw(
+    key,
+    system,
+    tools,
+    messages,
+    max_tokens=None,
+    thinking_mode=None,
+    timeout=45,
+    temperature=None,
+    deep=False,
+):
     """One call to DeepSeek. Returns the assistant message (a dict with optional tool_calls)."""
     model = active_model()
     thinking = (
@@ -388,6 +398,9 @@ def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None,
     if thinking_mode is False:
         model = os.environ.get("DEEPSEEK_WRITING_MODEL") or MODEL
         thinking = False
+    if deep:  # a slower, deeper read: the reasoning model thinks before it writes
+        model = os.environ.get("DEEPSEEK_REASONING_MODEL") or "deepseek-reasoner"
+        thinking = True
     limit = int(max_tokens or os.environ.get("DEEPSEEK_MAX_TOKENS", "8192" if thinking else "4096"))
     body = {
         "model": model,
@@ -398,8 +411,8 @@ def _chat_raw(key, system, tools, messages, max_tokens=None, thinking_mode=None,
         body.update(thinking={"type": "enabled"}, reasoning_effort="high")
     else:
         body["temperature"] = 0.2
-    if thinking_mode is False:
-        body.update(thinking={"type": "disabled"}, temperature=0.7)
+    if thinking_mode is False and not deep:
+        body.update(thinking={"type": "disabled"}, temperature=temperature or 0.7)
     if tools:
         body.update(tools=tools, tool_choice="auto")
     req = urllib.request.Request(

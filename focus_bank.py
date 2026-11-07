@@ -18,9 +18,8 @@ ANGLES = (
 BATCH = 5  # versions written per click, and per background top-up while sending
 MAX_VERSIONS = 40  # ceiling for one message's saved versions
 TOP_UP_AT = 2  # when this few unused versions remain in a round, the next batch starts
-MAX_RUN_SECONDS = (
-    270  # one batch gives up after this long and says why; never hangs for ten minutes
-)
+# One batch gives up after this long and says why (room for a deep, reasoning-model retry).
+MAX_RUN_SECONDS = 480
 RETRY_AFTER = (
     120,
     300,
@@ -197,6 +196,7 @@ class FocusBank:
         ]
         last_error = ""
         started = time.time()
+        samples = []  # rejected near-copies, shown to the AI so it does not repeat them
         reasons = {}  # why candidates were rejected, over the whole run (shown if it falls short)
 
         def why(tally):
@@ -231,6 +231,7 @@ class FocusBank:
                         goal - len(items),
                         last_note,
                         attempt,
+                        samples,
                     )
                 except Exception as exc:
                     last_error = str(exc)[:180]
@@ -247,6 +248,8 @@ class FocusBank:
                     text = dm_variants.repair(source, text) if text else text
                     reason = reject_reason(source, text, items + passed)
                     if reason:
+                        if re.search(r"repeated wording|not deeply|too similar", reason) and text:
+                            samples.append(text[:140].replace("\n", " "))
                         tried[reason] = tried.get(reason, 0) + 1
                         reasons[reason] = reasons.get(reason, 0) + 1
                         continue
@@ -321,7 +324,7 @@ class FocusBank:
             with self.lock:
                 self.running.discard(key)
 
-    def _candidates(self, api, source, avoid, need, last_note, attempt):
+    def _candidates(self, api, source, avoid, need, last_note, attempt, samples=()):
         """Rewrites from several AI calls made at the same time, each with a different opening
         angle. One slow call used to be followed by the next, so a batch took minutes when most
         rewrites were rejected; now a round costs one call. Errors in some calls are tolerated."""
@@ -338,10 +341,17 @@ class FocusBank:
                     + last_note
                     + " Correct that and keep everything else."
                 )
+            if samples:
+                p += (
+                    "\nThese rejected versions were too close to the source. Write something"
+                    " clearly different from them: " + " || ".join(list(samples)[-2:])
+                )
             prompts.append(p)
+        # Near-copies last time: read the message in depth with the reasoning model this time.
+        deep = bool(re.search(r"repeated wording|not deeply|too similar", last_note or ""))
         found, errors = [], []
         with ThreadPoolExecutor(max_workers=calls) as pool:
-            for future in [pool.submit(dm_variants._call, api, p) for p in prompts]:
+            for future in [pool.submit(dm_variants._call, api, p, deep) for p in prompts]:
                 try:
                     found.extend(future.result())
                 except Exception as exc:

@@ -137,6 +137,19 @@ if "--donors" in sys.argv:
         ]
         if i < 3:
             server.donors().book.update(row["id"], important=True)
+if "--giki" in sys.argv:
+    # Fake Top donors plus a fake named group, to check the "GIKI Donors" heading at every width.
+    book = server.donors().book
+    for i in range(14):
+        row = book.add("Demo donor " + str(i + 1), "1555" + str(1230000 + i))["donor"]
+        book.update(row["id"], important=True)
+        book.update(row["id"], top_donor=True)
+        if i < 5:
+            book.update(row["id"], normal_amount=(5 - i) * 1000)
+    data = book._load()
+    for n, r in enumerate([x for x in data["records"] if x["top_donor"]][5:], 1):
+        r["group"], r["group_order"] = "GIKI", 15 - n
+    book._save(data)
 if "--draft-task" in sys.argv:
     text = "*A short charity reminder.*\nYousuf needs treatment. *Rs. 25,000 left.* 💔\n*03097458815* EASYPAISA ONLY (Wajdan Khan)"
     server.chat_callbacks(

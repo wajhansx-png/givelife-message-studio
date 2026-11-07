@@ -3,7 +3,7 @@ import caption_facts, case_plan, message_rules, team_rules
 import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, datetime, math, re, secrets, os, base64, hashlib, gzip
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-from persist import configured_store
+from persist import configured_store, atomic_write
 import manual_commands
 import dm_composer, reply_setup
 import ai_call
@@ -106,6 +106,24 @@ SITE_ICONS = {
     "/icon-512.png": ("icon-512.png", "image/png"),
     "/manifest.webmanifest": ("manifest.webmanifest", "application/manifest+json"),
 }
+
+
+def prune_finished(table, keep=100, protect=(), *, finished=lambda v: bool(v.get("done"))):
+    """Long-running host: drop the oldest finished entries so in-memory job tables cannot grow forever.
+    Unfinished work and anything named in `protect` is never dropped; saved copies stay in the store."""
+    try:
+        extra = len(table) - keep
+        for key in list(table):
+            if extra <= 0:
+                break
+            if key in protect:
+                continue
+            value = table.get(key)
+            if isinstance(value, dict) and finished(value):
+                table.pop(key, None)
+                extra -= 1
+    except Exception:
+        pass
 
 
 def serialized_send(fn):
@@ -215,6 +233,9 @@ def scan_messages(jid):
         settled = _seconds_since(stamp)
         if settled is not None and settled >= 180:
             with _CHAT_LOCK:
+                if len(_CHAT_CACHE) >= 200:  # bounded: forget the oldest chats first
+                    for old in sorted(_CHAT_CACHE, key=lambda k: _CHAT_CACHE[k][2])[:50]:
+                        _CHAT_CACHE.pop(old, None)
                 _CHAT_CACHE[jid] = (stamp, messages, time.time())
     return messages
 
@@ -506,7 +527,7 @@ def write_left(left):
         if re.search(r"^LEFT:", state, re.M)
         else "LEFT: " + str(left) + "\n" + state
     )
-    f.write_text(state, encoding="utf-8")
+    atomic_write(f, state)
     persist_file("campaign", f)
 
 
@@ -615,7 +636,7 @@ def variant(advance):
     file = DATA / "variant-state.json"
     n = json.loads(file.read_text()).get("index", 0) if file.exists() else 0
     if advance:
-        file.write_text(json.dumps({"index": n + 1}))
+        atomic_write(file, json.dumps({"index": n + 1}))
         persist_file("variants", file)
         n += 1
     return n
@@ -636,11 +657,12 @@ def dm_selection(new):
         import random
 
         old = index
-        while True:
-            index = random.randrange(dm_templates.COUNT)
-            if index != old:
-                break
-        file.write_text(json.dumps([index]))
+        if dm_templates.COUNT > 1:  # with one template there is nothing else to pick (and no endless loop)
+            while True:
+                index = random.randrange(dm_templates.COUNT)
+                if index != old:
+                    break
+        atomic_write(file, json.dumps([index]))
     return [index]
 
 
@@ -682,7 +704,7 @@ def ensure_completed_drafts():
                 )
                 changed = True
         if changed:
-            DRAFT.write_text(json.dumps(drafts, ensure_ascii=False), encoding="utf-8")
+            atomic_write(DRAFT, json.dumps(drafts, ensure_ascii=False))
             persist_file("drafts", DRAFT)
 
 
@@ -699,7 +721,7 @@ def save_draft(key, text):
             )
         draft = json.loads(DRAFT.read_text(encoding="utf-8"))
         draft[key] = text
-        DRAFT.write_text(json.dumps(draft, ensure_ascii=False), encoding="utf-8")
+        atomic_write(DRAFT, json.dumps(draft, ensure_ascii=False))
         persist_file("drafts", DRAFT)
 
 
@@ -709,12 +731,17 @@ _FOCUS_BANK = None
 from focus_bank import VersionsPaused
 
 
+_SINGLETON_LOCK = threading.RLock()  # two threads must never build two copies of a send registry
+
+
 def focus_bank():
     global _FOCUS_BANK
     if _FOCUS_BANK is None:
-        from focus_bank import FocusBank
+        with _SINGLETON_LOCK:
+            if _FOCUS_BANK is None:
+                from focus_bank import FocusBank
 
-        _FOCUS_BANK = FocusBank(sys.modules[__name__])
+                _FOCUS_BANK = FocusBank(sys.modules[__name__])
     return _FOCUS_BANK
 
 
@@ -762,7 +789,7 @@ def regenerate_drafts(left, case_name=None):
         draft = json.loads(DRAFT.read_text(encoding="utf-8")) if DRAFT.exists() else {}
         draft["group"] = build_group(variant(False), left, case_name)
         draft["dm"] = build_dm(dm_selection(False), left, case_name)
-        DRAFT.write_text(json.dumps(draft, ensure_ascii=False), encoding="utf-8")
+        atomic_write(DRAFT, json.dumps(draft, ensure_ascii=False))
         persist_file("drafts", DRAFT)
 
 
@@ -895,7 +922,7 @@ def send_batch_attachment(jid, caption, ident):
     path, mime = batch_media.load(STORE, ident, ATT)
     field = "video" if mime == "video/mp4" else "image" if mime.startswith("image/") else "file"
     cap = ATT / ("caption-" + uuid.uuid4().hex + ".txt")
-    cap.write_text(caption, encoding="utf-8")
+    atomic_write(cap, caption)
     try:
         r = subprocess.run(
             [
@@ -965,7 +992,7 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                 }
     check_stop()
     cap = DATA / ("caption-" + uuid.uuid4().hex + ".txt")
-    cap.write_text(caption, encoding="utf-8")
+    atomic_write(cap, caption)
     r = post_media(jid, cap, poster_media("group" if str(jid).endswith("@g.us") else "dm"))
     cap.unlink(missing_ok=True)
     try:
@@ -1102,6 +1129,9 @@ def start_send_job(keys, caption, manual=False, request_id=None, with_picture=Tr
             ENGINE.notify("versions-paused", str(exc), 3 * 3600)
             return None
         ident = uuid.uuid4().hex
+        prune_finished(JOBS, 100, protect=(ACTIVE, LAST_JOB.get("id")))
+        for stale in [k for k in JOB_CANCEL if k not in JOBS]:
+            JOB_CANCEL.pop(stale, None)
         JOBS[ident] = {
             "done": False,
             "results": [],
@@ -1286,7 +1316,7 @@ if STORE:
     for key, f in (("memory", MEMORY), ("autopilot", AUTO)):
         v = STORE.get(key)
         if v:
-            f.write_text(v if isinstance(v, str) else json.dumps(v), encoding="utf-8")
+            atomic_write(f, v if isinstance(v, str) else json.dumps(v))
 
 CHATLOG = DATA / "chat.json"
 RECIP = DATA / "recipient.json"
@@ -1294,7 +1324,7 @@ if STORE:
     for key, f in (("chat", CHATLOG), ("recipient", RECIP)):
         v = STORE.get(key)
         if v:
-            f.write_text(v if isinstance(v, str) else json.dumps(v), encoding="utf-8")
+            atomic_write(f, v if isinstance(v, str) else json.dumps(v))
 CHAT_LOCK = threading.Lock()
 KNOWLEDGE = Knowledge(DATA, STORE)
 _WORKFLOW = None
@@ -1393,7 +1423,7 @@ def chat_add(who, text, err=False, turn_id=None, model=""):
                 "t": int(time.time() * 1000),
             }
         )
-        CHATLOG.write_text(json.dumps(items[-300:], ensure_ascii=False), encoding="utf-8")
+        atomic_write(CHATLOG, json.dumps(items[-300:], ensure_ascii=False))
         persist_file("chat", CHATLOG)
         KNOWLEDGE.archive(who, text, ident)
         return ident
@@ -1444,7 +1474,7 @@ def mem_add(rule):
         return "Nothing to save."
     m = mem_get()
     m.append({"rule": rule, "time": time.time()})
-    MEMORY.write_text(json.dumps(m, ensure_ascii=False), encoding="utf-8")
+    atomic_write(MEMORY, json.dumps(m, ensure_ascii=False))
     persist_file("memory", MEMORY)
     KNOWLEDGE.remember(rule)
     return (KNOWLEDGE.sync_error + " " if KNOWLEDGE.sync_error else "Saved for the future: ") + rule
@@ -1454,7 +1484,7 @@ HOLD = DATA / "hold.json"
 if STORE:
     _v = STORE.get("hold")
     if _v:
-        HOLD.write_text(_v if isinstance(_v, str) else json.dumps(_v), encoding="utf-8")
+        atomic_write(HOLD, _v if isinstance(_v, str) else json.dumps(_v))
 
 
 def on_hold():
@@ -1479,21 +1509,19 @@ def set_hold(on):
     prev = json.loads(HOLD.read_text(encoding="utf-8")) if HOLD.exists() else {}
     if on and not prev.get("on"):
         was = auto_on()
-        HOLD.write_text(
-            json.dumps({"on": True, "was_auto": was, "since": time.time()}), encoding="utf-8"
-        )
+        atomic_write(HOLD, json.dumps({"on": True, "was_auto": was, "since": time.time()}))
         CAMPAIGN["stop"] = True
         cancel_jobs("Stopped by owner.")
         if DONORS:
             DONORS.jobs.cancel()
         if was:
-            AUTO.write_text(json.dumps({"on": False, "since": time.time()}))
+            atomic_write(AUTO, json.dumps({"on": False, "since": time.time()}))
             persist_file("autopilot", AUTO)
         persist_file("hold", HOLD)
         auto_log("ON HOLD: all sending stopped until you say resume.")
         return 'On hold. Nothing will be sent anywhere. Say "resume" when the right WhatsApp is connected.'
     if not on and prev.get("on"):
-        HOLD.write_text(json.dumps({"on": False}), encoding="utf-8")
+        atomic_write(HOLD, json.dumps({"on": False}))
         persist_file("hold", HOLD)
         if prev.get("was_auto"):
             set_auto(True)
@@ -1509,7 +1537,7 @@ def auto_on():
 def set_auto(on):
     if on and not auto_on():
         ENGINE.activated()
-    AUTO.write_text(json.dumps({"on": bool(on), "since": time.time()}))
+    atomic_write(AUTO, json.dumps({"on": bool(on), "since": time.time()}))
     persist_file("autopilot", AUTO)
     auto_log("Autopilot turned " + ("ON" if on else "OFF") + ".")
     return (
@@ -1799,7 +1827,7 @@ def remember_recipient(name, jid):
     LAST_RECIPIENT.clear()
     LAST_RECIPIENT.update(name=name, id=jid)
     try:
-        RECIP.write_text(json.dumps(LAST_RECIPIENT), encoding="utf-8")
+        atomic_write(RECIP, json.dumps(LAST_RECIPIENT))
         persist_file("recipient", RECIP)
     except Exception:
         pass
@@ -1991,20 +2019,35 @@ def timed_chat_command(text, request_id=None):
     return timed_scheduler().command(text, request_id)
 
 
+_loop_failed = set()
+
+
+def _loop_failure(name, text, exc):
+    """A background check failed: say so once in the activity log (not every second); it retries on its own."""
+    if name not in _loop_failed:
+        _loop_failed.add(name)
+        try:
+            auto_log(text + " (" + type(exc).__name__ + "). It will retry by itself.")
+        except Exception:
+            pass
+
+
 def timed_loop():
     next_heal = 0.0
     while True:
         try:
             donors().tick_resume()
-        except Exception:
-            pass
+            _loop_failed.discard("resume")
+        except Exception as exc:
+            _loop_failure("resume", "Donor batch resume check failed", exc)
         if time.monotonic() >= next_heal:
             next_heal = time.monotonic() + 60
             try:
                 if STORE:
                     focus_bank().heal()  # keeps saved versions topped up with no button press
-            except Exception:
-                pass
+                _loop_failed.discard("heal")
+            except Exception as exc:
+                _loop_failure("heal", "Wording top-up check failed", exc)
         try:
             timed_scheduler().tick()
         except Exception:
@@ -2292,10 +2335,10 @@ if STORE:
     if _v:
         (DATA / "poster.mp4").write_bytes(base64.b64decode(_v))
     if STORE.get("poster_kind") == "video" and _v:
-        (DATA / "poster-kind.txt").write_text("video", encoding="utf-8")
+        atomic_write((DATA / "poster-kind.txt"), "video")
     elif STORE.get("poster_kind") == "video":
         # Preserve the selected media kind. A missing video must not trigger an old poster.
-        (DATA / "poster-kind.txt").write_text("video", encoding="utf-8")
+        atomic_write((DATA / "poster-kind.txt"), "video")
 if STORE:
     # Older versions saved the poster dialog as a DM-only copy, so group posts kept the old poster.
     # That copy is the owner's latest choice: make it the shared poster once.
@@ -2304,12 +2347,12 @@ if STORE:
     _dk = STORE.get("dm_poster_kind")
     if _dk == "video" and _dv:
         (DATA / "poster.mp4").write_bytes(base64.b64decode(_dv))
-        (DATA / "poster-kind.txt").write_text("video", encoding="utf-8")
+        atomic_write((DATA / "poster-kind.txt"), "video")
         STORE.put("poster_video_b64", _dv)
         STORE.put("poster_kind", "video")
     elif _dp and _dk in ("image", None, ""):
         (DATA / "poster.jpg").write_bytes(base64.b64decode(_dp))
-        (DATA / "poster-kind.txt").write_text("image", encoding="utf-8")
+        atomic_write((DATA / "poster-kind.txt"), "image")
         STORE.put("poster_b64", _dp)
         STORE.put("poster_kind", "image")
     if _dp or _dv or _dk:
@@ -2420,7 +2463,7 @@ def send_with_image(jid, caption, img):
         with urllib.request.urlopen(req, timeout=40) as r:
             return mapping(json.load(r))
     cap = DATA / ("caption-" + uuid.uuid4().hex + ".txt")
-    cap.write_text(caption, encoding="utf-8")
+    atomic_write(cap, caption)
     r = post_media(jid, cap, img)
     cap.unlink(missing_ok=True)
     try:
@@ -3215,7 +3258,7 @@ def remember_manual(value):
     global LAST_MANUAL
     value = mapping(value)
     LAST_MANUAL = dict(value)
-    MANUAL_STATE.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+    atomic_write(MANUAL_STATE, json.dumps(value, ensure_ascii=False))
     if STORE:
         STORE.put("manual_context", dict(value))
 
@@ -3310,7 +3353,7 @@ def ensure_dm_structure():
             except (OSError, ValueError):
                 left = 39000
             draft["dm"] = build_dm([0], left)
-            DRAFT.write_text(json.dumps(draft, ensure_ascii=False), encoding="utf-8")
+            atomic_write(DRAFT, json.dumps(draft, ensure_ascii=False))
             persist_file("drafts", DRAFT)
     except (OSError, ValueError, TypeError, KeyError):
         pass
@@ -3677,8 +3720,13 @@ def agent_action(name, prompt, args, owner):
         if len(phones) > 25:
             raise ValueError("Send to at most 25 numbers at a time.")
         check_hold()
+        if any(not j.get("done") for j in TEXT_LIST_JOBS.values()):
+            raise ValueError(
+                "A message list is already sending. Wait for it to finish. Nothing was sent."
+            )
         jid = uuid.uuid4().hex[:8]
-        TEXT_LIST_JOBS[jid] = {"total": len(phones), "sent": 0, "failed": []}
+        prune_finished(TEXT_LIST_JOBS, 20)
+        TEXT_LIST_JOBS[jid] = {"total": len(phones), "sent": 0, "failed": [], "done": False}
 
         def run():
             job = TEXT_LIST_JOBS[jid]
@@ -3719,7 +3767,21 @@ def agent_action(name, prompt, args, owner):
                 turn_id="textlist-" + jid,
             )
 
-        threading.Thread(target=run, daemon=True, name="text-list-" + jid).start()
+        def guarded():
+            try:
+                run()
+            except Exception:
+                job = TEXT_LIST_JOBS[jid]
+                chat_add(
+                    "app",
+                    f"The message list stopped unexpectedly after {job['sent']} of {job['total']} numbers. "
+                    "Check WhatsApp before trying again; nothing is retried automatically.",
+                    turn_id="textlist-" + jid,
+                )
+            finally:
+                TEXT_LIST_JOBS[jid]["done"] = True
+
+        threading.Thread(target=guarded, daemon=True, name="text-list-" + jid).start()
         return f"Sending your message to {len(phones)} numbers, about one a minute. I will post the result here when it finishes."
     raise ValueError("Unknown action.")
 
@@ -4283,6 +4345,7 @@ def assistant_task(body):
         ):
             OWNER_REVISION += 1
         revision = OWNER_REVISION
+        prune_finished(ASSIST_TASKS, 100)
         ASSIST_TASKS[ident] = {"done": False}
         if STORE:
             STORE.put("assistant_task_" + ident, {"done": False, "started": time.time()})
@@ -4464,7 +4527,7 @@ def edit_donation_order():
         else:
             updated[kind] = text
     with LOCK:
-        DRAFT.write_text(json.dumps(updated, ensure_ascii=False), encoding="utf-8")
+        atomic_write(DRAFT, json.dumps(updated, ensure_ascii=False))
         persist_file("drafts", DRAFT)
         if custom:
             work.revise(updated[custom])
@@ -4483,7 +4546,7 @@ def remove_arrival_line():
         ]
         drafts[kind] = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
     with LOCK:
-        DRAFT.write_text(json.dumps(drafts, ensure_ascii=False), encoding="utf-8")
+        atomic_write(DRAFT, json.dumps(drafts, ensure_ascii=False))
         persist_file("drafts", DRAFT)
         if custom:
             work.revise(drafts[custom])
@@ -4986,20 +5049,24 @@ def group_research():
 
 def recover_group_research():
     # A research-record or database failure must not prevent the rest of the studio starting.
-    while True:
+    wait = 30
+    for _ in range(20):  # backs off 30s..10min and then stops; the rest of the studio is unaffected
         try:
             group_research().service.start_worker()
             return
         except Exception:
-            time.sleep(30)
+            time.sleep(wait)
+            wait = min(wait * 2, 600)
 
 
 def donors():
     global DONORS
     if DONORS is None or DONORS.book.store is not STORE:
-        import donor_integration, sys
+        with _SINGLETON_LOCK:  # one registry only, or two could each send the same donor
+            if DONORS is None or DONORS.book.store is not STORE:
+                import donor_integration, sys
 
-        DONORS = donor_integration.DonorIntegration(sys.modules[__name__])
+                DONORS = donor_integration.DonorIntegration(sys.modules[__name__])
     return DONORS
 
 
@@ -5065,7 +5132,25 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(gz, kind, extra_headers={**head, "Content-Encoding": "gzip"})
         return self.reply(raw, kind, extra_headers=head)
 
+    timeout = 120  # a stalled or half-open client can never pin a worker thread forever
+
     def do_GET(self):
+        self.response_sent = False
+        try:
+            self._get()
+        except (BrokenPipeError, ConnectionResetError, TimeoutError):
+            pass  # the browser went away mid-reply; nothing to answer
+        except Exception:
+            if not self.response_sent:
+                try:
+                    self.reply(
+                        {"error": "This page could not load right now. Try again in a moment."},
+                        status=500,
+                    )
+                except Exception:
+                    pass
+
+    def _get(self):
         if self.path == "/health":
             return self.reply(
                 {
@@ -5652,9 +5737,9 @@ class Handler(BaseHTTPRequestHandler):
                 old = get_message("group")["text"]
                 work = workflow()
                 active = work.current("group", old)
-                DRAFT.write_text(
+                atomic_write(
+                    DRAFT,
                     json.dumps({k: str(body[k]) for k in ("group", "dm")}, ensure_ascii=False),
-                    encoding="utf-8",
                 )
                 persist_file("drafts", DRAFT)
                 if active and body["group"] != old:
@@ -5800,6 +5885,7 @@ class Handler(BaseHTTPRequestHandler):
             if running:
                 return self.reply({"eval_id": running})
             ident = uuid.uuid4().hex
+            prune_finished(EVAL_TASKS, 20)
             EVAL_TASKS[ident] = {"done": False, "results": [], "total": len(cases)}
 
             def evaluate():

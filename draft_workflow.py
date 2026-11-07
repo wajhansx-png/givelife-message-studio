@@ -1,5 +1,6 @@
 """Persistent draft task and server-issued next actions; never model-issued sends."""
 
+from persist import atomic_write
 import hashlib, json, re, threading, time, uuid, math
 from state_shapes import mapping
 import manual_commands
@@ -192,7 +193,7 @@ class DraftWorkflow:
         )
 
     def persist(self):
-        self.path.write_text(json.dumps(self.data, ensure_ascii=False), encoding="utf-8")
+        atomic_write(self.path, json.dumps(self.data, ensure_ascii=False))
         if self.store:
             self.store.put("draft_workflow", self.data)
 

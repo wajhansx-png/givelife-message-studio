@@ -1,5 +1,6 @@
 """Instant, editable wording bank from the saved DM or an owner-supplied message."""
 
+from persist import atomic_write
 import copy, hashlib, json, threading, time, uuid
 
 import dm_composer
@@ -39,7 +40,7 @@ class MessageBank:
         if self.app.STORE:
             self.app.STORE.put("donor_messages", data)
         self.cache = copy.deepcopy(data)
-        self.path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        atomic_write(self.path, json.dumps(data, ensure_ascii=False))
 
     def _entries(self, texts):
         return [

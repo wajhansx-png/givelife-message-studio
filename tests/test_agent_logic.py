@@ -18,6 +18,10 @@ class Clock:
 
 class Base(unittest.TestCase):
     def setUp(self):
+        # Automatic DMs are off in production; these tests exercise the logic itself.
+        patcher = patch.object(autopilot, "AUTO_DMS_ALLOWED", True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.tmp = tempfile.TemporaryDirectory()
         Clock.t = T0
         self.ps = [

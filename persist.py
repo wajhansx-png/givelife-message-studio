@@ -11,6 +11,21 @@ except ImportError:  # local preview without the cloud database
     psycopg = Jsonb = None
 
 
+
+def atomic_write(path, text):
+    """Write a state file so a crash or restart mid-write can never leave a truncated file:
+    the new content goes to a temporary file first, then replaces the old one in one step."""
+    path = Path(path)
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+    try:
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, path)
+    finally:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+
 class CloudStore:
     def __init__(self, uri):
         self.uri = uri

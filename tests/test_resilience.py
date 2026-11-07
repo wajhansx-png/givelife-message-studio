@@ -121,7 +121,8 @@ class WaitingTests(unittest.TestCase):
                 self.assertEqual(c.getresponse().status, code, path)
         finally:
             waiting.close()
-        with socket.socket() as s:  # port is free again for the real server
+        with socket.socket() as s:  # port is free again for the real server (which reuses addresses)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind(("127.0.0.1", port))
 
 

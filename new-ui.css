@@ -31,9 +31,47 @@
     max-width: none;
   }
 }
-
 /* ---------- Main screen: words instead of icons, readable message, shorter send buttons ---------- */
 @media (max-width: 899px) {
+  .UI2 #card .tools {
+    display: flex !important;
+    min-height: 30px !important;
+    padding: 0 4px !important;
+  }
+  .UI2 #card .tools :is(#previewBack, #edit, #fresh, .overflow-tools) {
+    display: none !important;
+  }
+  .UI2 #card .tools .ctx {
+    display: block !important;
+    margin: 0 !important;
+    color: var(--ink-muted, #aab0c5) !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .UI2 #card .tools .ctx::before {
+    content: 'GROUP MESSAGE';
+  }
+  .UI2 #card .tools .ctx img {
+    display: none !important;
+  }
+  .UI2 #card :is(#previewChangePoster, #copy) {
+    display: none !important;
+  }
+  .UI2 #card .chat {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #card .chat .message {
+    padding: 12px !important;
+    border-radius: 16px !important;
+    background: #006451 !important;
+    color: #ecfff8 !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+  }
   .UI2 .brandbar > #whatsappConnection {
     flex: 1.5 1 0 !important;
     min-width: 0 !important;
@@ -457,6 +495,279 @@
   color: var(--ink) !important;
 }
 
+/* ---------- Shared status row: show connection and amount before the message ---------- */
+.UI2 .ui2-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.UI2 .ui2-status-row #leftChip {
+  min-height: 36px !important;
+  width: auto !important;
+  max-width: 52%;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+.UI2 .ui2-status-row #leftChip::after {
+  content: ' left';
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.UI2 .ui2-status-row #whatsappConnection {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  min-width: 0 !important;
+  min-height: 36px !important;
+  width: auto !important;
+  flex: 1 1 0 !important;
+  max-width: none !important;
+  padding: 0 7px !important;
+  border: 0 !important;
+  background: transparent !important;
+  font-size: 0 !important;
+  text-align: left;
+}
+.UI2 .ui2-status-row #whatsappConnection::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #f0aa28;
+}
+.UI2 .ui2-status-row #whatsappConnection[data-state='online']::before {
+  background: #3cdc96;
+}
+.UI2 .ui2-status-row #whatsappConnection[data-state='offline']::before {
+  background: #ff6b6b;
+}
+.UI2 .ui2-status-row #whatsappConnection::after {
+  content: 'WhatsApp connected';
+  color: #3cdc96;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.UI2 .ui2-status-row #whatsappConnection[data-state='offline']::after {
+  content: 'Reconnect WhatsApp';
+  color: #ff8a8a;
+}
+.UI2 .ui2-status-row #whatsappConnection[data-state='connecting']::after {
+  content: 'Checking WhatsApp';
+  color: #f0aa28;
+}
+@media (max-width: 359px) {
+  .UI2 .ui2-status-row {
+    padding-inline: 6px;
+  }
+  .UI2 .ui2-status-row #leftChip {
+    font-size: 11px !important;
+    padding-inline: 7px !important;
+  }
+  .UI2 .ui2-status-row #whatsappConnection::after {
+    content: 'WhatsApp';
+    font-size: 11px;
+  }
+  .UI2 .ui2-status-row #whatsappConnection[data-state='offline']::after {
+    content: 'Reconnect';
+  }
+}
+
+/* ---------- Reader structure: message controls sit beside the text; primary actions dock below ---------- */
+.UI2 #messageFocus > header {
+  display: grid;
+  gap: 8px;
+}
+.UI2 .ui2-reader-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  gap: 10px;
+}
+.UI2 .ui2-reader-top #focusBack {
+  min-height: 42px !important;
+  padding-inline: 14px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--line2) !important;
+  color: var(--ink) !important;
+}
+.UI2 .ui2-reader-top .ui2-reader-back {
+  min-height: 42px !important;
+  padding-inline: 14px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--line2) !important;
+  color: var(--ink) !important;
+}
+.UI2 .ui2-reader-top #focusVersion {
+  margin: 0 !important;
+  text-align: right;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 #messageFocus .focus-workspace {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  min-height: 0;
+}
+.UI2 #messageFocus .focus-workspace > .focus-paper {
+  order: 1;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 180px;
+}
+.UI2 #messageFocus #focusFormatted,
+.UI2 #messageFocus #focusText {
+  font-size: 14px !important;
+  line-height: 1.38 !important;
+}
+.UI2 #messageFocus .focus-styles {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.UI2 #messageFocus .focus-styles::-webkit-scrollbar {
+  display: none;
+}
+.UI2 #messageFocus .focus-styles button {
+  flex: 0 0 auto !important;
+  min-height: 40px !important;
+  padding-inline: 12px !important;
+  white-space: nowrap !important;
+}
+.UI2 #messageFocus .ui2-reader-actions {
+  order: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(74px, auto) minmax(72px, auto);
+  gap: 7px;
+  align-items: stretch;
+}
+.UI2 #messageFocus .ui2-reader-actions > button {
+  min-width: 0;
+  min-height: 44px !important;
+  padding-inline: 10px !important;
+  font-size: 13px !important;
+  white-space: nowrap;
+}
+.UI2 #messageFocus .ui2-reader-actions #focusNext {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  order: 1;
+}
+.UI2 #messageFocus .ui2-reader-actions #focusTest {
+  order: 2;
+}
+.UI2 #messageFocus .ui2-reader-actions .focus-rail-more {
+  order: 3;
+}
+.UI2 #messageFocus .ui2-reader-actions #focusNext {
+  background: linear-gradient(110deg, #2878ed, #7650f6) !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-actions #focusTest {
+  background: transparent !important;
+  border: 2px solid #9670ff !important;
+  color: #e1d2ff !important;
+}
+.UI2 #messageFocus .ui2-reader-actions .focus-rail-more {
+  min-width: 44px;
+  grid-column: auto;
+}
+.UI2 #messageFocus .ui2-reader-actions .focus-rail-more > summary {
+  min-height: 44px !important;
+}
+.UI2 #messageFocus .focus-workspace > :is(.group-send, .dm-send) {
+  order: 3;
+  width: 100% !important;
+  max-width: none !important;
+}
+.UI2 #messageFocus .focus-rail {
+  display: none !important;
+}
+.UI2 #messageFocus .ui2-reader-dock {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px 0 max(6px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line2);
+}
+.UI2 #messageFocus .ui2-reader-dock > button {
+  min-width: 0;
+  min-height: 48px !important;
+  padding: 4px 7px !important;
+  font-size: 12px !important;
+  white-space: normal;
+}
+.UI2 #messageFocus .ui2-reader-dock #focusBack {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--line2) !important;
+}
+.UI2 #messageFocus .ui2-reader-dock #focusEdit {
+  background: #179f73 !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-dock #focusCopy {
+  background: #2878ed !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-dock #focusSave {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+}
+@media (max-width: 359px) {
+  .UI2 #messageFocus .ui2-reader-actions {
+    grid-template-columns: minmax(0, 1fr) 62px 50px;
+    gap: 4px;
+  }
+  .UI2 #messageFocus .ui2-reader-actions > button {
+    padding-inline: 5px !important;
+    font-size: 11px !important;
+  }
+  .UI2 #messageFocus .ui2-reader-dock {
+    gap: 4px;
+  }
+  .UI2 #messageFocus .ui2-reader-dock > button {
+    padding-inline: 3px !important;
+    font-size: 11px !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #messageFocus {
+    padding-bottom: 70px !important;
+  }
+  .UI2 #messageFocus .focus-workspace {
+    max-height: calc(100dvh - 180px);
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    padding-bottom: 8px;
+  }
+  .UI2 #messageFocus .ui2-reader-dock {
+    position: fixed;
+    z-index: 60;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 8px max(10px, calc((100vw - 780px) / 2)) max(8px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line2);
+    background: #11141d;
+  }
+}
+
 @media (max-width: 899px) {
   .UI2 #hist .ui2-chips {
     padding-right: 104px;
@@ -478,5 +789,41 @@
   .UI2 #donorsPage .donor-head #donorAdd {
     position: relative;
     z-index: 2;
+  }
+}
+
+/* ---------- Desktop reader: message, controls, and sends are visible in one workspace ---------- */
+@media (min-width: 900px) {
+  .UI2 #messageFocus .focus-workspace {
+    display: grid !important;
+    grid-template-columns: minmax(300px, 1.2fr) minmax(112px, 0.42fr) minmax(220px, 0.9fr) !important;
+    align-items: start !important;
+    gap: 14px !important;
+  }
+  .UI2 #messageFocus .focus-workspace > .focus-paper {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    min-width: 0;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  .UI2 #messageFocus .focus-workspace > .ui2-reader-actions {
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: 1fr;
+  }
+  .UI2 #messageFocus .focus-workspace > :is(.group-send, .dm-send) {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    min-width: 0;
+  }
+  .UI2 #messageFocus .ui2-reader-dock {
+    grid-template-columns: repeat(4, minmax(80px, 130px));
+    justify-content: start;
+    padding: 12px max(16px, calc((100vw - 1280px) / 2));
+    border-top: 1px solid var(--line2);
+  }
+  .UI2 #messageFocus #focusText {
+    min-height: 220px !important;
   }
 }

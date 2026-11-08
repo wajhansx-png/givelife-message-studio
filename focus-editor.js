@@ -594,7 +594,6 @@
       b.setAttribute('aria-busy', 'true');
       status('Writing: ' + label + '…');
       try {
-        if (!editing) edit(true);
         const t = $('focusText'),
           r = await fetch('/message-style', {
             method: 'POST',
@@ -605,12 +604,23 @@
         if (!r.ok || !d.text)
           throw Error(d.error || 'Could not write a message. Your text is unchanged.');
         if (kind !== startKind) return; /* the owner switched screens while it was writing */
-        t.focus({ preventScroll: true });
-        t.setSelectionRange(0, t.value.length);
-        if (!(document.execCommand && document.execCommand('insertText', false, d.text)))
-          t.value = d.text;
-        t.dispatchEvent(new Event('input', { bubbles: true }));
-        status('Written: ' + label + '. Edit it if you like, then press Done to save.');
+        if (editing) {
+          /* Already typing: replace in place, one Undo away. */
+          t.focus({ preventScroll: true });
+          t.setSelectionRange(0, t.value.length);
+          if (!(document.execCommand && document.execCommand('insertText', false, d.text)))
+            t.value = d.text;
+          t.dispatchEvent(new Event('input', { bubbles: true }));
+          status('Written: ' + label + '. Edit it if you like, then press Done to save.');
+        } else {
+          /* Reading the preview: show the new message there. No keyboard, no edit mode. It is an unsaved
+             draft until the owner presses Save Base (or Edit, then Done). */
+          dirty = true;
+          sessionStorage.setItem('focus-draft-' + kind, d.text);
+          paint(d.text);
+          $('focusVersion').textContent = 'New · not saved';
+          status('Written: ' + label + '. Press Save Base to keep it, or Edit to change it.');
+        }
       } catch (e) {
         status(e.message || 'Could not write a message. Your text is unchanged.');
       } finally {

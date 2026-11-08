@@ -44,9 +44,7 @@ for (const kind of ['group', 'dm'])
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await open(page, kind);
-    const text = page.locator('#focusText');
-    await page.locator('#focusEdit').click();
-    const original = await text.inputValue();
+    const text = page.locator('#focusText'); // hidden while previewing; its value is the draft
 
     await button(page, 'Urdu + English').click();
     await expect(page.locator('#focusState')).toContainText('Written');
@@ -62,14 +60,10 @@ for (const kind of ['group', 'dm'])
     expect(a.trimEnd()).toMatch(/GiveLife Foundation$/);
     expect(a).toMatch(/(سورۃ|صحیح|سنن)/); // a referenced verse or hadith
 
-    // It stays editable and Undo brings the old text back.
-    await text.press('Control+z');
-    await expect(text).toHaveValue(original);
-    await text.press('Control+Shift+z');
-    await expect(text).toHaveValue(a);
+    await expect(text).toBeHidden(); // the preview stays a preview: no keyboard
 
     await button(page, 'More Trigger').click();
-    await expect(page.locator('#focusState')).toContainText('More Trigger');
+    await expect(page.locator('#focusState')).toContainText('Written: More Trigger');
     const b = await text.inputValue();
     expect(b).not.toBe(a);
     expect(b.split('\n\n')[0]).not.toBe(paras[0]); // a different hook
@@ -84,7 +78,7 @@ for (const kind of ['group', 'dm'])
     expect(c.split('\n\n')[0]).toMatch(/^\*[^*\n]+\*$/);
 
     await button(page, 'English Trigger').click();
-    await expect(page.locator('#focusState')).toContainText('English Trigger');
+    await expect(page.locator('#focusState')).toContainText('Written: English Trigger');
     const d = await text.inputValue();
     expect(d).not.toMatch(urdu);
     expect(d.split('\n\n')[0]).not.toBe(c.split('\n\n')[0]);
@@ -93,7 +87,9 @@ for (const kind of ['group', 'dm'])
     const openings = [paras[0], b.split('\n\n')[0], c.split('\n\n')[0], d.split('\n\n')[0]];
     expect(new Set(openings).size).toBe(4);
 
-    // It is a normal editable draft: change a word, press Done, and it is saved by the existing path.
+    // It is a normal editable draft: Edit, change a word, Done, and it is saved by the existing path.
+    await page.locator('#focusEdit').click();
+    await expect(text).toBeVisible();
     await text.fill(d.replace('LEFT', 'LEFT ONLY'));
     await page.locator('#focusEdit').click();
     await expect(page.locator('#focusState')).toContainText('Saved');
@@ -105,6 +101,51 @@ for (const kind of ['group', 'dm'])
     await page.reload();
     await expect(page.locator('#focusFormatted')).toContainText('LEFT ONLY');
   });
+
+for (const kind of ['group', 'dm'])
+  for (const width of [390, 1440])
+    test(`${kind} ${width}px: a button fills the PREVIEW, no edit mode, no keyboard, saved only on Save Base`, async ({
+      page,
+      request,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await open(page, kind);
+      const drafts = () =>
+        request
+          .get('/drafts', { headers: { Authorization: 'Bearer ' + KEY } })
+          .then((r) => r.json());
+      const savedBefore = (await drafts())[kind];
+      const before = await page.locator('#focusFormatted').innerText();
+      for (const name of ['English', 'More Trigger']) {
+        await button(page, name).click();
+        await expect(page.locator('#focusState')).toContainText('Written');
+        // Still the read-only preview: the text box stays hidden and nothing is focused (no phone keyboard).
+        await expect(page.locator('#focusText')).toBeHidden();
+        await expect(page.locator('#focusFormatted')).toBeVisible();
+        expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe('TEXTAREA');
+        await expect(page.locator('#focusEdit')).toHaveText('Edit');
+      }
+      const now = await page.locator('#focusFormatted').innerText();
+      expect(now).not.toBe(before);
+      expect(now).toContain('Rs. 25,000 LEFT');
+      await expect(page.locator('#focusFormatted strong').first()).toBeVisible(); // real bold, not *stars*
+      await expect(page.locator('#focusVersion')).toContainText('not saved');
+      // The preview still fits the screen (no scrolling box, nothing cut off).
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      ).toBe(true);
+      const fits = await page
+        .locator('#focusFormatted')
+        .evaluate((n) => n.scrollHeight <= n.clientHeight + 3);
+      expect(fits).toBe(true);
+      // Not saved yet.
+      expect((await drafts())[kind]).toBe(savedBefore);
+      // Save Base keeps it.
+      await page.locator('#focusSave').click();
+      await page.locator('#focusBaseSave').click();
+      await expect(page.locator('#focusState')).toContainText('Saved base message');
+      expect((await drafts())[kind]).toContain('🔴 Rs. 25,000 LEFT');
+    });
 
 test('a failed write leaves the text alone, says why, and the buttons work again', async ({
   page,
@@ -160,3 +201,32 @@ test('a finished case is refused with a clear message', async ({ page }) => {
   await expect(page.locator('#focusState')).toContainText('The case is complete');
   await expect(page.locator('#focusText')).toHaveValue(before);
 });
+
+for (const width of [320, 390, 768, 1440])
+  test(`button row is responsive at ${width}px: a clean grid on phones, one row on desktop`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await open(page, 'group');
+    const boxes = [];
+    for (const name of ['Urdu + English', 'More Trigger', 'English', 'English Trigger'])
+      boxes.push(await button(page, name).boundingBox());
+    for (const b of boxes) {
+      expect(b.x).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.width).toBeLessThanOrEqual(width);
+    }
+    // No label is cut off.
+    for (const name of ['Urdu + English', 'More Trigger', 'English', 'English Trigger'])
+      expect(await button(page, name).evaluate((n) => n.scrollWidth <= n.clientWidth + 1)).toBe(
+        true,
+      );
+    if (width <= 899) {
+      expect(boxes[0].y).toBe(boxes[1].y); // two rows of two
+      expect(boxes[2].y).toBe(boxes[3].y);
+      expect(boxes[2].y).toBeGreaterThan(boxes[0].y);
+      expect(boxes[0].width).toBeGreaterThan(width / 2 - 30);
+      expect(boxes[0].height).toBeGreaterThanOrEqual(36);
+    } else {
+      expect(new Set(boxes.map((b) => Math.round(b.y))).size).toBe(1);
+    }
+  });

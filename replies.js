@@ -131,7 +131,7 @@
   dlg.className = 'report-dialog';
   dlg.setAttribute('aria-label', 'Report');
   dlg.innerHTML =
-    '<div class="report-card"><h2>Right now</h2><ol class="report-list">' +
+    '<div class="report-card"><header class="rp-head"><b>Report</b><button type="button" id="reportClose" aria-label="Close report">×</button></header><ol class="report-list" aria-label="Right now">' +
     [
       ['Groups', 'reportGroups'],
       ['DMs', 'reportDms'],
@@ -151,7 +151,7 @@
           'Sub"></small></li>',
       )
       .join('') +
-    '</ol><section id="autoControls" class="auto-controls" aria-label="Auto controls"><h3>Auto</h3><div id="autoCards"></div><button type="button" id="autoStopAll" hidden>Stop all Auto</button><p id="autoMsg" class="auto-msg" role="alert"></p></section><button type="button" id="reportClose">Close</button></div>';
+    '</ol><section id="autoControls" class="auto-controls" aria-label="Auto controls"><h3>Auto</h3><div id="autoCards"></div><p id="autoMsg" class="auto-msg" role="alert"></p></section><button type="button" id="autoStopAll" hidden>Stop all Auto</button></div>';
   document.body.append(dlg);
   const $ = (id) => document.getElementById(id);
   const clock = (sec) =>
@@ -281,10 +281,10 @@
     sw.setAttribute('role', 'switch');
     sw.setAttribute('aria-label', c.title);
     for (const [k, label] of [
-      ['recipients', 'Recipients'],
-      ['sent', 'Sent'],
-      ['pending', 'Pending'],
-      ['next', 'Next send'],
+      ['recipients', c.id === 'group' ? 'groups' : 'donors'],
+      ['sent', 'sent'],
+      ['pending', 'left'],
+      ['next', 'next'],
     ]) {
       const row = el('div');
       row.append(el('dt', '', label), el('dd', '', '—'));
@@ -409,6 +409,11 @@
       };
       for (const row of x.stats.children) row.lastChild.textContent = v[row.dataset.stat];
       x.note.textContent = c.note || '';
+      /* One glance: a thin bar shows how far the batch has got; the long note lives in the tooltip. */
+      const done = Number(c.sent) || 0,
+        total = done + (Number(c.pending) || 0);
+      x.card.style.setProperty('--p', c.id !== 'group' && total ? Math.min(1, done / total).toFixed(3) : '0');
+      x.card.title = c.note || '';
     }
     $('autoStopAll').hidden = !Object.values(cards).some((x) => x.last && x.last.on);
   }

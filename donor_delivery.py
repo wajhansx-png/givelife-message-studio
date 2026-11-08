@@ -232,6 +232,7 @@ class DonorDelivery:
         attachment=None,
         resume_id=None,
         follow_up=None,
+        owner=None,
         origin=None,
     ):
         if follow_up is not None and (
@@ -571,6 +572,8 @@ class DonorDelivery:
                 job["custom_template"] = custom_template
             if follow_up:
                 job["follow_up"] = follow_up.strip()
+            if owner:
+                job["owner"] = str(owner)[:40]  # which Reports > Auto control started this batch
             if attachment:
                 job["attachment"] = attachment
             data["jobs"].append(job)
@@ -1200,6 +1203,8 @@ class DonorDelivery:
             args["attachment"] = j["attachment"]
         if j.get("follow_up"):
             args["follow_up"] = j["follow_up"]
+        if j.get("owner"):
+            args["owner"] = j["owner"]
         if j.get("origin"):
             args["origin"] = j["origin"]
         if j["scope"] == "selected":

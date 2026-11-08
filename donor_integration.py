@@ -410,7 +410,8 @@ class DonorIntegration:
         if not body.get("chunk"):
             body.setdefault("limit", 20)
         result = self.jobs.start(**body)
-        self._learn(body)
+        if not body.get("owner"):
+            self._learn(body)  # an Auto control's own timing never replaces the owner's usual settings
         return result
 
     def usual_batch(self, text, request_id, scope="important"):

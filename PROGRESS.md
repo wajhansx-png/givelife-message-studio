@@ -19,3 +19,12 @@
 - Responsive: `python tests/responsive_dashboard.py` -> "no errors" at every screen/width (fixed the 360-380px "More" label).
 - Known pre-existing, not caused by this work: 4 legacy `tests/test_*.js` assert scripts (not wired to a runner) and 4 browser specs (`delayed_navigation` x1, `donor_resume` 1440, `navigation` x2) fail identically on the untouched baseline in this container.
 - Not verifiable here: real WhatsApp, live AI generation speed/quality, real phone selection handles/keyboard.
+
+## Pass 4: message buttons + Reports > Auto
+- `message_styles.py`: Urdu + English / More Trigger / English / English Trigger. The AI only writes hook, short story and a few words; amount, donor math (people x rupees, rounded up), verse/hadith text + reference (fixed approved list, hadith = `team_rules.HADITH`), saved payment account and signature are built in code. Numbers outside the case are rejected; openings are not repeated within a day; angles rotate; triggers must differ from the message they replace. Route: `POST /message-style`. Buttons live in the focus editor header (Group and DM).
+- `auto_controls.py`: Reports > Auto (Group Auto, Donor DM Auto, Important Donors Auto) over the EXISTING engines (`ENGINE.set_auto`, `donor_delivery`). A DM batch is tagged with its control (`owner`); one queue at a time; a finished/stopped batch means OFF; nothing switches on by itself. Routes: `GET/POST /auto-controls`. Live edits go through `donor_delivery.configure` (now also `follow_up`).
+- Root-cause fix found while testing: `donor_delivery.start` reused the name `ident` in a loop, so a batch that carried on an earlier one had `active` = a donor id (live settings and Stop missed it).
+- Auto-started batches never rewrite the owner's "usual" batch settings (`_learn` skipped when `owner` is set).
+- Verified in tests: math table + property check, structure, safety rejections (mutation-checked), overlap, restart (unit + real SIGKILL), live edit, follow-up, opt-out, browser (private fake server, 320/390/1440).
+- Not verifiable here: real AI wording quality, real WhatsApp, owner review of the verse/hadith list (`message_styles.VERSES`).
+- Pre-existing on main (unchanged by this work): `test_focus_parallel` (2), `test_agent_actions` team-plan test (clock dependent).

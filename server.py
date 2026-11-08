@@ -3130,6 +3130,75 @@ def alert_jids():
     return out
 
 
+AUTO_CONTROLS = None
+_AUTO_CONTROLS_LOCK = threading.Lock()
+
+
+def auto_controls():
+    global AUTO_CONTROLS
+    with _AUTO_CONTROLS_LOCK:
+        if AUTO_CONTROLS is None:
+            import auto_controls as module
+
+            AUTO_CONTROLS = module.AutoControls(sys.modules[__name__])
+        return AUTO_CONTROLS
+
+
+MSTYLE_LOCK = threading.Lock()
+MSTYLE_MEMORY = {}
+
+
+def message_style(body):
+    """One of the four editor buttons: write a new message from the live case, never sending anything."""
+    import message_styles
+
+    style = body.get("style")
+    kind = "dm" if body.get("kind") == "dm" else "group"
+    if style not in message_styles.STYLES:
+        raise ValueError("Choose one of the four message buttons.")
+    left = read_left()
+    if left <= 0:
+        raise ValueError("The case is complete (Rs. 0 left). Nothing was written.")
+    api = assistant.client()
+    if api is None:
+        raise RuntimeError("AI is not connected, so nothing was written. Your message is unchanged.")
+    if not MSTYLE_LOCK.acquire(blocking=False):
+        raise ValueError("A message is already being written. Wait a moment.")
+    try:
+        group, dm = get_message("group")["text"], get_message("dm")["text"]
+        current = str(body.get("current") or "")[:6000]
+        plan = plan_get()
+        facts = [f"Case: {active_case_name()}"]
+        if plan and plan.get("facts"):
+            facts.append("Verified case facts: " + json.dumps(plan["facts"], ensure_ascii=False))
+        facts += [t for t in (current, group, dm) if t.strip()]
+        ctx = {
+            "left": left,
+            "facts": "\n\n".join(facts),
+            "group_text": group,
+            "dm_text": dm,
+            "current_text": current or (dm if kind == "dm" else group),
+        }
+
+        def chat(system, prompt):
+            msg = assistant._chat_raw(
+                api, system, [], [{"role": "user", "content": prompt}], max_tokens=1500, thinking_mode=False
+            )
+            return msg.get("content", "") if isinstance(msg, dict) else ""
+
+        state = (STORE.get("message_styles") if STORE else None) or MSTYLE_MEMORY
+        result, new_state = message_styles.generate(
+            style, ctx, state if isinstance(state, dict) else {}, chat, __import__("ai_call").json_of
+        )
+        MSTYLE_MEMORY.clear()
+        MSTYLE_MEMORY.update(new_state)
+        if STORE:
+            STORE.put("message_styles", new_state)
+        return {**result, "left": left, "kind": kind}
+    finally:
+        MSTYLE_LOCK.release()
+
+
 def plan_view():
     plan, left = plan_get(), read_left()
     checks = {}
@@ -5287,6 +5356,7 @@ class Handler(BaseHTTPRequestHandler):
             "/focus-editor.js",
             "/format-toolbar.js",
             "/format-toolbar.css",
+            "/auto-controls.css",
             "/focus-editor.css",
             "/comfort.js",
             "/comfort.css",
@@ -5394,6 +5464,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/drafts":
             ensure_completed_drafts()
             self.reply(read_drafts())  # a damaged file is repaired first, never passed to the browser
+        elif self.path == "/auto-controls":
+            try:
+                self.reply(auto_controls().view())
+            except Exception:
+                self.reply({"error": "The Auto controls could not be read. Nothing was changed."}, status=503)
         elif self.path == "/report":
             # Every resume (donor DMs and groups) and how many people the Reply feature answered.
             PKT = datetime.timezone(datetime.timedelta(hours=5))
@@ -5825,6 +5900,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(bank.save(kind, body.get("text"), body.get("revision")))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=409)
+        if self.path == "/auto-controls":
+            try:
+                controls = auto_controls()
+                if "on" in body:
+                    return self.reply(controls.set(body.get("control"), body.get("on"), body.get("settings")))
+                return self.reply(controls.edit(body.get("control"), body.get("settings")))
+            except ValueError as e:
+                return self.reply({"error": str(e)}, status=400)
+        if self.path == "/message-style":
+            try:
+                return self.reply(message_style(body))
+            except RuntimeError as e:
+                return self.reply({"error": str(e)}, status=503)
+            except ValueError as e:
+                return self.reply({"error": str(e)}, status=400)
         if self.path == "/drafts":
             if any(
                 not isinstance(body.get(k), str) or len(body[k]) > 10000 for k in ("group", "dm")

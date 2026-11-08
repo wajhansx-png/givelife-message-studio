@@ -9,7 +9,7 @@ module.exports = defineConfig({
   timeout: 30000,
   use: { baseURL: `http://127.0.0.1:${port}`, headless: true, trace: 'retain-on-failure' },
   webServer: {
-    command: `python tests/preview_fake.py --donors --test-api --port ${port}`,
+    command: `python tests/preview_fake.py --donors --test-api --fake-ai --port ${port}`,
     url: `http://127.0.0.1:${port}/health`,
     reuseExistingServer: false,
     timeout: 30000,

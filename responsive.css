@@ -1519,3 +1519,39 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-form button[type='s
     transition: none;
   }
 }
+
+/* ---- Report, simple: one plain sentence per Auto and one line for today. The numbers stay for screen readers. ---- */
+html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-card .auto-stats,
+html body:not(#a):not(#b):not(#c) dialog.report-dialog .report-list {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap;
+}
+html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-card .auto-line {
+  grid-area: stats;
+  margin: 0;
+  padding-left: 4px;
+  overflow: hidden;
+  color: var(--rc-dim);
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-card[data-state='ON'] .auto-line {
+  color: var(--rc-text);
+}
+html body:not(#a):not(#b):not(#c) dialog.report-dialog .report-card .rp-today {
+  order: -1;
+  margin: 0;
+  padding: 2px 4px 0;
+  color: var(--rc-dim);
+  font-size: 13px;
+  text-align: center;
+}

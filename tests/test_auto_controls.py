@@ -67,6 +67,16 @@ class Defaults(Base):
         self.assertFalse(app.auto_on())
         self.assertEqual(self.sent, [])
 
+    def test_cards_are_named_for_what_they_do(self):
+        controls = self.c.view()["controls"]
+        self.assertEqual(controls[ac.GROUP]["title"], "Group Auto")
+        self.assertEqual(controls[ac.DONOR_DM]["title"], "DM Important Donors")
+        self.assertEqual(controls[IMPORTANT]["title"], "Important Donors Auto")
+        for scope, name in ac.SCOPE_TITLES.items():  # the name follows "Who to message"
+            view = self.c.edit(ac.DONOR_DM, {"scope": scope})
+            self.assertEqual(view["controls"][ac.DONOR_DM]["title"], name, scope)
+        self.assertEqual(set(ac.SCOPE_TITLES), set(ac.SCOPES))
+
 
 class GroupAuto(Base):
     def test_switches_the_existing_auto_engine(self):
@@ -214,6 +224,15 @@ class NoOverlap(Base):
         self.assertEqual(len(self.h.jobs.export_jobs()["jobs"]), 1)
         self.assertTrue(self.wait(lambda: self.sent))
         self.assertEqual(len({x["phone"] for x in self.sent}), len(self.sent))  # nobody twice
+
+    def test_the_overlap_message_uses_the_dm_card_name(self):
+        self.donors(6)
+        self.c.set(ac.DONOR_DM, True)
+        self.addCleanup(self.stop_everything)
+        with self.assertRaises(ValueError) as caught:
+            self.c.set(IMPORTANT, True, {"count": 3})
+        self.assertIn("DM Important Donors is sending now", str(caught.exception))
+        self.assertEqual(len(self.h.jobs.export_jobs()["jobs"]), 1)
 
     def test_pressing_on_twice_starts_one_batch(self):
         self.donors(4)

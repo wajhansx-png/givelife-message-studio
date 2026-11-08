@@ -31,7 +31,13 @@ test('three controls, all OFF at first, each with its numbers and Edit Settings'
   page,
 }) => {
   await openReport(page);
+  const names = {
+    group: 'Group Auto',
+    donor_dm: 'DM Important Donors',
+    important: 'Important Donors Auto',
+  };
   for (const id of ['group', 'donor_dm', 'important']) {
+    await expect(card(page, id).locator('h4')).toHaveText(names[id]);
     await expect(card(page, id).locator('.auto-switch')).toHaveText('OFF');
     await expect(card(page, id).locator('.auto-switch')).toHaveAttribute('aria-checked', 'false');
     for (const s of ['recipients', 'sent', 'pending', 'next'])
@@ -120,8 +126,9 @@ test('Important Donors Auto: owner picks the count, it sends at once, shows live
   expect((await events()).length).toBe(first.length); // nothing more went out
 });
 
-test('Donor DM Auto starts the usual DM batch only when switched ON', async ({ page }) => {
+test('DM Important Donors starts the usual DM batch only when switched ON', async ({ page }) => {
   await openReport(page);
+  await expect(card(page, 'donor_dm').locator('h4')).toHaveText('DM Important Donors');
   await expect(card(page, 'donor_dm').locator('.auto-switch')).toHaveText('OFF');
   const before = (await events()).length;
   await card(page, 'donor_dm').locator('.auto-switch').click();

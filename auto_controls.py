@@ -1,7 +1,7 @@
 """Reports > Auto: three independent ON/OFF controls. No second sending engine.
 
 - Group Auto drives the existing Auto engine (its schedule, rotation and saved group messages).
-- Donor DM Auto and Important Donors Auto each start ONE batch on the existing donor DM engine
+- DM Important Donors (key donor_dm) and Important Donors Auto each start ONE batch on the existing donor DM engine
   (donor_delivery), tagged with their name. That engine runs one batch at a time, so two controls
   can never contact the same donor at once. A batch that ends, for any reason, switches its control
   OFF: nothing restarts by itself and nothing is ever switched on without the owner pressing ON.
@@ -13,8 +13,25 @@ GROUP, DONOR_DM, IMPORTANT = "group", "donor_dm", "important"
 CONTROLS = (GROUP, DONOR_DM, IMPORTANT)
 RUNNING = ("Starting", "Sending", "Waiting")
 SETTINGS_KEY = "auto_controls_settings"
-TITLES = {GROUP: "Group Auto", DONOR_DM: "Donor DM Auto", IMPORTANT: "Important Donors Auto"}
+TITLES = {GROUP: "Group Auto", DONOR_DM: "DM Important Donors", IMPORTANT: "Important Donors Auto"}
 SCOPES = ("important", "top", "donated", "not_donated", "all")
+# The DM card is named after the list it DMs ("Who to message"), so the name never says Important for another list.
+SCOPE_TITLES = {
+    "important": "DM Important Donors",
+    "top": "DM Top Donors",
+    "donated": "DM Donated Donors",
+    "not_donated": "DM Not-Donated Donors",
+    "all": "DM All Donors",
+}
+
+
+def title_of(which, settings=None):
+    if which == DONOR_DM:
+        return SCOPE_TITLES.get(
+            (settings or {}).get("scope") or DEFAULTS[DONOR_DM]["scope"], TITLES[DONOR_DM]
+        )
+    return TITLES[which]
+
 
 # Important Donors Auto: 8 minutes between DMs, varied by up to 15 seconds either way, batches of 10.
 IMPORTANT_GAP_MINUTES, IMPORTANT_BATCH, IMPORTANT_JITTER = 8, 10, {"min": -15, "max": 15}
@@ -270,7 +287,7 @@ class AutoControls:
                 }
             out["controls"][which] = {
                 "id": which,
-                "title": TITLES[which],
+                "title": title_of(which, settings),
                 "settings": settings,
                 "fields": FIELDS[which],
                 **body,
@@ -302,7 +319,11 @@ class AutoControls:
             return ""
         if owner == which:
             return "same"
-        name = TITLES.get(owner, "A donor DM batch that you started")
+        name = (
+            title_of(owner, self.settings(owner))
+            if owner in CONTROLS
+            else "A donor DM batch that you started"
+        )
         return (
             f"{name} is sending now. Switch it OFF first: two DM queues never run at the same time."
         )

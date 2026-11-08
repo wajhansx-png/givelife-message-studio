@@ -233,7 +233,7 @@
       put('reportResumes', 'Unavailable', '');
     }
   }
-  /* ---- Auto: Group Auto, Donor DM Auto, Important Donors Auto. Each card only talks to /auto-controls;
+  /* ---- Auto: Group Auto, DM Important Donors, Important Donors Auto. Each card only talks to /auto-controls;
      the server runs everything, so closing the browser changes nothing. ---- */
   const cards = {};
   let autoTimer = 0,

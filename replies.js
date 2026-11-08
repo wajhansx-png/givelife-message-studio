@@ -151,7 +151,7 @@
           'Sub"></small></li>',
       )
       .join('') +
-    '</ol><section id="autoControls" class="auto-controls" aria-label="Auto controls"><h3>Auto</h3><div id="autoCards"></div><p id="autoMsg" class="auto-msg" role="alert"></p></section><button type="button" id="reportClose">Close</button></div>';
+    '</ol><section id="autoControls" class="auto-controls" aria-label="Auto controls"><h3>Auto</h3><div id="autoCards"></div><button type="button" id="autoStopAll" hidden>Stop all Auto</button><p id="autoMsg" class="auto-msg" role="alert"></p></section><button type="button" id="reportClose">Close</button></div>';
   document.body.append(dlg);
   const $ = (id) => document.getElementById(id);
   const clock = (sec) =>
@@ -245,6 +245,18 @@
     return n;
   };
   const autoSay = (text) => ($('autoMsg').textContent = text || '');
+  /* One tap switches every running Auto off (one after the other, so the server never races). */
+  $('autoStopAll').onclick = async () => {
+    const stop = $('autoStopAll');
+    stop.disabled = true;
+    try {
+      for (const [id, x] of Object.entries(cards)) if (x.last && x.last.on) paint(await autoCall({ control: id, on: false }));
+      autoSay('Everything is off. Nothing more will be sent.');
+    } catch (e) {
+      autoSay(e.message);
+    }
+    stop.disabled = false;
+  };
   async function autoCall(body) {
     const r = await fetch('/auto-controls', {
       method: 'POST',
@@ -398,6 +410,7 @@
       for (const row of x.stats.children) row.lastChild.textContent = v[row.dataset.stat];
       x.note.textContent = c.note || '';
     }
+    $('autoStopAll').hidden = !Object.values(cards).some((x) => x.last && x.last.on);
   }
   async function autoRefresh() {
     try {

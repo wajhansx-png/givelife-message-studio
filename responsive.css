@@ -1062,3 +1062,93 @@ html body:not(#a):not(#b):not(#c) .group-send .grp-card .delay-pill:is([aria-pre
     padding: 14px 10px !important;
   }
 }
+
+/* ---- Report: Auto first, one compact card per control, big switch, Stop all (made for a quick tap) ---- */
+html body:not(#a):not(#b):not(#c) .report-card {
+  display: flex;
+  flex-direction: column;
+}
+html body:not(#a):not(#b):not(#c) .report-card > .auto-controls {
+  order: -1;
+  margin: 0 0 12px;
+}
+html body:not(#a):not(#b):not(#c) .report-card > .auto-controls > h3 {
+  display: none;
+}
+html body:not(#a):not(#b):not(#c) .auto-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'head head' 'stats edit' 'note note' 'form form';
+  gap: 2px 8px;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 0 0 8px;
+}
+html body:not(#a):not(#b):not(#c) .auto-card .auto-head {
+  grid-area: head;
+}
+html body:not(#a):not(#b):not(#c) .auto-card .auto-stats {
+  grid-area: stats;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 0;
+}
+html body:not(#a):not(#b):not(#c) .auto-card .auto-stats div {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+html body:not(#a):not(#b):not(#c) .auto-card .auto-stats dd {
+  font-size: 13px;
+}
+html body:not(#a):not(#b):not(#c) .auto-card .auto-note {
+  grid-area: note;
+  margin: 0;
+  font-size: 12px;
+}
+html body:not(#a):not(#b):not(#c) .auto-card .auto-note:empty {
+  display: none;
+}
+html body:not(#a):not(#b):not(#c) .auto-card .auto-edit {
+  grid-area: edit;
+  min-height: 40px;
+  padding: 0 10px;
+  font-size: 12px;
+  margin: 0;
+}
+html body:not(#a):not(#b):not(#c) .auto-card .auto-form {
+  grid-area: form;
+}
+html body:not(#a):not(#b):not(#c) .auto-card .auto-switch {
+  min-height: 48px;
+  min-width: 84px;
+  font-size: 15px;
+  font-weight: 800;
+}
+html body:not(#a):not(#b):not(#c) .report-card #autoStopAll {
+  display: block !important;
+  width: 100%;
+  min-height: 48px;
+  margin: 0 0 4px !important;
+  border-radius: 14px;
+  border: 1px solid #f87171aa !important;
+  background: #7f1d1d !important;
+  color: #fff !important;
+  font-size: 15px;
+  font-weight: 800;
+}
+html body:not(#a):not(#b):not(#c) .report-card #autoStopAll[hidden] {
+  display: none !important;
+}
+html body:not(#a):not(#b):not(#c) .report-card .auto-card button {
+  margin: 0 !important;
+}
+@media (max-width: 380px) {
+  html body:not(#a):not(#b):not(#c) .auto-card {
+    padding: 6px 10px;
+  }
+  html body:not(#a):not(#b):not(#c) .auto-card .auto-stats dt {
+    font-size: 10px;
+  }
+}

@@ -30,6 +30,15 @@ class DonorIntegration:
             balance=app.read_left,
         )
         self.jobs.exclusion_reason = self.exclusion_reason
+        from donor_auto import DonorAuto
+
+        self.auto = DonorAuto(
+            app.STORE,
+            self.jobs,
+            self._follow_up_for,
+            lambda text: app.ENGINE.notify("donor-auto-stop", text, 1800),
+            lambda: bool(app.CAMPAIGN.get("running")),
+        )
         from donor_paste import PastedDonors
 
         self.pasted = PastedDonors(
@@ -99,6 +108,8 @@ class DonorIntegration:
         if self.app.STORE:
             self.app.STORE.put("donor_dm_pause", True)
         self.jobs.cancel()
+        if getattr(self, "auto", None) and self.auto.status()["enabled"]:
+            self.auto.disable("Auto is off: DMs were stopped.")
         self.app.CAMPAIGN["stop"] = True
         self.app.ENGINE.set_dms(False, self.app.ENGINE.s.get("dm_daily", 30))
         return {
@@ -360,6 +371,13 @@ class DonorIntegration:
     def start_batch(self, **body):
         with self.control_lock:
             return self._start_batch(**body)
+
+    def configure_job(self, ident, settings):
+        """Live edit of a running batch. A follow-up on/off switch becomes the saved text (or none)."""
+        settings = dict(settings) if isinstance(settings, dict) else settings
+        if isinstance(settings, dict) and type(settings.get("follow_up")) is bool:
+            settings["follow_up"] = self._follow_up_for(settings["follow_up"])
+        return self.jobs.configure(ident, settings)
 
     FOLLOW_KEY = "donor_follow_up"
 

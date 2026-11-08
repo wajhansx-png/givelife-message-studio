@@ -147,3 +147,37 @@ test('/new desktop reader: narrow, tall message with the buttons beside it; edit
   expect(ta.width).toBeLessThanOrEqual(341);
   expect(ta.height).toBeGreaterThan(200);
 });
+
+test('/new chat chips only fill the box and never send, and the chat fits every phone width', async ({
+  page,
+}) => {
+  const sent = [];
+  await page.route('**/*', (r) => {
+    if (r.request().method() === 'POST' && /send|chat|command|reply/i.test(r.request().url()))
+      sent.push(r.request().url());
+    return r.continue();
+  });
+  for (const width of [280, 320, 360, 390, 768, 1440]) {
+    await open(page, '/new#/chat', width);
+    const form = page.locator('#histForm');
+    await expect(form).toBeVisible();
+    const chips = page.locator('#hist .ui2-chips button');
+    await expect(chips).toHaveCount(3);
+    await chips.nth(1).click();
+    await expect(page.locator('#histForm textarea')).toHaveValue('send all');
+    expect(sent, 'a chip must never send').toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
+    const back = await page.locator('#histMain, #histClose').first().boundingBox();
+    const last = await chips.nth(2).boundingBox();
+    if (back && last && width < 900) {
+      const clash = !(
+        last.x + last.width <= back.x + 1 ||
+        last.y + last.height <= back.y ||
+        last.y >= back.y + back.height
+      );
+      expect(clash, `chip under the Back button at ${width}px`).toBe(false);
+    }
+  }
+});

@@ -5272,6 +5272,7 @@ class Handler(BaseHTTPRequestHandler):
             '<link rel="stylesheet" href="/responsive.css" />\n    <link rel="stylesheet" href="/new-ui.css" />',
             1,
         )
+        html = html.replace("</body>", '<script src="/new-ui.js"></script></body>', 1)
         return self.reply(
             html.encode("utf-8"), "text/html", extra_headers={"Cache-Control": "no-cache"}
         )
@@ -5365,6 +5366,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply_new_ui()
         if self.path.split("?")[0] == "/new-ui.css":
             return self.reply_new_ui_css()
+        if self.path.split("?")[0] == "/new-ui.js":
+            return self.reply_file("new-ui.js", "application/javascript")
         if self.path in (
             "/",
             "/app.js",

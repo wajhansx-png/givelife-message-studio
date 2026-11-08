@@ -384,3 +384,87 @@
     min-height: 40px !important;
   }
 }
+
+/* ---------- Chat: tap a chip instead of remembering the words (fills the box only, never sends) ---------- */
+.UI2 .ui2-chips {
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.UI2 .ui2-chips::-webkit-scrollbar {
+  display: none;
+}
+.UI2 .ui2-chips button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line2);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- Report: the three Auto cards are short rows so everything fits one screen ---------- */
+.UI2 .auto-card {
+  padding: 8px 12px !important;
+  margin-bottom: 8px !important;
+}
+.UI2 .auto-head h4 {
+  font-size: 14px !important;
+}
+.UI2 .auto-stats {
+  margin: 6px 0 4px !important;
+}
+.UI2 .auto-stats dt {
+  font-size: 11px !important;
+}
+.UI2 .auto-stats dd {
+  font-size: 13px !important;
+}
+.UI2 .auto-card .auto-switch {
+  min-height: 36px !important;
+  min-width: 56px !important;
+}
+@media (max-width: 380px) {
+  .UI2 .auto-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+  }
+}
+@media (max-width: 299px) {
+  .UI2 .auto-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* ---------- WhatsApp dialog: calm and short when everything is fine ---------- */
+.UI2 .connect-dialog h2 {
+  font-size: 16px !important;
+}
+.UI2 .connect-dialog {
+  padding: 16px !important;
+}
+
+/* ---------- Notes: the side tool tabs are easier to hit ---------- */
+.UI2 .foundation-notes .notes-edge {
+  min-width: 32px !important;
+  min-height: 76px !important;
+}
+
+/* ---------- Settings: Back is a calm grey button ---------- */
+.UI2 #set .back-action,
+.UI2 #set #setBack {
+  border-color: var(--line2) !important;
+  color: var(--ink) !important;
+}
+
+@media (max-width: 899px) {
+  .UI2 #hist .ui2-chips {
+    padding-right: 104px;
+  }
+}

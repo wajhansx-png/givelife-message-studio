@@ -450,12 +450,6 @@
   padding: 16px !important;
 }
 
-/* ---------- Notes: the side tool tabs are easier to hit ---------- */
-.UI2 .foundation-notes .notes-edge {
-  min-width: 32px !important;
-  min-height: 76px !important;
-}
-
 /* ---------- Settings: Back is a calm grey button ---------- */
 .UI2 #set .back-action,
 .UI2 #set #setBack {

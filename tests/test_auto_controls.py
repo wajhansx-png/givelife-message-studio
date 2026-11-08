@@ -27,12 +27,14 @@ class Base(unittest.TestCase):
 
     tearDown = fixture.SendTests.tearDown
 
-    def donors(self, n, important=None):
+    def donors(self, n, important=None, top=True):
         ids = []
         for i in range(n):
             row = self.h.book.add("Synthetic %02d" % i, "923001230%03d" % i)["donor"]
             if important is None or i < important:
                 self.h.book.update(row["id"], important=True)
+            if top and (important is None or i < important):  # a Top donor is always Important too
+                self.h.book.update(row["id"], top_donor=True)
             ids.append(row["id"])
         return ids
 
@@ -69,13 +71,13 @@ class Defaults(Base):
 
     def test_cards_are_named_for_what_they_do(self):
         controls = self.c.view()["controls"]
+        self.assertEqual(list(controls), [ac.GROUP, ac.DONOR_DM, IMPORTANT])
         self.assertEqual(controls[ac.GROUP]["title"], "Group Auto")
-        self.assertEqual(controls[ac.DONOR_DM]["title"], "DM Important Donors")
-        self.assertEqual(controls[IMPORTANT]["title"], "Important Donors Auto")
-        for scope, name in ac.SCOPE_TITLES.items():  # the name follows "Who to message"
-            view = self.c.edit(ac.DONOR_DM, {"scope": scope})
-            self.assertEqual(view["controls"][ac.DONOR_DM]["title"], name, scope)
-        self.assertEqual(set(ac.SCOPE_TITLES), set(ac.SCOPES))
+        self.assertEqual(controls[ac.DONOR_DM]["title"], "DM Top Donors")
+        self.assertEqual(controls[IMPORTANT]["title"], "DM Important Donors")
+        for which in (ac.DONOR_DM, IMPORTANT):  # nobody can pick another list for a DM card
+            self.assertNotIn("scope", {f["key"] for f in controls[which]["fields"]})
+            self.assertNotIn("scope", controls[which]["settings"])
 
 
 class GroupAuto(Base):
@@ -220,18 +222,18 @@ class NoOverlap(Base):
         self.addCleanup(self.stop_everything)
         with self.assertRaises(ValueError) as caught:
             self.c.set(ac.DONOR_DM, True)
-        self.assertIn("Important Donors Auto is sending now", str(caught.exception))
+        self.assertIn("DM Important Donors is sending now", str(caught.exception))
         self.assertEqual(len(self.h.jobs.export_jobs()["jobs"]), 1)
         self.assertTrue(self.wait(lambda: self.sent))
         self.assertEqual(len({x["phone"] for x in self.sent}), len(self.sent))  # nobody twice
 
-    def test_the_overlap_message_uses_the_dm_card_name(self):
+    def test_the_overlap_message_names_the_card_that_is_sending(self):
         self.donors(6)
         self.c.set(ac.DONOR_DM, True)
         self.addCleanup(self.stop_everything)
         with self.assertRaises(ValueError) as caught:
             self.c.set(IMPORTANT, True, {"count": 3})
-        self.assertIn("DM Important Donors is sending now", str(caught.exception))
+        self.assertIn("DM Top Donors is sending now", str(caught.exception))
         self.assertEqual(len(self.h.jobs.export_jobs()["jobs"]), 1)
 
     def test_pressing_on_twice_starts_one_batch(self):
@@ -389,11 +391,89 @@ class DonorDmAuto(Base):
         job = self.h.jobs.export_jobs()["jobs"][-1]
         self.assertEqual(
             (job["owner"], job["scope"], job["chunk"], job["gap_seconds"]),
-            (ac.DONOR_DM, "important", 7, 200.0),
+            (ac.DONOR_DM, "top", 7, 200.0),
         )
         self.assertEqual(job["rests"], [900.0])
         self.assertEqual(self.h.prefs(), usual)  # an Auto run never rewrites "how I usually do it"
         self.assertTrue(self.wait(lambda: self.sent))
+
+
+class ListsAreLocked(Base):
+    """Important keeps Important and Top keeps Top, in every case."""
+
+    def mixed(self):
+        """Two donors each: important only, important and Top (Top is always Important too), neither."""
+        groups = {}
+        for n, (name, imp, top) in enumerate(
+            (("important_only", True, False), ("both", True, True), ("neither", False, False))
+        ):
+            for i in range(2):
+                row = self.h.book.add(f"{name} {i}", f"92300777{n}{i:03d}")["donor"]
+                self.h.book.update(row["id"], important=imp)
+                if top:
+                    self.h.book.update(row["id"], top_donor=True)
+                groups.setdefault(name, set()).add(row["id"])
+        return groups
+
+    def recipients(self):
+        return set(self.h.jobs.export_jobs()["jobs"][-1]["ids"])
+
+    def test_top_card_messages_only_top_donors(self):
+        g = self.mixed()
+        self.c.set(ac.DONOR_DM, True)
+        self.addCleanup(self.stop_everything)
+        self.assertEqual(self.recipients(), g["both"])
+        self.assertEqual(self.h.jobs.export_jobs()["jobs"][-1]["scope"], "top")
+
+    def test_important_card_messages_only_important_donors(self):
+        g = self.mixed()
+        self.c.set(IMPORTANT, True, {"count": 10})
+        self.addCleanup(self.stop_everything)
+        self.assertEqual(self.recipients(), g["important_only"] | g["both"])
+        self.assertEqual(self.h.jobs.export_jobs()["jobs"][-1]["scope"], "important")
+
+    def test_nobody_outside_the_list_is_ever_messaged(self):
+        g = self.mixed()
+        for which, wanted in (
+            (ac.DONOR_DM, g["both"]),
+            (IMPORTANT, g["important_only"] | g["both"]),
+        ):
+            self.c.set(which, True, {"count": 10} if which == IMPORTANT else None)
+            self.assertTrue(self.wait(lambda: self.sent))
+            self.assertTrue(self.recipients() <= wanted and not self.recipients() & g["neither"])
+            self.c.set(which, False)
+            self.assertTrue(self.wait(lambda: not self.h.jobs.active))
+            self.h.jobs.import_jobs({"jobs": []})
+
+    def test_the_list_cannot_be_changed(self):
+        g = self.mixed()
+        with self.assertRaises(ValueError):
+            self.c.edit(ac.DONOR_DM, {"scope": "all"})
+        with self.assertRaises(ValueError):
+            self.c.set(ac.DONOR_DM, True, {"scope": "all"})
+        self.assertEqual(self.h.jobs.export_jobs()["jobs"], [])
+        app.STORE.put(
+            ac.SETTINGS_KEY, {ac.DONOR_DM: {"scope": "all"}}
+        )  # an old saved choice is ignored
+        self.assertNotIn("scope", self.c.settings(ac.DONOR_DM))
+        self.c.set(ac.DONOR_DM, True)
+        self.addCleanup(self.stop_everything)
+        self.assertEqual(self.recipients(), g["both"])
+        self.c.edit(ac.DONOR_DM, {"gap_minutes": 3})  # live edits still work
+        with self.assertRaises(ValueError):
+            self.c.edit(ac.DONOR_DM, {"scope": "all"})
+        self.assertEqual(self.h.jobs.export_jobs()["jobs"][-1]["scope"], "top")
+
+    def test_an_old_batch_for_another_list_is_not_shown_as_top(self):
+        self.mixed()
+        self.h.start_batch(scope="important", limit=2, chunk=1, gap_seconds=480, owner=ac.DONOR_DM)
+        self.addCleanup(self.stop_everything)
+        self.assertEqual(self.c._running_owner(), "manual")  # never "DM Top Donors"
+        self.assertFalse(self.view(ac.DONOR_DM)["on"])
+        with self.assertRaises(ValueError) as caught:
+            self.c.set(ac.DONOR_DM, True)
+        self.assertNotIn("DM Top Donors is sending now", str(caught.exception))
+        self.assertIn("is sending now", str(caught.exception))
 
 
 if __name__ == "__main__":

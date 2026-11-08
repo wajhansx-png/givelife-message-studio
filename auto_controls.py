@@ -1,9 +1,10 @@
 """Reports > Auto: three independent ON/OFF controls. No second sending engine.
 
 - Group Auto drives the existing Auto engine (its schedule, rotation and saved group messages).
-- DM Important Donors (key donor_dm) and Important Donors Auto each start ONE batch on the existing donor DM engine
-  (donor_delivery), tagged with their name. That engine runs one batch at a time, so two controls
-  can never contact the same donor at once. A batch that ends, for any reason, switches its control
+- DM Top Donors (key donor_dm) and DM Important Donors (key important) each start ONE batch on the existing
+  donor DM engine (donor_delivery), tagged with their name. Each is locked to its own list: Top always
+  messages Top donors and Important always messages Important donors, whatever else is selected. That engine
+  runs one batch at a time, so two controls can never contact the same donor at once. A batch that ends, for any reason, switches its control
   OFF: nothing restarts by itself and nothing is ever switched on without the owner pressing ON.
 """
 
@@ -13,32 +14,15 @@ GROUP, DONOR_DM, IMPORTANT = "group", "donor_dm", "important"
 CONTROLS = (GROUP, DONOR_DM, IMPORTANT)
 RUNNING = ("Starting", "Sending", "Waiting")
 SETTINGS_KEY = "auto_controls_settings"
-TITLES = {GROUP: "Group Auto", DONOR_DM: "DM Important Donors", IMPORTANT: "Important Donors Auto"}
-SCOPES = ("important", "top", "donated", "not_donated", "all")
-# The DM card is named after the list it DMs ("Who to message"), so the name never says Important for another list.
-SCOPE_TITLES = {
-    "important": "DM Important Donors",
-    "top": "DM Top Donors",
-    "donated": "DM Donated Donors",
-    "not_donated": "DM Not-Donated Donors",
-    "all": "DM All Donors",
-}
+TITLES = {GROUP: "Group Auto", DONOR_DM: "DM Top Donors", IMPORTANT: "DM Important Donors"}
+DM_SCOPE = {DONOR_DM: "top", IMPORTANT: "important"}  # each DM card is locked to its own list
 
-
-def title_of(which, settings=None):
-    if which == DONOR_DM:
-        return SCOPE_TITLES.get(
-            (settings or {}).get("scope") or DEFAULTS[DONOR_DM]["scope"], TITLES[DONOR_DM]
-        )
-    return TITLES[which]
-
-
-# Important Donors Auto: 8 minutes between DMs, varied by up to 15 seconds either way, batches of 10.
+# DM Important Donors: 8 minutes between DMs, varied by up to 15 seconds either way, batches of 10.
 IMPORTANT_GAP_MINUTES, IMPORTANT_BATCH, IMPORTANT_JITTER = 8, 10, {"min": -15, "max": 15}
 
 DEFAULTS = {
     GROUP: {"main_every": None, "freelance_every": None},
-    DONOR_DM: {"scope": "important", "follow_up": False, "gap_minutes": None, "batch_size": None},
+    DONOR_DM: {"follow_up": False, "gap_minutes": None, "batch_size": None},
     IMPORTANT: {
         "count": 20,
         "follow_up": False,
@@ -64,7 +48,6 @@ FIELDS = {
         },
     ],
     DONOR_DM: [
-        {"key": "scope", "label": "Who to message", "type": "select", "options": list(SCOPES)},
         {
             "key": "gap_minutes",
             "label": "Minutes between DMs (empty = your usual)",
@@ -175,10 +158,20 @@ class AutoControls:
         store.put(SETTINGS_KEY, saved)
 
     # ---- reading state --------------------------------------------------------------------------
+    @staticmethod
+    def _owner(job):
+        """Who started a batch. A batch tagged with a DM card but made for another list (for example one saved
+        before the lists were locked) counts as a manual batch, so a card never shows, resumes or blocks on
+        a list that is not its own."""
+        owner = job.get("owner") or "manual"
+        if owner in DM_SCOPE and job.get("scope") != DM_SCOPE[owner]:
+            return "manual"
+        return owner
+
     def _job(self, which):
         """The newest batch started by this control (it survives restarts: the owner tag is kept)."""
         jobs = self.app.donors().jobs.export_jobs().get("jobs", [])
-        return next((j for j in reversed(jobs) if j.get("owner") == which), None)
+        return next((j for j in reversed(jobs) if self._owner(j) == which), None)
 
     def _running_owner(self):
         """Which control (or 'manual') owns the donor DM engine right now, else ''."""
@@ -187,10 +180,10 @@ class AutoControls:
             job = next(
                 (j for j in jobs.export_jobs().get("jobs", []) if j.get("id") == jobs.active), {}
             )
-            return job.get("owner") or "manual"
+            return self._owner(job)
         last = (jobs.export_jobs().get("jobs") or [{}])[-1]
         if last.get("state") == "Interrupted" and last.get("auto"):
-            return last.get("owner") or "manual"  # about to resume by itself after a restart
+            return self._owner(last)  # about to resume by itself after a restart
         return ""
 
     def _dm_view(self, which):
@@ -287,7 +280,7 @@ class AutoControls:
                 }
             out["controls"][which] = {
                 "id": which,
-                "title": title_of(which, settings),
+                "title": TITLES[which],
                 "settings": settings,
                 "fields": FIELDS[which],
                 **body,
@@ -319,11 +312,7 @@ class AutoControls:
             return ""
         if owner == which:
             return "same"
-        name = (
-            title_of(owner, self.settings(owner))
-            if owner in CONTROLS
-            else "A donor DM batch that you started"
-        )
+        name = TITLES.get(owner, "A donor DM batch that you started")
         return (
             f"{name} is sending now. Switch it OFF first: two DM queues never run at the same time."
         )
@@ -359,7 +348,7 @@ class AutoControls:
             minutes = float(cfg.get("gap_minutes") or IMPORTANT_GAP_MINUTES)
             prefs = donors.prefs()
             plan = dict(
-                scope="important",
+                scope=DM_SCOPE[IMPORTANT],  # locked: Important always messages Important donors
                 limit=int(cfg["count"]),
                 chunk=IMPORTANT_BATCH,
                 gap_seconds=minutes * 60,
@@ -372,7 +361,7 @@ class AutoControls:
         else:
             prefs = donors.prefs()
             plan = dict(
-                scope=cfg.get("scope", "important"),
+                scope=DM_SCOPE[DONOR_DM],  # locked: Top always messages Top donors
                 chunk=int(cfg["batch_size"] or prefs.get("chunk") or 20),
                 gap_seconds=(
                     float(cfg["gap_minutes"]) * 60

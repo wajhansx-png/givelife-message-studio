@@ -97,6 +97,7 @@ def stop_job(ident):
 ASSIST_TASKS = {}
 EVAL_TASKS = {}
 
+NEW_UI_PREFIX = "html body.ui2" + "".join(":not(#%s)" % c for c in "abcdefgh")  # beats every existing rule
 SITE_ICONS = {
     "/favicon.svg": ("favicon.svg", "image/svg+xml"),
     "/favicon.ico": ("favicon.ico", "image/png"),
@@ -5262,6 +5263,27 @@ class Handler(BaseHTTPRequestHandler):
 
     _STATIC = {}
 
+    def reply_new_ui(self):
+        """The same app on its own path (/new) with the redesign switched on. "/" is never touched."""
+        html = (ROOT / "index.html").read_text(encoding="utf-8")
+        html = html.replace('<body class="nomsg"', '<body class="nomsg ui2"', 1)
+        html = html.replace(
+            '<link rel="stylesheet" href="/responsive.css" />',
+            '<link rel="stylesheet" href="/responsive.css" />\n    <link rel="stylesheet" href="/new-ui.css" />',
+            1,
+        )
+        html = html.replace("</body>", '<script src="/new-ui.js"></script></body>', 1)
+        return self.reply(
+            html.encode("utf-8"), "text/html", extra_headers={"Cache-Control": "no-cache"}
+        )
+
+    def reply_new_ui_css(self):
+        """new-ui.css is written with .UI2 where every rule needs the same strong prefix; expand it here."""
+        css = (ROOT / "new-ui.css").read_text(encoding="utf-8").replace(".UI2", NEW_UI_PREFIX)
+        return self.reply(
+            css.encode("utf-8"), "text/css", extra_headers={"Cache-Control": "no-cache"}
+        )
+
     def reply_file(self, name, kind):
         """App files: revalidated every time (ETag, so a new deploy shows at once) and gzipped, so repeat opens are tiny."""
         path = ROOT / name
@@ -5340,6 +5362,12 @@ class Handler(BaseHTTPRequestHandler):
                 if name.endswith(".css")
                 else "application/javascript",
             )
+        if self.path.split("?")[0] in ("/new", "/new/"):
+            return self.reply_new_ui()
+        if self.path.split("?")[0] == "/new-ui.css":
+            return self.reply_new_ui_css()
+        if self.path.split("?")[0] == "/new-ui.js":
+            return self.reply_file("new-ui.js", "application/javascript")
         if self.path in (
             "/",
             "/app.js",

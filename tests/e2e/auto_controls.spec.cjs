@@ -31,7 +31,13 @@ test('three controls, all OFF at first, each with its numbers and Edit Settings'
   page,
 }) => {
   await openReport(page);
+  const names = {
+    group: 'Group Auto',
+    donor_dm: 'DM Top Donors',
+    important: 'DM Important Donors',
+  };
   for (const id of ['group', 'donor_dm', 'important']) {
+    await expect(card(page, id).locator('h4')).toHaveText(names[id]);
     await expect(card(page, id).locator('.auto-switch')).toHaveText('OFF');
     await expect(card(page, id).locator('.auto-switch')).toHaveAttribute('aria-checked', 'false');
     for (const s of ['recipients', 'sent', 'pending', 'next'])
@@ -60,7 +66,7 @@ test('Group Auto switches the existing Auto engine on and off', async ({ page })
   expect((await api(PORT, '/autopilot')).on).toBe(false);
 });
 
-test('Important Donors Auto: owner picks the count, it sends at once, shows live numbers, edits live, blocks overlap, stops', async ({
+test('DM Important Donors: owner picks the count, it sends at once, shows live numbers, edits live, blocks overlap, stops', async ({
   page,
 }) => {
   await openReport(page);
@@ -82,7 +88,7 @@ test('Important Donors Auto: owner picks the count, it sends at once, shows live
 
   // The other DM control cannot start while this one owns the queue.
   await card(page, 'donor_dm').locator('.auto-switch').click();
-  await expect(page.locator('#autoMsg')).toContainText('Important Donors Auto is sending now');
+  await expect(page.locator('#autoMsg')).toContainText('DM Important Donors is sending now');
   await expect(card(page, 'donor_dm').locator('.auto-switch')).toHaveText('OFF');
 
   // Live edit: same batch, nothing re-sent.
@@ -120,12 +126,21 @@ test('Important Donors Auto: owner picks the count, it sends at once, shows live
   expect((await events()).length).toBe(first.length); // nothing more went out
 });
 
-test('Donor DM Auto starts the usual DM batch only when switched ON', async ({ page }) => {
+test('DM Top Donors messages only Top donors, and only when switched ON', async ({ page }) => {
+  // Three fresh donors become Important and then Top (a Top donor is always Important too).
+  const fresh = (await api(PORT, '/donors?tab=all')).items.filter((d) => !d.important).slice(0, 3);
+  expect(fresh).toHaveLength(3);
+  for (const d of fresh) {
+    await api(PORT, '/donors', { action: 'update', id: d.id, important: true });
+    await api(PORT, '/donors', { action: 'update', id: d.id, top_donor: true });
+  }
   await openReport(page);
+  await expect(card(page, 'donor_dm').locator('h4')).toHaveText('DM Top Donors');
   await expect(card(page, 'donor_dm').locator('.auto-switch')).toHaveText('OFF');
   const before = (await events()).length;
   await card(page, 'donor_dm').locator('.auto-switch').click();
   await expect(card(page, 'donor_dm').locator('.auto-switch')).toHaveText('ON');
+  await expect(stat(page, 'donor_dm', 'recipients')).toHaveText('3'); // the Top list only
   await expect(stat(page, 'donor_dm', 'sent')).not.toHaveText('0', { timeout: 15000 });
   await card(page, 'donor_dm').locator('.auto-switch').click();
   await expect(card(page, 'donor_dm').locator('.auto-switch')).toHaveText('OFF', {
@@ -134,6 +149,7 @@ test('Donor DM Auto starts the usual DM batch only when switched ON', async ({ p
   const phones = (await events()).map((e) => e.fields.phone);
   expect(new Set(phones).size).toBe(phones.length);
   expect(phones.length).toBeGreaterThan(before);
+  expect(phones.length - before).toBeLessThanOrEqual(3); // never beyond the 3 Top donors
 });
 
 test('bad settings are refused in the form and change nothing', async ({ page }) => {

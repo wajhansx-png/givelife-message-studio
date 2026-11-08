@@ -132,7 +132,9 @@ for (const [width, height, theme] of sizes) {
       try {
         // A fresh document closes native modal top layers from the previous state.
         await page.goto('about:blank');
-        await page.goto(screen.url || '/#/' + screen.route, { waitUntil: 'domcontentloaded' });
+        await page.goto(screen.url || (process.env.AUDIT_PATH || '') + '/#/' + screen.route, {
+          waitUntil: 'domcontentloaded',
+        });
         // Navigation and data loading settle before measuring a surface.
         if (screen.prepare) await screen.prepare(page);
         await expect(page.locator(screen.root)).toBeVisible({ timeout: 5000 });

@@ -235,7 +235,7 @@
       put('reportResumes', 'Unavailable', '');
     }
   }
-  /* ---- Auto: Group Auto, Donor DM Auto, Important Donors Auto. Each card only talks to /auto-controls;
+  /* ---- Auto: Group Auto, DM Top Donors, DM Important Donors. Each card only talks to /auto-controls;
      the server runs everything, so closing the browser changes nothing. ---- */
   const cards = {};
   let autoTimer = 0,
@@ -379,9 +379,7 @@
         what =
           id === 'important'
             ? 'up to ' + s.count + ' Important donors, ' + s.gap_minutes + ' minutes apart'
-            : 'your ' +
-              (s.scope || 'important').replace('_', ' ') +
-              ' donors the way you usually send';
+            : 'your Top donors the way you usually send';
       if (!confirm('Switch ' + x.last.title + ' ON? It will DM ' + what + '.')) return;
     }
     autoBusy = true;

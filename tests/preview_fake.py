@@ -168,6 +168,8 @@ if "--fake-ai" in sys.argv:
              "یہ قرض اب برداشت سے باہر ہے", "ایک چھوٹی سی مدد بڑا بوجھ ہلکا کر دے گی", "اس باپ کے آنسو ہمیں پکارتے ہیں"]
     _ENG = ["A helpless father needs you today", "One door knock after another", "Your small gift can lift this weight",
             "This debt is now too heavy", "Help before this family breaks", "A father is begging for time"]
+    _URDU_TAIL = ["آج", "ابھی", "فوراً", "پلیز", "دل سے", "اللہ کے نام پر", "فی الحال", "مل کر", "اب", "یہاں", "سب مل کر", "ہمت کریں", "جلدی", "دعا کے ساتھ", "اس ہفتے", "آخری بار"]
+    _ENG_TAIL = ["today", "now", "please", "together", "quickly", "with love", "this week", "for Allah", "right away", "step up", "be kind", "stand with us", "before night", "as one", "within hours", "from the heart"]
     _STORY = ["People keep coming to the house for the borrowed money. The father has nothing to give them.",
               "The family is worried and tired. They need help to pay what is left.",
               "The loan was taken for a sad and urgent need. Now the family cannot pay it back.",
@@ -181,7 +183,8 @@ if "--fake-ai" in sys.argv:
         i = next(_n)
         urdu = "in URDU (Urdu script)" in messages[-1]["content"]
         hooks = _URDU if urdu else _ENG
-        return {"content": json.dumps({"hook": hooks[i % 6], "story": _STORY[(i * 5 + 1) % 6], "help": _HELP[i % 6],
+        tail = (_URDU_TAIL if urdu else _ENG_TAIL)[(i // 6) % 16]  # 96 different openings, so a long test day never runs out
+        return {"content": json.dumps({"hook": tail + " " + hooks[i % 6], "story": _STORY[(i * 5 + 1) % 6], "help": _HELP[i % 6],
                                         "verse": _VERSES[(i * 3 + 2) % 6], "concept": "scripted %d" % i}, ensure_ascii=False)}
 
     _real_style = server.message_style

@@ -462,3 +462,21 @@
     padding-right: 104px;
   }
 }
+
+/* ---------- Donor mobile header: retain the literal + Add action and tap target ---------- */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-head #donorAdd {
+    min-width: 72px !important;
+    min-height: 44px !important;
+    padding-inline: 12px !important;
+    font-size: 13px !important;
+    font-weight: 750 !important;
+    white-space: nowrap !important;
+    flex: 0 0 auto !important;
+  }
+  .UI2 #donorsPage .donor-head .donor-title,
+  .UI2 #donorsPage .donor-head #donorAdd {
+    position: relative;
+    z-index: 2;
+  }
+}

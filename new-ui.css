@@ -1,0 +1,386 @@
+/* New design, served only at /new (the server swaps .UI2 for a strong prefix). "/" never loads this file.
+   Layout bands follow responsive.css: <=299, <=359, <=380, <=899, >=900. */
+
+/* ---------- Phone and tablet: every daily button sits at the bottom, in thumb reach ---------- */
+@media (max-width: 899px) {
+  .UI2 .app > .brandbar {
+    order: 3;
+  }
+  .UI2 .app > .foot {
+    order: 4;
+  }
+  .UI2 .brandbar #mainNavMore {
+    position: static;
+  }
+  .UI2 .brandbar #mainNavMore > .compact-nav-panel {
+    top: auto;
+    bottom: calc(100% + 7px);
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
+    translate: none !important;
+  }
+  .UI2 .brandbar > .fs-toggle {
+    display: none !important;
+  }
+  .UI2 .brandbar > :is(#donorNotesShortcut, .report-open, #mainNavMore, #whatsappConnection) {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    max-width: none;
+  }
+}
+
+/* ---------- Main screen: words instead of icons, readable message, shorter send buttons ---------- */
+@media (max-width: 899px) {
+  .UI2 .brandbar > #whatsappConnection {
+    flex: 1.5 1 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    width: auto !important;
+    min-height: 44px !important;
+    padding: 0 6px !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--line2) !important;
+    background: var(--surface) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0 !important;
+  }
+  .UI2 .brandbar > #whatsappConnection::before {
+    width: 9px;
+    height: 9px;
+    flex: none;
+    background: #f0aa28;
+    box-shadow: none;
+    animation: none;
+  }
+  .UI2 .brandbar > #whatsappConnection[data-state='online']::before {
+    background: #3cdc96;
+  }
+  .UI2 .brandbar > #whatsappConnection[data-state='offline']::before {
+    background: #ff6b6b;
+  }
+  .UI2 .brandbar > #whatsappConnection::after {
+    content: 'Check';
+    font-size: 12px;
+    font-weight: 700;
+    color: #f0aa28;
+    white-space: nowrap;
+  }
+  .UI2 .brandbar > #whatsappConnection[data-state='online']::after {
+    content: 'WhatsApp';
+    color: #3cdc96;
+  }
+  .UI2 .brandbar > #whatsappConnection[data-state='offline']::after {
+    content: 'Reconnect';
+    color: #ff8a8a;
+  }
+  .UI2 .brandbar > .report-open {
+    font-size: 12px !important;
+    font-weight: 700;
+    padding: 0 6px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 1 1 0 !important;
+  }
+  .UI2 .brandbar > .report-open::before {
+    display: none !important;
+  }
+  .UI2 .brandbar > :is(#donorNotesShortcut, #mainNavMore > summary) {
+    font-size: 12px;
+  }
+  .UI2 .brandbar #mainNavMore > summary {
+    width: 100%;
+    padding: 0 6px;
+  }
+
+  /* the message you are about to send: 13 px, easy to read */
+  .UI2 #groupPreview,
+  .UI2 #dmPreview {
+    font-size: 13px;
+    line-height: 1.42;
+  }
+  /* send buttons: 42 px tall, name and status on one line */
+  .UI2 .send-row .group-main-btn,
+  .UI2 .send-row .group-free-btn,
+  .UI2 .send-row .group-all-btn,
+  .UI2 button.test-row {
+    min-height: 42px !important;
+    height: 42px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  .UI2 .send-row .gb-name {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 14px;
+  }
+  .UI2 .send-row .gb-name small {
+    display: inline !important;
+    margin: 0 !important;
+    font-size: 11px;
+    opacity: 0.85;
+  }
+}
+/* Auto switched ON turns the whole strip green so nobody misses it */
+.UI2 .live[data-on='1'] {
+  background: #0e4a38;
+  border-color: #1fa46a;
+}
+.UI2 .live[data-on='1'] .livebar {
+  color: #c8ffe6;
+}
+
+@media (max-width: 359px) {
+  .UI2 .brandbar > #whatsappConnection {
+    gap: 4px;
+    padding: 0 3px !important;
+  }
+  .UI2 .brandbar > #whatsappConnection::after {
+    font-size: 11px;
+  }
+  .UI2 .brandbar > :is(#donorNotesShortcut, .report-open, #mainNavMore > summary) {
+    font-size: 11px !important;
+  }
+}
+@media (max-width: 299px) {
+  .UI2 .brandbar > #whatsappConnection::before {
+    display: none;
+  }
+}
+@media (max-width: 359px) {
+  .UI2 .send-row .gb-name {
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+  .UI2 .send-row .group-main-btn,
+  .UI2 .send-row .group-free-btn,
+  .UI2 .send-row .group-all-btn,
+  .UI2 button.test-row {
+    height: auto !important;
+    min-height: 46px !important;
+  }
+}
+
+/* ---------- Back is calm grey; Test is an outline so it never looks like Send (all sizes) ---------- */
+.UI2 .back-action {
+  border-color: var(--line2) !important;
+  color: var(--ink) !important;
+  background: var(--surface) !important;
+}
+.UI2 #messageFocus #focusTest {
+  background: transparent !important;
+  border: 2px solid #9670ff !important;
+  color: #e1d2ff !important;
+  box-shadow: none !important;
+}
+
+/* ---------- Donors on a phone: big touch targets, quiet rows, one scrolling tab row ---------- */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    gap: 6px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: none !important;
+  }
+  .UI2 #donorsPage .donor-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .UI2 #donorsPage .donor-tabs > [role='tab'] {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-height: 40px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+    flex-direction: row !important;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .UI2 #donorsPage .donor-row {
+    grid-template-columns: 40px minmax(0, 1fr) 50px 40px 40px 0 !important;
+    column-gap: 2px !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-star {
+    width: 40px !important;
+    min-width: 40px !important;
+    padding: 0 !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-identity .donor-top-chip {
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-row > details > summary {
+    width: 40px !important;
+    min-width: 40px !important;
+  }
+  .UI2 #donorsPage .donor-row > details {
+    width: 40px !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-dm {
+    width: 48px !important;
+    min-width: 48px !important;
+    height: 34px !important;
+    background: transparent !important;
+    color: #9aa3c0 !important;
+    border: 1px solid #394060 !important;
+    box-shadow: none !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='false'] {
+    font-size: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    padding: 0 !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='false']::before {
+    content: '\25CB';
+    font-size: 24px;
+    color: #8a92b0;
+    line-height: 1;
+  }
+}
+@media (max-width: 299px) {
+  .UI2 #donorsPage .donor-row {
+    grid-template-columns: 34px minmax(0, 1fr) 44px 34px 34px 0 !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-star,
+  .UI2 #donorsPage .donor-row > details,
+  .UI2 #donorsPage .donor-row > details > summary {
+    width: 34px !important;
+    min-width: 34px !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-dm {
+    width: 44px !important;
+    min-width: 44px !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='false'] {
+    width: 34px !important;
+    min-width: 34px !important;
+  }
+}
+
+/* ---------- Stop/Resume DMs is amber so it can never be mistaken for the blue DM button (all sizes) ---------- */
+.UI2 #donorsPage #donorToggle {
+  background: #3a2a0c !important;
+  border: 1px solid #f0aa28 !important;
+  color: #ffd78a !important;
+  box-shadow: none !important;
+}
+
+/* ---------- The donor edit panel opens above the rows after it, never behind them (all sizes) ---------- */
+.UI2 #donorsPage .donor-row:has(details[open]) {
+  position: relative;
+  z-index: 40;
+}
+
+/* ---------- Donors on a computer: quiet rows; extra buttons appear when the mouse is on the row ---------- */
+@media (min-width: 900px) {
+  .UI2 #donorsPage .donor-row > .donor-dm {
+    background: transparent !important;
+    color: #9aa3c0 !important;
+    border: 1px solid #394060 !important;
+    box-shadow: none !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='false'] {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: #6a7392 !important;
+    box-shadow: none !important;
+  }
+}
+@media (min-width: 900px) and (hover: hover) {
+  .UI2 #donorsPage .donor-row > .donor-identity .donor-top-chip {
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+  .UI2 #donorsPage .donor-row:hover > .donor-identity .donor-top-chip,
+  .UI2 #donorsPage .donor-row:focus-within > .donor-identity .donor-top-chip {
+    opacity: 1;
+  }
+}
+
+/* ---------- Message reader on a computer: a narrow, tall, fully visible message with its buttons beside it ---------- */
+@media (min-width: 900px) {
+  .UI2 #messageFocus > header {
+    justify-content: flex-start !important;
+    gap: 20px;
+  }
+  .UI2 #messageFocus > header .focus-styles {
+    margin-left: 0 !important;
+  }
+  .UI2 #messageFocus > header #focusState {
+    flex: 0 0 auto !important;
+  }
+  .UI2 #messageFocus .focus-workspace > .focus-paper {
+    align-content: flex-start !important;
+  }
+  .UI2 #messageFocus .focus-workspace {
+    grid-template-columns: minmax(360px, 400px) 120px minmax(280px, 360px) !important;
+    justify-content: start !important;
+    column-gap: 16px;
+  }
+  .UI2 #messageFocus .focus-workspace > .focus-paper {
+    grid-column: 1 !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding-top: 0 !important;
+  }
+  .UI2 #messageFocus .focus-workspace > .focus-rail {
+    grid-column: 2 !important;
+  }
+  .UI2 #messageFocus .focus-workspace > .send {
+    grid-column: 3 !important;
+    width: 100% !important;
+    max-width: none !important;
+    justify-self: stretch !important;
+  }
+  .UI2 #messageFocus #focusFormatted,
+  .UI2 #messageFocus #focusText {
+    width: min(340px, calc(100% - 24px)) !important;
+    max-width: 340px !important;
+    margin: 0 !important;
+    font-size: 13px !important;
+    line-height: 1.42 !important;
+    top: 12px !important;
+    left: 12px !important;
+    align-self: flex-start !important;
+  }
+}
+/* very narrow phones: the two small group buttons shrink so they never sit over the middle of the send button */
+@media (max-width: 299px) {
+  .UI2 .send-row .row-tools {
+    gap: 4px !important;
+  }
+  .UI2 .send-row .row-tools > :is(.gb-pick, .gb-timer) {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+}
+
+/* ---------- Computer: the send list is wider so group names fit on one line and the small buttons never cover them ---------- */
+@media (min-width: 900px) {
+  .UI2 .layout {
+    grid-template-columns: minmax(0, 1fr) 320px !important;
+  }
+}
+/* status circle gets a full-size touch target on phones */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='false'] {
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+}

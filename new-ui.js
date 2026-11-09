@@ -556,3 +556,169 @@
   addEventListener('popstate', paintTabs);
   addEventListener('hashchange', paintTabs);
 })();
+
+/* 8. Message reader and editor (PDF pages 10-14).
+   One bottom row: Copy, Edit (Done while editing), ⋯ and Back; Save Base, Test and Next wording live inside ⋯.
+   While editing, bold and italic show as bold and italic (no stars), with ONE small floating bar: B I ♥ Dua ×.
+   The live editor writes WhatsApp text (*bold*, _italic_) back into the real box, so saving is unchanged. */
+(() => {
+  const $ = (id) => document.getElementById(id);
+  function dock() {
+    const screen = $('messageFocus');
+    const bar = screen?.querySelector('.ui2-reader-dock');
+    const more = screen?.querySelector('.focus-rail-more');
+    if (!bar || !more || bar.dataset.ui2Row) return;
+    const panel = more.querySelector(':scope > div');
+    for (const id of ['focusNext', 'focusTest', 'focusSave']) {
+      const b = $(id);
+      if (b && panel) panel.prepend(b);
+    }
+    const sum = more.querySelector('summary');
+    sum.textContent = '⋯';
+    sum.setAttribute('aria-label', 'More: Save Base, Test, Next wording');
+    for (const id of ['focusCopy', 'focusEdit']) if ($(id)) bar.append($(id));
+    bar.append(more);
+    if ($('focusBack')) bar.append($('focusBack'));
+    const hint = document.createElement('p');
+    hint.className = 'ui2-reader-hint';
+    hint.textContent = 'Save Base · Test · Next wording live inside ⋯';
+    bar.after(hint);
+    bar.dataset.ui2Row = '1';
+  }
+
+  /* WhatsApp text <-> simple HTML for the live editor. */
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function toHtml(text) {
+    return String(text)
+      .split('\n')
+      .map((line) => {
+        let h = esc(line)
+          .replace(/(^|[^\p{L}\p{N}*])\*(\S(?:[^*\n]*\S)?)\*(?=$|[^\p{L}\p{N}*])/gu, '$1<b>$2</b>')
+          .replace(/(^|[^\p{L}\p{N}_])_(\S(?:[^_\n]*\S)?)_(?=$|[^\p{L}\p{N}_])/gu, '$1<i>$2</i>');
+        return '<div>' + (h || '<br>') + '</div>';
+      })
+      .join('');
+  }
+  function wrap(inner, mark) {
+    const lead = inner.match(/^\s*/)[0],
+      tail = inner.match(/\s*$/)[0],
+      core = inner.trim();
+    return core ? lead + mark + core + mark + tail : inner;
+  }
+  function inline(node) {
+    let out = '';
+    for (const n of node.childNodes) {
+      if (n.nodeType === 3) out += n.nodeValue.replace(/ /g, ' ');
+      else if (n.nodeName === 'BR') out += '\n';
+      else if (/^(B|STRONG)$/.test(n.nodeName)) out += wrap(inline(n), '*');
+      else if (/^(I|EM)$/.test(n.nodeName)) out += wrap(inline(n), '_');
+      else if (/^(DIV|P)$/.test(n.nodeName)) out += (out && !out.endsWith('\n') ? '\n' : '') + block(n);
+      else out += inline(n);
+    }
+    return out;
+  }
+  function block(div) {
+    const t = inline(div);
+    return t === '\n' ? '' : t.replace(/\n$/, '');
+  }
+  function toText(root) {
+    const parts = [];
+    let loose = '';
+    for (const n of root.childNodes) {
+      if (/^(DIV|P)$/.test(n.nodeName)) {
+        if (loose) parts.push(loose), (loose = '');
+        parts.push(block(n));
+      } else if (n.nodeName === 'BR') {
+        parts.push(loose);
+        loose = '';
+      } else loose += n.nodeType === 3 ? n.nodeValue : inline({ childNodes: [n] });
+    }
+    if (loose) parts.push(loose);
+    return parts.join('\n');
+  }
+
+  function live() {
+    const box = $('focusText'),
+      shown = $('focusFormatted');
+    if (!box || !shown || $('ui2Live')) return;
+    const ed = document.createElement('div');
+    ed.id = 'ui2Live';
+    ed.className = 'ui2-live';
+    ed.contentEditable = 'true';
+    ed.spellcheck = true;
+    ed.setAttribute('role', 'textbox');
+    ed.setAttribute('aria-multiline', 'true');
+    ed.setAttribute('aria-label', 'Edit WhatsApp message');
+    ed.hidden = true;
+    box.after(ed);
+    const tools = document.createElement('div');
+    tools.className = 'ui2-float';
+    tools.id = 'ui2Float';
+    tools.setAttribute('role', 'toolbar');
+    tools.setAttribute('aria-label', 'Text style');
+    tools.hidden = true;
+    tools.innerHTML =
+      '<button type="button" data-cmd="bold" aria-label="Bold"><b>B</b></button>' +
+      '<button type="button" data-cmd="italic" aria-label="Italic"><i>I</i></button>' +
+      '<button type="button" data-ins="💔" aria-label="Heart">♥</button>' +
+      '<button type="button" data-ins="🤲" aria-label="Dua">Dua</button>' +
+      '<button type="button" data-done aria-label="Done editing">×</button>';
+    ed.before(tools);
+    let pushing = false;
+    const push = () => {
+      const text = toText(ed);
+      if (box.value === text) return;
+      box.value = text;
+      pushing = true;
+      box.dispatchEvent(new Event('input', { bubbles: true }));
+      pushing = false;
+    };
+    ed.addEventListener('input', push);
+    ed.addEventListener('paste', (e) => {
+      e.preventDefault();
+      document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+    });
+    tools.addEventListener('mousedown', (e) => e.preventDefault());
+    tools.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.hasAttribute('data-done')) {
+        push();
+        $('focusEdit')?.click();
+        return;
+      }
+      ed.focus();
+      if (b.dataset.cmd) document.execCommand(b.dataset.cmd);
+      else document.execCommand('insertText', false, b.dataset.ins);
+      push();
+    });
+    /* Follow the real editor: when it opens, the live one takes its place. */
+    const sync = () => {
+      const on = !box.hidden;
+      if (on && ed.hidden) {
+        ed.innerHTML = toHtml(box.value);
+        ed.style.fontSize = box.style.fontSize || '';
+        ed.hidden = false;
+        tools.hidden = false;
+        box.classList.add('ui2-under');
+        ed.focus({ preventScroll: true });
+      } else if (!on && !ed.hidden) {
+        ed.hidden = true;
+        tools.hidden = true;
+        box.classList.remove('ui2-under');
+      }
+    };
+    new MutationObserver(sync).observe(box, { attributes: true, attributeFilter: ['hidden'] });
+    /* Text put into the real box by other buttons (new style, undo) shows up in the live editor too. */
+    box.addEventListener('input', () => {
+      if (!ed.hidden && !pushing && toText(ed) !== box.value) ed.innerHTML = toHtml(box.value);
+    });
+    sync();
+  }
+  const run = () => {
+    dock();
+    live();
+  };
+  run();
+  new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
+})();

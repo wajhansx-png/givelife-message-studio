@@ -1699,3 +1699,236 @@
   border-color: #f0aa28;
   color: #f0c46a;
 }
+
+/* ======================= Reader and editor (PDF pages 10-14) ======================= */
+.UI2 #messageFocus .ui2-reader-actions,
+.UI2 #messageFocus .focus-paper > :is(.focus-next-arrow, .focus-gen-icon),
+.UI2 #messageFocus .focus-rail > :is([data-mark], [data-emoji]),
+.UI2 #messageFocus .focus-workspace > :is(.group-send, .dm-send),
+.UI2 #messageFocus #focusText.ui2-under {
+  display: none !important;
+}
+.UI2 #messageFocus #focusState.sr-only {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  clip: auto !important;
+  overflow: hidden;
+  margin: 0 0 4px !important;
+  color: var(--ink-muted, #9aa1b8);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.UI2 #messageFocus .ui2-reader-dock {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 64px 1fr !important;
+  gap: 8px !important;
+  align-items: stretch;
+}
+.UI2 #messageFocus .ui2-reader-dock > :is(#focusCopy, #focusEdit, #focusBack),
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > summary {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 48px !important;
+  margin: 0 !important;
+  border-radius: 14px !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  list-style: none;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusCopy {
+  border: 0 !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusEdit {
+  border: 0 !important;
+  background: #1ea672 !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusBack,
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > summary {
+  border: 1px solid var(--line2) !important;
+  background: #263340 !important;
+  color: #dfe5ee !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more {
+  position: relative;
+  display: block !important;
+  min-width: 0;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > summary::-webkit-details-marker {
+  display: none;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 40;
+  display: grid;
+  gap: 6px;
+  min-width: 210px;
+  padding: 8px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface, #1b1f2c);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div > * {
+  width: 100% !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+}
+.UI2 #messageFocus .ui2-reader-hint {
+  margin: 6px 0 0;
+  color: var(--ink-muted, #8a91a6);
+  font-size: 12px;
+  text-align: center;
+}
+.UI2 #messageFocus .ui2-live {
+  min-height: 240px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #006451;
+  color: #ecfff8;
+  font-size: 15px;
+  line-height: 1.45;
+  outline: 2px solid rgba(255, 255, 255, 0.25);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.UI2 #messageFocus .ui2-float {
+  position: sticky;
+  top: 6px;
+  z-index: 30;
+  display: inline-flex;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #1b1f2c;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.UI2 #messageFocus .ui2-float[hidden] {
+  display: none;
+}
+.UI2 #messageFocus .ui2-float button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #eef0f6;
+  font-size: 14px;
+  font-weight: 800;
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus .focus-workspace {
+    display: block !important;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  .UI2 #messageFocus .ui2-reader-dock {
+    position: static !important;
+    grid-template-columns: repeat(4, minmax(90px, 140px)) !important;
+    justify-content: start !important;
+    max-width: 860px;
+    margin: 12px auto 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #messageFocus .ui2-reader-hint {
+    max-width: 860px;
+    margin: 6px auto 0;
+    text-align: left;
+  }
+  .UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+    left: 0;
+    right: auto;
+  }
+  .UI2 #messageFocus .ui2-reader-dock > #focusEdit::after {
+    content: ' E';
+    margin-left: 4px;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+  .UI2 #messageFocus .ui2-reader-dock > #focusCopy::after {
+    content: ' C';
+    margin-left: 4px;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+}
+.UI2 #messageFocus .ui2-reader-dock > * {
+  grid-column: auto !important;
+  grid-row: 1 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusCopy {
+  order: 1 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusEdit {
+  order: 2 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more {
+  order: 3 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusBack {
+  order: 4 !important;
+  flex-direction: row !important;
+  gap: 4px;
+}
+.UI2 #messageFocus .ui2-reader-back {
+  display: none !important;
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus .ui2-reader-back {
+    display: inline-flex !important;
+  }
+  .UI2 #messageFocus .focus-paper,
+  .UI2 #messageFocus #focusFormatted,
+  .UI2 #messageFocus .ui2-live {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  .UI2 #messageFocus #focusFormatted {
+    min-height: 320px;
+  }
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+  grid-template-columns: 1fr !important;
+  width: min(280px, calc(100vw - 32px));
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus > header {
+    position: static !important;
+    max-width: 860px;
+    margin: 0 auto 10px !important;
+  }
+  .UI2 #messageFocus .focus-paper,
+  .UI2 #messageFocus #focusFormatted {
+    height: auto !important;
+    max-height: calc(100vh - 260px) !important;
+    overflow: auto !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus .focus-paper {
+    display: block !important;
+  }
+  .UI2 #messageFocus > header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    height: auto !important;
+  }
+  .UI2 #messageFocus > header > * {
+    position: static !important;
+  }
+}

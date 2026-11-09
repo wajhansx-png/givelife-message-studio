@@ -2125,7 +2125,7 @@
     margin-left: auto;
   }
   .UI2 #donorsPage .donor-row {
-    grid-template-columns: 32px minmax(160px, 230px) 76px 44px minmax(0, 1fr) 0 40px !important;
+    grid-template-columns: 32px minmax(160px, 230px) 76px minmax(110px, max-content) minmax(0, 1fr) 40px !important;
   }
   .UI2 #donorsPage .donor-columns {
     display: none !important;
@@ -2185,7 +2185,11 @@
   background: #1ea672 !important;
   color: #fff !important;
 }
-.UI2 #donorMessages .bank-actions > button.tool:not(.ui2-bank-back) + button.tool:not(.ui2-bank-back) {
+.UI2
+  #donorMessages
+  .bank-actions
+  > button.tool:not(.ui2-bank-back)
+  + button.tool:not(.ui2-bank-back) {
   background: #2f6fe4 !important;
   color: #fff !important;
 }
@@ -2761,4 +2765,64 @@
 .UI2.ui2-gf .tabs {
   flex-wrap: nowrap !important;
   scrollbar-width: none;
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-row .donor-identity > .donor-top-chip {
+    flex: 0 0 40px !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+}
+.UI2 .ui2-sheet {
+  top: auto !important;
+  bottom: 0 !important;
+  margin: 0 auto !important;
+  border-bottom: 0 !important;
+  box-sizing: border-box !important;
+  max-height: 100dvh;
+  overflow: auto;
+  transform: none !important;
+  translate: none !important;
+}
+.UI2 #donorMessages .bank-actions {
+  position: relative !important;
+}
+.UI2 #donorMessages .bank-actions > .ui2-bank-more {
+  position: static !important;
+}
+.UI2 #donorMessages .ui2-bank-more > div {
+  left: auto !important;
+  right: 0 !important;
+  width: min(260px, 100%) !important;
+  box-sizing: border-box;
+}
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 .ui2-status-row {
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+  }
+  .UI2 .ui2-status-row > #whatsappConnection {
+    flex: 1 1 auto !important;
+    min-width: 150px !important;
+  }
+  .UI2 .ui2-status-row > :is(#leftChip, #live) {
+    flex: 0 0 auto !important;
+    min-width: max-content !important;
+  }
+}
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 .ui2-status-row > #live {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-row > .donor-dm {
+    min-height: 40px !important;
+    height: 40px !important;
+  }
 }

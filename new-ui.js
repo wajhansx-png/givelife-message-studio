@@ -130,7 +130,8 @@
     gapRow.after(sum);
     const more = mk('details', 'ui2-speed-more');
     more.id = 'ui2SpeedMore';
-    more.innerHTML = '<summary>More options (poster, follow-up, vary gap, test DM)</summary><div></div>';
+    more.innerHTML =
+      '<summary>More options (poster, follow-up, vary gap, test DM)</summary><div></div>';
     const box = more.querySelector('div');
     for (const id of ['batchLimit', 'batchPause']) {
       const r = $(id)?.closest('.bm-row');
@@ -138,15 +139,22 @@
     }
     const custom = mk('button', 'ui2-custom-gap', 'Custom wait…');
     custom.type = 'button';
-    custom.addEventListener('click', () => picker.querySelector('.batch-gap-btn[data-gap="custom"]')?.click());
+    custom.addEventListener('click', () =>
+      picker.querySelector('.batch-gap-btn[data-gap="custom"]')?.click(),
+    );
     box.append(custom);
-    for (const id of ['batchPauseCustom', 'batchEachRow', 'batchChips', 'batchRandomRow']) if ($(id)) box.append($(id));
-    const test = [...picker.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Test DM');
+    for (const id of ['batchPauseCustom', 'batchEachRow', 'batchChips', 'batchRandomRow'])
+      if ($(id)) box.append($(id));
+    const test = [...picker.querySelectorAll('button')].find(
+      (b) => b.textContent.trim() === 'Test DM',
+    );
     if (test) box.append(test);
     sum.after(more);
+    picker.addEventListener('close', () => (more.open = false));
     for (const el of [gapRow, $('batchLimit'), $('batchPause')])
       el?.addEventListener('click', () => setTimeout(paint));
-    for (const id of ['batchLimit', 'batchPause', 'batchGap']) $(id)?.addEventListener('change', paint);
+    for (const id of ['batchLimit', 'batchPause', 'batchGap'])
+      $(id)?.addEventListener('change', paint);
   }
   function paint() {
     const per = $('batchLimit')?.value,
@@ -155,7 +163,10 @@
     const gap = gapBtn?.dataset.gap;
     for (const b of document.querySelectorAll('.ui2-speed-btn')) {
       const p = PRESETS.find((x) => x[0] === b.dataset.speed);
-      b.setAttribute('aria-pressed', String(String(p[2]) === gap && p[3] === per && p[4] === rest?.value));
+      b.setAttribute(
+        'aria-pressed',
+        String(String(p[2]) === gap && p[3] === per && p[4] === rest?.value),
+      );
     }
     const sum = $('ui2SpeedSum');
     if (sum && rest) {
@@ -269,7 +280,8 @@
     if (!more) {
       more = mk('details', 'ui2-bank-more');
       more.id = 'ui2BankMore';
-      more.innerHTML = '<summary aria-label="More: Next, Regenerate, Test, Bold, Italic, Base message">⋯</summary><div></div>';
+      more.innerHTML =
+        '<summary aria-label="More: Next, Regenerate, Test, Bold, Italic, Base message">⋯</summary><div></div>';
       box.append(more);
       document.addEventListener('pointerdown', (e) => {
         if (more.open && !more.contains(e.target)) more.open = false;
@@ -290,7 +302,9 @@
       }
       panel.append(t);
     }
-    const back = [...box.querySelectorAll('.bank-pagination button')].find((b) => /Back/.test(b.textContent));
+    const back = [...box.querySelectorAll('.bank-pagination button')].find((b) =>
+      /Back/.test(b.textContent),
+    );
     if (back) {
       box.querySelectorAll('.ui2-bank-back').forEach((o) => o !== back && o.remove());
       back.classList.add('ui2-bank-back');
@@ -426,7 +440,13 @@
   }
   function paintTabs() {
     const path = typeof Nav !== 'undefined' ? Nav.path() : '';
-    const on = path.startsWith('donors') ? 'donors' : path === 'chat' ? 'chat' : path ? '' : 'message';
+    const on = path.startsWith('donors')
+      ? 'donors'
+      : path === 'chat'
+        ? 'chat'
+        : path
+          ? ''
+          : 'message';
     for (const b of document.querySelectorAll('.ui2-tab'))
       b.setAttribute('aria-current', String(b.dataset.tab === on));
   }
@@ -465,7 +485,11 @@
       return b;
     };
     const amount = ($('leftChip')?.textContent || 'Rs.').trim().replace(/\s*left$/i, '');
-    tile(amount + ' left', 'change amount', press(() => $('leftChip')));
+    tile(
+      amount + ' left',
+      'change amount',
+      press(() => $('leftChip')),
+    );
     const pick = document.querySelector('.case-pick');
     if (pick) {
       const sel = pick.querySelector('select');
@@ -478,10 +502,26 @@
       t.append(pick);
       grid.append(t);
     }
-    tile('Reply', 'chat shortcuts', press(() => document.querySelector('.reply-open')));
-    tile('Notes', '', press(() => $('donorNotesShortcut')));
-    tile('Report', 'right-now board', press(() => document.querySelector('.report-open')));
-    tile('Settings', '', press(() => $('gear')));
+    tile(
+      'Reply',
+      'chat shortcuts',
+      press(() => document.querySelector('.reply-open')),
+    );
+    tile(
+      'Notes',
+      '',
+      press(() => $('donorNotesShortcut')),
+    );
+    tile(
+      'Report',
+      'right-now board',
+      press(() => document.querySelector('.report-open')),
+    );
+    tile(
+      'Settings',
+      '',
+      press(() => $('gear')),
+    );
     const resume = document.querySelector('.resume-open');
     if (resume) {
       const r = mk('button', 'ui2-sheet-link', 'Resume messages');
@@ -537,7 +577,8 @@
     const timers = () => [...document.querySelectorAll('.gb-timer')];
     later.addEventListener('click', () => {
       const open = panel.hidden;
-      for (const t of timers()) if ((t.getAttribute('aria-expanded') === 'true') !== open) t.click();
+      for (const t of timers())
+        if ((t.getAttribute('aria-expanded') === 'true') !== open) t.click();
       panel.hidden = !open;
       later.setAttribute('aria-expanded', String(open));
     });
@@ -586,7 +627,10 @@
       b.title = 'Write a new message: ' + label;
       b.addEventListener('click', () => {
         Nav.go('preview');
-        setTimeout(() => document.querySelector(`.focus-styles [data-style="${key}"]`)?.click(), 250);
+        setTimeout(
+          () => document.querySelector(`.focus-styles [data-style="${key}"]`)?.click(),
+          250,
+        );
       });
       styles.append(b);
     }
@@ -605,11 +649,16 @@
     addChips(chips, $('cmd'), ['Amount left…', 'Send all', 'New wording']);
     const last = () => {
       const bots = log.querySelectorAll('.e.bot');
-      const text = bots.length > 1 ? bots[bots.length - 1].textContent.trim().replace(/\s+/g, ' ') : '';
+      const text =
+        bots.length > 1 ? bots[bots.length - 1].textContent.trim().replace(/\s+/g, ' ') : '';
       reply.hidden = !text;
       reply.textContent = text.length > 150 ? text.slice(0, 149) + '…' : text;
     };
-    new MutationObserver(last).observe(log, { childList: true, subtree: true, characterData: true });
+    new MutationObserver(last).observe(log, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
     last();
   }
   function placeholder() {
@@ -678,7 +727,11 @@
   };
   run();
   relayout();
-  new MutationObserver(run).observe(document.body, { childList: true, subtree: true, characterData: true });
+  new MutationObserver(run).observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
   for (const q of ['(min-width: 900px)', '(min-width: 700px)'])
     matchMedia(q).addEventListener('change', relayout);
   addEventListener('studio-navigate', paintTabs);
@@ -741,7 +794,8 @@
       else if (n.nodeName === 'BR') out += '\n';
       else if (/^(B|STRONG)$/.test(n.nodeName)) out += wrap(inline(n), '*');
       else if (/^(I|EM)$/.test(n.nodeName)) out += wrap(inline(n), '_');
-      else if (/^(DIV|P)$/.test(n.nodeName)) out += (out && !out.endsWith('\n') ? '\n' : '') + block(n);
+      else if (/^(DIV|P)$/.test(n.nodeName))
+        out += (out && !out.endsWith('\n') ? '\n' : '') + block(n);
       else out += inline(n);
     }
     return out;
@@ -755,7 +809,7 @@
     let loose = '';
     for (const n of root.childNodes) {
       if (/^(DIV|P)$/.test(n.nodeName)) {
-        if (loose) parts.push(loose), (loose = '');
+        if (loose) (parts.push(loose), (loose = ''));
         parts.push(block(n));
       } else if (n.nodeName === 'BR') {
         parts.push(loose);
@@ -864,9 +918,16 @@
       const name = b.querySelector('.tab-name');
       if (!name) continue;
       const tab = b.dataset.tab;
-      if (tab === 'important') setText(name.querySelector('.tab-word'), wide() ? 'Important' : 'Star');
+      if (tab === 'important')
+        setText(name.querySelector('.tab-word'), wide() ? 'Important' : 'Star');
       else {
-        const t = { all: 'All', top: 'Top', donated: 'Donated', not_contacted: 'Not messaged', volunteers: 'Volunteers' }[tab];
+        const t = {
+          all: 'All',
+          top: 'Top',
+          donated: 'Donated',
+          not_contacted: 'Not messaged',
+          volunteers: 'Volunteers',
+        }[tab];
         if (t) setText(name, t);
       }
     }
@@ -912,10 +973,13 @@
       toggle = $('donorToggle'),
       prog = $('donorProgress');
     if (!bar || !dm || !toggle || !prog) return;
-    const count = document.querySelector('.donor-tabs [data-tab="important"] .tab-count')?.textContent.trim();
+    const count = document
+      .querySelector('.donor-tabs [data-tab="important"] .tab-count')
+      ?.textContent.trim();
     const n = /Important/.test(dm.textContent) && count ? count : '';
     if (dm.dataset.ui2Count !== n) dm.dataset.ui2Count = n;
-    const running = prog.dataset.active === 'true' && !prog.hidden && toggle.textContent.trim() === 'Stop DMs';
+    const running =
+      prog.dataset.active === 'true' && !prog.hidden && toggle.textContent.trim() === 'Stop DMs';
     bar.toggleAttribute('data-ui2-running', running);
     const m = (prog.querySelector(':scope > span')?.textContent || '').match(/(\d+) of (\d+) sent/);
     const sent = running && m ? m[1] + ' of ' + m[2] + ' sent' : '';
@@ -983,7 +1047,9 @@
     const heads = [...body.querySelectorAll('.ui2-set-head')];
     const tools = heads.find((h) => h.textContent === 'Tools');
     const wa = heads.find((h) => h.textContent === 'WhatsApp');
-    const posterRow = [...body.querySelectorAll(':scope > .row')].find((r) => /^Poster/.test(r.textContent.trim()));
+    const posterRow = [...body.querySelectorAll(':scope > .row')].find((r) =>
+      /^Poster/.test(r.textContent.trim()),
+    );
     if (tools && posterRow && tools.nextElementSibling !== posterRow) tools.after(posterRow);
     const ai = body.querySelector(':scope > details.advanced');
     if (ai && wa && ai.nextElementSibling !== wa) wa.before(ai);
@@ -993,19 +1059,25 @@
       if (/^Poster/.test(t)) setText(btn, 'Change');
       if (/^University group finder/.test(t)) {
         setText(btn, 'Open');
-        if (btn && btn.getAttribute('href') === '/group-finder') btn.setAttribute('href', '/new/group-finder');
+        if (btn && btn.getAttribute('href') === '/group-finder')
+          btn.setAttribute('href', '/new/group-finder');
       }
       if (/^Case plan/.test(t)) setText(btn, 'Open');
       if (/^Appearance/.test(t) && !r.querySelector('.ui2-look')) {
         const seg = [...r.querySelectorAll('button')];
         const sel = mk('select', 'ui2-look');
         sel.setAttribute('aria-label', 'Appearance');
-        for (const b of seg) sel.append(new Option(b.textContent.trim() + ' ▾', b.textContent.trim()));
+        for (const b of seg)
+          sel.append(new Option(b.textContent.trim() + ' ▾', b.textContent.trim()));
         const sync = () => {
-          const on = seg.find((b) => b.getAttribute('aria-pressed') === 'true' || b.classList.contains('on'));
+          const on = seg.find(
+            (b) => b.getAttribute('aria-pressed') === 'true' || b.classList.contains('on'),
+          );
           if (on) sel.value = on.textContent.trim();
         };
-        sel.addEventListener('change', () => seg.find((b) => b.textContent.trim() === sel.value)?.click());
+        sel.addEventListener('change', () =>
+          seg.find((b) => b.textContent.trim() === sel.value)?.click(),
+        );
         seg[0]?.parentElement.after(sel);
         sync();
         for (const b of seg) new MutationObserver(sync).observe(b, { attributes: true });
@@ -1051,7 +1123,9 @@
     if (!dl || dl.dataset.ui2) return;
     const rows = [...dl.children];
     const by = (t) => rows.find((r) => r.querySelector('dt')?.textContent.trim() === t);
-    const top = ['Edit message', 'New wording', 'Copy message', 'Show / hide message', 'Focus chat'].map(by).filter(Boolean);
+    const top = ['Edit message', 'New wording', 'Copy message', 'Show / hide message', 'Focus chat']
+      .map(by)
+      .filter(Boolean);
     const head = mk('p', 'ui2-keys-head', 'MOST USED');
     dl.before(head);
     for (const r of top) dl.append(r);
@@ -1084,7 +1158,9 @@
       line = mk('p', 'ui2-wa-line');
       d.querySelector('.connect-state')?.after(line);
     }
-    const detail = ($('waDetail')?.textContent || '').replace(/^Ready to send from/i, 'ready from').replace(/\.$/, '');
+    const detail = ($('waDetail')?.textContent || '')
+      .replace(/^Ready to send from/i, 'ready from')
+      .replace(/\.$/, '');
     setText(line, '✓ Connected · ' + (detail || 'ready'));
   }
 
@@ -1128,5 +1204,9 @@
     finder();
   };
   run();
-  new MutationObserver(run).observe(document.body, { childList: true, subtree: true, characterData: true });
+  new MutationObserver(run).observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
 })();

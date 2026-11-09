@@ -181,3 +181,20 @@ test('/new chat chips only fill the box and never send, and the chat fits every 
     }
   }
 });
+
+test('/new on a computer opens in the reader; Back returns to the chat; a phone stays on the main screen', async ({
+  page,
+}) => {
+  await open(page, '/new', 1440);
+  await expect(page.locator('#messageFocus')).toBeVisible();
+  await expect(page.locator('#btnGivelife')).toBeVisible();
+  expect(await page.evaluate(() => location.hash)).toBe('#/preview');
+  await page.locator('#focusBack').click();
+  await expect(page.locator('#messageFocus')).toBeHidden();
+  await page.waitForTimeout(900); // it must not jump back into the reader
+  expect(await page.evaluate(() => location.hash)).not.toBe('#/preview');
+  await open(page, '/new', 390);
+  await page.waitForTimeout(900);
+  await expect(page.locator('#messageFocus')).toBeHidden();
+  expect(await page.evaluate(() => location.hash)).toBe('');
+});

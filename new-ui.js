@@ -29,3 +29,11 @@
   run();
   new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
 })();
+
+/* On a computer, open straight into the message beside the send list (the reader). Back still goes to the chat. */
+(() => {
+  if (innerWidth < 900 || location.hash.replace('#', '') !== '') return;
+  const go = () => typeof Nav !== 'undefined' && Nav.go('preview');
+  if (document.readyState === 'complete') setTimeout(go, 400);
+  else addEventListener('load', () => setTimeout(go, 400));
+})();

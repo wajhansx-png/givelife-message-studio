@@ -2119,10 +2119,9 @@
     margin-left: auto;
   }
   .UI2 #donorsPage .donor-row {
-    grid-template-columns: 32px minmax(160px, 230px) 76px minmax(110px, max-content) minmax(
-        0,
-        1fr
-      ) 40px !important;
+    grid-template-columns:
+      32px minmax(160px, 230px) 76px minmax(110px, max-content) minmax(0, 1fr)
+      40px !important;
   }
   .UI2 #donorsPage .donor-columns {
     display: none !important;
@@ -2956,6 +2955,7 @@
     color: var(--ink, #eef0f6) !important;
     box-shadow: none !important;
   }
+}
 
 /* Full-screen review: compact tools, bounded inputs, and one dedicated Chat page. */
 .UI2 #main-workspace .talk {

@@ -208,6 +208,22 @@ test('nested Top route returns to its own filter', async ({ page }) => {
   await expect(page).toHaveURL(/#\/donors\/top$/);
   await expect(page.locator('.donor-tabs [data-tab=top]')).toHaveAttribute('aria-selected', 'true');
 });
+test('group finder waits for research data before enabling its actions', async ({ page }) => {
+  let release;
+  const pending = new Promise((resolve) => (release = resolve));
+  await page.route('**/api/group-finder?*', async (route) => {
+    await pending;
+    await route.continue();
+  });
+  await page.goto('/new/group-finder');
+  await expect(page.locator('#importOpen')).toBeDisabled();
+  await expect(page.locator('#targetsOpen')).toBeDisabled();
+  await expect(page.locator('#findGroups')).toBeDisabled();
+  release();
+  await expect(page.locator('#importOpen')).toBeEnabled();
+  await page.locator('#importOpen').click();
+  await expect(page.locator('#importDialog')).toBeVisible();
+});
 for (const width of [320, 390, 768, 1440]) {
   test(`secondary screens and menus fit at ${width}px`, async ({ page, request }) => {
     await page.setViewportSize({ width, height: width === 320 ? 568 : 900 });

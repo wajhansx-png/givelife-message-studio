@@ -111,3 +111,27 @@ test('case writing endpoints require the studio access key', async ({ request })
     ).status(),
   ).toBe(401);
 });
+
+for (const [width, height] of [
+  [568, 320],
+  [667, 375],
+]) {
+  test(`case writer controls remain reachable in landscape ${width}x${height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
+    await page.goto('/new#/donors/messages');
+    await page.getByRole('button', { name: 'Write Case', exact: true }).click();
+    await page
+      .getByLabel('Case details', { exact: true })
+      .fill('A family needs help repaying a loan.');
+    await page.locator('#caseWriterGenerate').click();
+    await expect(page.locator('#caseWriterMessage')).not.toHaveValue('');
+    const workspace = await page.locator('.case-writer-workspace').boundingBox();
+    const footer = await page.locator('#caseWriterDialog footer').boundingBox();
+    expect(footer.y).toBeGreaterThanOrEqual(workspace.y + workspace.height);
+    await page.getByRole('button', { name: 'Use message', exact: true }).click();
+    await expect(page.locator('#caseWriterDialog')).toBeHidden();
+  });
+}

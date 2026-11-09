@@ -3,10 +3,10 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#141b1d"><title>Group finder · GiveLife</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/group-finder.css"></head>
 <body>
 <a class="skip" href="#results">Skip to groups</a>
-<header class="top"><a class="back" href="/">← Back</a><div><h1>Group finder</h1></div><button type="button" id="targetsOpen">Universities</button></header>
+<header class="top"><a class="back" href="/">← Back</a><div><h1>Group finder</h1></div><button type="button" id="targetsOpen" disabled>Universities</button></header>
 <main>
  <section class="activity" aria-label="Research status"><div><strong id="researchPhase">Loading research…</strong><span id="researchProgress">Your saved results will appear here.</span></div><button type="button" id="stopResearch" class="danger" hidden>Stop research</button></section>
- <div class="toolbar"><label class="search"><span class="sr">Search researched groups</span><input type="search" name="search" id="search" placeholder="Search university or group…" autocomplete="off"></label><button type="button" id="importOpen">Import links</button><button type="button" class="primary" id="findGroups">Find groups</button></div>
+ <div class="toolbar"><label class="search"><span class="sr">Search researched groups</span><input type="search" name="search" id="search" placeholder="Search university or group…" autocomplete="off"></label><button type="button" id="importOpen" disabled>Import links</button><button type="button" class="primary" id="findGroups" disabled>Find groups</button></div>
  <nav class="tabs" aria-label="Research filters"><button type="button" data-tab="all" aria-pressed="true">All <span id="count-all">0</span></button><button type="button" data-tab="ready" aria-pressed="false">Ready <span id="count-ready">0</span></button><button type="button" data-tab="needs_verification" aria-pressed="false">Needs checks <span id="count-needs_verification">0</span></button><button type="button" data-tab="blocked" aria-pressed="false">Blocked <span id="count-blocked">0</span></button></nav>
  <p id="feedback" class="feedback" role="status" aria-live="polite" aria-atomic="true"></p>
  <section id="results" aria-label="Researched groups" tabindex="-1"><div id="groupRows"></div><div id="empty" class="empty" hidden><h2>No groups researched yet</h2><p>Choose universities, then find public group links.</p></div></section>

@@ -295,6 +295,8 @@
         !data || JSON.stringify(data.universities) !== JSON.stringify(next.universities);
       data = next;
       render();
+      $('targetsOpen').disabled = false;
+      $('importOpen').disabled = false;
       if (uniChanged) renderUniversities();
     } catch (error) {
       feedback(error.message, true);

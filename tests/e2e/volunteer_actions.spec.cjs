@@ -19,6 +19,8 @@ for (const width of [1440, 1024, 768, 390, 320]) {
     await page.goto('/#/donors/volunteers');
     await expect(page.locator('.vol-heading')).toContainText('Volunteers');
     await expect(page.locator('.donor-head')).toBeHidden();
+    await expect(page.getByRole('tablist', { name: 'Donor filters' })).toBeVisible();
+    await expect(page.locator('[data-tab="volunteers"]')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('.donor-bottom')).toBeHidden();
     await expect(page.getByRole('button', { name: 'Stop DMs', exact: true })).toBeHidden();
     const row = page.locator('.vol-row').filter({ hasText: name });
@@ -132,8 +134,12 @@ test('empty page, add volunteer and save a share message on a small phone', asyn
   await page.reload();
   await expect(page.locator('#volMessage')).toHaveValue('Please share this update, {name}.');
   await expect(page.locator('.donor-bottom')).toBeHidden();
-  await page.getByRole('button', { name: 'Back to main screen', exact: true }).click();
-  await expect(page.locator('#donorsPage')).not.toBeVisible();
+  await page.locator('.vol-back').click();
+  await expect(page.locator('#donorsPage')).toBeVisible();
+  await expect(page.getByRole('tablist', { name: 'Donor filters' })).toBeVisible();
+  await expect(page.locator('#donorsPage')).toHaveAttribute('data-panel', 'all');
+  await page.locator('[data-tab="volunteers"]').click();
+  await expect(page.locator('#volMessage')).toHaveValue('Please share this update, {name}.');
 });
 
 test('delivery refresh keeps the message draft and caret without a poster checkbox', async ({

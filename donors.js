@@ -2661,8 +2661,8 @@
     pause.onclick = () => volAct({ action: 'stop' }, 'Pausing…');
     const back = make('button', 'tool vol-back', '← Back');
     back.type = 'button';
-    back.setAttribute('aria-label', 'Back to main screen');
-    back.onclick = close;
+    back.setAttribute('aria-label', 'Back to donors');
+    back.onclick = () => selectDonorTab('all');
     foot.append(addPanel, all, pause, back);
     const workspace = make('div', 'vol-workspace');
     workspace.append(msg, people);

@@ -313,7 +313,20 @@ html body #donorsPage[data-panel='volunteers'] {
 html
   body:not(#a):not(#b):not(#c)
   #donorsPage#donorsPage:not(#d)[data-panel='volunteers']
-  :is(.donor-head, .donor-toolbar, .donor-bottom, #donorResumeStatus, #donorProgressShow) {
+  :is(.donor-head, .donor-bottom, #donorResumeStatus, #donorProgressShow) {
+  display: none !important;
+}
+html
+  body:not(#a):not(#b):not(#c)
+  #donorsPage#donorsPage:not(#d)[data-panel='volunteers']
+  .donor-toolbar {
+  display: flex !important;
+  flex: none;
+}
+html
+  body:not(#a):not(#b):not(#c)
+  #donorsPage#donorsPage:not(#d)[data-panel='volunteers']
+  #donorSearch {
   display: none !important;
 }
 html body #donorsPage#donorsPage .donor-volunteers {

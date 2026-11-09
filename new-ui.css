@@ -3384,3 +3384,62 @@
     max-height: calc(100vh - 200px) !important;
   }
 }
+
+/* ======================= Smoothness ======================= */
+/* Long donor lists: rows off screen are skipped until scrolled to (much faster tab changes) */
+.UI2 #donorsPage .donor-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56px;
+}
+/* Taps answer at once: no double-tap zoom delay, no grey flash, a soft press */
+.UI2 :is(button, summary, [role='tab'], [role='button'], a, label, select) {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.UI2 :is(button, summary, [role='tab'], .ui2-tile, .ui2-chip):active {
+  transform: scale(0.97);
+  filter: brightness(1.12);
+}
+.UI2 :is(button, summary, [role='tab'], .ui2-tile, .ui2-chip) {
+  transition:
+    transform 0.08s ease,
+    filter 0.08s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Screens slide up softly instead of popping; lists fade in when the tab changes */
+  .UI2 dialog[open]:not(.ui2-sheet) {
+    animation: ui2-in 0.16s ease-out;
+  }
+  .UI2 .ui2-sheet[open] {
+    animation: ui2-up 0.2s ease-out;
+  }
+  .UI2 dialog[open]::backdrop {
+    animation: ui2-fade 0.16s ease-out;
+  }
+  .UI2 #messageFocus:not([hidden]),
+  .UI2 #donorsPage :is(#donorRows, #donorMessages:not([hidden]), #donorVolunteers:not([hidden])) {
+    animation: ui2-fade 0.14s ease-out;
+  }
+  .UI2 details[open] > :is(.ui2-options-panel, .compact-nav-panel, div):not(summary) {
+    animation: ui2-in 0.12s ease-out;
+  }
+}
+@keyframes ui2-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+@keyframes ui2-up {
+  from {
+    translate: 0 100%;
+  }
+}
+@keyframes ui2-fade {
+  from {
+    opacity: 0;
+  }
+}

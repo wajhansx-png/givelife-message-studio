@@ -2387,16 +2387,6 @@
       notice(e.message, true);
     }
   }
-  function volState(d) {
-    const s = d.delivery;
-    return d.dm_sent || s === 'Sent'
-      ? 'DM sent'
-      : s === 'Uncertain'
-        ? 'Check'
-        : s === 'Sending' || s === 'Requesting'
-          ? 'Sending…'
-          : 'DM';
-  }
   async function volAct(body, okText) {
     try {
       const r = await api('/volunteers', body);
@@ -2502,28 +2492,36 @@
       const row = make('div', 'vol-row');
       row.setAttribute('role', 'listitem');
       row.dataset.volId = d.id;
-      const sent = volState(d) === 'DM sent';
-      row.dataset.sent = String(sent);
       const nameEl = make('div', 'vol-name', i + 1 + '. ' + d.name);
-      const dm = make('button', 'tool vol-dm', volState(d));
-      dm.type = 'button';
-      dm.setAttribute('aria-label', 'Send the volunteer message to ' + d.name);
-      dm.onclick = () => {
-        if (!vols.message.trim()) {
+      const dmCase = make('button', 'tool vol-case', 'DM Case');
+      const dmShare = make('button', 'tool vol-share', 'DM Share');
+      dmCase.type = dmShare.type = 'button';
+      dmCase.setAttribute('aria-label', 'DM Case to ' + d.name);
+      dmShare.setAttribute('aria-label', 'DM Share to ' + d.name);
+      dmCase.title = 'Send the current case details to ' + d.name;
+      dmShare.title = 'Send the Message to Volunteers text to ' + d.name;
+      const sendVolunteer = async (action) => {
+        const text = el('donorVolunteers').querySelector('#volMessage').value;
+        if (action === 'send_one' && !text.trim()) {
           notice('Write the message for volunteers first (the box below).', true);
           el('donorVolunteers').querySelector('#volMessage')?.focus();
           return;
         }
-        volAct(
+        dmCase.disabled = dmShare.disabled = true;
+        await volAct(
           {
-            action: 'send_one',
+            action,
             id: d.id,
+            ...(action === 'send_one' ? { text } : {}),
             request_id: 'v' + crypto.randomUUID().replace(/-/g, ''),
             poster: el('volPoster').checked,
           },
           'Sending to ' + d.name + '…',
         );
+        dmCase.disabled = dmShare.disabled = false;
       };
+      dmCase.onclick = () => sendVolunteer('send_case');
+      dmShare.onclick = () => sendVolunteer('send_one');
       const more = make('details', 'donor-more');
       const summary = make('summary', '', '···');
       summary.setAttribute('aria-label', 'Manage ' + d.name);
@@ -2553,7 +2551,7 @@
         if (more.open) buildMenu();
       };
       more.append(summary);
-      row.append(nameEl, dm, more);
+      row.append(nameEl, dmCase, dmShare, more);
       list.append(row);
     });
     const msg = make('div', 'vol-msg');

@@ -7590,7 +7590,7 @@ html body :is(button, summary, [role='tab'], a):focus-visible {
 }
 .vol-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 80px 36px;
+  grid-template-columns: minmax(0, 1fr) repeat(2, 76px) 36px;
   align-items: center;
   gap: 8px;
   padding: 0 10px;
@@ -7617,9 +7617,6 @@ html body :is(button, summary, [role='tab'], a):focus-visible {
 }
 .vol-row .donor-more > summary {
   min-height: 32px;
-}
-.vol-row[data-sent='true'] .vol-dm {
-  color: var(--ok-ink, #4ade80) !important;
 }
 .vol-msg {
   display: flex;
@@ -7676,7 +7673,7 @@ html body :is(button, summary, [role='tab'], a):focus-visible {
     grid-column: 1 / -1;
   }
   .vol-row {
-    grid-template-columns: minmax(0, 1fr) 72px 36px;
+    grid-template-columns: minmax(0, 1fr) repeat(2, 66px) 32px;
   }
   .vol-foot {
     flex-wrap: wrap;

@@ -2699,7 +2699,7 @@ html body #donorsPage .donor-table-wrap > #donorExpand {
     min-height: 44px;
   }
   html body #donorsPage .vol-row {
-    grid-template-columns: minmax(0, 1fr) 74px 44px;
+    grid-template-columns: minmax(0, 1fr) repeat(2, 66px) 36px;
     min-height: 52px;
     padding: 4px 6px;
     gap: 6px;

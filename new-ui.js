@@ -333,8 +333,8 @@
       [rowOf('waOut'), 'WhatsApp'],
     ];
     for (const [row, name] of spots) if (row) row.before(mk(name));
-    help(document.getElementById('swDm'), 'Auto may send DMs by itself while it is on.');
-    help(document.getElementById('swNew'), 'Auto also DMs people who are new.');
+    help(document.getElementById('swDm'), 'Turn on only when you want the app to DM by itself');
+    help(document.getElementById('swNew'), 'New donors get a DM automatically');
   }
   new MutationObserver(group).observe(document.body, { childList: true, subtree: true });
   group();
@@ -935,4 +935,198 @@
     attributeFilter: ['data-active', 'hidden'],
   });
   addEventListener('resize', run);
+})();
+
+/* 10. Chat, Notes, Settings, Report, Keyboard shortcuts, WhatsApp and Group finder (PDF pages 26-32). */
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const setText = (n, t) => n && n.textContent !== t && (n.textContent = t);
+  const mk = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+
+  /* Notes: Lock and Full always at the top; Checklist, List, Red, B, I in one bar above the keyboard. */
+  function notes() {
+    const tools = $('notesTools'),
+      ed = $('notesEditor');
+    if (!tools || !ed) return;
+    setText($('notesFullscreen'), 'Full');
+    for (const b of tools.querySelectorAll('button')) {
+      if (b.textContent.trim() === 'Checklist') setText(b, '☑ Checklist');
+      if (b.textContent.trim() === 'Bullets') setText(b, '• List');
+    }
+    if (tools.querySelector('.ui2-note-b')) return;
+    for (const [cmd, label, cls] of [
+      ['bold', 'B', 'ui2-note-b'],
+      ['italic', 'I', 'ui2-note-i'],
+    ]) {
+      const b = mk('button', cls, label);
+      b.type = 'button';
+      b.setAttribute('aria-label', cmd === 'bold' ? 'Bold' : 'Italic');
+      b.addEventListener('mousedown', (e) => e.preventDefault());
+      b.addEventListener('click', () => {
+        ed.focus();
+        document.execCommand(cmd);
+        ed.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      tools.append(b);
+    }
+  }
+
+  /* Settings: Look / Sending safety / Tools / WhatsApp, Appearance as one choice, neutral Done at the bottom. */
+  function settings() {
+    const body = document.querySelector('#set .body');
+    if (!body || !body.querySelector('.ui2-set-head')) return;
+    const heads = [...body.querySelectorAll('.ui2-set-head')];
+    const tools = heads.find((h) => h.textContent === 'Tools');
+    const wa = heads.find((h) => h.textContent === 'WhatsApp');
+    const posterRow = [...body.querySelectorAll(':scope > .row')].find((r) => /^Poster/.test(r.textContent.trim()));
+    if (tools && posterRow && tools.nextElementSibling !== posterRow) tools.after(posterRow);
+    const ai = body.querySelector(':scope > details.advanced');
+    if (ai && wa && ai.nextElementSibling !== wa) wa.before(ai);
+    for (const r of body.querySelectorAll(':scope > .row')) {
+      const t = r.textContent.trim();
+      const btn = r.querySelector('button, a');
+      if (/^Poster/.test(t)) setText(btn, 'Change');
+      if (/^University group finder/.test(t)) {
+        setText(btn, 'Open');
+        if (btn && btn.getAttribute('href') === '/group-finder') btn.setAttribute('href', '/new/group-finder');
+      }
+      if (/^Case plan/.test(t)) setText(btn, 'Open');
+      if (/^Appearance/.test(t) && !r.querySelector('.ui2-look')) {
+        const seg = [...r.querySelectorAll('button')];
+        const sel = mk('select', 'ui2-look');
+        sel.setAttribute('aria-label', 'Appearance');
+        for (const b of seg) sel.append(new Option(b.textContent.trim() + ' ▾', b.textContent.trim()));
+        const sync = () => {
+          const on = seg.find((b) => b.getAttribute('aria-pressed') === 'true' || b.classList.contains('on'));
+          if (on) sel.value = on.textContent.trim();
+        };
+        sel.addEventListener('change', () => seg.find((b) => b.textContent.trim() === sel.value)?.click());
+        seg[0]?.parentElement.after(sel);
+        sync();
+        for (const b of seg) new MutationObserver(sync).observe(b, { attributes: true });
+      }
+    }
+    const done = $('setCloseBottom');
+    if (done) {
+      setText(done, 'Done');
+      done.classList.add('ui2-done');
+    }
+  }
+
+  /* Report: Right now first, then the three Auto rows: name, "6 groups · 0 sent", ON/OFF. Tap a name for its settings. */
+  function report() {
+    for (const card of document.querySelectorAll('.auto-card')) {
+      const dl = card.querySelector('.auto-stats');
+      if (!dl) continue;
+      const dt = [...dl.querySelectorAll('dt')].map((x) => x.textContent.trim());
+      const dd = [...dl.querySelectorAll('dd')].map((x) => x.textContent.trim());
+      const i = dt.indexOf('sent');
+      const line = (dd[0] || '0') + ' ' + (dt[0] || '') + ' · ' + (i >= 0 ? dd[i] : '0') + ' sent';
+      let sub = card.querySelector('.ui2-auto-sub');
+      if (!sub) {
+        sub = mk('small', 'ui2-auto-sub');
+        card.querySelector('.auto-head h4')?.after(sub);
+        const h = card.querySelector('.auto-head h4');
+        const edit = card.querySelector('.auto-edit');
+        if (h && edit) {
+          h.tabIndex = 0;
+          h.setAttribute('role', 'button');
+          h.title = 'Edit settings';
+          h.addEventListener('click', () => edit.click());
+          h.addEventListener('keydown', (e) => e.key === 'Enter' && edit.click());
+        }
+      }
+      setText(sub, line);
+    }
+  }
+
+  /* Keyboard shortcuts: the five used every day first, the rest folded. */
+  function keys() {
+    const dl = document.querySelector('#keyboardDialog dl');
+    if (!dl || dl.dataset.ui2) return;
+    const rows = [...dl.children];
+    const by = (t) => rows.find((r) => r.querySelector('dt')?.textContent.trim() === t);
+    const top = ['Edit message', 'New wording', 'Copy message', 'Show / hide message', 'Focus chat'].map(by).filter(Boolean);
+    const head = mk('p', 'ui2-keys-head', 'MOST USED');
+    dl.before(head);
+    for (const r of top) dl.append(r);
+    const rest = rows.filter((r) => !top.includes(r));
+    const more = mk('details', 'ui2-keys-more');
+    more.innerHTML = '<summary>All shortcuts (group / DM, send, scroll, close)</summary>';
+    const dl2 = mk('dl');
+    for (const r of rest) dl2.append(r);
+    more.append(dl2);
+    dl.after(more);
+    for (const r of top) {
+      const kbd = r.querySelector('dd kbd');
+      if (kbd && r.querySelector('dt').textContent.trim() === 'Focus chat') {
+        r.querySelector('dd').replaceChildren(kbd);
+      }
+    }
+    dl.dataset.ui2 = '1';
+  }
+
+  /* WhatsApp: one short green line when connected; the full steps only when something is wrong. */
+  function whatsapp() {
+    const d = $('whatsappDialog'),
+      h = $('waHeading');
+    if (!d || !h) return;
+    setText(d.querySelector('h2'), 'WhatsApp');
+    const ok = /is connected/i.test(h.textContent);
+    d.toggleAttribute('data-ui2-ok', ok);
+    let line = d.querySelector('.ui2-wa-line');
+    if (!line) {
+      line = mk('p', 'ui2-wa-line');
+      d.querySelector('.connect-state')?.after(line);
+    }
+    const detail = ($('waDetail')?.textContent || '').replace(/^Ready to send from/i, 'ready from').replace(/\.$/, '');
+    setText(line, '✓ Connected · ' + (detail || 'ready'));
+  }
+
+  /* Chat: the old bottom Back goes (the top Back stays), chips sit above the box. */
+  function chat() {
+    const ret = document.querySelector('#hist .chat-return');
+    if (ret) ret.classList.add('ui2-chat-return');
+  }
+
+  /* Group finder: Back returns to /new, and the main actions sit in a bottom bar. */
+  function finder() {
+    if (!document.body.classList.contains('ui2-gf')) return;
+    const back = document.querySelector('header.top a.back');
+    if (back && back.getAttribute('href') === '/') back.setAttribute('href', '/new');
+    if ($('ui2GfBar')) return;
+    const imp = $('importOpen'),
+      find = $('findGroups');
+    if (!imp || !find || !back) return;
+    const bar = mk('nav', 'ui2-gf-bar');
+    bar.id = 'ui2GfBar';
+    bar.setAttribute('aria-label', 'Group finder actions');
+    const b = mk('a', 'ui2-gf-back', '←');
+    b.href = '/new';
+    b.setAttribute('aria-label', 'Back');
+    bar.append(b, imp, find);
+    document.body.append(bar);
+    const empty = $('empty');
+    if (empty && !empty.querySelector('.ui2-gf-tip')) {
+      const tip = mk('p', 'ui2-gf-tip', 'Tap Find groups below to start.');
+      empty.append(tip);
+    }
+  }
+
+  const run = () => {
+    notes();
+    settings();
+    report();
+    keys();
+    whatsapp();
+    chat();
+    finder();
+  };
+  run();
+  new MutationObserver(run).observe(document.body, { childList: true, subtree: true, characterData: true });
 })();

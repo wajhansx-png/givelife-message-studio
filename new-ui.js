@@ -69,28 +69,119 @@
 /* 1. The home screen itself now shows the message beside the send list on a computer (see "Home" below),
    so it no longer jumps into the full-screen reader. */
 
-/* 2. DM speed dialog: plain words. Every option stays visible. */
+/* 2. DM speed dialog (PDF page 24, V4 page 21): How fast? Slow / Normal / Fast, the four wait times, one summary
+   line, and everything else folded under "More options (poster, follow-up, vary gap, test DM)".
+   Every choice still sets the dialog's own fields, so saving and sending are unchanged. */
 (() => {
   const LABELS = {
     batchCount: 'How many people',
     batchLimit: 'DMs in each batch',
     batchPause: 'Rest between batches',
   };
+  const PRESETS = [
+    ['slow', 'Slow', 8, '10', '30'],
+    ['normal', 'Normal', 4, '20', '20'],
+    ['fast', 'Fast', 2, '20', '20'],
+  ];
+  const $ = (id) => document.getElementById(id);
+  const mk = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  const set = (sel, v) => {
+    if (!sel || sel.value === v) return;
+    sel.value = v;
+    sel.dispatchEvent(new Event('input', { bubbles: true }));
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  function build(picker) {
+    const form = $('donorBatchForm'),
+      gapRow = picker.querySelector('.bm-gap');
+    if (!form || !gapRow || $('ui2Speed')) return;
+    const close = mk('button', 'ui2-x', '×');
+    close.type = 'button';
+    close.setAttribute('aria-label', 'Close');
+    close.addEventListener('click', () => $('batchCancel')?.click());
+    picker.prepend(close);
+    const speed = mk('div', 'bm-row ui2-speed');
+    speed.id = 'ui2Speed';
+    speed.append(mk('label', '', 'How fast?'));
+    const row = mk('div', 'ui2-speed-row');
+    row.setAttribute('role', 'group');
+    row.setAttribute('aria-label', 'How fast');
+    for (const [key, label, gap, per, rest] of PRESETS) {
+      const b = mk('button', 'ui2-speed-btn', label);
+      b.type = 'button';
+      b.dataset.speed = key;
+      b.addEventListener('click', () => {
+        picker.querySelector(`.batch-gap-btn[data-gap="${gap}"]`)?.click();
+        set($('batchLimit'), per);
+        set($('batchPause'), rest);
+        paint();
+      });
+      row.append(b);
+    }
+    speed.append(row);
+    gapRow.before(speed);
+    const sum = mk('p', 'ui2-speed-sum');
+    sum.id = 'ui2SpeedSum';
+    gapRow.after(sum);
+    const more = mk('details', 'ui2-speed-more');
+    more.id = 'ui2SpeedMore';
+    more.innerHTML = '<summary>More options (poster, follow-up, vary gap, test DM)</summary><div></div>';
+    const box = more.querySelector('div');
+    for (const id of ['batchLimit', 'batchPause']) {
+      const r = $(id)?.closest('.bm-row');
+      if (r) box.append(r);
+    }
+    const custom = mk('button', 'ui2-custom-gap', 'Custom wait…');
+    custom.type = 'button';
+    custom.addEventListener('click', () => picker.querySelector('.batch-gap-btn[data-gap="custom"]')?.click());
+    box.append(custom);
+    for (const id of ['batchPauseCustom', 'batchEachRow', 'batchChips', 'batchRandomRow']) if ($(id)) box.append($(id));
+    const test = [...picker.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Test DM');
+    if (test) box.append(test);
+    sum.after(more);
+    for (const el of [gapRow, $('batchLimit'), $('batchPause')])
+      el?.addEventListener('click', () => setTimeout(paint));
+    for (const id of ['batchLimit', 'batchPause', 'batchGap']) $(id)?.addEventListener('change', paint);
+  }
+  function paint() {
+    const per = $('batchLimit')?.value,
+      rest = $('batchPause'),
+      gapBtn = document.querySelector('#donorBatchPicker .batch-gap-btn[aria-pressed="true"]');
+    const gap = gapBtn?.dataset.gap;
+    for (const b of document.querySelectorAll('.ui2-speed-btn')) {
+      const p = PRESETS.find((x) => x[0] === b.dataset.speed);
+      b.setAttribute('aria-pressed', String(String(p[2]) === gap && p[3] === per && p[4] === rest?.value));
+    }
+    const sum = $('ui2SpeedSum');
+    if (sum && rest) {
+      const restText = rest.selectedOptions[0]?.textContent || '';
+      const text = per + ' per batch, then rest ' + restText.replace(/…$/, '');
+      if (sum.textContent !== text) sum.textContent = text;
+    }
+  }
   function relabel() {
-    const picker = document.getElementById('donorBatchPicker');
+    const picker = $('donorBatchPicker');
     if (!picker) return;
+    build(picker);
     for (const [id, text] of Object.entries(LABELS)) {
       const l = picker.querySelector('label[for="' + id + '"]');
       if (l && l.textContent !== text) l.textContent = text;
     }
-    const start = document.getElementById('batchStart');
+    const start = $('batchStart');
     const title = picker.querySelector('h2');
-    const speedOnly = start && start.textContent === 'Save gap';
-    if (speedOnly) start.textContent = 'Save speed';
+    if (start && start.textContent === 'Save gap') start.textContent = 'Save speed';
+    const speedOnly = start && start.textContent === 'Save speed';
     if (title) {
-      const want = start && start.textContent === 'Save speed' ? 'DM speed' : 'Send DMs';
+      const want = speedOnly ? 'DM speed' : 'Send DMs';
       if (title.textContent !== want) title.textContent = want;
     }
+    picker.toggleAttribute('data-ui2-speed-only', !!speedOnly);
+    paint();
   }
   new MutationObserver(relabel).observe(document.body, {
     childList: true,
@@ -100,12 +191,14 @@
   relabel();
 })();
 
-/* 3. Computer: Gap, Test DM, Auto and Poster move into one Options menu (left); Back stays on the right. */
+/* 3. Computer: Back (left), DM ★ Important (middle), Options (right) holding Gap, Test DM, Auto, Poster and
+   "Send with follow-up" (V4 page 40). Below 900px the controls go back where they were. */
 (() => {
   const wide = matchMedia('(min-width: 900px)');
   const IDS = ['donorPace', 'donorTest'];
   const LABELS = ['donorAuto', 'donorRowPoster'];
   let moved = [];
+  let follow = null;
   function nodes(bar) {
     const out = IDS.map((id) => document.getElementById(id));
     for (const id of LABELS) out.push(document.querySelector('label[for="' + id + '"]'));
@@ -117,18 +210,28 @@
     box.id = 'ui2Options';
     box.className = 'ui2-options';
     box.innerHTML =
-      '<summary aria-label="Options">Options</summary><div class="ui2-options-panel"></div>';
+      '<summary aria-label="Options">Options ▾</summary><div class="ui2-options-panel"></div>';
     const panel = box.querySelector('div');
     moved = nodes(bar).map((n) => [n, [...bar.children].indexOf(n)]);
     for (const [n] of moved) panel.append(n);
-    bar.prepend(box);
+    const fu = document.getElementById('donorFollowUpOpt');
+    if (fu) {
+      follow = [fu, fu.parentElement, fu.nextSibling];
+      panel.append(fu);
+    }
+    bar.append(box);
     box.addEventListener('keydown', (e) => e.key === 'Escape' && (box.open = false));
+    document.addEventListener('pointerdown', (e) => {
+      if (box.open && !box.contains(e.target)) box.open = false;
+    });
   }
   function restore(bar) {
     const box = document.getElementById('ui2Options');
     if (!box) return;
     for (const [n, i] of moved.sort((a, b) => a[1] - b[1]))
       bar.insertBefore(n, bar.children[i] || null);
+    if (follow) follow[1].insertBefore(follow[0], follow[2]);
+    follow = null;
     box.remove();
     moved = [];
   }
@@ -143,33 +246,59 @@
   sync();
 })();
 
-/* 4. Phone: big Regenerate and Next buttons on the DM messages page. They press the real round buttons. */
+/* 4. DM messages page (PDF page 25): one row Edit, Copy, ⋯, Back. Next, Regenerate, Test, Bold, Italic and
+   Base message live inside ⋯ and press the real buttons. */
 (() => {
-  const press = (sel) => () => document.querySelector(sel)?.click();
-  function big(id, label, sel) {
-    const b = document.createElement('button');
+  const mk = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  function proxy(label, sel) {
+    const b = mk('button', 'tool ui2-proxy', label);
     b.type = 'button';
-    b.id = id;
-    b.className = 'ui2-big';
-    b.textContent = label;
-    b.addEventListener('click', press(sel));
+    b.dataset.ui2Proxy = sel;
+    b.addEventListener('click', () => document.querySelector(sel)?.click());
     return b;
   }
   function bank() {
     const box = document.querySelector('#donorMessages .bank-actions');
-    if (
-      !box ||
-      box.querySelector('#ui2BankNext') ||
-      !document.querySelector('#donorMessages .bank-next-arrow')
-    )
-      return;
-    box.prepend(big('ui2BankNext', 'Next ›', '#donorMessages .bank-next-arrow'));
-    box.prepend(big('ui2BankGen', '↻ Regenerate', '#donorMessages .bank-gen-icon'));
-    for (const t of box.querySelectorAll('button.tool')) {
+    if (!box) return;
+    let more = box.querySelector('#ui2BankMore');
+    if (!more) {
+      more = mk('details', 'ui2-bank-more');
+      more.id = 'ui2BankMore';
+      more.innerHTML = '<summary aria-label="More: Next, Regenerate, Test, Bold, Italic, Base message">⋯</summary><div></div>';
+      box.append(more);
+      document.addEventListener('pointerdown', (e) => {
+        if (more.open && !more.contains(e.target)) more.open = false;
+      });
+    }
+    const panel = more.querySelector(':scope > div');
+    if (!panel.querySelector('[data-ui2-proxy]')) {
+      if (document.querySelector('#donorMessages .bank-next-arrow'))
+        panel.append(proxy('Next ›', '#donorMessages .bank-next-arrow'));
+      if (document.querySelector('#donorMessages .bank-gen-icon'))
+        panel.append(proxy('↻ Regenerate', '#donorMessages .bank-gen-icon'));
+    }
+    for (const t of box.querySelectorAll(':scope > button.tool')) {
       const x = t.textContent.trim();
-      if (x === 'Test') t.classList.add('ui2-test');
-      const n = { Edit: 1, Copy: 2, Test: 3, B: 4, I: 5, 'Base message': 6 }[x] ?? 7;
-      t.style.setProperty('order', String(n), 'important');
+      if (x === 'Edit' || x === 'Done' || x === 'Copy') {
+        t.style.setProperty('order', x === 'Copy' ? '2' : '1', 'important');
+        continue;
+      }
+      panel.append(t);
+    }
+    const back = [...box.querySelectorAll('.bank-pagination button')].find((b) => /Back/.test(b.textContent));
+    if (back) {
+      box.querySelectorAll('.ui2-bank-back').forEach((o) => o !== back && o.remove());
+      back.classList.add('ui2-bank-back');
+      box.append(back);
+    }
+    if (!box.nextElementSibling?.classList.contains('ui2-bank-hint')) {
+      const hint = mk('p', 'ui2-bank-hint', 'Base message · Test · Bold/Italic live inside ⋯');
+      box.after(hint);
     }
   }
   new MutationObserver(bank).observe(document.body, { childList: true, subtree: true });
@@ -721,4 +850,89 @@
   };
   run();
   new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
+})();
+
+/* 9. Donors (PDF pages 15-23, V4 page 40). Same tab words on phone and computer, search as an icon on a phone,
+   "+ Add" opens Add numbers first, DM ★ Important shows how many, and while DMs go out the bar is ONE amber
+   "Stop DMs · 3 of 7 sent". All buttons are the existing ones, moved or relabelled. */
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const wide = () => innerWidth >= 900;
+  const setText = (n, t) => n && n.textContent !== t && (n.textContent = t);
+  function tabs() {
+    for (const b of document.querySelectorAll('.donor-tabs [data-tab]')) {
+      const name = b.querySelector('.tab-name');
+      if (!name) continue;
+      const tab = b.dataset.tab;
+      if (tab === 'important') setText(name.querySelector('.tab-word'), wide() ? 'Important' : 'Star');
+      else {
+        const t = { all: 'All', top: 'Top', donated: 'Donated', not_contacted: 'Not messaged', volunteers: 'Volunteers' }[tab];
+        if (t) setText(name, t);
+      }
+    }
+  }
+  function head() {
+    const h = document.querySelector('.donor-head'),
+      nav = $('donorNavMore'),
+      add = $('donorAdd');
+    if (!h || !nav || !add) return;
+    const panel = nav.querySelector('.compact-nav-panel');
+    const sum = nav.querySelector('summary');
+    setText(sum, '+ Add');
+    nav.classList.add('ui2-add-menu');
+    const numbers = $('donorNumbers'),
+      bulk = $('donorBulk');
+    if (panel && numbers && panel.firstElementChild !== numbers) panel.prepend(numbers);
+    if (panel && add.parentElement !== panel) numbers ? numbers.after(add) : panel.prepend(add);
+    setText(add, 'Add one donor');
+    if (panel && bulk && add.nextElementSibling !== bulk) add.after(bulk);
+    const msgs = document.querySelector('.donor-message-tablist');
+    if (msgs && msgs.nextElementSibling !== nav) h.insertBefore(msgs, nav);
+    setText($('donorMessagesTab'), wide() ? 'Messages' : 'Msgs');
+    if (!$('ui2DonorSearch')) {
+      const s = document.createElement('button');
+      s.type = 'button';
+      s.id = 'ui2DonorSearch';
+      s.className = 'ui2-donor-search';
+      s.setAttribute('aria-label', 'Search donors');
+      s.setAttribute('aria-expanded', 'false');
+      s.textContent = '⌕';
+      s.addEventListener('click', () => {
+        const shell = document.querySelector('.donor-shell');
+        const on = shell.toggleAttribute('data-ui2-search');
+        s.setAttribute('aria-expanded', String(on));
+        if (on) $('donorSearch')?.focus();
+      });
+      h.insertBefore(s, msgs || nav);
+    }
+  }
+  function bottom() {
+    const bar = document.querySelector('.donor-bottom'),
+      dm = $('donorSendImportant'),
+      toggle = $('donorToggle'),
+      prog = $('donorProgress');
+    if (!bar || !dm || !toggle || !prog) return;
+    const count = document.querySelector('.donor-tabs [data-tab="important"] .tab-count')?.textContent.trim();
+    const n = /Important/.test(dm.textContent) && count ? count : '';
+    if (dm.dataset.ui2Count !== n) dm.dataset.ui2Count = n;
+    const running = prog.dataset.active === 'true' && !prog.hidden && toggle.textContent.trim() === 'Stop DMs';
+    bar.toggleAttribute('data-ui2-running', running);
+    const m = (prog.querySelector(':scope > span')?.textContent || '').match(/(\d+) of (\d+) sent/);
+    const sent = running && m ? m[1] + ' of ' + m[2] + ' sent' : '';
+    if (toggle.dataset.ui2Sent !== sent) toggle.dataset.ui2Sent = sent;
+  }
+  const run = () => {
+    tabs();
+    head();
+    bottom();
+  };
+  run();
+  new MutationObserver(run).observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ['data-active', 'hidden'],
+  });
+  addEventListener('resize', run);
 })();

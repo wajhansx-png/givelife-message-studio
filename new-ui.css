@@ -3360,3 +3360,27 @@
     justify-content: center !important;
   }
 }
+
+/* Final polish: no dead space above the reader on phones; DM messages page never overflows; taller desktop reader */
+@media (max-width: 899px) {
+  .UI2 #messageFocus .ui2-reader-top {
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .UI2 #messageFocus #focusState:empty {
+    display: none !important;
+  }
+}
+@media (max-width: 699px) {
+  .UI2 #donorMessages .ui2-bank-hint {
+    display: none !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus .focus-paper,
+  .UI2 #messageFocus #focusFormatted {
+    max-height: calc(100vh - 200px) !important;
+  }
+}

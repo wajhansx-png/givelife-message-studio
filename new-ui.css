@@ -3443,3 +3443,33 @@
     opacity: 0;
   }
 }
+
+/* Phone: calmer main screen and donor screen */
+@media (max-width: 699px) {
+  /* Main: the message fills the free space, so the send buttons always sit right above the bottom bar */
+  .UI2 #main-workspace {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+  .UI2 #main-workspace > #card {
+    flex: 1 1 auto !important;
+    min-height: 120px !important;
+    overflow: auto !important;
+  }
+  .UI2 #main-workspace > .side {
+    flex: 0 0 auto !important;
+  }
+  /* Donors: the All tab already shows the count, so the title goes; tools line up on the right in one calm row */
+  .UI2 #donorsPage .donor-head > .donor-title {
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-head {
+    justify-content: flex-end !important;
+  }
+  .UI2 #donorsPage .donor-head > .ui2-donor-search {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+}

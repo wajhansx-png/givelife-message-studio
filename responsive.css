@@ -306,27 +306,26 @@
   }
 }
 
-/* Volunteers: one workspace, case actions beside names, text-only sharing beside its message. */
-html body #donorsPage[data-panel="volunteers"] {
+/* Volunteers follows the PDF references: message first, quiet rows, one Send/Stop dock. */
+html body #donorsPage[data-panel='volunteers'] {
   background: var(--bg) !important;
 }
 html
   body:not(#a):not(#b):not(#c)
-  #donorsPage#donorsPage:not(#d)[data-panel="volunteers"]
-  :is(
-    .donor-head,
-    .donor-toolbar,
-    .donor-bottom,
-    #donorResumeStatus,
-    #donorProgressShow
-  ) {
+  #donorsPage#donorsPage:not(#d)[data-panel='volunteers']
+  :is(.donor-head, .donor-toolbar, .donor-bottom, #donorResumeStatus, #donorProgressShow) {
   display: none !important;
 }
 html body #donorsPage#donorsPage .donor-volunteers {
   flex: 1 1 auto;
-  padding: 8px 2px;
-  gap: 16px;
-  scroll-padding-block: 12px;
+  width: 100%;
+  max-width: 960px;
+  min-height: 0;
+  margin-inline: auto;
+  padding: 8px 2px 0;
+  gap: 12px;
+  overflow: hidden;
+  scroll-padding: 8px;
 }
 html body #donorsPage#donorsPage .vol-heading,
 html body #donorsPage#donorsPage .vol-msg-heading {
@@ -335,12 +334,16 @@ html body #donorsPage#donorsPage .vol-msg-heading {
   justify-content: space-between;
   gap: 10px;
 }
+html body #donorsPage#donorsPage .vol-heading {
+  padding: 0 2px 8px;
+}
 html body #donorsPage#donorsPage .vol-heading h2 {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 36px;
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 650;
 }
 .vol-count {
@@ -352,15 +355,19 @@ html body #donorsPage#donorsPage .vol-heading h2 {
 }
 html body #donorsPage#donorsPage .vol-add-panel {
   position: relative;
+  grid-column: 1;
+  grid-row: 1;
 }
 html body #donorsPage#donorsPage .vol-add-panel > summary {
   display: flex;
   align-items: center;
-  min-height: 40px;
+  justify-content: center;
+  min-height: 44px;
   padding: 0 12px;
   list-style: none;
   cursor: pointer;
   font-size: 13px;
+  white-space: nowrap;
 }
 .vol-add-panel > summary::-webkit-details-marker {
   display: none;
@@ -368,14 +375,17 @@ html body #donorsPage#donorsPage .vol-add-panel > summary {
 html body #donorsPage#donorsPage .vol-add {
   position: absolute;
   z-index: 5;
-  right: 0;
-  top: 48px;
+  left: 0;
+  bottom: 52px;
+  top: auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   width: min(340px, calc(100vw - 40px));
+  max-height: calc(100dvh - 100px);
+  overflow-y: auto;
   padding: 14px;
   border: 1px solid var(--line2);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--surface);
   box-shadow: var(--sh3);
 }
@@ -384,41 +394,65 @@ html body #donorsPage#donorsPage .vol-add .primary {
 }
 html body #donorsPage#donorsPage .vol-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
   align-items: start;
-  gap: 18px;
+  min-height: 0;
+  max-height: 560px;
+  overflow-y: auto;
+  gap: 16px;
 }
 html body #donorsPage#donorsPage :is(.vol-people, .vol-msg) {
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--surface);
-  overflow: visible;
+}
+html body #donorsPage#donorsPage .vol-people {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: min(500px, calc(100dvh - 180px));
+  overflow: hidden;
 }
 html body #donorsPage#donorsPage .vol-case-options {
-  padding: 10px 12px;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 10px;
   border-bottom: 1px solid var(--line);
+}
+.vol-list-label {
+  font-size: 13px;
+  font-weight: 600;
 }
 html body #donorsPage#donorsPage .vol-check {
   font-size: 12px !important;
-  min-height: 24px;
+  min-height: 40px;
 }
 html body #donorsPage#donorsPage .vol-list {
-  border-radius: 0 0 14px 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: 0 0 12px 12px;
   background: transparent;
-  overflow: visible;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 8px;
 }
 html body #donorsPage#donorsPage .vol-row {
-  grid-template-columns: minmax(0, 1fr) repeat(2, 76px) 28px;
+  grid-template-columns: minmax(0, 170px) repeat(2, 76px) 28px;
+  justify-content: start;
   gap: 6px;
-  padding: 6px 10px;
-  min-height: 52px;
+  padding: 4px 8px;
+  min-height: 48px;
 }
 html body #donorsPage#donorsPage .vol-name {
   font-size: 13px;
   white-space: normal;
   overflow-wrap: anywhere;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 html body #donorsPage#donorsPage .vol-row :is(.tool, .donor-more > summary) {
   width: 100%;
@@ -427,16 +461,48 @@ html body #donorsPage#donorsPage .vol-row :is(.tool, .donor-more > summary) {
   padding: 0 6px;
   font-size: 12px;
   white-space: nowrap;
-  border-radius: 9px;
+  border-radius: 8px;
 }
-html body #donorsPage#donorsPage .vol-row .vol-share {
+html body #donorsPage#donorsPage .vol-manage {
+  grid-column: 4;
+}
+html body #donorsPage#donorsPage .vol-manage-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: 160px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--sh3);
+}
+html body #donorsPage#donorsPage .vol-manage-menu button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 13px;
+  border-radius: 6px;
+}
+html body #donorsPage#donorsPage .vol-manage-menu .remove {
+  color: var(--red);
+}
+html body #donorsPage#donorsPage .vol-row :is(.vol-case, .vol-share) {
   color: var(--ink) !important;
-  background: color-mix(in srgb, var(--btn) 16%, var(--surface)) !important;
-  border-color: color-mix(in srgb, var(--btn) 45%, var(--line)) !important;
+  background: transparent !important;
+  border-color: var(--line) !important;
+  box-shadow: none !important;
 }
 html body #donorsPage#donorsPage .vol-msg {
-  padding: 14px;
-  gap: 10px;
+  padding: 12px;
+  gap: 8px;
+  align-self: start;
 }
 html body #donorsPage#donorsPage .vol-msg-heading label {
   font-size: 14px;
@@ -449,20 +515,23 @@ html body #donorsPage#donorsPage .vol-msg-heading label {
   white-space: nowrap;
 }
 html body #donorsPage#donorsPage .vol-msg textarea {
-  min-height: 190px;
-  padding: 12px;
+  field-sizing: content;
+  min-height: 96px;
+  max-height: min(32dvh, 260px);
+  padding: 10px;
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.5;
   background: var(--msg);
   color: var(--msgink);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 8px;
+  resize: vertical;
 }
 html body #donorsPage#donorsPage .vol-message-hint {
   margin: 0;
   color: var(--mut);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 11px;
+  line-height: 1.4;
 }
 html body #donorsPage#donorsPage .vol-msg-actions {
   display: flex;
@@ -470,63 +539,97 @@ html body #donorsPage#donorsPage .vol-msg-actions {
   gap: 8px;
 }
 html body #donorsPage#donorsPage .vol-msg-actions button {
+  flex: none;
   min-width: 0;
-  min-height: 42px;
-  padding: 8px 12px;
+  min-height: 36px;
+  padding: 6px 10px;
   font-size: 12px;
   white-space: nowrap;
 }
-html body #donorsPage#donorsPage .vol-msg-actions .primary {
-  flex: 1;
-}
 html body #donorsPage#donorsPage .vol-foot {
-  position: static;
-  display: flex;
-  justify-content: space-between;
+  position: relative;
+  display: grid;
+  flex: none;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
   gap: 8px;
-  padding: 0;
-  margin-top: auto;
-  background: transparent;
+  padding: 10px 0 max(4px, env(safe-area-inset-bottom));
+  margin: 0;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  width: min(100%, 480px);
+  align-self: center;
+}
+html body #donorsPage#donorsPage .vol-foot > :is(.primary, .vol-stop) {
+  grid-column: 2;
+  grid-row: 1;
+}
+html body #donorsPage#donorsPage .vol-foot .vol-back {
+  grid-column: 3;
+  grid-row: 1;
 }
 html body #donorsPage#donorsPage .vol-foot button {
-  min-height: 42px;
-  min-width: 90px;
-  width: auto;
+  min-height: 44px;
+  min-width: 0;
+  width: 100%;
+  padding: 8px 12px;
   font-size: 13px;
+  margin: 0;
 }
-html body #donorsPage#donorsPage .vol-stop {
-  color: var(--warn);
-  border-color: var(--amber);
-  background: var(--wbg);
+html body #donorsPage#donorsPage .vol-foot .vol-stop {
+  color: var(--warn) !important;
+  border-color: var(--amber) !important;
+  background: var(--wbg) !important;
+}
+html body #donorsPage#donorsPage .vol-progress {
+  flex: none;
+  font-size: 12px;
+  margin: 0;
 }
 @media (max-width: 899px) {
-  html body #donorsPage#donorsPage .donor-volunteers {
-    gap: 12px;
-  }
-  html body #donorsPage#donorsPage .vol-workspace {
-    gap: 12px;
-  }
   html body #donorsPage#donorsPage .vol-row {
     grid-template-columns: minmax(0, 1fr) repeat(2, 70px) 28px;
-    padding: 4px 8px;
+    min-height: 50px;
   }
   html body #donorsPage#donorsPage .vol-row :is(.tool, .donor-more > summary) {
     min-height: 44px;
   }
-  html body #donorsPage#donorsPage .vol-msg textarea {
-    min-height: 130px;
-    font-size: 16px;
-  }
-  html body #donorsPage#donorsPage .vol-msg {
-    padding: 12px;
-  }
+  html body #donorsPage#donorsPage .vol-msg textarea,
   html body #donorsPage#donorsPage .vol-add input {
     font-size: 16px;
   }
 }
 @media (max-width: 759px) {
   html body #donorsPage#donorsPage .vol-workspace {
-    grid-template-columns: minmax(0, 1fr);
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    max-height: none;
+    gap: 10px;
+  }
+  html body #donorsPage#donorsPage .vol-msg {
+    flex: none;
+    align-self: auto;
+    padding: 10px;
+  }
+  html body #donorsPage#donorsPage .vol-people {
+    flex: 1 1 140px;
+    min-height: 140px;
+    max-height: none;
+  }
+  html body #donorsPage#donorsPage .vol-msg textarea {
+    max-height: min(26dvh, 200px);
+  }
+  html body #donorsPage#donorsPage .vol-foot button {
+    font-size: 12px;
+    padding-inline: 10px;
+  }
+}
+@media (max-width: 759px) and (max-height: 560px) {
+  html body #donorsPage#donorsPage .vol-people {
+    flex: none;
+    max-height: 300px;
   }
 }
 

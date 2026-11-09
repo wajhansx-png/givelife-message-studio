@@ -1555,3 +1555,13 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .report-card .rp-today {
   font-size: 13px;
   text-align: center;
 }
+
+/* The donor-list batch dock must not cover the saved-message navigation on /new phones. */
+@media (max-width: 899px) {
+  html
+    body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f)
+    #donorsPage#donorsPage:not(#g)[data-panel='messages']
+    :is(.donor-bottom, #donorProgress, .dp-show, #donorBatchList) {
+    display: none !important;
+  }
+}

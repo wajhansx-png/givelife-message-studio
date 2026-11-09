@@ -40,6 +40,15 @@ test('the existing UI at "/" is untouched and /new is a separate path', async ({
   expect((await request.get('/new/')).status()).toBe(200);
 });
 
+test('/donor search treats SQL syntax as literal text (read-only)', async ({ request }) => {
+  const payload = encodeURIComponent("' OR 1=1--");
+  const response = await request.get(`/donors?tab=all&q=${payload}`, {
+    headers: { Authorization: `Bearer ${KEY}` },
+  });
+  expect(response.status()).toBe(200);
+  expect((await response.json()).items).toEqual([]);
+});
+
 for (const width of WIDTHS) {
   test(`/new fits ${width}px: no sideways scroll, nothing off-screen (main, donors, reader)`, async ({
     page,
@@ -218,6 +227,41 @@ for (const width of [280, 360, 430, 1440]) {
     } else {
       await expect(page.locator('#ui2BankGen')).toBeHidden();
     }
+  });
+}
+
+for (const width of [280, 390, 768, 899]) {
+  test(`/new DM messages at ${width}px: batch dock stays hidden and Back to donors works`, async ({
+    page,
+  }) => {
+    await open(page, '/new#/donors/messages', width);
+    await expect(page.locator('#donorMessages .bank-line').first()).toBeVisible();
+
+    // Simulate a persisted batch-status panel so the list-only dock cannot mask this control.
+    await page.evaluate(() => {
+      document.querySelector('#donorProgress').hidden = false;
+      document.querySelector('#donorProgressShow').hidden = false;
+      document.querySelector('#donorBatchList').hidden = false;
+    });
+    for (const selector of [
+      '.donor-bottom',
+      '#donorProgress',
+      '#donorProgressShow',
+      '#donorBatchList',
+    ])
+      await expect(page.locator(`#donorsPage ${selector}`)).toBeHidden();
+
+    const back = page.locator('#donorMessages .bank-back-bottom');
+    await expect(back).toBeVisible();
+    const clickable = await back.evaluate((button) => {
+      const r = button.getBoundingClientRect();
+      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return top === button || button.contains(top);
+    });
+    expect(clickable, `Back is covered at ${width}px`).toBe(true);
+    await back.click();
+    await expect(page.locator('.donor-row').first()).toBeVisible();
+    expect(await page.evaluate(() => location.hash)).toBe('#/donors/all');
   });
 }
 

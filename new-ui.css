@@ -2119,10 +2119,9 @@
     margin-left: auto;
   }
   .UI2 #donorsPage .donor-row {
-    grid-template-columns: 32px minmax(160px, 230px) 76px minmax(110px, max-content) minmax(
-        0,
-        1fr
-      ) 40px !important;
+    grid-template-columns:
+      32px minmax(160px, 230px) 76px minmax(110px, max-content) minmax(0, 1fr)
+      40px !important;
   }
   .UI2 #donorsPage .donor-columns {
     display: none !important;
@@ -2955,5 +2954,42 @@
     border: 1px solid var(--line2) !important;
     color: var(--ink, #eef0f6) !important;
     box-shadow: none !important;
+  }
+}
+
+/* Phone: the header never wraps into the title; the hide / deselect chips get their own row below it */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-head {
+    flex-wrap: wrap !important;
+    row-gap: 8px !important;
+  }
+  .UI2 #donorsPage .donor-head > .donor-title {
+    flex: 1 1 auto !important;
+    min-width: max-content !important;
+    white-space: nowrap !important;
+  }
+  .UI2 #donorsPage .donor-head > .donor-title h1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 !important;
+    white-space: nowrap !important;
+  }
+  .UI2 #donorsPage .donor-head > #donorHideRow:not([hidden]) {
+    display: flex !important;
+    flex: 1 1 100% !important;
+    order: 10 !important;
+    flex-wrap: wrap;
+    gap: 8px !important;
+    margin: 0 !important;
+  }
+  .UI2 #donorsPage #donorHideRow .hide-chip {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-height: 36px !important;
+    padding: 0 14px !important;
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
   }
 }

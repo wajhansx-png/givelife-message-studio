@@ -442,3 +442,50 @@ test('/new Notes: tool buttons are small, centred and fully on screen (no scroll
     expect(sc).toBe(true);
   }
 });
+
+for (const width of [280, 320, 412]) {
+  test(`/new phone donors at ${width}px: title, search, Msgs and Add never overlap; hide chips get their own row`, async ({
+    page,
+  }) => {
+    await open(page, '/new#/donors/important', width);
+    await expect(page.locator('.donor-row').first()).toBeVisible();
+    await page.evaluate(() => {
+      const h = document.getElementById('donorHideSent');
+      h.hidden = false;
+      h.textContent = 'Showing contacted · Hide';
+    });
+    const boxes = await page.evaluate(() =>
+      [
+        '.donor-title h1',
+        '#ui2DonorSearch',
+        '.donor-msgs',
+        '.ui2-add-menu > summary',
+        '#donorHideSent',
+        '#donorDeselectAll',
+      ]
+        .map((s) => document.querySelector(s))
+        .map((e) => {
+          const r = e.getBoundingClientRect();
+          return [r.x, r.y, r.right, r.bottom];
+        }),
+    );
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i],
+          b = boxes[j];
+        const overlap = a[0] < b[2] - 1 && b[0] < a[2] - 1 && a[1] < b[3] - 1 && b[1] < a[3] - 1;
+        expect(overlap, `boxes ${i} and ${j} overlap at ${width}px`).toBe(false);
+      }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
+  });
+}
+
+test('/new Back on Volunteers leaves Donors for the main screen', async ({ page }) => {
+  await open(page, '/new#/donors/volunteers', 390);
+  await expect(page.locator('#donorsPage')).toBeVisible();
+  await page.locator('#donorsPage .vol-back:visible').first().click();
+  await expect(page.locator('#donorsPage')).toBeHidden();
+  expect(await page.evaluate(() => location.hash)).not.toContain('donors');
+});

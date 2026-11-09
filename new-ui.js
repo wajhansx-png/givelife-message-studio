@@ -1205,3 +1205,16 @@
     characterData: true,
   });
 })();
+
+/* 11. Back on the Volunteers screen leaves Donors for the main screen (it used to just show the donor list). */
+document.addEventListener(
+  'click',
+  (e) => {
+    const b = e.target.closest?.('#donorsPage .vol-back');
+    if (!b) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    document.getElementById('donorMainBottom')?.click();
+  },
+  true,
+);

@@ -490,12 +490,6 @@
   margin: 0 !important;
   white-space: nowrap;
 }
-.UI2 .ui2-status-row #leftChip::after {
-  content: ' left';
-  font-size: 11px;
-  font-weight: 600;
-  opacity: 0.8;
-}
 .UI2 .ui2-status-row #whatsappConnection {
   display: flex !important;
   align-items: center;

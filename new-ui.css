@@ -3473,3 +3473,239 @@
     margin-right: auto !important;
   }
 }
+
+/* ======================= Phone: every donor tab uses the same fixed slots =======================
+   list (fills the space) > tabs > search / Msgs / + Add > one reserved row for hide / deselect > bottom bar */
+@media (max-width: 899px) {
+  /* The hide / deselect row always keeps its row, empty or not, so nothing above it moves between tabs */
+  .UI2 #donorsPage .donor-head > #donorHideRow,
+  .UI2 #donorsPage .donor-head > #donorHideRow[hidden] {
+    display: flex !important;
+    flex: 1 1 100% !important;
+    order: 10 !important;
+    min-height: 36px !important;
+    margin: 0 !important;
+  }
+  .UI2 #donorsPage .donor-head > #donorHideRow[hidden] {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  /* Volunteers: its content and its Back / DM all / + Add bar join the same slots as every other tab */
+  .UI2 #donorsPage #donorVolunteers:not([hidden]) {
+    display: contents !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace {
+    order: 1 !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    align-content: start;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-progress {
+    order: 1 !important;
+    flex: 0 0 auto !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot {
+    order: 5 !important;
+    flex: 0 0 auto !important;
+    margin-top: 0 !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage #donorVolunteers > .vol-foot {
+    box-sizing: border-box !important;
+    height: 59px !important;
+    padding: 5px 0 !important;
+    border-top: 1px solid var(--line2, #2b3045) !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace {
+    margin-top: 6px !important;
+  }
+}
+@media (max-width: 899px) {
+  /* Back is the same square arrow at the far right on every donor tab */
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-back {
+    order: 3 !important;
+    flex: 0 0 50px !important;
+    width: 50px !important;
+    min-width: 50px !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-back::before {
+    content: '\2190';
+    font-size: 22px;
+    line-height: 1;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .send-donors {
+    order: 1 !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-add-panel {
+    order: 2 !important;
+  }
+}
+
+/* ======================= Icons and clearer main screen ======================= */
+/* Send rows: a round icon in front of each group, and a real send arrow */
+.UI2 .group-send .gb-name::before {
+  content: '';
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 17px;
+}
+.UI2 .group-send .test-row .gb-name::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3'/%3E%3C/svg%3E");
+}
+.UI2 .group-send .group-main-btn .gb-name::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.4A4 4 0 0 1 19 10c0 5.6-7 10-7 10z'/%3E%3C/svg%3E");
+}
+.UI2 .group-send .group-free-btn .gb-name::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3'/%3E%3Cpath d='M3 20a6 6 0 0 1 12 0M16 5a3 3 0 0 1 0 6M21 20a5 5 0 0 0-4-4.9'/%3E%3C/svg%3E");
+}
+.UI2 .group-send .group-all-btn .gb-name::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12'/%3E%3C/svg%3E");
+}
+.UI2 .group-send .gb-go {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  font-size: 0 !important;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 3L3 10.5l7 3 3 7z'/%3E%3Cpath d='M21 3L10 13.5'/%3E%3C/svg%3E")
+    center / 22px no-repeat;
+}
+/* Later and Choose group: icons instead of glyphs */
+.UI2 .ui2-group-more :is(.ui2-later, .ui2-choose-btn) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.UI2 .ui2-later::before,
+.UI2 .ui2-choose-btn::after {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px;
+}
+.UI2 .ui2-later::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aab0c5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E");
+}
+.UI2 .ui2-choose-btn::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aab0c5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+/* Amount: a pencil icon that says "tap to change" */
+.UI2 #leftChip::after,
+.UI2 #leftChip[data-ui2-left='1']::after {
+  content: '' !important;
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin-left: 8px;
+  vertical-align: -2px;
+  opacity: 0.9;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4L19 9l-4-4L4 16z'/%3E%3C/svg%3E")
+    center / 15px no-repeat;
+}
+/* Bottom bar icons */
+.UI2 .ui2-tab span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Regenerate / Next under the group message (main screen on phones and tablets, and the reader) */
+.UI2 .ui2-gnav {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 2px;
+}
+.UI2 .ui2-gbtn {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 190px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #394060;
+  border-radius: 999px;
+  background: transparent;
+  color: #c3c8d8;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.UI2 .ui2-gnext {
+  border-color: #2f6fe4;
+  color: #9db8ff;
+}
+@media (min-width: 900px) {
+  .UI2 #ui2GnavMain {
+    display: none !important;
+  }
+}
+/* ======================= Donors: one fixed bottom bar on every tab (phone) ======================= */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-bottom:not([data-ui2-running]) {
+    grid-template-columns: minmax(0, 1fr) 56px !important;
+  }
+  .UI2 #donorsPage .donor-bottom > :is(#donorSendImportant, #donorSendAll) {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+  .UI2 #donorsPage .donor-bottom > #donorMainBottom {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    width: 56px !important;
+    min-width: 56px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-back {
+    flex: 0 0 56px !important;
+    width: 56px !important;
+    min-width: 56px !important;
+  }
+}
+
+.UI2 .group-send .gb-name {
+  align-items: center !important;
+}
+.UI2 .group-send .gb-name > .last-sent {
+  align-self: center;
+}
+.UI2 #ui2GnavMain {
+  margin: 8px 0 !important;
+}
+@media (max-width: 899px) {
+  .UI2 #main-workspace > #card {
+    flex: 0 1 auto !important;
+  }
+  .UI2 #main-workspace > #ui2GnavMain {
+    flex: 0 0 auto !important;
+  }
+}
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 #main-workspace > #card {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+  .UI2 #main-workspace > #ui2GnavMain {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    align-self: start;
+  }
+  .UI2 #main-workspace > .side {
+    grid-row: 1 / span 2 !important;
+  }
+}

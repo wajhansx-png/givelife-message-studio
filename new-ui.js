@@ -444,11 +444,25 @@ const ui2Frame = (fn) => {
     const nav = mk('nav', 'ui2-tabs');
     nav.id = 'ui2Tabs';
     nav.setAttribute('aria-label', 'Main');
+    const ico = (d) =>
+      `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+    const ICONS = {
+      message: ico('<path d="M4 5h16v11H9l-5 4z"/>'),
+      donors: ico(
+        '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.4A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+      ),
+      chat: ico(
+        '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.7A8 8 0 1 1 21 12z"/><path d="M9 11h6M9 14h4"/>',
+      ),
+      more: ico(
+        '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+      ),
+    };
     const items = [
-      ['message', '✉', 'Message', () => (typeof Nav !== 'undefined' ? Nav.go('') : null)],
-      ['donors', '♥', 'Donors', press(() => $('openDonors'))],
-      ['chat', '✎', 'Chat', press(() => $('chatOpen'))],
-      ['more', '⋯', 'More', () => sheet()],
+      ['message', ICONS.message, 'Message', () => (typeof Nav !== 'undefined' ? Nav.go('') : null)],
+      ['donors', ICONS.donors, 'Donors', press(() => $('openDonors'))],
+      ['chat', ICONS.chat, 'Chat', press(() => $('chatOpen'))],
+      ['more', ICONS.more, 'More', () => sheet()],
     ];
     for (const [key, icon, label, fn] of items) {
       const b = mk('button', 'ui2-tab', `<span aria-hidden="true">${icon}</span>${label}`);
@@ -567,13 +581,13 @@ const ui2Frame = (fn) => {
     if (!two || !drop || !tm || !tf || $('ui2GroupMore')) return;
     const more = mk('div', 'ui2-group-more');
     more.id = 'ui2GroupMore';
-    const later = mk('button', 'ui2-later', '◷ Later');
+    const later = mk('button', 'ui2-later', 'Later');
     later.type = 'button';
     later.id = 'ui2Later';
     later.setAttribute('aria-expanded', 'false');
     later.setAttribute('aria-controls', 'ui2LaterPanel');
     const wrap = mk('div', 'group-drop-wrap ui2-choose');
-    const choose = mk('button', 'ui2-choose-btn', '▾ Choose group');
+    const choose = mk('button', 'ui2-choose-btn', 'Choose group');
     choose.type = 'button';
     choose.setAttribute('aria-haspopup', 'true');
     choose.setAttribute('aria-expanded', 'false');
@@ -608,7 +622,7 @@ const ui2Frame = (fn) => {
       const due = timers()
         .filter((t) => t.classList.contains('is-pending'))
         .map((t) => t.textContent.trim());
-      const text = due.length ? '◷ Later · ' + due.join(', ') : '◷ Later';
+      const text = due.length ? 'Later · ' + due.join(', ') : 'Later';
       if (later.textContent !== text) later.textContent = text;
       if (!panel.hidden && tm.hidden && tf.hidden) {
         panel.hidden = true;
@@ -1321,3 +1335,72 @@ document.addEventListener('click', (e) => {
   if (!live || e.target.closest('#auto') || ui2Wide.matches) return;
   document.getElementById('auto')?.click();
 });
+
+/* 16. Group message: Regenerate and Next sit right under the message, like on the DM messages screen.
+   Main screen: Next = the app's next saved wording (New), Regenerate = opens the reader and makes 5 new versions.
+   Reader: Next version / Generate 5 Versions. Every button presses the real existing control. */
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const mk = (cls, label, svg, fn, id) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls;
+    if (id) b.id = id;
+    b.innerHTML = svg + '<span></span>';
+    b.lastChild.textContent = label;
+    b.addEventListener('click', fn);
+    return b;
+  };
+  const REGEN =
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>';
+  const NEXT =
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  function row(id, regen, next) {
+    const r = document.createElement('div');
+    r.className = 'ui2-gnav';
+    r.id = id;
+    r.append(
+      mk('ui2-gbtn', 'Regenerate', REGEN, regen),
+      mk('ui2-gbtn ui2-gnext', 'Next', NEXT, next),
+    );
+    return r;
+  }
+  function main() {
+    const card = $('card');
+    if (!card || $('ui2GnavMain')) return;
+    card.after(
+      row(
+        'ui2GnavMain',
+        () => {
+          if (typeof Nav !== 'undefined') Nav.go('preview');
+          let tries = 0;
+          const go = setInterval(() => {
+            const b = $('focusRetry');
+            if (++tries > 40 || (b && !$('messageFocus').hidden && !b.disabled)) {
+              clearInterval(go);
+              if (tries <= 40) b.click();
+            }
+          }, 100);
+        },
+        () => $('fresh')?.click(),
+      ),
+    );
+  }
+  function reader() {
+    const bar = document.querySelector('#messageFocus .ui2-reader-dock');
+    if (!bar || $('ui2GnavReader')) return;
+    bar.before(
+      row(
+        'ui2GnavReader',
+        () => $('focusRetry')?.click(),
+        () => $('focusNext')?.click(),
+      ),
+    );
+  }
+  const run = () => {
+    main();
+    reader();
+  };
+  run();
+  new MutationObserver(ui2Frame(run)).observe(document.body, { childList: true, subtree: true });
+})();

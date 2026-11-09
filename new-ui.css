@@ -3709,3 +3709,108 @@
     grid-row: 1 / span 2 !important;
   }
 }
+
+/* ======================= Msgs in the bottom bar (phone) ======================= */
+.UI2 .ui2-msgs-bottom {
+  display: none;
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-head .donor-message-tablist {
+    display: none !important;
+  }
+  .UI2 #donorsPage .ui2-msgs-bottom {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-sizing: border-box;
+    min-height: 46px;
+    padding: 0 12px;
+    border: 1px solid var(--line2, #3a4052);
+    border-radius: 14px;
+    background: var(--surface, #1b1f2c);
+    color: var(--ink, #eef0f6);
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .UI2 #donorsPage .donor-bottom:not([data-ui2-running]) {
+    grid-template-columns: 84px minmax(0, 1fr) 56px !important;
+  }
+  .UI2 #donorsPage .donor-bottom > .ui2-msgs-bottom {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+  .UI2 #donorsPage .donor-bottom > :is(#donorSendImportant, #donorSendAll) {
+    grid-column: 2 !important;
+  }
+  .UI2 #donorsPage .donor-bottom > #donorMainBottom {
+    grid-column: 3 !important;
+  }
+  .UI2 #donorsPage .donor-bottom[data-ui2-running] > .ui2-msgs-bottom {
+    display: none !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .ui2-msgs-bottom {
+    order: 0;
+    flex: 0 0 auto;
+    min-width: 74px;
+    height: 100%;
+  }
+  .UI2 #donorsPage .donor-head {
+    justify-content: space-between !important;
+  }
+}
+@media (max-width: 359px) {
+  .UI2 #donorsPage .ui2-msgs-bottom > span {
+    display: none;
+  }
+  .UI2 #donorsPage .donor-bottom:not([data-ui2-running]) {
+    grid-template-columns: 48px minmax(0, 1fr) 56px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .ui2-msgs-bottom {
+    min-width: 48px;
+    padding: 0;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .ui2-msgs-bottom {
+    flex: 0 0 84px !important;
+    width: 84px !important;
+    min-width: 84px !important;
+    max-width: 84px !important;
+    height: 100% !important;
+    margin: 0 !important;
+    order: 0 !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .send-donors {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-add-panel {
+    flex: 0 0 auto !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot {
+    gap: 6px !important;
+  }
+}
+@media (max-width: 359px) {
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .ui2-msgs-bottom {
+    flex-basis: 48px !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .send-donors {
+    font-size: 12px !important;
+    padding: 0 6px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-add-panel > summary {
+    padding: 0 10px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-back {
+    flex-basis: 48px !important;
+    width: 48px !important;
+    min-width: 48px !important;
+  }
+}

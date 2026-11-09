@@ -685,3 +685,32 @@ test('/new phone donors: Back is the same far-right arrow on every tab', async (
   }
   expect(new Set(xs).size, xs.join(' | ')).toBe(1);
 });
+
+for (const width of [280, 360, 412]) {
+  test(`/new phone donors at ${width}px: a Msgs button sits in the bottom bar on every tab and opens DM messages`, async ({
+    page,
+  }) => {
+    await open(page, '/new#/donors/all', width, 760);
+    await expect(page.locator('.donor-row').first()).toBeVisible();
+    for (const t of ['all', 'important', 'top', 'volunteers']) {
+      await page.locator(`.donor-tabs [data-tab="${t}"]`).click();
+      await page.waitForTimeout(350);
+      const m = page.locator('#donorsPage .ui2-msgs-bottom:visible').first();
+      await expect(m, t).toBeVisible();
+      const b = await m.boundingBox();
+      const bar = await page.evaluate(() => {
+        const e = [...document.querySelectorAll('.donor-bottom, .vol-foot')].find((x) =>
+          x.checkVisibility(),
+        );
+        const r = e.getBoundingClientRect();
+        return [r.y, r.bottom];
+      });
+      expect(b.y, t).toBeGreaterThanOrEqual(bar[0] - 1);
+      expect(b.y + b.height, t).toBeLessThanOrEqual(bar[1] + 1);
+      expect(b.x + b.width, t).toBeLessThanOrEqual(width);
+    }
+    await expect(page.locator('#donorsPage .donor-head .donor-message-tablist')).toBeHidden();
+    await page.locator('#donorsPage .ui2-msgs-bottom:visible').first().click();
+    await expect(page.locator('#donorMessages')).toBeVisible();
+  });
+}

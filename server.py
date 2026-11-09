@@ -1,8 +1,10 @@
 import sys
+import ops
+from http_runtime import BoundedHTTPServer
 import caption_facts, case_plan, message_rules, team_rules
 import json, subprocess, urllib.request, urllib.parse, threading, time, uuid, datetime, math, re, secrets, os, base64, hashlib, gzip
 from pathlib import Path
-from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer as ThreadingHTTPServer, BaseHTTPRequestHandler
 from persist import configured_store, atomic_write
 import manual_commands
 import dm_composer, reply_setup
@@ -5273,6 +5275,7 @@ class Handler(BaseHTTPRequestHandler):
         self.response_sent = True
         if not isinstance(data, (str, bytes)):
             data = json.dumps(data, ensure_ascii=False)
+        payload = data if isinstance(data, bytes) else data.encode()
         self.send_response(status)
         self.send_header("Content-Type", kind + "; charset=utf-8")
         if "Cache-Control" not in (extra_headers or {}):
@@ -5284,10 +5287,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("X-Content-Type-Options", "nosniff")
+        for name, value in ops.security_headers(self.remote_config().get("origins", []), self.headers.get("X-Forwarded-Proto") == "https").items():
+            self.send_header(name, value)
         for name, value in (extra_headers or {}).items():
             self.send_header(name, value)
         self.end_headers()
-        self.wfile.write(data if isinstance(data, bytes) else data.encode())
+        self.wfile.write(payload)
 
     _STATIC = {}
 
@@ -5342,6 +5347,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get("If-None-Match") == etag:
             self.response_sent = True
             self.send_response(304)
+            head.update(ops.security_headers(self.remote_config().get("origins", []), self.headers.get("X-Forwarded-Proto") == "https"))
             for k, v in head.items():
                 self.send_header(k, v)
             self.end_headers()
@@ -5350,7 +5356,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(gz, kind, extra_headers={**head, "Content-Encoding": "gzip"})
         return self.reply(raw, kind, extra_headers=head)
 
-    timeout = 120  # a stalled or half-open client can never pin a worker thread forever
+    timeout = 15  # bound idle/slow request-body reads; external operations keep their own deadlines
 
     def do_GET(self):
         self.response_sent = False
@@ -5358,7 +5364,8 @@ class Handler(BaseHTTPRequestHandler):
             self._get()
         except (BrokenPipeError, ConnectionResetError, TimeoutError):
             pass  # the browser went away mid-reply; nothing to answer
-        except Exception:
+        except Exception as exc:
+            ops.record_error(self, exc)
             if not self.response_sent:
                 try:
                     self.reply(
@@ -5447,6 +5454,19 @@ class Handler(BaseHTTPRequestHandler):
             )
         if not self.authorized():
             return self.reply({"error": "Access key required"}, status=401)
+        if self.path == "/ops/status":
+            import backups
+            return self.reply({**ops.diagnostics(), "storage": "postgresql" if hasattr(STORE, "uri") else "sqlite",
+                               "sqlite_encryption": bool(getattr(getattr(STORE, "cipher", None), "key", None)),
+                               "backups": backups.status()})
+        if self.path == "/ops/backup":
+            import backups
+            try:
+                path = backups.create(STORE, DATA / "encrypted-backups")
+                return self.reply(path.read_bytes(), "application/octet-stream",
+                                  extra_headers={"Content-Disposition": 'attachment; filename="studio.backup"'})
+            except ValueError as exc:
+                return self.reply({"error": str(exc)}, status=503)
         if self.path.split("?")[0] == "/api/case-plan":
             return self.reply(plan_view())
         if self.path.split("?")[0] == "/api/group-finder":
@@ -5712,7 +5732,8 @@ class Handler(BaseHTTPRequestHandler):
                     {"error": "The request data is invalid. Correct the fields and try again."},
                     status=400,
                 )
-        except Exception:
+        except Exception as exc:
+            ops.record_error(self, exc)
             if not self.response_sent:
                 self.reply(
                     {
@@ -6665,4 +6686,7 @@ if __name__ == "__main__":
     start_worker("autopilot advisor", PILOT.start)
     start_worker("auto engine", ENGINE.start)
     spawn(timed_loop, "timed-tasks")
-    ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "10000"))), Handler).serve_forever()
+    import backups
+    backups.start(STORE, DATA)
+    BoundedHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "10000"))), Handler,
+                      max_workers=int(os.environ.get("HTTP_MAX_WORKERS", "32"))).serve_forever()

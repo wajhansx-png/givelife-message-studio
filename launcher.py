@@ -2,6 +2,7 @@ import os, json, time, subprocess, signal, urllib.request, urllib.parse, uuid, s
 from pathlib import Path
 from persist import configured_store
 import supervisor
+import key_cache
 
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("DATA_DIR", "/data/studio"))
@@ -128,6 +129,9 @@ if state == "acquired":  # otherwise carry on without it: the lease must never b
 
 gowa_data = Path("/data/gowa")
 gowa_data.mkdir(parents=True, exist_ok=True)
+key_path = gowa_data / "whatsapp-keys.db"
+if not os.environ.get("GOWA_DB_KEYS_URI"):
+    key_cache.restore(store, key_path)
 env = os.environ.copy()
 env.update(
     APP_HOST="127.0.0.1",
@@ -165,6 +169,11 @@ def stop(*args):
             child.wait(timeout=15)
         except subprocess.TimeoutExpired:
             child.kill()
+    if not os.environ.get("GOWA_DB_KEYS_URI"):
+        try:
+            key_cache.save(store, key_path)
+        except Exception as exc:
+            print("[launcher] key checkpoint failed: " + type(exc).__name__, flush=True)
     lease.release()  # only after WhatsApp is stopped, so the next instance can take over safely
     raise SystemExit(0)
 
@@ -251,6 +260,8 @@ if not device_id:
     gowa_proc.terminate()
     raise SystemExit("WhatsApp gateway did not start.")
 gowa = supervisor.Child("whatsapp", start_gowa, proc=gowa_proc)
+if not os.environ.get("GOWA_DB_KEYS_URI"):
+    key_cache.start(store, key_path)
 server = supervisor.Child("server", start_server)
 children.extend([gowa_proc, server.proc])
 

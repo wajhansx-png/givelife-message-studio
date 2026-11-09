@@ -1,3 +1,4 @@
+from storage_crypto import ValueCipher
 from pathlib import Path
 import sqlite3
 import json
@@ -199,6 +200,7 @@ class SqliteStore:
 
     def __init__(self, db_path):
         self.db_path = str(db_path)
+        self.cipher = ValueCipher()
         self._lock = threading.RLock()
         self._pending = {}
 
@@ -206,6 +208,7 @@ class SqliteStore:
     def _conn(self):
         conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
         try:
+            conn.execute("PRAGMA secure_delete=ON")
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA synchronous=NORMAL")
             with conn:
@@ -223,6 +226,24 @@ class SqliteStore:
             )
             # Automatic recovery: restore existing assistant-knowledge, drafts, etc.
             self._recover_records(conn)
+            migrated = False
+            if self.cipher.key:
+                for key, raw in conn.execute("SELECT key,value FROM givelife_studio_state"):
+                    # Leases must stay readable by the atomic ownership predicates.
+                    try:
+                        lease = set(json.loads(raw)) == {'owner'} if isinstance(json.loads(raw), dict) else False
+                    except (ValueError, TypeError):
+                        lease = False
+                    if self.cipher.encrypted(raw):
+                        self.cipher.decode(raw, key)  # reject a wrong key before serving anything
+                    elif not lease:
+                        migrated = True
+                        conn.execute("UPDATE givelife_studio_state SET value=? WHERE key=?", (self.cipher.encode(raw, key), key))
+        if self.cipher.key and migrated:
+            # Remove old plaintext cells, freelist pages and WAL remnants after migration.
+            with self._lock, sqlite3.connect(self.db_path) as conn:
+                conn.execute("VACUUM")
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
     def _recover_records(self, conn):
         try:
@@ -247,7 +268,7 @@ class SqliteStore:
             row = conn.execute("SELECT value FROM givelife_studio_state WHERE key=?", (key,)).fetchone()
             if not row:
                 return default
-            val = row[0]
+            val = self.cipher.decode(row[0], key)
             try:
                 return json.loads(val)
             except Exception:
@@ -261,6 +282,7 @@ class SqliteStore:
             rows = conn.execute(f"SELECT key, value FROM givelife_studio_state WHERE key IN ({q})", list(keys)).fetchall()
             out = {}
             for k, v in rows:
+                v = self.cipher.decode(v, k)
                 try:
                     out[k] = json.loads(v)
                 except Exception:
@@ -269,6 +291,7 @@ class SqliteStore:
 
     def put(self, key, value):
         raw = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+        raw = self.cipher.encode(raw, key)
         now = time.time()
         with self._lock, self._conn() as conn:
             conn.execute(
@@ -279,6 +302,7 @@ class SqliteStore:
 
     def seed(self, key, value):
         raw = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+        raw = self.cipher.encode(raw, key)
         now = time.time()
         with self._lock, self._conn() as conn:
             conn.execute(
@@ -289,6 +313,7 @@ class SqliteStore:
 
     def claim(self, key, value):
         raw = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+        raw = self.cipher.encode(raw, key)
         now = time.time()
         with self._lock, self._conn() as conn:
             try:

@@ -151,7 +151,7 @@
       const numbers = document.getElementById('donorNumbers');
       const add = document.getElementById('donorAdd');
       if (donorPhone.matches && add) {
-        if (messages) head.insertBefore(messages, add);
+        if (messages) head.insertBefore(messages, add.parentNode === head ? add : null);
         if (bulk) panel.append(bulk);
         if (numbers) panel.append(numbers);
         if (navDetails) {
@@ -167,6 +167,90 @@
     };
     placeDonorActions();
     donorPhone.addEventListener('change', placeDonorActions);
+    /* Classic phone/tablet header, one row on every tab: Donors, search icon, Messages, More.
+       + Add and the Important-tab chips (hide contacted, deselect all) live in More; search opens in place
+       over this row, so nothing below it ever moves. The controls are moved, never rebuilt. */
+    if (!document.body.classList.contains('ui2')) {
+      const compact = matchMedia('(max-width:899px)');
+      const add = document.getElementById('donorAdd');
+      const hideRow = document.getElementById('donorHideRow');
+      const input = document.getElementById('donorSearch');
+      const toolbar = document.querySelector('.donor-toolbar');
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.id = 'donorSearchOpen';
+      open.className = 'donor-search-open';
+      open.setAttribute('aria-label', 'Search donors');
+      open.title = 'Search donors';
+      open.innerHTML =
+        '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>';
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.id = 'donorSearchClose';
+      close.className = 'donor-search-close';
+      close.setAttribute('aria-label', 'Close search');
+      close.textContent = '×';
+      const setSearch = (on) => {
+        head.classList.toggle('search-open', on);
+        open.setAttribute('aria-expanded', String(on));
+        if (on) input?.focus();
+      };
+      const clearSearch = () => {
+        if (!input || !input.value) return;
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      open.onclick = () => setSearch(true);
+      close.onclick = () => {
+        clearSearch();
+        setSearch(false);
+        open.focus();
+      };
+      input?.addEventListener('blur', () => {
+        if (!input.value.trim()) setSearch(false);
+      });
+      input?.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        e.preventDefault();
+        close.click();
+      });
+      /* A small dot on More says "contacted donors are hidden" while the Important list is filtered. */
+      const more = navDetails?.querySelector('summary');
+      const flag = () => {
+        const chip = document.getElementById('donorHideSent');
+        more?.toggleAttribute(
+          'data-note',
+          !!hideRow && !hideRow.hidden && !chip?.hidden && /hidden/.test(chip?.textContent || ''),
+        );
+      };
+      if (hideRow) {
+        new MutationObserver(flag).observe(hideRow, {
+          attributes: true,
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+        flag();
+      }
+      const place = () => {
+        if (compact.matches) {
+          head.insertBefore(open, head.querySelector(':scope > .donor-message-tablist'));
+          if (input) head.append(input);
+          head.append(close);
+          if (add) panel.prepend(add);
+          if (hideRow) panel.prepend(hideRow);
+        } else {
+          open.remove();
+          close.remove();
+          setSearch(false);
+          if (input && toolbar) toolbar.append(input);
+          if (add) head.append(add);
+          if (hideRow) head.insertBefore(hideRow, head.querySelector(':scope > .donor-message-tablist'));
+        }
+      };
+      place();
+      compact.addEventListener('change', place);
+    }
   }
   document.addEventListener('pointerdown', (e) => {
     for (const m of menus) if (m.open && !m.contains(e.target)) m.open = false;

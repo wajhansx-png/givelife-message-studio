@@ -1,4 +1,4 @@
-"""Reports > Auto: three controls over the existing engines. Stubbed transport: nothing is ever sent."""
+"""Reports > Auto: four controls over the existing engines. Stubbed transport: nothing is ever sent."""
 
 import hashlib, time, unittest
 from unittest.mock import patch
@@ -71,7 +71,8 @@ class Defaults(Base):
 
     def test_cards_are_named_for_what_they_do(self):
         controls = self.c.view()["controls"]
-        self.assertEqual(list(controls), [ac.GROUP, ac.DONOR_DM, IMPORTANT])
+        self.assertEqual(list(controls), [ac.GROUP, ac.DONOR_DM, IMPORTANT, ac.VOLUNTEER])
+        self.assertEqual(controls[ac.VOLUNTEER]["title"], "Volunteer Auto")
         self.assertEqual(controls[ac.GROUP]["title"], "Group Auto")
         self.assertEqual(controls[ac.DONOR_DM]["title"], "DM Top Donors")
         self.assertEqual(controls[IMPORTANT]["title"], "DM Important Donors")
@@ -478,3 +479,138 @@ class ListsAreLocked(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VolunteerAuto(Base):
+    """Volunteer Auto: case message with poster, then the saved share message, one volunteer at a time."""
+
+    def setUp(self):
+        super().setUp()
+        self.v = self.h.volunteers
+        self.v.jobs.import_jobs({"jobs": []})
+        self.v.book._save({"version": 1, "records": []})
+        self.v.jobs.active = None
+        self.v.jobs.stop.clear()
+        self.v.set_message("Please share this case, {name}.")
+        self.log = []
+
+        def send(body):  # the volunteer engine's own send step; nothing leaves this machine
+            self.log.append((body["phone"], body["message"], body.get("poster")))
+            return {"code": "SUCCESS", "results": {"message_id": "fake-%d" % len(self.log)}}
+
+        patcher = patch.object(self.v.jobs, "send", side_effect=send)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.addCleanup(self.stop_volunteers)
+
+    def stop_volunteers(self):
+        self.v.jobs.cancel()
+        self.wait(lambda: not self.v.jobs.active)
+
+    def people(self, n):
+        return [
+            self.v.book.add("Volunteer %02d" % i, "923001240%03d" % i)["donor"]["id"]
+            for i in range(n)
+        ]
+
+    def job(self):
+        return self.v.jobs.export_jobs()["jobs"][-1]
+
+    def test_sends_the_case_with_poster_then_the_share_message_to_the_first_volunteer(self):
+        self.people(12)
+        self.c.set(ac.VOLUNTEER, True)
+        self.assertTrue(self.wait(lambda: len(self.log) >= 2))
+        case = app.get_message("group")["text"]
+        first, second = self.log[0], self.log[1]
+        self.assertEqual(first[0], second[0])  # both go to the same person, one after the other
+        self.assertEqual((first[1], first[2]), (case, True))  # DM case + poster
+        self.assertTrue(second[1].startswith("Please share this case"))  # then DM share, text only
+        self.assertFalse(second[2])
+        job = self.job()
+        self.assertEqual(job["owner"], ac.VOLUNTEER)
+        self.assertEqual(
+            (job["scope"], job["chunk"], job["gap_seconds"], job["rests"]),
+            ("selected", 10, 300.0, [900.0]),
+        )
+        self.assertEqual((job["total"], job["batches"]), (12, 2))
+        view = self.view(ac.VOLUNTEER)
+        self.assertTrue(view["on"])
+        self.assertEqual((view["recipients"], view["sent"]), (12, 1))
+
+    def test_five_minutes_between_volunteers_give_or_take_fifteen_seconds(self):
+        self.people(3)
+        self.c.set(ac.VOLUNTEER, True)
+        gaps = [self.v.jobs._gap(self.job()) for _ in range(300)]
+        self.assertGreaterEqual(min(gaps), 300 - 15)
+        self.assertLessEqual(max(gaps), 300 + 15)
+        self.assertGreater(max(gaps) - min(gaps), 20)
+
+    def test_nobody_already_messaged_is_repeated_unless_asked(self):
+        ids = self.people(3)
+        self.v.book.delivery(ids[0], "Sent")
+        self.c.set(ac.VOLUNTEER, True)
+        self.assertNotIn(ids[0], self.job()["ids"])
+        self.stop_volunteers()
+        self.c.set(ac.VOLUNTEER, False)
+        self.v.jobs.import_jobs({"jobs": []})
+        self.v.jobs.active = None
+        self.v.jobs.stop.clear()
+        self.c.set(ac.VOLUNTEER, True, {"include_contacted": True})
+        self.assertEqual(self.job()["total"], 3)
+
+    def test_share_needs_a_saved_message_and_nothing_starts_without_one(self):
+        self.people(2)
+        self.v.set_message("")
+        with self.assertRaises(ValueError):
+            self.c.set(ac.VOLUNTEER, True)
+        self.assertEqual(self.v.jobs.export_jobs()["jobs"], [])
+        self.c.set(ac.VOLUNTEER, True, {"share": False})  # case + poster only
+        self.assertTrue(self.wait(lambda: len(self.log) >= 1))
+        self.assertEqual(len(self.log), 1)
+
+    def test_settings_can_be_edited_while_sending(self):
+        self.people(6)
+        self.c.set(ac.VOLUNTEER, True)
+        self.assertTrue(self.wait(lambda: len(self.log) >= 2))
+        view = self.c.edit(
+            ac.VOLUNTEER,
+            {"gap_minutes": 2, "batch_size": 5, "rest_minutes": 20, "share": False},
+        )
+        job = self.job()
+        self.assertEqual((job["gap_seconds"], job["chunk"], job["rests"]), (120.0, 5, [1200.0]))
+        self.assertIsNone(job.get("follow_up"))
+        self.assertTrue(view["controls"][ac.VOLUNTEER]["on"])  # same batch, never restarted
+        self.assertEqual(len(self.v.jobs.export_jobs()["jobs"]), 1)
+        with self.assertRaises(ValueError):
+            self.c.edit(ac.VOLUNTEER, {"batch_size": 99})
+
+    def test_off_stops_and_on_again_carries_on_without_repeating_anyone(self):
+        self.people(4)
+        self.c.set(ac.VOLUNTEER, True)
+        self.assertTrue(self.wait(lambda: len(self.log) >= 2))
+        self.c.set(ac.VOLUNTEER, False)
+        self.assertTrue(self.wait(lambda: not self.v.jobs.active))
+        self.assertFalse(self.view(ac.VOLUNTEER)["on"])
+        sent_before = len({x[0] for x in self.log})
+        self.v.jobs.stop.clear()
+        self.c.set(ac.VOLUNTEER, True)
+        self.assertTrue(self.wait(lambda: len({x[0] for x in self.log}) > sent_before))
+        phones = [x[0] for x in self.log if x[2]]  # one poster DM per person, ever
+        self.assertEqual(len(phones), len(set(phones)))
+
+    def test_never_runs_beside_a_donor_dm_queue_or_a_second_volunteer_send(self):
+        self.people(2)
+        self.donors(3)
+        self.c.set(IMPORTANT, True, {"count": 3})
+        self.addCleanup(self.stop_everything)
+        with self.assertRaises(ValueError):
+            self.c.set(ac.VOLUNTEER, True)
+        self.stop_everything()
+        self.h.jobs.active = None
+        self.h.jobs.stop.clear()
+        self.c.set(ac.VOLUNTEER, True)
+        self.assertEqual(len(self.v.jobs.export_jobs()["jobs"]), 1)
+        self.c.set(ac.VOLUNTEER, True)  # pressing ON again never starts a second batch
+        self.assertEqual(len(self.v.jobs.export_jobs()["jobs"]), 1)
+        with self.assertRaises(ValueError):  # and a donor DM control cannot start beside it
+            self.c.set(IMPORTANT, True, {"count": 3})

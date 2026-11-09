@@ -579,11 +579,40 @@
         test.removeAttribute('aria-busy');
       }
     };
-    const preview = mk('button', '', '⋯');
-    preview.type = 'button';
-    preview.setAttribute('aria-label', 'Preview and edit message');
-    preview.onclick = () => Nav.go('preview');
-    actions.append(next, test, preview);
+    const more = mk('details', 'ui2-home-more');
+    more.id = 'ui2HomeMore';
+    more.innerHTML = '<summary aria-label="More saved-message actions">⋯</summary><div></div>';
+    for (const [label, action] of [
+      ['Preview / edit', () => Nav.go('preview')],
+      ['Copy message', () => $('copy')?.click()],
+      [
+        'Change poster',
+        () => {
+          $('posterDialog').dataset.returnRoute = Nav.path();
+          window.DonorHub?.openPoster();
+        },
+      ],
+    ]) {
+      const button = mk('button', '', label);
+      button.type = 'button';
+      button.onclick = () => {
+        more.open = false;
+        action();
+      };
+      more.lastElementChild.append(button);
+    }
+    more.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && more.open) {
+        e.preventDefault();
+        e.stopPropagation();
+        more.open = false;
+        more.querySelector('summary').focus();
+      }
+    });
+    document.addEventListener('pointerdown', (e) => {
+      if (more.open && !more.contains(e.target)) more.open = false;
+    });
+    actions.append(next, test, more);
     card.querySelector('.chat').after(actions);
     const poster = $('previewChangePoster');
     const overflow = tools.querySelector('.overflow-tools > div');
@@ -1153,3 +1182,16 @@
     characterData: true,
   });
 })();
+
+// A generic Donors shortcut must not unexpectedly restore the separate Volunteers workspace.
+document.addEventListener(
+  'click',
+  (e) => {
+    if (!e.target.closest('#openDonors, #railDonors, #ui2Tabs [data-tab="donors"]')) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    Nav.go('donors/all');
+    window.DonorHub?.show('all');
+  },
+  true,
+);

@@ -1,0 +1,751 @@
+{
+  "tool": "gstack browse",
+  "version": "1.98.0",
+  "target": "isolated fake preview; no live WhatsApp transport",
+  "widths": [
+    390,
+    768,
+    1440
+  ],
+  "route_states": 63,
+  "page_horizontal_overflow": 0,
+  "console_error_states": 0,
+  "unexpected_login_states": 0,
+  "states": [
+    {
+      "route": "/",
+      "width": 390,
+      "overflow": false,
+      "dialogs": []
+    },
+    {
+      "route": "/preview",
+      "width": 390,
+      "overflow": false,
+      "dialogs": []
+    },
+    {
+      "route": "/chat",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "hist",
+          "w": 390
+        }
+      ]
+    },
+    {
+      "route": "/notes",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "foundationNotes",
+          "w": 390
+        }
+      ]
+    },
+    {
+      "route": "/settings",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "set",
+          "w": 389.6871337890625
+        }
+      ]
+    },
+    {
+      "route": "/settings/memory",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "set",
+          "w": 390
+        },
+        {
+          "id": "memoryDialog",
+          "w": 354
+        }
+      ]
+    },
+    {
+      "route": "/settings/poster",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "set",
+          "w": 382.20001220703125
+        },
+        {
+          "id": "posterDialog",
+          "w": 362.5999755859375
+        }
+      ]
+    },
+    {
+      "route": "/keyboard",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "keyboardDialog",
+          "w": 354
+        }
+      ]
+    },
+    {
+      "route": "/whatsapp",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "whatsappDialog",
+          "w": 353.9195556640625
+        }
+      ]
+    },
+    {
+      "route": "/donors/all",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        }
+      ]
+    },
+    {
+      "route": "/donors/important",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        }
+      ]
+    },
+    {
+      "route": "/donors/top",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        }
+      ]
+    },
+    {
+      "route": "/donors/donated",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        }
+      ]
+    },
+    {
+      "route": "/donors/not_donated",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        }
+      ]
+    },
+    {
+      "route": "/donors/not_contacted",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        }
+      ]
+    },
+    {
+      "route": "/donors/volunteers",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        }
+      ]
+    },
+    {
+      "route": "/donors/messages",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/add",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        },
+        {
+          "id": "donorAddDialog",
+          "w": 370
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/bulk",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        },
+        {
+          "id": "donorPasteDialog",
+          "w": 362.5999755859375
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/pace",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        },
+        {
+          "id": "donorBatchPicker",
+          "w": 370
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/notes",
+      "width": 390,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 390
+        },
+        {
+          "id": "foundationNotes",
+          "w": 389.958740234375
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 768,
+      "overflow": false,
+      "dialogs": []
+    },
+    {
+      "route": "/preview",
+      "width": 768,
+      "overflow": false,
+      "dialogs": []
+    },
+    {
+      "route": "/chat",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "hist",
+          "w": 768
+        }
+      ]
+    },
+    {
+      "route": "/notes",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "foundationNotes",
+          "w": 767.9906005859375
+        }
+      ]
+    },
+    {
+      "route": "/settings",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "set",
+          "w": 768
+        }
+      ]
+    },
+    {
+      "route": "/settings/memory",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "set",
+          "w": 752.6400146484375
+        },
+        {
+          "id": "memoryDialog",
+          "w": 509.5999755859375
+        }
+      ]
+    },
+    {
+      "route": "/settings/poster",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "set",
+          "w": 768
+        },
+        {
+          "id": "posterDialog",
+          "w": 520
+        }
+      ]
+    },
+    {
+      "route": "/keyboard",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "keyboardDialog",
+          "w": 479.8910827636719
+        }
+      ]
+    },
+    {
+      "route": "/whatsapp",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "whatsappDialog",
+          "w": 440
+        }
+      ]
+    },
+    {
+      "route": "/donors/all",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        }
+      ]
+    },
+    {
+      "route": "/donors/important",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        }
+      ]
+    },
+    {
+      "route": "/donors/top",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        }
+      ]
+    },
+    {
+      "route": "/donors/donated",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        }
+      ]
+    },
+    {
+      "route": "/donors/not_donated",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        }
+      ]
+    },
+    {
+      "route": "/donors/not_contacted",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        }
+      ]
+    },
+    {
+      "route": "/donors/volunteers",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        }
+      ]
+    },
+    {
+      "route": "/donors/messages",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/add",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        },
+        {
+          "id": "donorAddDialog",
+          "w": 509.5999755859375
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/bulk",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        },
+        {
+          "id": "donorPasteDialog",
+          "w": 540
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/pace",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        },
+        {
+          "id": "donorBatchPicker",
+          "w": 421.4000244140625
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/notes",
+      "width": 768,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 768
+        },
+        {
+          "id": "foundationNotes",
+          "w": 768
+        }
+      ]
+    },
+    {
+      "route": "/",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": []
+    },
+    {
+      "route": "/preview",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": []
+    },
+    {
+      "route": "/chat",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "hist",
+          "w": 900
+        }
+      ]
+    },
+    {
+      "route": "/notes",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "foundationNotes",
+          "w": 1439.364013671875
+        }
+      ]
+    },
+    {
+      "route": "/settings",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "set",
+          "w": 490
+        }
+      ]
+    },
+    {
+      "route": "/settings/memory",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "set",
+          "w": 500
+        },
+        {
+          "id": "memoryDialog",
+          "w": 520
+        }
+      ]
+    },
+    {
+      "route": "/settings/poster",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "set",
+          "w": 490
+        },
+        {
+          "id": "posterDialog",
+          "w": 509.60003662109375
+        }
+      ]
+    },
+    {
+      "route": "/keyboard",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "keyboardDialog",
+          "w": 480
+        }
+      ]
+    },
+    {
+      "route": "/whatsapp",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "whatsappDialog",
+          "w": 439.9533996582031
+        }
+      ]
+    },
+    {
+      "route": "/donors/all",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        }
+      ]
+    },
+    {
+      "route": "/donors/important",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        }
+      ]
+    },
+    {
+      "route": "/donors/top",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        }
+      ]
+    },
+    {
+      "route": "/donors/donated",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        }
+      ]
+    },
+    {
+      "route": "/donors/not_donated",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        }
+      ]
+    },
+    {
+      "route": "/donors/not_contacted",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        }
+      ]
+    },
+    {
+      "route": "/donors/volunteers",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        }
+      ]
+    },
+    {
+      "route": "/donors/messages",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/add",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        },
+        {
+          "id": "donorAddDialog",
+          "w": 520
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/bulk",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        },
+        {
+          "id": "donorPasteDialog",
+          "w": 529.199951171875
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/pace",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        },
+        {
+          "id": "donorBatchPicker",
+          "w": 430
+        }
+      ]
+    },
+    {
+      "route": "/donors/all/notes",
+      "width": 1440,
+      "overflow": false,
+      "dialogs": [
+        {
+          "id": "donorsPage",
+          "w": 1440
+        },
+        {
+          "id": "foundationNotes",
+          "w": 1440
+        }
+      ]
+    }
+  ]
+}

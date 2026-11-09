@@ -10,6 +10,7 @@
   "scripts": {
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:new": "playwright test tests/e2e/new_ui.spec.cjs tests/e2e/new_ui_complete.spec.cjs tests/e2e/new_ui_long_reader.spec.cjs --workers=3",
     "test:e2e:groups": "playwright test -c playwright.group-finder.config.cjs",
     "test:python": "python -m unittest discover -s tests -q",
     "format": "prettier --write \"**/*.{js,cjs,mjs,css}\" && ruff format .",

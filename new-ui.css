@@ -3030,7 +3030,8 @@
   height: 20px !important;
   margin: 0 !important;
 }
-.UI2 .foundation-notes .notes-workspace > .notes-toolbar {
+.UI2 .foundation-notes .notes-workspace > .notes-toolbar,
+.UI2 .foundation-notes[data-mode='writing'] .notes-workspace > .notes-toolbar {
   align-self: center;
   flex: 0 0 auto;
   width: fit-content !important;
@@ -3044,7 +3045,7 @@
 .UI2 .foundation-notes .notes-workspace > .notes-toolbar button {
   flex: 0 0 auto !important;
   min-width: 40px !important;
-  padding: 0 10px !important;
+  padding: 0 8px !important;
 }
 .UI2 .foundation-notes .notes-workspace,
 .UI2 .foundation-notes .notes-paper-scroll {
@@ -3375,6 +3376,10 @@
 /* Explicit reading/action order and sizing: legacy peek containment must not clip captions. */
 .UI2 #card .chat {
   order: 2 !important;
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
 }
 .UI2 #card .ui2-home-message-actions {
   order: 3 !important;
@@ -3489,4 +3494,106 @@
   .UI2 #main-workspace > .side {
     flex: 0 0 auto !important;
   }
+}
+/* Reader: one outer scroll area; nested absolute readers clipped long captions. */
+.UI2 #messageFocus {
+  justify-content: flex-start !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+.UI2 #messageFocus .focus-workspace {
+  position: static !important;
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+.UI2 #messageFocus .focus-paper {
+  position: relative !important;
+  contain: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+.UI2 #messageFocus #focusFormatted {
+  position: static !important;
+  inset: auto !important;
+  box-sizing: border-box !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  overflow-wrap: anywhere !important;
+  white-space: pre-wrap !important;
+  padding: 16px !important;
+}
+.UI2 #messageFocus #focusFormatted :is(.wa-line, b, i, a, span) {
+  max-width: 100%;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+}
+.UI2 #messageFocus .ui2-reader-dock {
+  flex: 0 0 auto !important;
+  margin-top: 12px !important;
+}
+@media (max-width: 899px) {
+  .UI2 #messageFocus .ui2-reader-dock {
+    position: fixed !important;
+    inset: auto 0 0 !important;
+    transform: none !important;
+    margin-bottom: 0 !important;
+  }
+  .UI2 #messageFocus {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important;
+  }
+}
+.UI2 #card {
+  overflow: visible !important;
+}
+.UI2 .ui2-home-more {
+  position: relative;
+  min-width: 0;
+}
+.UI2 .ui2-home-more > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--surface2, #232838);
+  color: var(--ink, #eef0f6);
+  list-style: none;
+  cursor: pointer;
+}
+.UI2 .ui2-home-more:not([open]) > div {
+  display: none;
+}
+.UI2 .ui2-home-more > div,
+.UI2 #card .overflow-tools > div {
+  position: absolute !important;
+  top: auto !important;
+  bottom: calc(100% + 8px) !important;
+  right: 0 !important;
+  left: auto !important;
+  z-index: 100;
+  display: grid;
+  gap: 6px;
+  width: min(220px, calc(100vw - 24px));
+  max-height: min(320px, calc(100dvh - 160px));
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--surface, #1b1f2c);
+  box-shadow: 0 8px 24px #0006;
+  box-sizing: border-box;
+}
+.UI2 .ui2-home-more > div > button {
+  width: 100%;
+  text-align: left;
 }

@@ -2751,7 +2751,7 @@ addEventListener('DOMContentLoaded', () => {
       const target = smallRoute(screen);
       if (Nav.path() === target) {
         Nav.go(
-          dialog.dataset.returnRoute ||
+          dialog.dataset.returnRoute ??
             (screen.path ? 'settings' : target.split('/').slice(0, 2).join('/')),
           { replace: true },
         );

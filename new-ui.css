@@ -3202,3 +3202,161 @@
     padding: 0 8px !important;
   }
 }
+
+/* ======================= Mobile fixes (Auto row, Chat, Donors, DM messages) ======================= */
+@media (max-width: 899px) {
+  /* 1. Auto: label and switch centred across the whole row; the whole row is the tap target */
+  .UI2 #live {
+    justify-content: center !important;
+    gap: 14px !important;
+    cursor: pointer;
+  }
+  /* 2. Chat: no top bar; Back sits with the chips near the thumb */
+  .UI2 #hist > header {
+    display: none !important;
+  }
+  .UI2 #hist .ui2-chat-return {
+    display: flex !important;
+    justify-content: flex-start !important;
+    padding: 6px 12px 0 !important;
+  }
+  .UI2 #hist .ui2-chat-return #histMain {
+    display: inline-flex !important;
+    align-items: center;
+    min-height: 44px !important;
+    padding: 0 18px !important;
+    border: 1px solid var(--line2, #3a4052) !important;
+    border-radius: 14px !important;
+    background: #263340 !important;
+    color: #dfe5ee !important;
+    font-weight: 700 !important;
+  }
+  /* 3. Donors list: title, search, Msgs, + Add and the tabs move to the bottom, above the DM bar */
+  .UI2 #donorsPage .donor-shell > .donor-table-wrap,
+  .UI2 #donorsPage .donor-shell > #donorVolunteers {
+    order: 1 !important;
+  }
+  .UI2 #donorsPage .donor-shell > .donor-toolbar {
+    order: 2 !important;
+    margin-top: 8px !important;
+  }
+  .UI2 #donorsPage .donor-shell > .donor-head {
+    order: 3 !important;
+    border-bottom: 0 !important;
+    margin-top: 6px !important;
+  }
+  .UI2 #donorsPage .donor-shell > :is(.donor-progress, .dp-show, .batch-list, .donor-bottom) {
+    order: 4 !important;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel {
+    top: auto !important;
+    bottom: calc(100% + 8px) !important;
+  }
+  /* 4. DM messages: no top bar; message centred and shown whole; DM messages / Follow-up at the bottom */
+  .UI2
+    #donorsPage
+    .donor-shell:has(#donorMessages:not([hidden]))
+    > :is(.donor-head, .donor-toolbar) {
+    display: none !important;
+  }
+  .UI2 #donorMessages .bank-followup {
+    order: 9 !important;
+    margin-top: 8px !important;
+  }
+  .UI2 #donorMessages .bank-workspace,
+  .UI2 #donorMessages .bank-message,
+  .UI2 #donorMessages .bank-preview {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .UI2 #donorMessages .bank-workspace {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .UI2 #donorMessages .bank-message {
+    align-self: center !important;
+    width: 100% !important;
+    max-width: 440px !important;
+    margin-inline: auto !important;
+    background: transparent !important;
+  }
+  .UI2 #donorMessages .bank-preview {
+    margin-inline: auto !important;
+  }
+  .UI2 #donorMessages .bank-actions .bank-pagination {
+    display: none !important;
+  }
+  .UI2 #donorMessages .ui2-bank-nav {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0;
+  }
+  .UI2 #donorMessages .ui2-bank-nav > button {
+    min-height: 40px !important;
+    padding: 0 16px !important;
+    border: 1px solid #394060 !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    color: #c3c8d8 !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #donorMessages .bank-message {
+    display: block !important;
+    min-height: 0 !important;
+  }
+  .UI2 #donorMessages .bank-preview {
+    flex: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .UI2 #donorMessages .bank-workspace {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .UI2 #hist[open] {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .UI2 #hist > #histLog {
+    order: 1;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+  .UI2 #hist > .chat-return {
+    order: 2;
+  }
+  .UI2 #hist > .next-actions {
+    order: 3;
+  }
+  .UI2 #hist > .ui2-hist-chips {
+    order: 4;
+  }
+  .UI2 #hist > form {
+    order: 5;
+  }
+  .UI2 #hist .ui2-chat-return > .sp {
+    display: none !important;
+  }
+  .UI2 #hist .ui2-chat-return #histMain {
+    order: -1;
+    flex-direction: row !important;
+    gap: 6px;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #hist .ui2-chat-return {
+    justify-content: flex-start !important;
+  }
+  .UI2 #hist .ui2-chat-return #histMain {
+    width: auto !important;
+    min-width: 96px !important;
+    white-space: nowrap !important;
+    grid-auto-flow: column !important;
+    justify-content: center !important;
+  }
+}

@@ -202,7 +202,7 @@ for (const width of [280, 320, 360, 390, 430, 768, 1440]) {
 }
 
 for (const width of [280, 360, 430, 1440]) {
-  test(`/new DM messages page at ${width}px: one row Edit, Copy, more, Back; Next and Regenerate inside more`, async ({
+  test(`/new DM messages page at ${width}px: one row Edit, Copy, more, Back; Next and Regenerate in their own row`, async ({
     page,
   }) => {
     await open(page, '/new#/donors/messages', width);
@@ -223,7 +223,7 @@ for (const width of [280, 360, 430, 1440]) {
     expect(ys.length).toBe(4);
     expect(new Set(ys).size).toBe(1); // one row
     await page.locator('#ui2BankMore > summary').click();
-    await expect(page.locator('#ui2BankMore [data-ui2-proxy]').first()).toBeVisible();
+    await expect(page.locator('.ui2-bank-nav [data-ui2-proxy]').first()).toBeVisible();
     const box = await page.locator('#ui2BankMore > div').boundingBox();
     expect(box.x).toBeGreaterThanOrEqual(-0.5);
     expect(box.x + box.width).toBeLessThanOrEqual(width + 0.5);
@@ -551,7 +551,7 @@ test('/new on-screen Back leaves no stale history entry, so the phone Back never
   await page.evaluate(() => window.history.pushState({ marker: 1 }, '', location.pathname + '#/'));
   await page.evaluate(() => window.history.replaceState({ marker: 1 }, '', location.pathname));
   for (const [tab, back] of [
-    ['chat', '#histClose'],
+    ['chat', '#histMain'],
     ['donors', '#donorMainBottom'],
     ['card', '#focusBack'],
   ]) {
@@ -570,4 +570,47 @@ test('/new on-screen Back leaves no stale history entry, so the phone Back never
       })
       .toBe(1);
   }
+});
+
+test('/new phone: tapping anywhere on the Auto row switches Auto', async ({ page }) => {
+  await open(page, '/new', 390);
+  const before = await page.locator('#auto').getAttribute('aria-checked');
+  const box = await page.locator('#live').boundingBox();
+  await page.mouse.click(box.x + 20, box.y + box.height / 2);
+  await expect.poll(() => page.locator('#auto').getAttribute('aria-checked')).not.toBe(before);
+  await page.mouse.click(box.x + 20, box.y + box.height / 2); // switch it back
+});
+
+test('/new phone: Chat has no top bar and Back sits near the thumb', async ({ page }) => {
+  await open(page, '/new#/chat', 390);
+  await expect(page.locator('#hist')).toBeVisible();
+  await expect(page.locator('#hist > header')).toBeHidden();
+  const back = await page.locator('#histMain').boundingBox();
+  expect(back.y).toBeGreaterThan(740 * 0.6);
+  await page.locator('#histMain').click();
+  await expect(page.locator('#hist')).toBeHidden();
+});
+
+test('/new phone donors: header and tabs sit below the list, near the thumb', async ({ page }) => {
+  await open(page, '/new#/donors/all', 390);
+  await expect(page.locator('.donor-row').first()).toBeVisible();
+  const table = await page.locator('#donorTable').boundingBox();
+  const head = await page.locator('.donor-head').boundingBox();
+  const tabs = await page.locator('.donor-tabs').boundingBox();
+  expect(tabs.y).toBeGreaterThan(table.y);
+  expect(head.y).toBeGreaterThan(tabs.y);
+});
+
+test('/new phone DM messages: no top bar, whole message shown, Next/Regenerate row, tabs at the bottom', async ({
+  page,
+}) => {
+  await open(page, '/new#/donors/messages', 390);
+  await expect(page.locator('#donorMessages .bank-line').first()).toBeVisible();
+  await expect(page.locator('#donorsPage .donor-head')).toBeHidden();
+  const prev = page.locator('#donorMessages .bank-preview');
+  expect(await prev.evaluate((e) => e.scrollHeight <= e.clientHeight + 1)).toBe(true);
+  await expect(page.locator('.ui2-bank-nav > button')).toHaveCount(2);
+  const tabs = await page.locator('#donorMessages .bank-followup').boundingBox();
+  const actions = await page.locator('#donorMessages .bank-actions').boundingBox();
+  expect(tabs.y).toBeGreaterThan(actions.y);
 });

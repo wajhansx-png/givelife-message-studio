@@ -288,11 +288,14 @@
       });
     }
     const panel = more.querySelector(':scope > div');
-    if (!panel.querySelector('[data-ui2-proxy]')) {
-      if (document.querySelector('#donorMessages .bank-next-arrow'))
-        panel.append(proxy('Next ›', '#donorMessages .bank-next-arrow'));
+    /* Next and Regenerate: one small row right under the message (pressing the real round buttons). */
+    if (!box.previousElementSibling?.classList.contains('ui2-bank-nav')) {
+      const nav = mk('div', 'ui2-bank-nav');
       if (document.querySelector('#donorMessages .bank-gen-icon'))
-        panel.append(proxy('↻ Regenerate', '#donorMessages .bank-gen-icon'));
+        nav.append(proxy('↻ Regenerate', '#donorMessages .bank-gen-icon'));
+      if (document.querySelector('#donorMessages .bank-next-arrow'))
+        nav.append(proxy('Next ›', '#donorMessages .bank-next-arrow'));
+      if (nav.children.length) box.before(nav);
     }
     for (const t of box.querySelectorAll(':scope > button.tool')) {
       const x = t.textContent.trim();
@@ -1296,3 +1299,10 @@ document.addEventListener(
     remember();
   });
 })();
+
+/* 15. Phone: tapping anywhere on the Auto row switches Auto (the switch itself still works as before). */
+document.addEventListener('click', (e) => {
+  const live = e.target.closest?.('#live');
+  if (!live || e.target.closest('#auto') || innerWidth >= 900) return;
+  document.getElementById('auto')?.click();
+});

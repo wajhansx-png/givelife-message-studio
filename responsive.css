@@ -306,49 +306,227 @@
   }
 }
 
-/* ---- Volunteers screen (<= 899px): one flowing page, no sticky dock covering the message box ---- */
+/* Volunteers: one workspace, case actions beside names, text-only sharing beside its message. */
+html body #donorsPage[data-panel="volunteers"] {
+  background: var(--bg) !important;
+}
+html
+  body:not(#a):not(#b):not(#c)
+  #donorsPage#donorsPage:not(#d)[data-panel="volunteers"]
+  :is(
+    .donor-head,
+    .donor-toolbar,
+    .donor-bottom,
+    #donorResumeStatus,
+    #donorProgressShow
+  ) {
+  display: none !important;
+}
+html body #donorsPage#donorsPage .donor-volunteers {
+  flex: 1 1 auto;
+  padding: 8px 2px;
+  gap: 16px;
+  scroll-padding-block: 12px;
+}
+html body #donorsPage#donorsPage .vol-heading,
+html body #donorsPage#donorsPage .vol-msg-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+html body #donorsPage#donorsPage .vol-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+}
+.vol-count {
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: var(--surface2);
+  color: var(--mut);
+  font-size: 12px;
+}
+html body #donorsPage#donorsPage .vol-add-panel {
+  position: relative;
+}
+html body #donorsPage#donorsPage .vol-add-panel > summary {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  list-style: none;
+  cursor: pointer;
+  font-size: 13px;
+}
+.vol-add-panel > summary::-webkit-details-marker {
+  display: none;
+}
+html body #donorsPage#donorsPage .vol-add {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  top: 48px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: min(340px, calc(100vw - 40px));
+  padding: 14px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh3);
+}
+html body #donorsPage#donorsPage .vol-add .primary {
+  grid-column: 1;
+}
+html body #donorsPage#donorsPage .vol-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+html body #donorsPage#donorsPage :is(.vol-people, .vol-msg) {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: visible;
+}
+html body #donorsPage#donorsPage .vol-case-options {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+html body #donorsPage#donorsPage .vol-check {
+  font-size: 12px !important;
+  min-height: 24px;
+}
+html body #donorsPage#donorsPage .vol-list {
+  border-radius: 0 0 14px 14px;
+  background: transparent;
+  overflow: visible;
+}
+html body #donorsPage#donorsPage .vol-row {
+  grid-template-columns: minmax(0, 1fr) repeat(2, 76px) 28px;
+  gap: 6px;
+  padding: 6px 10px;
+  min-height: 52px;
+}
+html body #donorsPage#donorsPage .vol-name {
+  font-size: 13px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+html body #donorsPage#donorsPage .vol-row :is(.tool, .donor-more > summary) {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  border-radius: 9px;
+}
+html body #donorsPage#donorsPage .vol-row .vol-share {
+  color: var(--ink) !important;
+  background: color-mix(in srgb, var(--btn) 16%, var(--surface)) !important;
+  border-color: color-mix(in srgb, var(--btn) 45%, var(--line)) !important;
+}
+html body #donorsPage#donorsPage .vol-msg {
+  padding: 14px;
+  gap: 10px;
+}
+html body #donorsPage#donorsPage .vol-msg-heading label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.vol-text-badge {
+  color: var(--mut);
+  font-size: 11px;
+  white-space: nowrap;
+}
+html body #donorsPage#donorsPage .vol-msg textarea {
+  min-height: 190px;
+  padding: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  background: var(--msg);
+  color: var(--msgink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+html body #donorsPage#donorsPage .vol-message-hint {
+  margin: 0;
+  color: var(--mut);
+  font-size: 12px;
+  line-height: 1.5;
+}
+html body #donorsPage#donorsPage .vol-msg-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+html body #donorsPage#donorsPage .vol-msg-actions button {
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+html body #donorsPage#donorsPage .vol-msg-actions .primary {
+  flex: 1;
+}
+html body #donorsPage#donorsPage .vol-foot {
+  position: static;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  margin-top: auto;
+  background: transparent;
+}
+html body #donorsPage#donorsPage .vol-foot button {
+  min-height: 42px;
+  min-width: 90px;
+  width: auto;
+  font-size: 13px;
+}
+html body #donorsPage#donorsPage .vol-stop {
+  color: var(--warn);
+  border-color: var(--amber);
+  background: var(--wbg);
+}
 @media (max-width: 899px) {
-  html
-    body:not(#a):not(#b):not(#c)
-    #donorsPage#donorsPage:not(#d)[data-panel='volunteers']
-    .donor-bottom {
-    display: none !important;
+  html body #donorsPage#donorsPage .donor-volunteers {
+    gap: 12px;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers {
-    padding-bottom: 12px !important;
-    scroll-padding-bottom: 12px !important;
+  html body #donorsPage#donorsPage .vol-workspace {
+    gap: 12px;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .vol-msg textarea {
-    min-height: 120px !important;
-    height: auto !important;
+  html body #donorsPage#donorsPage .vol-row {
+    grid-template-columns: minmax(0, 1fr) repeat(2, 70px) 28px;
+    padding: 4px 8px;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .vol-msg-actions {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    gap: 8px !important;
+  html body #donorsPage#donorsPage .vol-row :is(.tool, .donor-more > summary) {
+    min-height: 44px;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .vol-msg-actions > label {
-    flex: 1 1 150px !important;
-    min-width: 0 !important;
+  html body #donorsPage#donorsPage .vol-msg textarea {
+    min-height: 130px;
+    font-size: 16px;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .vol-msg-actions > button {
-    flex: 0 0 auto !important;
+  html body #donorsPage#donorsPage .vol-msg {
+    padding: 12px;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .vol-foot {
-    position: static !important;
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) auto !important;
-    gap: 8px !important;
-    align-items: center !important;
-    margin-top: 8px !important;
+  html body #donorsPage#donorsPage .vol-add input {
+    font-size: 16px;
   }
-  html
-    body:not(#a):not(#b):not(#c)
-    #donorsPage#donorsPage:not(#d)
-    .vol-foot
-    > :is(.primary, #volProgress) {
-    grid-column: 1 / -1 !important;
+}
+@media (max-width: 759px) {
+  html body #donorsPage#donorsPage .vol-workspace {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

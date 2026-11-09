@@ -2433,19 +2433,32 @@
       volPoll = setTimeout(async () => {
         await loadVolunteers();
         if (tab === 'volunteers') showVolunteers(true);
-      }, 5000);
+      }, 1500);
   }
   async function showVolunteers(keepDraft = false) {
     const box = el('donorVolunteers');
     if (!keepDraft || (!vols.items.length && !vols.message)) await loadVolunteers();
     if (tab !== 'volunteers') return;
+    const focused = keepDraft && box.contains(document.activeElement) ? document.activeElement : null;
+    const focusState = focused?.id
+      ? { id: focused.id, start: focused.selectionStart, end: focused.selectionEnd }
+      : null;
+    const scrollTop = box.scrollTop;
+    const addOpen = box.querySelector('.vol-add-panel')?.open || false;
+    const withPoster = box.querySelector('#volPoster')?.checked ?? true;
     const draft =
-        keepDraft && box.querySelector('#volMessage')
-          ? box.querySelector('#volMessage').value
-          : null,
+        keepDraft && box.querySelector('#volMessage') ? box.querySelector('#volMessage').value : null,
       nm = box.querySelector('#volName')?.value || '',
       ph = box.querySelector('#volPhone')?.value || '';
     box.textContent = '';
+    const heading = make('header', 'vol-heading');
+    const title = make('h2', '', 'Volunteers');
+    title.append(make('span', 'vol-count', String(vols.items.length)));
+    const addPanel = make('details', 'vol-add-panel');
+    addPanel.open = addOpen;
+    const addToggle = make('summary', 'tool', '+ Add volunteer');
+    addPanel.append(addToggle);
+    heading.append(title, addPanel);
     const add = make('form', 'vol-add');
     add.autocomplete = 'off';
     const name = make('input', '');
@@ -2483,8 +2496,20 @@
         n.value = typed[0];
         p2.value = typed[1];
       }
+      el('donorVolunteers').querySelector('.vol-add-panel').open = true;
       n?.focus();
     };
+    addPanel.append(add);
+    const people = make('section', 'vol-people');
+    people.setAttribute('aria-label', 'Volunteer list and case options');
+    const caseOptions = make('div', 'vol-case-options');
+    const poster = make('label', 'vol-check');
+    const pc = make('input', '');
+    pc.type = 'checkbox';
+    pc.id = 'volPoster';
+    pc.checked = withPoster;
+    poster.append(pc, ' Poster with DM Case');
+    caseOptions.append(poster);
     const list = make('div', 'vol-list');
     if (vols.items.length) list.setAttribute('role', 'list');
     if (!vols.items.length) list.append(make('p', 'donor-empty', 'No volunteers yet.'));
@@ -2493,13 +2518,14 @@
       row.setAttribute('role', 'listitem');
       row.dataset.volId = d.id;
       const nameEl = make('div', 'vol-name', i + 1 + '. ' + d.name);
+      nameEl.title = d.name;
       const dmCase = make('button', 'tool vol-case', 'DM Case');
       const dmShare = make('button', 'tool vol-share', 'DM Share');
       dmCase.type = dmShare.type = 'button';
       dmCase.setAttribute('aria-label', 'DM Case to ' + d.name);
       dmShare.setAttribute('aria-label', 'DM Share to ' + d.name);
       dmCase.title = 'Send the current case details to ' + d.name;
-      dmShare.title = 'Send the Message to Volunteers text to ' + d.name;
+      dmShare.title = 'Send text only to ' + d.name;
       const sendVolunteer = async (action) => {
         const text = el('donorVolunteers').querySelector('#volMessage').value;
         if (action === 'send_one' && !text.trim()) {
@@ -2514,7 +2540,7 @@
             id: d.id,
             ...(action === 'send_one' ? { text } : {}),
             request_id: 'v' + crypto.randomUUID().replace(/-/g, ''),
-            poster: el('volPoster').checked,
+            poster: action === 'send_case' && el('volPoster').checked,
           },
           'Sending to ' + d.name + '…',
         );
@@ -2554,38 +2580,44 @@
       row.append(nameEl, dmCase, dmShare, more);
       list.append(row);
     });
+    people.append(caseOptions, list);
     const msg = make('div', 'vol-msg');
-    const label = make('label', '', 'Message to volunteers (they get it exactly like this)');
+    const msgHeading = make('div', 'vol-msg-heading');
+    const label = make('label', '', 'Message to Volunteers');
     label.htmlFor = 'volMessage';
+    msgHeading.append(label, make('span', 'vol-text-badge', 'Text only'));
     const ta = make('textarea', '');
     ta.id = 'volMessage';
     ta.name = 'volunteer_message';
-    ta.rows = 6;
+    ta.rows = 5;
     ta.maxLength = 4000;
     ta.placeholder =
       'Assalam o alaikum {name}, please share this case in your groups…  ({name} becomes their name)';
     ta.value = draft ?? vols.message ?? '';
-    const poster = make('label', 'vol-check');
-    const pc = make('input', '');
-    pc.type = 'checkbox';
-    pc.id = 'volPoster';
-    pc.checked = true;
-    poster.append(pc, ' Send the poster with it');
+    const hint = make(
+      'p',
+      'vol-message-hint',
+      'DM Share sends this text. {name} becomes their first name.',
+    );
+    hint.id = 'volMessageHint';
+    ta.setAttribute('aria-describedby', hint.id);
     const save = make('button', 'tool', 'Save message');
     save.type = 'button';
     save.onclick = () => volAct({ action: 'message', text: ta.value }, 'Message saved.');
-    msg.append(label, ta, make('div', 'vol-msg-actions'));
-    msg.lastChild.append(poster, save);
+    msg.append(msgHeading, ta, hint);
+    const msgActions = make('div', 'vol-msg-actions');
     const prog = make('div', 'donor-progress vol-progress');
     prog.id = 'volProgress';
     prog.hidden = true;
     prog.setAttribute('role', 'status');
-    const foot = make('div', 'vol-foot');
+    const foot = make('footer', 'vol-foot');
     const all = make('button', 'primary send-donors', 'DM all volunteers');
     all.type = 'button';
     all.disabled = !vols.items.length;
-    all.onclick = () => openVolunteerTiming(ta.value, pc.checked);
-    const pause = make('button', 'tool', 'Pause');
+    all.onclick = () => openVolunteerTiming(ta.value, false);
+    msgActions.append(save, all);
+    msg.append(msgActions);
+    const pause = make('button', 'tool vol-stop', 'Stop DMs');
     pause.type = 'button';
     pause.hidden = !(
       vols.delivery && ['Starting', 'Sending', 'Waiting'].includes(vols.delivery.state)
@@ -2595,14 +2627,25 @@
     back.type = 'button';
     back.setAttribute('aria-label', 'Back to main screen');
     back.onclick = close;
-    foot.append(pause, all, back);
-    box.append(add, list, msg, prog, foot);
+    foot.append(back, pause);
+    const workspace = make('div', 'vol-workspace');
+    workspace.append(people, msg);
+    box.append(heading, workspace, prog, foot);
+    box.scrollTop = scrollTop;
+    if (focusState) {
+      const field = el(focusState.id);
+      field?.focus({ preventScroll: true });
+      if (field && typeof focusState.start === 'number')
+        field.setSelectionRange(focusState.start, focusState.end);
+    }
     // Account for the real sticky footer when scrolling to a message field.
     const syncVolDock = () => box.style.setProperty('--vol-dock-height', foot.offsetHeight + 'px');
     if (typeof ResizeObserver !== 'undefined') {
-      if (!volDockObserver) volDockObserver = new ResizeObserver(entries => {
-        for (const entry of entries) box.style.setProperty('--vol-dock-height', entry.target.offsetHeight + 'px');
-      });
+      if (!volDockObserver)
+        volDockObserver = new ResizeObserver((entries) => {
+          for (const entry of entries)
+            box.style.setProperty('--vol-dock-height', entry.target.offsetHeight + 'px');
+        });
       volDockObserver.disconnect();
       volDockObserver.observe(foot);
     }

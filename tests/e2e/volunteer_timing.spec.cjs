@@ -31,6 +31,6 @@ for (const width of [1440, 390])
     await expect(page.locator('#volProgress')).toContainText('Scheduled');
     await page.reload();
     await expect(page.locator('#volProgress')).toContainText('Scheduled');
-    await page.getByRole('button', { name: 'Pause', exact: true }).click();
+    await page.getByRole('button', { name: 'Stop DMs', exact: true }).click();
     await expect(page.locator('#volProgress')).toContainText('Last send');
   });

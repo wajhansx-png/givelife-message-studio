@@ -39,7 +39,11 @@ test('duplicate contact imports preserve one record per normalized number and hi
         const phones = ids.map((i) => '1555' + String(1230000 + i));
         const r = py({ op: 'duplicates', phones });
         expect(r.count).toBe(new Set(phones).size);
-        expect(JSON.stringify(r.public)).not.toContain('1555');
+        const publicJson = JSON.stringify(r.public);
+        for (const phone of phones) expect(publicJson).not.toContain(phone);
+        expect(r.public.donors.every((donor) => donor.number_hidden && !('phone' in donor))).toBe(
+          true,
+        );
       },
     ),
     { numRuns: 25, seed: 2801026 },

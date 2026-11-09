@@ -528,3 +528,18 @@ for (const width of [280, 390, 1440]) {
     );
   });
 }
+
+test('/new phone Back gesture: when the browser closes a screen itself, the address follows (no dead Back)', async ({
+  page,
+}) => {
+  for (const [tab, id] of [
+    ['chat', 'hist'],
+    ['donors', 'donorsPage'],
+  ]) {
+    await open(page, '/new', 390);
+    await page.locator(`.ui2-tab[data-tab="${tab}"]`).click();
+    await expect(page.locator('#' + id)).toBeVisible();
+    await page.evaluate((i) => document.getElementById(i).close(), id); // Android Chrome's Back gesture
+    await expect.poll(() => page.evaluate(() => location.hash)).toBe('');
+  }
+});

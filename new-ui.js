@@ -1218,3 +1218,33 @@ document.addEventListener(
   },
   true,
 );
+
+/* 12. Phone Back gesture: Chrome on Android closes an open screen (a modal dialog) by itself and keeps the
+   address (#/chat, #/settings ...). The next Back then only removed that stale entry, so it seemed to do
+   nothing. Whenever one of these screens closes in any way, the address follows it back. */
+(() => {
+  const ROUTES = {
+    hist: 'chat',
+    set: 'settings',
+    keyboardDialog: 'keyboard',
+    whatsappDialog: 'whatsapp',
+    donorsPage: 'donors',
+    foundationNotes: 'notes',
+  };
+  function watch() {
+    for (const [id, top] of Object.entries(ROUTES)) {
+      const d = document.getElementById(id);
+      if (!d || d.dataset.ui2Back) continue;
+      d.dataset.ui2Back = '1';
+      d.addEventListener('close', () =>
+        setTimeout(() => {
+          if (typeof Nav === 'undefined' || d.open || Nav.top() !== top) return;
+          if (window.history.state?.nav && window.history.length > 1) window.history.back();
+          else Nav.go('', { replace: true });
+        }, 60),
+      );
+    }
+  }
+  watch();
+  new MutationObserver(watch).observe(document.body, { childList: true, subtree: true });
+})();

@@ -148,21 +148,134 @@ test('/new desktop reader: narrow, tall message with the buttons beside it; edit
   expect(ta.height).toBeGreaterThan(200);
 });
 
-test('/new on a computer opens in the reader; Back returns to the chat; a phone stays on the main screen', async ({
+test('/new opens in the reader on a computer and on a phone; Back returns to the main screen without jumping back', async ({
   page,
 }) => {
-  await open(page, '/new', 1440);
-  await expect(page.locator('#messageFocus')).toBeVisible();
-  await expect(page.locator('#btnGivelife')).toBeVisible();
-  expect(await page.evaluate(() => location.hash)).toBe('#/preview');
-  await page.locator('#focusBack').click();
-  await expect(page.locator('#messageFocus')).toBeHidden();
-  await page.waitForTimeout(900); // it must not jump back into the reader
-  expect(await page.evaluate(() => location.hash)).not.toBe('#/preview');
-  await open(page, '/new', 390);
-  await page.waitForTimeout(900);
-  await expect(page.locator('#messageFocus')).toBeHidden();
-  expect(await page.evaluate(() => location.hash)).toBe('');
+  for (const width of [1440, 390, 280]) {
+    await open(page, '/new', width);
+    await expect(page.locator('#messageFocus')).toBeVisible();
+    expect(await page.evaluate(() => location.hash)).toBe('#/preview');
+    await page.locator('#focusBack').click();
+    await expect(page.locator('#messageFocus')).toBeHidden();
+    await page.waitForTimeout(900);
+    expect(await page.evaluate(() => location.hash)).not.toBe('#/preview');
+  }
+});
+
+for (const width of [280, 320, 360, 390, 430, 768]) {
+  test(`/new phone reader at ${width}px: Regenerate and Next are big thumb buttons that press the real ones`, async ({
+    page,
+  }) => {
+    const hits = [];
+    await page.route('**/*', (r) => {
+      if (r.request().method() === 'POST' && /send/i.test(r.request().url()))
+        hits.push(r.request().url());
+      return r.continue();
+    });
+    await open(page, '/new#/preview', width);
+    const regen = page.locator('#ui2Regen');
+    const next = page.locator('#ui2Next');
+    await expect(regen).toBeVisible();
+    await expect(next).toBeVisible();
+    const [r, n, e, t, b] = await Promise.all(
+      ['#ui2Regen', '#ui2Next', '#focusEdit', '#focusTest', '#focusBack'].map((s) =>
+        page.locator(s).boundingBox(),
+      ),
+    );
+    expect(Math.min(r.height, n.height)).toBeGreaterThanOrEqual(46);
+    expect(r.y).toBeLessThan(e.y); // the two main buttons sit above the row of four
+    for (const x of [r, n, e, t, b]) {
+      expect(x.x).toBeGreaterThanOrEqual(-0.5);
+      expect(x.x + x.width).toBeLessThanOrEqual(width + 0.5);
+      expect(x.y + x.height).toBeLessThanOrEqual(page.viewportSize().height + 0.5);
+    }
+    expect(await page.locator('#focusNextArrow').isVisible()).toBe(false); // the small round ones are replaced
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
+    await next.click();
+    expect(hits, 'Next and Regenerate must never send').toEqual([]);
+  });
+}
+
+test('/new computer reader keeps its round Next and Regenerate beside the message and hides the phone buttons', async ({
+  page,
+}) => {
+  await open(page, '/new#/preview', 1440);
+  await expect(page.locator('#focusNextArrow')).toBeVisible();
+  await expect(page.locator('#focusGenIcon')).toBeVisible();
+  await expect(page.locator('#ui2Next')).toBeHidden();
+  await expect(page.locator('#focusSave')).toBeVisible();
+});
+
+for (const width of [280, 360, 430, 1440]) {
+  test(`/new DM messages page at ${width}px: Regenerate and Next, one orderly button grid, 12px message`, async ({
+    page,
+  }) => {
+    await open(page, '/new#/donors/messages', width);
+    await expect(page.locator('#donorMessages .bank-line').first()).toBeVisible();
+    const fs = await page
+      .locator('#donorMessages .bank-line')
+      .first()
+      .evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    expect(fs).toBeGreaterThanOrEqual(12);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
+    if (width < 900) {
+      const names = ['#ui2BankGen', '#ui2BankNext'];
+      for (const sel of names) await expect(page.locator(sel)).toBeVisible();
+      const g = await page.locator('#ui2BankGen').boundingBox();
+      const edit = await page
+        .locator('#donorMessages .bank-actions button.tool', { hasText: /^Edit$/ })
+        .boundingBox();
+      expect(g.y).toBeLessThan(edit.y);
+      expect(g.height).toBeGreaterThanOrEqual(46);
+      for (const bx of await page.locator('#donorMessages .bank-actions button').evaluateAll((bs) =>
+        bs
+          .filter((b) => b.checkVisibility())
+          .map((b) => {
+            const r = b.getBoundingClientRect();
+            return [r.x, r.right];
+          }),
+      ))
+        expect(bx[0] >= -0.5 && bx[1] <= width + 0.5).toBe(true);
+    } else {
+      await expect(page.locator('#ui2BankGen')).toBeHidden();
+    }
+  });
+}
+
+test('/new Settings is grouped under four headings; the switches explain themselves', async ({
+  page,
+}) => {
+  for (const width of [280, 390, 1440]) {
+    await open(page, '/new#/settings', width);
+    await expect(page.locator('#set')).toBeVisible();
+    await expect(page.locator('.ui2-set-head')).toHaveText([
+      'Look',
+      'Sending safety',
+      'Tools',
+      'WhatsApp',
+    ]);
+    await expect(page.locator('#swDm').locator('xpath=ancestor::label//small')).toContainText(
+      'by itself',
+    );
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
+  }
+});
+
+test('/new Stop DMs is hidden while idle, and the existing page still has it', async ({
+  page,
+  request,
+}) => {
+  await open(page, '/new#/donors/all', 1440);
+  await expect(page.locator('#donorSendImportant')).toBeVisible();
+  await expect(page.locator('#donorToggle')).toBeHidden();
+  const old = await (await request.get('/')).text();
+  expect(old).not.toContain('ui2');
 });
 
 test('/new phone: tapping the donated circle shows a tick, and tapping again clears it', async ({

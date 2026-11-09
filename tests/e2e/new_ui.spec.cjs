@@ -543,3 +543,31 @@ test('/new phone Back gesture: when the browser closes a screen itself, the addr
     await expect.poll(() => page.evaluate(() => location.hash)).toBe('');
   }
 });
+
+test('/new on-screen Back leaves no stale history entry, so the phone Back never "does nothing"', async ({
+  page,
+}) => {
+  await open(page, '/new', 390);
+  await page.evaluate(() => window.history.pushState({ marker: 1 }, '', location.pathname + '#/'));
+  await page.evaluate(() => window.history.replaceState({ marker: 1 }, '', location.pathname));
+  for (const [tab, back] of [
+    ['chat', '#histClose'],
+    ['donors', '#donorMainBottom'],
+    ['card', '#focusBack'],
+  ]) {
+    if (tab === 'card') await page.locator('#card').click();
+    else await page.locator(`.ui2-tab[data-tab="${tab}"]`).click();
+    await page.waitForTimeout(400);
+    await page
+      .locator(back + ':visible')
+      .first()
+      .click();
+    await expect.poll(() => page.evaluate(() => location.hash)).toBe('');
+    // Back on the very entry we started from: nothing piled up after it.
+    await expect
+      .poll(() => page.evaluate(() => window.history.state && window.history.state.marker), {
+        message: tab,
+      })
+      .toBe(1);
+  }
+});

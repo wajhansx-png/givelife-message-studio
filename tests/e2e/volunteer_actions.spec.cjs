@@ -55,10 +55,9 @@ for (const width of [1440, 1024, 768, 390, 320]) {
     expect(actions).toHaveLength(0);
     await caseButton.click();
     await expect.poll(() => actions.length).toBe(1);
-    expect(actions[0].action).toBe('send_case');
+    expect(actions[0]).toMatchObject({ action: 'send_case', poster: true });
     await page.locator('#volMessage').fill('A new unsaved sharing request.');
-    // DM Share must ignore the case poster option, including its checked default.
-    await expect(page.locator('#volPoster')).toBeChecked();
+    await expect(page.locator('#donorVolunteers input[type=checkbox]')).toHaveCount(0);
     await shareButton.click();
     await expect.poll(() => actions.length).toBe(2);
     expect(actions[1]).toMatchObject({
@@ -84,7 +83,6 @@ test('case and unsaved share text reach only the selected volunteer through fake
   await request.post('/__test/seed', { headers, data: { group: caseText } });
   await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
   await page.goto('/#/donors/volunteers');
-  await page.locator('#volPoster').check();
   const events = async () =>
     (await (await request.get('/__test/events', { headers })).json()).events;
   await page.getByRole('button', { name: 'DM Case to Sara', exact: true }).click();
@@ -93,7 +91,6 @@ test('case and unsaved share text reach only the selected volunteer through fake
   expect((await events())[0].path).toContain('/send/image');
   await expect(page.locator('#volProgress')).toContainText('1 sent', { timeout: 10000 });
   await page.locator('#volMessage').fill('Please share this case, {name}.');
-  await expect(page.locator('#volPoster')).toBeChecked();
   await page.getByRole('button', { name: 'DM Share to Sara', exact: true }).click();
   await expect.poll(async () => (await events()).length).toBe(2);
   expect((await events())[1].fields).toMatchObject({
@@ -128,11 +125,10 @@ test('empty page, add volunteer and save a share message on a small phone', asyn
   await expect(page.locator('.vol-count')).toHaveText('1');
   await page.locator('.vol-add-panel > summary').click();
   await expect(page.locator('.vol-name')).toHaveText('1. Muhammad Abdullah Khan');
-  await page.locator('#volPoster').uncheck();
   await page.locator('#volMessage').fill('Please share this update, {name}.');
   await expect(page.getByRole('button', { name: 'DM all volunteers', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Save message', exact: true }).click();
-  await expect(page.locator('#volPoster')).not.toBeChecked();
+  await expect(page.locator('#donorVolunteers input[type=checkbox]')).toHaveCount(0);
   await page.reload();
   await expect(page.locator('#volMessage')).toHaveValue('Please share this update, {name}.');
   await expect(page.locator('.donor-bottom')).toBeHidden();
@@ -140,7 +136,9 @@ test('empty page, add volunteer and save a share message on a small phone', asyn
   await expect(page.locator('#donorsPage')).not.toBeVisible();
 });
 
-test('delivery refresh keeps the message draft, caret and case poster choice', async ({ page }) => {
+test('delivery refresh keeps the message draft and caret without a poster checkbox', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
   await page.goto('/#/donors/volunteers');
@@ -151,7 +149,6 @@ test('delivery refresh keeps the message draft, caret and case poster choice', a
   await expect(page.getByRole('button', { name: 'DM all volunteers', exact: true })).toBeHidden();
   await expect(page.locator('.vol-row .vol-case').first()).toBeDisabled();
   await expect(page.locator('.vol-row .vol-share').first()).toBeDisabled();
-  await page.locator('#volPoster').uncheck();
   await page.locator('#volMessage').fill('Keep this unsaved message and cursor.');
   await page.locator('#volMessage').evaluate((e) => e.setSelectionRange(7, 7));
   const oldField = await page.locator('#volMessage').elementHandle();
@@ -159,7 +156,7 @@ test('delivery refresh keeps the message draft, caret and case poster choice', a
   await expect(page.locator('#volMessage')).toBeFocused();
   await expect(page.locator('#volMessage')).toHaveValue('Keep this unsaved message and cursor.');
   expect(await page.locator('#volMessage').evaluate((e) => e.selectionStart)).toBe(7);
-  await expect(page.locator('#volPoster')).not.toBeChecked();
+  await expect(page.locator('#donorVolunteers input[type=checkbox]')).toHaveCount(0);
   await page.getByRole('button', { name: 'Stop DMs', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Stop DMs', exact: true })).toBeHidden();
   await expect(page.getByRole('button', { name: 'DM all volunteers', exact: true })).toBeVisible();

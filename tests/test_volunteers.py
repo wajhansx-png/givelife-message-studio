@@ -132,7 +132,7 @@ class VolunteerTests(unittest.TestCase):
         self.assertEqual(self.sent[0]["name"], "Sara")
         self.assertEqual(self.sent[0]["message"], "Current case: Rs. 25,000 left.")
         self.assertEqual(self.sent[0]["kind"], "volunteer_batch")
-        self.assertFalse(self.sent[0]["poster"])
+        self.assertTrue(self.sent[0]["poster"])
         self.assertEqual(self.v.message(), "")
 
     def test_dm_share_uses_unsaved_field_text_without_replacing_saved_message(self):
@@ -165,11 +165,11 @@ class VolunteerTests(unittest.TestCase):
         self.assertEqual(len(self.sent), 1)
         self.assertFalse(self.sent[0]["poster"])
 
-    def test_dm_case_can_still_include_the_poster(self):
+    def test_dm_case_includes_the_poster_by_default(self):
         self.v.app.get_message = lambda kind: {"text": "Current case details"}
         selected = self.v.mutate({"action": "add", "name": "Sara", "phone": "03001234567"})["donor"]
         with patch.object(self.v.jobs, "_run"):
-            self.v.mutate({"action": "send_case", "id": selected["id"], "poster": True})
+            self.v.mutate({"action": "send_case", "id": selected["id"]})
         self.run_job()
         self.assertTrue(self.sent[0]["poster"])
 

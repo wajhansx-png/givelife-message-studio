@@ -116,7 +116,7 @@ class Volunteers:
                 ids=[self.book.resolve(body.get("id", ""))["id"]],
                 limit=1,
                 request_id=body.get("request_id"),
-                poster=bool(body.get("poster", True)) if action == "send_case" else False,
+                poster=action == "send_case",
                 skip_contacted=False,
                 custom_template=text,
             )

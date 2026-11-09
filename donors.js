@@ -2452,7 +2452,6 @@
     const listScrollTop = box.querySelector('.vol-list')?.scrollTop || 0;
     const workspaceScrollTop = box.querySelector('.vol-workspace')?.scrollTop || 0;
     const addOpen = box.querySelector('.vol-add-panel')?.open || false;
-    const withPoster = box.querySelector('#volPoster')?.checked ?? true;
     const draft =
         keepDraft && box.querySelector('#volMessage') ? box.querySelector('#volMessage').value : null,
       nm = box.querySelector('#volName')?.value || '',
@@ -2511,13 +2510,7 @@
     const people = make('section', 'vol-people');
     people.setAttribute('aria-label', 'Volunteer list and case options');
     const caseOptions = make('div', 'vol-case-options');
-    const poster = make('label', 'vol-check');
-    const pc = make('input', '');
-    pc.type = 'checkbox';
-    pc.id = 'volPoster';
-    pc.checked = withPoster;
-    poster.append(pc, ' Poster with DM Case');
-    caseOptions.append(make('span', 'vol-list-label', 'People'), poster);
+    caseOptions.append(make('span', 'vol-list-label', 'People'));
     const list = make('div', 'vol-list');
     if (vols.items.length) {
       list.setAttribute('role', 'list');
@@ -2538,7 +2531,7 @@
       dmCase.disabled = dmShare.disabled = !!active;
       dmCase.setAttribute('aria-label', 'DM Case to ' + d.name);
       dmShare.setAttribute('aria-label', 'DM Share to ' + d.name);
-      dmCase.title = 'Send the current case details to ' + d.name;
+      dmCase.title = 'Send the current case and poster to ' + d.name;
       dmShare.title = 'Send text only to ' + d.name;
       const sendVolunteer = async (action) => {
         const text = el('donorVolunteers').querySelector('#volMessage').value;
@@ -2554,7 +2547,7 @@
             id: d.id,
             ...(action === 'send_one' ? { text } : {}),
             request_id: 'v' + crypto.randomUUID().replace(/-/g, ''),
-            poster: action === 'send_case' && el('volPoster').checked,
+            poster: action === 'send_case',
           },
           'Sending to ' + d.name + '…',
         );

@@ -1,4 +1,19 @@
 /* Redesign helpers, loaded only at /new. They move or relabel existing controls; nothing here sends anything. */
+/* Speed: every helper below watches the page for changes. Run each at most once per frame, not once per change. */
+/* Width checks use media queries: reading innerWidth made the browser re-measure the whole page each time. */
+const ui2Wide = matchMedia('(min-width: 900px)');
+const ui2Tab = matchMedia('(min-width: 700px)');
+const ui2Frame = (fn) => {
+  let queued = false;
+  return () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      fn();
+    });
+  };
+};
 (() => {
   function arrangeReader() {
     const screen = document.getElementById('messageFocus');
@@ -63,7 +78,7 @@
     arrangeStatus();
   };
   run();
-  new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(ui2Frame(run)).observe(document.body, { childList: true, subtree: true });
 })();
 
 /* 1. The home screen itself now shows the message beside the send list on a computer (see "Home" below),
@@ -194,7 +209,7 @@
     picker.toggleAttribute('data-ui2-speed-only', !!speedOnly);
     paint();
   }
-  new MutationObserver(relabel).observe(document.body, {
+  new MutationObserver(ui2Frame(relabel)).observe(document.body, {
     childList: true,
     subtree: true,
     characterData: true,
@@ -253,7 +268,7 @@
     else restore(bar);
   }
   wide.addEventListener('change', sync);
-  new MutationObserver(sync).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(ui2Frame(sync)).observe(document.body, { childList: true, subtree: true });
   sync();
 })();
 
@@ -318,7 +333,7 @@
       box.after(hint);
     }
   }
-  new MutationObserver(bank).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(ui2Frame(bank)).observe(document.body, { childList: true, subtree: true });
   bank();
 })();
 
@@ -353,7 +368,7 @@
     help(document.getElementById('swDm'), 'Turn on only when you want the app to DM by itself');
     help(document.getElementById('swNew'), 'New donors get a DM automatically');
   }
-  new MutationObserver(group).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(ui2Frame(group)).observe(document.body, { childList: true, subtree: true });
   group();
 })();
 
@@ -368,7 +383,7 @@
     const idle = !running && toggle.textContent.trim() === 'Stop DMs';
     toggle.toggleAttribute('data-ui2-idle', idle);
   }
-  new MutationObserver(sync).observe(document.body, {
+  new MutationObserver(ui2Frame(sync)).observe(document.body, {
     childList: true,
     subtree: true,
     characterData: true,
@@ -384,7 +399,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const press = (el) => () => el()?.click();
-  const band = () => (innerWidth >= 900 ? 'desk' : innerWidth >= 700 ? 'tab' : 'phone');
+  const band = () => (ui2Wide.matches ? 'desk' : ui2Tab.matches ? 'tab' : 'phone');
   const mk = (tag, cls, html) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -725,7 +740,7 @@
   };
   run();
   relayout();
-  new MutationObserver(run).observe(document.body, {
+  new MutationObserver(ui2Frame(run)).observe(document.body, {
     childList: true,
     subtree: true,
     characterData: true,
@@ -901,7 +916,7 @@
     live();
   };
   run();
-  new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(ui2Frame(run)).observe(document.body, { childList: true, subtree: true });
 })();
 
 /* 9. Donors (PDF pages 15-23, V4 page 40). Same tab words on phone and computer, search as an icon on a phone,
@@ -909,7 +924,7 @@
    "Stop DMs · 3 of 7 sent". All buttons are the existing ones, moved or relabelled. */
 (() => {
   const $ = (id) => document.getElementById(id);
-  const wide = () => innerWidth >= 900;
+  const wide = () => ui2Wide.matches;
   const setText = (n, t) => n && n.textContent !== t && (n.textContent = t);
   function tabs() {
     for (const b of document.querySelectorAll('.donor-tabs [data-tab]')) {
@@ -989,7 +1004,7 @@
     bottom();
   };
   run();
-  new MutationObserver(run).observe(document.body, {
+  new MutationObserver(ui2Frame(run)).observe(document.body, {
     childList: true,
     subtree: true,
     characterData: true,
@@ -1202,7 +1217,7 @@
     finder();
   };
   run();
-  new MutationObserver(run).observe(document.body, {
+  new MutationObserver(ui2Frame(run)).observe(document.body, {
     childList: true,
     subtree: true,
     characterData: true,
@@ -1249,7 +1264,7 @@ document.addEventListener(
     }
   }
   watch();
-  new MutationObserver(watch).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(ui2Frame(watch)).observe(document.body, { childList: true, subtree: true });
 })();
 
 /* 13. In-app Back steps back through the browser history instead of replacing the address. Before, every
@@ -1303,6 +1318,6 @@ document.addEventListener(
 /* 15. Phone: tapping anywhere on the Auto row switches Auto (the switch itself still works as before). */
 document.addEventListener('click', (e) => {
   const live = e.target.closest?.('#live');
-  if (!live || e.target.closest('#auto') || innerWidth >= 900) return;
+  if (!live || e.target.closest('#auto') || ui2Wide.matches) return;
   document.getElementById('auto')?.click();
 });

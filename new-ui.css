@@ -3369,4 +3369,124 @@
 }
 .UI2 #donorsPage .donor-bottom[data-ui2-paused] > #donorToggle {
   display: flex !important;
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+}
+/* Explicit reading/action order and sizing: legacy peek containment must not clip captions. */
+.UI2 #card .chat {
+  order: 2 !important;
+}
+.UI2 #card .ui2-home-message-actions {
+  order: 3 !important;
+}
+.UI2 #card #ui2Styles {
+  order: 1 !important;
+}
+@media (max-width: 899px) {
+  .UI2 #main-workspace > #card {
+    contain: none !important;
+    aspect-ratio: auto !important;
+    min-height: 0 !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #card .tools {
+    order: 4 !important;
+    margin-top: 0 !important;
+  }
+}
+.UI2 #donorsPage .donor-bottom[data-ui2-running] {
+  height: auto !important;
+  min-height: 0 !important;
+  grid-template-rows: auto !important;
+}
+.UI2 #donorsPage .donor-bottom[data-ui2-running] > #donorToggle {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  flex-wrap: wrap;
+  min-width: 0 !important;
+  padding: 8px !important;
+}
+.UI2 #donorsPage .donor-bottom[data-ui2-running] > #donorToggle::after {
+  position: static !important;
+  inset: auto !important;
+  height: auto !important;
+  width: auto !important;
+  white-space: normal !important;
+  transform: none !important;
+}
+.UI2 #donorsPage #donorProgress {
+  position: static !important;
+  inset: auto !important;
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: auto !important;
+  max-height: 28dvh;
+  margin: 4px 0;
+  overflow: auto;
+}
+.UI2 #ui2Options > .ui2-options-panel > :is(#donorPace, #donorTest) {
+  background: var(--surface2, #232838) !important;
+  color: var(--ink, #eef0f6) !important;
+  box-shadow: none !important;
+}
+.UI2 #donorsPage .donor-bottom[data-ui2-paused] {
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+}
+.UI2 #donorsPage .donor-bottom > #donorResumeStatus[data-state] {
+  position: static !important;
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  order: 4 !important;
+  width: auto !important;
+  max-width: 100% !important;
+}
+@media (min-width: 900px) {
+  .UI2 #donorsPage .donor-bottom[data-ui2-paused] {
+    grid-template-columns: auto minmax(0, 400px) auto !important;
+  }
+}
+.UI2 #donorsPage .donor-bottom[data-ui2-paused] > #donorMainBottom {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  width: auto !important;
+}
+/* Phone/tablet home uses natural page height, so a complete caption cannot overlap Send. */
+@media (max-width: 899px) {
+  .UI2 {
+    height: auto !important;
+    min-height: 100dvh;
+    overflow-y: auto !important;
+  }
+  .UI2 .app {
+    height: auto !important;
+    min-height: 100dvh;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .UI2 #main-workspace {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+    grid-template-rows: auto !important;
+  }
+  .UI2 #main-workspace > .side,
+  .UI2 #main-workspace .action-rail {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+@media (max-width: 699px) {
+  .UI2 #main-workspace {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .UI2 #main-workspace > .side {
+    flex: 0 0 auto !important;
+  }
 }

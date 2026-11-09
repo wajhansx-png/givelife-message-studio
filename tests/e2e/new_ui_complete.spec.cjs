@@ -160,6 +160,24 @@ for (const width of widths) {
         await expect(page.locator('#ui2Options > summary')).toBeVisible();
         await expect(page.locator('#donorMainBottom')).toBeVisible();
         await fits(page, '.donor-bottom');
+        for (const selector of [
+          '#ui2Options > summary',
+          '#donorToggle',
+          '#donorMainBottom',
+          '#ui2DmSending',
+        ]) {
+          await expect
+            .poll(
+              () =>
+                page.locator(selector).evaluate((e) => {
+                  const r = e.getBoundingClientRect();
+                  const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+                  return at === e || e.contains(at);
+                }),
+              { message: selector + ' must not be covered' },
+            )
+            .toBe(true);
+        }
       } else {
         await expect(page.locator('#ui2DmSending')).toBeHidden();
         await expect(page.locator('#donorToggle')).toBeHidden();
@@ -266,6 +284,10 @@ test('the full phone caption is unmasked, and Next/Test show in-progress states'
   await page.goto('/new');
   await expect(page.locator('#groupPreview')).toContainText('Sample caption line 13.');
   expect(await page.locator('#card').evaluate((e) => getComputedStyle(e).maskImage)).toBe('none');
+  const caption = await page.locator('#groupPreview').boundingBox();
+  const actions = await page.locator('#ui2HomeNext').boundingBox();
+  expect(actions.y).toBeGreaterThanOrEqual(caption.y + caption.height - 1);
+
   expect(await page.locator('#chat').evaluate((e) => e.scrollHeight <= e.clientHeight + 1)).toBe(
     true,
   );

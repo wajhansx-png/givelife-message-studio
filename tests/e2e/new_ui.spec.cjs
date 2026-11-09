@@ -491,7 +491,7 @@ test('/new Back on Volunteers leaves Donors for the main screen', async ({ page 
 });
 
 for (const width of [280, 390, 1440]) {
-  test(`/new Volunteers at ${width}px: dark list like the other tabs, name readable, bottom bar Back / DM all / Add in one row`, async ({
+  test(`/new Volunteers at ${width}px: dark list like the other tabs, name readable, bottom bar DM all / Add / Back in one row`, async ({
     page,
   }) => {
     await open(page, '/new#/donors/volunteers', width);
@@ -522,7 +522,9 @@ for (const width of [280, 390, 1440]) {
     expect(new Set(ys).size).toBe(1);
     const back = await page.locator('#donorVolunteers .vol-back').boundingBox();
     const dm = await page.locator('#donorVolunteers .send-donors').boundingBox();
-    expect(back.x).toBeLessThan(dm.x);
+    if (width < 900)
+      expect(back.x).toBeGreaterThan(dm.x); // phone: Back is the far-right arrow on every donor tab
+    else expect(back.x).toBeLessThan(dm.x);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,
     );
@@ -613,4 +615,73 @@ test('/new phone DM messages: no top bar, whole message shown, Next/Regenerate r
   const tabs = await page.locator('#donorMessages .bank-followup').boundingBox();
   const actions = await page.locator('#donorMessages .bank-actions').boundingBox();
   expect(tabs.y).toBeGreaterThan(actions.y);
+});
+
+for (const [w, h] of [
+  [412, 890],
+  [360, 700],
+  [280, 600],
+]) {
+  test(`/new phone donors at ${w}px: every tab keeps tabs, tools and the bottom bar in exactly the same place`, async ({
+    page,
+  }) => {
+    await open(page, '/new#/donors/all', w, h);
+    await expect(page.locator('.donor-row').first()).toBeVisible();
+    const seen = [];
+    for (const t of ['all', 'important', 'top', 'donated', 'not_contacted', 'volunteers', 'all']) {
+      await page.locator(`.donor-tabs [data-tab="${t}"]`).click();
+      await page.waitForTimeout(350);
+      seen.push(
+        await page.evaluate(() => {
+          const y = (e) => Math.round(e.getBoundingClientRect().y);
+          const bar = [...document.querySelectorAll('.donor-bottom, .vol-foot')].find((e) =>
+            e.checkVisibility(),
+          );
+          return [
+            y(document.querySelector('.donor-tabs')),
+            y(document.querySelector('.donor-head')),
+            y(bar),
+            Math.round(bar.getBoundingClientRect().height),
+          ].join(',');
+        }),
+      );
+    }
+    expect(new Set(seen).size, seen.join(' | ')).toBe(1);
+  });
+}
+
+test('/new phone: Regenerate and Next sit under the group message on the main screen and in the reader', async ({
+  page,
+}) => {
+  await open(page, '/new', 390);
+  const card = await page.locator('#card').boundingBox();
+  const nav = await page.locator('#ui2GnavMain').boundingBox();
+  expect(nav.y).toBeGreaterThanOrEqual(card.y + card.height - 1);
+  await expect(page.locator('#ui2GnavMain .ui2-gbtn')).toHaveText(['Regenerate', 'Next']);
+  expect(nav.x).toBeGreaterThanOrEqual(0);
+  expect(nav.x + nav.width).toBeLessThanOrEqual(390.5);
+  await page.locator('#ui2GnavMain .ui2-gnext').click(); // presses the real New wording button
+  await open(page, '/new#/preview', 390);
+  await expect(page.locator('#ui2GnavReader .ui2-gbtn')).toHaveText(['Regenerate', 'Next']);
+  await page.locator('#ui2GnavReader .ui2-gnext').click();
+  await expect(page.locator('#messageFocus')).toBeVisible();
+});
+
+test('/new phone donors: Back is the same far-right arrow on every tab', async ({ page }) => {
+  await open(page, '/new#/donors/all', 390);
+  const xs = [];
+  for (const t of ['all', 'important', 'top', 'volunteers']) {
+    await page.locator(`.donor-tabs [data-tab="${t}"]`).click();
+    await page.waitForTimeout(350);
+    xs.push(
+      await page.evaluate(() => {
+        const b = [...document.querySelectorAll('#donorMainBottom, .vol-back')].find((e) =>
+          e.checkVisibility(),
+        );
+        const r = b.getBoundingClientRect();
+        return Math.round(r.x) + ',' + Math.round(r.width);
+      }),
+    );
+  }
+  expect(new Set(xs).size, xs.join(' | ')).toBe(1);
 });

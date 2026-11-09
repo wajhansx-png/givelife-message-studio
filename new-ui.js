@@ -69,147 +69,55 @@
 /* 1. The home screen itself now shows the message beside the send list on a computer (see "Home" below),
    so it no longer jumps into the full-screen reader. */
 
-/* 2. DM speed dialog (PDF page 24, V4 page 21): How fast? Slow / Normal / Fast, the four wait times, one summary
-   line, and everything else folded under "More options (poster, follow-up, vary gap, test DM)".
-   Every choice still sets the dialog's own fields, so saving and sending are unchanged. */
+/* DM speed: the latest PDF shows all fields together, without a second menu. */
 (() => {
-  const LABELS = {
-    batchCount: 'How many people',
-    batchLimit: 'DMs in each batch',
-    batchPause: 'Rest between batches',
-  };
-  const PRESETS = [
-    ['slow', 'Slow', 8, '10', '30'],
-    ['normal', 'Normal', 4, '20', '20'],
-    ['fast', 'Fast', 2, '20', '20'],
-  ];
-  const $ = (id) => document.getElementById(id);
-  const mk = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
-  const set = (sel, v) => {
-    if (!sel || sel.value === v) return;
-    sel.value = v;
-    sel.dispatchEvent(new Event('input', { bubbles: true }));
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
-  };
-  function build(picker) {
-    const form = $('donorBatchForm'),
-      gapRow = picker.querySelector('.bm-gap');
-    if (!form || !gapRow || $('ui2Speed')) return;
-    const close = mk('button', 'ui2-x', '×');
+  function arrange() {
+    const picker = document.getElementById('donorBatchPicker');
+    if (!picker || picker.dataset.ui2Speed) return;
+    picker.dataset.ui2Speed = '1';
+    const close = document.createElement('button');
     close.type = 'button';
-    close.setAttribute('aria-label', 'Close');
-    close.addEventListener('click', () => $('batchCancel')?.click());
+    close.className = 'ui2-x';
+    close.textContent = '×';
+    close.setAttribute('aria-label', 'Close DM settings');
+    close.onclick = () => document.getElementById('batchCancel')?.click();
     picker.prepend(close);
-    const speed = mk('div', 'bm-row ui2-speed');
-    speed.id = 'ui2Speed';
-    speed.append(mk('label', '', 'How fast?'));
-    const row = mk('div', 'ui2-speed-row');
-    row.setAttribute('role', 'group');
-    row.setAttribute('aria-label', 'How fast');
-    for (const [key, label, gap, per, rest] of PRESETS) {
-      const b = mk('button', 'ui2-speed-btn', label);
-      b.type = 'button';
-      b.dataset.speed = key;
-      b.addEventListener('click', () => {
-        picker.querySelector(`.batch-gap-btn[data-gap="${gap}"]`)?.click();
-        set($('batchLimit'), per);
-        set($('batchPause'), rest);
-        paint();
-      });
-      row.append(b);
-    }
-    speed.append(row);
-    gapRow.before(speed);
-    const sum = mk('p', 'ui2-speed-sum');
-    sum.id = 'ui2SpeedSum';
-    gapRow.after(sum);
-    const more = mk('details', 'ui2-speed-more');
-    more.id = 'ui2SpeedMore';
-    more.innerHTML =
-      '<summary>More options (poster, follow-up, vary gap, test DM)</summary><div></div>';
-    const box = more.querySelector('div');
-    for (const id of ['batchLimit', 'batchPause']) {
-      const r = $(id)?.closest('.bm-row');
-      if (r) box.append(r);
-    }
-    const custom = mk('button', 'ui2-custom-gap', 'Custom wait…');
-    custom.type = 'button';
-    custom.addEventListener('click', () =>
-      picker.querySelector('.batch-gap-btn[data-gap="custom"]')?.click(),
-    );
-    box.append(custom);
-    for (const id of ['batchPauseCustom', 'batchEachRow', 'batchChips', 'batchRandomRow'])
-      if ($(id)) box.append($(id));
-    const test = [...picker.querySelectorAll('button')].find(
-      (b) => b.textContent.trim() === 'Test DM',
-    );
-    if (test) box.append(test);
-    sum.after(more);
-    picker.addEventListener('close', () => (more.open = false));
-    for (const el of [gapRow, $('batchLimit'), $('batchPause')])
-      el?.addEventListener('click', () => setTimeout(paint));
-    for (const id of ['batchLimit', 'batchPause', 'batchGap'])
-      $(id)?.addEventListener('change', paint);
-  }
-  function paint() {
-    const per = $('batchLimit')?.value,
-      rest = $('batchPause'),
-      gapBtn = document.querySelector('#donorBatchPicker .batch-gap-btn[aria-pressed="true"]');
-    const gap = gapBtn?.dataset.gap;
-    for (const b of document.querySelectorAll('.ui2-speed-btn')) {
-      const p = PRESETS.find((x) => x[0] === b.dataset.speed);
-      b.setAttribute(
-        'aria-pressed',
-        String(String(p[2]) === gap && p[3] === per && p[4] === rest?.value),
-      );
-    }
-    const sum = $('ui2SpeedSum');
-    if (sum && rest) {
-      const restText = rest.selectedOptions[0]?.textContent || '';
-      const text = per + ' per batch, then rest ' + restText.replace(/…$/, '');
-      if (sum.textContent !== text) sum.textContent = text;
+    const test = document.createElement('button');
+    test.type = 'button';
+    test.id = 'ui2BatchTest';
+    test.textContent = 'Test DM';
+    test.addEventListener('click', () => document.getElementById('donorTest')?.click());
+    document.getElementById('batchChips')?.after(test);
+
+    for (const [id, text] of Object.entries({
+      batchCount: 'How many people',
+      batchLimit: 'DMs in each batch',
+      batchPause: 'Rest between batches',
+    })) {
+      const label = picker.querySelector('label[for="' + id + '"]');
+      if (label) label.textContent = text;
     }
   }
-  function relabel() {
-    const picker = $('donorBatchPicker');
-    if (!picker) return;
-    build(picker);
-    for (const [id, text] of Object.entries(LABELS)) {
-      const l = picker.querySelector('label[for="' + id + '"]');
-      if (l && l.textContent !== text) l.textContent = text;
-    }
-    const start = $('batchStart');
-    const title = picker.querySelector('h2');
-    if (start && start.textContent === 'Save gap') start.textContent = 'Save speed';
-    const speedOnly = start && start.textContent === 'Save speed';
-    if (title) {
-      const want = speedOnly ? 'DM speed' : 'Send DMs';
-      if (title.textContent !== want) title.textContent = want;
-    }
-    picker.toggleAttribute('data-ui2-speed-only', !!speedOnly);
-    paint();
+  function title() {
+    arrange();
+    const start = document.getElementById('batchStart');
+    const heading = document.querySelector('#donorBatchPicker h2');
+    if (start?.textContent === 'Save gap') start.textContent = 'Save speed';
+    const text = start?.textContent === 'Save speed' ? 'DM speed' : 'Send DMs';
+    if (heading && heading.textContent !== text) heading.textContent = text;
   }
-  new MutationObserver(relabel).observe(document.body, {
+  new MutationObserver(title).observe(document.body, {
     childList: true,
     subtree: true,
     characterData: true,
   });
-  relabel();
+  title();
 })();
 
-/* 3. Computer: Back (left), DM ★ Important (middle), Options (right) holding Gap, Test DM, Auto, Poster and
-   "Send with follow-up" (V4 page 40). Below 900px the controls go back where they were. */
+/* Compact donor actions on every screen: Options, the primary DM action, Back. */
 (() => {
-  const wide = matchMedia('(min-width: 900px)');
   const IDS = ['donorPace', 'donorTest'];
   const LABELS = ['donorAuto', 'donorRowPoster'];
-  let moved = [];
-  let follow = null;
   function nodes(bar) {
     const out = IDS.map((id) => document.getElementById(id));
     for (const id of LABELS) out.push(document.querySelector('label[for="' + id + '"]'));
@@ -223,36 +131,31 @@
     box.innerHTML =
       '<summary aria-label="Options">Options ▾</summary><div class="ui2-options-panel"></div>';
     const panel = box.querySelector('div');
-    moved = nodes(bar).map((n) => [n, [...bar.children].indexOf(n)]);
-    for (const [n] of moved) panel.append(n);
+    for (const control of nodes(bar)) panel.append(control);
     const fu = document.getElementById('donorFollowUpOpt');
     if (fu) {
-      follow = [fu, fu.parentElement, fu.nextSibling];
       panel.append(fu);
     }
     bar.append(box);
-    box.addEventListener('keydown', (e) => e.key === 'Escape' && (box.open = false));
+    box.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !box.open) return;
+      e.preventDefault();
+      e.stopPropagation();
+      box.open = false;
+      box.querySelector('summary').focus();
+    });
+    panel.addEventListener('click', (e) => {
+      if (e.target.closest('button')) box.open = false;
+    });
     document.addEventListener('pointerdown', (e) => {
       if (box.open && !box.contains(e.target)) box.open = false;
     });
   }
-  function restore(bar) {
-    const box = document.getElementById('ui2Options');
-    if (!box) return;
-    for (const [n, i] of moved.sort((a, b) => a[1] - b[1]))
-      bar.insertBefore(n, bar.children[i] || null);
-    if (follow) follow[1].insertBefore(follow[0], follow[2]);
-    follow = null;
-    box.remove();
-    moved = [];
-  }
   function sync() {
     const bar = document.querySelector('.donor-bottom');
     if (!bar) return;
-    if (wide.matches) build(bar);
-    else restore(bar);
+    build(bar);
   }
-  wide.addEventListener('change', sync);
   new MutationObserver(sync).observe(document.body, { childList: true, subtree: true });
   sync();
 })();
@@ -377,7 +280,7 @@
 
 /* 7. Home (PDF pages 1-9, 13). Phone: one bottom bar (Message, Donors, Chat, More) and a bottom sheet for the rest.
    Tablet: message and send list side by side. Computer: one top bar, today's message beside the send list,
-   and the chat as one slim bar with quick chips. Every button below presses an existing control. */
+   and Chat on its own screen. Every button below presses an existing control. */
 (() => {
   const $ = (id) => document.getElementById(id);
   const press = (el) => () => el()?.click();
@@ -607,7 +510,7 @@
     paint();
   }
 
-  /* Computer: today's message with its style choices and keyboard letters; chat becomes a slim bar. */
+  /* Today's message, its actions, and the dedicated desktop Chat entry. */
   function desk() {
     const card = $('card'),
       tools = card?.querySelector('.tools');
@@ -615,6 +518,11 @@
     const form = $('cmdForm'),
       log = $('log');
     if (!card || !tools || !talk || !form || !log || $('ui2Styles')) return;
+    const chat = mk('button', 'ui2-chat-open', 'Chat');
+    chat.type = 'button';
+    chat.id = 'ui2ChatOpen';
+    chat.addEventListener('click', () => $('chatOpen')?.click());
+    document.querySelector('.app > .brandbar')?.append(chat);
     const styles = mk('div', 'ui2-styles');
     styles.id = 'ui2Styles';
     styles.setAttribute('role', 'group');
@@ -639,17 +547,76 @@
       styles.append(b);
     }
     tools.after(styles);
+    const actions = mk('div', 'ui2-home-message-actions');
+    actions.setAttribute('aria-label', 'Message actions');
+    const next = mk('button', 'primary', 'Next ›');
+    next.type = 'button';
+    next.id = 'ui2HomeNext';
+    next.setAttribute('aria-label', 'Next wording');
+    next.onclick = async () => {
+      next.disabled = true;
+      next.textContent = 'Writing…';
+      try {
+        await $('fresh').onclick();
+      } finally {
+        next.disabled = false;
+        next.textContent = 'Next ›';
+      }
+    };
+    const test = mk('button', '', 'Test');
+    test.type = 'button';
+    test.id = 'ui2HomeTest';
+    test.setAttribute('aria-label', 'Send to test group');
+    test.onclick = async () => {
+      test.disabled = true;
+      test.textContent = 'Sending…';
+      test.setAttribute('aria-busy', 'true');
+      try {
+        await window.sendTest('group');
+      } finally {
+        test.disabled = false;
+        test.textContent = 'Test';
+        test.removeAttribute('aria-busy');
+      }
+    };
+    const more = mk('details', 'ui2-home-more');
+    more.id = 'ui2HomeMore';
+    more.innerHTML = '<summary aria-label="More saved-message actions">⋯</summary><div></div>';
+    for (const [label, action] of [
+      ['Preview / edit', () => Nav.go('preview')],
+      ['Copy message', () => $('copy')?.click()],
+      [
+        'Change poster',
+        () => {
+          $('posterDialog').dataset.returnRoute = Nav.path();
+          window.DonorHub?.openPoster();
+        },
+      ],
+    ]) {
+      const button = mk('button', '', label);
+      button.type = 'button';
+      button.onclick = () => {
+        more.open = false;
+        action();
+      };
+      more.lastElementChild.append(button);
+    }
+    more.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && more.open) {
+        e.preventDefault();
+        e.stopPropagation();
+        more.open = false;
+        more.querySelector('summary').focus();
+      }
+    });
+    document.addEventListener('pointerdown', (e) => {
+      if (more.open && !more.contains(e.target)) more.open = false;
+    });
+    actions.append(next, test, more);
+    card.querySelector('.chat').after(actions);
     const poster = $('previewChangePoster');
     const overflow = tools.querySelector('.overflow-tools > div');
     if (poster && overflow) overflow.prepend(poster);
-  }
-  function placeholder() {
-    const cmd = $('cmd');
-    if (!cmd) return;
-    if (band() === 'desk') {
-      if (!cmd.dataset.ui2Ph) cmd.dataset.ui2Ph = cmd.placeholder;
-      cmd.placeholder = 'Tell the app what changed…';
-    } else if (cmd.dataset.ui2Ph) cmd.placeholder = cmd.dataset.ui2Ph;
   }
 
   /* Quick chips fill the box; nothing is sent until the send arrow is pressed. */
@@ -695,20 +662,7 @@
     form.before(chips);
   }
 
-  /* Computer: Chat is its own screen, opened from the top bar. */
-  function topChat() {
-    const bar = document.querySelector('.app > .brandbar'),
-      notes = $('donorNotesShortcut');
-    if (!bar || !notes || $('ui2TopChat')) return;
-    const b = mk('button', 'ui2-top-chat', 'Chat');
-    b.type = 'button';
-    b.id = 'ui2TopChat';
-    b.addEventListener('click', () => $('chatOpen')?.click());
-    bar.insertBefore(b, notes);
-  }
-
   const run = () => {
-    topChat();
     tabs();
     sendList();
     desk();
@@ -718,7 +672,6 @@
   };
   const relayout = () => {
     placeStatus();
-    placeholder();
   };
   run();
   relayout();
@@ -973,9 +926,22 @@
       ?.textContent.trim();
     const n = /Important/.test(dm.textContent) && count ? count : '';
     if (dm.dataset.ui2Count !== n) dm.dataset.ui2Count = n;
-    const running =
-      prog.dataset.active === 'true' && !prog.hidden && toggle.textContent.trim() === 'Stop DMs';
+    const running = prog.dataset.active === 'true' && toggle.textContent.trim() === 'Stop DMs';
     bar.toggleAttribute('data-ui2-running', running);
+    bar.toggleAttribute('data-ui2-paused', /Resume DMs|Change resume/.test(toggle.textContent));
+    toggle.setAttribute('aria-busy', String(running));
+    let state = $('ui2DmSending');
+    if (!state) {
+      state = document.createElement('p');
+      state.id = 'ui2DmSending';
+      state.setAttribute('role', 'status');
+      state.setAttribute('aria-live', 'polite');
+      bar.before(state);
+    }
+    if (state.hidden === running) state.hidden = !running;
+    const detail = (prog.querySelector(':scope > span')?.textContent || '').trim();
+    const label = running ? detail || 'Starting DMs…' : '';
+    if (state.textContent !== label) state.textContent = label;
     const m = (prog.querySelector(':scope > span')?.textContent || '').match(/(\d+) of (\d+) sent/);
     const sent = running && m ? m[1] + ' of ' + m[2] + ' sent' : '';
     if (toggle.dataset.ui2Sent !== sent) toggle.dataset.ui2Sent = sent;
@@ -1191,6 +1157,17 @@
 
   const run = () => {
     notes();
+    const follow = document.querySelector('#donorMessages .bank-followup-panel');
+    if (follow && !follow.querySelector('.ui2-follow-actions')) {
+      const actions = mk('div', 'ui2-follow-actions');
+      const save = follow.querySelector('button');
+      const back = mk('button', 'back-action', '← Back to donors');
+      back.type = 'button';
+      back.onclick = () => document.querySelector('#donorMessages .bank-back-bottom')?.click();
+      if (save) actions.append(save);
+      actions.append(back);
+      follow.append(actions);
+    }
     settings();
     report();
     keys();
@@ -1205,3 +1182,16 @@
     characterData: true,
   });
 })();
+
+// A generic Donors shortcut must not unexpectedly restore the separate Volunteers workspace.
+document.addEventListener(
+  'click',
+  (e) => {
+    if (!e.target.closest('#openDonors, #railDonors, #ui2Tabs [data-tab="donors"]')) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    Nav.go('donors/all');
+    window.DonorHub?.show('all');
+  },
+  true,
+);

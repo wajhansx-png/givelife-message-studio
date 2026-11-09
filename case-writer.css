@@ -36,6 +36,7 @@ html body #caseWriterDialog[open] {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+  flex: 0 0 auto;
   min-height: 0;
 }
 .case-writer-workspace section {

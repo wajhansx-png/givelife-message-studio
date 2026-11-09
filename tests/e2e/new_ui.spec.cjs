@@ -171,11 +171,9 @@ test("/new computer: the main screen shows today's message beside the send list;
   const send = await page.locator('.group-send').boundingBox();
   expect(card.x + card.width).toBeLessThanOrEqual(send.x + 1);
   await expect(page.locator('#ui2Styles')).toBeVisible();
-  await expect(page.locator('#main-workspace .talk')).toBeHidden(); // chat is its own screen
-  await expect(page.locator('#ui2TopChat')).toBeVisible();
-  await page.locator('#ui2TopChat').click();
+  await expect(page.locator('#main-workspace .talk')).toBeHidden();
+  await page.locator('#ui2ChatOpen').click();
   await expect(page.locator('#hist')).toBeVisible();
-  await page.locator('#histClose').click();
   await open(page, '/new', 390);
   await page.waitForTimeout(900);
   await expect(page.locator('#messageFocus')).toBeHidden();
@@ -315,7 +313,7 @@ test('/new phone: tapping the donated circle shows a tick, and tapping again cle
   }
 });
 
-test('/new computer: Back on the left, DM ★ Important (N) in the middle, Options on the right; phones are unchanged', async ({
+test('/new donor actions: compact Options, DM action, and Back at every width', async ({
   page,
 }) => {
   await open(page, '/new#/donors/all', 1440);
@@ -324,8 +322,8 @@ test('/new computer: Back on the left, DM ★ Important (N) in the middle, Optio
   const o = await opt.boundingBox();
   const dm = await page.locator('#donorSendImportant').boundingBox();
   const back = await page.locator('#donorMainBottom').boundingBox();
-  expect(back.x).toBeLessThan(dm.x);
-  expect(dm.x).toBeLessThan(o.x);
+  expect(o.x).toBeLessThan(dm.x);
+  expect(dm.x).toBeLessThan(back.x);
   expect(
     await page
       .locator('#donorSendImportant')
@@ -338,29 +336,20 @@ test('/new computer: Back on the left, DM ★ Important (N) in the middle, Optio
   expect(panel.x).toBeGreaterThanOrEqual(0);
   expect(panel.x + panel.width).toBeLessThanOrEqual(1440);
   expect(panel.y).toBeGreaterThanOrEqual(0);
-  await page.setViewportSize({ width: 700, height: 900 }); // shrinking puts the controls back where they were
-  await page.waitForTimeout(500);
-  await expect(page.locator('#ui2Options')).toHaveCount(0);
-  await expect(
-    page.locator('.donor-bottom > #donorAuto, .donor-bottom > label[for="donorAuto"]').first(),
-  ).toHaveCount(1);
-  await open(page, '/new#/donors/all', 390);
-  await expect(page.locator('#ui2Options')).toHaveCount(0);
+  for (const width of [700, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.locator('#ui2Options')).toHaveCount(1);
+    await expect(page.locator('#ui2Options #donorAuto')).toHaveCount(1);
+  }
 });
 
-test('/new DM speed dialog: How fast, four wait times and a summary; the rest folded under More options', async ({
-  page,
-}) => {
+test('/new DM speed dialog: every setting is visible without another menu', async ({ page }) => {
   for (const width of [280, 360, 768, 1440]) {
     await open(page, '/new#/donors/all', width);
     await expect(page.locator('.donor-row').first()).toBeVisible();
     await page.locator('#donorSendImportant').click();
     const picker = page.locator('#donorBatchPicker');
-    await expect(picker.locator('.ui2-speed-btn')).toHaveText(['Slow', 'Normal', 'Fast']);
-    await expect(picker.locator('.batch-gap-btn:visible')).toHaveCount(4);
-    await expect(picker.locator('#ui2SpeedSum')).toContainText('per batch, then rest');
-    await expect(picker.locator('#batchLimit')).toBeHidden();
-    await picker.locator('#ui2SpeedMore > summary').click();
+    await expect(picker.locator('.batch-gap-btn:visible')).toHaveCount(5);
     await expect(picker.locator('label[for="batchLimit"]')).toHaveText('DMs in each batch');
     await expect(picker.locator('label[for="batchPause"]')).toHaveText('Rest between batches');
     for (const sel of [
@@ -373,11 +362,15 @@ test('/new DM speed dialog: How fast, four wait times and a summary; the rest fo
       '#batchRandom',
       '#batchStart',
       '#batchCancel',
+      '#ui2BatchTest',
     ])
       await expect(picker.locator(sel).first(), sel + ' at ' + width).toBeVisible();
-    await picker.locator('.ui2-speed-btn', { hasText: 'Slow' }).click();
-    await expect(picker.locator('#batchLimit')).toHaveValue('10');
-    await expect(picker.locator('#ui2SpeedSum')).toHaveText('10 per batch, then rest 30 min');
+    await picker.locator('[data-gap="custom"]').click();
+    await expect(picker.locator('#batchGapCustom')).toBeVisible();
+    await picker.locator('#batchPause').selectOption('each');
+    await expect(picker.locator('#batchEach')).toBeVisible();
+    await picker.locator('#batchRandom').check();
+    await expect(picker.locator('#batchRandomRow')).toBeVisible();
     const box = await picker.boundingBox();
     expect(box.x).toBeGreaterThanOrEqual(-0.5);
     expect(box.x + box.width).toBeLessThanOrEqual(width + 0.5);

@@ -33,7 +33,7 @@ const Nav = {
   },
   /* The chat log below owns the name `history`, so the browser's is always reached as window.history. */
   valid(path) {
-    return /^(?:chat|notes|settings(?:\/(?:memory|poster))?|keyboard|preview|whatsapp|donors\/(?:all|important|donated|not_donated|not_contacted|volunteers|messages)(?:\/(?:notes|add|bulk|pace))?)$/.test(
+    return /^(?:chat|notes|settings(?:\/(?:memory|poster))?|keyboard|preview|whatsapp|donors\/(?:all|important|top|donated|not_donated|not_contacted|volunteers|messages)(?:\/(?:notes|add|bulk|pace))?)$/.test(
       path,
     );
   },
@@ -2751,7 +2751,7 @@ addEventListener('DOMContentLoaded', () => {
       const target = smallRoute(screen);
       if (Nav.path() === target) {
         Nav.go(
-          dialog.dataset.returnRoute ||
+          dialog.dataset.returnRoute ??
             (screen.path ? 'settings' : target.split('/').slice(0, 2).join('/')),
           { replace: true },
         );

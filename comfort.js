@@ -102,6 +102,7 @@
   /* Donors: Messages lives in the top nav. On phones Test DM and the poster switch move into More,
     so the bottom bar is a single row: Back · Stop · DM ★ · DM all. */
   function placeDonorControls() {
+    if (document.body.classList.contains('ui2')) return; // /new owns its compact Options menu.
     const head = document.querySelector('.donor-head'),
       more = document.getElementById('donorNavMore'),
       bottom = document.querySelector('.donor-bottom');

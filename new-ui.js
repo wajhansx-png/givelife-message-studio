@@ -1404,3 +1404,24 @@ document.addEventListener('click', (e) => {
   run();
   new MutationObserver(ui2Frame(run)).observe(document.body, { childList: true, subtree: true });
 })();
+
+/* 17. Phone: a Msgs button in the donors bottom bar on every tab (it presses the real Msgs control). */
+(() => {
+  const ICON =
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.7A8 8 0 1 1 21 12z"/><path d="M9 11h6M9 14h4"/></svg>';
+  function proxy() {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ui2-msgs-bottom';
+    b.setAttribute('aria-label', 'DM messages');
+    b.innerHTML = ICON + '<span>Msgs</span>';
+    b.addEventListener('click', () => document.getElementById('donorMessagesTab')?.click());
+    return b;
+  }
+  function run() {
+    for (const bar of document.querySelectorAll('#donorsPage .donor-bottom, #donorsPage .vol-foot'))
+      if (!bar.querySelector(':scope > .ui2-msgs-bottom')) bar.append(proxy());
+  }
+  run();
+  new MutationObserver(ui2Frame(run)).observe(document.body, { childList: true, subtree: true });
+})();

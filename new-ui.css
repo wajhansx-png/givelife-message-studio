@@ -2119,7 +2119,10 @@
     margin-left: auto;
   }
   .UI2 #donorsPage .donor-row {
-    grid-template-columns: 32px minmax(160px, 230px) 76px minmax(110px, max-content) minmax(0, 1fr) 40px !important;
+    grid-template-columns: 32px minmax(160px, 230px) 76px minmax(110px, max-content) minmax(
+        0,
+        1fr
+      ) 40px !important;
   }
   .UI2 #donorsPage .donor-columns {
     display: none !important;
@@ -2818,5 +2821,139 @@
   .UI2 #donorsPage .donor-row > .donor-dm {
     min-height: 40px !important;
     height: 40px !important;
+  }
+}
+
+/* ======================= Fixes from real use (live data) ======================= */
+/* Computer: no chat bar on the main screen; Chat is its own screen, opened from the top bar */
+.UI2 .ui2-top-chat {
+  display: none;
+}
+@media (min-width: 900px) {
+  .UI2 #main-workspace .talk {
+    display: none !important;
+  }
+  .UI2 #main-workspace {
+    grid-template-rows: minmax(0, 1fr) !important;
+  }
+  .UI2 .app > .brandbar > .ui2-top-chat {
+    display: inline-flex !important;
+    order: 4 !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 14px;
+    border: 1px solid var(--line2);
+    border-radius: 999px;
+    background: var(--surface2, #232838);
+    color: var(--ink, #eef0f6);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .UI2 .app > .brandbar > #donorNotesShortcut {
+    order: 5 !important;
+  }
+  .UI2 .app > .brandbar > .report-open {
+    order: 6 !important;
+  }
+  .UI2 .app > .brandbar > #mainNavMore {
+    order: 7 !important;
+  }
+}
+/* Options menu: a tidy, narrow list; nothing overlaps */
+.UI2 .ui2-options-panel {
+  width: max-content !important;
+  min-width: 200px !important;
+  max-width: 260px !important;
+  gap: 4px !important;
+  padding: 8px !important;
+}
+.UI2 .ui2-options-panel > * {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 38px !important;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  box-sizing: border-box !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+.UI2 .ui2-options-panel > label > input[type='checkbox'] {
+  position: static !important;
+  flex: 0 0 18px;
+  width: 18px !important;
+  height: 18px !important;
+  margin: 0 !important;
+}
+.UI2 .ui2-options-panel > label > span {
+  position: static !important;
+  display: inline !important;
+}
+/* Notes: small tool buttons, centred, all visible, no scrolling */
+.UI2 .foundation-notes .notes-workspace > .notes-toolbar,
+.UI2 .foundation-notes[data-mode='writing'] .notes-workspace > .notes-toolbar {
+  align-self: center !important;
+  width: fit-content !important;
+  max-width: calc(100% - 16px) !important;
+  margin: 8px auto !important;
+  overflow: visible !important;
+  flex: none !important;
+  justify-content: center !important;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-toolbar button {
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+  min-height: 40px !important;
+  padding: 0 12px !important;
+  border: 1px solid #36404c !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  white-space: nowrap !important;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-paper-scroll {
+  min-height: 0 !important;
+}
+/* Donors on a computer: a centred, narrower list; short amount box; names easy to find */
+@media (min-width: 900px) {
+  .UI2 #donorsPage .donor-shell {
+    max-width: 1000px !important;
+    margin-inline: auto !important;
+  }
+  .UI2 #donorsPage .donor-row {
+    grid-template-columns: 32px minmax(180px, 1fr) 76px minmax(110px, max-content) 110px 40px !important;
+    column-gap: 12px !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-amount {
+    width: 110px !important;
+    max-width: 110px !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #donorsPage .donor-table {
+    max-width: 760px !important;
+    margin-inline: auto !important;
+  }
+  .UI2 #donorsPage .donor-row {
+    grid-template-columns: 32px 250px 76px minmax(110px, max-content) 96px 36px !important;
+    column-gap: 10px !important;
+    justify-content: center;
+  }
+  .UI2 #donorsPage .donor-row > .donor-amount {
+    width: 96px !important;
+    max-width: 96px !important;
+  }
+  .UI2 .ui2-options-panel > :is(#donorPace, #donorTest) {
+    background: var(--surface2, #232838) !important;
+    border: 1px solid var(--line2) !important;
+    color: var(--ink, #eef0f6) !important;
+    box-shadow: none !important;
   }
 }

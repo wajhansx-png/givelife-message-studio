@@ -354,19 +354,23 @@
   group();
 })();
 
-/* 6. Stop DMs only shows while DMs are going out. "Resume DMs" and "Change resume" always stay visible. */
+/* 6. Stop DMs only shows while DMs are actually going out (sending, starting or waiting between batches).
+   "Resume DMs" and "Change resume" always stay visible. */
 (() => {
   function sync() {
     const toggle = document.getElementById('donorToggle');
-    const note = document.querySelector('#donorProgress > span');
-    if (!toggle || !note) return;
-    const idle = /^Idle/i.test(note.textContent.trim()) && toggle.textContent.trim() === 'Stop DMs';
+    const prog = document.getElementById('donorProgress');
+    if (!toggle || !prog) return;
+    const running = !prog.hidden && prog.dataset.active === 'true';
+    const idle = !running && toggle.textContent.trim() === 'Stop DMs';
     toggle.toggleAttribute('data-ui2-idle', idle);
   }
   new MutationObserver(sync).observe(document.body, {
     childList: true,
     subtree: true,
     characterData: true,
+    attributes: true,
+    attributeFilter: ['data-active', 'hidden'],
   });
   sync();
 })();
@@ -638,28 +642,6 @@
     const poster = $('previewChangePoster');
     const overflow = tools.querySelector('.overflow-tools > div');
     if (poster && overflow) overflow.prepend(poster);
-    const reply = mk('button', 'ui2-last-reply');
-    reply.type = 'button';
-    reply.id = 'ui2LastReply';
-    reply.hidden = true;
-    reply.title = 'Open the full chat';
-    reply.addEventListener('click', () => $('chatExpand')?.click());
-    const chips = mk('div', 'ui2-chips ui2-desk-chips');
-    talk.append(reply, chips);
-    addChips(chips, $('cmd'), ['Amount left…', 'Send all', 'New wording']);
-    const last = () => {
-      const bots = log.querySelectorAll('.e.bot');
-      const text =
-        bots.length > 1 ? bots[bots.length - 1].textContent.trim().replace(/\s+/g, ' ') : '';
-      reply.hidden = !text;
-      reply.textContent = text.length > 150 ? text.slice(0, 149) + '…' : text;
-    };
-    new MutationObserver(last).observe(log, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
-    last();
   }
   function placeholder() {
     const cmd = $('cmd');
@@ -713,7 +695,20 @@
     form.before(chips);
   }
 
+  /* Computer: Chat is its own screen, opened from the top bar. */
+  function topChat() {
+    const bar = document.querySelector('.app > .brandbar'),
+      notes = $('donorNotesShortcut');
+    if (!bar || !notes || $('ui2TopChat')) return;
+    const b = mk('button', 'ui2-top-chat', 'Chat');
+    b.type = 'button';
+    b.id = 'ui2TopChat';
+    b.addEventListener('click', () => $('chatOpen')?.click());
+    bar.insertBefore(b, notes);
+  }
+
   const run = () => {
+    topChat();
     tabs();
     sendList();
     desk();

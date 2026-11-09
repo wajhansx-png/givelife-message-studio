@@ -5277,6 +5277,20 @@ class Handler(BaseHTTPRequestHandler):
             html.encode("utf-8"), "text/html", extra_headers={"Cache-Control": "no-cache"}
         )
 
+    def reply_new_group_finder(self):
+        """Group finder inside the redesign (/new/group-finder): same page, the new look added. /group-finder is untouched."""
+        html = (ROOT / "group-finder.html").read_text(encoding="utf-8")
+        html = html.replace("<body>", '<body class="ui2 ui2-gf">', 1)
+        html = html.replace(
+            '<link rel="stylesheet" href="/group-finder.css">',
+            '<link rel="stylesheet" href="/group-finder.css"><link rel="stylesheet" href="/new-ui.css">',
+            1,
+        )
+        html = html.replace("</body>", '<script src="/new-ui.js"></script></body>', 1)
+        return self.reply(
+            html.encode("utf-8"), "text/html", extra_headers={"Cache-Control": "no-cache"}
+        )
+
     def reply_new_ui_css(self):
         """new-ui.css is written with .UI2 where every rule needs the same strong prefix; expand it here."""
         css = (ROOT / "new-ui.css").read_text(encoding="utf-8").replace(".UI2", NEW_UI_PREFIX)
@@ -5364,6 +5378,8 @@ class Handler(BaseHTTPRequestHandler):
             )
         if self.path.split("?")[0] in ("/new", "/new/"):
             return self.reply_new_ui()
+        if self.path.split("?")[0] == "/new/group-finder":
+            return self.reply_new_group_finder()
         if self.path.split("?")[0] == "/new-ui.css":
             return self.reply_new_ui_css()
         if self.path.split("?")[0] == "/new-ui.js":

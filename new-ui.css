@@ -256,7 +256,7 @@
     padding: 0 !important;
   }
   .UI2 #donorsPage .donor-row > .donor-identity .donor-top-chip {
-    display: none !important;
+    display: grid !important;
   }
   .UI2 #donorsPage .donor-row > details > summary {
     width: 40px !important;
@@ -972,5 +972,1851 @@
   }
   .UI2 #messageFocus #focusText {
     min-height: 220px !important;
+  }
+}
+
+/* ======================= Home (PDF pages 1-9, 13; V4 pages 7, 31) ======================= */
+/* Amount: "Rs. 25,000 left ✎" once */
+.UI2 #leftChip::after {
+  content: ' left ✎' !important;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.UI2 #leftChip[data-ui2-left='1']::after {
+  content: ' ✎' !important;
+}
+/* Auto: one plain row, "Auto is OFF" / "Auto is ON", the switch on the right (pages 5-6) */
+.UI2 #live {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  min-height: 0 !important;
+  padding: 6px 8px 6px 14px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 14px !important;
+  background: var(--surface) !important;
+}
+.UI2 #live > #liveBar,
+.UI2 #live > #liveMore,
+.UI2 #live .autosw .lbl {
+  display: none !important;
+}
+.UI2 #live::before {
+  content: 'Auto is OFF';
+  color: var(--ink-muted, #9aa1b8);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.UI2 #live[data-on='1'] {
+  border-color: rgba(60, 220, 150, 0.6) !important;
+  background: rgba(60, 220, 150, 0.12) !important;
+}
+.UI2 #live[data-on='1']::before {
+  content: 'Auto is ON';
+  color: #3cdc96;
+}
+.UI2 #live .autosw {
+  flex: none !important;
+  width: auto !important;
+  min-width: 52px !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  padding: 4px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* Send list: one 42px line per group, status beside the name, no small buttons on the row (pages 4, 8) */
+.UI2 .group-send .send-title h2 {
+  margin: 0 !important;
+  color: var(--ink-muted, #9aa1b8) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.UI2 .group-send #sendMode,
+.UI2 .group-send .row-tools {
+  display: none !important;
+}
+.UI2 .group-send .group-two :is(.test-row, .group-main-btn, .group-free-btn, .group-all-btn) {
+  min-height: 42px !important;
+  height: 42px !important;
+  padding: 0 14px !important;
+  border-radius: 12px !important;
+}
+.UI2 .group-send .gb-name {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 8px !important;
+  min-width: 0;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  white-space: nowrap;
+}
+.UI2 .group-send .gb-name > .last-sent {
+  display: inline !important;
+  overflow: hidden;
+  margin: 0 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  opacity: 0.85;
+  text-overflow: ellipsis;
+  text-transform: lowercase;
+}
+.UI2 .group-send .gb-name > .last-sent:not(:empty)::before {
+  content: '· ';
+}
+.UI2 .ui2-group-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.UI2 .ui2-group-more :is(.ui2-later, .ui2-choose-btn) {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--surface2, #232838);
+  color: var(--ink-muted, #aab0c5);
+  font-size: 12px;
+  font-weight: 700;
+}
+.UI2 .ui2-choose {
+  position: relative;
+}
+.UI2 .ui2-choose > .group-drop {
+  top: auto !important;
+  bottom: calc(100% + 6px) !important;
+  left: 0 !important;
+  right: auto !important;
+  min-width: 220px;
+  z-index: 30;
+}
+.UI2 .ui2-later-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.UI2 .ui2-later-line > span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 12px;
+  font-weight: 700;
+}
+.UI2 .ui2-later-line .delay-row {
+  margin: 0 !important;
+}
+
+/* Quick chips (chat and the slim chat bar) */
+.UI2 .ui2-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.UI2 .ui2-chip {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--surface2, #232838);
+  color: var(--ink-muted, #c3c8d8);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.UI2 .ui2-hist-chips {
+  padding: 8px 12px 4px;
+}
+
+/* More sheet (page 2) */
+.UI2 .ui2-sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 10px 14px calc(16px + env(safe-area-inset-bottom));
+  border: 1px solid var(--line2);
+  border-radius: 22px 22px 0 0;
+  background: var(--surface, #1b1f2c);
+  color: var(--ink, #eef0f6);
+}
+.UI2 .ui2-sheet::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+.UI2 .ui2-sheet-grip {
+  width: 44px;
+  height: 5px;
+  margin: 0 auto 12px;
+  border-radius: 9px;
+  background: var(--line2, #3a4052);
+}
+.UI2 .ui2-sheet-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.UI2 .ui2-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3px;
+  min-height: 70px;
+  padding: 10px 14px;
+  border: 1px solid var(--line2);
+  border-radius: 16px;
+  background: var(--surface2, #232838);
+  color: inherit;
+  text-align: left;
+}
+.UI2 .ui2-tile b {
+  font-size: 15px;
+}
+.UI2 .ui2-tile small {
+  color: var(--ink-muted, #aab0c5);
+  font-size: 12px;
+}
+.UI2 .ui2-case .case-pick {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+}
+.UI2 .ui2-case .case-pick select {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.UI2 .ui2-sheet-extra {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+.UI2 .ui2-sheet-link {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Phone and tablet: one bottom bar, nothing else at the top (pages 1, 9) */
+@media (max-width: 899px) {
+  .UI2 .app > .brandbar {
+    display: none !important;
+  }
+  .UI2 .app > .foot > :not(#ui2Tabs) {
+    display: none !important;
+  }
+  .UI2 .app > .foot {
+    display: block !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 20;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom)) !important;
+    background: var(--bg, #11141c) !important;
+  }
+  .UI2 .ui2-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .UI2 .ui2-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 56px;
+    padding: 4px;
+    border: 1px solid var(--line2);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--ink-muted, #aab0c5);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .UI2 .ui2-tab span {
+    font-size: 16px;
+    line-height: 1;
+  }
+  .UI2 .ui2-tab[aria-current='true'] {
+    border-color: transparent;
+    background: #2f6fe4;
+    color: #fff;
+  }
+}
+/* Tablet: message beside the send list, status on one line (page 9) */
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 .ui2-status-row #live {
+    flex: none !important;
+    padding: 0 0 0 10px !important;
+    border: 0 !important;
+    border-left: 1px solid var(--line2) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 .ui2-status-row #live::before {
+    font-size: 12px;
+  }
+  .UI2 #main-workspace {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.4fr) minmax(250px, 1fr) !important;
+    align-items: start !important;
+    gap: 12px !important;
+  }
+  .UI2 #main-workspace > #card {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .UI2 #main-workspace > .side {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+}
+
+/* Computer: one top bar, today's message beside the send list, slim chat bar (page 7, V4 page 31) */
+@media (min-width: 900px) {
+  .UI2 .app > .brandbar {
+    gap: 10px !important;
+  }
+  .UI2 .app > .brandbar > :is(.seg, .fs-toggle, #desktopPreview) {
+    display: none !important;
+  }
+  .UI2 .app > .brandbar .brand .mark {
+    display: none !important;
+  }
+  .UI2 .app > .brandbar .bname {
+    font-size: 15px !important;
+  }
+  .UI2 .app > .brandbar .bname::before {
+    content: '♥ ';
+  }
+  .UI2 .app > .brandbar .bname small {
+    display: none !important;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection {
+    display: flex !important;
+    align-items: center;
+    gap: 7px;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin-left: 18px;
+    padding: 0 6px !important;
+    border: 0 !important;
+    background: transparent !important;
+    font-size: 0 !important;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f0aa28;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection[data-state='online']::before {
+    background: #3cdc96;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection[data-state='offline']::before {
+    background: #ff6b6b;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection::after {
+    content: 'Checking WhatsApp';
+    color: #f0aa28;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection[data-state='online']::after {
+    content: 'WhatsApp connected';
+    color: #3cdc96;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection[data-state='offline']::after {
+    content: 'Reconnect WhatsApp';
+    color: #ff8a8a;
+  }
+  .UI2 .app > .brandbar > #live {
+    flex: none !important;
+    margin-left: 14px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 .app > .brandbar > #live::before {
+    content: 'Auto OFF';
+    font-size: 12px;
+  }
+  .UI2 .app > .brandbar > #live[data-on='1']::before {
+    content: 'Auto ON';
+  }
+  .UI2 .app > .brandbar > #leftChip {
+    margin-left: auto !important;
+    min-height: 34px !important;
+    border-radius: 999px !important;
+    font-size: 12px !important;
+  }
+  .UI2 .app > .foot > #openDonors,
+  .UI2 .app > .foot > #navGroups,
+  .UI2 .app > .foot > #chatOpen,
+  .UI2 #ui2Tabs,
+  .UI2 .ui2-status-row,
+  .UI2 #showMsg,
+  .UI2 #card .thumb-dock,
+  .UI2 #card #previewBack,
+  .UI2 #main-workspace .talk-title,
+  .UI2 #main-workspace #log,
+  .UI2 #railPreview {
+    display: none !important;
+  }
+  .UI2 #main-workspace {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+  }
+  .UI2 #main-workspace > .side {
+    display: contents !important;
+  }
+  .UI2 #main-workspace > #card {
+    display: flex !important;
+    flex-direction: column;
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    gap: 10px;
+    padding: 14px !important;
+    border: 1px solid var(--line2) !important;
+    border-radius: 18px !important;
+    background: var(--surface) !important;
+  }
+  .UI2 #main-workspace .action-rail {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex !important;
+    flex-direction: column;
+    min-width: 0;
+    padding: 14px !important;
+    border: 1px solid var(--line2) !important;
+    border-radius: 18px !important;
+    background: var(--surface) !important;
+  }
+  .UI2 #main-workspace .action-rail .group-send {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .UI2 #main-workspace .rail-quick {
+    margin-top: auto !important;
+  }
+  .UI2 #main-workspace .talk {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 12px;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 8px 12px !important;
+    border-radius: 16px !important;
+  }
+  .UI2 #main-workspace .talk > #cmdForm {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0 !important;
+  }
+  .UI2 #main-workspace .talk > .ui2-desk-chips {
+    grid-column: 2;
+    grid-row: 2;
+    flex-wrap: nowrap;
+  }
+  .UI2 #main-workspace .talk > #ui2LastReply {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    overflow: hidden;
+    padding: 4px 6px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-muted, #c3c8d8);
+    font-size: 13px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .UI2 #card .tools {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    order: 3;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #card .tools .ctx {
+    display: none !important;
+  }
+  .UI2 #card::before {
+    content: "TODAY'S MESSAGE";
+    order: 0;
+    color: var(--ink-muted, #9aa1b8);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+  }
+  .UI2 #card .ui2-styles {
+    order: 1;
+  }
+  .UI2 #card .chat {
+    order: 2;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+  .UI2 #card .chat .message {
+    max-width: none !important;
+    padding: 14px !important;
+    border-radius: 16px !important;
+    background: #006451 !important;
+    color: #ecfff8 !important;
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+  .UI2 #card .tools :is(#edit, #fresh, #copy) {
+    min-height: 34px !important;
+  }
+  .UI2 #card .tools #edit {
+    background: #1ea672 !important;
+    color: #fff !important;
+  }
+  .UI2 #card .tools #edit::after {
+    content: ' E';
+  }
+  .UI2 #card .tools #fresh::after {
+    content: ' N';
+  }
+  .UI2 #card .tools #copy::after {
+    content: ' C';
+  }
+  .UI2 #card .tools :is(#edit, #fresh, #copy)::after {
+    margin-left: 4px;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+}
+/* Style choices: one scrolling row */
+.UI2 .ui2-styles {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.UI2 .ui2-styles button {
+  flex: none;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--surface2, #232838);
+  color: var(--ink-muted, #aab0c5);
+  font-size: 12px;
+  font-weight: 600;
+}
+.UI2 .ui2-styles button:first-child {
+  border-color: transparent;
+  background: #2f6fe4;
+  color: #fff;
+}
+@media (max-width: 899px) {
+  .UI2 #card .ui2-styles {
+    display: none;
+  }
+}
+/* Home fixes: bottom bar beats comfort.css; amount word always shown; top bar order and sizes */
+.UI2 .app > .foot > #ui2Tabs {
+  display: grid !important;
+}
+.UI2 #leftChip .lw {
+  display: inline !important;
+}
+.UI2 .group-send .gb-name {
+  flex-direction: row !important;
+}
+@media (max-width: 899px) {
+  .UI2 #card .tools {
+    display: none !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 .app > .foot > #ui2Tabs {
+    display: none !important;
+  }
+  .UI2 .app > .brandbar > .brand {
+    order: 0 !important;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection {
+    order: 1 !important;
+  }
+  .UI2 .app > .brandbar > #live {
+    order: 2 !important;
+    justify-content: flex-start !important;
+    width: auto !important;
+  }
+  .UI2 .app > .brandbar > #leftChip {
+    order: 3 !important;
+  }
+  .UI2 .app > .brandbar > #donorNotesShortcut {
+    order: 4 !important;
+  }
+  .UI2 .app > .brandbar > .report-open {
+    order: 5 !important;
+  }
+  .UI2 .app > .brandbar > #mainNavMore {
+    order: 6 !important;
+  }
+  .UI2 .app > .brandbar > .sp {
+    display: none !important;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection::after,
+  .UI2 .app > .brandbar > #whatsappConnection::before {
+    display: inline-block !important;
+  }
+  .UI2 .app > .brandbar > :is(#donorNotesShortcut, .report-open),
+  .UI2 .app > .brandbar > #mainNavMore > summary {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 34px !important;
+    padding: 0 14px !important;
+    border-radius: 999px !important;
+    font-size: 12px !important;
+  }
+  .UI2 .app > .brandbar > .report-open svg {
+    display: none !important;
+  }
+  .UI2 #card .chat {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #card .chat .message {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  .UI2 #card .tools {
+    justify-content: flex-start !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #main-workspace .action-rail {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+  }
+  .UI2 #main-workspace .rail-quick {
+    grid-template-columns: auto !important;
+    justify-content: start !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #main-workspace .rail-quick #railDonors {
+    min-width: 140px;
+  }
+}
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 #main-workspace > .side {
+    align-self: start !important;
+    justify-content: flex-start !important;
+    height: auto !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #main-workspace .rail-quick {
+    display: flex !important;
+    margin-top: 14px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  .UI2 #main-workspace .rail-quick #railDonors {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px !important;
+    padding: 0 18px !important;
+    border: 1px solid var(--line2) !important;
+    border-radius: 12px !important;
+    background: var(--surface2, #232838) !important;
+    color: var(--ink, #eef0f6) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+}
+.UI2 .ui2-later-line .delay-row:not([hidden]) {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.UI2 .ui2-later-line .delay-pill {
+  min-height: 40px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--surface2, #232838);
+  color: var(--ink, #eef0f6);
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 .ui2-later-line .delay-pill.is-pending {
+  border-color: #f0aa28;
+  color: #f0c46a;
+}
+
+/* ======================= Reader and editor (PDF pages 10-14) ======================= */
+.UI2 #messageFocus .ui2-reader-actions,
+.UI2 #messageFocus .focus-paper > :is(.focus-next-arrow, .focus-gen-icon),
+.UI2 #messageFocus .focus-rail > :is([data-mark], [data-emoji]),
+.UI2 #messageFocus .focus-workspace > :is(.group-send, .dm-send),
+.UI2 #messageFocus #focusText.ui2-under {
+  display: none !important;
+}
+.UI2 #messageFocus #focusState.sr-only {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  clip: auto !important;
+  overflow: hidden;
+  margin: 0 0 4px !important;
+  color: var(--ink-muted, #9aa1b8);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.UI2 #messageFocus .ui2-reader-dock {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 64px 1fr !important;
+  gap: 8px !important;
+  align-items: stretch;
+}
+.UI2 #messageFocus .ui2-reader-dock > :is(#focusCopy, #focusEdit, #focusBack),
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > summary {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 48px !important;
+  margin: 0 !important;
+  border-radius: 14px !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  list-style: none;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusCopy {
+  border: 0 !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusEdit {
+  border: 0 !important;
+  background: #1ea672 !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusBack,
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > summary {
+  border: 1px solid var(--line2) !important;
+  background: #263340 !important;
+  color: #dfe5ee !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more {
+  position: relative;
+  display: block !important;
+  min-width: 0;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > summary::-webkit-details-marker {
+  display: none;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 40;
+  display: grid;
+  gap: 6px;
+  min-width: 210px;
+  padding: 8px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface, #1b1f2c);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div > * {
+  width: 100% !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+}
+.UI2 #messageFocus .ui2-reader-hint {
+  margin: 6px 0 0;
+  color: var(--ink-muted, #8a91a6);
+  font-size: 12px;
+  text-align: center;
+}
+.UI2 #messageFocus .ui2-live {
+  min-height: 240px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #006451;
+  color: #ecfff8;
+  font-size: 15px;
+  line-height: 1.45;
+  outline: 2px solid rgba(255, 255, 255, 0.25);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.UI2 #messageFocus .ui2-float {
+  position: sticky;
+  top: 6px;
+  z-index: 30;
+  display: inline-flex;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #1b1f2c;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.UI2 #messageFocus .ui2-float[hidden] {
+  display: none;
+}
+.UI2 #messageFocus .ui2-float button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #eef0f6;
+  font-size: 14px;
+  font-weight: 800;
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus .focus-workspace {
+    display: block !important;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  .UI2 #messageFocus .ui2-reader-dock {
+    position: static !important;
+    grid-template-columns: repeat(4, minmax(90px, 140px)) !important;
+    justify-content: start !important;
+    max-width: 860px;
+    margin: 12px auto 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #messageFocus .ui2-reader-hint {
+    max-width: 860px;
+    margin: 6px auto 0;
+    text-align: left;
+  }
+  .UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+    left: 0;
+    right: auto;
+  }
+  .UI2 #messageFocus .ui2-reader-dock > #focusEdit::after {
+    content: ' E';
+    margin-left: 4px;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+  .UI2 #messageFocus .ui2-reader-dock > #focusCopy::after {
+    content: ' C';
+    margin-left: 4px;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+}
+.UI2 #messageFocus .ui2-reader-dock > * {
+  grid-column: auto !important;
+  grid-row: 1 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusCopy {
+  order: 1 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusEdit {
+  order: 2 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more {
+  order: 3 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusBack {
+  order: 4 !important;
+  flex-direction: row !important;
+  gap: 4px;
+}
+.UI2 #messageFocus .ui2-reader-back {
+  display: none !important;
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus .ui2-reader-back {
+    display: inline-flex !important;
+  }
+  .UI2 #messageFocus .focus-paper,
+  .UI2 #messageFocus #focusFormatted,
+  .UI2 #messageFocus .ui2-live {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  .UI2 #messageFocus #focusFormatted {
+    min-height: 320px;
+  }
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+  grid-template-columns: 1fr !important;
+  width: min(280px, calc(100vw - 32px));
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus > header {
+    position: static !important;
+    max-width: 860px;
+    margin: 0 auto 10px !important;
+  }
+  .UI2 #messageFocus .focus-paper,
+  .UI2 #messageFocus #focusFormatted {
+    height: auto !important;
+    max-height: calc(100vh - 260px) !important;
+    overflow: auto !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus .focus-paper {
+    display: block !important;
+  }
+  .UI2 #messageFocus > header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    height: auto !important;
+  }
+  .UI2 #messageFocus > header > * {
+    position: static !important;
+  }
+}
+
+/* ======================= Donors (PDF pages 15-25, V4 pages 21, 40) ======================= */
+/* Bottom bar: Back, DM ★ Important (7), Options; count from the ★ tab */
+.UI2 #donorSendImportant[data-ui2-count]:not([data-ui2-count=''])::after {
+  content: ' (' attr(data-ui2-count) ')' !important;
+}
+@media (max-width: 899px) {
+  .UI2 #donorSendImportant[data-ui2-count]:not([data-ui2-count=''])::after {
+    content: 'DM ★ Important (' attr(data-ui2-count) ')' !important;
+    font-size: 15px !important;
+  }
+  .UI2 #donorsPage .donor-msgs::before {
+    content: none !important;
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-msgs {
+    background-image: none !important;
+    background-color: var(--surface2, #232838) !important;
+    color: var(--ink, #eef0f6) !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 .donor-bottom > #donorMainBottom {
+    order: -2 !important;
+  }
+  .UI2 .donor-bottom > .ui2-options {
+    order: 99 !important;
+  }
+  .UI2 .donor-bottom > .ui2-options > .ui2-options-panel {
+    left: auto !important;
+    right: 0 !important;
+  }
+  .UI2 .donor-bottom > .ui2-options > summary::after {
+    content: none !important;
+  }
+}
+/* While DMs go out: ONE big amber Stop with the count, nothing else near it */
+.UI2 .donor-bottom[data-ui2-running] > :not(#donorToggle) {
+  display: none !important;
+}
+.UI2 .donor-bottom[data-ui2-running] > #donorToggle {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  max-width: 640px !important;
+  min-height: 52px !important;
+  margin: 0 auto !important;
+  border-radius: 14px !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+}
+.UI2 .donor-bottom[data-ui2-running] > #donorToggle::before {
+  content: '■';
+  margin-right: 10px;
+  font-size: 13px;
+}
+.UI2 .donor-bottom[data-ui2-running] > #donorToggle[data-ui2-sent]:not([data-ui2-sent=''])::after {
+  content: ' · ' attr(data-ui2-sent);
+  margin-left: 6px;
+}
+/* Tabs: one scrollable row of pills with the same words everywhere */
+.UI2 #donorsPage .donor-tabs {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  padding: 2px 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  scrollbar-width: none;
+}
+.UI2 #donorsPage .donor-tabs > button {
+  display: inline-flex !important;
+  flex: none !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  width: auto !important;
+  min-height: 40px !important;
+  padding: 0 16px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 999px !important;
+  background: var(--surface2, #232838) !important;
+  color: var(--ink-muted, #aab0c5) !important;
+  font-size: 14px !important;
+}
+.UI2 #donorsPage .donor-tabs > button[aria-selected='true'] {
+  border-color: transparent !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+}
+.UI2 #donorsPage .donor-tabs :is(.tab-name, .tab-word, .tab-count) {
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  line-height: 1 !important;
+}
+/* Header: "+ Add" menu (Add numbers first), Messages, search icon on a phone, no expand button */
+.UI2 #donorsPage :is(.donor-expand-btn, #donorExpand, .donor-head .donor-title > button) {
+  display: none !important;
+}
+.UI2 #donorsPage .ui2-add-menu {
+  position: relative;
+}
+.UI2 #donorsPage .ui2-add-menu > summary {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px !important;
+  min-height: 44px !important;
+  padding: 0 16px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(90deg, #2f6fe4, #7c4dff) !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  list-style: none;
+}
+.UI2 #donorsPage .ui2-add-menu > summary::after,
+.UI2 #donorsPage .ui2-add-menu > summary::-webkit-details-marker {
+  display: none !important;
+  content: none !important;
+}
+.UI2 #donorsPage .ui2-add-menu .compact-nav-panel {
+  right: 0 !important;
+  left: auto !important;
+  min-width: 220px;
+}
+.UI2 #donorsPage .ui2-add-menu .compact-nav-panel > button {
+  display: flex !important;
+  width: 100% !important;
+  min-height: 44px !important;
+  justify-content: flex-start !important;
+}
+.UI2 #donorsPage .ui2-donor-search {
+  display: none;
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .ui2-donor-search {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    min-height: 44px;
+    margin-left: auto;
+    border: 1px solid var(--line2);
+    border-radius: 12px;
+    background: var(--surface2, #232838);
+    color: var(--ink, #eef0f6);
+    font-size: 22px;
+  }
+  .UI2 #donorsPage .donor-shell:not([data-ui2-search]) .donor-search {
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-msgs {
+    min-height: 44px !important;
+    padding: 0 14px !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    width: auto !important;
+    min-width: 66px !important;
+    max-width: none !important;
+    white-space: nowrap !important;
+  }
+  .UI2 #donorsPage .donor-head .donor-count {
+    display: inline !important;
+    margin-left: 4px;
+    color: var(--ink-muted, #8a91a6);
+    font-size: 14px;
+  }
+  .UI2 #donorsPage .donor-head .donor-message-tablist {
+    flex: none !important;
+  }
+}
+/* Computer: header left, tabs then search, actions right beside the name, drawer on the right */
+@media (min-width: 900px) {
+  .UI2 #donorsPage .donor-head {
+    justify-content: flex-start !important;
+    gap: 10px !important;
+  }
+  .UI2 #donorsPage .donor-head .ui2-add-menu {
+    margin-left: auto;
+  }
+  .UI2 #donorsPage .donor-row {
+    grid-template-columns: 32px minmax(160px, 230px) 76px minmax(110px, max-content) minmax(0, 1fr) 40px !important;
+  }
+  .UI2 #donorsPage .donor-columns {
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-amount:placeholder-shown:not(:focus) {
+    visibility: hidden;
+  }
+  .UI2 #donorsPage .donor-row:hover > .donor-amount {
+    visibility: visible;
+  }
+  .UI2 #donorsPage .donor-row .donor-more[open] > :not(summary) {
+    position: fixed !important;
+    top: 90px !important;
+    right: max(16px, calc((100vw - 1240px) / 2)) !important;
+    left: auto !important;
+    bottom: auto !important;
+    z-index: 80 !important;
+    width: 340px !important;
+    max-height: calc(100vh - 200px) !important;
+    overflow: auto !important;
+    padding: 14px !important;
+    border: 1px solid var(--line2) !important;
+    border-radius: 16px !important;
+    background: var(--surface, #1b1f2c) !important;
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.5) !important;
+  }
+}
+/* DM messages page: one row Edit, Copy, ⋯, Back; 13px message */
+.UI2 #donorMessages .bank-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 64px 1fr !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+}
+.UI2 #donorMessages .bank-actions > :is(button, details) {
+  grid-column: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+.UI2 #donorMessages .bank-actions > :is(.bank-regenerate-progress, .ui2-big) {
+  display: none !important;
+}
+.UI2 #donorMessages .bank-actions > button.tool,
+.UI2 #donorMessages .bank-actions > .ui2-bank-more > summary,
+.UI2 #donorMessages .bank-actions > .ui2-bank-back {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px !important;
+  border-radius: 14px !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  list-style: none;
+}
+.UI2 #donorMessages .bank-actions > button.tool:nth-of-type(1) {
+  background: #1ea672 !important;
+  color: #fff !important;
+}
+.UI2
+  #donorMessages
+  .bank-actions
+  > button.tool:not(.ui2-bank-back)
+  + button.tool:not(.ui2-bank-back) {
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}
+.UI2 #donorMessages .bank-actions > .ui2-bank-more {
+  position: relative;
+  order: 3 !important;
+}
+.UI2 #donorMessages .bank-actions > .ui2-bank-back {
+  order: 4 !important;
+  border: 1px solid var(--line2) !important;
+  background: #263340 !important;
+  color: #dfe5ee !important;
+}
+.UI2 #donorMessages .ui2-bank-more > summary {
+  border: 1px solid var(--line2) !important;
+  background: #263340 !important;
+  color: #dfe5ee !important;
+  cursor: pointer;
+}
+.UI2 #donorMessages .ui2-bank-more > summary::-webkit-details-marker {
+  display: none;
+}
+.UI2 #donorMessages .ui2-bank-more > div {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 50;
+  display: grid;
+  gap: 6px;
+  width: min(260px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface, #1b1f2c);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+.UI2 #donorMessages .ui2-bank-more > div > button {
+  width: 100% !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+}
+.UI2 #donorMessages .ui2-bank-hint {
+  margin: 6px 0 0;
+  color: var(--ink-muted, #8a91a6);
+  font-size: 12px;
+  text-align: center;
+}
+.UI2 #donorMessages :is(.bank-next-arrow, .bank-gen-icon) {
+  display: none !important;
+}
+.UI2 #donorMessages .bank-workspace .message,
+.UI2 #donorMessages .bank-workspace [class*='bank-text'] {
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+/* DM speed dialog */
+.UI2 #donorBatchPicker {
+  position: fixed;
+}
+.UI2 #donorBatchPicker .ui2-x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 20px;
+}
+.UI2 #donorBatchPicker[data-ui2-speed-only] .bm-grid2,
+.UI2 #donorBatchPicker[data-ui2-speed-only] #batchAudience,
+.UI2 #donorBatchPicker .batch-gap-btn[data-gap='custom'] {
+  display: none !important;
+}
+.UI2 #donorBatchPicker .ui2-speed-row,
+.UI2 #donorBatchPicker .batch-gap-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 8px !important;
+}
+.UI2 #donorBatchPicker .batch-gap-row {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+.UI2 #donorBatchPicker :is(.ui2-speed-btn, .batch-gap-btn) {
+  min-height: 40px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 999px !important;
+  background: var(--surface2, #232838) !important;
+  color: var(--ink-muted, #aab0c5) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+.UI2 #donorBatchPicker :is(.ui2-speed-btn, .batch-gap-btn)[aria-pressed='true'] {
+  border-color: transparent !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+}
+.UI2 #donorBatchPicker .ui2-speed > label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink-muted, #9aa1b8);
+  font-size: 12px;
+  font-weight: 700;
+}
+.UI2 #donorBatchPicker .ui2-speed-sum {
+  margin: 10px 0 4px;
+  font-size: 13px;
+}
+.UI2 #donorBatchPicker .ui2-speed-more > summary {
+  margin: 6px 0;
+  color: #5b8cff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.UI2 #donorBatchPicker .ui2-speed-more > div {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+.UI2 #donorBatchPicker .ui2-custom-gap {
+  justify-self: start;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 12px;
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-head {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  .UI2 #donorsPage .donor-head > :is(.ui2-add-menu, .donor-message-tablist, .ui2-donor-search) {
+    position: relative !important;
+    inset: auto !important;
+    flex: none !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+  .UI2 #donorsPage .donor-head > .donor-title {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-head > .donor-message-tablist {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+@media (max-width: 359px) {
+  .UI2 #donorsPage .donor-head .donor-count {
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-head .ui2-add-menu > summary {
+    min-width: 0 !important;
+    padding: 0 12px !important;
+  }
+  .UI2 #donorSendImportant[data-ui2-count]:not([data-ui2-count=''])::after {
+    content: 'DM ★ (' attr(data-ui2-count) ')' !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 .donor-bottom > #donorMainBottom {
+    order: -2 !important;
+  }
+  .UI2 .donor-bottom > #donorSendImportant {
+    flex: 1 1 auto !important;
+  }
+}
+.UI2 #donorsPage .donor-bottom[data-ui2-running] {
+  display: flex !important;
+  grid-template-columns: none !important;
+}
+.UI2 #donorsPage .donor-bottom[data-ui2-running] > #donorToggle {
+  min-width: 100% !important;
+  white-space: nowrap !important;
+}
+
+/* ======================= Chat, Notes, Settings, Report, Shortcuts, WhatsApp, Group finder (pages 26-32) ======================= */
+/* Chat: a small reply bubble, chips above the box, no second Back at the bottom */
+.UI2 #hist .ui2-chat-return #histMain {
+  display: none !important;
+}
+.UI2 #hist .ui2-hist-chips {
+  flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+.UI2 #hist #histLog .e.bot {
+  max-width: 85%;
+  padding: 10px 12px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 14px !important;
+  background: var(--surface2, #1f2433) !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+/* Notes: header always visible; tools in one bar above the keyboard; Back at the bottom left */
+.UI2 .foundation-notes .notes-head,
+.UI2 .foundation-notes[data-mode='writing'] .notes-head {
+  position: static !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: auto !important;
+  min-height: 52px !important;
+  max-height: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: none !important;
+}
+.UI2 .foundation-notes .notes-headline {
+  display: block !important;
+  flex: 1 1 auto;
+}
+.UI2 .foundation-notes .notes-headline h1 {
+  margin: 0 !important;
+  font-size: 18px !important;
+}
+.UI2 .foundation-notes :is(#notesLock, #notesFullscreen) {
+  min-height: 36px !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--line2, #3a3a3a) !important;
+  border-radius: 10px !important;
+  background: #2c3040 !important;
+  color: #e8e8e8 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+.UI2 .foundation-notes .notes-edge {
+  display: none !important;
+}
+.UI2 .foundation-notes .notes-workspace {
+  display: flex !important;
+  flex-direction: column !important;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-paper-scroll {
+  order: 1;
+  flex: 1 1 auto;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-toolbar,
+.UI2 .foundation-notes[data-mode='writing'] .notes-workspace > .notes-toolbar {
+  order: 2;
+  position: static !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 4px !important;
+  width: auto !important;
+  max-height: none !important;
+  margin: 8px 0 0 !important;
+  padding: 6px !important;
+  overflow-x: auto !important;
+  border: 1px solid #36404c !important;
+  border-radius: 14px !important;
+  background: #24323c !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-toolbar button {
+  flex: 1 0 auto !important;
+  width: auto !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #e8edf2 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+.UI2 .foundation-notes .notes-toolbar .ui2-note-i {
+  font-style: italic;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-foot {
+  order: 3;
+}
+.UI2 .foundation-notes .notes-back-dock {
+  justify-content: flex-start !important;
+}
+.UI2 .foundation-notes .notes-back {
+  min-height: 48px !important;
+  padding: 0 18px !important;
+  border-radius: 12px !important;
+  background: #263340 !important;
+  color: #dfe5ee !important;
+}
+/* Settings */
+.UI2 #set .ui2-look {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--surface2, #232838);
+  color: var(--ink, #eef0f6);
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 #set .row:has(.ui2-look) button {
+  display: none !important;
+}
+.UI2 #set .row:has(.ui2-look) :is(.seg, [role='group']):not(:has(.ui2-look)) {
+  display: none !important;
+}
+.UI2 #set #setClose {
+  display: none !important;
+}
+.UI2 #set .row:has(#waOut) > :first-child > :is(b, strong):first-child {
+  display: none !important;
+}
+.UI2 #set .row:has(#waOut) small {
+  color: var(--ink, #eef0f6) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+.UI2 #set .row:has(a[href*='case-plan']) small {
+  display: none !important;
+}
+.UI2 #set #setCloseBottom.ui2-done {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 50px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 14px !important;
+  background: #263340 !important;
+  color: #e8edf2 !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+}
+/* Report: Right now visible, Auto cards as short rows */
+.UI2 .report-card .report-list {
+  flex: none !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+.UI2 .report-card {
+  overflow-y: auto !important;
+}
+.UI2 .auto-card :is(.auto-stats, .auto-line, .auto-edit) {
+  display: none !important;
+}
+.UI2 .auto-card .auto-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 10px;
+}
+.UI2 .auto-card .auto-head h4 {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0 !important;
+  cursor: pointer;
+}
+.UI2 .auto-card .ui2-auto-sub {
+  grid-column: 1;
+  grid-row: 2;
+  color: var(--ink-muted, #8a91a6);
+  font-size: 12px;
+}
+.UI2 .auto-card .auto-head .auto-switch {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+/* Keyboard shortcuts */
+.UI2 #keyboardDialog .ui2-keys-head {
+  margin: 8px 0 4px;
+  color: var(--ink-muted, #8a91a6);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.UI2 #keyboardDialog .ui2-keys-more > summary {
+  margin: 12px 0 6px;
+  color: #5b8cff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+/* WhatsApp: one line when connected */
+.UI2 #whatsappDialog .ui2-wa-line {
+  display: none;
+  margin: 8px 0 14px;
+  color: #3cdc96;
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 #whatsappDialog[data-ui2-ok] .ui2-wa-line {
+  display: block;
+}
+.UI2 #whatsappDialog[data-ui2-ok] .connect-state {
+  display: none !important;
+}
+.UI2 #whatsappDialog h2 {
+  font-size: 16px !important;
+}
+/* Group finder (/new/group-finder) */
+.UI2.ui2-gf .toolbar :is(#importOpen, #findGroups) {
+  display: none;
+}
+.UI2.ui2-gf header.top a.back {
+  display: none !important;
+}
+.UI2.ui2-gf .tabs {
+  display: flex !important;
+  gap: 8px !important;
+  overflow-x: auto;
+  border: 0 !important;
+}
+.UI2.ui2-gf .tabs > * {
+  flex: none !important;
+  min-height: 34px !important;
+  padding: 0 14px !important;
+  border: 1px solid #2f3a3e !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 4px;
+}
+.UI2.ui2-gf .tabs > [aria-current='page'],
+.UI2.ui2-gf .tabs > [aria-selected='true'],
+.UI2.ui2-gf .tabs > .active {
+  border-color: transparent !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}
+.UI2.ui2-gf {
+  padding-bottom: 90px !important;
+}
+.UI2.ui2-gf .ui2-gf-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: 56px 1fr 1fr;
+  gap: 8px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: #141b1d;
+  border-top: 1px solid #2a3437;
+}
+.UI2.ui2-gf .ui2-gf-bar > * {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  margin: 0 !important;
+  border: 1px solid #2f3a3e;
+  border-radius: 14px;
+  background: #22302f;
+  color: #e8f0ee;
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.UI2.ui2-gf .ui2-gf-bar > #findGroups {
+  border: 0;
+  background: linear-gradient(90deg, #2f6fe4, #7c4dff);
+  color: #fff;
+}
+.UI2.ui2-gf .ui2-gf-tip {
+  margin-top: 6px;
+  color: #9aa7a5;
+  font-size: 13px;
+}
+.UI2 .report-card .report-list {
+  position: static !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  grid-template-rows: none !important;
+  grid-auto-flow: row !important;
+  gap: 2px !important;
+  margin: 4px 0 10px !important;
+  padding: 0 4px !important;
+  inset: auto !important;
+  transform: none !important;
+  width: auto !important;
+}
+.UI2 .report-card .report-list > li {
+  position: static !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  min-height: 30px !important;
+  height: auto !important;
+}
+.UI2 .report-card .report-list::before {
+  content: 'RIGHT NOW';
+  color: var(--ink-muted, #8a91a6);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.UI2 .report-card h3 {
+  display: block !important;
+  margin: 6px 4px !important;
+  color: var(--ink-muted, #8a91a6) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.UI2 #set .thumb-dock {
+  display: block !important;
+}
+.UI2 #hist header #histClose {
+  display: inline-flex !important;
+}
+.UI2 #keyboardDialog .ui2-keys-head + dl {
+  margin-top: 0 !important;
+}
+.UI2 #set #theme {
+  display: none !important;
+}
+.UI2 #set .thumb-dock > #setCloseBottom {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100% !important;
+}
+.UI2 .report-card > :first-child {
+  order: -2 !important;
+}
+.UI2 .report-card .report-list {
+  order: -1 !important;
+}
+.UI2 .report-card .report-list > li {
+  flex-direction: row !important;
+  align-items: center !important;
+  padding: 4px 2px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.UI2 .report-card .report-list > li > * {
+  display: inline !important;
+}
+.UI2 .report-card .report-list :is(.rp-n, .rp-s) {
+  display: none !important;
+}
+.UI2 .report-card .report-list .rp-t {
+  color: var(--ink, #eef0f6) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+.UI2 .report-card .report-list .rp-v {
+  margin-left: auto !important;
+  font-size: 14px !important;
+}
+.UI2 .report-card > :not(:first-child):not(.report-list) {
+  order: 1 !important;
+}
+.UI2.ui2-gf .tabs {
+  flex-wrap: nowrap !important;
+  scrollbar-width: none;
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-row .donor-identity > .donor-top-chip {
+    flex: 0 0 40px !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+}
+.UI2 .ui2-sheet {
+  top: auto !important;
+  bottom: 0 !important;
+  margin: 0 auto !important;
+  border-bottom: 0 !important;
+  box-sizing: border-box !important;
+  max-height: 100dvh;
+  overflow: auto;
+  transform: none !important;
+  translate: none !important;
+}
+.UI2 #donorMessages .bank-actions {
+  position: relative !important;
+}
+.UI2 #donorMessages .bank-actions > .ui2-bank-more {
+  position: static !important;
+}
+.UI2 #donorMessages .ui2-bank-more > div {
+  left: auto !important;
+  right: 0 !important;
+  width: min(260px, 100%) !important;
+  box-sizing: border-box;
+}
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 .ui2-status-row {
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+  }
+  .UI2 .ui2-status-row > #whatsappConnection {
+    flex: 1 1 auto !important;
+    min-width: 150px !important;
+  }
+  .UI2 .ui2-status-row > :is(#leftChip, #live) {
+    flex: 0 0 auto !important;
+    min-width: max-content !important;
+  }
+}
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 .ui2-status-row > #live {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-row > .donor-dm {
+    min-height: 40px !important;
+    height: 40px !important;
   }
 }

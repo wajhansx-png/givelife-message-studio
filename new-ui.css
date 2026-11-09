@@ -2993,3 +2993,212 @@
     white-space: nowrap !important;
   }
 }
+
+/* ======================= Volunteers: same look as the other donor tabs ======================= */
+.UI2 #donorVolunteers {
+  background: transparent !important;
+}
+.UI2 #donorVolunteers .vol-heading {
+  display: none !important; /* the selected tab already says Volunteers */
+}
+.UI2 #donorVolunteers .vol-workspace {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+  padding: 0 !important;
+}
+.UI2 #donorVolunteers .vol-people {
+  order: 1;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: #000 !important;
+  box-shadow: none !important;
+}
+.UI2 #donorVolunteers .vol-msg {
+  order: 2;
+  border: 1px solid var(--line2, #2b3045) !important;
+  border-radius: 16px !important;
+  background: var(--surface, #1b1f2c) !important;
+  box-shadow: none !important;
+}
+.UI2 #donorVolunteers .vol-people > :is(.vol-case-options, header, h3) {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--ink-muted, #8a91a6) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.UI2 #donorVolunteers .vol-list {
+  background: #000 !important;
+}
+.UI2 #donorVolunteers .vol-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto 40px !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 56px !important;
+  padding: 6px 12px !important;
+  border: 0 !important;
+  border-bottom: 1px solid #1c1f2b !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.UI2 #donorVolunteers .vol-row .vol-name {
+  overflow: hidden;
+  color: var(--ink, #eef0f6) !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.UI2 #donorVolunteers .vol-row :is(.vol-case, .vol-share) {
+  min-height: 40px !important;
+  min-width: 0 !important;
+  padding: 0 14px !important;
+  border: 1px solid #394060 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #9aa3c0 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+}
+.UI2 #donorVolunteers .vol-row .vol-manage {
+  width: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #8a91a6 !important;
+}
+.UI2 #donorVolunteers .donor-empty {
+  color: var(--ink-muted, #8a91a6) !important;
+}
+/* Bottom bar: Back (left), DM all (middle), + Add (right), like Donors */
+.UI2 #donorVolunteers .vol-foot {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 10px 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--line2, #2b3045) !important;
+  background: transparent !important;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-back {
+  order: 1;
+  flex: 0 0 auto;
+  min-height: 48px !important;
+  padding: 0 18px !important;
+  border: 1px solid var(--line2, #3a4052) !important;
+  border-radius: 14px !important;
+  background: #263340 !important;
+  color: #dfe5ee !important;
+}
+.UI2 #donorVolunteers .vol-foot > .send-donors {
+  order: 2;
+  flex: 1 1 auto;
+  max-width: 340px;
+  min-height: 48px !important;
+  border-radius: 14px !important;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-add-panel {
+  order: 3;
+  flex: 0 0 auto;
+  position: relative;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-add-panel > summary {
+  display: flex;
+  align-items: center;
+  min-height: 48px !important;
+  padding: 0 16px !important;
+  border: 1px solid var(--line2, #3a4052) !important;
+  border-radius: 14px !important;
+  background: var(--surface, #1b1f2c) !important;
+  color: var(--ink, #eef0f6) !important;
+  font-weight: 700;
+  list-style: none;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-stop {
+  order: 2;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-add-panel[open] > .vol-add {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 40;
+  width: min(300px, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface, #1b1f2c);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+@media (min-width: 900px) {
+  .UI2 #donorVolunteers .vol-workspace {
+    max-width: 760px;
+    margin-inline: auto !important;
+  }
+  .UI2 #donorVolunteers .vol-foot {
+    max-width: 760px;
+    margin-inline: auto !important;
+  }
+}
+.UI2 #donorVolunteers .vol-foot > .vol-back {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 92px !important;
+  max-width: none !important;
+  white-space: nowrap !important;
+  flex-direction: row !important;
+  justify-content: center;
+}
+.UI2 #donorVolunteers .vol-foot > .send-donors {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-add-panel {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.UI2 #donorVolunteers .vol-workspace {
+  align-content: start !important;
+}
+.UI2 #donorVolunteers .vol-people {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+.UI2 #donorVolunteers .vol-list {
+  min-height: 0 !important;
+  max-height: none !important;
+}
+.UI2 #donorVolunteers .vol-msg {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+.UI2 #donorVolunteers .vol-msg textarea {
+  min-height: 96px !important;
+  height: 96px !important;
+}
+@media (max-width: 359px) {
+  .UI2 #donorVolunteers .vol-row {
+    grid-template-columns: 1fr 1fr 40px !important;
+    row-gap: 4px !important;
+    padding-block: 8px !important;
+  }
+  .UI2 #donorVolunteers .vol-row .vol-name {
+    grid-column: 1 / -1;
+  }
+  .UI2 #donorVolunteers .vol-row :is(.vol-case, .vol-share) {
+    padding: 0 8px !important;
+  }
+}

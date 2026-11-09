@@ -171,7 +171,11 @@ test("/new computer: the main screen shows today's message beside the send list;
   const send = await page.locator('.group-send').boundingBox();
   expect(card.x + card.width).toBeLessThanOrEqual(send.x + 1);
   await expect(page.locator('#ui2Styles')).toBeVisible();
-  await expect(page.locator('.ui2-desk-chips .ui2-chip')).toHaveCount(3);
+  await expect(page.locator('#main-workspace .talk')).toBeHidden(); // chat is its own screen
+  await expect(page.locator('#ui2TopChat')).toBeVisible();
+  await page.locator('#ui2TopChat').click();
+  await expect(page.locator('#hist')).toBeVisible();
+  await page.locator('#histClose').click();
   await open(page, '/new', 390);
   await page.waitForTimeout(900);
   await expect(page.locator('#messageFocus')).toBeHidden();
@@ -378,5 +382,63 @@ test('/new DM speed dialog: How fast, four wait times and a summary; the rest fo
     expect(box.x).toBeGreaterThanOrEqual(-0.5);
     expect(box.x + box.width).toBeLessThanOrEqual(width + 0.5);
     await picker.locator('#batchCancel').click();
+  }
+});
+
+test('/new computer: Options items do not overlap and stay inside the screen', async ({ page }) => {
+  await open(page, '/new#/donors/all', 1440);
+  await page.locator('#ui2Options > summary').click();
+  const boxes = await page.locator('.ui2-options-panel > *').evaluateAll((els) =>
+    els.map((e) => {
+      const r = e.getBoundingClientRect();
+      return [r.x, r.y, r.right, r.bottom];
+    }),
+  );
+  expect(boxes.length).toBeGreaterThanOrEqual(4);
+  for (let i = 0; i < boxes.length; i++) {
+    expect(boxes[i][0]).toBeGreaterThanOrEqual(0);
+    expect(boxes[i][2]).toBeLessThanOrEqual(1440);
+    if (i) expect(boxes[i][1]).toBeGreaterThanOrEqual(boxes[i - 1][3] - 1); // no overlap with the one above
+  }
+});
+
+test('/new computer: donor list is centred and narrow, with a short amount box', async ({
+  page,
+}) => {
+  await open(page, '/new#/donors/all', 1440);
+  const t = await page.locator('#donorTable').boundingBox();
+  expect(t.width).toBeLessThanOrEqual(761);
+  expect(Math.abs(t.x + t.width / 2 - 720)).toBeLessThan(40);
+  await page.locator('.donor-row .donor-status').first().click();
+  const amt = await page.locator('.donor-row .donor-amount').first().boundingBox();
+  expect(amt.width).toBeLessThanOrEqual(110);
+});
+
+test('/new Notes: tool buttons are small, centred and fully on screen (no scroll)', async ({
+  page,
+}) => {
+  for (const [w, h] of [
+    [1920, 890],
+    [1366, 650],
+    [390, 740],
+  ]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.addInitScript((k) => {
+      localStorage.setItem('givelife-cloud-key', k);
+      localStorage.setItem('givelife-theme', 'dark');
+    }, KEY);
+    await page.goto('/new#/notes');
+    const pw = page.locator('#notesUnlockForm input[type=password]');
+    if (await pw.isVisible().catch(() => false)) {
+      await pw.fill('test-preview-only-pin');
+      await pw.press('Enter');
+    }
+    const bar = page.locator('#notesTools');
+    await expect(bar).toBeVisible();
+    const b = await bar.boundingBox();
+    expect(b.y + b.height).toBeLessThanOrEqual(h + 0.5);
+    expect(b.width).toBeLessThan(w > 700 ? 420 : w);
+    const sc = await bar.evaluate((e) => e.scrollWidth <= e.clientWidth + 1);
+    expect(sc).toBe(true);
   }
 });

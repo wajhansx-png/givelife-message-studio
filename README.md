@@ -34,4 +34,14 @@ Retention is bounded: 2,000 archived turns, 1,000 memory entries (including supe
 
 Provider reference: [DeepSeek tool calls](https://api-docs.deepseek.com/guides/tool_calls/) and [thinking-mode context requirements](https://api-docs.deepseek.com/guides/thinking_mode/).
 
+## Case writing and message learning
+
+In **Messages → Write Case**, enter or revise the case details, choose a writing style, and generate a message using the existing writer. Both the notes and the generated text stay editable and save automatically for the active case, including after reopening or restarting. **Regenerate message** uses the revised notes; **Use message** applies the reviewed text to the Messages bank and the saved DM draft. Generation and applying a message do not send it.
+
+The writer uses the current case balance shown in the panel and the existing verified payment block, donor calculations, verse selection, and formatting checks. If the notes explicitly name a different remaining balance, correct the notes or update the case balance first. Changes made during generation cannot be overwritten by an older result.
+
+`message_library.py` archives generated fundraising messages, DM versions, prepared direct messages, and manual message edits in the existing PostgreSQL/SQLite key-value store, with atomic JSON copies under `DATA_DIR/generated-messages`. Existing saved drafts and wording banks are imported when the archive is first used. Exact duplicates within a message kind share a record; replacements and edited versions are retained without an eviction limit.
+
+Future generation retrieves up to three style examples from the latest 256 archived messages, prioritizing owner edits and approved text, then validated generations. Rejected candidates remain archived but are excluded from style examples. Historical examples guide tone, structure, and formatting; the current case supplies facts and amounts. This is retrieval-based learning, not model-weight training or a guarantee of improving quality on every generation.
+
 Validation: `python -m unittest discover -s tests -v`, `pnpm test`, `pnpm test:e2e`, and `pnpm lint` (Prettier for JavaScript and CSS; ruff check and format for Python). `pnpm format` rewrites files to the project style. `python tests/preview_fake.py` starts an isolated local UI at port 3003 with a fake WhatsApp transport. `/mobile-preview` provides phone-size and keyboard-space layout checks. Production Settings → **Run 8 checks** exercises the real configured model against isolated simulated tools; it never contacts WhatsApp recipients. Treat model-evaluation scores as bounded evidence, not a guarantee of general accuracy.

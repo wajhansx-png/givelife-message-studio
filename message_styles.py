@@ -7,6 +7,7 @@ built here in code: the amount left, the donor count and amount, the Quran/Hadit
 
 import datetime, re, time
 import dm_composer, team_rules
+from message_library import style_block
 
 STYLES = ("ur_en", "ur_en_more", "en", "en_more")
 BILINGUAL = ("ur_en", "ur_en_more")
@@ -249,7 +250,7 @@ def build_prompt(style, ctx, angle, avoid, previous, notes):
         "Write the emotional parts of ONE WhatsApp fundraising message for GiveLife Foundation.",
         "",
         "CASE FACTS (the owner's own saved messages. These are the ONLY facts you may use):",
-        ctx["facts"][:2500],
+        ctx["facts"][:12000],
         "",
         f"MONEY: Rs. {ctx['left']:,} is still needed. Just {ctx['people']} people giving Rs. {ctx['each']:,} each can finish it.",
         f"ANGLE for this message: {angle[1]}.",
@@ -296,13 +297,13 @@ def build_prompt(style, ctx, angle, avoid, previous, notes):
         "",
         'Reply with one JSON object only: {"hook": "...", "story": "...", "help": "...", "verse": "<id>", "concept": "<5 words>"}',
     ]
-    return "\n".join(lines)
+    return "\n".join(lines) + style_block(ctx.get("style_examples", []))
 
 
 SYSTEM = "You are a careful, honest charity copywriter. You never invent facts. Reply with one JSON object only."
 
 
-def generate(style, ctx, state, chat, json_of, today=None, deadline=75.0):
+def generate(style, ctx, state, chat, json_of, today=None, deadline=75.0, archive=None):
     """-> (result dict, new state). `chat(system, prompt)` returns text. Raises ValueError with a plain reason."""
     if style not in STYLES:
         raise ValueError("Unknown message style.")
@@ -333,6 +334,8 @@ def generate(style, ctx, state, chat, json_of, today=None, deadline=75.0):
             failures.append("the AI left out a required part")
             continue
         bad = problems(style, text, parts, ctx, previous)
+        if archive:
+            archive(text, "candidate")
         key = opening_key(parts.get("hook"))
         if key in used:
             bad.append("the first line was already used today")
@@ -351,6 +354,8 @@ def generate(style, ctx, state, chat, json_of, today=None, deadline=75.0):
             "hook": parts.get("hook"),
             "at": time.time(),
         }
+        if archive:
+            archive(text, "validated")
         return {
             "text": text,
             "angle": angle[0],

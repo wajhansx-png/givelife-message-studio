@@ -18,6 +18,8 @@ import draft_flow
 import draft_workflow
 from chat_memory import Knowledge, safe_text
 from functools import wraps
+from message_library import library_for
+from case_writer import CaseWriter
 
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("DATA_DIR", "/data/studio"))
@@ -370,6 +372,8 @@ def send_custom(body):
         message = message.replace("{name}", str(body.get("name") or "").strip() or "friend")
     if not message.strip() or len(message) > 10000:
         raise ValueError("Write a message of 1 to 10,000 characters.")
+    if not is_group:
+        library_for(sys.modules[__name__]).record("dm", message, source="prepared_dm")
     if not STORE:
         raise ValueError("Persistent send records are unavailable. Try again later.")
     manual = body.get("kind") in ("donor_manual", "team_msg", "owner_text")
@@ -767,6 +771,7 @@ def save_draft(key, text):
                 "This case is completed. A saved caption cannot request new donations or show Rs. 0 LEFT. Use a completion or thank-you message instead. Nothing was saved."
             )
         draft = read_drafts()
+        library_for(sys.modules[__name__]).record(key, text, source="saved_draft")
         draft[key] = text
         atomic_write(DRAFT, json.dumps(draft, ensure_ascii=False))
         persist_file("drafts", DRAFT)
@@ -836,6 +841,8 @@ def regenerate_drafts(left, case_name=None):
         draft = read_drafts() if DRAFT.exists() else {}
         draft["group"] = build_group(variant(False), left, case_name)
         draft["dm"] = build_dm(dm_selection(False), left, case_name)
+        for kind in ("group", "dm"):
+            library_for(sys.modules[__name__]).record(kind, draft[kind], source="case_template")
         atomic_write(DRAFT, json.dumps(draft, ensure_ascii=False))
         persist_file("drafts", DRAFT)
 
@@ -3149,6 +3156,15 @@ MSTYLE_LOCK = threading.Lock()
 MSTYLE_MEMORY = {}
 
 
+def case_writer():
+    with _SINGLETON_LOCK:
+        value = getattr(sys.modules[__name__], "_CASE_WRITER", None)
+        if value is None:
+            value = CaseWriter(sys.modules[__name__])
+            sys.modules[__name__]._CASE_WRITER = value
+        return value
+
+
 def message_style(body):
     """One of the four editor buttons: write a new message from the live case, never sending anything."""
     import message_styles
@@ -3169,16 +3185,26 @@ def message_style(body):
         group, dm = get_message("group")["text"], get_message("dm")["text"]
         current = str(body.get("current") or "")[:6000]
         plan = plan_get()
-        facts = [f"Case: {active_case_name()}"]
-        if plan and plan.get("facts"):
-            facts.append("Verified case facts: " + json.dumps(plan["facts"], ensure_ascii=False))
-        facts += [t for t in (current, group, dm) if t.strip()]
+        manual = body.get("case_details")
+        if manual is not None:
+            if not isinstance(manual, str) or not manual.strip() or len(manual) > 12000:
+                raise ValueError("Write the case details first, up to 12,000 characters.")
+            facts = [manual]
+        else:
+            facts = [f"Case: {active_case_name()}"]
+            if plan and plan.get("facts"):
+                facts.append("Verified case facts: " + json.dumps(plan["facts"], ensure_ascii=False))
+            facts += [t for t in (current, group, dm) if t.strip()]
+        archive = library_for(sys.modules[__name__])
+        examples = archive.examples(kind, exclude=current) or focus_bank().owner_style(exclude=current)
+        examples = examples or [group, dm]
         ctx = {
             "left": left,
             "facts": "\n\n".join(facts),
             "group_text": group,
             "dm_text": dm,
             "current_text": current or (dm if kind == "dm" else group),
+            "style_examples": examples,
         }
 
         def chat(system, prompt):
@@ -3189,7 +3215,8 @@ def message_style(body):
 
         state = (STORE.get("message_styles") if STORE else None) or MSTYLE_MEMORY
         result, new_state = message_styles.generate(
-            style, ctx, state if isinstance(state, dict) else {}, chat, __import__("ai_call").json_of
+            style, ctx, state if isinstance(state, dict) else {}, chat, __import__("ai_call").json_of,
+            archive=lambda text, quality: archive.record(kind, text, source="manual_case" if manual is not None else "message_style", quality=quality, context={"details": manual or "", "left": left}),
         )
         MSTYLE_MEMORY.clear()
         MSTYLE_MEMORY.update(new_state)
@@ -3353,6 +3380,7 @@ ENGINE = autopilot.Engine(
 __import__("dm_variants").OWNER_STYLE = lambda: focus_bank().owner_style(
     get_message("group")["text"]
 )
+__import__("dm_variants").RECORD = lambda text, quality, kind="message": library_for(sys.modules[__name__]).record(kind, text, source="ai_rewrite", quality=quality)
 __import__("dm_variants").CORRECTIONS = lambda: [m.get("rule", "") for m in mem_get()][-15:]
 __import__("dm_variants").PROVEN = lambda: (
     (learning_mod.proven_texts(ENGINE.L, 1) + donors().book.proven_dm_texts(1))
@@ -5390,6 +5418,8 @@ class Handler(BaseHTTPRequestHandler):
             "/format.js",
             "/connection.js",
             "/donors.js",
+            "/case-writer.js",
+            "/case-writer.css",
             "/replies.js",
             "/notes.js",
             "/notes.css",
@@ -5469,6 +5499,8 @@ class Handler(BaseHTTPRequestHandler):
                     "auto": donors().auto.status(),
                 }
             )
+        if self.path == "/case-message":
+            return self.reply(case_writer().view())
         if self.path == "/cases":
             try:
                 return self.reply(donors().cases.view())
@@ -5712,6 +5744,7 @@ class Handler(BaseHTTPRequestHandler):
             "/donor-paste",
             "/api/group-finder",
             "/api/case-plan",
+            "/case-message",
         ):
             with LOCK:
                 OWNER_REVISION += 1
@@ -5950,6 +5983,21 @@ class Handler(BaseHTTPRequestHandler):
                 if "on" in body:
                     return self.reply(controls.set(body.get("control"), body.get("on"), body.get("settings")))
                 return self.reply(controls.edit(body.get("control"), body.get("settings")))
+            except ValueError as e:
+                return self.reply({"error": str(e)}, status=400)
+        if self.path == "/case-message":
+            try:
+                writer = case_writer()
+                action = body.get("action")
+                if action == "generate":
+                    return self.reply(writer.generate(body))
+                if action == "use":
+                    return self.reply(writer.use(body))
+                if action == "save":
+                    return self.reply(writer.save(body))
+                raise ValueError("Choose save, generate or use.")
+            except RuntimeError as e:
+                return self.reply({"error": str(e)}, status=503)
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
         if self.path == "/message-style":

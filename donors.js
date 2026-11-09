@@ -1137,6 +1137,10 @@
     head.prepend(mobileTitle);
     const info = make('span', 'bank-top-info', 'Edit Message 1 to update all regenerated wordings');
     head.append(info);
+    const writeCase = make('button', 'tool bank-write-case', 'Write Case');
+    writeCase.type = 'button';
+    writeCase.onclick = () => window.CaseWriter?.open();
+    head.append(writeCase);
     const grid = make('div', 'bank-workspace'),
       picker = make('nav', 'bank-picker'),
       actions = make('aside', 'bank-actions');

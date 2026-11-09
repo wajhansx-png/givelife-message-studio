@@ -131,7 +131,7 @@
   dlg.className = 'report-dialog';
   dlg.setAttribute('aria-label', 'Report');
   dlg.innerHTML =
-    '<div class="report-card"><h2>Right now</h2><ol class="report-list">' +
+    '<div class="report-card"><header class="rp-head"><b>Report</b><button type="button" id="reportClose" aria-label="Close report">×</button></header><ol class="report-list" aria-label="Right now">' +
     [
       ['Groups', 'reportGroups'],
       ['DMs', 'reportDms'],
@@ -151,7 +151,7 @@
           'Sub"></small></li>',
       )
       .join('') +
-    '</ol><section id="autoControls" class="auto-controls" aria-label="Auto controls"><h3>Auto</h3><div id="autoCards"></div><p id="autoMsg" class="auto-msg" role="alert"></p></section><button type="button" id="reportClose">Close</button></div>';
+    '</ol><p id="reportToday" class="rp-today"></p><section id="autoControls" class="auto-controls" aria-label="Auto controls"><h3>Auto</h3><div id="autoCards"></div><p id="autoMsg" class="auto-msg" role="alert"></p></section><button type="button" id="autoStopAll" hidden>Stop all Auto</button></div>';
   document.body.append(dlg);
   const $ = (id) => document.getElementById(id);
   const clock = (sec) =>
@@ -159,6 +159,8 @@
   const put = (id, value, sub) => {
     $(id).textContent = value;
     $(id + 'Sub').textContent = sub || '';
+    const n = (k) => (/\d+/.exec($(k).textContent) || ['0'])[0];
+    $('reportToday').textContent = 'Today: ' + n('reportGroups') + ' group posts · ' + n('reportReplies') + ' replies';
   };
   async function fill() {
     for (const id of ['reportGroups', 'reportDms', 'reportReplies', 'reportResumes']) put(id, '…');
@@ -245,6 +247,18 @@
     return n;
   };
   const autoSay = (text) => ($('autoMsg').textContent = text || '');
+  /* One tap switches every running Auto off (one after the other, so the server never races). */
+  $('autoStopAll').onclick = async () => {
+    const stop = $('autoStopAll');
+    stop.disabled = true;
+    try {
+      for (const [id, x] of Object.entries(cards)) if (x.last && x.last.on) paint(await autoCall({ control: id, on: false }));
+      autoSay('Everything is off. Nothing more will be sent.');
+    } catch (e) {
+      autoSay(e.message);
+    }
+    stop.disabled = false;
+  };
   async function autoCall(body) {
     const r = await fetch('/auto-controls', {
       method: 'POST',
@@ -261,6 +275,7 @@
       sw = el('button', 'auto-switch'),
       stats = el('dl', 'auto-stats'),
       note = el('p', 'auto-note'),
+      line = el('p', 'auto-line'),
       edit = el('button', 'auto-edit', 'Edit Settings'),
       form = el('form', 'auto-form');
     card.dataset.control = c.id;
@@ -269,10 +284,10 @@
     sw.setAttribute('role', 'switch');
     sw.setAttribute('aria-label', c.title);
     for (const [k, label] of [
-      ['recipients', 'Recipients'],
-      ['sent', 'Sent'],
-      ['pending', 'Pending'],
-      ['next', 'Next send'],
+      ['recipients', c.id === 'group' ? 'groups' : 'donors'],
+      ['sent', 'sent'],
+      ['pending', 'left'],
+      ['next', 'next'],
     ]) {
       const row = el('div');
       row.append(el('dt', '', label), el('dd', '', '—'));
@@ -281,8 +296,8 @@
     }
     form.hidden = true;
     form.append(el('p', 'auto-error'));
-    card.append(head, stats, note, edit, form);
-    cards[c.id] = { card, sw, stats, note, edit, form, fields: c.fields, filled: false };
+    card.append(head, line, stats, note, edit, form);
+    cards[c.id] = { card, sw, stats, note, line, edit, form, fields: c.fields, filled: false };
     sw.onclick = () => toggle(c.id);
     edit.onclick = () => {
       form.hidden = !form.hidden;
@@ -379,6 +394,22 @@
       x.sw.disabled = false;
     }
   }
+  /* What happened, in one plain sentence. */
+  function plain(c) {
+    const sent = Number(c.sent) || 0,
+      total = Number(c.recipients) || 0,
+      left = Number(c.pending) || 0,
+      at = c.next_at ? ' · next ' + clock(c.next_at) : '';
+    if (c.id === 'group') {
+      if (c.state === 'ON') return 'Posting' + at;
+      return sent ? 'Off · ' + sent + (sent === 1 ? ' post' : ' posts') + ' today' : 'Off';
+    }
+    if (c.state === 'STOPPING') return 'Stopping after this DM';
+    if (c.state === 'ON') return total ? sent + ' of ' + total + ' sent' + at : 'Starting…';
+    if (!total && !sent) return 'Off';
+    if (left && /unconfirmed|disconnect|restrict/i.test(c.note || '')) return 'Stopped · check WhatsApp';
+    return (left ? 'Stopped · ' : 'Done · ') + sent + ' of ' + total + ' sent';
+  }
   function paint(view) {
     for (const c of Object.values(view.controls || {})) {
       if (!cards[c.id]) buildCard(c);
@@ -395,7 +426,14 @@
       };
       for (const row of x.stats.children) row.lastChild.textContent = v[row.dataset.stat];
       x.note.textContent = c.note || '';
+      x.line.textContent = plain(c);
+      /* One glance: a thin bar shows how far the batch has got; the long note lives in the tooltip. */
+      const done = Number(c.sent) || 0,
+        total = done + (Number(c.pending) || 0);
+      x.card.style.setProperty('--p', c.id !== 'group' && total ? Math.min(1, done / total).toFixed(3) : '0');
+      x.card.title = c.note || '';
     }
+    $('autoStopAll').hidden = !Object.values(cards).some((x) => x.last && x.last.on);
   }
   async function autoRefresh() {
     try {

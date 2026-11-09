@@ -148,65 +148,40 @@ test('/new desktop reader: narrow, tall message with the buttons beside it; edit
   expect(ta.height).toBeGreaterThan(200);
 });
 
-test('/new opens in the reader on a computer and on a phone; Back returns to the main screen without jumping back', async ({
+test('/new opens in the reader on a computer; Back returns to the chat; a phone stays on the main screen', async ({
   page,
 }) => {
-  for (const width of [1440, 390, 280]) {
-    await open(page, '/new', width);
-    await expect(page.locator('#messageFocus')).toBeVisible();
-    expect(await page.evaluate(() => location.hash)).toBe('#/preview');
-    await page.locator('#focusBack').click();
-    await expect(page.locator('#messageFocus')).toBeHidden();
-    await page.waitForTimeout(900);
-    expect(await page.evaluate(() => location.hash)).not.toBe('#/preview');
-  }
+  await open(page, '/new', 1440);
+  await expect(page.locator('#messageFocus')).toBeVisible();
+  expect(await page.evaluate(() => location.hash)).toBe('#/preview');
+  await page.locator('#focusBack').click();
+  await expect(page.locator('#messageFocus')).toBeHidden();
+  await page.waitForTimeout(900);
+  expect(await page.evaluate(() => location.hash)).not.toBe('#/preview');
+  await open(page, '/new', 390);
+  await page.waitForTimeout(900);
+  await expect(page.locator('#messageFocus')).toBeHidden();
+  expect(await page.evaluate(() => location.hash)).toBe('');
 });
 
-for (const width of [280, 320, 360, 390, 430, 768]) {
-  test(`/new phone reader at ${width}px: Regenerate and Next are big thumb buttons that press the real ones`, async ({
+for (const width of [280, 320, 360, 390, 430, 768, 1440]) {
+  test(`/new reader at ${width}px: every visible button inside the screen, no sideways scroll`, async ({
     page,
   }) => {
-    const hits = [];
-    await page.route('**/*', (r) => {
-      if (r.request().method() === 'POST' && /send/i.test(r.request().url()))
-        hits.push(r.request().url());
-      return r.continue();
-    });
     await open(page, '/new#/preview', width);
-    const regen = page.locator('#ui2Regen');
-    const next = page.locator('#ui2Next');
-    await expect(regen).toBeVisible();
-    await expect(next).toBeVisible();
-    const [r, n, e, t, b] = await Promise.all(
-      ['#ui2Regen', '#ui2Next', '#focusEdit', '#focusTest', '#focusBack'].map((s) =>
-        page.locator(s).boundingBox(),
-      ),
-    );
-    expect(Math.min(r.height, n.height)).toBeGreaterThanOrEqual(46);
-    expect(r.y).toBeLessThan(e.y); // the two main buttons sit above the row of four
-    for (const x of [r, n, e, t, b]) {
-      expect(x.x).toBeGreaterThanOrEqual(-0.5);
-      expect(x.x + x.width).toBeLessThanOrEqual(width + 0.5);
-      expect(x.y + x.height).toBeLessThanOrEqual(page.viewportSize().height + 0.5);
+    await expect(page.locator('#messageFocus')).toBeVisible();
+    for (const sel of ['#focusEdit', '#focusTest', '#focusCopy', '#focusBack', '#focusNext']) {
+      const el = page.locator(sel).first();
+      if (!(await el.isVisible())) continue;
+      const bb = await el.boundingBox();
+      expect(bb.x, sel).toBeGreaterThanOrEqual(-0.5);
+      expect(bb.x + bb.width, sel).toBeLessThanOrEqual(width + 0.5);
     }
-    expect(await page.locator('#focusNextArrow').isVisible()).toBe(false); // the small round ones are replaced
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,
     );
-    await next.click();
-    expect(hits, 'Next and Regenerate must never send').toEqual([]);
   });
 }
-
-test('/new computer reader keeps its round Next and Regenerate beside the message and hides the phone buttons', async ({
-  page,
-}) => {
-  await open(page, '/new#/preview', 1440);
-  await expect(page.locator('#focusNextArrow')).toBeVisible();
-  await expect(page.locator('#focusGenIcon')).toBeVisible();
-  await expect(page.locator('#ui2Next')).toBeHidden();
-  await expect(page.locator('#focusSave')).toBeVisible();
-});
 
 for (const width of [280, 360, 430, 1440]) {
   test(`/new DM messages page at ${width}px: Regenerate and Next, one orderly button grid, 12px message`, async ({

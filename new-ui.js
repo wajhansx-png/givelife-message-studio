@@ -1,8 +1,74 @@
 /* Redesign helpers, loaded only at /new. They move or relabel existing controls; nothing here sends anything. */
-
-/* 1. Phone and computer: open straight into the message with its buttons and the send list (the reader). Back goes to the main screen. */
 (() => {
-  if (location.hash.replace('#', '') !== '') return;
+  function arrangeReader() {
+    const screen = document.getElementById('messageFocus');
+    const workspace = screen?.querySelector('.focus-workspace');
+    const paper = workspace?.querySelector('.focus-paper');
+    const rail = workspace?.querySelector('.focus-rail');
+    if (!screen || !workspace || !paper || !rail || screen.dataset.ui2Layout) return;
+    const header = screen.querySelector(':scope > header');
+    const top = document.createElement('div');
+    top.className = 'ui2-reader-top';
+    const status = document.getElementById('focusState');
+    if (status) status.classList.add('ui2-reader-status', 'sr-only');
+    const version = document.getElementById('focusVersion');
+    const back = document.getElementById('focusBack');
+    if (!version || !back) return;
+    const backTop = document.createElement('button');
+    backTop.type = 'button';
+    backTop.className = 'back-action ui2-reader-back';
+    backTop.textContent = '← Back';
+    backTop.setAttribute('aria-label', 'Back to messages');
+    backTop.addEventListener('click', () => back.click());
+    top.append(backTop, version);
+    header?.prepend(top);
+
+    const actions = document.createElement('div');
+    actions.className = 'ui2-reader-actions';
+    for (const id of ['focusNext', 'focusTest']) {
+      const button = document.getElementById(id);
+      if (button) actions.append(button);
+    }
+    const more = rail.querySelector('.focus-rail-more');
+    if (more) actions.append(more);
+    paper.after(actions);
+
+    const dock = document.createElement('nav');
+    dock.className = 'ui2-reader-dock';
+    dock.setAttribute('aria-label', 'Message actions');
+    for (const id of ['focusEdit', 'focusCopy', 'focusSave', 'focusBack']) {
+      const button = document.getElementById(id);
+      if (button) dock.append(button);
+    }
+    screen.append(dock);
+    screen.dataset.ui2Layout = '1';
+  }
+  function arrangeStatus() {
+    const app = document.querySelector('.app');
+    const live = document.getElementById('live');
+    const brand = app?.querySelector(':scope > .brandbar');
+    if (!app || !live || !brand || document.querySelector('.ui2-status-row')) return;
+    const whatsapp = document.getElementById('whatsappConnection');
+    const amount = document.getElementById('leftChip');
+    if (!whatsapp || !amount) return;
+    whatsapp.setAttribute('aria-label', 'WhatsApp status');
+    whatsapp.title = 'WhatsApp status';
+    const row = document.createElement('div');
+    row.className = 'ui2-status-row';
+    row.append(whatsapp, amount);
+    live.before(row);
+  }
+  const run = () => {
+    arrangeReader();
+    arrangeStatus();
+  };
+  run();
+  new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
+})();
+
+/* 1. Computer: open straight into the message beside the send list (the reader). Back still goes to the chat. */
+(() => {
+  if (innerWidth < 900 || location.hash.replace('#', '') !== '') return;
   const go = () => typeof Nav !== 'undefined' && Nav.go('preview');
   if (document.readyState === 'complete') setTimeout(go, 400);
   else addEventListener('load', () => setTimeout(go, 400));
@@ -82,9 +148,8 @@
   sync();
 })();
 
-/* 4. Phone: big Regenerate and Next buttons in the thumb zone. They press the real round buttons, so nothing new can go wrong. */
+/* 4. Phone: big Regenerate and Next buttons on the DM messages page. They press the real round buttons. */
 (() => {
-  const phone = matchMedia('(max-width: 899px)');
   const press = (sel) => () => document.querySelector(sel)?.click();
   function big(id, label, sel) {
     const b = document.createElement('button');
@@ -94,12 +159,6 @@
     b.textContent = label;
     b.addEventListener('click', press(sel));
     return b;
-  }
-  function reader() {
-    const rail = document.querySelector('#messageFocus .focus-rail');
-    if (!rail || rail.querySelector('#ui2Next')) return;
-    rail.prepend(big('ui2Next', 'Next ›', '#focusNextArrow'));
-    rail.prepend(big('ui2Regen', '↻ Regenerate', '#focusGenIcon'));
   }
   function bank() {
     const box = document.querySelector('#donorMessages .bank-actions');
@@ -118,24 +177,8 @@
       t.style.setProperty('order', String(n), 'important');
     }
   }
-  /* Save Base lives in the reader's More menu on a phone so the bottom bar stays short; it goes back on a computer. */
-  function moveSave() {
-    const save = document.getElementById('focusSave');
-    const panel = document.querySelector('#messageFocus details.focus-rail-more > div');
-    const rail = document.querySelector('#messageFocus .focus-rail');
-    if (!save || !panel || !rail) return;
-    if (phone.matches && save.parentElement !== panel) panel.prepend(save);
-    else if (!phone.matches && save.parentElement === panel)
-      rail.insertBefore(save, document.getElementById('focusTest'));
-  }
-  const run = () => {
-    reader();
-    bank();
-    moveSave();
-  };
-  phone.addEventListener('change', run);
-  new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
-  run();
+  new MutationObserver(bank).observe(document.body, { childList: true, subtree: true });
+  bank();
 })();
 
 /* 5. Settings: grouped under four headings, with one line of help under the two switches that decide who gets DMs. */

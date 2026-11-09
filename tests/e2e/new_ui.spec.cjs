@@ -148,40 +148,6 @@ test('/new desktop reader: narrow, tall message with the buttons beside it; edit
   expect(ta.height).toBeGreaterThan(200);
 });
 
-test('/new chat chips only fill the box and never send, and the chat fits every phone width', async ({
-  page,
-}) => {
-  const sent = [];
-  await page.route('**/*', (r) => {
-    if (r.request().method() === 'POST' && /send|chat|command|reply/i.test(r.request().url()))
-      sent.push(r.request().url());
-    return r.continue();
-  });
-  for (const width of [280, 320, 360, 390, 768, 1440]) {
-    await open(page, '/new#/chat', width);
-    const form = page.locator('#histForm');
-    await expect(form).toBeVisible();
-    const chips = page.locator('#hist .ui2-chips button');
-    await expect(chips).toHaveCount(3);
-    await chips.nth(1).click();
-    await expect(page.locator('#histForm textarea')).toHaveValue('send all');
-    expect(sent, 'a chip must never send').toEqual([]);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
-      true,
-    );
-    const back = await page.locator('#histMain, #histClose').first().boundingBox();
-    const last = await chips.nth(2).boundingBox();
-    if (back && last && width < 900) {
-      const clash = !(
-        last.x + last.width <= back.x + 1 ||
-        last.y + last.height <= back.y ||
-        last.y >= back.y + back.height
-      );
-      expect(clash, `chip under the Back button at ${width}px`).toBe(false);
-    }
-  }
-});
-
 test('/new on a computer opens in the reader; Back returns to the chat; a phone stays on the main screen', async ({
   page,
 }) => {
@@ -197,4 +163,80 @@ test('/new on a computer opens in the reader; Back returns to the chat; a phone 
   await page.waitForTimeout(900);
   await expect(page.locator('#messageFocus')).toBeHidden();
   expect(await page.evaluate(() => location.hash)).toBe('');
+});
+
+test('/new phone: tapping the donated circle shows a tick, and tapping again clears it', async ({
+  page,
+}) => {
+  for (const width of [280, 360, 430]) {
+    await open(page, '/new#/donors/all', width);
+    const status = page.locator('.donor-status').nth(5);
+    await expect(status).toHaveAttribute('aria-pressed', 'false');
+    await status.click();
+    await expect(status).toHaveAttribute('aria-pressed', 'true');
+    const mark = await status.evaluate((e) => getComputedStyle(e, '::before').content);
+    expect(mark).toContain('\u2713');
+    const box = await status.boundingBox();
+    expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(width >= 300 ? 34 : 28);
+    await status.click();
+    await expect(status).toHaveAttribute('aria-pressed', 'false');
+  }
+});
+
+test('/new computer: Options menu on the left holds Auto and Poster, Back stays on the right; phones are unchanged', async ({
+  page,
+}) => {
+  await open(page, '/new#/donors/all', 1440);
+  const opt = page.locator('#ui2Options > summary');
+  await expect(opt).toBeVisible();
+  const o = await opt.boundingBox();
+  const dm = await page.locator('#donorSendImportant').boundingBox();
+  const back = await page.locator('#donorMainBottom').boundingBox();
+  expect(o.x).toBeLessThan(dm.x);
+  expect(dm.x).toBeLessThan(back.x);
+  await opt.click();
+  await expect(page.locator('#ui2Options #donorAuto')).toBeVisible();
+  await expect(page.locator('#ui2Options #donorRowPoster')).toBeVisible();
+  const panel = await page.locator('.ui2-options-panel').boundingBox();
+  expect(panel.x).toBeGreaterThanOrEqual(0);
+  expect(panel.y).toBeGreaterThanOrEqual(0);
+  await page.setViewportSize({ width: 700, height: 900 }); // shrinking puts the controls back where they were
+  await page.waitForTimeout(500);
+  await expect(page.locator('#ui2Options')).toHaveCount(0);
+  await expect(
+    page.locator('.donor-bottom > #donorAuto, .donor-bottom > label[for="donorAuto"]').first(),
+  ).toHaveCount(1);
+  await open(page, '/new#/donors/all', 390);
+  await expect(page.locator('#ui2Options')).toHaveCount(0);
+});
+
+test('/new DM speed dialog: plain labels, every option visible, at phone and computer widths', async ({
+  page,
+}) => {
+  for (const width of [280, 360, 768, 1440]) {
+    await open(page, '/new#/donors/all', width);
+    await expect(page.locator('.donor-row').first()).toBeVisible();
+    await page.locator('#donorSendImportant').click();
+    const picker = page.locator('#donorBatchPicker');
+    await expect(picker.locator('label[for="batchCount"]')).toHaveText('How many people');
+    await expect(picker.locator('label[for="batchLimit"]')).toHaveText('DMs in each batch');
+    await expect(picker.locator('label[for="batchPause"]')).toHaveText('Rest between batches');
+    for (const sel of [
+      '#batchCount',
+      '#batchLimit',
+      '#batchPause',
+      '.batch-gap-btn >> nth=0',
+      '#batchPoster',
+      '#batchFollowUp',
+      '#batchIncl',
+      '#batchRandom',
+      '#batchStart',
+      '#batchCancel',
+    ])
+      await expect(picker.locator(sel).first(), sel + ' at ' + width).toBeVisible();
+    const box = await picker.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(-0.5);
+    expect(box.x + box.width).toBeLessThanOrEqual(width + 0.5);
+    await picker.locator('#batchCancel').click();
+  }
 });

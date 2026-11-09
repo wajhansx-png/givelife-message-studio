@@ -385,30 +385,6 @@
   }
 }
 
-/* ---------- Chat: tap a chip instead of remembering the words (fills the box only, never sends) ---------- */
-.UI2 .ui2-chips {
-  display: flex;
-  gap: 6px;
-  padding: 6px 8px 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.UI2 .ui2-chips::-webkit-scrollbar {
-  display: none;
-}
-.UI2 .ui2-chips button {
-  flex: 0 0 auto;
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--line2);
-  border-radius: 18px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
 /* ---------- Report: the three Auto cards are short rows so everything fits one screen ---------- */
 .UI2 .auto-card {
   padding: 8px 12px !important;
@@ -457,8 +433,89 @@
   color: var(--ink) !important;
 }
 
+/* ---------- Donated: the circle becomes a green tick once the donor is marked donated (phone) ---------- */
 @media (max-width: 899px) {
-  .UI2 #hist .ui2-chips {
-    padding-right: 104px;
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='true'] {
+    font-size: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='true']::before {
+    content: '\2713';
+    font-size: 22px;
+    font-weight: 800;
+    color: #3cdc96;
+    line-height: 1;
+  }
+}
+
+/* ---------- Computer: Options menu (left) holds Gap, Test DM, Auto and Poster; Back stays on the right ---------- */
+.UI2 .ui2-options > summary {
+  display: none;
+}
+@media (min-width: 900px) {
+  .UI2 .donor-bottom {
+    position: relative;
+  }
+  .UI2 .donor-bottom > .ui2-options {
+    order: -1;
+    position: relative;
+    flex: none;
+  }
+  .UI2 .donor-bottom > .ui2-options > summary {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 16px;
+    cursor: pointer;
+    list-style: none;
+    border: 1px solid var(--line2);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .UI2 .donor-bottom > .ui2-options > summary::-webkit-details-marker {
+    display: none;
+  }
+  .UI2 .donor-bottom > .ui2-options > summary::after {
+    content: '\2304';
+    margin-left: 8px;
+  }
+  .UI2 .ui2-options:not([open]) > .ui2-options-panel {
+    display: none;
+  }
+  .UI2 .ui2-options-panel {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 8px);
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 230px;
+    padding: 10px;
+    border: 1px solid var(--line2);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: 0 8px 24px #0006;
+  }
+  .UI2 .ui2-options-panel > * {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    justify-content: flex-start;
+    text-align: left;
+    min-height: 40px;
+  }
+  .UI2 .donor-bottom > #donorMainBottom {
+    order: 99;
   }
 }

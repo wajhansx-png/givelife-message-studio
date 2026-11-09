@@ -489,3 +489,42 @@ test('/new Back on Volunteers leaves Donors for the main screen', async ({ page 
   await expect(page.locator('#donorsPage')).toBeHidden();
   expect(await page.evaluate(() => location.hash)).not.toContain('donors');
 });
+
+for (const width of [280, 390, 1440]) {
+  test(`/new Volunteers at ${width}px: dark list like the other tabs, name readable, bottom bar Back / DM all / Add in one row`, async ({
+    page,
+  }) => {
+    await open(page, '/new#/donors/volunteers', width);
+    await expect(page.locator('#donorVolunteers')).toBeVisible();
+    if (!(await page.locator('.vol-row').count())) {
+      await page.locator('.vol-add-panel > summary').click();
+      await page.fill('#volName', 'Wajdan');
+      await page.fill('#volPhone', '+923001234567');
+      await page.locator('.vol-add button.primary').click();
+      await expect(page.locator('.vol-row').first()).toBeVisible();
+    }
+    await expect(page.locator('.vol-row .vol-name').first()).toBeVisible();
+    await expect
+      .poll(() =>
+        page
+          .locator('.vol-row .vol-name')
+          .first()
+          .evaluate((e) => e.getBoundingClientRect().width),
+      )
+      .toBeGreaterThan(60);
+    const bg = await page
+      .locator('#donorVolunteers .vol-list')
+      .evaluate((e) => getComputedStyle(e).backgroundColor);
+    expect(bg).toBe('rgb(0, 0, 0)');
+    const ys = await page
+      .locator('#donorVolunteers .vol-foot > :is(.vol-back, .send-donors, .vol-add-panel)')
+      .evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().y)));
+    expect(new Set(ys).size).toBe(1);
+    const back = await page.locator('#donorVolunteers .vol-back').boundingBox();
+    const dm = await page.locator('#donorVolunteers .send-donors').boundingBox();
+    expect(back.x).toBeLessThan(dm.x);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
+  });
+}

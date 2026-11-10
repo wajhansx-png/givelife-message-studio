@@ -4302,3 +4302,97 @@
   .UI2 .report-card #autoCards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .UI2 .report-card:has(.auto-form:not([hidden])) #autoCards { grid-template-columns: 1fr; }
 }
+
+/* Desktop DM controls only. The phone controls retain their existing placement. */
+@media (min-width: 900px) {
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-bank-nav,
+  .UI2 #donorsPage#donorsPage #donorMessages [data-bank-save-id],
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-copy {
+    display: none !important;
+  }
+  .UI2
+    #donorsPage#donorsPage
+    #donorMessages
+    .bank-actions
+    > .ui2-desktop-msg-control {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    border: 1px solid var(--line2);
+    color: var(--ink);
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-regenerate {
+    order: 1 !important;
+    background: var(--surface2) !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-next {
+    order: 2 !important;
+    background: #2f6fe4 !important;
+    color: #fff !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-preview {
+    position: relative;
+    padding-top: 44px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-edit {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    z-index: 3;
+  }
+  .UI2
+    #donorsPage#donorsPage
+    #donorMessages
+    .bank-detail
+    .ui2-desktop-msg-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    min-width: 34px !important;
+    padding: 6px !important;
+    margin: 0;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: var(--ink) !important;
+    box-shadow: none !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-preview .ui2-desktop-edit {
+    color: var(--msgink, #ecfff8) !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-copy {
+    flex: none;
+    align-self: center;
+    margin-block: 4px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-editing textarea {
+    padding-top: 44px !important;
+  }
+  .UI2
+    #donorsPage#donorsPage
+    #donorMessages
+    .bank-detail
+    .ui2-desktop-msg-control:hover {
+    background: #ffffff15 !important;
+  }
+  .UI2
+    #donorsPage#donorsPage
+    #donorMessages
+    .bank-detail
+    .ui2-desktop-msg-control:focus-visible {
+    outline: 2px solid #9db8ff;
+    outline-offset: 2px;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-msg-control[hidden] {
+    display: none !important;
+  }
+}

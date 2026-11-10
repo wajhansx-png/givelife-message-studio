@@ -1,0 +1,245 @@
+html body #donorsPage .donor-thanks {
+  display: none !important;
+}
+html
+  body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+  #donorsPage[data-panel='donated']
+  .donor-thanks {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  order: 2;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+html
+  body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+  #donorsPage[data-panel='donated']
+  #donorSendImportant {
+  display: none !important;
+}
+html body #donorThanksDialog {
+  width: min(880px, calc(100vw - 20px));
+  max-height: calc(100dvh - 20px);
+  padding: 16px;
+  box-sizing: border-box;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line2);
+  border-radius: 18px;
+  overflow: auto;
+}
+#donorThanksDialog header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 12px;
+}
+#donorThanksDialog h2 {
+  margin: 0 0 4px;
+  font-size: 19px;
+}
+#donorThanksDialog small {
+  font-size: 12px;
+  color: var(--mut);
+}
+#donorThanksDialog #thanksClose {
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+}
+.thanks-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+.thanks-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+#donorThanksDialog label {
+  font-size: 13px;
+  font-weight: 600;
+}
+#donorThanksDialog label small {
+  display: block;
+  font-weight: 400;
+}
+html body #donorThanksDialog :is(textarea, input) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  font-size: 15px;
+  padding: 9px;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+}
+#donorThanksDialog textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+#thanksCaptionWrap label {
+  display: block;
+  margin-bottom: 8px;
+}
+.thanks-file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+#donorThanksDialog .thanks-file-row button {
+  font-size: 12px;
+  min-height: 36px;
+  padding: 0 8px;
+}
+.thanks-timing {
+  margin-top: 4px;
+  font-size: 12px;
+}
+.thanks-timing summary {
+  padding: 8px 0;
+  cursor: pointer;
+}
+#thanksPace {
+  color: var(--mut);
+}
+.thanks-timing > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.thanks-review {
+  min-width: 0;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.thanks-review h3 {
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+#thanksPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.thanks-bubble {
+  margin: 0;
+  padding: 10px;
+  background: var(--msg);
+  color: var(--msgink);
+  border-radius: 10px;
+  white-space: pre-wrap;
+}
+.thanks-bubble :is(img, video) {
+  display: block;
+  max-width: 100%;
+  max-height: 190px;
+  margin: auto;
+  border-radius: 8px;
+}
+.thanks-bubble p {
+  margin: 8px 0 0;
+}
+.thanks-bubble a {
+  color: inherit;
+}
+#thanksRecipients {
+  max-height: 140px;
+  padding-left: 20px;
+  overflow: auto;
+  font-size: 12px;
+}
+#thanksAudience {
+  font-size: 12px;
+  cursor: pointer;
+  padding: 8px 0;
+}
+#thanksStatus {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 12px 0 8px;
+}
+#donorThanksDialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0;
+}
+#donorThanksDialog footer button {
+  min-height: 44px;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+@media (max-width: 650px) {
+  .thanks-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  html body #donorThanksDialog :is(textarea, input) {
+    font-size: 16px;
+  }
+  #donorThanksDialog footer {
+    position: sticky;
+    bottom: -16px;
+    padding: 10px 0 16px;
+    background: var(--surface);
+  }
+  #donorThanksDialog footer button {
+    flex: 1;
+    min-width: 0;
+  }
+  #donorThanksDialog {
+    padding: 12px;
+  }
+}
+#donorThanksDialog button {
+  border-radius: 10px;
+}
+.thanks-review {
+  align-self: start;
+}
+.thanks-review > summary {
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.thanks-review[open] > summary {
+  margin-bottom: 8px;
+}
+.thanks-review > small {
+  display: block;
+}
+@media (min-width: 900px) {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+    #donorsPage[data-panel='donated']
+    .donor-thanks {
+    flex: 0 1 auto;
+    max-width: 340px;
+    padding-inline: 18px;
+  }
+}

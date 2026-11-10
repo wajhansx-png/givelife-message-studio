@@ -59,6 +59,9 @@ class DonorIntegration:
         from cases import Cases
 
         self.cases = Cases(app, self)
+        from donor_thanks import DonorThanks
+
+        self.thanks = DonorThanks(app, self)
         self.revision = 0
         self._resume_due = None
 
@@ -108,6 +111,8 @@ class DonorIntegration:
         if self.app.STORE:
             self.app.STORE.put("donor_dm_pause", True)
         self.jobs.cancel()
+        if getattr(self, "thanks", None):
+            self.thanks.stop()
         if getattr(self, "auto", None) and self.auto.status()["enabled"]:
             self.auto.disable("Auto is off: DMs were stopped.")
         self.app.CAMPAIGN["stop"] = True

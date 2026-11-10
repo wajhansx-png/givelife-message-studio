@@ -4295,3 +4295,10 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Five Auto summaries still fit the small-phone Report. */
+.UI2 .report-card .auto-card .auto-head { row-gap: 0 !important; }
+@media (min-width: 600px) and (max-height: 440px) {
+  .UI2 .report-card #autoCards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .UI2 .report-card:has(.auto-form:not([hidden])) #autoCards { grid-template-columns: 1fr; }
+}

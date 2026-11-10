@@ -309,6 +309,14 @@ def custom_recipient(body):
 def send_custom(body):
     jid, is_group = custom_recipient(body)
     message = body.get("message", "")
+    if not is_group and body.get('kind') == 'donor_thanks':
+        hub = donors()
+        row = hub.book.resolve(body.get('donor_id'))
+        if (body.get('case_id') != hub.thanks.case_id() or read_left() > 0
+                or not row.get('donated') or norm_phone(row['phone']) != jid):
+            raise ValueError('This donor is not eligible for the completed case update.')
+    elif not is_group and donors().thanks.active:
+        raise ValueError('Thanks donors is sending. Pause it before another DM queue.')
     if (
         is_group
         and read_left() <= 0
@@ -372,14 +380,14 @@ def send_custom(body):
         )
     if not is_group and body.get("kind") in ("volunteer_batch", "volunteer_manual"):
         message = message.replace("{name}", str(body.get("name") or "").strip() or "friend")
-    if not message.strip() or len(message) > 10000:
+    if (not message.strip() and not (body.get("kind") == "donor_thanks" and body.get("attachment"))) or len(message) > 10000:
         raise ValueError("Write a message of 1 to 10,000 characters.")
     if not is_group:
         library_for(sys.modules[__name__]).record("dm", message, source="prepared_dm")
     if not STORE:
         raise ValueError("Persistent send records are unavailable. Try again later.")
     manual = body.get("kind") in ("donor_manual", "team_msg", "owner_text")
-    explicit_batch = body.get("kind") in ("donor_batch", "volunteer_batch", "volunteer_flow")
+    explicit_batch = body.get("kind") in ("donor_batch", "volunteer_batch", "volunteer_flow", "donor_thanks")
     if not SEND_LOCK.acquire(blocking=manual or explicit_batch):
         raise ValueError("Another send is running. Please wait for it to finish.")
     try:
@@ -995,8 +1003,7 @@ def send_batch_attachment(jid, caption, ident):
                 f"phone={jid}",
                 "-F",
                 f"{field}=@{path};type={mime}",
-                "-F",
-                f"caption=<{cap}",
+                *(["-F", f"caption=<{cap}"] if caption else []),
             ],
             capture_output=True,
         )
@@ -5426,6 +5433,8 @@ class Handler(BaseHTTPRequestHandler):
             "/connection.js",
             "/donors.js",
             "/case-writer.js",
+            "/donor-thanks.js",
+            "/donor-thanks.css",
             "/case-writer.css",
             "/replies.js",
             "/notes.js",
@@ -5519,6 +5528,18 @@ class Handler(BaseHTTPRequestHandler):
                     "auto": donors().auto.status(),
                 }
             )
+        if self.path.startswith('/thanks-media/'):
+            try:
+                ident = self.path.rsplit('/', 1)[-1]
+                if ident != donors().thanks.view().get('attachment'):
+                    return self.reply({}, status=404)
+                import batch_media
+                path, mime = batch_media.load(STORE, ident, ATT)
+                return self.reply(path.read_bytes(), mime)
+            except ValueError:
+                return self.reply({}, status=404)
+        if self.path == "/donor-thanks":
+            return self.reply(donors().thanks.view())
         if self.path == "/case-message":
             return self.reply(case_writer().view())
         if self.path == "/cases":
@@ -5766,6 +5787,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/group-finder",
             "/api/case-plan",
             "/case-message",
+            "/donor-thanks",
         ):
             with LOCK:
                 OWNER_REVISION += 1
@@ -5998,6 +6020,25 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(bank.save(kind, body.get("text"), body.get("revision")))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=409)
+        if self.path == "/donor-thanks":
+            try:
+                thanks = donors().thanks
+                action = body.get('action')
+                if action == 'save':
+                    return self.reply(thanks.save(body))
+                if body.get('case_id') != thanks.case_id():
+                    raise ValueError('The active case changed. Reopen Thank donors.')
+                if action == 'start':
+                    if body.get('revision') != thanks.view()['revision']:
+                        raise ValueError('The update changed. Review it again before sending.')
+                    return self.reply(thanks.start())
+                if action == 'stop':
+                    return self.reply(thanks.stop())
+                if action == 'settings':
+                    return self.reply(thanks.configure(body.get('settings') or {}))
+                raise ValueError('Choose save, settings, start or stop.')
+            except ValueError as e:
+                return self.reply({'error': str(e)}, status=400)
         if self.path == "/auto-controls":
             try:
                 controls = auto_controls()
@@ -6633,6 +6674,7 @@ def donor_auto_loop():
         time.sleep(15)
         try:
             donors().auto.tick()
+            donors().thanks.tick()
         except Exception as exc:
             print("[donor-auto] " + type(exc).__name__, flush=True)
 

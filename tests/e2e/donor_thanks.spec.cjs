@@ -37,7 +37,7 @@ for (const width of [1440, 768, 390, 320, 280]) {
     const dialog = await page.locator('#donorThanksDialog').boundingBox();
     expect(dialog.width).toBeLessThanOrEqual(Math.min(width - 16, 680));
     await expect(page.locator('.thanks-review')).toHaveCount(0); // no Preview section
-    await expect(page.locator('.thanks-media .thanks-attach')).toHaveText(['Attach image', 'Attach video']);
+    await expect(page.locator('.thanks-media .thanks-attach')).toHaveText(['Image', 'Video']);
     await expect(page.locator('#thanksGapSel')).toBeVisible(); // timing is always shown
     // Start clean: an earlier width may have left attachments saved on the shared server.
     while ((await page.locator('.thanks-item .thanks-remove').count()) > 0)
@@ -58,19 +58,18 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await page.locator('#thanksAttachVid').click(); // a real tap on "Attach video" adds a fourth
     await (await chooser).setFiles({ name: 'fourth.png', mimeType: 'image/png', buffer: png });
     await expect(page.locator('.thanks-item')).toHaveCount(4);
-    // "+ Caption" under each one, only where wanted: the 1st and the 3rd.
+    // Every caption is editable without an expansion step.
+    await expect(page.locator('#thanksMediaSelect')).toBeVisible();
     for (const [n, text] of [
       [1, 'Alhamdulillah, the case is complete.'],
       [3, 'Third caption.'],
     ]) {
+      await page.locator('#thanksMediaSelect').selectOption(String(n - 1));
       const item = page.locator('.thanks-item').nth(n - 1);
-      if ((await item.locator('.thanks-capd').getAttribute('open')) === null)
-        await item.locator('.thanks-capd > summary').click();
+
       await item.locator('textarea').fill(text);
     }
-    // Message is folded behind "+ Message" (third after the attachments); a saved message opens it by itself.
-    if ((await page.locator('.thanks-msg').getAttribute('open')) === null)
-      await page.locator('.thanks-msg > summary').click();
+    await expect(page.locator('#thanksMessage')).toBeVisible();
     await page
       .locator('#donorThanksDialog')
       .getByLabel('Message', { exact: true })
@@ -89,10 +88,15 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await page.locator('#thanksRest').fill('1');
     await page.locator('#thanksRestSec').fill('45');
     // Test: the update goes to the GiveLife test group only, never to a donor.
-    const beforeTest = (await (await request.get('/__test/events', { headers })).json()).events.length;
+    const beforeTest = (await (await request.get('/__test/events', { headers })).json()).events
+      .length;
     await page.locator('#thanksTest').click();
-    await expect(page.locator('#thanksStatus')).toContainText('Test sent to the GiveLife test group');
-    const testEvents = (await (await request.get('/__test/events', { headers })).json()).events.slice(beforeTest);
+    await expect(page.locator('#thanksStatus')).toContainText(
+      'Test sent to the GiveLife test group',
+    );
+    const testEvents = (
+      await (await request.get('/__test/events', { headers })).json()
+    ).events.slice(beforeTest);
     expect(testEvents).toHaveLength(5); // four attachments, then the message
     for (const e of testEvents) expect(e.fields.phone).toBe('120363431210327603@g.us');
     expect(testEvents[0].path).toContain('/send/image');
@@ -102,18 +106,27 @@ for (const width of [1440, 768, 390, 320, 280]) {
       'Third caption.',
       '',
     ]);
-    expect(testEvents[4].fields.message).toBe('JazakAllah khair, Test.');
+    expect(testEvents[4].fields.message).toBe('JazakAllah khair, Test Bhai.');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.locator('#thanksStatus')).toContainText('Update saved');
     const saved = (await (await request.get('/donor-thanks', { headers })).json()).settings;
-    expect([saved.gap_minutes, saved.gap_seconds, saved.vary_seconds, saved.rest_seconds]).toEqual([2, 0, 15, 45]);
+    expect([saved.gap_minutes, saved.gap_seconds, saved.vary_seconds, saved.rest_seconds]).toEqual([
+      2, 0, 15, 45,
+    ]);
     const cur = await (await request.get('/donor-thanks', { headers })).json();
     await request.post('/donor-thanks', {
       headers,
       data: {
         action: 'settings',
         case_id: cur.case_id,
-        settings: { gap_minutes: 5, gap_seconds: 0, vary_seconds: 0, batch_size: 10, rest_minutes: 20, rest_seconds: 0 },
+        settings: {
+          gap_minutes: 5,
+          gap_seconds: 0,
+          vary_seconds: 0,
+          batch_size: 10,
+          rest_minutes: 20,
+          rest_seconds: 0,
+        },
       },
     }); // back to the defaults for the next test
     await page.getByRole('button', { name: 'Close Thank donors', exact: true }).click();
@@ -122,7 +135,9 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await expect(page.locator('.thanks-item').nth(0).locator('textarea')).toHaveValue(
       'Alhamdulillah, the case is complete.',
     );
-    await expect(page.locator('.thanks-item').nth(2).locator('textarea')).toHaveValue('Third caption.');
+    await expect(page.locator('.thanks-item').nth(2).locator('textarea')).toHaveValue(
+      'Third caption.',
+    );
     const before = (await (await request.get('/__test/events', { headers })).json()).events.length;
     await page.locator('#thanksSwitch').click(); // the start toggle
     await expect
@@ -142,7 +157,7 @@ for (const width of [1440, 768, 390, 320, 280]) {
       '',
     ]); // each with its own caption, in order
     expect(events[4].path).toContain('/send/message');
-    expect(events[4].fields.message).toBe('JazakAllah khair, Supporter.');
+    expect(events[4].fields.message).toBe('JazakAllah khair, Bhai.');
     expect(events[0].fields.phone).toBe('1555123' + String(width).padStart(4, '0'));
     await expect
       .poll(async () => {
@@ -270,9 +285,7 @@ test('an open tab says "New version ready" when the server has been updated, and
   page,
 }) => {
   let version = 'abc1234';
-  await page.route('**/health', (route) =>
-    route.fulfill({ json: { ok: true, version } }),
-  );
+  await page.route('**/health', (route) => route.fulfill({ json: { ok: true, version } }));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new');
@@ -282,9 +295,6 @@ test('an open tab says "New version ready" when the server has been updated, and
   await expect(page.locator('#updateBar')).toContainText('New version ready');
   const box = await page.locator('#updateBar button').boundingBox();
   expect(box.height).toBeGreaterThanOrEqual(40);
-  await Promise.all([
-    page.waitForEvent('load'),
-    page.locator('#updateBar button').click(),
-  ]);
+  await Promise.all([page.waitForEvent('load'), page.locator('#updateBar button').click()]);
   await expect(page.locator('#updateBar')).toHaveCount(0);
 });

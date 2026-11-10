@@ -1,6 +1,7 @@
 """Case-scoped completion updates; immutable sends and independent per-part receipts."""
 
 import copy
+import re
 import threading
 import time
 import uuid
@@ -30,6 +31,10 @@ LIMITS = (
 )
 
 
+def personalize_thanks(text, address):
+    return re.sub(r"(?i)\{name\}(?:\s+(?:bhai|brother|sister)\b)?", lambda _: address, text)
+
+
 def wait_seconds(cfg, rest):
     """The wait before the next donor: the exact rest after a batch, else the gap varied by up to +/- vary seconds."""
     cfg = {**DEFAULTS, **cfg}
@@ -46,6 +51,45 @@ class DonorThanks:
         self.lock = threading.RLock()
         self.worker = threading.Lock()
         self.boot = uuid.uuid4().hex
+        self._save_address_profiles()
+
+    def _save_address_profiles(self):
+        """Fill missing address preferences once; preserve every saved owner choice."""
+        import dm_composer
+        from dm_profile_import import valid_dm_name
+
+        book = self.hub.book
+        with book.lock:
+            data = book._load()
+            changed = False
+            for row in data["records"]:
+                if row.get("deleted") or (
+                    valid_dm_name(row.get("dm_name"))
+                    and row.get("dm_salutation") in ("Brother", "Sister", "Neutral")
+                ):
+                    continue
+                if hasattr(self.hub, "personal_name"):
+                    name, title = self.hub.personal_name(row)
+                else:
+                    name = dm_composer.first_name(row.get("name", ""))
+                    title = dm_composer.gender(row.get("name", ""), name)
+                row.update(dm_name=name, dm_salutation=title,
+                           dm_profile_source="name_based_suggestion")
+                changed = True
+            if changed:
+                book._save(data)
+
+    def _address(self, row):
+        import dm_composer
+        from dm_profile_import import valid_dm_name
+
+        name, title = row.get("dm_name"), row.get("dm_salutation")
+        if not valid_dm_name(name) or title not in ("Brother", "Sister", "Neutral"):
+            self._save_address_profiles()
+            row = self.hub.book.resolve(row["id"])
+            name, title = row.get("dm_name", ""), row.get("dm_salutation", "Brother")
+        return dm_composer.greeting(name, title)
+
 
     def case_id(self):
         return self.hub.cases._load()["current"]
@@ -396,13 +440,13 @@ class DonorThanks:
                     return
                 receipt["parts"][part] = "Sending"
                 self._put(data)
-            name = (row["name"].split() or ["friend"])[0]
             try:
+                name = self._address(row)
                 result = self.app.send_custom(
                     {
                         "target": "phone",
                         "phone": row["phone"],
-                        "message": text.replace("{name}", name),
+                        "message": personalize_thanks(text, name),
                         "attachment": attachment,
                         "poster": False,
                         "kind": "donor_thanks",

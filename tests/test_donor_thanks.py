@@ -110,7 +110,7 @@ class ThanksTests(unittest.TestCase):
         self.assertEqual(self.sent[0]["attachment"], self.asset)
         self.assertEqual(self.sent[0]["message"], "Alhamdulillah, case complete.")
         self.assertIsNone(self.sent[1]["attachment"])
-        self.assertEqual(self.sent[1]["message"], "Thank you Sara.")
+        self.assertEqual(self.sent[1]["message"], "Thank you Sara Sister.")
         self.assertTrue(all(x["donor_id"] == self.first for x in self.sent))
         self.assertEqual(self.thanks.view()["sent"], 1)
         self.assertFalse(self.hub.book.resolve(self.first).get("dm_sent", False))
@@ -339,7 +339,7 @@ class ThanksTests(unittest.TestCase):
                 (ids[1], ""),
                 (ids[2], "Third"),
                 (ids[3], "Fourth"),
-                (None, "Thank you, Sara."),
+                (None, "Thank you, Sara Sister."),
             ],
         )
 
@@ -397,6 +397,18 @@ class ThanksTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "already sending"):
             self.thanks.start(donor_id=self.first)
         self.assertEqual(self.sent, [])
+
+    def test_saved_address_profiles_and_caption_placeholders(self):
+        self.hub.book.update(self.first, dm_name="Sara", dm_salutation="Sister")
+        unknown = self.add("Unknown", True)
+        self.thanks._save_address_profiles()
+        self.assertEqual(self.hub.book.resolve(unknown)["dm_salutation"], "Brother")
+        self.assertEqual(self.hub.book.resolve(self.first)["dm_salutation"], "Sister")
+        self.save(attachment=self.asset, caption="Dear {Name} bhai", message="Thanks {name}")
+        self.start()
+        self.thanks.tick()
+        self.assertEqual(self.sent[0]["message"], "Dear Sara Sister")
+        self.assertEqual(self.sent[1]["message"], "Thanks Sara Sister")
 
 
 if __name__ == "__main__":

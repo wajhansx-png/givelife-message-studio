@@ -72,7 +72,7 @@ for (const width of [1440, 390, 320]) {
       before,
     );
     expect(events[0].fields.caption).toBe('Alhamdulillah, complete.');
-    expect(events[1].fields.message).toBe('JazakAllah khair, Row.');
+    expect(events[1].fields.message).toBe('JazakAllah khair, Bhai.');
     expect(events[0].fields.phone).toBe('15551' + String(width).padStart(4, '0') + '01');
     await row.locator('.donor-dm').click();
     await expect(page.locator('#thanksRowStatus')).toContainText('already sent');

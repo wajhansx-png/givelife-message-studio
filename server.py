@@ -2269,7 +2269,8 @@ TEST_GROUP_JID = "120363431210327603@g.us"
 
 def send_thanks_test(message, media):
     """The Thank donors update, exactly as a donor would get it, sent ONLY to the GiveLife test group
-    ({name} becomes "Test"). It never reaches a donor and changes no donor record."""
+    ({name} becomes "Test Bhai"). It never reaches a donor and changes no donor record."""
+    from donor_thanks import personalize_thanks
     check_hold()
     if not SEND_LOCK.acquire(blocking=False):
         raise ValueError("Another send is running. Please wait for it to finish.")
@@ -2283,12 +2284,12 @@ def send_thanks_test(message, media):
         results = []
         try:
             for caption, attachment in media:  # each image or video with its own caption, in order
-                results.append(send_batch_attachment(TEST_GROUP_JID, caption or "", attachment))
+                results.append(send_batch_attachment(TEST_GROUP_JID, personalize_thanks(caption or "", "Test Bhai"), attachment))
             if message.strip():
                 req = urllib.request.Request(
                     GOWA_URL + "/send/message",
                     data=json.dumps(
-                        {"phone": TEST_GROUP_JID, "message": message.replace("{name}", "Test")}
+                        {"phone": TEST_GROUP_JID, "message": personalize_thanks(message, "Test Bhai")}
                     ).encode(),
                     headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
                     method="POST",

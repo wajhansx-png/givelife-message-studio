@@ -5,25 +5,26 @@
   dialog.setAttribute('aria-labelledby', 'thanksTitle');
   dialog.innerHTML = `<header><div><h2 id="thanksTitle" tabindex="-1" autofocus>Thank donors</h2><small id="thanksContext"></small></div></header>
   <div class="thanks-body"><section class="thanks-compose">
-    <div class="thanks-media"><button type="button" class="thanks-attach" id="thanksAttachImg">Attach image</button><button type="button" class="thanks-attach" id="thanksAttachVid">Attach video</button></div>
-    <div class="thanks-list" id="thanksList"></div>
+    <div class="thanks-media"><button type="button" class="thanks-attach" id="thanksAttachImg">Image</button><button type="button" class="thanks-attach" id="thanksAttachVid">Video</button></div>
+    <label class="thanks-picker" hidden>Attachment<select id="thanksMediaSelect"></select></label><div class="thanks-list" id="thanksList"></div>
     <input id="thanksFile" type="file" aria-label="Attach file" accept="image/jpeg,image/png,image/webp,video/mp4" multiple hidden>
-    <details class="thanks-msg"><summary>+ Message</summary>
-      <label for="thanksMessage">Message</label><textarea id="thanksMessage" aria-describedby="thanksNameHint" maxlength="4000" rows="4" placeholder="Write a thank-you message…"></textarea>
-      <small id="thanksNameHint">Use {name} for their first name. Sent after any attachment.</small>
-    </details>
+    <section class="thanks-msg">
+      <label for="thanksMessage">Message</label><textarea id="thanksMessage" aria-describedby="thanksNameHint" maxlength="4000" rows="2" placeholder="Write a thank-you message…"></textarea>
+      <small id="thanksNameHint">{name} → saved name + Bhai/Sister. Sent after attachments.</small>
+    </section>
     <section class="thanks-timing"><b>Timing</b>
       <div class="thanks-grid">
-        <div class="thanks-opt" data-k="gap"><label>Gap between donors<select id="thanksGapSel"></select></label><div class="thanks-custom" hidden><label>min<input id="thanksGap" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksGapSec" type="number" min="0" max="59" inputmode="numeric"></label></div></div>
-        <div class="thanks-opt" data-k="vary"><label>Vary gap by ±<select id="thanksVarySel"></select></label><div class="thanks-custom" hidden><label>sec<input id="thanksVary" type="number" min="0" max="300" inputmode="numeric"></label></div></div>
-        <div class="thanks-opt" data-k="batch"><label>Donors per batch<select id="thanksBatchSel"></select></label><div class="thanks-custom" hidden><label>donors<input id="thanksBatch" type="number" min="1" max="100" inputmode="numeric"></label></div></div>
-        <div class="thanks-opt" data-k="rest"><label>Rest after a batch<select id="thanksRestSel"></select></label><div class="thanks-custom" hidden><label>min<input id="thanksRest" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksRestSec" type="number" min="0" max="59" inputmode="numeric"></label></div></div>
+        <div class="thanks-opt" data-k="gap"><label>Gap<select id="thanksGapSel"></select></label><div class="thanks-custom" hidden><label>min<input id="thanksGap" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksGapSec" type="number" min="0" max="59" inputmode="numeric"></label></div></div>
+        <div class="thanks-opt" data-k="vary"><label>Variation ±<select id="thanksVarySel"></select></label><div class="thanks-custom" hidden><label>sec<input id="thanksVary" type="number" min="0" max="300" inputmode="numeric"></label></div></div>
+        <div class="thanks-opt" data-k="batch"><label>Batch size<select id="thanksBatchSel"></select></label><div class="thanks-custom" hidden><label>donors<input id="thanksBatch" type="number" min="1" max="100" inputmode="numeric"></label></div></div>
+        <div class="thanks-opt" data-k="rest"><label>Rest<select id="thanksRestSel"></select></label><div class="thanks-custom" hidden><label>min<input id="thanksRest" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksRestSec" type="number" min="0" max="59" inputmode="numeric"></label></div></div>
       </div></section>
   </section></div>
   <p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save</button><button type="button" id="thanksTest" title="Send this to the GiveLife test group only">Test</button><div class="thanks-start"><span id="thanksStartLabel">Start</span><button type="button" role="switch" id="thanksSwitch" aria-checked="false" aria-label="Start sending the thank-you updates"><i></i></button></div><button type="button" id="thanksClose" aria-label="Close Thank donors">Back</button></footer>`;
   document.body.append(dialog);
   const $ = (id) => dialog.querySelector('#' + id);
   let state,
+    selectedMedia = 0,
     viewVersion = 0,
     busy = false,
     poll;
@@ -66,19 +67,36 @@
         ? state.pending + ' donors'
         : 'Start';
     for (const b of dialog.querySelectorAll('.thanks-remove, .thanks-attach'))
-      b.disabled = busy || state?.on || (b.classList.contains('thanks-attach') && state?.media.length >= MAX_MEDIA);
+      b.disabled =
+        busy ||
+        state?.on ||
+        (b.classList.contains('thanks-attach') && state?.media.length >= MAX_MEDIA);
   }
   /* Any number of images and videos (up to 8), each with its own optional "+ Caption"; sent in this order. */
   const MAX_MEDIA = 8;
   function renderList() {
     const list = $('thanksList');
     list.replaceChildren();
+    selectedMedia = Math.min(selectedMedia, Math.max(0, (state?.media.length || 0) - 1));
+    const picker = $('thanksMediaSelect');
+    picker.replaceChildren();
+    picker.parentElement.hidden = !state?.media.length;
+    picker.onchange = () => {
+      selectedMedia = Number(picker.value);
+      for (const [index, item] of [...list.children].entries())
+        item.hidden = index !== selectedMedia;
+    };
     state?.media.forEach((m, i) => {
       const item = document.createElement('div');
       item.className = 'thanks-item';
+      item.hidden = i !== selectedMedia;
+      const option = new Option(i + 1 + '. ' + m.filename, String(i));
+      picker.add(option);
+      picker.value = String(selectedMedia);
       const name = document.createElement('span');
       name.className = 'thanks-name';
       name.textContent = m.filename;
+      name.title = m.filename;
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'thanks-remove';
@@ -89,11 +107,8 @@
         renderList();
         note('Attachment removed. Save to keep this change.');
       };
-      const more = document.createElement('details');
+      const more = document.createElement('div');
       more.className = 'thanks-capd';
-      more.open = !!m.caption; // a saved caption shows itself
-      const sum = document.createElement('summary');
-      sum.textContent = '+ Caption';
       const box = document.createElement('textarea');
       box.maxLength = 4000;
       box.rows = 2;
@@ -104,7 +119,7 @@
         m.caption = box.value;
         note('Unsaved changes');
       });
-      more.append(sum, box);
+      more.append(box);
       item.append(name, remove, more);
       list.append(item);
     });
@@ -119,7 +134,6 @@
   }
   function fill() {
     $('thanksMessage').value = state.message;
-    if (state.message) dialog.querySelector('.thanks-msg').open = true; // a saved message shows itself
     const c = state.settings;
     $('thanksGap').value = c.gap_minutes;
     $('thanksGapSec').value = c.gap_seconds || 0;
@@ -157,7 +171,10 @@
     gap: (v) => (($('thanksGap').value = Math.floor(v / 60)), ($('thanksGapSec').value = v % 60)),
     vary: (v) => ($('thanksVary').value = v),
     batch: (v) => ($('thanksBatch').value = v),
-    rest: (v) => (($('thanksRest').value = Math.floor(v / 60)), ($('thanksRestSec').value = v % 60)),
+    rest: (v) => (
+      ($('thanksRest').value = Math.floor(v / 60)),
+      ($('thanksRestSec').value = v % 60)
+    ),
   };
   function syncOpt(k, keepCustom) {
     const sel = $('thanks' + k[0].toUpperCase() + k.slice(1) + 'Sel'),
@@ -251,7 +268,8 @@
   $('thanksFile').onchange = () =>
     action(async () => {
       for (const file of [...$('thanksFile').files]) {
-        if (state.media.length >= MAX_MEDIA) throw Error('At most ' + MAX_MEDIA + ' images or videos.');
+        if (state.media.length >= MAX_MEDIA)
+          throw Error('At most ' + MAX_MEDIA + ' images or videos.');
         if (file.size > 15000000) throw Error(file.name + ' is over 15 MB.');
         note('Uploading ' + file.name + '…');
         const data = await new Promise((ok, no) => {
@@ -434,7 +452,8 @@
   function paintTab() {
     const on = !!tabState?.on;
     tabSwitch.setAttribute('aria-checked', String(on));
-    tabSwitch.disabled = tabBusy || !tabState || (!on && (tabState.left > 0 || tabState.pending === 0));
+    tabSwitch.disabled =
+      tabBusy || !tabState || (!on && (tabState.left > 0 || tabState.pending === 0));
     tabTest.disabled = tabBusy || !tabState;
     tabLabel.textContent = !tabState
       ? '… donors'
@@ -488,7 +507,10 @@
       paintTab();
     }
   };
-  new MutationObserver(loadTab).observe(directory, { attributes: true, attributeFilter: ['data-panel'] });
+  new MutationObserver(loadTab).observe(directory, {
+    attributes: true,
+    attributeFilter: ['data-panel'],
+  });
   setInterval(loadTab, 5000);
   loadTab();
   const button = document.createElement('button');

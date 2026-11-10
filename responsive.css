@@ -2353,3 +2353,150 @@ html body #donorThanksDialog footer button {
     flex: 1 1 auto;
   }
 }
+
+/* Thank donors: every editing option stays exposed in a compact, quiet form. */
+html body #donorThanksDialog header {
+  padding-bottom: 8px;
+}
+html body #donorThanksDialog .thanks-compose,
+html body #donorThanksDialog .thanks-list {
+  gap: 8px;
+}
+html body #donorThanksDialog .thanks-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 8px;
+  margin: 0;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--line);
+}
+html body #donorThanksDialog .thanks-name {
+  min-width: 0;
+  font-size: 13px;
+}
+html body #donorThanksDialog .thanks-capd {
+  margin: 0;
+  padding: 0;
+}
+html body #donorThanksDialog :is(.thanks-capd textarea, #thanksMessage) {
+  display: block;
+  height: 60px;
+  min-height: 60px;
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 16px;
+  line-height: 1.4;
+  resize: vertical;
+}
+html body #donorThanksDialog :is(.thanks-capd textarea, #thanksMessage):focus {
+  height: 112px;
+}
+html body #donorThanksDialog .thanks-msg {
+  display: grid;
+  gap: 4px;
+}
+html body #donorThanksDialog .thanks-timing .thanks-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 8px;
+  align-items: start;
+}
+html body #donorThanksDialog .thanks-timing label {
+  font-size: 12px;
+}
+html body #donorThanksDialog .thanks-timing :is(select, input) {
+  min-height: 44px;
+  padding: 4px 8px;
+  font-size: 16px;
+}
+html body #donorThanksDialog :is(.thanks-attach, .thanks-remove, #thanksTest) {
+  min-height: 44px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--line2);
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: none;
+}
+html body #donorThanksDialog footer {
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+}
+html body #donorThanksDialog footer > button {
+  min-height: 44px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+html body #donorThanksDialog footer .thanks-start {
+  min-width: 0;
+  gap: 4px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+html body #donorThanksDialog footer #thanksSwitch {
+  min-height: 44px;
+  height: 44px;
+}
+html body #donorThanksDialog footer #thanksSwitch > i {
+  top: 10px;
+}
+html body #donorThanksDialog #thanksStatus {
+  overflow-wrap: anywhere;
+  max-height: 3.6em;
+  overflow: auto;
+}
+@media (max-width: 899px) {
+  html body #donorThanksDialog {
+    padding: 10px;
+    max-height: calc(100dvh - 16px);
+  }
+}
+@media (max-width: 359px) {
+  html body #donorThanksDialog footer {
+    gap: 4px;
+  }
+  html body #donorThanksDialog footer > button {
+    padding-inline: 8px;
+  }
+}
+/* One selected attachment editor keeps all settings within phone reach. */
+html body #donorThanksDialog .thanks-picker {
+  display: grid;
+  gap: 3px;
+}
+html body #donorThanksDialog #thanksMediaSelect {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  font-size: 16px;
+}
+html body #donorThanksDialog .thanks-item {
+  border-top: 0;
+}
+html body #donorThanksDialog .thanks-item .thanks-name {
+  font-size: 12px;
+}
+html body #donorThanksDialog .thanks-list {
+  margin: 0;
+}
+html body #donorThanksDialog .thanks-compose {
+  gap: 5px;
+}
+html body #donorThanksDialog :is(.thanks-capd textarea, #thanksMessage):focus {
+  height: 80px;
+}
+/* Filename is already in the picker; keep Remove beside the caption. */
+html body #donorThanksDialog .thanks-item > .thanks-name {
+  display: none;
+}
+html body #donorThanksDialog .thanks-item > .thanks-capd {
+  grid-column: 1;
+  grid-row: 1;
+}
+html body #donorThanksDialog .thanks-item > .thanks-remove {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+}

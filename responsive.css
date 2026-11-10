@@ -2584,3 +2584,24 @@ html body #donorThanksDialog .thanks-head-row .thanks-media {
     padding-inline: 6px;
   }
 }
+
+/* Quiet accents distinguish saving, testing and adding media. */
+html body #donorThanksDialog #thanksSave:not(:disabled) {
+  border-color: #477de1;
+  background: #2758b2 !important;
+  color: #fff;
+}
+html body #donorThanksDialog #thanksTest:not(:disabled) {
+  border-color: #7460a9;
+  background: #3d315e !important;
+  color: #f3edff;
+}
+html body #donorThanksDialog#donorThanksDialog .thanks-attach:not(:disabled) {
+  border-color: #4a568a;
+  background: #252d47 !important;
+  color: #dae4ff;
+}
+html body #donorThanksDialog :is(#thanksSave, #thanksTest, .thanks-attach):focus-visible {
+  outline: 2px solid #b9caff;
+  outline-offset: 2px;
+}

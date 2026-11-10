@@ -118,9 +118,11 @@ for (const width of [1440, 768, 390, 320, 280]) {
     }); // back to the defaults for the next test
     await page.getByRole('button', { name: 'Close Thank donors', exact: true }).click();
     await button.click();
-    await expect(page.getByLabel('Caption', { exact: true })).toHaveValue(
+    await expect(page.locator('.thanks-item')).toHaveCount(4); // all four attachments came back
+    await expect(page.locator('.thanks-item').nth(0).locator('textarea')).toHaveValue(
       'Alhamdulillah, the case is complete.',
     );
+    await expect(page.locator('.thanks-item').nth(2).locator('textarea')).toHaveValue('Third caption.');
     const before = (await (await request.get('/__test/events', { headers })).json()).events.length;
     await page.locator('#thanksSwitch').click(); // the start toggle
     await expect

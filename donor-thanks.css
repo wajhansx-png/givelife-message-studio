@@ -530,3 +530,93 @@ html body #donorThanksDialog #thanksSwitch[aria-checked='true'] > i {
 html body #donorThanksDialog #thanksSwitch:disabled {
   opacity: 0.45;
 }
+
+/* Donated tab: the toggle and Test share the one thanks row. */
+html body #donorsPage .thanks-tab-row {
+  display: none;
+}
+html body #donorsPage[data-panel='donated'] .thanks-tab-row {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  align-self: center;
+  gap: 6px 10px;
+  width: min(760px, 100%);
+  box-sizing: border-box;
+}
+html body #donorsPage .thanks-tab-row .thanks-row-mode {
+  flex: 1 1 160px;
+  width: auto !important;
+  min-width: 0;
+}
+html body #donorsPage .thanks-tab-ctl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 700;
+}
+html body #donorsPage #thanksTabSwitch {
+  position: relative;
+  flex: none;
+  width: 56px;
+  min-width: 56px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid var(--line, #3a4052);
+  border-radius: 999px;
+  background: #3a3f4d;
+  cursor: pointer;
+}
+html body #donorsPage #thanksTabSwitch > i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+html body #donorsPage #thanksTabSwitch[aria-checked='true'] {
+  border-color: transparent;
+  background: #1f8a63;
+}
+html body #donorsPage #thanksTabSwitch[aria-checked='true'] > i {
+  transform: translateX(24px);
+}
+html body #donorsPage #thanksTabSwitch:disabled,
+html body #donorsPage #thanksTabTest:disabled {
+  opacity: 0.45;
+}
+html body #donorsPage #thanksTabTest {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* One line: the "Thanks donor" check on the left, count + toggle + Test on the right (the row keeps its height). */
+html body #donorsPage[data-panel='donated'] .thanks-tab-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 4px 8px;
+}
+html body #donorsPage .thanks-tab-row .thanks-row-mode {
+  flex: none;
+  padding: 4px 0 4px 8px;
+}
+html body #donorsPage .thanks-tab-ctl {
+  margin-left: 0;
+  align-self: center;
+  gap: 6px;
+}
+html body #donorsPage .thanks-tab-row .thanks-row-mode small {
+  flex-basis: 100%;
+  padding-left: 26px;
+  font-size: 11px;
+}

@@ -319,7 +319,15 @@
   mode.className = 'thanks-row-mode';
   mode.innerHTML =
     '<input type="checkbox" id="thanksDonorMode"><span>Thanks donor</span><small id="thanksRowStatus" role="status" aria-live="polite">Normal saved DM · check to send thanks</small>';
-  document.querySelector('#donorsPage .donor-toolbar')?.after(mode);
+  /* The Donated tab: the "Thanks donor" check, then the start toggle and Test, all in the same one row. */
+  const tabRow = document.createElement('div');
+  tabRow.className = 'thanks-tab-row';
+  const ctl = document.createElement('div');
+  ctl.className = 'thanks-tab-ctl';
+  ctl.innerHTML =
+    '<span id="thanksTabLabel">… donors</span><button type="button" role="switch" id="thanksTabSwitch" aria-checked="false" aria-label="Start sending thank-you updates"><i></i></button><button type="button" id="thanksTabTest" title="Send this update to the GiveLife test group only">Test</button>';
+  tabRow.append(mode, ctl);
+  document.querySelector('#donorsPage .donor-toolbar')?.after(tabRow);
   const toggle = mode.querySelector('input');
   const directory = document.getElementById('donorsPage');
   let modeCase = null,
@@ -410,6 +418,72 @@
       toggle.disabled = false;
     }
   };
+  let tabState = null,
+    tabBusy = false;
+  const tabSwitch = ctl.querySelector('#thanksTabSwitch'),
+    tabTest = ctl.querySelector('#thanksTabTest'),
+    tabLabel = ctl.querySelector('#thanksTabLabel');
+  const hasUpdate = () => !!tabState && !!(tabState.attachment || tabState.attachment2 || tabState.message.trim());
+  function paintTab() {
+    const on = !!tabState?.on;
+    tabSwitch.setAttribute('aria-checked', String(on));
+    tabSwitch.disabled = tabBusy || !tabState || (!on && (tabState.left > 0 || tabState.pending === 0));
+    tabTest.disabled = tabBusy || !tabState;
+    tabLabel.textContent = !tabState
+      ? '… donors'
+      : on
+        ? `${tabState.sent}/${tabState.total} sent`
+        : `${tabState.pending} donors`;
+  }
+  async function loadTab() {
+    if (directory.dataset.panel !== 'donated' || tabBusy) return;
+    try {
+      tabState = await api();
+      paintTab();
+    } catch (_) {}
+  }
+  const needsSaved = () => {
+    if (hasUpdate()) return false;
+    modeNotice('Open Thank donors and save your update first.');
+    window.DonorThanks.open();
+    return true;
+  };
+  tabSwitch.onclick = async () => {
+    if (tabBusy || !tabState) return;
+    tabBusy = true;
+    paintTab();
+    try {
+      if (tabState.on) {
+        tabState = await api('stop', { case_id: tabState.case_id });
+        modeNotice('Paused. An upload already started may finish.');
+      } else if (!needsSaved()) {
+        if (tabState.left > 0) throw Error('Finish this case before sending thank-you updates.');
+        tabState = await api('start', { case_id: tabState.case_id, revision: tabState.revision });
+        modeNotice('Sending the saved update to every donor, at your timing.');
+      }
+    } catch (error) {
+      modeNotice(error.message);
+    } finally {
+      tabBusy = false;
+      paintTab();
+    }
+  };
+  tabTest.onclick = async () => {
+    if (tabBusy || !tabState || needsSaved()) return;
+    tabBusy = true;
+    paintTab();
+    try {
+      modeNotice((await api('test', { case_id: tabState.case_id })).reply);
+    } catch (error) {
+      modeNotice(error.message);
+    } finally {
+      tabBusy = false;
+      paintTab();
+    }
+  };
+  new MutationObserver(loadTab).observe(directory, { attributes: true, attributeFilter: ['data-panel'] });
+  setInterval(loadTab, 5000);
+  loadTab();
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'donor-thanks';

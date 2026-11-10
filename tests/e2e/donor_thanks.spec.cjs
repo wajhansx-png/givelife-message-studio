@@ -39,6 +39,11 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await expect(page.locator('.thanks-review')).toHaveCount(0); // no Preview section
     await expect(page.locator('.thanks-slot > .thanks-attach, .thanks-slot > .thanks-attached .thanks-name')).toHaveCount(4);
     await expect(page.locator('#thanksGapSel')).toBeVisible(); // timing is always shown
+    // Start clean: an earlier width may have left attachments saved on the shared server.
+    for (const n of [1, 2]) {
+      const remove = page.locator(`[data-slot="${n}"] .thanks-remove`);
+      if (await remove.isVisible()) await remove.click();
+    }
     await page.locator('#thanksFile').setInputFiles({
       name: 'proof.png',
       mimeType: 'image/png',
@@ -52,9 +57,9 @@ for (const width of [1440, 768, 390, 320, 280]) {
       await page.locator('[data-slot="1"] .thanks-capd > summary').click(); // "+ Caption" opens the box
     await page.getByLabel('Caption', { exact: true }).fill('Alhamdulillah, the case is complete.');
     // A second attachment (the video slot) has its own caption.
-    await page.locator('[data-slot="2"] > .thanks-attach').click({ trial: true });
-    await page.evaluate(() => document.querySelector('[data-slot="2"] > .thanks-attach').click());
-    await page.locator('#thanksFile').setInputFiles({
+    const chooser = page.waitForEvent('filechooser');
+    await page.locator('[data-slot="2"] > .thanks-attach').click(); // a real tap on "Attach video"
+    await (await chooser).setFiles({
       name: 'second.png',
       mimeType: 'image/png',
       buffer: Buffer.from(
@@ -232,3 +237,22 @@ for (const [mime, caption, suffix] of [
     else expect(event.fields.caption || '').toBe('');
   });
 }
+
+test('Donated tab: the start toggle and Test sit in the one thanks row, and only on that tab', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/donors/donated');
+  await expect(page.locator('#thanksTabSwitch')).toBeVisible();
+  await expect(page.locator('#thanksTabTest')).toBeVisible();
+  const row = await page.locator('.thanks-tab-row').boundingBox();
+  for (const sel of ['#thanksTabSwitch', '#thanksTabTest']) {
+    const b = await page.locator(sel).boundingBox();
+    expect(b.y, sel).toBeGreaterThanOrEqual(row.y - 1);
+    expect(b.y + b.height, sel).toBeLessThanOrEqual(row.y + row.height + 1);
+    expect(b.x + b.width, sel).toBeLessThanOrEqual(390);
+  }
+  await page.locator('.donor-tabs [data-tab="all"]').click();
+  await expect(page.locator('#thanksTabSwitch')).toBeHidden();
+});

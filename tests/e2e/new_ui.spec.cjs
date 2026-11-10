@@ -593,14 +593,85 @@ test('/new phone: Chat has no top bar and Back sits near the thumb', async ({ pa
   await expect(page.locator('#hist')).toBeHidden();
 });
 
-test('/new phone donors: header and tabs sit below the list, near the thumb', async ({ page }) => {
+test('/new phone donors: one control row below the list: tabs, search icon and a ⋯ menu', async ({
+  page,
+}) => {
   await open(page, '/new#/donors/all', 390);
   await expect(page.locator('.donor-row').first()).toBeVisible();
   const table = await page.locator('#donorTable').boundingBox();
-  const head = await page.locator('.donor-head').boundingBox();
   const tabs = await page.locator('.donor-tabs').boundingBox();
+  const search = await page.locator('#ui2DonorSearch').boundingBox();
+  const more = await page.locator('#donorNavMore > summary').boundingBox();
   expect(tabs.y).toBeGreaterThan(table.y);
-  expect(head.y).toBeGreaterThan(tabs.y);
+  await expect(page.locator('.donor-head')).toBeHidden(); // no separate Search / + Add row any more
+  await expect(page.locator('#donorHideRow')).toBeHidden(); // and no empty reserved row
+  for (const box of [search, more]) {
+    expect(Math.abs(box.y - tabs.y)).toBeLessThanOrEqual(4); // same row as the tabs
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+  }
+  expect(search.x).toBeGreaterThanOrEqual(tabs.x + tabs.width - 1);
+  expect(more.x).toBeGreaterThan(search.x);
+  expect(table.y + table.height).toBeLessThanOrEqual(tabs.y); // the list ends where the row starts
+});
+
+test('/new phone donors: search opens over the tabs without moving the list, filters, and closes', async ({
+  page,
+}) => {
+  await open(page, '/new#/donors/all', 390);
+  await expect(page.locator('.donor-row').first()).toBeVisible();
+  await page.waitForTimeout(700); // the screen has finished sliding in
+  const before = await page.locator('#donorTable').boundingBox();
+  const rows = await page.locator('.donor-row').count();
+  await page.locator('#ui2DonorSearch').click();
+  await expect(page.locator('#donorSearch')).toBeVisible();
+  await expect(page.locator('#donorSearch')).toBeFocused();
+  const field = await page.locator('#donorSearch').boundingBox();
+  const tabs = await page.locator('.donor-tabs').boundingBox();
+  expect(Math.abs(field.y - tabs.y)).toBeLessThanOrEqual(4); // opens in the tabs row
+  await page.locator('#donorSearch').fill('Demo donor 2');
+  await expect(page.locator('.donor-row')).toHaveCount(2);
+  const during = await page.locator('#donorTable').boundingBox();
+  expect(during.y).toBe(before.y);
+  expect(during.height).toBe(before.height); // never pushed
+  await page.locator('#ui2DonorSearch').click(); // now a ×: clears and closes
+  await expect(page.locator('#donorSearch')).toBeHidden();
+  await expect(page.locator('.donor-row')).toHaveCount(rows);
+});
+
+test('/new phone donors: the ⋯ menu holds Add numbers, Add one donor, Bulk and the Important chips', async ({
+  page,
+}) => {
+  await open(page, '/new#/donors/all', 390);
+  await expect(page.locator('.donor-row').first()).toBeVisible();
+  await page.locator('#donorNavMore > summary').click();
+  for (const id of ['#donorNumbers', '#donorAdd', '#donorBulk']) await expect(page.locator(id)).toBeVisible();
+  await expect(page.locator('#donorDeselectAll')).toBeHidden(); // only on the Important tab
+  const panel = await page.locator('#donorNavMore .compact-nav-panel').boundingBox();
+  const bar = await page.locator('.donor-tabs').boundingBox();
+  expect(panel.y + panel.height).toBeLessThanOrEqual(bar.y); // opens upward, over the list
+  expect(panel.x).toBeGreaterThanOrEqual(0);
+  await page.locator('#donorAdd').click();
+  await expect(page.locator('#donorAddDialog')).toBeVisible();
+  await page.locator('#donorAddCancel').click();
+  await page.locator('.donor-tabs [data-tab="important"]').click();
+  await page.locator('#donorNavMore > summary').click();
+  await expect(page.locator('#donorDeselectAll')).toBeVisible();
+  const chip = await page.locator('#donorDeselectAll').boundingBox();
+  expect(chip.height).toBeGreaterThanOrEqual(44);
+});
+
+test('/new phone DM messages: the message takes the free height; every button is together at the bottom', async ({
+  page,
+}) => {
+  await open(page, '/new#/donors/messages', 390, 844);
+  await expect(page.locator('#donorMessages .bank-line').first()).toBeVisible();
+  const card = await page.locator('#donorMessages .bank-detail').boundingBox();
+  const actions = await page.locator('#donorMessages .bank-actions').boundingBox();
+  const follow = await page.locator('#donorMessages .bank-followup').boundingBox();
+  expect(card.height).toBeGreaterThan(844 * 0.5);
+  expect(follow.y - (actions.y + actions.height)).toBeLessThanOrEqual(24); // no empty gap above the bar
+  expect(await page.locator('#donorMessages .bank-detail').evaluate((e) => e.scrollHeight <= e.clientHeight + 1)).toBe(true);
 });
 
 test('/new phone DM messages: no top bar, whole message shown, Next/Regenerate row, tabs at the bottom', async ({

@@ -966,7 +966,12 @@ const ui2Frame = (fn) => {
     if (!h || !nav || !add) return;
     const panel = nav.querySelector('.compact-nav-panel');
     const sum = nav.querySelector('summary');
-    setText(sum, '+ Add');
+    const phone = !wide(),
+      bar = document.querySelector('.donor-toolbar'),
+      hide = $('donorHideRow');
+    /* Phone: the menu is one "⋯" button at the end of the tabs row; computer: the "+ Add" button in the header. */
+    setText(sum, phone ? '⋯' : '+ Add');
+    sum.setAttribute('aria-label', phone ? 'More: add donors and list options' : 'Add donors');
     nav.classList.add('ui2-add-menu');
     const numbers = $('donorNumbers'),
       bulk = $('donorBulk');
@@ -975,7 +980,7 @@ const ui2Frame = (fn) => {
     setText(add, 'Add one donor');
     if (panel && bulk && add.nextElementSibling !== bulk) add.after(bulk);
     const msgs = document.querySelector('.donor-message-tablist');
-    if (msgs && msgs.nextElementSibling !== nav) h.insertBefore(msgs, nav);
+    if (msgs && nav.parentElement === h && msgs.nextElementSibling !== nav) h.insertBefore(msgs, nav);
     setText($('donorMessagesTab'), wide() ? 'Messages' : 'Msgs');
     if (!$('ui2DonorSearch')) {
       const s = document.createElement('button');
@@ -985,13 +990,52 @@ const ui2Frame = (fn) => {
       s.setAttribute('aria-label', 'Search donors');
       s.setAttribute('aria-expanded', 'false');
       s.textContent = '⌕';
+      const shell = document.querySelector('.donor-shell'),
+        input = $('donorSearch');
+      const close = () => {
+        shell.removeAttribute('data-ui2-search');
+        s.setAttribute('aria-expanded', 'false');
+      };
+      const clear = () => {
+        if (!input?.value) return;
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      /* Keep focus in the field while the button is pressed, so the field's blur never reopens it. */
+      s.addEventListener('mousedown', (e) => e.preventDefault());
       s.addEventListener('click', () => {
-        const shell = document.querySelector('.donor-shell');
-        const on = shell.toggleAttribute('data-ui2-search');
-        s.setAttribute('aria-expanded', String(on));
-        if (on) $('donorSearch')?.focus();
+        const on = !shell.hasAttribute('data-ui2-search');
+        if (on) {
+          shell.setAttribute('data-ui2-search', '');
+          s.setAttribute('aria-expanded', 'true');
+          input?.focus();
+        } else {
+          clear();
+          close();
+        }
       });
-      h.insertBefore(s, msgs || nav);
+      input?.addEventListener('blur', () => {
+        if (!input.value.trim()) close();
+      });
+      input?.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        e.preventDefault();
+        clear();
+        close();
+        input.blur();
+      });
+      (nav.parentElement === h ? h : bar)?.insertBefore(s, nav.parentElement === h ? msgs || nav : nav);
+    }
+    /* Phone: search icon and "⋯" end the tabs row; the hide / deselect chips live inside "⋯". Computer: back in the header. */
+    const search = $('ui2DonorSearch');
+    if (phone && bar) {
+      if (search.parentElement !== bar) bar.append(search);
+      if (nav.parentElement !== bar) bar.append(nav);
+      if (hide && panel && hide.parentElement !== panel) panel.append(hide);
+    } else if (!phone) {
+      if (hide && hide.parentElement !== h) h.insertBefore(hide, msgs);
+      if (search.parentElement !== h) h.insertBefore(search, msgs || null);
+      if (nav.parentElement !== h) h.append(nav);
     }
   }
   function bottom() {

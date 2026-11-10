@@ -1565,9 +1565,6 @@
   }
 }
 @media (min-width: 900px) {
-  .UI2 .app > .foot > #ui2Tabs {
-    display: none !important;
-  }
   .UI2 .app > .brandbar > .brand {
     order: 0 !important;
   }
@@ -4047,4 +4044,79 @@
   .UI2 #donorsPage #donorVolunteers > .vol-workspace > .vol-msg {
     flex: 0 0 auto;
   }
+}
+
+/* ======================= Computer: every option in one bottom bar =======================
+   Message, Donors, Chat, Notes, Report, Settings, More: an icon and a word each, big to hit, the page you are on lit.
+   The top bar keeps only the status (WhatsApp, Auto, amount left), so nothing is on the screen twice. */
+@media (min-width: 900px) {
+  .UI2 .app > .foot {
+    display: block !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 20;
+    padding: 10px 0 12px !important;
+    border-top: 1px solid var(--line2);
+    background: var(--bg, #11141c) !important;
+  }
+  .UI2 .app > .foot > :not(#ui2Tabs):not(.sr-only) {
+    display: none !important;
+  }
+  .UI2 .app > .foot > #ui2Tabs {
+    display: flex !important;
+    justify-content: center;
+    gap: 10px;
+  }
+  .UI2 .ui2-tab {
+    display: flex;
+    flex: 0 1 150px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 60px;
+    padding: 6px 10px;
+    border: 1px solid var(--line2);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--ink-muted, #aab0c5);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .UI2 .ui2-tab:hover {
+    background: var(--surface2, #232838);
+    color: var(--ink, #eef0f6);
+  }
+  .UI2 .ui2-tab span {
+    display: grid;
+    place-items: center;
+    line-height: 1;
+  }
+  .UI2 .ui2-tab[aria-current='true'] {
+    border-color: transparent;
+    background: #2f6fe4;
+    color: #fff;
+  }
+  .UI2 .app > .brandbar > :is(#ui2TopChat, #donorNotesShortcut, .report-open, #mainNavMore) {
+    display: none !important;
+  }
+  .UI2 #main-workspace .rail-quick {
+    display: none !important;
+  }
+  .UI2 .ui2-tile[data-dup] {
+    display: none;
+  }
+}
+/* Phone and tablet keep four big buttons; Notes, Report and Settings stay inside More. */
+@media (max-width: 899px) {
+  .UI2 .ui2-tab:is([data-tab='notes'], [data-tab='report'], [data-tab='settings']) {
+    display: none;
+  }
+}
+/* The page you are on is lit blue in the bottom bar (the global button style used to hide this). */
+.UI2 .ui2-tab[aria-current='true'] {
+  border-color: transparent !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
 }

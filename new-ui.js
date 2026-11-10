@@ -454,6 +454,11 @@ const ui2Frame = (fn) => {
       chat: ico(
         '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.7A8 8 0 1 1 21 12z"/><path d="M9 11h6M9 14h4"/>',
       ),
+      notes: ico('<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>'),
+      report: ico('<path d="M5 20V10M12 20V4M19 20v-7"/>'),
+      settings: ico(
+        '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+      ),
       more: ico(
         '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
       ),
@@ -462,6 +467,10 @@ const ui2Frame = (fn) => {
       ['message', ICONS.message, 'Message', () => (typeof Nav !== 'undefined' ? Nav.go('') : null)],
       ['donors', ICONS.donors, 'Donors', press(() => $('openDonors'))],
       ['chat', ICONS.chat, 'Chat', press(() => $('chatOpen'))],
+      /* Computer only (the phone keeps these in More): every top-bar option is also one clear button here. */
+      ['notes', ICONS.notes, 'Notes', press(() => $('donorNotesShortcut'))],
+      ['report', ICONS.report, 'Report', press(() => document.querySelector('.report-open'))],
+      ['settings', ICONS.settings, 'Settings', press(() => $('gear'))],
       ['more', ICONS.more, 'More', () => sheet()],
     ];
     for (const [key, icon, label, fn] of items) {
@@ -480,9 +489,11 @@ const ui2Frame = (fn) => {
       ? 'donors'
       : path === 'chat'
         ? 'chat'
-        : path
-          ? ''
-          : 'message';
+        : path === 'notes'
+          ? 'notes'
+          : path
+            ? ''
+            : 'message';
     for (const b of document.querySelectorAll('.ui2-tab'))
       b.setAttribute('aria-current', String(b.dataset.tab === on));
   }
@@ -543,21 +554,22 @@ const ui2Frame = (fn) => {
       'chat shortcuts',
       press(() => document.querySelector('.reply-open')),
     );
+    /* On a computer these three are already buttons in the bottom bar, so they are not shown twice. */
     tile(
       'Notes',
       '',
       press(() => $('donorNotesShortcut')),
-    );
+    ).dataset.dup = '1';
     tile(
       'Report',
       'right-now board',
       press(() => document.querySelector('.report-open')),
-    );
+    ).dataset.dup = '1';
     tile(
       'Settings',
       '',
       press(() => $('gear')),
-    );
+    ).dataset.dup = '1';
     const resume = document.querySelector('.resume-open');
     if (resume) {
       const r = mk('button', 'ui2-sheet-link', 'Resume messages');

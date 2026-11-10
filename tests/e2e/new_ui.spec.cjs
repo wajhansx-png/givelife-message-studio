@@ -81,7 +81,7 @@ for (const width of [280, 320, 360, 390, 430, 768]) {
     await open(page, '/new', width);
     const tabs = page.locator('#ui2Tabs');
     await expect(tabs).toBeVisible();
-    await expect(tabs.locator('.ui2-tab')).toHaveText([/Message/, /Donors/, /Chat/, /More/]);
+    await expect(tabs.locator('.ui2-tab:visible')).toHaveText([/Message/, /Donors/, /Chat/, /More/]);
     const bar = await tabs.boundingBox();
     const send = await page.locator('#btnGivelife').boundingBox();
     expect(bar.y).toBeGreaterThan(send.y); // below the send buttons: in thumb reach
@@ -172,14 +172,57 @@ test("/new computer: the main screen shows today's message beside the send list;
   expect(card.x + card.width).toBeLessThanOrEqual(send.x + 1);
   await expect(page.locator('#ui2Styles')).toBeVisible();
   await expect(page.locator('#main-workspace .talk')).toBeHidden(); // chat is its own screen
-  await expect(page.locator('#ui2TopChat')).toBeVisible();
-  await page.locator('#ui2TopChat').click();
+  await expect(page.locator('#ui2Tabs [data-tab="chat"]')).toBeVisible();
+  await page.locator('#ui2Tabs [data-tab="chat"]').click();
   await expect(page.locator('#hist')).toBeVisible();
   await page.locator('#histClose').click();
   await open(page, '/new', 390);
   await page.waitForTimeout(900);
   await expect(page.locator('#messageFocus')).toBeHidden();
   expect(await page.evaluate(() => location.hash)).toBe('');
+});
+
+test('/new computer: every option is one clear button in the bottom bar, and nothing is shown twice', async ({
+  page,
+}) => {
+  await open(page, '/new', 1440, 900);
+  const bar = page.locator('#ui2Tabs');
+  await expect(bar).toBeVisible();
+  await expect(bar.locator('.ui2-tab')).toHaveText([
+    /Message/,
+    /Donors/,
+    /Chat/,
+    /Notes/,
+    /Report/,
+    /Settings/,
+    /More/,
+  ]);
+  await expect(bar.locator('[data-tab="message"]')).toHaveAttribute('aria-current', 'true');
+  const box = await bar.boundingBox();
+  expect(box.y + box.height).toBeLessThanOrEqual(900);
+  expect(box.y).toBeGreaterThan(600); // at the bottom
+  for (const b of await bar.locator('.ui2-tab').all()) {
+    const r = await b.boundingBox();
+    expect(r.height).toBeGreaterThanOrEqual(56);
+    expect(r.width).toBeGreaterThanOrEqual(110);
+    await expect(b.locator('svg')).toBeVisible(); // an icon and a word
+  }
+  // The same options are not on the screen twice.
+  for (const dup of ['#donorNotesShortcut', '.report-open', '#mainNavMore', '#ui2TopChat', '#railDonors'])
+    await expect(page.locator(dup).first(), dup).toBeHidden();
+  await expect(page.locator('.brandbar #leftChip')).toBeVisible(); // the status stays on top
+  for (const [tab, screen] of [
+    ['donors', '#donorsPage'],
+    ['chat', '#hist'],
+    ['notes', '#foundationNotes'],
+    ['report', '.report-dialog'],
+    ['settings', '#set'],
+    ['more', '#ui2Sheet'],
+  ]) {
+    await open(page, '/new', 1440, 900);
+    await page.locator(`#ui2Tabs [data-tab="${tab}"]`).click();
+    await expect(page.locator(screen).first(), tab).toBeVisible();
+  }
 });
 
 for (const width of [280, 320, 360, 390, 430, 768, 1440]) {

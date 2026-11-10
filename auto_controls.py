@@ -33,7 +33,14 @@ VOLUNTEER_GAP_MINUTES, VOLUNTEER_BATCH, VOLUNTEER_REST_MINUTES = 5, 10, 15
 VOLUNTEER_JITTER = {"min": -15, "max": 15}
 
 DEFAULTS = {
-    THANKS: {"gap_minutes": 5, "batch_size": 10, "rest_minutes": 20},
+    THANKS: {
+        "gap_minutes": 5,
+        "gap_seconds": 0,
+        "batch_size": 10,
+        "rest_minutes": 20,
+        "rest_seconds": 0,
+        "vary_seconds": 0,
+    },
     GROUP: {"main_every": None, "freelance_every": None},
     DONOR_DM: {"follow_up": False, "gap_minutes": None, "batch_size": None},
     IMPORTANT: {
@@ -52,9 +59,42 @@ DEFAULTS = {
 }
 FIELDS = {
     THANKS: [
-        {"key": "gap_minutes", "label": "Minutes between donors", "type": "number", "min": 1, "max": 1440},
+        {
+            "key": "gap_minutes",
+            "label": "Gap between donors: minutes",
+            "type": "number",
+            "min": 0,
+            "max": 1440,
+        },
+        {
+            "key": "gap_seconds",
+            "label": "Gap between donors: seconds",
+            "type": "number",
+            "min": 0,
+            "max": 59,
+        },
+        {
+            "key": "vary_seconds",
+            "label": "Vary each gap by up to ± seconds",
+            "type": "number",
+            "min": 0,
+            "max": 300,
+        },
         {"key": "batch_size", "label": "Donors per batch", "type": "number", "min": 1, "max": 100},
-        {"key": "rest_minutes", "label": "Minutes between batches", "type": "number", "min": 1, "max": 1440},
+        {
+            "key": "rest_minutes",
+            "label": "Rest between batches: minutes",
+            "type": "number",
+            "min": 0,
+            "max": 1440,
+        },
+        {
+            "key": "rest_seconds",
+            "label": "Rest between batches: seconds",
+            "type": "number",
+            "min": 0,
+            "max": 59,
+        },
     ],
     GROUP: [
         {
@@ -172,8 +212,8 @@ class AutoControls:
         return saved if isinstance(saved, dict) else {}
 
     def settings(self, which):
-        if which == THANKS and getattr(self.app.donors(), 'thanks', None):
-            return self.app.donors().thanks.view()['settings']
+        if which == THANKS and getattr(self.app.donors(), "thanks", None):
+            return self.app.donors().thanks.view()["settings"]
         merged = dict(DEFAULTS[which])
         merged.update({k: v for k, v in (self._saved().get(which) or {}).items() if k in merged})
         return merged
@@ -342,11 +382,17 @@ class AutoControls:
         out = {"left": self.app.read_left(), "controls": {}}
         for which in CONTROLS:
             if which == THANKS:
-                thanks = getattr(self.app.donors(), 'thanks', None)
+                thanks = getattr(self.app.donors(), "thanks", None)
                 v = thanks.view() if thanks else {}
-                body = {'on': bool(v.get('on')), 'state': 'ON' if v.get('on') else 'OFF',
-                    'recipients': v.get('total', 0), 'sent': v.get('sent', 0), 'pending': v.get('pending', 0),
-                    'next_at': v.get('next_at'), 'note': v.get('error') or 'Saved completion update · Donated → Thank donors'}
+                body = {
+                    "on": bool(v.get("on")),
+                    "state": "ON" if v.get("on") else "OFF",
+                    "recipients": v.get("total", 0),
+                    "sent": v.get("sent", 0),
+                    "pending": v.get("pending", 0),
+                    "next_at": v.get("next_at"),
+                    "note": v.get("error") or "Saved completion update · Donated → Thank donors",
+                }
             else:
                 body = self._group_view() if which == GROUP else self._dm_view(which)
             settings = self.settings(which)

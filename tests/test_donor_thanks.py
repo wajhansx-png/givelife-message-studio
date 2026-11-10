@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import batch_media
 from donor_book import DonorBook
+import donor_thanks
 from donor_thanks import DonorThanks
 from persist import SqliteStore
 
@@ -246,6 +247,53 @@ class ThanksTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "storage"):
             self.start()
         self.assertEqual(self.sent, [])
+
+    def test_pace_can_be_set_in_minutes_and_seconds_with_a_random_variation(self):
+        self.thanks.configure(
+            {
+                "gap_minutes": 2,
+                "gap_seconds": 30,
+                "vary_seconds": 20,
+                "rest_minutes": 1,
+                "rest_seconds": 15,
+            }
+        )
+        cfg = self.thanks._load()["settings"]
+        self.assertEqual(
+            (cfg["gap_seconds"], cfg["vary_seconds"], cfg["rest_seconds"]), (30, 20, 15)
+        )
+        waits = [donor_thanks.wait_seconds(cfg, False) for _ in range(300)]
+        self.assertGreaterEqual(min(waits), 150 - 20)
+        self.assertLessEqual(max(waits), 150 + 20)
+        self.assertGreater(max(waits) - min(waits), 10)  # really varies
+        self.assertEqual(donor_thanks.wait_seconds(cfg, True), 75)  # the rest is exact
+        self.thanks.configure({"vary_seconds": 0})
+        self.assertEqual(donor_thanks.wait_seconds(self.thanks._load()["settings"], False), 150)
+
+    def test_test_button_sends_only_to_the_test_group_and_changes_no_donor(self):
+        tests = []
+        self.app.send_thanks_test = lambda message, caption, attachment: tests.append(
+            (message, caption, attachment)
+        )
+        with self.assertRaises(ValueError):  # nothing to test yet
+            self.thanks.test()
+        self.save(message="JazakAllah, {name}.", caption="Done", attachment=self.asset)
+        self.assertEqual(self.thanks.test(), {"reply": "Test sent to the GiveLife test group."})
+        self.assertEqual(tests, [("JazakAllah, {name}.", "Done", self.asset)])
+        self.assertEqual(self.sent, [])  # no donor was messaged
+        self.assertEqual(self.thanks.view()["sent"], 0)
+
+    def test_seconds_only_pace_and_bad_values(self):
+        self.thanks.configure({"gap_minutes": 0, "gap_seconds": 20})
+        self.assertEqual(donor_thanks.wait_seconds(self.thanks._load()["settings"], False), 20)
+        for values in (
+            {"gap_minutes": 0, "gap_seconds": 3},  # under 5 seconds
+            {"gap_seconds": 60},
+            {"vary_seconds": 301},
+            {"rest_minutes": 0, "rest_seconds": 0},
+        ):
+            with self.assertRaises(ValueError):
+                self.thanks.configure(values)
 
     def test_one_donor_send_does_not_start_the_rest_of_the_audience(self):
         other = self.add("Another supporter", True)

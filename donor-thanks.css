@@ -301,3 +301,80 @@ html
   > .donor-thanks {
   display: none !important;
 }
+
+/* Timing: visible at once, in minutes and seconds, with three quick speeds. */
+.thanks-timing > .thanks-presets {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.thanks-timing > .thanks-presets button {
+  flex: 1;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.thanks-timing > .thanks-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.thanks-timing fieldset {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.thanks-timing legend {
+  grid-column: 1 / -1;
+  padding: 0 0 4px;
+  color: var(--mut);
+  font-size: 12px;
+}
+.thanks-timing label {
+  display: grid;
+  gap: 3px;
+  color: var(--mut);
+  font-size: 12px;
+}
+.thanks-timing input {
+  min-height: 44px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+html body #donorThanksDialog .thanks-timing .thanks-grid {
+  align-items: end;
+}
+html body #donorThanksDialog .thanks-timing :is(label, legend) {
+  color: var(--mut);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Timing, shortest: one line, three quick speeds, the exact numbers folded under Custom. */
+.thanks-timing .thanks-pace-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  padding: 8px 0 6px;
+  font-size: 13px;
+}
+.thanks-timing .thanks-pace-row #thanksPace {
+  color: var(--mut);
+  font-weight: 400;
+}
+.thanks-timing .thanks-custom {
+  margin-top: 6px;
+}
+.thanks-timing .thanks-custom > summary {
+  min-height: 36px;
+  padding: 8px 0;
+  color: var(--mut);
+  font-size: 13px;
+  cursor: pointer;
+}

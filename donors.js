@@ -1795,7 +1795,11 @@
           const dm = make('button', 'donor-dm', 'DM');
           dm.type = 'button';
           dm.setAttribute('aria-label', 'Send saved DM to ' + d.name);
-          dm.onclick = () => send('selected', [d.id]);
+          dm.onclick = () => {
+            if (tab === 'donated' && window.DonorThanks?.rowMode())
+              return window.DonorThanks.sendOne(d.id);
+            return send('selected', [d.id]);
+          };
           if (d.has_number === false) {
             dm.textContent = 'Add #';
             dm.title = 'Add a number to send DMs';

@@ -243,3 +243,61 @@ html body #donorThanksDialog :is(textarea, input) {
     padding-inline: 18px;
   }
 }
+html body #donorsPage .thanks-row-mode {
+  display: none !important;
+}
+html body #donorsPage[data-panel='donated'] .thanks-row-mode {
+  display: flex !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  flex: none;
+  align-self: center;
+  width: min(760px, 100%);
+  box-sizing: border-box;
+  margin: 0;
+  padding: 4px 8px;
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+html body #donorsPage .thanks-row-mode input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex: none;
+  accent-color: #2f6fe4;
+}
+html body #donorsPage .thanks-row-mode small {
+  color: var(--mut);
+  font-size: 12px;
+}
+html body #donorsPage[data-thanks-mode] .donor-dm {
+  border-color: #6798ff !important;
+}
+@media (max-width: 599px) {
+  html body #donorsPage .thanks-row-mode small {
+    flex-basis: 100%;
+    padding-left: 26px;
+    font-size: 11px;
+  }
+}
+@media (max-width: 899px) {
+  html
+    body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+    #donorsPage[data-panel='donated']
+    .donor-bottom:not([data-ui2-running])
+    > .donor-thanks {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+html
+  body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+  #donorsPage#donorsPage
+  .donor-bottom[data-ui2-running]
+  > .donor-thanks {
+  display: none !important;
+}

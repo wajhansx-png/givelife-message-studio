@@ -276,6 +276,102 @@
       }
     },
   };
+  // This is a per-screen sending mode, deliberately off on a fresh page or another tab.
+  const mode = document.createElement('label');
+  mode.className = 'thanks-row-mode';
+  mode.innerHTML =
+    '<input type="checkbox" id="thanksDonorMode"><span>Thanks donor</span><small id="thanksRowStatus" role="status" aria-live="polite">Normal saved DM · check to send thanks</small>';
+  document.querySelector('#donorsPage .donor-toolbar')?.after(mode);
+  const toggle = mode.querySelector('input');
+  const directory = document.getElementById('donorsPage');
+  let modeCase = null,
+    modeBusy = false;
+  const modeNotice = (text) => {
+    const target = mode.querySelector('#thanksRowStatus');
+    if (target) target.textContent = text;
+  };
+  function paintMode() {
+    const on = toggle.checked && !!modeCase;
+    directory.toggleAttribute('data-thanks-mode', on);
+    for (const dm of directory.querySelectorAll('#donorRows .donor-dm')) {
+      if (on) {
+        if (!dm.dataset.thanksOriginalLabel)
+          dm.dataset.thanksOriginalLabel = dm.getAttribute('aria-label') || 'Send saved DM';
+        dm.setAttribute(
+          'aria-label',
+          dm.dataset.thanksOriginalLabel.replace('Send saved DM', 'Send saved thanks'),
+        );
+      } else if (dm.dataset.thanksOriginalLabel) {
+        dm.setAttribute('aria-label', dm.dataset.thanksOriginalLabel);
+        delete dm.dataset.thanksOriginalLabel;
+      }
+    }
+  }
+  function resetMode() {
+    toggle.checked = false;
+    modeCase = null;
+    paintMode();
+    modeNotice('Normal saved DM · check to send thanks');
+  }
+  toggle.onchange = async () => {
+    if (!toggle.checked) {
+      resetMode();
+      return;
+    }
+    toggle.disabled = true;
+    try {
+      const saved = await api();
+      if (directory.dataset.panel !== 'donated') return resetMode();
+      if (saved.left > 0) throw Error('Finish this case before sending thank-you updates.');
+      if (!saved.attachment && !saved.message.trim())
+        throw Error('Open Thank donors and save your update first.');
+      modeCase = saved.case_id;
+      paintMode();
+      modeNotice('Saved thank-you update · one donor per click');
+    } catch (error) {
+      resetMode();
+      modeNotice(error.message);
+    } finally {
+      toggle.disabled = false;
+    }
+  };
+  new MutationObserver(() => {
+    if (directory.dataset.panel !== 'donated') resetMode();
+  }).observe(directory, { attributes: true, attributeFilter: ['data-panel'] });
+  new MutationObserver(() => {
+    if (modeCase) paintMode();
+  }).observe(document.getElementById('donorRows'), { childList: true, subtree: true });
+  window.DonorThanks.rowMode = () => toggle.checked && !!modeCase;
+  window.DonorThanks.sendOne = async (ident) => {
+    if (modeBusy) return;
+    modeBusy = true;
+    toggle.disabled = true;
+    try {
+      const saved = await api();
+      if (saved.case_id !== modeCase) {
+        resetMode();
+        throw Error(
+          'The case changed. Check the saved thank-you update and turn Thanks donor on again.',
+        );
+      }
+      const result = await api('send_one', {
+        case_id: saved.case_id,
+        revision: saved.revision,
+        id: ident,
+      });
+      const name = result.recipients.find((r) => r.id === ident)?.name || 'this donor';
+      modeNotice(
+        'Sending the saved thank-you update to ' +
+          name +
+          '. Check Thank donors for delivery status.',
+      );
+    } catch (error) {
+      modeNotice(error.message);
+    } finally {
+      modeBusy = false;
+      toggle.disabled = false;
+    }
+  };
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'donor-thanks';

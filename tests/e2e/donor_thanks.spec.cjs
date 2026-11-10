@@ -70,8 +70,12 @@ for (const width of [1440, 390, 320]) {
     expect(events[1].path).toContain('/send/message');
     expect(events[1].fields.message).toBe('JazakAllah khair, Supporter.');
     expect(events[0].fields.phone).toBe('1555123' + String(width).padStart(4, '0'));
-    const status = await (await request.get('/donor-thanks', { headers })).json();
-    expect(status.recipients.find((r) => r.id === added.donor.id).state).toBe('Sent');
+    await expect
+      .poll(async () => {
+        const status = await (await request.get('/donor-thanks', { headers })).json();
+        return status.recipients.find((r) => r.id === added.donor.id).state;
+      })
+      .toBe('Sent');
     await expect(page.locator('#donorThanksDialog')).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,

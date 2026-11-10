@@ -247,6 +247,30 @@ class ThanksTests(unittest.TestCase):
             self.start()
         self.assertEqual(self.sent, [])
 
+    def test_one_donor_send_does_not_start_the_rest_of_the_audience(self):
+        other = self.add("Another supporter", True)
+        self.hub.book.delivery(other, "Sent", 12345)
+        self.save(attachment=self.asset, caption="Case completed.", message="Thank you {name}.")
+        with patch("donor_thanks.threading.Thread"):
+            self.thanks.start(donor_id=other)
+        self.thanks.tick()
+        self.assertEqual([r["donor_id"] for r in self.sent], [other, other])
+        self.assertTrue(self.hub.book.resolve(other).get("dm_sent"))
+        self.assertFalse(self.thanks.view()["on"])
+        self.assertEqual(self.thanks.view()["pending"], 1)
+        with self.assertRaisesRegex(ValueError, "already sent"):
+            self.thanks.start(donor_id=other)
+        self.assertEqual(len(self.sent), 2)
+
+    def test_one_donor_cannot_join_a_running_queue_or_target_a_nondonor(self):
+        self.save(message="Thank you.")
+        with self.assertRaises(ValueError):
+            self.thanks.start(donor_id=self.other)
+        self.start()
+        with self.assertRaisesRegex(ValueError, "already sending"):
+            self.thanks.start(donor_id=self.first)
+        self.assertEqual(self.sent, [])
+
 
 if __name__ == "__main__":
     unittest.main()

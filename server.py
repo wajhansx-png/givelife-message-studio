@@ -6028,9 +6028,14 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(thanks.save(body))
                 if body.get('case_id') != thanks.case_id():
                     raise ValueError('The active case changed. Reopen Thank donors.')
-                if action == 'start':
+                if action in ('start', 'send_one'):
                     if body.get('revision') != thanks.view()['revision']:
                         raise ValueError('The update changed. Review it again before sending.')
+                    if action == 'send_one':
+                        ident = body.get('id')
+                        if not isinstance(ident, str) or not ident:
+                            raise ValueError('Choose the donor to thank.')
+                        return self.reply(thanks.start(donor_id=ident))
                     return self.reply(thanks.start())
                 if action == 'stop':
                     return self.reply(thanks.stop())

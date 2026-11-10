@@ -146,12 +146,16 @@ class DonorThanks:
             self._put(data)
         return self.view()
 
-    def start(self):
+    def start(self, donor_id=None):
         if not self.app.STORE:
             raise ValueError("Persistent storage is unavailable. Nothing was sent or saved.")
         with self.hub.cases.lock, self.hub.control_lock, self.lock:
             data = self._load()
             if data["on"]:
+                if donor_id is not None:
+                    raise ValueError(
+                        "Thanks donors is already sending. Wait for it to finish or pause it first."
+                    )
                 return self.view()
             if self.app.read_left() > 0:
                 raise ValueError("Finish this case before sending its thank-you update.")
@@ -169,17 +173,31 @@ class DonorThanks:
             ids = [
                 r["id"]
                 for r in self._rows()
+                if donor_id is None or r["id"] == donor_id
                 if data["receipts"].get(r["id"], {}).get("state")
                 not in ("Sent", "Uncertain", "Sending", "Skipped")
             ]
             if not ids:
+                if donor_id is not None:
+                    status = data["receipts"].get(donor_id, {}).get("state")
+                    if status == "Sent":
+                        raise ValueError("Thanks already sent to this donor. Nothing was repeated.")
+                    if status in ("Uncertain", "Sending"):
+                        raise ValueError(
+                            "This donor's update needs review in WhatsApp. It will not repeat."
+                        )
+                    raise ValueError(
+                        "This donor did not donate to this case, or their update was already sent or needs review. Nothing was repeated."
+                    )
                 raise ValueError(
                     "No donors are waiting for this case update. Confirmed and unconfirmed updates are not repeated."
                 )
             data.update(
                 on=True,
                 ids=ids,
-                next_at=max(time.time(), data.get("next_at") or 0),
+                next_at=time.time()
+                if donor_id is not None
+                else max(time.time(), data.get("next_at") or 0),
                 error="",
                 batch_count=data.get("batch_count", 0),
             )

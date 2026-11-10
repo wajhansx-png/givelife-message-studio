@@ -2098,13 +2098,13 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-form .auto-form-not
 
 /* Desktop: Volunteers keeps the same header band too (donor-only controls keep their space, hidden), so the tabs never jump. */
 @media (min-width: 900px) {
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d):not(#e):not(#f)[data-panel='volunteers'] .donor-head {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d):not(#e):not(#f)[data-panel='volunteers'] .donor-head {
     display: flex !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d)[data-panel='volunteers'] .donor-head > :not(.donor-title):not(.donor-message-tablist):not(#donorNavMore) {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d)[data-panel='volunteers'] .donor-head > :not(.donor-title):not(.donor-message-tablist):not(#donorNavMore) {
     visibility: hidden;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d)[data-panel='volunteers'] .donor-head > .donor-title {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d)[data-panel='volunteers'] .donor-head > .donor-title {
     flex: 1 1 auto !important;
     margin-right: auto !important;
   }
@@ -2138,45 +2138,45 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot >
 
 /* ---- Volunteers (classic phone/tablet): same surfaces, rows, buttons and Back arrow as the other Donors tabs. ---- */
 @media (max-width: 899px) {
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-people {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-people {
     overflow: hidden;
     border: 1px solid #1f1f1f !important;
     border-radius: 22px !important;
     background: #000 !important;
     box-shadow: none !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-list {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-list {
     background: #000 !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-people > :is(.vol-case-options, header, h3) {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-people > :is(.vol-case-options, header, h3) {
     border: 0 !important;
     background: transparent !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-row {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-row {
     border: 0 !important;
     border-bottom: 1px solid #1c1f2b !important;
     border-radius: 0 !important;
     background: transparent !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-msg {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-msg {
     border: 1px solid #1f1f1f !important;
     border-radius: 22px !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-row :is(.vol-case, .vol-share) {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-row :is(.vol-case, .vol-share) {
     border: 1px solid #394060 !important;
     border-radius: 999px !important;
     background: transparent !important;
     box-shadow: none !important;
     color: #c3c9de !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot {
     padding: 6px 0 0 !important;
     background: transparent !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot :is(.send-donors, .vol-add-panel > summary) {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot :is(.send-donors, .vol-add-panel > summary) {
     min-height: 46px !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot > .vol-back {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot > .vol-back {
     display: grid !important;
     place-items: center;
     flex: 0 0 50px !important;
@@ -2192,7 +2192,7 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot >
     color: #f87171 !important;
     font-size: 0 !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot > .vol-back::after {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot > .vol-back::after {
     content: '←';
     font-size: 22px;
     line-height: 1;
@@ -2201,7 +2201,7 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot >
 
 /* With the phone keyboard open (very short screen) the Volunteers message needs the room: the header band steps aside. */
 @media (max-height: 480px) {
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d):not(#e):not(#f):not(#g)[data-panel='volunteers'] .donor-head {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d):not(#e):not(#f):not(#g)[data-panel='volunteers'] .donor-head {
     display: none !important;
   }
 }

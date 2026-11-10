@@ -36,8 +36,14 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await expect(page.getByRole('dialog', { name: 'Thank donors', exact: true })).toBeVisible();
     const dialog = await page.locator('#donorThanksDialog').boundingBox();
     expect(dialog.width).toBeLessThanOrEqual(Math.min(width - 16, 680));
-    await expect(page.locator('#thanksPreview')).not.toBeVisible();
-    await expect(page.locator('#thanksGap')).not.toBeVisible();
+    await expect(page.locator('.thanks-review')).toHaveCount(0); // no Preview section
+    await expect(page.locator('.thanks-slot > .thanks-attach, .thanks-slot > .thanks-attached .thanks-name')).toHaveCount(4);
+    await expect(page.locator('#thanksGapSel')).toBeVisible(); // timing is always shown
+    // Start clean: an earlier width may have left attachments saved on the shared server.
+    for (const n of [1, 2]) {
+      const remove = page.locator(`[data-slot="${n}"] .thanks-remove`);
+      if (await remove.isVisible()) await remove.click();
+    }
     await page.locator('#thanksFile').setInputFiles({
       name: 'proof.png',
       mimeType: 'image/png',
@@ -47,60 +53,87 @@ for (const width of [1440, 768, 390, 320, 280]) {
       ),
     });
     await expect(page.locator('#thanksStatus')).toContainText('Media ready');
+    if ((await page.locator('[data-slot="1"] .thanks-capd').getAttribute('open')) === null)
+      await page.locator('[data-slot="1"] .thanks-capd > summary').click(); // "+ Caption" opens the box
     await page.getByLabel('Caption', { exact: true }).fill('Alhamdulillah, the case is complete.');
+    // A second attachment (the video slot) has its own caption.
+    const chooser = page.waitForEvent('filechooser');
+    await page.locator('[data-slot="2"] > .thanks-attach').click(); // a real tap on "Attach video"
+    await (await chooser).setFiles({
+      name: 'second.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1cAAAAASUVORK5CYII=',
+        'base64',
+      ),
+    });
+    await expect(page.locator('[data-slot="2"] .thanks-capd > summary')).toBeVisible(); // + Caption under the video too
+    if ((await page.locator('[data-slot="2"] .thanks-capd').getAttribute('open')) === null)
+      await page.locator('[data-slot="2"] .thanks-capd > summary').click();
+    await page.locator('#thanksCaption2').fill('Second caption.');
+    // Message is folded behind "+ Message" (third after the attachments); a saved message opens it by itself.
+    if ((await page.locator('.thanks-msg').getAttribute('open')) === null)
+      await page.locator('.thanks-msg > summary').click();
     await page
       .locator('#donorThanksDialog')
       .getByLabel('Message', { exact: true })
       .fill('JazakAllah khair, {name}.');
-    await page.locator('.thanks-review > summary').click();
-    await expect(page.locator('#thanksPreview .thanks-bubble')).toHaveCount(2);
-    await expect(page.locator('#thanksPreview')).toContainText(
-      'Alhamdulillah, the case is complete.',
-    );
-    await expect(page.locator('#thanksPreview')).toContainText('JazakAllah khair, {name}.');
-    // Timing is one short line with three quick speeds; the exact numbers sit under Custom.
-    await expect(page.locator('#thanksPace')).toContainText(' apart');
-    await page.locator('[data-preset="fast"]').click();
-    await expect(page.locator('#thanksPace')).toHaveText('30 sec apart ±10s · batches of 20');
-    await page.locator('[data-preset="normal"]').click();
-    await page.locator('.thanks-custom > summary').click();
-    await expect(page.locator('#thanksGap')).toHaveValue('5');
-    await expect(page.locator('#thanksGapSec')).toHaveValue('0');
-    await expect(page.locator('#thanksBatch')).toHaveValue('10');
-    await expect(page.locator('#thanksRest')).toHaveValue('20');
-    await page.locator('#thanksGapSec').fill('30');
-    await expect(page.locator('#thanksPace')).toContainText('5 min 30 sec apart');
-    await page.locator('#thanksGapSec').fill('0');
+    // Timing: four dropdowns of common choices; "Custom…" opens the exact minute / second boxes.
+    for (const id of ['thanksGapSel', 'thanksVarySel', 'thanksBatchSel', 'thanksRestSel'])
+      await expect(page.locator('#' + id)).toBeVisible();
+    await expect(page.locator('[data-preset]')).toHaveCount(0);
+    await expect(page.locator('#thanksGap')).toBeHidden(); // exact boxes only under Custom
+    await expect(page.locator('#thanksBatchSel')).toHaveValue('10');
+    await expect(page.locator('#thanksRestSel')).toHaveValue('1200');
+    await page.locator('#thanksGapSel').selectOption('120');
+    await page.locator('#thanksVarySel').selectOption('15');
+    await page.locator('#thanksRestSel').selectOption('custom');
+    await expect(page.locator('#thanksRest')).toBeVisible();
+    await page.locator('#thanksRest').fill('1');
+    await page.locator('#thanksRestSec').fill('45');
     // Test: the update goes to the GiveLife test group only, never to a donor.
     const beforeTest = (await (await request.get('/__test/events', { headers })).json()).events.length;
     await page.locator('#thanksTest').click();
     await expect(page.locator('#thanksStatus')).toContainText('Test sent to the GiveLife test group');
     const testEvents = (await (await request.get('/__test/events', { headers })).json()).events.slice(beforeTest);
-    expect(testEvents).toHaveLength(2);
+    expect(testEvents).toHaveLength(3); // image, second attachment, message
     for (const e of testEvents) expect(e.fields.phone).toBe('120363431210327603@g.us');
     expect(testEvents[0].path).toContain('/send/image');
-    expect(testEvents[1].fields.message).toBe('JazakAllah khair, Test.');
+    expect(testEvents[1].fields.caption).toBe('Second caption.');
+    expect(testEvents[2].fields.message).toBe('JazakAllah khair, Test.');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.locator('#thanksStatus')).toContainText('Update saved');
+    const saved = (await (await request.get('/donor-thanks', { headers })).json()).settings;
+    expect([saved.gap_minutes, saved.gap_seconds, saved.vary_seconds, saved.rest_seconds]).toEqual([2, 0, 15, 45]);
+    const cur = await (await request.get('/donor-thanks', { headers })).json();
+    await request.post('/donor-thanks', {
+      headers,
+      data: {
+        action: 'settings',
+        case_id: cur.case_id,
+        settings: { gap_minutes: 5, gap_seconds: 0, vary_seconds: 0, batch_size: 10, rest_minutes: 20, rest_seconds: 0 },
+      },
+    }); // back to the defaults for the next test
     await page.getByRole('button', { name: 'Close Thank donors', exact: true }).click();
     await button.click();
     await expect(page.getByLabel('Caption', { exact: true })).toHaveValue(
       'Alhamdulillah, the case is complete.',
     );
     const before = (await (await request.get('/__test/events', { headers })).json()).events.length;
-    await page.locator('#thanksSend').click();
+    await page.locator('#thanksSwitch').click(); // the start toggle
     await expect
       .poll(
         async () => (await (await request.get('/__test/events', { headers })).json()).events.length,
       )
-      .toBe(before + 2);
+      .toBe(before + 3);
     const events = (await (await request.get('/__test/events', { headers })).json()).events.slice(
       before,
     );
     expect(events[0].path).toContain('/send/image');
     expect(events[0].fields.caption).toBe('Alhamdulillah, the case is complete.');
-    expect(events[1].path).toContain('/send/message');
-    expect(events[1].fields.message).toBe('JazakAllah khair, Supporter.');
+    expect(events[1].fields.caption).toBe('Second caption.'); // its own caption
+    expect(events[2].path).toContain('/send/message');
+    expect(events[2].fields.message).toBe('JazakAllah khair, Supporter.');
     expect(events[0].fields.phone).toBe('1555123' + String(width).padStart(4, '0'));
     await expect
       .poll(async () => {
@@ -204,3 +237,22 @@ for (const [mime, caption, suffix] of [
     else expect(event.fields.caption || '').toBe('');
   });
 }
+
+test('Donated tab: the start toggle and Test sit in the one thanks row, and only on that tab', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/donors/donated');
+  await expect(page.locator('#thanksTabSwitch')).toBeVisible();
+  await expect(page.locator('#thanksTabTest')).toBeVisible();
+  const row = await page.locator('.thanks-tab-row').boundingBox();
+  for (const sel of ['#thanksTabSwitch', '#thanksTabTest']) {
+    const b = await page.locator(sel).boundingBox();
+    expect(b.y, sel).toBeGreaterThanOrEqual(row.y - 1);
+    expect(b.y + b.height, sel).toBeLessThanOrEqual(row.y + row.height + 1);
+    expect(b.x + b.width, sel).toBeLessThanOrEqual(390);
+  }
+  await page.locator('.donor-tabs [data-tab="all"]').click();
+  await expect(page.locator('#thanksTabSwitch')).toBeHidden();
+});

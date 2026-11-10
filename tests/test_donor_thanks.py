@@ -62,7 +62,16 @@ class ThanksTests(unittest.TestCase):
         return self.thanks.save(
             {
                 k: changes.get(k, data[k])
-                for k in ("case_id", "revision", "attachment", "filename", "caption", "message")
+                for k in (
+                    "case_id",
+                    "revision",
+                    "attachment",
+                    "filename",
+                    "caption",
+                    "attachment2",
+                    "caption2",
+                    "message",
+                )
             }
         )
 
@@ -272,8 +281,10 @@ class ThanksTests(unittest.TestCase):
 
     def test_test_button_sends_only_to_the_test_group_and_changes_no_donor(self):
         tests = []
-        self.app.send_thanks_test = lambda message, caption, attachment: tests.append(
-            (message, caption, attachment)
+        self.app.send_thanks_test = (
+            lambda message, caption, attachment, caption2="", attachment2=None: tests.append(
+                (message, caption, attachment)
+            )
         )
         with self.assertRaises(ValueError):  # nothing to test yet
             self.thanks.test()
@@ -282,6 +293,30 @@ class ThanksTests(unittest.TestCase):
         self.assertEqual(tests, [("JazakAllah, {name}.", "Done", self.asset)])
         self.assertEqual(self.sent, [])  # no donor was messaged
         self.assertEqual(self.thanks.view()["sent"], 0)
+
+    def test_two_attachments_each_with_its_own_caption_go_in_order_then_the_message(self):
+        second = batch_media.save(
+            self.store,
+            "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\nsecond").decode(),
+        )
+        self.save(
+            attachment=self.asset,
+            caption="First caption",
+            attachment2=second,
+            caption2="Second caption",
+            message="Thank you, {name}.",
+        )
+        view = self.thanks.view()
+        self.assertEqual((view["caption"], view["caption2"]), ("First caption", "Second caption"))
+        with self.assertRaises(ValueError):  # a caption needs its own attachment
+            self.save(attachment2=None, caption2="Orphan")
+        self.start()
+        self.thanks.tick()
+        parts = [(b.get("attachment"), b["message"]) for b in self.sent]
+        self.assertEqual(
+            parts,
+            [(self.asset, "First caption"), (second, "Second caption"), (None, "Thank you, Sara.")],
+        )
 
     def test_seconds_only_pace_and_bad_values(self):
         self.thanks.configure({"gap_minutes": 0, "gap_seconds": 20})

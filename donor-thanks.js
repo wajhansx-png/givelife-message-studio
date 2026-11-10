@@ -5,29 +5,29 @@
   dialog.setAttribute('aria-labelledby', 'thanksTitle');
   dialog.innerHTML = `<header><div><h2 id="thanksTitle" tabindex="-1" autofocus>Thank donors</h2><small id="thanksContext"></small></div></header>
   <div class="thanks-body"><section class="thanks-compose">
-    <label for="thanksMessage">Message</label><textarea id="thanksMessage" aria-describedby="thanksNameHint" maxlength="4000" rows="4" placeholder="Write a thank-you message…"></textarea>
-    <small id="thanksNameHint">Use {name} for their first name. Sent after any attachment.</small>
-    <div class="thanks-attach-row"><button type="button" id="thanksAttach">+ Attach file</button><small id="thanksFileHint">Photo, video or PDF</small></div>
-    <input id="thanksFile" type="file" aria-label="Attach file" accept="image/jpeg,image/png,image/webp,video/mp4,application/pdf" hidden>
-    <div class="thanks-file-row" hidden><span id="thanksFileName"></span><button type="button" id="thanksRemove" hidden>Remove</button></div>
-    <div id="thanksCaptionWrap" hidden><label for="thanksCaption">Caption</label><textarea id="thanksCaption" maxlength="4000" rows="2" placeholder="Optional · shown with the attachment"></textarea></div>
-    <details class="thanks-review"><summary>Preview</summary><div id="thanksPreview" aria-label="Message preview"></div><details><summary id="thanksAudience">Recipients</summary><ul id="thanksRecipients"></ul></details></details>
-    <section class="thanks-timing"><div class="thanks-pace-row"><b>Timing</b> <span id="thanksPace"></span></div>
-      <div class="thanks-presets" role="group" aria-label="Quick speed"><button type="button" data-preset="fast">Fast</button><button type="button" data-preset="normal">Normal</button><button type="button" data-preset="slow">Slow</button></div>
-      <details class="thanks-custom"><summary>Custom</summary><div class="thanks-grid">
-        <fieldset><legend>Gap</legend><label>min<input id="thanksGap" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksGapSec" type="number" min="0" max="59" inputmode="numeric"></label></fieldset>
-        <label>± vary (sec)<input id="thanksVary" type="number" min="0" max="300" inputmode="numeric"></label>
-        <label>Batch of<input id="thanksBatch" type="number" min="1" max="100" inputmode="numeric"></label>
-        <fieldset><legend>Rest</legend><label>min<input id="thanksRest" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksRestSec" type="number" min="0" max="59" inputmode="numeric"></label></fieldset>
-      </div></details></section>
+    <div class="thanks-media">
+      <div class="thanks-slot" data-slot="1"><button type="button" class="thanks-attach" id="thanksAttachImg">Attach image</button><div class="thanks-attached" hidden><span class="thanks-name"></span><button type="button" class="thanks-remove" aria-label="Remove image">Remove</button><details class="thanks-capd"><summary>+ Caption</summary><textarea id="thanksCaption" aria-label="Caption" maxlength="4000" rows="2" placeholder="Caption (optional)"></textarea></details></div></div>
+      <div class="thanks-slot" data-slot="2"><button type="button" class="thanks-attach" id="thanksAttachVid">Attach video</button><div class="thanks-attached" hidden><span class="thanks-name"></span><button type="button" class="thanks-remove" aria-label="Remove video">Remove</button><details class="thanks-capd"><summary>+ Caption</summary><textarea id="thanksCaption2" aria-label="Video caption" maxlength="4000" rows="2" placeholder="Caption (optional)"></textarea></details></div></div>
+    </div>
+    <input id="thanksFile" type="file" aria-label="Attach file" accept="image/jpeg,image/png,image/webp,video/mp4" hidden>
+    <details class="thanks-msg"><summary>+ Message</summary>
+      <label for="thanksMessage">Message</label><textarea id="thanksMessage" aria-describedby="thanksNameHint" maxlength="4000" rows="4" placeholder="Write a thank-you message…"></textarea>
+      <small id="thanksNameHint">Use {name} for their first name. Sent after any attachment.</small>
+    </details>
+    <section class="thanks-timing"><b>Timing</b>
+      <div class="thanks-grid">
+        <div class="thanks-opt" data-k="gap"><label>Gap between donors<select id="thanksGapSel"></select></label><div class="thanks-custom" hidden><label>min<input id="thanksGap" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksGapSec" type="number" min="0" max="59" inputmode="numeric"></label></div></div>
+        <div class="thanks-opt" data-k="vary"><label>Vary gap by ±<select id="thanksVarySel"></select></label><div class="thanks-custom" hidden><label>sec<input id="thanksVary" type="number" min="0" max="300" inputmode="numeric"></label></div></div>
+        <div class="thanks-opt" data-k="batch"><label>Donors per batch<select id="thanksBatchSel"></select></label><div class="thanks-custom" hidden><label>donors<input id="thanksBatch" type="number" min="1" max="100" inputmode="numeric"></label></div></div>
+        <div class="thanks-opt" data-k="rest"><label>Rest after a batch<select id="thanksRestSel"></select></label><div class="thanks-custom" hidden><label>min<input id="thanksRest" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksRestSec" type="number" min="0" max="59" inputmode="numeric"></label></div></div>
+      </div></section>
   </section></div>
-  <p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save</button><button type="button" id="thanksTest" title="Send this to the GiveLife test group only">Test</button><button type="button" id="thanksSend" class="primary">Send</button><button type="button" id="thanksPause" hidden>Pause</button><button type="button" id="thanksClose" aria-label="Close Thank donors">Back</button></footer>`;
+  <div class="thanks-start"><span id="thanksStartLabel">Start sending</span><button type="button" role="switch" id="thanksSwitch" aria-checked="false" aria-label="Start sending the thank-you updates"><i></i></button></div><p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save</button><button type="button" id="thanksTest" title="Send this to the GiveLife test group only">Test</button><button type="button" id="thanksClose" aria-label="Close Thank donors">Back</button></footer>`;
   document.body.append(dialog);
   const $ = (id) => dialog.querySelector('#' + id);
   let state,
     viewVersion = 0,
     busy = false,
-    previewURL,
     poll;
   async function api(action, body = {}) {
     const response = await fetch(
@@ -49,87 +49,54 @@
   function controls() {
     for (const field of dialog.querySelectorAll('input,textarea'))
       field.disabled = busy || state?.on;
+    for (const sel of dialog.querySelectorAll('select')) sel.disabled = busy || state?.on;
     $('thanksSave').disabled = busy || state?.on;
-    $('thanksTest').disabled = busy || !state || (!state.attachment && !$('thanksMessage').value.trim());
-    $('thanksSend').hidden = !!state?.on;
-    $('thanksSend').disabled =
+    $('thanksTest').disabled =
+      busy || !state || (!state.attachment && !state.attachment2 && !$('thanksMessage').value.trim());
+    const on = !!state?.on;
+    $('thanksSwitch').setAttribute('aria-checked', String(on));
+    $('thanksSwitch').disabled =
       busy ||
       !state ||
-      state.left > 0 ||
-      (!state.attachment && !$('thanksMessage').value.trim()) ||
-      state.pending === 0;
-    $('thanksPause').hidden = !state?.on;
-    $('thanksPause').disabled = busy;
-    $('thanksRemove').disabled = busy || state?.on;
-    $('thanksAttach').disabled = busy || state?.on;
+      (!on &&
+        (state.left > 0 ||
+          (!state.attachment && !state.attachment2 && !$('thanksMessage').value.trim()) ||
+          state.pending === 0));
+    $('thanksStartLabel').textContent = on
+      ? 'Sending · switch off to pause'
+      : state
+        ? 'Send to ' + state.pending + ' donors'
+        : 'Start sending';
+    for (const b of dialog.querySelectorAll('.thanks-remove, .thanks-attach')) b.disabled = busy || state?.on;
   }
+  /* Two attachment slots (an image and a video), each with its own optional caption. */
+  const SLOTS = [
+    { n: 1, att: 'attachment', file: 'filename', mime: 'mime', cap: 'thanksCaption', accept: 'image/jpeg,image/png,image/webp' },
+    { n: 2, att: 'attachment2', file: 'filename2', mime: 'mime2', cap: 'thanksCaption2', accept: 'video/mp4' },
+  ];
+  const slotBox = (sl) => dialog.querySelector(`[data-slot="${sl.n}"]`);
+  let slot = SLOTS[0];
   function preview() {
-    const box = $('thanksPreview');
-    box.replaceChildren();
-    if (state?.attachment) {
-      const bubble = document.createElement('div');
-      bubble.className = 'thanks-bubble';
-      if (previewURL) {
-        const media = document.createElement(
-          state.mime.startsWith('image/') ? 'img' : state.mime.startsWith('video/') ? 'video' : 'a',
-        );
-        if (media.tagName === 'A') {
-          media.href = previewURL;
-          media.textContent = '📄 ' + state.filename;
-          media.target = '_blank';
-          media.rel = 'noopener';
-        } else {
-          media.src = previewURL;
-          if (media.tagName === 'VIDEO') media.controls = true;
-          else media.alt = 'Completion proof';
-        }
-        bubble.append(media);
-      } else {
-        const name = document.createElement('strong');
-        name.textContent = state.filename;
-        bubble.append(name);
-      }
-      if ($('thanksCaption').value) {
-        const caption = document.createElement('p');
-        caption.textContent = $('thanksCaption').value;
-        bubble.append(caption);
-      }
-      box.append(bubble);
+    for (const sl of SLOTS) {
+      const has = !!state?.[sl.att];
+      slotBox(sl).querySelector('.thanks-attach').hidden = has;
+      slotBox(sl).querySelector('.thanks-attached').hidden = !has;
+      slotBox(sl).querySelector('.thanks-name').textContent = has ? state[sl.file] : '';
     }
-    if ($('thanksMessage').value) {
-      const text = document.createElement('p');
-      text.className = 'thanks-bubble';
-      text.textContent = $('thanksMessage').value;
-      box.append(text);
-    }
-    if (!box.children.length) box.textContent = 'Your message or attachment will appear here.';
-    $('thanksCaptionWrap').hidden = !state?.attachment;
-    $('thanksRemove').hidden = !state?.attachment;
-    $('thanksAttach').hidden = !!state?.attachment;
-    $('thanksFileHint').hidden = !!state?.attachment;
-    dialog.querySelector('.thanks-file-row').hidden = !state?.attachment;
-    $('thanksFileName').textContent = state?.attachment ? state.filename : '';
     controls();
   }
   function audience() {
-    $('thanksAudience').textContent =
-      `${state.total} recipients` +
-      (state.sent ? ` · ${state.sent} sent · ${state.pending} waiting` : '');
-    $('thanksRecipients').replaceChildren(
-      ...state.recipients.map((row) => {
-        const li = document.createElement('li');
-        li.textContent = row.name + ' · ' + (row.state === 'Sent' ? 'Update sent' : row.state);
-        return li;
-      }),
-    );
     $('thanksContext').textContent =
       `${state.case_name} · ${state.total} donors` +
+      (state.sent ? ` · ${state.sent} sent · ${state.pending} waiting` : '') +
       (state.left > 0 ? ' · Finish case to send' : '');
-    $('thanksSend').textContent = 'Send to ' + state.pending;
   }
   function fill() {
     $('thanksCaption').value = state.caption;
+    $('thanksCaption2').value = state.caption2 || '';
+    for (const sl of SLOTS) slotBox(sl).querySelector('.thanks-capd').open = !!$(sl.cap).value; // a saved caption shows itself
     $('thanksMessage').value = state.message;
+    if (state.message) dialog.querySelector('.thanks-msg').open = true; // a saved message shows itself
     const c = state.settings;
     $('thanksGap').value = c.gap_minutes;
     $('thanksGapSec').value = c.gap_seconds || 0;
@@ -137,48 +104,71 @@
     $('thanksBatch').value = c.batch_size;
     $('thanksRest').value = c.rest_minutes;
     $('thanksRestSec').value = c.rest_seconds || 0;
-    pace();
+    for (const k of Object.keys(OPTS)) syncOpt(k, false);
     audience();
     preview();
   }
-  /* The timing in one short line, and the three quick speeds. */
   const num = (id) => Number($(id).value) || 0;
-  const dur = (m, s) => (m ? m + ' min' : '') + (m && s ? ' ' : '') + (s || !m ? s + ' sec' : '');
-  function pace() {
-    $('thanksPace').textContent =
-      dur(num('thanksGap'), num('thanksGapSec')) +
-      ' apart' +
-      (num('thanksVary') ? ' ±' + num('thanksVary') + 's' : '') +
-      ' · batches of ' +
-      num('thanksBatch');
-  }
-  const PRESETS = {
-    fast: [0, 30, 10, 20, 5, 0],
-    normal: [5, 0, 30, 10, 20, 0],
-    slow: [10, 0, 60, 5, 30, 0],
+  /* Timing: a dropdown of common choices per setting; "Custom…" shows the exact minute / second boxes. */
+  const OPTS = {
+    gap: [10, 20, 30, 60, 120, 180, 300, 600, 900, 1800],
+    vary: [0, 5, 10, 15, 30, 60, 120],
+    batch: [5, 10, 15, 20, 30, 50],
+    rest: [60, 120, 300, 600, 1200, 1800, 3600, 7200],
   };
-  for (const b of dialog.querySelectorAll('[data-preset]'))
-    b.addEventListener('click', () => {
-      const [gm, gs, vary, batch, rm, rs] = PRESETS[b.dataset.preset];
-      for (const [id, v] of [
-        ['thanksGap', gm],
-        ['thanksGapSec', gs],
-        ['thanksVary', vary],
-        ['thanksBatch', batch],
-        ['thanksRest', rm],
-        ['thanksRestSec', rs],
-      ])
-        $(id).value = v;
-      pace();
+  const words = (k, v) =>
+    k === 'batch'
+      ? v + ' donors'
+      : k === 'vary' && !v
+        ? 'No variation'
+        : v < 60
+          ? v + ' sec'
+          : Math.floor(v / 60) + ' min' + (v % 60 ? ' ' + (v % 60) + ' sec' : '');
+  const BOXES = {
+    gap: () => num('thanksGap') * 60 + num('thanksGapSec'),
+    vary: () => num('thanksVary'),
+    batch: () => num('thanksBatch'),
+    rest: () => num('thanksRest') * 60 + num('thanksRestSec'),
+  };
+  const WRITE = {
+    gap: (v) => (($('thanksGap').value = Math.floor(v / 60)), ($('thanksGapSec').value = v % 60)),
+    vary: (v) => ($('thanksVary').value = v),
+    batch: (v) => ($('thanksBatch').value = v),
+    rest: (v) => (($('thanksRest').value = Math.floor(v / 60)), ($('thanksRestSec').value = v % 60)),
+  };
+  function syncOpt(k, keepCustom) {
+    const sel = $('thanks' + k[0].toUpperCase() + k.slice(1) + 'Sel'),
+      box = dialog.querySelector(`[data-k="${k}"] .thanks-custom`),
+      v = BOXES[k]();
+    sel.value = OPTS[k].includes(v) && !(keepCustom && !box.hidden) ? String(v) : 'custom';
+    box.hidden = sel.value !== 'custom';
+  }
+  for (const k of Object.keys(OPTS)) {
+    const sel = $('thanks' + k[0].toUpperCase() + k.slice(1) + 'Sel');
+    for (const v of OPTS[k]) sel.append(new Option(words(k, v), v));
+    sel.append(new Option('Custom…', 'custom'));
+    sel.addEventListener('change', () => {
+      const box = dialog.querySelector(`[data-k="${k}"] .thanks-custom`);
+      if (sel.value === 'custom') {
+        box.hidden = false; // "Custom…" opens the exact boxes, whatever the current value is
+        box.querySelector('input')?.focus();
+        return;
+      }
+      WRITE[k](Number(sel.value));
+      box.hidden = true;
     });
-  for (const id of ['thanksGap', 'thanksGapSec', 'thanksVary', 'thanksBatch', 'thanksRest', 'thanksRestSec'])
-    $(id).addEventListener('input', pace);
+    for (const input of dialog.querySelectorAll(`[data-k="${k}"] input`))
+      input.addEventListener('input', () => syncOpt(k, true));
+  }
   async function save() {
     state = await api('save', {
       case_id: state.case_id,
       revision: state.revision,
       attachment: state.attachment,
       filename: state.filename,
+      attachment2: state.attachment2 || null,
+      filename2: state.filename2 || '',
+      caption2: $('thanksCaption2').value,
       caption: $('thanksCaption').value,
       message: $('thanksMessage').value,
     });
@@ -213,25 +203,31 @@
       await save();
       note('Update saved.');
     });
-  $('thanksSend').onclick = () =>
+  const startSending = () =>
     action(async () => {
       await save();
       state = await api('start', { case_id: state.case_id, revision: state.revision });
       fill();
       note('Sending. You can close this panel.');
     });
-  $('thanksTest').onclick = () =>
-    action(async () => {
-      await save();
-      note((await api('test', { case_id: state.case_id })).reply);
-    });
-  $('thanksPause').onclick = () =>
+  const pauseSending = () =>
     action(async () => {
       state = await api('stop', { case_id: state.case_id });
       fill();
       note('Paused. An upload already started may finish.');
     });
-  $('thanksAttach').onclick = () => $('thanksFile').click();
+  $('thanksSwitch').onclick = () => (state?.on ? pauseSending() : startSending());
+  $('thanksTest').onclick = () =>
+    action(async () => {
+      await save();
+      note((await api('test', { case_id: state.case_id })).reply);
+    });
+  for (const sl of SLOTS)
+    slotBox(sl).querySelector('.thanks-attach').onclick = () => {
+      slot = sl;
+      $('thanksFile').accept = sl.accept;
+      $('thanksFile').click();
+    };
   $('thanksFile').onchange = () =>
     action(async () => {
       const file = $('thanksFile').files[0];
@@ -251,26 +247,25 @@
       });
       const result = await response.json();
       if (!response.ok) throw Error(result.error || 'Upload failed.');
-      if (previewURL) URL.revokeObjectURL(previewURL);
-      previewURL = URL.createObjectURL(file);
-      state.attachment = result.id;
-      state.mime = file.type;
-      state.filename = file.name;
+      state[slot.att] = result.id;
+      state[slot.mime] = file.type;
+      state[slot.file] = file.name;
+      slot = SLOTS[0];
       preview();
       note('Media ready. Caption and message are optional.');
     });
-  $('thanksRemove').onclick = () => {
-    state.attachment = null;
-    state.mime = '';
-    state.filename = '';
-    $('thanksFile').value = '';
-    $('thanksCaption').value = '';
-    if (previewURL) URL.revokeObjectURL(previewURL);
-    previewURL = null;
-    preview();
-    note('Attachment removed. Save to keep this change.');
-  };
-  for (const id of ['thanksCaption', 'thanksMessage'])
+  for (const sl of SLOTS)
+    slotBox(sl).querySelector('.thanks-remove').onclick = () => {
+      state[sl.att] = null;
+      state[sl.mime] = '';
+      state[sl.file] = '';
+      $('thanksFile').value = '';
+      $(sl.cap).value = '';
+      slotBox(sl).querySelector('.thanks-capd').open = false;
+      preview();
+      note('Attachment removed. Save to keep this change.');
+    };
+  for (const id of ['thanksCaption', 'thanksCaption2', 'thanksMessage'])
     $(id).addEventListener('input', () => {
       preview();
       note('Unsaved changes');
@@ -280,8 +275,6 @@
     dialog.close();
     viewVersion++;
     clearTimeout(poll);
-    if (previewURL) URL.revokeObjectURL(previewURL);
-    previewURL = null;
   }
   $('thanksClose').onclick = close;
   dialog.addEventListener('cancel', (event) => {
@@ -314,15 +307,6 @@
         fill();
         note('');
         dialog.showModal();
-        if (state.attachment) {
-          const r = await fetch('/thanks-media/' + state.attachment);
-          if (r.ok) {
-            const blob = await r.blob();
-            if (!dialog.open || version !== viewVersion) return;
-            previewURL = URL.createObjectURL(blob);
-            preview();
-          }
-        }
         refresh();
       } catch (error) {
         const status = document.getElementById('donorNotice');
@@ -335,7 +319,15 @@
   mode.className = 'thanks-row-mode';
   mode.innerHTML =
     '<input type="checkbox" id="thanksDonorMode"><span>Thanks donor</span><small id="thanksRowStatus" role="status" aria-live="polite">Normal saved DM · check to send thanks</small>';
-  document.querySelector('#donorsPage .donor-toolbar')?.after(mode);
+  /* The Donated tab: the "Thanks donor" check, then the start toggle and Test, all in the same one row. */
+  const tabRow = document.createElement('div');
+  tabRow.className = 'thanks-tab-row';
+  const ctl = document.createElement('div');
+  ctl.className = 'thanks-tab-ctl';
+  ctl.innerHTML =
+    '<span id="thanksTabLabel">… donors</span><button type="button" role="switch" id="thanksTabSwitch" aria-checked="false" aria-label="Start sending thank-you updates"><i></i></button><button type="button" id="thanksTabTest" title="Send this update to the GiveLife test group only">Test</button>';
+  tabRow.append(mode, ctl);
+  document.querySelector('#donorsPage .donor-toolbar')?.after(tabRow);
   const toggle = mode.querySelector('input');
   const directory = document.getElementById('donorsPage');
   let modeCase = null,
@@ -426,6 +418,72 @@
       toggle.disabled = false;
     }
   };
+  let tabState = null,
+    tabBusy = false;
+  const tabSwitch = ctl.querySelector('#thanksTabSwitch'),
+    tabTest = ctl.querySelector('#thanksTabTest'),
+    tabLabel = ctl.querySelector('#thanksTabLabel');
+  const hasUpdate = () => !!tabState && !!(tabState.attachment || tabState.attachment2 || tabState.message.trim());
+  function paintTab() {
+    const on = !!tabState?.on;
+    tabSwitch.setAttribute('aria-checked', String(on));
+    tabSwitch.disabled = tabBusy || !tabState || (!on && (tabState.left > 0 || tabState.pending === 0));
+    tabTest.disabled = tabBusy || !tabState;
+    tabLabel.textContent = !tabState
+      ? '… donors'
+      : on
+        ? `${tabState.sent}/${tabState.total} sent`
+        : `${tabState.pending} donors`;
+  }
+  async function loadTab() {
+    if (directory.dataset.panel !== 'donated' || tabBusy) return;
+    try {
+      tabState = await api();
+      paintTab();
+    } catch (_) {}
+  }
+  const needsSaved = () => {
+    if (hasUpdate()) return false;
+    modeNotice('Open Thank donors and save your update first.');
+    window.DonorThanks.open();
+    return true;
+  };
+  tabSwitch.onclick = async () => {
+    if (tabBusy || !tabState) return;
+    tabBusy = true;
+    paintTab();
+    try {
+      if (tabState.on) {
+        tabState = await api('stop', { case_id: tabState.case_id });
+        modeNotice('Paused. An upload already started may finish.');
+      } else if (!needsSaved()) {
+        if (tabState.left > 0) throw Error('Finish this case before sending thank-you updates.');
+        tabState = await api('start', { case_id: tabState.case_id, revision: tabState.revision });
+        modeNotice('Sending the saved update to every donor, at your timing.');
+      }
+    } catch (error) {
+      modeNotice(error.message);
+    } finally {
+      tabBusy = false;
+      paintTab();
+    }
+  };
+  tabTest.onclick = async () => {
+    if (tabBusy || !tabState || needsSaved()) return;
+    tabBusy = true;
+    paintTab();
+    try {
+      modeNotice((await api('test', { case_id: tabState.case_id })).reply);
+    } catch (error) {
+      modeNotice(error.message);
+    } finally {
+      tabBusy = false;
+      paintTab();
+    }
+  };
+  new MutationObserver(loadTab).observe(directory, { attributes: true, attributeFilter: ['data-panel'] });
+  setInterval(loadTab, 5000);
+  loadTab();
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'donor-thanks';

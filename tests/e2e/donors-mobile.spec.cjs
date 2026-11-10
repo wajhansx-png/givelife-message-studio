@@ -57,8 +57,7 @@ for (const [width, height] of [
     }
     await assertInside(page, [
       '#donorMessagesTab',
-      '#donorAdd',
-      '#donorSearch',
+      '#donorSearchOpen',
       '#donorSendImportant',
       '#donorNavMore > summary',
       '#donorToggle',
@@ -71,8 +70,14 @@ for (const [width, height] of [
     await expect(page.locator('#donorMessagesTab')).toHaveAccessibleName('Messages');
     await expect(page.locator('#donorBulk')).toBeHidden();
     await expect(page.locator('#donorSendAll')).toBeHidden();
+    // Search is one icon; it opens over the header row and closes again.
+    await page.locator('#donorSearchOpen').click();
+    await assertInside(page, ['#donorSearch', '#donorSearchClose'], width, height);
+    await page.locator('#donorSearchClose').click();
+    await expect(page.locator('#donorSearch')).toBeHidden();
     await page.locator('#donorNavMore > summary').click();
-    // More holds only Bulk message; Test DM and the poster choice live in the Send DMs setup.
+    // More holds + Add and Bulk message; Test DM and the poster choice live in the Send DMs setup.
+    await expect(page.locator('#donorAdd')).toBeVisible();
     await expect(page.locator('#donorBulk')).toBeVisible();
     await expect(page.locator('#donorNavMore #donorTest')).toHaveCount(0);
     await expect(page.locator('#donorBatchPicker #donorTest')).toHaveCount(1);
@@ -167,6 +172,7 @@ test('Donor row editor stays inside a narrow phone and the keyboard can be used'
     contentType: 'image/png',
   });
   await page.locator('.donor-row .donor-menu-close').first().click();
+  await page.locator('#donorNavMore > summary').click(); // + Add lives in More on phones
   await page.locator('#donorAdd').click();
   await expect(page.locator('#donorAddDialog')).toBeVisible();
   await page.setViewportSize({ width: 320, height: 420 });

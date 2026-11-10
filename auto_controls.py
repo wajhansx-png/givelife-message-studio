@@ -10,15 +10,25 @@
 
 import threading, time, uuid
 
-GROUP, DONOR_DM, IMPORTANT = "group", "donor_dm", "important"
-CONTROLS = (GROUP, DONOR_DM, IMPORTANT)
+GROUP, DONOR_DM, IMPORTANT, VOLUNTEER = "group", "donor_dm", "important", "volunteer"
+CONTROLS = (GROUP, DONOR_DM, IMPORTANT, VOLUNTEER)
 RUNNING = ("Starting", "Sending", "Waiting")
 SETTINGS_KEY = "auto_controls_settings"
-TITLES = {GROUP: "Group Auto", DONOR_DM: "DM Top Donors", IMPORTANT: "DM Important Donors"}
+TITLES = {
+    GROUP: "Group Auto",
+    DONOR_DM: "DM Top Donors",
+    IMPORTANT: "DM Important Donors",
+    VOLUNTEER: "Volunteer Auto",
+}
 DM_SCOPE = {DONOR_DM: "top", IMPORTANT: "important"}  # each DM card is locked to its own list
 
 # DM Important Donors: 8 minutes between DMs, varied by up to 15 seconds either way, batches of 10.
 IMPORTANT_GAP_MINUTES, IMPORTANT_BATCH, IMPORTANT_JITTER = 8, 10, {"min": -15, "max": 15}
+
+# Volunteer Auto: each volunteer gets the case message with poster, then the saved share message. 5 minutes
+# between volunteers (varied by up to 15 seconds), batches of 10, then a 15 minute rest.
+VOLUNTEER_GAP_MINUTES, VOLUNTEER_BATCH, VOLUNTEER_REST_MINUTES = 5, 10, 15
+VOLUNTEER_JITTER = {"min": -15, "max": 15}
 
 DEFAULTS = {
     GROUP: {"main_every": None, "freelance_every": None},
@@ -28,6 +38,13 @@ DEFAULTS = {
         "follow_up": False,
         "include_contacted": False,
         "gap_minutes": IMPORTANT_GAP_MINUTES,
+    },
+    VOLUNTEER: {
+        "gap_minutes": VOLUNTEER_GAP_MINUTES,
+        "batch_size": VOLUNTEER_BATCH,
+        "rest_minutes": VOLUNTEER_REST_MINUTES,
+        "share": True,
+        "include_contacted": False,
     },
 }
 FIELDS = {
@@ -94,7 +111,45 @@ FIELDS = {
             "type": "check",
         },
     ],
+    VOLUNTEER: [
+        {
+            "key": "gap_minutes",
+            "label": "Minutes between volunteers (varies by up to 15 seconds)",
+            "type": "number",
+            "min": 1,
+            "max": 10,
+        },
+        {
+            "key": "batch_size",
+            "label": "Volunteers per batch",
+            "type": "number",
+            "min": 1,
+            "max": 20,
+        },
+        {
+            "key": "rest_minutes",
+            "label": "Minutes to rest between batches",
+            "type": "number",
+            "min": 1,
+            "max": 120,
+        },
+        {
+            "key": "share",
+            "label": "After the case and poster, send the saved volunteer share message",
+            "type": "check",
+        },
+        {
+            "key": "include_contacted",
+            "label": "Also include volunteers already messaged",
+            "type": "check",
+        },
+    ],
 }
+
+
+def donors_vol_active(app, job):
+    """True while the given Volunteer Auto batch is the one sending right now."""
+    return bool(job and app.donors().volunteers.jobs.active == job.get("id"))
 
 
 class AutoControls:
@@ -133,10 +188,12 @@ class AutoControls:
                 out[key] = value
             else:
                 if value in (None, ""):
-                    if (
-                        key in ("gap_minutes", "batch_size", "main_every", "freelance_every")
-                        and which != IMPORTANT
-                    ):
+                    if key in (
+                        "gap_minutes",
+                        "batch_size",
+                        "main_every",
+                        "freelance_every",
+                    ) and which in (GROUP, DONOR_DM):
                         out[key] = None
                         continue
                     raise ValueError("Enter a number for: " + field["label"])
@@ -144,7 +201,7 @@ class AutoControls:
                     raise ValueError("Enter a number for: " + field["label"])
                 if not field["min"] <= value <= field["max"]:
                     raise ValueError(f"{field['label']}: choose {field['min']} to {field['max']}.")
-                out[key] = int(value) if key != "gap_minutes" else float(value)
+                out[key] = float(value) if key in ("gap_minutes", "rest_minutes") else int(value)
         if not out:
             raise ValueError("Choose settings to change.")
         return out
@@ -170,8 +227,13 @@ class AutoControls:
 
     def _job(self, which):
         """The newest batch started by this control (it survives restarts: the owner tag is kept)."""
-        jobs = self.app.donors().jobs.export_jobs().get("jobs", [])
+        jobs = self._engine(which).export_jobs().get("jobs", [])
         return next((j for j in reversed(jobs) if self._owner(j) == which), None)
+
+    def _engine(self, which):
+        """Donor DMs and volunteer DMs are two separate batch engines (separate lists and records)."""
+        donors = self.app.donors()
+        return donors.volunteers.jobs if which == VOLUNTEER else donors.jobs
 
     def _running_owner(self):
         """Which control (or 'manual') owns the donor DM engine right now, else ''."""
@@ -206,7 +268,7 @@ class AutoControls:
         pending = len([i for i in mine_ids if i not in seen])
         state = job.get("state", "")
         running = state in RUNNING or (state == "Interrupted" and job.get("auto"))
-        jobs = self.app.donors().jobs
+        jobs = self._engine(which)
         stopping = running and jobs.active == job.get("id") and jobs.stop.is_set()
         view.update(
             on=running and not stopping,
@@ -296,6 +358,8 @@ class AutoControls:
         with self.lock:
             if which == GROUP:
                 return self._set_group(on)
+            if on and which == VOLUNTEER:
+                return self._start_volunteers(settings)
             return self._start_dm(which, settings) if on else self._stop_dm(which)
 
     def _set_group(self, on):
@@ -324,6 +388,11 @@ class AutoControls:
             return self.view()  # already ON: pressing ON again never starts a second batch
         if busy:
             raise ValueError(busy)
+        mine = self._job(VOLUNTEER)
+        if mine and donors_vol_active(app, mine):
+            raise ValueError(
+                "Volunteer Auto is sending now. Switch it OFF first: two DM queues never run at the same time."
+            )
         if app.CAMPAIGN.get("running"):
             raise ValueError(
                 "A DM list is sending now. Stop it first: two DM queues never run at the same time."
@@ -379,15 +448,80 @@ class AutoControls:
         donors.start_batch(**plan, request_id=rid, owner=which)
         return self.view()
 
+    def _start_volunteers(self, settings):
+        """One batch on the volunteer engine: every volunteer, from the first, gets the case message with its
+        poster and then the saved share message. Nobody already messaged is repeated."""
+        app = self.app
+        donors = app.donors()
+        vol = donors.volunteers
+        mine = self._job(VOLUNTEER)
+        if vol.jobs.active:
+            if mine and vol.jobs.active == mine.get("id"):
+                return self.view()  # already ON: pressing ON again never starts a second batch
+            raise ValueError(
+                "A volunteer send that you started is running. Stop it first: two DM queues never run at the same time."
+            )
+        if (
+            donors.jobs.active
+            or app.CAMPAIGN.get("running")
+            or getattr(app.ENGINE, "dm_running", False)
+        ):
+            raise ValueError(
+                "A donor DM queue is sending now. Switch it OFF first: two DM queues never run at the same time."
+            )
+        if app.read_left() <= 0:
+            raise ValueError("The case is complete (Rs. 0 left), so no DMs were started.")
+        if settings:
+            self._store_settings(VOLUNTEER, self._normalise(VOLUNTEER, settings))
+        cfg = self.settings(VOLUNTEER)
+        share = vol.message().strip() if cfg.get("share") else ""
+        if cfg.get("share") and not share:
+            raise ValueError(
+                "Write the message for volunteers first (Volunteers tab), or untick the share message."
+            )
+        case = app.get_message("group")["text"]
+        if not isinstance(case, str) or not case.strip() or len(case) > 8000:
+            raise ValueError("The current case message is empty or too long. Edit it first.")
+        everyone = vol.book.recipients("all")
+        rows = [
+            r
+            for r in everyone
+            if cfg.get("include_contacted")
+            or not vol.book.contacted(r)
+            and r.get("delivery") not in ("Uncertain", "Sending")
+        ]
+        if not rows:
+            raise ValueError(
+                "No volunteers yet."
+                if not everyone
+                else "Every volunteer was already messaged. Tick the box to include them again."
+            )
+        vol.jobs.start(
+            "selected",
+            ids=[r["id"] for r in rows],
+            chunk=int(cfg["batch_size"]),
+            gap_seconds=float(cfg["gap_minutes"]) * 60,
+            rests=[float(cfg["rest_minutes"]) * 60],
+            jitter=dict(VOLUNTEER_JITTER),
+            poster=True,
+            skip_contacted=False,
+            custom_template=case,
+            follow_up=share or None,
+            request_id=f"auto-{VOLUNTEER}-{uuid.uuid4().hex}",
+            owner=VOLUNTEER,
+            origin="auto_toggle",
+        )
+        return self.view()
+
     def _stop_dm(self, which):
-        donors = self.app.donors()
+        jobs = self._engine(which)
         job = self._job(which)
         if not job:
             return self.view()
-        if donors.jobs.active and donors.jobs.active == job.get("id"):
-            donors.jobs.cancel()  # the DM being sent finishes; the rest stays saved
+        if jobs.active and jobs.active == job.get("id"):
+            jobs.cancel()  # the DM being sent finishes; the rest stays saved
         elif job.get("state") == "Interrupted":
-            donors.jobs._update(job["id"], state="Stopped", error="Switched off by the owner.")
+            jobs._update(job["id"], state="Stopped", error="Switched off by the owner.")
         return self.view()
 
     def edit(self, which, settings):
@@ -406,21 +540,32 @@ class AutoControls:
                 return self.view()
             clean = self._normalise(which, settings)
             donors = self.app.donors()
+            engine = self._engine(which)
             job = self._job(which)
-            live = bool(job and donors.jobs.active and donors.jobs.active == job.get("id"))
+            live = bool(job and engine.active and engine.active == job.get("id"))
             patch = {}
+            if which == VOLUNTEER:
+                if clean.get("rest_minutes"):
+                    patch["rests"] = [clean["rest_minutes"] * 60]
+                if "share" in clean:
+                    text = donors.volunteers.message().strip() if clean["share"] else None
+                    if clean["share"] and not text:
+                        raise ValueError(
+                            "Write the message for volunteers first (Volunteers tab), or untick the share message."
+                        )
+                    patch["follow_up"] = text
             if "gap_minutes" in clean and clean["gap_minutes"]:
                 patch["gap_seconds"] = clean["gap_minutes"] * 60
             if "batch_size" in clean and clean["batch_size"]:
                 patch["chunk"] = clean["batch_size"]
-            if "follow_up" in clean:
+            if "follow_up" in clean and which != VOLUNTEER:
                 if clean["follow_up"] and not donors.follow_up_text():
                     raise ValueError(
                         "Write the follow-up in Messages → Follow-Up Message first, or untick it."
                     )
                 patch["follow_up"] = donors.follow_up_text() if clean["follow_up"] else None
             if live and patch:
-                donors.jobs.configure(job["id"], patch)
+                engine.configure(job["id"], patch)
             self._store_settings(
                 which, clean
             )  # saved only after the live batch accepted the change

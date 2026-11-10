@@ -9,7 +9,7 @@ test.describe.configure({ mode: 'serial' });
 test.beforeAll(async () => (server = await startOwnServer(PORT)));
 test.afterAll(async () => {
   if (server) {
-    for (const control of ['important', 'donor_dm', 'group'])
+    for (const control of ['volunteer', 'important', 'donor_dm', 'group'])
       await api(PORT, '/auto-controls', { control, on: false }).catch(() => {});
     server.kill();
   }
@@ -20,14 +20,14 @@ async function openReport(page) {
   page.on('dialog', (d) => d.accept());
   await page.goto('/');
   await page.locator('.report-open').click();
-  await expect(page.locator('.auto-card')).toHaveCount(3);
+  await expect(page.locator('.auto-card')).toHaveCount(4);
 }
 const card = (page, id) => page.locator(`.auto-card[data-control="${id}"]`);
 const stat = (page, id, name) => card(page, id).locator(`[data-stat="${name}"] dd`);
 const events = async () =>
   (await api(PORT, '/__test/events')).events.filter((e) => /send/.test(e.path));
 
-test('three controls, all OFF at first, each with its numbers and Edit Settings', async ({
+test('four controls, all OFF at first, each with its numbers and Edit Settings', async ({
   page,
 }) => {
   await openReport(page);
@@ -35,8 +35,9 @@ test('three controls, all OFF at first, each with its numbers and Edit Settings'
     group: 'Group Auto',
     donor_dm: 'DM Top Donors',
     important: 'DM Important Donors',
+    volunteer: 'Volunteer Auto',
   };
-  for (const id of ['group', 'donor_dm', 'important']) {
+  for (const id of ['group', 'donor_dm', 'important', 'volunteer']) {
     await expect(card(page, id).locator('h4')).toHaveText(names[id]);
     await expect(card(page, id).locator('.auto-switch')).toHaveText('OFF');
     await expect(card(page, id).locator('.auto-switch')).toHaveAttribute('aria-checked', 'false');
@@ -177,3 +178,56 @@ for (const width of [1440, 390, 320])
       expect(b.height).toBeGreaterThanOrEqual(36);
     }
   });
+
+test('Volunteer Auto: case + poster, then the saved share message, to the first volunteer; edits live; OFF stops', async ({
+  page,
+}) => {
+  await api(PORT, '/volunteers', { action: 'message', text: 'Please share this, {name}.' });
+  for (const [name, phone] of [
+    ['Vol A', '923002223301'],
+    ['Vol B', '923002223302'],
+    ['Vol C', '923002223303'],
+  ])
+    await api(PORT, '/volunteers', { action: 'add', name, phone });
+  await openReport(page);
+  const vol = card(page, 'volunteer');
+  await expect(vol.locator('.auto-set')).toContainText('5 min apart · 10 per batch · 15 min rest');
+  await vol.getByRole('button', { name: 'Edit Settings' }).click();
+  await expect(vol.locator('input[name="gap_minutes"]')).toHaveValue('5');
+  await expect(vol.locator('input[name="batch_size"]')).toHaveValue('10');
+  await expect(vol.locator('input[name="rest_minutes"]')).toHaveValue('15');
+  await vol.getByRole('button', { name: 'Cancel' }).click();
+  const before = (await events()).length;
+
+  await vol.locator('.auto-switch').click();
+  await expect(vol.locator('.auto-switch')).toHaveText('ON');
+  await expect(stat(page, 'volunteer', 'recipients')).toHaveText('3');
+  await expect(stat(page, 'volunteer', 'sent')).toHaveText('1', { timeout: 15000 });
+  const sent = (await events()).slice(before);
+  await expect.poll(async () => (await events()).length - before, { timeout: 15000 }).toBe(2);
+  const [poster, share] = (await events()).slice(before);
+  expect(poster.path).toContain('image'); // DM Case: the case message with its poster
+  expect(share.fields.phone).toBe(poster.fields.phone); // then the share message, same person
+  expect(share.fields.message || share.fields.caption).toContain('Please share this, Vol');
+  expect(sent.length).toBeGreaterThanOrEqual(1);
+
+  // Live edit while sending: same batch, nothing re-sent.
+  const jobBefore = (await api(PORT, '/volunteers')).delivery.id;
+  await vol.getByRole('button', { name: 'Edit Settings' }).click();
+  await expect(vol.locator('.auto-form-note')).toContainText('Sending now');
+  await vol.locator('input[name="gap_minutes"]').fill('4');
+  await vol.locator('input[name="batch_size"]').fill('8');
+  await vol.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('#autoMsg')).toContainText('nothing was restarted');
+  await expect(vol.locator('.auto-switch')).toHaveText('ON');
+  await expect(vol.locator('.auto-set')).toContainText('4 min apart · 8 per batch');
+  expect((await api(PORT, '/volunteers')).delivery.id).toBe(jobBefore);
+  expect((await events()).length - before).toBe(2);
+
+  await vol.locator('.auto-switch').click();
+  await expect(vol.locator('.auto-switch')).toHaveText('OFF', { timeout: 15000 });
+  await page.waitForTimeout(1200);
+  expect((await events()).length - before).toBe(2); // nothing more went out
+  const phones = (await events()).map((e) => e.fields.phone);
+  expect(phones.filter((p) => p === poster.fields.phone)).toHaveLength(2); // one poster + one share, once
+});

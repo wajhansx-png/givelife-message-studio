@@ -275,6 +275,7 @@ for (const width of [1440, 390])
     await shot(page, `${width}-whatsapp`);
     await page.locator('#waCloudClose').click();
     await page.locator('#openDonors').click();
+    if (width < 900) await page.locator('#donorNavMore > summary').click(); // + Add lives in More on phones
     await page.locator('#donorAdd').click();
     await inside(page, page.locator('#donorAddDialog'));
     await shot(page, `${width}-add-donor`);

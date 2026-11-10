@@ -3814,3 +3814,8 @@
     min-width: 48px !important;
   }
 }
+
+/* The Report's settings summary line belongs to the classic page; /new has its own tap-the-name row. */
+.UI2 .auto-card .auto-set {
+  display: none !important;
+}

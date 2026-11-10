@@ -277,14 +277,16 @@
       note = el('p', 'auto-note'),
       line = el('p', 'auto-line'),
       edit = el('button', 'auto-edit', 'Edit Settings'),
+      set = el('button', 'auto-set'),
       form = el('form', 'auto-form');
     card.dataset.control = c.id;
     head.append(el('h4', '', c.title), sw);
-    sw.type = edit.type = 'button';
+    sw.type = edit.type = set.type = 'button';
+    set.title = 'Change ' + c.title + ' settings';
     sw.setAttribute('role', 'switch');
     sw.setAttribute('aria-label', c.title);
     for (const [k, label] of [
-      ['recipients', c.id === 'group' ? 'groups' : 'donors'],
+      ['recipients', c.id === 'group' ? 'groups' : c.id === 'volunteer' ? 'volunteers' : 'donors'],
       ['sent', 'sent'],
       ['pending', 'left'],
       ['next', 'next'],
@@ -296,8 +298,9 @@
     }
     form.hidden = true;
     form.append(el('p', 'auto-error'));
-    card.append(head, line, stats, note, edit, form);
-    cards[c.id] = { card, sw, stats, note, line, edit, form, fields: c.fields, filled: false };
+    card.append(head, line, stats, note, set, edit, form);
+    cards[c.id] = { card, sw, stats, note, line, set, edit, form, fields: c.fields, filled: false };
+    set.onclick = () => edit.click();
     sw.onclick = () => toggle(c.id);
     edit.onclick = () => {
       form.hidden = !form.hidden;
@@ -312,7 +315,11 @@
   function fillForm(id) {
     const x = cards[id],
       view = x.last;
-    x.form.replaceChildren(el('p', 'auto-error'));
+    x.form.replaceChildren(
+      el('b', 'auto-form-title', view.title + ' settings'),
+      el('p', 'auto-form-note', view.on ? 'Sending now: changes apply from the next send.' : ''),
+      el('p', 'auto-error'),
+    );
     for (const f of x.fields) {
       const label = el('label'),
         text = el('span', '', f.label);
@@ -379,7 +386,9 @@
         what =
           id === 'important'
             ? 'up to ' + s.count + ' Important donors, ' + s.gap_minutes + ' minutes apart'
-            : 'your Top donors the way you usually send';
+            : id === 'volunteer'
+              ? 'every volunteer one by one (case + poster' + (s.share ? ', then the share message' : '') + '), ' + s.gap_minutes + ' minutes apart, ' + s.rest_minutes + ' minutes rest after every ' + s.batch_size
+              : 'your Top donors the way you usually send';
       if (!confirm('Switch ' + x.last.title + ' ON? It will DM ' + what + '.')) return;
     }
     autoBusy = true;
@@ -410,6 +419,16 @@
     if (left && /unconfirmed|disconnect|restrict/i.test(c.note || '')) return 'Stopped · check WhatsApp';
     return (left ? 'Stopped · ' : 'Done · ') + sent + ' of ' + total + ' sent';
   }
+  /* The settings in one short line, so what the Auto will do is visible without opening anything. */
+  function settingsLine(c) {
+    const s = c.settings || {},
+      usual = (v, unit) => (v == null || v === '' ? 'usual' : v + unit);
+    if (c.id === 'group')
+      return (s.main_every ? 'GiveLife every ' + s.main_every + ' min' : 'GiveLife on schedule') + (s.freelance_every ? ' · Freelance every ' + s.freelance_every + ' min' : '');
+    if (c.id === 'important') return s.count + ' donors · ' + s.gap_minutes + ' min apart';
+    if (c.id === 'volunteer') return s.gap_minutes + ' min apart · ' + s.batch_size + ' per batch · ' + s.rest_minutes + ' min rest' + (s.share ? ' · + share' : '');
+    return usual(s.gap_minutes, ' min') + ' apart · ' + usual(s.batch_size, '') + ' per batch';
+  }
   function paint(view) {
     for (const c of Object.values(view.controls || {})) {
       if (!cards[c.id]) buildCard(c);
@@ -427,6 +446,7 @@
       for (const row of x.stats.children) row.lastChild.textContent = v[row.dataset.stat];
       x.note.textContent = c.note || '';
       x.line.textContent = plain(c);
+      x.set.textContent = settingsLine(c);
       /* One glance: a thin bar shows how far the batch has got; the long note lives in the tooltip. */
       const done = Number(c.sent) || 0,
         total = done + (Number(c.pending) || 0);

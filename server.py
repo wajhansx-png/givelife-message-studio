@@ -5473,6 +5473,7 @@ class Handler(BaseHTTPRequestHandler):
             "/donors.js",
             "/case-writer.js",
             "/donor-thanks.js",
+            "/app-update.js",
             "/donor-thanks.css",
             "/case-writer.css",
             "/replies.js",

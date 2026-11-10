@@ -265,3 +265,26 @@ test('Donated tab: the start toggle and Test sit in the one thanks row, and only
   await page.locator('.donor-tabs [data-tab="all"]').click();
   await expect(page.locator('#thanksTabSwitch')).toBeHidden();
 });
+
+test('an open tab says "New version ready" when the server has been updated, and Refresh reloads', async ({
+  page,
+}) => {
+  let version = 'abc1234';
+  await page.route('**/health', (route) =>
+    route.fulfill({ json: { ok: true, version } }),
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new');
+  await expect(page.locator('#updateBar')).toHaveCount(0);
+  version = 'def5678';
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await expect(page.locator('#updateBar')).toContainText('New version ready');
+  const box = await page.locator('#updateBar button').boundingBox();
+  expect(box.height).toBeGreaterThanOrEqual(40);
+  await Promise.all([
+    page.waitForEvent('load'),
+    page.locator('#updateBar button').click(),
+  ]);
+  await expect(page.locator('#updateBar')).toHaveCount(0);
+});

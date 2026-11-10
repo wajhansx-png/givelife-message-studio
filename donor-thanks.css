@@ -646,3 +646,76 @@ html body #donorThanksDialog .thanks-item {
 html body #donorThanksDialog .thanks-item > .thanks-capd {
   grid-column: 1 / -1;
 }
+
+/* Compact: a smaller dialog. Save, Test, the start toggle and Back share the one footer row. */
+html body #donorThanksDialog {
+  padding: 10px 12px 8px !important;
+}
+html body #donorThanksDialog h2 {
+  margin: 0;
+  font-size: 18px;
+}
+html body #donorThanksDialog header small {
+  font-size: 12px;
+}
+html body #donorThanksDialog .thanks-body {
+  gap: 6px;
+}
+html body #donorThanksDialog .thanks-media > button {
+  min-height: 42px;
+  font-size: 14px;
+}
+html body #donorThanksDialog .thanks-msg > summary,
+html body #donorThanksDialog .thanks-capd > summary {
+  min-height: 34px;
+  padding: 6px 0;
+  font-size: 14px;
+}
+html body #donorThanksDialog .thanks-timing > b {
+  padding: 6px 0 4px;
+}
+html body #donorThanksDialog .thanks-timing select {
+  min-height: 40px;
+  font-size: 15px;
+}
+html body #donorThanksDialog .thanks-timing .thanks-grid {
+  gap: 6px 8px;
+}
+html body #donorThanksDialog .thanks-timing label {
+  font-size: 11px;
+}
+html body #donorThanksDialog footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 6px;
+}
+html body #donorThanksDialog footer > button {
+  min-height: 42px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+html body #donorThanksDialog footer .thanks-start {
+  flex: 1 1 auto;
+  justify-content: center;
+  gap: 8px;
+  padding: 0;
+  font-size: 13px;
+}
+html body #donorThanksDialog footer #thanksSwitch {
+  width: 52px;
+  min-width: 52px;
+  height: 30px;
+  min-height: 30px;
+}
+html body #donorThanksDialog footer #thanksSwitch > i {
+  width: 22px;
+  height: 22px;
+}
+html body #donorThanksDialog footer #thanksSwitch[aria-checked='true'] > i {
+  transform: translateX(22px);
+}
+html body #donorThanksDialog #thanksStatus {
+  margin: 4px 0 0;
+  font-size: 12px;
+}

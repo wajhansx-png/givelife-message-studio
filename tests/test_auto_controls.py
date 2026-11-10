@@ -1,4 +1,4 @@
-"""Reports > Auto: four controls over the existing engines. Stubbed transport: nothing is ever sent."""
+"""Reports > Auto: five controls over the existing engines. Stubbed transport: nothing is ever sent."""
 
 import hashlib, time, unittest
 from unittest.mock import patch
@@ -71,8 +71,9 @@ class Defaults(Base):
 
     def test_cards_are_named_for_what_they_do(self):
         controls = self.c.view()["controls"]
-        self.assertEqual(list(controls), [ac.GROUP, ac.DONOR_DM, IMPORTANT, ac.VOLUNTEER])
+        self.assertEqual(list(controls), [ac.GROUP, ac.DONOR_DM, IMPORTANT, ac.VOLUNTEER, ac.THANKS])
         self.assertEqual(controls[ac.VOLUNTEER]["title"], "Volunteer Auto")
+        self.assertEqual(controls[ac.THANKS]["title"], "Thanks donors")
         self.assertEqual(controls[ac.GROUP]["title"], "Group Auto")
         self.assertEqual(controls[ac.DONOR_DM]["title"], "DM Top Donors")
         self.assertEqual(controls[IMPORTANT]["title"], "DM Important Donors")

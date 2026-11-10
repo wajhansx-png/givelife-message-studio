@@ -1,4 +1,4 @@
-"""Reports > Auto: three independent ON/OFF controls. No second sending engine.
+"""Reports > Auto: independent ON/OFF controls, including case completion updates. Existing campaign engines and a case-scoped completion queue.
 
 - Group Auto drives the existing Auto engine (its schedule, rotation and saved group messages).
 - DM Top Donors (key donor_dm) and DM Important Donors (key important) each start ONE batch on the existing
@@ -8,13 +8,15 @@
   OFF: nothing restarts by itself and nothing is ever switched on without the owner pressing ON.
 """
 
-import threading, time, uuid
+import threading, uuid
 
 GROUP, DONOR_DM, IMPORTANT, VOLUNTEER = "group", "donor_dm", "important", "volunteer"
-CONTROLS = (GROUP, DONOR_DM, IMPORTANT, VOLUNTEER)
+THANKS = "thanks"
+CONTROLS = (GROUP, DONOR_DM, IMPORTANT, VOLUNTEER, THANKS)
 RUNNING = ("Starting", "Sending", "Waiting")
 SETTINGS_KEY = "auto_controls_settings"
 TITLES = {
+    THANKS: "Thanks donors",
     GROUP: "Group Auto",
     DONOR_DM: "DM Top Donors",
     IMPORTANT: "DM Important Donors",
@@ -31,6 +33,7 @@ VOLUNTEER_GAP_MINUTES, VOLUNTEER_BATCH, VOLUNTEER_REST_MINUTES = 5, 10, 15
 VOLUNTEER_JITTER = {"min": -15, "max": 15}
 
 DEFAULTS = {
+    THANKS: {"gap_minutes": 5, "batch_size": 10, "rest_minutes": 20},
     GROUP: {"main_every": None, "freelance_every": None},
     DONOR_DM: {"follow_up": False, "gap_minutes": None, "batch_size": None},
     IMPORTANT: {
@@ -48,6 +51,11 @@ DEFAULTS = {
     },
 }
 FIELDS = {
+    THANKS: [
+        {"key": "gap_minutes", "label": "Minutes between donors", "type": "number", "min": 1, "max": 1440},
+        {"key": "batch_size", "label": "Donors per batch", "type": "number", "min": 1, "max": 100},
+        {"key": "rest_minutes", "label": "Minutes between batches", "type": "number", "min": 1, "max": 1440},
+    ],
     GROUP: [
         {
             "key": "main_every",
@@ -164,6 +172,8 @@ class AutoControls:
         return saved if isinstance(saved, dict) else {}
 
     def settings(self, which):
+        if which == THANKS and getattr(self.app.donors(), 'thanks', None):
+            return self.app.donors().thanks.view()['settings']
         merged = dict(DEFAULTS[which])
         merged.update({k: v for k, v in (self._saved().get(which) or {}).items() if k in merged})
         return merged
@@ -249,7 +259,7 @@ class AutoControls:
         return ""
 
     def _dm_view(self, which):
-        job, settings = self._job(which), self.settings(which)
+        job = self._job(which)
         view = {
             "on": False,
             "recipients": 0,
@@ -331,7 +341,14 @@ class AutoControls:
     def view(self):
         out = {"left": self.app.read_left(), "controls": {}}
         for which in CONTROLS:
-            body = self._group_view() if which == GROUP else self._dm_view(which)
+            if which == THANKS:
+                thanks = getattr(self.app.donors(), 'thanks', None)
+                v = thanks.view() if thanks else {}
+                body = {'on': bool(v.get('on')), 'state': 'ON' if v.get('on') else 'OFF',
+                    'recipients': v.get('total', 0), 'sent': v.get('sent', 0), 'pending': v.get('pending', 0),
+                    'next_at': v.get('next_at'), 'note': v.get('error') or 'Saved completion update · Donated → Thank donors'}
+            else:
+                body = self._group_view() if which == GROUP else self._dm_view(which)
             settings = self.settings(which)
             if which == GROUP:
                 summary = self.app.ENGINE.summary()
@@ -356,6 +373,12 @@ class AutoControls:
         if type(on) is not bool:
             raise ValueError("Choose ON or OFF.")
         with self.lock:
+            if which == THANKS:
+                thanks = self.app.donors().thanks
+                if settings:
+                    thanks.configure(self._normalise(THANKS, settings))
+                thanks.start() if on else thanks.stop()
+                return self.view()
             if which == GROUP:
                 return self._set_group(on)
             if on and which == VOLUNTEER:
@@ -530,6 +553,9 @@ class AutoControls:
         if which not in CONTROLS:
             raise ValueError("Unknown control.")
         with self.lock:
+            if which == THANKS:
+                self.app.donors().thanks.configure(self._normalise(THANKS, settings))
+                return self.view()
             if which == GROUP:
                 clean = self._normalise(which, settings)
                 now = self.app.ENGINE.summary()

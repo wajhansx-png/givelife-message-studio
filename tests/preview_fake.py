@@ -108,22 +108,13 @@ poster = ROOT.parent / "cloud-service/poster.jpg"
 import server
 
 
-class Store:
+from persist import SqliteStore
+
+
+class Store(SqliteStore):
     def __init__(self):
-        self.data = {}
-        self.lock = threading.RLock()
-
-    def get(self, k, d=None):
-        import copy
-
-        with self.lock:
-            return copy.deepcopy(self.data.get(k, d))
-
-    def put(self, k, v):
-        import copy
-
-        with self.lock:
-            self.data[k] = copy.deepcopy(v)
+        super().__init__(Path(folder.name) / 'preview.sqlite')
+        self.initialize()
 
 
 server.STORE = Store()
@@ -161,7 +152,7 @@ if "--draft-task" in sys.argv:
     )["set_message"](kind="group", text=text)
 if "--fake-ai" in sys.argv:
     # Scripted writer for the four message buttons only: every other feature still sees "AI not connected".
-    import itertools, re as _re
+    import itertools
 
     _n = itertools.count()
     _URDU = ["ایک مجبور باپ کی فریاد سنیے", "گھر کے دروازے پر دستک ہے", "آج آپ کا ہاتھ ایک گھر بچا سکتا ہے",

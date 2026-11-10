@@ -266,7 +266,8 @@ for (const width of [280, 360, 430, 1440]) {
     expect(ys.length).toBe(4);
     expect(new Set(ys).size).toBe(1); // one row
     await page.locator('#ui2BankMore > summary').click();
-    await expect(page.locator('.ui2-bank-nav [data-ui2-proxy]').first()).toBeVisible();
+    if (width >= 900) await expect(page.locator('.ui2-desktop-regenerate')).toBeVisible();
+    else await expect(page.locator('.ui2-bank-nav [data-ui2-proxy]').first()).toBeVisible();
     const box = await page.locator('#ui2BankMore > div').boundingBox();
     expect(box.x).toBeGreaterThanOrEqual(-0.5);
     expect(box.x + box.width).toBeLessThanOrEqual(width + 0.5);

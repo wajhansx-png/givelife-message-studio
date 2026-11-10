@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const { auditElements } = require('./element-audit.cjs');
 const fs = require('node:fs');
+const selectedStates = process.env.CONTROL_STATES?.split(',').filter(Boolean);
 test.use({ reducedMotion: 'reduce' });
 test.describe.configure({ mode: 'parallel' });
 test('remembered Report cannot cover a newly opened dialog', async ({ page }) => {
@@ -41,6 +42,31 @@ const routes = [
 const states = [
   ...routes,
   ['notes-locked', 'notes', '#foundationNotes'],
+  ...['composer', 'pace', 'preview', 'recipients', 'media'].map((mode) => [
+    'thanks-' + mode,
+    'donors/donated',
+    '#donorThanksDialog',
+    async (p) => {
+      await p.evaluate(() => window.DonorThanks.open());
+      if (mode === 'pace') await p.locator('.thanks-timing > summary').click();
+      if (['preview', 'recipients'].includes(mode)) {
+        if (!(await p.locator('.thanks-review').evaluate((e) => e.open)))
+          await p.locator('.thanks-review > summary').click();
+      }
+      if (mode === 'recipients') await p.locator('#thanksAudience').click();
+      if (mode === 'media') {
+        await p.locator('#thanksFile').setInputFiles({
+          name: 'proof.png',
+          mimeType: 'image/png',
+          buffer: Buffer.from(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1cAAAAASUVORK5CYII=',
+            'base64',
+          ),
+        });
+        await p.locator('#thanksCaption').waitFor({ state: 'visible' });
+      }
+    },
+  ]),
   ['group-choice', '', '#dropFree', '.ui2-choose-btn'],
   ['group-timing', '', '#ui2LaterPanel', '#ui2Later'],
   ['speed-advanced', 'donors/all/pace', '#donorBatchPicker', '#ui2SpeedMore > summary'],
@@ -93,7 +119,10 @@ const states = [
     'message-edit',
     'donors/messages',
     '#donorsPage',
-    (p) => p.locator('.bank-actions').getByRole('button', { name: 'Edit', exact: true }).click(),
+    (p) =>
+      p.viewportSize().width >= 900
+        ? p.locator('.ui2-desktop-edit').click()
+        : p.locator('.bank-actions').getByRole('button', { name: 'Edit', exact: true }).click(),
   ],
   ['message-menu', 'donors/messages', '#ui2BankMore > div', '#ui2BankMore > summary'],
   [
@@ -146,6 +175,7 @@ for (const [w, h] of [
     p.setDefaultTimeout(5000);
     const results = [];
     for (const [name, route, root, prepare] of states) {
+      if (selectedStates && !selectedStates.includes(name)) continue;
       let errors = [];
       const handler = (e) => errors.push(e.message);
       p.on('pageerror', handler);
@@ -210,6 +240,7 @@ for (const [w, h] of [
       path: info.outputPath('controls.json'),
       contentType: 'application/json',
     });
+    expect(results.length).toBeGreaterThan(0);
     expect(results.filter((r) => r.error || r.errors?.length || r.failures?.length)).toEqual([]);
   });
 }

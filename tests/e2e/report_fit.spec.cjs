@@ -33,7 +33,7 @@ for (const active of [false, true]) {
       await page.evaluate(() => document.querySelector('.report-open').click());
       const report = page.getByRole('dialog', { name: 'Report', exact: true });
       await expect(report).toBeVisible();
-      await expect(report.locator('.auto-card')).toHaveCount(4);
+      await expect(report.locator('.auto-card')).toHaveCount(5);
       const overflow = await report.locator('.report-card').evaluate((e) => {
         const r = e.getBoundingClientRect();
         return {
@@ -59,7 +59,7 @@ for (const active of [false, true]) {
       await report.locator('.auto-head h4').first().click();
       await expect(report.locator('.auto-form:not([hidden])')).toBeVisible();
       await report.getByRole('button', { name: 'Cancel', exact: true }).click();
-      await expect(report.locator('.auto-card:visible')).toHaveCount(4);
+      await expect(report.locator('.auto-card:visible')).toHaveCount(5);
     });
   }
 }

@@ -151,7 +151,7 @@ class Cases:
             pass
 
     def _busy(self):
-        if self.hub.jobs.active or self.hub.volunteers.jobs.active:
+        if self.hub.jobs.active or self.hub.volunteers.jobs.active or (getattr(self.hub, 'thanks', None) and self.hub.thanks.active):
             raise ValueError("A DM batch is still running. Pause it first, then change the case.")
 
     # --- public

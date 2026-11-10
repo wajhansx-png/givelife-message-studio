@@ -1,80 +1,80 @@
 {
   "900x700": {
-    "states": 41,
-    "controls": 504,
-    "rendered_elements": 1438,
+    "states": 46,
+    "controls": 550,
+    "rendered_elements": 1604,
     "failures": 0
   },
   "280x480": {
-    "states": 41,
-    "controls": 532,
-    "rendered_elements": 1394,
+    "states": 46,
+    "controls": 576,
+    "rendered_elements": 1545,
     "failures": 0
   },
   "899x700": {
-    "states": 41,
-    "controls": 535,
-    "rendered_elements": 1448,
+    "states": 46,
+    "controls": 581,
+    "rendered_elements": 1610,
     "failures": 0
   },
   "430x932": {
-    "states": 41,
-    "controls": 530,
-    "rendered_elements": 1428,
+    "states": 46,
+    "controls": 573,
+    "rendered_elements": 1576,
     "failures": 0
   },
   "667x375": {
-    "states": 41,
-    "controls": 531,
-    "rendered_elements": 1401,
+    "states": 46,
+    "controls": 577,
+    "rendered_elements": 1563,
     "failures": 0
   },
   "1920x1080": {
-    "states": 41,
-    "controls": 504,
-    "rendered_elements": 1440,
+    "states": 46,
+    "controls": 550,
+    "rendered_elements": 1606,
     "failures": 0
   },
   "768x1024": {
-    "states": 41,
-    "controls": 535,
-    "rendered_elements": 1447,
+    "states": 46,
+    "controls": 581,
+    "rendered_elements": 1609,
     "failures": 0
   },
   "1024x768": {
-    "states": 41,
-    "controls": 504,
-    "rendered_elements": 1438,
+    "states": 46,
+    "controls": 550,
+    "rendered_elements": 1604,
     "failures": 0
   },
   "1440x900": {
-    "states": 41,
-    "controls": 504,
-    "rendered_elements": 1440,
+    "states": 46,
+    "controls": 550,
+    "rendered_elements": 1606,
     "failures": 0
   },
   "1280x800": {
-    "states": 41,
-    "controls": 504,
-    "rendered_elements": 1440,
+    "states": 46,
+    "controls": 550,
+    "rendered_elements": 1606,
     "failures": 0
   },
   "390x844": {
-    "states": 41,
-    "controls": 530,
-    "rendered_elements": 1428,
+    "states": 46,
+    "controls": 573,
+    "rendered_elements": 1576,
     "failures": 0
   },
   "320x480": {
-    "states": 41,
-    "controls": 532,
-    "rendered_elements": 1394,
+    "states": 46,
+    "controls": 576,
+    "rendered_elements": 1545,
     "failures": 0
   },
   "568x320": {
-    "states": 41,
-    "controls": 531,
-    "rendered_elements": 1401,
+    "states": 46,
+    "controls": 575,
+    "rendered_elements": 1552,
     "failures": 0
   }
 }

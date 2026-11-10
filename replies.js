@@ -383,7 +383,7 @@
     const x = cards[id];
     if (autoBusy) return;
     const turningOn = !x.last.on && x.last.state !== 'STOPPING';
-    if (turningOn && id !== 'group') {
+    if (turningOn && id !== 'group' && id !== 'thanks') {
       const s = x.last.settings,
         what =
           id === 'important'
@@ -437,6 +437,15 @@
       return (
         (s.main_every ? 'GiveLife every ' + s.main_every + ' min' : 'GiveLife on schedule') +
         (s.freelance_every ? ' · Freelance every ' + s.freelance_every + ' min' : '')
+      );
+    if (c.id === 'thanks')
+      return (
+        s.gap_minutes +
+        ' min apart · ' +
+        s.batch_size +
+        ' per batch · ' +
+        s.rest_minutes +
+        ' min rest'
       );
     if (c.id === 'important') return s.count + ' donors · ' + s.gap_minutes + ' min apart';
     if (c.id === 'volunteer')

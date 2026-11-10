@@ -20,14 +20,14 @@ async function openReport(page) {
   page.on('dialog', (d) => d.accept());
   await page.goto('/');
   await page.locator('.report-open').click();
-  await expect(page.locator('.auto-card')).toHaveCount(4);
+  await expect(page.locator('.auto-card')).toHaveCount(5);
 }
 const card = (page, id) => page.locator(`.auto-card[data-control="${id}"]`);
 const stat = (page, id, name) => card(page, id).locator(`[data-stat="${name}"] dd`);
 const events = async () =>
   (await api(PORT, '/__test/events')).events.filter((e) => /send/.test(e.path));
 
-test('four controls, all OFF at first, each with its numbers and Edit Settings', async ({
+test('five controls, all OFF at first, each with its numbers and Edit Settings', async ({
   page,
 }) => {
   await openReport(page);

@@ -313,6 +313,7 @@ const ui2Frame = (fn) => {
       if (nav.children.length) box.before(nav);
     }
     for (const t of box.querySelectorAll(':scope > button.tool')) {
+      if (ui2Wide.matches && t.matches('[data-bank-save-id], .bank-copy')) continue;
       const x = t.textContent.trim();
       if (x === 'Edit' || x === 'Done' || x === 'Copy') {
         t.style.setProperty('order', x === 'Copy' ? '2' : '1', 'important');
@@ -1497,3 +1498,100 @@ document.addEventListener(
   },
   true,
 );
+
+/* Desktop DM bank: navigation in the dock, quiet editing/copy icons around the message.
+   The original controls keep their handlers; phone/tablet DOM and layout stay as before. */
+(() => {
+  const COPY =
+    '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"/></svg>';
+  const PENCIL =
+    '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14z"/></svg>';
+  const SAVE =
+    '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>';
+  function make(cls, label, content, selector) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = cls;
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    button.innerHTML = content;
+    button.onclick = () => document.querySelector(selector)?.click();
+    return button;
+  }
+  function arrange() {
+    const root = document.getElementById('donorMessages');
+    if (!root) return;
+    if (!ui2Wide.matches) {
+      root
+        .querySelectorAll('.ui2-desktop-msg-control')
+        .forEach((e) => e.remove());
+      root
+        .querySelector('.bank-detail')
+        ?.classList.remove('ui2-desktop-editing');
+      return;
+    }
+    const card = root.querySelector('.bank-detail'),
+      preview = card?.querySelector('.bank-preview');
+    const actions = root.querySelector('.bank-actions'),
+      original = root.querySelector('[data-bank-save-id]');
+    if (!card || !preview || !actions || !original) return;
+    if (!actions.querySelector('.ui2-desktop-regenerate')) {
+      actions.append(
+        make(
+          'ui2-desktop-msg-control ui2-desktop-regenerate',
+          'Regenerate',
+          '↻ Regenerate',
+          '#donorMessages .bank-gen-icon',
+        ),
+        make(
+          'ui2-desktop-msg-control ui2-desktop-next',
+          'Next message',
+          'Next ›',
+          '#donorMessages [data-bank-nav="next"]',
+        ),
+      );
+    }
+    actions.querySelector('.ui2-desktop-regenerate').disabled =
+      !!root.querySelector('.bank-regenerate')?.disabled;
+    actions.querySelector('.ui2-desktop-next').disabled = !!root.querySelector(
+      '[data-bank-nav="next"]',
+    )?.disabled;
+    let edit = card.querySelector('.ui2-desktop-edit');
+    if (!edit)
+      edit = make(
+        'ui2-desktop-msg-control ui2-desktop-edit',
+        'Edit message',
+        PENCIL,
+        '#donorMessages [data-bank-save-id]',
+      );
+    const editing = !card.querySelector('textarea').hidden;
+    card.classList.toggle('ui2-desktop-editing', editing);
+    const host = editing ? card : preview;
+    if (edit.parentElement !== host) host.append(edit);
+    const label = editing ? 'Save message' : 'Edit message';
+    if (edit.getAttribute('aria-label') !== label) {
+      edit.setAttribute('aria-label', label);
+      edit.title = label;
+      edit.innerHTML = editing ? SAVE : PENCIL;
+    }
+    edit.disabled = original.disabled;
+    let copy = card.querySelector('.ui2-desktop-copy');
+    if (!copy) {
+      copy = make(
+        'ui2-desktop-msg-control ui2-desktop-copy',
+        'Copy message',
+        COPY,
+        '#donorMessages .bank-copy',
+      );
+      card.append(copy);
+    }
+    copy.hidden = editing;
+  }
+  const run = ui2Frame(arrange);
+  new MutationObserver(run).observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+  ui2Wide.addEventListener('change', run);
+  arrange();
+})();

@@ -20,7 +20,7 @@
         <div class="thanks-opt" data-k="rest"><label>Rest after a batch<select id="thanksRestSel"></select></label><div class="thanks-custom" hidden><label>min<input id="thanksRest" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksRestSec" type="number" min="0" max="59" inputmode="numeric"></label></div></div>
       </div></section>
   </section></div>
-  <div class="thanks-start"><span id="thanksStartLabel">Start sending</span><button type="button" role="switch" id="thanksSwitch" aria-checked="false" aria-label="Start sending the thank-you updates"><i></i></button></div><p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save</button><button type="button" id="thanksTest" title="Send this to the GiveLife test group only">Test</button><button type="button" id="thanksClose" aria-label="Close Thank donors">Back</button></footer>`;
+  <p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save</button><button type="button" id="thanksTest" title="Send this to the GiveLife test group only">Test</button><div class="thanks-start"><span id="thanksStartLabel">Start</span><button type="button" role="switch" id="thanksSwitch" aria-checked="false" aria-label="Start sending the thank-you updates"><i></i></button></div><button type="button" id="thanksClose" aria-label="Close Thank donors">Back</button></footer>`;
   document.body.append(dialog);
   const $ = (id) => dialog.querySelector('#' + id);
   let state,
@@ -61,10 +61,10 @@
           (!state.media.length && !$('thanksMessage').value.trim()) ||
           state.pending === 0));
     $('thanksStartLabel').textContent = on
-      ? 'Sending · switch off to pause'
+      ? state.sent + '/' + state.total + ' sent'
       : state
-        ? 'Send to ' + state.pending + ' donors'
-        : 'Start sending';
+        ? state.pending + ' donors'
+        : 'Start';
     for (const b of dialog.querySelectorAll('.thanks-remove, .thanks-attach'))
       b.disabled = busy || state?.on || (b.classList.contains('thanks-attach') && state?.media.length >= MAX_MEDIA);
   }

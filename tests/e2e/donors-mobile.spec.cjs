@@ -172,6 +172,7 @@ test('Donor row editor stays inside a narrow phone and the keyboard can be used'
     contentType: 'image/png',
   });
   await page.locator('.donor-row .donor-menu-close').first().click();
+  await page.locator('#donorNavMore > summary').click(); // + Add lives in More on phones
   await page.locator('#donorAdd').click();
   await expect(page.locator('#donorAddDialog')).toBeVisible();
   await page.setViewportSize({ width: 320, height: 420 });

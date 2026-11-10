@@ -2198,3 +2198,10 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot >
     line-height: 1;
   }
 }
+
+/* With the phone keyboard open (very short screen) the Volunteers message needs the room: the header band steps aside. */
+@media (max-height: 480px) {
+  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d):not(#e):not(#f):not(#g)[data-panel='volunteers'] .donor-head {
+    display: none !important;
+  }
+}

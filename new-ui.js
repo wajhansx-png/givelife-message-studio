@@ -958,6 +958,19 @@ const ui2Frame = (fn) => {
         if (t) setText(name, t);
       }
     }
+    /* The tab you are on is always in view: the row scrolls to it when the tab changes (and when the screen opens). */
+    const strip = document.querySelector('.donor-tabs'),
+      sel = strip?.querySelector('[aria-selected="true"]');
+    if (strip && sel) {
+      /* Again whenever the tab or the row's size changes (labels settle, buttons step aside), never while you scroll it. */
+      const key = [sel.dataset.tab, strip.scrollWidth, strip.clientWidth].join(':');
+      const r = sel.getBoundingClientRect(),
+        box = strip.getBoundingClientRect();
+      if (strip.dataset.ui2Sel !== key && box.width && r.width) {
+        strip.dataset.ui2Sel = key;
+        strip.scrollLeft += r.left + r.width / 2 - (box.left + box.width / 2);
+      }
+    }
   }
   function head() {
     const h = document.querySelector('.donor-head'),

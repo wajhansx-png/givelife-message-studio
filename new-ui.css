@@ -3988,9 +3988,9 @@
   .UI2 #donorsPage #donorVolunteers > .vol-workspace {
     max-height: none !important;
   }
-  /* Volunteers has its own dock: the two buttons keep their space (so the tabs never change width) but are not used. */
+  /* Volunteers has its own dock and its own + Add: the search and ⋯ buttons step aside and the tabs use the full width. */
   .UI2 #donorsPage[data-panel='volunteers'] .donor-toolbar > :is(.ui2-donor-search, .ui2-add-menu) {
-    visibility: hidden;
+    display: none;
   }
 }
 
@@ -4026,5 +4026,25 @@
     min-height: 0 !important;
     grid-template-rows: 48px !important;
     grid-auto-rows: 0 !important;
+  }
+}
+
+/* Computer: the Volunteers people list and message sit one above the other, never on top of each other,
+   and the people list scrolls inside its own box when there are many. */
+@media (min-width: 900px) {
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace {
+    display: flex !important;
+    flex-direction: column;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow-y: auto;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace > .vol-people {
+    flex: 0 1 auto;
+    width: 100%;
+    max-height: min(500px, 55vh) !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace > .vol-msg {
+    flex: 0 0 auto;
   }
 }

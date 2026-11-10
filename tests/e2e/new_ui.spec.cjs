@@ -661,6 +661,21 @@ test('/new phone donors: the ⋯ menu holds Add numbers, Add one donor, Bulk and
   expect(chip.height).toBeGreaterThanOrEqual(44);
 });
 
+test('/new phone donors: the tab you are on is always in view; Volunteers uses the full tab row', async ({
+  page,
+}) => {
+  for (const tab of ['volunteers', 'donated', 'all']) {
+    await open(page, '/new#/donors/' + tab, 390);
+    await expect(page.locator(`.donor-tabs [data-tab="${tab}"]`)).toBeInViewport({ ratio: 0.95 });
+  }
+  await page.locator('.donor-tabs [data-tab="volunteers"]').click();
+  await expect(page.locator('#donorVolunteers')).toBeVisible();
+  await expect(page.locator('#ui2DonorSearch')).toBeHidden(); // Volunteers has its own + Add dock
+  await expect(page.locator('#donorNavMore')).toBeHidden();
+  const tabs = await page.locator('.donor-tabs').boundingBox();
+  expect(tabs.x + tabs.width).toBeGreaterThan(390 - 16); // the tabs use the whole row
+});
+
 test('/new phone DM messages: the message takes the free height; every button is together at the bottom', async ({
   page,
 }) => {

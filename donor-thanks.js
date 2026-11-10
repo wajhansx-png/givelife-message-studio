@@ -43,7 +43,10 @@
       throw Error(result.error || 'Could not save this update. Your text is still here.');
     return result;
   }
-  const note = (text) => ($('thanksStatus').textContent = text);
+  const note = (text, level = 'info') => {
+    $('thanksStatus').textContent = text;
+    $('thanksStatus').dataset.level = level;
+  };
   function controls() {
     for (const field of dialog.querySelectorAll('input,textarea'))
       field.disabled = busy || state?.on;
@@ -53,6 +56,7 @@
       busy || !state || (!state.media.length && !$('thanksMessage').value.trim());
     const on = !!state?.on;
     $('thanksSwitch').setAttribute('aria-checked', String(on));
+    $('thanksSwitch').setAttribute('aria-label', on ? 'Stop sending thank-you updates' : 'Start sending thank-you updates');
     $('thanksSwitch').disabled =
       busy ||
       !state ||
@@ -221,7 +225,7 @@
     try {
       await task();
     } catch (error) {
-      note(error.message);
+      note(error.message, 'error');
     } finally {
       busy = false;
       controls();
@@ -243,7 +247,7 @@
     action(async () => {
       state = await api('stop', { case_id: state.case_id });
       fill();
-      note('Paused. An upload already started may finish.');
+      note('Paused. An upload already started may finish.', 'warning');
     });
   $('thanksSwitch').onclick = () => (state?.on ? pauseSending() : startSending());
   $('thanksTest').onclick = () =>
@@ -309,7 +313,7 @@
           state = latest;
           audience();
           controls();
-          note(state.error || (state.on ? 'Updates are sending.' : 'Updates finished or paused.'));
+          note(state.error || (state.on ? 'Updates are sending.' : 'Updates finished or paused.'), state.error ? 'error' : 'info');
         }
       }
     } catch (_) {}

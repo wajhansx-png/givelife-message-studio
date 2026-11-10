@@ -2605,3 +2605,34 @@ html body #donorThanksDialog :is(#thanksSave, #thanksTest, .thanks-attach):focus
   outline: 2px solid #b9caff;
   outline-offset: 2px;
 }
+
+/* Clear action and status colors for the compact Thank donors dialog. */
+html body #donorThanksDialog #thanksSwitch[aria-checked='false'] {
+  background: #434956 !important;
+  border-color: #727987;
+}
+html body #donorThanksDialog #thanksSwitch[aria-checked='true'] {
+  background: #16734e !important;
+  border-color: #35a779;
+}
+html body #donorThanksDialog #thanksRemove:not(:disabled) {
+  color: #ffc1c1;
+  border-color: #955d67;
+}
+html body #donorThanksDialog #thanksClose:not(:disabled) {
+  color: #e4e7ee;
+  border-color: #59606f;
+}
+html body #donorThanksDialog #thanksStatus {
+  color: #b8bfce;
+}
+html body #donorThanksDialog #thanksStatus[data-level='warning'] {
+  color: #ffd27c;
+}
+html body #donorThanksDialog #thanksStatus[data-level='error'] {
+  color: #ffb1b1;
+}
+html body #donorThanksDialog :is(button, select, input, textarea):focus-visible {
+  outline: 2px solid #b9caff;
+  outline-offset: 2px;
+}

@@ -4146,7 +4146,7 @@
   .UI2 #donorsPage[data-panel='volunteers'] .donor-shell > .donor-head {
     display: flex !important;
   }
-  .UI2 #donorsPage[data-panel='volunteers'] .donor-head > :is(.ui2-add-menu, #donorHideRow, .ui2-donor-search) {
+  .UI2 #donorsPage[data-panel='volunteers'] .donor-head > :is(#donorHideRow, .ui2-donor-search) {
     visibility: hidden;
   }
 }

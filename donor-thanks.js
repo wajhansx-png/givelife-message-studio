@@ -26,6 +26,7 @@
     selectedMedia = 0,
     viewVersion = 0,
     busy = false,
+    starting = false,
     poll;
   async function api(action, body = {}) {
     const response = await fetch(
@@ -54,9 +55,10 @@
     $('thanksSave').disabled = busy || state?.on;
     $('thanksTest').disabled =
       busy || !state || (!state.media.length && !$('thanksMessage').value.trim());
-    const on = !!state?.on;
+    const on = !!state?.on || starting;
     $('thanksSwitch').setAttribute('aria-checked', String(on));
-    $('thanksSwitch').setAttribute('aria-label', on ? 'Stop sending thank-you updates' : 'Start sending thank-you updates');
+    $('thanksSwitch').setAttribute('aria-label', starting ? 'Starting thank-you updates' : on ? 'Stop sending thank-you updates' : 'Start sending thank-you updates');
+    $('thanksSwitch').setAttribute('aria-busy', String(starting));
     $('thanksSwitch').disabled =
       busy ||
       !state ||
@@ -64,7 +66,9 @@
         (state.left > 0 ||
           (!state.media.length && !$('thanksMessage').value.trim()) ||
           state.pending === 0));
-    $('thanksStartLabel').textContent = on
+    $('thanksStartLabel').textContent = starting
+      ? 'Starting…'
+      : on
       ? state.sent + '/' + state.total + ' sent'
       : state
         ? state.pending + ' donors'
@@ -218,15 +222,23 @@
     });
     fill();
   }
-  async function action(task) {
+  async function action(task, start = false) {
     if (busy) return;
+    starting = start;
     busy = true;
     controls();
     try {
       await task();
     } catch (error) {
+      if (start) {
+        try {
+          const latest = await api();
+          if (latest.case_id === state?.case_id) state.on = latest.on;
+        } catch (_) {}
+      }
       note(error.message, 'error');
     } finally {
+      starting = false;
       busy = false;
       controls();
     }
@@ -242,7 +254,7 @@
       state = await api('start', { case_id: state.case_id, revision: state.revision });
       fill();
       note('Sending. You can close this panel.');
-    });
+    }, true);
   const pauseSending = () =>
     action(async () => {
       state = await api('stop', { case_id: state.case_id });
@@ -252,8 +264,15 @@
   $('thanksSwitch').onclick = () => (state?.on ? pauseSending() : startSending());
   $('thanksTest').onclick = () =>
     action(async () => {
-      await save();
-      note((await api('test', { case_id: state.case_id })).reply);
+      const button = $('thanksTest');
+      button.textContent = 'Testing…';
+      note('Sending test…');
+      try {
+        await save();
+        note((await api('test', { case_id: state.case_id })).reply);
+      } finally {
+        button.textContent = 'Test';
+      }
     });
   for (const [id, accept] of [
     ['thanksAttachImg', 'image/jpeg,image/png,image/webp'],
@@ -442,18 +461,23 @@
     }
   };
   let tabState = null,
-    tabBusy = false;
+    tabBusy = false,
+    tabStarting = false;
   const tabSwitch = ctl.querySelector('#thanksTabSwitch'),
     tabTest = ctl.querySelector('#thanksTabTest'),
     tabLabel = ctl.querySelector('#thanksTabLabel');
   const hasUpdate = () => !!tabState && !!(tabState.media.length || tabState.message.trim());
   function paintTab() {
-    const on = !!tabState?.on;
+    const on = !!tabState?.on || tabStarting;
     tabSwitch.setAttribute('aria-checked', String(on));
+    tabSwitch.setAttribute('aria-busy', String(tabStarting));
+    tabSwitch.setAttribute('aria-label', tabStarting ? 'Starting thank-you updates' : on ? 'Stop sending thank-you updates' : 'Start sending thank-you updates');
     tabSwitch.disabled =
       tabBusy || !tabState || (!on && (tabState.left > 0 || tabState.pending === 0));
     tabTest.disabled = tabBusy || !tabState;
-    tabLabel.textContent = !tabState
+    tabLabel.textContent = tabStarting
+      ? 'Starting…'
+      : !tabState
       ? '… donors'
       : on
         ? `${tabState.sent}/${tabState.total} sent`
@@ -475,6 +499,8 @@
   tabSwitch.onclick = async () => {
     if (tabBusy || !tabState) return;
     tabBusy = true;
+    tabStarting = !tabState.on && hasUpdate() && tabState.left <= 0;
+    if (tabStarting) modeNotice('Starting…');
     paintTab();
     try {
       if (tabState.on) {
@@ -486,8 +512,12 @@
         modeNotice('Sending the saved update to every donor, at your timing.');
       }
     } catch (error) {
+      if (tabStarting) {
+        try { tabState = await api(); } catch (_) {}
+      }
       modeNotice(error.message);
     } finally {
+      tabStarting = false;
       tabBusy = false;
       paintTab();
     }
@@ -495,12 +525,15 @@
   tabTest.onclick = async () => {
     if (tabBusy || !tabState || needsSaved()) return;
     tabBusy = true;
+    tabTest.textContent = 'Testing…';
+    modeNotice('Sending test…');
     paintTab();
     try {
       modeNotice((await api('test', { case_id: tabState.case_id })).reply);
     } catch (error) {
       modeNotice(error.message);
     } finally {
+      tabTest.textContent = 'Test';
       tabBusy = false;
       paintTab();
     }

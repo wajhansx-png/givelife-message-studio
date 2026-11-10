@@ -298,3 +298,118 @@ test('an open tab says "New version ready" when the server has been updated, and
   await Promise.all([page.waitForEvent('load'), page.locator('#updateBar button').click()]);
   await expect(page.locator('#updateBar')).toHaveCount(0);
 });
+
+test('start shows immediately while saving, then restores on failure', async ({ page, request }) => {
+  const added = await (await request.post('/donors', {
+    headers,
+    data: { action: 'add', name: 'Toggle Test', phone: '15551239991' },
+  })).json();
+  await request.post('/donors', { headers, data: { action: 'update', id: added.donor.id, donated: true } });
+  await request.post('/left', { headers, data: { left: 0 } });
+  await page.addInitScript(k => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/donors/donated');
+  await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+  await page.locator('#thanksMessage').fill('Thank you.');
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  await page.route('**/donor-thanks', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postDataJSON()?.action === 'save') {
+      await gate;
+      return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({error:'Save failed'}) });
+    }
+    return route.continue();
+  });
+  await page.locator('#thanksSwitch').click();
+  await expect(page.locator('#thanksSwitch')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('#thanksSwitch')).toBeDisabled();
+  await expect(page.locator('#thanksStartLabel')).toHaveText('Starting…');
+  release();
+  await expect(page.locator('#thanksStatus')).toHaveText('Save failed');
+  await expect(page.locator('#thanksSwitch')).toHaveAttribute('aria-checked', 'false');
+  await expect(page.locator('#thanksSwitch')).toBeEnabled();
+});
+
+test('donated tab toggle shows starting and rolls back on start failure', async ({ page, request }) => {
+  const added = await (await request.post('/donors', {
+    headers, data: { action: 'add', name: 'Tab test', phone: '15551239992' },
+  })).json();
+  await request.post('/donors', { headers, data: { action: 'update', id: added.donor.id, donated: true } });
+  await request.post('/left', { headers, data: { left: 0 } });
+  const initial = await (await request.get('/donor-thanks', { headers })).json();
+  await request.post('/donor-thanks', {headers, data: {
+    action: 'save', case_id: initial.case_id, revision: initial.revision, media: [], message: 'Thank you.'
+  }});
+  await page.addInitScript(k => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/donors/donated');
+  await expect(page.locator('#thanksTabSwitch')).toBeEnabled();
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  await page.route('**/donor-thanks', async route => {
+    if (route.request().method() === 'POST' && route.request().postDataJSON()?.action === 'start') {
+      await gate;
+      return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({error:'Start failed'}) });
+    }
+    return route.continue();
+  });
+  await page.locator('#thanksTabSwitch').click();
+  await expect(page.locator('#thanksTabSwitch')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('#thanksTabLabel')).toHaveText('Starting…');
+  release();
+  await expect(page.locator('#thanksRowStatus')).toHaveText('Start failed');
+  await expect(page.locator('#thanksTabSwitch')).toHaveAttribute('aria-checked', 'false');
+});
+
+test('test button responds immediately and reports a failed test', async ({ page }) => {
+  await page.setViewportSize({width:320,height:740});
+  await page.addInitScript(k => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/donors/donated');
+  await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+  await page.locator('#thanksMessage').fill('Thank you.');
+  let release, calls = 0;
+  const gate = new Promise(resolve => { release = resolve; });
+  await page.route('**/donor-thanks', async route => {
+    if (route.request().method() === 'POST' && route.request().postDataJSON()?.action === 'test') {
+      calls++;
+      await gate;
+      return route.fulfill({status:400, contentType:'application/json', body:JSON.stringify({error:'Test failed'})});
+    }
+    return route.continue();
+  });
+  await page.locator('#thanksTest').click();
+  await expect(page.locator('#thanksTest')).toHaveText('Testing…');
+  await expect(page.locator('#thanksTest')).toBeDisabled();
+  for (const button of await page.locator('#donorThanksDialog footer button').all()) {
+    const rect = await button.boundingBox();
+    expect(rect.x).toBeGreaterThanOrEqual(0);
+    expect(rect.x + rect.width).toBeLessThanOrEqual(320);
+  }
+  await expect(page.locator('#thanksStatus')).toHaveText('Sending test…');
+  release();
+  await expect(page.locator('#thanksStatus')).toHaveText('Test failed');
+  await expect(page.locator('#thanksTest')).toHaveText('Test');
+  expect(calls).toBe(1);
+});
+
+test('donated tab test responds immediately while the request is pending', async ({page, request}) => {
+  const data = await (await request.get('/donor-thanks', {headers})).json();
+  await request.post('/donor-thanks', {headers, data:{action:'save', case_id:data.case_id, revision:data.revision, media:[], message:'Thank you.'}});
+  await page.addInitScript(k => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/donors/donated');
+  await expect(page.locator('#thanksTabTest')).toBeEnabled();
+  let release;
+  const gate = new Promise(resolve => {release = resolve;});
+  await page.route('**/donor-thanks', async route => {
+    if (route.request().method() === 'POST' && route.request().postDataJSON()?.action === 'test') {
+      await gate;
+      return route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:'Test failed'})});
+    }
+    return route.continue();
+  });
+  await page.locator('#thanksTabTest').click();
+  await expect(page.locator('#thanksTabTest')).toHaveText('Testing…');
+  await expect(page.locator('#thanksTabTest')).toBeDisabled();
+  release();
+  await expect(page.locator('#thanksRowStatus')).toHaveText('Test failed');
+  await expect(page.locator('#thanksTabTest')).toHaveText('Test');
+});

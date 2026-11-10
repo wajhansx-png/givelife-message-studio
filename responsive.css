@@ -2636,3 +2636,53 @@ html body #donorThanksDialog :is(button, select, input, textarea):focus-visible 
   outline: 2px solid #b9caff;
   outline-offset: 2px;
 }
+
+/* Starting is shown immediately while confirmation arrives. */
+html body #donorThanksDialog #thanksSwitch[aria-busy='true'] {
+  opacity: 1;
+}
+html body #donorsPage #thanksTabSwitch[aria-busy='true'] {
+  opacity: 1;
+}
+html body #donorsPage #thanksTabSwitch[aria-checked='true'] {
+  background: #16734e !important;
+  border-color: #35a779;
+}
+
+/* Premium black surfaces with the studio's blue and purple accents. */
+html body #donorThanksDialog {
+  --surface: #08090c;
+  --bg: #14161c;
+  --line: #303440;
+  --line2: #303440;
+  background: #08090c !important;
+  border-color: #303440;
+}
+html body #donorThanksDialog :is(textarea, input, select) {
+  background: #14161c !important;
+  border-color: #303440;
+  color: #f5f6fa;
+}
+html body #donorThanksDialog #thanksSave:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb, #6331c6) !important;
+  border-color: #426ce0;
+}
+html body #donorThanksDialog #thanksTest:not(:disabled) {
+  background: #3d315e !important;
+  border-color: #7460a9;
+}
+html body #donorThanksDialog#donorThanksDialog .thanks-attach:not(:disabled) {
+  background: #202943 !important;
+  border-color: #465ca0;
+  color: #e2e9ff;
+}
+html body #donorThanksDialog #thanksClose:not(:disabled) {
+  background: #111c30 !important;
+  border-color: #4267ad;
+  color: #e4ecff;
+}
+html body #donorThanksDialog footer #thanksTest {
+  white-space: nowrap;
+  font-size: 12px;
+  padding-inline: 6px;
+}

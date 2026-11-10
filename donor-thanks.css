@@ -486,3 +486,47 @@ html body #donorThanksDialog .thanks-capd > textarea {
   min-height: 56px;
   box-sizing: border-box;
 }
+
+/* The start toggle: one ON/OFF switch, like the other Autos. */
+html body #donorThanksDialog .thanks-start {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+html body #donorThanksDialog #thanksSwitch {
+  position: relative;
+  flex: none;
+  width: 64px;
+  min-width: 64px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid var(--line, #3a4052);
+  border-radius: 999px;
+  background: #3a3f4d;
+  cursor: pointer;
+}
+html body #donorThanksDialog #thanksSwitch > i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+html body #donorThanksDialog #thanksSwitch[aria-checked='true'] {
+  border-color: transparent;
+  background: #1f8a63;
+}
+html body #donorThanksDialog #thanksSwitch[aria-checked='true'] > i {
+  transform: translateX(28px);
+}
+html body #donorThanksDialog #thanksSwitch:disabled {
+  opacity: 0.45;
+}

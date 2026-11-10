@@ -22,7 +22,7 @@
         <div class="thanks-opt" data-k="rest"><label>Rest after a batch<select id="thanksRestSel"></select></label><div class="thanks-custom" hidden><label>min<input id="thanksRest" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksRestSec" type="number" min="0" max="59" inputmode="numeric"></label></div></div>
       </div></section>
   </section></div>
-  <p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save</button><button type="button" id="thanksTest" title="Send this to the GiveLife test group only">Test</button><button type="button" id="thanksSend" class="primary">Send</button><button type="button" id="thanksPause" hidden>Pause</button><button type="button" id="thanksClose" aria-label="Close Thank donors">Back</button></footer>`;
+  <div class="thanks-start"><span id="thanksStartLabel">Start sending</span><button type="button" role="switch" id="thanksSwitch" aria-checked="false" aria-label="Start sending the thank-you updates"><i></i></button></div><p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save</button><button type="button" id="thanksTest" title="Send this to the GiveLife test group only">Test</button><button type="button" id="thanksClose" aria-label="Close Thank donors">Back</button></footer>`;
   document.body.append(dialog);
   const $ = (id) => dialog.querySelector('#' + id);
   let state,
@@ -53,15 +53,20 @@
     $('thanksSave').disabled = busy || state?.on;
     $('thanksTest').disabled =
       busy || !state || (!state.attachment && !state.attachment2 && !$('thanksMessage').value.trim());
-    $('thanksSend').hidden = !!state?.on;
-    $('thanksSend').disabled =
+    const on = !!state?.on;
+    $('thanksSwitch').setAttribute('aria-checked', String(on));
+    $('thanksSwitch').disabled =
       busy ||
       !state ||
-      state.left > 0 ||
-      (!state.attachment && !state.attachment2 && !$('thanksMessage').value.trim()) ||
-      state.pending === 0;
-    $('thanksPause').hidden = !state?.on;
-    $('thanksPause').disabled = busy;
+      (!on &&
+        (state.left > 0 ||
+          (!state.attachment && !state.attachment2 && !$('thanksMessage').value.trim()) ||
+          state.pending === 0));
+    $('thanksStartLabel').textContent = on
+      ? 'Sending · switch off to pause'
+      : state
+        ? 'Send to ' + state.pending + ' donors'
+        : 'Start sending';
     for (const b of dialog.querySelectorAll('.thanks-remove, .thanks-attach')) b.disabled = busy || state?.on;
   }
   /* Two attachment slots (an image and a video), each with its own optional caption. */
@@ -80,7 +85,12 @@
     }
     controls();
   }
-  function audience() {} // the recipient count is in the title line
+  function audience() {
+    $('thanksContext').textContent =
+      `${state.case_name} · ${state.total} donors` +
+      (state.sent ? ` · ${state.sent} sent · ${state.pending} waiting` : '') +
+      (state.left > 0 ? ' · Finish case to send' : '');
+  }
   function fill() {
     $('thanksCaption').value = state.caption;
     $('thanksCaption2').value = state.caption2 || '';
@@ -193,23 +203,24 @@
       await save();
       note('Update saved.');
     });
-  $('thanksSend').onclick = () =>
+  const startSending = () =>
     action(async () => {
       await save();
       state = await api('start', { case_id: state.case_id, revision: state.revision });
       fill();
       note('Sending. You can close this panel.');
     });
-  $('thanksTest').onclick = () =>
-    action(async () => {
-      await save();
-      note((await api('test', { case_id: state.case_id })).reply);
-    });
-  $('thanksPause').onclick = () =>
+  const pauseSending = () =>
     action(async () => {
       state = await api('stop', { case_id: state.case_id });
       fill();
       note('Paused. An upload already started may finish.');
+    });
+  $('thanksSwitch').onclick = () => (state?.on ? pauseSending() : startSending());
+  $('thanksTest').onclick = () =>
+    action(async () => {
+      await save();
+      note((await api('test', { case_id: state.case_id })).reply);
     });
   for (const sl of SLOTS)
     slotBox(sl).querySelector('.thanks-attach').onclick = () => {

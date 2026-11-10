@@ -115,7 +115,7 @@ for (const width of [1440, 768, 390, 320, 280]) {
       'Alhamdulillah, the case is complete.',
     );
     const before = (await (await request.get('/__test/events', { headers })).json()).events.length;
-    await page.locator('#thanksSend').click();
+    await page.locator('#thanksSwitch').click(); // the start toggle
     await expect
       .poll(
         async () => (await (await request.get('/__test/events', { headers })).json()).events.length,

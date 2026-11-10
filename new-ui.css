@@ -4120,3 +4120,49 @@
   background: #2f6fe4 !important;
   color: #fff !important;
 }
+/* Volunteers belongs to the donor directory: preserve its header, canvas and action theme. */
+.UI2 #donorsPage #donorVolunteers .vol-foot > .vol-back {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+.UI2 #donorsPage #donorVolunteers .vol-foot > .send-donors {
+  background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
+  border: 0 !important;
+  box-shadow: 0 6px 18px #4f46e555 !important;
+  flex: 0 1 auto;
+  width: auto !important;
+  padding-inline: 18px !important;
+}
+.UI2 #donorsPage #donorVolunteers .vol-row {
+  border-bottom-color: #161616 !important;
+}
+@media (min-width: 900px) {
+  .UI2 #donorsPage[data-panel='volunteers'] .donor-head {
+    display: flex !important;
+  }
+  .UI2 #donorsPage #donorVolunteers:not([hidden]) {
+    display: contents !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace {
+    flex: 1 1 0 !important;
+    width: min(760px, 100%) !important;
+    max-width: 100% !important;
+    margin: 24px auto 0 !important;
+    gap: 16px !important;
+    align-items: stretch !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace > .vol-msg {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot {
+    flex: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 8px 0 !important;
+    gap: 10px !important;
+  }
+}

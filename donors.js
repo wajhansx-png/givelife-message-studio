@@ -2903,6 +2903,10 @@
     }
   };
   el('donorAdd').onclick = () => {
+    if (tab === 'volunteers') {
+      page.querySelector('.vol-add-panel > summary')?.click();
+      return;
+    }
     el('donorAddNote').textContent = '';
     add.showModal();
     el('donorNewName').focus();

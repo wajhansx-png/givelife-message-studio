@@ -307,9 +307,6 @@
 }
 
 /* Volunteers follows the PDF references: message first, quiet rows, one Send/Stop dock. */
-html body #donorsPage[data-panel='volunteers'] {
-  background: var(--bg) !important;
-}
 html
   body:not(#a):not(#b):not(#c)
   #donorsPage#donorsPage:not(#d)[data-panel='volunteers']

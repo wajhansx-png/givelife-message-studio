@@ -5,21 +5,22 @@
   dialog.setAttribute('aria-labelledby', 'thanksTitle');
   dialog.innerHTML = `<header><div><h2 id="thanksTitle" tabindex="-1" autofocus>Thank donors</h2><small id="thanksContext"></small></div></header>
   <div class="thanks-body"><section class="thanks-compose">
-    <label for="thanksMessage">Message</label><textarea id="thanksMessage" aria-describedby="thanksNameHint" maxlength="4000" rows="4" placeholder="Write a thank-you message…"></textarea>
-    <small id="thanksNameHint">Use {name} for their first name. Sent after any attachment.</small>
     <div class="thanks-attach-row"><button type="button" id="thanksAttach">+ Attach file</button><small id="thanksFileHint">Photo, video or PDF</small></div>
     <input id="thanksFile" type="file" aria-label="Attach file" accept="image/jpeg,image/png,image/webp,video/mp4,application/pdf" hidden>
     <div class="thanks-file-row" hidden><span id="thanksFileName"></span><button type="button" id="thanksRemove" hidden>Remove</button></div>
     <div id="thanksCaptionWrap" hidden><label for="thanksCaption">Caption</label><textarea id="thanksCaption" maxlength="4000" rows="2" placeholder="Optional · shown with the attachment"></textarea></div>
+    <details class="thanks-msg"><summary>+ Message</summary>
+      <label for="thanksMessage">Message</label><textarea id="thanksMessage" aria-describedby="thanksNameHint" maxlength="4000" rows="4" placeholder="Write a thank-you message…"></textarea>
+      <small id="thanksNameHint">Use {name} for their first name. Sent after any attachment.</small>
+    </details>
     <details class="thanks-review"><summary>Preview</summary><div id="thanksPreview" aria-label="Message preview"></div><details><summary id="thanksAudience">Recipients</summary><ul id="thanksRecipients"></ul></details></details>
-    <section class="thanks-timing"><div class="thanks-pace-row"><b>Timing</b> <span id="thanksPace"></span></div>
-      <div class="thanks-presets" role="group" aria-label="Quick speed"><button type="button" data-preset="fast">Fast</button><button type="button" data-preset="normal">Normal</button><button type="button" data-preset="slow">Slow</button></div>
-      <details class="thanks-custom"><summary>Custom</summary><div class="thanks-grid">
-        <fieldset><legend>Gap</legend><label>min<input id="thanksGap" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksGapSec" type="number" min="0" max="59" inputmode="numeric"></label></fieldset>
-        <label>± vary (sec)<input id="thanksVary" type="number" min="0" max="300" inputmode="numeric"></label>
-        <label>Batch of<input id="thanksBatch" type="number" min="1" max="100" inputmode="numeric"></label>
-        <fieldset><legend>Rest</legend><label>min<input id="thanksRest" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksRestSec" type="number" min="0" max="59" inputmode="numeric"></label></fieldset>
-      </div></details></section>
+    <section class="thanks-timing"><b>Timing</b>
+      <div class="thanks-grid">
+        <fieldset><legend>Gap between donors</legend><label>min<input id="thanksGap" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksGapSec" type="number" min="0" max="59" inputmode="numeric"></label></fieldset>
+        <label>Vary gap by ± sec<input id="thanksVary" type="number" min="0" max="300" inputmode="numeric"></label>
+        <label>Donors per batch<input id="thanksBatch" type="number" min="1" max="100" inputmode="numeric"></label>
+        <fieldset><legend>Rest after a batch</legend><label>min<input id="thanksRest" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksRestSec" type="number" min="0" max="59" inputmode="numeric"></label></fieldset>
+      </div></section>
   </section></div>
   <p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save</button><button type="button" id="thanksTest" title="Send this to the GiveLife test group only">Test</button><button type="button" id="thanksSend" class="primary">Send</button><button type="button" id="thanksPause" hidden>Pause</button><button type="button" id="thanksClose" aria-label="Close Thank donors">Back</button></footer>`;
   document.body.append(dialog);
@@ -130,6 +131,7 @@
   function fill() {
     $('thanksCaption').value = state.caption;
     $('thanksMessage').value = state.message;
+    if (state.message) dialog.querySelector('.thanks-msg').open = true; // a saved message shows itself
     const c = state.settings;
     $('thanksGap').value = c.gap_minutes;
     $('thanksGapSec').value = c.gap_seconds || 0;
@@ -137,42 +139,10 @@
     $('thanksBatch').value = c.batch_size;
     $('thanksRest').value = c.rest_minutes;
     $('thanksRestSec').value = c.rest_seconds || 0;
-    pace();
     audience();
     preview();
   }
-  /* The timing in one short line, and the three quick speeds. */
   const num = (id) => Number($(id).value) || 0;
-  const dur = (m, s) => (m ? m + ' min' : '') + (m && s ? ' ' : '') + (s || !m ? s + ' sec' : '');
-  function pace() {
-    $('thanksPace').textContent =
-      dur(num('thanksGap'), num('thanksGapSec')) +
-      ' apart' +
-      (num('thanksVary') ? ' ±' + num('thanksVary') + 's' : '') +
-      ' · batches of ' +
-      num('thanksBatch');
-  }
-  const PRESETS = {
-    fast: [0, 30, 10, 20, 5, 0],
-    normal: [5, 0, 30, 10, 20, 0],
-    slow: [10, 0, 60, 5, 30, 0],
-  };
-  for (const b of dialog.querySelectorAll('[data-preset]'))
-    b.addEventListener('click', () => {
-      const [gm, gs, vary, batch, rm, rs] = PRESETS[b.dataset.preset];
-      for (const [id, v] of [
-        ['thanksGap', gm],
-        ['thanksGapSec', gs],
-        ['thanksVary', vary],
-        ['thanksBatch', batch],
-        ['thanksRest', rm],
-        ['thanksRestSec', rs],
-      ])
-        $(id).value = v;
-      pace();
-    });
-  for (const id of ['thanksGap', 'thanksGapSec', 'thanksVary', 'thanksBatch', 'thanksRest', 'thanksRestSec'])
-    $(id).addEventListener('input', pace);
   async function save() {
     state = await api('save', {
       case_id: state.case_id,

@@ -37,7 +37,7 @@ for (const width of [1440, 768, 390, 320, 280]) {
     const dialog = await page.locator('#donorThanksDialog').boundingBox();
     expect(dialog.width).toBeLessThanOrEqual(Math.min(width - 16, 680));
     await expect(page.locator('#thanksPreview')).not.toBeVisible();
-    await expect(page.locator('#thanksGap')).not.toBeVisible();
+    await expect(page.locator('#thanksGap')).toBeVisible(); // timing fields are always shown
     await page.locator('#thanksFile').setInputFiles({
       name: 'proof.png',
       mimeType: 'image/png',
@@ -48,6 +48,8 @@ for (const width of [1440, 768, 390, 320, 280]) {
     });
     await expect(page.locator('#thanksStatus')).toContainText('Media ready');
     await page.getByLabel('Caption', { exact: true }).fill('Alhamdulillah, the case is complete.');
+    await expect(page.locator('#thanksMessage')).toBeHidden(); // Message is folded: Attach comes first
+    await page.locator('.thanks-msg > summary').click();
     await page
       .locator('#donorThanksDialog')
       .getByLabel('Message', { exact: true })
@@ -58,19 +60,16 @@ for (const width of [1440, 768, 390, 320, 280]) {
       'Alhamdulillah, the case is complete.',
     );
     await expect(page.locator('#thanksPreview')).toContainText('JazakAllah khair, {name}.');
-    // Timing is one short line with three quick speeds; the exact numbers sit under Custom.
-    await expect(page.locator('#thanksPace')).toContainText(' apart');
-    await page.locator('[data-preset="fast"]').click();
-    await expect(page.locator('#thanksPace')).toHaveText('30 sec apart ±10s · batches of 20');
-    await page.locator('[data-preset="normal"]').click();
-    await page.locator('.thanks-custom > summary').click();
-    await expect(page.locator('#thanksGap')).toHaveValue('5');
-    await expect(page.locator('#thanksGapSec')).toHaveValue('0');
+    // Timing is plain fields, always visible: gap and rest in minutes and seconds, a variation, a batch size.
+    for (const id of ['thanksGap', 'thanksGapSec', 'thanksVary', 'thanksBatch', 'thanksRest', 'thanksRestSec'])
+      await expect(page.locator('#' + id)).toBeVisible();
+    await expect(page.locator('[data-preset]')).toHaveCount(0); // no Fast / Normal / Slow
     await expect(page.locator('#thanksBatch')).toHaveValue('10');
     await expect(page.locator('#thanksRest')).toHaveValue('20');
+    await page.locator('#thanksGap').fill('2');
     await page.locator('#thanksGapSec').fill('30');
-    await expect(page.locator('#thanksPace')).toContainText('5 min 30 sec apart');
-    await page.locator('#thanksGapSec').fill('0');
+    await page.locator('#thanksVary').fill('15');
+    await page.locator('#thanksRestSec').fill('45');
     // Test: the update goes to the GiveLife test group only, never to a donor.
     const beforeTest = (await (await request.get('/__test/events', { headers })).json()).events.length;
     await page.locator('#thanksTest').click();
@@ -82,6 +81,17 @@ for (const width of [1440, 768, 390, 320, 280]) {
     expect(testEvents[1].fields.message).toBe('JazakAllah khair, Test.');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.locator('#thanksStatus')).toContainText('Update saved');
+    const saved = (await (await request.get('/donor-thanks', { headers })).json()).settings;
+    expect([saved.gap_minutes, saved.gap_seconds, saved.vary_seconds, saved.rest_seconds]).toEqual([2, 30, 15, 45]);
+    const cur = await (await request.get('/donor-thanks', { headers })).json();
+    await request.post('/donor-thanks', {
+      headers,
+      data: {
+        action: 'settings',
+        case_id: cur.case_id,
+        settings: { gap_minutes: 5, gap_seconds: 0, vary_seconds: 0, batch_size: 10, rest_minutes: 20, rest_seconds: 0 },
+      },
+    }); // back to the defaults for the next test
     await page.getByRole('button', { name: 'Close Thank donors', exact: true }).click();
     await button.click();
     await expect(page.getByLabel('Caption', { exact: true })).toHaveValue(

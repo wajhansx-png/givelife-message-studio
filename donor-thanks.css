@@ -378,3 +378,22 @@ html body #donorThanksDialog .thanks-timing :is(label, legend) {
   font-size: 13px;
   cursor: pointer;
 }
+
+/* Timing: the plain fields, always visible, two to a row. */
+.thanks-timing > b {
+  display: block;
+  padding: 10px 0 6px;
+  font-size: 13px;
+}
+
+/* Message is third after the photo or video: one tap on "+ Message" opens it. */
+.thanks-msg > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.thanks-msg[open] > summary {
+  color: var(--mut);
+}

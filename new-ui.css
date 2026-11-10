@@ -4427,7 +4427,7 @@
     padding: 0 !important;
   }
   .UI2 #donorsPage#donorsPage #donorMessages .bank-workspace {
-    width: min(960px, 100%) !important;
+    width: min(640px, 100%) !important;
     max-width: none !important;
     max-height: none !important;
     gap: 8px !important;

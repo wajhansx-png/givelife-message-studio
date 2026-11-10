@@ -60,6 +60,9 @@ for (const [width, height] of [
     expect(result.top).toBeGreaterThan(0);
     expect(result.bottom).toBeLessThan(height);
     expect(result.last).toBeLessThanOrEqual(result.bottom);
+    const column = await page.locator('.bank-workspace').boundingBox();
+    expect(column.width).toBeLessThanOrEqual(640);
+    expect(Math.abs(column.x + column.width / 2 - width / 2)).toBeLessThan(2);
     const dock = await page.locator('.bank-actions').boundingBox();
     expect(dock.y + dock.height).toBeLessThanOrEqual(height);
     for (const tab of await page.locator('.bank-subtabs button').all()) {

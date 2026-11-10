@@ -1307,19 +1307,6 @@ const ui2Frame = (fn) => {
   });
 })();
 
-/* 11. Back on the Volunteers screen leaves Donors for the main screen (it used to just show the donor list). */
-document.addEventListener(
-  'click',
-  (e) => {
-    const b = e.target.closest?.('#donorsPage .vol-back');
-    if (!b) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    document.getElementById('donorMainBottom')?.click();
-  },
-  true,
-);
-
 /* 12. Phone Back gesture: Chrome on Android closes an open screen (a modal dialog) by itself and keeps the
    address (#/chat, #/settings ...). The next Back then only removed that stale entry, so it seemed to do
    nothing. Whenever one of these screens closes in any way, the address follows it back. */
@@ -1494,3 +1481,19 @@ document.addEventListener('click', (e) => {
   run();
   new MutationObserver(ui2Frame(run)).observe(document.body, { childList: true, subtree: true });
 })();
+
+/* The shared header's Add action follows the selected directory tab. */
+document.addEventListener(
+  'click',
+  (event) => {
+    if (
+      !event.target.closest?.('#donorNavMore > summary') ||
+      document.getElementById('donorsPage')?.dataset.panel !== 'volunteers'
+    )
+      return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    document.querySelector('.vol-add-panel > summary')?.click();
+  },
+  true,
+);

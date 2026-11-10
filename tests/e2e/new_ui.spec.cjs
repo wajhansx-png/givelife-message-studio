@@ -525,12 +525,13 @@ for (const width of [280, 320, 412]) {
   });
 }
 
-test('/new Back on Volunteers leaves Donors for the main screen', async ({ page }) => {
+test('/new Back on Volunteers returns to the donor list with tabs visible', async ({ page }) => {
   await open(page, '/new#/donors/volunteers', 390);
   await expect(page.locator('#donorsPage')).toBeVisible();
   await page.locator('#donorsPage .vol-back:visible').first().click();
-  await expect(page.locator('#donorsPage')).toBeHidden();
-  expect(await page.evaluate(() => location.hash)).not.toContain('donors');
+  await expect(page.locator('#donorsPage')).toBeVisible();
+  await expect(page.locator('#donorsPage')).toHaveAttribute('data-panel', 'all');
+  await expect(page.locator('.donor-tabs')).toBeVisible();
 });
 
 for (const width of [280, 390, 1440]) {
@@ -688,7 +689,8 @@ test('/new phone donors: the ⋯ menu holds Add numbers, Add one donor, Bulk and
   await open(page, '/new#/donors/all', 390);
   await expect(page.locator('.donor-row').first()).toBeVisible();
   await page.locator('#donorNavMore > summary').click();
-  for (const id of ['#donorNumbers', '#donorAdd', '#donorBulk']) await expect(page.locator(id)).toBeVisible();
+  for (const id of ['#donorNumbers', '#donorAdd', '#donorBulk'])
+    await expect(page.locator(id)).toBeVisible();
   await expect(page.locator('#donorDeselectAll')).toBeHidden(); // only on the Important tab
   const panel = await page.locator('#donorNavMore .compact-nav-panel').boundingBox();
   const bar = await page.locator('.donor-tabs').boundingBox();
@@ -729,7 +731,11 @@ test('/new phone DM messages: the message takes the free height; every button is
   const follow = await page.locator('#donorMessages .bank-followup').boundingBox();
   expect(card.height).toBeGreaterThan(844 * 0.5);
   expect(follow.y - (actions.y + actions.height)).toBeLessThanOrEqual(24); // no empty gap above the bar
-  expect(await page.locator('#donorMessages .bank-detail').evaluate((e) => e.scrollHeight <= e.clientHeight + 1)).toBe(true);
+  expect(
+    await page
+      .locator('#donorMessages .bank-detail')
+      .evaluate((e) => e.scrollHeight <= e.clientHeight + 1),
+  ).toBe(true);
 });
 
 test('/new phone DM messages: no top bar, whole message shown, Next/Regenerate row, tabs at the bottom', async ({
@@ -841,5 +847,44 @@ for (const width of [280, 360, 412]) {
     await expect(page.locator('#donorsPage .donor-head .donor-message-tablist')).toBeHidden();
     await page.locator('#donorsPage .ui2-msgs-bottom:visible').first().click();
     await expect(page.locator('#donorMessages')).toBeVisible();
+  });
+}
+
+for (const width of [390, 1440, 1920]) {
+  test(`/new Volunteers shares the donor theme and header at ${width}px`, async ({ page }) => {
+    await open(page, '/new#/donors/all', width);
+    const shell = page.locator('#donorsPage');
+    const theme = await shell.evaluate((e) => getComputedStyle(e).backgroundColor);
+    const header = await page.locator('.donor-head').boundingBox();
+    const backTheme = await page
+      .locator('#donorMainBottom')
+      .evaluate((e) => getComputedStyle(e).backgroundColor);
+    const sendTheme = await page
+      .locator('#donorSendImportant')
+      .evaluate((e) => getComputedStyle(e).backgroundImage);
+    await page.locator('.donor-tabs [data-tab="volunteers"]').click();
+    await expect(page.locator('#donorVolunteers')).toBeVisible();
+    if (header) await expect(page.locator('.donor-head')).toBeVisible();
+    expect(await shell.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(theme);
+    const volunteerHeader = await page.locator('.donor-head').boundingBox();
+    if (header) {
+      expect(Math.abs(volunteerHeader.y - header.y)).toBeLessThan(2);
+      expect(Math.abs(volunteerHeader.width - header.width)).toBeLessThan(2);
+    }
+    expect(
+      await page.locator('.vol-back').evaluate((e) => getComputedStyle(e).backgroundColor),
+    ).toBe(backTheme);
+    expect(
+      await page
+        .locator('.vol-foot .send-donors')
+        .evaluate((e) => getComputedStyle(e).backgroundImage),
+    ).toBe(sendTheme);
+    if (width >= 900) {
+      const list = await page.locator('.vol-people').boundingBox();
+      const message = await page.locator('.vol-msg').boundingBox();
+      expect(Math.abs(list.width - message.width)).toBeLessThan(2);
+      await page.locator('#donorNavMore > summary').click();
+      await expect(page.getByLabel('Volunteer name', { exact: true })).toBeVisible();
+    }
   });
 }

@@ -4120,3 +4120,33 @@
   background: #2f6fe4 !important;
   color: #fff !important;
 }
+
+/* Computer: the Donors header buttons keep the same place on every tab.
+   Messages stays right after the title; the Important chips (hide contacted, deselect all) come after it. */
+@media (min-width: 900px) {
+  .UI2 #donorsPage .donor-head > .donor-title {
+    order: 0 !important;
+  }
+  .UI2 #donorsPage .donor-head > .donor-message-tablist {
+    order: 1 !important;
+    margin-left: 0 !important;
+  }
+  .UI2 #donorsPage .donor-head > #donorHideRow {
+    order: 2 !important;
+    margin: 0 0 0 8px !important;
+  }
+  .UI2 #donorsPage .donor-head > .ui2-add-menu {
+    order: 9 !important;
+    margin-left: auto !important;
+  }
+}
+
+/* Computer: Volunteers keeps the same header band as the other tabs (donor-only buttons keep their space, unused). */
+@media (min-width: 900px) {
+  .UI2 #donorsPage[data-panel='volunteers'] .donor-shell > .donor-head {
+    display: flex !important;
+  }
+  .UI2 #donorsPage[data-panel='volunteers'] .donor-head > :is(.ui2-add-menu, #donorHideRow, .ui2-donor-search) {
+    visibility: hidden;
+  }
+}

@@ -160,7 +160,8 @@
     $(id).textContent = value;
     $(id + 'Sub').textContent = sub || '';
     const n = (k) => (/\d+/.exec($(k).textContent) || ['0'])[0];
-    $('reportToday').textContent = 'Today: ' + n('reportGroups') + ' group posts · ' + n('reportReplies') + ' replies';
+    $('reportToday').textContent =
+      'Today: ' + n('reportGroups') + ' group posts · ' + n('reportReplies') + ' replies';
   };
   async function fill() {
     for (const id of ['reportGroups', 'reportDms', 'reportReplies', 'reportResumes']) put(id, '…');
@@ -252,7 +253,8 @@
     const stop = $('autoStopAll');
     stop.disabled = true;
     try {
-      for (const [id, x] of Object.entries(cards)) if (x.last && x.last.on) paint(await autoCall({ control: id, on: false }));
+      for (const [id, x] of Object.entries(cards))
+        if (x.last && x.last.on) paint(await autoCall({ control: id, on: false }));
       autoSay('Everything is off. Nothing more will be sent.');
     } catch (e) {
       autoSay(e.message);
@@ -387,7 +389,14 @@
           id === 'important'
             ? 'up to ' + s.count + ' Important donors, ' + s.gap_minutes + ' minutes apart'
             : id === 'volunteer'
-              ? 'every volunteer one by one (case + poster' + (s.share ? ', then the share message' : '') + '), ' + s.gap_minutes + ' minutes apart, ' + s.rest_minutes + ' minutes rest after every ' + s.batch_size
+              ? 'every volunteer one by one (case + poster' +
+                (s.share ? ', then the share message' : '') +
+                '), ' +
+                s.gap_minutes +
+                ' minutes apart, ' +
+                s.rest_minutes +
+                ' minutes rest after every ' +
+                s.batch_size
               : 'your Top donors the way you usually send';
       if (!confirm('Switch ' + x.last.title + ' ON? It will DM ' + what + '.')) return;
     }
@@ -416,7 +425,8 @@
     if (c.state === 'STOPPING') return 'Stopping after this DM';
     if (c.state === 'ON') return total ? sent + ' of ' + total + ' sent' + at : 'Starting…';
     if (!total && !sent) return 'Off';
-    if (left && /unconfirmed|disconnect|restrict/i.test(c.note || '')) return 'Stopped · check WhatsApp';
+    if (left && /unconfirmed|disconnect|restrict/i.test(c.note || ''))
+      return 'Stopped · check WhatsApp';
     return (left ? 'Stopped · ' : 'Done · ') + sent + ' of ' + total + ' sent';
   }
   /* The settings in one short line, so what the Auto will do is visible without opening anything. */
@@ -424,10 +434,30 @@
     const s = c.settings || {},
       usual = (v, unit) => (v == null || v === '' ? 'usual' : v + unit);
     if (c.id === 'group')
-      return (s.main_every ? 'GiveLife every ' + s.main_every + ' min' : 'GiveLife on schedule') + (s.freelance_every ? ' · Freelance every ' + s.freelance_every + ' min' : '');
-    if (c.id === 'thanks') return s.gap_minutes + ' min apart · ' + s.batch_size + ' per batch · ' + s.rest_minutes + ' min rest';
+      return (
+        (s.main_every ? 'GiveLife every ' + s.main_every + ' min' : 'GiveLife on schedule') +
+        (s.freelance_every ? ' · Freelance every ' + s.freelance_every + ' min' : '')
+      );
+    if (c.id === 'thanks')
+      return (
+        s.gap_minutes +
+        ' min apart · ' +
+        s.batch_size +
+        ' per batch · ' +
+        s.rest_minutes +
+        ' min rest'
+      );
     if (c.id === 'important') return s.count + ' donors · ' + s.gap_minutes + ' min apart';
-    if (c.id === 'volunteer') return s.gap_minutes + ' min apart · ' + s.batch_size + ' per batch · ' + s.rest_minutes + ' min rest' + (s.share ? ' · + share' : '');
+    if (c.id === 'volunteer')
+      return (
+        s.gap_minutes +
+        ' min apart · ' +
+        s.batch_size +
+        ' per batch · ' +
+        s.rest_minutes +
+        ' min rest' +
+        (s.share ? ' · + share' : '')
+      );
     return usual(s.gap_minutes, ' min') + ' apart · ' + usual(s.batch_size, '') + ' per batch';
   }
   function paint(view) {
@@ -451,7 +481,10 @@
       /* One glance: a thin bar shows how far the batch has got; the long note lives in the tooltip. */
       const done = Number(c.sent) || 0,
         total = done + (Number(c.pending) || 0);
-      x.card.style.setProperty('--p', c.id !== 'group' && total ? Math.min(1, done / total).toFixed(3) : '0');
+      x.card.style.setProperty(
+        '--p',
+        c.id !== 'group' && total ? Math.min(1, done / total).toFixed(3) : '0',
+      );
       x.card.title = c.note || '';
     }
     $('autoStopAll').hidden = !Object.values(cards).some((x) => x.last && x.last.on);
@@ -480,7 +513,11 @@
   });
   /* Reopening the app returns to the Report if it was open. */
   try {
-    if (localStorage.getItem('givelife-report-open') === '1') setTimeout(open, 600);
+    if (localStorage.getItem('givelife-report-open') === '1')
+      setTimeout(() => {
+        // A dialog opened since load takes priority over restoring the previous screen.
+        if (!document.querySelector('dialog[open]')) open();
+      }, 600);
   } catch (e) {}
   $('reportClose').onclick = () => {
     remember(false);

@@ -219,6 +219,29 @@ html body #donorThanksDialog :is(textarea, input) {
 #donorThanksDialog button {
   border-radius: 10px;
 }
+/* Keep actions in a separate row while the composer scrolls above them. */
+html body #donorThanksDialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+html body #donorThanksDialog > .thanks-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+html body #donorThanksDialog > :is(header, footer, #thanksStatus) {
+  flex: 0 0 auto;
+}
+html body #donorThanksDialog footer {
+  position: static;
+}
+@media (max-width: 899px) {
+  html body.ui2 #donorsPage .donor-bottom > .donor-thanks {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    width: 100%;
+  }
+}
 .thanks-review {
   align-self: start;
 }

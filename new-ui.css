@@ -2897,6 +2897,7 @@
 .UI2 .foundation-notes .notes-workspace > .notes-toolbar,
 .UI2 .foundation-notes[data-mode='writing'] .notes-workspace > .notes-toolbar {
   align-self: center !important;
+  flex-wrap: wrap !important;
   width: fit-content !important;
   max-width: calc(100% - 16px) !important;
   margin: 8px auto !important;
@@ -3918,7 +3919,10 @@
     font-size: 14px !important;
   }
   /* A small dot on "⋯" while contacted donors are hidden on the Important list. */
-  .UI2 #donorsPage .ui2-add-menu:has(#donorHideRow:not([hidden]) #donorHideSent:not([hidden])) > summary::before {
+  .UI2
+    #donorsPage
+    .ui2-add-menu:has(#donorHideRow:not([hidden]) #donorHideSent:not([hidden]))
+    > summary::before {
     content: '';
     position: absolute;
     top: 6px;
@@ -3937,8 +3941,10 @@
     width: 22px;
     height: 22px;
     background: currentColor;
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E") center / contain no-repeat;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E") center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E")
+      center / contain no-repeat;
   }
   /* Search: opens over the tabs (left of the × and "⋯"), then closes again. */
   .UI2 #donorsPage .donor-shell[data-ui2-search] .donor-toolbar > #donorSearch,
@@ -3968,7 +3974,11 @@
     font-size: 0 !important;
   }
   .UI2 #donorsPage .donor-shell[data-ui2-search] .donor-toolbar > .ui2-donor-search::before,
-  .UI2 #donorsPage .donor-toolbar > #donorSearch:not(:placeholder-shown) ~ .ui2-donor-search::before {
+  .UI2
+    #donorsPage
+    .donor-toolbar
+    > #donorSearch:not(:placeholder-shown)
+    ~ .ui2-donor-search::before {
     content: '×';
     width: auto;
     height: auto;
@@ -4282,9 +4292,7 @@
   overflow-y: auto !important;
 }
 .UI2 .report-card:has(.auto-form:not([hidden])) .report-list,
-.UI2
-  .report-card:has(.auto-form:not([hidden]))
-  .auto-card:not(:has(.auto-form:not([hidden]))) {
+.UI2 .report-card:has(.auto-form:not([hidden])) .auto-card:not(:has(.auto-form:not([hidden]))) {
   display: none !important;
 }
 @media (min-width: 600px) {
@@ -4297,10 +4305,16 @@
 }
 
 /* Five Auto summaries still fit the small-phone Report. */
-.UI2 .report-card .auto-card .auto-head { row-gap: 0 !important; }
+.UI2 .report-card .auto-card .auto-head {
+  row-gap: 0 !important;
+}
 @media (min-width: 600px) and (max-height: 440px) {
-  .UI2 .report-card #autoCards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .UI2 .report-card:has(.auto-form:not([hidden])) #autoCards { grid-template-columns: 1fr; }
+  .UI2 .report-card #autoCards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .UI2 .report-card:has(.auto-form:not([hidden])) #autoCards {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Desktop DM controls only. The phone controls retain their existing placement. */
@@ -4310,11 +4324,7 @@
   .UI2 #donorsPage#donorsPage #donorMessages .bank-copy {
     display: none !important;
   }
-  .UI2
-    #donorsPage#donorsPage
-    #donorMessages
-    .bank-actions
-    > .ui2-desktop-msg-control {
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-actions > .ui2-desktop-msg-control {
     display: flex !important;
     align-items: center;
     justify-content: center;
@@ -4344,11 +4354,7 @@
     right: 8px;
     z-index: 3;
   }
-  .UI2
-    #donorsPage#donorsPage
-    #donorMessages
-    .bank-detail
-    .ui2-desktop-msg-control {
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-detail .ui2-desktop-msg-control {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -4375,18 +4381,10 @@
   .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-editing textarea {
     padding-top: 44px !important;
   }
-  .UI2
-    #donorsPage#donorsPage
-    #donorMessages
-    .bank-detail
-    .ui2-desktop-msg-control:hover {
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-detail .ui2-desktop-msg-control:hover {
     background: #ffffff15 !important;
   }
-  .UI2
-    #donorsPage#donorsPage
-    #donorMessages
-    .bank-detail
-    .ui2-desktop-msg-control:focus-visible {
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-detail .ui2-desktop-msg-control:focus-visible {
     outline: 2px solid #9db8ff;
     outline-offset: 2px;
   }
@@ -4394,5 +4392,92 @@
 @media (min-width: 900px) {
   .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-msg-control[hidden] {
     display: none !important;
+  }
+}
+
+/* Keep the reader's contextual menu within narrow viewports. */
+.UI2 .foundation-notes .notes-workspace[hidden] {
+  display: none !important;
+}
+@media (max-width: 899px) {
+  .UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+    position: fixed !important;
+    inset: auto 10px 78px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: calc(100dvh - 100px) !important;
+    overflow-y: auto !important;
+    box-sizing: border-box;
+  }
+  .UI2 #donorMessages .bank-actions > .ui2-bank-back {
+    padding-inline: 4px !important;
+    font-size: 13px !important;
+    white-space: normal !important;
+  }
+}
+.UI2 #messageFocus:has(.ui2-live:not([hidden])) #ui2GnavReader {
+  display: none !important;
+}
+.UI2 .replies-dialog .rep-actions {
+  position: static !important;
+  margin: 0 !important;
+  padding: 8px 0 0 !important;
+}
+.UI2 #donorsPage .donor-row:has(.donor-more[open]) {
+  content-visibility: visible;
+  contain: none;
+}
+.UI2 #donorMessages[data-sub='follow'] .ui2-bank-nav {
+  display: none !important;
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-shell[data-ui2-search] .donor-tabs {
+    visibility: hidden !important;
+  }
+}
+@media (max-width: 899px) and (max-height: 520px) {
+  .UI2 #messageFocus #ui2GnavReader {
+    position: fixed !important;
+    inset: auto 10px 68px !important;
+    margin: 0 !important;
+    z-index: 25;
+    background: var(--surface, #232838);
+  }
+  .UI2 #messageFocus {
+    padding-bottom: 132px !important;
+  }
+}
+@media (max-width: 899px) and (max-height: 520px) {
+  .UI2 #donorsPage .donor-row .donor-more[open] > div {
+    position: fixed !important;
+    inset: 8px !important;
+    width: auto !important;
+    max-height: calc(100dvh - 16px) !important;
+    overflow-y: auto !important;
+    z-index: 100 !important;
+  }
+}
+.UI2 #donorMessages[data-sub='follow'] .bank-workspace {
+  display: contents !important;
+}
+.UI2 #donorMessages[data-sub='follow'] .bank-message,
+.UI2 #donorMessages[data-sub='follow'] .bank-actions > :not(.ui2-bank-back) {
+  display: none !important;
+}
+.UI2 #donorMessages[data-sub='follow'] .bank-actions {
+  position: static !important;
+  order: 10 !important;
+  display: flex !important;
+  justify-content: flex-end;
+  flex: 0 0 auto !important;
+}
+.UI2 #donorsPage#donorsPage #donorMessages[data-sub='follow'] .ui2-desktop-msg-control {
+  display: none !important;
+}
+@media (min-width: 900px) and (max-width: 1024px) {
+  .UI2 #leftChip {
+    padding-inline: 6px !important;
+    min-width: max-content !important;
   }
 }

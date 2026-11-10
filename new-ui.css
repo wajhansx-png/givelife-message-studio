@@ -3815,7 +3815,216 @@
   }
 }
 
-/* The Report's settings summary line belongs to the classic page; /new has its own tap-the-name row. */
+/* Report: the settings in one tappable line under each Auto (opens the same Edit sheet), so Edit is easy to find. */
 .UI2 .auto-card .auto-set {
-  display: none !important;
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  margin: 0 !important;
+  padding: 2px 4px 0 !important;
+  overflow: hidden;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--ink-muted, #8a91a6) !important;
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.UI2 .auto-card .auto-set:empty {
+  display: none;
+}
+
+/* ======================= Phone: Donors, one control row =======================
+   list (fills the space) > tabs + search icon + "⋯" > bottom bar.
+   + Add, Add numbers, Bulk message and the Important chips (hide contacted, deselect all) live inside "⋯";
+   the search field opens over the tabs, so nothing moves and the list is never pushed. */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-shell > .donor-head {
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-shell > .donor-toolbar {
+    position: relative;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+  .UI2 #donorsPage .donor-toolbar > .donor-tabs {
+    flex: 1 1 0 !important;
+    order: 1 !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+  .UI2 #donorsPage .donor-toolbar > .ui2-donor-search {
+    order: 2 !important;
+    flex: 0 0 48px !important;
+    width: 48px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+  }
+  .UI2 #donorsPage .donor-toolbar > .ui2-add-menu {
+    order: 3 !important;
+    flex: 0 0 48px;
+  }
+  .UI2 #donorsPage .donor-toolbar > .ui2-add-menu > summary {
+    min-width: 48px !important;
+    width: 48px;
+    padding: 0 !important;
+    border: 1px solid var(--line2) !important;
+    background: var(--surface2, #232838) !important;
+    color: var(--ink, #eef0f6) !important;
+    font-size: 24px !important;
+    line-height: 1;
+  }
+  .UI2 #donorsPage .donor-toolbar > .ui2-add-menu .compact-nav-panel {
+    top: auto !important;
+    bottom: calc(100% + 8px) !important;
+    right: 0 !important;
+    left: auto !important;
+    width: min(260px, calc(100vw - 24px));
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel > .hide-row {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel > .hide-row[hidden] {
+    display: none !important;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel :is(.hide-chip, button):not([hidden]) {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100% !important;
+    min-height: 44px !important;
+    padding: 0 12px !important;
+    border-radius: 10px;
+    font-size: 14px !important;
+    text-align: left;
+    white-space: normal;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel button[hidden] {
+    display: none !important;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel #donorHideRow:not([hidden]) {
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0 !important;
+    width: 100%;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel #donorHideRow .hide-chip:not([hidden]) {
+    min-height: 44px !important;
+    height: auto !important;
+    font-size: 14px !important;
+  }
+  /* A small dot on "⋯" while contacted donors are hidden on the Important list. */
+  .UI2 #donorsPage .ui2-add-menu:has(#donorHideRow:not([hidden]) #donorHideSent:not([hidden])) > summary::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f5b942;
+  }
+  /* The search button shows a clear magnifier, and a × while the field is open. */
+  .UI2 #donorsPage .donor-toolbar > .ui2-donor-search {
+    font-size: 0 !important;
+  }
+  .UI2 #donorsPage .donor-toolbar > .ui2-donor-search::before {
+    content: '';
+    width: 22px;
+    height: 22px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  /* Search: opens over the tabs (left of the × and "⋯"), then closes again. */
+  .UI2 #donorsPage .donor-shell[data-ui2-search] .donor-toolbar > #donorSearch,
+  .UI2 #donorsPage .donor-toolbar > #donorSearch:not(:placeholder-shown) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 108px;
+    z-index: 6;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 14px !important;
+    border: 1px solid var(--line2) !important;
+    border-radius: 12px !important;
+    background: var(--surface, #1b1f2c) !important;
+    color: var(--ink, #eef0f6) !important;
+    font-size: 16px !important;
+  }
+  .UI2 #donorsPage .donor-shell[data-ui2-search] .ui2-donor-search,
+  .UI2 #donorsPage .donor-toolbar > #donorSearch:not(:placeholder-shown) ~ .ui2-donor-search {
+    position: relative;
+    z-index: 7;
+    font-size: 0 !important;
+  }
+  .UI2 #donorsPage .donor-shell[data-ui2-search] .donor-toolbar > .ui2-donor-search::before,
+  .UI2 #donorsPage .donor-toolbar > #donorSearch:not(:placeholder-shown) ~ .ui2-donor-search::before {
+    content: '×';
+    width: auto;
+    height: auto;
+    background: none;
+    -webkit-mask: none;
+    mask: none;
+    font-size: 28px;
+    line-height: 1;
+  }
+  /* Every tab ends at exactly the same line, and the Volunteers area fills the screen like the donor list. */
+  .UI2 #donorsPage .donor-shell {
+    padding-bottom: 5px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace {
+    max-height: none !important;
+  }
+  /* Volunteers has its own dock: the two buttons keep their space (so the tabs never change width) but are not used. */
+  .UI2 #donorsPage[data-panel='volunteers'] .donor-toolbar > :is(.ui2-donor-search, .ui2-add-menu) {
+    visibility: hidden;
+  }
+}
+
+/* ======================= Phone: Msgs, the message gets the free height =======================
+   heading > message (fills everything left; scrolls only if it is really longer) > Regenerate / Next >
+   Edit, Copy, ⋯, Back > DM messages / Follow-up. All the buttons sit together at the bottom, in thumb reach. */
+@media (max-width: 899px) {
+  .UI2 #donorMessages .bank-workspace {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+  }
+  .UI2 #donorMessages .bank-workspace > .bank-message {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column;
+    align-self: stretch !important;
+    min-height: 0 !important;
+    max-width: 440px !important;
+    overflow-y: auto !important;
+  }
+  .UI2 #donorMessages .bank-workspace > .bank-message > .bank-preview {
+    flex: 0 0 auto !important;
+    margin-block: auto !important;
+    overflow: visible !important;
+  }
+  .UI2 #donorMessages .bank-workspace > .ui2-bank-nav {
+    flex: 0 0 auto;
+  }
+  .UI2 #donorMessages .bank-workspace > .bank-actions {
+    flex: 0 0 auto !important;
+    height: 48px !important;
+    min-height: 0 !important;
+    grid-template-rows: 48px !important;
+    grid-auto-rows: 0 !important;
+  }
 }

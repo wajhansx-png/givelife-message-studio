@@ -423,3 +423,13 @@ html body #donorThanksDialog .thanks-timing :is(label, legend) {
 .thanks-timing .thanks-custom[hidden] {
   display: none;
 }
+html body #donorThanksDialog .thanks-attach-row {
+  display: flex;
+  gap: 8px;
+}
+html body #donorThanksDialog .thanks-attach-row > button {
+  flex: 1 1 0;
+  min-height: 48px;
+  font-size: 15px;
+  font-weight: 700;
+}

@@ -5,15 +5,14 @@
   dialog.setAttribute('aria-labelledby', 'thanksTitle');
   dialog.innerHTML = `<header><div><h2 id="thanksTitle" tabindex="-1" autofocus>Thank donors</h2><small id="thanksContext"></small></div></header>
   <div class="thanks-body"><section class="thanks-compose">
-    <div class="thanks-attach-row"><button type="button" id="thanksAttach">+ Attach file</button><small id="thanksFileHint">Photo, video or PDF</small></div>
-    <input id="thanksFile" type="file" aria-label="Attach file" accept="image/jpeg,image/png,image/webp,video/mp4,application/pdf" hidden>
+    <div class="thanks-attach-row"><button type="button" id="thanksAttachImg">Attach image</button><button type="button" id="thanksAttachVid">Attach video</button></div>
+    <input id="thanksFile" type="file" aria-label="Attach file" accept="image/jpeg,image/png,image/webp,video/mp4" hidden>
     <div class="thanks-file-row" hidden><span id="thanksFileName"></span><button type="button" id="thanksRemove" hidden>Remove</button></div>
     <div id="thanksCaptionWrap" hidden><label for="thanksCaption">Caption</label><textarea id="thanksCaption" maxlength="4000" rows="2" placeholder="Optional · shown with the attachment"></textarea></div>
     <details class="thanks-msg"><summary>+ Message</summary>
       <label for="thanksMessage">Message</label><textarea id="thanksMessage" aria-describedby="thanksNameHint" maxlength="4000" rows="4" placeholder="Write a thank-you message…"></textarea>
       <small id="thanksNameHint">Use {name} for their first name. Sent after any attachment.</small>
     </details>
-    <details class="thanks-review"><summary>Preview</summary><div id="thanksPreview" aria-label="Message preview"></div><details><summary id="thanksAudience">Recipients</summary><ul id="thanksRecipients"></ul></details></details>
     <section class="thanks-timing"><b>Timing</b>
       <div class="thanks-grid">
         <div class="thanks-opt" data-k="gap"><label>Gap between donors<select id="thanksGapSel"></select></label><div class="thanks-custom" hidden><label>min<input id="thanksGap" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksGapSec" type="number" min="0" max="59" inputmode="numeric"></label></div></div>
@@ -63,72 +62,17 @@
     $('thanksPause').hidden = !state?.on;
     $('thanksPause').disabled = busy;
     $('thanksRemove').disabled = busy || state?.on;
-    $('thanksAttach').disabled = busy || state?.on;
+    $('thanksAttachImg').disabled = $('thanksAttachVid').disabled = busy || state?.on;
   }
   function preview() {
-    const box = $('thanksPreview');
-    box.replaceChildren();
-    if (state?.attachment) {
-      const bubble = document.createElement('div');
-      bubble.className = 'thanks-bubble';
-      if (previewURL) {
-        const media = document.createElement(
-          state.mime.startsWith('image/') ? 'img' : state.mime.startsWith('video/') ? 'video' : 'a',
-        );
-        if (media.tagName === 'A') {
-          media.href = previewURL;
-          media.textContent = '📄 ' + state.filename;
-          media.target = '_blank';
-          media.rel = 'noopener';
-        } else {
-          media.src = previewURL;
-          if (media.tagName === 'VIDEO') media.controls = true;
-          else media.alt = 'Completion proof';
-        }
-        bubble.append(media);
-      } else {
-        const name = document.createElement('strong');
-        name.textContent = state.filename;
-        bubble.append(name);
-      }
-      if ($('thanksCaption').value) {
-        const caption = document.createElement('p');
-        caption.textContent = $('thanksCaption').value;
-        bubble.append(caption);
-      }
-      box.append(bubble);
-    }
-    if ($('thanksMessage').value) {
-      const text = document.createElement('p');
-      text.className = 'thanks-bubble';
-      text.textContent = $('thanksMessage').value;
-      box.append(text);
-    }
-    if (!box.children.length) box.textContent = 'Your message or attachment will appear here.';
     $('thanksCaptionWrap').hidden = !state?.attachment;
     $('thanksRemove').hidden = !state?.attachment;
-    $('thanksAttach').hidden = !!state?.attachment;
-    $('thanksFileHint').hidden = !!state?.attachment;
+    dialog.querySelector('.thanks-attach-row').hidden = !!state?.attachment;
     dialog.querySelector('.thanks-file-row').hidden = !state?.attachment;
     $('thanksFileName').textContent = state?.attachment ? state.filename : '';
     controls();
   }
-  function audience() {
-    $('thanksAudience').textContent =
-      `${state.total} recipients` +
-      (state.sent ? ` · ${state.sent} sent · ${state.pending} waiting` : '');
-    $('thanksRecipients').replaceChildren(
-      ...state.recipients.map((row) => {
-        const li = document.createElement('li');
-        li.textContent = row.name + ' · ' + (row.state === 'Sent' ? 'Update sent' : row.state);
-        return li;
-      }),
-    );
-    $('thanksContext').textContent =
-      `${state.case_name} · ${state.total} donors` +
-      (state.left > 0 ? ' · Finish case to send' : '');
-    $('thanksSend').textContent = 'Send to ' + state.pending;
-  }
+  function audience() {} // the recipient count is in the title line
   function fill() {
     $('thanksCaption').value = state.caption;
     $('thanksMessage').value = state.message;
@@ -254,7 +198,14 @@
       fill();
       note('Paused. An upload already started may finish.');
     });
-  $('thanksAttach').onclick = () => $('thanksFile').click();
+  for (const [id, accept] of [
+    ['thanksAttachImg', 'image/jpeg,image/png,image/webp'],
+    ['thanksAttachVid', 'video/mp4'],
+  ])
+    $(id).onclick = () => {
+      $('thanksFile').accept = accept;
+      $('thanksFile').click();
+    };
   $('thanksFile').onchange = () =>
     action(async () => {
       const file = $('thanksFile').files[0];

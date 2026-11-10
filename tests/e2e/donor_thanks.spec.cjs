@@ -36,7 +36,8 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await expect(page.getByRole('dialog', { name: 'Thank donors', exact: true })).toBeVisible();
     const dialog = await page.locator('#donorThanksDialog').boundingBox();
     expect(dialog.width).toBeLessThanOrEqual(Math.min(width - 16, 680));
-    await expect(page.locator('#thanksPreview')).not.toBeVisible();
+    await expect(page.locator('.thanks-review')).toHaveCount(0); // no Preview section
+    await expect(page.locator('.thanks-attach-row button')).toHaveText(['Attach image', 'Attach video']);
     await expect(page.locator('#thanksGapSel')).toBeVisible(); // timing is always shown
     await page.locator('#thanksFile').setInputFiles({
       name: 'proof.png',
@@ -54,12 +55,6 @@ for (const width of [1440, 768, 390, 320, 280]) {
       .locator('#donorThanksDialog')
       .getByLabel('Message', { exact: true })
       .fill('JazakAllah khair, {name}.');
-    await page.locator('.thanks-review > summary').click();
-    await expect(page.locator('#thanksPreview .thanks-bubble')).toHaveCount(2);
-    await expect(page.locator('#thanksPreview')).toContainText(
-      'Alhamdulillah, the case is complete.',
-    );
-    await expect(page.locator('#thanksPreview')).toContainText('JazakAllah khair, {name}.');
     // Timing: four dropdowns of common choices; "Custom…" opens the exact minute / second boxes.
     for (const id of ['thanksGapSel', 'thanksVarySel', 'thanksBatchSel', 'thanksRestSel'])
       await expect(page.locator('#' + id)).toBeVisible();

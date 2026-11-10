@@ -5,10 +5,11 @@
   dialog.setAttribute('aria-labelledby', 'thanksTitle');
   dialog.innerHTML = `<header><div><h2 id="thanksTitle" tabindex="-1" autofocus>Thank donors</h2><small id="thanksContext"></small></div></header>
   <div class="thanks-body"><section class="thanks-compose">
-    <div class="thanks-attach-row"><button type="button" id="thanksAttachImg">Attach image</button><button type="button" id="thanksAttachVid">Attach video</button></div>
+    <div class="thanks-media">
+      <div class="thanks-slot" data-slot="1"><button type="button" class="thanks-attach" id="thanksAttachImg">Attach image</button><div class="thanks-attached" hidden><span class="thanks-name"></span><button type="button" class="thanks-remove" aria-label="Remove image">Remove</button><textarea id="thanksCaption" aria-label="Caption" maxlength="4000" rows="2" placeholder="Caption (optional)"></textarea></div></div>
+      <div class="thanks-slot" data-slot="2"><button type="button" class="thanks-attach" id="thanksAttachVid">Attach video</button><div class="thanks-attached" hidden><span class="thanks-name"></span><button type="button" class="thanks-remove" aria-label="Remove video">Remove</button><textarea id="thanksCaption2" aria-label="Video caption" maxlength="4000" rows="2" placeholder="Caption (optional)"></textarea></div></div>
+    </div>
     <input id="thanksFile" type="file" aria-label="Attach file" accept="image/jpeg,image/png,image/webp,video/mp4" hidden>
-    <div class="thanks-file-row" hidden><span id="thanksFileName"></span><button type="button" id="thanksRemove" hidden>Remove</button></div>
-    <div id="thanksCaptionWrap" hidden><label for="thanksCaption">Caption</label><textarea id="thanksCaption" maxlength="4000" rows="2" placeholder="Optional · shown with the attachment"></textarea></div>
     <details class="thanks-msg"><summary>+ Message</summary>
       <label for="thanksMessage">Message</label><textarea id="thanksMessage" aria-describedby="thanksNameHint" maxlength="4000" rows="4" placeholder="Write a thank-you message…"></textarea>
       <small id="thanksNameHint">Use {name} for their first name. Sent after any attachment.</small>
@@ -27,7 +28,6 @@
   let state,
     viewVersion = 0,
     busy = false,
-    previewURL,
     poll;
   async function api(action, body = {}) {
     const response = await fetch(
@@ -51,30 +51,39 @@
       field.disabled = busy || state?.on;
     for (const sel of dialog.querySelectorAll('select')) sel.disabled = busy || state?.on;
     $('thanksSave').disabled = busy || state?.on;
-    $('thanksTest').disabled = busy || !state || (!state.attachment && !$('thanksMessage').value.trim());
+    $('thanksTest').disabled =
+      busy || !state || (!state.attachment && !state.attachment2 && !$('thanksMessage').value.trim());
     $('thanksSend').hidden = !!state?.on;
     $('thanksSend').disabled =
       busy ||
       !state ||
       state.left > 0 ||
-      (!state.attachment && !$('thanksMessage').value.trim()) ||
+      (!state.attachment && !state.attachment2 && !$('thanksMessage').value.trim()) ||
       state.pending === 0;
     $('thanksPause').hidden = !state?.on;
     $('thanksPause').disabled = busy;
-    $('thanksRemove').disabled = busy || state?.on;
-    $('thanksAttachImg').disabled = $('thanksAttachVid').disabled = busy || state?.on;
+    for (const b of dialog.querySelectorAll('.thanks-remove, .thanks-attach')) b.disabled = busy || state?.on;
   }
+  /* Two attachment slots (an image and a video), each with its own optional caption. */
+  const SLOTS = [
+    { n: 1, att: 'attachment', file: 'filename', mime: 'mime', cap: 'thanksCaption', accept: 'image/jpeg,image/png,image/webp' },
+    { n: 2, att: 'attachment2', file: 'filename2', mime: 'mime2', cap: 'thanksCaption2', accept: 'video/mp4' },
+  ];
+  const slotBox = (sl) => dialog.querySelector(`[data-slot="${sl.n}"]`);
+  let slot = SLOTS[0];
   function preview() {
-    $('thanksCaptionWrap').hidden = !state?.attachment;
-    $('thanksRemove').hidden = !state?.attachment;
-    dialog.querySelector('.thanks-attach-row').hidden = !!state?.attachment;
-    dialog.querySelector('.thanks-file-row').hidden = !state?.attachment;
-    $('thanksFileName').textContent = state?.attachment ? state.filename : '';
+    for (const sl of SLOTS) {
+      const has = !!state?.[sl.att];
+      slotBox(sl).querySelector('.thanks-attach').hidden = has;
+      slotBox(sl).querySelector('.thanks-attached').hidden = !has;
+      slotBox(sl).querySelector('.thanks-name').textContent = has ? state[sl.file] : '';
+    }
     controls();
   }
   function audience() {} // the recipient count is in the title line
   function fill() {
     $('thanksCaption').value = state.caption;
+    $('thanksCaption2').value = state.caption2 || '';
     $('thanksMessage').value = state.message;
     if (state.message) dialog.querySelector('.thanks-msg').open = true; // a saved message shows itself
     const c = state.settings;
@@ -146,6 +155,9 @@
       revision: state.revision,
       attachment: state.attachment,
       filename: state.filename,
+      attachment2: state.attachment2 || null,
+      filename2: state.filename2 || '',
+      caption2: $('thanksCaption2').value,
       caption: $('thanksCaption').value,
       message: $('thanksMessage').value,
     });
@@ -198,12 +210,10 @@
       fill();
       note('Paused. An upload already started may finish.');
     });
-  for (const [id, accept] of [
-    ['thanksAttachImg', 'image/jpeg,image/png,image/webp'],
-    ['thanksAttachVid', 'video/mp4'],
-  ])
-    $(id).onclick = () => {
-      $('thanksFile').accept = accept;
+  for (const sl of SLOTS)
+    slotBox(sl).querySelector('.thanks-attach').onclick = () => {
+      slot = sl;
+      $('thanksFile').accept = sl.accept;
       $('thanksFile').click();
     };
   $('thanksFile').onchange = () =>
@@ -225,26 +235,24 @@
       });
       const result = await response.json();
       if (!response.ok) throw Error(result.error || 'Upload failed.');
-      if (previewURL) URL.revokeObjectURL(previewURL);
-      previewURL = URL.createObjectURL(file);
-      state.attachment = result.id;
-      state.mime = file.type;
-      state.filename = file.name;
+      state[slot.att] = result.id;
+      state[slot.mime] = file.type;
+      state[slot.file] = file.name;
+      slot = SLOTS[0];
       preview();
       note('Media ready. Caption and message are optional.');
     });
-  $('thanksRemove').onclick = () => {
-    state.attachment = null;
-    state.mime = '';
-    state.filename = '';
-    $('thanksFile').value = '';
-    $('thanksCaption').value = '';
-    if (previewURL) URL.revokeObjectURL(previewURL);
-    previewURL = null;
-    preview();
-    note('Attachment removed. Save to keep this change.');
-  };
-  for (const id of ['thanksCaption', 'thanksMessage'])
+  for (const sl of SLOTS)
+    slotBox(sl).querySelector('.thanks-remove').onclick = () => {
+      state[sl.att] = null;
+      state[sl.mime] = '';
+      state[sl.file] = '';
+      $('thanksFile').value = '';
+      $(sl.cap).value = '';
+      preview();
+      note('Attachment removed. Save to keep this change.');
+    };
+  for (const id of ['thanksCaption', 'thanksCaption2', 'thanksMessage'])
     $(id).addEventListener('input', () => {
       preview();
       note('Unsaved changes');
@@ -254,8 +262,6 @@
     dialog.close();
     viewVersion++;
     clearTimeout(poll);
-    if (previewURL) URL.revokeObjectURL(previewURL);
-    previewURL = null;
   }
   $('thanksClose').onclick = close;
   dialog.addEventListener('cancel', (event) => {
@@ -288,15 +294,6 @@
         fill();
         note('');
         dialog.showModal();
-        if (state.attachment) {
-          const r = await fetch('/thanks-media/' + state.attachment);
-          if (r.ok) {
-            const blob = await r.blob();
-            if (!dialog.open || version !== viewVersion) return;
-            previewURL = URL.createObjectURL(blob);
-            preview();
-          }
-        }
         refresh();
       } catch (error) {
         const status = document.getElementById('donorNotice');

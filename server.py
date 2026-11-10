@@ -2267,7 +2267,7 @@ def send_text(jid, text):
 TEST_GROUP_JID = "120363431210327603@g.us"
 
 
-def send_thanks_test(message, caption, attachment):
+def send_thanks_test(message, caption, attachment, caption2="", attachment2=None):
     """The Thank donors update, exactly as a donor would get it, sent ONLY to the GiveLife test group
     ({name} becomes "Test"). It never reaches a donor and changes no donor record."""
     check_hold()
@@ -2284,6 +2284,8 @@ def send_thanks_test(message, caption, attachment):
         try:
             if attachment:
                 results.append(send_batch_attachment(TEST_GROUP_JID, caption or "", attachment))
+            if attachment2:
+                results.append(send_batch_attachment(TEST_GROUP_JID, caption2 or "", attachment2))
             if message.strip():
                 req = urllib.request.Request(
                     GOWA_URL + "/send/message",

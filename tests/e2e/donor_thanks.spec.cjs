@@ -37,7 +37,7 @@ for (const width of [1440, 768, 390, 320, 280]) {
     const dialog = await page.locator('#donorThanksDialog').boundingBox();
     expect(dialog.width).toBeLessThanOrEqual(Math.min(width - 16, 680));
     await expect(page.locator('.thanks-review')).toHaveCount(0); // no Preview section
-    await expect(page.locator('.thanks-attach-row button')).toHaveText(['Attach image', 'Attach video']);
+    await expect(page.locator('.thanks-slot > .thanks-attach, .thanks-slot > .thanks-attached .thanks-name')).toHaveCount(4);
     await expect(page.locator('#thanksGapSel')).toBeVisible(); // timing is always shown
     await page.locator('#thanksFile').setInputFiles({
       name: 'proof.png',
@@ -49,8 +49,22 @@ for (const width of [1440, 768, 390, 320, 280]) {
     });
     await expect(page.locator('#thanksStatus')).toContainText('Media ready');
     await page.getByLabel('Caption', { exact: true }).fill('Alhamdulillah, the case is complete.');
-    await expect(page.locator('#thanksMessage')).toBeHidden(); // Message is folded: Attach comes first
-    await page.locator('.thanks-msg > summary').click();
+    // A second attachment (the video slot) has its own caption.
+    await page.locator('[data-slot="2"] > .thanks-attach').click({ trial: true });
+    await page.evaluate(() => document.querySelector('[data-slot="2"] > .thanks-attach').click());
+    await page.locator('#thanksFile').setInputFiles({
+      name: 'second.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1cAAAAASUVORK5CYII=',
+        'base64',
+      ),
+    });
+    await expect(page.locator('#thanksCaption2')).toBeVisible();
+    await page.locator('#thanksCaption2').fill('Second caption.');
+    // Message is folded behind "+ Message" (third after the attachments); a saved message opens it by itself.
+    if ((await page.locator('.thanks-msg').getAttribute('open')) === null)
+      await page.locator('.thanks-msg > summary').click();
     await page
       .locator('#donorThanksDialog')
       .getByLabel('Message', { exact: true })
@@ -73,10 +87,11 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await page.locator('#thanksTest').click();
     await expect(page.locator('#thanksStatus')).toContainText('Test sent to the GiveLife test group');
     const testEvents = (await (await request.get('/__test/events', { headers })).json()).events.slice(beforeTest);
-    expect(testEvents).toHaveLength(2);
+    expect(testEvents).toHaveLength(3); // image, second attachment, message
     for (const e of testEvents) expect(e.fields.phone).toBe('120363431210327603@g.us');
     expect(testEvents[0].path).toContain('/send/image');
-    expect(testEvents[1].fields.message).toBe('JazakAllah khair, Test.');
+    expect(testEvents[1].fields.caption).toBe('Second caption.');
+    expect(testEvents[2].fields.message).toBe('JazakAllah khair, Test.');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.locator('#thanksStatus')).toContainText('Update saved');
     const saved = (await (await request.get('/donor-thanks', { headers })).json()).settings;
@@ -101,14 +116,15 @@ for (const width of [1440, 768, 390, 320, 280]) {
       .poll(
         async () => (await (await request.get('/__test/events', { headers })).json()).events.length,
       )
-      .toBe(before + 2);
+      .toBe(before + 3);
     const events = (await (await request.get('/__test/events', { headers })).json()).events.slice(
       before,
     );
     expect(events[0].path).toContain('/send/image');
     expect(events[0].fields.caption).toBe('Alhamdulillah, the case is complete.');
-    expect(events[1].path).toContain('/send/message');
-    expect(events[1].fields.message).toBe('JazakAllah khair, Supporter.');
+    expect(events[1].fields.caption).toBe('Second caption.'); // its own caption
+    expect(events[2].path).toContain('/send/message');
+    expect(events[2].fields.message).toBe('JazakAllah khair, Supporter.');
     expect(events[0].fields.phone).toBe('1555123' + String(width).padStart(4, '0'));
     await expect
       .poll(async () => {

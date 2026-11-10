@@ -37,40 +37,37 @@ for (const width of [1440, 768, 390, 320, 280]) {
     const dialog = await page.locator('#donorThanksDialog').boundingBox();
     expect(dialog.width).toBeLessThanOrEqual(Math.min(width - 16, 680));
     await expect(page.locator('.thanks-review')).toHaveCount(0); // no Preview section
-    await expect(page.locator('.thanks-slot > .thanks-attach, .thanks-slot > .thanks-attached .thanks-name')).toHaveCount(4);
+    await expect(page.locator('.thanks-media .thanks-attach')).toHaveText(['Attach image', 'Attach video']);
     await expect(page.locator('#thanksGapSel')).toBeVisible(); // timing is always shown
     // Start clean: an earlier width may have left attachments saved on the shared server.
-    for (const n of [1, 2]) {
-      const remove = page.locator(`[data-slot="${n}"] .thanks-remove`);
-      if (await remove.isVisible()) await remove.click();
-    }
-    await page.locator('#thanksFile').setInputFiles({
-      name: 'proof.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1cAAAAASUVORK5CYII=',
-        'base64',
-      ),
-    });
+    while ((await page.locator('.thanks-item .thanks-remove').count()) > 0)
+      await page.locator('.thanks-item .thanks-remove').first().click();
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1cAAAAASUVORK5CYII=',
+      'base64',
+    );
+    // Several files at once, and more later: no fixed limit of one image and one video.
+    await page.locator('#thanksFile').setInputFiles([
+      { name: 'proof.png', mimeType: 'image/png', buffer: png },
+      { name: 'second.png', mimeType: 'image/png', buffer: png },
+      { name: 'third.png', mimeType: 'image/png', buffer: png },
+    ]);
     await expect(page.locator('#thanksStatus')).toContainText('Media ready');
-    if ((await page.locator('[data-slot="1"] .thanks-capd').getAttribute('open')) === null)
-      await page.locator('[data-slot="1"] .thanks-capd > summary').click(); // "+ Caption" opens the box
-    await page.getByLabel('Caption', { exact: true }).fill('Alhamdulillah, the case is complete.');
-    // A second attachment (the video slot) has its own caption.
+    await expect(page.locator('.thanks-item')).toHaveCount(3);
     const chooser = page.waitForEvent('filechooser');
-    await page.locator('[data-slot="2"] > .thanks-attach').click(); // a real tap on "Attach video"
-    await (await chooser).setFiles({
-      name: 'second.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1cAAAAASUVORK5CYII=',
-        'base64',
-      ),
-    });
-    await expect(page.locator('[data-slot="2"] .thanks-capd > summary')).toBeVisible(); // + Caption under the video too
-    if ((await page.locator('[data-slot="2"] .thanks-capd').getAttribute('open')) === null)
-      await page.locator('[data-slot="2"] .thanks-capd > summary').click();
-    await page.locator('#thanksCaption2').fill('Second caption.');
+    await page.locator('#thanksAttachVid').click(); // a real tap on "Attach video" adds a fourth
+    await (await chooser).setFiles({ name: 'fourth.png', mimeType: 'image/png', buffer: png });
+    await expect(page.locator('.thanks-item')).toHaveCount(4);
+    // "+ Caption" under each one, only where wanted: the 1st and the 3rd.
+    for (const [n, text] of [
+      [1, 'Alhamdulillah, the case is complete.'],
+      [3, 'Third caption.'],
+    ]) {
+      const item = page.locator('.thanks-item').nth(n - 1);
+      if ((await item.locator('.thanks-capd').getAttribute('open')) === null)
+        await item.locator('.thanks-capd > summary').click();
+      await item.locator('textarea').fill(text);
+    }
     // Message is folded behind "+ Message" (third after the attachments); a saved message opens it by itself.
     if ((await page.locator('.thanks-msg').getAttribute('open')) === null)
       await page.locator('.thanks-msg > summary').click();
@@ -96,11 +93,16 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await page.locator('#thanksTest').click();
     await expect(page.locator('#thanksStatus')).toContainText('Test sent to the GiveLife test group');
     const testEvents = (await (await request.get('/__test/events', { headers })).json()).events.slice(beforeTest);
-    expect(testEvents).toHaveLength(3); // image, second attachment, message
+    expect(testEvents).toHaveLength(5); // four attachments, then the message
     for (const e of testEvents) expect(e.fields.phone).toBe('120363431210327603@g.us');
     expect(testEvents[0].path).toContain('/send/image');
-    expect(testEvents[1].fields.caption).toBe('Second caption.');
-    expect(testEvents[2].fields.message).toBe('JazakAllah khair, Test.');
+    expect(testEvents.slice(0, 4).map((e) => e.fields.caption || '')).toEqual([
+      'Alhamdulillah, the case is complete.',
+      '',
+      'Third caption.',
+      '',
+    ]);
+    expect(testEvents[4].fields.message).toBe('JazakAllah khair, Test.');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.locator('#thanksStatus')).toContainText('Update saved');
     const saved = (await (await request.get('/donor-thanks', { headers })).json()).settings;
@@ -116,24 +118,31 @@ for (const width of [1440, 768, 390, 320, 280]) {
     }); // back to the defaults for the next test
     await page.getByRole('button', { name: 'Close Thank donors', exact: true }).click();
     await button.click();
-    await expect(page.getByLabel('Caption', { exact: true })).toHaveValue(
+    await expect(page.locator('.thanks-item')).toHaveCount(4); // all four attachments came back
+    await expect(page.locator('.thanks-item').nth(0).locator('textarea')).toHaveValue(
       'Alhamdulillah, the case is complete.',
     );
+    await expect(page.locator('.thanks-item').nth(2).locator('textarea')).toHaveValue('Third caption.');
     const before = (await (await request.get('/__test/events', { headers })).json()).events.length;
     await page.locator('#thanksSwitch').click(); // the start toggle
     await expect
       .poll(
         async () => (await (await request.get('/__test/events', { headers })).json()).events.length,
       )
-      .toBe(before + 3);
+      .toBe(before + 5);
     const events = (await (await request.get('/__test/events', { headers })).json()).events.slice(
       before,
     );
     expect(events[0].path).toContain('/send/image');
     expect(events[0].fields.caption).toBe('Alhamdulillah, the case is complete.');
-    expect(events[1].fields.caption).toBe('Second caption.'); // its own caption
-    expect(events[2].path).toContain('/send/message');
-    expect(events[2].fields.message).toBe('JazakAllah khair, Supporter.');
+    expect(events.slice(0, 4).map((e) => e.fields.caption || '')).toEqual([
+      'Alhamdulillah, the case is complete.',
+      '',
+      'Third caption.',
+      '',
+    ]); // each with its own caption, in order
+    expect(events[4].path).toContain('/send/message');
+    expect(events[4].fields.message).toBe('JazakAllah khair, Supporter.');
     expect(events[0].fields.phone).toBe('1555123' + String(width).padStart(4, '0'));
     await expect
       .poll(async () => {

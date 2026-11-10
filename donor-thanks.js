@@ -5,11 +5,9 @@
   dialog.setAttribute('aria-labelledby', 'thanksTitle');
   dialog.innerHTML = `<header><div><h2 id="thanksTitle" tabindex="-1" autofocus>Thank donors</h2><small id="thanksContext"></small></div></header>
   <div class="thanks-body"><section class="thanks-compose">
-    <div class="thanks-media">
-      <div class="thanks-slot" data-slot="1"><button type="button" class="thanks-attach" id="thanksAttachImg">Attach image</button><div class="thanks-attached" hidden><span class="thanks-name"></span><button type="button" class="thanks-remove" aria-label="Remove image">Remove</button><details class="thanks-capd"><summary>+ Caption</summary><textarea id="thanksCaption" aria-label="Caption" maxlength="4000" rows="2" placeholder="Caption (optional)"></textarea></details></div></div>
-      <div class="thanks-slot" data-slot="2"><button type="button" class="thanks-attach" id="thanksAttachVid">Attach video</button><div class="thanks-attached" hidden><span class="thanks-name"></span><button type="button" class="thanks-remove" aria-label="Remove video">Remove</button><details class="thanks-capd"><summary>+ Caption</summary><textarea id="thanksCaption2" aria-label="Video caption" maxlength="4000" rows="2" placeholder="Caption (optional)"></textarea></details></div></div>
-    </div>
-    <input id="thanksFile" type="file" aria-label="Attach file" accept="image/jpeg,image/png,image/webp,video/mp4" hidden>
+    <div class="thanks-media"><button type="button" class="thanks-attach" id="thanksAttachImg">Attach image</button><button type="button" class="thanks-attach" id="thanksAttachVid">Attach video</button></div>
+    <div class="thanks-list" id="thanksList"></div>
+    <input id="thanksFile" type="file" aria-label="Attach file" accept="image/jpeg,image/png,image/webp,video/mp4" multiple hidden>
     <details class="thanks-msg"><summary>+ Message</summary>
       <label for="thanksMessage">Message</label><textarea id="thanksMessage" aria-describedby="thanksNameHint" maxlength="4000" rows="4" placeholder="Write a thank-you message…"></textarea>
       <small id="thanksNameHint">Use {name} for their first name. Sent after any attachment.</small>
@@ -52,7 +50,7 @@
     for (const sel of dialog.querySelectorAll('select')) sel.disabled = busy || state?.on;
     $('thanksSave').disabled = busy || state?.on;
     $('thanksTest').disabled =
-      busy || !state || (!state.attachment && !state.attachment2 && !$('thanksMessage').value.trim());
+      busy || !state || (!state.media.length && !$('thanksMessage').value.trim());
     const on = !!state?.on;
     $('thanksSwitch').setAttribute('aria-checked', String(on));
     $('thanksSwitch').disabled =
@@ -60,31 +58,59 @@
       !state ||
       (!on &&
         (state.left > 0 ||
-          (!state.attachment && !state.attachment2 && !$('thanksMessage').value.trim()) ||
+          (!state.media.length && !$('thanksMessage').value.trim()) ||
           state.pending === 0));
     $('thanksStartLabel').textContent = on
       ? 'Sending · switch off to pause'
       : state
         ? 'Send to ' + state.pending + ' donors'
         : 'Start sending';
-    for (const b of dialog.querySelectorAll('.thanks-remove, .thanks-attach')) b.disabled = busy || state?.on;
+    for (const b of dialog.querySelectorAll('.thanks-remove, .thanks-attach'))
+      b.disabled = busy || state?.on || (b.classList.contains('thanks-attach') && state?.media.length >= MAX_MEDIA);
   }
-  /* Two attachment slots (an image and a video), each with its own optional caption. */
-  const SLOTS = [
-    { n: 1, att: 'attachment', file: 'filename', mime: 'mime', cap: 'thanksCaption', accept: 'image/jpeg,image/png,image/webp' },
-    { n: 2, att: 'attachment2', file: 'filename2', mime: 'mime2', cap: 'thanksCaption2', accept: 'video/mp4' },
-  ];
-  const slotBox = (sl) => dialog.querySelector(`[data-slot="${sl.n}"]`);
-  let slot = SLOTS[0];
-  function preview() {
-    for (const sl of SLOTS) {
-      const has = !!state?.[sl.att];
-      slotBox(sl).querySelector('.thanks-attach').hidden = has;
-      slotBox(sl).querySelector('.thanks-attached').hidden = !has;
-      slotBox(sl).querySelector('.thanks-name').textContent = has ? state[sl.file] : '';
-    }
+  /* Any number of images and videos (up to 8), each with its own optional "+ Caption"; sent in this order. */
+  const MAX_MEDIA = 8;
+  function renderList() {
+    const list = $('thanksList');
+    list.replaceChildren();
+    state?.media.forEach((m, i) => {
+      const item = document.createElement('div');
+      item.className = 'thanks-item';
+      const name = document.createElement('span');
+      name.className = 'thanks-name';
+      name.textContent = m.filename;
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'thanks-remove';
+      remove.textContent = 'Remove';
+      remove.setAttribute('aria-label', 'Remove ' + m.filename);
+      remove.onclick = () => {
+        state.media.splice(i, 1);
+        renderList();
+        note('Attachment removed. Save to keep this change.');
+      };
+      const more = document.createElement('details');
+      more.className = 'thanks-capd';
+      more.open = !!m.caption; // a saved caption shows itself
+      const sum = document.createElement('summary');
+      sum.textContent = '+ Caption';
+      const box = document.createElement('textarea');
+      box.maxLength = 4000;
+      box.rows = 2;
+      box.placeholder = 'Caption (optional)';
+      box.value = m.caption || '';
+      box.setAttribute('aria-label', 'Caption for ' + m.filename);
+      box.addEventListener('input', () => {
+        m.caption = box.value;
+        note('Unsaved changes');
+      });
+      more.append(sum, box);
+      item.append(name, remove, more);
+      list.append(item);
+    });
     controls();
   }
+  const preview = renderList;
   function audience() {
     $('thanksContext').textContent =
       `${state.case_name} · ${state.total} donors` +
@@ -92,9 +118,6 @@
       (state.left > 0 ? ' · Finish case to send' : '');
   }
   function fill() {
-    $('thanksCaption').value = state.caption;
-    $('thanksCaption2').value = state.caption2 || '';
-    for (const sl of SLOTS) slotBox(sl).querySelector('.thanks-capd').open = !!$(sl.cap).value; // a saved caption shows itself
     $('thanksMessage').value = state.message;
     if (state.message) dialog.querySelector('.thanks-msg').open = true; // a saved message shows itself
     const c = state.settings;
@@ -164,12 +187,7 @@
     state = await api('save', {
       case_id: state.case_id,
       revision: state.revision,
-      attachment: state.attachment,
-      filename: state.filename,
-      attachment2: state.attachment2 || null,
-      filename2: state.filename2 || '',
-      caption2: $('thanksCaption2').value,
-      caption: $('thanksCaption').value,
+      media: state.media.map((m) => ({ id: m.id, filename: m.filename, caption: m.caption || '' })),
       message: $('thanksMessage').value,
     });
     state = await api('settings', {
@@ -222,54 +240,43 @@
       await save();
       note((await api('test', { case_id: state.case_id })).reply);
     });
-  for (const sl of SLOTS)
-    slotBox(sl).querySelector('.thanks-attach').onclick = () => {
-      slot = sl;
-      $('thanksFile').accept = sl.accept;
+  for (const [id, accept] of [
+    ['thanksAttachImg', 'image/jpeg,image/png,image/webp'],
+    ['thanksAttachVid', 'video/mp4'],
+  ])
+    $(id).onclick = () => {
+      $('thanksFile').accept = accept;
       $('thanksFile').click();
     };
   $('thanksFile').onchange = () =>
     action(async () => {
-      const file = $('thanksFile').files[0];
-      if (!file) return;
-      if (file.size > 15000000) throw Error('Choose a file under 15 MB.');
-      note('Uploading privately…');
-      const data = await new Promise((ok, no) => {
-        const reader = new FileReader();
-        reader.onload = () => ok(reader.result);
-        reader.onerror = () => no(Error('Could not read the file.'));
-        reader.readAsDataURL(file);
-      });
-      const response = await fetch('/upload-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ use: 'bulk', data }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw Error(result.error || 'Upload failed.');
-      state[slot.att] = result.id;
-      state[slot.mime] = file.type;
-      state[slot.file] = file.name;
-      slot = SLOTS[0];
-      preview();
-      note('Media ready. Caption and message are optional.');
-    });
-  for (const sl of SLOTS)
-    slotBox(sl).querySelector('.thanks-remove').onclick = () => {
-      state[sl.att] = null;
-      state[sl.mime] = '';
-      state[sl.file] = '';
+      for (const file of [...$('thanksFile').files]) {
+        if (state.media.length >= MAX_MEDIA) throw Error('At most ' + MAX_MEDIA + ' images or videos.');
+        if (file.size > 15000000) throw Error(file.name + ' is over 15 MB.');
+        note('Uploading ' + file.name + '…');
+        const data = await new Promise((ok, no) => {
+          const reader = new FileReader();
+          reader.onload = () => ok(reader.result);
+          reader.onerror = () => no(Error('Could not read the file.'));
+          reader.readAsDataURL(file);
+        });
+        const response = await fetch('/upload-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ use: 'bulk', data }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw Error(result.error || 'Upload failed.');
+        state.media.push({ id: result.id, filename: file.name, mime: file.type, caption: '' });
+        renderList();
+      }
       $('thanksFile').value = '';
-      $(sl.cap).value = '';
-      slotBox(sl).querySelector('.thanks-capd').open = false;
-      preview();
-      note('Attachment removed. Save to keep this change.');
-    };
-  for (const id of ['thanksCaption', 'thanksCaption2', 'thanksMessage'])
-    $(id).addEventListener('input', () => {
-      preview();
-      note('Unsaved changes');
+      note('Media ready. Captions and message are optional.');
     });
+  $('thanksMessage').addEventListener('input', () => {
+    controls();
+    note('Unsaved changes');
+  });
   function close() {
     if (busy) return;
     dialog.close();
@@ -369,7 +376,7 @@
       const saved = await api();
       if (directory.dataset.panel !== 'donated') return resetMode();
       if (saved.left > 0) throw Error('Finish this case before sending thank-you updates.');
-      if (!saved.attachment && !saved.message.trim())
+      if (!saved.media.length && !saved.message.trim())
         throw Error('Open Thank donors and save your update first.');
       modeCase = saved.case_id;
       paintMode();
@@ -423,7 +430,7 @@
   const tabSwitch = ctl.querySelector('#thanksTabSwitch'),
     tabTest = ctl.querySelector('#thanksTabTest'),
     tabLabel = ctl.querySelector('#thanksTabLabel');
-  const hasUpdate = () => !!tabState && !!(tabState.attachment || tabState.attachment2 || tabState.message.trim());
+  const hasUpdate = () => !!tabState && !!(tabState.media.length || tabState.message.trim());
   function paintTab() {
     const on = !!tabState?.on;
     tabSwitch.setAttribute('aria-checked', String(on));

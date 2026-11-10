@@ -2267,7 +2267,7 @@ def send_text(jid, text):
 TEST_GROUP_JID = "120363431210327603@g.us"
 
 
-def send_thanks_test(message, caption, attachment, caption2="", attachment2=None):
+def send_thanks_test(message, media):
     """The Thank donors update, exactly as a donor would get it, sent ONLY to the GiveLife test group
     ({name} becomes "Test"). It never reaches a donor and changes no donor record."""
     check_hold()
@@ -2282,10 +2282,8 @@ def send_thanks_test(message, caption, attachment, caption2="", attachment2=None
             raise ValueError("WhatsApp is disconnected. Tap WhatsApp to reconnect.")
         results = []
         try:
-            if attachment:
+            for caption, attachment in media:  # each image or video with its own caption, in order
                 results.append(send_batch_attachment(TEST_GROUP_JID, caption or "", attachment))
-            if attachment2:
-                results.append(send_batch_attachment(TEST_GROUP_JID, caption2 or "", attachment2))
             if message.strip():
                 req = urllib.request.Request(
                     GOWA_URL + "/send/message",

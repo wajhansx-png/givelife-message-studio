@@ -18,8 +18,7 @@ DEFAULTS = {
     "rest_seconds": 0,
     "vary_seconds": 0,
 }
-# A second attachment (for example a video after an image), each with its own optional caption.
-SECOND_MEDIA = {"attachment2": None, "filename2": "", "mime2": "", "caption2": ""}
+MAX_MEDIA = 8  # images and videos in one update, each with its own optional caption
 # (key, minimum, maximum): minutes and seconds are separate boxes so a pace can be "2 min 30 sec".
 LIMITS = (
     ("gap_minutes", 0, 1440),
@@ -57,8 +56,31 @@ class DonorThanks:
             **DEFAULTS,
             **(data.get("settings") or {}),
         }  # older saves get the new boxes
-        for key, value in SECOND_MEDIA.items():  # older saves have only one attachment
-            data.setdefault(key, value)
+        if "media" not in data:  # older saves had one or two attachments in separate fields
+            data["media"] = [
+                {
+                    "id": data[att],
+                    "filename": data.get(file) or "Attachment",
+                    "mime": data.get(mime) or "",
+                    "caption": data.get(cap) or "",
+                }
+                for att, file, mime, cap in (
+                    ("attachment", "filename", "mime", "caption"),
+                    ("attachment2", "filename2", "mime2", "caption2"),
+                )
+                if data.get(att)
+            ]
+        for old in (
+            "attachment",
+            "filename",
+            "mime",
+            "caption",
+            "attachment2",
+            "filename2",
+            "mime2",
+            "caption2",
+        ):
+            data.pop(old, None)
         return data
 
     def _load_raw(self, cid=None):
@@ -66,10 +88,7 @@ class DonorThanks:
         return (self.app.STORE.get("donor_thanks_" + cid) if self.app.STORE else None) or {
             "case_id": cid,
             "revision": 0,
-            "attachment": None,
-            "filename": "",
-            "mime": "",
-            "caption": "",
+            "media": [],
             "message": "",
             "settings": dict(DEFAULTS),
             "receipts": {},
@@ -122,6 +141,29 @@ class DonorThanks:
             )
             return public
 
+    @staticmethod
+    def _media_from(body):
+        """The attachments of an update: the list the screen sends, or the older one/two-attachment fields."""
+        listed = body.get("media")
+        if listed is not None:
+            if not isinstance(listed, list) or not all(
+                isinstance(m, dict) and isinstance(m.get("id"), str) and m["id"] for m in listed
+            ):
+                raise ValueError("Choose the attachments again.")
+            return listed
+        old = []
+        for att, file, cap in (
+            ("attachment", "filename", "caption"),
+            ("attachment2", "filename2", "caption2"),
+        ):
+            if body.get(att):
+                old.append(
+                    {"id": body[att], "filename": body.get(file), "caption": body.get(cap) or ""}
+                )
+            elif (body.get(cap) or "").strip():
+                raise ValueError("A caption needs an attachment.")
+        return old
+
     def save(self, body):
         with self.hub.cases.lock, self.lock:
             data = self._load()
@@ -131,60 +173,44 @@ class DonorThanks:
                 )
             if data["on"]:
                 raise ValueError("Pause Thanks donors before changing its message or media.")
-            body = {"caption2": "", **body}
-            for field in ("caption", "caption2", "message"):
-                if not isinstance(body.get(field), str) or len(body[field]) > 4000:
+            if not isinstance(body.get("message"), str) or len(body["message"]) > 4000:
+                raise ValueError("Keep each text field within 4,000 characters.")
+            media = self._media_from(body)
+            if len(media) > MAX_MEDIA:
+                raise ValueError(f"Attach at most {MAX_MEDIA} images or videos.")
+            items = []
+            for item in media:
+                caption = item.get("caption", "")
+                if not isinstance(caption, str) or len(caption) > 4000:
                     raise ValueError("Keep each text field within 4,000 characters.")
-            attachment = body.get("attachment") or None
-            attachment2 = body.get("attachment2") or None
-            mime = mime2 = ""
-            if attachment:
-                _, mime = batch_media.load(self.app.STORE, attachment, self.app.ATT)
-            elif body["caption"].strip():
-                raise ValueError(
-                    "A caption needs an attachment. Use Separate message for text alone."
+                _, mime = batch_media.load(self.app.STORE, item["id"], self.app.ATT)
+                items.append(
+                    {
+                        "id": item["id"],
+                        "mime": mime,
+                        "filename": hide_numbers(str(item.get("filename") or "Attachment"))[:150],
+                        "caption": caption,
+                    }
                 )
-            if attachment2:
-                _, mime2 = batch_media.load(self.app.STORE, attachment2, self.app.ATT)
-            elif body["caption2"].strip():
-                raise ValueError("A caption needs an attachment.")
-            if self.app.completed_case_appeal(
-                body["caption"] + "\n" + body["caption2"] + "\n" + body["message"]
-            ):
+            texts = [m["caption"] for m in items] + [body["message"]]
+            if self.app.completed_case_appeal("\n".join(texts)):
                 raise ValueError(
                     "Use a completion or thank-you update, without a new fundraising appeal."
                 )
-            for field in ("caption", "caption2", "message"):
+            for text in texts:
                 library_for(self.app).record(
-                    "dm", body[field], source="completion_editor", quality="owner"
+                    "dm", text, source="completion_editor", quality="owner"
                 )
-            data.update(
-                attachment=attachment,
-                mime=mime,
-                filename=hide_numbers(str(body.get("filename") or "Attachment"))[:150],
-                caption=body["caption"],
-                attachment2=attachment2,
-                mime2=mime2,
-                filename2=hide_numbers(str(body.get("filename2") or "Attachment"))[:150],
-                caption2=body["caption2"],
-                message=body["message"],
-                revision=data["revision"] + 1,
-            )
+            data.update(media=items, message=body["message"], revision=data["revision"] + 1)
             self._put(data)
             return self.view()
 
     def test(self):
         """Send this update to the GiveLife test group only, so it can be checked before donors get it."""
         data = self._load()
-        if not data["attachment"] and not data["attachment2"] and not data["message"].strip():
+        if not data["media"] and not data["message"].strip():
             raise ValueError("Write a message or attach a file first.")
-        self.app.send_thanks_test(
-            data["message"],
-            data["caption"],
-            data["attachment"],
-            data["caption2"],
-            data["attachment2"],
-        )
+        self.app.send_thanks_test(data["message"], [(m["caption"], m["id"]) for m in data["media"]])
         return {"reply": "Test sent to the GiveLife test group."}
 
     def configure(self, settings):
@@ -236,11 +262,10 @@ class DonorThanks:
                 or getattr(self.app.ENGINE, "dm_running", False)
             ):
                 raise ValueError("Pause the other DM queue before starting Thanks donors.")
-            if not (data["attachment"] or data["attachment2"] or data["message"].strip()):
+            if not (data["media"] or data["message"].strip()):
                 raise ValueError("Open Donated → Thank donors and save media or a message first.")
-            for media in (data["attachment"], data["attachment2"]):
-                if media:
-                    batch_media.load(self.app.STORE, media, self.app.ATT)
+            for item in data["media"]:
+                batch_media.load(self.app.STORE, item["id"], self.app.ATT)
             ids = [
                 r["id"]
                 for r in self._rows()
@@ -342,10 +367,12 @@ class DonorThanks:
                 self._put(data)
                 return
             parts = []
-            if data["attachment"]:
-                parts.append(("media", data["caption"], data["attachment"]))
-            if data["attachment2"]:
-                parts.append(("media2", data["caption2"], data["attachment2"]))
+            for index, item in enumerate(
+                data["media"]
+            ):  # "media", "media2", "media3"… keep earlier receipts valid
+                parts.append(
+                    ("media" if index == 0 else f"media{index + 1}", item["caption"], item["id"])
+                )
             if data["message"].strip():
                 parts.append(("message", data["message"], None))
             self._put(data)

@@ -469,3 +469,20 @@ html body #donorThanksDialog .thanks-name {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* "+ Caption" under each attachment, like "+ Message": one tap opens the box. */
+html body #donorThanksDialog .thanks-capd {
+  grid-column: 1 / -1;
+}
+html body #donorThanksDialog .thanks-capd > summary {
+  min-height: 40px;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+html body #donorThanksDialog .thanks-capd > textarea {
+  width: 100%;
+  min-height: 56px;
+  box-sizing: border-box;
+}

@@ -48,6 +48,8 @@ for (const width of [1440, 768, 390, 320, 280]) {
       ),
     });
     await expect(page.locator('#thanksStatus')).toContainText('Media ready');
+    if ((await page.locator('[data-slot="1"] .thanks-capd').getAttribute('open')) === null)
+      await page.locator('[data-slot="1"] .thanks-capd > summary').click(); // "+ Caption" opens the box
     await page.getByLabel('Caption', { exact: true }).fill('Alhamdulillah, the case is complete.');
     // A second attachment (the video slot) has its own caption.
     await page.locator('[data-slot="2"] > .thanks-attach').click({ trial: true });
@@ -60,7 +62,9 @@ for (const width of [1440, 768, 390, 320, 280]) {
         'base64',
       ),
     });
-    await expect(page.locator('#thanksCaption2')).toBeVisible();
+    await expect(page.locator('[data-slot="2"] .thanks-capd > summary')).toBeVisible(); // + Caption under the video too
+    if ((await page.locator('[data-slot="2"] .thanks-capd').getAttribute('open')) === null)
+      await page.locator('[data-slot="2"] .thanks-capd > summary').click();
     await page.locator('#thanksCaption2').fill('Second caption.');
     // Message is folded behind "+ Message" (third after the attachments); a saved message opens it by itself.
     if ((await page.locator('.thanks-msg').getAttribute('open')) === null)

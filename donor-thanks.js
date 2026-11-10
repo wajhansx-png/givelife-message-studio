@@ -6,8 +6,8 @@
   dialog.innerHTML = `<header><div><h2 id="thanksTitle" tabindex="-1" autofocus>Thank donors</h2><small id="thanksContext"></small></div></header>
   <div class="thanks-body"><section class="thanks-compose">
     <div class="thanks-media">
-      <div class="thanks-slot" data-slot="1"><button type="button" class="thanks-attach" id="thanksAttachImg">Attach image</button><div class="thanks-attached" hidden><span class="thanks-name"></span><button type="button" class="thanks-remove" aria-label="Remove image">Remove</button><textarea id="thanksCaption" aria-label="Caption" maxlength="4000" rows="2" placeholder="Caption (optional)"></textarea></div></div>
-      <div class="thanks-slot" data-slot="2"><button type="button" class="thanks-attach" id="thanksAttachVid">Attach video</button><div class="thanks-attached" hidden><span class="thanks-name"></span><button type="button" class="thanks-remove" aria-label="Remove video">Remove</button><textarea id="thanksCaption2" aria-label="Video caption" maxlength="4000" rows="2" placeholder="Caption (optional)"></textarea></div></div>
+      <div class="thanks-slot" data-slot="1"><button type="button" class="thanks-attach" id="thanksAttachImg">Attach image</button><div class="thanks-attached" hidden><span class="thanks-name"></span><button type="button" class="thanks-remove" aria-label="Remove image">Remove</button><details class="thanks-capd"><summary>+ Caption</summary><textarea id="thanksCaption" aria-label="Caption" maxlength="4000" rows="2" placeholder="Caption (optional)"></textarea></details></div></div>
+      <div class="thanks-slot" data-slot="2"><button type="button" class="thanks-attach" id="thanksAttachVid">Attach video</button><div class="thanks-attached" hidden><span class="thanks-name"></span><button type="button" class="thanks-remove" aria-label="Remove video">Remove</button><details class="thanks-capd"><summary>+ Caption</summary><textarea id="thanksCaption2" aria-label="Video caption" maxlength="4000" rows="2" placeholder="Caption (optional)"></textarea></details></div></div>
     </div>
     <input id="thanksFile" type="file" aria-label="Attach file" accept="image/jpeg,image/png,image/webp,video/mp4" hidden>
     <details class="thanks-msg"><summary>+ Message</summary>
@@ -84,6 +84,7 @@
   function fill() {
     $('thanksCaption').value = state.caption;
     $('thanksCaption2').value = state.caption2 || '';
+    for (const sl of SLOTS) slotBox(sl).querySelector('.thanks-capd').open = !!$(sl.cap).value; // a saved caption shows itself
     $('thanksMessage').value = state.message;
     if (state.message) dialog.querySelector('.thanks-msg').open = true; // a saved message shows itself
     const c = state.settings;
@@ -249,6 +250,7 @@
       state[sl.file] = '';
       $('thanksFile').value = '';
       $(sl.cap).value = '';
+      slotBox(sl).querySelector('.thanks-capd').open = false;
       preview();
       note('Attachment removed. Save to keep this change.');
     };

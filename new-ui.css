@@ -4166,3 +4166,101 @@
     gap: 10px !important;
   }
 }
+
+/* Report: a screen-sized summary, with settings opened only when requested. */
+.UI2 dialog.report-dialog .report-card {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  width: min(640px, calc(100vw - 20px)) !important;
+  padding: 8px 12px 12px !important;
+  box-sizing: border-box;
+  overflow: visible !important;
+}
+.UI2 .report-card .rp-head {
+  min-height: 44px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.UI2 .report-card .report-list {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 4px 16px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  white-space: normal !important;
+}
+.UI2 .report-card .report-list::before {
+  grid-column: 1 / -1;
+}
+.UI2 .report-card .report-list > li {
+  min-height: 28px !important;
+  padding: 2px !important;
+  gap: 8px;
+}
+.UI2 .report-card #reportToday {
+  display: none !important;
+}
+.UI2 .report-card .auto-controls {
+  margin: 0 !important;
+}
+.UI2 .report-card .auto-controls h3 {
+  margin: 2px 0 6px !important;
+}
+.UI2 .report-card #autoCards {
+  display: grid;
+  gap: 6px;
+}
+.UI2 .report-card .auto-card {
+  display: block !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 6px 10px !important;
+}
+.UI2 .report-card .auto-card .auto-head {
+  min-height: 44px;
+}
+.UI2 .report-card .auto-card .auto-head h4 {
+  font-size: 14px !important;
+  line-height: 1.3;
+}
+.UI2 .report-card .auto-card .ui2-auto-sub {
+  font-size: 12px;
+}
+.UI2 .report-card .auto-card .auto-switch {
+  margin: 0 !important;
+  padding: 0 10px !important;
+  min-height: 44px !important;
+  min-width: 64px !important;
+  font-size: 13px !important;
+}
+.UI2 .report-card .auto-card :is(.auto-set, .auto-line, .auto-edit),
+.UI2 .report-card :is(.auto-note, .auto-msg):empty {
+  display: none !important;
+}
+.UI2 .report-card .auto-note {
+  margin: 4px 0 0 !important;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.UI2 .report-card #autoStopAll {
+  margin: 0 !important;
+  min-height: 44px !important;
+}
+.UI2 .report-card:has(.auto-form:not([hidden])) {
+  overflow-y: auto !important;
+}
+.UI2 .report-card:has(.auto-form:not([hidden])) .report-list,
+.UI2
+  .report-card:has(.auto-form:not([hidden]))
+  .auto-card:not(:has(.auto-form:not([hidden]))) {
+  display: none !important;
+}
+@media (min-width: 600px) {
+  .UI2 .report-card #autoCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .UI2 .report-card:has(.auto-form:not([hidden])) #autoCards {
+    grid-template-columns: 1fr;
+  }
+}

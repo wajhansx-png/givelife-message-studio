@@ -8,6 +8,7 @@ on:
       - 'index.html'
       - 'tests/e2e/element-audit.cjs'
       - 'tests/e2e/responsive-elements.spec.cjs'
+      - 'tests/e2e/new_ui_controls.spec.cjs'
       - 'studio.css'
       - 'donors.css'
       - 'donors.js'
@@ -27,6 +28,35 @@ on:
 permissions:
   contents: read
 jobs:
+  new-studio-controls:
+    name: New studio screens, menus and controls
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm exec playwright install --with-deps chromium
+      - name: Check every listed screen and open control surface
+        run: corepack pnpm test:e2e:controls
+      - name: Keep control inventories and failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: new-studio-control-matrix
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
   fake-donors-mobile:
     name: Responsive surfaces and element geometry (fake transport)
     runs-on: ubuntu-latest

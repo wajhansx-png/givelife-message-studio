@@ -1,6 +1,6 @@
 # New studio control audit — 10 November 2026
 
-The automated audit opens 41 screen states at 13 viewport sizes: **533 state checks, 6,861 control observations and 18,624 rendered-element observations**, with no recorded layout failures after fixes. Counts repeat controls across states and sizes; they are not unique buttons.
+The automated audit opens 41 screen states at 13 viewport sizes: **533 state checks, 6,776 control observations and 18,537 rendered-element observations**, with no recorded layout failures after fixes. Reviewed base: `5aaa1a1` (main including the Donors/Volunteers header update). Counts repeat controls across states and sizes; they are not unique buttons.
 
 ## Viewports
 
@@ -14,13 +14,14 @@ The test inventories every visible control within each listed surface. It scroll
 
 ## Fixed failures
 
-- Wrap Notes formatting tools on very narrow phones.
+- Wrap Notes formatting tools on very narrow phones; ensure the workspace actually disappears when Notes is locked.
 - Keep the Preview three-dot menu inside the phone viewport and scroll its contents when the screen is short.
 - Keep Next/Regenerate above the phone action dock in landscape; hide them while editing.
 - Let opened donor row menus escape row rendering containment; use a viewport panel on short phones.
 - Hide covered donor tabs while phone search is expanded.
 - Keep Follow-up fields separate from the DM-only reader and actions.
 - Keep Reply actions in flow so they do not cover Add on short screens.
+- Prevent the remembered Report from reopening over a dialog the user has just opened. A deterministic browser-clock regression checks this case.
 - Fit the Messages Back label on narrow phones and the amount chip near the desktop breakpoint.
 
 ## Reproduce
@@ -34,7 +35,9 @@ Use the project Python requirements and Node dependencies first. The Playwright 
 
 ## Evidence and limits
 
-[Per-viewport counts](nov10-controls/matrix.json). The initial matrix passed nine cases; four Reply cases needed a readiness correction and then passed focused reruns. The existing new-studio suite also passed 85 cases after the initial CSS fixes. Before the fixes, 110 existing new-studio, Report, Volunteer and Case Writer tests passed, demonstrating why the additional geometry audit was needed.
+[Per-viewport counts](nov10-controls/matrix.json). The final run passed **all 14 control tests** in 3.5 minutes: 13 complete viewport matrices and the timed Report/Reply regression. All 10 existing Report layout tests also passed after the Report change. Formatting and `git diff --check` passed.
+
+The existing new-studio suite passed 85 cases after the initial CSS fixes. Before the fixes, 110 existing new-studio, Report, Volunteer and Case Writer tests passed, demonstrating why the additional geometry audit was needed. During the deeper audit, checking the real locked-Notes state exposed a hidden-workspace CSS override; failure screenshots also identified Report's delayed restore covering Reply. The final run includes both fixes.
 
 The matrix is a finite Chromium layout check, not a claim to cover every possible width, all nested application states, all business outcomes, Safari/Firefox, physical-device keyboards or the deployed production account. Opening each listed surface and checking control reachability does not activate every action. Functional sending coverage uses the existing fake-transport suites. Production was not deployed by this change.
 

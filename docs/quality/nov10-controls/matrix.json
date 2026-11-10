@@ -1,80 +1,80 @@
 {
   "900x700": {
     "states": 41,
-    "controls": 511,
-    "rendered_elements": 1447,
+    "controls": 504,
+    "rendered_elements": 1438,
     "failures": 0
   },
   "280x480": {
     "states": 41,
-    "controls": 539,
-    "rendered_elements": 1401,
+    "controls": 532,
+    "rendered_elements": 1394,
     "failures": 0
   },
   "899x700": {
     "states": 41,
-    "controls": 542,
-    "rendered_elements": 1457,
+    "controls": 535,
+    "rendered_elements": 1448,
     "failures": 0
   },
   "430x932": {
     "states": 41,
-    "controls": 535,
-    "rendered_elements": 1429,
+    "controls": 530,
+    "rendered_elements": 1428,
     "failures": 0
   },
   "667x375": {
     "states": 41,
-    "controls": 536,
-    "rendered_elements": 1402,
+    "controls": 531,
+    "rendered_elements": 1401,
     "failures": 0
   },
   "1920x1080": {
     "states": 41,
-    "controls": 511,
-    "rendered_elements": 1449,
+    "controls": 504,
+    "rendered_elements": 1440,
     "failures": 0
   },
   "768x1024": {
     "states": 41,
-    "controls": 542,
-    "rendered_elements": 1456,
+    "controls": 535,
+    "rendered_elements": 1447,
     "failures": 0
   },
   "1024x768": {
     "states": 41,
-    "controls": 511,
-    "rendered_elements": 1447,
+    "controls": 504,
+    "rendered_elements": 1438,
     "failures": 0
   },
   "1440x900": {
     "states": 41,
-    "controls": 510,
-    "rendered_elements": 1446,
+    "controls": 504,
+    "rendered_elements": 1440,
     "failures": 0
   },
   "1280x800": {
     "states": 41,
-    "controls": 510,
-    "rendered_elements": 1446,
+    "controls": 504,
+    "rendered_elements": 1440,
     "failures": 0
   },
   "390x844": {
     "states": 41,
-    "controls": 537,
-    "rendered_elements": 1435,
+    "controls": 530,
+    "rendered_elements": 1428,
     "failures": 0
   },
   "320x480": {
     "states": 41,
-    "controls": 539,
-    "rendered_elements": 1401,
+    "controls": 532,
+    "rendered_elements": 1394,
     "failures": 0
   },
   "568x320": {
     "states": 41,
-    "controls": 538,
-    "rendered_elements": 1408,
+    "controls": 531,
+    "rendered_elements": 1401,
     "failures": 0
   }
 }

@@ -4305,6 +4305,9 @@
 }
 
 /* Keep the reader's contextual menu within narrow viewports. */
+.UI2 .foundation-notes .notes-workspace[hidden] {
+  display: none !important;
+}
 @media (max-width: 899px) {
   .UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
     position: fixed !important;

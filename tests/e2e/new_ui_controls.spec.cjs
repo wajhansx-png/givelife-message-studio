@@ -3,6 +3,20 @@ const { auditElements } = require('./element-audit.cjs');
 const fs = require('node:fs');
 test.use({ reducedMotion: 'reduce' });
 test.describe.configure({ mode: 'parallel' });
+test('remembered Report cannot cover a newly opened dialog', async ({ page }) => {
+  const start = new Date('2026-11-10T00:00:00Z');
+  await page.clock.install({ time: start });
+  await page.clock.pauseAt(new Date('2026-11-10T00:00:01Z'));
+  await page.addInitScript(() => {
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key');
+    localStorage.setItem('givelife-report-open', '1');
+  });
+  await page.goto('/new');
+  await page.evaluate(() => window.AutoReplies.open());
+  await page.clock.runFor(1000);
+  await expect(page.locator('.replies-dialog')).toBeVisible();
+  await expect(page.locator('.report-dialog')).toBeHidden();
+});
 const routes = [
   ['home', '', '.app'],
   ['preview', 'preview', '#messageFocus'],
@@ -97,6 +111,7 @@ const states = [
       await p.locator('.reply-open').evaluate((e) => e.click());
       await p.locator('#repList textarea').first().waitFor({ state: 'visible' });
       await expect(p.locator('#repNote')).not.toHaveText('');
+      await p.locator('#repEnabled').click({ trial: true });
     },
   ],
   ['research', '/new/group-finder', 'body'],
@@ -126,6 +141,7 @@ for (const [w, h] of [
       if (location.protocol !== 'http:') return;
       localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key');
       localStorage.setItem('givelife-theme', 'dark');
+      localStorage.removeItem('givelife-report-open');
     });
     p.setDefaultTimeout(5000);
     const results = [];
@@ -147,9 +163,9 @@ for (const [w, h] of [
           await p.locator('#notesEditor').waitFor({ state: 'visible' });
         }
         if (name === 'notes-locked') {
-          if (await p.locator('#notesLock').isVisible())
-            await p.locator('#notesLock').click();
+          if (await p.locator('#notesLock').isVisible()) await p.locator('#notesLock').click();
           await p.locator('#notesPassword').waitFor({ state: 'visible' });
+          await expect(p.locator('#notesWorkspace')).toBeHidden();
         }
         if (prepare) {
           if (typeof prepare === 'function') await prepare(p);
@@ -157,7 +173,32 @@ for (const [w, h] of [
         }
         await p.locator(root).waitFor({ state: 'visible' });
         await p.evaluate(() => document.fonts.ready);
+        // Modal top-layer hit testing must run after the newly opened dialog paints.
+        await p.evaluate(
+          () =>
+            new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+        );
         const r = await auditElements(p, root);
+        if (r.failures.length) {
+          r.openDialogs = await p.locator('dialog[open]').evaluateAll((dialogs) =>
+            dialogs.map((e) => ({
+              id: e.id,
+              className: e.className,
+              modal: e.matches(':modal'),
+            })),
+          );
+          r.hitTests = await p.locator(root).evaluate((surface) =>
+            [...surface.querySelectorAll('button,input,textarea')].map((el) => {
+              const rect = el.getBoundingClientRect();
+              const at = document.elementFromPoint(
+                rect.x + rect.width / 2,
+                rect.y + rect.height / 2,
+              );
+              return { id: el.id, hit: at?.outerHTML.slice(0, 250) };
+            }),
+          );
+          await p.screenshot({ path: info.outputPath(name + '.png') });
+        }
         results.push({ name, errors, ...r });
       } catch (e) {
         results.push({ name, error: e.message });

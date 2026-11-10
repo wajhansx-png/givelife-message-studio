@@ -620,3 +620,29 @@ html body #donorsPage .thanks-tab-row .thanks-row-mode small {
   padding-left: 26px;
   font-size: 11px;
 }
+
+/* Attach image / video side by side; every attached file is a row with its own "+ Caption". */
+html body #donorThanksDialog .thanks-media {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+html body #donorThanksDialog .thanks-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+html body #donorThanksDialog .thanks-list:empty {
+  display: none;
+}
+html body #donorThanksDialog .thanks-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--line, #3a4052);
+}
+html body #donorThanksDialog .thanks-item > .thanks-capd {
+  grid-column: 1 / -1;
+}

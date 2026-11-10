@@ -58,20 +58,39 @@ class ThanksTests(unittest.TestCase):
         return ident
 
     def save(self, **changes):
+        """Save an update. Attachments can be given as media=[{"id", "caption"}], or with the older one-or-two
+        attachment keywords (attachment, caption, attachment2, caption2)."""
         data = self.thanks.view()
+        if any(
+            changes.get(cap) and not changes.get(att)
+            for att, cap in (("attachment", "caption"), ("attachment2", "caption2"))
+        ):  # a caption with no attachment, in the older field form
+            return self.thanks.save(
+                {
+                    "case_id": data["case_id"],
+                    "revision": data["revision"],
+                    "message": changes.get("message", data["message"]),
+                    "attachment": None,
+                    "caption": changes.get("caption", ""),
+                    "caption2": changes.get("caption2", ""),
+                }
+            )
+        media = changes.get("media")
+        if media is None and any(
+            k in changes for k in ("attachment", "caption", "attachment2", "caption2")
+        ):
+            media = []
+            for att, cap in (("attachment", "caption"), ("attachment2", "caption2")):
+                if changes.get(att):
+                    media.append(
+                        {"id": changes[att], "filename": "file", "caption": changes.get(cap, "")}
+                    )
         return self.thanks.save(
             {
-                k: changes.get(k, data[k])
-                for k in (
-                    "case_id",
-                    "revision",
-                    "attachment",
-                    "filename",
-                    "caption",
-                    "attachment2",
-                    "caption2",
-                    "message",
-                )
+                "case_id": data["case_id"],
+                "revision": data["revision"],
+                "media": data["media"] if media is None else media,
+                "message": changes.get("message", data["message"]),
             }
         )
 
@@ -281,42 +300,67 @@ class ThanksTests(unittest.TestCase):
 
     def test_test_button_sends_only_to_the_test_group_and_changes_no_donor(self):
         tests = []
-        self.app.send_thanks_test = (
-            lambda message, caption, attachment, caption2="", attachment2=None: tests.append(
-                (message, caption, attachment)
-            )
-        )
+        self.app.send_thanks_test = lambda message, media: tests.append((message, media))
         with self.assertRaises(ValueError):  # nothing to test yet
             self.thanks.test()
         self.save(message="JazakAllah, {name}.", caption="Done", attachment=self.asset)
         self.assertEqual(self.thanks.test(), {"reply": "Test sent to the GiveLife test group."})
-        self.assertEqual(tests, [("JazakAllah, {name}.", "Done", self.asset)])
+        self.assertEqual(tests, [("JazakAllah, {name}.", [("Done", self.asset)])])
         self.assertEqual(self.sent, [])  # no donor was messaged
         self.assertEqual(self.thanks.view()["sent"], 0)
 
-    def test_two_attachments_each_with_its_own_caption_go_in_order_then_the_message(self):
-        second = batch_media.save(
-            self.store,
-            "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\nsecond").decode(),
-        )
+    def test_many_attachments_each_with_its_own_caption_go_in_order_then_the_message(self):
+        def upload(label):
+            return batch_media.save(
+                self.store,
+                "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\n" + label).decode(),
+            )
+
+        ids = [self.asset, upload(b"two"), upload(b"three"), upload(b"four")]
         self.save(
-            attachment=self.asset,
-            caption="First caption",
-            attachment2=second,
-            caption2="Second caption",
+            media=[
+                {"id": ids[0], "filename": "a.png", "caption": "First"},
+                {"id": ids[1], "filename": "b.mp4", "caption": ""},
+                {"id": ids[2], "filename": "c.mp4", "caption": "Third"},
+                {"id": ids[3], "filename": "d.mp4", "caption": "Fourth"},
+            ],
             message="Thank you, {name}.",
         )
-        view = self.thanks.view()
-        self.assertEqual((view["caption"], view["caption2"]), ("First caption", "Second caption"))
-        with self.assertRaises(ValueError):  # a caption needs its own attachment
-            self.save(attachment2=None, caption2="Orphan")
+        self.assertEqual(
+            [m["caption"] for m in self.thanks.view()["media"]], ["First", "", "Third", "Fourth"]
+        )
         self.start()
         self.thanks.tick()
         parts = [(b.get("attachment"), b["message"]) for b in self.sent]
         self.assertEqual(
             parts,
-            [(self.asset, "First caption"), (second, "Second caption"), (None, "Thank you, Sara.")],
+            [
+                (ids[0], "First"),
+                (ids[1], ""),
+                (ids[2], "Third"),
+                (ids[3], "Fourth"),
+                (None, "Thank you, Sara."),
+            ],
         )
+
+    def test_attachments_are_limited_and_older_saves_are_converted(self):
+        too_many = [{"id": self.asset, "filename": "x.png", "caption": ""}] * (
+            donor_thanks.MAX_MEDIA + 1
+        )
+        with self.assertRaises(ValueError):
+            self.save(media=too_many)
+        # An older save kept one attachment in separate fields: it is read as a one-item list.
+        old = self.thanks._load_raw()
+        old.pop("media", None)
+        old.update(
+            attachment=self.asset, filename="old.png", mime="image/png", caption="Old caption"
+        )
+        self.thanks._put(old)
+        view = self.thanks.view()
+        self.assertEqual(
+            [(m["id"], m["caption"]) for m in view["media"]], [(self.asset, "Old caption")]
+        )
+        self.assertNotIn("attachment", view)
 
     def test_seconds_only_pace_and_bad_values(self):
         self.thanks.configure({"gap_minutes": 0, "gap_seconds": 20})

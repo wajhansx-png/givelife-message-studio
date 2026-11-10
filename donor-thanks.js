@@ -16,10 +16,10 @@
     <details class="thanks-review"><summary>Preview</summary><div id="thanksPreview" aria-label="Message preview"></div><details><summary id="thanksAudience">Recipients</summary><ul id="thanksRecipients"></ul></details></details>
     <section class="thanks-timing"><b>Timing</b>
       <div class="thanks-grid">
-        <fieldset><legend>Gap between donors</legend><label>min<input id="thanksGap" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksGapSec" type="number" min="0" max="59" inputmode="numeric"></label></fieldset>
-        <label>Vary gap by ± sec<input id="thanksVary" type="number" min="0" max="300" inputmode="numeric"></label>
-        <label>Donors per batch<input id="thanksBatch" type="number" min="1" max="100" inputmode="numeric"></label>
-        <fieldset><legend>Rest after a batch</legend><label>min<input id="thanksRest" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksRestSec" type="number" min="0" max="59" inputmode="numeric"></label></fieldset>
+        <div class="thanks-opt" data-k="gap"><label>Gap between donors<select id="thanksGapSel"></select></label><div class="thanks-custom" hidden><label>min<input id="thanksGap" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksGapSec" type="number" min="0" max="59" inputmode="numeric"></label></div></div>
+        <div class="thanks-opt" data-k="vary"><label>Vary gap by ±<select id="thanksVarySel"></select></label><div class="thanks-custom" hidden><label>sec<input id="thanksVary" type="number" min="0" max="300" inputmode="numeric"></label></div></div>
+        <div class="thanks-opt" data-k="batch"><label>Donors per batch<select id="thanksBatchSel"></select></label><div class="thanks-custom" hidden><label>donors<input id="thanksBatch" type="number" min="1" max="100" inputmode="numeric"></label></div></div>
+        <div class="thanks-opt" data-k="rest"><label>Rest after a batch<select id="thanksRestSel"></select></label><div class="thanks-custom" hidden><label>min<input id="thanksRest" type="number" min="0" max="1440" inputmode="numeric"></label><label>sec<input id="thanksRestSec" type="number" min="0" max="59" inputmode="numeric"></label></div></div>
       </div></section>
   </section></div>
   <p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save</button><button type="button" id="thanksTest" title="Send this to the GiveLife test group only">Test</button><button type="button" id="thanksSend" class="primary">Send</button><button type="button" id="thanksPause" hidden>Pause</button><button type="button" id="thanksClose" aria-label="Close Thank donors">Back</button></footer>`;
@@ -50,6 +50,7 @@
   function controls() {
     for (const field of dialog.querySelectorAll('input,textarea'))
       field.disabled = busy || state?.on;
+    for (const sel of dialog.querySelectorAll('select')) sel.disabled = busy || state?.on;
     $('thanksSave').disabled = busy || state?.on;
     $('thanksTest').disabled = busy || !state || (!state.attachment && !$('thanksMessage').value.trim());
     $('thanksSend').hidden = !!state?.on;
@@ -139,10 +140,56 @@
     $('thanksBatch').value = c.batch_size;
     $('thanksRest').value = c.rest_minutes;
     $('thanksRestSec').value = c.rest_seconds || 0;
+    for (const k of Object.keys(OPTS)) syncOpt(k, false);
     audience();
     preview();
   }
   const num = (id) => Number($(id).value) || 0;
+  /* Timing: a dropdown of common choices per setting; "Custom…" shows the exact minute / second boxes. */
+  const OPTS = {
+    gap: [10, 20, 30, 60, 120, 180, 300, 600, 900, 1800],
+    vary: [0, 5, 10, 15, 30, 60, 120],
+    batch: [5, 10, 15, 20, 30, 50],
+    rest: [60, 120, 300, 600, 1200, 1800, 3600, 7200],
+  };
+  const words = (k, v) =>
+    k === 'batch'
+      ? v + ' donors'
+      : k === 'vary' && !v
+        ? 'No variation'
+        : v < 60
+          ? v + ' sec'
+          : Math.floor(v / 60) + ' min' + (v % 60 ? ' ' + (v % 60) + ' sec' : '');
+  const BOXES = {
+    gap: () => num('thanksGap') * 60 + num('thanksGapSec'),
+    vary: () => num('thanksVary'),
+    batch: () => num('thanksBatch'),
+    rest: () => num('thanksRest') * 60 + num('thanksRestSec'),
+  };
+  const WRITE = {
+    gap: (v) => (($('thanksGap').value = Math.floor(v / 60)), ($('thanksGapSec').value = v % 60)),
+    vary: (v) => ($('thanksVary').value = v),
+    batch: (v) => ($('thanksBatch').value = v),
+    rest: (v) => (($('thanksRest').value = Math.floor(v / 60)), ($('thanksRestSec').value = v % 60)),
+  };
+  function syncOpt(k, keepCustom) {
+    const sel = $('thanks' + k[0].toUpperCase() + k.slice(1) + 'Sel'),
+      box = dialog.querySelector(`[data-k="${k}"] .thanks-custom`),
+      v = BOXES[k]();
+    sel.value = OPTS[k].includes(v) && !(keepCustom && !box.hidden) ? String(v) : 'custom';
+    box.hidden = sel.value !== 'custom';
+  }
+  for (const k of Object.keys(OPTS)) {
+    const sel = $('thanks' + k[0].toUpperCase() + k.slice(1) + 'Sel');
+    for (const v of OPTS[k]) sel.append(new Option(words(k, v), v));
+    sel.append(new Option('Custom…', 'custom'));
+    sel.addEventListener('change', () => {
+      if (sel.value !== 'custom') WRITE[k](Number(sel.value));
+      syncOpt(k, true);
+    });
+    for (const input of dialog.querySelectorAll(`[data-k="${k}"] input`))
+      input.addEventListener('input', () => syncOpt(k, true));
+  }
   async function save() {
     state = await api('save', {
       case_id: state.case_id,

@@ -397,3 +397,29 @@ html body #donorThanksDialog .thanks-timing :is(label, legend) {
 .thanks-msg[open] > summary {
   color: var(--mut);
 }
+
+/* Timing as four dropdowns; the exact boxes appear only under Custom. */
+.thanks-timing .thanks-opt {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-width: 0;
+}
+.thanks-timing .thanks-opt > label {
+  display: grid;
+  gap: 3px;
+}
+.thanks-timing select {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  font-size: 15px;
+}
+.thanks-timing .thanks-custom {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.thanks-timing .thanks-custom[hidden] {
+  display: none;
+}

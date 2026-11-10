@@ -2202,3 +2202,12 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot >
     display: none !important;
   }
 }
+
+/* Computer, classic: the Donors header buttons sit at the right and keep the same place on every tab
+   (the Important chips appear to the left of them instead of pushing them). */
+@media (min-width: 900px) {
+  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-head > .donor-title {
+    flex: 1 1 auto !important;
+    margin-right: auto !important;
+  }
+}

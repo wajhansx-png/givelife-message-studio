@@ -184,8 +184,14 @@
     for (const v of OPTS[k]) sel.append(new Option(words(k, v), v));
     sel.append(new Option('Custom…', 'custom'));
     sel.addEventListener('change', () => {
-      if (sel.value !== 'custom') WRITE[k](Number(sel.value));
-      syncOpt(k, true);
+      const box = dialog.querySelector(`[data-k="${k}"] .thanks-custom`);
+      if (sel.value === 'custom') {
+        box.hidden = false; // "Custom…" opens the exact boxes, whatever the current value is
+        box.querySelector('input')?.focus();
+        return;
+      }
+      WRITE[k](Number(sel.value));
+      box.hidden = true;
     });
     for (const input of dialog.querySelectorAll(`[data-k="${k}"] input`))
       input.addEventListener('input', () => syncOpt(k, true));

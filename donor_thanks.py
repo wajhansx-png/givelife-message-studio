@@ -5,11 +5,38 @@ import threading
 import time
 import uuid
 
+import random
 import batch_media
 from donor_book import hide_numbers
 from message_library import library_for
 
-DEFAULTS = {"gap_minutes": 5, "batch_size": 10, "rest_minutes": 20}
+DEFAULTS = {
+    "gap_minutes": 5,
+    "gap_seconds": 0,
+    "batch_size": 10,
+    "rest_minutes": 20,
+    "rest_seconds": 0,
+    "vary_seconds": 0,
+}
+# (key, minimum, maximum): minutes and seconds are separate boxes so a pace can be "2 min 30 sec".
+LIMITS = (
+    ("gap_minutes", 0, 1440),
+    ("gap_seconds", 0, 59),
+    ("batch_size", 1, 100),
+    ("rest_minutes", 0, 1440),
+    ("rest_seconds", 0, 59),
+    ("vary_seconds", 0, 300),
+)
+
+
+def wait_seconds(cfg, rest):
+    """The wait before the next donor: the exact rest after a batch, else the gap varied by up to +/- vary seconds."""
+    cfg = {**DEFAULTS, **cfg}
+    if rest:
+        return 60 * cfg["rest_minutes"] + cfg["rest_seconds"]
+    base = 60 * cfg["gap_minutes"] + cfg["gap_seconds"]
+    vary = cfg["vary_seconds"]
+    return max(5, base + (random.uniform(-vary, vary) if vary else 0))
 
 
 class DonorThanks:
@@ -23,6 +50,14 @@ class DonorThanks:
         return self.hub.cases._load()["current"]
 
     def _load(self, cid=None):
+        data = self._load_raw(cid)
+        data["settings"] = {
+            **DEFAULTS,
+            **(data.get("settings") or {}),
+        }  # older saves get the new boxes
+        return data
+
+    def _load_raw(self, cid=None):
         cid = cid or self.case_id()
         return (self.app.STORE.get("donor_thanks_" + cid) if self.app.STORE else None) or {
             "case_id": cid,
@@ -122,26 +157,39 @@ class DonorThanks:
             self._put(data)
             return self.view()
 
+    def test(self):
+        """Send this update to the GiveLife test group only, so it can be checked before donors get it."""
+        data = self._load()
+        if not data["attachment"] and not data["message"].strip():
+            raise ValueError("Write a message or attach a file first.")
+        self.app.send_thanks_test(data["message"], data["caption"], data["attachment"])
+        return {"reply": "Test sent to the GiveLife test group."}
+
     def configure(self, settings):
         if not isinstance(settings, dict):
             raise ValueError("Choose the sending pace to edit.")
         clean = {}
-        for key, maximum in (("gap_minutes", 1440), ("batch_size", 100), ("rest_minutes", 1440)):
-            value = settings.get(key, self._load()["settings"][key])
-            if (
-                type(value) not in (int, float)
-                or not 1 <= value <= maximum
-                or (key == "batch_size" and value != int(value))
-            ):
-                raise ValueError("Choose valid timing: 1–1,440 minutes, 1–100 donors per batch.")
-            clean[key] = int(value) if key == "batch_size" else value
+        saved = {**DEFAULTS, **self._load()["settings"]}
+        for key, low, high in LIMITS:
+            value = settings.get(key, saved[key])
+            if type(value) not in (int, float) or not low <= value <= high:
+                raise ValueError(
+                    "Choose valid timing: minutes 0–1,440, seconds 0–59, 1–100 donors per batch, vary 0–300 seconds."
+                )
+            clean[key] = int(value) if key != "gap_minutes" and key != "rest_minutes" else value
+            if key == "batch_size" and value != int(value):
+                raise ValueError("Choose a whole number of donors per batch.")
+        if 60 * clean["gap_minutes"] + clean["gap_seconds"] < 5:
+            raise ValueError("Choose a gap of at least 5 seconds between donors.")
+        if 60 * clean["rest_minutes"] + clean["rest_seconds"] < 5:
+            raise ValueError("Choose a rest of at least 5 seconds between batches.")
         with self.lock:
             data = self._load()
             data["settings"] = clean
             if data.get("on") and data.get("last_at"):
-                data["next_at"] = data["last_at"] + 60 * clean["gap_minutes"]
+                data["next_at"] = data["last_at"] + wait_seconds(clean, False)
                 if data.get("waiting_batch") or data.get("batch_count", 0) >= clean["batch_size"]:
-                    data["next_at"] = data["last_at"] + 60 * clean["rest_minutes"]
+                    data["next_at"] = data["last_at"] + wait_seconds(clean, True)
                     data.update(waiting_batch=True, batch_count=0)
             self._put(data)
         return self.view()
@@ -339,7 +387,7 @@ class DonorThanks:
                 batch_count=0 if rest else count,
                 waiting_batch=rest,
                 last_at=time.time(),
-                next_at=time.time() + 60 * cfg["rest_minutes" if rest else "gap_minutes"],
+                next_at=time.time() + wait_seconds(cfg, rest),
             )
             if all(
                 data["receipts"].get(i, {}).get("state") in ("Sent", "Skipped", "Uncertain")

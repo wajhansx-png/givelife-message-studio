@@ -2264,6 +2264,45 @@ def send_text(jid, text):
         return mapping(json.load(r))
 
 
+TEST_GROUP_JID = "120363431210327603@g.us"
+
+
+def send_thanks_test(message, caption, attachment):
+    """The Thank donors update, exactly as a donor would get it, sent ONLY to the GiveLife test group
+    ({name} becomes "Test"). It never reaches a donor and changes no donor record."""
+    check_hold()
+    if not SEND_LOCK.acquire(blocking=False):
+        raise ValueError("Another send is running. Please wait for it to finish.")
+    try:
+        try:
+            status = api_result("/devices/" + DEVICE + "/status")
+        except Exception:
+            status = {}
+        if not status.get("is_connected") or not status.get("is_logged_in"):
+            raise ValueError("WhatsApp is disconnected. Tap WhatsApp to reconnect.")
+        results = []
+        try:
+            if attachment:
+                results.append(send_batch_attachment(TEST_GROUP_JID, caption or "", attachment))
+            if message.strip():
+                req = urllib.request.Request(
+                    GOWA_URL + "/send/message",
+                    data=json.dumps(
+                        {"phone": TEST_GROUP_JID, "message": message.replace("{name}", "Test")}
+                    ).encode(),
+                    headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=40) as response:
+                    results.append(mapping(json.load(response)))
+        except Exception:
+            raise ValueError("The test was not confirmed. Check the test group on WhatsApp.") from None
+        if not results or any(mapping(r).get("code") != "SUCCESS" for r in results):
+            raise ValueError("The test was not confirmed. Check the test group on WhatsApp.")
+    finally:
+        SEND_LOCK.release()
+
+
 def last_sent_by_key():
     saved = dict(LAST_LOCAL)
     if STORE:
@@ -6041,7 +6080,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(thanks.stop())
                 if action == 'settings':
                     return self.reply(thanks.configure(body.get('settings') or {}))
-                raise ValueError('Choose save, settings, start or stop.')
+                if action == 'test':
+                    return self.reply(thanks.test())
+                raise ValueError('Choose save, settings, test, start or stop.')
             except ValueError as e:
                 return self.reply({'error': str(e)}, status=400)
         if self.path == "/auto-controls":

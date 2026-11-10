@@ -58,11 +58,28 @@ for (const width of [1440, 768, 390, 320, 280]) {
       'Alhamdulillah, the case is complete.',
     );
     await expect(page.locator('#thanksPreview')).toContainText('JazakAllah khair, {name}.');
-    await page.locator('.thanks-timing > summary').click();
+    // Timing is one short line with three quick speeds; the exact numbers sit under Custom.
+    await expect(page.locator('#thanksPace')).toContainText(' apart');
+    await page.locator('[data-preset="fast"]').click();
+    await expect(page.locator('#thanksPace')).toHaveText('30 sec apart ±10s · batches of 20');
+    await page.locator('[data-preset="normal"]').click();
+    await page.locator('.thanks-custom > summary').click();
     await expect(page.locator('#thanksGap')).toHaveValue('5');
+    await expect(page.locator('#thanksGapSec')).toHaveValue('0');
     await expect(page.locator('#thanksBatch')).toHaveValue('10');
     await expect(page.locator('#thanksRest')).toHaveValue('20');
-    await page.locator('.thanks-timing > summary').click();
+    await page.locator('#thanksGapSec').fill('30');
+    await expect(page.locator('#thanksPace')).toContainText('5 min 30 sec apart');
+    await page.locator('#thanksGapSec').fill('0');
+    // Test: the update goes to the GiveLife test group only, never to a donor.
+    const beforeTest = (await (await request.get('/__test/events', { headers })).json()).events.length;
+    await page.locator('#thanksTest').click();
+    await expect(page.locator('#thanksStatus')).toContainText('Test sent to the GiveLife test group');
+    const testEvents = (await (await request.get('/__test/events', { headers })).json()).events.slice(beforeTest);
+    expect(testEvents).toHaveLength(2);
+    for (const e of testEvents) expect(e.fields.phone).toBe('120363431210327603@g.us');
+    expect(testEvents[0].path).toContain('/send/image');
+    expect(testEvents[1].fields.message).toBe('JazakAllah khair, Test.');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.locator('#thanksStatus')).toContainText('Update saved');
     await page.getByRole('button', { name: 'Close Thank donors', exact: true }).click();

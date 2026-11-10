@@ -6,7 +6,7 @@ let server;
 test.use({ baseURL: `http://127.0.0.1:${port}` });
 test.beforeAll(async () => (server = await startOwnServer(port)));
 test.afterAll(() => server?.kill());
-for (const width of [1440, 390, 320]) {
+for (const width of [1440, 768, 390, 320, 280]) {
   test(`Thank donors composer and attached caption at ${width}px`, async ({ page, request }) => {
     const added = await (
       await request.post('/donors', {
@@ -34,6 +34,10 @@ for (const width of [1440, 390, 320]) {
     expect(box.x + box.width).toBeLessThanOrEqual(width);
     await button.click();
     await expect(page.getByRole('dialog', { name: 'Thank donors', exact: true })).toBeVisible();
+    const dialog = await page.locator('#donorThanksDialog').boundingBox();
+    expect(dialog.width).toBeLessThanOrEqual(Math.min(width - 16, 680));
+    await expect(page.locator('#thanksPreview')).not.toBeVisible();
+    await expect(page.locator('#thanksGap')).not.toBeVisible();
     await page.locator('#thanksFile').setInputFiles({
       name: 'proof.png',
       mimeType: 'image/png',
@@ -43,16 +47,27 @@ for (const width of [1440, 390, 320]) {
       ),
     });
     await expect(page.locator('#thanksStatus')).toContainText('Media ready');
+    await page.getByLabel('Caption', { exact: true }).fill('Alhamdulillah, the case is complete.');
     await page
-      .getByLabel('Caption on the media', { exact: true })
-      .fill('Alhamdulillah, the case is complete.');
-    await page.getByLabel('Separate message', { exact: false }).fill('JazakAllah khair, {name}.');
+      .locator('#donorThanksDialog')
+      .getByLabel('Message', { exact: true })
+      .fill('JazakAllah khair, {name}.');
+    await page.locator('.thanks-review > summary').click();
     await expect(page.locator('#thanksPreview .thanks-bubble')).toHaveCount(2);
-    await page.getByRole('button', { name: 'Save update', exact: true }).click();
+    await expect(page.locator('#thanksPreview')).toContainText(
+      'Alhamdulillah, the case is complete.',
+    );
+    await expect(page.locator('#thanksPreview')).toContainText('JazakAllah khair, {name}.');
+    await page.locator('.thanks-timing > summary').click();
+    await expect(page.locator('#thanksGap')).toHaveValue('5');
+    await expect(page.locator('#thanksBatch')).toHaveValue('10');
+    await expect(page.locator('#thanksRest')).toHaveValue('20');
+    await page.locator('.thanks-timing > summary').click();
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.locator('#thanksStatus')).toContainText('Update saved');
     await page.getByRole('button', { name: 'Close Thank donors', exact: true }).click();
     await button.click();
-    await expect(page.getByLabel('Caption on the media', { exact: true })).toHaveValue(
+    await expect(page.getByLabel('Caption', { exact: true })).toHaveValue(
       'Alhamdulillah, the case is complete.',
     );
     const before = (await (await request.get('/__test/events', { headers })).json()).events.length;

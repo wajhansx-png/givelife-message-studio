@@ -3,16 +3,18 @@
   const dialog = document.createElement('dialog');
   dialog.id = 'donorThanksDialog';
   dialog.setAttribute('aria-labelledby', 'thanksTitle');
-  dialog.innerHTML = `<header><div><h2 id="thanksTitle">Thank donors</h2><small id="thanksContext"></small></div><button type="button" id="thanksClose" aria-label="Close Thank donors">×</button></header>
+  dialog.innerHTML = `<header><div><h2 id="thanksTitle" tabindex="-1" autofocus>Thank donors</h2><small id="thanksContext"></small></div></header>
   <div class="thanks-body"><section class="thanks-compose">
-    <label for="thanksFile">Photo, video or document <small>Optional · up to 15 MB</small></label>
-    <input id="thanksFile" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,application/pdf">
-    <div class="thanks-file-row"><span id="thanksFileName">No media</span><button type="button" id="thanksRemove" hidden>Remove media</button></div>
-    <div id="thanksCaptionWrap" hidden><label for="thanksCaption">Caption on the media</label><textarea id="thanksCaption" maxlength="4000" rows="3" placeholder="Optional. Appears below the photo, video or document."></textarea></div>
-    <label for="thanksMessage">Separate message <small>Optional with media</small></label><textarea id="thanksMessage" maxlength="4000" rows="4" placeholder="A separate message after the attachment, or text alone. Use {name} for their first name."></textarea>
-    <details class="thanks-timing"><summary>Sending pace <span id="thanksPace"></span></summary><div><label>Gap (minutes)<input id="thanksGap" type="number" min="1" max="1440"></label><label>Donors per batch<input id="thanksBatch" type="number" min="1" max="100"></label><label>Batch rest (minutes)<input id="thanksRest" type="number" min="1" max="1440"></label></div></details>
-  </section><details class="thanks-review" open><summary>Preview &amp; recipients</summary><small>Media + its caption first. Separate message follows.</small><div id="thanksPreview" aria-label="Message preview"></div><details><summary id="thanksAudience">Donors for this case</summary><ul id="thanksRecipients"></ul></details></details></div>
-  <p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save update</button><button type="button" id="thanksSend" class="primary">Send update</button><button type="button" id="thanksPause" hidden>Pause updates</button></footer>`;
+    <label for="thanksMessage">Message</label><textarea id="thanksMessage" aria-describedby="thanksNameHint" maxlength="4000" rows="4" placeholder="Write a thank-you message…"></textarea>
+    <small id="thanksNameHint">Use {name} for their first name. Sent after any attachment.</small>
+    <div class="thanks-attach-row"><button type="button" id="thanksAttach">+ Attach file</button><small id="thanksFileHint">Photo, video or PDF · max 15 MB</small></div>
+    <input id="thanksFile" type="file" aria-label="Attach file" accept="image/jpeg,image/png,image/webp,video/mp4,application/pdf" hidden>
+    <div class="thanks-file-row" hidden><span id="thanksFileName"></span><button type="button" id="thanksRemove" hidden>Remove</button></div>
+    <div id="thanksCaptionWrap" hidden><label for="thanksCaption">Caption</label><textarea id="thanksCaption" maxlength="4000" rows="2" placeholder="Optional · shown with the attachment"></textarea></div>
+    <details class="thanks-review"><summary>Preview</summary><div id="thanksPreview" aria-label="Message preview"></div><details><summary id="thanksAudience">Recipients</summary><ul id="thanksRecipients"></ul></details></details>
+    <details class="thanks-timing"><summary>Sending options <span id="thanksPace"></span></summary><div><label>Gap (minutes)<input id="thanksGap" type="number" min="1" max="1440"></label><label>Donors per batch<input id="thanksBatch" type="number" min="1" max="100"></label><label>Batch rest (minutes)<input id="thanksRest" type="number" min="1" max="1440"></label></div></details>
+  </section></div>
+  <p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save</button><button type="button" id="thanksSend" class="primary">Send</button><button type="button" id="thanksPause" hidden>Pause</button><button type="button" id="thanksClose" aria-label="Close Thank donors">Back</button></footer>`;
   document.body.append(dialog);
   const $ = (id) => dialog.querySelector('#' + id);
   let state,
@@ -51,6 +53,7 @@
     $('thanksPause').hidden = !state?.on;
     $('thanksPause').disabled = busy;
     $('thanksRemove').disabled = busy || state?.on;
+    $('thanksAttach').disabled = busy || state?.on;
   }
   function preview() {
     const box = $('thanksPreview');
@@ -91,17 +94,19 @@
       text.textContent = $('thanksMessage').value;
       box.append(text);
     }
-    if (!box.children.length)
-      box.textContent = 'Add media or write a message to preview your update.';
+    if (!box.children.length) box.textContent = 'Your message or attachment will appear here.';
     $('thanksCaptionWrap').hidden = !state?.attachment;
     $('thanksRemove').hidden = !state?.attachment;
-    $('thanksFile').hidden = !!state?.attachment;
-    $('thanksFileName').textContent = state?.attachment ? state.filename : 'No media';
+    $('thanksAttach').hidden = !!state?.attachment;
+    $('thanksFileHint').hidden = !!state?.attachment;
+    dialog.querySelector('.thanks-file-row').hidden = !state?.attachment;
+    $('thanksFileName').textContent = state?.attachment ? state.filename : '';
     controls();
   }
   function audience() {
     $('thanksAudience').textContent =
-      `${state.total} donors · ${state.sent} updated · ${state.pending} waiting`;
+      `${state.total} recipients` +
+      (state.sent ? ` · ${state.sent} sent · ${state.pending} waiting` : '');
     $('thanksRecipients').replaceChildren(
       ...state.recipients.map((row) => {
         const li = document.createElement('li');
@@ -110,12 +115,9 @@
       }),
     );
     $('thanksContext').textContent =
-      state.case_name +
-      ' · ' +
-      (state.left > 0
-        ? 'Prepare now. Sending unlocks when this case is complete.'
-        : 'Completed · only donors who donated to this case');
-    $('thanksSend').textContent = 'Send to ' + state.pending + ' donors';
+      `${state.case_name} · ${state.total} donors` +
+      (state.left > 0 ? ' · Finish case to send' : '');
+    $('thanksSend').textContent = 'Send to ' + state.pending;
   }
   function fill() {
     $('thanksCaption').value = state.caption;
@@ -123,8 +125,7 @@
     $('thanksGap').value = state.settings.gap_minutes;
     $('thanksBatch').value = state.settings.batch_size;
     $('thanksRest').value = state.settings.rest_minutes;
-    $('thanksPace').textContent =
-      `${state.settings.gap_minutes} min · ${state.settings.batch_size} donors · ${state.settings.rest_minutes} min rest`;
+    $('thanksPace').textContent = `${state.settings.gap_minutes} min apart`;
     audience();
     preview();
   }
@@ -163,14 +164,14 @@
   $('thanksSave').onclick = () =>
     action(async () => {
       await save();
-      note('Update saved. You can send it here or turn on Thanks donors in Report.');
+      note('Update saved.');
     });
   $('thanksSend').onclick = () =>
     action(async () => {
       await save();
       state = await api('start', { case_id: state.case_id, revision: state.revision });
       fill();
-      note('Sending with your saved pace. You can close this panel.');
+      note('Sending. You can close this panel.');
     });
   $('thanksPause').onclick = () =>
     action(async () => {
@@ -178,6 +179,7 @@
       fill();
       note('Paused. An upload already started may finish.');
     });
+  $('thanksAttach').onclick = () => $('thanksFile').click();
   $('thanksFile').onchange = () =>
     action(async () => {
       const file = $('thanksFile').files[0];
@@ -203,7 +205,7 @@
       state.mime = file.type;
       state.filename = file.name;
       preview();
-      note('Media ready. Add a caption, a separate message, or send the media alone.');
+      note('Media ready. Caption and message are optional.');
     });
   $('thanksRemove').onclick = () => {
     state.attachment = null;
@@ -214,7 +216,7 @@
     if (previewURL) URL.revokeObjectURL(previewURL);
     previewURL = null;
     preview();
-    note('Media and its caption removed. Save to keep this change.');
+    note('Attachment removed. Save to keep this change.');
   };
   for (const id of ['thanksCaption', 'thanksMessage'])
     $(id).addEventListener('input', () => {
@@ -256,9 +258,9 @@
         const loaded = await api();
         if (version !== viewVersion) return;
         state = loaded;
-        dialog.querySelector('.thanks-review').open = matchMedia('(min-width: 651px)').matches;
+        for (const details of dialog.querySelectorAll('details')) details.open = false;
         fill();
-        note('Review your update and recipients before sending.');
+        note('');
         dialog.showModal();
         if (state.attachment) {
           const r = await fetch('/thanks-media/' + state.attachment);

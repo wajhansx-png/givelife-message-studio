@@ -2500,3 +2500,87 @@ html body #donorThanksDialog .thanks-item > .thanks-remove {
   grid-row: 1;
   align-self: start;
 }
+
+/* Compact Thank donors header and attachment controls. */
+html body #donorThanksDialog .thanks-head-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+html body #donorThanksDialog .thanks-head-row h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+html body #donorThanksDialog .thanks-media {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+html body #donorThanksDialog .thanks-media > button {
+  min-height: 44px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+html body #donorThanksDialog header {
+  padding-bottom: 5px;
+}
+html body #donorThanksDialog .thanks-picker {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+html body #donorThanksDialog .thanks-item {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+html body #donorThanksDialog .thanks-item[hidden] {
+  display: none !important;
+}
+html body #donorThanksDialog .thanks-timing .thanks-grid {
+  align-items: start;
+}
+html body #donorThanksDialog .thanks-opt > label {
+  display: block;
+}
+html body #donorThanksDialog #thanksStatus {
+  max-height: 2.8em;
+}
+html body #donorThanksDialog header {
+  display: block;
+  min-width: 0;
+}
+html body #donorThanksDialog .thanks-head-row h2 {
+  font-size: 16px;
+}
+html body #donorThanksDialog .thanks-head-row .thanks-media {
+  margin-left: auto;
+}
+@media (max-width: 359px) {
+  html body #donorThanksDialog .thanks-head-row h2 {
+    font-size: 15px;
+  }
+  html body #donorThanksDialog .thanks-media > button {
+    padding-inline: 5px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 359px) {
+  html body #donorThanksDialog footer .thanks-start {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    font-size: 11px;
+    gap: 3px;
+  }
+  html body #donorThanksDialog footer #thanksSwitch {
+    width: 44px;
+    min-width: 44px;
+  }
+  html body #donorThanksDialog footer #thanksSwitch[aria-checked='true'] > i {
+    transform: translateX(14px);
+  }
+  html body #donorThanksDialog footer > button {
+    padding-inline: 6px;
+  }
+}

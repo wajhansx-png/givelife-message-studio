@@ -37,11 +37,11 @@ for (const width of [1440, 768, 390, 320, 280]) {
     const dialog = await page.locator('#donorThanksDialog').boundingBox();
     expect(dialog.width).toBeLessThanOrEqual(Math.min(width - 16, 680));
     await expect(page.locator('.thanks-review')).toHaveCount(0); // no Preview section
-    await expect(page.locator('.thanks-media .thanks-attach')).toHaveText(['Image', 'Video']);
+    await expect(page.locator('.thanks-media .thanks-attach')).toHaveText(['+ Image', '+ Video']);
     await expect(page.locator('#thanksGapSel')).toBeVisible(); // timing is always shown
     // Start clean: an earlier width may have left attachments saved on the shared server.
-    while ((await page.locator('.thanks-item .thanks-remove').count()) > 0)
-      await page.locator('.thanks-item .thanks-remove').first().click();
+    while ((await page.locator('.thanks-item').count()) > 0)
+      await page.locator('#thanksRemove').click();
     const png = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1cAAAAASUVORK5CYII=',
       'base64',

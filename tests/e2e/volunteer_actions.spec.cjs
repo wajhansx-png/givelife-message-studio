@@ -18,7 +18,9 @@ for (const width of [1440, 1024, 768, 390, 320]) {
     await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
     await page.goto('/#/donors/volunteers');
     await expect(page.locator('.vol-heading')).toContainText('Volunteers');
-    await expect(page.locator('.donor-head')).toBeHidden();
+    // The header band stays (so the tabs never move); the donor-only controls are not usable here.
+    await expect(page.locator('.donor-head')).toBeVisible();
+    await expect(page.locator('#donorAdd')).toBeHidden();
     await expect(page.getByRole('tablist', { name: 'Donor filters' })).toBeVisible();
     await expect(page.locator('[data-tab="volunteers"]')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('.donor-bottom')).toBeHidden();

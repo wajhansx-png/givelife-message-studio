@@ -1766,10 +1766,11 @@
     /* First screenful at once, the rest in the following frames: a tab click answers immediately even with hundreds of donors. */ const paintChunk =
       () => {
         if (epoch !== drawEpoch) return;
+        const frag = document.createDocumentFragment();
         for (const end = Math.min(next + DRAW_CHUNK, items.length); next < end; next++) {
           const d = items[next];
           if (tab === 'top' && d.group && (next === 0 || items[next - 1].group !== d.group))
-            rows.append(make('div', 'donor-group-head', d.group + ' Donors'));
+            frag.append(make('div', 'donor-group-head', d.group + ' Donors'));
           const row = make('article', 'donor-row');
           row.dataset.donorId = d.id;
           row.dataset.important = !!d.important;
@@ -2099,9 +2100,10 @@
           };
           more.append(summary);
           row.append(star, ident, dm, status, amount, more);
-          rows.append(row);
+          frag.append(row);
           paintDelivery(row, d.delivery || 'Not contacted');
         }
+        rows.append(frag);
         if (next < items.length) requestAnimationFrame(paintChunk);
       };
     paintChunk();

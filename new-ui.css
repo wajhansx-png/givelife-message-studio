@@ -4551,3 +4551,12 @@
   box-shadow: none !important;
   filter: none !important;
 }
+
+/* App Consistency: Universal removal of all blur glows and box shadows */
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}

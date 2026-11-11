@@ -1535,3 +1535,12 @@ html body #donorPasteDialog #pastePoster {
 .numbers-dialog .numbers-remove:disabled {
   opacity: 0.5;
 }
+
+/* App Consistency: Universal removal of all blur glows and box shadows */
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}

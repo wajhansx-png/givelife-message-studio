@@ -979,7 +979,7 @@ const ui2Frame = (fn) => {
     const strip = document.querySelector('.donor-tabs'),
       sel = strip?.querySelector('[aria-selected="true"]');
     if (strip && sel) {
-      const key = [sel.dataset.tab, strip.scrollWidth, strip.clientWidth].join(':');
+      const key = sel.dataset.tab;
       if (strip.dataset.ui2Sel !== key) {
         strip.dataset.ui2Sel = key;
         requestAnimationFrame(() => scrollTabToFull(sel));

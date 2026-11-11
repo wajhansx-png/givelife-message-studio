@@ -3397,3 +3397,12 @@ html
   overflow-y: auto !important;
   overscroll-behavior: contain;
 }
+
+/* App Consistency: Universal removal of all blur glows and box shadows */
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}

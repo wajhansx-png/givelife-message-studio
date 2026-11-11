@@ -2894,25 +2894,11 @@ html body #donorThanksDialog {
   box-shadow: none !important;
 }
 html body #donorThanksDialog footer {
+  bottom: auto !important; /* cancel legacy sticky-footer offset */
   z-index: 1;
   isolation: isolate;
   box-sizing: border-box;
   background: #090b10 !important;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   box-shadow: none !important;
-}
-
-/* A definite mobile height lets the inner scroll area shrink, rather than clipping
-   the bottom row when max-height alone caps an auto-sized flex dialog. */
-@media (max-width: 700px) {
-  html body #donorThanksDialog {
-    height: min(660px, calc(100dvh - 24px));
-  }
-}
-
-@media (max-width: 700px) {
-  html body #donorThanksDialog {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
-  }
 }

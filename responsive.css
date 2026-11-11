@@ -2907,7 +2907,7 @@ html body #donorThanksDialog footer {
    Keep every setting named and preserve caption and message editing. */
 html body #donorThanksDialog {
   width: min(610px, calc(100vw - 24px));
-  height: auto;
+  height: fit-content; /* inset:0 on dialogs otherwise stretches height:auto */
   max-height: calc(100dvh - 24px);
 }
 html body #donorThanksDialog header {

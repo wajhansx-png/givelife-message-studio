@@ -57,6 +57,14 @@ for (const width of widths) {
     expect(metrics.body.bottom).toBeLessThanOrEqual(metrics.footer.top + 2);
     expect(metrics.footer.scrollWidth).toBeLessThanOrEqual(metrics.footer.clientWidth + 2);
     expect(metrics.timingFits).toBe(true);
+    if (width === 390) expect(metrics.rect.height).toBeLessThanOrEqual(560);
+    for (const [id, name] of [['thanksGapSel', 'Gap'], ['thanksVarySel', 'Vary'], ['thanksBatchSel', 'Batch'], ['thanksRestSel', 'Rest']]) {
+      const options = await page.locator('#' + id + ' option').allTextContents();
+      expect(options.some(value => value.startsWith(name + ': '))).toBe(true);
+    }
+    const timingRows = await page.locator('.thanks-timing select').evaluateAll(els =>
+      els.map(el => Math.round(el.getBoundingClientRect().top)));
+    expect(new Set(timingRows).size).toBe(width <= 369 ? 2 : 1);
     // No blurred or semi-transparent backdrop that lets a purple dock show beneath the popup.
     expect(metrics.backdrop.background).toBe('rgb(5, 7, 12)');
     expect(metrics.backdrop.filter).toBe('none');

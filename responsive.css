@@ -2902,3 +2902,118 @@ html body #donorThanksDialog footer {
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   box-shadow: none !important;
 }
+
+/* Compact Thank Donors modal: content wraps naturally instead of filling the phone.
+   Keep every setting named and preserve caption and message editing. */
+html body #donorThanksDialog {
+  width: min(610px, calc(100vw - 24px));
+  height: fit-content; /* inset:0 on dialogs otherwise stretches height:auto */
+  max-height: calc(100dvh - 24px);
+}
+html body #donorThanksDialog header {
+  padding: 9px 12px 7px;
+}
+html body #donorThanksDialog h2 {
+  font-size: 16px;
+}
+html body #donorThanksDialog #thanksContext {
+  margin-top: 2px;
+  font-size: 11px;
+}
+html body #donorThanksDialog :is(#thanksAttachImg, #thanksAttachVid) {
+  min-height: 38px;
+  min-width: 50px;
+  padding: 0 8px;
+}
+html body #donorThanksDialog .thanks-body {
+  flex: 0 1 auto;
+  min-height: 0;
+  padding: 8px 12px;
+  overflow-y: auto;
+}
+html body #donorThanksDialog .thanks-compose {
+  min-height: 0;
+  gap: 7px;
+}
+html body #donorThanksDialog .thanks-list {
+  flex: 0 0 auto;
+  min-height: 0;
+  gap: 4px;
+}
+html body #donorThanksDialog .thanks-item {
+  padding: 0;
+}
+html body #donorThanksDialog :is(.thanks-field-label, .thanks-msg > label) {
+  font-size: 11px;
+  line-height: 13px;
+}
+html body #donorThanksDialog .thanks-picker {
+  gap: 6px;
+}
+html body #donorThanksDialog #thanksMediaSelect,
+html body #donorThanksDialog #thanksRemove {
+  min-height: 38px;
+  height: 38px;
+  font-size: 12px;
+}
+html body #donorThanksDialog .thanks-capd {
+  gap: 3px;
+}
+html body #donorThanksDialog .thanks-capd textarea {
+  height: 60px;
+  min-height: 60px;
+}
+html body #donorThanksDialog .thanks-msg,
+html body #donorThanksDialog[data-has-media='true'][data-has-message='false'] .thanks-msg {
+  gap: 3px;
+}
+html body #donorThanksDialog #thanksMessage,
+html body #donorThanksDialog[data-has-media='true'][data-has-message='false'] #thanksMessage {
+  height: 74px;
+  min-height: 74px;
+}
+html body #donorThanksDialog textarea {
+  padding: 8px 9px;
+  line-height: 19px;
+  font-size: 14px;
+}
+html body #donorThanksDialog .thanks-timing .thanks-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+html body #donorThanksDialog .thanks-opt {
+  min-width: 0;
+  gap: 3px;
+}
+html body #donorThanksDialog .thanks-timing select {
+  min-height: 40px;
+  height: 40px;
+  padding: 5px 3px;
+  font-size: 12px;
+}
+html body #donorThanksDialog .thanks-custom {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+html body #donorThanksDialog .thanks-custom input {
+  min-width: 0;
+}
+html body #donorThanksDialog #thanksStatus {
+  max-height: 2.7em;
+  padding: 0 12px 4px;
+  font-size: 11px;
+}
+html body #donorThanksDialog footer {
+  gap: 5px;
+  padding: 7px 12px max(10px, env(safe-area-inset-bottom));
+}
+html body #donorThanksDialog footer > button,
+html body #donorThanksDialog footer .thanks-start {
+  min-height: 42px;
+  font-size: 12px;
+}
+@media (max-width: 369px) {
+  html body #donorThanksDialog .thanks-timing .thanks-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

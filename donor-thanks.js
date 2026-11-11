@@ -179,14 +179,13 @@
     batch: [5, 10, 15, 20, 30, 50],
     rest: [60, 120, 300, 600, 1200, 1800, 3600, 7200],
   };
+  // Short visible labels keep all four timing settings readable on a phone.
   const words = (k, v) =>
     k === 'batch'
       ? String(v)
-      : k === 'vary' && !v
-        ? '0 sec'
-        : v < 60
-          ? v + ' sec'
-          : Math.floor(v / 60) + ' min' + (v % 60 ? ' ' + (v % 60) + ' sec' : '');
+      : v < 60
+        ? v + 's'
+        : Math.floor(v / 60) + 'm' + (v % 60 ? ' ' + (v % 60) + 's' : '');
   const BOXES = {
     gap: () => num('thanksGap') * 60 + num('thanksGapSec'),
     vary: () => num('thanksVary'),

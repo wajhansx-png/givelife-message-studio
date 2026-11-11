@@ -64,7 +64,7 @@ for (const width of widths) {
     }
     const timingRows = await page.locator('.thanks-timing select').evaluateAll(els =>
       els.map(el => Math.round(el.getBoundingClientRect().top)));
-    expect(new Set(timingRows).size).toBe(width < 350 ? 2 : 1);
+    expect(new Set(timingRows).size).toBe(width <= 369 ? 2 : 1);
     // No blurred or semi-transparent backdrop that lets a purple dock show beneath the popup.
     expect(metrics.backdrop.background).toBe('rgb(5, 7, 12)');
     expect(metrics.backdrop.filter).toBe('none');

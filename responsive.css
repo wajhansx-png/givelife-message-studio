@@ -3012,7 +3012,7 @@ html body #donorThanksDialog footer .thanks-start {
   min-height: 42px;
   font-size: 12px;
 }
-@media (max-width: 349px) {
+@media (max-width: 369px) {
   html body #donorThanksDialog .thanks-timing .thanks-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

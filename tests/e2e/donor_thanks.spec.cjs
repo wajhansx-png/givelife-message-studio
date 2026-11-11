@@ -35,7 +35,13 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await button.click();
     await expect(page.getByRole('dialog', { name: 'Thank donors', exact: true })).toBeVisible();
     const dialog = await page.locator('#donorThanksDialog').boundingBox();
-    expect(dialog.width).toBeLessThanOrEqual(Math.min(width - 16, 680));
+    if (width <= 899) {
+      expect(dialog.x).toBe(0);
+      expect(dialog.y).toBe(0);
+      expect(dialog.width).toBe(width);
+    } else {
+      expect(dialog.width).toBeLessThanOrEqual(680);
+    }
     await expect(page.locator('.thanks-review')).toHaveCount(0); // no Preview section
     await expect(page.locator('.thanks-media .thanks-attach')).toHaveText(['+ Image', '+ Video']);
     await expect(page.locator('#thanksGapSel')).toBeVisible(); // timing is always shown
@@ -440,6 +446,9 @@ test('caption and message stay visible above the footer on a short screen', asyn
       const footer = document.querySelector('#donorThanksDialog footer').getBoundingClientRect();
       return box.top >= area.top - 1 && box.bottom <= area.bottom + 1 && box.bottom <= footer.top;
     });
+  await page.locator('#thanksMessage').fill('');
+  await page.locator('#thanksMessage').fill('An extra message for the donor.');
+  await expect.poll(() => withinEditor('#thanksMessage')).toBe(true);
   for (const selector of ['#thanksMessage', '.thanks-capd textarea']) {
     await page.locator(selector).focus();
     await expect.poll(() => withinEditor(selector)).toBe(true);

@@ -72,6 +72,8 @@
     $('thanksStatus').dataset.level = level;
   };
   function controls() {
+    dialog.dataset.hasMedia = String(!!state?.media.length);
+    dialog.dataset.hasMessage = String(!!$('thanksMessage').value.trim());
     for (const field of dialog.querySelectorAll('input,textarea'))
       field.disabled = busy || state?.on;
     for (const sel of dialog.querySelectorAll('select')) sel.disabled = busy || state?.on;
@@ -331,6 +333,7 @@
   $('thanksMessage').addEventListener('input', () => {
     controls();
     note('Unsaved changes');
+    keepFocusedFieldVisible();
   });
   function close() {
     if (busy) return;

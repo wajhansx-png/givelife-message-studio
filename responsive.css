@@ -2212,20 +2212,28 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot >
   }
 }
 
-/* Thank donors: one focused composer, with optional details revealed in place. */
+/* Thank donors: a focused writing workspace with one quiet action bar. */
 html body #donorThanksDialog {
-  width: min(680px, calc(100vw - 24px));
+  --surface: #090b10;
+  --bg: #13161d;
+  --line: #252a35;
+  --line2: #303745;
+  width: min(640px, calc(100vw - 32px));
   max-width: none;
-  height: fit-content;
-  max-height: calc(100dvh - 24px);
+  height: min(760px, calc(100dvh - 32px));
+  max-height: none;
   inset: 0;
   margin: auto;
+  padding: 0 !important;
+  box-sizing: border-box;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 0;
-  padding: 18px;
   overflow: hidden;
+  border: 1px solid #2a303c;
+  border-radius: 14px !important;
   background: var(--surface) !important;
+  color: #f2f4f8;
   backdrop-filter: none;
   animation: none !important;
   transform: none;
@@ -2235,412 +2243,321 @@ html body #donorThanksDialog:not([open]),
 html body #donorThanksDialog [hidden] {
   display: none !important;
 }
+html body #donorThanksDialog::backdrop {
+  background: rgba(3, 5, 9, 0.85);
+  backdrop-filter: none;
+}
 html body #donorThanksDialog header {
-  padding: 0 0 14px;
+  display: block;
+  margin: 0;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+html body #donorThanksDialog .thanks-head-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 html body #donorThanksDialog h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: #f5f7fb;
   font-size: 18px;
-  margin: 0 0 4px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+html body #donorThanksDialog #thanksContext {
+  display: block;
+  margin-top: 3px;
+  color: #a5afc0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+html body #donorThanksDialog .thanks-media {
+  display: flex;
+  gap: 4px;
+}
+html body #donorThanksDialog :is(#thanksAttachImg, #thanksAttachVid) {
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid #303e57;
+  border-radius: 8px;
+  background: #111a29 !important;
+  box-shadow: none;
+  color: #c9daff;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 html body #donorThanksDialog .thanks-body {
   display: block;
+  min-width: 0;
   min-height: 0;
+  padding: 12px 16px;
   overflow: auto;
   overscroll-behavior: contain;
-  padding: 2px;
+  scrollbar-width: thin;
 }
 html body #donorThanksDialog .thanks-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 100%;
+  max-width: 620px;
+  margin-inline: auto;
+}
+html body #donorThanksDialog .thanks-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 8px;
 }
-html body #donorThanksDialog #thanksMessage {
-  min-height: 124px;
+html body #donorThanksDialog .thanks-list {
+  display: grid;
+  flex: 1 0 140px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 8px;
+  margin: 0;
 }
-html body #donorThanksDialog .thanks-attach-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  margin-block: 4px;
+html body #donorThanksDialog .thanks-list:empty,
+html body #donorThanksDialog .thanks-name {
+  display: none;
 }
-html body #donorThanksDialog :is(#thanksAttach, #thanksSave, #thanksClose) {
-  min-width: 0;
-  min-height: 40px;
-  height: auto;
-  padding: 8px 14px;
-  border: 1px solid var(--line2);
-  background: var(--bg);
-  color: var(--ink);
-  box-shadow: none;
-  font-size: 13px;
-}
-html body #donorThanksDialog #thanksSend {
-  background: #2f6fe8;
-  color: #fff;
-  box-shadow: none;
-}
-html body #donorThanksDialog #thanksPause {
-  border: 1px solid #ad8023;
-  background: color-mix(in srgb, #ad8023 18%, var(--bg));
-  color: var(--ink);
-  box-shadow: none;
-}
-html body #donorThanksDialog :is(.thanks-review, .thanks-timing) {
+html body #donorThanksDialog .thanks-item {
+  display: block;
+  min-height: 0;
+  height: 100%;
   margin: 0;
   padding: 0;
   border: 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
+}
+html body #donorThanksDialog .thanks-capd {
+  display: grid;
+  grid-template-rows: auto minmax(88px, 1fr);
+  height: 100%;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+html body #donorThanksDialog :is(.thanks-field-label, .thanks-msg > label) {
+  color: #bdc6d5;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+html body #donorThanksDialog .thanks-msg {
+  display: grid;
+  grid-template-rows: auto minmax(96px, 1fr) auto;
+  flex: 1 0 140px;
+  min-height: 0;
+  gap: 6px;
+}
+html body #donorThanksDialog :is(textarea, input, select) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  background: var(--bg) !important;
+  color: #edf1f7;
+  font: inherit;
+  font-size: 16px;
+  box-shadow: none;
+}
+html body #donorThanksDialog textarea {
+  padding: 10px;
+  line-height: 22px;
+  resize: none;
+}
+html body #donorThanksDialog .thanks-capd textarea {
+  height: 100%;
+  min-height: 88px;
+}
+html body #donorThanksDialog[data-has-media='true'][data-has-message='false'] .thanks-msg {
+  flex: 0 0 auto;
+  grid-template-rows: auto 66px auto;
+}
+html body #donorThanksDialog[data-has-media='true'][data-has-message='false'] #thanksMessage {
+  min-height: 66px;
+}
+html body #donorThanksDialog #thanksMessage {
+  height: 100%;
+  min-height: 96px;
+}
+html body #donorThanksDialog #thanksNameHint {
+  color: #a5afc0;
+  font-size: 11px;
+  line-height: 15px;
+}
+html body #donorThanksDialog :is(#thanksMediaSelect, .thanks-timing select, .thanks-custom input) {
+  min-height: 44px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+html body #donorThanksDialog .thanks-timing {
+  margin: 0;
+  padding: 0;
+  border: 0;
   background: transparent;
 }
-html body #donorThanksDialog :is(.thanks-review, .thanks-timing) > summary {
-  min-height: 38px;
-  box-sizing: border-box;
+html body #donorThanksDialog .thanks-timing .thanks-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  align-items: start;
+}
+html body #donorThanksDialog .thanks-opt {
+  min-width: 0;
+  gap: 6px;
+}
+html body #donorThanksDialog .thanks-opt > label {
+  display: block;
+}
+html body #donorThanksDialog .thanks-custom {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
   margin: 0;
-  padding: 10px 0;
-  font-size: 13px;
+}
+html body #donorThanksDialog .thanks-custom label {
+  font-size: 12px;
+  color: #bdc6d5;
+}
+html body #donorThanksDialog #thanksRemove {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 9px;
+  border: 1px solid #44323c;
+  border-radius: 8px;
+  background: #171319 !important;
+  box-shadow: none;
+  color: #edb8c1;
+  font-size: 12px;
   font-weight: 500;
 }
-html body #donorThanksDialog #thanksPace {
-  margin-left: 6px;
-  font-size: 12px;
-}
 html body #donorThanksDialog #thanksStatus {
-  margin: 8px 0 0;
+  max-height: 3em;
+  margin: 0;
+  padding: 0 16px 8px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  color: #aeb9ca;
+  font-size: 12px;
+  line-height: 1.4;
 }
 html body #donorThanksDialog #thanksStatus:empty {
   display: none;
+}
+html body #donorThanksDialog #thanksStatus[data-level='error'] {
+  color: #ffb7bf;
+}
+html body #donorThanksDialog #thanksStatus[data-level='warning'] {
+  color: #f4d18e;
 }
 html body #donorThanksDialog footer {
   position: static;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 10px 0 0;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 16px;
   border-top: 1px solid var(--line);
   background: var(--surface);
 }
-html body #donorThanksDialog footer button {
-  flex: 0 1 auto;
-  min-width: 0;
-  min-height: 40px;
-  margin: 0;
-  white-space: normal;
-}
-@media (max-width: 899px) {
-  html body #donorThanksDialog {
-    width: min(600px, calc(100vw - 16px));
-    max-height: calc(100dvh - 16px);
-    padding: 12px;
-    margin: auto auto 8px;
-    border-radius: 14px;
-  }
-  html body #donorThanksDialog :is(textarea, input) {
-    font-size: 16px;
-  }
-  html body #donorThanksDialog :is(.thanks-review, .thanks-timing) > summary,
-  html
-    body
-    #donorThanksDialog
-    :is(#thanksAttach, #thanksSave, #thanksClose, #thanksSend, #thanksPause) {
-    min-height: 44px;
-  }
-  html body #donorThanksDialog footer {
-    gap: 6px;
-  }
-  html body #donorThanksDialog footer :is(#thanksSend, #thanksPause) {
-    flex: 1 1 auto;
-  }
-}
-
-/* Thank donors: every editing option stays exposed in a compact, quiet form. */
-html body #donorThanksDialog header {
-  padding-bottom: 8px;
-}
-html body #donorThanksDialog .thanks-compose,
-html body #donorThanksDialog .thanks-list {
-  gap: 8px;
-}
-html body #donorThanksDialog .thanks-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 2px 8px;
-  margin: 0;
-  padding: 0 0 8px;
-  border-bottom: 1px solid var(--line);
-}
-html body #donorThanksDialog .thanks-name {
-  min-width: 0;
-  font-size: 13px;
-}
-html body #donorThanksDialog .thanks-capd {
-  margin: 0;
-  padding: 0;
-}
-html body #donorThanksDialog :is(.thanks-capd textarea, #thanksMessage) {
-  display: block;
-  height: 60px;
-  min-height: 60px;
-  margin: 0;
-  padding: 6px 8px;
-  font-size: 16px;
-  line-height: 1.4;
-  resize: vertical;
-}
-html body #donorThanksDialog :is(.thanks-capd textarea, #thanksMessage):focus {
-  height: 112px;
-}
-html body #donorThanksDialog .thanks-msg {
-  display: grid;
-  gap: 4px;
-}
-html body #donorThanksDialog .thanks-timing .thanks-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 8px;
-  align-items: start;
-}
-html body #donorThanksDialog .thanks-timing label {
-  font-size: 12px;
-}
-html body #donorThanksDialog .thanks-timing :is(select, input) {
-  min-height: 44px;
-  padding: 4px 8px;
-  font-size: 16px;
-}
-html body #donorThanksDialog :is(.thanks-attach, .thanks-remove, #thanksTest) {
-  min-height: 44px;
-  padding: 6px 10px;
-  font-size: 13px;
-  border: 1px solid var(--line2);
-  background: var(--bg);
-  color: var(--ink);
-  box-shadow: none;
-}
-html body #donorThanksDialog footer {
-  flex-wrap: nowrap;
-  gap: 6px;
-  margin-top: 6px;
-  padding-top: 6px;
-}
 html body #donorThanksDialog footer > button {
+  flex: 0 0 auto;
+  min-width: 44px;
   min-height: 44px;
-  padding: 6px 10px;
-  font-size: 13px;
-}
-html body #donorThanksDialog footer .thanks-start {
-  min-width: 0;
-  gap: 4px;
-  font-size: 12px;
-  flex-wrap: wrap;
-}
-html body #donorThanksDialog footer #thanksSwitch {
-  min-height: 44px;
-  height: 44px;
-}
-html body #donorThanksDialog footer #thanksSwitch > i {
-  top: 10px;
-}
-html body #donorThanksDialog #thanksStatus {
-  overflow-wrap: anywhere;
-  max-height: 3.6em;
-  overflow: auto;
-}
-@media (max-width: 899px) {
-  html body #donorThanksDialog {
-    padding: 10px;
-    max-height: calc(100dvh - 16px);
-  }
-}
-@media (max-width: 359px) {
-  html body #donorThanksDialog footer {
-    gap: 4px;
-  }
-  html body #donorThanksDialog footer > button {
-    padding-inline: 8px;
-  }
-}
-/* One selected attachment editor keeps all settings within phone reach. */
-html body #donorThanksDialog .thanks-picker {
-  display: grid;
-  gap: 3px;
-}
-html body #donorThanksDialog #thanksMediaSelect {
-  width: 100%;
-  min-width: 0;
-  min-height: 44px;
-  font-size: 16px;
-}
-html body #donorThanksDialog .thanks-item {
-  border-top: 0;
-}
-html body #donorThanksDialog .thanks-item .thanks-name {
-  font-size: 12px;
-}
-html body #donorThanksDialog .thanks-list {
+  height: auto;
   margin: 0;
-}
-html body #donorThanksDialog .thanks-compose {
-  gap: 5px;
-}
-html body #donorThanksDialog :is(.thanks-capd textarea, #thanksMessage):focus {
-  height: 80px;
-}
-/* Filename is already in the picker; keep Remove beside the caption. */
-html body #donorThanksDialog .thanks-item > .thanks-name {
-  display: none;
-}
-html body #donorThanksDialog .thanks-item > .thanks-capd {
-  grid-column: 1;
-  grid-row: 1;
-}
-html body #donorThanksDialog .thanks-item > .thanks-remove {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: start;
-}
-
-/* Compact Thank donors header and attachment controls. */
-html body #donorThanksDialog .thanks-head-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-html body #donorThanksDialog .thanks-head-row h2 {
-  flex: 1 1 auto;
-  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
 }
-html body #donorThanksDialog .thanks-media {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 4px;
-}
-html body #donorThanksDialog .thanks-media > button {
-  min-height: 44px;
-  padding: 4px 8px;
-  font-size: 13px;
-}
-html body #donorThanksDialog header {
-  padding-bottom: 5px;
-}
-html body #donorThanksDialog .thanks-picker {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 6px;
-}
-html body #donorThanksDialog .thanks-item {
-  display: block;
-  padding: 0;
-  border: 0;
-}
-html body #donorThanksDialog .thanks-item[hidden] {
-  display: none !important;
-}
-html body #donorThanksDialog .thanks-timing .thanks-grid {
-  align-items: start;
-}
-html body #donorThanksDialog .thanks-opt > label {
-  display: block;
-}
-html body #donorThanksDialog #thanksStatus {
-  max-height: 2.8em;
-}
-html body #donorThanksDialog header {
-  display: block;
-  min-width: 0;
-}
-html body #donorThanksDialog .thanks-head-row h2 {
-  font-size: 16px;
-}
-html body #donorThanksDialog .thanks-head-row .thanks-media {
-  margin-left: auto;
-}
-@media (max-width: 359px) {
-  html body #donorThanksDialog .thanks-head-row h2 {
-    font-size: 15px;
-  }
-  html body #donorThanksDialog .thanks-media > button {
-    padding-inline: 5px;
-    font-size: 12px;
-  }
-}
-@media (max-width: 359px) {
-  html body #donorThanksDialog footer .thanks-start {
-    flex-wrap: nowrap;
-    white-space: nowrap;
-    font-size: 12px;
-    gap: 3px;
-  }
-  html body #donorThanksDialog footer #thanksSwitch {
-    width: 44px;
-    min-width: 44px;
-  }
-  html body #donorThanksDialog footer #thanksSwitch[aria-checked='true'] > i {
-    transform: translateX(14px);
-  }
-  html body #donorThanksDialog footer > button {
-    padding-inline: 6px;
-  }
-}
-
-/* Quiet accents distinguish saving, testing and adding media. */
-html body #donorThanksDialog #thanksSave:not(:disabled) {
-  border-color: #477de1;
-  background: #2758b2 !important;
+html body #donorThanksDialog #thanksSave {
+  background: #315fe9 !important;
+  border-color: #315fe9;
   color: #fff;
 }
-html body #donorThanksDialog #thanksTest:not(:disabled) {
-  border-color: #7460a9;
-  background: #3d315e !important;
-  color: #f3edff;
+html body #donorThanksDialog #thanksTest {
+  background: #1c192a !important;
+  border-color: #4a3e67;
+  color: #e0d6f8;
 }
-html body #donorThanksDialog#donorThanksDialog .thanks-attach:not(:disabled) {
-  border-color: #4a568a;
-  background: #252d47 !important;
-  color: #dae4ff;
+html body #donorThanksDialog #thanksClose {
+  background: #131b28 !important;
+  border-color: #34455f;
+  color: #cfddf3;
 }
-html body #donorThanksDialog :is(#thanksSave, #thanksTest, .thanks-attach):focus-visible {
-  outline: 2px solid #b9caff;
+html body #donorThanksDialog footer .thanks-start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  gap: 5px;
+  min-width: 0;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+html body #donorThanksDialog footer #thanksSwitch {
+  position: relative;
+  flex: 0 0 50px;
+  width: 50px;
+  min-width: 50px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+html body #donorThanksDialog footer #thanksSwitch::before {
+  content: '';
+  position: absolute;
+  inset: 8px 0;
+  border: 1px solid #6a7489;
+  border-radius: 999px;
+  background: #3f495b;
+}
+html body #donorThanksDialog footer #thanksSwitch > i {
+  position: absolute;
+  top: 12px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+html body #donorThanksDialog footer #thanksSwitch[aria-checked='true']::before {
+  border-color: #37976f;
+  background: #17744c;
+}
+html body #donorThanksDialog footer #thanksSwitch[aria-checked='true'] > i {
+  transform: translateX(22px);
+}
+html body #donorThanksDialog :is(button, select, textarea, input):focus-visible {
+  outline: 2px solid #97baff;
   outline-offset: 2px;
 }
-
-/* Clear action and status colors for the compact Thank donors dialog. */
-html body #donorThanksDialog #thanksSwitch[aria-checked='false'] {
-  background: #434956 !important;
-  border-color: #727987;
+html body #donorThanksDialog button:disabled {
+  opacity: 0.5;
 }
-html body #donorThanksDialog #thanksSwitch[aria-checked='true'] {
-  background: #16734e !important;
-  border-color: #35a779;
-}
-html body #donorThanksDialog #thanksRemove:not(:disabled) {
-  color: #ffc1c1;
-  border-color: #955d67;
-}
-html body #donorThanksDialog #thanksClose:not(:disabled) {
-  color: #e4e7ee;
-  border-color: #59606f;
-}
-html body #donorThanksDialog #thanksStatus {
-  color: #b8bfce;
-}
-html body #donorThanksDialog #thanksStatus[data-level='warning'] {
-  color: #ffd27c;
-}
-html body #donorThanksDialog #thanksStatus[data-level='error'] {
-  color: #ffb1b1;
-}
-html body #donorThanksDialog :is(button, select, input, textarea):focus-visible {
-  outline: 2px solid #b9caff;
-  outline-offset: 2px;
-}
-
-/* Starting is shown immediately while confirmation arrives. */
-html body #donorThanksDialog #thanksSwitch[aria-busy='true'] {
-  opacity: 1;
-}
+html body #donorThanksDialog footer #thanksSwitch[aria-busy='true'],
 html body #donorsPage #thanksTabSwitch[aria-busy='true'] {
   opacity: 1;
 }
@@ -2648,162 +2565,49 @@ html body #donorsPage #thanksTabSwitch[aria-checked='true'] {
   background: #16734e !important;
   border-color: #35a779;
 }
-
-/* Premium black surfaces with the studio's blue and purple accents. */
-html body #donorThanksDialog {
-  --surface: #08090c;
-  --bg: #14161c;
-  --line: #303440;
-  --line2: #303440;
-  background: #08090c !important;
-  border-color: #303440;
-}
-html body #donorThanksDialog :is(textarea, input, select) {
-  background: #14161c !important;
-  border-color: #303440;
-  color: #f5f6fa;
-}
-html body #donorThanksDialog #thanksSave:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb, #6331c6) !important;
-  border-color: #426ce0;
-}
-html body #donorThanksDialog #thanksTest:not(:disabled) {
-  background: #3d315e !important;
-  border-color: #7460a9;
-}
-html body #donorThanksDialog#donorThanksDialog .thanks-attach:not(:disabled) {
-  background: #202943 !important;
-  border-color: #465ca0;
-  color: #e2e9ff;
-}
-html body #donorThanksDialog #thanksClose:not(:disabled) {
-  background: #111c30 !important;
-  border-color: #4267ad;
-  color: #e4ecff;
-}
-html body #donorThanksDialog footer #thanksTest {
-  white-space: nowrap;
-  font-size: 12px;
-  padding-inline: 6px;
-}
-
-/* Thank donors: quiet surfaces and clear, compact editing groups. */
-html body #donorThanksDialog {
-  --surface: #0c0e13;
-  --bg: #171a21;
-  --line: #262a34;
-  --line2: #303642;
-  width: min(600px, calc(100vw - 16px));
-  background: var(--surface) !important;
-  border: 1px solid #2c303b;
-  border-radius: 16px;
-}
-html body #donorThanksDialog header {
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--line);
-}
-html body #donorThanksDialog .thanks-head-row {
-  gap: 8px;
-}
-html body #donorThanksDialog h2 {
-  color: #f5f6f9;
-  font-size: 16px;
-  letter-spacing: -0.01em;
-}
-html body #donorThanksDialog #thanksContext {
-  display: block;
-  margin-top: 3px;
-  color: #adb4c4;
-  line-height: 1.35;
-}
-html body #donorThanksDialog .thanks-body {
-  padding: 8px 1px 1px;
-}
-html body #donorThanksDialog .thanks-compose {
-  gap: 8px;
-}
-html body #donorThanksDialog .thanks-picker {
-  gap: 6px;
-}
-html body #donorThanksDialog .thanks-capd,
-html body #donorThanksDialog .thanks-msg {
-  display: grid;
-  gap: 4px;
-}
-html body #donorThanksDialog :is(.thanks-field-label, .thanks-msg > label) {
-  color: #c5cad5;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 16px;
-}
-html body #donorThanksDialog :is(.thanks-capd textarea, #thanksMessage) {
-  box-sizing: border-box;
-  height: 82px;
-  min-height: 82px;
-  padding: 7px 10px;
-  border: 1px solid var(--line2);
-  border-radius: 10px;
-  background: var(--bg) !important;
-  color: #f3f4f7;
-  font-size: 16px;
-  line-height: 22px;
-}
-html body #donorThanksDialog :is(.thanks-capd textarea, #thanksMessage):focus {
-  height: 118px;
-}
-html body #donorThanksDialog #thanksNameHint {
-  color: #aab1bf;
-  font-size: 11px;
-  line-height: 15px;
-}
-html body #donorThanksDialog .thanks-timing {
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-html body #donorThanksDialog .thanks-timing .thanks-grid {
-  gap: 6px;
-}
-html body #donorThanksDialog :is(#thanksMediaSelect, .thanks-timing select) {
-  min-width: 0;
-  min-height: 44px;
-  border: 1px solid var(--line2);
-  border-radius: 10px;
-  background: var(--bg) !important;
-  color: #eef0f5;
-  font-size: 15px;
-}
-html body #donorThanksDialog :is(.thanks-media > button, #thanksRemove, footer > button) {
-  border-radius: 10px;
-  box-shadow: none;
-}
-html body #donorThanksDialog#donorThanksDialog .thanks-attach:not(:disabled) {
-  background: #1c263b !important;
-  border-color: #384b72;
-  color: #e3ebff;
-}
-html body #donorThanksDialog #thanksTest:not(:disabled) {
-  background: #302a43 !important;
-  border-color: #534770;
-}
-html body #donorThanksDialog #thanksClose:not(:disabled) {
-  background: #171e2b !important;
-  border-color: #3b506e;
-}
-html body #donorThanksDialog footer {
-  gap: 6px;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-}
-
-/* Keep each footer action easy to tap without squeezing the status switch. */
-html body #donorThanksDialog footer > button {
-  min-width: 44px;
+@media (max-width: 899px) {
+  html body #donorThanksDialog {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0 !important;
+  }
+  html body #donorThanksDialog::backdrop {
+    background: #090b10;
+  }
+  html body #donorThanksDialog :is(#thanksMediaSelect, .thanks-timing select, .thanks-custom input) {
+    font-size: 16px;
+  }
+  html body #donorThanksDialog header {
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+  html body #donorThanksDialog footer {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
 }
 @media (max-width: 359px) {
-  html body #donorThanksDialog footer :is(#thanksSave, #thanksTest, #thanksClose) {
-    min-width: 44px;
+  html body #donorThanksDialog header,
+  html body #donorThanksDialog .thanks-body,
+  html body #donorThanksDialog footer {
+    padding-inline: 12px;
+  }
+  html body #donorThanksDialog footer > button {
     padding-inline: 6px;
+    font-size: 12px;
+  }
+  html body #donorThanksDialog :is(#thanksAttachImg, #thanksAttachVid) {
+    padding-inline: 7px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 299px) {
+  html body #donorThanksDialog h2 {
+    font-size: 16px;
+  }
+  html body #donorThanksDialog footer .thanks-start {
+    flex-direction: column;
+    gap: 0;
   }
 }

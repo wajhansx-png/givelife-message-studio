@@ -4560,3 +4560,14 @@
   filter: none !important;
   -webkit-filter: none !important;
 }
+
+/* Force zero box-shadow on bottom nav foot and tabs */
+.UI2 .app > .foot,
+.UI2 .ui2-tabs,
+.UI2 .ui2-tab,
+.UI2 .ui2-tab[aria-current='true'] {
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  background-image: none !important;
+}

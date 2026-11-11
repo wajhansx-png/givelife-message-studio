@@ -8265,3 +8265,14 @@ html body .donor-page .donor-tabs::-webkit-scrollbar {
   filter: none !important;
   -webkit-filter: none !important;
 }
+
+/* Phase 2/3 iPhone-Level Performance & GPU Acceleration */
+.donor-table,
+.donor-shell,
+.donor-tabs,
+.chat,
+dialog {
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
+}

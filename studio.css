@@ -6633,7 +6633,7 @@ summary,
   .donor-page .donor-tabs button[aria-selected='true'],
   .seg button[aria-pressed='true']
 ) {
-  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--primary) 70%, transparent) !important;
+  box-shadow: none !important;
 }
 :is(
   .big,
@@ -7096,7 +7096,7 @@ html body .autosw[aria-checked='true'],
 html body .autosw[aria-checked='true'] {
   background: var(--grad) !important;
   border-color: transparent !important;
-  box-shadow: 0 6px 16px -8px #2f6fe8cc !important;
+  box-shadow: none !important;
 }
 html body input.sw:checked::before,
 html body input.sw:checked::after,
@@ -7355,7 +7355,7 @@ html body :is(.talk, .hist) .e.bot .rn {
   background: linear-gradient(135deg, #0e7490, #2f6fe8 55%, #6d4ef0) !important;
   color: #fff !important;
   font-weight: 700;
-  box-shadow: 0 4px 10px -4px #2f6fe899;
+  box-shadow: none;
 }
 html body :is(.talk, .hist) .e.bot .rt {
   color: var(--r-key) !important;

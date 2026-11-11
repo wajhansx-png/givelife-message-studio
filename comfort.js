@@ -53,9 +53,7 @@
 
   /* Smooth screen changes: a short fade-and-rise whenever a screen, tab or message appears. */
   function enter(el) {
-    if (!el || still.matches || el.classList.contains('cmf-enter')) return;
-    el.classList.add('cmf-enter');
-    el.addEventListener('animationend', () => el.classList.remove('cmf-enter'), { once: true });
+    // Instant response: zero animation lag
   }
   const shown = (el) => (el.tagName === 'DIALOG' ? el.open : !el.hidden);
   new MutationObserver((records) => {

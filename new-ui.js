@@ -980,15 +980,9 @@ const ui2Frame = (fn) => {
       sel = strip?.querySelector('[aria-selected="true"]');
     if (strip && sel) {
       const key = [sel.dataset.tab, strip.scrollWidth, strip.clientWidth].join(':');
-      const r = sel.getBoundingClientRect(),
-        box = strip.getBoundingClientRect();
-      if (strip.dataset.ui2Sel !== key && box.width && r.width) {
+      if (strip.dataset.ui2Sel !== key) {
         strip.dataset.ui2Sel = key;
-        const targetLeft = strip.scrollLeft + (r.left + r.width / 2) - (box.left + box.width / 2);
-        strip.scrollTo({
-          left: Math.max(0, targetLeft),
-          behavior: 'smooth',
-        });
+        requestAnimationFrame(() => scrollTabToFull(sel));
       }
     }
   }
@@ -1526,24 +1520,55 @@ document.addEventListener(
   arrange();
 })();
 
+function scrollTabToFull(btn) {
+  if (!btn) return;
+  const strip = btn.closest('.donor-tabs');
+  if (!strip) return;
+
+  const btnBox = btn.getBoundingClientRect();
+  const stripBox = strip.getBoundingClientRect();
+  if (!stripBox.width || !btnBox.width) return;
+
+  const nextTab = btn.nextElementSibling;
+  const prevTab = btn.previousElementSibling;
+
+  let targetScrollLeft = strip.scrollLeft;
+
+  if (nextTab) {
+    const nextBox = nextTab.getBoundingClientRect();
+    const padding = 16;
+    if (nextBox.right > stripBox.right - padding) {
+      targetScrollLeft += nextBox.right - stripBox.right + padding;
+    } else if (btnBox.left < stripBox.left + padding) {
+      targetScrollLeft -= stripBox.left - btnBox.left + padding;
+    }
+  } else {
+    const padding = 16;
+    if (btnBox.right > stripBox.right - padding) {
+      targetScrollLeft += btnBox.right - stripBox.right + padding;
+    } else if (btnBox.left < stripBox.left + padding) {
+      targetScrollLeft -= stripBox.left - btnBox.left + padding;
+    }
+  }
+
+  if (prevTab && btnBox.left < stripBox.left + 16) {
+    const prevBox = prevTab.getBoundingClientRect();
+    const padding = 16;
+    targetScrollLeft -= stripBox.left - prevBox.left + padding;
+  }
+
+  strip.scrollTo({
+    left: Math.max(0, targetScrollLeft),
+    behavior: 'smooth',
+  });
+}
+
 document.addEventListener(
   'click',
   (e) => {
     const btn = e.target.closest('.donor-tabs [data-tab], .donor-tabs button');
     if (!btn) return;
-    const strip = btn.closest('.donor-tabs');
-    if (!strip) return;
-    requestAnimationFrame(() => {
-      const r = btn.getBoundingClientRect();
-      const box = strip.getBoundingClientRect();
-      if (box.width && r.width) {
-        const targetLeft = strip.scrollLeft + (r.left + r.width / 2) - (box.left + box.width / 2);
-        strip.scrollTo({
-          left: Math.max(0, targetLeft),
-          behavior: 'smooth',
-        });
-      }
-    });
+    requestAnimationFrame(() => scrollTabToFull(btn));
   },
   true,
 );

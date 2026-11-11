@@ -8231,3 +8231,28 @@ html body .donor-page .donor-tabs::-webkit-scrollbar {
   height: 0 !important;
   background: transparent !important;
 }
+
+/* Neutralize bottom blur glows and colored box shadows on buttons and bottom nav items */
+:is(
+  button,
+  .send-row,
+  .grp-card,
+  .gb-card,
+  .group-send button,
+  .send-donors,
+  .send-important,
+  .ui2-gbtn,
+  .ui2-tab,
+  .nav-item,
+  .main-nav button,
+  .autosw,
+  #live,
+  .prim,
+  .main,
+  .primary,
+  .go,
+  #batchStart
+) {
+  box-shadow: none !important;
+  filter: none !important;
+}

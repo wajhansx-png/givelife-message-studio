@@ -83,18 +83,15 @@
     'click',
     (e) => {
       const t = e.target.closest(
-        '.donor-tabs [role=tab],#donorMessagesTab,[data-bank-nav],.bank-back,.bank-back-bottom,[data-view-button]',
+        '#donorMessagesTab,[data-bank-nav],.bank-back,.bank-back-bottom,[data-view-button]',
       );
       if (!t) return;
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          if (t.matches('[data-bank-nav]'))
-            enter(document.querySelector('#donorMessages .bank-detail'));
-          else if (t.matches('#donorMessagesTab')) enter(document.getElementById('donorMessages'));
-          else if (t.matches('[data-view-button]')) enter(document.getElementById('card'));
-          else enter(document.getElementById('donorTable'));
-        }),
-      );
+      requestAnimationFrame(() => {
+        if (t.matches('[data-bank-nav]'))
+          enter(document.querySelector('#donorMessages .bank-detail'));
+        else if (t.matches('#donorMessagesTab')) enter(document.getElementById('donorMessages'));
+        else if (t.matches('[data-view-button]')) enter(document.getElementById('card'));
+      });
     },
     true,
   );

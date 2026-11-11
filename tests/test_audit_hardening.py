@@ -51,7 +51,9 @@ class HttpHardening(unittest.TestCase):
                         conn.close()
                 for auth, expected in ((None, 401), ("Bearer test-only-studio-access-key", 405)):
                     conn = http.client.HTTPConnection("127.0.0.1", srv.server_port)
-                    conn.request("HEAD", "/ops/backup", headers={"Authorization": auth} if auth else {})
+                    conn.request(
+                        "HEAD", "/ops/backup", headers={"Authorization": auth} if auth else {}
+                    )
                     response = conn.getresponse()
                     self.assertEqual(response.status, expected)
                     self.assertEqual(response.read(), b"")

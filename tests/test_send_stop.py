@@ -110,14 +110,19 @@ class SendStopTests(unittest.TestCase):
 
     def test_hold_blocks_custom_text_without_contacting_recipient(self):
         body = {
-            "target": "phone", "phone": "923001230009", "message": "Hi",
-            "kind": "volunteer_batch", "poster": False,
+            "target": "phone",
+            "phone": "923001230009",
+            "message": "Hi",
+            "kind": "volunteer_batch",
+            "poster": False,
         }
         digest = hashlib.sha256(app.custom_recipient(body)[0].encode()).hexdigest()
         before = app.STORE.get("dm_daily", {})
         with (
             patch.object(app, "on_hold", return_value=True),
-            patch.object(app, "api_result", return_value={"is_connected": True, "is_logged_in": True}),
+            patch.object(
+                app, "api_result", return_value={"is_connected": True, "is_logged_in": True}
+            ),
             patch.object(app.urllib.request, "urlopen") as send,
         ):
             with self.assertRaisesRegex(ValueError, "On hold"):
@@ -128,8 +133,11 @@ class SendStopTests(unittest.TestCase):
 
     def test_hold_after_connection_check_blocks_custom_text(self):
         body = {
-            "target": "phone", "phone": "923001230009", "message": "Hi",
-            "kind": "volunteer_batch", "poster": False,
+            "target": "phone",
+            "phone": "923001230009",
+            "message": "Hi",
+            "kind": "volunteer_batch",
+            "poster": False,
         }
         digest = hashlib.sha256(app.custom_recipient(body)[0].encode()).hexdigest()
         before = app.STORE.get("dm_daily", {})
@@ -169,8 +177,11 @@ class SendStopTests(unittest.TestCase):
 
     def test_hold_while_waiting_for_wire_lock_restores_recipient(self):
         body = {
-            "target": "phone", "phone": "923001230009", "message": "Hi",
-            "kind": "volunteer_batch", "poster": False,
+            "target": "phone",
+            "phone": "923001230009",
+            "message": "Hi",
+            "kind": "volunteer_batch",
+            "poster": False,
         }
         digest = hashlib.sha256(app.custom_recipient(body)[0].encode()).hexdigest()
         before = app.STORE.get("dm_daily", {})
@@ -185,7 +196,9 @@ class SendStopTests(unittest.TestCase):
 
         with (
             patch.object(app, "on_hold", side_effect=held.is_set),
-            patch.object(app, "api_result", return_value={"is_connected": True, "is_logged_in": True}),
+            patch.object(
+                app, "api_result", return_value={"is_connected": True, "is_logged_in": True}
+            ),
             patch.object(app.urllib.request, "urlopen") as send,
         ):
             with app.WIRE_LOCK:
@@ -194,7 +207,9 @@ class SendStopTests(unittest.TestCase):
                 deadline = time.monotonic() + 3
                 while not app.STORE.get("dm_recipient_" + digest) and time.monotonic() < deadline:
                     time.sleep(0.01)
-                self.assertTrue(app.STORE.get("dm_recipient_" + digest), "send did not reach the wire lock")
+                self.assertTrue(
+                    app.STORE.get("dm_recipient_" + digest), "send did not reach the wire lock"
+                )
                 held.set()
             worker.join(3)
             self.assertFalse(worker.is_alive())
@@ -224,8 +239,11 @@ class SendStopTests(unittest.TestCase):
 
     def test_hold_while_poster_waits_for_wire_restores_recipient(self):
         body = {
-            "target": "phone", "phone": "923001230009", "message": "Hi",
-            "kind": "volunteer_batch", "poster": True,
+            "target": "phone",
+            "phone": "923001230009",
+            "message": "Hi",
+            "kind": "volunteer_batch",
+            "poster": True,
         }
         digest = hashlib.sha256(app.custom_recipient(body)[0].encode()).hexdigest()
         before = app.STORE.get("dm_daily", {})
@@ -240,7 +258,9 @@ class SendStopTests(unittest.TestCase):
 
         with (
             patch.object(app, "on_hold", side_effect=held.is_set),
-            patch.object(app, "api_result", return_value={"is_connected": True, "is_logged_in": True}),
+            patch.object(
+                app, "api_result", return_value={"is_connected": True, "is_logged_in": True}
+            ),
             patch.object(app, "post_media") as send,
         ):
             with app.WIRE_LOCK:

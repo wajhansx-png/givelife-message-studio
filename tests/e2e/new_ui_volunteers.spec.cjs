@@ -81,6 +81,9 @@ test('Volunteers hides the donor header and keeps its actions reachable across w
   await page.screenshot({ path: '/tmp/givelife-volunteers-mobile.png' });
   await page.locator('.vol-back').click();
   await expect(page.locator('#donorsPage')).toHaveAttribute('data-panel', 'all');
-  await expect(page.getByRole('tab', { name: /All donors/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: /All donors/ })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   expect(errors).toEqual([]);
 });

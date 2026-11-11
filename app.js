@@ -79,7 +79,11 @@ const Nav = {
       // A missing history event must never leave navigation locked.
       pending.timer = setTimeout(() => {
         if (Nav.pending !== pending) return;
-        window.history.replaceState({ nav: 1, from: '' }, '', target ? '#/' + target : location.pathname + location.search);
+        window.history.replaceState(
+          { nav: 1, from: '' },
+          '',
+          target ? '#/' + target : location.pathname + location.search,
+        );
         finish();
       }, 1000);
       window.history.back();
@@ -93,8 +97,7 @@ const Nav = {
     if (Nav.pending) {
       // A second tap cannot traverse twice. A parent Back immediately after
       // closing its child waits for that child transition to settle.
-      if (Nav.pending.target.split('/')[0] === name)
-        Nav.pending.next = () => Nav.leave(name);
+      if (Nav.pending.target.split('/')[0] === name) Nav.pending.next = () => Nav.leave(name);
       return;
     }
     const from = window.history.state?.from;
@@ -2764,7 +2767,11 @@ const smallScreens = [
   { id: 'donorThanksDialog', suffix: 'thanks', open: () => window.DonorThanks?.open() },
   { id: 'baseMessageDialog', suffix: 'base', open: () => window.DonorHub?.openBaseMessage() },
   { id: 'donorResumeDialog', suffix: 'resume', open: () => window.DonorHub?.openResumeChoice() },
-  { id: 'volTimingDialog', suffix: 'volunteer_timing', open: () => window.DonorHub?.restoreVolunteerTiming() },
+  {
+    id: 'volTimingDialog',
+    suffix: 'volunteer_timing',
+    open: () => window.DonorHub?.restoreVolunteerTiming(),
+  },
   { id: 'posterDialog', path: 'settings/poster', open: () => window.DonorHub?.openPoster() },
 ];
 function smallRoute(screen) {
@@ -2805,7 +2812,8 @@ addEventListener('DOMContentLoaded', () => {
       dialog.addEventListener('close', () => {
         const target = smallRoute(screen);
         if (Nav.path() === target) {
-          const parent = dialog.dataset.returnRoute ||
+          const parent =
+            dialog.dataset.returnRoute ||
             (screen.path ? 'settings' : target.split('/').slice(0, 2).join('/'));
           delete dialog.dataset.returnRoute;
           Nav.returnTo(parent);

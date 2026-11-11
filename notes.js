@@ -533,11 +533,13 @@
     let block = sel?.anchorNode;
     if (block?.nodeType === 3) block = block.parentElement;
     block = block?.closest?.('p,li,h1,h2,h3,div');
-    if (!block || !editor.contains(block) || block === editor || block.textContent.trim() !== '') return;
+    if (!block || !editor.contains(block) || block === editor || block.textContent.trim() !== '')
+      return;
     const wrappers = [...block.querySelectorAll('font[color],span[style*="color"]')];
     if (!wrappers.length) return;
     for (const w of wrappers) w.replaceWith(...w.childNodes);
-    if (!block.querySelector('br') && !block.textContent) block.append(document.createElement('br'));
+    if (!block.querySelector('br') && !block.textContent)
+      block.append(document.createElement('br'));
     const range = document.createRange();
     range.setStart(block, 0);
     range.collapse(true);

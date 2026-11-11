@@ -5,16 +5,26 @@
    Selector prefix: html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage  (5 ids of specificity). */
 
 /* The redesigned volunteer Add panel opens from the right-hand action. */
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
-  #donorsPage#donorsPage #donorVolunteers .vol-foot {
+html
+  body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+  #donorsPage#donorsPage
+  #donorVolunteers
+  .vol-foot {
   position: relative !important;
 }
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
-  #donorsPage#donorsPage #donorVolunteers .vol-add-panel {
+html
+  body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+  #donorsPage#donorsPage
+  #donorVolunteers
+  .vol-add-panel {
   position: static !important;
 }
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
-  #donorsPage#donorsPage #donorVolunteers .vol-add-panel[open] > .vol-add {
+html
+  body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+  #donorsPage#donorsPage
+  #donorVolunteers
+  .vol-add-panel[open]
+  > .vol-add {
   left: auto !important;
   right: 0 !important;
 }
@@ -1328,7 +1338,11 @@ html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-group-he
 }
 
 /* ---- Timer presets (all widths): the chosen one (15m / 30m / 45m / 1h) is filled blue ---- */
-html body:not(#a):not(#b):not(#c) .group-send .grp-card .delay-pill:is([aria-pressed='true'], .is-pending) {
+html
+  body:not(#a):not(#b):not(#c)
+  .group-send
+  .grp-card
+  .delay-pill:is([aria-pressed='true'], .is-pending) {
   background: #2f6fe8 !important;
   border-color: #2f6fe8 !important;
   color: #fff !important;
@@ -1409,20 +1423,20 @@ html[data-theme='light'] body:not(#a):not(#b):not(#c) dialog.report-dialog .repo
 }
 @media (prefers-color-scheme: light) {
   html:not([data-theme='dark']) body:not(#a):not(#b):not(#c) dialog.report-dialog .report-card {
-  --rc-card: #f4f5f7;
-  --rc-surface: #ffffff;
-  --rc-line: #dcdfe5;
-  --rc-text: #1e2229;
-  --rc-dim: #5b6573;
-  --rc-on: #2e8b6a;
-  --rc-off: #8a929e;
-  --rc-sw-on: #2e8b6a;
-  --rc-sw-on-fg: #ffffff;
-  --rc-sw-off: #e9ecf0;
-  --rc-stop-bg: #fbe3e6;
-  --rc-stop-line: #e2a1a9;
-  --rc-stop-fg: #7a1d29;
-  --rc-shadow: 0 12px 40px #1e222926;
+    --rc-card: #f4f5f7;
+    --rc-surface: #ffffff;
+    --rc-line: #dcdfe5;
+    --rc-text: #1e2229;
+    --rc-dim: #5b6573;
+    --rc-on: #2e8b6a;
+    --rc-off: #8a929e;
+    --rc-sw-on: #2e8b6a;
+    --rc-sw-on-fg: #ffffff;
+    --rc-sw-off: #e9ecf0;
+    --rc-stop-bg: #fbe3e6;
+    --rc-stop-line: #e2a1a9;
+    --rc-stop-fg: #7a1d29;
+    --rc-shadow: 0 12px 40px #1e222926;
   }
 }
 html body:not(#a):not(#b):not(#c) dialog.report-dialog::backdrop,
@@ -1531,7 +1545,12 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-card .auto-head h4:
   border-radius: 50%;
   background: var(--accent);
 }
-html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-card[data-state='ON'] .auto-head h4::before {
+html
+  body:not(#a):not(#b):not(#c)
+  dialog.report-dialog
+  .auto-card[data-state='ON']
+  .auto-head
+  h4::before {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--rc-on) 22%, transparent);
 }
 html body:not(#a):not(#b):not(#c) dialog.report-dialog .report-card .auto-card button {
@@ -1551,7 +1570,11 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-card .auto-switch {
   letter-spacing: 0.05em;
 }
 html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-card[data-state='ON'] .auto-switch,
-html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-card[data-state='STOPPING'] .auto-switch {
+html
+  body:not(#a):not(#b):not(#c)
+  dialog.report-dialog
+  .auto-card[data-state='STOPPING']
+  .auto-switch {
   border-color: transparent !important;
   background: var(--rc-sw-on) !important;
   color: var(--rc-sw-on-fg) !important;
@@ -1910,8 +1933,10 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-card .auto-edit::be
   width: 18px;
   height: 18px;
   background: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h10M19 7h1M4 17h2M11 17h9'/%3E%3Ccircle cx='16.5' cy='7' r='2.5'/%3E%3Ccircle cx='8.5' cy='17' r='2.5'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h10M19 7h1M4 17h2M11 17h9'/%3E%3Ccircle cx='16.5' cy='7' r='2.5'/%3E%3Ccircle cx='8.5' cy='17' r='2.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h10M19 7h1M4 17h2M11 17h9'/%3E%3Ccircle cx='16.5' cy='7' r='2.5'/%3E%3Ccircle cx='8.5' cy='17' r='2.5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h10M19 7h1M4 17h2M11 17h9'/%3E%3Ccircle cx='16.5' cy='7' r='2.5'/%3E%3Ccircle cx='8.5' cy='17' r='2.5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
   font-size: 0;
 }
 html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-card .auto-edit::after {
@@ -1986,7 +2011,11 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-form .auto-form-not
 /* ---- Donors (classic), phone and tablet: ONE header row on every tab. Donors | search icon | Messages | More.
    + Add and the Important-tab chips live in More. Search opens over this row, so the tabs and the list never move. ---- */
 @media (max-width: 899px) {
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head > .donor-search-open {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    > .donor-search-open {
     display: grid;
     place-items: center;
     flex: 0 0 auto;
@@ -2004,8 +2033,16 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-form .auto-form-not
   html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head #donorSearch {
     display: none !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head.search-open #donorSearch,
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head #donorSearch:not(:placeholder-shown) {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head.search-open
+    #donorSearch,
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    #donorSearch:not(:placeholder-shown) {
     position: absolute !important;
     inset: 0 0 auto 0 !important;
     z-index: 40;
@@ -2021,11 +2058,24 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-form .auto-form-not
     color: var(--ink) !important;
     font-size: 16px !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head > .donor-search-close {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    > .donor-search-close {
     display: none;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head.search-open > .donor-search-close,
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head #donorSearch:not(:placeholder-shown) ~ .donor-search-close {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head.search-open
+    > .donor-search-close,
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    #donorSearch:not(:placeholder-shown)
+    ~ .donor-search-close {
     position: absolute;
     top: 0;
     right: 0;
@@ -2043,10 +2093,20 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-form .auto-form-not
     line-height: 1;
   }
   /* A small dot on More while contacted donors are hidden on the Important list. */
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head #donorNavMore > summary[data-note] {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    #donorNavMore
+    > summary[data-note] {
     position: relative;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head #donorNavMore > summary[data-note]::before {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    #donorNavMore
+    > summary[data-note]::before {
     content: '';
     position: absolute;
     top: 5px;
@@ -2065,24 +2125,40 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-form .auto-form-not
   html body .compact-nav-panel > .hide-row[hidden] {
     display: none !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .compact-nav-panel :is(#donorAdd, #donorBulk) {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .compact-nav-panel
+    :is(#donorAdd, #donorBulk) {
     border: 1px solid var(--line2) !important;
     background: transparent !important;
     box-shadow: none !important;
     color: var(--ink) !important;
     font-weight: 600;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) #donorNavMore .compact-nav-panel button:not([hidden]) {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    #donorNavMore
+    .compact-nav-panel
+    button:not([hidden]) {
     display: flex !important;
     align-items: center;
     justify-content: flex-start;
     min-height: 44px;
     text-align: left;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .compact-nav-panel button[hidden] {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    .compact-nav-panel
+    button[hidden] {
     display: none !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) #donorSearch::-webkit-search-cancel-button {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)
+    #donorSearch::-webkit-search-cancel-button {
     display: none;
   }
   html body .compact-nav-panel :is(.hide-chip, #donorAdd):not([hidden]) {
@@ -2097,26 +2173,48 @@ html body:not(#a):not(#b):not(#c) dialog.report-dialog .auto-form .auto-form-not
     text-align: left;
   }
   /* Volunteers keeps the same header row, so the tabs stay exactly where they are on every other tab. */
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d):not(#e):not(#f)[data-panel='volunteers'] .donor-head {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d):not(#e):not(#f)[data-panel='volunteers']
+    .donor-head {
     display: flex !important;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d)[data-panel='volunteers'] .donor-head > .donor-search-open {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)[data-panel='volunteers']
+    .donor-head
+    > .donor-search-open {
     visibility: hidden;
   }
-  html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d)[data-panel='volunteers'] .compact-nav-panel #donorAdd {
+  html
+    body:not(#a):not(#b):not(#c)
+    #donorsPage#donorsPage:not(#d)[data-panel='volunteers']
+    .compact-nav-panel
+    #donorAdd {
     display: none !important;
   }
 }
 
 /* Desktop: Volunteers keeps the same header band too (donor-only controls keep their space, hidden), so the tabs never jump. */
 @media (min-width: 900px) {
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d):not(#e):not(#f)[data-panel='volunteers'] .donor-head {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d):not(#e):not(#f)[data-panel='volunteers']
+    .donor-head {
     display: flex !important;
   }
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d)[data-panel='volunteers'] .donor-head > :not(.donor-title):not(.donor-message-tablist):not(#donorNavMore) {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)[data-panel='volunteers']
+    .donor-head
+    > :not(.donor-title):not(.donor-message-tablist):not(#donorNavMore) {
     visibility: hidden;
   }
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d)[data-panel='volunteers'] .donor-head > .donor-title {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)[data-panel='volunteers']
+    .donor-head
+    > .donor-title {
     flex: 1 1 auto !important;
     margin-right: auto !important;
   }
@@ -2127,7 +2225,11 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot >
   background: color-mix(in srgb, #fff 2%, #14151c) !important;
   background-image: none !important;
 }
-html[data-theme='light'] body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot > #chatOpen {
+html[data-theme='light']
+  body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h)
+  .app
+  > .foot
+  > #chatOpen {
   background: var(--surface) !important;
 }
 html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot > #openDonors {
@@ -2150,45 +2252,85 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot >
 
 /* ---- Volunteers (classic phone/tablet): same surfaces, rows, buttons and Back arrow as the other Donors tabs. ---- */
 @media (max-width: 899px) {
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-people {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)
+    .donor-volunteers
+    .vol-people {
     overflow: hidden;
     border: 1px solid #1f1f1f !important;
     border-radius: 22px !important;
     background: #000 !important;
     box-shadow: none !important;
   }
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-list {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)
+    .donor-volunteers
+    .vol-list {
     background: #000 !important;
   }
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-people > :is(.vol-case-options, header, h3) {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)
+    .donor-volunteers
+    .vol-people
+    > :is(.vol-case-options, header, h3) {
     border: 0 !important;
     background: transparent !important;
   }
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-row {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)
+    .donor-volunteers
+    .vol-row {
     border: 0 !important;
     border-bottom: 1px solid #1c1f2b !important;
     border-radius: 0 !important;
     background: transparent !important;
   }
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-msg {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)
+    .donor-volunteers
+    .vol-msg {
     border: 1px solid #1f1f1f !important;
     border-radius: 22px !important;
   }
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-row :is(.vol-case, .vol-share) {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)
+    .donor-volunteers
+    .vol-row
+    :is(.vol-case, .vol-share) {
     border: 1px solid #394060 !important;
     border-radius: 999px !important;
     background: transparent !important;
     box-shadow: none !important;
     color: #c3c9de !important;
   }
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)
+    .donor-volunteers
+    .vol-foot {
     padding: 6px 0 0 !important;
     background: transparent !important;
   }
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot :is(.send-donors, .vol-add-panel > summary) {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)
+    .donor-volunteers
+    .vol-foot
+    :is(.send-donors, .vol-add-panel > summary) {
     min-height: 46px !important;
   }
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot > .vol-back {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)
+    .donor-volunteers
+    .vol-foot
+    > .vol-back {
     display: grid !important;
     place-items: center;
     flex: 0 0 50px !important;
@@ -2204,7 +2346,12 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot >
     color: #f87171 !important;
     font-size: 0 !important;
   }
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-volunteers .vol-foot > .vol-back::after {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)
+    .donor-volunteers
+    .vol-foot
+    > .vol-back::after {
     content: '←';
     font-size: 22px;
     line-height: 1;
@@ -2213,7 +2360,10 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot >
 
 /* With the phone keyboard open (very short screen) the Volunteers message needs the room: the header band steps aside. */
 @media (max-height: 480px) {
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d):not(#e):not(#f):not(#g)[data-panel='volunteers'] .donor-head {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d):not(#e):not(#f):not(#g)[data-panel='volunteers']
+    .donor-head {
     display: none !important;
   }
 }
@@ -2221,7 +2371,11 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f):not(#g):not(#h) .app > .foot >
 /* Computer, classic: the Donors header buttons sit at the right and keep the same place on every tab
    (the Important chips appear to the left of them instead of pushing them). */
 @media (min-width: 900px) {
-  html body:not(#a):not(#b):not(#c):not(.ui2) #donorsPage#donorsPage:not(#d) .donor-head > .donor-title {
+  html
+    body:not(#a):not(#b):not(#c):not(.ui2)
+    #donorsPage#donorsPage:not(#d)
+    .donor-head
+    > .donor-title {
     flex: 1 1 auto !important;
     margin-right: auto !important;
   }
@@ -2592,7 +2746,10 @@ html body #donorsPage #thanksTabSwitch[aria-checked='true'] {
   html body #donorThanksDialog::backdrop {
     background: #090b10;
   }
-  html body #donorThanksDialog :is(#thanksMediaSelect, .thanks-timing select, .thanks-custom input) {
+  html
+    body
+    #donorThanksDialog
+    :is(#thanksMediaSelect, .thanks-timing select, .thanks-custom input) {
     font-size: 16px;
   }
   html body #donorThanksDialog header {
@@ -2659,7 +2816,6 @@ html body #donorThanksDialog[data-phase='stopping'] #thanksStartLabel {
   color: #f4d18e;
 }
 
-
 /* Thank Donors — compact centered popup; preserve the existing sender and settings.
    The four action areas remain accessible without the full-screen mobile takeover. */
 html body #donorThanksDialog {
@@ -2676,9 +2832,11 @@ html body #donorThanksDialog {
   overflow: hidden;
   background: #090b10 !important;
 }
-html body #donorThanksDialog:not([open]) { display: none !important; }
+html body #donorThanksDialog:not([open]) {
+  display: none !important;
+}
 html body #donorThanksDialog::backdrop {
-  background: rgba(2, 4, 10, .78);
+  background: rgba(2, 4, 10, 0.78);
   backdrop-filter: blur(5px);
 }
 html body #donorThanksDialog header {
@@ -2701,7 +2859,10 @@ html body #donorThanksDialog #thanksContext {
   font-size: 11px;
   line-height: 1.3;
 }
-html body #donorThanksDialog .thanks-media { display: flex; gap: 6px; }
+html body #donorThanksDialog .thanks-media {
+  display: flex;
+  gap: 6px;
+}
 html body #donorThanksDialog :is(#thanksAttachImg, #thanksAttachVid) {
   min-height: 40px;
   min-width: 54px;
@@ -2780,7 +2941,9 @@ html body #donorThanksDialog .thanks-timing select {
   border-radius: 9px;
   font-size: 14px;
 }
-html body #donorThanksDialog .thanks-picker { min-width: 0; }
+html body #donorThanksDialog .thanks-picker {
+  min-width: 0;
+}
 html body #donorThanksDialog #thanksMediaSelect {
   min-width: 0;
   max-width: 100%;
@@ -2796,7 +2959,7 @@ html body #donorThanksDialog footer {
   position: relative;
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, .8fr) minmax(0, .8fr) minmax(0, 1.25fr) minmax(0, .8fr);
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 0.8fr) minmax(0, 1.25fr) minmax(0, 0.8fr);
   gap: 6px;
   align-items: stretch;
   padding: 9px 14px max(10px, env(safe-area-inset-bottom));
@@ -2830,7 +2993,7 @@ html body #donorThanksDialog footer .thanks-start:has(#thanksSwitch[aria-checked
   background: #57302b;
 }
 html body #donorThanksDialog footer .thanks-start:has(#thanksSwitch:disabled) {
-  opacity: .56;
+  opacity: 0.56;
 }
 html body #donorThanksDialog footer .thanks-start:focus-within {
   outline: 2px solid #97baff;
@@ -2852,7 +3015,9 @@ html body #donorThanksDialog footer #thanksSwitch {
   cursor: pointer;
 }
 html body #donorThanksDialog footer #thanksSwitch::before,
-html body #donorThanksDialog footer #thanksSwitch > i { display: none; }
+html body #donorThanksDialog footer #thanksSwitch > i {
+  display: none;
+}
 html body #donorThanksDialog #thanksClose {
   background: #1a2230 !important;
   border-color: #343b49;
@@ -2868,24 +3033,30 @@ html body #donorThanksDialog #thanksClose {
     border-radius: 14px !important;
   }
   html body #donorThanksDialog::backdrop {
-    background: rgba(2, 4, 10, .78);
+    background: rgba(2, 4, 10, 0.78);
   }
 }
 @media (max-width: 359px) {
   html body #donorThanksDialog header,
-  html body #donorThanksDialog .thanks-body { padding-inline: 10px; }
+  html body #donorThanksDialog .thanks-body {
+    padding-inline: 10px;
+  }
   html body #donorThanksDialog footer {
     padding-inline: 10px;
     gap: 4px;
   }
-  html body #donorThanksDialog h2 { font-size: 16px; }
+  html body #donorThanksDialog h2 {
+    font-size: 16px;
+  }
   html body #donorThanksDialog :is(#thanksAttachImg, #thanksAttachVid) {
     min-width: 48px;
     padding-inline: 6px;
     font-size: 12px;
   }
   html body #donorThanksDialog footer > button,
-  html body #donorThanksDialog footer .thanks-start { font-size: 12px; }
+  html body #donorThanksDialog footer .thanks-start {
+    font-size: 12px;
+  }
 }
 @media (max-width: 299px) {
   html body #donorThanksDialog footer {
@@ -2896,7 +3067,6 @@ html body #donorThanksDialog #thanksClose {
     grid-row: 1;
   }
 }
-
 
 /* Thank Donors bottom edge: the global half-transparent dialog backdrop was
    showing the underlying purple page button/glow through the rounded footer. */
@@ -3035,7 +3205,10 @@ html body #donorThanksDialog footer .thanks-start {
 
 /* Mobile donor controls retain full tap targets; the duplicate Top action stays in More. */
 @media (max-width: 899px) {
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-tabs {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-tabs {
     display: flex !important;
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
@@ -3044,7 +3217,11 @@ html body #donorThanksDialog footer .thanks-start {
     gap: 5px !important;
     scrollbar-width: thin;
   }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-tabs > button {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-tabs
+    > button {
     flex: 0 0 auto !important;
     width: max-content !important;
     min-width: 44px !important;
@@ -3055,12 +3232,19 @@ html body #donorThanksDialog footer .thanks-start {
     white-space: nowrap !important;
     overflow: visible !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-tabs :is(.tab-name, .tab-word) {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-tabs
+    :is(.tab-name, .tab-word) {
     font-size: 12px !important;
     white-space: nowrap !important;
     letter-spacing: normal !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row {
     grid-template-columns: 44px minmax(0, 1fr) 44px 62px 44px !important;
     grid-template-rows: auto !important;
     grid-template-areas: none !important;
@@ -3069,54 +3253,138 @@ html body #donorThanksDialog footer .thanks-start {
     min-height: 44px !important;
     padding: 0 !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-identity {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > .donor-identity {
     grid-area: 1 / 2 !important;
     min-width: 0 !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row .donor-top-chip {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    .donor-top-chip {
     display: none !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > :is(.donor-star, .donor-dm, .donor-more),
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-more > summary {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > :is(.donor-star, .donor-dm, .donor-more),
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > .donor-more
+    > summary {
     width: 44px !important;
     min-width: 44px !important;
     height: 44px !important;
     min-height: 44px !important;
     padding: 0 !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-star { grid-area: 1 / 1 !important; }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-dm { grid-area: 1 / 3 !important; }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-status {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > .donor-star {
+    grid-area: 1 / 1 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > .donor-dm {
+    grid-area: 1 / 3 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > .donor-status {
     grid-area: 1 / 4 !important;
     width: 62px !important;
     min-width: 62px !important;
     height: 44px !important;
     min-height: 44px !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-more { grid-area: 1 / 5 !important; }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row .donor-menu-top {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > .donor-more {
+    grid-area: 1 / 5 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    .donor-menu-top {
     display: block !important;
     min-height: 44px !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage[data-panel='messages'] :is(.donor-bottom, #donorProgress, .dp-show, #donorBatchList) {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage[data-panel='messages']
+    :is(.donor-bottom, #donorProgress, .dp-show, #donorBatchList) {
     display: none !important;
   }
 }
 @media (max-width: 359px) {
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row {
     grid-template-columns: 44px minmax(0, 1fr) 62px 44px !important;
     grid-template-rows: minmax(24px, auto) 44px !important;
     row-gap: 2px !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-star { grid-area: 1 / 1 / 3 / 2 !important; }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-identity { grid-area: 1 / 2 / 2 / 4 !important; }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-dm { grid-area: 2 / 2 !important; }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-status { grid-area: 2 / 3 !important; }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-more { grid-area: 1 / 4 / 3 / 5 !important; }
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > .donor-star {
+    grid-area: 1 / 1 / 3 / 2 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > .donor-identity {
+    grid-area: 1 / 2 / 2 / 4 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > .donor-dm {
+    grid-area: 2 / 2 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > .donor-status {
+    grid-area: 2 / 3 !important;
+  }
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+    #donorsPage#donorsPage
+    .donor-row
+    > .donor-more {
+    grid-area: 1 / 4 / 3 / 5 !important;
+  }
 }
 
 /* Read long saved messages at their readable size, with scrolling inside the reader. */
-html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage[data-panel='messages'] #donorMessages .bank-detail .bank-preview {
+html
+  body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+  #donorsPage#donorsPage[data-panel='messages']
+  #donorMessages
+  .bank-detail
+  .bank-preview {
   min-height: 0 !important;
   overflow-y: auto !important;
   overscroll-behavior: contain;

@@ -3,6 +3,7 @@
 Totals come from donor-shared screenshots across cases, NOT bank-confirmed payments.
 The importer never changes current-case donated flags, current-case amounts, or DM state.
 """
+
 import base64
 import copy
 import json
@@ -71,7 +72,9 @@ def import_rankings(store, folder, encoded):
             # A previous manual Top selection is not erased. Only newly ranked
             # contacts are added to Top; Important, donation history, and delivery
             # flags remain untouched.
-            top_was_manually_unset = row.get("receipt_rank") is not None and not row.get("top_donor")
+            top_was_manually_unset = row.get("receipt_rank") is not None and not row.get(
+                "top_donor"
+            )
             row.update(
                 receipt_total=item["total"],
                 receipt_rank=rank,

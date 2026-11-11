@@ -1,13 +1,34 @@
 const { test, expect } = require('@playwright/test');
 const KEY = 'manual-fix-preview-key';
-const text = 'Brother, please help this family.\n\nRs. 25,000 LEFT.\n\n03097458815 Easypaisa only, Wajdan Khan.';
-const regenerateControl = (page, base, width) => page.locator(base === '/' ? '.bank-gen-icon' : width < 900 ? '.ui2-bank-nav [data-ui2-proxy="#donorMessages .bank-gen-icon"]' : '.ui2-desktop-regenerate');
-const nextControl = (page, base, width) => page.locator(base === '/' ? '.bank-next-arrow' : width < 900 ? '.ui2-bank-nav [data-ui2-proxy="#donorMessages .bank-next-arrow"]' : '.ui2-desktop-next');
-const items = [1, 2].map((number) => ({ id: 'version-' + number, text: text + '\nVersion ' + number, enabled: true }));
+const text =
+  'Brother, please help this family.\n\nRs. 25,000 LEFT.\n\n03097458815 Easypaisa only, Wajdan Khan.';
+const regenerateControl = (page, base, width) =>
+  page.locator(
+    base === '/'
+      ? '.bank-gen-icon'
+      : width < 900
+        ? '.ui2-bank-nav [data-ui2-proxy="#donorMessages .bank-gen-icon"]'
+        : '.ui2-desktop-regenerate',
+  );
+const nextControl = (page, base, width) =>
+  page.locator(
+    base === '/'
+      ? '.bank-next-arrow'
+      : width < 900
+        ? '.ui2-bank-nav [data-ui2-proxy="#donorMessages .bank-next-arrow"]'
+        : '.ui2-desktop-next',
+  );
+const items = [1, 2].map((number) => ({
+  id: 'version-' + number,
+  text: text + '\nVersion ' + number,
+  enabled: true,
+}));
 
 for (const base of ['/', '/new/']) {
   for (const width of [390, 1440]) {
-    test(`regeneration control remains disabled after changing versions ${base} ${width}`, async ({ page }) => {
+    test(`regeneration control remains disabled after changing versions ${base} ${width}`, async ({
+      page,
+    }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
       let release;
@@ -38,7 +59,9 @@ for (const base of ['/', '/new/']) {
       expect(calls).toBe(1);
     });
 
-    test(`empty message bank can save a base and generate versions ${base} ${width}`, async ({ page }) => {
+    test(`empty message bank can save a base and generate versions ${base} ${width}`, async ({
+      page,
+    }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
       let saved = [];

@@ -252,9 +252,13 @@ test('regeneration cannot be duplicated by switching message previews', async ({
   await page.getByRole('button', { name: 'Regenerate versions', exact: true }).click();
   await expect.poll(() => calls).toBe(1);
   await page.getByRole('button', { name: 'Next message', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Regenerate versions', exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Regenerate versions', exact: true }),
+  ).toBeDisabled();
   release();
-  await expect(page.getByRole('button', { name: 'Regenerate versions', exact: true })).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'Regenerate versions', exact: true }),
+  ).toBeEnabled();
   expect(calls).toBe(1);
 });
 for (const width of [1440, 390])
@@ -425,7 +429,14 @@ test('delivery refresh updates donor counts without replacing the active editor'
   request,
 }) => {
   // The app no longer creates sample DM templates on opening this screen.
-  await page.route('**/donor-messages', (r) => r.fulfill({ json: { items: [{ id: 'layout-editable', text: 'Bhai, this is a synthetic saved DM.' }], generation: {} } }));
+  await page.route('**/donor-messages', (r) =>
+    r.fulfill({
+      json: {
+        items: [{ id: 'layout-editable', text: 'Bhai, this is a synthetic saved DM.' }],
+        generation: {},
+      },
+    }),
+  );
   let sent = 12;
   const base = await (await request.get('/donors', { headers: auth })).json();
   await page.route(/\/donors(\?.*)?$/, (r) =>

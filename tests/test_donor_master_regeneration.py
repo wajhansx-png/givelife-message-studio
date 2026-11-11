@@ -34,7 +34,9 @@ class DonorMasterTests(unittest.TestCase):
             state = (data.get("generation") or {}).get("state")
             if state == "Partial" and not saves:
                 saves.append(1)
-                raise ValueError("Persistent records are unavailable.")  # the first "stop" save fails
+                raise ValueError(
+                    "Persistent records are unavailable."
+                )  # the first "stop" save fails
             return real_save(data)
 
         def boom(*a, **k):

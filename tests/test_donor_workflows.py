@@ -43,10 +43,20 @@ class WorkflowTests(unittest.TestCase):
             registry.book.add(name, phone)
         jobs = registry.jobs
         second = type(jobs)(
-            self.fixture.scope.name, jobs.store, jobs.book, jobs.send, jobs.caption,
-            jobs.connected, jobs.held, jobs.eligible, jobs.name_for,
-            variants=jobs.variants, case_closed=jobs.case_closed, reserve=jobs.reserve,
-            refresh_caption=jobs.refresh_caption, balance=jobs.balance,
+            self.fixture.scope.name,
+            jobs.store,
+            jobs.book,
+            jobs.send,
+            jobs.caption,
+            jobs.connected,
+            jobs.held,
+            jobs.eligible,
+            jobs.name_for,
+            variants=jobs.variants,
+            case_closed=jobs.case_closed,
+            reserve=jobs.reserve,
+            refresh_caption=jobs.refresh_caption,
+            balance=jobs.balance,
         )
         second._load()  # This worker read state before the first worker started.
         first = jobs.start("all", 60, request_id="stale-worker", run=False)
@@ -64,10 +74,20 @@ class WorkflowTests(unittest.TestCase):
             registry.book.add(name, phone)
         jobs = registry.jobs
         second = type(jobs)(
-            self.fixture.scope.name, persist.SqliteStore(db), jobs.book, jobs.send,
-            jobs.caption, jobs.connected, jobs.held, jobs.eligible, jobs.name_for,
-            variants=jobs.variants, case_closed=jobs.case_closed, reserve=jobs.reserve,
-            refresh_caption=jobs.refresh_caption, balance=jobs.balance,
+            self.fixture.scope.name,
+            persist.SqliteStore(db),
+            jobs.book,
+            jobs.send,
+            jobs.caption,
+            jobs.connected,
+            jobs.held,
+            jobs.eligible,
+            jobs.name_for,
+            variants=jobs.variants,
+            case_closed=jobs.case_closed,
+            reserve=jobs.reserve,
+            refresh_caption=jobs.refresh_caption,
+            balance=jobs.balance,
         )
         gate = threading.Barrier(2)
 
@@ -80,8 +100,10 @@ class WorkflowTests(unittest.TestCase):
         jobs.connected = second.connected = connected
         with patch.object(jobs, "_run") as first_run, patch.object(second, "_run") as second_run:
             with ThreadPoolExecutor(max_workers=2) as workers:
-                futures = [workers.submit(job.start, "all", 60, request_id="concurrent", run=True)
-                           for job in (jobs, second)]
+                futures = [
+                    workers.submit(job.start, "all", 60, request_id="concurrent", run=True)
+                    for job in (jobs, second)
+                ]
                 results = [future.result(timeout=10) for future in futures]
             self.assertEqual(first_run.call_count + second_run.call_count, 1)
         self.assertEqual(results[0]["job"]["id"], results[1]["job"]["id"])
@@ -143,7 +165,9 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(called.call_count, 1)
             self.assertEqual(self.app.STORE.get(registry.messages.ROTATION_KEY), rotated)
         with self.assertRaisesRegex(ValueError, "different batch"):
-            registry.jobs.start("all", 60, request_id="after-rotation", follow_up="Changed", run=False)
+            registry.jobs.start(
+                "all", 60, request_id="after-rotation", follow_up="Changed", run=False
+            )
 
     def test_request_claim_survives_job_history_trimming(self):
         self.app.STORE = persist.SqliteStore(Path(self.fixture.scope.name) / "trimmed.sqlite")
@@ -151,8 +175,12 @@ class WorkflowTests(unittest.TestCase):
         registry = self.app.donors()
         registry.book.add("Ali", "03001234567")
         first = registry.jobs.start("all", 60, request_id="old-job", run=False)
-        registry.jobs._update(first["job"]["id"], state="Stopped", failed=1,
-                              receipts=[{"id": "example", "state": "Uncertain"}])
+        registry.jobs._update(
+            first["job"]["id"],
+            state="Stopped",
+            failed=1,
+            receipts=[{"id": "example", "state": "Uncertain"}],
+        )
         registry.jobs.import_jobs({"jobs": []})
         with patch.object(registry.jobs, "reserve") as reserve:
             again = registry.jobs.start("all", 60, request_id="old-job", run=False)
@@ -176,7 +204,10 @@ class WorkflowTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "save reply lost"):
                 registry.jobs.start("all", 60, request_id="saved-job", run=False)
         rotated = self.app.STORE.get(registry.messages.ROTATION_KEY)
-        with patch.object(registry.jobs, "reserve") as reserve, patch.object(registry.jobs, "_run") as worker:
+        with (
+            patch.object(registry.jobs, "reserve") as reserve,
+            patch.object(registry.jobs, "_run") as worker,
+        ):
             again = registry.jobs.start("all", 60, request_id="saved-job", run=True)
             self.assertEqual(again["job"]["state"], "Starting")
             reserve.assert_not_called()
@@ -188,8 +219,10 @@ class WorkflowTests(unittest.TestCase):
         self.app.STORE.initialize()
         registry = self.app.donors()
         rid = "legacy-orphan"
-        self.app.STORE.claim(registry.jobs.CLAIM + hashlib.sha256(rid.encode()).hexdigest(),
-                             {"id": "old", "signature": "unknown", "state": "Starting"})
+        self.app.STORE.claim(
+            registry.jobs.CLAIM + hashlib.sha256(rid.encode()).hexdigest(),
+            {"id": "old", "signature": "unknown", "state": "Starting"},
+        )
         with patch.object(registry.jobs, "reserve") as reserve:
             with self.assertRaisesRegex(ValueError, "already tracked"):
                 registry.jobs.start("all", 60, request_id=rid, run=False)

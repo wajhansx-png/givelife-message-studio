@@ -1,4 +1,5 @@
 """Offline Generate 20 regression: no AI calls or WhatsApp sending."""
+
 import copy
 import tempfile
 import unittest
@@ -24,7 +25,9 @@ class GenerateTwentyTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.source = "*This is the owner's approved base*\nRs. 16,000 still needed.\nEASYPAISA ONLY"
+        self.source = (
+            "*This is the owner's approved base*\nRs. 16,000 still needed.\nEASYPAISA ONLY"
+        )
         self.store = FakeStore()
         app = SimpleNamespace(
             DATA=Path(self.tmp.name),

@@ -26,7 +26,12 @@ class DonorIntegration:
             self.messages.captions,
             lambda: app.read_left() <= 0,
             reserve=self.messages.reserve_round,
-            refresh_caption=lambda text,old:app.caption_facts.current(app,app.draft_workflow.update_amount(text,old,app.read_left()) if type(old) is int else text),
+            refresh_caption=lambda text, old: app.caption_facts.current(
+                app,
+                app.draft_workflow.update_amount(text, old, app.read_left())
+                if type(old) is int
+                else text,
+            ),
             balance=app.read_left,
         )
         self.jobs.exclusion_reason = self.exclusion_reason
@@ -353,7 +358,12 @@ class DonorIntegration:
 
         number, total, text = self.messages.next_test()
         result = self.app.send_dm_test(dm_composer.personalize(text, "", "Brother"), poster)
-        return {**result, "version": number, "total": total, "reply": f"Test DM sent: version {number} of {total}."}
+        return {
+            **result,
+            "version": number,
+            "total": total,
+            "reply": f"Test DM sent: version {number} of {total}.",
+        }
 
     PREFS_KEY = "donor_batch_prefs"
 
@@ -416,7 +426,9 @@ class DonorIntegration:
             body.setdefault("limit", 20)
         result = self.jobs.start(**body)
         if not body.get("owner"):
-            self._learn(body)  # an Auto control's own timing never replaces the owner's usual settings
+            self._learn(
+                body
+            )  # an Auto control's own timing never replaces the owner's usual settings
         return result
 
     def usual_batch(self, text, request_id, scope="important"):
@@ -601,7 +613,11 @@ class DonorIntegration:
                 return first, address if first or address == "Sister" else "Brother"
             label = label.get("name", "")
         raw_label = str(label)
-        label = re.sub(r"(?i)\b(?:donors?|donir|donkr|donoe|good|best|new|perm|member|giki|gikii|volun|expert|developer|fast|ambas|main)\b", " ", raw_label)
+        label = re.sub(
+            r"(?i)\b(?:donors?|donir|donkr|donoe|good|best|new|perm|member|giki|gikii|volun|expert|developer|fast|ambas|main)\b",
+            " ",
+            raw_label,
+        )
         label = re.sub(r"[^\w\s\'-]", " ", label)
         label = re.sub(r"\d+(?:[.,]\d+)?(?:k)?", " ", label)
         label = " ".join(label.split())
@@ -639,7 +655,16 @@ class DonorIntegration:
                 k: v
                 for k, v in body.items()
                 if k
-                in ("name", "top_donor", "important", "donated", "amount", "normal_amount", "notes", "phone")
+                in (
+                    "name",
+                    "top_donor",
+                    "important",
+                    "donated",
+                    "amount",
+                    "normal_amount",
+                    "notes",
+                    "phone",
+                )
             }
             if "phone" in fields and self.book.resolve(body.get("id", "")).get("phone"):
                 del fields["phone"]  # a saved number is never replaced from here
@@ -665,7 +690,9 @@ class DonorIntegration:
             if body.get("replace") is True:
                 from private_top_names import remove_group
 
-                gone = remove_group(self.book, group)  # the pasted list was checked first: nothing lost
+                gone = remove_group(
+                    self.book, group
+                )  # the pasted list was checked first: nothing lost
             r = merge_top_group(self.book, prepared, group)
             with self.book.lock:
                 live = [x for x in self.book._load()["records"] if not x.get("deleted")]
@@ -680,7 +707,8 @@ class DonorIntegration:
             return {
                 **r,
                 "removed": gone["removed"] if gone is not None else 0,
-                "reply": head + f" under {group} Donors. {have} of {total} now have their number saved.",
+                "reply": head
+                + f" under {group} Donors. {have} of {total} now have their number saved.",
             }
         if action == "remove_group":
             # Owner clears a named Top group (GIKI) so the list can be pasted again with no repeats.
@@ -691,7 +719,11 @@ class DonorIntegration:
             return {
                 **r,
                 "reply": f"{r['removed']} {group} donors removed"
-                + (f"; {r['kept']} kept (they have history) and taken out of the group" if r["kept"] else "")
+                + (
+                    f"; {r['kept']} kept (they have history) and taken out of the group"
+                    if r["kept"]
+                    else ""
+                )
                 + ". Paste the list again to add them back.",
             }
         if action == "clear_important":

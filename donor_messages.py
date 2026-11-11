@@ -40,7 +40,12 @@ class MessageBank:
     def _save(self, data):
         archive = library_for(self.app)
         for row in (data.get("items") or []) + (data.get("previous_items") or []):
-            archive.record("dm", row.get("text"), source="message_bank", quality="validated" if data.get("mode") == "custom" else "generated")
+            archive.record(
+                "dm",
+                row.get("text"),
+                source="message_bank",
+                quality="validated" if data.get("mode") == "custom" else "generated",
+            )
         for text in (data.get("generation") or {}).get("accepted", []):
             archive.record("dm", text, source="dm_regeneration", quality="validated")
         if self.app.STORE:
@@ -484,7 +489,9 @@ class MessageBank:
             raise ValueError("Saved DM rotation is unavailable. Nothing was sent.")
         texts = self._rotation_texts()
         if count > 1 and len(texts) < 2:
-            raise ValueError("Save at least 2 different messages in Messages before starting this batch.")
+            raise ValueError(
+                "Save at least 2 different messages in Messages before starting this batch."
+            )
         revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
         saved = self.app.STORE.get(self.ROTATION_KEY, {}) or {}
         index = (

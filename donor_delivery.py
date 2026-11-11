@@ -18,11 +18,14 @@ def serialized_start(fn):
                 if self._starting_claim:
                     key, claim = self._starting_claim
                     try:
-                        self.store.put(key, {
-                            **claim,
-                            "state": "Interrupted",
-                            "error": "Batch startup did not finish. Check delivery results before starting a new request.",
-                        })
+                        self.store.put(
+                            key,
+                            {
+                                **claim,
+                                "state": "Interrupted",
+                                "error": "Batch startup did not finish. Check delivery results before starting a new request.",
+                            },
+                        )
                     except Exception:
                         pass  # Keep the original durable claim even when its status cannot be updated.
                 raise
@@ -241,7 +244,8 @@ class DonorDelivery:
                 self.store
                 and hasattr(self.store, "claim")
                 and j.get("request_signature")
-                and fields.get("state") in ("Completed", "Stopped", "Interrupted", "Nothing sent", "Failed")
+                and fields.get("state")
+                in ("Completed", "Stopped", "Interrupted", "Nothing sent", "Failed")
             ):
                 key = self.CLAIM + hashlib.sha256(j["request_id"].encode()).hexdigest()
                 self.store.put(key, j)
@@ -249,9 +253,13 @@ class DonorDelivery:
 
     def _claimed_start(self, claim, request_signature):
         if not isinstance(claim, dict) or not claim.get("request_signature"):
-            raise ValueError("This earlier request is already tracked. Check delivery results before starting a new request.")
+            raise ValueError(
+                "This earlier request is already tracked. Check delivery results before starting a new request."
+            )
         if claim["request_signature"] != request_signature:
-            raise ValueError("This request was already used for a different batch. Refresh before sending.")
+            raise ValueError(
+                "This request was already used for a different batch. Refresh before sending."
+            )
         # A crash between claiming and saving a job must never reserve wording or dispatch again.
         return {
             "job": self._public(claim),
@@ -350,9 +358,26 @@ class DonorDelivery:
             raise ValueError("Invalid send request.")
         request_signature = hashlib.sha256(
             json.dumps(
-                [scope, gap, ids, limit, poster, personal_names, chunk, rests, jitter,
-                 skip_contacted, hold_until, custom_template, attachment, resume_id,
-                 follow_up, owner, origin, fresh],
+                [
+                    scope,
+                    gap,
+                    ids,
+                    limit,
+                    poster,
+                    personal_names,
+                    chunk,
+                    rests,
+                    jitter,
+                    skip_contacted,
+                    hold_until,
+                    custom_template,
+                    attachment,
+                    resume_id,
+                    follow_up,
+                    owner,
+                    origin,
+                    fresh,
+                ],
                 sort_keys=True,
             ).encode()
         ).hexdigest()
@@ -372,15 +397,32 @@ class DonorDelivery:
             if previous_signature is None:
                 # Old jobs predate request signatures. Recreate their original signature
                 # using the captions and recipient snapshot they already reserved.
-                legacy = [scope, gap, ids, limit, poster, previous.get("captions"),
-                          custom_template, attachment, personal_names, chunk, rests, jitter,
-                          hold_until, previous.get("ids")]
-                previous_signature = hashlib.sha256(json.dumps(legacy, sort_keys=True).encode()).hexdigest()
+                legacy = [
+                    scope,
+                    gap,
+                    ids,
+                    limit,
+                    poster,
+                    previous.get("captions"),
+                    custom_template,
+                    attachment,
+                    personal_names,
+                    chunk,
+                    rests,
+                    jitter,
+                    hold_until,
+                    previous.get("ids"),
+                ]
+                previous_signature = hashlib.sha256(
+                    json.dumps(legacy, sort_keys=True).encode()
+                ).hexdigest()
                 matches = previous_signature == previous.get("signature")
             else:
                 matches = previous_signature == request_signature
             if not matches:
-                raise ValueError("This request was already used for a different batch. Refresh before sending.")
+                raise ValueError(
+                    "This request was already used for a different batch. Refresh before sending."
+                )
             return {
                 "job": self._public(previous),
                 "reply": "This request is already tracked. It was not started again.",
@@ -503,7 +545,9 @@ class DonorDelivery:
             )
         with self.lock:
             if self.active:
-                raise ValueError("A donor batch is already running. Stop it or wait for it to finish.")
+                raise ValueError(
+                    "A donor batch is already running. Stop it or wait for it to finish."
+                )
             if not self.store:
                 raise ValueError("Persistent sending records are unavailable. Nothing was sent.")
             if not self.connected():

@@ -76,14 +76,18 @@
       const type = response.headers.get('content-type') || '';
       if (type.includes('text/html')) {
         // A host error/wake-up page is not an API response. Never retry a send here.
-        throw Error('The cloud is restarting or unavailable. Sending was not confirmed; check WhatsApp before retrying.');
+        throw Error(
+          'The cloud is restarting or unavailable. Sending was not confirmed; check WhatsApp before retrying.',
+        );
       }
       return response;
     } catch (e) {
       throw Error(
-        e.message.startsWith('The cloud is restarting') ? e.message : e.name === 'AbortError'
-          ? 'The cloud is taking too long. Tap Try again.'
-          : 'Could not reach the cloud. Check your internet and try again.',
+        e.message.startsWith('The cloud is restarting')
+          ? e.message
+          : e.name === 'AbortError'
+            ? 'The cloud is taking too long. Tap Try again.'
+            : 'Could not reach the cloud. Check your internet and try again.',
       );
     } finally {
       clearTimeout(timer);
@@ -298,7 +302,10 @@
   }
   setInterval(pollConnection, 15000);
   /* Every same-origin API call carries the key; only the page's own static files go out bare. */
-  const isStatic = (u) => u === '/' || u === '/health' || /^\/[^?]*\.(?:js|css|html|png|jpe?g|svg|ico|webp|json|webmanifest|woff2?)(?:\?|$)/i.test(u);
+  const isStatic = (u) =>
+    u === '/' ||
+    u === '/health' ||
+    /^\/[^?]*\.(?:js|css|html|png|jpe?g|svg|ico|webp|json|webmanifest|woff2?)(?:\?|$)/i.test(u);
   window.fetch = async (url, options = {}) => {
     if (typeof url !== 'string' || !url.startsWith('/') || url.startsWith('//') || isStatic(url))
       return raw(url, options);

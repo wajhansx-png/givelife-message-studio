@@ -128,9 +128,7 @@ class Cases:
             (a.DATA / "poster.jpg").write_bytes(base64.b64decode(picture))
         if video:
             (a.DATA / "poster.mp4").write_bytes(base64.b64decode(video))
-        atomic_write(
-            a.DATA / "poster-kind.txt", "video" if kind == "video" and video else "image"
-        )
+        atomic_write(a.DATA / "poster-kind.txt", "video" if kind == "video" and video else "image")
         for i, encoded in enumerate(papers[:6]):
             if isinstance(encoded, str):
                 (paper_dir / f"paper-{i}.jpg").write_bytes(base64.b64decode(encoded))
@@ -151,7 +149,11 @@ class Cases:
             pass
 
     def _busy(self):
-        if self.hub.jobs.active or self.hub.volunteers.jobs.active or (getattr(self.hub, 'thanks', None) and self.hub.thanks.active):
+        if (
+            self.hub.jobs.active
+            or self.hub.volunteers.jobs.active
+            or (getattr(self.hub, "thanks", None) and self.hub.thanks.active)
+        ):
             raise ValueError("A DM batch is still running. Pause it first, then change the case.")
 
     # --- public

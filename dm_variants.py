@@ -268,7 +268,9 @@ PROVEN = lambda: []
 # Set by the server: the owner's own recent saved messages (FocusBank.owner_style).
 OWNER_STYLE = lambda: []
 CORRECTIONS = lambda: []  # the owner's saved wording corrections; set by the server
-RECORD = lambda text, quality, kind="message": None  # archive candidates separately from accepted text
+RECORD = lambda text, quality, kind="message": (
+    None
+)  # archive candidates separately from accepted text
 
 
 def _prompt(source, count, avoid):

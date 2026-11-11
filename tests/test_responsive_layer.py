@@ -45,8 +45,7 @@ class ResponsiveLayer(unittest.TestCase):
             return [
                 selector.strip()
                 for selector, _ in re.findall(r"([^{}]+)\{([^{}]*)\}", clean)
-                if selector.strip().endswith(suffix)
-                and "," not in selector
+                if selector.strip().endswith(suffix) and "," not in selector
             ]
 
         for suffix in (" .donor-tabs", " .donor-row"):

@@ -20,9 +20,18 @@ for (const base of ['/', '/new']) {
       const geometry = await row.evaluate((el) => {
         const rect = (node) => {
           const r = node.getBoundingClientRect();
-          return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
+          return {
+            x: r.x,
+            y: r.y,
+            right: r.right,
+            bottom: r.bottom,
+            width: r.width,
+            height: r.height,
+          };
         };
-        const controls = [...el.querySelectorAll('.donor-star,.donor-dm,.donor-status,.donor-more > summary')];
+        const controls = [
+          ...el.querySelectorAll('.donor-star,.donor-dm,.donor-status,.donor-more > summary'),
+        ];
         return {
           pageFits: document.documentElement.scrollWidth <= innerWidth + 1,
           name: rect(el.querySelector('.donor-name')),
@@ -34,7 +43,9 @@ for (const base of ['/', '/new']) {
         };
       });
       expect(geometry.pageFits, `${base} ${width}px page overflow`).toBe(true);
-      expect(geometry.name.width, `${base} ${width}px readable name area`).toBeGreaterThanOrEqual(70);
+      expect(geometry.name.width, `${base} ${width}px readable name area`).toBeGreaterThanOrEqual(
+        70,
+      );
       for (const control of geometry.controls) {
         expect(control.width, `${base} ${width}px target width`).toBeGreaterThanOrEqual(44);
         expect(control.height, `${base} ${width}px target height`).toBeGreaterThanOrEqual(44);
@@ -64,11 +75,16 @@ for (const base of ['/', '/new']) {
     await expect(row.locator('.donor-menu-top')).toBeVisible();
     const wasTop = await row.locator('.donor-top-chip').getAttribute('aria-pressed');
     await row.locator('.donor-menu-top').click();
-    await expect(row.locator('.donor-top-chip')).toHaveAttribute('aria-pressed', wasTop === 'true' ? 'false' : 'true');
+    await expect(row.locator('.donor-top-chip')).toHaveAttribute(
+      'aria-pressed',
+      wasTop === 'true' ? 'false' : 'true',
+    );
     for (const width of [900, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await expect(row.locator('.donor-top-chip')).toBeVisible();
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      ).toBe(true);
     }
   });
 }

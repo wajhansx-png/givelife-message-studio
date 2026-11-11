@@ -243,8 +243,11 @@
     paint();
   }
   btn.onclick = toggle;
-  for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, paint);
-  document.addEventListener('fullscreenerror', () => say('This browser did not allow full screen.'));
+  for (const ev of ['fullscreenchange', 'webkitfullscreenchange'])
+    document.addEventListener(ev, paint);
+  document.addEventListener('fullscreenerror', () =>
+    say('This browser did not allow full screen.'),
+  );
   window.NativeFS = { supported: can, isOn, toggle };
   paint();
   (document.querySelector('.brandbar') || document.body).append(btn);
@@ -252,9 +255,14 @@
   /* Keyboard: keep the field being typed in on screen once the keyboard has resized the view. */
   addEventListener('focusin', (e) => {
     const t = e.target;
-    if (t?.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable=true]'))
+    if (
+      t?.matches?.(
+        'input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable=true]',
+      )
+    )
       setTimeout(() => {
-        if (document.activeElement === t) t.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        if (document.activeElement === t)
+          t.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }, 320);
   });
 })();

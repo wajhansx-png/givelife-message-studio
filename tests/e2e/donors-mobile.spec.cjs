@@ -26,7 +26,9 @@ async function assertInside(page, selectors, width, height) {
     expect(r, selector + ' has a bounding box').not.toBeNull();
     expect(r.x, selector + ' stays on-screen left').toBeGreaterThanOrEqual(-1);
     expect(r.x + r.width, selector + ' stays on-screen right').toBeLessThanOrEqual(width + 1);
-    expect(r.y + r.height, selector + ' stays on-screen vertically').toBeLessThanOrEqual(height + 2);
+    expect(r.y + r.height, selector + ' stays on-screen vertically').toBeLessThanOrEqual(
+      height + 2,
+    );
   }
 }
 
@@ -37,115 +39,154 @@ for (const [width, height] of [
   [430, 932],
   [560, 780],
 ]) {
-  test('Donors phone layout fits ' + width + 'px without hiding actions', async ({
-    page,
-    request,
-  }, testInfo) => {
-    await openDonors(page, request, width, height);
-    if (width === 320) {
-      const controls = await page.evaluate(() =>
-        ['donorBulk', 'donorMessagesTab', 'donorSendAll', 'donorSendImportant', 'donorTest', 'donorToggle', 'donorMainBottom'].map((id) => {
-          const el = document.getElementById(id);
+  test(
+    'Donors phone layout fits ' + width + 'px without hiding actions',
+    async ({ page, request }, testInfo) => {
+      await openDonors(page, request, width, height);
+      if (width === 320) {
+        const controls = await page.evaluate(() =>
+          [
+            'donorBulk',
+            'donorMessagesTab',
+            'donorSendAll',
+            'donorSendImportant',
+            'donorTest',
+            'donorToggle',
+            'donorMainBottom',
+          ].map((id) => {
+            const el = document.getElementById(id);
+            const r = el.getBoundingClientRect();
+            const parent = el.parentElement;
+            return {
+              id,
+              hidden: el.hidden,
+              display: getComputedStyle(el).display,
+              parent: parent?.className,
+              parentDisplay: parent ? getComputedStyle(parent).display : '',
+              x: Math.round(r.x),
+              y: Math.round(r.y),
+              w: Math.round(r.width),
+              h: Math.round(r.height),
+            };
+          }),
+        );
+        console.log('Donors mobile control geometry:', JSON.stringify(controls));
+      }
+      await assertInside(
+        page,
+        [
+          '#donorMessagesTab',
+          '#donorSearchOpen',
+          '#donorSendImportant',
+          '#donorNavMore > summary',
+          '#donorToggle',
+          '#donorMainBottom',
+          '.donor-row .donor-star',
+          '.donor-row .donor-dm',
+          '.donor-row .donor-status',
+          '.donor-row .donor-more > summary',
+        ],
+        width,
+        height,
+      );
+      await expect(page.locator('#donorMessagesTab')).toHaveAccessibleName('Messages');
+      await expect(page.locator('#donorBulk')).toBeHidden();
+      await expect(page.locator('#donorSendAll')).toBeHidden();
+      // Search is one icon; it opens over the header row and closes again.
+      await page.locator('#donorSearchOpen').click();
+      await assertInside(page, ['#donorSearch', '#donorSearchClose'], width, height);
+      await page.locator('#donorSearchClose').click();
+      await expect(page.locator('#donorSearch')).toBeHidden();
+      await page.locator('#donorNavMore > summary').click();
+      // More holds + Add and Bulk message; Test DM and the poster choice live in the Send DMs setup.
+      await expect(page.locator('#donorAdd')).toBeVisible();
+      await expect(page.locator('#donorBulk')).toBeVisible();
+      await expect(page.locator('#donorNavMore #donorTest')).toHaveCount(0);
+      await expect(page.locator('#donorBatchPicker #donorTest')).toHaveCount(1);
+      await page.locator('#donorNavMore > summary').click();
+      const rowLayout = await page
+        .locator('.donor-row')
+        .first()
+        .evaluate((row) => {
+          const name = row.querySelector('.donor-name').getBoundingClientRect();
+          const dm = row.querySelector('.donor-dm').getBoundingClientRect();
+          return {
+            nameWidth: name.width,
+            nameTop: name.top,
+            dmTop: dm.top,
+            rowHeight: row.getBoundingClientRect().height,
+          };
+        });
+      expect(rowLayout.nameWidth).toBeGreaterThan(55);
+      expect(Math.abs(rowLayout.dmTop - rowLayout.nameTop)).toBeLessThan(25);
+      expect(rowLayout.rowHeight).toBeLessThanOrEqual(65);
+      await expect(page.locator('.donor-row .donor-amount').first()).toBeHidden();
+      expect(
+        await page.locator('#donorTable').evaluate((el) => el.scrollWidth <= el.clientWidth + 2),
+      ).toBe(true);
+      expect(
+        await page.locator('#donorTable').evaluate((el) => el.scrollHeight > el.clientHeight),
+      ).toBe(true);
+      const tabs = await page.locator('.donor-tabs [data-tab]').evaluateAll((els) =>
+        els.map((el) => {
           const r = el.getBoundingClientRect();
-          const parent = el.parentElement;
-          return { id, hidden: el.hidden, display: getComputedStyle(el).display,
-            parent: parent?.className, parentDisplay: parent ? getComputedStyle(parent).display : '',
-            x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
+          return { x: r.left, right: r.right, width: r.width, height: r.height };
         }),
       );
-      console.log('Donors mobile control geometry:', JSON.stringify(controls));
-    }
-    await assertInside(page, [
-      '#donorMessagesTab',
-      '#donorSearchOpen',
-      '#donorSendImportant',
-      '#donorNavMore > summary',
-      '#donorToggle',
-      '#donorMainBottom',
-      '.donor-row .donor-star',
-      '.donor-row .donor-dm',
-      '.donor-row .donor-status',
-      '.donor-row .donor-more > summary',
-    ], width, height);
-    await expect(page.locator('#donorMessagesTab')).toHaveAccessibleName('Messages');
-    await expect(page.locator('#donorBulk')).toBeHidden();
-    await expect(page.locator('#donorSendAll')).toBeHidden();
-    // Search is one icon; it opens over the header row and closes again.
-    await page.locator('#donorSearchOpen').click();
-    await assertInside(page, ['#donorSearch', '#donorSearchClose'], width, height);
-    await page.locator('#donorSearchClose').click();
-    await expect(page.locator('#donorSearch')).toBeHidden();
-    await page.locator('#donorNavMore > summary').click();
-    // More holds + Add and Bulk message; Test DM and the poster choice live in the Send DMs setup.
-    await expect(page.locator('#donorAdd')).toBeVisible();
-    await expect(page.locator('#donorBulk')).toBeVisible();
-    await expect(page.locator('#donorNavMore #donorTest')).toHaveCount(0);
-    await expect(page.locator('#donorBatchPicker #donorTest')).toHaveCount(1);
-    await page.locator('#donorNavMore > summary').click();
-    const rowLayout = await page.locator('.donor-row').first().evaluate((row) => {
-      const name = row.querySelector('.donor-name').getBoundingClientRect();
-      const dm = row.querySelector('.donor-dm').getBoundingClientRect();
-      return { nameWidth: name.width, nameTop: name.top, dmTop: dm.top,
-        rowHeight: row.getBoundingClientRect().height };
-    });
-    expect(rowLayout.nameWidth).toBeGreaterThan(55);
-    expect(Math.abs(rowLayout.dmTop - rowLayout.nameTop)).toBeLessThan(25);
-    expect(rowLayout.rowHeight).toBeLessThanOrEqual(65);
-    await expect(page.locator('.donor-row .donor-amount').first()).toBeHidden();
-    expect(await page.locator('#donorTable').evaluate(
-      (el) => el.scrollWidth <= el.clientWidth + 2,
-    )).toBe(true);
-    expect(await page.locator('#donorTable').evaluate(
-      (el) => el.scrollHeight > el.clientHeight,
-    )).toBe(true);
-    const tabs = await page.locator('.donor-tabs [data-tab]').evaluateAll(
-      (els) => els.map((el) => {
-        const r = el.getBoundingClientRect();
-        return { x: r.left, right: r.right, width: r.width, height: r.height };
-      }),
-    );
-    expect(tabs).toHaveLength(6);
-    expect(new Set(tabs.map(t => Math.round(t.x))).size).toBe(6);
-    for (const t of tabs) {
-      expect(t.x).toBeGreaterThanOrEqual(-1);
-      expect(t.right).toBeLessThanOrEqual(width + 1);
-      expect(t.height).toBeGreaterThanOrEqual(40);
-    }
-    await testInfo.attach('donors-list-' + width + '.png', {
-      body: await page.locator('#donorsPage').screenshot({ path: 'mobile-screenshots/donors-list-' + width + '.png' }),
-      contentType: 'image/png',
-    });
+      expect(tabs).toHaveLength(6);
+      expect(new Set(tabs.map((t) => Math.round(t.x))).size).toBe(6);
+      for (const t of tabs) {
+        expect(t.x).toBeGreaterThanOrEqual(-1);
+        expect(t.right).toBeLessThanOrEqual(width + 1);
+        expect(t.height).toBeGreaterThanOrEqual(40);
+      }
+      await testInfo.attach('donors-list-' + width + '.png', {
+        body: await page
+          .locator('#donorsPage')
+          .screenshot({ path: 'mobile-screenshots/donors-list-' + width + '.png' }),
+        contentType: 'image/png',
+      });
 
-    await openDonorMessages(page);
-    await expect(page.locator('.bank-detail')).toBeVisible();
-    if (width === 320) {
-      const next = page.locator('#donorMessages .bank-next-arrow').first();
-      const box = await next.boundingBox();
-      expect(box, 'Next message must be rendered').not.toBeNull();
-      expect(box.y + box.height, 'Next message must be reachable on a short phone').toBeLessThanOrEqual(height + 2);
-    }
-    expect(await page.locator('.bank-detail').evaluate(
-      (el) => el.getBoundingClientRect().width,
-    )).toBeGreaterThan(width - 35);
-    expect(await page.locator('.bank-workspace').evaluate(
-      (el) => el.scrollWidth <= el.clientWidth + 2,
-    )).toBe(true);
-    await testInfo.attach('donors-messages-' + width + '.png', {
-      body: await page.locator('#donorsPage').screenshot({ path: 'mobile-screenshots/donors-messages-' + width + '.png' }),
-      contentType: 'image/png',
-    });
-    await page.locator('.bank-back-bottom').scrollIntoViewIfNeeded();
-    await page.locator('.bank-back-bottom').click();
-    await page.locator('[data-tab=volunteers]').click();
-    await expect(page.locator('#donorVolunteers')).toBeVisible();
-    await expect(page.locator('#donorTable')).toBeHidden();
-    await expect(page.locator('.donor-bottom')).toBeHidden();
-    await assertInside(page, ['#volName', '#volPhone'], width, height);
-    await testInfo.attach('donors-volunteers-' + width + '.png', {
-      body: await page.locator('#donorsPage').screenshot({ path: 'mobile-screenshots/donors-volunteers-' + width + '.png' }),
-      contentType: 'image/png',
-    });
-  });
+      await openDonorMessages(page);
+      await expect(page.locator('.bank-detail')).toBeVisible();
+      if (width === 320) {
+        const next = page.locator('#donorMessages .bank-next-arrow').first();
+        const box = await next.boundingBox();
+        expect(box, 'Next message must be rendered').not.toBeNull();
+        expect(
+          box.y + box.height,
+          'Next message must be reachable on a short phone',
+        ).toBeLessThanOrEqual(height + 2);
+      }
+      expect(
+        await page.locator('.bank-detail').evaluate((el) => el.getBoundingClientRect().width),
+      ).toBeGreaterThan(width - 35);
+      expect(
+        await page
+          .locator('.bank-workspace')
+          .evaluate((el) => el.scrollWidth <= el.clientWidth + 2),
+      ).toBe(true);
+      await testInfo.attach('donors-messages-' + width + '.png', {
+        body: await page
+          .locator('#donorsPage')
+          .screenshot({ path: 'mobile-screenshots/donors-messages-' + width + '.png' }),
+        contentType: 'image/png',
+      });
+      await page.locator('.bank-back-bottom').scrollIntoViewIfNeeded();
+      await page.locator('.bank-back-bottom').click();
+      await page.locator('[data-tab=volunteers]').click();
+      await expect(page.locator('#donorVolunteers')).toBeVisible();
+      await expect(page.locator('#donorTable')).toBeHidden();
+      await expect(page.locator('.donor-bottom')).toBeHidden();
+      await assertInside(page, ['#volName', '#volPhone'], width, height);
+      await testInfo.attach('donors-volunteers-' + width + '.png', {
+        body: await page
+          .locator('#donorsPage')
+          .screenshot({ path: 'mobile-screenshots/donors-volunteers-' + width + '.png' }),
+        contentType: 'image/png',
+      });
+    },
+  );
 }
 
 test('Donor row editor stays inside a narrow phone and the keyboard can be used', async ({
@@ -168,7 +209,9 @@ test('Donor row editor stays inside a narrow phone and the keyboard can be used'
   expect(r.y).toBeGreaterThanOrEqual(0);
   expect(r.y + r.height).toBeLessThanOrEqual(569);
   await testInfo.attach('donors-row-editor-320.png', {
-    body: await page.locator('#donorsPage').screenshot({ path: 'mobile-screenshots/donors-row-editor-320.png' }),
+    body: await page
+      .locator('#donorsPage')
+      .screenshot({ path: 'mobile-screenshots/donors-row-editor-320.png' }),
     contentType: 'image/png',
   });
   await page.locator('.donor-row .donor-menu-close').first().click();
@@ -185,8 +228,10 @@ test('Donor row editor stays inside a narrow phone and the keyboard can be used'
   });
 });
 
-
-test('Paused controls occupy a full-width row inside the bottom dock', async ({ page, request }) => {
+test('Paused controls occupy a full-width row inside the bottom dock', async ({
+  page,
+  request,
+}) => {
   await request.post('/donor-delivery', { headers: AUTH, data: { stop: true } });
   await openDonors(page, request, 390, 690);
   await expect(page.locator('#donorResumeStatus')).toBeVisible();
@@ -209,13 +254,24 @@ test('Paused controls occupy a full-width row inside the bottom dock', async ({ 
   await expect(page.locator('.donor-menu-amount-input').first()).toBeVisible();
 });
 
-for (const [width, height] of [[320, 420], [740, 360]]) {
-  test(`Short viewport preserves donor reading space and bottom dock ${width}x${height}`, async ({ page, request }) => {
+for (const [width, height] of [
+  [320, 420],
+  [740, 360],
+]) {
+  test(`Short viewport preserves donor reading space and bottom dock ${width}x${height}`, async ({
+    page,
+    request,
+  }) => {
     await request.post('/donor-delivery', { headers: AUTH, data: { stop: true } });
     await openDonors(page, request, width, height);
     const table = await page.locator('#donorTable').boundingBox();
     expect(table.height).toBeGreaterThanOrEqual(60);
-    await assertInside(page, ['#donorMainBottom', '#donorToggle', '#donorSendImportant'], width, height);
+    await assertInside(
+      page,
+      ['#donorMainBottom', '#donorToggle', '#donorSendImportant'],
+      width,
+      height,
+    );
     await page.screenshot({ path: `mobile-screenshots/short-dock-${width}.png` });
   });
 }
@@ -238,12 +294,12 @@ for (const width of [320, 360, 390, 430]) {
     for (const selector of ['.donor-star', '.donor-dm', '.donor-status', '.donor-more > summary']) {
       const box = await row.locator(selector).boundingBox();
       // Browser rectangles can differ from the 44px CSS size by a subpixel.
-      expect(box.width, selector + ' touch width').toBeGreaterThanOrEqual(24) // one-line rows (owner's choice): WCAG 2.2 minimum;
+      expect(box.width, selector + ' touch width').toBeGreaterThanOrEqual(24); // one-line rows (owner's choice): WCAG 2.2 minimum;
       expect(box.height, selector + ' touch height').toBeGreaterThanOrEqual(24);
     }
     const name = await row.locator('.donor-name').boundingBox();
     expect(name.width).toBeGreaterThanOrEqual(60);
-    expect(name.height).toBeLessThanOrEqual(56) // a long name may use up to 3 lines;
+    expect(name.height).toBeLessThanOrEqual(56); // a long name may use up to 3 lines;
     await expect(row.locator('.donor-name')).toContainText('Syed Muhammad Abdullah Khan');
     const hide = await page.locator('#donorResumeStatus .rs-fold').boundingBox();
     const resume = await page.locator('#donorResumeNowInline').boundingBox();

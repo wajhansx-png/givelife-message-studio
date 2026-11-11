@@ -101,7 +101,8 @@ def steps(text):
             "send" in explicit
             and "edit" in explicit
             and not re.search(
-                r"(?i)\b(?:edit|rewrite|correct|shorten|shorter|longer|stronger|simpler|bold|fix|update|change|replace)\b", clause
+                r"(?i)\b(?:edit|rewrite|correct|shorten|shorter|longer|stronger|simpler|bold|fix|update|change|replace)\b",
+                clause,
             )
         ):
             explicit.remove("edit")

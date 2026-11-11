@@ -1451,11 +1451,13 @@ html body #donorPasteDialog #pastePoster {
 }
 .poster-dialog .donor-form-actions button:disabled,
 .poster-dialog .poster-choose:has(+ input:disabled) {
-  opacity: .7;
+  opacity: 0.7;
   cursor: progress;
 }
 @media (prefers-reduced-motion: reduce) {
-  .poster-dialog #posterProgressFill { transition: none; }
+  .poster-dialog #posterProgressFill {
+    transition: none;
+  }
 }
 
 /* The 20-version generator belongs beside the visible Donors > Messages actions,
@@ -1479,7 +1481,7 @@ html body #donorPasteDialog #pastePoster {
   flex: none;
 }
 #donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate:disabled {
-  opacity: .68;
+  opacity: 0.68;
   cursor: progress;
 }
 #donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate-progress {
@@ -1508,7 +1510,9 @@ html body #donorPasteDialog #pastePoster {
   font-weight: 600;
 }
 @media (max-width: 899px) {
-  .donor-receipt-total { font-size: 9px; }
+  .donor-receipt-total {
+    font-size: 9px;
+  }
 }
 
 /* Add numbers dialog: a quiet, full-width "Remove all GIKI donors" button above Close / Save. */

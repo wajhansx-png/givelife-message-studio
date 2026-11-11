@@ -60,6 +60,8 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await expect(page.locator('.thanks-item')).toHaveCount(4);
     // Every caption is editable without an expansion step.
     await expect(page.locator('#thanksMediaSelect')).toBeVisible();
+    await expect(page.locator('.thanks-item:not([hidden]) .thanks-field-label')).toHaveText('Caption');
+    await expect(page.locator('#thanksStartLabel')).toHaveText('Start');
     for (const [n, text] of [
       [1, 'Alhamdulillah, the case is complete.'],
       [3, 'Third caption.'],
@@ -412,4 +414,35 @@ test('donated tab test responds immediately while the request is pending', async
   release();
   await expect(page.locator('#thanksRowStatus')).toHaveText('Test failed');
   await expect(page.locator('#thanksTabTest')).toHaveText('Test');
+});
+
+test('caption and message stay visible above the footer on a short screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 420 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/donors/donated');
+  await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1cAAAAASUVORK5CYII=',
+    'base64',
+  );
+  await page
+    .locator('#thanksFile')
+    .setInputFiles({ name: 'proof.png', mimeType: 'image/png', buffer: png });
+  await expect(page.locator('.thanks-capd textarea')).toBeVisible();
+  await page
+    .locator('#thanksMessage')
+    .fill('A longer message that keeps an unsaved status visible.');
+  await page.locator('#thanksMessage').blur();
+  const withinEditor = async (selector) =>
+    page.locator(selector).evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const area = el.closest('.thanks-body').getBoundingClientRect();
+      const footer = document.querySelector('#donorThanksDialog footer').getBoundingClientRect();
+      return box.top >= area.top - 1 && box.bottom <= area.bottom + 1 && box.bottom <= footer.top;
+    });
+  for (const selector of ['#thanksMessage', '.thanks-capd textarea']) {
+    await page.locator(selector).focus();
+    await expect.poll(() => withinEditor(selector)).toBe(true);
+  }
+  await expect(page.locator('#thanksClose')).toBeInViewport();
 });

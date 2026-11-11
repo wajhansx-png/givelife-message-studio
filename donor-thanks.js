@@ -22,6 +22,29 @@
   <p id="thanksStatus" role="status" aria-live="polite"></p><footer><button type="button" id="thanksSave">Save</button><button type="button" id="thanksTest" title="Send this to the GiveLife test group only">Test</button><div class="thanks-start"><span id="thanksStartLabel">Start</span><button type="button" role="switch" id="thanksSwitch" aria-checked="false" aria-label="Start sending the thank-you updates"><i></i></button></div><button type="button" id="thanksClose" aria-label="Close Thank donors">Back</button></footer>`;
   document.body.append(dialog);
   const $ = (id) => dialog.querySelector('#' + id);
+  const scrollArea = dialog.querySelector('.thanks-body');
+  let visibilityFrame = 0;
+  function keepFocusedFieldVisible() {
+    cancelAnimationFrame(visibilityFrame);
+    visibilityFrame = requestAnimationFrame(() => {
+      const field = document.activeElement;
+      if (
+        !dialog.open ||
+        !scrollArea.contains(field) ||
+        !field.matches('textarea, input:not([type="file"])')
+      )
+        return;
+      const bounds = field.getBoundingClientRect();
+      const area = scrollArea.getBoundingClientRect();
+      if (bounds.bottom > area.bottom - 6)
+        scrollArea.scrollTop += bounds.bottom - area.bottom + 6;
+      else if (bounds.top < area.top + 6)
+        scrollArea.scrollTop -= area.top - bounds.top + 6;
+    });
+  }
+  dialog.addEventListener('focusin', keepFocusedFieldVisible);
+  window.visualViewport?.addEventListener('resize', keepFocusedFieldVisible);
+  if (window.ResizeObserver) new ResizeObserver(keepFocusedFieldVisible).observe(scrollArea);
   let state,
     selectedMedia = 0,
     viewVersion = 0,
@@ -66,13 +89,7 @@
         (state.left > 0 ||
           (!state.media.length && !$('thanksMessage').value.trim()) ||
           state.pending === 0));
-    $('thanksStartLabel').textContent = starting
-      ? 'Starting…'
-      : on
-      ? state.sent + '/' + state.total + ' sent'
-      : state
-        ? state.pending + ' donors'
-        : 'Start';
+    $('thanksStartLabel').textContent = starting ? 'Starting…' : on ? 'Stop' : 'Start';
     for (const b of dialog.querySelectorAll('.thanks-remove, .thanks-attach'))
       b.disabled =
         busy ||
@@ -106,6 +123,9 @@
       name.title = m.filename;
       const more = document.createElement('div');
       more.className = 'thanks-capd';
+      const captionLabel = document.createElement('span');
+      captionLabel.className = 'thanks-field-label';
+      captionLabel.textContent = 'Caption';
       const box = document.createElement('textarea');
       box.maxLength = 4000;
       box.rows = 2;
@@ -116,7 +136,7 @@
         m.caption = box.value;
         note('Unsaved changes');
       });
-      more.append(box);
+      more.append(captionLabel, box);
       item.append(name, more);
       list.append(item);
     });

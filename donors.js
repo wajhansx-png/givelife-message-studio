@@ -3481,6 +3481,14 @@ Ayesha, +92 301 1234567" aria-describedby="pasteResult"></textarea><div id="past
     isOpen: () => page.open,
     refresh,
     openPoster,
+    openBaseMessage,
+    openResumeChoice,
+    restoreVolunteerTiming() {
+      if (!volSendPlan) return false;
+      paintVolunteerTiming();
+      if (!volTiming.open) volTiming.showModal();
+      return true;
+    },
     privateChatText: (text) =>
       /\bdonors?\b/i.test(text)
         ? String(text).replace(/(?:\+|00)?\d[\d ()-]{6,23}\d/g, '[number hidden]')
@@ -3491,7 +3499,20 @@ Ayesha, +92 301 1234567" aria-describedby="pasteResult"></textarea><div id="past
     window.waMark.apply(input, mark);
   }
 
-  function openBaseMessage() {
+  async function openBaseMessage() {
+    const path = Nav.path();
+    if (!bankData) {
+      try {
+        const loaded = await api('/donor-messages');
+        if (Nav.path() !== path || !page.open) return;
+        bankData = loaded;
+      } catch (error) {
+        notice(error.message, true);
+        if (Nav.path() === path && path.endsWith('/base'))
+          Nav.returnTo(path.split('/').slice(0, -1).join('/'));
+        return;
+      }
+    }
     let d = el('baseMessageDialog');
     if (!d) {
       d = document.createElement('dialog');

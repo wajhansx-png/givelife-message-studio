@@ -652,9 +652,7 @@
   }
   el('notesBack').onclick = async () => {
     if (await back()) {
-      Nav.go(notesRoute === 'notes' ? '' : notesRoute.replace(/\/notes$/, ''), { replace: true });
-      if (notesParentState) window.history.replaceState(notesParentState, '', location.href);
-      renderNav();
+      Nav.returnTo(notesRoute === 'notes' ? '' : notesRoute.replace(/\/notes$/, ''));
     }
   };
   el('notesLock').onclick = async () => {

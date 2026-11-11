@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openSettings, openDonorMessages } = require('./helpers.cjs');
+const { openSettings, openDonorMessages, showPreview } = require('./helpers.cjs');
 const auth = { Authorization: 'Bearer manual-fix-preview-key' };
 const LONG = Array.from(
   { length: 7 },
@@ -28,10 +28,11 @@ test('a refresh stays on the same Donors tab, and on Messages', async ({ page, r
   );
   expect(page.url()).toContain('#/donors/important');
   await openDonorMessages(page);
-  await page.getByRole('button', { name: 'Message 3', exact: true }).click();
+  await page.getByRole('button', { name: 'Next message', exact: true }).click();
+  await page.getByRole('button', { name: 'Next message', exact: true }).click();
   await page.reload();
   await expect(page.locator('#donorMessages')).toBeVisible();
-  await expect(page.locator('.bank-detail header')).toContainText('Message 3');
+  await expect(page.locator('.bank-heading')).toContainText('Message 3');
 });
 test('Back and Forward move between screens smoothly and never leave the app', async ({
   page,
@@ -60,12 +61,12 @@ test('Back and Forward move between screens smoothly and never leave the app', a
   await expect(page.locator('#set')).toBeVisible();
   await page.locator('#setCloseBottom').click();
   await expect(page.locator('#set')).not.toBeVisible();
-  await page.locator('#showMsg').click();
+  await showPreview(page);
   await expect(page).toHaveURL(/#\/preview/);
   await page.reload();
-  await expect(page.locator('#card')).toBeVisible();
-  await page.locator('#previewBackBottom').click();
-  await expect(page.locator('#card')).not.toBeVisible();
+  await expect(page.locator('#messageFocus')).toBeVisible();
+  await page.locator('#focusBack').click();
+  await expect(page.locator('#messageFocus')).not.toBeVisible();
 });
 test('phone: Chat and Donors are an equal, centred pair in the thumb row', async ({
   page,

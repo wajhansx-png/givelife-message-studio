@@ -33,30 +33,72 @@ const Nav = {
   },
   /* The chat log below owns the name `history`, so the browser's is always reached as window.history. */
   valid(path) {
-    return /^(?:chat|notes|settings(?:\/(?:memory|poster))?|keyboard|preview|whatsapp|donors\/(?:all|important|donated|not_donated|not_contacted|volunteers|messages)(?:\/(?:notes|add|bulk|pace))?)$/.test(
+    return /^(?:chat|notes|settings(?:\/(?:memory|poster))?|keyboard|preview|whatsapp|donors\/(?:all|important|top|donated|not_donated|not_contacted|volunteers|messages)(?:\/(?:notes|add|bulk|pace|numbers|thanks|base|resume|volunteer_timing))?)$/.test(
       path,
     );
   },
   go(path, { replace = false } = {}) {
     if (Nav.rendering || Nav.path() === path) return;
+    if (Nav.pending) {
+      Nav.pending.next = () => Nav.go(path, { replace });
+      return;
+    }
     const h = window.history,
-      from = replace ? h.state?.from : Nav.path();
+      from = replace ? h.state?.from : Nav.path(),
+      back = replace ? h.state?.back : Nav.path();
     try {
       (replace ? h.replaceState : h.pushState).call(
         h,
-        { nav: 1, from: Nav.valid(from) ? from : '' },
+        { nav: 1, from: Nav.valid(from) ? from : '', ...(back === undefined ? {} : { back }) },
         '',
         path ? '#/' + path : location.pathname + location.search,
       );
       dispatchEvent(new Event('studio-navigate'));
     } catch (e) {}
   },
-  // Close synchronously. A delayed history.back() can undo the next tap or race a refresh.
+  // Consume entries created by this controller. Deep links have no owned
+  // parent entry, so replace them instead of navigating outside the app.
+  returnTo(target) {
+    if (Nav.rendering || Nav.path() === target) return;
+    if (Nav.pending) {
+      if (Nav.pending.target !== target) Nav.pending.next = () => Nav.returnTo(target);
+      return;
+    }
+    if (window.history.state?.back === target) {
+      const pending = { target, next: null };
+      const finish = () => {
+        if (Nav.pending !== pending) return;
+        clearTimeout(pending.timer);
+        removeEventListener('popstate', finish);
+        Nav.pending = null;
+        scheduleNavigation();
+        pending.next?.();
+      };
+      Nav.pending = pending;
+      addEventListener('popstate', finish);
+      // A missing history event must never leave navigation locked.
+      pending.timer = setTimeout(() => {
+        if (Nav.pending !== pending) return;
+        window.history.replaceState({ nav: 1, from: '' }, '', target ? '#/' + target : location.pathname + location.search);
+        finish();
+      }, 1000);
+      window.history.back();
+      return;
+    }
+    Nav.go(target, { replace: true });
+    renderNav();
+  },
   leave(name) {
     if (Nav.rendering || Nav.top() !== name) return;
+    if (Nav.pending) {
+      // A second tap cannot traverse twice. A parent Back immediately after
+      // closing its child waits for that child transition to settle.
+      if (Nav.pending.target.split('/')[0] === name)
+        Nav.pending.next = () => Nav.leave(name);
+      return;
+    }
     const from = window.history.state?.from;
-    Nav.go(Nav.valid(from) && from.split('/')[0] !== name ? from : '', { replace: true });
-    renderNav();
+    Nav.returnTo(Nav.valid(from) && from.split('/')[0] !== name ? from : '');
   },
 };
 /* Server-issued next steps are tied to the exact saved draft, never AI-authored commands. */
@@ -2718,6 +2760,11 @@ const smallScreens = [
   { id: 'donorAddDialog', suffix: 'add', open: () => $('donorAdd').click() },
   { id: 'donorPasteDialog', suffix: 'bulk', open: () => $('donorBulk').click() },
   { id: 'donorBatchPicker', suffix: 'pace', open: () => $('donorPace').click() },
+  { id: 'donorNumbersDialog', suffix: 'numbers', open: () => $('donorNumbers').click() },
+  { id: 'donorThanksDialog', suffix: 'thanks', open: () => window.DonorThanks?.open() },
+  { id: 'baseMessageDialog', suffix: 'base', open: () => window.DonorHub?.openBaseMessage() },
+  { id: 'donorResumeDialog', suffix: 'resume', open: () => window.DonorHub?.openResumeChoice() },
+  { id: 'volTimingDialog', suffix: 'volunteer_timing', open: () => window.DonorHub?.restoreVolunteerTiming() },
   { id: 'posterDialog', path: 'settings/poster', open: () => window.DonorHub?.openPoster() },
 ];
 function smallRoute(screen) {
@@ -2732,34 +2779,44 @@ function smallRoute(screen) {
 function restoreSmallDialog(path, open = false) {
   for (const screen of smallScreens) {
     const dialog = $(screen.id);
-    if (!dialog) continue;
     const target = screen.path
       ? path === screen.path
       : path.startsWith('donors/') && path.split('/')[2] === screen.suffix;
-    if (dialog.open && !target) dialog.close();
-    if (open && target && !dialog.open) screen.open();
+    if (dialog?.open && !target) dialog.close();
+    if (open && target && !dialog?.open && screen.open() === false) {
+      // Confirmation dialogs need an in-memory draft. A fresh link must not
+      // restore a Send button with no prepared action behind it.
+      queueMicrotask(() => {
+        if (Nav.path() === path) Nav.returnTo(path.split('/').slice(0, -1).join('/'));
+      });
+    }
   }
 }
 addEventListener('DOMContentLoaded', () => {
-  for (const screen of smallScreens) {
-    const dialog = $(screen.id);
-    if (!dialog) continue;
-    new MutationObserver(() => {
+  const bound = new WeakSet();
+  function bind() {
+    for (const screen of smallScreens) {
+      const dialog = $(screen.id);
+      if (!dialog || bound.has(dialog)) continue;
+      bound.add(dialog);
+      new MutationObserver(() => {
+        if (dialog.open) Nav.go(smallRoute(screen));
+      }).observe(dialog, { attributes: true, attributeFilter: ['open'] });
+      dialog.addEventListener('close', () => {
+        const target = smallRoute(screen);
+        if (Nav.path() === target) {
+          const parent = dialog.dataset.returnRoute ||
+            (screen.path ? 'settings' : target.split('/').slice(0, 2).join('/'));
+          delete dialog.dataset.returnRoute;
+          Nav.returnTo(parent);
+        }
+      });
       if (dialog.open) Nav.go(smallRoute(screen));
-    }).observe(dialog, { attributes: true, attributeFilter: ['open'] });
-    dialog.addEventListener('close', () => {
-      const target = smallRoute(screen);
-      if (Nav.path() === target) {
-        Nav.go(
-          dialog.dataset.returnRoute ||
-            (screen.path ? 'settings' : target.split('/').slice(0, 2).join('/')),
-          { replace: true },
-        );
-        delete dialog.dataset.returnRoute;
-        renderNav();
-      }
-    });
+    }
   }
+  bind();
+  // The base-message dialog is created only on first use.
+  new MutationObserver(bind).observe(document.body, { childList: true, subtree: true });
 });
 let navigationEpoch = 0;
 async function renderNav() {

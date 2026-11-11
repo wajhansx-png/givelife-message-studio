@@ -369,10 +369,11 @@
   }
   window.DonorThanks = {
     async open() {
-      const version = ++viewVersion;
+      const version = ++viewVersion,
+        path = Nav.path();
       try {
         const loaded = await api();
-        if (version !== viewVersion) return;
+        if (version !== viewVersion || path !== Nav.path() || !window.DonorHub?.isOpen()) return;
         state = loaded;
         for (const details of dialog.querySelectorAll('details')) details.open = false;
         fill();

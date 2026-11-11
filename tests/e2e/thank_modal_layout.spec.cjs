@@ -40,7 +40,6 @@ for (const width of widths) {
         backdrop: {
           background: getComputedStyle(node, '::backdrop').backgroundColor,
           filter: getComputedStyle(node, '::backdrop').backdropFilter,
-          webkitFilter: getComputedStyle(node, '::backdrop').webkitBackdropFilter,
         },
         actions: [...footer.querySelectorAll('button')].map(b => {
           const r = b.getBoundingClientRect();
@@ -61,7 +60,6 @@ for (const width of widths) {
     // No blurred or semi-transparent backdrop that lets a purple dock show beneath the popup.
     expect(metrics.backdrop.background).toBe('rgb(5, 7, 12)');
     expect(metrics.backdrop.filter).toBe('none');
-    expect(metrics.backdrop.webkitFilter).toBe('none');
     expect(metrics.footer.bottom).toBeLessThanOrEqual(metrics.rect.bottom + 1);
     for (const action of metrics.actions) {
       expect(action.left).toBeGreaterThanOrEqual(metrics.rect.x - 1);

@@ -2611,3 +2611,35 @@ html body #donorsPage #thanksTabSwitch[aria-checked='true'] {
     gap: 0;
   }
 }
+
+/* One consistent blue/purple setup palette and clear action feedback. */
+html body #donorThanksDialog :is(#thanksAttachImg, #thanksAttachVid) {
+  background: #182c50 !important;
+  border-color: #3b62a1;
+  color: #e1ecff;
+}
+html body #donorThanksDialog .thanks-capd .thanks-field-label {
+  color: #adcaff;
+}
+html body #donorThanksDialog .thanks-msg > label {
+  color: #d3bdfb;
+}
+html body #donorThanksDialog #thanksTest {
+  background: #382554 !important;
+  border-color: #7b5ba7;
+  color: #f0e7ff;
+}
+html body #donorThanksDialog #thanksClose {
+  background: #17263f !important;
+  border-color: #3b5b8a;
+  color: #dce9ff;
+}
+html body #donorThanksDialog[data-phase='running'] #thanksStartLabel {
+  color: #9ee4bb;
+}
+html body #donorThanksDialog[data-phase='starting'] #thanksStartLabel {
+  color: #adcaff;
+}
+html body #donorThanksDialog[data-phase='stopping'] #thanksStartLabel {
+  color: #f4d18e;
+}

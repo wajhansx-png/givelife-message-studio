@@ -455,3 +455,72 @@ test('caption and message stay visible above the footer on a short screen', asyn
   }
   await expect(page.locator('#thanksClose')).toBeInViewport();
 });
+
+for (const view of ['dialog', 'tab']) {
+  test(view + ' stop responds immediately and restores state after a failed stop', async ({ page, request }) => {
+    const saved = await (await request.get('/donor-thanks', { headers })).json();
+    let fakeOn = true, fail = true, release;
+    let gate = new Promise(resolve => { release = resolve; });
+    await page.route('**/donor-thanks', async route => {
+      if (route.request().method() === 'GET')
+        return route.fulfill({ json: { ...saved, on: fakeOn } });
+      if (route.request().postDataJSON()?.action === 'stop') {
+        await gate;
+        if (fail)
+          return route.fulfill({ status: 400, json: { error: 'Stop was not confirmed' } });
+        fakeOn = false;
+        return route.fulfill({ json: { ...saved, on: false } });
+      }
+      return route.continue();
+    });
+    await page.addInitScript(k => localStorage.setItem('givelife-cloud-key', k), KEY);
+    await page.goto('/new#/donors/donated');
+    if (view === 'dialog')
+      await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+    const toggle = page.locator(view === 'dialog' ? '#thanksSwitch' : '#thanksTabSwitch');
+    const label = page.locator(view === 'dialog' ? '#thanksStartLabel' : '#thanksTabLabel');
+    const status = page.locator(view === 'dialog' ? '#thanksStatus' : '#thanksRowStatus');
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await expect(toggle).toBeDisabled();
+    await expect(label).toHaveText('Stopping…');
+    release();
+    await expect(status).toHaveText('Stop was not confirmed');
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await expect(toggle).toBeEnabled();
+    fail = false;
+    gate = new Promise(resolve => { release = resolve; });
+    await toggle.click();
+    await expect(label).toHaveText('Stopping…');
+    release();
+    await expect(status).toContainText('Paused');
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  });
+}
+
+test('Test avoids an unchanged timing write and persists a changed pace', async ({ page }) => {
+  const actions = [];
+  await page.route('**/donor-thanks', async route => {
+    if (route.request().method() === 'POST') {
+      const action = route.request().postDataJSON().action;
+      actions.push(action);
+      if (action === 'test')
+        return route.fulfill({ json: { reply: 'Test confirmed' } });
+    }
+    return route.continue();
+  });
+  await page.addInitScript(k => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/donors/donated');
+  await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+  await page.locator('#thanksMessage').fill('Thank you, {name}.');
+  await page.locator('#thanksTest').click();
+  await expect(page.locator('#thanksStatus')).toHaveText('Test confirmed');
+  expect(actions).toEqual(['save', 'test']);
+  actions.length = 0;
+  const next = await page.locator('#thanksGapSel').inputValue() === '120' ? '180' : '120';
+  await page.locator('#thanksGapSel').selectOption(next);
+  await page.locator('#thanksTest').click();
+  await expect(page.locator('#thanksStatus')).toHaveText('Test confirmed');
+  expect(actions).toEqual(['save', 'settings', 'test']);
+});

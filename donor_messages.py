@@ -483,6 +483,8 @@ class MessageBank:
         if not self.app.STORE:
             raise ValueError("Saved DM rotation is unavailable. Nothing was sent.")
         texts = self._rotation_texts()
+        if count > 1 and len(texts) < 2:
+            raise ValueError("Save at least 2 different messages in Messages before starting this batch.")
         revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
         saved = self.app.STORE.get(self.ROTATION_KEY, {}) or {}
         index = (

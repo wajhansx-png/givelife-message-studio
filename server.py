@@ -56,6 +56,10 @@ class SendStopped(Exception):
     pass
 
 
+class SendHeld(ValueError):
+    """A hold stopped delivery before it reached the gateway."""
+
+
 def check_stop():
     stop = getattr(REQUEST_STOP, "fn", None)
     if stop and stop():
@@ -307,6 +311,7 @@ def custom_recipient(body):
 
 
 def send_custom(body):
+    check_hold()
     jid, is_group = custom_recipient(body)
     message = body.get("message", "")
     if not is_group and body.get('kind') == 'donor_thanks':
@@ -397,6 +402,8 @@ def send_custom(body):
             status = {}  # the WhatsApp service is restarting or unreachable: nothing was sent
         if not status.get("is_connected") or not status.get("is_logged_in"):
             raise ValueError("WhatsApp is disconnected. Tap WhatsApp to reconnect.")
+        check_hold()
+        check_stop()
         now = time.time()
         saved = STORE.get("last_sent", {})
         if not is_group:
@@ -442,6 +449,7 @@ def send_custom(body):
                             "This recipient was contacted before. Check WhatsApp before sending again."
                         )
             ledger = STORE.get("dm_daily", {})
+            prior_ledger = dict(ledger)
             day = (
                 datetime.datetime.fromtimestamp(now, datetime.timezone(datetime.timedelta(hours=5)))
                 .date()
@@ -464,7 +472,6 @@ def send_custom(body):
             ):
                 raise ValueError(f"Wait at least {DM_MIN_GAP // 60} minutes between DMs.")
             check_stop()  # last point where Stop leaves no trace
-            prior_ledger = dict(ledger)
             prior_recipient = records.get("dm_recipient_" + digest) or {}
             ledger.update(count=ledger["count"] + 1, last=now)
             STORE.put("dm_daily", ledger)
@@ -478,17 +485,11 @@ def send_custom(body):
                 result = send_batch_attachment(jid, message, body["attachment"])
             elif body.get("poster") is True:
                 result = send_image(jid, message)
+                if result.get("code") == "ERROR" and result.get("message") == "On hold: you told me to wait.":
+                    raise SendHeld(result["message"])
             else:
-                check_stop()
-                req = urllib.request.Request(
-                    GOWA_URL + "/send/message",
-                    data=json.dumps({"phone": jid, "message": message}).encode(),
-                    headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
-                    method="POST",
-                )
-                with urllib.request.urlopen(req, timeout=40) as response:
-                    result = mapping(json.load(response))
-        except SendStopped:
+                result = send_custom_text(jid, message)
+        except (SendStopped, SendHeld):
             # Nothing was uploaded: undo the "contacted" reservation so this person can be sent to later.
             if not is_group:
                 STORE.put("dm_daily", prior_ledger)
@@ -988,6 +989,8 @@ def send_batch_attachment(jid, caption, ident):
     cap = ATT / ("caption-" + uuid.uuid4().hex + ".txt")
     atomic_write(cap, caption)
     try:
+        check_hold()
+        check_stop()
         r = subprocess.run(
             [
                 "curl",
@@ -1056,8 +1059,13 @@ def send_image(jid, caption, check_gap=False, _retry=True):
     check_stop()
     cap = DATA / ("caption-" + uuid.uuid4().hex + ".txt")
     atomic_write(cap, caption)
-    r = post_media(jid, cap, poster_media("group" if str(jid).endswith("@g.us") else "dm"))
-    cap.unlink(missing_ok=True)
+    try:
+        poster = poster_media("group" if str(jid).endswith("@g.us") else "dm")
+        check_hold()
+        check_stop()
+        r = post_media(jid, cap, poster)
+    finally:
+        cap.unlink(missing_ok=True)
     try:
         result = mapping(json.loads(r.stdout))
     except Exception:
@@ -1563,7 +1571,7 @@ def on_hold():
 
 def check_hold():
     if on_hold():
-        raise ValueError(
+        raise SendHeld(
             'On hold: you told me to wait. Say "resume" when the right WhatsApp is connected.'
         )
 
@@ -2247,6 +2255,21 @@ import autopilot, learning as learning_mod, random as _random
 
 OWNER_PHONE = os.environ.get("OWNER_PHONE", "923205069925")
 TEST_DM_PHONE = os.environ.get("TEST_DM_PHONE", "923097458815")  # Test DMs go to this number
+
+
+@serialized_send
+def send_custom_text(jid, text):
+    """Send already-prepared custom text without changing its wording."""
+    check_hold()
+    check_stop()
+    req = urllib.request.Request(
+        GOWA_URL + "/send/message",
+        data=json.dumps({"phone": jid, "message": text}).encode(),
+        headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=40) as response:
+        return mapping(json.load(response))
 
 
 @serialized_send
@@ -5338,8 +5361,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header(name, value)
         for name, value in (extra_headers or {}).items():
             self.send_header(name, value)
+        self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
-        self.wfile.write(payload)
+        if getattr(self, "command", "") != "HEAD":
+            self.wfile.write(payload)
 
     _STATIC = {}
 
@@ -5404,6 +5429,31 @@ class Handler(BaseHTTPRequestHandler):
         return self.reply(raw, kind, extra_headers=head)
 
     timeout = 15  # bound idle/slow request-body reads; external operations keep their own deadlines
+
+    def do_HEAD(self):
+        # Only public read-only resources can be delegated to GET. Some private
+        # GET endpoints create backups or perform other work.
+        path = self.path.split("?", 1)[0]
+        public_pages = {
+            "/", "/health", "/new", "/new/", "/new/group-finder",
+            "/group-finder", "/case-plan",
+        }
+        public_assets = {
+            "/app.js", "/format.js", "/connection.js", "/donors.js",
+            "/case-writer.js", "/donor-thanks.js", "/app-update.js",
+            "/donor-thanks.css", "/case-writer.css", "/replies.js", "/notes.js",
+            "/notes.css", "/donors.css", "/studio.css", "/compact-nav.js",
+            "/compact-nav.css", "/focus-editor.js", "/format-toolbar.js",
+            "/format-toolbar.css", "/auto-controls.css", "/focus-editor.css",
+            "/comfort.js", "/comfort.css", "/responsive.css", "/new-ui.js",
+            "/new-ui.css", "/group-finder.js", "/group-finder.css",
+            "/case-plan.js", "/case-plan.css",
+        }
+        if path in public_pages or path in public_assets or path in SITE_ICONS:
+            return self.do_GET()
+        if not self.authorized():
+            return self.reply({"error": "Access key required"}, status=401)
+        return self.reply({"error": "Method not allowed"}, status=405)
 
     def do_GET(self):
         self.response_sent = False

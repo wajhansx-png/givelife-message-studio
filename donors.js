@@ -2816,6 +2816,24 @@
     clearTimeout(searchTimer);
     Nav.go('donors/' + next, { replace: true });
     applyFilters();
+    const btn = page.querySelector();
+    if (btn) {
+      const strip = btn.closest('.donor-tabs');
+      if (strip) {
+        requestAnimationFrame(() => {
+          const r = btn.getBoundingClientRect();
+          const box = strip.getBoundingClientRect();
+          if (box.width && r.width) {
+            const targetLeft =
+              strip.scrollLeft + (r.left + r.width / 2) - (box.left + box.width / 2);
+            strip.scrollTo({
+              left: Math.max(0, targetLeft),
+              behavior: 'smooth',
+            });
+          }
+        });
+      }
+    }
   }
   launch.onclick = open;
   el('donorMainBottom').onclick = close;

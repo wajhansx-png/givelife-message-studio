@@ -8215,3 +8215,19 @@ html
   color: var(--mut);
   letter-spacing: 0.01em;
 }
+
+.donor-tabs,
+.donor-page .donor-tabs,
+html body .donor-page .donor-tabs {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  scroll-behavior: smooth !important;
+}
+.donor-tabs::-webkit-scrollbar,
+.donor-page .donor-tabs::-webkit-scrollbar,
+html body .donor-page .donor-tabs::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}

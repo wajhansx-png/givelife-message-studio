@@ -979,13 +979,16 @@ const ui2Frame = (fn) => {
     const strip = document.querySelector('.donor-tabs'),
       sel = strip?.querySelector('[aria-selected="true"]');
     if (strip && sel) {
-      /* Again whenever the tab or the row's size changes (labels settle, buttons step aside), never while you scroll it. */
       const key = [sel.dataset.tab, strip.scrollWidth, strip.clientWidth].join(':');
       const r = sel.getBoundingClientRect(),
         box = strip.getBoundingClientRect();
       if (strip.dataset.ui2Sel !== key && box.width && r.width) {
         strip.dataset.ui2Sel = key;
-        strip.scrollLeft += r.left + r.width / 2 - (box.left + box.width / 2);
+        const targetLeft = strip.scrollLeft + (r.left + r.width / 2) - (box.left + box.width / 2);
+        strip.scrollTo({
+          left: Math.max(0, targetLeft),
+          behavior: 'smooth',
+        });
       }
     }
   }
@@ -1522,3 +1525,25 @@ document.addEventListener(
   ui2Wide.addEventListener('change', run);
   arrange();
 })();
+
+document.addEventListener(
+  'click',
+  (e) => {
+    const btn = e.target.closest('.donor-tabs [data-tab], .donor-tabs button');
+    if (!btn) return;
+    const strip = btn.closest('.donor-tabs');
+    if (!strip) return;
+    requestAnimationFrame(() => {
+      const r = btn.getBoundingClientRect();
+      const box = strip.getBoundingClientRect();
+      if (box.width && r.width) {
+        const targetLeft = strip.scrollLeft + (r.left + r.width / 2) - (box.left + box.width / 2);
+        strip.scrollTo({
+          left: Math.max(0, targetLeft),
+          behavior: 'smooth',
+        });
+      }
+    });
+  },
+  true,
+);

@@ -1851,12 +1851,17 @@ html body #donorsPage .donor-tabs {
   flex-wrap: nowrap !important;
   gap: 6px !important;
   overflow-x: auto;
-  scrollbar-width: none;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  scroll-behavior: smooth !important;
   flex: 1 1 auto;
   min-width: 0;
 }
 html body #donorsPage .donor-tabs::-webkit-scrollbar {
-  display: none;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
 html body #donorsPage .donor-tabs > [role='tab'] {
   flex: 0 0 auto !important;

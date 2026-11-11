@@ -2470,7 +2470,9 @@ html body #donorThanksDialog .thanks-body {
   padding: 12px 16px;
   overflow: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  scroll-behavior: smooth !important;
 }
 html body #donorThanksDialog .thanks-compose {
   display: flex;
@@ -3219,7 +3221,9 @@ html body #donorThanksDialog footer .thanks-start {
     outline: none !important;
     box-shadow: none !important;
     -webkit-tap-highlight-color: transparent !important;
-    scrollbar-width: thin;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    scroll-behavior: smooth !important;
   }
   html
     body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)

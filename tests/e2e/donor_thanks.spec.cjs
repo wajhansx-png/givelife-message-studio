@@ -35,13 +35,12 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await button.click();
     await expect(page.getByRole('dialog', { name: 'Thank donors', exact: true })).toBeVisible();
     const dialog = await page.locator('#donorThanksDialog').boundingBox();
-    if (width <= 899) {
-      expect(dialog.x).toBe(0);
-      expect(dialog.y).toBe(0);
-      expect(dialog.width).toBe(width);
-    } else {
-      expect(dialog.width).toBeLessThanOrEqual(680);
-    }
+    // A centered popup on phones, tablets and desktop (never a full-screen takeover).
+    expect(dialog.x).toBeGreaterThanOrEqual(0);
+    expect(dialog.y).toBeGreaterThanOrEqual(0);
+    expect(dialog.width).toBeLessThanOrEqual(Math.min(width - 16, 724));
+    expect(dialog.x + dialog.width).toBeLessThanOrEqual(width + 1);
+    expect(dialog.y + dialog.height).toBeLessThanOrEqual(900 + 1);
     await expect(page.locator('.thanks-review')).toHaveCount(0); // no Preview section
     await expect(page.locator('.thanks-media .thanks-attach')).toHaveText(['+ Image', '+ Video']);
     await expect(page.locator('#thanksGapSel')).toBeVisible(); // timing is always shown

@@ -56,6 +56,10 @@ class SendStopped(Exception):
     pass
 
 
+class SendHeld(ValueError):
+    """A hold stopped delivery before it reached the gateway."""
+
+
 def check_stop():
     stop = getattr(REQUEST_STOP, "fn", None)
     if stop and stop():
@@ -101,7 +105,9 @@ def stop_job(ident):
 ASSIST_TASKS = {}
 EVAL_TASKS = {}
 
-NEW_UI_PREFIX = "html body.ui2" + "".join(":not(#%s)" % c for c in "abcdefgh")  # beats every existing rule
+NEW_UI_PREFIX = "html body.ui2" + "".join(
+    ":not(#%s)" % c for c in "abcdefgh"
+)  # beats every existing rule
 SITE_ICONS = {
     "/favicon.svg": ("favicon.svg", "image/svg+xml"),
     "/favicon.ico": ("favicon.ico", "image/png"),
@@ -210,7 +216,11 @@ def read_drafts():
                 atomic_write(DRAFT, json.dumps(restored, ensure_ascii=False))
             except OSError:
                 pass
-        print("[drafts] damaged file set aside; " + ("restored from database" if restored else "starting empty"), flush=True)
+        print(
+            "[drafts] damaged file set aside; "
+            + ("restored from database" if restored else "starting empty"),
+            flush=True,
+        )
         return restored
 
 
@@ -307,16 +317,21 @@ def custom_recipient(body):
 
 
 def send_custom(body):
+    check_hold()
     jid, is_group = custom_recipient(body)
     message = body.get("message", "")
-    if not is_group and body.get('kind') == 'donor_thanks':
+    if not is_group and body.get("kind") == "donor_thanks":
         hub = donors()
-        row = hub.book.resolve(body.get('donor_id'))
-        if (body.get('case_id') != hub.thanks.case_id() or read_left() > 0
-                or not row.get('donated') or norm_phone(row['phone']) != jid):
-            raise ValueError('This donor is not eligible for the completed case update.')
+        row = hub.book.resolve(body.get("donor_id"))
+        if (
+            body.get("case_id") != hub.thanks.case_id()
+            or read_left() > 0
+            or not row.get("donated")
+            or norm_phone(row["phone"]) != jid
+        ):
+            raise ValueError("This donor is not eligible for the completed case update.")
     elif not is_group and donors().thanks.active:
-        raise ValueError('Thanks donors is sending. Pause it before another DM queue.')
+        raise ValueError("Thanks donors is sending. Pause it before another DM queue.")
     if (
         is_group
         and read_left() <= 0
@@ -380,14 +395,21 @@ def send_custom(body):
         )
     if not is_group and body.get("kind") in ("volunteer_batch", "volunteer_manual"):
         message = message.replace("{name}", str(body.get("name") or "").strip() or "friend")
-    if (not message.strip() and not (body.get("kind") == "donor_thanks" and body.get("attachment"))) or len(message) > 10000:
+    if (
+        not message.strip() and not (body.get("kind") == "donor_thanks" and body.get("attachment"))
+    ) or len(message) > 10000:
         raise ValueError("Write a message of 1 to 10,000 characters.")
     if not is_group:
         library_for(sys.modules[__name__]).record("dm", message, source="prepared_dm")
     if not STORE:
         raise ValueError("Persistent send records are unavailable. Try again later.")
     manual = body.get("kind") in ("donor_manual", "team_msg", "owner_text")
-    explicit_batch = body.get("kind") in ("donor_batch", "volunteer_batch", "volunteer_flow", "donor_thanks")
+    explicit_batch = body.get("kind") in (
+        "donor_batch",
+        "volunteer_batch",
+        "volunteer_flow",
+        "donor_thanks",
+    )
     if not SEND_LOCK.acquire(blocking=manual or explicit_batch):
         raise ValueError("Another send is running. Please wait for it to finish.")
     try:
@@ -397,6 +419,8 @@ def send_custom(body):
             status = {}  # the WhatsApp service is restarting or unreachable: nothing was sent
         if not status.get("is_connected") or not status.get("is_logged_in"):
             raise ValueError("WhatsApp is disconnected. Tap WhatsApp to reconnect.")
+        check_hold()
+        check_stop()
         now = time.time()
         saved = STORE.get("last_sent", {})
         if not is_group:
@@ -442,6 +466,7 @@ def send_custom(body):
                             "This recipient was contacted before. Check WhatsApp before sending again."
                         )
             ledger = STORE.get("dm_daily", {})
+            prior_ledger = dict(ledger)
             day = (
                 datetime.datetime.fromtimestamp(now, datetime.timezone(datetime.timedelta(hours=5)))
                 .date()
@@ -464,7 +489,6 @@ def send_custom(body):
             ):
                 raise ValueError(f"Wait at least {DM_MIN_GAP // 60} minutes between DMs.")
             check_stop()  # last point where Stop leaves no trace
-            prior_ledger = dict(ledger)
             prior_recipient = records.get("dm_recipient_" + digest) or {}
             ledger.update(count=ledger["count"] + 1, last=now)
             STORE.put("dm_daily", ledger)
@@ -478,17 +502,14 @@ def send_custom(body):
                 result = send_batch_attachment(jid, message, body["attachment"])
             elif body.get("poster") is True:
                 result = send_image(jid, message)
+                if (
+                    result.get("code") == "ERROR"
+                    and result.get("message") == "On hold: you told me to wait."
+                ):
+                    raise SendHeld(result["message"])
             else:
-                check_stop()
-                req = urllib.request.Request(
-                    GOWA_URL + "/send/message",
-                    data=json.dumps({"phone": jid, "message": message}).encode(),
-                    headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
-                    method="POST",
-                )
-                with urllib.request.urlopen(req, timeout=40) as response:
-                    result = mapping(json.load(response))
-        except SendStopped:
+                result = send_custom_text(jid, message)
+        except (SendStopped, SendHeld):
             # Nothing was uploaded: undo the "contacted" reservation so this person can be sent to later.
             if not is_group:
                 STORE.put("dm_daily", prior_ledger)
@@ -718,7 +739,9 @@ def dm_selection(new):
         import random
 
         old = index
-        if dm_templates.COUNT > 1:  # with one template there is nothing else to pick (and no endless loop)
+        if (
+            dm_templates.COUNT > 1
+        ):  # with one template there is nothing else to pick (and no endless loop)
             while True:
                 index = random.randrange(dm_templates.COUNT)
                 if index != old:
@@ -988,6 +1011,8 @@ def send_batch_attachment(jid, caption, ident):
     cap = ATT / ("caption-" + uuid.uuid4().hex + ".txt")
     atomic_write(cap, caption)
     try:
+        check_hold()
+        check_stop()
         r = subprocess.run(
             [
                 "curl",
@@ -1056,8 +1081,13 @@ def send_image(jid, caption, check_gap=False, _retry=True):
     check_stop()
     cap = DATA / ("caption-" + uuid.uuid4().hex + ".txt")
     atomic_write(cap, caption)
-    r = post_media(jid, cap, poster_media("group" if str(jid).endswith("@g.us") else "dm"))
-    cap.unlink(missing_ok=True)
+    try:
+        poster = poster_media("group" if str(jid).endswith("@g.us") else "dm")
+        check_hold()
+        check_stop()
+        r = post_media(jid, cap, poster)
+    finally:
+        cap.unlink(missing_ok=True)
     try:
         result = mapping(json.loads(r.stdout))
     except Exception:
@@ -1563,7 +1593,7 @@ def on_hold():
 
 def check_hold():
     if on_hold():
-        raise ValueError(
+        raise SendHeld(
             'On hold: you told me to wait. Say "resume" when the right WhatsApp is connected.'
         )
 
@@ -1575,7 +1605,9 @@ def set_hold(on):
         prev = json.loads(HOLD.read_text(encoding="utf-8")) if HOLD.exists() else {}
         prev = prev if isinstance(prev, dict) else {}
     except (OSError, ValueError):
-        prev = {"on": True} if HOLD.exists() else {}  # unreadable hold counts as on (as on_hold does), so "resume" can clear it
+        prev = (
+            {"on": True} if HOLD.exists() else {}
+        )  # unreadable hold counts as on (as on_hold does), so "resume" can clear it
     if on and not prev.get("on"):
         was = auto_on()
         atomic_write(HOLD, json.dumps({"on": True, "was_auto": was, "since": time.time()}))
@@ -2250,6 +2282,21 @@ TEST_DM_PHONE = os.environ.get("TEST_DM_PHONE", "923097458815")  # Test DMs go t
 
 
 @serialized_send
+def send_custom_text(jid, text):
+    """Send already-prepared custom text without changing its wording."""
+    check_hold()
+    check_stop()
+    req = urllib.request.Request(
+        GOWA_URL + "/send/message",
+        data=json.dumps({"phone": jid, "message": text}).encode(),
+        headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=40) as response:
+        return mapping(json.load(response))
+
+
+@serialized_send
 def send_text(jid, text):
     text = dm_composer.payment_fix(text)
     check_hold()
@@ -2271,6 +2318,7 @@ def send_thanks_test(message, media):
     """The Thank donors update, exactly as a donor would get it, sent ONLY to the GiveLife test group
     ({name} becomes "Test Bhai"). It never reaches a donor and changes no donor record."""
     from donor_thanks import personalize_thanks
+
     check_hold()
     if not SEND_LOCK.acquire(blocking=False):
         raise ValueError("Another send is running. Please wait for it to finish.")
@@ -2284,12 +2332,19 @@ def send_thanks_test(message, media):
         results = []
         try:
             for caption, attachment in media:  # each image or video with its own caption, in order
-                results.append(send_batch_attachment(TEST_GROUP_JID, personalize_thanks(caption or "", "Test Bhai"), attachment))
+                results.append(
+                    send_batch_attachment(
+                        TEST_GROUP_JID, personalize_thanks(caption or "", "Test Bhai"), attachment
+                    )
+                )
             if message.strip():
                 req = urllib.request.Request(
                     GOWA_URL + "/send/message",
                     data=json.dumps(
-                        {"phone": TEST_GROUP_JID, "message": personalize_thanks(message, "Test Bhai")}
+                        {
+                            "phone": TEST_GROUP_JID,
+                            "message": personalize_thanks(message, "Test Bhai"),
+                        }
                     ).encode(),
                     headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
                     method="POST",
@@ -2297,7 +2352,9 @@ def send_thanks_test(message, media):
                 with urllib.request.urlopen(req, timeout=40) as response:
                     results.append(mapping(json.load(response)))
         except Exception:
-            raise ValueError("The test was not confirmed. Check the test group on WhatsApp.") from None
+            raise ValueError(
+                "The test was not confirmed. Check the test group on WhatsApp."
+            ) from None
         if not results or any(mapping(r).get("code") != "SUCCESS" for r in results):
             raise ValueError("The test was not confirmed. Check the test group on WhatsApp.")
     finally:
@@ -3227,7 +3284,9 @@ def message_style(body):
         raise ValueError("The case is complete (Rs. 0 left). Nothing was written.")
     api = assistant.client()
     if api is None:
-        raise RuntimeError("AI is not connected, so nothing was written. Your message is unchanged.")
+        raise RuntimeError(
+            "AI is not connected, so nothing was written. Your message is unchanged."
+        )
     if not MSTYLE_LOCK.acquire(blocking=False):
         raise ValueError("A message is already being written. Wait a moment.")
     try:
@@ -3242,10 +3301,14 @@ def message_style(body):
         else:
             facts = [f"Case: {active_case_name()}"]
             if plan and plan.get("facts"):
-                facts.append("Verified case facts: " + json.dumps(plan["facts"], ensure_ascii=False))
+                facts.append(
+                    "Verified case facts: " + json.dumps(plan["facts"], ensure_ascii=False)
+                )
             facts += [t for t in (current, group, dm) if t.strip()]
         archive = library_for(sys.modules[__name__])
-        examples = archive.examples(kind, exclude=current) or focus_bank().owner_style(exclude=current)
+        examples = archive.examples(kind, exclude=current) or focus_bank().owner_style(
+            exclude=current
+        )
         examples = examples or [group, dm]
         ctx = {
             "left": left,
@@ -3258,14 +3321,29 @@ def message_style(body):
 
         def chat(system, prompt):
             msg = assistant._chat_raw(
-                api, system, [], [{"role": "user", "content": prompt}], max_tokens=1500, thinking_mode=False
+                api,
+                system,
+                [],
+                [{"role": "user", "content": prompt}],
+                max_tokens=1500,
+                thinking_mode=False,
             )
             return msg.get("content", "") if isinstance(msg, dict) else ""
 
         state = (STORE.get("message_styles") if STORE else None) or MSTYLE_MEMORY
         result, new_state = message_styles.generate(
-            style, ctx, state if isinstance(state, dict) else {}, chat, __import__("ai_call").json_of,
-            archive=lambda text, quality: archive.record(kind, text, source="manual_case" if manual is not None else "message_style", quality=quality, context={"details": manual or "", "left": left}),
+            style,
+            ctx,
+            state if isinstance(state, dict) else {},
+            chat,
+            __import__("ai_call").json_of,
+            archive=lambda text, quality: archive.record(
+                kind,
+                text,
+                source="manual_case" if manual is not None else "message_style",
+                quality=quality,
+                context={"details": manual or "", "left": left},
+            ),
         )
         MSTYLE_MEMORY.clear()
         MSTYLE_MEMORY.update(new_state)
@@ -3429,7 +3507,9 @@ ENGINE = autopilot.Engine(
 __import__("dm_variants").OWNER_STYLE = lambda: focus_bank().owner_style(
     get_message("group")["text"]
 )
-__import__("dm_variants").RECORD = lambda text, quality, kind="message": library_for(sys.modules[__name__]).record(kind, text, source="ai_rewrite", quality=quality)
+__import__("dm_variants").RECORD = lambda text, quality, kind="message": library_for(
+    sys.modules[__name__]
+).record(kind, text, source="ai_rewrite", quality=quality)
 __import__("dm_variants").CORRECTIONS = lambda: [m.get("rule", "") for m in mem_get()][-15:]
 __import__("dm_variants").PROVEN = lambda: (
     (learning_mod.proven_texts(ENGINE.L, 1) + donors().book.proven_dm_texts(1))
@@ -5334,12 +5414,17 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("X-Content-Type-Options", "nosniff")
-        for name, value in ops.security_headers(self.remote_config().get("origins", []), self.headers.get("X-Forwarded-Proto") == "https").items():
+        for name, value in ops.security_headers(
+            self.remote_config().get("origins", []),
+            self.headers.get("X-Forwarded-Proto") == "https",
+        ).items():
             self.send_header(name, value)
         for name, value in (extra_headers or {}).items():
             self.send_header(name, value)
+        self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
-        self.wfile.write(payload)
+        if getattr(self, "command", "") != "HEAD":
+            self.wfile.write(payload)
 
     _STATIC = {}
 
@@ -5394,7 +5479,12 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get("If-None-Match") == etag:
             self.response_sent = True
             self.send_response(304)
-            head.update(ops.security_headers(self.remote_config().get("origins", []), self.headers.get("X-Forwarded-Proto") == "https"))
+            head.update(
+                ops.security_headers(
+                    self.remote_config().get("origins", []),
+                    self.headers.get("X-Forwarded-Proto") == "https",
+                )
+            )
             for k, v in head.items():
                 self.send_header(k, v)
             self.end_headers()
@@ -5404,6 +5494,57 @@ class Handler(BaseHTTPRequestHandler):
         return self.reply(raw, kind, extra_headers=head)
 
     timeout = 15  # bound idle/slow request-body reads; external operations keep their own deadlines
+
+    def do_HEAD(self):
+        # Only public read-only resources can be delegated to GET. Some private
+        # GET endpoints create backups or perform other work.
+        path = self.path.split("?", 1)[0]
+        public_pages = {
+            "/",
+            "/health",
+            "/new",
+            "/new/",
+            "/new/group-finder",
+            "/group-finder",
+            "/case-plan",
+        }
+        public_assets = {
+            "/app.js",
+            "/format.js",
+            "/connection.js",
+            "/donors.js",
+            "/case-writer.js",
+            "/donor-thanks.js",
+            "/app-update.js",
+            "/donor-thanks.css",
+            "/case-writer.css",
+            "/replies.js",
+            "/notes.js",
+            "/notes.css",
+            "/donors.css",
+            "/studio.css",
+            "/compact-nav.js",
+            "/compact-nav.css",
+            "/focus-editor.js",
+            "/format-toolbar.js",
+            "/format-toolbar.css",
+            "/auto-controls.css",
+            "/focus-editor.css",
+            "/comfort.js",
+            "/comfort.css",
+            "/responsive.css",
+            "/new-ui.js",
+            "/new-ui.css",
+            "/group-finder.js",
+            "/group-finder.css",
+            "/case-plan.js",
+            "/case-plan.css",
+        }
+        if path in public_pages or path in public_assets or path in SITE_ICONS:
+            return self.do_GET()
+        if not self.authorized():
+            return self.reply({"error": "Access key required"}, status=401)
+        return self.reply({"error": "Method not allowed"}, status=405)
 
     def do_GET(self):
         self.response_sent = False
@@ -5506,15 +5647,25 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply({"error": "Access key required"}, status=401)
         if self.path == "/ops/status":
             import backups
-            return self.reply({**ops.diagnostics(), "storage": "postgresql" if hasattr(STORE, "uri") else "sqlite",
-                               "sqlite_encryption": bool(getattr(getattr(STORE, "cipher", None), "key", None)),
-                               "backups": backups.status()})
+
+            return self.reply(
+                {
+                    **ops.diagnostics(),
+                    "storage": "postgresql" if hasattr(STORE, "uri") else "sqlite",
+                    "sqlite_encryption": bool(getattr(getattr(STORE, "cipher", None), "key", None)),
+                    "backups": backups.status(),
+                }
+            )
         if self.path == "/ops/backup":
             import backups
+
             try:
                 path = backups.create(STORE, DATA / "encrypted-backups")
-                return self.reply(path.read_bytes(), "application/octet-stream",
-                                  extra_headers={"Content-Disposition": 'attachment; filename="studio.backup"'})
+                return self.reply(
+                    path.read_bytes(),
+                    "application/octet-stream",
+                    extra_headers={"Content-Disposition": 'attachment; filename="studio.backup"'},
+                )
             except ValueError as exc:
                 return self.reply({"error": str(exc)}, status=503)
         if self.path.split("?")[0] == "/api/case-plan":
@@ -5569,12 +5720,13 @@ class Handler(BaseHTTPRequestHandler):
                     "auto": donors().auto.status(),
                 }
             )
-        if self.path.startswith('/thanks-media/'):
+        if self.path.startswith("/thanks-media/"):
             try:
-                ident = self.path.rsplit('/', 1)[-1]
-                if ident != donors().thanks.view().get('attachment'):
+                ident = self.path.rsplit("/", 1)[-1]
+                if ident != donors().thanks.view().get("attachment"):
                     return self.reply({}, status=404)
                 import batch_media
+
                 path, mime = batch_media.load(STORE, ident, ATT)
                 return self.reply(path.read_bytes(), mime)
             except ValueError:
@@ -5621,12 +5773,17 @@ class Handler(BaseHTTPRequestHandler):
                 )
         if self.path == "/drafts":
             ensure_completed_drafts()
-            self.reply(read_drafts())  # a damaged file is repaired first, never passed to the browser
+            self.reply(
+                read_drafts()
+            )  # a damaged file is repaired first, never passed to the browser
         elif self.path == "/auto-controls":
             try:
                 self.reply(auto_controls().view())
             except Exception:
-                self.reply({"error": "The Auto controls could not be read. Nothing was changed."}, status=503)
+                self.reply(
+                    {"error": "The Auto controls could not be read. Nothing was changed."},
+                    status=503,
+                )
         elif self.path == "/report":
             # Every resume (donor DMs and groups) and how many people the Reply feature answered.
             PKT = datetime.timezone(datetime.timedelta(hours=5))
@@ -6064,34 +6221,36 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/donor-thanks":
             try:
                 thanks = donors().thanks
-                action = body.get('action')
-                if action == 'save':
+                action = body.get("action")
+                if action == "save":
                     return self.reply(thanks.save(body))
-                if body.get('case_id') != thanks.case_id():
-                    raise ValueError('The active case changed. Reopen Thank donors.')
-                if action in ('start', 'send_one'):
-                    if body.get('revision') != thanks.view()['revision']:
-                        raise ValueError('The update changed. Review it again before sending.')
-                    if action == 'send_one':
-                        ident = body.get('id')
+                if body.get("case_id") != thanks.case_id():
+                    raise ValueError("The active case changed. Reopen Thank donors.")
+                if action in ("start", "send_one"):
+                    if body.get("revision") != thanks.view()["revision"]:
+                        raise ValueError("The update changed. Review it again before sending.")
+                    if action == "send_one":
+                        ident = body.get("id")
                         if not isinstance(ident, str) or not ident:
-                            raise ValueError('Choose the donor to thank.')
+                            raise ValueError("Choose the donor to thank.")
                         return self.reply(thanks.start(donor_id=ident))
                     return self.reply(thanks.start())
-                if action == 'stop':
+                if action == "stop":
                     return self.reply(thanks.stop())
-                if action == 'settings':
-                    return self.reply(thanks.configure(body.get('settings') or {}))
-                if action == 'test':
+                if action == "settings":
+                    return self.reply(thanks.configure(body.get("settings") or {}))
+                if action == "test":
                     return self.reply(thanks.test())
-                raise ValueError('Choose save, settings, test, start or stop.')
+                raise ValueError("Choose save, settings, test, start or stop.")
             except ValueError as e:
-                return self.reply({'error': str(e)}, status=400)
+                return self.reply({"error": str(e)}, status=400)
         if self.path == "/auto-controls":
             try:
                 controls = auto_controls()
                 if "on" in body:
-                    return self.reply(controls.set(body.get("control"), body.get("on"), body.get("settings")))
+                    return self.reply(
+                        controls.set(body.get("control"), body.get("on"), body.get("settings"))
+                    )
                 return self.reply(controls.edit(body.get("control"), body.get("settings")))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
@@ -6777,6 +6936,10 @@ if __name__ == "__main__":
     start_worker("auto engine", ENGINE.start)
     spawn(timed_loop, "timed-tasks")
     import backups
+
     backups.start(STORE, DATA)
-    BoundedHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "10000"))), Handler,
-                      max_workers=int(os.environ.get("HTTP_MAX_WORKERS", "32"))).serve_forever()
+    BoundedHTTPServer(
+        ("0.0.0.0", int(os.environ.get("PORT", "10000"))),
+        Handler,
+        max_workers=int(os.environ.get("HTTP_MAX_WORKERS", "32")),
+    ).serve_forever()

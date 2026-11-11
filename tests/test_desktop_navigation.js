@@ -16,6 +16,7 @@ function node(id) {
       open: false,
       hidden: false,
       attrs: {},
+      addEventListener() {},
       setAttribute(k, v) {
         this.attrs[k] = v;
       },
@@ -79,11 +80,11 @@ vm.runInContext(
   'let editing=false;' +
     source.slice(
       source.indexOf('function setNoMsg('),
-      source.indexOf("if($('desktopPreview'))", source.indexOf('function setNoMsg(')),
+      source.indexOf("if ($('desktopPreview'))", source.indexOf('function setNoMsg(')),
     ) +
     source.slice(
       source.indexOf('function focusChatInput('),
-      source.indexOf('/* ---- start ---- */'),
+      source.indexOf('/* ---- show the screen the address names'),
     ),
   ctx,
 );

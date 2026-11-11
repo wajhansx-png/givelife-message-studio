@@ -1,4 +1,5 @@
 """Offline contact importer tests: fake database, no real contacts or WhatsApp."""
+
 import base64
 import copy
 import json
@@ -55,7 +56,9 @@ class ImportTests(unittest.TestCase):
         first = import_from_environment(self.store, self.folder.name, payload(records()))
         self.assertEqual(first["added"], 3)
         current = self.store.get("donor_book")
-        current["records"][0].update(donated=True, amount=1500, important=True, notes="Existing note")
+        current["records"][0].update(
+            donated=True, amount=1500, important=True, notes="Existing note"
+        )
         self.store.put("donor_book", current)
         second = import_from_environment(self.store, self.folder.name, payload(records()))
         self.assertEqual(second["added"], 0)

@@ -316,19 +316,53 @@ def dm_control(text):
 # matching would turn "sent" into "send" and invent a send request. Abbreviations the rules
 # already understand (msg, mins, hrs) are deliberately left alone.
 TYPOS = {
-    "snd": "send", "sned": "send", "sedn": "send", "semd": "send", "sendd": "send",
-    "pst": "post", "psot": "post", "shre": "share",
-    "dnors": "donors", "doners": "donors", "donars": "donors", "donros": "donors", "dnor": "donor",
-    "doner": "donor", "donar": "donor", "imporant": "important", "importent": "important",
-    "caes": "case", "csae": "case", "cse": "case",
-    "shrter": "shorter", "shoter": "shorter", "shortr": "shorter", "mke": "make", "mak": "make",
-    "captoin": "caption", "capton": "caption", "caprion": "caption",
-    "mesage": "message", "messge": "message", "massage": "message",
-    "scedule": "schedule", "shedule": "schedule", "schdule": "schedule",
-    "freelanc": "freelance", "frelance": "freelance", "freelence": "freelance",
-    "gropus": "groups", "grups": "groups", "gruops": "groups", "voluntiers": "volunteers",
-    "volunters": "volunteers", "pasue": "pause", "puase": "pause", "remeber": "remember",
-    "rember": "remember", "minuts": "minutes",
+    "snd": "send",
+    "sned": "send",
+    "sedn": "send",
+    "semd": "send",
+    "sendd": "send",
+    "pst": "post",
+    "psot": "post",
+    "shre": "share",
+    "dnors": "donors",
+    "doners": "donors",
+    "donars": "donors",
+    "donros": "donors",
+    "dnor": "donor",
+    "doner": "donor",
+    "donar": "donor",
+    "imporant": "important",
+    "importent": "important",
+    "caes": "case",
+    "csae": "case",
+    "cse": "case",
+    "shrter": "shorter",
+    "shoter": "shorter",
+    "shortr": "shorter",
+    "mke": "make",
+    "mak": "make",
+    "captoin": "caption",
+    "capton": "caption",
+    "caprion": "caption",
+    "mesage": "message",
+    "messge": "message",
+    "massage": "message",
+    "scedule": "schedule",
+    "shedule": "schedule",
+    "schdule": "schedule",
+    "freelanc": "freelance",
+    "frelance": "freelance",
+    "freelence": "freelance",
+    "gropus": "groups",
+    "grups": "groups",
+    "gruops": "groups",
+    "voluntiers": "volunteers",
+    "volunters": "volunteers",
+    "pasue": "pause",
+    "puase": "pause",
+    "remeber": "remember",
+    "rember": "remember",
+    "minuts": "minutes",
 }
 TYPO_WORD = re.compile(r"\b(" + "|".join(sorted(TYPOS, key=len, reverse=True)) + r")\b", re.I)
 QUOTED = re.compile(r'("[^"\n]*"|“[^”\n]*”|```[\s\S]*?```)')
@@ -427,7 +461,11 @@ def _parse(text):
     ) or low in ("dm off", "dms off", "auto dms off"):
         return {"kind": "stop_dms"}
     # "stop everything now" / "sab band karo abhi": a trailing urgency word is the same stop.
-    calm = re.sub(r"(?:[\s.!,]+(?:right now|now|please|pls|plz|asap|immediately|abhi|jaldi))+[\s.!]*$", "", low)
+    calm = re.sub(
+        r"(?:[\s.!,]+(?:right now|now|please|pls|plz|asap|immediately|abhi|jaldi))+[\s.!]*$",
+        "",
+        low,
+    )
     if calm in (
         "hold",
         "wait",
@@ -524,7 +562,11 @@ def _parse(text):
         + UNIT
         + r"?\s+(?:came in|came|arrived|received|donated|aya|aaya|aye|aaye|ayi|aayi|mila|mile|mil gaye|mil gaya)(?:\s+(?:hain|hai|hue|huay|ho gaye|ho gaya))?",
         # "5000 came from Ali" / "received 3000 from a donor today": who sent it or when does not change the amount.
-        re.sub(r"(?i)(?:\s+(?:from|by)\s+[^\d\n]{1,40}?)?(?:\s+(?:today|now|just now|abhi))?[.!]?$", "", t),
+        re.sub(
+            r"(?i)(?:\s+(?:from|by)\s+[^\d\n]{1,40}?)?(?:\s+(?:today|now|just now|abhi))?[.!]?$",
+            "",
+            t,
+        ),
         re.I,
     )
     if arrival:

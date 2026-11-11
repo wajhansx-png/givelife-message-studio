@@ -36,10 +36,8 @@
         return;
       const bounds = field.getBoundingClientRect();
       const area = scrollArea.getBoundingClientRect();
-      if (bounds.bottom > area.bottom - 6)
-        scrollArea.scrollTop += bounds.bottom - area.bottom + 6;
-      else if (bounds.top < area.top + 6)
-        scrollArea.scrollTop -= area.top - bounds.top + 6;
+      if (bounds.bottom > area.bottom - 6) scrollArea.scrollTop += bounds.bottom - area.bottom + 6;
+      else if (bounds.top < area.top + 6) scrollArea.scrollTop -= area.top - bounds.top + 6;
     });
   }
   dialog.addEventListener('focusin', keepFocusedFieldVisible);
@@ -85,7 +83,16 @@
     const on = !stopping && (!!state?.on || starting);
     dialog.dataset.phase = stopping ? 'stopping' : starting ? 'starting' : on ? 'running' : 'idle';
     $('thanksSwitch').setAttribute('aria-checked', String(on));
-    $('thanksSwitch').setAttribute('aria-label', stopping ? 'Stopping thank-you updates' : starting ? 'Starting thank-you updates' : on ? 'Stop sending thank-you updates' : 'Start sending thank-you updates');
+    $('thanksSwitch').setAttribute(
+      'aria-label',
+      stopping
+        ? 'Stopping thank-you updates'
+        : starting
+          ? 'Starting thank-you updates'
+          : on
+            ? 'Stop sending thank-you updates'
+            : 'Start sending thank-you updates',
+    );
     $('thanksSwitch').setAttribute('aria-busy', String(starting || stopping));
     $('thanksSwitch').disabled =
       busy ||
@@ -94,7 +101,13 @@
         (state.left > 0 ||
           (!state.media.length && !$('thanksMessage').value.trim()) ||
           state.pending === 0));
-    $('thanksStartLabel').textContent = stopping ? 'Stopping…' : starting ? 'Starting…' : on ? 'Stop' : 'Start';
+    $('thanksStartLabel').textContent = stopping
+      ? 'Stopping…'
+      : starting
+        ? 'Starting…'
+        : on
+          ? 'Stop'
+          : 'Start';
     for (const b of dialog.querySelectorAll('.thanks-remove, .thanks-attach'))
       b.disabled =
         busy ||
@@ -210,8 +223,9 @@
   }
   for (const k of Object.keys(OPTS)) {
     const sel = $('thanks' + k[0].toUpperCase() + k.slice(1) + 'Sel');
-    const label = {gap: 'Gap', vary: 'Vary', batch: 'Batch', rest: 'Rest'}[k];
-    for (const v of OPTS[k]) sel.append(new Option(label + ': ' + (k === 'vary' && v ? '±' : '') + words(k, v), v));
+    const label = { gap: 'Gap', vary: 'Vary', batch: 'Batch', rest: 'Rest' }[k];
+    for (const v of OPTS[k])
+      sel.append(new Option(label + ': ' + (k === 'vary' && v ? '±' : '') + words(k, v), v));
     sel.append(new Option(label + ': Custom…', 'custom'));
     sel.addEventListener('change', () => {
       const box = dialog.querySelector(`[data-k="${k}"] .thanks-custom`);
@@ -283,11 +297,15 @@
       note('Sending. You can close this panel.');
     }, true);
   const pauseSending = () =>
-    action(async () => {
-      state = await api('stop', { case_id: state.case_id });
-      fill();
-      note('Paused. An upload already started may finish.', 'warning');
-    }, false, true);
+    action(
+      async () => {
+        state = await api('stop', { case_id: state.case_id });
+        fill();
+        note('Paused. An upload already started may finish.', 'warning');
+      },
+      false,
+      true,
+    );
   $('thanksSwitch').onclick = () => (state?.on ? pauseSending() : startSending());
   $('thanksTest').onclick = () =>
     action(async () => {
@@ -361,7 +379,10 @@
           state = latest;
           audience();
           controls();
-          note(state.error || (state.on ? 'Updates are sending.' : 'Updates finished or paused.'), state.error ? 'error' : 'info');
+          note(
+            state.error || (state.on ? 'Updates are sending.' : 'Updates finished or paused.'),
+            state.error ? 'error' : 'info',
+          );
         }
       }
     } catch (_) {}
@@ -503,19 +524,28 @@
     const on = !tabStopping && (!!tabState?.on || tabStarting);
     tabSwitch.setAttribute('aria-checked', String(on));
     tabSwitch.setAttribute('aria-busy', String(tabStarting || tabStopping));
-    tabSwitch.setAttribute('aria-label', tabStopping ? 'Stopping thank-you updates' : tabStarting ? 'Starting thank-you updates' : on ? 'Stop sending thank-you updates' : 'Start sending thank-you updates');
+    tabSwitch.setAttribute(
+      'aria-label',
+      tabStopping
+        ? 'Stopping thank-you updates'
+        : tabStarting
+          ? 'Starting thank-you updates'
+          : on
+            ? 'Stop sending thank-you updates'
+            : 'Start sending thank-you updates',
+    );
     tabSwitch.disabled =
       tabBusy || !tabState || (!on && (tabState.left > 0 || tabState.pending === 0));
     tabTest.disabled = tabBusy || !tabState;
     tabLabel.textContent = tabStopping
       ? 'Stopping…'
       : tabStarting
-      ? 'Starting…'
-      : !tabState
-      ? '… donors'
-      : on
-        ? `${tabState.sent}/${tabState.total} sent`
-        : `${tabState.pending} donors`;
+        ? 'Starting…'
+        : !tabState
+          ? '… donors'
+          : on
+            ? `${tabState.sent}/${tabState.total} sent`
+            : `${tabState.pending} donors`;
   }
   async function loadTab() {
     if (directory.dataset.panel !== 'donated' || tabBusy) return;
@@ -553,7 +583,9 @@
       }
     } catch (error) {
       if (tabStarting || tabStopping) {
-        try { tabState = await api(); } catch (_) {}
+        try {
+          tabState = await api();
+        } catch (_) {}
       }
       modeNotice(error.message);
     } finally {

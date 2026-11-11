@@ -1,4 +1,5 @@
 import http.client
+import io
 import os
 import sqlite3
 import tempfile
@@ -14,6 +15,52 @@ app = fixture.app
 
 
 class HttpHardening(unittest.TestCase):
+    def test_head_response_uses_get_headers_without_writing_a_body(self):
+        handler = app.Handler.__new__(app.Handler)
+        handler.path = "/new"
+        handler.command = "HEAD"
+        handler.headers = {}
+        handler.wfile = io.BytesIO()
+        status, headers = [], {}
+        handler.send_response = status.append
+        handler.send_header = lambda key, value: headers.update({key: value})
+        handler.end_headers = lambda: None
+        handler.do_HEAD()
+        self.assertEqual(status, [200])
+        self.assertEqual(handler.wfile.getvalue(), b"")
+        self.assertGreater(int(headers["Content-Length"]), 0)
+
+    def test_head_matches_public_get_without_body_or_private_side_effects(self):
+        with ThreadingHTTPServer(("127.0.0.1", 0), app.Handler) as srv:
+            threading.Thread(target=srv.serve_forever, daemon=True).start()
+            try:
+                for path in ("/", "/new", "/health", "/app.js", "/new-ui.css"):
+                    with self.subTest(path=path):
+                        conn = http.client.HTTPConnection("127.0.0.1", srv.server_port)
+                        conn.request("GET", path)
+                        get = conn.getresponse()
+                        body = get.read()
+                        headers = dict(get.getheaders())
+                        self.assertEqual(get.status, 200)
+                        conn.request("HEAD", path)
+                        head = conn.getresponse()
+                        self.assertEqual(head.status, 200)
+                        self.assertEqual(head.read(), b"")
+                        self.assertEqual(head.getheader("Content-Type"), headers["Content-Type"])
+                        self.assertEqual(int(head.getheader("Content-Length")), len(body))
+                        conn.close()
+                for auth, expected in ((None, 401), ("Bearer test-only-studio-access-key", 405)):
+                    conn = http.client.HTTPConnection("127.0.0.1", srv.server_port)
+                    conn.request(
+                        "HEAD", "/ops/backup", headers={"Authorization": auth} if auth else {}
+                    )
+                    response = conn.getresponse()
+                    self.assertEqual(response.status, expected)
+                    self.assertEqual(response.read(), b"")
+                    conn.close()
+            finally:
+                srv.shutdown()
+
     def test_every_response_blocks_untrusted_framing(self):
         with ThreadingHTTPServer(("127.0.0.1", 0), app.Handler) as srv:
             threading.Thread(target=srv.serve_forever, daemon=True).start()

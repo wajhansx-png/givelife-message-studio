@@ -85,7 +85,10 @@ class GroupGenerationFailures(unittest.TestCase):
         naps = []
         with (
             patch("dm_variants.assistant.client", return_value="fake"),
-            patch("dm_variants._call", side_effect=[RuntimeError("429 Too Many Requests")] * 3 + [deep] * 3),
+            patch(
+                "dm_variants._call",
+                side_effect=[RuntimeError("429 Too Many Requests")] * 3 + [deep] * 3,
+            ),
             patch("dm_variants._sleep", side_effect=naps.append),
         ):
             bank._generate("group", bank.get("group"), ("group", row["revision"]))
@@ -100,7 +103,9 @@ class GroupGenerationFailures(unittest.TestCase):
         ):
             bank._generate("group", bank.get("group"), ("group", row["revision"]))
         got = bank.get("group")
-        self.assertEqual((got["state"], wire.call_count), ("Needs retry", 3))  # one round of 3 parallel calls, then stop
+        self.assertEqual(
+            (got["state"], wire.call_count), ("Needs retry", 3)
+        )  # one round of 3 parallel calls, then stop
         self.assertIn("403", got["error"])
 
     def test_rejected_candidates_use_at_most_six_calls(self):

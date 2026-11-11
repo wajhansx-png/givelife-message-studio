@@ -13,10 +13,12 @@
   page.innerHTML = `<div class="donor-shell"><header class="donor-head"><div class="donor-title"><h1>Donors <span class="donor-count" id="donorTotal"></span></h1></div><span class="donor-total"><small>Total donated</small> <strong id="donorTotalAmount">PKR 0</strong></span><span class="donor-total"><small>Normal total</small> <strong id="donorNormalTotal">PKR 0</strong></span><span class="donor-message-tablist" role="tablist" aria-label="Message bank"><button role="tab" class="donor-msgs" id="donorMessagesTab" data-tab="messages" aria-selected="false" aria-label="Messages">Messages</button></span><button class="donor-bulk" id="donorBulk">Bulk message</button><button class="donor-bulk" id="donorNumbers" type="button">Add numbers</button><button class="donor-add" id="donorAdd">+ Add</button></header><div class="donor-toolbar"><div class="donor-tabs" role="tablist" aria-label="Donor filters"><button role="tab" data-tab="all" aria-selected="true">All</button><button role="tab" data-tab="important" aria-selected="false">★ Important</button><button role="tab" data-tab="top" aria-selected="false">Top donors</button><button role="tab" data-tab="donated" aria-selected="false">Donated</button><button role="tab" data-tab="not_contacted" aria-selected="false">Not contacted</button><button role="tab" data-tab="volunteers" aria-selected="false">Volunteers</button></div><input class="donor-search" id="donorSearch" name="donor_search" type="search" autocomplete="off" placeholder="Search donors…" aria-label="Search donor names or private numbers"></div><div id="donorHideRow" class="hide-row" hidden><button type="button" id="donorHideSent" class="hide-chip"></button><button type="button" id="donorDeselectAll" class="hide-chip deselect-chip">Deselect all</button></div><div id="donorNotice" class="donor-notice" role="status" aria-live="polite"></div><div class="donor-table" id="donorTable" role="region" aria-label="Donor list" tabindex="0"><div class="donor-columns" aria-hidden="false"><span>★</span><span>Name</span><span>DM</span><span>Status</span><span>PKR</span><span><button type="button" class="donor-expand-btn" id="donorExpand" aria-label="Expand to full screen" title="Expand to full screen">⤢</button></span></div><div id="donorRows"></div></div><section id="donorMessages" class="donor-messages" aria-label="DM wording bank" hidden></section><section id="donorVolunteers" class="donor-volunteers" aria-label="Volunteers" hidden></section><div class="donor-progress" id="donorProgress" hidden><button type="button" class="dp-hide" id="donorProgressHide" aria-label="Hide sending details" title="Hide">Hide ⌄</button><span></span><div class="dp-facts" id="donorProgressFacts" aria-label="Batch plan"></div><button id="donorContinue" hidden>Restart</button><button id="donorEditBatch" title="Edit future sends without pausing the running batch">Edit settings</button><button id="donorStop">Pause</button></div><button type="button" class="dp-show" id="donorProgressShow" hidden aria-label="Show sending details" title="Show sending details">⌃ DM sending status</button><details id="donorBatchList" class="batch-list" hidden><summary id="donorBatchSummary"></summary><div class="batch-cols"><section><h3>Sent</h3><ol id="batchSent"></ol></section><section><h3>Next</h3><ol id="batchNext"></ol></section></div><p id="batchOther"></p></details><footer class="donor-bottom"><button type="button" class="donor-back-bottom back-action" id="donorMainBottom" aria-label="Back to main screen">← Back</button><button type="button" class="donor-gap" id="donorPace">Gap: 4 min ▾</button><input id="donorGap" type="hidden" value="240"><button type="button" class="donor-mini" id="donorTest" title="Send one clearly marked test DM to your own WhatsApp">Test DM</button><button type="button" class="donor-mini" id="donorToggle" title="Stop all DMs. Press again to resume everything.">Stop DMs</button><label class="donor-poster-toggle donor-auto-toggle" for="donorAuto" title="Auto: DM every Top donor not yet contacted, 10 per batch, 5 min apart, 15 min rest. Turn off to pause."><input type="checkbox" id="donorAuto"> Auto</label><label class="donor-poster-toggle" for="donorRowPoster" title="Attach the poster to the single-tap DM button beside each donor"><input type="checkbox" id="donorRowPoster" checked> Poster on DM</label><span class="donor-message-info">Saved DM · Important first</span><button class="send-important" id="donorSendImportant">DM ★ Important</button><button class="send-donors" id="donorSendAll">DM all</button></footer></div>`;
   document.body.append(page);
   /* The Hide / Deselect chips live in the top bar, so showing them never pushes the donor list down. */
-  page.querySelector('.donor-head').insertBefore(
-    page.querySelector('#donorHideRow'),
-    page.querySelector('.donor-message-tablist'),
-  );
+  page
+    .querySelector('.donor-head')
+    .insertBefore(
+      page.querySelector('#donorHideRow'),
+      page.querySelector('.donor-message-tablist'),
+    );
 
   /* Batch DM count, shown on its own at the right side of the donor list. */
   const dmBadge = make('div', 'donor-dm-badge');
@@ -102,7 +104,10 @@
       updateExpandBtn(entering);
       tryNativeFS(entering);
     };
-    document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && page.classList.contains('donor-expanded')) updateExpandBtn(false); });
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && page.classList.contains('donor-expanded'))
+        updateExpandBtn(false);
+    });
   }
 
   let msgSub = 'dm'; /* Messages sub-tab: 'dm' versions or 'follow' up */
@@ -206,8 +211,7 @@
     resumeStatus.hidden = !pending && !attention && !paused;
     /* The status owns a full-width footer row; it never shares a button cell. */
     const bottomRow = page.querySelector('.donor-bottom');
-    if (bottomRow && resumeStatus.parentElement !== bottomRow)
-      bottomRow.prepend(resumeStatus);
+    if (bottomRow && resumeStatus.parentElement !== bottomRow) bottomRow.prepend(resumeStatus);
     /* Folded: the panel shows as a small pill until tapped open again (remembered). */
     let folded = false;
     try {
@@ -395,7 +399,10 @@
   /* Cached once and updated on resize: reading sizes during a DOM change forces a full page layout. */
   const narrow560 = { matches: false },
     narrow700 = { matches: false };
-  for (const [flag, q] of [[narrow560, '(max-width:559.98px)'], [narrow700, '(max-width:699.98px)']]) {
+  for (const [flag, q] of [
+    [narrow560, '(max-width:559.98px)'],
+    [narrow700, '(max-width:699.98px)'],
+  ]) {
     const mq = matchMedia(q);
     flag.matches = mq.matches;
     mq.addEventListener('change', (e) => (flag.matches = e.matches));
@@ -484,6 +491,17 @@
       'aria-label',
       (d.important ? 'Remove Important from ' : 'Make Important: ') + d.name,
     );
+    const top = row.querySelector('.donor-top-chip');
+    if (top) {
+      top.textContent = d.top_donor ? 'Top ✓' : '+ Top';
+      top.setAttribute('aria-pressed', !!d.top_donor);
+      top.setAttribute(
+        'aria-label',
+        (d.top_donor ? 'Remove from Top donors: ' : 'Add to Top donors: ') + d.name,
+      );
+    }
+    const topMenu = row.querySelector('.donor-menu-top');
+    if (topMenu) topMenu.textContent = d.top_donor ? 'Remove from Top donors' : 'Add to Top donors';
     row.querySelector('.donor-name').textContent = d.name;
     {
       const ident = row.querySelector('.donor-identity');
@@ -523,7 +541,8 @@
     const epoch = ++filterEpoch;
     updateCounts();
     el('donorTable').hidden = tab === 'messages' || tab === 'volunteers';
-    if (el('donorFollowUpOpt')) el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
+    if (el('donorFollowUpOpt'))
+      el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
     el('donorMessages').hidden = tab !== 'messages';
     el('donorVolunteers').hidden = tab !== 'volunteers';
     if (tab === 'volunteers') {
@@ -543,7 +562,8 @@
         .sort(
           field === 'top_order'
             ? topCmp
-            : (a, b) => (a[field] ?? Number.MAX_SAFE_INTEGER) - (b[field] ?? Number.MAX_SAFE_INTEGER),
+            : (a, b) =>
+                (a[field] ?? Number.MAX_SAFE_INTEGER) - (b[field] ?? Number.MAX_SAFE_INTEGER),
         )
         .forEach((d, i) => (d[rank] = i + 1));
     /* A named group (e.g. GIKI) sits under its own heading and is numbered 1.. in its own order. */
@@ -555,7 +575,9 @@
         .filter((d) => d.top_donor && !d.group)
         .sort(topCmp)
         .forEach((d) => (d.top_rank = ++n));
-      for (const g of [...new Set(allDonors.filter((d) => d.top_donor && d.group).map((d) => d.group))]) {
+      for (const g of [
+        ...new Set(allDonors.filter((d) => d.top_donor && d.group).map((d) => d.group)),
+      ]) {
         n = 0;
         allDonors
           .filter((d) => d.top_donor && d.group === g)
@@ -597,7 +619,8 @@
             : 0) ||
           Number(!!a.dm_sent) - Number(!!b.dm_sent) ||
           (a.dm_sent ? (a.last_sent_at || 0) - (b.last_sent_at || 0) : 0) ||
-          (a.important_order ?? Number.MAX_SAFE_INTEGER) - (b.important_order ?? Number.MAX_SAFE_INTEGER) ||
+          (a.important_order ?? Number.MAX_SAFE_INTEGER) -
+            (b.important_order ?? Number.MAX_SAFE_INTEGER) ||
           0 ||
           Number(!!a.dm_sent) - Number(!!b.dm_sent) ||
           (a.dm_sent ? (a.last_sent_at || 0) - (b.last_sent_at || 0) : 0) ||
@@ -781,7 +804,8 @@
   }
   async function openBatchPicker(scope) {
     editingJob = null;
-    el('batchIncl').disabled=false;el('batchFresh').disabled=false;
+    el('batchIncl').disabled = false;
+    el('batchFresh').disabled = false;
     const epoch = ++pickerEpoch,
       path = Nav.path();
     pickerScope = scope;
@@ -869,7 +893,11 @@
   el('batchFollowUp').onchange = () => setFollowUp(el('batchFollowUp').checked);
   el('batchPoster').onchange = () => {
     /* One poster choice for the app: the switch here also sets the single-tap DM poster. */
-    if (!editingJob && el('donorRowPoster') && el('donorRowPoster').checked !== el('batchPoster').checked) {
+    if (
+      !editingJob &&
+      el('donorRowPoster') &&
+      el('donorRowPoster').checked !== el('batchPoster').checked
+    ) {
       el('donorRowPoster').checked = el('batchPoster').checked;
       el('donorRowPoster').dispatchEvent(new Event('change'));
     }
@@ -936,12 +964,29 @@
       body.jitter = { min: -Math.abs(lo), max: Math.abs(hi) };
     }
     if (editingJob) {
-      const button=el('batchStart');button.disabled=true;
+      const button = el('batchStart');
+      button.disabled = true;
       try {
-        const result=await api('/donor-delivery',{configure:editingJob,settings:{gap_seconds:secs,chunk:per,rests:pauses,poster:body.poster,jitter:body.jitter||null,follow_up:el('batchFollowUp').checked}});
-        editingJob=null;picker.close();notice(result.reply);await poll();
-      } catch(error) { el('batchPlan').textContent=error.message; }
-      finally {button.disabled=false;}
+        const result = await api('/donor-delivery', {
+          configure: editingJob,
+          settings: {
+            gap_seconds: secs,
+            chunk: per,
+            rests: pauses,
+            poster: body.poster,
+            jitter: body.jitter || null,
+            follow_up: el('batchFollowUp').checked,
+          },
+        });
+        editingJob = null;
+        picker.close();
+        notice(result.reply);
+        await poll();
+      } catch (error) {
+        el('batchPlan').textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
       return;
     }
     batchBody = body;
@@ -975,7 +1020,8 @@
       node.dataset.open = open ? '' : '1';
       node.textContent = open ? bankGenerationLabel() : detail;
     };
-    node.onkeydown = (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), node.onclick());
+    node.onkeydown = (e) =>
+      (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), node.onclick());
   }
   function queueBankGenerationPoll() {
     clearTimeout(bankGenerationTimer);
@@ -1020,7 +1066,11 @@
     head.append(
       make('span', '', bankData.items.length + ' wording variants · same facts · editable'),
     );
-    const regen = make('button', 'tool bank-regenerate', bankData.items.length > 1 ? 'Regenerate 20' : 'Generate 20 versions');
+    const regen = make(
+      'button',
+      'tool bank-regenerate',
+      bankData.items.length > 1 ? 'Regenerate 20' : 'Generate 20 versions',
+    );
     regen.onclick = async () => {
       if (bankRegenerating || bankSaves.size) return;
       const master = bankData.items[0];
@@ -1086,7 +1136,9 @@
         t.onclick = () => {
           msgSub = id;
           box.dataset.sub = id;
-          tabs.querySelectorAll('button').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.sub === id)));
+          tabs
+            .querySelectorAll('button')
+            .forEach((x) => x.setAttribute('aria-selected', String(x.dataset.sub === id)));
           if (id === 'follow') fuText.focus({ preventScroll: true });
         };
         tabs.append(t);
@@ -1212,7 +1264,13 @@
         if (edit.hidden) {
           /* The editor looks exactly like the message it replaces: same font, size and spacing. */
           const look = getComputedStyle(preview);
-          for (const prop of ['font-family', 'font-size', 'line-height', 'letter-spacing', 'padding'])
+          for (const prop of [
+            'font-family',
+            'font-size',
+            'line-height',
+            'letter-spacing',
+            'padding',
+          ])
             edit.style.setProperty(prop, look.getPropertyValue(prop), 'important');
           edit.hidden = false;
           preview.hidden = true;
@@ -1252,7 +1310,10 @@
         }
       };
       actions.append(button);
-      for (const [mark, label] of [['*', 'B'], ['_', 'I']]) {
+      for (const [mark, label] of [
+        ['*', 'B'],
+        ['_', 'I'],
+      ]) {
         const f = make('button', 'tool bank-format', label);
         f.type = 'button';
         f.setAttribute('aria-label', mark === '*' ? 'Bold' : 'Italic');
@@ -1279,10 +1340,17 @@
       card.append(title, preview, edit);
       grid.append(card);
     }
-    if (!item)
-      grid.append(
-        make('p', 'donor-empty', 'No saved messages yet. Use Regenerate to create them.'),
+    if (!item) {
+      const empty = make('div', 'donor-empty bank-empty'),
+        addBase = make('button', 'primary', 'Add base message');
+      addBase.type = 'button';
+      addBase.onclick = openBaseMessage;
+      empty.append(
+        make('p', '', 'No saved messages yet. Add a base message, then generate versions.'),
+        addBase,
       );
+      grid.append(empty);
+    }
     const nav = make('nav', 'bank-pagination');
     nav.setAttribute('aria-label', 'Message navigation');
     const backBottom = make('button', 'bank-back-bottom back-action', '← Back');
@@ -1351,6 +1419,7 @@
         arrow.type = 'button';
         arrow.title = 'Next message';
         arrow.setAttribute('aria-label', 'Next message');
+        arrow.disabled = position < 0 || position + 1 >= bankData.items.length;
         arrow.onclick = () => box.querySelector('[data-bank-nav=next]')?.click();
         const gen = make('button', 'bank-gen-icon', '↻');
         gen.type = 'button';
@@ -1373,9 +1442,11 @@
   }
   function syncBankControls() {
     const box = el('donorMessages');
+    const generating = bankData?.generation?.state === 'Generating',
+      regenerateDisabled = bankRegenerating || bankSaves.size > 0 || generating;
+    for (const b of box.querySelectorAll('.bank-gen-icon')) b.disabled = regenerateDisabled;
     for (const b of box.querySelectorAll('.bank-regenerate')) {
-      const generating = bankData?.generation?.state === 'Generating';
-      b.disabled = bankRegenerating || bankSaves.size > 0 || generating;
+      b.disabled = regenerateDisabled;
       b.textContent = generating
         ? 'Generating 20…'
         : (bankData?.items?.length || 0) > 1
@@ -1547,7 +1618,10 @@
           Object.assign(donor, r.donor);
           paintRow(donor);
           updateCounts();
-          if (('important' in fields || 'top_donor' in fields) && ['important', 'top'].includes(tab))
+          if (
+            ('important' in fields || 'top_donor' in fields) &&
+            ['important', 'top'].includes(tab)
+          )
             applyFilters();
         }
       })
@@ -1753,7 +1827,9 @@
             );
           if (d.follow_up_state) {
             row.dataset.fu = d.follow_up_state;
-            ident.append(make('small', 'donor-fu', 'Follow-up: ' + d.follow_up_state.toLowerCase()));
+            ident.append(
+              make('small', 'donor-fu', 'Follow-up: ' + d.follow_up_state.toLowerCase()),
+            );
           }
           ident.title = d.name + ' · ' + when(d.last_sent_at);
           const status = make('button', 'donor-status', d.donated ? 'Donated ✓' : 'Not donated');
@@ -1878,7 +1954,11 @@
             }
             dmTitle.value = d.dm_salutation || 'Brother';
             dmTitleLabel.append(dmTitle);
-            const dmPreview = make('small', '', 'Suggested from contact name; please correct if needed.');
+            const dmPreview = make(
+              'small',
+              '',
+              'Suggested from contact name; please correct if needed.',
+            );
             const dmSave = make('button', 'donor-normal-save', 'Save DM greeting');
             dmSave.type = 'button';
             dmSave.onclick = () => {
@@ -1991,7 +2071,11 @@
               saveAmount();
             };
             donatedBox.append(donatedInput);
-            const topInMenu = make('button', 'donor-menu-top', d.top_donor ? 'Remove from Top donors' : 'Add to Top donors');
+            const topInMenu = make(
+              'button',
+              'donor-menu-top',
+              d.top_donor ? 'Remove from Top donors' : 'Add to Top donors',
+            );
             topInMenu.type = 'button';
             topInMenu.onclick = () => ident.querySelector('.donor-top-chip').click();
             menu.append(rename, dmProfile, normal, donatedBox, topInMenu, del);
@@ -2059,7 +2143,8 @@
       if (b.getAttribute('tabindex') !== ti) b.setAttribute('tabindex', ti);
     }
     el('donorTable').hidden = tab === 'messages' || tab === 'volunteers';
-    if (el('donorFollowUpOpt')) el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
+    if (el('donorFollowUpOpt'))
+      el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
     el('donorMessages').hidden = tab !== 'messages';
     el('donorVolunteers').hidden = tab !== 'volunteers';
     if (tab === 'messages' && !el('donorMessages').textContent)
@@ -2119,7 +2204,10 @@
           ...(followUpOn ? { follow_up: true } : {}),
         });
         if (result.follow_up && result.follow_up !== 'Sent')
-          notice('Follow-up ' + result.follow_up.toLowerCase() + '. Check WhatsApp before resending.', true);
+          notice(
+            'Follow-up ' + result.follow_up.toLowerCase() + '. Check WhatsApp before resending.',
+            true,
+          );
         if (result.code === 'SUCCESS') {
           const mine = allDonors.find((x) => x.id === ids[0]);
           if (mine) {
@@ -2186,10 +2274,13 @@
         ol.append(li);
       }
     };
-    fill('batchSent', done, (r) =>
-      r.name +
-      (r.time ? ' · ' + clock(new Date(r.time * 1000)) : '') +
-      (r.follow_up ? ' · follow-up: ' + r.follow_up.toLowerCase() : ''),
+    fill(
+      'batchSent',
+      done,
+      (r) =>
+        r.name +
+        (r.time ? ' · ' + clock(new Date(r.time * 1000)) : '') +
+        (r.follow_up ? ' · follow-up: ' + r.follow_up.toLowerCase() : ''),
     );
     fill('batchNext', next, (n) => n);
     const nb = j.next_batch_at
@@ -2221,7 +2312,8 @@
   let autoNote = '';
   function paintAuto(a) {
     if (!a || !el('donorAuto')) return;
-    if (autoOn && !a.enabled && a.note && a.note !== autoNote) notice(a.note, /^Auto (paused|stopped)/.test(a.note));
+    if (autoOn && !a.enabled && a.note && a.note !== autoNote)
+      notice(a.note, /^Auto (paused|stopped)/.test(a.note));
     autoNote = a.note || '';
     autoOn = !!a.enabled;
     el('donorAuto').checked = autoOn;
@@ -2243,12 +2335,20 @@
       lastJob = j;
       el('donorContinue').hidden =
         active ||
-        !(j.resumable > 0 && ['all', 'important', 'top', 'donated', 'not_donated'].includes(j.scope));
+        !(
+          j.resumable > 0 && ['all', 'important', 'top', 'donated', 'not_donated'].includes(j.scope)
+        );
       if (!el('donorContinue').hidden)
         el('donorContinue').textContent = 'Restart (' + j.resumable + ' left)';
       /* Whole-audience total from the donor list itself, so it stays right after an app restart. */
       const inScope = allDonors.filter((d) =>
-          j.scope === 'top' ? d.top_donor : j.scope === 'important' ? d.important : j.scope === 'all' ? true : false,
+          j.scope === 'top'
+            ? d.top_donor
+            : j.scope === 'important'
+              ? d.important
+              : j.scope === 'all'
+                ? true
+                : false,
         ),
         /* The count sits outside the list box, in the free space on the right; with no room it joins the green line. */
         shellBox = el('donorTable').getBoundingClientRect(),
@@ -2273,7 +2373,9 @@
             const m = Math.round((Number(sec) || 0) / 60);
             return m >= 60 && m % 60 === 0 ? m / 60 + ' hr' : m + ' min';
           },
-          rests = (j.rests && j.rests.length ? j.rests : j.rest_seconds ? [j.rest_seconds] : []).map(mins),
+          rests = (
+            j.rests && j.rests.length ? j.rests : j.rest_seconds ? [j.rest_seconds] : []
+          ).map(mins),
           items = [];
         /* After a restart the batch number can pass the planned count; never show "4 of 2". */
         if (j.batches) {
@@ -2282,17 +2384,33 @@
           items.push(['Batches', (now ? now + ' of ' : '') + of]);
         }
         if (j.chunk) items.push(['Per batch', j.chunk + ' people']);
-        if (j.batches > 1 && rests.length) items.push(['Rest between batches', [...new Set(rests)].join(' / ')]);
-        if (j.gap_seconds) items.push(['Gap between messages', j.gap_seconds < 60 ? gapText(j.gap_seconds) : mins(j.gap_seconds)]);
+        if (j.batches > 1 && rests.length)
+          items.push(['Rest between batches', [...new Set(rests)].join(' / ')]);
+        if (j.gap_seconds)
+          items.push([
+            'Gap between messages',
+            j.gap_seconds < 60 ? gapText(j.gap_seconds) : mins(j.gap_seconds),
+          ]);
         facts.textContent = '';
         if (items.length) {
-          const short = { Batches: 'batch', 'Per batch': 'per batch', 'Rest between batches': 'rest', 'Gap between messages': 'gap' };
+          const short = {
+            Batches: 'batch',
+            'Per batch': 'per batch',
+            'Rest between batches': 'rest',
+            'Gap between messages': 'gap',
+          };
           facts.append(
             make(
               'small',
               'dp-plan',
               items
-                .map(([k, v]) => (k === 'Batches' ? 'Batch ' + v : k === 'Per batch' ? v.replace(' people', '') + ' per batch' : short[k] + ' ' + v))
+                .map(([k, v]) =>
+                  k === 'Batches'
+                    ? 'Batch ' + v
+                    : k === 'Per batch'
+                      ? v.replace(' people', '') + ' per batch'
+                      : short[k] + ' ' + v,
+                )
                 .join(' · '),
             ),
           );
@@ -2332,16 +2450,16 @@
             ? 'The app was updated, so sending restarted. It continues by itself ' +
               (j.sent ? '(' + j.sent + ' already sent, not repeated).' : '(nobody is sent twice).')
             : failed
-            ? 'Not sent' +
-              (j.sent ? ' to everyone' : '') +
-              '. ' +
-              (reason
-                ? reason.name + ': ' + reason.state.slice(9)
-                : j.error || 'Check delivery results.')
-            : 'Batch complete · ' +
-              (j.sent || 0) +
-              ' sent' +
-              (j.skipped ? ' · ' + j.skipped + ' skipped' : '');
+              ? 'Not sent' +
+                (j.sent ? ' to everyone' : '') +
+                '. ' +
+                (reason
+                  ? reason.name + ': ' + reason.state.slice(9)
+                  : j.error || 'Check delivery results.')
+              : 'Batch complete · ' +
+                (j.sent || 0) +
+                ' sent' +
+                (j.skipped ? ' · ' + j.skipped + ' skipped' : '');
           notice(text, failed);
           el('donorNotice').querySelector('.donor-notice-close').onclick = () =>
             dismissBatch(jobKey);
@@ -2356,7 +2474,10 @@
         const shown = (j.previous_sent || 0) + (j.sent || 0),
           whole = j.original_total || j.total || 0;
         el('donorProgressShow').textContent = '⌃ ' + shown + '/' + whole;
-        el('donorProgressShow').setAttribute('aria-label', 'Show sending details: ' + shown + ' of ' + whole + ' sent');
+        el('donorProgressShow').setAttribute(
+          'aria-label',
+          'Show sending details: ' + shown + ' of ' + whole + ' sent',
+        );
       }
       if (!active && j.state !== 'Idle') await refresh(true);
       if (active && seenSent !== null && j.sent !== seenSent) await refresh(true);
@@ -2452,7 +2573,8 @@
     const box = el('donorVolunteers');
     if (!keepDraft || (!vols.items.length && !vols.message)) await loadVolunteers();
     if (tab !== 'volunteers') return;
-    const focused = keepDraft && box.contains(document.activeElement) ? document.activeElement : null;
+    const focused =
+      keepDraft && box.contains(document.activeElement) ? document.activeElement : null;
     const focusState = focused?.id
       ? { id: focused.id, start: focused.selectionStart, end: focused.selectionEnd }
       : null;
@@ -2461,7 +2583,9 @@
     const workspaceScrollTop = box.querySelector('.vol-workspace')?.scrollTop || 0;
     const addOpen = box.querySelector('.vol-add-panel')?.open || false;
     const draft =
-        keepDraft && box.querySelector('#volMessage') ? box.querySelector('#volMessage').value : null,
+        keepDraft && box.querySelector('#volMessage')
+          ? box.querySelector('#volMessage').value
+          : null,
       nm = box.querySelector('#volName')?.value || '',
       ph = box.querySelector('#volPhone')?.value || '';
     box.textContent = '';
@@ -2525,7 +2649,8 @@
       list.setAttribute('aria-label', 'Volunteer names and actions');
       list.tabIndex = 0;
     }
-    const active = vols.delivery && ['Starting', 'Sending', 'Waiting'].includes(vols.delivery.state);
+    const active =
+      vols.delivery && ['Starting', 'Sending', 'Waiting'].includes(vols.delivery.state);
     if (!vols.items.length) list.append(make('p', 'donor-empty', 'No volunteers yet.'));
     vols.items.forEach((d, i) => {
       const row = make('div', 'vol-row');
@@ -2798,22 +2923,31 @@
     b.disabled = true;
     try {
       const job = await api('/donor-delivery').catch(() => ({}));
-      if (!['Starting','Sending','Waiting'].includes(job.state)) throw Error('Resume the paused batch first, then edit its settings.');
+      if (!['Starting', 'Sending', 'Waiting'].includes(job.state))
+        throw Error('Resume the paused batch first, then edit its settings.');
       await openBatchPicker(job.scope === 'top' || job.scope === 'all' ? job.scope : 'important');
-      editingJob=job.id;
+      editingJob = job.id;
       setGap(job.gap_seconds);
-      el('batchLimit').value=job.chunk||20;
-      el('batchCount').value=job.total||1;el('batchCount').disabled=true;
-      el('batchIncl').disabled=true;el('batchFresh').disabled=true;
-      el('batchPoster').checked=job.poster!==false;
-      el('batchFollowUp').checked=!!job.follow_up;
-      el('batchEach').value=(job.rests||[job.rest_seconds||1200]).map(x=>x/60).join(', ');
-      el('batchPause').value='each';
-      el('batchRandom').checked=!!job.jitter;
-      if(job.jitter){el('batchJMin').value=Math.abs(job.jitter.min);el('batchJMax').value=job.jitter.max;}
+      el('batchLimit').value = job.chunk || 20;
+      el('batchCount').value = job.total || 1;
+      el('batchCount').disabled = true;
+      el('batchIncl').disabled = true;
+      el('batchFresh').disabled = true;
+      el('batchPoster').checked = job.poster !== false;
+      el('batchFollowUp').checked = !!job.follow_up;
+      el('batchEach').value = (job.rests || [job.rest_seconds || 1200])
+        .map((x) => x / 60)
+        .join(', ');
+      el('batchPause').value = 'each';
+      el('batchRandom').checked = !!job.jitter;
+      if (job.jitter) {
+        el('batchJMin').value = Math.abs(job.jitter.min);
+        el('batchJMax').value = job.jitter.max;
+      }
       paintAudience();
-      el('batchStart').textContent='Save changes';
-      el('batchPlan').textContent='DMs keep sending while you edit. Changes apply to waiting donors when saved.';
+      el('batchStart').textContent = 'Save changes';
+      el('batchPlan').textContent =
+        'DMs keep sending while you edit. Changes apply to waiting donors when saved.';
     } catch (e) {
       notice(e.message, true);
     } finally {
@@ -2830,7 +2964,10 @@
     el('donorProgress').classList.toggle('dp-collapsed', progressHidden);
     el('donorProgressShow').hidden = !progressHidden || el('donorProgress').hidden;
   }
-  for (const [id, hide] of [['donorProgressHide', true], ['donorProgressShow', false]])
+  for (const [id, hide] of [
+    ['donorProgressHide', true],
+    ['donorProgressShow', false],
+  ])
     el(id).onclick = () => {
       if (hide && terminalKey) return dismissBatch(terminalKey);
       progressHidden = hide;
@@ -2839,7 +2976,10 @@
       } catch (e) {}
       paintProgressHidden();
     };
-  new MutationObserver(paintProgressHidden).observe(el('donorProgress'), { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(paintProgressHidden).observe(el('donorProgress'), {
+    attributes: true,
+    attributeFilter: ['hidden'],
+  });
   /* Hide sits at the bottom of the box, within thumb reach. */
   el('donorProgress').append(el('donorProgressHide'));
   const foldProgress = () => {
@@ -2855,12 +2995,25 @@
   document.addEventListener('pointerdown', (e) => {
     if (!page.open) return;
     const box = el('donorProgress');
-    if (!box.hidden && !progressHidden && !box.contains(e.target) && !el('donorProgressShow').contains(e.target) && e.target.closest('dialog') === page)
+    if (
+      !box.hidden &&
+      !progressHidden &&
+      !box.contains(e.target) &&
+      !el('donorProgressShow').contains(e.target) &&
+      e.target.closest('dialog') === page
+    )
       foldProgress();
-    for (const m of page.querySelectorAll('.donor-more[open]')) if (!m.contains(e.target)) m.open = false;
+    for (const m of page.querySelectorAll('.donor-more[open]'))
+      if (!m.contains(e.target)) m.open = false;
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || e.defaultPrevented || !page.open || [...document.querySelectorAll('dialog[open]')].some((d) => d !== page)) return;
+    if (
+      e.key !== 'Escape' ||
+      e.defaultPrevented ||
+      !page.open ||
+      [...document.querySelectorAll('dialog[open]')].some((d) => d !== page)
+    )
+      return;
     const menu = page.querySelector('.donor-more[open]');
     if (menu) {
       menu.open = false;
@@ -2882,17 +3035,27 @@
         const footPx = (foot ? size(foot) : 72) + 'px',
           rsH = rs ? size(rs) : 0,
           rsPx = rs && rs.parentElement !== foot && !rs.hidden && rsH ? rsH + 8 + 'px' : '0px';
-        if (shell.style.getPropertyValue('--donor-foot') !== footPx) shell.style.setProperty('--donor-foot', footPx);
-        if (shell.style.getPropertyValue('--donor-rs') !== rsPx) shell.style.setProperty('--donor-rs', rsPx);
+        if (shell.style.getPropertyValue('--donor-foot') !== footPx)
+          shell.style.setProperty('--donor-foot', footPx);
+        if (shell.style.getPropertyValue('--donor-rs') !== rsPx)
+          shell.style.setProperty('--donor-rs', rsPx);
       };
     if (typeof ResizeObserver !== 'undefined')
       for (const n of [foot, rs])
         if (n)
           new ResizeObserver((entries) => {
-            for (const e of entries) heights.set(e.target, Math.round(e.borderBoxSize?.[0]?.blockSize ?? e.target.offsetHeight));
+            for (const e of entries)
+              heights.set(
+                e.target,
+                Math.round(e.borderBoxSize?.[0]?.blockSize ?? e.target.offsetHeight),
+              );
             sync();
           }).observe(n);
-    if (rs) new MutationObserver(() => (heights.delete(rs), sync())).observe(rs, { attributes: true, attributeFilter: ['hidden', 'class'] });
+    if (rs)
+      new MutationObserver(() => (heights.delete(rs), sync())).observe(rs, {
+        attributes: true,
+        attributeFilter: ['hidden', 'class'],
+      });
     sync();
   }
   el('donorStop').onclick = async () => {
@@ -3004,7 +3167,8 @@
     el('posterProgressTrack').setAttribute('aria-valuenow', String(value));
     el('posterProgressFill').style.width = value + '%';
     el('posterProgressText').textContent = message;
-    el('posterSave').textContent = state === 'saved' ? 'Saved ✓' : state === 'saving' ? 'Finishing…' : 'Saving ' + value + '%';
+    el('posterSave').textContent =
+      state === 'saved' ? 'Saved ✓' : state === 'saving' ? 'Finishing…' : 'Saving ' + value + '%';
   }
   function resetPosterProgress() {
     el('posterProgress').hidden = true;
@@ -3031,18 +3195,33 @@
       xhr.upload.onload = () => onProgress(99, true);
       xhr.onload = () => {
         let result;
-        try { result = JSON.parse(xhr.responseText); }
-        catch (e) { reject(Error('Server response was invalid. Check the saved poster before retrying.')); return; }
+        try {
+          result = JSON.parse(xhr.responseText);
+        } catch (e) {
+          reject(Error('Server response was invalid. Check the saved poster before retrying.'));
+          return;
+        }
         if (xhr.status < 200 || xhr.status >= 300 || result.id !== 'poster') {
-          reject(Error(result.error || (xhr.status === 401 ? 'Session expired. Sign in again.' : 'Saving was not confirmed.')));
+          reject(
+            Error(
+              result.error ||
+                (xhr.status === 401
+                  ? 'Session expired. Sign in again.'
+                  : 'Saving was not confirmed.'),
+            ),
+          );
           return;
         }
         resolve(result);
       };
       xhr.onerror = () => reject(Error('Connection lost. Check the saved poster before retrying.'));
-      xhr.ontimeout = () => reject(Error('Save timed out. Check the saved poster before retrying.'));
-      try { xhr.send(JSON.stringify({ use: 'dm_poster', data })); }
-      catch (e) { reject(Error('Could not start the upload. ' + e.message)); }
+      xhr.ontimeout = () =>
+        reject(Error('Save timed out. Check the saved poster before retrying.'));
+      try {
+        xhr.send(JSON.stringify({ use: 'dm_poster', data }));
+      } catch (e) {
+        reject(Error('Could not start the upload. ' + e.message));
+      }
     });
   }
   async function openPoster() {
@@ -3213,22 +3392,26 @@
     return btn;
   }
   /* One step for "delete and add everything again": the pasted list is checked first, so a bad paste changes nothing. */
-  twoTap('Replace GIKI list with the pasted one', 'Tap again to replace the GIKI list', async () => {
-    if (!el('numbersText').value.trim()) {
-      el('numbersResult').textContent = 'Paste the list first.';
-      return;
-    }
-    el('numbersResult').textContent = 'Replacing…';
-    const r = await api('/donors', {
-      action: 'group_numbers',
-      text: el('numbersText').value,
-      group: 'GIKI',
-      replace: true,
-    });
-    el('numbersText').value = '';
-    el('numbersResult').textContent = '✓ ' + r.reply;
-    await refresh(true);
-  });
+  twoTap(
+    'Replace GIKI list with the pasted one',
+    'Tap again to replace the GIKI list',
+    async () => {
+      if (!el('numbersText').value.trim()) {
+        el('numbersResult').textContent = 'Paste the list first.';
+        return;
+      }
+      el('numbersResult').textContent = 'Replacing…';
+      const r = await api('/donors', {
+        action: 'group_numbers',
+        text: el('numbersText').value,
+        group: 'GIKI',
+        replace: true,
+      });
+      el('numbersText').value = '';
+      el('numbersResult').textContent = '✓ ' + r.reply;
+      await refresh(true);
+    },
+  );
   twoTap('Remove all GIKI donors', 'Tap again to remove all GIKI', async () => {
     el('numbersResult').textContent = 'Removing…';
     const r = await api('/donors', { action: 'remove_group', group: 'GIKI' });
@@ -3241,7 +3424,11 @@
     b.disabled = true;
     el('numbersResult').textContent = 'Saving…';
     try {
-      const r = await api('/donors', { action: 'group_numbers', text: el('numbersText').value, group: 'GIKI' });
+      const r = await api('/donors', {
+        action: 'group_numbers',
+        text: el('numbersText').value,
+        group: 'GIKI',
+      });
       el('numbersText').value = '';
       el('numbersResult').textContent = '✓ ' + r.reply;
       await refresh(true);
@@ -3518,7 +3705,9 @@ Ayesha, +92 301 1234567" aria-describedby="pasteResult"></textarea><div id="past
       d = document.createElement('dialog');
       d.id = 'baseMessageDialog';
       d.className = 'base-dialog';
-      d.innerHTML = '<form method="dialog"><h2>Base message</h2><p>The 20 versions are written from this. Saving keeps only this message until you press Generate 20 versions.</p><div class="base-tools"><button type="button" data-mark="*" aria-label="Bold"><b>B</b></button><button type="button" data-mark="_" aria-label="Italic"><i>I</i></button></div><textarea id="baseMessageText" rows="14" aria-label="Base message"></textarea><p id="baseMessageNote" role="status"></p><div class="base-actions"><button type="button" id="baseMessageCancel">Cancel</button><button type="button" id="baseMessageSave" class="primary">Save base message</button></div></form>';
+      d.setAttribute('aria-label', 'Base message');
+      d.innerHTML =
+        '<form method="dialog"><h2>Base message</h2><p>The 20 versions are written from this. Saving keeps only this message until you press Generate 20 versions.</p><div class="base-tools"><button type="button" data-mark="*" aria-label="Bold"><b>B</b></button><button type="button" data-mark="_" aria-label="Italic"><i>I</i></button></div><textarea id="baseMessageText" rows="14" aria-label="Base message"></textarea><p id="baseMessageNote" role="status"></p><div class="base-actions"><button type="button" id="baseMessageCancel">Cancel</button><button type="button" id="baseMessageSave" class="primary">Save base message</button></div></form>';
       document.body.append(d);
       for (const b of d.querySelectorAll('[data-mark]')) {
         b.onmousedown = (e) => e.preventDefault();
@@ -3529,7 +3718,12 @@ Ayesha, +92 301 1234567" aria-describedby="pasteResult"></textarea><div id="past
         const text = el('baseMessageText').value.trim();
         if (!text) return;
         const note = el('baseMessageNote');
-        if (bankData && bankData.items.length > 1 && !confirm('This replaces all 20 versions with just this base message. Continue?')) return;
+        if (
+          bankData &&
+          bankData.items.length > 1 &&
+          !confirm('This replaces all 20 versions with just this base message. Continue?')
+        )
+          return;
         el('baseMessageSave').disabled = true;
         try {
           const r = await api('/donor-messages', { action: 'base', text });

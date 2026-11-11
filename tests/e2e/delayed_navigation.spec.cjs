@@ -14,7 +14,7 @@ test('slow Gap response cannot reopen a closed donor screen', async ({ page }) =
     await gate;
     await r.continue();
   });
-  await page.locator('#donorPace').evaluate(button => button.click());
+  await page.locator('#donorPace').evaluate((button) => button.click());
   await page.goBack();
   release();
   await page.waitForTimeout(300);

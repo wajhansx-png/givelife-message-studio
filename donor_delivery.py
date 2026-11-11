@@ -2,8 +2,37 @@
 
 import traceback
 import copy, hashlib, json, math, random, re, threading, time, uuid
+from functools import wraps
 from pathlib import Path
 from donor_book import hide_numbers
+
+
+def serialized_start(fn):
+    @wraps(fn)
+    def call(self, *args, **kwargs):
+        with self.start_lock:
+            self._starting_claim = None
+            try:
+                return fn(self, *args, **kwargs)
+            except Exception:
+                if self._starting_claim:
+                    key, claim = self._starting_claim
+                    try:
+                        self.store.put(
+                            key,
+                            {
+                                **claim,
+                                "state": "Interrupted",
+                                "error": "Batch startup did not finish. Check delivery results before starting a new request.",
+                            },
+                        )
+                    except Exception:
+                        pass  # Keep the original durable claim even when its status cannot be updated.
+                raise
+            finally:
+                self._starting_claim = None
+
+    return call
 
 
 class DonorDelivery:
@@ -39,6 +68,7 @@ class DonorDelivery:
         self.eligible = eligible
         self.name_for = name_for
         self.lock = threading.RLock()
+        self.start_lock = threading.RLock()
         self.boot = uuid.uuid4().hex
         self.stop = threading.Event()
         self.active = None
@@ -192,6 +222,7 @@ class DonorDelivery:
                 "captions",
                 "ids",
                 "signature",
+                "request_signature",
                 "personal_names",
                 "custom_template",
             )
@@ -209,8 +240,33 @@ class DonorDelivery:
             j = next(x for x in data["jobs"] if x["id"] == ident)
             j.update(fields, updated_at=time.time())
             self._save(data)
+            if (
+                self.store
+                and hasattr(self.store, "claim")
+                and j.get("request_signature")
+                and fields.get("state")
+                in ("Completed", "Stopped", "Interrupted", "Nothing sent", "Failed")
+            ):
+                key = self.CLAIM + hashlib.sha256(j["request_id"].encode()).hexdigest()
+                self.store.put(key, j)
             return copy.deepcopy(j)
 
+    def _claimed_start(self, claim, request_signature):
+        if not isinstance(claim, dict) or not claim.get("request_signature"):
+            raise ValueError(
+                "This earlier request is already tracked. Check delivery results before starting a new request."
+            )
+        if claim["request_signature"] != request_signature:
+            raise ValueError(
+                "This request was already used for a different batch. Refresh before sending."
+            )
+        # A crash between claiming and saving a job must never reserve wording or dispatch again.
+        return {
+            "job": self._public(claim),
+            "reply": "This donor batch is already tracked. Check its delivery results; it was not started again.",
+        }
+
+    @serialized_start
     def start(
         self,
         scope="important",
@@ -251,10 +307,6 @@ class DonorDelivery:
         ):
             raise ValueError(
                 "Write a custom message for selected recipients (up to 8,000 characters)."
-            )
-        if self.case_closed():
-            raise ValueError(
-                "The case is complete (Rs. 0 left), so no donor DMs were started. Set a new amount left first if you need to ask again."
             )
         if (
             type(gap_seconds) not in (float, int)
@@ -300,15 +352,94 @@ class DonorDelivery:
                     "Random gap: choose a minimum and maximum change in seconds, minimum first."
                 )
             jitter = {"min": float(jitter["min"]), "max": float(jitter["max"])}
+        gap = max(5.0, float(gap_seconds))
+        rid = str(request_id or uuid.uuid4().hex)
+        if not 1 <= len(rid) <= 100:
+            raise ValueError("Invalid send request.")
+        request_signature = hashlib.sha256(
+            json.dumps(
+                [
+                    scope,
+                    gap,
+                    ids,
+                    limit,
+                    poster,
+                    personal_names,
+                    chunk,
+                    rests,
+                    jitter,
+                    skip_contacted,
+                    hold_until,
+                    custom_template,
+                    attachment,
+                    resume_id,
+                    follow_up,
+                    owner,
+                    origin,
+                    fresh,
+                ],
+                sort_keys=True,
+            ).encode()
+        ).hexdigest()
+        claim_key = self.CLAIM + hashlib.sha256(rid.encode()).hexdigest()
+        with self.lock:
+            # A different process may have written a job since this instance cached it.
+            if self.store:
+                persisted = self.store.get(self.KEY)
+                if isinstance(persisted, dict):
+                    self._cache = copy.deepcopy(persisted)
+            previous = next(
+                (job for job in self._load().get("jobs", []) if job.get("request_id") == rid),
+                None,
+            )
+        if previous:
+            previous_signature = previous.get("request_signature")
+            if previous_signature is None:
+                # Old jobs predate request signatures. Recreate their original signature
+                # using the captions and recipient snapshot they already reserved.
+                legacy = [
+                    scope,
+                    gap,
+                    ids,
+                    limit,
+                    poster,
+                    previous.get("captions"),
+                    custom_template,
+                    attachment,
+                    personal_names,
+                    chunk,
+                    rests,
+                    jitter,
+                    hold_until,
+                    previous.get("ids"),
+                ]
+                previous_signature = hashlib.sha256(
+                    json.dumps(legacy, sort_keys=True).encode()
+                ).hexdigest()
+                matches = previous_signature == previous.get("signature")
+            else:
+                matches = previous_signature == request_signature
+            if not matches:
+                raise ValueError(
+                    "This request was already used for a different batch. Refresh before sending."
+                )
+            return {
+                "job": self._public(previous),
+                "reply": "This request is already tracked. It was not started again.",
+            }
+        if self.store and hasattr(self.store, "claim"):
+            claim = self.store.get(claim_key)
+            if claim:
+                return self._claimed_start(claim, request_signature)
+        if self.case_closed():
+            raise ValueError(
+                "The case is complete (Rs. 0 left), so no donor DMs were started. Set a new amount left first if you need to ask again."
+            )
         if self.held():
             raise ValueError("Sending is on hold. Resume it before starting DMs.")
         caption = custom_template if custom_template is not None else self.caption()
         if not isinstance(caption, str) or not caption.strip():
             raise ValueError("The saved DM message is empty. Edit it first.")
-        gap = max(5.0, float(gap_seconds))
-        rid = str(request_id or uuid.uuid4().hex)
-        if not 1 <= len(rid) <= 100:
-            raise ValueError("Invalid send request.")
         cap = min(limit or 1000, 1000) if chunk else min(limit or 20, 20)
         skip = bool(chunk) if skip_contacted is None else bool(skip_contacted)
         rows = self.book.recipients(scope, ids, None)
@@ -412,6 +543,33 @@ class DonorDelivery:
                 if already
                 else "There are no donors in this audience."
             )
+        with self.lock:
+            if self.active:
+                raise ValueError(
+                    "A donor batch is already running. Stop it or wait for it to finish."
+                )
+            if not self.store:
+                raise ValueError("Persistent sending records are unavailable. Nothing was sent.")
+            if not self.connected():
+                raise ValueError("WhatsApp is disconnected. Link it before sending.")
+            ident = uuid.uuid4().hex
+            now = time.time()
+            reservation = {
+                "id": ident,
+                "request_id": rid,
+                "request_signature": request_signature,
+                "boot": self.boot,
+                "state": "Starting",
+                "total": len(rows),
+                "sent": 0,
+                "skipped": 0,
+                "failed": 0,
+                "created_at": now,
+            }
+            if hasattr(self.store, "claim"):
+                if not self.store.claim(claim_key, reservation):
+                    return self._claimed_start(self.store.get(claim_key), request_signature)
+                self._starting_claim = (claim_key, reservation)
         # Each round of up to `chunk` people reserves its own versions from the shared
         # rotation cursor, so later rounds (and later batches, and single DMs) continue
         # forward through the bank instead of reusing the same first few versions.
@@ -483,38 +641,11 @@ class DonorDelivery:
                     "job": self._public(previous),
                     "reply": "This request is already tracked. It was not started again.",
                 }
-            if self.active:
-                raise ValueError(
-                    "A donor batch is already running. Stop it or wait for it to finish."
-                )
-            if not self.store:
-                raise ValueError("Persistent sending records are unavailable. Nothing was sent.")
-            if not self.connected():
-                raise ValueError("WhatsApp is disconnected. Link it before sending.")
-            ident = uuid.uuid4().hex
-            now = time.time()
-            claim_key = self.CLAIM + hashlib.sha256(rid.encode()).hexdigest()
-            reservation = {
-                "id": ident,
-                "signature": signature,
-                "state": "Starting",
-                "total": len(rows),
-                "sent": 0,
-                "skipped": 0,
-                "failed": 0,
-            }
-            if hasattr(self.store, "claim") and not self.store.claim(claim_key, reservation):
-                existing = self.store.get(claim_key, reservation)
-                if existing.get("signature") != signature:
-                    raise ValueError("This request was already used for another donor batch.")
-                return {
-                    "job": self._public(existing),
-                    "reply": "This donor batch is already tracked. It was not started again.",
-                }
             job = {
                 "id": ident,
                 "request_id": rid,
                 "signature": signature,
+                "request_signature": request_signature,
                 "boot": self.boot,
                 "scope": scope,
                 "gap_seconds": gap,
@@ -578,6 +709,9 @@ class DonorDelivery:
                 job["attachment"] = attachment
             data["jobs"].append(job)
             self._save(data)
+            if self._starting_claim:
+                self.store.put(claim_key, job)
+                self._starting_claim = None
             self.active = ident
             self.stop.clear()
         if run:

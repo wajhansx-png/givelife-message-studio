@@ -58,7 +58,9 @@ def record_text(L, text, ts=None):
 
 def proven_texts(L, limit=2, min_posts=3):
     """Real past wordings that were followed by donations, best first (never invented)."""
-    rows = [r for r in L.get("texts", {}).values() if r.get("wins") and r.get("posts", 0) >= min_posts]
+    rows = [
+        r for r in L.get("texts", {}).values() if r.get("wins") and r.get("posts", 0) >= min_posts
+    ]
     rows.sort(key=lambda r: -((r["wins"] + 1) / (r["posts"] + 2)))
     return [r["text"] for r in rows[:limit]]
 

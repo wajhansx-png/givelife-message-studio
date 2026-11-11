@@ -263,7 +263,8 @@ def variant_request(text):
             t,
         )
         or re.search(
-            r"(?i)\b(?:10|ten|\d{1,2})\b(?!\s*(?:min\w*|hours?|hrs?|am|pm|baje)\b).{0,40}\b(?:versions?|variants?|wordings?|rewrites)\b", t
+            r"(?i)\b(?:10|ten|\d{1,2})\b(?!\s*(?:min\w*|hours?|hrs?|am|pm|baje)\b).{0,40}\b(?:versions?|variants?|wordings?|rewrites)\b",
+            t,
         )
     )
 
@@ -714,9 +715,9 @@ def fast_command_eligible(text):
         pass
     if manual_commands.question_request(text):
         return False
-    if draft_flow.editing_request(owner_text(text)) and (
-        manual_commands.parse(text) or {}
-    ).get("kind") not in ("donation_order", "remove_arrival_line"):
+    if draft_flow.editing_request(owner_text(text)) and (manual_commands.parse(text) or {}).get(
+        "kind"
+    ) not in ("donation_order", "remove_arrival_line"):
         return False
     if re.match(
         r"(?i)^(?:please\s+)?(?:show|preview|draft|summarize|summarise|analyse|analyze|explain|review|read|check|tell me)\b",

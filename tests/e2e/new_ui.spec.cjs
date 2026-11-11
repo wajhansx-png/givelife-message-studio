@@ -81,7 +81,12 @@ for (const width of [280, 320, 360, 390, 430, 768]) {
     await open(page, '/new', width);
     const tabs = page.locator('#ui2Tabs');
     await expect(tabs).toBeVisible();
-    await expect(tabs.locator('.ui2-tab:visible')).toHaveText([/Message/, /Donors/, /Chat/, /More/]);
+    await expect(tabs.locator('.ui2-tab:visible')).toHaveText([
+      /Message/,
+      /Donors/,
+      /Chat/,
+      /More/,
+    ]);
     const bar = await tabs.boundingBox();
     const send = await page.locator('#btnGivelife').boundingBox();
     expect(bar.y).toBeGreaterThan(send.y); // below the send buttons: in thumb reach
@@ -208,7 +213,13 @@ test('/new computer: every option is one clear button in the bottom bar, and not
     await expect(b.locator('svg')).toBeVisible(); // an icon and a word
   }
   // The same options are not on the screen twice.
-  for (const dup of ['#donorNotesShortcut', '.report-open', '#mainNavMore', '#ui2TopChat', '#railDonors'])
+  for (const dup of [
+    '#donorNotesShortcut',
+    '.report-open',
+    '#mainNavMore',
+    '#ui2TopChat',
+    '#railDonors',
+  ])
     await expect(page.locator(dup).first(), dup).toBeHidden();
   await expect(page.locator('.brandbar #leftChip')).toBeVisible(); // the status stays on top
   for (const [tab, screen] of [

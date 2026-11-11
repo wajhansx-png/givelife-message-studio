@@ -1,4 +1,6 @@
-import hashlib, time, types, unittest
+import hashlib, time, types, unittest, threading
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from unittest.mock import patch
 import test_donor_hub as hub
 import manual_commands, chat_policy, persist
@@ -20,6 +22,219 @@ class WorkflowTests(unittest.TestCase):
         self.app.AUTO.write_bytes(self.auto)
         self.app.HOLD.write_bytes(self.hold)
         self.fixture.tearDown()
+
+    def test_batch_replay_does_not_advance_real_message_rotation(self):
+        registry = self.app.donors()
+        for name, phone in (("Ali", "03001234567"), ("Sara", "03001234568")):
+            registry.book.add(name, phone)
+        first = registry.jobs.start("all", 60, request_id="same-real-bank", run=False)
+        rotation = self.app.STORE.get(registry.messages.ROTATION_KEY)
+        again = registry.jobs.start("all", 60, request_id="same-real-bank", run=False)
+        self.assertEqual(again["job"]["id"], first["job"]["id"])
+        self.assertEqual(self.app.STORE.get(registry.messages.ROTATION_KEY), rotation)
+        self.assertEqual(len(registry.jobs._load()["jobs"]), 1)
+        with self.assertRaisesRegex(ValueError, "different batch"):
+            registry.jobs.start("all", 120, request_id="same-real-bank", run=False)
+        self.assertEqual(self.app.STORE.get(registry.messages.ROTATION_KEY), rotation)
+
+    def test_batch_replay_with_a_stale_second_worker_does_not_reserve_again(self):
+        registry = self.app.donors()
+        for name, phone in (("Ali", "03001234567"), ("Sara", "03001234568")):
+            registry.book.add(name, phone)
+        jobs = registry.jobs
+        second = type(jobs)(
+            self.fixture.scope.name,
+            jobs.store,
+            jobs.book,
+            jobs.send,
+            jobs.caption,
+            jobs.connected,
+            jobs.held,
+            jobs.eligible,
+            jobs.name_for,
+            variants=jobs.variants,
+            case_closed=jobs.case_closed,
+            reserve=jobs.reserve,
+            refresh_caption=jobs.refresh_caption,
+            balance=jobs.balance,
+        )
+        second._load()  # This worker read state before the first worker started.
+        first = jobs.start("all", 60, request_id="stale-worker", run=False)
+        rotation = self.app.STORE.get(registry.messages.ROTATION_KEY)
+        again = second.start("all", 60, request_id="stale-worker", run=False)
+        self.assertEqual(again["job"]["id"], first["job"]["id"])
+        self.assertEqual(self.app.STORE.get(registry.messages.ROTATION_KEY), rotation)
+
+    def test_concurrent_sqlite_batch_claim_reserves_and_starts_once(self):
+        db = Path(self.fixture.scope.name) / "shared.sqlite"
+        self.app.STORE = persist.SqliteStore(db)
+        self.app.STORE.initialize()
+        registry = self.app.donors()
+        for name, phone in (("Ali", "03001234567"), ("Sara", "03001234568")):
+            registry.book.add(name, phone)
+        jobs = registry.jobs
+        second = type(jobs)(
+            self.fixture.scope.name,
+            persist.SqliteStore(db),
+            jobs.book,
+            jobs.send,
+            jobs.caption,
+            jobs.connected,
+            jobs.held,
+            jobs.eligible,
+            jobs.name_for,
+            variants=jobs.variants,
+            case_closed=jobs.case_closed,
+            reserve=jobs.reserve,
+            refresh_caption=jobs.refresh_caption,
+            balance=jobs.balance,
+        )
+        gate = threading.Barrier(2)
+
+        def connected():
+            gate.wait(timeout=5)
+            return True
+
+        reserve = unittest.mock.Mock(wraps=jobs.reserve)
+        jobs.reserve = second.reserve = reserve
+        jobs.connected = second.connected = connected
+        with patch.object(jobs, "_run") as first_run, patch.object(second, "_run") as second_run:
+            with ThreadPoolExecutor(max_workers=2) as workers:
+                futures = [
+                    workers.submit(job.start, "all", 60, request_id="concurrent", run=True)
+                    for job in (jobs, second)
+                ]
+                results = [future.result(timeout=10) for future in futures]
+            self.assertEqual(first_run.call_count + second_run.call_count, 1)
+        self.assertEqual(results[0]["job"]["id"], results[1]["job"]["id"])
+        self.assertEqual(reserve.call_count, 1)
+        self.assertEqual(len(self.app.STORE.get(jobs.KEY)["jobs"]), 1)
+
+    def test_disconnected_batch_does_not_advance_rotation(self):
+        registry = self.app.donors()
+        registry.book.add("Ali", "03001234567")
+        before = self.app.STORE.get(registry.messages.ROTATION_KEY)
+        with patch.object(registry.jobs, "connected", return_value=False):
+            with self.assertRaisesRegex(ValueError, "disconnected"):
+                registry.jobs.start("all", 60, request_id="offline", run=False)
+        self.assertEqual(self.app.STORE.get(registry.messages.ROTATION_KEY), before)
+
+    def test_active_batch_does_not_consume_more_wording(self):
+        registry = self.app.donors()
+        registry.book.add("Ali", "03001234567")
+        registry.jobs.start("all", 60, request_id="first-batch", run=False)
+        before = self.app.STORE.get(registry.messages.ROTATION_KEY)
+        with self.assertRaisesRegex(ValueError, "already running"):
+            registry.jobs.start("all", 60, request_id="second-batch", run=False)
+        self.assertEqual(self.app.STORE.get(registry.messages.ROTATION_KEY), before)
+
+    def test_failed_or_crashed_start_is_never_reserved_again(self):
+        self.app.STORE = persist.SqliteStore(Path(self.fixture.scope.name) / "claims.sqlite")
+        self.app.STORE.initialize()
+        registry = self.app.donors()
+        registry.book.add("Ali", "03001234567")
+        for number, error in enumerate((RuntimeError("preparation failed"), SystemExit("crash"))):
+            rid = "interrupted-" + str(number)
+            before = self.app.STORE.get(registry.messages.ROTATION_KEY)
+            with patch.object(registry.jobs, "reserve", side_effect=error) as reserve:
+                with self.assertRaises(type(error)):
+                    registry.jobs.start("all", 60, request_id=rid, run=False)
+                again = registry.jobs.start("all", 60, request_id=rid, run=False)
+                self.assertIn(again["job"]["state"], ("Starting", "Interrupted"))
+                self.assertEqual(reserve.call_count, 1)
+            self.assertEqual(self.app.STORE.get(registry.messages.ROTATION_KEY), before)
+            self.assertFalse(self.app.STORE.get(registry.jobs.KEY, {}).get("jobs"))
+
+    def test_failure_after_rotation_keeps_claim_and_does_not_repeat_rotation(self):
+        self.app.STORE = persist.SqliteStore(Path(self.fixture.scope.name) / "rotated.sqlite")
+        self.app.STORE.initialize()
+        registry = self.app.donors()
+        registry.book.add("Ali", "03001234567")
+        reserve = registry.jobs.reserve
+
+        def fail_after_reserving(count):
+            reserve(count)
+            raise RuntimeError("reply lost")
+
+        with patch.object(registry.jobs, "reserve", side_effect=fail_after_reserving) as called:
+            with self.assertRaisesRegex(RuntimeError, "reply lost"):
+                registry.jobs.start("all", 60, request_id="after-rotation", run=False)
+            rotated = self.app.STORE.get(registry.messages.ROTATION_KEY)
+            again = registry.jobs.start("all", 60, request_id="after-rotation", run=False)
+            self.assertEqual(again["job"]["state"], "Interrupted")
+            self.assertEqual(called.call_count, 1)
+            self.assertEqual(self.app.STORE.get(registry.messages.ROTATION_KEY), rotated)
+        with self.assertRaisesRegex(ValueError, "different batch"):
+            registry.jobs.start(
+                "all", 60, request_id="after-rotation", follow_up="Changed", run=False
+            )
+
+    def test_request_claim_survives_job_history_trimming(self):
+        self.app.STORE = persist.SqliteStore(Path(self.fixture.scope.name) / "trimmed.sqlite")
+        self.app.STORE.initialize()
+        registry = self.app.donors()
+        registry.book.add("Ali", "03001234567")
+        first = registry.jobs.start("all", 60, request_id="old-job", run=False)
+        registry.jobs._update(
+            first["job"]["id"],
+            state="Stopped",
+            failed=1,
+            receipts=[{"id": "example", "state": "Uncertain"}],
+        )
+        registry.jobs.import_jobs({"jobs": []})
+        with patch.object(registry.jobs, "reserve") as reserve:
+            again = registry.jobs.start("all", 60, request_id="old-job", run=False)
+            reserve.assert_not_called()
+        self.assertEqual(first["job"]["id"], again["job"]["id"])
+        self.assertEqual(again["job"]["state"], "Stopped")
+        self.assertEqual(again["job"]["receipts"][0]["state"], "Uncertain")
+
+    def test_failure_after_job_save_does_not_launch_or_reserve_again(self):
+        self.app.STORE = persist.SqliteStore(Path(self.fixture.scope.name) / "saved.sqlite")
+        self.app.STORE.initialize()
+        registry = self.app.donors()
+        registry.book.add("Ali", "03001234567")
+        save = registry.jobs._save
+
+        def lose_response(data):
+            save(data)
+            raise RuntimeError("save reply lost")
+
+        with patch.object(registry.jobs, "_save", side_effect=lose_response):
+            with self.assertRaisesRegex(RuntimeError, "save reply lost"):
+                registry.jobs.start("all", 60, request_id="saved-job", run=False)
+        rotated = self.app.STORE.get(registry.messages.ROTATION_KEY)
+        with (
+            patch.object(registry.jobs, "reserve") as reserve,
+            patch.object(registry.jobs, "_run") as worker,
+        ):
+            again = registry.jobs.start("all", 60, request_id="saved-job", run=True)
+            self.assertEqual(again["job"]["state"], "Starting")
+            reserve.assert_not_called()
+            worker.assert_not_called()
+        self.assertEqual(self.app.STORE.get(registry.messages.ROTATION_KEY), rotated)
+
+    def test_orphan_legacy_claim_does_not_guess_by_reserving_again(self):
+        self.app.STORE = persist.SqliteStore(Path(self.fixture.scope.name) / "legacy.sqlite")
+        self.app.STORE.initialize()
+        registry = self.app.donors()
+        rid = "legacy-orphan"
+        self.app.STORE.claim(
+            registry.jobs.CLAIM + hashlib.sha256(rid.encode()).hexdigest(),
+            {"id": "old", "signature": "unknown", "state": "Starting"},
+        )
+        with patch.object(registry.jobs, "reserve") as reserve:
+            with self.assertRaisesRegex(ValueError, "already tracked"):
+                registry.jobs.start("all", 60, request_id=rid, run=False)
+            reserve.assert_not_called()
+
+    def test_one_usable_message_cannot_advance_a_rejected_round(self):
+        bank = self.app.donors().messages
+        before = self.app.STORE.get(bank.ROTATION_KEY)
+        with patch.object(bank, "_rotation_texts", return_value=["One complete saved wording"]):
+            with self.assertRaisesRegex(ValueError, "at least 2"):
+                bank.reserve_round(2)
+        self.assertEqual(self.app.STORE.get(bank.ROTATION_KEY), before)
 
     def test_dm_pause_does_not_stop_groups(self):
         self.app.AUTO.write_text('{"on":true}')

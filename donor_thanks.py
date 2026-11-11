@@ -73,8 +73,9 @@ class DonorThanks:
                 else:
                     name = dm_composer.first_name(row.get("name", ""))
                     title = dm_composer.gender(row.get("name", ""), name)
-                row.update(dm_name=name, dm_salutation=title,
-                           dm_profile_source="name_based_suggestion")
+                row.update(
+                    dm_name=name, dm_salutation=title, dm_profile_source="name_based_suggestion"
+                )
                 changed = True
             if changed:
                 book._save(data)
@@ -89,7 +90,6 @@ class DonorThanks:
             row = self.hub.book.resolve(row["id"])
             name, title = row.get("dm_name", ""), row.get("dm_salutation", "Brother")
         return dm_composer.greeting(name, title)
-
 
     def case_id(self):
         return self.hub.cases._load()["current"]

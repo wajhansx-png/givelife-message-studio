@@ -15,8 +15,11 @@ for (const width of [1440, 390])
     await showDm(page);
     await showPreview(page);
     await expect(page.locator('#messageFocus .dm-send')).toBeVisible();
-    expect(await page.locator('#messageFocus .dm-send').evaluate(el =>
-      el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    expect(
+      await page
+        .locator('#messageFocus .dm-send')
+        .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+    ).toBe(true);
     await expect(page.locator('#focusFormatted')).not.toHaveText('');
     await expect(page.locator('#dmPhone')).toHaveCount(1);
     await page.locator('#focusEdit').click();

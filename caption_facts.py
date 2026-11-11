@@ -110,7 +110,9 @@ def transform_banks(app, fn):
                 bank[field] = fn(bank[field])
         generation = bank.get("generation")
         if isinstance(generation, dict) and generation.get("state") == "Generating":
-            generation.update(state="Superseded", error="The balance changed. Regenerate with the new amount.")
+            generation.update(
+                state="Superseded", error="The balance changed. Regenerate with the new amount."
+            )
         bank["left"] = app.read_left()
         app.STORE.put("donor_messages", bank)
         if getattr(app, "DONORS", None):

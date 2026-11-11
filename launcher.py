@@ -25,6 +25,7 @@ store.restore(DATA, ROOT)
 if os.environ.get("GIVELIFE_TOP_NAMES_JSON"):
     try:
         from private_top_names import import_top_names
+
         receipt = import_top_names(store, DATA, os.environ["GIVELIFE_TOP_NAMES_JSON"])
         print("[top-names-import] " + " ".join(f"{k}={v}" for k, v in receipt.items()), flush=True)
     except Exception as exc:
@@ -35,8 +36,11 @@ if os.environ.get("GIVELIFE_TOP_NAMES_JSON"):
 if os.environ.get("GIVELIFE_TOP_NAMES_EXTRA_JSON"):
     try:
         from private_top_names import import_top_names
+
         receipt = import_top_names(
-            store, DATA, os.environ["GIVELIFE_TOP_NAMES_EXTRA_JSON"],
+            store,
+            DATA,
+            os.environ["GIVELIFE_TOP_NAMES_EXTRA_JSON"],
             import_id="giki_top_names_extra_2026_11_07",
         )
         print("[top-names-extra] " + " ".join(f"{k}={v}" for k, v in receipt.items()), flush=True)
@@ -47,6 +51,7 @@ if os.environ.get("GIVELIFE_TOP_NAMES_EXTRA_JSON"):
 if os.environ.get("GIVELIFE_GIKI_GROUP_B64"):
     try:
         from private_top_names import import_top_group
+
         receipt = import_top_group(store, DATA, os.environ["GIVELIFE_GIKI_GROUP_B64"])
         print("[giki-group-import] " + " ".join(f"{k}={v}" for k, v in receipt.items()), flush=True)
     except Exception as exc:
@@ -58,12 +63,9 @@ if os.environ.get("GIVELIFE_DONOR_IMPORT_B64"):
     try:
         from private_donor_import import import_from_environment
 
-        receipt = import_from_environment(
-            store, DATA, os.environ["GIVELIFE_DONOR_IMPORT_B64"]
-        )
+        receipt = import_from_environment(store, DATA, os.environ["GIVELIFE_DONOR_IMPORT_B64"])
         print(
-            "[donor-import] verified "
-            + " ".join(f"{k}={v}" for k, v in receipt.items()),
+            "[donor-import] verified " + " ".join(f"{k}={v}" for k, v in receipt.items()),
             flush=True,
         )
     except Exception as exc:
@@ -76,12 +78,9 @@ if os.environ.get("GIVELIFE_DM_PROFILES_B64"):
     try:
         from dm_profile_import import import_profiles
 
-        stats = import_profiles(
-            store, DATA, os.environ["GIVELIFE_DM_PROFILES_B64"]
-        )
+        stats = import_profiles(store, DATA, os.environ["GIVELIFE_DM_PROFILES_B64"])
         print(
-            "[dm-profile-import] verified "
-            + " ".join(f"{k}={v}" for k, v in stats.items()),
+            "[dm-profile-import] verified " + " ".join(f"{k}={v}" for k, v in stats.items()),
             flush=True,
         )
     except Exception as exc:
@@ -94,9 +93,7 @@ if os.environ.get("GIVELIFE_RECEIPT_RANKINGS_B64"):
     try:
         from private_receipt_ranking import import_rankings
 
-        receipt = import_rankings(
-            store, DATA, os.environ["GIVELIFE_RECEIPT_RANKINGS_B64"]
-        )
+        receipt = import_rankings(store, DATA, os.environ["GIVELIFE_RECEIPT_RANKINGS_B64"])
         print(
             "[receipt-ranking] verified "
             + " ".join(f"{key}={value}" for key, value in receipt.items()),

@@ -576,7 +576,6 @@ class SendingWorkflow(unittest.TestCase):
         with patch.object(b, "_spawn"):
             row = b.save("group", SRC)
             b.generate("group")
-        answers = iter([DEEP[0:2], DEEP[2:4], DEEP[4:6]])
         seen, real = [], b.record
 
         def spy(kind, revision, values):
@@ -585,7 +584,7 @@ class SendingWorkflow(unittest.TestCase):
 
         with (
             patch("dm_variants.assistant.client", return_value="fake"),
-            patch("dm_variants._call", side_effect=lambda *a, **k: next(answers, [])),
+            patch.object(b, "_rounds", return_value=iter([DEEP[0:2], DEEP[2:4], DEEP[4:6]])),
             patch(
                 "quality.review", side_effect=lambda c, src, passed, *a, **k: [None] * len(passed)
             ),

@@ -24,7 +24,14 @@ STATE = {
     "drafts": chat_bench.STATE["drafts"],
     "draft_task": chat_bench.STATE["draft_task"],
     "engine": {"group_intervals": {"main": 15, "fiverr": 30, "upwork": 30}},
-    "schedules": [{"position": 1, "id": "a1b2c3d4", "state": "pending", "what": "Once · today 09:00 PM PKT · poster + saved caption to main"}],
+    "schedules": [
+        {
+            "position": 1,
+            "id": "a1b2c3d4",
+            "state": "pending",
+            "what": "Once · today 09:00 PM PKT · poster + saved caption to main",
+        }
+    ],
 }
 
 
@@ -33,9 +40,14 @@ def fake_tools(calls):
         def run(**args):
             calls.append(name)
             if name == "get_message":
-                return {"kind": args.get("kind", "group"), "text": STATE["drafts"].get(args.get("kind", "group"), "")}
+                return {
+                    "kind": args.get("kind", "group"),
+                    "text": STATE["drafts"].get(args.get("kind", "group"), ""),
+                }
             if name == "find_contact":
-                return json.dumps([{"id": "923001234567@s.whatsapp.net", "name": "Ali Khan", "group": False}])
+                return json.dumps(
+                    [{"id": "923001234567@s.whatsapp.net", "name": "Ali Khan", "group": False}]
+                )
             if name == "list_schedules":
                 return "1. #a1b2c3d4 · pending · Once · today 09:00 PM PKT · poster + saved caption to main"
             if name in ("recent_activity", "list_rules", "app_status", "search_memory"):
@@ -63,7 +75,10 @@ def run_case(case):
     started = time.monotonic()
     error = ""
     try:
-        result = assistant.chat(case["text"], case.get("history", []), STATE, [], fake_tools(calls)) or {}
+        result = (
+            assistant.chat(case["text"], case.get("history", []), STATE, [], fake_tools(calls))
+            or {}
+        )
     except Exception as e:
         result, error = {}, str(e)[:200]
     seconds = time.monotonic() - started
@@ -106,9 +121,11 @@ def main():
             "avg_model_calls": round(sum(r["model_calls"] for r in rows) / n, 2),
             "failures": [r for r in rows if not r["ok"]],
         }
-        print(f"{model}: {report[model]['first_attempt_accuracy']:.0%} first-attempt, "
-              f"{report[model]['tool_success']:.0%} tools, {report[model]['unsafe_calls']} unsafe, "
-              f"{report[model]['avg_seconds']}s avg, {report[model]['avg_model_calls']} calls/turn")
+        print(
+            f"{model}: {report[model]['first_attempt_accuracy']:.0%} first-attempt, "
+            f"{report[model]['tool_success']:.0%} tools, {report[model]['unsafe_calls']} unsafe, "
+            f"{report[model]['avg_seconds']}s avg, {report[model]['avg_model_calls']} calls/turn"
+        )
     if args.out:
         Path(args.out).write_text(json.dumps(report, indent=2, default=list))
 

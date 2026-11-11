@@ -312,6 +312,10 @@ const ui2Frame = (fn) => {
         nav.append(proxy('Next ›', '#donorMessages .bank-next-arrow'));
       if (nav.children.length) box.before(nav);
     }
+    for (const button of box.parentElement.querySelectorAll('.ui2-bank-nav [data-ui2-proxy]')) {
+      const target = document.querySelector(button.dataset.ui2Proxy);
+      button.disabled = !target || target.disabled;
+    }
     for (const t of box.querySelectorAll(':scope > button.tool')) {
       if (ui2Wide.matches && t.matches('[data-bank-save-id], .bank-copy')) continue;
       const x = t.textContent.trim();
@@ -1006,7 +1010,8 @@ const ui2Frame = (fn) => {
     setText(add, 'Add one donor');
     if (panel && bulk && add.nextElementSibling !== bulk) add.after(bulk);
     const msgs = document.querySelector('.donor-message-tablist');
-    if (msgs && nav.parentElement === h && msgs.nextElementSibling !== nav) h.insertBefore(msgs, nav);
+    if (msgs && nav.parentElement === h && msgs.nextElementSibling !== nav)
+      h.insertBefore(msgs, nav);
     setText($('donorMessagesTab'), wide() ? 'Messages' : 'Msgs');
     if (!$('ui2DonorSearch')) {
       const s = document.createElement('button');
@@ -1050,7 +1055,10 @@ const ui2Frame = (fn) => {
         close();
         input.blur();
       });
-      (nav.parentElement === h ? h : bar)?.insertBefore(s, nav.parentElement === h ? msgs || nav : nav);
+      (nav.parentElement === h ? h : bar)?.insertBefore(
+        s,
+        nav.parentElement === h ? msgs || nav : nav,
+      );
     }
     /* Phone: search icon and "⋯" end the tabs row; the hide / deselect chips live inside "⋯". Computer: back in the header. */
     const search = $('ui2DonorSearch');
@@ -1446,12 +1454,8 @@ document.addEventListener(
     const root = document.getElementById('donorMessages');
     if (!root) return;
     if (!ui2Wide.matches) {
-      root
-        .querySelectorAll('.ui2-desktop-msg-control')
-        .forEach((e) => e.remove());
-      root
-        .querySelector('.bank-detail')
-        ?.classList.remove('ui2-desktop-editing');
+      root.querySelectorAll('.ui2-desktop-msg-control').forEach((e) => e.remove());
+      root.querySelector('.bank-detail')?.classList.remove('ui2-desktop-editing');
       return;
     }
     const card = root.querySelector('.bank-detail'),
@@ -1477,9 +1481,8 @@ document.addEventListener(
     }
     actions.querySelector('.ui2-desktop-regenerate').disabled =
       !!root.querySelector('.bank-regenerate')?.disabled;
-    actions.querySelector('.ui2-desktop-next').disabled = !!root.querySelector(
-      '[data-bank-nav="next"]',
-    )?.disabled;
+    actions.querySelector('.ui2-desktop-next').disabled =
+      !!root.querySelector('[data-bank-nav="next"]')?.disabled;
     let edit = card.querySelector('.ui2-desktop-edit');
     if (!edit)
       edit = make(

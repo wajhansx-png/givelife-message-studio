@@ -1,7 +1,9 @@
 const { test, expect } = require('@playwright/test');
 async function setup(page, base, width = 390, route = '') {
   await page.setViewportSize({ width, height: 844 });
-  await page.addInitScript(() => localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'));
+  await page.addInitScript(() =>
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
+  );
   await page.goto(base + route);
 }
 async function donors(page, base) {
@@ -11,7 +13,7 @@ async function donors(page, base) {
 async function reveal(page, selector) {
   // Gap is hidden by the existing compact dock at some widths. Exercise
   // its real handler without changing layout as part of this navigation fix.
-  if (selector === '#donorPace') return page.locator(selector).evaluate(button => button.click());
+  if (selector === '#donorPace') return page.locator(selector).evaluate((button) => button.click());
   if (!(await page.locator(selector).isVisible())) {
     const menu = selector === '#donorPace' ? '#ui2Options > summary' : '#donorNavMore > summary';
     if (await page.locator(menu).count()) await page.locator(menu).click();
@@ -20,7 +22,9 @@ async function reveal(page, selector) {
 }
 for (const base of ['/', '/new/']) {
   for (const width of [320, 1440]) {
-    test(`${base} ${width}: modal closing consumes history and Back leaves once`, async ({ page }) => {
+    test(`${base} ${width}: modal closing consumes history and Back leaves once`, async ({
+      page,
+    }) => {
       test.setTimeout(60000);
       await setup(page, base, width);
       await donors(page, base);
@@ -66,16 +70,25 @@ for (const base of ['/', '/new/']) {
     await donors(page, base);
     await reveal(page, '#donorAdd');
     await page.locator('#donorAddCancel').click();
-    await page.evaluate(() => { document.getElementById('donorMainBottom').click(); document.getElementById('donorMainBottom').click(); });
+    await page.evaluate(() => {
+      document.getElementById('donorMainBottom').click();
+      document.getElementById('donorMainBottom').click();
+    });
     await expect(page.locator('#donorsPage')).toBeHidden();
     await expect(page).not.toHaveURL(/donors/);
   });
 }
 for (const base of ['/', '/new/']) {
-  test(`${base}: child closing preserves original screen and missing Back events recover`, async ({ page }) => {
+  test(`${base}: child closing preserves original screen and missing Back events recover`, async ({
+    page,
+  }) => {
     await setup(page, base);
     // Exercise a non-Home caller using the same controller as in-app navigation.
-    await page.evaluate(() => { Nav.go('preview'); renderNav(); window.DonorHub.open(); });
+    await page.evaluate(() => {
+      Nav.go('preview');
+      renderNav();
+      window.DonorHub.open();
+    });
     await page.locator('.donor-tabs [data-tab=top]').click();
     await reveal(page, '#donorNumbers');
     await expect(page.locator('#donorNumbersDialog')).toBeVisible();
@@ -84,13 +97,21 @@ for (const base of ['/', '/new/']) {
     await page.locator('#donorMainBottom').click();
     await expect(page).toHaveURL(/#\/preview$/);
     await expect(page.locator('#donorsPage')).toBeHidden();
-    await page.evaluate(() => { Nav.go(''); renderNav(); window.DonorHub.open(); });
-    await page.evaluate(() => { window.history.back = () => {}; });
+    await page.evaluate(() => {
+      Nav.go('');
+      renderNav();
+      window.DonorHub.open();
+    });
+    await page.evaluate(() => {
+      window.history.back = () => {};
+    });
     await page.locator('#donorMainBottom').click();
     await expect(page).not.toHaveURL(/donors/);
     await expect.poll(() => page.evaluate(() => !!Nav.pending)).toBe(false);
   });
-  test(`${base}: Thank donors and base message close before parent, with no late reopen`, async ({ page }) => {
+  test(`${base}: Thank donors and base message close before parent, with no late reopen`, async ({
+    page,
+  }) => {
     await setup(page, base);
     await donors(page, base);
     await page.locator('.donor-tabs [data-tab=donated]').click();
@@ -109,9 +130,16 @@ for (const base of ['/', '/new/']) {
     await expect(page.locator('#donorsPage')).toBeHidden();
     await donors(page, base);
     let release;
-    const gate = new Promise(resolve => { release = resolve; });
-    await page.route('**/donor-thanks', async route => { await gate; await route.continue(); });
-    await page.evaluate(() => { void window.DonorThanks.open(); });
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/donor-thanks', async (route) => {
+      await gate;
+      await route.continue();
+    });
+    await page.evaluate(() => {
+      void window.DonorThanks.open();
+    });
     await page.locator('#donorMainBottom').click();
     release();
     await expect(page.locator('#donorsPage')).toBeHidden();
@@ -149,7 +177,9 @@ for (const base of ['/', '/new/']) {
       await page.locator(close).click();
       await expect(page).toHaveURL(new RegExp('#/' + parent + '$'));
       await expect(page.locator(dialog)).toBeHidden();
-      expect(await page.evaluate(() => !document.activeElement.closest('dialog:not([open])'))).toBe(true);
+      expect(await page.evaluate(() => !document.activeElement.closest('dialog:not([open])'))).toBe(
+        true,
+      );
       if (parent.startsWith('donors/')) {
         await page.locator('#donorMainBottom').click();
         await expect(page.locator('#donorsPage')).toBeHidden();

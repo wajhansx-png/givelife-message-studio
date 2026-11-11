@@ -71,7 +71,9 @@ class Defaults(Base):
 
     def test_cards_are_named_for_what_they_do(self):
         controls = self.c.view()["controls"]
-        self.assertEqual(list(controls), [ac.GROUP, ac.DONOR_DM, IMPORTANT, ac.VOLUNTEER, ac.THANKS])
+        self.assertEqual(
+            list(controls), [ac.GROUP, ac.DONOR_DM, IMPORTANT, ac.VOLUNTEER, ac.THANKS]
+        )
         self.assertEqual(controls[ac.VOLUNTEER]["title"], "Volunteer Auto")
         self.assertEqual(controls[ac.THANKS]["title"], "Thanks donors")
         self.assertEqual(controls[ac.GROUP]["title"], "Group Auto")

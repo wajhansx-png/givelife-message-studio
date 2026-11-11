@@ -20,7 +20,7 @@ class ParallelRound(unittest.TestCase):
             b.save("group", SRC)
         prompts, lock, depth = [], threading.Lock(), {"now": 0, "max": 0}
 
-        def slow_call(api, prompt):
+        def slow_call(api, prompt, deep=False):
             with lock:
                 prompts.append(prompt)
                 depth["now"] += 1

@@ -5,6 +5,7 @@ node_modules
 test-results
 playwright-report
 .test-data
+graphify-out
 __pycache__
 *.pyc
 

@@ -121,7 +121,9 @@ class WaitingTests(unittest.TestCase):
                 self.assertEqual(c.getresponse().status, code, path)
         finally:
             waiting.close()
-        with socket.socket() as s:  # port is free again for the real server (which reuses addresses)
+        with (
+            socket.socket() as s
+        ):  # port is free again for the real server (which reuses addresses)
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind(("127.0.0.1", port))
 
@@ -174,7 +176,9 @@ class ChildTests(unittest.TestCase):
             raise OSError("gone")
 
         calls_forever = []
-        loop = supervisor.Child("y", never, max_crashes=3, sleep=lambda _: None, log=lambda *_: None)
+        loop = supervisor.Child(
+            "y", never, max_crashes=3, sleep=lambda _: None, log=lambda *_: None
+        )
         results = [loop.check() for _ in range(3)]
         self.assertEqual(results[-1], "giveup")
 

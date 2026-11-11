@@ -5247,7 +5247,9 @@ body::after {
   gap: 6px;
   padding: 6px;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 .donor-tabs button {
   border-radius: 10px;
@@ -6061,7 +6063,13 @@ dialog::backdrop {
   transform: translateY(1px);
 }
 /* Tabs: muted list, active trigger = bg-background + border (light shadow-sm) */
-.donor-page .donor-tabs,
+.donor-page .donor-tabs {
+  border-color: transparent !important;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 10px !important;
+}
 .brandbar .seg {
   border-color: var(--line) !important;
   border-radius: 10px !important;

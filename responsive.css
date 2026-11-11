@@ -3215,6 +3215,10 @@ html body #donorThanksDialog footer .thanks-start {
     overflow-y: hidden !important;
     min-width: 0 !important;
     gap: 5px !important;
+    border: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent !important;
     scrollbar-width: thin;
   }
   html

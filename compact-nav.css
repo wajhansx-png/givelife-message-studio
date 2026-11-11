@@ -167,6 +167,9 @@ html body .donor-tabs {
   padding: 3px;
   border-radius: 10px;
   flex: 1;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 html body .donor-tabs button {
   min-height: 38px;

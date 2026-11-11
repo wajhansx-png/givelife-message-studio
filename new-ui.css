@@ -229,6 +229,10 @@
     min-width: 0 !important;
     max-width: 100% !important;
     gap: 6px;
+    border: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent !important;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: none !important;
@@ -1993,8 +1997,22 @@
   overflow-x: auto !important;
   padding: 2px 0 !important;
   border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
   background: transparent !important;
+  -webkit-tap-highlight-color: transparent !important;
   scrollbar-width: none;
+}
+.UI2 #donorsPage .donor-tabs:focus,
+.UI2 #donorsPage .donor-tabs:focus-visible,
+.UI2 #donorsPage .donor-tabs:focus-within,
+.UI2 #donorsPage .donor-toolbar:focus,
+.UI2 #donorsPage .donor-toolbar:focus-visible,
+.UI2 #donorsPage .donor-toolbar:focus-within {
+  outline: none !important;
+  outline: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 .UI2 #donorsPage .donor-tabs > button {
   display: inline-flex !important;
@@ -3854,12 +3872,18 @@
     flex-direction: row !important;
     align-items: center !important;
     gap: 6px !important;
+    border: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
   }
   .UI2 #donorsPage .donor-toolbar > .donor-tabs {
     flex: 1 1 0 !important;
     order: 1 !important;
     width: auto !important;
     min-width: 0 !important;
+    border: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
   }
   .UI2 #donorsPage .donor-toolbar > .ui2-donor-search {
     order: 2 !important;

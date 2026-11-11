@@ -484,6 +484,14 @@
       'aria-label',
       (d.important ? 'Remove Important from ' : 'Make Important: ') + d.name,
     );
+    const top = row.querySelector('.donor-top-chip');
+    if (top) {
+      top.textContent = d.top_donor ? 'Top ✓' : '+ Top';
+      top.setAttribute('aria-pressed', !!d.top_donor);
+      top.setAttribute('aria-label', (d.top_donor ? 'Remove from Top donors: ' : 'Add to Top donors: ') + d.name);
+    }
+    const topMenu = row.querySelector('.donor-menu-top');
+    if (topMenu) topMenu.textContent = d.top_donor ? 'Remove from Top donors' : 'Add to Top donors';
     row.querySelector('.donor-name').textContent = d.name;
     {
       const ident = row.querySelector('.donor-identity');
@@ -1279,10 +1287,14 @@
       card.append(title, preview, edit);
       grid.append(card);
     }
-    if (!item)
-      grid.append(
-        make('p', 'donor-empty', 'No saved messages yet. Use Regenerate to create them.'),
-      );
+    if (!item) {
+      const empty = make('div', 'donor-empty bank-empty'),
+        addBase = make('button', 'primary', 'Add base message');
+      addBase.type = 'button';
+      addBase.onclick = openBaseMessage;
+      empty.append(make('p', '', 'No saved messages yet. Add a base message, then generate versions.'), addBase);
+      grid.append(empty);
+    }
     const nav = make('nav', 'bank-pagination');
     nav.setAttribute('aria-label', 'Message navigation');
     const backBottom = make('button', 'bank-back-bottom back-action', '← Back');
@@ -1351,6 +1363,7 @@
         arrow.type = 'button';
         arrow.title = 'Next message';
         arrow.setAttribute('aria-label', 'Next message');
+        arrow.disabled = position < 0 || position + 1 >= bankData.items.length;
         arrow.onclick = () => box.querySelector('[data-bank-nav=next]')?.click();
         const gen = make('button', 'bank-gen-icon', '↻');
         gen.type = 'button';
@@ -1373,9 +1386,11 @@
   }
   function syncBankControls() {
     const box = el('donorMessages');
+    const generating = bankData?.generation?.state === 'Generating',
+      regenerateDisabled = bankRegenerating || bankSaves.size > 0 || generating;
+    for (const b of box.querySelectorAll('.bank-gen-icon')) b.disabled = regenerateDisabled;
     for (const b of box.querySelectorAll('.bank-regenerate')) {
-      const generating = bankData?.generation?.state === 'Generating';
-      b.disabled = bankRegenerating || bankSaves.size > 0 || generating;
+      b.disabled = regenerateDisabled;
       b.textContent = generating
         ? 'Generating 20…'
         : (bankData?.items?.length || 0) > 1
@@ -3518,6 +3533,7 @@ Ayesha, +92 301 1234567" aria-describedby="pasteResult"></textarea><div id="past
       d = document.createElement('dialog');
       d.id = 'baseMessageDialog';
       d.className = 'base-dialog';
+      d.setAttribute('aria-label', 'Base message');
       d.innerHTML = '<form method="dialog"><h2>Base message</h2><p>The 20 versions are written from this. Saving keeps only this message until you press Generate 20 versions.</p><div class="base-tools"><button type="button" data-mark="*" aria-label="Bold"><b>B</b></button><button type="button" data-mark="_" aria-label="Italic"><i>I</i></button></div><textarea id="baseMessageText" rows="14" aria-label="Base message"></textarea><p id="baseMessageNote" role="status"></p><div class="base-actions"><button type="button" id="baseMessageCancel">Cancel</button><button type="button" id="baseMessageSave" class="primary">Save base message</button></div></form>';
       document.body.append(d);
       for (const b of d.querySelectorAll('[data-mark]')) {

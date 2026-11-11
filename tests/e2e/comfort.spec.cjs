@@ -150,12 +150,12 @@ test('message library switches previews and preserves unsaved edits', async ({ p
   await open(page, request);
   await page.locator('#openDonors').click();
   await openDonorMessages(page);
-  await page.getByRole('button', { name: 'Message 2', exact: true }).click();
+  await page.getByRole('button', { name: 'Next message', exact: true }).click();
   await expect(page.locator('.bank-detail header')).toContainText('Message 2');
   await page.locator('.bank-actions').getByRole('button', { name: 'Edit', exact: true }).click();
   await page.getByLabel('Edit message 2', { exact: true }).fill('Synthetic edited caption.');
-  await page.getByRole('button', { name: 'Message 1', exact: true }).click();
-  await page.getByRole('button', { name: 'Message 2', exact: true }).click();
+  await page.getByRole('button', { name: 'Previous message', exact: true }).click();
+  await page.getByRole('button', { name: 'Next message', exact: true }).click();
   await expect(page.getByLabel('Edit message 2', { exact: true })).toHaveValue(
     'Synthetic edited caption.',
   );
@@ -219,7 +219,7 @@ test('typing during a slow save keeps newer text as an unsaved draft', async ({
     sentText = (await editor.inputValue()) + '\n\nSynthetic submitted A',
     newerText = sentText + '\nNewer draft B';
   await editor.fill(sentText);
-  await page.locator('.bank-detail').getByRole('button', { name: 'Save', exact: true }).click();
+  await page.locator('.bank-actions').getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(() => !!submitted).toBe(true);
   await editor.fill(newerText);
   release();
@@ -249,12 +249,12 @@ test('regeneration cannot be duplicated by switching message previews', async ({
     }
     await route.continue();
   });
-  await page.getByRole('button', { name: 'Regenerate', exact: true }).click();
+  await page.getByRole('button', { name: 'Regenerate versions', exact: true }).click();
   await expect.poll(() => calls).toBe(1);
-  await page.getByRole('button', { name: 'Message 2', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Regenerate', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Next message', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Regenerate versions', exact: true })).toBeDisabled();
   release();
-  await expect(page.getByRole('button', { name: 'Regenerate', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Regenerate versions', exact: true })).toBeEnabled();
   expect(calls).toBe(1);
 });
 for (const width of [1440, 390])
@@ -292,7 +292,9 @@ test('an empty message library explains how to recover', async ({ page, request 
   await page.locator('#openDonors').click();
   await openDonorMessages(page);
   await expect(page.locator('#donorMessages')).toContainText('No saved messages yet');
-  await expect(page.getByRole('button', { name: 'Regenerate', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Add base message', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Base message', exact: true })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Base message', exact: true })).toBeEditable();
 });
 for (const [width, height] of [
   [1280, 720],
@@ -313,7 +315,7 @@ for (const [width, height] of [
   [360, 640],
   [320, 568],
 ])
-  test(`mobile Messages shows every full variant with Next ${width}x${height}`, async ({
+  test(`mobile Messages keeps every variant readable with Next ${width}x${height}`, async ({
     page,
     request,
   }) => {
@@ -333,11 +335,23 @@ for (const [width, height] of [
     ).toBeDisabled();
     for (let i = 0; i < total; i++) {
       await expect(page.locator('.bank-current')).toHaveText('Message ' + (i + 1) + ' of ' + total);
-      await expect
-        .poll(() =>
-          page.locator('.bank-preview').evaluate((el) => el.scrollHeight <= el.clientHeight + 2),
-        )
-        .toBe(true);
+      const reading = await page.locator('.bank-preview').evaluate((el) => {
+        const look = getComputedStyle(el);
+        el.scrollTop = el.scrollHeight;
+        return {
+          fontSize: parseFloat(look.fontSize),
+          fitsWidth: el.scrollWidth <= el.clientWidth + 2,
+          overflows: el.scrollHeight > el.clientHeight + 2,
+          overflow: look.overflowY,
+          remaining: el.scrollHeight - el.clientHeight - el.scrollTop,
+        };
+      });
+      expect(reading.fontSize).toBeGreaterThanOrEqual(14);
+      expect(reading.fitsWidth).toBe(true);
+      if (reading.overflows) {
+        expect(['auto', 'scroll']).toContain(reading.overflow);
+        expect(reading.remaining).toBeLessThanOrEqual(2);
+      }
       await inside(page, page.getByRole('button', { name: 'Next message', exact: true }));
       if (i === 0 || i === total - 1) await shot(page, `${width}x${height}-reader-${i + 1}`);
       if (i < total - 1)

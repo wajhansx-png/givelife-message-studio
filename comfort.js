@@ -149,23 +149,12 @@
     if (n && !n.title) n.title = 'Next message (→)';
     fitBankPreview();
   }
-  /* The whole DM shows at once: the largest size (10.5–19px) at which it fits without scrolling. */
+  /* Keep long captions readable; the reading surface handles scrolling. */
   function fitBankPreview() {
     const p = box?.querySelector('.bank-detail .bank-preview');
     if (!p || p.closest('[hidden]') || !p.clientHeight) return;
-    p.style.setProperty('line-height', '1.3', 'important');
-    let lo = 9.5,
-      hi = 14,
-      best = lo;
-    for (let i = 0; i < 7; i++) {
-      const mid = (lo + hi) / 2;
-      p.style.setProperty('font-size', mid + 'px', 'important');
-      if (p.scrollHeight <= p.clientHeight + 2) {
-        best = mid;
-        lo = mid;
-      } else hi = mid;
-    }
-    p.style.setProperty('font-size', best + 'px', 'important');
+    p.style.setProperty('line-height', '1.4', 'important');
+    p.style.setProperty('font-size', '14px', 'important');
   }
   addEventListener('resize', () => requestAnimationFrame(fitBankPreview));
   if (box) {

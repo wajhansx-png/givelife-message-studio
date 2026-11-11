@@ -312,6 +312,10 @@ const ui2Frame = (fn) => {
         nav.append(proxy('Next ›', '#donorMessages .bank-next-arrow'));
       if (nav.children.length) box.before(nav);
     }
+    for (const button of box.parentElement.querySelectorAll('.ui2-bank-nav [data-ui2-proxy]')) {
+      const target = document.querySelector(button.dataset.ui2Proxy);
+      button.disabled = !target || target.disabled;
+    }
     for (const t of box.querySelectorAll(':scope > button.tool')) {
       if (ui2Wide.matches && t.matches('[data-bank-save-id], .bank-copy')) continue;
       const x = t.textContent.trim();

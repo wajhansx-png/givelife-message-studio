@@ -23,6 +23,13 @@ class SendStopTests(unittest.TestCase):
             return json.load(r)
 
     def test_stopped_test_sends_nothing(self):
+        cleaned = threading.Event()
+        original_unwatch = app.unwatch_stop
+
+        def unwatch(sid):
+            original_unwatch(sid)
+            cleaned.set()
+
         http = app.ThreadingHTTPServer(("127.0.0.1", 0), app.Handler)
         threading.Thread(target=http.serve_forever, daemon=True).start()
         try:
@@ -30,15 +37,18 @@ class SendStopTests(unittest.TestCase):
             with (
                 patch.object(app.workflow(), "options", return_value={"poster": False}),
                 patch.object(app, "send_text") as send_text,
+                patch.object(app, "unwatch_stop", side_effect=unwatch),
             ):
                 result = self.post(
                     http.server_port, "/test", {"message": "Hi", "stop_id": "stop-test-0001"}
                 )
             self.assertEqual(result["code"], "STOPPED")
             send_text.assert_not_called()
+            self.assertTrue(cleaned.wait(1), "request cleanup did not complete")
             self.assertNotIn("stop-test-0001", app.STOP_EVENTS)
         finally:
             http.shutdown()
+            http.server_close()
 
     def test_unstopped_test_still_sends(self):
         http = app.ThreadingHTTPServer(("127.0.0.1", 0), app.Handler)

@@ -8,14 +8,15 @@ from email.policy import default
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-EVENTS = ROOT.parent / "manual-preview-events.json"
 events = []
 incoming = []
+events_lock = threading.Lock()
 
 
 def record(item):
-    events.append(item)
-    EVENTS.write_text(json.dumps(events, ensure_ascii=False), encoding="utf-8")
+    with events_lock:
+        events.append(item)
+        EVENTS.write_text(json.dumps(events, ensure_ascii=False), encoding="utf-8")
 
 
 class FakeWhatsApp(BaseHTTPRequestHandler):
@@ -98,6 +99,7 @@ os.environ.update(
     WHATSAPP_DEVICE_ID="fake-device",
 )
 folder = tempfile.TemporaryDirectory()
+EVENTS = Path(folder.name) / "manual-preview-events.json"
 os.environ["DATA_DIR"] = folder.name
 for name in ("drafts.json", "state.md"):
     shutil.copyfile(ROOT / name, Path(folder.name) / name)

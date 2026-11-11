@@ -64,8 +64,9 @@ nodes.hideMsg.onclick({ stopPropagation() {} });
 assert(hidden);
 assert.equal(show.hidden, false);
 assert(html.includes('<body class="nomsg"'), 'Avoid flashing the caption before JavaScript loads');
-assert(html.includes('id="chips" role="group"'), 'Group actions remain visible in the markup');
-assert(!html.includes('id="chips" hidden'));
+assert(html.includes('aria-label="Send groups"'), 'Group actions remain available in the markup');
+for (const id of ['btnGivelife', 'btnFree', 'sendAll'])
+  assert(html.includes(`id="${id}"`), `Group action ${id} remains available`);
 assert(!html.includes('id="moreG"'));
 assert(
   !source.includes("$('moreG')"),

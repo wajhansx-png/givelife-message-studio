@@ -4,6 +4,21 @@
    older override. Verify with tests/responsive_sweep.js: no SIDEWAYS-SCROLL, OFF-SCREEN, OVERLAP, TEXT-CUT.
    Selector prefix: html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage  (5 ids of specificity). */
 
+/* The redesigned volunteer Add panel opens from the right-hand action. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+  #donorsPage#donorsPage #donorVolunteers .vol-foot {
+  position: relative !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+  #donorsPage#donorsPage #donorVolunteers .vol-add-panel {
+  position: static !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h)
+  #donorsPage#donorsPage #donorVolunteers .vol-add-panel[open] > .vol-add {
+  left: auto !important;
+  right: 0 !important;
+}
+
 @media (max-width: 899px) {
   /* ---- Donors: title bar ---- */
   html body:not(#a):not(#b):not(#c) #donorsPage#donorsPage:not(#d) .donor-head {
@@ -3016,4 +3031,93 @@ html body #donorThanksDialog footer .thanks-start {
   html body #donorThanksDialog .thanks-timing .thanks-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Mobile donor controls retain full tap targets; the duplicate Top action stays in More. */
+@media (max-width: 899px) {
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    min-width: 0 !important;
+    gap: 5px !important;
+    scrollbar-width: thin;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-tabs > button {
+    flex: 0 0 auto !important;
+    width: max-content !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 5px 10px !important;
+    font-size: 12px !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-tabs :is(.tab-name, .tab-word) {
+    font-size: 12px !important;
+    white-space: nowrap !important;
+    letter-spacing: normal !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row {
+    grid-template-columns: 44px minmax(0, 1fr) 44px 62px 44px !important;
+    grid-template-rows: auto !important;
+    grid-template-areas: none !important;
+    gap: 2px !important;
+    height: auto !important;
+    min-height: 44px !important;
+    padding: 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-identity {
+    grid-area: 1 / 2 !important;
+    min-width: 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row .donor-top-chip {
+    display: none !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > :is(.donor-star, .donor-dm, .donor-more),
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-more > summary {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-star { grid-area: 1 / 1 !important; }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-dm { grid-area: 1 / 3 !important; }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-status {
+    grid-area: 1 / 4 !important;
+    width: 62px !important;
+    min-width: 62px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-more { grid-area: 1 / 5 !important; }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row .donor-menu-top {
+    display: block !important;
+    min-height: 44px !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage[data-panel='messages'] :is(.donor-bottom, #donorProgress, .dp-show, #donorBatchList) {
+    display: none !important;
+  }
+}
+@media (max-width: 359px) {
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row {
+    grid-template-columns: 44px minmax(0, 1fr) 62px 44px !important;
+    grid-template-rows: minmax(24px, auto) 44px !important;
+    row-gap: 2px !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-star { grid-area: 1 / 1 / 3 / 2 !important; }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-identity { grid-area: 1 / 2 / 2 / 4 !important; }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-dm { grid-area: 2 / 2 !important; }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-status { grid-area: 2 / 3 !important; }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage .donor-row > .donor-more { grid-area: 1 / 4 / 3 / 5 !important; }
+}
+
+/* Read long saved messages at their readable size, with scrolling inside the reader. */
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h) #donorsPage#donorsPage[data-panel='messages'] #donorMessages .bank-detail .bank-preview {
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
 }

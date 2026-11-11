@@ -15,6 +15,18 @@ async function open(page, width = 390) {
   await expect(page.getByRole('dialog', { name: 'Write Case', exact: true })).toBeVisible();
 }
 
+async function generate(page) {
+  const completed = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/case-message') &&
+      response.request().method() === 'POST' &&
+      response.request().postDataJSON().action === 'generate',
+  );
+  await page.locator('#caseWriterGenerate').click();
+  expect((await completed).ok()).toBe(true);
+  await expect(page.locator('#caseWriterGenerate')).toBeEnabled();
+}
+
 for (const width of [1440, 390, 320]) {
   test(`case notes, regeneration and edited output persist at ${width}px`, async ({
     page,
@@ -26,14 +38,14 @@ for (const width of [1440, 390, 320]) {
     const note = `A helpless father needs help repaying money borrowed for his family. People are coming to his home asking for it. Review ${width}.`;
     await details.fill(note);
     await page.getByLabel('Writing style', { exact: true }).selectOption('en');
-    await page.locator('#caseWriterGenerate').click();
+    await generate(page);
     await expect(output).toHaveValue(/Rs\. 25,000 LEFT/);
     const original = await output.inputValue();
     const updated = note + ' The family cannot repay the loan alone.';
     await details.fill(updated);
     await expect(output).toHaveValue(original);
     await expect(page.getByRole('button', { name: 'Use message', exact: true })).toBeDisabled();
-    await page.locator('#caseWriterGenerate').click();
+    await generate(page);
     await expect(output).not.toHaveValue(original);
     const edited = (await output.inputValue()) + '\n\nPlease share this appeal with a friend.';
     await output.fill(edited);

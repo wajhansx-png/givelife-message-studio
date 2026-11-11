@@ -20,7 +20,8 @@
       if (details.open)
         requestAnimationFrame(() => {
           const r = panel.getBoundingClientRect();
-          const dx = r.left < 8 ? 8 - r.left : r.right > innerWidth - 8 ? innerWidth - 8 - r.right : 0;
+          const dx =
+            r.left < 8 ? 8 - r.left : r.right > innerWidth - 8 ? innerWidth - 8 - r.right : 0;
           if (dx) panel.style.translate = Math.round(dx) + 'px 0';
         });
     });
@@ -146,6 +147,8 @@
     const donorPhone = matchMedia('(max-width:560px)');
     const navDetails = document.getElementById('donorNavMore');
     const placeDonorActions = () => {
+      // The redesign owns these controls and nests Add inside its menu.
+      if (document.body.classList.contains('ui2')) return;
       const messages = document.querySelector('.donor-message-tablist');
       const bulk = document.getElementById('donorBulk');
       const numbers = document.getElementById('donorNumbers');
@@ -245,7 +248,8 @@
           setSearch(false);
           if (input && toolbar) toolbar.append(input);
           if (add) head.append(add);
-          if (hideRow) head.insertBefore(hideRow, head.querySelector(':scope > .donor-message-tablist'));
+          if (hideRow)
+            head.insertBefore(hideRow, head.querySelector(':scope > .donor-message-tablist'));
         }
       };
       place();

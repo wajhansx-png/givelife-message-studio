@@ -2992,6 +2992,9 @@
 }
 
 /* ======================= Volunteers: same look as the other donor tabs ======================= */
+.UI2 #donorsPage[data-panel='volunteers'] .donor-head {
+  display: none !important;
+}
 .UI2 #donorVolunteers {
   background: transparent !important;
 }
@@ -3194,6 +3197,10 @@
   }
   .UI2 #donorVolunteers .vol-row .vol-name {
     grid-column: 1 / -1;
+  }
+  .UI2 #donorVolunteers .vol-row .vol-manage {
+    grid-column: 3;
+    grid-row: 2;
   }
   .UI2 #donorVolunteers .vol-row :is(.vol-case, .vol-share) {
     padding: 0 8px !important;

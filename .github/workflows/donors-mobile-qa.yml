@@ -12,6 +12,8 @@ on:
       - 'donors.css'
       - 'donors.js'
       - 'tests/e2e/donors-mobile.spec.cjs'
+      - 'tests/e2e/thank_modal_layout.spec.cjs'
+      - 'tests/e2e/donor_thanks.spec.cjs'
       - 'tests/e2e/donor-message-phone.spec.cjs'
       - 'tests/e2e/mobile-back-thumb.spec.cjs'
       - '.github/workflows/donors-mobile-qa.yml'
@@ -49,6 +51,8 @@ jobs:
         run: corepack pnpm exec playwright install --with-deps chromium
       - name: Inspect real Donors DOM at phone widths (never send)
         run: corepack pnpm exec playwright test tests/e2e/donors-mobile.spec.cjs tests/e2e/donor-message-phone.spec.cjs tests/e2e/mobile-back-thumb.spec.cjs --reporter=list
+      - name: Test Thank Donors modal at all widths with fake transport
+        run: corepack pnpm exec playwright test tests/e2e/thank_modal_layout.spec.cjs tests/e2e/donor_thanks.spec.cjs --reporter=list
       - name: Audit every rendered element in the existing workspaces
         env:
           ELEMENT_AUDIT_SMOKE: '0'

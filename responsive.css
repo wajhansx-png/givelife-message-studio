@@ -2909,3 +2909,10 @@ html body #donorThanksDialog footer {
     height: min(660px, calc(100dvh - 24px));
   }
 }
+
+@media (max-width: 700px) {
+  html body #donorThanksDialog {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+  }
+}

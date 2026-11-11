@@ -2881,3 +2881,24 @@ html body #donorThanksDialog #thanksClose {
     grid-row: 1;
   }
 }
+
+
+/* Thank Donors bottom edge: the global half-transparent dialog backdrop was
+   showing the underlying purple page button/glow through the rounded footer. */
+html body #donorThanksDialog::backdrop {
+  background: #05070c !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html body #donorThanksDialog {
+  box-shadow: none !important;
+}
+html body #donorThanksDialog footer {
+  bottom: auto !important; /* cancel legacy sticky-footer offset */
+  z-index: 1;
+  isolation: isolate;
+  box-sizing: border-box;
+  background: #090b10 !important;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  box-shadow: none !important;
+}

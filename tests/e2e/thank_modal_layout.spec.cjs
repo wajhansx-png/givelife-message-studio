@@ -37,6 +37,10 @@ for (const width of widths) {
         footer: { top: footRect.top, bottom: footRect.bottom, scrollWidth: footer.scrollWidth, clientWidth: footer.clientWidth },
         header: rectOf('header').bottom,
         timingFits: timeFits,
+        backdrop: {
+          background: getComputedStyle(node, '::backdrop').backgroundColor,
+          filter: getComputedStyle(node, '::backdrop').backdropFilter,
+        },
         actions: [...footer.querySelectorAll('button')].map(b => {
           const r = b.getBoundingClientRect();
           return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, height: r.height };
@@ -53,11 +57,16 @@ for (const width of widths) {
     expect(metrics.body.bottom).toBeLessThanOrEqual(metrics.footer.top + 2);
     expect(metrics.footer.scrollWidth).toBeLessThanOrEqual(metrics.footer.clientWidth + 2);
     expect(metrics.timingFits).toBe(true);
+    // No blurred or semi-transparent backdrop that lets a purple dock show beneath the popup.
+    expect(metrics.backdrop.background).toBe('rgb(5, 7, 12)');
+    expect(metrics.backdrop.filter).toBe('none');
+    expect(metrics.footer.bottom).toBeLessThanOrEqual(metrics.rect.bottom + 1);
     for (const action of metrics.actions) {
       expect(action.left).toBeGreaterThanOrEqual(metrics.rect.x - 1);
       expect(action.right).toBeLessThanOrEqual(metrics.rect.right + 1);
       expect(action.top).toBeGreaterThanOrEqual(metrics.footer.top - 1);
       expect(action.bottom).toBeLessThanOrEqual(metrics.footer.bottom + 1);
+      expect(action.bottom).toBeLessThanOrEqual(metrics.rect.bottom - 6);
       expect(action.height).toBeGreaterThanOrEqual(40);
     }
     await page.locator('#thanksMessage').fill('JazakAllah for helping Yousaf and his family. '.repeat(10));

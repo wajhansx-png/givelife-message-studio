@@ -515,7 +515,8 @@ const ui2Frame = (fn) => {
       d.id = 'ui2Sheet';
       d.setAttribute('aria-label', 'More');
       d.innerHTML =
-        '<div class="ui2-sheet-grip" aria-hidden="true"></div><div class="ui2-sheet-grid"></div><div class="ui2-sheet-extra"></div>';
+        '<div class="ui2-sheet-grip" aria-hidden="true"></div><button type="button" class="ui2-sheet-x" aria-label="Close">✕</button><div class="ui2-sheet-grid"></div><div class="ui2-sheet-extra"></div>';
+      d.querySelector('.ui2-sheet-x').addEventListener('click', () => d.close());
       d.addEventListener('click', (e) => e.target === d && d.close());
       d.addEventListener('close', () => {
         const pick = d.querySelector('.case-pick');
@@ -541,6 +542,7 @@ const ui2Frame = (fn) => {
       return b;
     };
     const amount = ($('leftChip')?.textContent || 'Rs.').trim().replace(/\s*left$/i, '');
+    tile('Case page', 'run the whole case', () => Nav.go('case')).dataset.wide = '1';
     tile(
       amount + ' left',
       'change amount',

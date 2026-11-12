@@ -4588,7 +4588,7 @@
   position: static !important;
   width: auto !important;
   height: auto !important;
-  margin: 2px 0 6px !important;
+  margin: 0 !important;
   padding: 0 !important;
   overflow: visible !important;
   clip: auto !important;
@@ -4607,9 +4607,9 @@
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 2px !important;
-  min-height: 84px !important;
-  padding: 8px 4px 6px !important;
+  gap: 0 !important;
+  min-height: 62px !important;
+  padding: 5px 4px 4px !important;
   border: 1px solid var(--tcb) !important;
   border-radius: 14px !important;
   background: var(--tcg) !important;
@@ -4640,14 +4640,14 @@
   --tct: #fecaca;
 }
 .UI2 dialog.report-dialog .report-card .report-list > li > .rp-i {
-  width: 18px !important;
-  height: 18px !important;
+  width: 15px !important;
+  height: 15px !important;
   color: var(--tc) !important;
 }
 .UI2 dialog.report-dialog .report-card .report-list > li > .rp-v {
   order: 2 !important;
   color: #fff !important;
-  font-size: 26px !important;
+  font-size: 22px !important;
   font-weight: 800 !important;
   line-height: 1.1 !important;
   font-variant-numeric: tabular-nums !important;
@@ -4655,9 +4655,9 @@
 .UI2 dialog.report-dialog .report-card .report-list > li > .rp-t {
   order: 3 !important;
   color: var(--tct) !important;
-  font-size: 12px !important;
+  font-size: 11.5px !important;
   font-weight: 600 !important;
-  line-height: 1.15 !important;
+  line-height: 1.1 !important;
 }
 .UI2 dialog.report-dialog .report-card .report-list > li > :is(.rp-n, .rp-s) {
   display: none !important;
@@ -4669,7 +4669,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin: 4px 0 6px !important;
+  margin: 2px 0 4px !important;
   color: var(--ink, #eef0f6);
   font-size: 15px !important;
   font-weight: 700;
@@ -4686,14 +4686,14 @@
 }
 .UI2 dialog.report-dialog .report-card .auto-card {
   position: relative;
-  padding: 4px 10px 10px !important;
+  padding: 1px 10px 7px !important;
   border: 1px solid #2a2f40 !important;
   border-radius: 14px !important;
   background: #1c2030 !important;
   overflow: hidden;
 }
 .UI2 dialog.report-dialog .report-card .auto-card .auto-head {
-  min-height: 40px;
+  min-height: 32px;
 }
 .UI2 dialog.report-dialog .report-card .auto-card .auto-head h4 {
   display: flex;
@@ -4726,7 +4726,8 @@
 }
 .UI2 dialog.report-dialog .report-card .auto-card .ui2-auto-sub {
   color: var(--ink-muted, #a3a9bd);
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 1.2;
 }
 .UI2 dialog.report-dialog .report-card .auto-card[data-state='ON'] .ui2-auto-sub {
   color: #86efac;
@@ -4735,8 +4736,8 @@
   color: #fca5a5;
 }
 .UI2 dialog.report-dialog .report-card .auto-card .auto-switch {
-  min-width: 64px !important;
-  min-height: 40px !important;
+  min-width: 60px !important;
+  min-height: 34px !important;
   border: 1px solid #3a4057 !important;
   border-radius: 20px !important;
   background: #272c3d !important;
@@ -4803,26 +4804,43 @@
 }
 @media (max-width: 359px), (max-height: 620px) {
   .UI2 dialog.report-dialog .report-card .report-list > li {
-    min-height: 66px !important;
-    padding: 5px 3px 4px !important;
+    min-height: 56px !important;
+    padding: 4px 3px 3px !important;
   }
   .UI2 dialog.report-dialog .report-card .report-list > li > .rp-v {
-    font-size: 20px !important;
+    font-size: 19px !important;
   }
   .UI2 dialog.report-dialog .report-card .report-list > li > .rp-i {
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
   }
   .UI2 dialog.report-dialog .report-card .auto-card {
-    padding: 2px 8px 8px !important;
+    padding: 1px 8px 7px !important;
   }
   .UI2 dialog.report-dialog .report-card .auto-card .auto-head {
-    min-height: 36px;
+    min-height: 30px;
   }
   .UI2 dialog.report-dialog .report-card .auto-card .auto-switch {
-    min-height: 36px !important;
+    min-height: 32px !important;
   }
   .UI2 dialog.report-dialog .report-card .auto-controls h3 {
     margin: 0 0 4px !important;
   }
+}
+
+.UI2 dialog.report-dialog .report-card {
+  gap: 6px !important;
+  padding: 4px 12px 10px !important;
+}
+.UI2 dialog.report-dialog .report-card .rp-head {
+  min-height: 36px !important;
+}
+.UI2 dialog.report-dialog .report-card #autoCards {
+  gap: 5px !important;
+}
+.UI2 dialog.report-dialog .report-card #autoStopAll {
+  min-height: 40px !important;
+}
+.UI2 dialog.report-dialog .report-card .auto-card[data-prog='1'] {
+  padding-bottom: 10px !important;
 }

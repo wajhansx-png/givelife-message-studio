@@ -33,7 +33,7 @@ const Nav = {
   },
   /* The chat log below owns the name `history`, so the browser's is always reached as window.history. */
   valid(path) {
-    return /^(?:chat|notes|settings(?:\/(?:memory|poster))?|keyboard|preview|whatsapp|donors\/(?:all|important|top|donated|not_donated|not_contacted|volunteers|messages)(?:\/(?:notes|add|bulk|pace|numbers|thanks|base|resume|volunteer_timing))?)$/.test(
+    return /^(?:case|chat|notes|settings(?:\/(?:memory|poster))?|keyboard|preview|whatsapp|donors\/(?:all|important|top|donated|not_donated|not_contacted|volunteers|messages)(?:\/(?:notes|add|bulk|pace|numbers|thanks|base|resume|volunteer_timing))?)$/.test(
       path,
     );
   },

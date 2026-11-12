@@ -82,6 +82,7 @@ for (const width of [280, 320, 360, 390, 430, 768]) {
     const tabs = page.locator('#ui2Tabs');
     await expect(tabs).toBeVisible();
     await expect(tabs.locator('.ui2-tab:visible')).toHaveText([
+      /Case/,
       /Message/,
       /Donors/,
       /Chat/,
@@ -208,6 +209,7 @@ test('/new computer: every option is one clear button in the bottom bar, and not
   const bar = page.locator('#ui2Tabs');
   await expect(bar).toBeVisible();
   await expect(bar.locator('.ui2-tab')).toHaveText([
+    /Case/,
     /Message/,
     /Donors/,
     /Chat/,

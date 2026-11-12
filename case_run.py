@@ -956,6 +956,9 @@ class CaseRun:
                 "shared": steps.count("shared"),
                 "needs": steps.count("needs") + steps.count("uncertain"),
                 "declined": steps.count("declined"),
+                "people": [
+                    {"name": f["name"], "step": f["step"]} for f in list(st["giki"].values())[:60]
+                ],
             }
         action = "review"
         if out["state"] == "running":
@@ -987,6 +990,7 @@ class CaseRun:
             "needs": self.needs(st),
             "checks": self.checks(st, m),
             "approved": bool(st["approved"]),
+            "plan_ids": {"important": list(st["plan"]["important"].get("ids") or [])},
             "log": st["log"][-8:],
             "drafts": st.get("drafts"),
             "payment": {"number": autopilot.ACCOUNT},

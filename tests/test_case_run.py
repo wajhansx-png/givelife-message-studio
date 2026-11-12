@@ -3,7 +3,6 @@
 import datetime, time, unittest
 from unittest.mock import patch
 
-import test_manual_sends as fixture
 from test_manual_sends import app
 import test_auto_controls as tac
 import case_run

@@ -357,6 +357,7 @@
     volPoll = 0;
   let drawEpoch = 0;
   const DRAW_CHUNK = 40;
+  const EAGER_ROWS = 200; // up to here rows are drawn in the following frames; longer lists load as you scroll
   let tab = 'all',
     data = { items: [], counts: {} },
     searchTimer,
@@ -2106,7 +2107,10 @@
         rows.append(frag);
         // More rows are drawn only when the list is scrolled near its end: opening Donors and
         // switching tabs stay fast with hundreds of donors. Closed page: stop; opening redraws.
-        if (next < items.length && page.open) moreOnScroll(rows, paintChunk);
+        if (next < items.length && page.open) {
+          if (next < EAGER_ROWS) requestAnimationFrame(paintChunk);
+          else moreOnScroll(rows, paintChunk);
+        }
       };
     paintChunk();
   }

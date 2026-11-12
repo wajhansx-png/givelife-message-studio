@@ -5093,6 +5093,7 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
   font-weight: 700;
 }
 .UI2 dialog.case-page .cr-row {
+  cursor: pointer;
   padding: 10px 12px;
   border: 1px solid var(--cr-line);
   border-radius: 14px;

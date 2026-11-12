@@ -264,6 +264,9 @@
       const card = make('article', 'cr-row');
       card.dataset.key = r.key;
       card.dataset.state = r.enabled ? r.state : 'off';
+      card.onclick = (e) => {
+        if (!e.target.closest('button')) rowSheet(r.key); // tap a row to see its names, messages and timing
+      };
       const head = make('div', 'cr-row-head');
       head.append(
         make('b', '', r.title),

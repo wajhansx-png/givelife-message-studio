@@ -27,7 +27,10 @@ class Base(tac.Base):
             if isinstance(outcome, Exception):
                 raise outcome
             self.shared.append((body["phone"], body["message"], body.get("poster")))
-            return outcome or {"code": "SUCCESS", "results": {"message_id": "x%d" % len(self.shared)}}
+            return outcome or {
+                "code": "SUCCESS",
+                "results": {"message_id": "x%d" % len(self.shared)},
+            }
 
         for name, fake in (
             ("send_custom", send_custom),
@@ -76,7 +79,13 @@ class Base(tac.Base):
 
     def reply(self, did, text, mid):
         self.replies.setdefault(self.phone(did), []).append(
-            {"id": mid, "content": text, "is_from_me": False, "timestamp": stamp(), "media_type": ""}
+            {
+                "id": mid,
+                "content": text,
+                "is_from_me": False,
+                "timestamp": stamp(),
+                "media_type": "",
+            }
         )
 
 
@@ -84,7 +93,9 @@ class Plan(Base):
     def test_the_defaults_match_the_plan_and_nothing_starts(self):
         self.people()
         v = self.cr.view()
-        self.assertEqual((v["status"], [r["key"] for r in v["rows"]]), ("idle", list(case_run.ROWS)))
+        self.assertEqual(
+            (v["status"], [r["key"] for r in v["rows"]]), ("idle", list(case_run.ROWS))
+        )
         plan = self.state()["plan"]
         self.assertEqual(plan["group"]["every_minutes"], 45)
         self.assertEqual(
@@ -117,7 +128,9 @@ class Plan(Base):
         self.h.book.delivery(done["id"], "Sent")
         self.cr.set_plan({"important": {"ids": [top[0], top[1]], "enabled": True}})
         aud = self.cr.audiences(self.state()["plan"])
-        self.assertEqual(sorted(aud["top"]), sorted(top))  # Top comes first: Important adds nobody twice
+        self.assertEqual(
+            sorted(aud["top"]), sorted(top)
+        )  # Top comes first: Important adds nobody twice
         self.assertEqual(aud["important"], [])
         self.assertEqual(sorted(aud["giki"]), sorted(giki))
         self.assertNotIn(done["id"], aud["top"] + aud["giki"])  # already contacted
@@ -138,9 +151,13 @@ class Run(Base):
         self.assertEqual(app.ENGINE.summary()["pace_override"][0], 45)
         self.assertTrue(self.tick_until(lambda: len(self.sent) >= 1))
         job = self.h.jobs.export_jobs()["jobs"][-1]
-        self.assertEqual((job["owner"], job["origin"], sorted(job["ids"])), ("case_top", "case_run", sorted(top)))
+        self.assertEqual(
+            (job["owner"], job["origin"], sorted(job["ids"])), ("case_top", "case_run", sorted(top))
+        )
         self.assertNotIn(late["id"], job["ids"])
-        self.assertEqual(len(self.h.jobs.export_jobs()["jobs"]), 1)  # GIKI waits: one DM queue at a time
+        self.assertEqual(
+            len(self.h.jobs.export_jobs()["jobs"]), 1
+        )  # GIKI waits: one DM queue at a time
         again = self.cr.start("anything")  # pressing Start twice never starts a second run
         self.assertEqual(again["status"], "running")
         self.assertEqual(len(self.h.jobs.export_jobs()["jobs"]), 1)
@@ -214,6 +231,19 @@ class Run(Base):
             revived.tick()
         self.assertEqual(len(self.h.jobs.export_jobs()["jobs"]), 1)
 
+    def test_a_wording_change_after_approval_is_shown_to_the_owner(self):
+        self.people(2, 1)
+        self.approve()
+        self.addCleanup(self.stop_everything)
+        changed = lambda: [i for i in self.cr.view()["needs"] if i["type"] == "changed"]  # noqa: E731
+        self.assertEqual(changed(), [])
+        self.h.set_follow_up("A different question about sharing?")
+        items = changed()
+        self.assertEqual(len(items), 1)
+        self.assertIn("share question", items[0]["title"])
+        self.cr.need_act(items[0]["id"], "review")
+        self.assertEqual(changed(), [])
+
     def test_a_disconnected_whatsapp_is_on_the_needs_you_list(self):
         self.people(2, 0)
         self.approve()
@@ -253,7 +283,9 @@ class Giki(Base):
     def test_an_unclear_reply_waits_for_the_owner_who_can_mark_agreed(self):
         did = self.giki_waiting()
         self.reply(did, "I will think and tell you, what is this about?", "m2")
-        self.assertTrue(self.tick_until(lambda: self.state()["giki"][self.phone(did)]["step"] == "needs"))
+        self.assertTrue(
+            self.tick_until(lambda: self.state()["giki"][self.phone(did)]["step"] == "needs")
+        )
         items = [i for i in self.cr.view()["needs"] if i["type"] == "giki_reply"]
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]["actions"], ["agreed", "not_agreed", "reply"])
@@ -265,16 +297,24 @@ class Giki(Base):
     def test_a_clear_no_stops_and_a_send_that_may_have_gone_is_never_retried(self):
         did = self.giki_waiting()
         self.reply(did, "No", "m3")
-        self.assertTrue(self.tick_until(lambda: self.state()["giki"][self.phone(did)]["step"] == "declined"))
+        self.assertTrue(
+            self.tick_until(lambda: self.state()["giki"][self.phone(did)]["step"] == "declined")
+        )
         self.assertEqual(self.shared, [])
-        self.cr.need_act(next(iter(self.state()["needs"]), "x"), "dismiss") if self.state()["needs"] else None
+        self.cr.need_act(next(iter(self.state()["needs"]), "x"), "dismiss") if self.state()[
+            "needs"
+        ] else None
         self.cr.giki_decide(self.phone(did), "agreed")
         self.share_result[:] = [{"code": "UNCERTAIN"}]
-        self.assertTrue(self.tick_until(lambda: self.state()["giki"][self.phone(did)]["step"] == "uncertain"))
+        self.assertTrue(
+            self.tick_until(lambda: self.state()["giki"][self.phone(did)]["step"] == "uncertain")
+        )
         count = len(self.shared)
         self.tick_until(lambda: False, 10)
         self.assertEqual(len(self.shared), count)  # no automatic retry
-        self.assertTrue([i for i in self.cr.view()["needs"] if i["id"].startswith("giki-uncertain")])
+        self.assertTrue(
+            [i for i in self.cr.view()["needs"] if i["id"].startswith("giki-uncertain")]
+        )
 
     def test_a_refused_send_is_tried_again_and_goes_out_once(self):
         did = self.giki_waiting()
@@ -318,7 +358,9 @@ class Money(Base):
         self.assertEqual(len(thanks), 1)  # the thank-you is prepared, not sent
         self.assertIn("JazakAllah", thanks[0]["text"])
         self.tick_until(lambda: False, 6)
-        self.assertEqual([i for i in self.cr.view()["needs"] if i["type"] == "payment"], [])  # seen once
+        self.assertEqual(
+            [i for i in self.cr.view()["needs"] if i["type"] == "payment"], []
+        )  # seen once
 
     def test_a_bad_amount_changes_nothing(self):
         did, item = self.claim()

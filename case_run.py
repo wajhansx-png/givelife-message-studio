@@ -255,10 +255,14 @@ class CaseRun:
         if name not in ("group", "donor"):
             raise ValueError("Choose group or donor messages.")
         m = self._messages()
-        digest = m["group"]["digest"] if name == "group" else _digest(
-            m["dm"]["digest"] + m["question"]["digest"]
+        digest = (
+            m["group"]["digest"]
+            if name == "group"
+            else _digest(m["dm"]["digest"] + m["question"]["digest"])
         )
-        self._edit(lambda st: st["checks"].__setitem__(name, {"digest": digest, "at": self.clock()}))
+        self._edit(
+            lambda st: st["checks"].__setitem__(name, {"digest": digest, "at": self.clock()})
+        )
         return self.view()
 
     def summary(self):
@@ -277,7 +281,9 @@ class CaseRun:
         if self.app.on_hold():
             blockers.append("Sending is on hold. Resume it first.")
         if st["status"] != "paused" and self._dm_busy():
-            blockers.append("A DM queue is sending now. Stop it first: two queues never run together.")
+            blockers.append(
+                "A DM queue is sending now. Stop it first: two queues never run together."
+            )
         if plan["group"]["enabled"] and not m["group"]["text"].strip():
             blockers.append("The GiveLife Group message is empty.")
         dm_rows = [k for k in ("top", "giki", "important") if plan[k]["enabled"]]
@@ -286,8 +292,13 @@ class CaseRun:
         if plan["giki"]["enabled"] and not m["question"]["text"].strip():
             blockers.append("Write the share question first (Messages → Follow-Up Message).")
         if plan["volunteers"]["enabled"] and not m["volunteers"]["text"].strip():
-            warnings.append("No saved volunteer share message: volunteers get the case and poster only.")
-        if not any(plan[k]["enabled"] and aud[k] for k in DM_ORDER) and not plan["group"]["enabled"]:
+            warnings.append(
+                "No saved volunteer share message: volunteers get the case and poster only."
+            )
+        if (
+            not any(plan[k]["enabled"] and aud[k] for k in DM_ORDER)
+            and not plan["group"]["enabled"]
+        ):
             blockers.append("Nobody is selected and no group is on.")
         for name, label in (("group", "Group messages"), ("donor", "Donor messages")):
             if self.checks(st, m)[name] != "ok":
@@ -304,7 +315,9 @@ class CaseRun:
         for key in ("top", "giki", "important"):
             names[key] = [by.get(i, "") for i in aud[key]][:40]
         names["volunteers"] = [
-            r["name"] for r in self.hub.volunteers.book.recipients("all") if r["id"] in aud["volunteers"]
+            r["name"]
+            for r in self.hub.volunteers.book.recipients("all")
+            if r["id"] in aud["volunteers"]
         ][:40]
         body = {
             "case": self._cid(),
@@ -322,6 +335,7 @@ class CaseRun:
             "blockers": blockers,
             "warnings": warnings,
             "audiences": aud,
+            "msg": body["msg"],
         }
 
     # ------------------------------------------------------------------ run control
@@ -343,12 +357,18 @@ class CaseRun:
                 "token": token,
                 "plan": plan,
                 "ids": s["audiences"],
+                "msg": s["msg"],
                 "left": self.app.read_left(),
             }
             st["starts"] += 1
             st["status"] = "running"
             st["rows"] = {
-                k: {"state": "queued" if plan[k]["enabled"] and (k == "group" or s["audiences"][k]) else "off", "starts": 0}
+                k: {
+                    "state": "queued"
+                    if plan[k]["enabled"] and (k == "group" or s["audiences"][k])
+                    else "off",
+                    "starts": 0,
+                }
                 for k in ROWS
             }
             self._log(st, "Case started with the approved plan.")
@@ -438,7 +458,12 @@ class CaseRun:
         st = self._read()
         done = self._confirmed()
         if confirm is not True:
-            return {"confirm": True, "confirmed": done, "left": self.app.read_left(), "view": self.view()}
+            return {
+                "confirm": True,
+                "confirmed": done,
+                "left": self.app.read_left(),
+                "view": self.view(),
+            }
         with self.lock:
             st = self._read()
             self._stop_engines()
@@ -460,11 +485,20 @@ class CaseRun:
 
     def _confirmed(self):
         recs = self.hub.book._load()["records"]
-        return int(sum(float(r.get("amount") or 0) for r in recs if r.get("donated") and not r.get("deleted")))
+        return int(
+            sum(
+                float(r.get("amount") or 0)
+                for r in recs
+                if r.get("donated") and not r.get("deleted")
+            )
+        )
 
     def _drafts(self, came):
         try:
-            return {"update": self.app.update_text(came, self.app.read_left()), "thanks": self.app.thank_text()}
+            return {
+                "update": self.app.update_text(came, self.app.read_left()),
+                "thanks": self.app.thank_text(),
+            }
         except Exception:
             return {}
 
@@ -490,7 +524,9 @@ class CaseRun:
         cfg = ap["plan"][key]
         book = h.volunteers.book if key == "volunteers" else h.book
         wanted = set(ap["ids"][key])
-        ids = [r["id"] for r in book.recipients("all") if r["id"] in wanted and self._fresh(book, r)]
+        ids = [
+            r["id"] for r in book.recipients("all") if r["id"] in wanted and self._fresh(book, r)
+        ]
         if key != "volunteers":
             ids = [i for i in ids if not self._excluded(book.resolve(i))]
         if not ids:
@@ -538,7 +574,9 @@ class CaseRun:
         job = self._job(row)
         if not job:
             if self.clock() - row.get("started_at", self.clock()) > 120:
-                row["state"] = "queued"  # the start was lost before it was saved: ids are filtered again
+                row["state"] = (
+                    "queued"  # the start was lost before it was saved: ids are filtered again
+                )
             return
         state = job.get("state", "")
         row["job"] = job.get("id")
@@ -560,7 +598,9 @@ class CaseRun:
             a.set_auto(True)
             row["state"] = "running"
         elif row["state"] == "running" and not a.auto_on():
-            row["state"] = "paused"  # switched off elsewhere: we never switch it back on by ourselves
+            row["state"] = (
+                "paused"  # switched off elsewhere: we never switch it back on by ourselves
+            )
 
     def _advance(self, st):
         if st["status"] != "running" or not st["approved"]:
@@ -640,7 +680,9 @@ class CaseRun:
                 {"target": "phone", "phone": phone, "message": text, "kind": kind, "poster": poster}
             )
         except ValueError as e:
-            return ("blocked" if "opted out" in str(e) or "blocked" in str(e) else "retry"), str(e)[:160]
+            return ("blocked" if "opted out" in str(e) or "blocked" in str(e) else "retry"), str(e)[
+                :160
+            ]
         except Exception:
             return "uncertain", "Send not confirmed. Check WhatsApp before retrying."
         if (r or {}).get("code") == "SUCCESS":
@@ -660,7 +702,10 @@ class CaseRun:
             if n == 0:
                 text, poster = self.app.get_message("group")["text"], True
             elif n == 1:
-                text, poster = f"Please send a screenshot to {autopilot.ACCOUNT} after you donate.", False
+                text, poster = (
+                    f"Please send a screenshot to {autopilot.ACCOUNT} after you donate.",
+                    False,
+                )
             else:
                 text, poster = f"{self._address(row)}, please share both messages above.", False
             self._edit(lambda s: s["giki"][phone].__setitem__("inflight", n))
@@ -726,9 +771,24 @@ class CaseRun:
             info = people[phone]
             for m in msgs:
                 mid = m.get("id")
-                if not mid or m.get("is_from_me") or mid in st["seen"] or autopilot._stamp(m) < info["at"]:
+                if (
+                    not mid
+                    or m.get("is_from_me")
+                    or mid in st["seen"]
+                    or autopilot._stamp(m) < info["at"]
+                ):
                     continue
-                events.append((phone, info, mid, str(m.get("content") or ""), m.get("media_type", ""), msgs, m))
+                events.append(
+                    (
+                        phone,
+                        info,
+                        mid,
+                        str(m.get("content") or ""),
+                        m.get("media_type", ""),
+                        msgs,
+                        m,
+                    )
+                )
 
         def apply(s):
             s["cursor"] = start + len(batch)
@@ -751,7 +811,17 @@ class CaseRun:
                         f["step"] = "declined"
                     continue
                 if label in ("donated", "both"):
-                    self._need(s, f"pay:{mid}", "payment", f"{info['name']} says they donated", text, phone, info, ["check_payment", "not_paid"], mid)
+                    self._need(
+                        s,
+                        f"pay:{mid}",
+                        "payment",
+                        f"{info['name']} says they donated",
+                        text,
+                        phone,
+                        info,
+                        ["check_payment", "not_paid"],
+                        mid,
+                    )
                     continue
                 if f and f["step"] == "waiting":
                     verdict = agreement(text)
@@ -761,9 +831,29 @@ class CaseRun:
                         f["step"] = "declined"
                     else:
                         f["step"] = "needs"
-                        self._need(s, f"giki:{mid}", "giki_reply", f"{info['name']}: GIKI reply is unclear", text, phone, info, ["agreed", "not_agreed", "reply"], mid)
+                        self._need(
+                            s,
+                            f"giki:{mid}",
+                            "giki_reply",
+                            f"{info['name']}: GIKI reply is unclear",
+                            text,
+                            phone,
+                            info,
+                            ["agreed", "not_agreed", "reply"],
+                            mid,
+                        )
                 elif label == "question":
-                    self._need(s, f"q:{mid}", "question", f"{info['name']} asked a question", text, phone, info, ["reply", "dismiss"], mid)
+                    self._need(
+                        s,
+                        f"q:{mid}",
+                        "question",
+                        f"{info['name']} asked a question",
+                        text,
+                        phone,
+                        info,
+                        ["reply", "dismiss"],
+                        mid,
+                    )
 
         self._edit(apply)
 
@@ -791,22 +881,98 @@ class CaseRun:
         items = [dict(i) for i in st["needs"].values() if i["state"] == "open"]
         running = st["status"] in ("running", "paused")
         if running and not self.app.wa_ok():
-            items.append({"id": "whatsapp", "type": "whatsapp", "title": "WhatsApp is disconnected", "actions": ["reconnect"]})
+            items.append(
+                {
+                    "id": "whatsapp",
+                    "type": "whatsapp",
+                    "title": "WhatsApp is disconnected",
+                    "actions": ["reconnect"],
+                }
+            )
         for key, row in st["rows"].items():
             job = self._job(row) if row.get("request_id") else None
             for rec in (job or {}).get("receipts", []):
                 nid = "uncertain:" + str(rec.get("id"))
                 if rec.get("state") == "Uncertain" and nid not in st["resolved"]:
-                    items.append({"id": nid, "type": "uncertain", "title": "A delivery is uncertain. Check WhatsApp before retrying.", "donor_id": rec.get("id"), "actions": ["mark_sent", "mark_not_sent"]})
-            if row["state"] == "done" and ("done:" + key) not in st["resolved"] and st["status"] == "running":
-                items.append({"id": "done:" + key, "type": "audience_done", "title": f"{TITLES[key]} finished", "actions": ["wait", "choose_audience"]})
-            if row["state"] == "stopped" and row.get("error") and (f"stopped:{key}:{row.get('starts', 0)}") not in st["resolved"]:
-                items.append({"id": f"stopped:{key}:{row.get('starts', 0)}", "type": "stopped", "title": f"{TITLES[key]} stopped: {row['error']}", "actions": ["review"]})
+                    items.append(
+                        {
+                            "id": nid,
+                            "type": "uncertain",
+                            "title": "A delivery is uncertain. Check WhatsApp before retrying.",
+                            "donor_id": rec.get("id"),
+                            "actions": ["mark_sent", "mark_not_sent"],
+                        }
+                    )
+            if (
+                row["state"] == "done"
+                and ("done:" + key) not in st["resolved"]
+                and st["status"] == "running"
+            ):
+                items.append(
+                    {
+                        "id": "done:" + key,
+                        "type": "audience_done",
+                        "title": f"{TITLES[key]} finished",
+                        "actions": ["wait", "choose_audience"],
+                    }
+                )
+            if (
+                row["state"] == "stopped"
+                and row.get("error")
+                and (f"stopped:{key}:{row.get('starts', 0)}") not in st["resolved"]
+            ):
+                items.append(
+                    {
+                        "id": f"stopped:{key}:{row.get('starts', 0)}",
+                        "type": "stopped",
+                        "title": f"{TITLES[key]} stopped: {row['error']}",
+                        "actions": ["review"],
+                    }
+                )
+        ap = st["approved"] or {}
+        if running and ap.get("msg"):
+            now = {
+                k: _digest(v["text"]) for k, v in self._messages().items() if isinstance(v, dict)
+            }
+            names = {
+                "group": "group message",
+                "dm": "donor message",
+                "question": "share question",
+                "volunteers": "volunteer message",
+            }
+            changed = [k for k, d in ap["msg"].items() if now.get(k) != d]
+            if changed:
+                nid = "changed:" + _digest(",".join(k + now.get(k, "") for k in changed))
+                if nid not in st["resolved"]:
+                    items.append(
+                        {
+                            "id": nid,
+                            "type": "changed",
+                            "title": "Wording changed after you approved: "
+                            + ", ".join(names[k] for k in changed),
+                            "actions": ["review"],
+                        }
+                    )
         for phone, f in st["giki"].items():
             if f["step"] == "uncertain":
-                items.append({"id": "giki-uncertain:" + phone, "type": "uncertain", "title": f"{f['name']}: share message not confirmed", "phone": phone, "actions": ["giki_checked"]})
+                items.append(
+                    {
+                        "id": "giki-uncertain:" + phone,
+                        "type": "uncertain",
+                        "title": f"{f['name']}: share message not confirmed",
+                        "phone": phone,
+                        "actions": ["giki_checked"],
+                    }
+                )
         if running and self.app.read_left() <= 0:
-            items.append({"id": "goal", "type": "goal", "title": "The amount is complete.", "actions": ["finish"]})
+            items.append(
+                {
+                    "id": "goal",
+                    "type": "goal",
+                    "title": "The amount is complete.",
+                    "actions": ["finish"],
+                }
+            )
         return items
 
     def need_act(self, nid, op, amount=None, text=None):
@@ -824,10 +990,23 @@ class CaseRun:
             res, note = self._send(item["phone"], str(text).strip(), kind="owner_text")
             if res != "ok":
                 raise ValueError(note or "Not sent. Nothing was changed.")
-            if item["type"] == "giki_reply":  # a reply keeps the question open: their next answer is read again
+            if (
+                item["type"] == "giki_reply"
+            ):  # a reply keeps the question open: their next answer is read again
                 self._edit(lambda s: s["giki"].get(item["phone"], {}).update(step="waiting"))
             return self._resolve(nid)
-        if op in ("not_paid", "dismiss", "wait", "choose_audience", "review", "mark_sent", "mark_not_sent", "giki_checked", "reconnect", "finish"):
+        if op in (
+            "not_paid",
+            "dismiss",
+            "wait",
+            "choose_audience",
+            "review",
+            "mark_sent",
+            "mark_not_sent",
+            "giki_checked",
+            "reconnect",
+            "finish",
+        ):
             if op == "reconnect":
                 try:
                     self.app.api("/app/reconnect")
@@ -843,7 +1022,9 @@ class CaseRun:
                 except Exception:
                     pass
             if op == "giki_checked":
-                self._edit(lambda s: s["giki"].get(nid.split(":", 1)[1], {}).update(step="declined"))
+                self._edit(
+                    lambda s: s["giki"].get(nid.split(":", 1)[1], {}).update(step="declined")
+                )
             return self._resolve(nid)
         raise ValueError("Choose one of the actions shown.")
 
@@ -859,7 +1040,12 @@ class CaseRun:
 
     # ------------------------------------------------------------------ money: confirmed once, left updated once
     def _pay(self, nid, amount):
-        if type(amount) not in (int, float) or isinstance(amount, bool) or not 1 <= amount <= 100000000 or amount != amount:
+        if (
+            type(amount) not in (int, float)
+            or isinstance(amount, bool)
+            or not 1 <= amount <= 100000000
+            or amount != amount
+        ):
             raise ValueError("Enter the amount you received.")
         amount = int(amount)
         with self.lock:
@@ -880,7 +1066,9 @@ class CaseRun:
                     "left": max(0, left - amount),
                     "at": self.clock(),
                 }
-                self._write(st)  # targets are fixed first, so a retry after a crash cannot add twice
+                self._write(
+                    st
+                )  # targets are fixed first, so a retry after a crash cannot add twice
             if pay.get("donor_id"):
                 self.hub.book.update(pay["donor_id"], donated=True, amount=pay["total"])
             if self.app.read_left() != pay["left"]:
@@ -936,16 +1124,24 @@ class CaseRun:
         if key == "group":
             s = self.app.ENGINE.summary()
             out["sent"] = s.get("posts_today", 0)
-            nxt = [n.get("due_at") for n in (self.app.ENGINE.status().get("next") or []) if n.get("due_at")]
+            nxt = [
+                n.get("due_at")
+                for n in (self.app.ENGINE.status().get("next") or [])
+                if n.get("due_at")
+            ]
             out["next_at"] = min(nxt) if nxt and out["state"] == "running" else None
         else:
             job = self._job(row) if row and row.get("request_id") else None
-            ids = (ap["ids"][key] if ap else aud.get(key, []))
+            ids = ap["ids"][key] if ap else aud.get(key, [])
             if job:
                 seen = {r.get("id") for r in job.get("receipts", [])}
                 out["sent"] = (job.get("previous_sent") or 0) + (job.get("sent") or 0)
                 out["left"] = len([i for i in job.get("ids", []) if i not in seen])
-                out["next_at"] = (job.get("next_at") or job.get("next_batch_at")) if out["state"] == "running" else None
+                out["next_at"] = (
+                    (job.get("next_at") or job.get("next_batch_at"))
+                    if out["state"] == "running"
+                    else None
+                )
             else:
                 out["left"] = len(ids) if plan["enabled"] else 0
         if key == "giki":
@@ -1015,5 +1211,7 @@ class CaseRun:
         if op == "check":
             return self.mark_checked(body.get("name"))
         if op == "need":
-            return self.need_act(body.get("id"), body.get("op"), body.get("amount"), body.get("text"))
+            return self.need_act(
+                body.get("id"), body.get("op"), body.get("amount"), body.get("text")
+            )
         raise ValueError("Unknown action.")

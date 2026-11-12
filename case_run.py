@@ -1190,7 +1190,20 @@ class CaseRun:
             "log": st["log"][-8:],
             "drafts": st.get("drafts"),
             "payment": {"number": autopilot.ACCOUNT},
+            "cases": [
+                {"id": c["id"], "name": c["name"], "current": c["id"] == reg["current"]}
+                for c in reg["cases"]
+            ],
         }
+
+    def set_left(self, left):
+        """The amount still needed, changed from the case page (same path as the amount chip)."""
+        if type(left) not in (int, float) or isinstance(left, bool) or left != left:
+            raise ValueError("Enter the amount still needed, in rupees.")
+        if not 0 <= left <= 100000000:
+            raise ValueError("Enter an amount from 0 to 100,000,000.")
+        self.app.set_left(int(left))
+        return self.view()
 
     def act(self, body):
         op = body.get("action")
@@ -1210,6 +1223,8 @@ class CaseRun:
             return self.finish(body.get("confirm"))
         if op == "check":
             return self.mark_checked(body.get("name"))
+        if op == "left":
+            return self.set_left(body.get("left"))
         if op == "need":
             return self.need_act(
                 body.get("id"), body.get("op"), body.get("amount"), body.get("text")

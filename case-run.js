@@ -90,8 +90,8 @@
   page.id = 'casePage';
   page.setAttribute('aria-label', 'Case');
   page.innerHTML =
-    '<div class="cr-shell"><div class="cr-head"><div class="cr-top"><h1 id="crName">Case</h1><span class="cr-pills"><span class="cr-pill" id="crWa"></span><span class="cr-pill" id="crStatus"></span></span></div>' +
-    '<p class="cr-meta" id="crMeta"></p><div class="cr-tools-row"><button type="button" id="crPrepare" class="cr-soft">Prepare case</button>' +
+    '<div class="cr-shell"><div class="cr-head"><div class="cr-top"><h1><button type="button" id="crName" class="cr-tap" aria-label="Change case">Case</button></h1><span class="cr-pills"><button type="button" class="cr-pill cr-tap" id="crWa" aria-label="WhatsApp connection"></button><span class="cr-pill" id="crStatus"></span></span></div>' +
+    '<button type="button" class="cr-meta cr-tap" id="crMeta" aria-label="Change the amount left"></button><div class="cr-tools-row"><button type="button" id="crPrepare" class="cr-soft">Prepare case</button>' +
     '<details class="cr-tools" id="crTools"><summary>Tools</summary><div class="cr-menu" id="crMenu"></div></details>' +
     '<button type="button" id="crBack" class="cr-soft">Close</button></div></div>' +
     '<main class="cr-main"><p class="cr-say" id="crSay" role="status"></p>' +
@@ -151,7 +151,7 @@
     const st = $('crStatus');
     st.textContent = STATUS[data.status] || data.status;
     st.dataset.s = data.status;
-    $('crMeta').textContent = `Confirmed ${rs(data.case.confirmed)} · Left ${rs(data.case.left)}`;
+    $('crMeta').textContent = `Confirmed ${rs(data.case.confirmed)} · Left ${rs(data.case.left)} ✎`;
     const wa = $('crWa');
     wa.textContent = data.whatsapp ? 'WhatsApp on' : 'WhatsApp off';
     wa.dataset.ok = data.whatsapp ? '1' : '0';
@@ -316,6 +316,12 @@
   }
   function paintDone(box) {
     box.replaceChildren(make('h2', '', 'Case finished'));
+    const next = make('div', 'cr-row-actions');
+    next.append(
+      btn('Thank donors', 'cr-run', () => window.DonorThanks?.open?.()),
+      btn('Start a new case', 'cr-more', caseSheet),
+    );
+    box.append(next);
     box.append(
       make(
         'p',
@@ -651,6 +657,65 @@
     openSheet('Prepare case', body, [['Done', 'cr-go', null]]);
   }
 
+  function amountSheet() {
+    const input = make('input');
+    input.type = 'number';
+    input.min = '0';
+    input.inputMode = 'numeric';
+    input.value = data.case.left;
+    openSheet('Amount still needed', field('Rs. left for this case', input), [
+      ['Save', 'cr-go', () => post({ action: 'left', left: Number(input.value) })],
+      ['Cancel', 'cr-soft', null],
+    ]);
+    setTimeout(() => input.select(), 50);
+  }
+  async function cases(body) {
+    const r = await fetch('/cases', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw Error(d.error || 'That did not work. Nothing was changed.');
+    location.reload(); // every screen reads the new case
+  }
+  function caseSheet() {
+    const body = make('div', 'cr-sum');
+    const pick = make('select');
+    for (const c of data.cases || []) {
+      const o = new Option(c.name, c.id, false, c.current);
+      pick.append(o);
+    }
+    const name = make('input'),
+      left = make('input');
+    name.placeholder = 'For example the child’s name';
+    left.type = 'number';
+    left.inputMode = 'numeric';
+    left.placeholder = 'Amount needed';
+    body.append(
+      field('Open a saved case', pick),
+      btn('Open this case', 'cr-more', async () => {
+        try {
+          await cases({ action: 'switch', id: pick.value });
+        } catch (e) {
+          $('csError').textContent = e.message;
+        }
+      }),
+      make('b', '', 'Start a new case'),
+      make('p', 'cr-sub', 'Starts from zero: no old amount, stars, sent marks or plan are reused.'),
+      field('Name', name),
+      field('Amount needed (Rs.)', left),
+    );
+    openSheet('Case', body, [
+      [
+        'Start new case',
+        'cr-go',
+        () => cases({ action: 'new', name: name.value, left: Number(left.value) }),
+      ],
+      ['Close', 'cr-soft', null],
+    ]);
+  }
+
   /* ---------------------------------------------------------------- tools menu (the existing tools) */
   const press = (id) => () => document.getElementById(id)?.click();
   /* Nav.go only records a route; each page opens from its own button, so press the same buttons the tabs press. */
@@ -666,6 +731,11 @@
     ['Case Writer', () => window.CaseWriter?.open?.()],
     ['Notes', press('donorNotesShortcut')],
     ['Chat', press('chatOpen')],
+    ['Volunteers and their sharing request', donors('volunteers')],
+    ['Thank donors', () => window.DonorThanks?.open?.()],
+    ['Auto replies', () => document.querySelector('.reply-open')?.click()],
+    ['Resume group messages', () => document.querySelector('.resume-open')?.click()],
+    ['WhatsApp connection', press('whatsappConnection')],
     ['Find groups', () => (location.href = '/new/group-finder')],
     ['Reports', () => document.querySelector('.report-open')?.click()],
     ['Settings', press('gear')],
@@ -701,6 +771,9 @@
   page.addEventListener('cancel', () => (page.returnValue = ''));
   $('crBack').onclick = () => page.close();
   $('crPrepare').onclick = () => data && prepareSheet();
+  $('crMeta').onclick = () => data && amountSheet();
+  $('crName').onclick = () => data && caseSheet();
+  $('crWa').onclick = press('whatsappConnection');
   $('crStart').onclick = () => data && startSheet();
   $('crPause').onclick = () => data && pauseAll();
   $('crFinish').onclick = () => data && finishSheet();

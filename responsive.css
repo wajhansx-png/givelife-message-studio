@@ -2839,7 +2839,6 @@ html body #donorThanksDialog:not([open]) {
 }
 html body #donorThanksDialog::backdrop {
   background: rgba(2, 4, 10, 0.78);
-  backdrop-filter: blur(5px);
 }
 html body #donorThanksDialog header {
   flex: 0 0 auto;

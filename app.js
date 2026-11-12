@@ -1023,6 +1023,12 @@ $('copy').onclick = async () => {
   }
 };
 
+/* More → Case page: the one page that runs the whole case. Only /new shows this button (new-ui.js). */
+$('openCase').onclick = () => {
+  document.querySelector('.overflow-tools').open = false;
+  Nav.go('case');
+};
+
 /* ---- sending ---- */
 let operationCount = 0;
 function busy(on) {

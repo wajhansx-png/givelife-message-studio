@@ -5784,6 +5784,11 @@ class Handler(BaseHTTPRequestHandler):
                     {"error": "The Auto controls could not be read. Nothing was changed."},
                     status=503,
                 )
+        elif self.path == "/case-run":
+            try:
+                self.reply(donors().caserun.view())
+            except Exception:
+                self.reply({"error": "The case page could not be read. Nothing was changed."}, status=503)
         elif self.path == "/report":
             # Every resume (donor DMs and groups) and how many people the Reply feature answered.
             PKT = datetime.timezone(datetime.timedelta(hours=5))
@@ -6242,6 +6247,11 @@ class Handler(BaseHTTPRequestHandler):
                 if action == "test":
                     return self.reply(thanks.test())
                 raise ValueError("Choose save, settings, test, start or stop.")
+            except ValueError as e:
+                return self.reply({"error": str(e)}, status=400)
+        if self.path == "/case-run":
+            try:
+                return self.reply(donors().caserun.act(body))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
         if self.path == "/auto-controls":
@@ -6884,6 +6894,10 @@ def donor_auto_loop():
             donors().thanks.tick()
         except Exception as exc:
             print("[donor-auto] " + type(exc).__name__, flush=True)
+        try:
+            donors().caserun.tick()
+        except Exception as exc:
+            print("[case-run] " + type(exc).__name__, flush=True)
 
 
 def resume_batches_after_restart(wait=10, tries=90, sleep=time.sleep):

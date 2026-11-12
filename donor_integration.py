@@ -67,6 +67,9 @@ class DonorIntegration:
         from donor_thanks import DonorThanks
 
         self.thanks = DonorThanks(app, self)
+        from case_run import CaseRun
+
+        self.caserun = CaseRun(app, self)
         self.revision = 0
         self._resume_due = None
 

@@ -176,10 +176,16 @@
     $('reportToday').textContent =
       'Today: ' + n('reportGroups') + ' group posts · ' + n('reportReplies') + ' replies';
   };
+  async function readReport(path) {
+    const response = await fetch(path);
+    const data = await response.json();
+    if (!response.ok) throw Error(data.error || 'Unavailable');
+    return data;
+  }
   async function fill() {
     for (const id of ['reportGroups', 'reportDms', 'reportReplies', 'reportResumes']) put(id, '…');
     try {
-      const d = await (await fetch('/autopilot')).json(),
+      const d = await readReport('/autopilot'),
         st = d.status || {},
         t = st.today || {},
         next = (st.next || [])[0];
@@ -198,7 +204,7 @@
       put('reportGroups', '—', 'Unavailable · try again in a moment');
     }
     try {
-      const j = await (await fetch('/donor-delivery')).json(),
+      const j = await readReport('/donor-delivery'),
         active = ['Starting', 'Sending', 'Waiting'].includes(j.state),
         sent = (j.previous_sent || 0) + (j.sent || 0),
         total = j.original_total || j.total || 0;
@@ -236,7 +242,7 @@
   };
   async function fillExtra() {
     try {
-      const d = await (await fetch('/report')).json(),
+      const d = await readReport('/report'),
         r = d.replies || {},
         list = d.resumes || [],
         last = list[0];
@@ -261,7 +267,8 @@
      the server runs everything, so closing the browser changes nothing. ---- */
   const cards = {};
   let autoTimer = 0,
-    autoBusy = false;
+    autoBusy = false,
+    autoRevision = 0;
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -283,14 +290,25 @@
     stop.disabled = false;
   };
   async function autoCall(body) {
-    const r = await fetch('/auto-controls', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw Error(d.error || 'That did not work. Nothing was changed.');
-    return d;
+    const controller = new AbortController(),
+      timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const r = await fetch('/auto-controls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw Error(d.error || 'That did not work. Check status before retrying.');
+      if (!d.controls) throw Error('Unexpected response. Check status before retrying.');
+      return d;
+    } catch (error) {
+      if (controller.signal.aborted) throw Error('Timed out · refresh status before retrying');
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
   function buildCard(c) {
     const card = el('article', 'auto-card'),
@@ -299,11 +317,15 @@
       stats = el('dl', 'auto-stats'),
       note = el('p', 'auto-note'),
       line = el('p', 'auto-line'),
-      edit = el('button', 'auto-edit', 'Edit Settings'),
+      edit = el('button', 'auto-edit', '⚙︎'),
+      settingsDialog = el('dialog', 'auto-settings-dialog'),
       set = el('button', 'auto-set'),
       form = el('form', 'auto-form');
     card.dataset.control = c.id;
-    head.append(el('h4', '', c.title), sw);
+    head.append(el('h4', '', c.title), edit, sw);
+    edit.setAttribute('aria-label', 'Edit Settings');
+    edit.title = c.title + ' settings';
+    settingsDialog.setAttribute('aria-label', c.title + ' settings');
     sw.type = edit.type = set.type = 'button';
     set.title = 'Change ' + c.title + ' settings';
     sw.setAttribute('role', 'switch');
@@ -321,14 +343,21 @@
     }
     form.hidden = true;
     form.append(el('p', 'auto-error'));
-    card.append(head, line, stats, note, set, edit, form);
-    cards[c.id] = { card, sw, stats, note, line, set, edit, form, fields: c.fields, filled: false };
+    settingsDialog.append(form);
+    card.append(head, line, stats, note, set, settingsDialog);
+    cards[c.id] = { card, sw, stats, note, line, set, edit, form, settingsDialog, saving: false, fields: c.fields, filled: false };
     set.onclick = () => edit.click();
     sw.onclick = () => toggle(c.id);
     edit.onclick = () => {
-      form.hidden = !form.hidden;
-      if (!form.hidden) fillForm(c.id);
+      if (settingsDialog.open) return;
+      fillForm(c.id);
+      form.hidden = false;
+      settingsDialog.showModal();
     };
+    settingsDialog.addEventListener('cancel', event => {
+      if (cards[c.id].saving) event.preventDefault();
+    });
+    settingsDialog.addEventListener('close', () => { form.hidden = true; edit.focus({ preventScroll: true }); });
     form.onsubmit = (e) => {
       e.preventDefault();
       saveForm(c.id);
@@ -345,7 +374,7 @@
     );
     for (const f of x.fields) {
       const label = el('label'),
-        text = el('span', '', f.label);
+        text = el('span', '', ({main_every:'GiveLife (min)', freelance_every:'Other groups (min)', gap_minutes:'Gap (min)', gap_seconds:'Gap (sec)', vary_seconds:'Variation (sec)', batch_size:'Per batch', rest_minutes:'Rest (min)', rest_seconds:'Rest (sec)', count:'Donors', follow_up:'Send follow-up', include_contacted:'Include contacted', share:'Send share message'})[f.key] || f.label);
       let input;
       if (f.type === 'select') {
         input = el('select');
@@ -360,6 +389,8 @@
         }
       }
       input.name = f.key;
+      input.title = f.label;
+      if (f.type === 'number') input.placeholder = 'Saved default';
       const value = view.settings[f.key];
       if (f.type === 'check') input.checked = !!value;
       else input.value = value == null ? '' : value;
@@ -371,12 +402,13 @@
       cancel = el('button', '', 'Cancel');
     save.type = 'submit';
     cancel.type = 'button';
-    cancel.onclick = () => (x.form.hidden = true);
+    cancel.onclick = () => x.settingsDialog.close();
     x.form.append(save, cancel);
   }
   async function saveForm(id) {
     const x = cards[id],
       settings = {};
+    if (x.saving) return;
     for (const f of x.fields) {
       const input = x.form.elements[f.key];
       if (!input) continue;
@@ -389,15 +421,23 @@
               : Number(input.value)
             : input.value;
     }
+    x.saving = true;
+    autoRevision++;
+    const actions = [...x.form.querySelectorAll('button,input,select')];
+    actions.forEach(button => { button.disabled = true; });
+    x.form.setAttribute('aria-busy', 'true');
     try {
       x.form.querySelector('.auto-error').textContent = '';
       paint(await autoCall({ control: id, settings }));
-      x.form.hidden = true;
-      autoSay(
-        'Saved. Active sends use the new settings from the next send; nothing was restarted.',
-      );
+      x.settingsDialog.close();
+      autoSay('Saved · nothing was restarted');
     } catch (e) {
       x.form.querySelector('.auto-error').textContent = e.message;
+    } finally {
+      autoRevision++;
+      x.saving = false;
+      actions.forEach(button => { button.disabled = false; });
+      x.form.removeAttribute('aria-busy');
     }
   }
   async function toggle(id) {
@@ -422,15 +462,21 @@
       if (!confirm('Switch ' + x.last.title + ' ON? It will DM ' + what + '.')) return;
     }
     autoBusy = true;
-    x.sw.disabled = true;
+    autoRevision++;
+    for (const item of Object.values(cards)) item.sw.disabled = true;
+    x.sw.setAttribute('aria-busy', 'true');
+    x.sw.textContent = turningOn ? 'Starting…' : 'Stopping…';
     autoSay('');
     try {
       paint(await autoCall({ control: id, on: turningOn }));
     } catch (e) {
       autoSay(e.message);
+      paint({ controls: { [id]: x.last } });
     } finally {
+      autoRevision++;
       autoBusy = false;
-      x.sw.disabled = false;
+      x.sw.removeAttribute('aria-busy');
+      for (const item of Object.values(cards)) item.sw.disabled = false;
     }
   }
   /* What happened, in one plain sentence. */
@@ -522,10 +568,16 @@
     $('autoStopAll').hidden = !Object.values(cards).some((x) => x.last && x.last.on);
   }
   async function autoRefresh() {
+    if (autoBusy || Object.values(cards).some(x => x.saving)) return;
+    const revision = autoRevision;
     try {
-      paint(await (await fetch('/auto-controls')).json());
+      const result = await readReport('/auto-controls');
+      if (revision === autoRevision && dlg.open) {
+        paint(result);
+        if ($('autoMsg').textContent === 'Cannot refresh · try again') autoSay('');
+      }
     } catch (e) {
-      autoSay('Auto controls are unavailable right now. Nothing was changed.');
+      if (revision === autoRevision && dlg.open) autoSay('Cannot refresh · try again');
     }
   }
   const open = () => {
@@ -541,6 +593,8 @@
   };
   dlg.addEventListener('close', () => {
     clearInterval(autoTimer);
+    autoRevision++;
+    for (const x of Object.values(cards)) if (x.settingsDialog.open) x.settingsDialog.close();
     remember(false);
   });
   /* Reopening the app returns to the Report if it was open. */

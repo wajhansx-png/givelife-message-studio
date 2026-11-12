@@ -66,6 +66,9 @@
       timer = setTimeout(() => controller.abort(), timeout),
       headers = new Headers(options.headers || {});
     if (token) headers.set('Authorization', 'Bearer ' + token);
+    const cancel = () => controller.abort();
+    if (options.signal?.aborted) cancel();
+    else options.signal?.addEventListener('abort', cancel, { once: true });
     try {
       const response = await raw(base + path, {
         ...options,
@@ -91,6 +94,7 @@
       );
     } finally {
       clearTimeout(timer);
+      options.signal?.removeEventListener('abort', cancel);
     }
   }
   function unlock() {

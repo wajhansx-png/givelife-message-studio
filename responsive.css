@@ -3405,3 +3405,110 @@ html
   filter: none !important;
   -webkit-filter: none !important;
 }
+
+/* Activity Report: one reachable settings control and a focused editor for
+   every automation. The form uses the server's complete supported schema. */
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-card .auto-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 44px 72px !important;
+  grid-column: 1 / -1;
+  gap: 6px !important;
+  align-items: center;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-card .auto-edit {
+  display: inline-flex !important;
+  position: static !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  font-size: 21px !important;
+  border-radius: 12px !important;
+  color: #c4b5fd !important;
+  background: #202033 !important;
+  box-shadow: none !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-edit::before,
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-edit::after {
+  content: none !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.auto-settings-dialog {
+  position: fixed !important;
+  inset: 0 !important;
+  margin: auto !important;
+  width: min(540px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: calc(100dvh - 24px) !important;
+  overflow: auto !important;
+  padding: 16px !important;
+  border: 1px solid #343541 !important;
+  border-radius: 18px !important;
+  background: #0d0e13 !important;
+  color: #f5f5fa !important;
+  box-sizing: border-box !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.auto-settings-dialog::backdrop {
+  background: #0009;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.auto-settings-dialog .auto-form:not([hidden]) {
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  transform: none !important;
+  overflow: visible !important;
+  background: transparent !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.auto-settings-dialog .auto-form > :is(b,p) {
+  grid-column: 1 / -1;
+  margin: 0 !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.auto-settings-dialog .auto-form > p:empty { display: none !important; }
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.auto-settings-dialog label {
+  display: flex !important;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0 !important;
+  color: #c9c9d5;
+  font-size: 13px;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.auto-settings-dialog label.auto-check {
+  flex-direction: row;
+  align-items: center;
+  min-height: 44px;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.auto-settings-dialog :is(input:not([type=checkbox]),select,button) {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 44px !important;
+  box-sizing: border-box;
+  font-size: 16px !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.auto-settings-dialog input[type=checkbox] {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.auto-settings-dialog .auto-save {
+  background: #4f46e5 !important;
+  color: white !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.auto-settings-dialog :focus-visible {
+  outline: 2px solid #a78bfa !important;
+  outline-offset: 2px;
+}
+
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-card .auto-head > * {
+  grid-area: auto !important;
+  margin: 0 !important;
+}

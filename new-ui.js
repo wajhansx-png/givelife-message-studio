@@ -611,6 +611,7 @@ const ui2Frame = (fn) => {
     choose.addEventListener('click', () => {
       $('btnFreePick')?.click();
       choose.setAttribute('aria-expanded', String(!drop.hidden));
+      if (!drop.hidden) requestAnimationFrame(() => drop.scrollIntoView({ block: 'nearest' }));
     });
     wrap.append(choose, drop);
     more.append(later, wrap);
@@ -634,6 +635,7 @@ const ui2Frame = (fn) => {
         if ((t.getAttribute('aria-expanded') === 'true') !== open) t.click();
       panel.hidden = !open;
       later.setAttribute('aria-expanded', String(open));
+      if (open) requestAnimationFrame(() => panel.scrollIntoView({ block: 'nearest' }));
     });
     const paint = () => {
       const due = timers()

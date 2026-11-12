@@ -4847,3 +4847,7 @@
 .UI2 dialog.report-dialog .report-card .auto-card .ui2-auto-sub:empty {
   display: none !important;
 }
+/* Later / Choose group open above the bottom bar, not under it. */
+.UI2 :is(#ui2LaterPanel, #dropFree) {
+  scroll-margin-bottom: 150px;
+}

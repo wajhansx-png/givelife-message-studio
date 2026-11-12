@@ -651,8 +651,9 @@ html body #foundationNotes #notesSync[data-error='true'] {
 
 /* Keep the page still; long notes scroll within their writing surface. */
 
-html:has(#foundationNotes[open]),
-body:has(#foundationNotes[open]) {
+/* A class, not html:has(): a :has() on the root restyles the whole page after every DOM change. */
+html.notes-open,
+html.notes-open body {
   overflow: hidden !important;
 }
 

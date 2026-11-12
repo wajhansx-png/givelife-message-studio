@@ -90,7 +90,7 @@
   page.id = 'casePage';
   page.setAttribute('aria-label', 'Case');
   page.innerHTML =
-    '<div class="cr-shell"><div class="cr-head"><div class="cr-top"><h1 id="crName">Case</h1><span class="cr-pill" id="crStatus"></span></div>' +
+    '<div class="cr-shell"><div class="cr-head"><div class="cr-top"><h1 id="crName">Case</h1><span class="cr-pills"><span class="cr-pill" id="crWa"></span><span class="cr-pill" id="crStatus"></span></span></div>' +
     '<p class="cr-meta" id="crMeta"></p><div class="cr-tools-row"><button type="button" id="crPrepare" class="cr-soft">Prepare case</button>' +
     '<details class="cr-tools" id="crTools"><summary>Tools</summary><div class="cr-menu" id="crMenu"></div></details>' +
     '<button type="button" id="crBack" class="cr-soft">Close</button></div></div>' +
@@ -151,9 +151,10 @@
     const st = $('crStatus');
     st.textContent = STATUS[data.status] || data.status;
     st.dataset.s = data.status;
-    $('crMeta').textContent =
-      `Confirmed ${rs(data.case.confirmed)} · ${rs(data.case.left)} left · WhatsApp ${data.whatsapp ? 'connected' : 'not connected'}`;
-    $('crMeta').dataset.wa = data.whatsapp ? '1' : '0';
+    $('crMeta').textContent = `Confirmed ${rs(data.case.confirmed)} · Left ${rs(data.case.left)}`;
+    const wa = $('crWa');
+    wa.textContent = data.whatsapp ? 'WhatsApp on' : 'WhatsApp off';
+    wa.dataset.ok = data.whatsapp ? '1' : '0';
     paintNeeds();
     paintRows();
     const run = data.status === 'running',
@@ -168,24 +169,35 @@
     done.hidden = data.status !== 'finished';
     if (!done.hidden) paintDone(done);
   }
+  function needRow(it) {
+    const row = make('article', 'cr-need');
+    row.dataset.type = it.type;
+    const text = make('div', 'cr-need-text');
+    text.append(make('b', '', it.title));
+    if (it.text) text.append(make('small', '', '“' + it.text + '”'));
+    row.append(text, ...needButtons(it));
+    return row;
+  }
   function paintNeeds() {
     const box = $('crNeeds'),
+      head = $('crNeedsH'),
       items = data.needs || [];
+    head.querySelector('.cr-more-needs')?.remove();
     $('crNeedsN').textContent = items.length ? String(items.length) : '';
     box.replaceChildren();
     if (!items.length) {
       box.append(make('p', 'cr-empty', 'Nothing needs you.'));
       return;
     }
-    for (const it of items) {
-      const row = make('article', 'cr-need');
-      row.dataset.type = it.type;
-      const text = make('div', 'cr-need-text');
-      text.append(make('b', '', it.title));
-      if (it.text) text.append(make('small', '', '“' + it.text + '”'));
-      row.append(text, ...needButtons(it));
-      box.append(row);
-    }
+    box.append(needRow(items[0]));
+    if (items.length > 1)
+      head.append(
+        btn(`See all ${items.length}`, 'cr-more-needs', () => {
+          const list = make('div', 'cr-sum');
+          for (const it of data.needs) list.append(needRow(it));
+          openSheet('Needs you', list, [['Close', 'cr-soft', null]]);
+        }),
+      );
   }
   function needButtons(it) {
     const one = (label, fn) => btn(label, 'cr-act', fn);
@@ -267,48 +279,38 @@
       card.onclick = (e) => {
         if (!e.target.closest('button')) rowSheet(r.key); // tap a row to see its names, messages and timing
       };
-      const head = make('div', 'cr-row-head');
-      head.append(
+      const info = make('div', 'cr-info'),
+        name = make('div', 'cr-name');
+      name.append(
         make('b', '', r.title),
         make('span', 'cr-pill', r.enabled ? STATE[r.state] || r.state : 'Off'),
       );
       const next = r.next_at ? clock(r.next_at) : '—';
-      const line = make(
-        'p',
-        'cr-line',
-        r.key === 'group'
-          ? `Posted today ${r.sent} · Next ${next}`
-          : `Sent ${r.sent} · Left ${r.left == null ? 0 : r.left} · Next ${next}`,
+      info.append(
+        name,
+        make(
+          'p',
+          'cr-line',
+          r.key === 'group'
+            ? `Posted today ${r.sent} · Next ${next}`
+            : `Sent ${r.sent} · Left ${r.left == null ? 0 : r.left} · Next ${next}`,
+        ),
       );
-      card.append(head, line);
-      if (r.giki) {
-        const g = r.giki;
-        card.dataset.giki =
-          `Waiting ${g.waiting} · Agreed ${g.agreed} · Shared ${g.shared}` +
-          (g.needs ? ` · Needs you ${g.needs}` : '');
-        card.append(make('p', 'cr-sub', card.dataset.giki));
-      }
-      const plan =
-        r.key === 'group'
-          ? `Every ${r.plan.every_minutes} min`
-          : r.key === 'important' && !r.enabled
-            ? 'Off until you choose people'
-            : `${r.plan.gap_minutes} min apart · ${r.plan.batch_size} per batch · ${r.plan.rest_minutes} min break`;
-      const foot = make('div', 'cr-foot'),
-        subs = make('div', 'cr-subs');
-      subs.append(make('p', 'cr-sub', r.note || plan));
-      const acts = make('div', 'cr-row-actions');
+      const g = r.giki;
+      if (g && g.waiting + g.agreed + g.shared + g.needs > 0)
+        info.append(
+          make('p', 'cr-sub', `Waiting ${g.waiting} · Agreed ${g.agreed} · Shared ${g.shared}`),
+        );
+      if (r.note) info.append(make('p', 'cr-sub cr-warn-line', r.note));
+      card.append(info);
       if (r.action !== 'none') {
         const label = { start: 'Start', pause: 'Pause', review: 'Review' }[r.action];
-        acts.append(
-          btn(label, 'cr-run', () =>
-            r.action === 'review' ? rowSheet(r.key) : rowOp(r.key, r.action),
-          ),
+        const run = btn(label, 'cr-run', () =>
+          r.action === 'review' ? rowSheet(r.key) : rowOp(r.key, r.action),
         );
+        run.dataset.act = r.action;
+        card.append(run);
       }
-      acts.append(btn('More', 'cr-more', () => rowSheet(r.key)));
-      foot.append(subs, acts);
-      card.append(foot);
       box.append(card);
     }
   }
@@ -711,6 +713,10 @@
   (async () => {
     try {
       const d = await (await fetch('/case-run')).json();
+      if (d && d.rows) {
+        data = d; // ready before the page opens, so it shows at once
+        paint();
+      }
       if ((d.status === 'running' || d.status === 'paused') && path() === '')
         Nav.go('case', { replace: true });
       else sync();

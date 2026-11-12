@@ -27,6 +27,8 @@ const inView = async (page, locator) => {
 
 for (const [width, height] of [
   [320, 568],
+  [360, 740],
+  [375, 667],
   [390, 844],
   [844, 390],
   [1440, 900],
@@ -43,7 +45,13 @@ for (const [width, height] of [
       'Important Donors',
     ]);
     await expect(page.locator('#crStatus')).toHaveText('Not started');
-    await expect(page.locator('#crMeta')).toContainText('left');
+    await expect(page.locator('#crMeta')).toContainText('Left');
+    if (width !== 320)
+      /* every common phone and desktop: the whole page is on screen, nothing to scroll */
+      expect(
+        await page.locator('.cr-main').evaluate((e) => e.scrollHeight <= e.clientHeight + 1),
+        'the page should not need scrolling',
+      ).toBe(true);
     for (const id of ['#crStart', '#crPause', '#crFinish']) await inView(page, page.locator(id));
     await expect(page.locator('#crStart')).toBeEnabled();
     await expect(page.locator('#crPause')).toBeDisabled();
@@ -103,18 +111,18 @@ test('saving settings never starts sending, and Important stays off until people
   page,
 }) => {
   await open(page, 390, 844);
-  await page.locator('.cr-row[data-key="top"] .cr-more').click();
+  await page.locator('.cr-row[data-key="top"] .cr-name b').click();
   const sheet = page.locator('#caseSheet');
   const gap = sheet.locator('input[type=number]').first();
   await gap.fill('4');
   await sheet.getByRole('button', { name: 'Save' }).click();
   await expect(sheet).toBeHidden();
-  await page.locator('.cr-row[data-key="top"] .cr-more').click();
+  await page.locator('.cr-row[data-key="top"] .cr-name b').click();
   await expect(sheet.locator('input[type=number]').first()).toHaveValue('4');
   await sheet.locator('#csFoot').getByRole('button', { name: 'Close' }).click();
   expect((await api(port, '/case-run')).status).toBe('idle');
   expect((await api(port, '/auto-controls')).controls.group.on).toBe(false);
-  await page.locator('.cr-row[data-key="important"] .cr-more').click();
+  await page.locator('.cr-row[data-key="important"] .cr-name b').click();
   await sheet.locator('input[type=checkbox]').first().check(); // include
   await sheet.getByRole('button', { name: 'Save' }).click();
   await expect(sheet.locator('#csError')).toContainText('Select the Important donors first');

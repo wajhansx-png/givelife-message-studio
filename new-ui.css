@@ -5099,15 +5099,6 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
   border-radius: 14px;
   background: var(--cr-surface);
 }
-.UI2 dialog.case-page .cr-row-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.UI2 dialog.case-page .cr-row-head b {
-  font-size: 16px;
-}
 .UI2 dialog.case-page .cr-line {
   margin: 6px 0 2px;
   font-size: 14.5px;
@@ -5119,16 +5110,6 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
   color: var(--cr-muted);
   font-size: 13px;
   line-height: 1.35;
-}
-.UI2 dialog.case-page .cr-foot {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 8px;
-}
-.UI2 dialog.case-page .cr-subs {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 .UI2 dialog.case-page .cr-row-actions,
 .UI2 dialog.case-sheet .cr-row-actions {
@@ -5395,4 +5376,213 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
     font-size: 12.5px;
     white-space: nowrap;
   }
+}
+
+/* No-scroll layout: one line of counts per row, the button beside the text, one Needs you row. */
+.UI2 dialog.case-page .cr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 12px;
+}
+.UI2 dialog.case-page .cr-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.UI2 dialog.case-page .cr-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.UI2 dialog.case-page .cr-name b {
+  font-size: 15px;
+}
+.UI2 dialog.case-page .cr-name .cr-pill {
+  padding: 2px 9px;
+  font-size: 12px;
+}
+.UI2 dialog.case-page .cr-line {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+}
+.UI2 dialog.case-page .cr-run {
+  flex: none;
+  min-width: 76px;
+}
+.UI2 dialog.case-page .cr-warn-line {
+  color: #fca5a5;
+}
+.UI2 dialog.case-page .cr-rows,
+.UI2 dialog.case-page .cr-needs {
+  gap: 6px;
+}
+.UI2 dialog.case-page h2 {
+  margin: 8px 0 6px;
+}
+.UI2 dialog.case-page .cr-main {
+  padding: 4px 16px 8px;
+}
+.UI2 dialog.case-page .cr-head {
+  padding: 10px 16px 8px;
+}
+.UI2 dialog.case-page .cr-meta {
+  margin: 4px 0 8px;
+}
+.UI2 dialog.case-page .cr-need {
+  padding: 8px 12px;
+}
+.UI2 dialog.case-page .cr-empty {
+  padding: 2px;
+}
+.UI2 dialog.case-page .cr-more-needs {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #6b5516 !important;
+  border-radius: 12px;
+  background: transparent !important;
+  color: #fcd34d !important;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+/* Short screens: the same page, tighter, still without scrolling. */
+@media (max-height: 700px) {
+  .UI2 dialog.case-page h2 {
+    margin: 4px 0;
+    font-size: 13px;
+  }
+  .UI2 dialog.case-page .cr-head {
+    padding: 8px 16px 6px;
+  }
+  .UI2 dialog.case-page .cr-meta {
+    margin: 2px 0 6px;
+    font-size: 13px;
+  }
+  .UI2 dialog.case-page :is(.cr-soft, .cr-tools > summary) {
+    min-height: 40px;
+  }
+  .UI2 dialog.case-page .cr-row {
+    min-height: 46px;
+    padding: 5px 10px;
+  }
+  .UI2 dialog.case-page .cr-run {
+    min-height: 40px;
+    min-width: 66px;
+  }
+  .UI2 dialog.case-page .cr-need-text small {
+    display: none;
+  }
+  .UI2 dialog.case-page .cr-more-needs {
+    min-height: 32px;
+  }
+  .UI2 dialog.case-page .cr-bar {
+    padding-top: 6px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+  .UI2 dialog.case-page .cr-bar button {
+    min-height: 44px;
+  }
+}
+/* A phone on its side: plan rows in two columns, headings dropped. */
+@media (max-height: 480px) and (min-width: 560px) {
+  .UI2 dialog.case-page h2 {
+    display: none;
+  }
+  .UI2 dialog.case-page .cr-rows {
+    grid-template-columns: 1fr 1fr;
+  }
+  .UI2 dialog.case-page .cr-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 14px;
+  }
+  .UI2 dialog.case-page .cr-top {
+    flex: 0 1 auto;
+    gap: 10px;
+  }
+  .UI2 dialog.case-page .cr-meta {
+    flex: 1 1 auto;
+    margin: 0;
+  }
+  .UI2 dialog.case-page .cr-tools-row {
+    flex: none;
+  }
+}
+
+.UI2 dialog.case-page .cr-pills {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+.UI2 dialog.case-page .cr-pill[data-ok='1'] {
+  background: #12332a;
+  color: #6ee7b7;
+}
+.UI2 dialog.case-page .cr-pill[data-ok='0'] {
+  background: #3a1d22;
+  color: #fca5a5;
+}
+.UI2 dialog.case-page .cr-need {
+  flex-wrap: nowrap;
+}
+.UI2 dialog.case-page .cr-need-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.UI2 dialog.case-page .cr-need-text b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.UI2 dialog.case-page .cr-act {
+  flex: none;
+}
+.UI2 dialog.case-page h2 .cr-more-needs {
+  margin-left: auto;
+  min-height: 32px;
+}
+@media (max-height: 660px) {
+  .UI2 dialog.case-page .cr-row {
+    min-height: 42px;
+    padding: 3px 10px;
+  }
+  .UI2 dialog.case-page :is(.cr-rows, .cr-needs) {
+    gap: 4px;
+  }
+  .UI2 dialog.case-page .cr-need {
+    padding: 4px 10px;
+  }
+  .UI2 dialog.case-page .cr-main {
+    padding: 2px 16px 4px;
+  }
+  .UI2 dialog.case-page .cr-line {
+    margin-top: 0;
+  }
+  .UI2 dialog.case-page .cr-name .cr-pill {
+    padding: 1px 8px;
+  }
+}
+
+.UI2 dialog.case-page .cr-run {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #3a4057 !important;
+  border-radius: 12px;
+  background: transparent !important;
+  color: var(--cr-ink) !important;
+  font-size: 15px;
+  font-weight: 700;
+}
+.UI2 dialog.case-page .cr-run[data-act='start'] {
+  border-color: transparent !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}
+.UI2 dialog.case-page .cr-run[data-act='pause'] {
+  border-color: #b08a1c !important;
+  background: #33280f !important;
+  color: #fcd34d !important;
 }

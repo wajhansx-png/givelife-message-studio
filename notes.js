@@ -44,7 +44,7 @@
     <section class="notes-workspace" id="notesWorkspace" hidden>
       <div class="notes-toolbar" role="toolbar" aria-label="Format your notes">
         <button type="button" id="notesChecklist" aria-label="Checklist" title="Checklist">Checklist</button>
-        <button type="button" data-command="insertUnorderedList" aria-label="Bulleted list" title="Bulleted list">Bullets</button>
+        <button type="button" data-command="insertUnorderedList" title="Bulleted list">Bullets</button>
         <button type="button" id="notesRed" class="notes-red" aria-label="Red text" aria-pressed="false" title="Red text">Red</button>
       </div>
       <div class="notes-paper-scroll">

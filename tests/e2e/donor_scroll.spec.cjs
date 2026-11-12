@@ -21,7 +21,6 @@ for (const width of [1440, 390])
     await page.locator('#donorTable').evaluate((el) => (el.scrollTop = 1600));
     const before = await page.locator('#donorTable').evaluate((el) => el.scrollTop);
     expect(before).toBeGreaterThan(500);
-    const star = page.locator('#donorRows .donor-star').filter({ visible: true });
     const target = await page.locator('#donorTable').evaluate(
       (el) =>
         [...el.querySelectorAll('.donor-row')].find((row) => {
@@ -34,7 +33,11 @@ for (const width of [1440, 390])
     const saved = page.waitForResponse(
       (r) => r.url().endsWith('/donors') && r.request().method() === 'POST',
     );
-    await page.locator(`[data-donor-id="${target}"] .donor-star`).click();
+    /* Tap the star where a person sees it. locator.click() first runs Playwright's own scroll-into-view while the
+       rows settle, which moves the list itself and hides what the app really does. */
+    const star = page.locator(`[data-donor-id="${target}"] .donor-star`);
+    const box = await star.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     expect((await saved).ok()).toBe(true);
     await expect
       .poll(() => page.locator('#donorTable').evaluate((el) => el.scrollTop))

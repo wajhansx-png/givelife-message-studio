@@ -985,10 +985,23 @@ const ui2Frame = (fn) => {
     const strip = document.querySelector('.donor-tabs'),
       sel = strip?.querySelector('[aria-selected="true"]');
     if (strip && sel) {
+      watchTabs(strip);
       const key = sel.dataset.tab;
       if (strip.dataset.ui2Sel !== key) {
         strip.dataset.ui2Sel = key;
-        requestAnimationFrame(() => scrollTabToFull(sel));
+        /* right after opening the row may not be laid out yet: try again until it is */
+        /* labels can still change width for a moment (counts load): keep the tab in view ~2.5 s */
+        const started = Date.now();
+        const tryScroll = (n) =>
+          requestAnimationFrame(() => {
+            if (sel.getAttribute('aria-selected') !== 'true' || tabsUserAt > started) return;
+            const a = sel.getBoundingClientRect(),
+              b = strip.getBoundingClientRect();
+            if (!a.width || a.left < b.left - 1 || a.right > b.right + 1)
+              scrollTabToFull(sel, false);
+            if (n > 0) setTimeout(() => tryScroll(n - 1), 150);
+          });
+        tryScroll(16);
       }
     }
   }
@@ -1535,14 +1548,22 @@ document.addEventListener(
   arrange();
 })();
 
-function scrollTabToFull(btn) {
-  if (!btn) return;
+/* The person scrolling the tab row themselves always wins over automatic scrolling. */
+let tabsUserAt = 0;
+function watchTabs(strip) {
+  if (strip.dataset.ui2Watch) return;
+  strip.dataset.ui2Watch = '1';
+  for (const e of ['pointerdown', 'wheel', 'touchstart'])
+    strip.addEventListener(e, () => (tabsUserAt = Date.now()), { passive: true });
+}
+function scrollTabToFull(btn, smooth = true) {
+  if (!btn) return false;
   const strip = btn.closest('.donor-tabs');
-  if (!strip) return;
+  if (!strip) return false;
 
   const btnBox = btn.getBoundingClientRect();
   const stripBox = strip.getBoundingClientRect();
-  if (!stripBox.width || !btnBox.width) return;
+  if (!stripBox.width || !btnBox.width || !btn.checkVisibility()) return false;
 
   const nextTab = btn.nextElementSibling;
   const prevTab = btn.previousElementSibling;
@@ -1574,8 +1595,9 @@ function scrollTabToFull(btn) {
 
   strip.scrollTo({
     left: Math.max(0, targetScrollLeft),
-    behavior: 'smooth',
+    behavior: smooth ? 'smooth' : 'instant',
   });
+  return true;
 }
 
 document.addEventListener(

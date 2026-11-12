@@ -154,7 +154,7 @@ test('message library switches previews and preserves unsaved edits', async ({ p
   await expect(page.locator('.bank-detail header')).toContainText('Message 2');
   await page.locator('.bank-actions').getByRole('button', { name: 'Edit', exact: true }).click();
   await page.getByLabel('Edit message 2', { exact: true }).fill('Synthetic edited caption.');
-  await page.getByRole('button', { name: 'Previous message', exact: true }).click();
+  await page.locator('[data-bank-nav="previous"]').dispatchEvent('click'); // phones show only Next
   await page.getByRole('button', { name: 'Next message', exact: true }).click();
   await expect(page.getByLabel('Edit message 2', { exact: true })).toHaveValue(
     'Synthetic edited caption.',
@@ -334,9 +334,7 @@ for (const [width, height] of [
     await expect(page.locator('#donorProgress')).not.toBeVisible();
     const total = 20;
     await expect(page.locator('.bank-mobile-picker')).toHaveCount(0);
-    await expect(
-      page.getByRole('button', { name: 'Previous message', exact: true }),
-    ).toBeDisabled();
+    await expect(page.locator('[data-bank-nav="previous"]')).toBeDisabled(); // hidden on phones; Next only
     for (let i = 0; i < total; i++) {
       await expect(page.locator('.bank-current')).toHaveText('Message ' + (i + 1) + ' of ' + total);
       const reading = await page.locator('.bank-preview').evaluate((el) => {
@@ -362,7 +360,7 @@ for (const [width, height] of [
         await page.getByRole('button', { name: 'Next message', exact: true }).click();
     }
     await expect(page.getByRole('button', { name: 'Next message', exact: true })).toBeDisabled();
-    await page.getByRole('button', { name: 'Previous message', exact: true }).click();
+    await page.locator('[data-bank-nav="previous"]').dispatchEvent('click'); // phones show only Next
     await expect(page.locator('.bank-current')).toHaveText(
       'Message ' + (total - 1) + ' of ' + total,
     );

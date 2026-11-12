@@ -79,7 +79,7 @@ for (const [width, height] of [
           '#donorSearchOpen',
           '#donorSendImportant',
           '#donorNavMore > summary',
-          '#donorToggle',
+          '#donorToggle:visible, #donorResumeStatus:visible', // Stop DMs, or Resume while paused
           '#donorMainBottom',
           '.donor-row .donor-star',
           '.donor-row .donor-dm',
@@ -119,7 +119,8 @@ for (const [width, height] of [
         });
       expect(rowLayout.nameWidth).toBeGreaterThan(55);
       expect(Math.abs(rowLayout.dmTop - rowLayout.nameTop)).toBeLessThan(25);
-      expect(rowLayout.rowHeight).toBeLessThanOrEqual(65);
+      // one line from 360px; at 320px the status moves under the name (two lines), still compact
+      expect(rowLayout.rowHeight).toBeLessThanOrEqual(width < 360 ? 92 : 65);
       await expect(page.locator('.donor-row .donor-amount').first()).toBeHidden();
       expect(
         await page.locator('#donorTable').evaluate((el) => el.scrollWidth <= el.clientWidth + 2),
@@ -179,6 +180,7 @@ for (const [width, height] of [
       await expect(page.locator('#donorVolunteers')).toBeVisible();
       await expect(page.locator('#donorTable')).toBeHidden();
       await expect(page.locator('.donor-bottom')).toBeHidden();
+      await page.locator('.vol-add-panel > summary').click(); // the add form is folded under "+ Add"
       await assertInside(page, ['#volName', '#volPhone'], width, height);
       await testInfo.attach('donors-volunteers-' + width + '.png', {
         body: await page
@@ -247,9 +249,9 @@ test('Paused controls occupy a full-width row inside the bottom dock', async ({
   await page.locator('#donorResumeStatus .rs-pill').click();
   await expect(page.locator('#donorResumeNowInline')).toBeVisible();
   const back = await page.locator('#donorMainBottom').boundingBox();
-  const toggle = await page.locator('#donorToggle').boundingBox();
+  // While paused the blue bar holds Resume, so the duplicate Stop/Resume button is hidden (owner's design).
+  await expect(page.locator('#donorToggle')).toBeHidden();
   const dm = await page.locator('#donorSendImportant').boundingBox();
-  expect(toggle.x).toBeLessThan(dm.x);
   expect(dm.x).toBeLessThan(back.x);
   await page.locator('.donor-more > summary').first().click();
   await expect(page.locator('.donor-menu-amount-input').first()).toBeVisible();
@@ -269,7 +271,7 @@ for (const [width, height] of [
     expect(table.height).toBeGreaterThanOrEqual(60);
     await assertInside(
       page,
-      ['#donorMainBottom', '#donorToggle', '#donorSendImportant'],
+      ['#donorMainBottom', '#donorResumeNowInline', '#donorSendImportant'], // paused: Resume lives in the bar
       width,
       height,
     );
@@ -307,8 +309,13 @@ for (const width of [320, 360, 390, 430]) {
     const clock = await page.locator('#donorResumeAtInline').boundingBox();
     expect(hide.height).toBeGreaterThanOrEqual(24); // the compact resume row keeps WCAG 2.2's 24px minimum
     expect(resume.height).toBeGreaterThanOrEqual(24);
-    expect(hide.y + hide.height).toBeLessThanOrEqual(resume.y + 1);
-    expect(hide.y + hide.height).toBeLessThanOrEqual(clock.y + 1);
+    const apart = (a, b) =>
+      a.x + a.width <= b.x + 1 ||
+      b.x + b.width <= a.x + 1 ||
+      a.y + a.height <= b.y + 1 ||
+      b.y + b.height <= a.y + 1;
+    expect(apart(hide, resume), 'Hide and Resume do not overlap').toBe(true);
+    expect(apart(hide, clock), 'Hide and the resume time do not overlap').toBe(true);
     await row.locator('.donor-more > summary').click();
     if (width <= 360) await expect(row.locator('.donor-menu-top')).toBeVisible();
     await page.screenshot({ path: `mobile-screenshots/donor-touch-${width}.png` });

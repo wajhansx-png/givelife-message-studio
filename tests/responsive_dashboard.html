@@ -50,7 +50,7 @@
       const ROUTES = [
         ['Donors · All', 'donors/all', '#donorsPage'], ['Donors · Important', 'donors/important', '#donorsPage'],
         ['Donors · Volunteers', 'donors/volunteers', '#donorsPage'], ['Donors · Messages', 'donors/messages', '#donorsPage'],
-        ['Main (groups)', '', ''], ['Notes', 'notes', '#foundationNotes'], ['Focus (message)', 'preview', '#messageFocus'], ['Chat', 'chat', '#hist'], ['Settings', 'settings', '#set'],
+        ['Case (New only)', 'case', '#casePage'], ['Main (groups)', '', ''], ['Notes', 'notes', '#foundationNotes'], ['Focus (message)', 'preview', '#messageFocus'], ['Chat', 'chat', '#hist'], ['Settings', 'settings', '#set'],
       ];
       const WIDTHS = [280, 320, 360, 390, 430, 540, 768, 1024, 1440];
       const $ = (id) => document.getElementById(id);
@@ -75,6 +75,7 @@
         $('version').disabled = true;
         const rows = {}, all = [];
         for (const [n, r, root] of ROUTES) {
+          if (r === 'case' && window.__sweepBase !== '/new/') { rows[n] = []; continue; } // "/" has no Case page
           $('status').textContent = `checking ${n}…`;
           const found = [];
           for (let i = 0; i < WIDTHS.length; i += 4) found.push(...(await sweep([[r, root]], WIDTHS.slice(i, i + 4), 3500)));

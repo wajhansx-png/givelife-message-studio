@@ -206,9 +206,15 @@ test('mobile Notes opens a hidden toolbar by tapping top edge without shrinking 
   expect((await page.locator('.notes-paper').boundingBox()).height).toBeGreaterThanOrEqual(
     height - 2,
   );
-  await page
-    .locator('#foundationNotes')
-    .dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 12, clientY: 16 });
+  const edgeTap = () =>
+    page
+      .locator('#foundationNotes')
+      .dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 12, clientY: 16 });
+  // The test's mouse clicks (a phone sends none) may already have folded the header; start from shown.
+  if ((await page.locator('#foundationNotes').getAttribute('data-controls')) !== 'open')
+    await edgeTap();
+  await expect(page.locator('.notes-head')).toBeVisible();
+  await edgeTap();
   await expect(page.locator('.notes-head')).toBeHidden();
 });
 

@@ -1256,7 +1256,7 @@
     border-radius: 14px;
     background: var(--surface);
     color: var(--ink-muted, #aab0c5);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
   }
   .UI2 .ui2-tab span {

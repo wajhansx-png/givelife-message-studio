@@ -479,7 +479,7 @@ const ui2Frame = (fn) => {
       ['more', ICONS.more, 'More', () => sheet()],
     ];
     for (const [key, icon, label, fn] of items) {
-      const b = mk('button', 'ui2-tab', `<span aria-hidden="true">${icon}</span>${label}`);
+      const b = mk('button', 'ui2-tab', label);
       b.type = 'button';
       b.dataset.tab = key;
       b.addEventListener('click', fn);

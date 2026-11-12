@@ -4119,9 +4119,7 @@ html
   position: relative;
   overflow: hidden;
   background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
-  box-shadow:
-    0 6px 16px -8px #7c3aedaa,
-    inset 0 1px 0 #ffffff26 !important;
+  box-shadow: none !important;
 }
 html
   body:not(#_):not(#__)
@@ -4367,7 +4365,7 @@ html
   background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
   border: 0 !important;
   color: #fff !important;
-  box-shadow: 0 6px 16px -10px #7c3aedaa !important;
+  box-shadow: none !important;
 }
 html
   body:not(#_):not(#__):not(#___)

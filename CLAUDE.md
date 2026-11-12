@@ -26,3 +26,11 @@ Apply these rules automatically to every coding task.
 # RESPONSIVE UI RULES
 - Layout fixes go in `responsive.css` (loaded last), one rule block per width band: <=299, <=359, <=380, <=899, >=900.
 - Before finishing any UI change run `python tests/responsive_dashboard.py` (needs `tests/preview_fake.py --port 3003`), open `/dash`, press "Find errors": every screen and width must show no errors.
+
+# DESIGN TASTE (from GiveLife_UIUX_Visual_Only_Dark_FIXED.pdf, pages 1-10 read)
+- Most-used buttons at the bottom of the phone (thumb zone). Bottom nav: Message, Donors, Chat, More. Words only, no icons.
+- Clear words instead of icons. No glow or box-shadow under buttons.
+- Message text 15px, fully readable. Send buttons one line each, about 42px, group name never overlapped.
+- Extra options (timer, pick group) away from the Send arrow. More opens a bottom sheet, not a top menu.
+- Show money left, tap to change. Auto ON/OFF easy to see without hiding the message.
+- Tablet: message and send list side by side. Desktop: message and send buttons together.

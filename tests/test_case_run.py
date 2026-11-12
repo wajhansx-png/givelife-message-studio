@@ -20,6 +20,7 @@ def stamp(ahead=0):
 class Base(tac.Base):
     def setUp(self):
         super().setUp()
+        app._WA.update(t=0.0)  # the shared WhatsApp status is cached: every test starts fresh
         self.cr = self.h.caserun
         self.h.set_follow_up(QUESTION)
         self.fast = patch.object(self.h.jobs, "_gap", return_value=0)
@@ -252,6 +253,7 @@ class Run(Base):
         self.approve()
         self.addCleanup(self.stop_everything)
         self.status_connected = False
+        app._WA.update(t=0.0)  # forget the cached "connected" answer
         items = {i["id"]: i for i in self.cr.view()["needs"]}
         self.assertEqual(items["whatsapp"]["actions"], ["reconnect"])
 

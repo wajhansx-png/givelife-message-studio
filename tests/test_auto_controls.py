@@ -12,6 +12,7 @@ IMPORTANT = "important"
 class Base(unittest.TestCase):
     def setUp(self):
         fixture.SendTests.setUp(self)
+        app._WA.update(t=0.0)  # the shared WhatsApp status is cached: every test starts fresh
         self.h = app.donors()
         self.h.jobs.import_jobs({"jobs": []})
         self.h.book._save({"version": 1, "records": []})

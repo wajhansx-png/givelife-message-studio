@@ -469,6 +469,7 @@ const ui2Frame = (fn) => {
       ),
     };
     const items = [
+      ['case', ICONS.message, 'Case', () => (typeof Nav !== 'undefined' ? Nav.go('case') : null)],
       ['message', ICONS.message, 'Message', () => (typeof Nav !== 'undefined' ? Nav.go('') : null)],
       ['donors', ICONS.donors, 'Donors', press(() => $('openDonors'))],
       ['chat', ICONS.chat, 'Chat', press(() => $('chatOpen'))],
@@ -490,15 +491,18 @@ const ui2Frame = (fn) => {
   }
   function paintTabs() {
     const path = typeof Nav !== 'undefined' ? Nav.path() : '';
-    const on = path.startsWith('donors')
-      ? 'donors'
-      : path === 'chat'
-        ? 'chat'
-        : path === 'notes'
-          ? 'notes'
-          : path
-            ? ''
-            : 'message';
+    const on =
+      path === 'case'
+        ? 'case'
+        : path.startsWith('donors')
+          ? 'donors'
+          : path === 'chat'
+            ? 'chat'
+            : path === 'notes'
+              ? 'notes'
+              : path
+                ? ''
+                : 'message';
     for (const b of document.querySelectorAll('.ui2-tab'))
       b.setAttribute('aria-current', String(b.dataset.tab === on));
   }
@@ -611,6 +615,7 @@ const ui2Frame = (fn) => {
     choose.addEventListener('click', () => {
       $('btnFreePick')?.click();
       choose.setAttribute('aria-expanded', String(!drop.hidden));
+      if (!drop.hidden) requestAnimationFrame(() => drop.scrollIntoView({ block: 'nearest' }));
     });
     wrap.append(choose, drop);
     more.append(later, wrap);
@@ -634,6 +639,7 @@ const ui2Frame = (fn) => {
         if ((t.getAttribute('aria-expanded') === 'true') !== open) t.click();
       panel.hidden = !open;
       later.setAttribute('aria-expanded', String(open));
+      if (open) requestAnimationFrame(() => panel.scrollIntoView({ block: 'nearest' }));
     });
     const paint = () => {
       const due = timers()

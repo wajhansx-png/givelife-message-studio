@@ -2935,8 +2935,6 @@ dialog[open] {
   }
 }
 dialog::backdrop {
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   opacity: 0;
   transition:
     opacity var(--mid) var(--ease),
@@ -8264,15 +8262,4 @@ html body .donor-page .donor-tabs::-webkit-scrollbar {
   box-shadow: none !important;
   filter: none !important;
   -webkit-filter: none !important;
-}
-
-/* Phase 2/3 iPhone-Level Performance & GPU Acceleration */
-.donor-table,
-.donor-shell,
-.donor-tabs,
-.chat,
-dialog {
-  will-change: transform;
-  transform: translateZ(0);
-  -webkit-overflow-scrolling: touch;
 }

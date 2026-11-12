@@ -357,6 +357,7 @@
     volPoll = 0;
   let drawEpoch = 0;
   const DRAW_CHUNK = 40;
+  const EAGER_ROWS = 200; // up to here rows are drawn in the following frames; longer lists load as you scroll
   let tab = 'all',
     data = { items: [], counts: {} },
     searchTimer,
@@ -536,7 +537,7 @@
   }
   /* Sort = the server's sending order: Important first, not-yet-sent before sent, sent sink in the order sent; the top row is always next. */
   function applyFilters() {
-    page.dataset.panel = tab;
+    setPanel(tab);
     el('donorMessagesTab').tabIndex = 0;
     const epoch = ++filterEpoch;
     updateCounts();
@@ -2104,7 +2105,12 @@
           paintDelivery(row, d.delivery || 'Not contacted');
         }
         rows.append(frag);
-        if (next < items.length) requestAnimationFrame(paintChunk);
+        // More rows are drawn only when the list is scrolled near its end: opening Donors and
+        // switching tabs stay fast with hundreds of donors. Closed page: stop; opening redraws.
+        if (next < items.length && page.open) {
+          if (next < EAGER_ROWS) requestAnimationFrame(paintChunk);
+          else moreOnScroll(rows, paintChunk);
+        }
       };
     paintChunk();
   }
@@ -2134,9 +2140,42 @@
     }
     applyFilters();
   }
+  /* Changing data-panel restyles every donor row (many rules start with #donorsPage[data-panel]).
+     The new tab redraws its rows anyway, so drop the old ones first: a tab switch no longer restyles hundreds of rows. */
+  let rowsWatch = null;
+  function moreOnScroll(rows, paint) {
+    rowsWatch?.disconnect();
+    let root = rows.parentElement;
+    while (root && !/auto|scroll/.test(getComputedStyle(root).overflowY)) root = root.parentElement;
+    const mark = make('div', 'donor-rows-more');
+    mark.setAttribute('aria-hidden', 'true');
+    rows.append(mark);
+    rowsWatch = new IntersectionObserver(
+      (seen) => {
+        if (!seen.some((e) => e.isIntersecting)) return;
+        rowsWatch.disconnect();
+        mark.remove();
+        paint();
+      },
+      { root, rootMargin: '0px 0px 1200px 0px' },
+    );
+    rowsWatch.observe(mark);
+  }
+  function dropRows() {
+    drawEpoch++;
+    rowsWatch?.disconnect();
+    el('donorRows').textContent = '';
+  }
+  function setPanel(t) {
+    if (page.dataset.panel === t) return;
+    dropRows();
+    page.dataset.panel = t;
+  }
+  // Esc closes the dialog without close(): drop the rows first there too (closing restyles every row).
+  page.addEventListener('cancel', dropRows);
   const TABS = ['all', 'important', 'top', 'donated', 'not_contacted', 'volunteers', 'messages'];
   function showSelectedTab() {
-    page.dataset.panel = tab;
+    setPanel(tab);
     el('donorMessagesTab').tabIndex = 0;
     for (const b of page.querySelectorAll('[data-tab]')) {
       b.setAttribute('aria-selected', String(tab === b.dataset.tab));
@@ -2163,6 +2202,7 @@
     await poll();
   }
   function close() {
+    dropRows();
     page.close();
     Nav.leave('donors');
     clearTimeout(pollTimer);
@@ -2182,7 +2222,7 @@
   }
   function hide() {
     clearTimeout(pollTimer);
-    if (page.open) page.close();
+    if (page.open) (dropRows(), page.close());
   }
   page.addEventListener('close', () => {
     clearTimeout(pollTimer);
@@ -2818,7 +2858,7 @@
     clearTimeout(searchTimer);
     Nav.go('donors/' + next, { replace: true });
     applyFilters();
-    const btn = page.querySelector();
+    const btn = page.querySelector(`.donor-tabs [data-tab="${next}"]`);
     if (btn) {
       const strip = btn.closest('.donor-tabs');
       if (strip) {

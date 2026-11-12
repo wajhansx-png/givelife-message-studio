@@ -434,7 +434,7 @@ test('donor list is numbered, progress is one slim line, and tabs have a visible
     .locator('.donor-row .donor-name')
     .evaluateAll((els) => els.slice(0, 3).map((e) => getComputedStyle(e, '::before').content));
   expect(names.every((c) => c.includes('counter(donor)'))).toBe(true);
-  await expect(page.locator('#donorProgress span')).toContainText('1 sent · 9 pending · 0 failed');
+  await expect(page.locator('#donorProgress span')).toContainText('1 of 10 sent · 9 left');
   await expect(page.locator('#donorBatchList')).toBeHidden();
   const h = (await page.locator('#donorProgress').boundingBox()).height;
   expect(h).toBeLessThan(50);
@@ -619,7 +619,8 @@ test('Volunteers tab: filters stay readable on phones and add, save and manage a
   }
 });
 
-test('team over WhatsApp: tasks in the screen, a natural first message, his reply shows up to check, verified', async ({
+// The Team screen was retired from the interface (its saved data is kept), so this check no longer applies.
+test.skip('team over WhatsApp: tasks in the screen, a natural first message, his reply shows up to check, verified', async ({
   page,
   request,
 }) => {
@@ -672,7 +673,8 @@ test('team over WhatsApp: tasks in the screen, a natural first message, his repl
   expect((await cmd('hello how are you')).reply || '').not.toContain('of 2 done');
 });
 
-test('team screen is one screen with no scrolling at every size, even with a lot of data', async ({
+// The Team screen was retired from the interface (its saved data is kept), so this check no longer applies.
+test.skip('team screen is one screen with no scrolling at every size, even with a lot of data', async ({
   page,
   request,
 }) => {
@@ -760,7 +762,8 @@ test('team screen is one screen with no scrolling at every size, even with a lot
   expect(fit, 'a 20-task plan preview also fits one screen').toBe(true);
 });
 
-test('team screen keeps the focused field (and the phone keyboard) when the window resizes or refreshes', async ({
+// The Team screen was retired from the interface (its saved data is kept), so this check no longer applies.
+test.skip('team screen keeps the focused field (and the phone keyboard) when the window resizes or refreshes', async ({
   page,
   request,
 }) => {
@@ -782,7 +785,8 @@ test('team screen keeps the focused field (and the phone keyboard) when the wind
   expect(await box.inputValue()).toBe('Post in groups');
 });
 
-test('team: a planning error is visible inside the Team screen, and quiet hours are an optional switch in Settings', async ({
+// The Team screen was retired from the interface (its saved data is kept), so this check no longer applies.
+test.skip('team: a planning error is visible inside the Team screen, and quiet hours are an optional switch in Settings', async ({
   page,
   request,
 }) => {

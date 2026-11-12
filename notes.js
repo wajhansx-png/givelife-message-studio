@@ -18,6 +18,10 @@
   const page = make('dialog', 'foundation-notes');
   page.id = 'foundationNotes';
   page.setAttribute('aria-label', 'Private foundation notes');
+  /* Lock page scroll while notes are open (see notes.css: a class is far cheaper than html:has()). */
+  new MutationObserver(() =>
+    document.documentElement.classList.toggle('notes-open', page.open),
+  ).observe(page, { attributes: true, attributeFilter: ['open'] });
   page.innerHTML = String.raw`
    <section class="notes-shell">
     <header class="notes-head">

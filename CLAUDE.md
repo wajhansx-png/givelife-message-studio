@@ -39,3 +39,7 @@ Apply these rules automatically to every coding task.
 - First step of every code prompt: `graphify query "<question>"` or `graphify explain "<name>"`, then open only the files it names.
 - No `graphify-out/graph.json` (it is git-ignored, so new sessions lack it): run `pip install -q graphifyy && graphify update .` first.
 - After editing code: `graphify update .`. For one simple lookup, grep is fine.
+
+# CASE PAGE (/new, Case tab)
+- `case_run.py` + `/case-run` run the approved plan through the EXISTING engines (no sender of its own); `case-run.js` + the end of `new-ui.css` are the page. Tests: `tests/test_case_run.py`, `tests/e2e/case_run.spec.cjs`.
+- Saving a plan never sends. Start needs the summary token. One DM queue at a time. Never retry an uncertain send. A claim is not money until the owner confirms the amount.

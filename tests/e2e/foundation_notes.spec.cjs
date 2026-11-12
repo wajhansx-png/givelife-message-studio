@@ -163,7 +163,7 @@ test('quiet Notes keeps only writing visible; top-edge reveals controls and full
   expect(colors.editor).toBe('rgba(0, 0, 0, 0)');
   expect(colors.border).toBe('1px'); /* a hairline border frames the writing column */
   expect(colors.outline).toBe('none');
-  expect(colors.shadow).not.toBe('none');
+  expect(colors.shadow).toBe('none'); /* no glow or shadow under the writing column (design rule) */
   await page.locator('#notesEditor').fill('A focused foundation idea');
   await expect(toolbar).toBeHidden();
   await page.mouse.move(100, 18);

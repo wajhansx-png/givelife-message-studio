@@ -2064,7 +2064,6 @@ html body .e.bot {
   box-shadow:
     0 10px 30px #0006,
     inset 0 1px 0 #ffffff14 !important;
-  backdrop-filter: blur(6px);
 }
 html body .e.bot.err {
   background: linear-gradient(135deg, #7f1d1d66, #9a341266) !important;
@@ -2105,7 +2104,6 @@ html body #liveMore > div:not(.k) {
   background:
     radial-gradient(circle at 20% 20%, #7c3aed88, transparent 50%),
     radial-gradient(circle at 80% 80%, #0891b288, transparent 50%), #050816ee;
-  backdrop-filter: blur(6px);
 }
 .report-card {
   width: min(640px, calc(100vw - 32px));
@@ -2718,7 +2716,6 @@ html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination > b
 .report-card button {
   background: #ffffff1a !important;
   border: 1px solid #ffffff40 !important;
-  backdrop-filter: blur(6px);
 }
 /* Group preview: action buttons sit right next to the message; frequent ones coloured. */
 @media (min-width: 901px) {
@@ -3267,7 +3264,6 @@ html body #donorsPage #donorProgress:not([hidden]) {
   z-index: 6 !important;
   margin: 0 !important;
   background: #0f1a17f2 !important;
-  backdrop-filter: blur(8px);
   box-shadow: 0 12px 34px #000b !important;
 }
 html body #donorsPage .dp-show {
@@ -7149,7 +7145,6 @@ html body #donorsPage {
   border: 1px solid #ffffff2e;
   background: #0d1020b8;
   color: #e6ebf5;
-  backdrop-filter: blur(6px);
   cursor: pointer;
 }
 .fs-toggle[hidden] {
@@ -7797,7 +7792,6 @@ html body:not(#_) :is(#messageFocus .focus-gen-icon, #donorsPage .bank-gen-icon)
   background: #1e1b2ecc !important;
   border: 1px solid #a78bfa77 !important;
   box-shadow: 0 4px 12px #0006 !important;
-  backdrop-filter: blur(6px);
   display: grid;
   place-items: center;
   padding: 0 !important;

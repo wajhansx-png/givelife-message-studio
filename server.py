@@ -5437,7 +5437,9 @@ class Handler(BaseHTTPRequestHandler):
             '<link rel="stylesheet" href="/responsive.css" />\n    <link rel="stylesheet" href="/new-ui.css" />',
             1,
         )
-        html = html.replace("</body>", '<script src="/new-ui.js"></script></body>', 1)
+        html = html.replace(
+            "</body>", '<script src="/new-ui.js"></script><script src="/case-run.js"></script></body>', 1
+        )
         return self.reply(
             html.encode("utf-8"), "text/html", extra_headers={"Cache-Control": "no-cache"}
         )
@@ -5534,6 +5536,7 @@ class Handler(BaseHTTPRequestHandler):
             "/comfort.css",
             "/responsive.css",
             "/new-ui.js",
+            "/case-run.js",
             "/new-ui.css",
             "/group-finder.js",
             "/group-finder.css",
@@ -5607,6 +5610,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply_new_ui_css()
         if self.path.split("?")[0] == "/new-ui.js":
             return self.reply_file("new-ui.js", "application/javascript")
+        if self.path.split("?")[0] == "/case-run.js":
+            return self.reply_file("case-run.js", "application/javascript")
         if self.path in (
             "/",
             "/app.js",
@@ -5784,6 +5789,11 @@ class Handler(BaseHTTPRequestHandler):
                     {"error": "The Auto controls could not be read. Nothing was changed."},
                     status=503,
                 )
+        elif self.path == "/case-run":
+            try:
+                self.reply(donors().caserun.view())
+            except Exception:
+                self.reply({"error": "The case page could not be read. Nothing was changed."}, status=503)
         elif self.path == "/report":
             # Every resume (donor DMs and groups) and how many people the Reply feature answered.
             PKT = datetime.timezone(datetime.timedelta(hours=5))
@@ -6242,6 +6252,11 @@ class Handler(BaseHTTPRequestHandler):
                 if action == "test":
                     return self.reply(thanks.test())
                 raise ValueError("Choose save, settings, test, start or stop.")
+            except ValueError as e:
+                return self.reply({"error": str(e)}, status=400)
+        if self.path == "/case-run":
+            try:
+                return self.reply(donors().caserun.act(body))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
         if self.path == "/auto-controls":
@@ -6884,6 +6899,10 @@ def donor_auto_loop():
             donors().thanks.tick()
         except Exception as exc:
             print("[donor-auto] " + type(exc).__name__, flush=True)
+        try:
+            donors().caserun.tick()
+        except Exception as exc:
+            print("[case-run] " + type(exc).__name__, flush=True)
 
 
 def resume_batches_after_restart(wait=10, tries=90, sleep=time.sleep):

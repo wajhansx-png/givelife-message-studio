@@ -460,7 +460,7 @@
   /* Clicking outside the editor saves the edit and leaves editing (buttons in the tool rail keep their own behaviour). */
   document.addEventListener('pointerdown', (e) => {
     if (screen.hidden || !editing || baseDialog.open) return;
-    if ($('focusText').contains(e.target) || e.target.closest('.focus-rail, dialog, #waMarkBar'))
+    if ($('focusText').contains(e.target) || e.target.closest('.focus-rail, dialog, #waMarkBar, #ui2Live, #ui2Float'))
       return;
     edit(false);
   });

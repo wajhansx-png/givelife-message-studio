@@ -82,6 +82,7 @@ for (const width of [280, 320, 360, 390, 430, 768]) {
     const tabs = page.locator('#ui2Tabs');
     await expect(tabs).toBeVisible();
     await expect(tabs.locator('.ui2-tab:visible')).toHaveText([
+      /Case/,
       /Message/,
       /Donors/,
       /Chat/,
@@ -165,6 +166,20 @@ test('/new desktop reader: the message with its buttons right under it; editing 
   expect(await page.locator('#focusText').inputValue()).toBe(before); // round trip keeps the text exactly
 });
 
+test('/new reader: tapping a line or the B/I bar while editing keeps editing open', async ({
+  page,
+}) => {
+  await open(page, '/new#/preview', 390);
+  await page.locator('#focusEdit').click();
+  const live = page.locator('#ui2Live');
+  await expect(live).toBeVisible();
+  await live.click({ position: { x: 40, y: 30 } });
+  await expect(live).toBeVisible();
+  await page.locator('#ui2Float [data-cmd="bold"]').click();
+  await expect(live).toBeVisible();
+  await expect(page.locator('#ui2Float')).toBeVisible();
+});
+
 test("/new computer: the main screen shows today's message beside the send list; a phone keeps one column", async ({
   page,
 }) => {
@@ -194,6 +209,7 @@ test('/new computer: every option is one clear button in the bottom bar, and not
   const bar = page.locator('#ui2Tabs');
   await expect(bar).toBeVisible();
   await expect(bar.locator('.ui2-tab')).toHaveText([
+    /Case/,
     /Message/,
     /Donors/,
     /Chat/,
@@ -706,7 +722,7 @@ test('/new phone donors: the ⋯ menu holds Add numbers, Add one donor, Bulk and
   await expect(page.locator('#donorDeselectAll')).toBeHidden(); // only on the Important tab
   const panel = await page.locator('#donorNavMore .compact-nav-panel').boundingBox();
   const bar = await page.locator('.donor-tabs').boundingBox();
-  expect(panel.y + panel.height).toBeLessThanOrEqual(bar.y); // opens upward, over the list
+  expect(panel.y + panel.height).toBeLessThanOrEqual(bar.y + 1); // opens upward, over the list (browser rectangles differ by a subpixel)
   expect(panel.x).toBeGreaterThanOrEqual(0);
   await page.locator('#donorAdd').click();
   await expect(page.locator('#donorAddDialog')).toBeVisible();

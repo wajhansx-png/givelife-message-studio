@@ -517,7 +517,7 @@
     const all = Object.values(cards).filter((x) => x.last),
       running = all.filter((x) => x.last.on).length,
       count = $('autoCount');
-    count.textContent = (running ? running + ' running · ' : '') + all.length + ' total';
+    count.textContent = running + '/' + all.length + ' on';
     count.dataset.run = running ? '1' : '';
     $('autoStopAll').hidden = !Object.values(cards).some((x) => x.last && x.last.on);
   }

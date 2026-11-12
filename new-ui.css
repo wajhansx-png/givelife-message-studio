@@ -4844,3 +4844,6 @@
 .UI2 dialog.report-dialog .report-card .auto-card[data-prog='1'] {
   padding-bottom: 10px !important;
 }
+.UI2 dialog.report-dialog .report-card .auto-card .ui2-auto-sub:empty {
+  display: none !important;
+}

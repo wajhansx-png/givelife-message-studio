@@ -1199,8 +1199,6 @@ const ui2Frame = (fn) => {
       if (!dl) continue;
       const dt = [...dl.querySelectorAll('dt')].map((x) => x.textContent.trim());
       const dd = [...dl.querySelectorAll('dd')].map((x) => x.textContent.trim());
-      const i = dt.indexOf('sent');
-      const line = (dd[0] || '0') + ' ' + (dt[0] || '') + ' · ' + (i >= 0 ? dd[i] : '0') + ' sent';
       let sub = card.querySelector('.ui2-auto-sub');
       if (!sub) {
         sub = mk('small', 'ui2-auto-sub');
@@ -1215,7 +1213,18 @@ const ui2Frame = (fn) => {
           h.addEventListener('keydown', (e) => e.key === 'Enter' && edit.click());
         }
       }
-      setText(sub, card.querySelector('.auto-line')?.textContent.trim() || line);
+      /* Minimal text: "4/15 · next 10:00", "6/20 · check WhatsApp", nothing at all when there is nothing to say. */
+      const num = (k) => Number(dd[dt.indexOf(k)]) || 0,
+        sent = num('sent'),
+        total = sent + num('left'),
+        at = dd[dt.indexOf('next')],
+        isGroup = card.dataset.control === 'group',
+        run = card.dataset.state === 'ON' || card.dataset.state === 'STOPPING',
+        bits = [];
+      if (sent || total) bits.push(isGroup ? sent + ' sent' : sent + '/' + total);
+      if (run && at && at !== '—') bits.push('next ' + at);
+      if (card.dataset.alert === '1') bits.push('check WhatsApp');
+      setText(sub, bits.join(' · '));
     }
   }
 

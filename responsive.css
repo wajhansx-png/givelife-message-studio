@@ -3412,9 +3412,9 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) 44px 72px !important;
   grid-column: 1 / -1;
-  grid-template-rows: 52px !important;
-  height: 52px !important;
-  min-height: 52px !important;
+  grid-template-rows: 60px !important;
+  height: 60px !important;
+  min-height: 60px !important;
   gap: 6px !important;
   align-items: center;
 }
@@ -3577,7 +3577,7 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
   justify-content: center !important;
   gap: 2px !important;
   min-width: 0 !important;
-  max-height: 52px !important;
+  max-height: 60px !important;
 }
 html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-identity h4 {
   min-width: 0;
@@ -3638,4 +3638,38 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
   font-size: 14px !important;
   font-weight: 600;
   box-shadow: none !important;
+}
+
+/* A real, labelled delivery track beneath the sent count, inside the name
+   column. Recurring Group Auto has no finite completion percentage. */
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-card::after {
+  display: none !important;
+  content: none !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-batch-progress:not([hidden]) {
+  display: block !important;
+  height: 8px !important;
+  min-height: 8px !important;
+  width: calc(100% - 20px) !important;
+  margin: 2px 0 0 20px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: 999px !important;
+  background: #343a4e !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-batch-progress[hidden] { display: none !important; }
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-progress-fill {
+  display: block !important;
+  height: 100% !important;
+  border-radius: inherit !important;
+  background: #a394ff !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-card:is([data-state='ON'],[data-complete='1']) .auto-progress-fill {
+  background: #34d399 !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-card[data-state='STOPPING'] .auto-progress-fill {
+  background: #fbbf24 !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-card[data-alert='1'] .auto-progress-fill {
+  background: #f87171 !important;
 }

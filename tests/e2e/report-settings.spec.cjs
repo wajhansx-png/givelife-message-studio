@@ -220,3 +220,37 @@ for (const [width,height] of [[320,740],[390,844],[768,1024],[1440,900]]) {
     await expect(page.locator('.report-dialog')).toBeHidden();
   });
 }
+for (const width of [320,390,1440]) {
+  test(`progress shows true delivered fraction, not a decorative underline at ${width}`, async ({page}) => {
+    const view = await api(port, '/auto-controls');
+    const batch = view.controls.thanks;
+    Object.assign(batch,{sent:4,pending:0,recipients:15,state:'OFF',on:false});
+    await page.route('**/auto-controls', route => route.fulfill({json:view}));
+    await open(page,width);
+    const card = page.locator('[data-control=thanks]');
+    const bar = card.getByRole('progressbar', {name:'Thanks donors progress'});
+    await expect(bar).toBeVisible();
+    await expect(bar).toHaveAttribute('aria-valuenow','27');
+    await expect(bar).toHaveAttribute('aria-valuetext','4 of 15 sent');
+    await expect(card.locator('.ui2-auto-sub')).toContainText('4/15 sent');
+    for (const sent of [0,15]) {
+      Object.assign(batch,{sent,pending:15-sent});
+      await page.evaluate(()=>GiveLifeReport.open());
+      await expect(bar).toHaveAttribute('aria-valuenow',String(sent ? 100 : 0));
+      await expect(bar).toHaveAttribute('aria-valuetext',`${sent} of 15 sent`);
+    }
+    const fill = bar.locator('.auto-progress-fill');
+    const bounds = await bar.boundingBox();
+    expect(bounds.height).toBe(8);
+    const identity = await card.locator('.auto-identity').boundingBox();
+    const filled = await fill.boundingBox();
+    expect(Math.abs(bounds.width-filled.width)).toBeLessThanOrEqual(1);
+    expect(bounds.x).toBeGreaterThanOrEqual(identity.x);
+    expect(bounds.x+bounds.width).toBeLessThanOrEqual(identity.x+identity.width+1);
+    expect(await card.evaluate(e=>getComputedStyle(e,'::after').display)).toBe('none');
+    expect(await page.locator('[data-control=group]').getByRole('progressbar').count()).toBe(0);
+    Object.assign(batch,{sent:0,pending:0,recipients:0});
+    await page.evaluate(()=>GiveLifeReport.open());
+    await expect(bar).toBeHidden();
+  });
+}

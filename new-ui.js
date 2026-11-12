@@ -1222,12 +1222,12 @@ const ui2Frame = (fn) => {
       /* Minimal text: "4/15 · next 10:00", "6/20 · check WhatsApp", nothing at all when there is nothing to say. */
       const num = (k) => Number(dd[dt.indexOf(k)]) || 0,
         sent = num('sent'),
-        total = sent + num('left'),
+        total = Number(card.dataset.progressTotal) || sent + num('left'),
         at = dd[dt.indexOf('next')],
         isGroup = card.dataset.control === 'group',
         run = card.dataset.state === 'ON' || card.dataset.state === 'STOPPING',
         bits = [];
-      if (sent || total) bits.push(isGroup ? sent + ' sent' : sent + '/' + total);
+      if (sent || total) bits.push(isGroup ? sent + ' sent' : sent + '/' + total + ' sent');
       if (run && at && at !== '—') bits.push('next ' + at);
       if (card.dataset.alert === '1') bits.push('check WhatsApp');
       setText(sub, bits.join(' · '));

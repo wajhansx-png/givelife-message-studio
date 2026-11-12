@@ -323,7 +323,16 @@
       form = el('form', 'auto-form');
     card.dataset.control = c.id;
     const identity = el('div', 'auto-identity');
-    identity.append(el('h4', '', c.title));
+    const progress = el('div', 'auto-batch-progress'),
+      fill = el('span', 'auto-progress-fill');
+    progress.hidden = true;
+    progress.setAttribute('role', 'progressbar');
+    progress.setAttribute('aria-label', c.title + ' progress');
+    progress.setAttribute('aria-valuemin', '0');
+    progress.setAttribute('aria-valuemax', '100');
+    fill.setAttribute('aria-hidden', 'true');
+    progress.append(fill);
+    identity.append(el('h4', '', c.title), progress);
     head.append(identity, edit, sw);
     edit.setAttribute('aria-label', 'Edit Settings');
     edit.title = c.title + ' settings';
@@ -347,7 +356,7 @@
     form.append(el('p', 'auto-error'));
     settingsDialog.append(form);
     card.append(head, line, stats, note, set, settingsDialog);
-    cards[c.id] = { card, sw, stats, note, line, set, edit, form, settingsDialog, saving: false, fields: c.fields, filled: false };
+    cards[c.id] = { card, sw, stats, note, line, set, edit, form, settingsDialog, progress, fill, saving: false, fields: c.fields, filled: false };
     set.onclick = () => edit.click();
     sw.onclick = () => toggle(c.id);
     edit.onclick = () => {
@@ -547,13 +556,19 @@
       x.note.textContent = c.note || '';
       x.line.textContent = plain(c);
       x.set.textContent = settingsLine(c);
-      /* One glance: a thin bar shows how far the batch has got; the long note lives in the tooltip. */
-      const done = Number(c.sent) || 0,
-        total = done + (Number(c.pending) || 0);
-      x.card.style.setProperty(
-        '--p',
-        c.id !== 'group' && total ? Math.min(1, done / total).toFixed(3) : '0',
-      );
+      // Delivery progress uses the original audience. Failed/skipped recipients
+      // must not turn a partly delivered batch into a false 100% when pending is zero.
+      const done = Math.max(0, Number(c.sent) || 0),
+        total = Math.max(done, Number(c.recipients) || 0, done + (Number(c.pending) || 0)),
+        hasBatch = c.id !== 'group' && total > 0,
+        ratio = hasBatch ? Math.min(1, done / total) : 0;
+      x.card.dataset.progressTotal = hasBatch ? String(total) : '0';
+      x.card.dataset.complete = hasBatch && done === total ? '1' : '';
+      x.progress.hidden = !hasBatch;
+      x.progress.setAttribute('aria-valuenow', String(Math.round(ratio * 100)));
+      x.progress.setAttribute('aria-valuetext', done + ' of ' + total + ' sent');
+      x.progress.title = done + ' of ' + total + ' sent';
+      x.fill.style.width = ratio * 100 + '%';
       x.card.title = c.note || '';
       /* Same rule plain() already uses for "Stopped · check WhatsApp": red means it stopped and needs a look. */
       x.card.dataset.alert =

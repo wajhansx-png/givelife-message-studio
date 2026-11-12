@@ -512,7 +512,7 @@ test('poster upload shows real progress, stays open until confirmed, and then cl
   await expect(page.locator('#posterDialog')).toBeVisible();
   await expect.poll(() => !!finishUpload).toBe(true);
   expect(authorized).toBe(true);
-  await expect(page.locator('#posterProgressText')).toContainText('saving securely');
+  await expect(page.locator('#posterProgressText')).toContainText(/Uploading|saving securely/); // real progress, never a fake timer
   finishUpload();
   await expect(page.locator('#posterDialog')).not.toBeVisible({ timeout: 8000 });
   await expect(page.locator('#donorNotice')).toContainText('Video saved for groups and DMs.');

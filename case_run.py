@@ -1114,14 +1114,18 @@ class CaseRun:
         finally:
             self.worker.release()
 
-    def _row_view(self, st, key, aud):
+    def _row_view(self, st, key, aud, m=None):
         plan, ap, row = st["plan"][key], st["approved"], st["rows"].get(key)
+        m = m or self._messages()
         out = {
             "key": key,
             "title": TITLES[key],
             "enabled": plan["enabled"],
             "state": (row or {}).get("state", "idle"),
             "plan": {k: v for k, v in plan.items() if k not in ("enabled", "ids")},
+            "has_msg": bool(
+                m[{"group": "group", "volunteers": "volunteers"}.get(key, "dm")]["text"].strip()
+            ),
             "sent": 0,
             "left": None,
             "next_at": None,
@@ -1188,7 +1192,7 @@ class CaseRun:
                 "confirmed": self._confirmed(),
             },
             "whatsapp": bool(self.app.wa_ok()),
-            "rows": [self._row_view(st, k, aud) for k in ROWS],
+            "rows": [self._row_view(st, k, aud, m) for k in ROWS],
             "needs": self.needs(st),
             "checks": self.checks(st, m),
             "approved": bool(st["approved"]),

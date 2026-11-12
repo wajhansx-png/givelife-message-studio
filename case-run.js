@@ -90,17 +90,18 @@
   page.id = 'casePage';
   page.setAttribute('aria-label', 'Case');
   page.innerHTML =
-    '<div class="cr-shell"><div class="cr-head"><div class="cr-top"><h1><button type="button" id="crName" class="cr-tap" aria-label="Change case">Case</button></h1><span class="cr-pills"><button type="button" class="cr-pill cr-tap" id="crWa" aria-label="WhatsApp connection"></button><span class="cr-pill" id="crStatus"></span></span></div>' +
-    '<button type="button" class="cr-meta cr-tap" id="crMeta" aria-label="Change the amount left"></button><div class="cr-tools-row"><button type="button" id="crPrepare" class="cr-soft">Prepare case</button>' +
-    '<button type="button" id="crTools" class="cr-soft">Tools</button>' +
-    '<button type="button" id="crBack" class="cr-soft">Close</button></div></div>' +
+    '<div class="cr-shell"><header class="cr-top"><button type="button" id="crWa" class="cr-wa" aria-label="WhatsApp connection"></button></header>' +
     '<main class="cr-main"><p class="cr-say" id="crSay" role="status"></p>' +
-    '<section aria-labelledby="crNeedsH"><h2 id="crNeedsH">Needs you <small id="crNeedsN"></small></h2><div id="crNeeds" class="cr-needs"></div></section>' +
-    '<section aria-labelledby="crPlanH"><h2 id="crPlanH">Sending plan</h2><div id="crRows" class="cr-rows"></div></section>' +
+    '<div class="cr-list cr-prep-row"><div class="cr-li"><b>Prepare case</b><button type="button" id="crPrepare" class="cr-tx">Open</button></div></div>' +
+    '<section id="crNeedsSec" aria-labelledby="crNeedsH" hidden><h2 id="crNeedsH">Needs you <small id="crNeedsN"></small></h2><div id="crNeeds" class="cr-list"></div></section>' +
+    '<section aria-labelledby="crPlanH"><h2 id="crPlanH">Sending plan</h2><div id="crRows" class="cr-list"></div></section>' +
     '<section id="crDone" class="cr-done" hidden></section></main>' +
-    '<footer class="cr-bar"><button type="button" id="crStart" class="cr-go">Start case</button>' +
+    '<footer class="cr-foot"><div class="cr-bar"><button type="button" id="crStart" class="cr-go">Start case</button>' +
     '<button type="button" id="crPause" class="cr-stop">Pause all</button>' +
-    '<button type="button" id="crFinish" class="cr-end">Finish case</button></footer></div>';
+    '<button type="button" id="crFinish" class="cr-end">Finish case</button></div>' +
+    '<nav class="cr-nav" aria-label="Case menu"><button type="button" id="crTools" class="cr-link">Tools</button>' +
+    '<button type="button" id="crSettings" class="cr-link">Settings</button>' +
+    '<button type="button" id="crBack" class="cr-link">Close</button></nav></footer></div>';
   document.body.append(page);
   const sheet = make('dialog', 'case-sheet');
   sheet.id = 'caseSheet';
@@ -150,30 +151,39 @@
     const s = JSON.stringify(data);
     if (s === sig) return;
     sig = s;
-    $('crName').textContent = data.case.name || 'Case';
-    const st = $('crStatus');
-    st.textContent = STATUS[data.status] || data.status;
-    st.dataset.s = data.status;
-    $('crMeta').textContent = `Confirmed ${rs(data.case.confirmed)} · Left ${rs(data.case.left)}`;
     const wa = $('crWa');
-    wa.textContent = data.whatsapp ? 'WhatsApp on' : 'WhatsApp off';
+    wa.replaceChildren(
+      make('span', 'cr-dot'),
+      make('span', '', data.whatsapp ? 'WhatsApp' : 'WhatsApp off'),
+    );
     wa.dataset.ok = data.whatsapp ? '1' : '0';
+    const ready = Object.values(data.checks || {}).every((v) => v === 'ok');
+    $('crPrepare').replaceChildren(make('span', 'cr-open', 'Open'));
+    $('crPrepare').closest('.cr-li').dataset.todo = ready ? '0' : '1';
+    $('crPrepare').setAttribute(
+      'aria-label',
+      ready ? 'Prepare case' : 'Prepare case: something is not ready',
+    );
     paintNeeds();
     paintRows();
     const run = data.status === 'running',
       paused = data.status === 'paused',
-      idle = data.status === 'idle';
-    const start = $('crStart');
-    start.textContent = paused ? 'Resume case' : 'Start case';
-    start.disabled = !(idle || paused);
+      idle = data.status === 'idle',
+      fin = data.status === 'finished';
+    $('crStart').textContent = paused ? 'Resume case' : 'Start case';
+    $('crStart').hidden = !(idle || paused);
+    $('crPause').hidden = !run;
+    $('crFinish').hidden = !(run || paused);
     $('crPause').disabled = !run;
     $('crFinish').disabled = !(run || paused);
+    document.querySelector('#casePage .cr-bar').hidden = fin;
     const done = $('crDone');
-    done.hidden = data.status !== 'finished';
+    done.hidden = !fin;
+    $('crPlanH').parentElement.hidden = fin;
     if (!done.hidden) paintDone(done);
   }
   function needRow(it) {
-    const row = make('article', 'cr-need');
+    const row = make('article', 'cr-li cr-need');
     row.dataset.type = it.type;
     const text = make('div', 'cr-need-text');
     text.append(make('b', '', it.title));
@@ -188,10 +198,8 @@
     head.querySelector('.cr-more-needs')?.remove();
     $('crNeedsN').textContent = items.length ? String(items.length) : '';
     box.replaceChildren();
-    if (!items.length) {
-      box.append(make('p', 'cr-empty', 'Nothing needs you.'));
-      return;
-    }
+    $('crNeedsSec').hidden = !items.length;
+    if (!items.length) return;
     box.append(needRow(items[0]));
     if (items.length > 1)
       head.append(
@@ -203,7 +211,7 @@
       );
   }
   function needButtons(it) {
-    const one = (label, fn) => btn(label, 'cr-act', fn);
+    const one = (label, fn) => btn(label, 'cr-tx', fn);
     switch (it.type) {
       case 'payment':
         return [one('Check payment', () => paySheet(it))];
@@ -275,46 +283,39 @@
   function paintRows() {
     const box = $('crRows');
     box.replaceChildren();
+    const live = data.status === 'running' || data.status === 'paused';
     for (const r of data.rows) {
-      const card = make('article', 'cr-row');
-      card.dataset.key = r.key;
-      card.dataset.state = r.enabled ? r.state : 'off';
-      card.onclick = (e) => {
-        if (!e.target.closest('button')) rowSheet(r.key); // tap a row to see its names, messages and timing
-      };
-      const info = make('div', 'cr-info'),
-        name = make('div', 'cr-name');
-      name.append(
-        make('b', '', r.title),
-        make('span', 'cr-pill', r.enabled ? STATE[r.state] || r.state : 'Off'),
-      );
-      const next = r.next_at ? clock(r.next_at) : '—';
-      info.append(
-        name,
-        make(
-          'p',
-          'cr-line',
-          r.key === 'group'
-            ? `Posted today ${r.sent} · Next ${next}`
-            : `Sent ${r.sent} · Left ${r.left == null ? 0 : r.left} · Next ${next}`,
-        ),
-      );
-      const g = r.giki;
-      if (g && g.waiting + g.agreed + g.shared + g.needs > 0)
-        info.append(
-          make('p', 'cr-sub', `Waiting ${g.waiting} · Agreed ${g.agreed} · Shared ${g.shared}`),
-        );
-      if (r.note) info.append(make('p', 'cr-sub cr-warn-line', r.note));
-      card.append(info);
-      if (r.action !== 'none') {
-        const label = { start: 'Start', pause: 'Pause', review: 'Review' }[r.action];
-        const run = btn(label, 'cr-run', () =>
-          r.action === 'review' ? rowSheet(r.key) : rowOp(r.key, r.action),
+      const li = make('article', 'cr-li cr-row');
+      li.dataset.key = r.key;
+      li.dataset.state = r.enabled ? r.state : 'off';
+      const name = make('button', 'cr-name', '');
+      name.append(make('b', '', r.title));
+      if (r.note) name.append(make('small', 'cr-warn-line', r.note));
+      name.onclick = () => rowSheet(r.key);
+      name.setAttribute('aria-label', `${r.title}: messages and settings`);
+      li.append(name);
+      const acts = make('div', 'cr-acts');
+      const total = (r.sent || 0) + (r.left == null ? 0 : r.left);
+      if (!r.enabled) acts.append(make('span', 'cr-cnt', 'Off'));
+      else if (live && r.key === 'group') acts.append(make('span', 'cr-cnt', String(r.sent || 0)));
+      else if (live) acts.append(make('span', 'cr-cnt', `${r.sent || 0}/${total}`));
+      if (r.action === 'start' || r.action === 'pause') {
+        const run = btn(r.action === 'start' ? 'Start' : 'Pause', 'cr-tx cr-run', () =>
+          rowOp(r.key, r.action),
         );
         run.dataset.act = r.action;
-        card.append(run);
+        acts.append(run);
+      } else if (!live && r.key === 'important' && !r.enabled) {
+        acts.append(btn('Choose', 'cr-tx', () => rowSheet(r.key, 'people')));
+      } else if (!live && r.enabled) {
+        const add = !r.has_msg;
+        const edit = btn(add ? 'Add message' : 'Edit message', 'cr-tx', () => editSheet(r.key));
+        edit.setAttribute('aria-label', `${add ? 'Add' : 'Edit'} message: ${r.title}`);
+        if (add) edit.dataset.add = '1';
+        acts.append(edit);
       }
-      box.append(card);
+      if (acts.children.length) li.append(acts);
+      box.append(li);
     }
   }
   function paintDone(box) {
@@ -508,23 +509,148 @@
   }
 
   /* Row details: timing, who, what, and (Important) who to include. Saving never starts sending. */
-  async function rowSheet(key) {
+  /* One place to write each message: the same saved messages the rest of the app sends. */
+  const EDITORS = {
+    group: {
+      title: 'GiveLife Group message',
+      load: async () => (await call('/focus-bank?kind=group')).source || '',
+      save: async (text) => {
+        await call('/focus-bank', { kind: 'group', text });
+        await call('/focus-bank', { kind: 'group', action: 'generate' }).catch(() => {});
+      },
+    },
+    dm: {
+      title: 'Donor message',
+      load: async () => {
+        const d = await call('/donor-messages');
+        return d.base || d.origin || ((d.items || [])[0] || {}).text || '';
+      },
+      save: async (text) => {
+        await call('/donor-messages', { action: 'base', text });
+        await call('/donor-messages', { action: 'regenerate' }).catch(() => {});
+      },
+    },
+    question: {
+      title: 'Share question',
+      load: async () => (await call('/donor-messages')).follow_up || '',
+      save: (text) => call('/donor-messages', { action: 'follow_up', text }),
+    },
+    volunteers: {
+      title: 'Volunteers message',
+      load: async () => (await call('/volunteers')).message || '',
+      save: (text) => call('/volunteers', { action: 'message', text }),
+    },
+  };
+  async function editSheet(key, part) {
+    const kind = part || (key === 'group' ? 'group' : key === 'volunteers' ? 'volunteers' : 'dm');
+    const ed = EDITORS[kind];
+    const text = make('textarea', 'cr-text');
+    text.rows = 10;
+    text.placeholder = 'Loading…';
+    text.disabled = true;
+    text.setAttribute('aria-label', ed.title);
+    openSheet(ed.title, text, [
+      [
+        'Save',
+        'cr-go',
+        async () => {
+          if (text.disabled) throw Error('Still loading. Try again in a moment.');
+          await ed.save(text.value);
+          await load();
+        },
+      ],
+      ['Close', 'cr-soft', null],
+    ]);
+    try {
+      text.value = await ed.load();
+      text.disabled = false;
+      text.placeholder = kind === 'volunteers' ? 'What should volunteers share?' : '';
+      text.focus({ preventScroll: true });
+    } catch (e) {
+      $('csError').textContent = e.message;
+    }
+  }
+  async function rowSheet(key, tab = 'message') {
     const r = data.rows.find((x) => x.key === key);
     openSheet(r.title, make('p', 'cr-sub', 'Loading…'), [['Close', 'cr-soft', null]]); // answer the tap at once
-    const body = make('div', 'cr-sum');
     let s = null;
     try {
       s = await post({ action: 'summary' });
     } catch (e) {}
+    const body = make('div', 'cr-sum');
+    const panes = {
+      message: make('div', 'cr-pane'),
+      timing: make('div', 'cr-pane'),
+      people: make('div', 'cr-pane'),
+    };
+    const seg = make('div', 'cr-seg');
+    const count = s && s.rows[key] && s.rows[key].count != null ? s.rows[key].count : r.left || 0;
+    const show = (name) => {
+      for (const [k, el] of Object.entries(panes)) el.hidden = k !== name;
+      for (const b of seg.children) b.dataset.on = b.dataset.k === name ? '1' : '0';
+      const save = $('csFoot').firstElementChild;
+      if (save && sheet.open) save.hidden = name === 'message'; // Save is for timing and people only
+    };
+    for (const [k, label] of [
+      ['message', 'Message'],
+      ['timing', 'Settings'],
+      ['people', key === 'group' ? 'Groups' : `People (${count})`],
+    ]) {
+      if (k === 'people' && key === 'group') continue;
+      const b = btn(label, 'cr-seg-b', () => show(k));
+      b.dataset.k = k;
+      seg.append(b);
+    }
+    body.append(seg, panes.message, panes.timing, panes.people);
+    /* Message */
+    const kind = key === 'group' ? 'group' : key === 'volunteers' ? 'volunteers' : 'dm';
+    const mtext = s ? (kind === 'dm' ? s.messages.dm : s.messages[kind]) : '';
+    const block = (label, text, editLabel, fn) => {
+      const w = make('div', 'cr-block');
+      w.append(make('b', '', label));
+      if (text) w.append(make('p', 'cr-quote', text));
+      else w.append(make('p', 'cr-sub', 'Nothing written yet.'));
+      w.append(btn(editLabel, text ? 'cr-more' : 'cr-act', fn));
+      return w;
+    };
+    panes.message.append(
+      block(
+        kind === 'volunteers'
+          ? 'Volunteers message'
+          : kind === 'group'
+            ? 'Group message'
+            : 'Donor message',
+        mtext,
+        mtext ? 'Edit message' : 'Add message',
+        () => editSheet(key),
+      ),
+    );
+    if (key === 'volunteers' && !mtext)
+      panes.message.append(
+        btn('Use the case message', 'cr-more', async () => {
+          try {
+            const g = (await call('/focus-bank?kind=group')).source || '';
+            await call('/volunteers', { action: 'message', text: g });
+            await load();
+            sheet.close();
+          } catch (e) {
+            $('csError').textContent = e.message;
+          }
+        }),
+      );
+    if (key === 'giki')
+      panes.message.append(
+        block('Share question', s ? s.messages.question : '', 'Edit question', () =>
+          editSheet(key, 'question'),
+        ),
+      );
+    /* Timing */
     const on = make('input');
     on.type = 'checkbox';
     on.checked = r.enabled;
     const onLabel = make('label', 'cr-check');
     onLabel.append(on, make('span', '', 'Include in this case'));
-    body.append(
-      make('p', 'cr-sub', `${r.title} · ${r.enabled ? STATE[r.state] || r.state : 'Off'}`),
-      onLabel,
-    );
+    panes.timing.append(onLabel);
     const inputs = {};
     for (const [name, label, lo, hi] of FIELDS[key === 'group' ? 'group' : 'dm']) {
       const i = make('input');
@@ -533,17 +659,15 @@
       i.max = hi;
       i.value = r.plan[name];
       inputs[name] = i;
-      body.append(field(`${label} (${lo}–${hi})`, i));
+      panes.timing.append(field(`${label} (${lo}–${hi})`, i));
     }
+    /* People */
     let picked = null;
-    if (key === 'important') picked = await importantPicker(body, s);
+    if (key === 'important') picked = await importantPicker(panes.people, s);
     if (s && s.names && s.names[key] && s.names[key].length)
-      body.append(
-        make('b', '', `Names (${s.rows[key].count})`),
-        make('p', 'cr-names', s.names[key].join(', ')),
-      );
-    if (r.giki && r.giki.people)
-      body.append(
+      panes.people.append(make('p', 'cr-names', s.names[key].join(', ')));
+    if (r.giki && r.giki.people && r.giki.people.length)
+      panes.people.append(
         make('b', '', 'Sharing'),
         make(
           'p',
@@ -551,14 +675,11 @@
           r.giki.people.map((p) => `${p.name}: ${GIKI[p.step] || p.step}`).join(' · '),
         ),
       );
-    if (s && key === 'group')
-      body.append(make('b', '', 'Message'), make('p', 'cr-quote', s.messages.group));
-    if (s && key !== 'group' && s.messages.dm && key !== 'volunteers')
-      body.append(make('b', '', 'Message'), make('p', 'cr-quote', s.messages.dm));
-    if (s && key === 'giki')
-      body.append(make('b', '', 'Share question'), make('p', 'cr-quote', s.messages.question));
+    if (!panes.people.children.length) panes.people.append(make('p', 'cr-sub', 'No one yet.'));
     const locked = data.status === 'running';
-    if (locked) body.append(make('p', 'cr-warn', 'The plan is running. Pause all to change it.'));
+    if (locked)
+      body.append(make('p', 'cr-warn', 'The plan is running. Pause all to change timing.'));
+    show(tab === 'people' && key === 'group' ? 'message' : tab);
     openSheet(r.title, body, [
       [
         'Save',
@@ -573,6 +694,7 @@
       ],
       ['Close', 'cr-soft', null],
     ]);
+    show(tab === 'people' && key === 'group' ? 'message' : tab);
   }
   async function importantPicker(body, s) {
     let items = [];
@@ -987,6 +1109,55 @@
     ['Find groups', () => (location.href = '/new/group-finder')],
     ['Settings', press('gear')],
   ];
+  /* Settings: the few things that belong to the case, then the shared app settings */
+  function settingsSheet() {
+    const mk = (label, value, action, fn) => {
+      const row = make('div', 'cr-li');
+      row.append(make('b', '', label));
+      if (value) row.append(make('span', 'cr-cnt', value));
+      row.append(btn(action, 'cr-tx', fn));
+      return row;
+    };
+    const close = (fn) => () => (sheet.close(), fn());
+    const body = make('div', 'cr-sets');
+    const a = make('div', 'cr-list'),
+      b = make('div', 'cr-list');
+    a.append(
+      mk('Case', data.case.name || '', 'Change', () => caseSheet()),
+      mk('Amount left', rs(data.case.left), 'Change', () => amountSheet()),
+      mk(
+        'Poster',
+        '',
+        'Change',
+        close(() => window.DonorHub?.openPoster?.()),
+      ),
+    );
+    b.append(
+      mk('Sending times', '', 'Open', () => timingSheet()),
+      mk(
+        'Auto replies',
+        '',
+        'Open',
+        close(() => document.querySelector('.reply-open')?.click()),
+      ),
+      mk('WhatsApp', data.whatsapp ? 'On' : 'Off', 'Open', close(press('whatsappConnection'))),
+      mk('App settings', '', 'Open', close(press('gear'))),
+    );
+    body.append(a, b);
+    openSheet('Settings', body, [['Close', 'cr-soft', null]]);
+  }
+  function timingSheet() {
+    const list = make('div', 'cr-list');
+    for (const r of data.rows) {
+      const row = make('div', 'cr-li');
+      row.append(
+        make('b', '', r.title),
+        btn('Open', 'cr-tx', () => rowSheet(r.key, 'timing')),
+      );
+      list.append(row);
+    }
+    openSheet('Sending times', list, [['Close', 'cr-soft', null]]);
+  }
   /* Tools opens as a bottom sheet (never a menu dropping from the top) */
   function toolsSheet() {
     const list = make('div', 'cr-menu');
@@ -1022,8 +1193,7 @@
   $('crBack').onclick = () => page.close();
   $('crPrepare').onclick = () => data && prepareSheet();
   $('crTools').onclick = toolsSheet;
-  $('crMeta').onclick = () => data && amountSheet();
-  $('crName').onclick = () => data && caseSheet();
+  $('crSettings').onclick = () => data && settingsSheet();
   $('crWa').onclick = press('whatsappConnection');
   $('crStart').onclick = () => data && startSheet();
   $('crPause').onclick = () => data && pauseAll();

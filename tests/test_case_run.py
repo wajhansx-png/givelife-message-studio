@@ -10,8 +10,11 @@ import case_run
 QUESTION = "Can you share this case in your class group?"
 
 
-def stamp():
-    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+def stamp(ahead=0):
+    """A message time. A reply is stamped a few seconds ahead: the send receipt is written just after the fake send,
+    so a reply stamped in the same instant would (wrongly) look older than the message it answers."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    return (now + datetime.timedelta(seconds=ahead)).isoformat()
 
 
 class Base(tac.Base):
@@ -83,7 +86,7 @@ class Base(tac.Base):
                 "id": mid,
                 "content": text,
                 "is_from_me": False,
-                "timestamp": stamp(),
+                "timestamp": stamp(5),
                 "media_type": "",
             }
         )

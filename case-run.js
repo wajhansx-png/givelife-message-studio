@@ -499,6 +499,7 @@
   /* Row details: timing, who, what, and (Important) who to include. Saving never starts sending. */
   async function rowSheet(key) {
     const r = data.rows.find((x) => x.key === key);
+    openSheet(r.title, make('p', 'cr-sub', 'Loading…'), [['Close', 'cr-soft', null]]); // answer the tap at once
     const body = make('div', 'cr-sum');
     let s = null;
     try {

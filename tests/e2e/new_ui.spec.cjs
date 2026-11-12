@@ -722,7 +722,7 @@ test('/new phone donors: the ⋯ menu holds Add numbers, Add one donor, Bulk and
   await expect(page.locator('#donorDeselectAll')).toBeHidden(); // only on the Important tab
   const panel = await page.locator('#donorNavMore .compact-nav-panel').boundingBox();
   const bar = await page.locator('.donor-tabs').boundingBox();
-  expect(panel.y + panel.height).toBeLessThanOrEqual(bar.y); // opens upward, over the list
+  expect(panel.y + panel.height).toBeLessThanOrEqual(bar.y + 1); // opens upward, over the list (browser rectangles differ by a subpixel)
   expect(panel.x).toBeGreaterThanOrEqual(0);
   await page.locator('#donorAdd').click();
   await expect(page.locator('#donorAddDialog')).toBeVisible();

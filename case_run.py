@@ -402,7 +402,7 @@ class CaseRun:
             }
             self._log(st, "Case started with the approved plan.")
             self._write(st)
-        self.tick()
+        self.tick(quick=True)
         return self.view()
 
     def _stop_engines(self):
@@ -460,7 +460,7 @@ class CaseRun:
                     row.update(state="queued", starts=row.get("starts", 0) + 1, job=None)
             self._log(st, "Resumed. Nobody already contacted is repeated.")
             self._write(st)
-        self.tick()
+        self.tick(quick=True)
         return self.view()
 
     def row_op(self, key, op):
@@ -490,7 +490,7 @@ class CaseRun:
                     st["status"] = "running"
                     self._log(st, f"{TITLES[key]} started again; the other rows stay paused.")
             self._write(st)
-        self.tick()
+        self.tick(quick=True)
         return self.view()
 
     def add_row(self, key, token):
@@ -524,7 +524,7 @@ class CaseRun:
             st["rows"][key] = {"state": state, "starts": 1 if joins else 0}
             self._log(st, f"{TITLES[key]} added to the case.")
             self._write(st)
-        self.tick()
+        self.tick(quick=True)
         return self.view()
 
     def finish(self, confirm=False):
@@ -1168,7 +1168,7 @@ class CaseRun:
         return self.view()
 
     # ------------------------------------------------------------------ the page
-    def tick(self):
+    def tick(self, quick=False):
         """Called every few seconds. Follows the engines, starts the next approved row, reads replies."""
         if not self.worker.acquire(blocking=False):
             return
@@ -1176,6 +1176,8 @@ class CaseRun:
             if self._read()["status"] != "running":
                 return
             self._edit(self._advance)
+            if quick:  # a tap only starts the next row; reading chats (slow WhatsApp calls) is the background loop's job
+                return
             self._flow()
             self._scan()
         finally:

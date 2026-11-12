@@ -127,6 +127,7 @@ class SendTests(unittest.TestCase):
         )
         self.sent = []
         self.status_connected = True
+        app._WA.update(t=0.0)  # the shared WhatsApp status is cached: start every test fresh
         self.status_recent = False
 
         def api(path):

@@ -94,7 +94,11 @@ for (const width of [280, 320, 360, 390, 430, 768]) {
     await tabs.locator('[data-tab="more"]').click();
     const sheet = page.locator('#ui2Sheet');
     await expect(sheet).toBeVisible();
-    await expect(sheet.locator('.ui2-tile')).toHaveCount(6);
+    await expect(sheet.locator('.ui2-tile')).toHaveCount(7); // Case page + the six tiles
+    await expect(sheet.locator('.ui2-sheet-x')).toBeVisible(); // a cross closes it
+    await sheet.locator('.ui2-sheet-x').click();
+    await expect(sheet).toBeHidden();
+    await tabs.locator('[data-tab="more"]').click();
     const b = await sheet.boundingBox();
     expect(b.x).toBeGreaterThanOrEqual(-0.5);
     expect(b.x + b.width).toBeLessThanOrEqual(width + 0.5);

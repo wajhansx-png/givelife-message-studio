@@ -1663,12 +1663,30 @@ def auto_log(text, quiet=False):
     del AUTOLOG[:-50]
 
 
+_WA = {"t": 0.0, "ok": False, "busy": False}
+_WA_LOCK = threading.Lock()
+
+
 def wa_ok():
+    """Is WhatsApp connected? One shared answer: the bridge is asked at most once per 5 s (1.5 s after a "no"),
+    and never by two threads at once. Every page poll used to call the bridge itself, which jammed the server."""
+    now = time.time()
+    if now - _WA["t"] < (5 if _WA["ok"] else 1.5):
+        return _WA["ok"]
+    with _WA_LOCK:
+        if _WA["busy"] and _WA["t"]:
+            return _WA["ok"]  # someone is already asking: use the last answer
+        _WA["busy"] = True
+    ok = False
     try:
         s = api_result("/devices/" + DEVICE + "/status")
-        return bool(s.get("is_connected") and s.get("is_logged_in"))
+        ok = bool(s.get("is_connected") and s.get("is_logged_in"))
     except Exception:
-        return False
+        ok = False
+    finally:
+        with _WA_LOCK:
+            _WA.update(t=time.time(), ok=ok, busy=False)
+    return ok
 
 
 NEVER_GROUPS = {
@@ -5428,21 +5446,38 @@ class Handler(BaseHTTPRequestHandler):
 
     _STATIC = {}
 
+    def reply_built(self, name, sources, build, kind):
+        """Pages built from files (/new, new-ui.css): ETag + gzip + 304 like reply_file; rebuilt only when a file changes."""
+        key = tuple((p.stat().st_mtime_ns, p.stat().st_size) for p in sources)
+        hit = Handler._STATIC.get(name)
+        if not hit or hit[0] != key:
+            raw = build().encode("utf-8")
+            hit = Handler._STATIC[name] = (
+                key,
+                raw,
+                '"' + hashlib.sha1(raw).hexdigest()[:24] + '"',
+                gzip.compress(raw, 6),
+            )
+        return self.send_cached(hit, kind)
+
     def reply_new_ui(self):
         """The same app on its own path (/new) with the redesign switched on. "/" is never touched."""
-        html = (ROOT / "index.html").read_text(encoding="utf-8")
-        html = html.replace('<body class="nomsg"', '<body class="nomsg ui2"', 1)
-        html = html.replace(
-            '<link rel="stylesheet" href="/responsive.css" />',
-            '<link rel="stylesheet" href="/responsive.css" />\n    <link rel="stylesheet" href="/new-ui.css" />',
-            1,
-        )
-        html = html.replace(
-            "</body>", '<script src="/new-ui.js"></script><script src="/case-run.js"></script></body>', 1
-        )
-        return self.reply(
-            html.encode("utf-8"), "text/html", extra_headers={"Cache-Control": "no-cache"}
-        )
+
+        def build():
+            html = (ROOT / "index.html").read_text(encoding="utf-8")
+            html = html.replace('<body class="nomsg"', '<body class="nomsg ui2"', 1)
+            html = html.replace(
+                '<link rel="stylesheet" href="/responsive.css" />',
+                '<link rel="stylesheet" href="/responsive.css" />\n    <link rel="stylesheet" href="/new-ui.css" />',
+                1,
+            )
+            return html.replace(
+                "</body>",
+                '<script src="/new-ui.js"></script><script src="/case-run.js"></script></body>',
+                1,
+            )
+
+        return self.reply_built("/new", [ROOT / "index.html"], build, "text/html")
 
     def reply_new_group_finder(self):
         """Group finder inside the redesign (/new/group-finder): same page, the new look added. /group-finder is untouched."""
@@ -5460,9 +5495,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def reply_new_ui_css(self):
         """new-ui.css is written with .UI2 where every rule needs the same strong prefix; expand it here."""
-        css = (ROOT / "new-ui.css").read_text(encoding="utf-8").replace(".UI2", NEW_UI_PREFIX)
-        return self.reply(
-            css.encode("utf-8"), "text/css", extra_headers={"Cache-Control": "no-cache"}
+        return self.reply_built(
+            "/new-ui.css",
+            [ROOT / "new-ui.css"],
+            lambda: (ROOT / "new-ui.css").read_text(encoding="utf-8").replace(".UI2", NEW_UI_PREFIX),
+            "text/css",
         )
 
     def reply_file(self, name, kind):
@@ -5476,6 +5513,9 @@ class Handler(BaseHTTPRequestHandler):
             etag = '"' + hashlib.sha1(raw).hexdigest()[:24] + '"'
             gz = gzip.compress(raw, 6) if len(raw) > 1024 else None
             hit = Handler._STATIC[name] = (key, raw, etag, gz)
+        return self.send_cached(hit, kind)
+
+    def send_cached(self, hit, kind):
         _, raw, etag, gz = hit
         head = {"Cache-Control": "no-cache", "ETag": etag, "Vary": "Accept-Encoding"}
         if self.headers.get("If-None-Match") == etag:

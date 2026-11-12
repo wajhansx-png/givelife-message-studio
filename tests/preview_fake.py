@@ -29,6 +29,12 @@ class FakeWhatsApp(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        # FAKE_WA_DELAY=0.4 makes every WhatsApp call slow like a remote bridge; FAKE_WA_LOG=file counts the calls
+        if os.environ.get("FAKE_WA_LOG"):
+            with open(os.environ["FAKE_WA_LOG"], "a") as f:
+                f.write(self.path.split("?")[0] + "\n")
+        if os.environ.get("FAKE_WA_DELAY"):
+            time.sleep(float(os.environ["FAKE_WA_DELAY"]))
         if "/status" in self.path:
             return self.response(
                 {"code": "SUCCESS", "results": {"is_connected": True, "is_logged_in": True}}

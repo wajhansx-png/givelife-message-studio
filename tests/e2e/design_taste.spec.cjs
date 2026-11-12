@@ -21,6 +21,12 @@ const audit = (page, scope) =>
         c = getComputedStyle(b),
         t = b.textContent.trim();
       const id = (b.id ? '#' + b.id : '') + '"' + t.slice(0, 22) + '"';
+      // owner-approved exceptions: the small settings icon on each row and the − / + steppers
+      if (b.matches('.cr-gear, .cr-step')) {
+        if (!b.getAttribute('aria-label')) out.push('NO-LABEL ' + id);
+        if (r.height < 38.5 || r.width < 38.5) out.push('SHORT ' + id);
+        continue;
+      }
       if (!/[A-Za-z]{2}/.test(t)) out.push('ICON ' + id);
       if (c.boxShadow !== 'none' && !/^rgba\([^)]*\) 0px 0px 0px 1px inset$/.test(c.boxShadow))
         out.push('SHADOW ' + id + ' ' + c.boxShadow.slice(0, 40));

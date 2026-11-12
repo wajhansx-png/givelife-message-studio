@@ -131,6 +131,37 @@ test('saving settings never starts sending, and Important stays off until people
   await expect(sheet.locator('#csError')).toContainText('Select the Important donors first');
 });
 
+test('each row has a small settings icon that opens its timing in one tap, and it hides while sending', async ({
+  page,
+}) => {
+  await open(page, 390, 844);
+  await expect(page.locator('.cr-row .cr-gear')).toHaveCount(5);
+  const box = await page.locator('.cr-row[data-key="top"] .cr-gear').boundingBox();
+  expect(box.width).toBeGreaterThanOrEqual(40);
+  expect(box.height).toBeGreaterThanOrEqual(40);
+  await page.getByRole('button', { name: 'Edit timing: Top Donors' }).click();
+  const sheet = page.locator('#caseSheet');
+  await expect(sheet.locator('.cr-seg-b[data-on="1"]')).toHaveText('Settings');
+  const gap = sheet.locator('input[type=number]').first();
+  await expect(gap).toBeVisible();
+  const v0 = Number(await gap.inputValue());
+  await sheet.getByRole('button', { name: /^More: Minutes between DMs/ }).click();
+  await expect(gap).toHaveValue(String(Math.min(10, v0 + 1)));
+  for (let i = 0; i < 12; i++)
+    await sheet.getByRole('button', { name: /^Less: Minutes between DMs/ }).click();
+  await expect(gap).toHaveValue('1'); // stops at the lowest allowed value
+  await sheet.getByRole('button', { name: 'People', exact: false }).first().click();
+  await expect(sheet.getByRole('button', { name: 'Back to settings' })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Back to settings' }).click();
+  await sheet.locator('#csFoot').getByRole('button', { name: 'Close' }).click();
+  expect((await api(port, '/case-run')).status).toBe('idle'); // opening timing never starts anything
+  // 320px phone: the row name stays on one line
+  await page.setViewportSize({ width: 320, height: 568 });
+  const names = page.locator('.cr-row .cr-name');
+  for (let i = 0; i < 5; i++)
+    expect((await names.nth(i).boundingBox()).height).toBeLessThan(50);
+});
+
 test('approve once, run, pause all, resume and finish; reopening lands on the case page', async ({
   page,
 }) => {

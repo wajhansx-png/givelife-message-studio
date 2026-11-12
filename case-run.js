@@ -14,6 +14,8 @@
     if (fn) b.onclick = fn;
     return b;
   };
+  const GEAR =
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
   const rs = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-PK');
   const clock = (sec) =>
     sec ? new Date(sec * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—';
@@ -42,11 +44,12 @@
     cancelled: 'Cancelled',
   };
   const FIELDS = {
-    group: [['every_minutes', 'Minutes between posts', 15, 1440]],
+    // [field, label, lowest, highest, step of the − / + buttons]
+    group: [['every_minutes', 'Minutes between posts', 15, 1440, 15]],
     dm: [
-      ['gap_minutes', 'Minutes between DMs', 1, 10],
-      ['batch_size', 'DMs per batch', 1, 20],
-      ['rest_minutes', 'Minutes of rest between batches', 1, 120],
+      ['gap_minutes', 'Minutes between DMs', 1, 10, 1],
+      ['batch_size', 'DMs per batch', 1, 20, 1],
+      ['rest_minutes', 'Rest between batches', 1, 120, 5],
     ],
   };
 
@@ -309,10 +312,19 @@
         acts.append(btn('Choose', 'cr-tx', () => rowSheet(r.key, 'people')));
       } else if (!live && r.enabled) {
         const add = !r.has_msg;
-        const edit = btn(add ? 'Add message' : 'Edit message', 'cr-tx', () => editSheet(r.key));
+        const edit = btn('', 'cr-tx', () => editSheet(r.key));
+        edit.append(add ? 'Add' : 'Edit', make('span', 'cr-w', ' message')); // " message" hides on tiny phones
         edit.setAttribute('aria-label', `${add ? 'Add' : 'Edit'} message: ${r.title}`);
         if (add) edit.dataset.add = '1';
         acts.append(edit);
+      }
+      /* small settings icon: opens this row's timing straight away (same sheet as Settings tab) */
+      if (data.status !== 'running') {
+        // timing is locked while sending, so the icon only shows when it can be changed
+        const gear = btn('', 'cr-gear', () => rowSheet(r.key, 'timing'));
+        gear.innerHTML = GEAR;
+        gear.setAttribute('aria-label', `Edit timing: ${r.title}`);
+        acts.append(gear);
       }
       if (acts.children.length) li.append(acts);
       box.append(li);
@@ -587,16 +599,15 @@
     const count = s && s.rows[key] && s.rows[key].count != null ? s.rows[key].count : r.left || 0;
     const show = (name) => {
       for (const [k, el] of Object.entries(panes)) el.hidden = k !== name;
-      for (const b of seg.children) b.dataset.on = b.dataset.k === name ? '1' : '0';
+      const lit = name === 'people' ? 'timing' : name; // People is opened from Settings
+      for (const b of seg.children) b.dataset.on = b.dataset.k === lit ? '1' : '0';
       const save = $('csFoot').firstElementChild;
-      if (save && sheet.open) save.hidden = name === 'message'; // Save is for timing and people only
+      if (save && sheet.open) save.hidden = name === 'message'; // Save is for settings and people only
     };
     for (const [k, label] of [
       ['message', 'Message'],
       ['timing', 'Settings'],
-      ['people', key === 'group' ? 'Groups' : `People (${count})`],
     ]) {
-      if (k === 'people' && key === 'group') continue;
       const b = btn(label, 'cr-seg-b', () => show(k));
       b.dataset.k = k;
       seg.append(b);
@@ -645,21 +656,41 @@
         ),
       );
     /* Timing */
-    const on = make('input');
+    /* Settings: plain rows, one switch, and − / + buttons so nothing needs typing */
+    const on = make('input', 'cr-switch');
     on.type = 'checkbox';
     on.checked = r.enabled;
-    const onLabel = make('label', 'cr-check');
-    onLabel.append(on, make('span', '', 'Include in this case'));
+    const onLabel = make('label', 'cr-set-row');
+    onLabel.append(make('span', '', 'Send in this case'), on);
     panes.timing.append(onLabel);
     const inputs = {};
-    for (const [name, label, lo, hi] of FIELDS[key === 'group' ? 'group' : 'dm']) {
-      const i = make('input');
+    for (const [name, label, lo, hi, step] of FIELDS[key === 'group' ? 'group' : 'dm']) {
+      const i = make('input', 'cr-num');
       i.type = 'number';
       i.min = lo;
       i.max = hi;
+      i.inputMode = 'numeric';
       i.value = r.plan[name];
+      i.setAttribute('aria-label', `${label} (${lo}–${hi})`);
       inputs[name] = i;
-      panes.timing.append(field(`${label} (${lo}–${hi})`, i));
+      const bump = (dir) => {
+        const v = Number(i.value);
+        i.value = Math.min(hi, Math.max(lo, (Number.isFinite(v) ? v : lo) + dir * step));
+      };
+      const less = btn('−', 'cr-step', () => bump(-1));
+      less.setAttribute('aria-label', `Less: ${label}`);
+      const more = btn('+', 'cr-step', () => bump(1));
+      more.setAttribute('aria-label', `More: ${label}`);
+      const stepper = make('div', 'cr-stepper');
+      stepper.append(less, i, more);
+      const line = make('div', 'cr-set-row');
+      line.append(make('span', '', label), stepper);
+      panes.timing.append(line);
+    }
+    if (key !== 'group') {
+      const people = btn('', 'cr-set-row cr-set-link', () => show('people'));
+      people.append(make('span', '', 'People'), make('span', 'cr-set-val', String(count)));
+      panes.timing.append(people);
     }
     /* People */
     let picked = null;
@@ -676,6 +707,7 @@
         ),
       );
     if (!panes.people.children.length) panes.people.append(make('p', 'cr-sub', 'No one yet.'));
+    panes.people.prepend(btn('Back to settings', 'cr-tx cr-back', () => show('timing')));
     const locked = data.status === 'running';
     if (locked)
       body.append(make('p', 'cr-warn', 'The plan is running. Pause all to change timing.'));

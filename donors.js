@@ -2858,7 +2858,7 @@
     clearTimeout(searchTimer);
     Nav.go('donors/' + next, { replace: true });
     applyFilters();
-    const btn = page.querySelector();
+    const btn = page.querySelector(`.donor-tabs [data-tab="${next}"]`);
     if (btn) {
       const strip = btn.closest('.donor-tabs');
       if (strip) {

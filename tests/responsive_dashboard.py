@@ -40,6 +40,10 @@ class H(http.server.BaseHTTPRequestHandler):
         name = {"/": "index.html", "/dash": "tests/responsive_dashboard.html"}.get(
             path, path.lstrip("/")
         )
+        if name == "new-ui.css":
+            return (
+                self.forward()
+            )  # the server expands its .UI2 prefix; the raw file matches nothing
         f = (ROOT / name).resolve()
         if ROOT in f.parents and f.is_file() and f.suffix in TYPES and not name.endswith(".py"):
             return self.send(200, f.read_bytes(), TYPES[f.suffix])

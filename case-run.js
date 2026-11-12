@@ -604,56 +604,249 @@
     return () => [...chosen];
   }
 
-  function prepareSheet() {
-    const body = make('div', 'cr-sum');
-    const rows = [
-      ['case', 'Case ready', 'Case Writer', () => window.CaseWriter?.open?.()],
-      ['poster', 'Poster ready', 'Open Settings (poster)', press('gear')],
-      ['group', 'Group messages checked', 'Open group message', () => Nav.go('preview')],
-      ['donor', 'Donor messages checked', 'Open donor messages', donors('messages')],
-    ];
-    for (const [key, label, open, fn] of rows) {
-      const state = data.checks[key];
-      const row = make('div', 'cr-check-row');
-      row.dataset.s = state;
-      row.append(
-        make('b', '', label),
-        make(
-          'span',
-          'cr-pill',
-          state === 'ok' ? 'Ready' : state === 'again' ? 'Check again' : 'Not yet',
-        ),
-      );
-      const acts = make('div', 'cr-row-actions');
-      acts.append(btn(open, 'cr-more', () => (sheet.close(), fn())));
-      if (key === 'group' || key === 'donor')
-        acts.append(
-          btn('Mark checked', 'cr-act', async () => {
-            try {
-              take(await post({ action: 'check', name: key }));
-              sheet.close();
-              prepareSheet();
-            } catch (e) {
-              $('csError').textContent = e.message;
-            }
-          }),
-        );
-      row.append(acts);
-      body.append(row);
+  /* ---------------------------------------------------------------- prepare case: everything in one panel */
+  async function call(url, body) {
+    const r = await fetch(
+      url,
+      body
+        ? {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          }
+        : {},
+    );
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) throw Error(d.error || 'That did not work. Nothing was changed.');
+    return d;
+  }
+  const PILL = { ok: 'Ready', again: 'Check again', check: 'Not yet' };
+  /* One block per message: its base text, Save Base, Next (read the versions), Test 3 versions, Looks right. */
+  function block(o) {
+    const box = make('details', 'cr-prep');
+    box.dataset.k = o.key;
+    const sum = make('summary');
+    const pill = make('span', 'cr-pill');
+    sum.append(make('b', '', o.title), pill);
+    const text = make('textarea', 'cr-text');
+    text.rows = 5;
+    text.setAttribute('aria-label', o.title);
+    text.placeholder = 'Loading…';
+    const view = make('p', 'cr-quote');
+    view.hidden = true;
+    const note = make('p', 'cr-sub');
+    note.setAttribute('role', 'status');
+    const acts = make('div', 'cr-row-actions');
+    let saved = null,
+      items = [],
+      at = -1;
+    const setPill = () => {
+      const s = o.check ? data.checks[o.check] : saved && saved.trim() ? 'ok' : 'check';
+      pill.textContent = o.check ? PILL[s] : s === 'ok' ? 'Saved' : 'Not yet';
+      box.dataset.s = s;
+    };
+    const run = (b, fn) => async () => {
+      if (b.disabled) return;
+      b.disabled = true;
+      try {
+        note.textContent = (await fn()) || '';
+      } catch (e) {
+        note.textContent = e.message;
+      } finally {
+        b.disabled = false;
+        setPill();
+      }
+    };
+    const fetchIt = async () => {
+      const d = await o.load();
+      items = d.items || [];
+      if (saved === null || text.value === saved) text.value = d.text || '';
+      saved = d.text || '';
+      text.placeholder = '';
+      return d;
+    };
+    const save = async () => {
+      if (text.value === saved) return false;
+      await o.save(text.value);
+      saved = text.value;
+      await load();
+      return true;
+    };
+    const b = {};
+    b.save = btn('Save Base', 'cr-act');
+    b.save.onclick = run(b.save, async () => {
+      const changed = await save();
+      if (!o.versions) return changed ? 'Saved.' : 'Nothing changed.';
+      if (changed || !items.length) await o.versions();
+      at = -1;
+      view.hidden = true;
+      return changed
+        ? 'Saved. Writing the wording versions now; press Next to read them.'
+        : 'This is already your base. Press Next to read the versions.';
+    });
+    acts.append(b.save);
+    if (o.versions) {
+      b.next = btn('Next', 'cr-more');
+      b.next.onclick = run(b.next, async () => {
+        await fetchIt();
+        if (!items.length) return 'No versions yet. Press Save Base, then wait a moment.';
+        at = (at + 1) % items.length;
+        view.textContent = items[at];
+        view.hidden = false;
+        return `Version ${at + 1} of ${items.length}`;
+      });
+      acts.append(b.next);
     }
-    body.append(
-      make(
-        'p',
-        'cr-sub',
-        'Save Base makes five wording versions; read them with Next and use Test to send three different versions to your test group. Then mark the messages checked. If the wording changes later they show “Check again”.',
+    if (o.test) {
+      b.test = btn('Test 3 versions', 'cr-more');
+      b.test.onclick = run(b.test, async () => {
+        await save();
+        return await o.test();
+      });
+      acts.append(b.test);
+    }
+    if (o.check) {
+      b.ok = btn('Looks right', 'cr-go');
+      b.ok.onclick = run(b.ok, async () => {
+        await save();
+        take(await post({ action: 'check', name: o.check }));
+        return 'Checked. If the wording changes later this shows “Check again”.';
+      });
+      acts.append(b.ok);
+    }
+    box.append(sum, ...(o.before || []), text, view, acts, note);
+    box.addEventListener(
+      'toggle',
+      () => box.open && saved === null && fetchIt().catch((e) => (note.textContent = e.message)),
+    );
+    setPill();
+    box.refresh = setPill;
+    return box;
+  }
+  async function testGroup() {
+    for (let i = 0; i < 3; i++) {
+      const r = await call('/test', {
+        message: $('csBody').querySelector('[data-k="group"] textarea').value,
+      });
+      if (r.code !== 'SUCCESS')
+        throw Error(
+          r.message || `Test ${i + 1} was not confirmed. Check the Test group before trying again.`,
+        );
+    }
+    return 'Sent 3 versions to the Test group. Check the poster and wording there.';
+  }
+  async function testDonor() {
+    let last = '';
+    for (let i = 0; i < 3; i++) {
+      const r = await call('/donor-messages', { action: 'test', poster: true });
+      if (r.code && r.code !== 'SUCCESS')
+        throw Error(
+          r.message || `Test ${i + 1} was not confirmed. Check WhatsApp before trying again.`,
+        );
+      last = r.reply || '';
+    }
+    return `Sent 3 test DMs (last: ${last}). Check the greeting says Bhai or Sister correctly.`;
+  }
+  function prepareSheet() {
+    const body = make('div', 'cr-sum cr-prepare');
+    const c = data.case;
+    const ready = (k) => PILL[data.checks[k]] || 'Not yet';
+    /* Case facts, target and payment details */
+    const caseBox = make('details', 'cr-prep');
+    caseBox.dataset.s = data.checks.case;
+    const cs = make('summary');
+    cs.append(make('b', '', 'Case'), make('span', 'cr-pill', ready('case')));
+    caseBox.append(
+      cs,
+      make('p', '', `${c.name || 'This case'} · ${rs(c.left)} left · Confirmed ${rs(c.confirmed)}`),
+      make('p', 'cr-sub', `Payment: ${data.payment?.number || ''} (Easypaisa)`),
+    );
+    const ca = make('div', 'cr-row-actions');
+    ca.append(
+      btn('Change amount', 'cr-act', () => amountSheet()),
+      btn(
+        'Case facts (Case Writer)',
+        'cr-more',
+        () => (sheet.close(), window.CaseWriter?.open?.()),
       ),
+      btn('Switch or new case', 'cr-more', () => caseSheet()),
     );
-    const vol = btn(
-      'Open the volunteer sharing request',
-      'cr-more',
-      () => (sheet.close(), donors('volunteers')()),
+    caseBox.append(ca);
+    /* Poster */
+    const posterBox = make('details', 'cr-prep');
+    posterBox.dataset.s = data.checks.poster;
+    const ps = make('summary');
+    ps.append(make('b', '', 'Poster'), make('span', 'cr-pill', ready('poster')));
+    const img = make('img', 'cr-poster');
+    img.alt = 'Current poster';
+    posterBox.addEventListener(
+      'toggle',
+      () => posterBox.open && !img.src && (img.src = '/poster?v=' + Date.now()),
     );
-    body.append(vol);
+    img.onerror = () => (img.hidden = true);
+    posterBox.append(
+      ps,
+      img,
+      btn('Change poster', 'cr-act', () => (sheet.close(), window.DonorHub?.openPoster?.())),
+    );
+    const group = block({
+      key: 'group',
+      title: 'GiveLife Group message',
+      check: 'group',
+      load: async () => {
+        const d = await call('/focus-bank?kind=group');
+        return { text: d.source, items: d.items, revision: d.revision };
+      },
+      save: async (text) => call('/focus-bank', { kind: 'group', text }),
+      versions: () => call('/focus-bank', { kind: 'group', action: 'generate' }),
+      test: testGroup,
+    });
+    const ask = make('textarea', 'cr-text');
+    ask.rows = 3;
+    ask.setAttribute('aria-label', 'Share question (GIKI)');
+    let askSaved = null;
+    const donor = block({
+      key: 'donor',
+      title: 'Donor message',
+      check: 'donor',
+      load: async () => {
+        const d = await call('/donor-messages');
+        const items = (d.items || []).map((x) => x.text).filter(Boolean);
+        if (askSaved === null) ask.value = askSaved = d.follow_up || '';
+        return { text: d.base || d.origin || items[0] || '', items };
+      },
+      save: async (text) => {
+        await call('/donor-messages', { action: 'base', text });
+      },
+      versions: () => call('/donor-messages', { action: 'regenerate' }),
+      test: testDonor,
+    });
+    /* the GIKI share question lives with the donor message: both are checked together */
+    const askRow = make('div', 'cr-row-actions');
+    askRow.append(
+      btn('Save share question', 'cr-more', async () => {
+        try {
+          await call('/donor-messages', { action: 'follow_up', text: ask.value });
+          askSaved = ask.value;
+          await load();
+          $('csError').textContent = '';
+          donor.refresh();
+        } catch (e) {
+          $('csError').textContent = e.message;
+        }
+      }),
+    );
+    donor.append(make('b', 'cr-label', 'Share question (GIKI)'), ask, askRow);
+    const vol = block({
+      key: 'volunteers',
+      title: 'Volunteers sharing request',
+      load: async () => ({ text: (await call('/volunteers')).message || '' }),
+      save: (text) => call('/volunteers', { action: 'message', text }),
+    });
+    const boxes = [caseBox, posterBox, group, donor, vol];
+    /* open the first thing that is not ready, so the next step is always in front of you */
+    (boxes.find((x) => x.dataset.s !== 'ok') || group).open = true;
+    body.append(...boxes);
     openSheet('Prepare case', body, [['Done', 'cr-go', null]]);
   }
 

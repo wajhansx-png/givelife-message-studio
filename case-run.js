@@ -90,17 +90,18 @@
   page.id = 'casePage';
   page.setAttribute('aria-label', 'Case');
   page.innerHTML =
-    '<div class="cr-shell"><div class="cr-head"><div class="cr-top"><h1><button type="button" id="crName" class="cr-tap" aria-label="Change case">Case</button></h1><span class="cr-pills"><button type="button" class="cr-pill cr-tap" id="crWa" aria-label="WhatsApp connection"></button><span class="cr-pill" id="crStatus"></span></span></div>' +
-    '<div class="cr-money"><div class="cr-tile" id="crConf"></div><button type="button" class="cr-tile" id="crMeta" aria-label="Change the amount left"></button></div><div class="cr-tools-row"><button type="button" id="crPrepare" class="cr-soft">Prepare case</button>' +
-    '<button type="button" id="crTools" class="cr-soft">Tools</button>' +
-    '<button type="button" id="crBack" class="cr-soft">Close</button></div></div>' +
+    '<div class="cr-shell"><header class="cr-top"><button type="button" id="crWa" class="cr-wa" aria-label="WhatsApp connection"></button></header>' +
     '<main class="cr-main"><p class="cr-say" id="crSay" role="status"></p>' +
-    '<section aria-labelledby="crNeedsH"><h2 id="crNeedsH">Needs you <small id="crNeedsN"></small></h2><div id="crNeeds" class="cr-needs"></div></section>' +
-    '<section aria-labelledby="crPlanH"><h2 id="crPlanH">Sending plan</h2><div id="crRows" class="cr-rows"></div></section>' +
+    '<div class="cr-list cr-prep-row"><div class="cr-li"><b>Prepare case</b><button type="button" id="crPrepare" class="cr-tx">Open</button></div></div>' +
+    '<section id="crNeedsSec" aria-labelledby="crNeedsH" hidden><h2 id="crNeedsH">Needs you <small id="crNeedsN"></small></h2><div id="crNeeds" class="cr-list"></div></section>' +
+    '<section aria-labelledby="crPlanH"><h2 id="crPlanH">Sending plan</h2><div id="crRows" class="cr-list"></div></section>' +
     '<section id="crDone" class="cr-done" hidden></section></main>' +
-    '<footer class="cr-bar"><button type="button" id="crStart" class="cr-go">Start case</button>' +
+    '<footer class="cr-foot"><div class="cr-bar"><button type="button" id="crStart" class="cr-go">Start case</button>' +
     '<button type="button" id="crPause" class="cr-stop">Pause all</button>' +
-    '<button type="button" id="crFinish" class="cr-end">Finish case</button></footer></div>';
+    '<button type="button" id="crFinish" class="cr-end">Finish case</button></div>' +
+    '<nav class="cr-nav" aria-label="Case menu"><button type="button" id="crTools" class="cr-link">Tools</button>' +
+    '<button type="button" id="crSettings" class="cr-link">Settings</button>' +
+    '<button type="button" id="crBack" class="cr-link">Close</button></nav></footer></div>';
   document.body.append(page);
   const sheet = make('dialog', 'case-sheet');
   sheet.id = 'caseSheet';
@@ -150,36 +151,39 @@
     const s = JSON.stringify(data);
     if (s === sig) return;
     sig = s;
-    $('crName').textContent = data.case.name || 'Case';
-    const st = $('crStatus');
-    st.textContent = STATUS[data.status] || data.status;
-    st.dataset.s = data.status;
-    const tile = (el, label, hint, value) => {
-      const small = make('small', '', label);
-      if (hint) small.append(make('span', 'cr-hint', hint));
-      el.replaceChildren(small, make('b', '', value));
-    };
-    tile($('crConf'), 'Confirmed', '', rs(data.case.confirmed));
-    tile($('crMeta'), 'Left', ' · tap to change', rs(data.case.left));
     const wa = $('crWa');
-    wa.textContent = data.whatsapp ? 'WhatsApp' : 'WhatsApp off';
+    wa.replaceChildren(
+      make('span', 'cr-dot'),
+      make('span', '', data.whatsapp ? 'WhatsApp' : 'WhatsApp off'),
+    );
     wa.dataset.ok = data.whatsapp ? '1' : '0';
+    const ready = Object.values(data.checks || {}).every((v) => v === 'ok');
+    $('crPrepare').replaceChildren(make('span', 'cr-open', 'Open'));
+    $('crPrepare').closest('.cr-li').dataset.todo = ready ? '0' : '1';
+    $('crPrepare').setAttribute(
+      'aria-label',
+      ready ? 'Prepare case' : 'Prepare case: something is not ready',
+    );
     paintNeeds();
     paintRows();
     const run = data.status === 'running',
       paused = data.status === 'paused',
-      idle = data.status === 'idle';
-    const start = $('crStart');
-    start.textContent = paused ? 'Resume case' : 'Start case';
-    start.disabled = !(idle || paused);
+      idle = data.status === 'idle',
+      fin = data.status === 'finished';
+    $('crStart').textContent = paused ? 'Resume case' : 'Start case';
+    $('crStart').hidden = !(idle || paused);
+    $('crPause').hidden = !run;
+    $('crFinish').hidden = !(run || paused);
     $('crPause').disabled = !run;
     $('crFinish').disabled = !(run || paused);
+    document.querySelector('#casePage .cr-bar').hidden = fin;
     const done = $('crDone');
-    done.hidden = data.status !== 'finished';
+    done.hidden = !fin;
+    $('crPlanH').parentElement.hidden = fin;
     if (!done.hidden) paintDone(done);
   }
   function needRow(it) {
-    const row = make('article', 'cr-need');
+    const row = make('article', 'cr-li cr-need');
     row.dataset.type = it.type;
     const text = make('div', 'cr-need-text');
     text.append(make('b', '', it.title));
@@ -194,10 +198,8 @@
     head.querySelector('.cr-more-needs')?.remove();
     $('crNeedsN').textContent = items.length ? String(items.length) : '';
     box.replaceChildren();
-    if (!items.length) {
-      box.append(make('p', 'cr-empty', 'Nothing needs you.'));
-      return;
-    }
+    $('crNeedsSec').hidden = !items.length;
+    if (!items.length) return;
     box.append(needRow(items[0]));
     if (items.length > 1)
       head.append(
@@ -209,7 +211,7 @@
       );
   }
   function needButtons(it) {
-    const one = (label, fn) => btn(label, 'cr-act', fn);
+    const one = (label, fn) => btn(label, 'cr-tx', fn);
     switch (it.type) {
       case 'payment':
         return [one('Check payment', () => paySheet(it))];
@@ -281,82 +283,39 @@
   function paintRows() {
     const box = $('crRows');
     box.replaceChildren();
+    const live = data.status === 'running' || data.status === 'paused';
     for (const r of data.rows) {
-      const card = make('article', 'cr-row');
-      card.dataset.key = r.key;
-      card.dataset.state = r.enabled ? r.state : 'off';
-      card.onclick = (e) => {
-        if (!e.target.closest('button')) rowSheet(r.key); // tap a row to see its names, messages and timing
-      };
-      const info = make('div', 'cr-info'),
-        name = make('div', 'cr-name');
-      /* the status shows only when something is happening; a quiet row stays quiet */
-      const pill = !r.enabled
-        ? ['Off', '']
-        : r.state === 'idle'
-          ? r.has_msg
-            ? null
-            : ['No message', 'warn']
-          : [STATE[r.state] || r.state, ''];
+      const li = make('article', 'cr-li cr-row');
+      li.dataset.key = r.key;
+      li.dataset.state = r.enabled ? r.state : 'off';
+      const name = make('button', 'cr-name', '');
       name.append(make('b', '', r.title));
-      if (pill) {
-        const chip = make('span', 'cr-pill', pill[0]);
-        if (pill[1]) chip.dataset.w = '1';
-        name.append(chip);
-      }
-      const next = r.next_at ? clock(r.next_at) : '—';
-      const busy = r.state !== 'idle';
-      info.append(
-        name,
-        make(
-          'p',
-          'cr-line',
-          r.key === 'group'
-            ? busy
-              ? `${r.sent} posted · ${next}`
-              : `${r.sent} posted today`
-            : busy
-              ? `${r.sent} sent · ${r.left == null ? 0 : r.left} left · ${next}`
-              : `${r.sent} sent · ${r.left == null ? 0 : r.left} left`,
-        ),
-      );
-      const g = r.giki;
-      if (g && g.waiting + g.agreed + g.shared + g.needs > 0)
-        info.append(
-          make(
-            'p',
-            'cr-sub cr-giki',
-            `Waiting ${g.waiting} · Agreed ${g.agreed} · Shared ${g.shared}`,
-          ),
-        );
-      if (r.note) info.append(make('p', 'cr-sub cr-warn-line', r.note));
-      card.append(info);
-      /* Edit message (or Add message) on every row that sends one; then the one main action */
+      if (r.note) name.append(make('small', 'cr-warn-line', r.note));
+      name.onclick = () => rowSheet(r.key);
+      name.setAttribute('aria-label', `${r.title}: messages and settings`);
+      li.append(name);
       const acts = make('div', 'cr-acts');
-      if (r.key !== 'important' || r.enabled) {
-        const long = r.has_msg ? 'Edit message' : 'Add message';
-        const edit = btn('', 'cr-edit', () => editSheet(r.key));
-        edit.append(
-          make('span', 'cr-long', long),
-          make('span', 'cr-short', r.has_msg ? 'Edit' : 'Add'),
-        );
-        edit.setAttribute('aria-label', `${long}: ${r.title}`);
-        if (!r.has_msg) edit.dataset.add = '1';
-        acts.append(edit);
-      }
+      const total = (r.sent || 0) + (r.left == null ? 0 : r.left);
+      if (!r.enabled) acts.append(make('span', 'cr-cnt', 'Off'));
+      else if (live && r.key === 'group') acts.append(make('span', 'cr-cnt', String(r.sent || 0)));
+      else if (live) acts.append(make('span', 'cr-cnt', `${r.sent || 0}/${total}`));
       if (r.action === 'start' || r.action === 'pause') {
-        const run = btn(r.action === 'start' ? 'Start' : 'Pause', 'cr-run', () =>
+        const run = btn(r.action === 'start' ? 'Start' : 'Pause', 'cr-tx cr-run', () =>
           rowOp(r.key, r.action),
         );
         run.dataset.act = r.action;
         acts.append(run);
-      } else if (r.key === 'important' && !r.enabled) {
-        acts.append(btn('Choose', 'cr-edit', () => rowSheet(r.key, 'people')));
-      } else if (r.action === 'review') {
-        acts.append(btn('Timing', 'cr-edit', () => rowSheet(r.key, 'timing')));
+      } else if (!live && r.key === 'important' && !r.enabled) {
+        acts.append(btn('Choose', 'cr-tx', () => rowSheet(r.key, 'people')));
+      } else if (!live && r.enabled) {
+        const add = !r.has_msg;
+        const edit = btn(add ? 'Add message' : 'Edit message', 'cr-tx', () => editSheet(r.key));
+        edit.setAttribute('aria-label', `${add ? 'Add' : 'Edit'} message: ${r.title}`);
+        if (add) edit.dataset.add = '1';
+        acts.append(edit);
       }
-      if (acts.children.length) card.append(acts);
-      box.append(card);
+      if (acts.children.length) li.append(acts);
+      box.append(li);
     }
   }
   function paintDone(box) {
@@ -634,7 +593,7 @@
     };
     for (const [k, label] of [
       ['message', 'Message'],
-      ['timing', 'Timing'],
+      ['timing', 'Settings'],
       ['people', key === 'group' ? 'Groups' : `People (${count})`],
     ]) {
       if (k === 'people' && key === 'group') continue;
@@ -1150,6 +1109,55 @@
     ['Find groups', () => (location.href = '/new/group-finder')],
     ['Settings', press('gear')],
   ];
+  /* Settings: the few things that belong to the case, then the shared app settings */
+  function settingsSheet() {
+    const mk = (label, value, action, fn) => {
+      const row = make('div', 'cr-li');
+      row.append(make('b', '', label));
+      if (value) row.append(make('span', 'cr-cnt', value));
+      row.append(btn(action, 'cr-tx', fn));
+      return row;
+    };
+    const close = (fn) => () => (sheet.close(), fn());
+    const body = make('div', 'cr-sets');
+    const a = make('div', 'cr-list'),
+      b = make('div', 'cr-list');
+    a.append(
+      mk('Case', data.case.name || '', 'Change', () => caseSheet()),
+      mk('Amount left', rs(data.case.left), 'Change', () => amountSheet()),
+      mk(
+        'Poster',
+        '',
+        'Change',
+        close(() => window.DonorHub?.openPoster?.()),
+      ),
+    );
+    b.append(
+      mk('Sending times', '', 'Open', () => timingSheet()),
+      mk(
+        'Auto replies',
+        '',
+        'Open',
+        close(() => document.querySelector('.reply-open')?.click()),
+      ),
+      mk('WhatsApp', data.whatsapp ? 'On' : 'Off', 'Open', close(press('whatsappConnection'))),
+      mk('App settings', '', 'Open', close(press('gear'))),
+    );
+    body.append(a, b);
+    openSheet('Settings', body, [['Close', 'cr-soft', null]]);
+  }
+  function timingSheet() {
+    const list = make('div', 'cr-list');
+    for (const r of data.rows) {
+      const row = make('div', 'cr-li');
+      row.append(
+        make('b', '', r.title),
+        btn('Open', 'cr-tx', () => rowSheet(r.key, 'timing')),
+      );
+      list.append(row);
+    }
+    openSheet('Sending times', list, [['Close', 'cr-soft', null]]);
+  }
   /* Tools opens as a bottom sheet (never a menu dropping from the top) */
   function toolsSheet() {
     const list = make('div', 'cr-menu');
@@ -1185,8 +1193,7 @@
   $('crBack').onclick = () => page.close();
   $('crPrepare').onclick = () => data && prepareSheet();
   $('crTools').onclick = toolsSheet;
-  $('crMeta').onclick = () => data && amountSheet();
-  $('crName').onclick = () => data && caseSheet();
+  $('crSettings').onclick = () => data && settingsSheet();
   $('crWa').onclick = press('whatsappConnection');
   $('crStart').onclick = () => data && startSheet();
   $('crPause').onclick = () => data && pauseAll();

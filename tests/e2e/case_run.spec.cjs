@@ -37,28 +37,27 @@ for (const [width, height] of [
     page,
   }) => {
     await open(page, width, height);
-    await expect(page.locator('.cr-row b')).toHaveText([
+    await expect(page.locator('.cr-row .cr-name b')).toHaveText([
       'GiveLife Group',
       'Top Donors',
       'GIKI',
       'Volunteers',
       'Important Donors',
     ]);
-    await expect(page.locator('#crStatus')).toHaveText('Not started');
-    await expect(page.locator('#crMeta')).toContainText('Left');
+    await expect(page.locator('#crNeedsSec')).toBeHidden(); // nothing needs you: no empty box
     /* every phone (even 320x568) and desktop: the whole page is on screen, nothing to scroll */
     expect(
       await page.locator('.cr-main').evaluate((e) => e.scrollHeight <= e.clientHeight + 1),
       'the page should not need scrolling',
     ).toBe(true);
-    for (const id of ['#crStart', '#crPause', '#crFinish']) await inView(page, page.locator(id));
+    for (const id of ['#crStart', '#crSettings', '#crTools', '#crBack'])
+      await inView(page, page.locator(id));
     await expect(page.locator('#crStart')).toBeEnabled();
-    await expect(page.locator('#crPause')).toBeDisabled();
+    await expect(page.locator('#crPause')).toBeHidden(); // Pause all and Finish appear only while it runs
+    await expect(page.locator('#crFinish')).toBeHidden();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,
     );
-    for (const row of await page.locator('.cr-row').all())
-      await expect(row.locator('.cr-line')).toContainText(/Sent|Posted/);
     await inView(page, page.locator('#crPrepare'));
   });
 }
@@ -114,16 +113,19 @@ test('saving settings never starts sending, and Important stays off until people
   await open(page, 390, 844);
   await page.locator('.cr-row[data-key="top"] .cr-name b').click();
   const sheet = page.locator('#caseSheet');
+  await sheet.getByRole('button', { name: 'Settings', exact: true }).click();
   const gap = sheet.locator('input[type=number]').first();
   await gap.fill('4');
   await sheet.getByRole('button', { name: 'Save' }).click();
   await expect(sheet).toBeHidden();
   await page.locator('.cr-row[data-key="top"] .cr-name b').click();
+  await sheet.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(sheet.locator('input[type=number]').first()).toHaveValue('4');
   await sheet.locator('#csFoot').getByRole('button', { name: 'Close' }).click();
   expect((await api(port, '/case-run')).status).toBe('idle');
   expect((await api(port, '/auto-controls')).controls.group.on).toBe(false);
   await page.locator('.cr-row[data-key="important"] .cr-name b').click();
+  await sheet.getByRole('button', { name: 'Settings', exact: true }).click();
   await sheet.locator('input[type=checkbox]').first().check(); // include
   await sheet.getByRole('button', { name: 'Save' }).click();
   await expect(sheet.locator('#csError')).toContainText('Select the Important donors first');
@@ -139,30 +141,31 @@ test('approve once, run, pause all, resume and finish; reopening lands on the ca
   await open(page, 390, 844);
   await page.locator('#crStart').click();
   await page.getByRole('button', { name: 'Approve and start' }).click();
-  await expect(page.locator('#crStatus')).toHaveText('Running');
-  await expect(page.locator('#crPause')).toBeEnabled();
-  await expect(page.locator('#crStart')).toBeDisabled();
+  await expect(page.locator('#crPause')).toBeVisible();
+  await expect(page.locator('#crStart')).toBeHidden();
   expect((await api(port, '/auto-controls')).controls.group.on).toBe(true);
-  await expect(page.locator('.cr-row[data-key="group"] .cr-pill')).toHaveText('Running');
+  await expect(page.locator('.cr-row[data-key="group"] .cr-run')).toHaveText('Pause');
 
   await page.goto('/new'); // reopening the app while a case runs
   await expect(page.locator('#casePage')).toBeVisible();
   expect(await page.evaluate(() => location.hash)).toBe('#/case');
 
   await page.locator('#crPause').click();
-  await expect(page.locator('#crStatus')).toHaveText('Paused');
   await expect(page.locator('#crStart')).toHaveText('Resume case');
+  expect((await api(port, '/case-run')).status).toBe('paused');
   expect((await api(port, '/auto-controls')).controls.group.on).toBe(false);
   await page.locator('#crStart').click();
-  await expect(page.locator('#crStatus')).toHaveText('Running');
+  await expect(page.locator('#crPause')).toBeVisible();
+  expect((await api(port, '/case-run')).status).toBe('running');
 
   await page.locator('#crFinish').click();
   await expect(page.locator('#caseSheet')).toContainText('Confirmed so far');
   expect((await api(port, '/case-run')).status).toBe('running'); // asking changes nothing
   await page.locator('#caseSheet').getByRole('button', { name: 'Finish case' }).click();
-  await expect(page.locator('#crStatus')).toHaveText('Finished');
   await expect(page.locator('#crDone')).toBeVisible();
-  await expect(page.locator('#crStart')).toBeDisabled();
+  await expect(page.locator('#crStart')).toBeHidden();
+  await expect(page.locator('#crFinish')).toBeHidden();
+  expect((await api(port, '/case-run')).status).toBe('finished');
   expect((await api(port, '/auto-controls')).controls.group.on).toBe(false);
 });
 
@@ -200,20 +203,24 @@ test('Needs you: a payment claim is confirmed once with the amount the owner typ
   await expect(sheet).toBeHidden();
   expect(seen).toEqual([{ action: 'need', id: 'pay:1', op: 'check_payment', amount: 2000 }]);
   await expect(page.locator('.cr-need')).toHaveCount(0);
-  await expect(page.locator('.cr-empty')).toHaveText('Nothing needs you.');
+  await expect(page.locator('#crNeedsSec')).toBeHidden();
 });
 
 test('one page controls the amount, the case and WhatsApp, and Tools reaches every other tool', async ({
   page,
 }) => {
   await open(page, 390, 844);
-  await page.locator('#crMeta').click();
   const sheet = page.locator('#caseSheet');
+  const settings = () => page.locator('#crSettings').click();
+  const row = (name) => sheet.locator('.cr-li', { hasText: name });
+  await settings();
+  await row('Amount left').getByRole('button', { name: 'Change' }).click();
   await sheet.locator('input[type=number]').fill('19000');
   await sheet.getByRole('button', { name: 'Save' }).click();
-  await expect(page.locator('#crMeta')).toContainText('Left Rs. 19,000');
   expect((await api(port, '/case-run')).case.left).toBe(19000);
-  await page.locator('#crName').click();
+  await settings();
+  await expect(row('Amount left')).toContainText('Rs. 19,000');
+  await row('Case').getByRole('button', { name: 'Change' }).click();
   await expect(sheet.locator('select option')).not.toHaveCount(0);
   await expect(sheet.getByRole('button', { name: 'Start new case' })).toBeVisible();
   await sheet.locator('#csFoot').getByRole('button', { name: 'Close' }).click();
@@ -231,6 +238,18 @@ test('one page controls the amount, the case and WhatsApp, and Tools reaches eve
   await page.locator('#caseSheet #csFoot').getByRole('button', { name: 'Close' }).click();
   await page.locator('#crWa').click();
   await expect(page.locator('#whatsappDialog')).toBeVisible();
+  await page.evaluate(() => document.getElementById('whatsappDialog').close());
+  // every Settings line is there, nothing to look for elsewhere
+  await settings();
+  await expect(sheet.locator('.cr-li b')).toHaveText([
+    'Case',
+    'Amount left',
+    'Poster',
+    'Sending times',
+    'Auto replies',
+    'WhatsApp',
+    'App settings',
+  ]);
 });
 
 test('Prepare case: edit, Save Base, Next, Test 3 versions and Looks right, all in one panel', async ({

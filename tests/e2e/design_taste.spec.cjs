@@ -22,7 +22,7 @@ const audit = (page, scope) =>
         t = b.textContent.trim();
       const id = (b.id ? '#' + b.id : '') + '"' + t.slice(0, 22) + '"';
       // owner-approved exceptions: the small settings icon on each row and the − / + steppers
-      if (b.matches('.cr-gear, .cr-step')) {
+      if (b.matches('.cr-gear, .cr-step, .cr-sw')) {
         if (!b.getAttribute('aria-label')) out.push('NO-LABEL ' + id);
         if (r.height < 38.5 || r.width < 38.5) out.push('SHORT ' + id);
         continue;
@@ -65,7 +65,7 @@ for (const [w, h] of [
       if (w < 900) expect(box.y + box.height).toBeGreaterThan(h - 2); // a bottom sheet, not a menu dropping from the top
       await page.evaluate(() => document.getElementById('caseSheet').close());
       for (const [name, open] of [
-        ['start', '#crStart'],
+        ['start', '.cr-row[data-key="group"] .cr-sw'],
         ['prepare', '#crPrepare'],
         ['row', '.cr-row[data-key="top"] .cr-name b'],
       ]) {

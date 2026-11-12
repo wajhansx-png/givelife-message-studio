@@ -42,4 +42,5 @@ Apply these rules automatically to every coding task.
 
 # CASE PAGE (/new, Case tab)
 - `case_run.py` + `/case-run` run the approved plan through the EXISTING engines (no sender of its own); `case-run.js` + the end of `new-ui.css` are the page. Tests: `tests/test_case_run.py`, `tests/e2e/case_run.spec.cjs`.
+- No Start button: each row has one switch (ON = it sends). First ON asks once (summary + Start sending); a row joins a running case with `summary(key)` + `add_row`, and `row_op` pauses/starts one row alone.
 - Saving a plan never sends. Start needs the summary token. One DM queue at a time. Never retry an uncertain send. A claim is not money until the owner confirms the amount.

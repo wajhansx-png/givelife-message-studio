@@ -17,6 +17,13 @@ from donor_book import normalize_phone
 KEY = "case_run"
 ROWS = ("group", "top", "giki", "volunteers", "important")
 DM_ORDER = ("top", "giki", "volunteers", "important")
+MSG_OF = {  # which saved messages each row sends
+    "group": ("group",),
+    "top": ("dm",),
+    "giki": ("dm", "question"),
+    "volunteers": ("volunteers",),
+    "important": ("dm",),
+}
 TITLES = {
     "group": "GiveLife Group",
     "top": "Top Donors",
@@ -271,9 +278,15 @@ class CaseRun:
         )
         return self.view()
 
-    def summary(self):
+    def summary(self, key=None):
+        """What Start would do. With a row key: what turning on ONE more row of a running case would do."""
         st = self._read()
         plan = st["plan"]
+        if key is not None:
+            if key not in ROWS:
+                raise ValueError("Choose a row.")
+            plan = copy.deepcopy(plan)
+            plan[key]["enabled"] = True
         aud = self.audiences(plan)
         m = self._messages()
         blockers, warnings = [], []
@@ -286,7 +299,7 @@ class CaseRun:
             blockers.append("WhatsApp is disconnected. Reconnect it first.")
         if self.app.on_hold():
             blockers.append("Sending is on hold. Resume it first.")
-        if st["status"] != "paused" and self._dm_busy():
+        if key is None and st["status"] != "paused" and self._dm_busy():
             blockers.append(
                 "A DM queue is sending now. Stop it first: two queues never run together."
             )
@@ -306,6 +319,8 @@ class CaseRun:
             and not plan["group"]["enabled"]
         ):
             blockers.append("Nobody is selected and no group is on.")
+        if key is not None and key != "group" and not aud[key]:
+            blockers.append(f"No one is waiting in {TITLES[key]}.")
         for name, label in (("group", "Group messages"), ("donor", "Donor messages")):
             if self.checks(st, m)[name] != "ok":
                 warnings.append(f"{label}: check again before you start.")
@@ -332,6 +347,14 @@ class CaseRun:
             "msg": {k: m[k]["digest"] for k in ("group", "dm", "question", "volunteers")},
             "left": left,
         }
+        if key is not None:  # one row only: other rows sending meanwhile must not change this token
+            body = {
+                "case": body["case"],
+                "row": key,
+                "plan": plan[key],
+                "aud": aud[key],
+                "msg": {k: body["msg"][k] for k in MSG_OF[key]},
+            }
         token = _digest(json.dumps(body, sort_keys=True))
         return {
             "token": token,
@@ -341,7 +364,7 @@ class CaseRun:
             "blockers": blockers,
             "warnings": warnings,
             "audiences": aud,
-            "msg": body["msg"],
+            "msg": {k: m[k]["digest"] for k in ("group", "dm", "question", "volunteers")},
         }
 
     # ------------------------------------------------------------------ run control
@@ -441,21 +464,65 @@ class CaseRun:
         return self.view()
 
     def row_op(self, key, op):
+        """Pause or start ONE approved row. Starting a row of a paused case runs only that row; the rest stay paused."""
         if key not in ROWS or op not in ("pause", "start"):
             raise ValueError("Choose a row and Start or Pause.")
         with self.lock:
             st = self._read()
             row = st["rows"].get(key)
-            if st["status"] != "running" or not row or row["state"] == "off":
-                raise ValueError("Start the case first. Only approved rows can run.")
+            if st["status"] not in ("running", "paused") or not row or row["state"] == "off":
+                raise ValueError("Start this row first: it was not approved yet.")
             if op == "pause":
+                if row["state"] in ("paused", "stopped", "done"):
+                    return self.view()
                 if key == "group":
                     self.app.set_auto(False)
                 else:
                     self._cancel_row(row)
                 row["state"] = "paused"
             elif row["state"] in ("paused", "stopped"):
+                if not self.app.wa_ok():
+                    raise ValueError("WhatsApp is disconnected. Reconnect it first.")
+                if self.app.on_hold():
+                    raise ValueError("Sending is on hold. Resume it first.")
                 row.update(state="queued", starts=row.get("starts", 0) + 1, job=None, error="")
+                if st["status"] == "paused":
+                    st["status"] = "running"
+                    self._log(st, f"{TITLES[key]} started again; the other rows stay paused.")
+            self._write(st)
+        self.tick()
+        return self.view()
+
+    def add_row(self, key, token):
+        """One more row joins a running or paused case after ITS OWN summary is approved. Other rows are untouched."""
+        if key not in ROWS:
+            raise ValueError("Choose a row.")
+        with self.lock:
+            st = self._read()
+            if st["status"] not in ("running", "paused") or not st["approved"]:
+                raise ValueError("Start the case first.")
+            row = st["rows"].get(key)
+            if row and row["state"] != "off":
+                raise ValueError(f"{TITLES[key]} is already part of this case.")
+            s = self.summary(key)
+            if s["blockers"]:
+                raise ValueError(s["blockers"][0])
+            if token != s["token"]:
+                raise ValueError("The plan changed since you looked at it. Review it again.")
+            ap = st["approved"]
+            st["plan"][key]["enabled"] = True
+            ap["plan"][key] = copy.deepcopy(st["plan"][key])
+            ap["ids"][key] = s["audiences"][key]
+            used = {
+                m for k, r in st["rows"].items() if k != key and r["state"] != "off" for m in MSG_OF[k]
+            }
+            for name in MSG_OF[key]:
+                if name not in used:
+                    ap["msg"][name] = s["msg"][name]
+            joins = key == "group" or bool(s["audiences"][key])
+            state = ("queued" if st["status"] == "running" else "paused") if joins else "off"
+            st["rows"][key] = {"state": state, "starts": 1 if joins else 0}
+            self._log(st, f"{TITLES[key]} added to the case.")
             self._write(st)
         self.tick()
         return self.view()
@@ -1220,7 +1287,9 @@ class CaseRun:
         if op == "plan":
             return self.set_plan(body.get("plan"))
         if op == "summary":
-            return self.summary()
+            return self.summary(body.get("key"))
+        if op == "add_row":
+            return self.add_row(body.get("key"), body.get("token"))
         if op == "start":
             return self.start(body.get("token"))
         if op == "resume":

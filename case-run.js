@@ -16,6 +16,7 @@
   };
   const GEAR =
     '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+  const ROWS = ['group', 'top', 'giki', 'volunteers', 'important'];
   const rs = (n) => 'Rs. ' + Number(n || 0).toLocaleString('en-PK');
   const clock = (sec) =>
     sec ? new Date(sec * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—';
@@ -99,7 +100,7 @@
     '<section id="crNeedsSec" aria-labelledby="crNeedsH" hidden><h2 id="crNeedsH">Needs you <small id="crNeedsN"></small></h2><div id="crNeeds" class="cr-list"></div></section>' +
     '<section aria-labelledby="crPlanH"><h2 id="crPlanH">Sending plan</h2><div id="crRows" class="cr-list"></div></section>' +
     '<section id="crDone" class="cr-done" hidden></section></main>' +
-    '<footer class="cr-foot"><div class="cr-bar"><button type="button" id="crStart" class="cr-go">Start case</button>' +
+    '<footer class="cr-foot"><div class="cr-bar"><button type="button" id="crResume" class="cr-go">Resume all</button>' +
     '<button type="button" id="crPause" class="cr-stop">Pause all</button>' +
     '<button type="button" id="crFinish" class="cr-end">Finish case</button></div>' +
     '<nav class="cr-nav" aria-label="Case menu"><button type="button" id="crTools" class="cr-link">Tools</button>' +
@@ -173,13 +174,12 @@
       paused = data.status === 'paused',
       idle = data.status === 'idle',
       fin = data.status === 'finished';
-    $('crStart').textContent = paused ? 'Resume case' : 'Start case';
-    $('crStart').hidden = !(idle || paused);
+    $('crResume').hidden = !paused;
     $('crPause').hidden = !run;
     $('crFinish').hidden = !(run || paused);
     $('crPause').disabled = !run;
     $('crFinish').disabled = !(run || paused);
-    document.querySelector('#casePage .cr-bar').hidden = fin;
+    document.querySelector('#casePage .cr-bar').hidden = fin || idle; // nothing to press before a row is switched on
     const done = $('crDone');
     done.hidden = !fin;
     $('crPlanH').parentElement.hidden = fin;
@@ -283,14 +283,23 @@
       say(e.message);
     }
   }
+  /* one switch per row: ON = this row sends. Nothing else on the page decides that. */
+  const rowBusy = new Set();
+  let asking = ''; // the row whose "Start …?" question is open keeps its switch on
+  const repaint = () => {
+    sig = '';
+    paint();
+  };
   function paintRows() {
     const box = $('crRows');
     box.replaceChildren();
     const live = data.status === 'running' || data.status === 'paused';
+    const noPeople = !((data.plan_ids && data.plan_ids.important) || []).length;
     for (const r of data.rows) {
       const li = make('article', 'cr-li cr-row');
       li.dataset.key = r.key;
-      li.dataset.state = r.enabled ? r.state : 'off';
+      const on = (live && (r.state === 'running' || r.state === 'queued')) || asking === r.key;
+      li.dataset.state = live ? r.state : 'idle';
       const name = make('button', 'cr-name', '');
       name.append(make('b', '', r.title));
       if (r.note) name.append(make('small', 'cr-warn-line', r.note));
@@ -299,26 +308,25 @@
       li.append(name);
       const acts = make('div', 'cr-acts');
       const total = (r.sent || 0) + (r.left == null ? 0 : r.left);
-      if (!r.enabled) acts.append(make('span', 'cr-cnt', 'Off'));
+      if (live && r.state === 'off') acts.append(make('span', 'cr-cnt', 'Off'));
       else if (live && r.key === 'group') acts.append(make('span', 'cr-cnt', String(r.sent || 0)));
       else if (live) acts.append(make('span', 'cr-cnt', `${r.sent || 0}/${total}`));
-      if (r.action === 'start' || r.action === 'pause') {
-        const run = btn(r.action === 'start' ? 'Start' : 'Pause', 'cr-tx cr-run', () =>
-          rowOp(r.key, r.action),
+      if (!live) {
+        // before the case runs: the message word and the timing icon, then the switch
+        const choose = r.key === 'important' && noPeople;
+        const edit = btn('', 'cr-tx', () =>
+          choose ? rowSheet(r.key, 'people') : editSheet(r.key),
         );
-        run.dataset.act = r.action;
-        acts.append(run);
-      } else if (!live && r.key === 'important' && !r.enabled) {
-        acts.append(btn('Choose', 'cr-tx', () => rowSheet(r.key, 'people')));
-      } else if (!live && r.enabled) {
-        const add = !r.has_msg;
-        const edit = btn('', 'cr-tx', () => editSheet(r.key));
-        edit.append(add ? 'Add' : 'Edit', make('span', 'cr-w', ' message')); // " message" hides on tiny phones
-        edit.setAttribute('aria-label', `${add ? 'Add' : 'Edit'} message: ${r.title}`);
+        const add = !choose && !r.has_msg;
+        edit.append(choose ? 'Choose' : add ? 'Add' : 'Edit');
+        if (!choose) edit.append(make('span', 'cr-w', ' message')); // " message" hides on tiny phones
+        edit.setAttribute(
+          'aria-label',
+          choose ? `Choose people: ${r.title}` : `${add ? 'Add' : 'Edit'} message: ${r.title}`,
+        );
         if (add) edit.dataset.add = '1';
         acts.append(edit);
       }
-      /* small settings icon: opens this row's timing straight away (same sheet as Settings tab) */
       if (data.status !== 'running') {
         // timing is locked while sending, so the icon only shows when it can be changed
         const gear = btn('', 'cr-gear', () => rowSheet(r.key, 'timing'));
@@ -326,8 +334,112 @@
         gear.setAttribute('aria-label', `Edit timing: ${r.title}`);
         acts.append(gear);
       }
-      if (acts.children.length) li.append(acts);
+      if (r.state === 'done' && live) {
+        acts.append(make('span', 'cr-cnt', 'Done'));
+      } else {
+        const sw = btn('', 'cr-sw', null);
+        sw.setAttribute('role', 'switch');
+        sw.setAttribute('aria-checked', on ? 'true' : 'false');
+        sw.setAttribute('aria-label', `Send: ${r.title}`);
+        sw.onclick = () => toggleRow(r, !on);
+        acts.append(sw);
+      }
+      li.append(acts);
       box.append(li);
+    }
+  }
+  /* A switch never trusts itself: it asks the server and then repaints from the server's answer, so a refused or
+     failed tap always snaps back to what is really happening. Each row has its own busy flag. */
+  async function toggleRow(r, want) {
+    if (rowBusy.has(r.key)) return;
+    rowBusy.add(r.key);
+    const sw = document.querySelector(`.cr-row[data-key="${r.key}"] .cr-sw`);
+    if (sw) sw.setAttribute('aria-checked', want ? 'true' : 'false'); // answer the tap at once
+    try {
+      const live = data.status === 'running' || data.status === 'paused';
+      if (!want && !live) return repaint();
+      if (!live || r.state === 'off') asking = r.key;
+      if (!live) {
+        // only this row is switched on for the start: nothing sends until "Start sending" is tapped
+        const only = {};
+        for (const k of ROWS) only[k] = { enabled: k === r.key };
+        take(await post({ action: 'plan', plan: only }));
+        await startRowSheet(r, false);
+      } else if (r.state === 'off') {
+        if (want) await startRowSheet(r, true);
+        else repaint();
+      } else {
+        take(await post({ action: 'row', key: r.key, op: want ? 'start' : 'pause' }));
+      }
+    } catch (e) {
+      asking = '';
+      await load().catch(() => {}); // heal first: the page shows what is really happening
+      repaint();
+      say(e.message);
+      if (r.key === 'important' && /Important donors/i.test(e.message)) rowSheet(r.key, 'people');
+    } finally {
+      rowBusy.delete(r.key);
+    }
+  }
+  function rowSummary(s, key) {
+    const box = make('div', 'cr-sum');
+    for (const t of s.blockers) box.append(make('p', 'cr-block', t));
+    for (const t of s.warnings) box.append(make('p', 'cr-warn', t));
+    const r = s.rows[key],
+      p = r.plan || {};
+    const line = (a, b) => {
+      const row = make('div', 'cr-sum-row');
+      row.append(make('b', '', a), make('span', '', b));
+      box.append(row);
+    };
+    if (key === 'group') line('Posts every', `${p.every_minutes} min`);
+    else {
+      line(key === 'volunteers' ? 'People waiting' : 'Donors waiting', String(r.count));
+      line('One message every', `${p.gap_minutes} min`);
+      line('Then rest after each', `${p.batch_size} DMs`);
+    }
+    return box;
+  }
+  /* "Start Top Donors?" (before the case runs) or the same question for a row that was not approved yet. */
+  async function startRowSheet(r, add) {
+    const s = await post(add ? { action: 'summary', key: r.key } : { action: 'summary' });
+    const buttons = [['Cancel', 'cr-soft', null]];
+    if (!s.blockers.length)
+      buttons.push([
+        'Start sending',
+        'cr-go',
+        async () => {
+          try {
+            return await post(
+              add ? { action: 'add_row', key: r.key, token: s.token } : { action: 'start', token: s.token },
+            );
+          } catch (e) {
+            // the plan moved under us: show the fresh summary and let the owner decide again
+            if (/changed since/i.test(e.message)) {
+              await startRowSheet(r, add);
+              throw Error('The plan changed, so this was reloaded. Check it and tap Start sending again.');
+            }
+            throw e;
+          }
+        },
+      ]);
+    sheet.addEventListener(
+      'close',
+      () => {
+        asking = '';
+        repaint();
+      },
+      { once: true },
+    ); // Cancel or swipe away: the switch snaps back
+    openSheet(`Start ${r.title}?`, rowSummary(s, r.key), buttons);
+  }
+  async function resumeAll() {
+    try {
+      take(await post({ action: 'resume' }));
+    } catch (e) {
+      await load().catch(() => {});
+      repaint();
+      say(e.message);
     }
   }
   function paintDone(box) {
@@ -366,58 +478,6 @@
   }
 
   /* ---------------------------------------------------------------- actions */
-  async function rowOp(key, op) {
-    try {
-      take(await post({ action: 'row', key, op }));
-    } catch (e) {
-      say(e.message);
-    }
-  }
-
-  function summaryList(s) {
-    const box = make('div', 'cr-sum');
-    for (const t of s.blockers) box.append(make('p', 'cr-block', t));
-    for (const t of s.warnings) box.append(make('p', 'cr-warn', t));
-    for (const key of ['group', 'top', 'giki', 'volunteers', 'important']) {
-      const r = s.rows[key],
-        p = r.plan || {};
-      const what = !r.enabled
-        ? 'Off'
-        : key === 'group'
-          ? `Every ${p.every_minutes} min`
-          : `${r.count} people · ${p.gap_minutes} min apart · ${p.batch_size} per batch · ${p.rest_minutes} min break`;
-      const row = make('div', 'cr-sum-row');
-      row.append(make('b', '', r.title), make('span', '', what));
-      box.append(row);
-    }
-    const msg = make('div', 'cr-sum-msg');
-    for (const [k, label] of [
-      ['group', 'Group message'],
-      ['dm', 'Donor message'],
-      ['question', 'Share question (GIKI)'],
-    ]) {
-      if (!s.messages[k]) continue;
-      msg.append(make('b', '', label), make('p', 'cr-quote', s.messages[k].slice(0, 160)));
-    }
-    box.append(msg);
-    return box;
-  }
-  async function startSheet() {
-    try {
-      if (data.status === 'paused') return take(await post({ action: 'resume' }));
-      const s = await post({ action: 'summary' });
-      const buttons = [['Cancel', 'cr-soft', null]];
-      if (!s.blockers.length)
-        buttons.unshift([
-          'Approve and start',
-          'cr-go',
-          () => post({ action: 'start', token: s.token }),
-        ]);
-      openSheet('Start case', summaryList(s), buttons);
-    } catch (e) {
-      say(e.message);
-    }
-  }
   async function pauseAll() {
     try {
       take(await post({ action: 'pause' }));
@@ -656,13 +716,7 @@
         ),
       );
     /* Timing */
-    /* Settings: plain rows, one switch, and − / + buttons so nothing needs typing */
-    const on = make('input', 'cr-switch');
-    on.type = 'checkbox';
-    on.checked = r.enabled;
-    const onLabel = make('label', 'cr-set-row');
-    onLabel.append(make('span', '', 'Send in this case'), on);
-    panes.timing.append(onLabel);
+    /* Settings: plain rows and − / + buttons so nothing needs typing. Whether a row sends is the switch on the page. */
     const inputs = {};
     for (const [name, label, lo, hi, step] of FIELDS[key === 'group' ? 'group' : 'dm']) {
       const i = make('input', 'cr-num');
@@ -718,7 +772,7 @@
         'cr-go',
         () => {
           if (locked) throw Error('Pause all first, then change the plan.');
-          const row = { enabled: on.checked };
+          const row = {};
           for (const [n, i] of Object.entries(inputs)) row[n] = Number(i.value);
           if (picked) row.ids = picked();
           return post({ action: 'plan', plan: { [key]: row } });
@@ -1227,7 +1281,7 @@
   $('crTools').onclick = toolsSheet;
   $('crSettings').onclick = () => data && settingsSheet();
   $('crWa').onclick = press('whatsappConnection');
-  $('crStart').onclick = () => data && startSheet();
+  $('crResume').onclick = () => data && resumeAll();
   $('crPause').onclick = () => data && pauseAll();
   $('crFinish').onclick = () => data && finishSheet();
   addEventListener('studio-navigate', sync);

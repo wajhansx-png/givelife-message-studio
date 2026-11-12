@@ -371,6 +371,18 @@ class Money(Base):
         self.assertEqual(app.read_left(), left)
 
 
+class Amount(Base):
+    def test_the_amount_left_changes_from_the_page_and_bad_values_change_nothing(self):
+        self.cr.act({"action": "left", "left": 18000})
+        self.assertEqual(app.read_left(), 18000)
+        self.assertEqual(self.cr.view()["case"]["left"], 18000)
+        for bad in (-1, "5000", None, True, 10**9):
+            with self.assertRaises(ValueError):
+                self.cr.act({"action": "left", "left": bad})
+        self.assertEqual(app.read_left(), 18000)
+        self.assertTrue(any(c["current"] for c in self.cr.view()["cases"]))
+
+
 class Words(unittest.TestCase):
     def test_only_a_short_clear_yes_or_no_counts(self):
         for text in ("Yes", "yes sure", "ok", "Haan ji", "Jee zaroor"):

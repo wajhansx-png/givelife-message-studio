@@ -84,7 +84,7 @@ test('the Case tab is the first tab, and Tools opens the existing tools and come
     'Reports',
     'Settings',
   ]);
-  await page.locator('#crMenu .cr-tool', { hasText: 'Donors' }).click();
+  await page.locator('#crMenu').getByRole('button', { name: 'Donors', exact: true }).click();
   await expect(page.locator('#donorsPage')).toBeVisible();
   await page.locator('#donorMainBottom').click();
   await expect(page.locator('#donorsPage')).toBeHidden();
@@ -200,4 +200,34 @@ test('Needs you: a payment claim is confirmed once with the amount the owner typ
   expect(seen).toEqual([{ action: 'need', id: 'pay:1', op: 'check_payment', amount: 2000 }]);
   await expect(page.locator('.cr-need')).toHaveCount(0);
   await expect(page.locator('.cr-empty')).toHaveText('Nothing needs you.');
+});
+
+test('one page controls the amount, the case and WhatsApp, and Tools reaches every other tool', async ({
+  page,
+}) => {
+  await open(page, 390, 844);
+  await page.locator('#crMeta').click();
+  const sheet = page.locator('#caseSheet');
+  await sheet.locator('input[type=number]').fill('19000');
+  await sheet.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('#crMeta')).toContainText('Left Rs. 19,000');
+  expect((await api(port, '/case-run')).case.left).toBe(19000);
+  await page.locator('#crName').click();
+  await expect(sheet.locator('select option')).not.toHaveCount(0);
+  await expect(sheet.getByRole('button', { name: 'Start new case' })).toBeVisible();
+  await sheet.locator('#csFoot').getByRole('button', { name: 'Close' }).click();
+  await page.locator('#crTools summary').click();
+  await expect(page.locator('#crMenu .cr-tool')).toContainText([
+    'Donors',
+    'Volunteers and their sharing request',
+    'Thank donors',
+    'Auto replies',
+    'Resume group messages',
+    'WhatsApp connection',
+    'Reports',
+    'Settings',
+  ]);
+  await page.locator('#crTools summary').click();
+  await page.locator('#crWa').click();
+  await expect(page.locator('#whatsappDialog')).toBeVisible();
 });

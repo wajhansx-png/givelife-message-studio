@@ -92,7 +92,7 @@
   page.innerHTML =
     '<div class="cr-shell"><div class="cr-head"><div class="cr-top"><h1><button type="button" id="crName" class="cr-tap" aria-label="Change case">Case</button></h1><span class="cr-pills"><button type="button" class="cr-pill cr-tap" id="crWa" aria-label="WhatsApp connection"></button><span class="cr-pill" id="crStatus"></span></span></div>' +
     '<button type="button" class="cr-meta cr-tap" id="crMeta" aria-label="Change the amount left"></button><div class="cr-tools-row"><button type="button" id="crPrepare" class="cr-soft">Prepare case</button>' +
-    '<details class="cr-tools" id="crTools"><summary>Tools</summary><div class="cr-menu" id="crMenu"></div></details>' +
+    '<button type="button" id="crTools" class="cr-soft">Tools</button>' +
     '<button type="button" id="crBack" class="cr-soft">Close</button></div></div>' +
     '<main class="cr-main"><p class="cr-say" id="crSay" role="status"></p>' +
     '<section aria-labelledby="crNeedsH"><h2 id="crNeedsH">Needs you <small id="crNeedsN"></small></h2><div id="crNeeds" class="cr-needs"></div></section>' +
@@ -105,7 +105,7 @@
   const sheet = make('dialog', 'case-sheet');
   sheet.id = 'caseSheet';
   sheet.innerHTML =
-    '<header><h2 id="csTitle"></h2><button type="button" id="csClose" aria-label="Close">×</button></header><div id="csBody"></div><p id="csError" class="cr-error" role="alert"></p><footer id="csFoot"></footer>';
+    '<header><span class="cr-grab" aria-hidden="true"></span><h2 id="csTitle"></h2></header><div id="csBody"></div><p id="csError" class="cr-error" role="alert"></p><footer id="csFoot"></footer>';
   document.body.append(sheet);
   const say = (t) => {
     const n = $('crSay');
@@ -119,6 +119,8 @@
     $('csError').textContent = '';
     const foot = $('csFoot');
     foot.replaceChildren();
+    /* every sheet closes from the bottom, in thumb reach: add Close when nothing else dismisses it */
+    if (!buttons.some((b) => !b[2])) buttons = [...buttons, ['Close', 'cr-soft', null]];
     for (const [label, cls, run, keep] of buttons) {
       const b = btn(label, cls);
       b.onclick = async () => {
@@ -138,7 +140,6 @@
     }
     if (!sheet.open) sheet.showModal();
   }
-  $('csClose').onclick = () => sheet.close();
   sheet.addEventListener('click', (e) => e.target === sheet && sheet.close());
 
   /* ---------------------------------------------------------------- painting */
@@ -151,7 +152,8 @@
     const st = $('crStatus');
     st.textContent = STATUS[data.status] || data.status;
     st.dataset.s = data.status;
-    $('crMeta').textContent = `Confirmed ${rs(data.case.confirmed)} · Left ${rs(data.case.left)} ✎`;
+    $('crMeta').textContent =
+      `Confirmed ${rs(data.case.confirmed)} · Left ${rs(data.case.left)} · Change`;
     const wa = $('crWa');
     wa.textContent = data.whatsapp ? 'WhatsApp on' : 'WhatsApp off';
     wa.dataset.ok = data.whatsapp ? '1' : '0';
@@ -933,13 +935,14 @@
     ['Reports', () => document.querySelector('.report-open')?.click()],
     ['Settings', press('gear')],
   ];
-  for (const [label, fn] of TOOLS)
-    $('crMenu').append(
-      btn(label, 'cr-tool', () => {
-        $('crTools').open = false;
-        fn();
-      }),
-    );
+  /* Tools opens as a bottom sheet (never a menu dropping from the top) */
+  function toolsSheet() {
+    const list = make('div', 'cr-menu');
+    list.id = 'crMenu';
+    for (const [label, fn] of TOOLS)
+      list.append(btn(label, 'cr-tool', () => (sheet.close(), fn())));
+    openSheet('Tools', list, [['Close', 'cr-soft', null]]);
+  }
 
   /* ---------------------------------------------------------------- open / close with the address */
   const path = () => (typeof Nav !== 'undefined' ? Nav.path() : '');
@@ -964,6 +967,7 @@
   page.addEventListener('cancel', () => (page.returnValue = ''));
   $('crBack').onclick = () => page.close();
   $('crPrepare').onclick = () => data && prepareSheet();
+  $('crTools').onclick = toolsSheet;
   $('crMeta').onclick = () => data && amountSheet();
   $('crName').onclick = () => data && caseSheet();
   $('crWa').onclick = press('whatsappConnection');

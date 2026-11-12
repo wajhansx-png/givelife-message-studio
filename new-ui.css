@@ -5414,9 +5414,12 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
   font-size: 14px;
   font-weight: 600;
 }
+.UI2 dialog.case-sheet .cr-seg-b[data-on='0'] {
+  color: var(--cr-muted);
+}
 .UI2 dialog.case-sheet .cr-seg-b[data-on='1'] {
-  background: #232a40;
-  border-color: #3d4a75;
+  background: #2b3556;
+  border-color: #4a5a95;
 }
 .UI2 dialog.case-sheet .cr-pane {
   display: grid;
@@ -5424,6 +5427,92 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
 }
 .UI2 dialog.case-sheet .cr-pane[hidden] {
   display: none;
+}
+/* Settings tab: plain rows, a switch and − / + steppers (no typing needed) */
+.UI2 dialog.case-sheet .cr-set-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  margin: 0;
+  padding: 4px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--cr-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--cr-ink);
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+}
+.UI2 dialog.case-sheet .cr-pane > .cr-set-row:last-child {
+  border-bottom: 0;
+}
+.UI2 dialog.case-sheet .cr-set-row > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.UI2 dialog.case-sheet .cr-stepper {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+.UI2 dialog.case-sheet .cr-step {
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: #1d212b !important;
+  color: var(--cr-ink) !important;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+}
+.UI2 dialog.case-sheet .cr-num {
+  box-sizing: border-box;
+  width: 56px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cr-ink);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.UI2 dialog.case-sheet .cr-num::-webkit-inner-spin-button,
+.UI2 dialog.case-sheet .cr-num::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+.UI2 dialog.case-sheet .cr-set-val {
+  flex: none;
+  color: var(--cr-muted);
+  font-weight: 600;
+}
+.UI2 dialog.case-sheet .cr-set-link::after {
+  content: '›';
+  margin-left: -4px;
+  color: var(--cr-muted);
+  font-size: 22px;
+}
+.UI2 dialog.case-sheet .cr-back {
+  justify-self: start;
+  margin-left: -10px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .UI2 dialog.case-page .cr-sw::before,
+  .UI2 dialog.case-page .cr-sw::after {
+    transition: none;
+  }
 }
 .UI2 dialog.case-sheet .cr-block {
   display: grid;
@@ -5639,6 +5728,65 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
 .UI2 dialog.case-page .cr-tx[data-add='1'] {
   color: #fbbf24 !important;
 }
+/* the row switch: ON = this row sends. The button is 44px tall for the thumb; the track is drawn inside it. */
+.UI2 dialog.case-page .cr-sw {
+  position: relative;
+  flex: none;
+  width: 57px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+}
+.UI2 dialog.case-page .cr-sw::before {
+  content: '';
+  position: absolute;
+  top: 6.5px;
+  left: 3px;
+  width: 51px;
+  height: 31px;
+  border-radius: 16px;
+  background: #3a4057;
+  transition: background 0.2s;
+}
+.UI2 dialog.case-page .cr-sw::after {
+  content: '';
+  position: absolute;
+  top: 8.5px;
+  left: 5px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+.UI2 dialog.case-page .cr-sw[aria-checked='true']::before {
+  background: #34d399;
+}
+.UI2 dialog.case-page .cr-sw[aria-checked='true']::after {
+  transform: translateX(20px);
+}
+/* small settings icon at the end of each row: timing in one tap */
+.UI2 dialog.case-page .cr-gear {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  color: var(--cr-muted) !important;
+}
+.UI2 dialog.case-page .cr-gear svg {
+  width: 20px;
+  height: 20px;
+}
+.UI2 dialog.case-page .cr-row[data-state='off'] .cr-gear {
+  opacity: 0.7;
+}
 .UI2 dialog.case-page .cr-run[data-act='pause'] {
   color: #fbbf24 !important;
 }
@@ -5800,6 +5948,11 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
   .UI2 dialog.case-page .cr-tx {
     padding: 0 7px;
     font-size: 15px;
+  }
+  /* "Edit message" becomes "Edit" so the row name never wraps */
+  .UI2 dialog.case-page .cr-tx .cr-w,
+  .UI2 dialog.case-page .cr-row[data-state='off'] .cr-cnt {
+    display: none;
   }
 }
 /* computer: a centred column, bigger type; the side panel pushes the page left */

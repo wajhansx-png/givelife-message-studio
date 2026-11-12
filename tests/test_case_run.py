@@ -256,6 +256,92 @@ class Run(Base):
         self.assertEqual(items["whatsapp"]["actions"], ["reconnect"])
 
 
+class OneRow(Base):
+    """Each row switch is its own control: one row can start, join, pause or restart without touching the others."""
+
+    def only(self, key):
+        return {k: {"enabled": k == key} for k in case_run.ROWS}
+
+    def test_starting_one_row_runs_only_that_row_and_the_others_stay_off(self):
+        top, giki = self.people(2, 1)
+        self.cr.set_plan(self.only("top"))
+        self.approve()
+        self.addCleanup(self.stop_everything)
+        rows = self.state()["rows"]
+        self.assertEqual({k: r["state"] for k, r in rows.items()}["giki"], "off")
+        self.assertEqual(rows["top"]["state"] in ("queued", "running"), True)
+        with self.assertRaises(ValueError):  # a row that was never approved cannot just be started
+            self.cr.row_op("giki", "start")
+
+    def test_important_without_people_is_refused_and_changes_nothing(self):
+        self.people(2, 1)
+        before = self.state()["plan"]
+        with self.assertRaises(ValueError):
+            self.cr.set_plan(self.only("important"))
+        self.assertEqual(self.state()["plan"], before)
+
+    def test_a_new_row_joins_only_after_its_own_summary_and_runs_after_the_others(self):
+        top, giki = self.people(2, 1)
+        self.fast.start()
+        self.addCleanup(self.fast.stop)
+        self.cr.set_plan(self.only("top"))
+        self.approve()
+        self.addCleanup(self.stop_everything)
+        s = self.cr.summary("giki")
+        self.assertEqual((s["blockers"], s["rows"]["giki"]["count"]), ([], 1))
+        with self.assertRaises(ValueError):
+            self.cr.add_row("giki", "not-the-token")
+        self.assertEqual(self.state()["rows"]["giki"]["state"], "off")
+        self.cr.add_row("giki", s["token"])
+        self.assertTrue(self.tick_until(lambda: self.state()["rows"]["giki"]["state"] == "running"))
+        jobs = self.h.jobs.export_jobs()["jobs"]
+        self.assertEqual([j["owner"] for j in jobs], ["case_top", "case_giki"])  # one DM queue at a time
+        phones = [m["phone"] for m in self.sent]
+        self.assertEqual(len(phones), len(set(phones)), "a person was messaged twice")
+        with self.assertRaises(ValueError):  # a row that already joined cannot join twice
+            self.cr.add_row("giki", s["token"])
+
+    def test_the_row_token_ignores_other_rows_sending_meanwhile(self):
+        self.people(3, 1)
+        self.cr.set_plan(self.only("top"))
+        self.approve()
+        self.addCleanup(self.stop_everything)
+        s = self.cr.summary("giki")
+        self.assertTrue(self.tick_until(lambda: len(self.sent) >= 1))  # Top sends someone
+        self.assertEqual(self.cr.summary("giki")["token"], s["token"])
+        self.cr.add_row("giki", s["token"])
+
+    def test_pausing_one_row_leaves_the_others_and_it_can_start_again_alone(self):
+        self.people(3, 0)
+        self.cr.set_plan({"group": {"enabled": True}, "top": {"enabled": True}})
+        self.cr.set_plan({"giki": {"enabled": False}, "volunteers": {"enabled": False}})
+        self.approve()
+        self.addCleanup(self.stop_everything)
+        self.assertTrue(self.tick_until(lambda: len(self.sent) >= 1))
+        group_before = self.state()["rows"]["group"]["state"]
+        self.cr.row_op("top", "pause")
+        rows = self.state()["rows"]
+        self.assertEqual((rows["top"]["state"], rows["group"]["state"]), ("paused", group_before))
+        self.cr.pause()  # Pause all, then start only Top again
+        self.assertEqual(self.state()["status"], "paused")
+        self.cr.row_op("top", "start")
+        st = self.state()
+        self.assertEqual(st["status"], "running")
+        self.assertIn(st["rows"]["top"]["state"], ("queued", "running"))
+        self.assertEqual(st["rows"]["group"]["state"], "paused")  # the group row stays paused
+
+    def test_a_row_cannot_start_while_whatsapp_is_disconnected(self):
+        self.people(2, 0)
+        self.cr.set_plan(self.only("top"))
+        self.approve()
+        self.addCleanup(self.stop_everything)
+        self.cr.row_op("top", "pause")
+        with patch.object(app, "wa_ok", return_value=False):
+            with self.assertRaises(ValueError):
+                self.cr.row_op("top", "start")
+        self.assertEqual(self.state()["rows"]["top"]["state"], "paused")
+
+
 class Giki(Base):
     def giki_waiting(self):
         top, giki = self.people(1, 1)

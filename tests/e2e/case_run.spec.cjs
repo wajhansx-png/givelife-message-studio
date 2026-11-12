@@ -50,9 +50,11 @@ for (const [width, height] of [
       await page.locator('.cr-main').evaluate((e) => e.scrollHeight <= e.clientHeight + 1),
       'the page should not need scrolling',
     ).toBe(true);
-    for (const id of ['#crStart', '#crSettings', '#crTools', '#crBack'])
-      await inView(page, page.locator(id));
-    await expect(page.locator('#crStart')).toBeEnabled();
+    for (const id of ['#crSettings', '#crTools', '#crBack']) await inView(page, page.locator(id));
+    await expect(page.locator('#casePage .cr-bar')).toBeHidden(); // no Start button: a row's switch starts it
+    await expect(page.locator('.cr-row .cr-sw')).toHaveCount(5);
+    for (const sw of await page.locator('.cr-row .cr-sw').all())
+      await expect(sw).toHaveAttribute('aria-checked', 'false'); // nothing is on before you switch it on
     await expect(page.locator('#crPause')).toBeHidden(); // Pause all and Finish appear only while it runs
     await expect(page.locator('#crFinish')).toBeHidden();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
@@ -91,15 +93,21 @@ test('the Case tab is the first tab, and Tools opens the existing tools and come
   await expect(page.locator('#casePage')).toBeVisible(); // back exactly where you were
 });
 
-test('Start case shows one summary; cancelling starts nothing', async ({ page }) => {
+test('switching a row on asks once; Cancel starts nothing and the switch snaps back', async ({
+  page,
+}) => {
   await open(page, 390, 844);
-  await page.locator('#crStart').click();
+  const sw = page.locator('.cr-row[data-key="group"] .cr-sw');
+  await sw.click();
   const sheet = page.locator('#caseSheet');
   await expect(sheet).toBeVisible();
-  await expect(sheet.locator('.cr-sum-row')).toHaveCount(5);
-  await expect(sheet.locator('.cr-sum-row').first()).toContainText('Every 45 min');
+  await expect(sheet.locator('#csTitle')).toHaveText('Start GiveLife Group?');
+  await expect(sheet.locator('.cr-sum-row').first()).toContainText('45 min');
+  await expect(sw).toHaveAttribute('aria-checked', 'true'); // stays on while it asks
+  await expect(sheet.locator('#csFoot button')).toHaveText(['Cancel', 'Start sending']); // Start on the right
   await sheet.getByRole('button', { name: 'Cancel' }).click();
   await expect(sheet).toBeHidden();
+  await expect(sw).toHaveAttribute('aria-checked', 'false');
   const view = await api(port, '/case-run');
   expect(view.status).toBe('idle');
   const jobs = await api(port, '/donor-delivery');
@@ -124,46 +132,100 @@ test('saving settings never starts sending, and Important stays off until people
   await sheet.locator('#csFoot').getByRole('button', { name: 'Close' }).click();
   expect((await api(port, '/case-run')).status).toBe('idle');
   expect((await api(port, '/auto-controls')).controls.group.on).toBe(false);
-  await page.locator('.cr-row[data-key="important"] .cr-name b').click();
-  await sheet.getByRole('button', { name: 'Settings', exact: true }).click();
-  await sheet.locator('input[type=checkbox]').first().check(); // include
-  await sheet.getByRole('button', { name: 'Save' }).click();
-  await expect(sheet.locator('#csError')).toContainText('Select the Important donors first');
+  const imp = page.locator('.cr-row[data-key="important"] .cr-sw');
+  await imp.click(); // Important cannot be switched on before people are chosen
+  await expect(page.locator('#crSay')).toContainText('Select the Important donors first');
+  await expect(sheet).toBeVisible(); // it opens the people list to choose from
+  await expect(sheet.getByRole('button', { name: 'Back to settings' })).toBeVisible();
+  await sheet.locator('#csFoot').getByRole('button', { name: 'Close' }).click();
+  await expect(imp).toHaveAttribute('aria-checked', 'false');
+  expect((await api(port, '/case-run')).status).toBe('idle');
 });
 
-test('approve once, run, pause all, resume and finish; reopening lands on the case page', async ({
+test('each row has a small settings icon that opens its timing in one tap, and it hides while sending', async ({
   page,
 }) => {
-  await api(port, '/case-run', {
-    action: 'plan',
-    plan: { giki: { enabled: false }, volunteers: { enabled: false } },
-  });
   await open(page, 390, 844);
-  await page.locator('#crStart').click();
-  await page.getByRole('button', { name: 'Approve and start' }).click();
+  await expect(page.locator('.cr-row .cr-gear')).toHaveCount(5);
+  const box = await page.locator('.cr-row[data-key="top"] .cr-gear').boundingBox();
+  expect(box.width).toBeGreaterThanOrEqual(40);
+  expect(box.height).toBeGreaterThanOrEqual(40);
+  await page.getByRole('button', { name: 'Edit timing: Top Donors' }).click();
+  const sheet = page.locator('#caseSheet');
+  await expect(sheet.locator('.cr-seg-b[data-on="1"]')).toHaveText('Settings');
+  const gap = sheet.locator('input[type=number]').first();
+  await expect(gap).toBeVisible();
+  const v0 = Number(await gap.inputValue());
+  await sheet.getByRole('button', { name: /^More: Minutes between DMs/ }).click();
+  await expect(gap).toHaveValue(String(Math.min(10, v0 + 1)));
+  for (let i = 0; i < 12; i++)
+    await sheet.getByRole('button', { name: /^Less: Minutes between DMs/ }).click();
+  await expect(gap).toHaveValue('1'); // stops at the lowest allowed value
+  await sheet.getByRole('button', { name: 'People', exact: false }).first().click();
+  await expect(sheet.getByRole('button', { name: 'Back to settings' })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Back to settings' }).click();
+  await sheet.locator('#csFoot').getByRole('button', { name: 'Close' }).click();
+  expect((await api(port, '/case-run')).status).toBe('idle'); // opening timing never starts anything
+  // 320px phone: the row name stays on one line
+  await page.setViewportSize({ width: 320, height: 568 });
+  const names = page.locator('.cr-row .cr-name');
+  for (let i = 0; i < 5; i++)
+    expect((await names.nth(i).boundingBox()).height).toBeLessThan(50);
+});
+
+test('start one row, switch rows on and off on their own, pause all, resume and finish', async ({
+  page,
+}) => {
+  await open(page, 390, 844);
+  const sheet = page.locator('#caseSheet');
+  const sw = (key) => page.locator(`.cr-row[data-key="${key}"] .cr-sw`);
+  const row = async (key) => (await api(port, '/case-run')).rows.find((r) => r.key === key);
+  await sw('group').click();
+  await page.getByRole('button', { name: 'Start sending' }).click();
   await expect(page.locator('#crPause')).toBeVisible();
-  await expect(page.locator('#crStart')).toBeHidden();
+  await expect(page.locator('#crResume')).toBeHidden();
+  await expect(sw('group')).toHaveAttribute('aria-checked', 'true');
   expect((await api(port, '/auto-controls')).controls.group.on).toBe(true);
-  await expect(page.locator('.cr-row[data-key="group"] .cr-run')).toHaveText('Pause');
+
+  /* each switch is its own control: the group row goes off and on, the case keeps running */
+  await sw('group').click();
+  await expect(sw('group')).toHaveAttribute('aria-checked', 'false');
+  await expect.poll(async () => (await api(port, '/auto-controls')).controls.group.on).toBe(false);
+  expect((await api(port, '/case-run')).status).toBe('running');
+  await sw('group').click();
+  await expect(sw('group')).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(async () => (await api(port, '/auto-controls')).controls.group.on).toBe(true);
+
+  /* a row that was never approved asks first, says why when nobody is waiting, and snaps back */
+  await sw('top').click();
+  await expect(sheet).toContainText('No one is waiting in Top Donors.');
+  await expect(sheet.getByRole('button', { name: 'Start sending' })).toHaveCount(0);
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+  await expect(sw('top')).toHaveAttribute('aria-checked', 'false');
+  expect((await row('top')).state).toBe('off');
 
   await page.goto('/new'); // reopening the app while a case runs
   await expect(page.locator('#casePage')).toBeVisible();
   expect(await page.evaluate(() => location.hash)).toBe('#/case');
 
   await page.locator('#crPause').click();
-  await expect(page.locator('#crStart')).toHaveText('Resume case');
-  expect((await api(port, '/case-run')).status).toBe('paused');
-  expect((await api(port, '/auto-controls')).controls.group.on).toBe(false);
-  await page.locator('#crStart').click();
+  await expect(page.locator('#crResume')).toHaveText('Resume all');
+  await expect.poll(async () => (await api(port, '/case-run')).status).toBe('paused');
+  await expect.poll(async () => (await api(port, '/auto-controls')).controls.group.on).toBe(false);
+  await sw('group').click(); // switching one row on while paused runs only that row
+  await expect(page.locator('#crPause')).toBeVisible();
+  await expect.poll(async () => (await api(port, '/case-run')).status).toBe('running');
+  await page.locator('#crPause').click();
+  await page.locator('#crResume').click();
   await expect(page.locator('#crPause')).toBeVisible();
   expect((await api(port, '/case-run')).status).toBe('running');
 
   await page.locator('#crFinish').click();
-  await expect(page.locator('#caseSheet')).toContainText('Confirmed so far');
+  await expect(sheet).toContainText('Confirmed so far');
   expect((await api(port, '/case-run')).status).toBe('running'); // asking changes nothing
-  await page.locator('#caseSheet').getByRole('button', { name: 'Finish case' }).click();
+  await sheet.getByRole('button', { name: 'Finish case' }).click();
   await expect(page.locator('#crDone')).toBeVisible();
-  await expect(page.locator('#crStart')).toBeHidden();
+  await expect(page.locator('#crResume')).toBeHidden();
   await expect(page.locator('#crFinish')).toBeHidden();
   expect((await api(port, '/case-run')).status).toBe('finished');
   expect((await api(port, '/auto-controls')).controls.group.on).toBe(false);

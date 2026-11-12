@@ -320,6 +320,9 @@
   function fit() {
     const p = $('focusFormatted');
     if (editing) return;
+    const key = [p.clientWidth, p.clientHeight, $('focusText').value].join('|');
+    if (p.dataset.fitKey === key && p.style.fontSize) return; // same box + same text: nothing to measure
+    p.dataset.fitKey = key;
     p.style.setProperty('line-height', '1.3', 'important');
     let lo = 9.5,
       hi = 14,

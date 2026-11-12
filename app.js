@@ -575,6 +575,7 @@ function render() {
     if (!editing) $('chat').scrollTop = previewScroll[view()] || 0;
   });
 }
+const fitCache = {};
 function fit() {
   if (editing) return;
   const chat = $('chat'),
@@ -582,13 +583,33 @@ function fit() {
   if (!chat.clientHeight) return;
   const style = getComputedStyle(chat),
     available = chat.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
-  chat.style.overflowY = 'hidden';
-  for (let size = isPhone() ? 14 : 17; size >= 11; size -= 0.5) {
-    m.style.fontSize = size + 'px';
-    if (m.scrollHeight <= available) break;
+  /* Same box + same text = same answer: reuse it (no measuring, no forced layout). */
+  const max = isPhone() ? 14 : 17,
+    key = [chat.clientWidth, Math.round(available), max, $(view()).value].join('|'),
+    hit = fitCache[view()];
+  if (hit && hit.key === key) {
+    m.style.fontSize = hit.size + 'px';
+    chat.style.overflowY = hit.scroll ? 'auto' : 'hidden';
+    return;
   }
+  chat.style.overflowY = 'hidden';
+  /* Largest size (max … 11 in 0.5 steps) that fits: try max first, then binary search (about 4 measurements, not 13). */
+  const at = (i) => max - i * 0.5,
+    last = (max - 11) * 2,
+    fits = (i) => ((m.style.fontSize = at(i) + 'px'), m.scrollHeight <= available);
+  let best = last;
+  if (fits(0)) best = 0;
+  else
+    for (let lo = 1, hi = last; lo <= hi; ) {
+      const mid = (lo + hi) >> 1;
+      if (fits(mid)) (best = mid), (hi = mid - 1);
+      else lo = mid + 1;
+    }
+  m.style.fontSize = at(best) + 'px';
   // Unusually long content stays accessible; ordinary saved captions fit in place.
-  if (m.scrollHeight > available) chat.style.overflowY = 'auto';
+  const scroll = m.scrollHeight > available;
+  if (scroll) chat.style.overflowY = 'auto';
+  fitCache[view()] = { key, size: at(best), scroll };
 }
 /* [font px, columns, tightness]. Short answers get a big font. Long ones use the width of a wide screen
    (two columns) before the text is ever made small, and scrolling is the very last resort. */

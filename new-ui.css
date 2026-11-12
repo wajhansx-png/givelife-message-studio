@@ -5969,9 +5969,13 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
     padding: 0 7px;
     font-size: 15px;
   }
-  /* "Edit message" becomes "Edit" so the row name never wraps */
-  .UI2 dialog.case-page .cr-tx .cr-w,
   .UI2 dialog.case-page .cr-row[data-state='off'] .cr-cnt {
+    display: none;
+  }
+}
+/* phones: "Edit message" becomes "Edit" so a row name never wraps onto two lines */
+@media (max-width: 430px) {
+  .UI2 dialog.case-page .cr-tx .cr-w {
     display: none;
   }
 }
@@ -6058,4 +6062,16 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
   .UI2 dialog.case-page .cr-top {
     min-height: 40px;
   }
+}
+
+/* Smoothness: each full-screen page keeps its layout and style work to itself, so opening it or changing
+   something inside no longer re-lays out the whole document. */
+.UI2 dialog.donor-page,
+.UI2 dialog.case-page,
+.UI2 dialog.case-sheet,
+.UI2 .ui2-sheet,
+.UI2 #messageFocus,
+.UI2 #hist,
+.UI2 #set {
+  contain: layout style;
 }

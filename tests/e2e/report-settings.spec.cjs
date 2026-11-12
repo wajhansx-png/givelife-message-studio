@@ -163,3 +163,60 @@ test('stalled save times out, restores draft and allows Cancel', async ({ page }
     await expect(dialog).toBeHidden();
   } finally { release(); }
 });
+for (const width of [320, 390, 768, 1440]) {
+  test(`progress and long statuses keep every report row consistent at ${width}`, async ({ page }) => {
+    const view = await api(port, '/auto-controls');
+    for (const [id, control] of Object.entries(view.controls)) {
+      control.sent = id === 'group' ? 1 : 4;
+      control.pending = id === 'group' ? 0 : 11;
+      control.recipients = id === 'group' ? 6 : 15;
+      control.next_at = Math.floor(Date.now() / 1000) + 120;
+      control.state = id === 'important' ? 'STOPPING' : id === 'donor_dm' ? 'ON' : 'OFF';
+      control.on = ['ON','STOPPING'].includes(control.state);
+    }
+    await page.route('**/auto-controls', route => route.fulfill({json:view}));
+    await open(page, width);
+    await expect(page.locator('[data-control=group] .ui2-auto-sub')).toContainText('1 sent');
+    await page.evaluate(() => Promise.all(document.getAnimations().filter(animation => animation.effect?.getTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {}))));
+    const heights = [];
+    for (const row of await page.locator('.auto-card').all()) {
+      const title = await row.locator('h4').boundingBox();
+      const gear = await row.locator('.auto-edit').boundingBox();
+      const toggle = await row.locator('.auto-switch').boundingBox();
+      const status = await row.locator('.ui2-auto-sub').boundingBox();
+      const bounds = await row.boundingBox();
+      heights.push(bounds.height);
+      expect(Math.abs(gear.y - toggle.y)).toBeLessThanOrEqual(1);
+      expect(gear.width).toBeCloseTo(44, 0);
+      expect(toggle.width).toBeCloseTo(72, 0);
+      expect(gear.height).toBeCloseTo(44, 0);
+      expect(toggle.height).toBeCloseTo(44, 0);
+      expect(await row.locator('.auto-switch').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true);
+      expect(title.x + title.width).toBeLessThanOrEqual(gear.x);
+      expect(status.x + status.width).toBeLessThanOrEqual(gear.x);
+      expect(toggle.x + toggle.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+    }
+    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(1);
+    await page.screenshot({path:`/workspace/scratch/report-progress-${width}.png`});
+  });
+}
+for (const [width,height] of [[320,740],[390,844],[768,1024],[1440,900]]) {
+  test(`Report uses full screen with compact rows and reachable Back at ${width}`, async ({page}) => {
+    await open(page,width);
+    await page.setViewportSize({width,height});
+    await page.evaluate(() => Promise.all(document.getAnimations().filter(animation => animation.effect?.getTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {}))));
+    const box = await page.locator('.report-card').boundingBox();
+    expect(box.x).toBe(0);
+    expect(box.y).toBe(0);
+    expect(box.width).toBe(width);
+    expect(box.height).toBe(height);
+    const back = page.locator('#reportClose');
+    await expect(back).toHaveText('Back');
+    const bounds = await back.boundingBox();
+    expect(bounds.width).toBe(72);
+    expect(bounds.height).toBe(44);
+    expect(bounds.y).toBeGreaterThan(height-100);
+    await back.click();
+    await expect(page.locator('.report-dialog')).toBeHidden();
+  });
+}

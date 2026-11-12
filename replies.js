@@ -131,7 +131,7 @@
   dlg.className = 'report-dialog';
   dlg.setAttribute('aria-label', 'Report');
   dlg.innerHTML =
-    '<div class="report-card"><header class="rp-head"><b>Activity Report</b><button type="button" id="reportClose" aria-label="Close report">×</button></header><ol class="report-list" aria-label="Right now">' +
+    '<div class="report-card"><header class="rp-head"><b>Activity Report</b></header><ol class="report-list" aria-label="Right now">' +
     [
       [
         'Groups Sent',
@@ -161,7 +161,7 @@
           'Sub"></small></li>',
       )
       .join('') +
-    '</ol><p id="reportToday" class="rp-today"></p><section id="autoControls" class="auto-controls" aria-label="Auto controls"><h3>Automations <small id="autoCount"></small></h3><div id="autoCards"></div><p id="autoMsg" class="auto-msg" role="alert"></p></section><button type="button" id="autoStopAll" hidden>Stop all Auto</button></div>';
+    '</ol><p id="reportToday" class="rp-today"></p><section id="autoControls" class="auto-controls" aria-label="Auto controls"><h3>Automations <small id="autoCount"></small></h3><div id="autoCards"></div><p id="autoMsg" class="auto-msg" role="alert"></p></section><button type="button" id="autoStopAll" hidden>Stop all Auto</button><footer class="report-footer"><button type="button" id="reportClose" aria-label="Close report">Back</button></footer></div>';
   document.body.append(dlg);
   const $ = (id) => document.getElementById(id);
   const clock = (sec) =>
@@ -322,7 +322,9 @@
       set = el('button', 'auto-set'),
       form = el('form', 'auto-form');
     card.dataset.control = c.id;
-    head.append(el('h4', '', c.title), edit, sw);
+    const identity = el('div', 'auto-identity');
+    identity.append(el('h4', '', c.title));
+    head.append(identity, edit, sw);
     edit.setAttribute('aria-label', 'Edit Settings');
     edit.title = c.title + ' settings';
     settingsDialog.setAttribute('aria-label', c.title + ' settings');

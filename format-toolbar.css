@@ -14,20 +14,7 @@
 #waMarkBar[hidden] {
   display: none;
 }
-#waMarkBar button {
-  min-width: 44px;
-  min-height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--line, #dde6e1);
-  border-radius: 7px;
-  background: var(--surface2, #eef3f0);
-  color: inherit;
-  font: inherit;
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  touch-action: manipulation;
-}
+
 #waMarkBar button:hover {
   border-color: var(--ring, #0b7a5c);
 }

@@ -1,3 +1,4 @@
+from storage_crypto import ValueCipher
 from pathlib import Path
 import sqlite3
 import json
@@ -9,7 +10,6 @@ try:
     from psycopg.types.json import Jsonb
 except ImportError:  # local preview without the cloud database
     psycopg = Jsonb = None
-
 
 
 def atomic_write(path, text):
@@ -25,6 +25,7 @@ def atomic_write(path, text):
             tmp.unlink()
         except OSError:
             pass
+
 
 class CloudStore:
     def __init__(self, uri):
@@ -175,7 +176,9 @@ class CloudStore:
                         self._retrying = False
                         return
         finally:
-            self._retrying = False  # if this thread ever dies, the next failed write starts a new one
+            self._retrying = (
+                False  # if this thread ever dies, the next failed write starts a new one
+            )
 
     def restore(self, data, root):
         self.initialize()
@@ -199,6 +202,7 @@ class SqliteStore:
 
     def __init__(self, db_path):
         self.db_path = str(db_path)
+        self.cipher = ValueCipher()
         self._lock = threading.RLock()
         self._pending = {}
 
@@ -206,6 +210,7 @@ class SqliteStore:
     def _conn(self):
         conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
         try:
+            conn.execute("PRAGMA secure_delete=ON")
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA synchronous=NORMAL")
             with conn:
@@ -223,20 +228,50 @@ class SqliteStore:
             )
             # Automatic recovery: restore existing assistant-knowledge, drafts, etc.
             self._recover_records(conn)
+            migrated = False
+            if self.cipher.key:
+                for key, raw in conn.execute("SELECT key,value FROM givelife_studio_state"):
+                    # Leases must stay readable by the atomic ownership predicates.
+                    try:
+                        lease = (
+                            set(json.loads(raw)) == {"owner"}
+                            if isinstance(json.loads(raw), dict)
+                            else False
+                        )
+                    except (ValueError, TypeError):
+                        lease = False
+                    if self.cipher.encrypted(raw):
+                        self.cipher.decode(raw, key)  # reject a wrong key before serving anything
+                    elif not lease:
+                        migrated = True
+                        conn.execute(
+                            "UPDATE givelife_studio_state SET value=? WHERE key=?",
+                            (self.cipher.encode(raw, key), key),
+                        )
+        if self.cipher.key and migrated:
+            # Remove old plaintext cells, freelist pages and WAL remnants after migration.
+            with self._lock, sqlite3.connect(self.db_path) as conn:
+                conn.execute("VACUUM")
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
     def _recover_records(self, conn):
         try:
             parent = Path(self.db_path).parent
             # 1. Recover assistant-knowledge
-            row = conn.execute("SELECT 1 FROM givelife_studio_state WHERE key='assistant_knowledge'").fetchone()
+            row = conn.execute(
+                "SELECT 1 FROM givelife_studio_state WHERE key='assistant_knowledge'"
+            ).fetchone()
             if not row:
-                for cand in (parent / "assistant-knowledge.json", parent.parent / "assistant-knowledge.json"):
+                for cand in (
+                    parent / "assistant-knowledge.json",
+                    parent.parent / "assistant-knowledge.json",
+                ):
                     if cand.exists():
                         raw = cand.read_text(encoding="utf-8").strip()
                         if raw:
                             conn.execute(
                                 "INSERT INTO givelife_studio_state (key, value, updated_at) VALUES (?, ?, ?)",
-                                ("assistant_knowledge", raw, time.time())
+                                ("assistant_knowledge", raw, time.time()),
                             )
                             break
         except Exception:
@@ -244,10 +279,12 @@ class SqliteStore:
 
     def get(self, key, default=None):
         with self._lock, self._conn() as conn:
-            row = conn.execute("SELECT value FROM givelife_studio_state WHERE key=?", (key,)).fetchone()
+            row = conn.execute(
+                "SELECT value FROM givelife_studio_state WHERE key=?", (key,)
+            ).fetchone()
             if not row:
                 return default
-            val = row[0]
+            val = self.cipher.decode(row[0], key)
             try:
                 return json.loads(val)
             except Exception:
@@ -258,9 +295,12 @@ class SqliteStore:
             return {}
         with self._lock, self._conn() as conn:
             q = ",".join("?" for _ in keys)
-            rows = conn.execute(f"SELECT key, value FROM givelife_studio_state WHERE key IN ({q})", list(keys)).fetchall()
+            rows = conn.execute(
+                f"SELECT key, value FROM givelife_studio_state WHERE key IN ({q})", list(keys)
+            ).fetchall()
             out = {}
             for k, v in rows:
+                v = self.cipher.decode(v, k)
                 try:
                     out[k] = json.loads(v)
                 except Exception:
@@ -269,32 +309,35 @@ class SqliteStore:
 
     def put(self, key, value):
         raw = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+        raw = self.cipher.encode(raw, key)
         now = time.time()
         with self._lock, self._conn() as conn:
             conn.execute(
                 "INSERT INTO givelife_studio_state (key, value, updated_at) VALUES (?, ?, ?) "
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
-                (key, raw, now)
+                (key, raw, now),
             )
 
     def seed(self, key, value):
         raw = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+        raw = self.cipher.encode(raw, key)
         now = time.time()
         with self._lock, self._conn() as conn:
             conn.execute(
                 "INSERT INTO givelife_studio_state (key, value, updated_at) VALUES (?, ?, ?) "
                 "ON CONFLICT(key) DO NOTHING",
-                (key, raw, now)
+                (key, raw, now),
             )
 
     def claim(self, key, value):
         raw = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+        raw = self.cipher.encode(raw, key)
         now = time.time()
         with self._lock, self._conn() as conn:
             try:
                 conn.execute(
                     "INSERT INTO givelife_studio_state (key, value, updated_at) VALUES (?, ?, ?)",
-                    (key, raw, now)
+                    (key, raw, now),
                 )
                 return True
             except sqlite3.IntegrityError:
@@ -304,9 +347,14 @@ class SqliteStore:
         now = time.time()
         raw = json.dumps({"owner": owner})
         with self._lock, self._conn() as conn:
-            row = conn.execute("SELECT value, updated_at FROM givelife_studio_state WHERE key=?", (key,)).fetchone()
+            row = conn.execute(
+                "SELECT value, updated_at FROM givelife_studio_state WHERE key=?", (key,)
+            ).fetchone()
             if not row:
-                conn.execute("INSERT INTO givelife_studio_state (key, value, updated_at) VALUES (?, ?, ?)", (key, raw, now))
+                conn.execute(
+                    "INSERT INTO givelife_studio_state (key, value, updated_at) VALUES (?, ?, ?)",
+                    (key, raw, now),
+                )
                 return True
             cur_val, updated_at = row
             try:
@@ -314,13 +362,19 @@ class SqliteStore:
             except Exception:
                 cur_owner = None
             if cur_owner == owner or (now - updated_at) >= float(ttl):
-                conn.execute("UPDATE givelife_studio_state SET value=?, updated_at=? WHERE key=?", (raw, now, key))
+                conn.execute(
+                    "UPDATE givelife_studio_state SET value=?, updated_at=? WHERE key=?",
+                    (raw, now, key),
+                )
                 return True
             return False
 
     def lease_release(self, key, owner):
         with self._lock, self._conn() as conn:
-            conn.execute("UPDATE givelife_studio_state SET updated_at=0 WHERE key=? AND value LIKE ?", (key, f'%"owner": "{owner}"%'))
+            conn.execute(
+                "UPDATE givelife_studio_state SET updated_at=0 WHERE key=? AND value LIKE ?",
+                (key, f'%"owner": "{owner}"%'),
+            )
 
     def put_retry(self, key, value, every=15):
         """put(), but a failed write (disk briefly full or locked) is kept and retried in the background."""

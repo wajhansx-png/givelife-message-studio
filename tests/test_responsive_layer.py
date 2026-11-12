@@ -30,11 +30,35 @@ class ResponsiveLayer(unittest.TestCase):
         ):
             self.assertIn(band, queries, band)
 
-    def test_rules_out_rank_the_older_layers(self):
-        selectors = re.findall(r"^\s*(html body[^{]+)\{", CSS, re.M)
-        self.assertTrue(selectors)
-        for sel in selectors:
-            self.assertIn(":not(#a):not(#b):not(#c)", sel)
+    def test_critical_mobile_overrides_out_rank_the_older_layers(self):
+        # Compare the selectors that actually compete for the repaired layouts.
+        # Harmless rules do not need the same literal prefix. Computed geometry,
+        # touch targets and menu behavior are verified on both routes by
+        # donor_responsive_cascade.spec.cjs against the complete loaded cascade.
+        older = "\n".join(
+            (ROOT / name).read_text(encoding="utf-8")
+            for name in ("donors.css", "comfort.css", "new-ui.css")
+        ).replace(".UI2", "html body.ui2" + ":not(#ui)" * 8)
+
+        def selectors(text, suffix):
+            clean = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+            return [
+                selector.strip()
+                for selector, _ in re.findall(r"([^{}]+)\{([^{}]*)\}", clean)
+                if selector.strip().endswith(suffix) and "," not in selector
+            ]
+
+        for suffix in (" .donor-tabs", " .donor-row"):
+            old_rules = selectors(older, suffix)
+            overrides = selectors(CSS, suffix)
+            self.assertTrue(old_rules, suffix)
+            self.assertTrue(overrides, suffix)
+            # A higher ID specificity wins even when /new is loaded afterward.
+            self.assertGreater(
+                max(selector.count("#") for selector in overrides),
+                max(selector.count("#") for selector in old_rules),
+                suffix,
+            )
 
 
 if __name__ == "__main__":

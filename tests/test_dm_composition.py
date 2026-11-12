@@ -21,7 +21,9 @@ class CompositionTests(unittest.TestCase):
             "GiveLife Foundation",
         ):
             with self.subTest(name=name):
-                self.assertEqual(dm_composer.greeting(name, "Sister"), "Sister")  # explicit gender kept, no fake name
+                self.assertEqual(
+                    dm_composer.greeting(name, "Sister"), "Sister"
+                )  # explicit gender kept, no fake name
                 self.assertEqual(dm_composer.greeting(name), "Bhai")
         self.assertEqual(dm_composer.greeting("Wajdan Khan"), "Wajdan Bhai")
         self.assertEqual(dm_composer.greeting("Ayesha Khan", "Sister"), "Ayesha Sister")

@@ -120,3 +120,70 @@ class VolunteerTests(unittest.TestCase):
         self.assertEqual(self.v.view()["items"], [])
         self.v.mutate({"action": "restore", "id": a["id"]})
         self.assertEqual(len(self.v.view()["items"]), 1)
+
+    def test_dm_case_sends_current_case_only_to_selected_volunteer(self):
+        self.v.app.get_message = lambda kind: {"text": "Current case: Rs. 25,000 left."}
+        selected = self.v.mutate({"action": "add", "name": "Sara", "phone": "03001234567"})["donor"]
+        self.v.mutate({"action": "add", "name": "Ali", "phone": "03007654321"})
+        with patch.object(self.v.jobs, "_run"):
+            self.v.mutate({"action": "send_case", "id": selected["id"], "poster": False})
+        self.run_job()
+        self.assertEqual(len(self.sent), 1)
+        self.assertEqual(self.sent[0]["name"], "Sara")
+        self.assertEqual(self.sent[0]["message"], "Current case: Rs. 25,000 left.")
+        self.assertEqual(self.sent[0]["kind"], "volunteer_batch")
+        self.assertTrue(self.sent[0]["poster"])
+        self.assertEqual(self.v.message(), "")
+
+    def test_dm_share_uses_unsaved_field_text_without_replacing_saved_message(self):
+        selected = self.v.mutate({"action": "add", "name": "Sara", "phone": "03001234567"})["donor"]
+        self.v.set_message("Previously saved share message")
+        request = {
+            "action": "send_one",
+            "id": selected["id"],
+            "text": "Please share this update, {name}.",
+            "request_id": "share-once",
+            "poster": True,  # Older clients must not be able to attach a poster to DM Share.
+        }
+        with patch.object(self.v.jobs, "_run"):
+            first = self.v.mutate(request)
+            again = self.v.mutate(request)
+        self.assertEqual(first["job"]["id"], again["job"]["id"])
+        self.run_job()
+        self.assertEqual(len(self.sent), 1)
+        self.assertEqual(self.sent[0]["message"], request["text"])
+        self.assertEqual(self.sent[0]["kind"], "volunteer_batch")
+        self.assertFalse(self.sent[0]["poster"])
+        self.assertEqual(self.v.message(), "Previously saved share message")
+
+    def test_saved_share_message_is_text_only_even_when_poster_requested(self):
+        selected = self.v.mutate({"action": "add", "name": "Sara", "phone": "03001234567"})["donor"]
+        self.v.set_message("Please share this case")
+        with patch.object(self.v.jobs, "_run"):
+            self.v.mutate({"action": "send_one", "id": selected["id"], "poster": True})
+        self.run_job()
+        self.assertEqual(len(self.sent), 1)
+        self.assertFalse(self.sent[0]["poster"])
+
+    def test_dm_case_includes_the_poster_by_default(self):
+        self.v.app.get_message = lambda kind: {"text": "Current case details"}
+        selected = self.v.mutate({"action": "add", "name": "Sara", "phone": "03001234567"})["donor"]
+        with patch.object(self.v.jobs, "_run"):
+            self.v.mutate({"action": "send_case", "id": selected["id"]})
+        self.run_job()
+        self.assertTrue(self.sent[0]["poster"])
+
+    def test_empty_or_invalid_share_text_never_falls_back_to_saved_message(self):
+        self.v.set_message("Old message must not be sent")
+        for text in (" ", None, 123, "x" * (self.v.MAX + 1)):
+            with self.subTest(text_type=type(text).__name__):
+                with self.assertRaisesRegex(ValueError, "Write the message"):
+                    self.v.mutate({"action": "send_one", "text": text})
+        self.assertEqual(self.v.jobs.status()["state"], "Idle")
+
+    def test_empty_case_does_not_send_the_share_message(self):
+        self.v.app.get_message = lambda kind: {"text": ""}
+        self.v.set_message("Share request")
+        with self.assertRaisesRegex(ValueError, "case message is empty"):
+            self.v.mutate({"action": "send_case"})
+        self.assertEqual(self.sent, [])

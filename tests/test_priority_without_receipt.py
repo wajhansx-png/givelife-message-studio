@@ -1,4 +1,5 @@
 """Donor Top priority is an owner choice, not conditional on a receipt."""
+
 import copy
 import tempfile
 import unittest

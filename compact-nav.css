@@ -167,6 +167,9 @@ html body .donor-tabs {
   padding: 3px;
   border-radius: 10px;
   flex: 1;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 html body .donor-tabs button {
   min-height: 38px;
@@ -943,4 +946,13 @@ html body #donorBatchForm > label.batch-fresh {
   html body .composer .clip {
     min-width: 44px;
   }
+}
+
+/* App Consistency: Universal removal of all blur glows and box shadows */
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
 }

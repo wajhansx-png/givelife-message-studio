@@ -24,7 +24,9 @@ def summarize(results, destinations):
         if r.get("code") == "SUCCESS":
             continue
         name = str(r.get("group") or "Group").strip()
-        detail = str(r.get("message") or r.get("error") or r.get("code") or "No delivery receipt").strip()
+        detail = str(
+            r.get("message") or r.get("error") or r.get("code") or "No delivery receipt"
+        ).strip()
         failures.append(f"{name}: {detail[:260]}")
     if not outcomes:
         failures.append("The send stopped before a gateway receipt was recorded.")

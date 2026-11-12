@@ -66,7 +66,10 @@ test('phone notes: readable editing surface, toolbar and no sideways scrolling',
   await editor.press('ControlOrMeta+A');
   // Formatting controls live in the side panel opened by the edge handle.
   await openTools(page);
-  await page.locator('.notes-toolbar').getByRole('button', { name: 'Bullets', exact: true }).click();
+  await page
+    .locator('.notes-toolbar')
+    .getByRole('button', { name: 'Bullets', exact: true })
+    .click();
   await expect(editor.locator('ul li')).toContainText('Find university representatives');
   await expect(page.locator('#notesSync')).toHaveText('Saved', { timeout: 10000 });
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
@@ -195,7 +198,10 @@ test('mobile Notes opens a hidden toolbar by tapping top edge without shrinking 
   await page.locator('#notesEditor').fill('Volunteer outreach');
   await page.locator('#notesEditor').press('ControlOrMeta+A');
   await openTools(page);
-  await page.locator('.notes-toolbar').getByRole('button', { name: 'Bullets', exact: true }).click();
+  await page
+    .locator('.notes-toolbar')
+    .getByRole('button', { name: 'Bullets', exact: true })
+    .click();
   await expect(page.locator('#notesEditor li')).toHaveText('Volunteer outreach');
   expect((await page.locator('.notes-paper').boundingBox()).height).toBeGreaterThanOrEqual(
     height - 2,
@@ -296,7 +302,10 @@ test('narrow phone: editor and formatting rail fit with keyboard open', async ({
   expect(paper.y + paper.height).toBeLessThanOrEqual(401);
 });
 
-test('notes use a calm 18px column, start high, centred, with Bullets in the side tools', async ({ page, request }) => {
+test('notes use a calm 18px column, start high, centred, with Bullets in the side tools', async ({
+  page,
+  request,
+}) => {
   await open(page, request, 1920, 1080);
   await page.locator('#notesPassword').fill('test-preview-only-pin');
   await page.locator('#notesUnlockButton').click();

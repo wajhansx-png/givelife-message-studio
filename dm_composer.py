@@ -139,7 +139,9 @@ FEMALE_MARK = re.compile(
     r"(?i)\b(?:mrs|miss|ms|madam|madame|sister|sis|baji|baaji|apa|aapi|aunty|auntie|begum|bibi|bano|khatoon|"
     r"khala|phupo|phuppo|nani|dadi|ammi|ammy|mother|wife|daughter|beti|behan|mam)\b"
 )
-MALE_MARK = re.compile(r"(?i)\b(?:mr|bhai|bhaijan|sahab|sahib|uncle|brother|bro|abbu|chacha|mamu|sir|janab)\b")
+MALE_MARK = re.compile(
+    r"(?i)\b(?:mr|bhai|bhaijan|sahab|sahib|uncle|brother|bro|abbu|chacha|mamu|sir|janab)\b"
+)
 
 
 def gender(label="", first=""):

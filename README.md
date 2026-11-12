@@ -34,4 +34,24 @@ Retention is bounded: 2,000 archived turns, 1,000 memory entries (including supe
 
 Provider reference: [DeepSeek tool calls](https://api-docs.deepseek.com/guides/tool_calls/) and [thinking-mode context requirements](https://api-docs.deepseek.com/guides/thinking_mode/).
 
+## Case writing and message learning
+
+**Donated → Thank donors** prepares a completion update for donors marked as donated in the active case. Upload a JPEG, PNG, WebP image, MP4 video or PDF (up to 15 MB), optionally add its native media caption, and optionally add a separate message. Empty captions are omitted; media alone and text alone are supported. The preview keeps the attachment/caption together and shows the separate message afterward. `{name}` uses the donor's first name. Save an update in advance; sending unlocks once the case balance reaches zero.
+
+**Donated → Thanks donor** is an optional checkbox above the list. While checked, each row’s DM/DM sent button sends the saved completion update only to that donor; switching tabs resets it. Previously confirmed or unconfirmed updates are not repeated, and the normal fundraising DM marks stay unchanged.
+
+**Report → Thanks donors** starts or pauses the saved update. Defaults are 5 minutes between donors, 10 donors per batch, and a 20-minute rest after each batch; settings are editable in Report or the composer. The gap starts after a recipient's final message finishes. The server persists the queue, timing and separate media/text receipts in the existing database and continues an enabled queue after a restart. Confirmed parts are not repeated; an in-flight or unconfirmed part stops the queue for review. Recipient changes and opt-outs are rechecked before sending. Fundraising DM marks are preserved, and case switching is blocked while completion updates are enabled. Media/text edits require pausing first; timing edits apply to the remaining queue.
+
+In **Messages → Write Case**, enter or revise the case details, choose a writing style, and generate a message using the existing writer. Both the notes and the generated text stay editable and save automatically for the active case, including after reopening or restarting. **Regenerate message** uses the revised notes; **Use message** applies the reviewed text to the Messages bank and the saved DM draft. Generation and applying a message do not send it.
+
+The writer uses the current case balance shown in the panel and the existing verified payment block, donor calculations, verse selection, and formatting checks. If the notes explicitly name a different remaining balance, correct the notes or update the case balance first. Changes made during generation cannot be overwritten by an older result.
+
+`message_library.py` archives generated fundraising messages, DM versions, prepared direct messages, and manual message edits in the existing PostgreSQL/SQLite key-value store, with atomic JSON copies under `DATA_DIR/generated-messages`. Existing saved drafts and wording banks are imported when the archive is first used. Exact duplicates within a message kind share a record; replacements and edited versions are retained without an eviction limit.
+
+Future generation retrieves up to three style examples from the latest 256 archived messages, prioritizing owner edits and approved text, then validated generations. Rejected candidates remain archived but are excluded from style examples. Historical examples guide tone, structure, and formatting; the current case supplies facts and amounts. This is retrieval-based learning, not model-weight training or a guarantee of improving quality on every generation.
+
 Validation: `python -m unittest discover -s tests -v`, `pnpm test`, `pnpm test:e2e`, and `pnpm lint` (Prettier for JavaScript and CSS; ruff check and format for Python). `pnpm format` rewrites files to the project style. `python tests/preview_fake.py` starts an isolated local UI at port 3003 with a fake WhatsApp transport. `/mobile-preview` provides phone-size and keyboard-space layout checks. Production Settings → **Run 8 checks** exercises the real configured model against isolated simulated tools; it never contacts WhatsApp recipients. Treat model-evaluation scores as bounded evidence, not a guarantee of general accuracy.
+
+## Audit hardening and recovery
+
+See [storage, encrypted backups, capacity and disaster recovery](docs/operations/RECOVERY.md). `GIVELIFE_STORAGE_KEY` is independent of the UI access key. Encryption and off-site backup activation require configuration; local snapshots alone are not durable backups on Free hosting. Authenticated `GET /ops/status` reports the configured backend and backup status. Bounded HTTP handlers reject overload instead of growing without limit.

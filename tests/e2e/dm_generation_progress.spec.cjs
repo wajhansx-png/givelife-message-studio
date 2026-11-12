@@ -41,15 +41,21 @@ for (const width of [1440, 390])
       });
     });
     await page.goto('/#/donors/messages');
-    await expect(page.locator('.bank-regenerate')).toBeVisible();
-    await page.locator('.bank-regenerate').click();
+    await expect(
+      page.getByRole('button', { name: 'Regenerate versions', exact: true }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Regenerate versions', exact: true }).click();
     await expect(page.locator('.bank-generation-state')).toContainText('Generating DMs');
-    await expect(page.locator('.bank-regenerate')).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Regenerate versions', exact: true }),
+    ).toBeDisabled();
     await expect(page.locator('.bank-generation-state')).toHaveText('20 DM messages ready', {
       timeout: 10000,
     });
     await expect(page.locator('.bank-generation-state')).toBeVisible();
-    await expect(page.locator('.bank-regenerate')).toBeEnabled();
+    await expect(
+      page.getByRole('button', { name: 'Regenerate versions', exact: true }),
+    ).toBeEnabled();
     await page.reload();
     await expect(page.locator('.bank-generation-state')).toHaveText('20 DM messages ready');
     await expect(page.locator('.bank-preview')).toContainText('Brother');

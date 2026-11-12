@@ -3,6 +3,7 @@
 The contact payload is supplied only via a temporary Render environment variable.
 No contact names/numbers are committed, exposed in logs, or sent to WhatsApp.
 """
+
 import base64
 import copy
 import hashlib
@@ -60,22 +61,24 @@ def import_from_environment(store, folder, payload):
             if phone in known:
                 existing += 1
                 continue
-            updated["records"].append({
-                "id": uuid.uuid4().hex,
-                "name": name,
-                "phone": phone,
-                "important": False,
-                "donated": False,
-                "amount": 0,
-                "normal_amount": 0,
-                "notes": "",
-                "source": "WhatsApp label 2026-11-06: " + label,
-                "created_at": now,
-                "updated_at": now,
-                "deleted": False,
-                "last_sent_at": None,
-                "delivery": "Not contacted",
-            })
+            updated["records"].append(
+                {
+                    "id": uuid.uuid4().hex,
+                    "name": name,
+                    "phone": phone,
+                    "important": False,
+                    "donated": False,
+                    "amount": 0,
+                    "normal_amount": 0,
+                    "notes": "",
+                    "source": "WhatsApp label 2026-11-06: " + label,
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted": False,
+                    "last_sent_at": None,
+                    "delivery": "Not contacted",
+                }
+            )
             known.add(phone)
             added += 1
         if added:

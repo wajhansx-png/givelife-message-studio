@@ -2,6 +2,7 @@ import os, json, time, subprocess, signal, urllib.request, urllib.parse, uuid, s
 from pathlib import Path
 from persist import configured_store
 import supervisor
+import key_cache
 
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("DATA_DIR", "/data/studio"))
@@ -24,6 +25,7 @@ store.restore(DATA, ROOT)
 if os.environ.get("GIVELIFE_TOP_NAMES_JSON"):
     try:
         from private_top_names import import_top_names
+
         receipt = import_top_names(store, DATA, os.environ["GIVELIFE_TOP_NAMES_JSON"])
         print("[top-names-import] " + " ".join(f"{k}={v}" for k, v in receipt.items()), flush=True)
     except Exception as exc:
@@ -34,8 +36,11 @@ if os.environ.get("GIVELIFE_TOP_NAMES_JSON"):
 if os.environ.get("GIVELIFE_TOP_NAMES_EXTRA_JSON"):
     try:
         from private_top_names import import_top_names
+
         receipt = import_top_names(
-            store, DATA, os.environ["GIVELIFE_TOP_NAMES_EXTRA_JSON"],
+            store,
+            DATA,
+            os.environ["GIVELIFE_TOP_NAMES_EXTRA_JSON"],
             import_id="giki_top_names_extra_2026_11_07",
         )
         print("[top-names-extra] " + " ".join(f"{k}={v}" for k, v in receipt.items()), flush=True)
@@ -46,6 +51,7 @@ if os.environ.get("GIVELIFE_TOP_NAMES_EXTRA_JSON"):
 if os.environ.get("GIVELIFE_GIKI_GROUP_B64"):
     try:
         from private_top_names import import_top_group
+
         receipt = import_top_group(store, DATA, os.environ["GIVELIFE_GIKI_GROUP_B64"])
         print("[giki-group-import] " + " ".join(f"{k}={v}" for k, v in receipt.items()), flush=True)
     except Exception as exc:
@@ -57,12 +63,9 @@ if os.environ.get("GIVELIFE_DONOR_IMPORT_B64"):
     try:
         from private_donor_import import import_from_environment
 
-        receipt = import_from_environment(
-            store, DATA, os.environ["GIVELIFE_DONOR_IMPORT_B64"]
-        )
+        receipt = import_from_environment(store, DATA, os.environ["GIVELIFE_DONOR_IMPORT_B64"])
         print(
-            "[donor-import] verified "
-            + " ".join(f"{k}={v}" for k, v in receipt.items()),
+            "[donor-import] verified " + " ".join(f"{k}={v}" for k, v in receipt.items()),
             flush=True,
         )
     except Exception as exc:
@@ -75,12 +78,9 @@ if os.environ.get("GIVELIFE_DM_PROFILES_B64"):
     try:
         from dm_profile_import import import_profiles
 
-        stats = import_profiles(
-            store, DATA, os.environ["GIVELIFE_DM_PROFILES_B64"]
-        )
+        stats = import_profiles(store, DATA, os.environ["GIVELIFE_DM_PROFILES_B64"])
         print(
-            "[dm-profile-import] verified "
-            + " ".join(f"{k}={v}" for k, v in stats.items()),
+            "[dm-profile-import] verified " + " ".join(f"{k}={v}" for k, v in stats.items()),
             flush=True,
         )
     except Exception as exc:
@@ -93,9 +93,7 @@ if os.environ.get("GIVELIFE_RECEIPT_RANKINGS_B64"):
     try:
         from private_receipt_ranking import import_rankings
 
-        receipt = import_rankings(
-            store, DATA, os.environ["GIVELIFE_RECEIPT_RANKINGS_B64"]
-        )
+        receipt = import_rankings(store, DATA, os.environ["GIVELIFE_RECEIPT_RANKINGS_B64"])
         print(
             "[receipt-ranking] verified "
             + " ".join(f"{key}={value}" for key, value in receipt.items()),
@@ -128,6 +126,9 @@ if state == "acquired":  # otherwise carry on without it: the lease must never b
 
 gowa_data = Path("/data/gowa")
 gowa_data.mkdir(parents=True, exist_ok=True)
+key_path = gowa_data / "whatsapp-keys.db"
+if not os.environ.get("GOWA_DB_KEYS_URI"):
+    key_cache.restore(store, key_path)
 env = os.environ.copy()
 env.update(
     APP_HOST="127.0.0.1",
@@ -165,6 +166,11 @@ def stop(*args):
             child.wait(timeout=15)
         except subprocess.TimeoutExpired:
             child.kill()
+    if not os.environ.get("GOWA_DB_KEYS_URI"):
+        try:
+            key_cache.save(store, key_path)
+        except Exception as exc:
+            print("[launcher] key checkpoint failed: " + type(exc).__name__, flush=True)
     lease.release()  # only after WhatsApp is stopped, so the next instance can take over safely
     raise SystemExit(0)
 
@@ -251,6 +257,8 @@ if not device_id:
     gowa_proc.terminate()
     raise SystemExit("WhatsApp gateway did not start.")
 gowa = supervisor.Child("whatsapp", start_gowa, proc=gowa_proc)
+if not os.environ.get("GOWA_DB_KEYS_URI"):
+    key_cache.start(store, key_path)
 server = supervisor.Child("server", start_server)
 children.extend([gowa_proc, server.proc])
 

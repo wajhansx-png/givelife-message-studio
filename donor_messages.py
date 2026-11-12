@@ -7,6 +7,7 @@ import dm_composer
 import dm_templates
 import dm_variants
 import draft_workflow
+from message_library import library_for
 
 
 class MessageBank:
@@ -37,6 +38,16 @@ class MessageBank:
             )
 
     def _save(self, data):
+        archive = library_for(self.app)
+        for row in (data.get("items") or []) + (data.get("previous_items") or []):
+            archive.record(
+                "dm",
+                row.get("text"),
+                source="message_bank",
+                quality="validated" if data.get("mode") == "custom" else "generated",
+            )
+        for text in (data.get("generation") or {}).get("accepted", []):
+            archive.record("dm", text, source="dm_regeneration", quality="validated")
         if self.app.STORE:
             self.app.STORE.put("donor_messages", data)
         self.cache = copy.deepcopy(data)
@@ -282,6 +293,7 @@ class MessageBank:
             raise ValueError(
                 "Paste the complete message with its paragraphs, amount and payment details."
             )
+        library_for(self.app).record("dm", source, source="owner_supplied_message", quality="owner")
         count = max(1, min(20, int(count or 10)))
         total = max(count, min(20, int(total or 20)))
         if self.gen_lock.locked():
@@ -330,6 +342,7 @@ class MessageBank:
             raise ValueError(
                 "Keep the complete base message: paragraphs, remaining amount and payment details."
             )
+        library_for(self.app).record("dm", text, source="base_message", quality="owner")
         with self.lock:
             data = self.get()
             if (data.get("generation") or {}).get("state") == "Generating":
@@ -395,6 +408,7 @@ class MessageBank:
             row = next((r for r in data["items"] if r["id"] == ident), None)
             if row is None:
                 raise ValueError("Message not found.")
+            library_for(self.app).record("dm", text, source="message_editor", quality="owner")
             row["text"] = text
             if isinstance(data.get("generation"), dict):
                 data["generation"].update(
@@ -474,6 +488,10 @@ class MessageBank:
         if not self.app.STORE:
             raise ValueError("Saved DM rotation is unavailable. Nothing was sent.")
         texts = self._rotation_texts()
+        if count > 1 and len(texts) < 2:
+            raise ValueError(
+                "Save at least 2 different messages in Messages before starting this batch."
+            )
         revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
         saved = self.app.STORE.get(self.ROTATION_KEY, {}) or {}
         index = (

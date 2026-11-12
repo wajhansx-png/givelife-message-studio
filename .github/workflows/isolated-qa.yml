@@ -2,29 +2,19 @@ name: Isolated GiveLife V1 QA
 on:
   pull_request:
     branches: [main]
-    paths:
-      - '.github/workflows/isolated-qa.yml'
-      - '*.py'
-      - '*.js'
-      - '*.css'
-      - 'index.html'
-      - 'tests/**'
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/isolated-qa.yml'
-      - '*.py'
-      - '*.js'
-      - 'tests/**'
-      - 'assistant_contract.md'
   workflow_dispatch:
 concurrency:
   group: givelife-v1-qa-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash
 jobs:
-  fake-transport-regressions:
+  logic-regressions:
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
@@ -36,61 +26,140 @@ jobs:
         with:
           node-version: '22'
       - name: Python dependencies
-        run: python -m pip install -r requirements.txt
-      - name: Validate every Python module compiles
-        run: python -m compileall -q -f .
-      - name: Python lint and formatting
-        run: |
-          python -m pip install ruff
-          ruff check .
-          ruff format --check .
-      - name: Python logic and failure-simulation tests
-        id: python
-        continue-on-error: true
-        run: python -m unittest discover -s tests -v
-      - name: Frontend JavaScript syntax
-        id: syntax
-        continue-on-error: true
-        run: |
-          node --check app.js
-          node --check team.js
-          node --check donors.js
-          node --check connection.js
-          node --check notes.js
-      - name: Donor control recovery regressions
-        run: node --test tests/test_donor_control_recovery.js tests/test_volunteer_timing_ui.js
+        run: python -m pip install -r requirements-dev.txt
       - name: Frontend dependencies
         run: |
           corepack enable
           corepack pnpm install --frozen-lockfile
+      - name: Validate every Python module compiles
+        id: compile
+        continue-on-error: true
+        run: python -m compileall -q -f . 2>&1 | tee compile.log
+      - name: Python lint and formatting
+        id: pylint
+        continue-on-error: true
+        run: |
+          ruff check . 2>&1 | tee ruff-check.log
+          ruff format --check . 2>&1 | tee ruff-format.log
+      - name: Python logic and failure-simulation tests
+        id: python
+        continue-on-error: true
+        run: python tests/run_required_unittests.py 2>&1 | tee python-tests.log
+      - name: Frontend JavaScript syntax
+        id: syntax
+        continue-on-error: true
+        run: |
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(git ls-files -z -- '*.js' '*.cjs' '*.mjs')
+      - name: Legacy JavaScript behavior tests
+        id: node
+        continue-on-error: true
+        run: node --test tests/test_*.js 2>&1 | tee node-tests.log
       - name: JavaScript and CSS formatting
-        run: corepack pnpm exec prettier --check "**/*.{js,cjs,mjs,css}"
+        id: jsformat
+        continue-on-error: true
+        run: corepack pnpm exec prettier --check "**/*.{js,cjs,mjs,css}" 2>&1 | tee prettier.log
       - name: JS unit tests
         id: jsunit
         continue-on-error: true
-        run: corepack pnpm test
-      - name: Browser dependencies
-        run: corepack pnpm exec playwright install --with-deps chromium
-      - name: Mobile and desktop E2E tests (fake WhatsApp only)
-        id: browser
-        continue-on-error: true
-        run: corepack pnpm test:e2e
-      - name: Upload failure traces
+        run: corepack pnpm test 2>&1 | tee vitest.log
+      - name: Upload logic results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: givelife-isolated-qa-traces
+          name: givelife-logic-results
+          path: '*.log'
+          retention-days: 5
+      - name: Require every logic check
+        if: always()
+        env:
+          COMPILE_STATUS: ${{ steps.compile.outcome }}
+          LINT_STATUS: ${{ steps.pylint.outcome }}
+          PY_STATUS: ${{ steps.python.outcome }}
+          SYNTAX_STATUS: ${{ steps.syntax.outcome }}
+          NODE_STATUS: ${{ steps.node.outcome }}
+          FORMAT_STATUS: ${{ steps.jsformat.outcome }}
+          JS_STATUS: ${{ steps.jsunit.outcome }}
+        run: |
+          for status in "$COMPILE_STATUS" "$LINT_STATUS" "$PY_STATUS" "$SYNTAX_STATUS" "$NODE_STATUS" "$FORMAT_STATUS" "$JS_STATUS"; do
+            test "$status" = success || exit 1
+          done
+  browser-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Backend dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Browser dependencies
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm exec playwright install --with-deps chromium
+      - name: Mobile and desktop E2E tests (fake WhatsApp only)
+        run: corepack pnpm test:e2e --shard=${{ matrix.shard }}/4 --workers=1 2>&1 | tee browser-tests.log
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: givelife-browser-shard-${{ matrix.shard }}
           path: |
+            browser-tests.log
+            test-results/
+            playwright-report/
+            mobile-screenshots/
+          retention-days: 5
+  group-finder-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Backend dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Browser dependencies
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm exec playwright install --with-deps chromium
+      - name: Group finder E2E tests (isolated fixture)
+        run: corepack pnpm test:e2e:groups 2>&1 | tee group-finder-tests.log
+      - name: Upload group finder evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: givelife-group-finder-results
+          path: |
+            group-finder-tests.log
             test-results/
             playwright-report/
           retention-days: 5
+  fake-transport-regressions:
+    if: always()
+    needs: [logic-regressions, browser-regressions, group-finder-regressions]
+    runs-on: ubuntu-latest
+    steps:
       - name: Enforce full QA pass
-        if: always()
         env:
-          PY_STATUS: ${{ steps.python.outcome }}
-          SYNTAX_STATUS: ${{ steps.syntax.outcome }}
-          JS_STATUS: ${{ steps.jsunit.outcome }}
-          BROWSER_STATUS: ${{ steps.browser.outcome }}
+          LOGIC_STATUS: ${{ needs.logic-regressions.result }}
+          BROWSER_STATUS: ${{ needs.browser-regressions.result }}
+          GROUPS_STATUS: ${{ needs.group-finder-regressions.result }}
         run: |
-          echo "Python: $PY_STATUS; JS syntax: $SYNTAX_STATUS; JS unit: $JS_STATUS; Browser: $BROWSER_STATUS"
-          test "$PY_STATUS" = success && test "$SYNTAX_STATUS" = success && test "$JS_STATUS" = success && test "$BROWSER_STATUS" = success
+          echo "Logic: $LOGIC_STATUS; browser: $BROWSER_STATUS; group finder: $GROUPS_STATUS"
+          test "$LOGIC_STATUS" = success && test "$BROWSER_STATUS" = success && test "$GROUPS_STATUS" = success

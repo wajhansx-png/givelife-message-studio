@@ -3,6 +3,7 @@
 A name can suggest a form of address, but it does not establish someone's gender.
 Store only the suggested greeting fields, never a gender identity.
 """
+
 import base64
 import copy
 import json
@@ -85,10 +86,15 @@ def import_profiles(store, folder, payload):
         raise RuntimeError("DM profiles were not verified in persistent storage.")
     stored = {r.get("phone"): r for r in saved["records"]}
     verified = sum(
-        1 for phone, name, address in profiles
-        if (stored[phone].get("dm_profile_source") == "owner"
-            or (stored[phone].get("dm_name") == name
-                and stored[phone].get("dm_salutation") == address))
+        1
+        for phone, name, address in profiles
+        if (
+            stored[phone].get("dm_profile_source") == "owner"
+            or (
+                stored[phone].get("dm_name") == name
+                and stored[phone].get("dm_salutation") == address
+            )
+        )
     )
     if verified != len(profiles):
         raise RuntimeError("DM profile verification failed.")

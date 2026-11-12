@@ -1,0 +1,415 @@
+import base64
+from pathlib import Path
+import tempfile
+import threading
+from types import SimpleNamespace
+import unittest
+from unittest.mock import patch
+
+import batch_media
+from donor_book import DonorBook
+import donor_thanks
+from donor_thanks import DonorThanks
+from persist import SqliteStore
+
+
+class ThanksTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        root = Path(self.temp.name)
+        self.store = SqliteStore(root / "studio.sqlite")
+        self.store.initialize()
+        self.case, self.left, self.sent = "case-one", 0, []
+        self.app = SimpleNamespace(
+            DATA=root,
+            ATT=root,
+            STORE=self.store,
+            read_left=lambda: self.left,
+            on_hold=lambda: False,
+            wa_ok=lambda: True,
+            CAMPAIGN={},
+            ENGINE=SimpleNamespace(dm_running=False),
+            completed_case_appeal=lambda text: "donate now" in text,
+            send_custom=lambda body: self.sent.append(body) or {"code": "SUCCESS"},
+        )
+        self.hub = SimpleNamespace(
+            book=DonorBook(root, self.store),
+            cases=SimpleNamespace(lock=threading.RLock(), _load=lambda: {"current": self.case}),
+            jobs=SimpleNamespace(active=False),
+            volunteers=SimpleNamespace(jobs=SimpleNamespace(active=False)),
+            control_lock=threading.RLock(),
+            eligible=lambda phone: True,
+        )
+        self.thanks = DonorThanks(self.app, self.hub)
+        self.hub.thanks = self.thanks
+        self.first = self.add("Sara", True)
+        self.other = self.add("Other", False)
+        self.asset = batch_media.save(
+            self.store,
+            "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\nproof").decode(),
+        )
+
+    def add(self, name, donated):
+        ident = self.hub.book.add(
+            name, "1555123" + str(len(self.hub.book.recipients("all"))).zfill(4)
+        )["donor"]["id"]
+        self.hub.book.update(ident, donated=donated)
+        return ident
+
+    def save(self, **changes):
+        """Save an update. Attachments can be given as media=[{"id", "caption"}], or with the older one-or-two
+        attachment keywords (attachment, caption, attachment2, caption2)."""
+        data = self.thanks.view()
+        if any(
+            changes.get(cap) and not changes.get(att)
+            for att, cap in (("attachment", "caption"), ("attachment2", "caption2"))
+        ):  # a caption with no attachment, in the older field form
+            return self.thanks.save(
+                {
+                    "case_id": data["case_id"],
+                    "revision": data["revision"],
+                    "message": changes.get("message", data["message"]),
+                    "attachment": None,
+                    "caption": changes.get("caption", ""),
+                    "caption2": changes.get("caption2", ""),
+                }
+            )
+        media = changes.get("media")
+        if media is None and any(
+            k in changes for k in ("attachment", "caption", "attachment2", "caption2")
+        ):
+            media = []
+            for att, cap in (("attachment", "caption"), ("attachment2", "caption2")):
+                if changes.get(att):
+                    media.append(
+                        {"id": changes[att], "filename": "file", "caption": changes.get(cap, "")}
+                    )
+        return self.thanks.save(
+            {
+                "case_id": data["case_id"],
+                "revision": data["revision"],
+                "media": data["media"] if media is None else media,
+                "message": changes.get("message", data["message"]),
+            }
+        )
+
+    def start(self):
+        with patch("donor_thanks.threading.Thread"):
+            self.thanks.start()
+
+    def test_media_caption_is_one_send_and_separate_message_is_second(self):
+        self.save(
+            attachment=self.asset,
+            caption="Alhamdulillah, case complete.",
+            message="Thank you {name}.",
+        )
+        self.start()
+        self.thanks.tick()
+        self.assertEqual(len(self.sent), 2)
+        self.assertEqual(self.sent[0]["attachment"], self.asset)
+        self.assertEqual(self.sent[0]["message"], "Alhamdulillah, case complete.")
+        self.assertIsNone(self.sent[1]["attachment"])
+        self.assertEqual(self.sent[1]["message"], "Thank you Sara Sister.")
+        self.assertTrue(all(x["donor_id"] == self.first for x in self.sent))
+        self.assertEqual(self.thanks.view()["sent"], 1)
+        self.assertFalse(self.hub.book.resolve(self.first).get("dm_sent", False))
+
+    def test_media_alone_has_an_empty_caption_and_text_alone_has_no_attachment(self):
+        self.save(attachment=self.asset)
+        self.start()
+        self.thanks.tick()
+        self.assertEqual(self.sent[0]["message"], "")
+        self.assertEqual(len(self.sent), 1)
+        self.case = "case-two"
+        self.save(message="Thank you for your support.")
+        self.start()
+        self.thanks.tick()
+        self.assertEqual(len(self.sent), 2)
+        self.assertIsNone(self.sent[-1]["attachment"])
+
+    def test_active_case_must_be_finished_and_no_fundraising_caption(self):
+        self.save(message="Thank you.")
+        self.left = 1000
+        with self.assertRaisesRegex(ValueError, "Finish this case"):
+            self.start()
+        self.left = 0
+        with self.assertRaisesRegex(ValueError, "fundraising"):
+            self.save(message="donate now")
+        with self.assertRaisesRegex(ValueError, "caption needs"):
+            self.save(caption="Caption without media")
+        self.assertEqual(self.sent, [])
+
+    def test_receipts_survive_restart_and_case_isolation(self):
+        self.save(message="Thank you.")
+        self.start()
+        self.thanks.tick()
+        restored = DonorThanks(self.app, self.hub)
+        with self.assertRaisesRegex(ValueError, "No donors are waiting"):
+            restored.start()
+        self.case = "case-two"
+        self.assertEqual(restored.view()["sent"], 0)
+        self.assertEqual(restored.view()["message"], "")
+        self.case = "case-one"
+        self.assertEqual(restored.view()["sent"], 1)
+        self.assertEqual(len(self.sent), 1)
+
+    def test_uncertain_media_is_not_repeated_and_separate_text_does_not_send(self):
+        self.app.send_custom = lambda body: self.sent.append(body) or {"code": "UNCERTAIN"}
+        self.save(attachment=self.asset, message="Thank you.")
+        self.start()
+        self.thanks.tick()
+        self.assertEqual(len(self.sent), 1)
+        self.assertFalse(self.thanks.view()["on"])
+        with self.assertRaisesRegex(ValueError, "No donors are waiting"):
+            self.start()
+        self.assertEqual(self.thanks.view()["recipients"][0]["state"], "Uncertain")
+
+    def test_crash_after_claim_never_replays_the_started_part(self):
+        self.save(message="Thank you.")
+        self.start()
+        self.store.claim("thanks_part_case-one_" + self.first + "_message", {"at": 1})
+        self.thanks.tick()
+        self.assertEqual(self.sent, [])
+        self.assertEqual(self.thanks.view()["recipients"][0]["state"], "Uncertain")
+
+    def test_pause_between_media_and_message_resumes_only_remaining_message(self):
+        def send(body):
+            self.sent.append(body)
+            self.thanks.stop()
+            return {"code": "SUCCESS"}
+
+        self.app.send_custom = send
+        self.save(attachment=self.asset, message="Thank you.")
+        self.start()
+        self.thanks.tick()
+        self.assertEqual(len(self.sent), 1)
+        self.app.send_custom = lambda body: self.sent.append(body) or {"code": "SUCCESS"}
+        self.start()
+        self.thanks.tick()
+        self.assertEqual(len(self.sent), 2)
+        self.assertIsNone(self.sent[-1]["attachment"])
+        self.assertEqual(self.thanks.view()["sent"], 1)
+
+    def test_default_pace_and_batch_rest_are_measured_after_recipient_finishes(self):
+        for i in range(11):
+            self.add("Donor " + str(i), True)
+        self.save(message="Thank you.")
+        self.start()
+        for i in range(10):
+            now = 10000 + i * 300
+            with patch("donor_thanks.time.time", return_value=now):
+                data = self.thanks._load()
+                data["next_at"] = now
+                self.thanks._put(data)
+                self.thanks.tick(now)
+            self.assertEqual(self.thanks._load()["next_at"], now + (1200 if i == 9 else 300))
+        self.assertEqual(len(self.sent), 10)
+        self.assertEqual(self.thanks._load()["batch_count"], 0)
+        due = self.thanks._load()["next_at"]
+        self.thanks.tick(due - 1)
+        self.assertEqual(len(self.sent), 10)
+        self.thanks.configure({"rest_minutes": 30})
+        self.assertEqual(self.thanks._load()["next_at"], now + 1800)
+
+    def test_changed_case_or_donation_status_cannot_receive_update(self):
+        self.save(message="Thank you.")
+        self.start()
+        self.case = "case-two"
+        self.thanks.tick()
+        self.assertEqual(self.sent, [])
+        self.case = "case-one"
+        self.start()
+        self.hub.book.update(self.first, donated=False)
+        self.thanks.tick()
+        self.assertEqual(self.sent, [])
+
+    def test_other_queues_and_hold_prevent_sending_and_edits_are_revision_checked(self):
+        self.save(message="Thank you.")
+        self.hub.jobs.active = True
+        with self.assertRaisesRegex(ValueError, "other DM queue"):
+            self.start()
+        self.hub.jobs.active = False
+        self.start()
+        self.app.on_hold = lambda: True
+        self.thanks.tick()
+        self.assertEqual(self.sent, [])
+        with self.assertRaisesRegex(ValueError, "Pause"):
+            self.save(message="An edit")
+        self.thanks.stop()
+        with self.assertRaisesRegex(ValueError, "changed"):
+            self.thanks.save({"case_id": "old", "revision": 0})
+
+    def test_two_workers_cannot_dispatch_the_same_recipient(self):
+        self.save(message="Thank you.")
+        self.start()
+        entered, release = threading.Event(), threading.Event()
+
+        def send(body):
+            self.sent.append(body)
+            entered.set()
+            release.wait(3)
+            return {"code": "SUCCESS"}
+
+        self.app.send_custom = send
+        second = DonorThanks(self.app, self.hub)
+        thread = threading.Thread(target=self.thanks.tick)
+        thread.start()
+        try:
+            self.assertTrue(entered.wait(2))
+            second.tick()
+            self.assertEqual(len(self.sent), 1)
+        finally:
+            release.set()
+            thread.join(3)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(self.thanks.view()["sent"], 1)
+
+    def test_settings_validation_and_missing_storage_do_not_send(self):
+        for values in ([], {"batch_size": True}, {"batch_size": 2.5}, {"gap_minutes": 0}):
+            with self.assertRaises(ValueError):
+                self.thanks.configure(values)
+        self.save(message="Thank you.")
+        self.app.STORE = None
+        self.assertFalse(self.thanks.active)
+        with self.assertRaisesRegex(ValueError, "storage"):
+            self.start()
+        self.assertEqual(self.sent, [])
+
+    def test_pace_can_be_set_in_minutes_and_seconds_with_a_random_variation(self):
+        self.thanks.configure(
+            {
+                "gap_minutes": 2,
+                "gap_seconds": 30,
+                "vary_seconds": 20,
+                "rest_minutes": 1,
+                "rest_seconds": 15,
+            }
+        )
+        cfg = self.thanks._load()["settings"]
+        self.assertEqual(
+            (cfg["gap_seconds"], cfg["vary_seconds"], cfg["rest_seconds"]), (30, 20, 15)
+        )
+        waits = [donor_thanks.wait_seconds(cfg, False) for _ in range(300)]
+        self.assertGreaterEqual(min(waits), 150 - 20)
+        self.assertLessEqual(max(waits), 150 + 20)
+        self.assertGreater(max(waits) - min(waits), 10)  # really varies
+        self.assertEqual(donor_thanks.wait_seconds(cfg, True), 75)  # the rest is exact
+        self.thanks.configure({"vary_seconds": 0})
+        self.assertEqual(donor_thanks.wait_seconds(self.thanks._load()["settings"], False), 150)
+
+    def test_test_button_sends_only_to_the_test_group_and_changes_no_donor(self):
+        tests = []
+        self.app.send_thanks_test = lambda message, media: tests.append((message, media))
+        with self.assertRaises(ValueError):  # nothing to test yet
+            self.thanks.test()
+        self.save(message="JazakAllah, {name}.", caption="Done", attachment=self.asset)
+        self.assertEqual(self.thanks.test(), {"reply": "Test sent to the GiveLife test group."})
+        self.assertEqual(tests, [("JazakAllah, {name}.", [("Done", self.asset)])])
+        self.assertEqual(self.sent, [])  # no donor was messaged
+        self.assertEqual(self.thanks.view()["sent"], 0)
+
+    def test_many_attachments_each_with_its_own_caption_go_in_order_then_the_message(self):
+        def upload(label):
+            return batch_media.save(
+                self.store,
+                "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\n" + label).decode(),
+            )
+
+        ids = [self.asset, upload(b"two"), upload(b"three"), upload(b"four")]
+        self.save(
+            media=[
+                {"id": ids[0], "filename": "a.png", "caption": "First"},
+                {"id": ids[1], "filename": "b.mp4", "caption": ""},
+                {"id": ids[2], "filename": "c.mp4", "caption": "Third"},
+                {"id": ids[3], "filename": "d.mp4", "caption": "Fourth"},
+            ],
+            message="Thank you, {name}.",
+        )
+        self.assertEqual(
+            [m["caption"] for m in self.thanks.view()["media"]], ["First", "", "Third", "Fourth"]
+        )
+        self.start()
+        self.thanks.tick()
+        parts = [(b.get("attachment"), b["message"]) for b in self.sent]
+        self.assertEqual(
+            parts,
+            [
+                (ids[0], "First"),
+                (ids[1], ""),
+                (ids[2], "Third"),
+                (ids[3], "Fourth"),
+                (None, "Thank you, Sara Sister."),
+            ],
+        )
+
+    def test_attachments_are_limited_and_older_saves_are_converted(self):
+        too_many = [{"id": self.asset, "filename": "x.png", "caption": ""}] * (
+            donor_thanks.MAX_MEDIA + 1
+        )
+        with self.assertRaises(ValueError):
+            self.save(media=too_many)
+        # An older save kept one attachment in separate fields: it is read as a one-item list.
+        old = self.thanks._load_raw()
+        old.pop("media", None)
+        old.update(
+            attachment=self.asset, filename="old.png", mime="image/png", caption="Old caption"
+        )
+        self.thanks._put(old)
+        view = self.thanks.view()
+        self.assertEqual(
+            [(m["id"], m["caption"]) for m in view["media"]], [(self.asset, "Old caption")]
+        )
+        self.assertNotIn("attachment", view)
+
+    def test_seconds_only_pace_and_bad_values(self):
+        self.thanks.configure({"gap_minutes": 0, "gap_seconds": 20})
+        self.assertEqual(donor_thanks.wait_seconds(self.thanks._load()["settings"], False), 20)
+        for values in (
+            {"gap_minutes": 0, "gap_seconds": 3},  # under 5 seconds
+            {"gap_seconds": 60},
+            {"vary_seconds": 301},
+            {"rest_minutes": 0, "rest_seconds": 0},
+        ):
+            with self.assertRaises(ValueError):
+                self.thanks.configure(values)
+
+    def test_one_donor_send_does_not_start_the_rest_of_the_audience(self):
+        other = self.add("Another supporter", True)
+        self.hub.book.delivery(other, "Sent", 12345)
+        self.save(attachment=self.asset, caption="Case completed.", message="Thank you {name}.")
+        with patch("donor_thanks.threading.Thread"):
+            self.thanks.start(donor_id=other)
+        self.thanks.tick()
+        self.assertEqual([r["donor_id"] for r in self.sent], [other, other])
+        self.assertTrue(self.hub.book.resolve(other).get("dm_sent"))
+        self.assertFalse(self.thanks.view()["on"])
+        self.assertEqual(self.thanks.view()["pending"], 1)
+        with self.assertRaisesRegex(ValueError, "already sent"):
+            self.thanks.start(donor_id=other)
+        self.assertEqual(len(self.sent), 2)
+
+    def test_one_donor_cannot_join_a_running_queue_or_target_a_nondonor(self):
+        self.save(message="Thank you.")
+        with self.assertRaises(ValueError):
+            self.thanks.start(donor_id=self.other)
+        self.start()
+        with self.assertRaisesRegex(ValueError, "already sending"):
+            self.thanks.start(donor_id=self.first)
+        self.assertEqual(self.sent, [])
+
+    def test_saved_address_profiles_and_caption_placeholders(self):
+        self.hub.book.update(self.first, dm_name="Sara", dm_salutation="Sister")
+        unknown = self.add("Unknown", True)
+        self.thanks._save_address_profiles()
+        self.assertEqual(self.hub.book.resolve(unknown)["dm_salutation"], "Brother")
+        self.assertEqual(self.hub.book.resolve(self.first)["dm_salutation"], "Sister")
+        self.save(attachment=self.asset, caption="Dear {Name} bhai", message="Thanks {name}")
+        self.start()
+        self.thanks.tick()
+        self.assertEqual(self.sent[0]["message"], "Dear Sara Sister")
+        self.assertEqual(self.sent[1]["message"], "Thanks Sara Sister")
+
+
+if __name__ == "__main__":
+    unittest.main()

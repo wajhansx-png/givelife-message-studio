@@ -744,3 +744,28 @@ body.message-focus-open > .foot {
     animation: none;
   }
 }
+
+/* Four message buttons at the top of the editor: compact, wrap on small screens. */
+#messageFocus header {
+  flex-wrap: wrap;
+}
+#messageFocus .focus-styles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-inline-start: auto;
+}
+#messageFocus .focus-styles button {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+#messageFocus .focus-styles button[aria-busy='true'] {
+  opacity: 0.7;
+  cursor: progress;
+}
+#messageFocus .focus-styles button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

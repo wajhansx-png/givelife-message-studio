@@ -53,9 +53,7 @@
 
   /* Smooth screen changes: a short fade-and-rise whenever a screen, tab or message appears. */
   function enter(el) {
-    if (!el || still.matches || el.classList.contains('cmf-enter')) return;
-    el.classList.add('cmf-enter');
-    el.addEventListener('animationend', () => el.classList.remove('cmf-enter'), { once: true });
+    // Instant response: zero animation lag
   }
   const shown = (el) => (el.tagName === 'DIALOG' ? el.open : !el.hidden);
   new MutationObserver((records) => {
@@ -83,18 +81,15 @@
     'click',
     (e) => {
       const t = e.target.closest(
-        '.donor-tabs [role=tab],#donorMessagesTab,[data-bank-nav],.bank-back,.bank-back-bottom,[data-view-button]',
+        '#donorMessagesTab,[data-bank-nav],.bank-back,.bank-back-bottom,[data-view-button]',
       );
       if (!t) return;
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          if (t.matches('[data-bank-nav]'))
-            enter(document.querySelector('#donorMessages .bank-detail'));
-          else if (t.matches('#donorMessagesTab')) enter(document.getElementById('donorMessages'));
-          else if (t.matches('[data-view-button]')) enter(document.getElementById('card'));
-          else enter(document.getElementById('donorTable'));
-        }),
-      );
+      requestAnimationFrame(() => {
+        if (t.matches('[data-bank-nav]'))
+          enter(document.querySelector('#donorMessages .bank-detail'));
+        else if (t.matches('#donorMessagesTab')) enter(document.getElementById('donorMessages'));
+        else if (t.matches('[data-view-button]')) enter(document.getElementById('card'));
+      });
     },
     true,
   );
@@ -149,23 +144,12 @@
     if (n && !n.title) n.title = 'Next message (→)';
     fitBankPreview();
   }
-  /* The whole DM shows at once: the largest size (10.5–19px) at which it fits without scrolling. */
+  /* Keep long captions readable; the reading surface handles scrolling. */
   function fitBankPreview() {
     const p = box?.querySelector('.bank-detail .bank-preview');
     if (!p || p.closest('[hidden]') || !p.clientHeight) return;
-    p.style.setProperty('line-height', '1.3', 'important');
-    let lo = 9.5,
-      hi = 14,
-      best = lo;
-    for (let i = 0; i < 7; i++) {
-      const mid = (lo + hi) / 2;
-      p.style.setProperty('font-size', mid + 'px', 'important');
-      if (p.scrollHeight <= p.clientHeight + 2) {
-        best = mid;
-        lo = mid;
-      } else hi = mid;
-    }
-    p.style.setProperty('font-size', best + 'px', 'important');
+    p.style.setProperty('line-height', '1.4', 'important');
+    p.style.setProperty('font-size', '14px', 'important');
   }
   addEventListener('resize', () => requestAnimationFrame(fitBankPreview));
   if (box) {
@@ -254,8 +238,11 @@
     paint();
   }
   btn.onclick = toggle;
-  for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, paint);
-  document.addEventListener('fullscreenerror', () => say('This browser did not allow full screen.'));
+  for (const ev of ['fullscreenchange', 'webkitfullscreenchange'])
+    document.addEventListener(ev, paint);
+  document.addEventListener('fullscreenerror', () =>
+    say('This browser did not allow full screen.'),
+  );
   window.NativeFS = { supported: can, isOn, toggle };
   paint();
   (document.querySelector('.brandbar') || document.body).append(btn);
@@ -263,9 +250,14 @@
   /* Keyboard: keep the field being typed in on screen once the keyboard has resized the view. */
   addEventListener('focusin', (e) => {
     const t = e.target;
-    if (t?.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable=true]'))
+    if (
+      t?.matches?.(
+        'input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable=true]',
+      )
+    )
       setTimeout(() => {
-        if (document.activeElement === t) t.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        if (document.activeElement === t)
+          t.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }, 320);
   });
 })();

@@ -7,11 +7,12 @@ remote-access.json
 ui/
 seed/
 localdata/
-node_modules/
+node_modules
 test-results/
 mobile-screenshots/
 playwright-report/
 .test-data/
+graphify-out/
 
 
 graphify-out/

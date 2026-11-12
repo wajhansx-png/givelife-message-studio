@@ -45,7 +45,18 @@ class FocusBank:
     def _put(self, data):
         if not self.app.STORE:
             raise ValueError("Persistent storage is unavailable. Nothing was changed.")
+        from message_library import library_for
+
+        archive = library_for(self.app)
         self.app.STORE.put("focus_wording", data)
+        for kind in ("group", "dm"):
+            row = data.get(kind) or {}
+            for text in [row.get("source", "")] + (row.get("history") or []):
+                archive.record(kind, text, source="saved_wording", quality="owner")
+            for text in row.get("items") or []:
+                archive.record(kind, text, source="wording_versions", quality="validated")
+            for text in row.get("manual") or []:
+                archive.record(kind, text, source="wording_editor", quality="owner")
 
     def get(self, kind):
         with self.app.LOCK, self.lock:
@@ -133,8 +144,11 @@ class FocusBank:
         out, seen = [], {wording_key(exclude)} if exclude else set()
         rows = [data.get(k) or {} for k in ("group", "dm")]
         # Approved = what the owner wrote or hand-edited; hand edits come first, they show taste best.
+        from message_library import library_for
+
         texts = (
             [t for r in rows for t in r.get("manual", []) or []]
+            + library_for(self.app).examples(exclude=exclude, limit=limit)
             + [r.get("source", "") for r in rows]
             + [t for r in rows for t in reversed(r.get("history", []))]
         )

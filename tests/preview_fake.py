@@ -8,14 +8,15 @@ from email.policy import default
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-EVENTS = ROOT.parent / "manual-preview-events.json"
 events = []
 incoming = []
+events_lock = threading.Lock()
 
 
 def record(item):
-    events.append(item)
-    EVENTS.write_text(json.dumps(events, ensure_ascii=False), encoding="utf-8")
+    with events_lock:
+        events.append(item)
+        EVENTS.write_text(json.dumps(events, ensure_ascii=False), encoding="utf-8")
 
 
 class FakeWhatsApp(BaseHTTPRequestHandler):
@@ -98,6 +99,7 @@ os.environ.update(
     WHATSAPP_DEVICE_ID="fake-device",
 )
 folder = tempfile.TemporaryDirectory()
+EVENTS = Path(folder.name) / "manual-preview-events.json"
 os.environ["DATA_DIR"] = folder.name
 for name in ("drafts.json", "state.md"):
     shutil.copyfile(ROOT / name, Path(folder.name) / name)
@@ -108,22 +110,13 @@ poster = ROOT.parent / "cloud-service/poster.jpg"
 import server
 
 
-class Store:
+from persist import SqliteStore
+
+
+class Store(SqliteStore):
     def __init__(self):
-        self.data = {}
-        self.lock = threading.RLock()
-
-    def get(self, k, d=None):
-        import copy
-
-        with self.lock:
-            return copy.deepcopy(self.data.get(k, d))
-
-    def put(self, k, v):
-        import copy
-
-        with self.lock:
-            self.data[k] = copy.deepcopy(v)
+        super().__init__(Path(folder.name) / "preview.sqlite")
+        self.initialize()
 
 
 server.STORE = Store()
@@ -159,6 +152,112 @@ if "--draft-task" in sys.argv:
     server.chat_callbacks(
         "Make a message for givelife without poster only 3 lines", revision=server.OWNER_REVISION
     )["set_message"](kind="group", text=text)
+if "--fake-ai" in sys.argv:
+    # Scripted writer for the four message buttons only: every other feature still sees "AI not connected".
+    import itertools
+
+    _n = itertools.count()
+    _URDU = [
+        "ایک مجبور باپ کی فریاد سنیے",
+        "گھر کے دروازے پر دستک ہے",
+        "آج آپ کا ہاتھ ایک گھر بچا سکتا ہے",
+        "یہ قرض اب برداشت سے باہر ہے",
+        "ایک چھوٹی سی مدد بڑا بوجھ ہلکا کر دے گی",
+        "اس باپ کے آنسو ہمیں پکارتے ہیں",
+    ]
+    _ENG = [
+        "A helpless father needs you today",
+        "One door knock after another",
+        "Your small gift can lift this weight",
+        "This debt is now too heavy",
+        "Help before this family breaks",
+        "A father is begging for time",
+    ]
+    _URDU_TAIL = [
+        "آج",
+        "ابھی",
+        "فوراً",
+        "پلیز",
+        "دل سے",
+        "اللہ کے نام پر",
+        "فی الحال",
+        "مل کر",
+        "اب",
+        "یہاں",
+        "سب مل کر",
+        "ہمت کریں",
+        "جلدی",
+        "دعا کے ساتھ",
+        "اس ہفتے",
+        "آخری بار",
+    ]
+    _ENG_TAIL = [
+        "today",
+        "now",
+        "please",
+        "together",
+        "quickly",
+        "with love",
+        "this week",
+        "for Allah",
+        "right away",
+        "step up",
+        "be kind",
+        "stand with us",
+        "before night",
+        "as one",
+        "within hours",
+        "from the heart",
+    ]
+    _STORY = [
+        "People keep coming to the house for the borrowed money. The father has nothing to give them.",
+        "The family is worried and tired. They need help to pay what is left.",
+        "The loan was taken for a sad and urgent need. Now the family cannot pay it back.",
+        "Neighbours are asking for their money. The father feels helpless.",
+        "Each day the worry grows. A little help from many people can end it.",
+        "The family trusts that good people will stand with them.",
+    ]
+    _VERSES = ["q34_39", "q2_261", "h_muslim_2699", "q2_245", "h_tirmidhi_2616", "q5_2"]
+    _HELP = [
+        "this helpless father",
+        "this tired family",
+        "this worried father",
+        "this family",
+        "this home",
+        "this father",
+    ]
+
+    def _fake_raw(api, system, tools, messages, **k):
+        i = next(_n)
+        urdu = "in URDU (Urdu script)" in messages[-1]["content"]
+        hooks = _URDU if urdu else _ENG
+        tail = (_URDU_TAIL if urdu else _ENG_TAIL)[
+            (i // 6) % 16
+        ]  # 96 different openings, so a long test day never runs out
+        return {
+            "content": json.dumps(
+                {
+                    "hook": tail + " " + hooks[i % 6],
+                    "story": _STORY[(i * 5 + 1) % 6],
+                    "help": _HELP[i % 6],
+                    "verse": _VERSES[(i * 3 + 2) % 6],
+                    "concept": "scripted %d" % i,
+                },
+                ensure_ascii=False,
+            )
+        }
+
+    _real_style = server.message_style
+
+    def _style_with_fake_ai(body):
+        client, raw = server.assistant.client, server.assistant._chat_raw
+        server.assistant.client, server.assistant._chat_raw = (lambda: object()), _fake_raw
+        try:
+            return _real_style(body)
+        finally:
+            server.assistant.client, server.assistant._chat_raw = client, raw
+
+    server.message_style = _style_with_fake_ai
 # No engine/background AI loops are started. The only sends are explicit preview actions.
 server.Handler.log_message = lambda *a: None
 original_get = server.Handler.do_GET

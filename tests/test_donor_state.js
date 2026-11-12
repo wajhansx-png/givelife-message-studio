@@ -17,6 +17,7 @@ async function main() {
       donorTable: { hidden: false },
       donorMessages: { hidden: true },
       donorVolunteers: { hidden: true },
+      donorSendImportant: { dataset: {} },
     };
   const ctx = {
     Nav: {

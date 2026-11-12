@@ -2,6 +2,7 @@
 const fs = require('node:fs'),
   vm = require('node:vm'),
   assert = require('node:assert/strict');
+const { extractFunction } = require('./helpers/source.cjs');
 const source = fs.readFileSync('app.js', 'utf8'),
   html = fs.readFileSync('index.html', 'utf8');
 const part = (start, end) =>
@@ -22,7 +23,7 @@ function node(id) {
       hidden: true,
       open: false,
       attrs: {},
-      classList: { toggle() {} },
+      classList: { toggle() {}, remove() {}, add() {} },
       setAttribute(k, v) {
         this.attrs[k] = v;
       },
@@ -105,7 +106,7 @@ const ctx = {
 };
 ctx.visualViewport = ctx.window.visualViewport;
 vm.createContext(ctx);
-vm.runInContext(part('function saveChatDraft(', 'let correctionTurn='), ctx);
+vm.runInContext(part('function saveChatDraft(', 'let correctionTurn ='), ctx);
 async function main() {
   node('histCmd').value = 'A real instruction';
   events.length = 0;
@@ -162,7 +163,7 @@ async function main() {
   assert.equal(storage.get('givelife-chat-draft'), 'Keep this');
   assert(events.includes('focus:chatOpen'));
   // Pending locks cover the network round trip and the receipt, and are per action.
-  vm.runInContext(part('const watchingJobs=', 'const requestId='), ctx);
+  vm.runInContext(part('const watchingJobs =', 'const requestId ='), ctx);
   assert(ctx.lockSend('main', true));
   assert(!ctx.lockSend('main', true));
   assert(ctx.lockSend('community', true));
@@ -170,6 +171,7 @@ async function main() {
   assert(ctx.lockSend('main', true));
   ctx.lockSend('main', false);
   let posts = 0,
+    stops = 0,
     resolvePost,
     watches = 0;
   Object.assign(ctx, {
@@ -177,10 +179,18 @@ async function main() {
     GN: { main: 'GiveLife' },
     setLiveNotice() {},
     busy() {},
+    progressButton: () => null,
+    setButtonProgress() {},
+    endButtonProgress() {},
+    fillEmptyCaption: async () => {},
     ensureCaption: async () => {},
     save: async () => {},
     requestId: () => String(posts),
-    post: () => {
+    post: (url) => {
+      if (url === '/stop-send') {
+        stops++;
+        return Promise.resolve({ ok: true });
+      }
       posts++;
       return new Promise(
         (r) => (resolvePost = () => r({ ok: true, json: async () => ({ job_id: 'job-1' }) })),
@@ -189,15 +199,12 @@ async function main() {
     watchGroupJob: () => watches++,
   });
   node('group').value = 'Original *formatted* caption';
-  vm.runInContext(
-    'let timer=null;' +
-      part('async function sendGroup(', "document.querySelectorAll('[data-group]')"),
-    ctx,
-  );
-  const first = ctx.sendGroup('main'),
-    duplicate = ctx.sendGroup('main');
+  vm.runInContext('let timer=null;' + extractFunction(source, 'sendGroup'), ctx);
+  const first = ctx.sendGroup('main');
   await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(posts, 1, 'Rapid repeated taps must create one request');
+  const duplicate = ctx.sendGroup('main');
+  assert.equal(posts, 1, 'A second tap must not create another send request');
+  assert.equal(stops, 1, 'A second tap requests Stop while the send is starting');
   resolvePost();
   await Promise.all([first, duplicate]);
   assert.equal(watches, 1);
@@ -220,11 +227,11 @@ async function main() {
   node('whatsappConnection').dataset.state = 'online';
   vm.runInContext(
     "let autoOn=false,autoKnown=true,liveNotice=null,liveSnapshot=null,checkedAt=Date.now()-10000,pollError='',operationCount=0,lastAnnouncedError='';" +
-      part('function setLiveNotice(', 'let autoPolling='),
+      part('function setLiveNotice(', 'let autoPolling ='),
     ctx,
   );
   ctx.paintStatusLine();
-  assert(node('liveMeta').textContent.includes('Automatic actions off'));
+  assert.equal(node('liveMeta').textContent, 'Auto off');
   assert(node('liveDetail').textContent.includes('Synced 10s ago'));
   ctx.setLiveNotice('Confirmed sent to test group');
   assert(
@@ -263,7 +270,7 @@ async function main() {
     node('liveMeta').textContent.includes('Checking Auto status'),
     'Initial state must not falsely claim Auto is off',
   );
-  assert(html.includes('id="auto" disabled'));
+  assert.match(html, /id="auto"\s+disabled/);
   const upcoming = ctx.statusView(
     { state: 'idle', next: [{ group: 'main', due_at: Date.now() / 1000 + 600 }] },
     true,
@@ -328,6 +335,12 @@ async function main() {
     syncCtx = {
       $: (id) => syncFields[id],
       JSON,
+      document: { dispatchEvent() {} },
+      Event: class {
+        constructor(type) {
+          this.type = type;
+        }
+      },
       showLeft() {},
       applyDrafts: (d) => {
         syncFields.group.value = d.group;
@@ -337,7 +350,7 @@ async function main() {
   vm.createContext(syncCtx);
   vm.runInContext(
     "let left=25000,draftsReady=true,editing=false,pendingChats=0,operationCount=0,draftSaved=JSON.stringify({group:'Saved group',dm:'Saved DM'});" +
-      part('function refreshLiveDrafts(', 'let autoPolling='),
+      part('function refreshLiveDrafts(', 'let autoPolling ='),
     syncCtx,
   );
   const baseline = {
@@ -382,7 +395,7 @@ async function main() {
     getComputedStyle: () => ({ paddingTop: '12px', paddingBottom: '12px' }),
   };
   vm.createContext(fitCtx);
-  vm.runInContext('let editing=false;' + part('function fit(){', 'new ResizeObserver'), fitCtx);
+  vm.runInContext('let editing=false;' + part('function fit() {', 'new ResizeObserver'), fitCtx);
   fitCtx.fit();
   assert.equal(preview.style.fontSize, '11px');
   assert.equal(box.style.overflowY, 'hidden');
@@ -420,7 +433,7 @@ async function main() {
       node('campText').textContent = t;
     },
   });
-  vm.runInContext('let listT=null;' + part('let campTimer=', '/* ---- the assistant:'), ctx);
+  vm.runInContext('let listT=null;' + part('let campTimer =', '/* ---- the assistant:'), ctx);
   await ctx.pollCamp();
   assert.equal(
     scheduled,

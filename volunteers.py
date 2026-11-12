@@ -18,6 +18,12 @@ class VolunteerDelivery(DonorDelivery):
     KIND = "volunteer_batch"
     CLAIM = "volunteer_batch_request_"
 
+    def _fresh_caption(self, job, index):
+        # Volunteer text uses the volunteer greeting path, not donor template personalization.
+        if "custom_template" in job:
+            return job["custom_template"]
+        return super()._fresh_caption(job, index)
+
 
 class Volunteers:
     MESSAGE_KEY = "volunteer_message"
@@ -32,7 +38,7 @@ class Volunteers:
             app.DATA,
             app.STORE,
             self.book,
-            app.send_custom,
+            lambda body: app.send_custom({**body, "kind": VolunteerDelivery.KIND}),
             self.message,
             app.wa_ok,
             lambda: app.on_hold(),
@@ -93,6 +99,27 @@ class Volunteers:
             return self.set_message(body.get("text"))
         if action == "stop":
             return self.jobs.cancel()
+        if action == "send_case" or action == "send_one" and "text" in body:
+            text = (
+                self.app.get_message("group")["text"] if action == "send_case" else body.get("text")
+            )
+            maximum = 8000 if action == "send_case" else self.MAX
+            if not isinstance(text, str) or not text.strip() or len(text) > maximum:
+                raise ValueError(
+                    "The current case message is empty or too long. Edit it before sending."
+                    if action == "send_case"
+                    else f"Write the message for volunteers first (up to {maximum:,} characters)."
+                )
+            return self.jobs.start(
+                "selected",
+                body.get("gap_seconds", 180),
+                ids=[self.book.resolve(body.get("id", ""))["id"]],
+                limit=1,
+                request_id=body.get("request_id"),
+                poster=action == "send_case",
+                skip_contacted=False,
+                custom_template=text,
+            )
         if action in ("send_all", "send_one"):
             if not self.message().strip():
                 raise ValueError(
@@ -105,7 +132,7 @@ class Volunteers:
                     ids=[self.book.resolve(body.get("id", ""))["id"]],
                     limit=1,
                     request_id=body.get("request_id"),
-                    poster=bool(body.get("poster", True)),
+                    poster=False,
                     skip_contacted=False,
                 )
             delay = body.get("delay_seconds", 0)

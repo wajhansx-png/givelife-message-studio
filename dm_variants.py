@@ -268,6 +268,9 @@ PROVEN = lambda: []
 # Set by the server: the owner's own recent saved messages (FocusBank.owner_style).
 OWNER_STYLE = lambda: []
 CORRECTIONS = lambda: []  # the owner's saved wording corrections; set by the server
+RECORD = lambda text, quality, kind="message": (
+    None
+)  # archive candidates separately from accepted text
 
 
 def _prompt(source, count, avoid):
@@ -402,7 +405,10 @@ def _call(key, prompt, deep=False):
         deep=deep,
     )
     content = message.get("content") if isinstance(message, dict) else ""
-    return _json_list(content)
+    texts = _json_list(content)
+    for text in texts:
+        RECORD(text, "candidate")
+    return texts
 
 
 AI_BACKOFF = (5, 15, 30)  # seconds to wait after a rate limit / server hiccup before retrying
@@ -488,6 +494,7 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
                 reasons[reason] = reasons.get(reason, 0) + 1
                 continue
             out.append(candidate.strip())
+            RECORD(candidate.strip(), "validated", "dm")
             if len(out) >= count:
                 break
         if tried:

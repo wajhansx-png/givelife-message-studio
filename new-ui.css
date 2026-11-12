@@ -1,0 +1,4573 @@
+/* New design, served only at /new (the server swaps .UI2 for a strong prefix). "/" never loads this file.
+   Layout bands follow responsive.css: <=299, <=359, <=380, <=899, >=900. */
+
+/* ---------- Phone and tablet: every daily button sits at the bottom, in thumb reach ---------- */
+@media (max-width: 899px) {
+  .UI2 .app > .brandbar {
+    order: 3;
+  }
+  .UI2 .app > .foot {
+    order: 4;
+  }
+  .UI2 .brandbar #mainNavMore {
+    position: static;
+  }
+  .UI2 .brandbar #mainNavMore > .compact-nav-panel {
+    top: auto;
+    bottom: calc(100% + 7px);
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
+    translate: none !important;
+  }
+  .UI2 .brandbar > .fs-toggle {
+    display: none !important;
+  }
+  .UI2 .brandbar > :is(#donorNotesShortcut, .report-open, #mainNavMore, #whatsappConnection) {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    max-width: none;
+  }
+}
+/* ---------- Main screen: words instead of icons, readable message, shorter send buttons ---------- */
+@media (max-width: 899px) {
+  .UI2 #card .tools {
+    display: flex !important;
+    min-height: 30px !important;
+    padding: 0 4px !important;
+  }
+  .UI2 #card .tools :is(#previewBack, #edit, #fresh, .overflow-tools) {
+    display: none !important;
+  }
+  .UI2 #card .tools .ctx {
+    display: block !important;
+    margin: 0 !important;
+    color: var(--ink-muted, #aab0c5) !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .UI2 #card .tools .ctx::before {
+    content: 'GROUP MESSAGE';
+  }
+  .UI2 #card .tools .ctx img {
+    display: none !important;
+  }
+  .UI2 #card :is(#previewChangePoster, #copy) {
+    display: none !important;
+  }
+  .UI2 #card .chat {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #card .chat .message {
+    padding: 12px !important;
+    border-radius: 16px !important;
+    background: #006451 !important;
+    color: #ecfff8 !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+  }
+  .UI2 .brandbar > #whatsappConnection {
+    flex: 1.5 1 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    width: auto !important;
+    min-height: 44px !important;
+    padding: 0 6px !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--line2) !important;
+    background: var(--surface) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0 !important;
+  }
+  .UI2 .brandbar > #whatsappConnection::before {
+    width: 9px;
+    height: 9px;
+    flex: none;
+    background: #f0aa28;
+    box-shadow: none;
+    animation: none;
+  }
+  .UI2 .brandbar > #whatsappConnection[data-state='online']::before {
+    background: #3cdc96;
+  }
+  .UI2 .brandbar > #whatsappConnection[data-state='offline']::before {
+    background: #ff6b6b;
+  }
+  .UI2 .brandbar > #whatsappConnection::after {
+    content: 'Check';
+    font-size: 12px;
+    font-weight: 700;
+    color: #f0aa28;
+    white-space: nowrap;
+  }
+  .UI2 .brandbar > #whatsappConnection[data-state='online']::after {
+    content: 'WhatsApp';
+    color: #3cdc96;
+  }
+  .UI2 .brandbar > #whatsappConnection[data-state='offline']::after {
+    content: 'Reconnect';
+    color: #ff8a8a;
+  }
+  .UI2 .brandbar > .report-open {
+    font-size: 12px !important;
+    font-weight: 700;
+    padding: 0 6px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 1 1 0 !important;
+  }
+  .UI2 .brandbar > .report-open::before {
+    display: none !important;
+  }
+  .UI2 .brandbar > :is(#donorNotesShortcut, #mainNavMore > summary) {
+    font-size: 12px;
+  }
+  .UI2 .brandbar #mainNavMore > summary {
+    width: 100%;
+    padding: 0 6px;
+  }
+
+  /* the message you are about to send: 13 px, easy to read */
+  .UI2 #groupPreview,
+  .UI2 #dmPreview {
+    font-size: 13px;
+    line-height: 1.42;
+  }
+  /* send buttons: 42 px tall, name and status on one line */
+  .UI2 .send-row .group-main-btn,
+  .UI2 .send-row .group-free-btn,
+  .UI2 .send-row .group-all-btn,
+  .UI2 button.test-row {
+    min-height: 42px !important;
+    height: 42px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  .UI2 .send-row .gb-name {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 14px;
+  }
+  .UI2 .send-row .gb-name small {
+    display: inline !important;
+    margin: 0 !important;
+    font-size: 11px;
+    opacity: 0.85;
+  }
+}
+/* Auto switched ON turns the whole strip green so nobody misses it */
+.UI2 .live[data-on='1'] {
+  background: #0e4a38;
+  border-color: #1fa46a;
+}
+.UI2 .live[data-on='1'] .livebar {
+  color: #c8ffe6;
+}
+
+@media (max-width: 359px) {
+  .UI2 .brandbar > #whatsappConnection {
+    gap: 4px;
+    padding: 0 3px !important;
+  }
+  .UI2 .brandbar > #whatsappConnection::after {
+    font-size: 11px;
+  }
+  .UI2 .brandbar > :is(#donorNotesShortcut, .report-open, #mainNavMore > summary) {
+    font-size: 11px !important;
+  }
+}
+@media (max-width: 299px) {
+  .UI2 .brandbar > #whatsappConnection::before {
+    display: none;
+  }
+}
+@media (max-width: 359px) {
+  .UI2 .send-row .gb-name {
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+  .UI2 .send-row .group-main-btn,
+  .UI2 .send-row .group-free-btn,
+  .UI2 .send-row .group-all-btn,
+  .UI2 button.test-row {
+    height: auto !important;
+    min-height: 46px !important;
+  }
+}
+
+/* ---------- Back is calm grey; Test is an outline so it never looks like Send (all sizes) ---------- */
+.UI2 .back-action {
+  border-color: var(--line2) !important;
+  color: var(--ink) !important;
+  background: var(--surface) !important;
+}
+.UI2 #messageFocus #focusTest {
+  background: transparent !important;
+  border: 2px solid #9670ff !important;
+  color: #e1d2ff !important;
+  box-shadow: none !important;
+}
+
+/* ---------- Donors on a phone: big touch targets, quiet rows, one scrolling tab row ---------- */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    gap: 6px;
+    border: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    scroll-behavior: smooth !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: none !important;
+  }
+  .UI2 #donorsPage .donor-tabs::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #donorsPage .donor-tabs > [role='tab'] {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-height: 40px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+    flex-direction: row !important;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .UI2 #donorsPage .donor-row {
+    grid-template-columns: 40px minmax(0, 1fr) 50px 40px 40px 0 !important;
+    column-gap: 2px !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-star {
+    width: 40px !important;
+    min-width: 40px !important;
+    padding: 0 !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-identity .donor-top-chip {
+    display: grid !important;
+  }
+  .UI2 #donorsPage .donor-row > details > summary {
+    width: 40px !important;
+    min-width: 40px !important;
+  }
+  .UI2 #donorsPage .donor-row > details {
+    width: 40px !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-dm {
+    width: 48px !important;
+    min-width: 48px !important;
+    height: 34px !important;
+    background: transparent !important;
+    color: #9aa3c0 !important;
+    border: 1px solid #394060 !important;
+    box-shadow: none !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='false'] {
+    font-size: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    padding: 0 !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='false']::before {
+    content: '\25CB';
+    font-size: 24px;
+    color: #8a92b0;
+    line-height: 1;
+  }
+}
+@media (max-width: 299px) {
+  .UI2 #donorsPage .donor-row {
+    grid-template-columns: 34px minmax(0, 1fr) 44px 34px 34px 0 !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-star,
+  .UI2 #donorsPage .donor-row > details,
+  .UI2 #donorsPage .donor-row > details > summary {
+    width: 34px !important;
+    min-width: 34px !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-dm {
+    width: 44px !important;
+    min-width: 44px !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='false'] {
+    width: 34px !important;
+    min-width: 34px !important;
+  }
+}
+
+/* ---------- Stop/Resume DMs is amber so it can never be mistaken for the blue DM button (all sizes) ---------- */
+.UI2 #donorsPage #donorToggle {
+  background: #3a2a0c !important;
+  border: 1px solid #f0aa28 !important;
+  color: #ffd78a !important;
+  box-shadow: none !important;
+}
+
+/* ---------- The donor edit panel opens above the rows after it, never behind them (all sizes) ---------- */
+.UI2 #donorsPage .donor-row:has(details[open]) {
+  position: relative;
+  z-index: 40;
+}
+
+/* ---------- Donors on a computer: quiet rows; extra buttons appear when the mouse is on the row ---------- */
+@media (min-width: 900px) {
+  .UI2 #donorsPage .donor-row > .donor-dm {
+    background: transparent !important;
+    color: #9aa3c0 !important;
+    border: 1px solid #394060 !important;
+    box-shadow: none !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='false'] {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: #6a7392 !important;
+    box-shadow: none !important;
+  }
+}
+@media (min-width: 900px) and (hover: hover) {
+  .UI2 #donorsPage .donor-row > .donor-identity .donor-top-chip {
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+  .UI2 #donorsPage .donor-row:hover > .donor-identity .donor-top-chip,
+  .UI2 #donorsPage .donor-row:focus-within > .donor-identity .donor-top-chip {
+    opacity: 1;
+  }
+}
+
+/* ---------- Message reader on a computer: a narrow, tall, fully visible message with its buttons beside it ---------- */
+@media (min-width: 900px) {
+  .UI2 #messageFocus > header {
+    justify-content: flex-start !important;
+    gap: 20px;
+  }
+  .UI2 #messageFocus > header .focus-styles {
+    margin-left: 0 !important;
+  }
+  .UI2 #messageFocus > header #focusState {
+    flex: 0 0 auto !important;
+  }
+  .UI2 #messageFocus .focus-workspace > .focus-paper {
+    align-content: flex-start !important;
+  }
+  .UI2 #messageFocus .focus-workspace {
+    grid-template-columns: minmax(360px, 400px) 120px minmax(280px, 360px) !important;
+    justify-content: start !important;
+    column-gap: 16px;
+  }
+  .UI2 #messageFocus .focus-workspace > .focus-paper {
+    grid-column: 1 !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding-top: 0 !important;
+  }
+  .UI2 #messageFocus .focus-workspace > .focus-rail {
+    grid-column: 2 !important;
+  }
+  .UI2 #messageFocus .focus-workspace > .send {
+    grid-column: 3 !important;
+    width: 100% !important;
+    max-width: none !important;
+    justify-self: stretch !important;
+  }
+  .UI2 #messageFocus #focusFormatted,
+  .UI2 #messageFocus #focusText {
+    width: min(340px, calc(100% - 24px)) !important;
+    max-width: 340px !important;
+    margin: 0 !important;
+    font-size: 13px !important;
+    line-height: 1.42 !important;
+    top: 12px !important;
+    left: 12px !important;
+    align-self: flex-start !important;
+  }
+}
+/* very narrow phones: the two small group buttons shrink so they never sit over the middle of the send button */
+@media (max-width: 299px) {
+  .UI2 .send-row .row-tools {
+    gap: 4px !important;
+  }
+  .UI2 .send-row .row-tools > :is(.gb-pick, .gb-timer) {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+}
+
+/* ---------- Computer: the send list is wider so group names fit on one line and the small buttons never cover them ---------- */
+@media (min-width: 900px) {
+  .UI2 .layout {
+    grid-template-columns: minmax(0, 1fr) 320px !important;
+  }
+}
+/* status circle gets a full-size touch target on phones */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='false'] {
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+}
+
+/* ---------- Report: the three Auto cards are short rows so everything fits one screen ---------- */
+.UI2 .auto-card {
+  padding: 8px 12px !important;
+  margin-bottom: 8px !important;
+}
+.UI2 .auto-head h4 {
+  font-size: 14px !important;
+}
+.UI2 .auto-stats {
+  margin: 6px 0 4px !important;
+}
+.UI2 .auto-stats dt {
+  font-size: 11px !important;
+}
+.UI2 .auto-stats dd {
+  font-size: 13px !important;
+}
+.UI2 .auto-card .auto-switch {
+  min-height: 36px !important;
+  min-width: 56px !important;
+}
+@media (max-width: 380px) {
+  .UI2 .auto-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+  }
+}
+@media (max-width: 299px) {
+  .UI2 .auto-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* ---------- WhatsApp dialog: calm and short when everything is fine ---------- */
+.UI2 .connect-dialog h2 {
+  font-size: 16px !important;
+}
+.UI2 .connect-dialog {
+  padding: 16px !important;
+}
+
+/* ---------- Settings: Back is a calm grey button ---------- */
+.UI2 #set .back-action,
+.UI2 #set #setBack {
+  border-color: var(--line2) !important;
+  color: var(--ink) !important;
+}
+
+/* ---------- Shared status row: show connection and amount before the message ---------- */
+.UI2 .ui2-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.UI2 .ui2-status-row #leftChip {
+  min-height: 36px !important;
+  width: auto !important;
+  max-width: 52%;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+.UI2 .ui2-status-row #whatsappConnection {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  min-width: 0 !important;
+  min-height: 36px !important;
+  width: auto !important;
+  flex: 1 1 0 !important;
+  max-width: none !important;
+  padding: 0 7px !important;
+  border: 0 !important;
+  background: transparent !important;
+  font-size: 0 !important;
+  text-align: left;
+}
+.UI2 .ui2-status-row #whatsappConnection::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #f0aa28;
+}
+.UI2 .ui2-status-row #whatsappConnection[data-state='online']::before {
+  background: #3cdc96;
+}
+.UI2 .ui2-status-row #whatsappConnection[data-state='offline']::before {
+  background: #ff6b6b;
+}
+.UI2 .ui2-status-row #whatsappConnection::after {
+  content: 'WhatsApp connected';
+  color: #3cdc96;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.UI2 .ui2-status-row #whatsappConnection[data-state='offline']::after {
+  content: 'Reconnect WhatsApp';
+  color: #ff8a8a;
+}
+.UI2 .ui2-status-row #whatsappConnection[data-state='connecting']::after {
+  content: 'Checking WhatsApp';
+  color: #f0aa28;
+}
+@media (max-width: 359px) {
+  .UI2 .ui2-status-row {
+    padding-inline: 6px;
+  }
+  .UI2 .ui2-status-row #leftChip {
+    font-size: 11px !important;
+    padding-inline: 7px !important;
+  }
+  .UI2 .ui2-status-row #whatsappConnection::after {
+    content: 'WhatsApp';
+    font-size: 11px;
+  }
+  .UI2 .ui2-status-row #whatsappConnection[data-state='offline']::after {
+    content: 'Reconnect';
+  }
+}
+
+/* ---------- Reader structure: message controls sit beside the text; primary actions dock below ---------- */
+.UI2 #messageFocus > header {
+  display: grid;
+  gap: 8px;
+}
+.UI2 .ui2-reader-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  gap: 10px;
+}
+.UI2 .ui2-reader-top #focusBack {
+  min-height: 42px !important;
+  padding-inline: 14px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--line2) !important;
+  color: var(--ink) !important;
+}
+.UI2 .ui2-reader-top .ui2-reader-back {
+  min-height: 42px !important;
+  padding-inline: 14px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--line2) !important;
+  color: var(--ink) !important;
+}
+.UI2 .ui2-reader-top #focusVersion {
+  margin: 0 !important;
+  text-align: right;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 #messageFocus .focus-workspace {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  min-height: 0;
+}
+.UI2 #messageFocus .focus-workspace > .focus-paper {
+  order: 1;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 180px;
+}
+.UI2 #messageFocus #focusFormatted,
+.UI2 #messageFocus #focusText {
+  font-size: 14px !important;
+  line-height: 1.38 !important;
+}
+.UI2 #messageFocus .focus-styles {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.UI2 #messageFocus .focus-styles::-webkit-scrollbar {
+  display: none;
+}
+.UI2 #messageFocus .focus-styles button {
+  flex: 0 0 auto !important;
+  min-height: 40px !important;
+  padding-inline: 12px !important;
+  white-space: nowrap !important;
+}
+.UI2 #messageFocus .ui2-reader-actions {
+  order: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(74px, auto) minmax(72px, auto);
+  gap: 7px;
+  align-items: stretch;
+}
+.UI2 #messageFocus .ui2-reader-actions > button {
+  min-width: 0;
+  min-height: 44px !important;
+  padding-inline: 10px !important;
+  font-size: 13px !important;
+  white-space: nowrap;
+}
+.UI2 #messageFocus .ui2-reader-actions #focusNext {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  order: 1;
+}
+.UI2 #messageFocus .ui2-reader-actions #focusTest {
+  order: 2;
+}
+.UI2 #messageFocus .ui2-reader-actions .focus-rail-more {
+  order: 3;
+}
+.UI2 #messageFocus .ui2-reader-actions #focusNext {
+  background: linear-gradient(110deg, #2878ed, #7650f6) !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-actions #focusTest {
+  background: transparent !important;
+  border: 2px solid #9670ff !important;
+  color: #e1d2ff !important;
+}
+.UI2 #messageFocus .ui2-reader-actions .focus-rail-more {
+  min-width: 44px;
+  grid-column: auto;
+}
+.UI2 #messageFocus .ui2-reader-actions .focus-rail-more > summary {
+  min-height: 44px !important;
+}
+.UI2 #messageFocus .focus-workspace > :is(.group-send, .dm-send) {
+  order: 3;
+  width: 100% !important;
+  max-width: none !important;
+}
+.UI2 #messageFocus .focus-rail {
+  display: none !important;
+}
+.UI2 #messageFocus .ui2-reader-dock {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px 0 max(6px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line2);
+}
+.UI2 #messageFocus .ui2-reader-dock > button {
+  min-width: 0;
+  min-height: 48px !important;
+  padding: 4px 7px !important;
+  font-size: 12px !important;
+  white-space: normal;
+}
+.UI2 #messageFocus .ui2-reader-dock #focusBack {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--line2) !important;
+}
+.UI2 #messageFocus .ui2-reader-dock #focusEdit {
+  background: #179f73 !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-dock #focusCopy {
+  background: #2878ed !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-dock #focusSave {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+}
+@media (max-width: 359px) {
+  .UI2 #messageFocus .ui2-reader-actions {
+    grid-template-columns: minmax(0, 1fr) 62px 50px;
+    gap: 4px;
+  }
+  .UI2 #messageFocus .ui2-reader-actions > button {
+    padding-inline: 5px !important;
+    font-size: 11px !important;
+  }
+  .UI2 #messageFocus .ui2-reader-dock {
+    gap: 4px;
+  }
+  .UI2 #messageFocus .ui2-reader-dock > button {
+    padding-inline: 3px !important;
+    font-size: 11px !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #messageFocus {
+    padding-bottom: 70px !important;
+  }
+  .UI2 #messageFocus .focus-workspace {
+    max-height: calc(100dvh - 180px);
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    padding-bottom: 8px;
+  }
+  .UI2 #messageFocus .ui2-reader-dock {
+    position: fixed;
+    z-index: 60;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 8px max(10px, calc((100vw - 780px) / 2)) max(8px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line2);
+    background: #11141d;
+  }
+}
+
+/* ---------- Donated: the circle becomes a green tick once the donor is marked donated (phone) ---------- */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='true'] {
+    font-size: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-status[aria-pressed='true']::before {
+    content: '\2713';
+    font-size: 22px;
+    font-weight: 800;
+    color: #3cdc96;
+    line-height: 1;
+  }
+}
+
+/* ---------- Computer: Options menu (left) holds Gap, Test DM, Auto and Poster; Back stays on the right ---------- */
+.UI2 .ui2-options > summary {
+  display: none;
+}
+@media (min-width: 900px) {
+  .UI2 .donor-bottom {
+    position: relative;
+  }
+  .UI2 .donor-bottom > .ui2-options {
+    order: -1;
+    position: relative;
+    flex: none;
+  }
+  .UI2 .donor-bottom > .ui2-options > summary {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 16px;
+    cursor: pointer;
+    list-style: none;
+    border: 1px solid var(--line2);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .UI2 .donor-bottom > .ui2-options > summary::-webkit-details-marker {
+    display: none;
+  }
+  .UI2 .donor-bottom > .ui2-options > summary::after {
+    content: '\2304';
+    margin-left: 8px;
+  }
+  .UI2 .ui2-options:not([open]) > .ui2-options-panel {
+    display: none;
+  }
+  .UI2 .ui2-options-panel {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 8px);
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 230px;
+    padding: 10px;
+    border: 1px solid var(--line2);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: 0 8px 24px #0006;
+  }
+  .UI2 .ui2-options-panel > * {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    justify-content: flex-start;
+    text-align: left;
+    min-height: 40px;
+  }
+  .UI2 .donor-bottom > #donorMainBottom {
+    order: 99;
+  }
+}
+
+/* ---------- DM messages page: thumb-zone buttons on phones, 12 px message ---------- */
+.UI2 .ui2-big {
+  display: none;
+}
+@media (max-width: 899px) {
+  .UI2 .ui2-big {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px !important;
+    height: 50px !important;
+    padding: 0 8px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line2);
+  }
+  .UI2 #ui2BankNext {
+    background: #203478;
+    border-color: #2f6bf0;
+    color: #fff;
+  }
+  .UI2 #donorMessages .bank-next-arrow,
+  .UI2 #donorMessages .bank-gen-icon {
+    display: none !important;
+  }
+  .UI2 #donorMessages .bank-actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    align-items: stretch;
+  }
+  .UI2 #donorMessages .bank-actions > .ui2-big {
+    order: 0;
+    flex: 1 1 calc(50% - 6px) !important;
+    min-width: 0;
+  }
+  .UI2 #donorMessages .bank-actions > button.tool {
+    min-width: 0 !important;
+    font-size: 12px !important;
+    min-height: 44px !important;
+    flex: 1 1 calc(33% - 6px) !important;
+  }
+  .UI2 #donorMessages .bank-actions > button.tool.bank-format {
+    flex: 0 0 48px !important;
+  }
+  .UI2 #donorMessages .bank-actions > .bank-pagination {
+    order: 3;
+    flex: 1 1 100% !important;
+  }
+  .UI2 #donorMessages .bank-line {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #donorMessages .bank-line {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+}
+.UI2 #donorMessages .ui2-test {
+  background: transparent !important;
+  border: 2px solid #9670ff !important;
+  color: #e1d2ff !important;
+  box-shadow: none !important;
+}
+
+@media (min-width: 900px) {
+  .UI2 #donorMessages .bank-line {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+}
+
+/* ---------- Settings headings ---------- */
+.UI2 .ui2-set-head {
+  padding: 14px 4px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted, #8f98b8);
+}
+.UI2 #set .row .t small {
+  display: block;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* ---------- Stop DMs only while sending ---------- */
+.UI2 #donorToggle[data-ui2-idle] {
+  display: none !important;
+}
+/* ---------- Donor mobile header: retain the literal + Add action and tap target ---------- */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-head #donorAdd {
+    min-width: 72px !important;
+    min-height: 44px !important;
+    padding-inline: 12px !important;
+    font-size: 13px !important;
+    font-weight: 750 !important;
+    white-space: nowrap !important;
+    flex: 0 0 auto !important;
+  }
+  .UI2 #donorsPage .donor-head .donor-title,
+  .UI2 #donorsPage .donor-head #donorAdd {
+    position: relative;
+    z-index: 2;
+  }
+}
+
+/* ---------- Desktop reader: message, controls, and sends are visible in one workspace ---------- */
+@media (min-width: 900px) {
+  .UI2 #messageFocus .focus-workspace {
+    display: grid !important;
+    grid-template-columns: minmax(300px, 1.2fr) minmax(112px, 0.42fr) minmax(220px, 0.9fr) !important;
+    align-items: start !important;
+    gap: 14px !important;
+  }
+  .UI2 #messageFocus .focus-workspace > .focus-paper {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    min-width: 0;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  .UI2 #messageFocus .focus-workspace > .ui2-reader-actions {
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: 1fr;
+  }
+  .UI2 #messageFocus .focus-workspace > :is(.group-send, .dm-send) {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    min-width: 0;
+  }
+  .UI2 #messageFocus .ui2-reader-dock {
+    grid-template-columns: repeat(4, minmax(80px, 130px));
+    justify-content: start;
+    padding: 12px max(16px, calc((100vw - 1280px) / 2));
+    border-top: 1px solid var(--line2);
+  }
+  .UI2 #messageFocus #focusText {
+    min-height: 220px !important;
+  }
+}
+
+/* ======================= Home (PDF pages 1-9, 13; V4 pages 7, 31) ======================= */
+/* Amount: "Rs. 25,000 left ✎" once */
+.UI2 #leftChip::after {
+  content: ' left ✎' !important;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.UI2 #leftChip[data-ui2-left='1']::after {
+  content: ' ✎' !important;
+}
+/* Auto: one plain row, "Auto is OFF" / "Auto is ON", the switch on the right (pages 5-6) */
+.UI2 #live {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  min-height: 0 !important;
+  padding: 6px 8px 6px 14px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 14px !important;
+  background: var(--surface) !important;
+}
+.UI2 #live > #liveBar,
+.UI2 #live > #liveMore,
+.UI2 #live .autosw .lbl {
+  display: none !important;
+}
+.UI2 #live::before {
+  content: 'Auto is OFF';
+  color: var(--ink-muted, #9aa1b8);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.UI2 #live[data-on='1'] {
+  border-color: rgba(60, 220, 150, 0.6) !important;
+  background: rgba(60, 220, 150, 0.12) !important;
+}
+.UI2 #live[data-on='1']::before {
+  content: 'Auto is ON';
+  color: #3cdc96;
+}
+.UI2 #live .autosw {
+  flex: none !important;
+  width: auto !important;
+  min-width: 52px !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  padding: 4px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* Send list: one 42px line per group, status beside the name, no small buttons on the row (pages 4, 8) */
+.UI2 .group-send .send-title h2 {
+  margin: 0 !important;
+  color: var(--ink-muted, #9aa1b8) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.UI2 .group-send #sendMode,
+.UI2 .group-send .row-tools {
+  display: none !important;
+}
+.UI2 .group-send .group-two :is(.test-row, .group-main-btn, .group-free-btn, .group-all-btn) {
+  min-height: 42px !important;
+  height: 42px !important;
+  padding: 0 14px !important;
+  border-radius: 12px !important;
+}
+.UI2 .group-send .gb-name {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 8px !important;
+  min-width: 0;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  white-space: nowrap;
+}
+.UI2 .group-send .gb-name > .last-sent {
+  display: inline !important;
+  overflow: hidden;
+  margin: 0 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  opacity: 0.85;
+  text-overflow: ellipsis;
+  text-transform: lowercase;
+}
+.UI2 .group-send .gb-name > .last-sent:not(:empty)::before {
+  content: '· ';
+}
+.UI2 .ui2-group-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.UI2 .ui2-group-more :is(.ui2-later, .ui2-choose-btn) {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--surface2, #232838);
+  color: var(--ink-muted, #aab0c5);
+  font-size: 12px;
+  font-weight: 700;
+}
+.UI2 .ui2-choose {
+  position: relative;
+}
+.UI2 .ui2-choose > .group-drop {
+  top: auto !important;
+  bottom: calc(100% + 6px) !important;
+  left: 0 !important;
+  right: auto !important;
+  min-width: 220px;
+  z-index: 30;
+}
+.UI2 .ui2-later-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.UI2 .ui2-later-line > span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 12px;
+  font-weight: 700;
+}
+.UI2 .ui2-later-line .delay-row {
+  margin: 0 !important;
+}
+
+/* Quick chips (chat and the slim chat bar) */
+.UI2 .ui2-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.UI2 .ui2-chip {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--surface2, #232838);
+  color: var(--ink-muted, #c3c8d8);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.UI2 .ui2-hist-chips {
+  padding: 8px 12px 4px;
+}
+
+/* More sheet (page 2) */
+.UI2 .ui2-sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 10px 14px calc(16px + env(safe-area-inset-bottom));
+  border: 1px solid var(--line2);
+  border-radius: 22px 22px 0 0;
+  background: var(--surface, #1b1f2c);
+  color: var(--ink, #eef0f6);
+}
+.UI2 .ui2-sheet::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+.UI2 .ui2-sheet-grip {
+  width: 44px;
+  height: 5px;
+  margin: 0 auto 12px;
+  border-radius: 9px;
+  background: var(--line2, #3a4052);
+}
+.UI2 .ui2-sheet-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.UI2 .ui2-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3px;
+  min-height: 70px;
+  padding: 10px 14px;
+  border: 1px solid var(--line2);
+  border-radius: 16px;
+  background: var(--surface2, #232838);
+  color: inherit;
+  text-align: left;
+}
+.UI2 .ui2-tile b {
+  font-size: 15px;
+}
+.UI2 .ui2-tile small {
+  color: var(--ink-muted, #aab0c5);
+  font-size: 12px;
+}
+.UI2 .ui2-case .case-pick {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+}
+.UI2 .ui2-case .case-pick select {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.UI2 .ui2-sheet-extra {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+.UI2 .ui2-sheet-link {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Phone and tablet: one bottom bar, nothing else at the top (pages 1, 9) */
+@media (max-width: 899px) {
+  .UI2 .app > .brandbar {
+    display: none !important;
+  }
+  .UI2 .app > .foot > :not(#ui2Tabs) {
+    display: none !important;
+  }
+  .UI2 .app > .foot {
+    display: block !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 20;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom)) !important;
+    background: var(--bg, #11141c) !important;
+  }
+  .UI2 .ui2-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .UI2 .ui2-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 56px;
+    padding: 4px;
+    border: 1px solid var(--line2);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--ink-muted, #aab0c5);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .UI2 .ui2-tab span {
+    font-size: 16px;
+    line-height: 1;
+  }
+  .UI2 .ui2-tab[aria-current='true'] {
+    border-color: transparent;
+    background: #2f6fe4;
+    color: #fff;
+  }
+}
+/* Tablet: message beside the send list, status on one line (page 9) */
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 .ui2-status-row #live {
+    flex: none !important;
+    padding: 0 0 0 10px !important;
+    border: 0 !important;
+    border-left: 1px solid var(--line2) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 .ui2-status-row #live::before {
+    font-size: 12px;
+  }
+  .UI2 #main-workspace {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.4fr) minmax(250px, 1fr) !important;
+    align-items: start !important;
+    gap: 12px !important;
+  }
+  .UI2 #main-workspace > #card {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .UI2 #main-workspace > .side {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+}
+
+/* Computer: one top bar, today's message beside the send list, slim chat bar (page 7, V4 page 31) */
+@media (min-width: 900px) {
+  .UI2 .app > .brandbar {
+    gap: 10px !important;
+  }
+  .UI2 .app > .brandbar > :is(.seg, .fs-toggle, #desktopPreview) {
+    display: none !important;
+  }
+  .UI2 .app > .brandbar .brand .mark {
+    display: none !important;
+  }
+  .UI2 .app > .brandbar .bname {
+    font-size: 15px !important;
+  }
+  .UI2 .app > .brandbar .bname::before {
+    content: '♥ ';
+  }
+  .UI2 .app > .brandbar .bname small {
+    display: none !important;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection {
+    display: flex !important;
+    align-items: center;
+    gap: 7px;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin-left: 18px;
+    padding: 0 6px !important;
+    border: 0 !important;
+    background: transparent !important;
+    font-size: 0 !important;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f0aa28;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection[data-state='online']::before {
+    background: #3cdc96;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection[data-state='offline']::before {
+    background: #ff6b6b;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection::after {
+    content: 'Checking WhatsApp';
+    color: #f0aa28;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection[data-state='online']::after {
+    content: 'WhatsApp connected';
+    color: #3cdc96;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection[data-state='offline']::after {
+    content: 'Reconnect WhatsApp';
+    color: #ff8a8a;
+  }
+  .UI2 .app > .brandbar > #live {
+    flex: none !important;
+    margin-left: 14px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 .app > .brandbar > #live::before {
+    content: 'Auto OFF';
+    font-size: 12px;
+  }
+  .UI2 .app > .brandbar > #live[data-on='1']::before {
+    content: 'Auto ON';
+  }
+  .UI2 .app > .brandbar > #leftChip {
+    margin-left: auto !important;
+    min-height: 34px !important;
+    border-radius: 999px !important;
+    font-size: 12px !important;
+  }
+  .UI2 .app > .foot > #openDonors,
+  .UI2 .app > .foot > #navGroups,
+  .UI2 .app > .foot > #chatOpen,
+  .UI2 #ui2Tabs,
+  .UI2 .ui2-status-row,
+  .UI2 #showMsg,
+  .UI2 #card .thumb-dock,
+  .UI2 #card #previewBack,
+  .UI2 #main-workspace .talk-title,
+  .UI2 #main-workspace #log,
+  .UI2 #railPreview {
+    display: none !important;
+  }
+  .UI2 #main-workspace {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+  }
+  .UI2 #main-workspace > .side {
+    display: contents !important;
+  }
+  .UI2 #main-workspace > #card {
+    display: flex !important;
+    flex-direction: column;
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    gap: 10px;
+    padding: 14px !important;
+    border: 1px solid var(--line2) !important;
+    border-radius: 18px !important;
+    background: var(--surface) !important;
+  }
+  .UI2 #main-workspace .action-rail {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex !important;
+    flex-direction: column;
+    min-width: 0;
+    padding: 14px !important;
+    border: 1px solid var(--line2) !important;
+    border-radius: 18px !important;
+    background: var(--surface) !important;
+  }
+  .UI2 #main-workspace .action-rail .group-send {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .UI2 #main-workspace .rail-quick {
+    margin-top: auto !important;
+  }
+  .UI2 #main-workspace .talk {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 12px;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 8px 12px !important;
+    border-radius: 16px !important;
+  }
+  .UI2 #main-workspace .talk > #cmdForm {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0 !important;
+  }
+  .UI2 #main-workspace .talk > .ui2-desk-chips {
+    grid-column: 2;
+    grid-row: 2;
+    flex-wrap: nowrap;
+  }
+  .UI2 #main-workspace .talk > #ui2LastReply {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    overflow: hidden;
+    padding: 4px 6px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-muted, #c3c8d8);
+    font-size: 13px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .UI2 #card .tools {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    order: 3;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #card .tools .ctx {
+    display: none !important;
+  }
+  .UI2 #card::before {
+    content: "TODAY'S MESSAGE";
+    order: 0;
+    color: var(--ink-muted, #9aa1b8);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+  }
+  .UI2 #card .ui2-styles {
+    order: 1;
+  }
+  .UI2 #card .chat {
+    order: 2;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+  .UI2 #card .chat .message {
+    max-width: none !important;
+    padding: 14px !important;
+    border-radius: 16px !important;
+    background: #006451 !important;
+    color: #ecfff8 !important;
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+  .UI2 #card .tools :is(#edit, #fresh, #copy) {
+    min-height: 34px !important;
+  }
+  .UI2 #card .tools #edit {
+    background: #1ea672 !important;
+    color: #fff !important;
+  }
+  .UI2 #card .tools #edit::after {
+    content: ' E';
+  }
+  .UI2 #card .tools #fresh::after {
+    content: ' N';
+  }
+  .UI2 #card .tools #copy::after {
+    content: ' C';
+  }
+  .UI2 #card .tools :is(#edit, #fresh, #copy)::after {
+    margin-left: 4px;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+}
+/* Style choices: one scrolling row */
+.UI2 .ui2-styles {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.UI2 .ui2-styles button {
+  flex: none;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--surface2, #232838);
+  color: var(--ink-muted, #aab0c5);
+  font-size: 12px;
+  font-weight: 600;
+}
+.UI2 .ui2-styles button:first-child {
+  border-color: transparent;
+  background: #2f6fe4;
+  color: #fff;
+}
+@media (max-width: 899px) {
+  .UI2 #card .ui2-styles {
+    display: none;
+  }
+}
+/* Home fixes: bottom bar beats comfort.css; amount word always shown; top bar order and sizes */
+.UI2 .app > .foot > #ui2Tabs {
+  display: grid !important;
+}
+.UI2 #leftChip .lw {
+  display: inline !important;
+}
+.UI2 .group-send .gb-name {
+  flex-direction: row !important;
+}
+@media (max-width: 899px) {
+  .UI2 #card .tools {
+    display: none !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 .app > .brandbar > .brand {
+    order: 0 !important;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection {
+    order: 1 !important;
+  }
+  .UI2 .app > .brandbar > #live {
+    order: 2 !important;
+    justify-content: flex-start !important;
+    width: auto !important;
+  }
+  .UI2 .app > .brandbar > #leftChip {
+    order: 3 !important;
+  }
+  .UI2 .app > .brandbar > #donorNotesShortcut {
+    order: 4 !important;
+  }
+  .UI2 .app > .brandbar > .report-open {
+    order: 5 !important;
+  }
+  .UI2 .app > .brandbar > #mainNavMore {
+    order: 6 !important;
+  }
+  .UI2 .app > .brandbar > .sp {
+    display: none !important;
+  }
+  .UI2 .app > .brandbar > #whatsappConnection::after,
+  .UI2 .app > .brandbar > #whatsappConnection::before {
+    display: inline-block !important;
+  }
+  .UI2 .app > .brandbar > :is(#donorNotesShortcut, .report-open),
+  .UI2 .app > .brandbar > #mainNavMore > summary {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 34px !important;
+    padding: 0 14px !important;
+    border-radius: 999px !important;
+    font-size: 12px !important;
+  }
+  .UI2 .app > .brandbar > .report-open svg {
+    display: none !important;
+  }
+  .UI2 #card .chat {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #card .chat .message {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  .UI2 #card .tools {
+    justify-content: flex-start !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #main-workspace .action-rail {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+  }
+  .UI2 #main-workspace .rail-quick {
+    grid-template-columns: auto !important;
+    justify-content: start !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #main-workspace .rail-quick #railDonors {
+    min-width: 140px;
+  }
+}
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 #main-workspace > .side {
+    align-self: start !important;
+    justify-content: flex-start !important;
+    height: auto !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #main-workspace .rail-quick {
+    display: flex !important;
+    margin-top: 14px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  .UI2 #main-workspace .rail-quick #railDonors {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px !important;
+    padding: 0 18px !important;
+    border: 1px solid var(--line2) !important;
+    border-radius: 12px !important;
+    background: var(--surface2, #232838) !important;
+    color: var(--ink, #eef0f6) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+}
+.UI2 .ui2-later-line .delay-row:not([hidden]) {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.UI2 .ui2-later-line .delay-pill {
+  min-height: 40px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--surface2, #232838);
+  color: var(--ink, #eef0f6);
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 .ui2-later-line .delay-pill.is-pending {
+  border-color: #f0aa28;
+  color: #f0c46a;
+}
+
+/* ======================= Reader and editor (PDF pages 10-14) ======================= */
+.UI2 #messageFocus .ui2-reader-actions,
+.UI2 #messageFocus .focus-paper > :is(.focus-next-arrow, .focus-gen-icon),
+.UI2 #messageFocus .focus-rail > :is([data-mark], [data-emoji]),
+.UI2 #messageFocus .focus-workspace > :is(.group-send, .dm-send),
+.UI2 #messageFocus #focusText.ui2-under {
+  display: none !important;
+}
+.UI2 #messageFocus #focusState.sr-only {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  clip: auto !important;
+  overflow: hidden;
+  margin: 0 0 4px !important;
+  color: var(--ink-muted, #9aa1b8);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.UI2 #messageFocus .ui2-reader-dock {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 64px 1fr !important;
+  gap: 8px !important;
+  align-items: stretch;
+}
+.UI2 #messageFocus .ui2-reader-dock > :is(#focusCopy, #focusEdit, #focusBack),
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > summary {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 48px !important;
+  margin: 0 !important;
+  border-radius: 14px !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  list-style: none;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusCopy {
+  border: 0 !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusEdit {
+  border: 0 !important;
+  background: #1ea672 !important;
+  color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusBack,
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > summary {
+  border: 1px solid var(--line2) !important;
+  background: #263340 !important;
+  color: #dfe5ee !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more {
+  position: relative;
+  display: block !important;
+  min-width: 0;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > summary::-webkit-details-marker {
+  display: none;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 40;
+  display: grid;
+  gap: 6px;
+  min-width: 210px;
+  padding: 8px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface, #1b1f2c);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div > * {
+  width: 100% !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+}
+.UI2 #messageFocus .ui2-reader-hint {
+  margin: 6px 0 0;
+  color: var(--ink-muted, #8a91a6);
+  font-size: 12px;
+  text-align: center;
+}
+.UI2 #messageFocus .ui2-live {
+  min-height: 240px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #006451;
+  color: #ecfff8;
+  font-size: 15px;
+  line-height: 1.45;
+  outline: 2px solid rgba(255, 255, 255, 0.25);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.UI2 #messageFocus .ui2-float {
+  position: sticky;
+  top: 6px;
+  z-index: 30;
+  display: inline-flex;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #1b1f2c;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.UI2 #messageFocus .ui2-float[hidden] {
+  display: none;
+}
+.UI2 #messageFocus .ui2-float button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #eef0f6;
+  font-size: 14px;
+  font-weight: 800;
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus .focus-workspace {
+    display: block !important;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  .UI2 #messageFocus .ui2-reader-dock {
+    position: static !important;
+    grid-template-columns: repeat(4, minmax(90px, 140px)) !important;
+    justify-content: start !important;
+    max-width: 860px;
+    margin: 12px auto 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .UI2 #messageFocus .ui2-reader-hint {
+    max-width: 860px;
+    margin: 6px auto 0;
+    text-align: left;
+  }
+  .UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+    left: 0;
+    right: auto;
+  }
+  .UI2 #messageFocus .ui2-reader-dock > #focusEdit::after {
+    content: ' E';
+    margin-left: 4px;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+  .UI2 #messageFocus .ui2-reader-dock > #focusCopy::after {
+    content: ' C';
+    margin-left: 4px;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+}
+.UI2 #messageFocus .ui2-reader-dock > * {
+  grid-column: auto !important;
+  grid-row: 1 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusCopy {
+  order: 1 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusEdit {
+  order: 2 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more {
+  order: 3 !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusBack {
+  order: 4 !important;
+  flex-direction: row !important;
+  gap: 4px;
+}
+.UI2 #messageFocus .ui2-reader-back {
+  display: none !important;
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus .ui2-reader-back {
+    display: inline-flex !important;
+  }
+  .UI2 #messageFocus .focus-paper,
+  .UI2 #messageFocus #focusFormatted,
+  .UI2 #messageFocus .ui2-live {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  .UI2 #messageFocus #focusFormatted {
+    min-height: 320px;
+  }
+}
+.UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+  grid-template-columns: 1fr !important;
+  width: min(280px, calc(100vw - 32px));
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus > header {
+    position: static !important;
+    max-width: 860px;
+    margin: 0 auto 10px !important;
+  }
+  .UI2 #messageFocus .focus-paper,
+  .UI2 #messageFocus #focusFormatted {
+    height: auto !important;
+    max-height: calc(100vh - 260px) !important;
+    overflow: auto !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus .focus-paper {
+    display: block !important;
+  }
+  .UI2 #messageFocus > header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    height: auto !important;
+  }
+  .UI2 #messageFocus > header > * {
+    position: static !important;
+  }
+}
+
+/* ======================= Donors (PDF pages 15-25, V4 pages 21, 40) ======================= */
+/* Bottom bar: Back, DM ★ Important (7), Options; count from the ★ tab */
+.UI2 #donorSendImportant[data-ui2-count]:not([data-ui2-count=''])::after {
+  content: ' (' attr(data-ui2-count) ')' !important;
+}
+@media (max-width: 899px) {
+  .UI2 #donorSendImportant[data-ui2-count]:not([data-ui2-count=''])::after {
+    content: 'DM ★ Important (' attr(data-ui2-count) ')' !important;
+    font-size: 15px !important;
+  }
+  .UI2 #donorsPage .donor-msgs::before {
+    content: none !important;
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-msgs {
+    background-image: none !important;
+    background-color: var(--surface2, #232838) !important;
+    color: var(--ink, #eef0f6) !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 .donor-bottom > #donorMainBottom {
+    order: -2 !important;
+  }
+  .UI2 .donor-bottom > .ui2-options {
+    order: 99 !important;
+  }
+  .UI2 .donor-bottom > .ui2-options > .ui2-options-panel {
+    left: auto !important;
+    right: 0 !important;
+  }
+  .UI2 .donor-bottom > .ui2-options > summary::after {
+    content: none !important;
+  }
+}
+/* While DMs go out: ONE big amber Stop with the count, nothing else near it */
+.UI2 .donor-bottom[data-ui2-running] > :not(#donorToggle) {
+  display: none !important;
+}
+.UI2 .donor-bottom[data-ui2-running] > #donorToggle {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  max-width: 640px !important;
+  min-height: 52px !important;
+  margin: 0 auto !important;
+  border-radius: 14px !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+}
+.UI2 .donor-bottom[data-ui2-running] > #donorToggle::before {
+  content: '■';
+  margin-right: 10px;
+  font-size: 13px;
+}
+.UI2 .donor-bottom[data-ui2-running] > #donorToggle[data-ui2-sent]:not([data-ui2-sent=''])::after {
+  content: ' · ' attr(data-ui2-sent);
+  margin-left: 6px;
+}
+/* Tabs: one scrollable row of pills with the same words everywhere */
+.UI2 #donorsPage .donor-tabs {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  padding: 2px 0 !important;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  -webkit-tap-highlight-color: transparent !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  scroll-behavior: smooth !important;
+}
+.UI2 #donorsPage .donor-tabs::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+.UI2 #donorsPage .donor-tabs:focus,
+.UI2 #donorsPage .donor-tabs:focus-visible,
+.UI2 #donorsPage .donor-tabs:focus-within,
+.UI2 #donorsPage .donor-toolbar:focus,
+.UI2 #donorsPage .donor-toolbar:focus-visible,
+.UI2 #donorsPage .donor-toolbar:focus-within {
+  outline: none !important;
+  outline: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.UI2 #donorsPage .donor-tabs > button {
+  display: inline-flex !important;
+  flex: none !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  width: auto !important;
+  min-height: 40px !important;
+  padding: 0 16px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 999px !important;
+  background: var(--surface2, #232838) !important;
+  color: var(--ink-muted, #aab0c5) !important;
+  font-size: 14px !important;
+}
+.UI2 #donorsPage .donor-tabs > button[aria-selected='true'] {
+  border-color: transparent !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+}
+.UI2 #donorsPage .donor-tabs :is(.tab-name, .tab-word, .tab-count) {
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  line-height: 1 !important;
+}
+/* Header: "+ Add" menu (Add numbers first), Messages, search icon on a phone, no expand button */
+.UI2 #donorsPage :is(.donor-expand-btn, #donorExpand, .donor-head .donor-title > button) {
+  display: none !important;
+}
+.UI2 #donorsPage .ui2-add-menu {
+  position: relative;
+}
+.UI2 #donorsPage .ui2-add-menu > summary {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px !important;
+  min-height: 44px !important;
+  padding: 0 16px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(90deg, #2f6fe4, #7c4dff) !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  list-style: none;
+}
+.UI2 #donorsPage .ui2-add-menu > summary::after,
+.UI2 #donorsPage .ui2-add-menu > summary::-webkit-details-marker {
+  display: none !important;
+  content: none !important;
+}
+.UI2 #donorsPage .ui2-add-menu .compact-nav-panel {
+  right: 0 !important;
+  left: auto !important;
+  min-width: 220px;
+}
+.UI2 #donorsPage .ui2-add-menu .compact-nav-panel > button {
+  display: flex !important;
+  width: 100% !important;
+  min-height: 44px !important;
+  justify-content: flex-start !important;
+}
+.UI2 #donorsPage .ui2-donor-search {
+  display: none;
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .ui2-donor-search {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    min-height: 44px;
+    margin-left: auto;
+    border: 1px solid var(--line2);
+    border-radius: 12px;
+    background: var(--surface2, #232838);
+    color: var(--ink, #eef0f6);
+    font-size: 22px;
+  }
+  .UI2 #donorsPage .donor-shell:not([data-ui2-search]) .donor-search {
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-msgs {
+    min-height: 44px !important;
+    padding: 0 14px !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    width: auto !important;
+    min-width: 66px !important;
+    max-width: none !important;
+    white-space: nowrap !important;
+  }
+  .UI2 #donorsPage .donor-head .donor-count {
+    display: inline !important;
+    margin-left: 4px;
+    color: var(--ink-muted, #8a91a6);
+    font-size: 14px;
+  }
+  .UI2 #donorsPage .donor-head .donor-message-tablist {
+    flex: none !important;
+  }
+}
+/* Computer: header left, tabs then search, actions right beside the name, drawer on the right */
+@media (min-width: 900px) {
+  .UI2 #donorsPage .donor-head {
+    justify-content: flex-start !important;
+    gap: 10px !important;
+  }
+  .UI2 #donorsPage .donor-head .ui2-add-menu {
+    margin-left: auto;
+  }
+  .UI2 #donorsPage .donor-row {
+    grid-template-columns:
+      32px minmax(160px, 230px) 76px minmax(110px, max-content) minmax(0, 1fr)
+      40px !important;
+  }
+  .UI2 #donorsPage .donor-columns {
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-amount:placeholder-shown:not(:focus) {
+    visibility: hidden;
+  }
+  .UI2 #donorsPage .donor-row:hover > .donor-amount {
+    visibility: visible;
+  }
+  .UI2 #donorsPage .donor-row .donor-more[open] > :not(summary) {
+    position: fixed !important;
+    top: 90px !important;
+    right: max(16px, calc((100vw - 1240px) / 2)) !important;
+    left: auto !important;
+    bottom: auto !important;
+    z-index: 80 !important;
+    width: 340px !important;
+    max-height: calc(100vh - 200px) !important;
+    overflow: auto !important;
+    padding: 14px !important;
+    border: 1px solid var(--line2) !important;
+    border-radius: 16px !important;
+    background: var(--surface, #1b1f2c) !important;
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.5) !important;
+  }
+}
+/* DM messages page: one row Edit, Copy, ⋯, Back; 13px message */
+.UI2 #donorMessages .bank-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 64px 1fr !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+}
+.UI2 #donorMessages .bank-actions > :is(button, details) {
+  grid-column: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+.UI2 #donorMessages .bank-actions > :is(.bank-regenerate-progress, .ui2-big) {
+  display: none !important;
+}
+.UI2 #donorMessages .bank-actions > button.tool,
+.UI2 #donorMessages .bank-actions > .ui2-bank-more > summary,
+.UI2 #donorMessages .bank-actions > .ui2-bank-back {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px !important;
+  border-radius: 14px !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  list-style: none;
+}
+.UI2 #donorMessages .bank-actions > button.tool:nth-of-type(1) {
+  background: #1ea672 !important;
+  color: #fff !important;
+}
+.UI2
+  #donorMessages
+  .bank-actions
+  > button.tool:not(.ui2-bank-back)
+  + button.tool:not(.ui2-bank-back) {
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}
+.UI2 #donorMessages .bank-actions > .ui2-bank-more {
+  position: relative;
+  order: 3 !important;
+}
+.UI2 #donorMessages .bank-actions > .ui2-bank-back {
+  order: 4 !important;
+  border: 1px solid var(--line2) !important;
+  background: #263340 !important;
+  color: #dfe5ee !important;
+}
+.UI2 #donorMessages .ui2-bank-more > summary {
+  border: 1px solid var(--line2) !important;
+  background: #263340 !important;
+  color: #dfe5ee !important;
+  cursor: pointer;
+}
+.UI2 #donorMessages .ui2-bank-more > summary::-webkit-details-marker {
+  display: none;
+}
+.UI2 #donorMessages .ui2-bank-more > div {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 50;
+  display: grid;
+  gap: 6px;
+  width: min(260px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface, #1b1f2c);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+.UI2 #donorMessages .ui2-bank-more > div > button {
+  width: 100% !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+}
+.UI2 #donorMessages .ui2-bank-hint {
+  margin: 6px 0 0;
+  color: var(--ink-muted, #8a91a6);
+  font-size: 12px;
+  text-align: center;
+}
+.UI2 #donorMessages :is(.bank-next-arrow, .bank-gen-icon) {
+  display: none !important;
+}
+.UI2 #donorMessages .bank-workspace .message,
+.UI2 #donorMessages .bank-workspace [class*='bank-text'] {
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+/* DM speed dialog */
+.UI2 #donorBatchPicker {
+  position: fixed;
+}
+.UI2 #donorBatchPicker .ui2-x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 20px;
+}
+.UI2 #donorBatchPicker[data-ui2-speed-only] .bm-grid2,
+.UI2 #donorBatchPicker[data-ui2-speed-only] #batchAudience,
+.UI2 #donorBatchPicker .batch-gap-btn[data-gap='custom'] {
+  display: none !important;
+}
+.UI2 #donorBatchPicker .ui2-speed-row,
+.UI2 #donorBatchPicker .batch-gap-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 8px !important;
+}
+.UI2 #donorBatchPicker .batch-gap-row {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+.UI2 #donorBatchPicker :is(.ui2-speed-btn, .batch-gap-btn) {
+  min-height: 40px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 999px !important;
+  background: var(--surface2, #232838) !important;
+  color: var(--ink-muted, #aab0c5) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+.UI2 #donorBatchPicker :is(.ui2-speed-btn, .batch-gap-btn)[aria-pressed='true'] {
+  border-color: transparent !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+}
+.UI2 #donorBatchPicker .ui2-speed > label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink-muted, #9aa1b8);
+  font-size: 12px;
+  font-weight: 700;
+}
+.UI2 #donorBatchPicker .ui2-speed-sum {
+  margin: 10px 0 4px;
+  font-size: 13px;
+}
+.UI2 #donorBatchPicker .ui2-speed-more > summary {
+  margin: 6px 0;
+  color: #5b8cff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.UI2 #donorBatchPicker .ui2-speed-more > div {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+.UI2 #donorBatchPicker .ui2-custom-gap {
+  justify-self: start;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 12px;
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-head {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  .UI2 #donorsPage .donor-head > :is(.ui2-add-menu, .donor-message-tablist, .ui2-donor-search) {
+    position: relative !important;
+    inset: auto !important;
+    flex: none !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+  .UI2 #donorsPage .donor-head > .donor-title {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-head > .donor-message-tablist {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+@media (max-width: 359px) {
+  .UI2 #donorsPage .donor-head .donor-count {
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-head .ui2-add-menu > summary {
+    min-width: 0 !important;
+    padding: 0 12px !important;
+  }
+  .UI2 #donorSendImportant[data-ui2-count]:not([data-ui2-count=''])::after {
+    content: 'DM ★ (' attr(data-ui2-count) ')' !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 .donor-bottom > #donorMainBottom {
+    order: -2 !important;
+  }
+  .UI2 .donor-bottom > #donorSendImportant {
+    flex: 1 1 auto !important;
+  }
+}
+.UI2 #donorsPage .donor-bottom[data-ui2-running] {
+  display: flex !important;
+  grid-template-columns: none !important;
+}
+.UI2 #donorsPage .donor-bottom[data-ui2-running] > #donorToggle {
+  min-width: 100% !important;
+  white-space: nowrap !important;
+}
+
+/* ======================= Chat, Notes, Settings, Report, Shortcuts, WhatsApp, Group finder (pages 26-32) ======================= */
+/* Chat: a small reply bubble, chips above the box, no second Back at the bottom */
+.UI2 #hist .ui2-chat-return #histMain {
+  display: none !important;
+}
+.UI2 #hist .ui2-hist-chips {
+  flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+.UI2 #hist #histLog .e.bot {
+  max-width: 85%;
+  padding: 10px 12px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 14px !important;
+  background: var(--surface2, #1f2433) !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+/* Notes: header always visible; tools in one bar above the keyboard; Back at the bottom left */
+.UI2 .foundation-notes .notes-head,
+.UI2 .foundation-notes[data-mode='writing'] .notes-head {
+  position: static !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: auto !important;
+  min-height: 52px !important;
+  max-height: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: none !important;
+}
+.UI2 .foundation-notes .notes-headline {
+  display: block !important;
+  flex: 1 1 auto;
+}
+.UI2 .foundation-notes .notes-headline h1 {
+  margin: 0 !important;
+  font-size: 18px !important;
+}
+.UI2 .foundation-notes :is(#notesLock, #notesFullscreen) {
+  min-height: 36px !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--line2, #3a3a3a) !important;
+  border-radius: 10px !important;
+  background: #2c3040 !important;
+  color: #e8e8e8 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+.UI2 .foundation-notes .notes-edge {
+  display: none !important;
+}
+.UI2 .foundation-notes .notes-workspace {
+  display: flex !important;
+  flex-direction: column !important;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-paper-scroll {
+  order: 1;
+  flex: 1 1 auto;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-toolbar,
+.UI2 .foundation-notes[data-mode='writing'] .notes-workspace > .notes-toolbar {
+  order: 2;
+  position: static !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 4px !important;
+  width: auto !important;
+  max-height: none !important;
+  margin: 8px 0 0 !important;
+  padding: 6px !important;
+  overflow-x: auto !important;
+  border: 1px solid #36404c !important;
+  border-radius: 14px !important;
+  background: #24323c !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-toolbar button {
+  flex: 1 0 auto !important;
+  width: auto !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #e8edf2 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+.UI2 .foundation-notes .notes-toolbar .ui2-note-i {
+  font-style: italic;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-foot {
+  order: 3;
+}
+.UI2 .foundation-notes .notes-back-dock {
+  justify-content: flex-start !important;
+}
+.UI2 .foundation-notes .notes-back {
+  min-height: 48px !important;
+  padding: 0 18px !important;
+  border-radius: 12px !important;
+  background: #263340 !important;
+  color: #dfe5ee !important;
+}
+/* Settings */
+.UI2 #set .ui2-look {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--surface2, #232838);
+  color: var(--ink, #eef0f6);
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 #set .row:has(.ui2-look) button {
+  display: none !important;
+}
+.UI2 #set .row:has(.ui2-look) :is(.seg, [role='group']):not(:has(.ui2-look)) {
+  display: none !important;
+}
+.UI2 #set #setClose {
+  display: none !important;
+}
+.UI2 #set .row:has(#waOut) > :first-child > :is(b, strong):first-child {
+  display: none !important;
+}
+.UI2 #set .row:has(#waOut) small {
+  color: var(--ink, #eef0f6) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+.UI2 #set .row:has(a[href*='case-plan']) small {
+  display: none !important;
+}
+.UI2 #set #setCloseBottom.ui2-done {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 50px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 14px !important;
+  background: #263340 !important;
+  color: #e8edf2 !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+}
+/* Report: Right now visible, Auto cards as short rows */
+.UI2 .report-card .report-list {
+  flex: none !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+.UI2 .report-card {
+  overflow-y: auto !important;
+}
+.UI2 .auto-card :is(.auto-stats, .auto-line, .auto-edit) {
+  display: none !important;
+}
+.UI2 .auto-card .auto-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 10px;
+}
+.UI2 .auto-card .auto-head h4 {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0 !important;
+  cursor: pointer;
+}
+.UI2 .auto-card .ui2-auto-sub {
+  grid-column: 1;
+  grid-row: 2;
+  color: var(--ink-muted, #8a91a6);
+  font-size: 12px;
+}
+.UI2 .auto-card .auto-head .auto-switch {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+/* Keyboard shortcuts */
+.UI2 #keyboardDialog .ui2-keys-head {
+  margin: 8px 0 4px;
+  color: var(--ink-muted, #8a91a6);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.UI2 #keyboardDialog .ui2-keys-more > summary {
+  margin: 12px 0 6px;
+  color: #5b8cff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+/* WhatsApp: one line when connected */
+.UI2 #whatsappDialog .ui2-wa-line {
+  display: none;
+  margin: 8px 0 14px;
+  color: #3cdc96;
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 #whatsappDialog[data-ui2-ok] .ui2-wa-line {
+  display: block;
+}
+.UI2 #whatsappDialog[data-ui2-ok] .connect-state {
+  display: none !important;
+}
+.UI2 #whatsappDialog h2 {
+  font-size: 16px !important;
+}
+/* Group finder (/new/group-finder) */
+.UI2.ui2-gf .toolbar :is(#importOpen, #findGroups) {
+  display: none;
+}
+.UI2.ui2-gf header.top a.back {
+  display: none !important;
+}
+.UI2.ui2-gf .tabs {
+  display: flex !important;
+  gap: 8px !important;
+  overflow-x: auto;
+  border: 0 !important;
+}
+.UI2.ui2-gf .tabs > * {
+  flex: none !important;
+  min-height: 34px !important;
+  padding: 0 14px !important;
+  border: 1px solid #2f3a3e !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 4px;
+}
+.UI2.ui2-gf .tabs > [aria-current='page'],
+.UI2.ui2-gf .tabs > [aria-selected='true'],
+.UI2.ui2-gf .tabs > .active {
+  border-color: transparent !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}
+.UI2.ui2-gf {
+  padding-bottom: 90px !important;
+}
+.UI2.ui2-gf .ui2-gf-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: 56px 1fr 1fr;
+  gap: 8px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: #141b1d;
+  border-top: 1px solid #2a3437;
+}
+.UI2.ui2-gf .ui2-gf-bar > * {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  margin: 0 !important;
+  border: 1px solid #2f3a3e;
+  border-radius: 14px;
+  background: #22302f;
+  color: #e8f0ee;
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.UI2.ui2-gf .ui2-gf-bar > #findGroups {
+  border: 0;
+  background: linear-gradient(90deg, #2f6fe4, #7c4dff);
+  color: #fff;
+}
+.UI2.ui2-gf .ui2-gf-tip {
+  margin-top: 6px;
+  color: #9aa7a5;
+  font-size: 13px;
+}
+.UI2 .report-card .report-list {
+  position: static !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  grid-template-rows: none !important;
+  grid-auto-flow: row !important;
+  gap: 2px !important;
+  margin: 4px 0 10px !important;
+  padding: 0 4px !important;
+  inset: auto !important;
+  transform: none !important;
+  width: auto !important;
+}
+.UI2 .report-card .report-list > li {
+  position: static !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  min-height: 30px !important;
+  height: auto !important;
+}
+.UI2 .report-card .report-list::before {
+  content: 'RIGHT NOW';
+  color: var(--ink-muted, #8a91a6);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.UI2 .report-card h3 {
+  display: block !important;
+  margin: 6px 4px !important;
+  color: var(--ink-muted, #8a91a6) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.UI2 #set .thumb-dock {
+  display: block !important;
+}
+.UI2 #hist header #histClose {
+  display: inline-flex !important;
+}
+.UI2 #keyboardDialog .ui2-keys-head + dl {
+  margin-top: 0 !important;
+}
+.UI2 #set #theme {
+  display: none !important;
+}
+.UI2 #set .thumb-dock > #setCloseBottom {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100% !important;
+}
+.UI2 .report-card > :first-child {
+  order: -2 !important;
+}
+.UI2 .report-card .report-list {
+  order: -1 !important;
+}
+.UI2 .report-card .report-list > li {
+  flex-direction: row !important;
+  align-items: center !important;
+  padding: 4px 2px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.UI2 .report-card .report-list > li > * {
+  display: inline !important;
+}
+.UI2 .report-card .report-list :is(.rp-n, .rp-s) {
+  display: none !important;
+}
+.UI2 .report-card .report-list .rp-t {
+  color: var(--ink, #eef0f6) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+.UI2 .report-card .report-list .rp-v {
+  margin-left: auto !important;
+  font-size: 14px !important;
+}
+.UI2 .report-card > :not(:first-child):not(.report-list) {
+  order: 1 !important;
+}
+.UI2.ui2-gf .tabs {
+  flex-wrap: nowrap !important;
+  scrollbar-width: none;
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-row .donor-identity > .donor-top-chip {
+    flex: 0 0 40px !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+}
+.UI2 .ui2-sheet {
+  top: auto !important;
+  bottom: 0 !important;
+  margin: 0 auto !important;
+  border-bottom: 0 !important;
+  box-sizing: border-box !important;
+  max-height: 100dvh;
+  overflow: auto;
+  transform: none !important;
+  translate: none !important;
+}
+.UI2 #donorMessages .bank-actions {
+  position: relative !important;
+}
+.UI2 #donorMessages .bank-actions > .ui2-bank-more {
+  position: static !important;
+}
+.UI2 #donorMessages .ui2-bank-more > div {
+  left: auto !important;
+  right: 0 !important;
+  width: min(260px, 100%) !important;
+  box-sizing: border-box;
+}
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 .ui2-status-row {
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+  }
+  .UI2 .ui2-status-row > #whatsappConnection {
+    flex: 1 1 auto !important;
+    min-width: 150px !important;
+  }
+  .UI2 .ui2-status-row > :is(#leftChip, #live) {
+    flex: 0 0 auto !important;
+    min-width: max-content !important;
+  }
+}
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 .ui2-status-row > #live {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-row > .donor-dm {
+    min-height: 40px !important;
+    height: 40px !important;
+  }
+}
+
+/* ======================= Fixes from real use (live data) ======================= */
+/* Computer: no chat bar on the main screen; Chat is its own screen, opened from the top bar */
+.UI2 .ui2-top-chat {
+  display: none;
+}
+@media (min-width: 900px) {
+  .UI2 #main-workspace .talk {
+    display: none !important;
+  }
+  .UI2 #main-workspace {
+    grid-template-rows: minmax(0, 1fr) !important;
+  }
+  .UI2 .app > .brandbar > .ui2-top-chat {
+    display: inline-flex !important;
+    order: 4 !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 14px;
+    border: 1px solid var(--line2);
+    border-radius: 999px;
+    background: var(--surface2, #232838);
+    color: var(--ink, #eef0f6);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .UI2 .app > .brandbar > #donorNotesShortcut {
+    order: 5 !important;
+  }
+  .UI2 .app > .brandbar > .report-open {
+    order: 6 !important;
+  }
+  .UI2 .app > .brandbar > #mainNavMore {
+    order: 7 !important;
+  }
+}
+/* Options menu: a tidy, narrow list; nothing overlaps */
+.UI2 .ui2-options-panel {
+  width: max-content !important;
+  min-width: 200px !important;
+  max-width: 260px !important;
+  gap: 4px !important;
+  padding: 8px !important;
+}
+.UI2 .ui2-options-panel > * {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 38px !important;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  box-sizing: border-box !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+.UI2 .ui2-options-panel > label > input[type='checkbox'] {
+  position: static !important;
+  flex: 0 0 18px;
+  width: 18px !important;
+  height: 18px !important;
+  margin: 0 !important;
+}
+.UI2 .ui2-options-panel > label > span {
+  position: static !important;
+  display: inline !important;
+}
+/* Notes: small tool buttons, centred, all visible, no scrolling */
+.UI2 .foundation-notes .notes-workspace > .notes-toolbar,
+.UI2 .foundation-notes[data-mode='writing'] .notes-workspace > .notes-toolbar {
+  align-self: center !important;
+  width: fit-content !important;
+  max-width: calc(100% - 16px) !important;
+  margin: 8px auto !important;
+  overflow: visible !important;
+  flex: none !important;
+  justify-content: center !important;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-toolbar button {
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+  min-height: 40px !important;
+  padding: 0 12px !important;
+  border: 1px solid #36404c !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  white-space: nowrap !important;
+}
+.UI2 .foundation-notes .notes-workspace > .notes-paper-scroll {
+  min-height: 0 !important;
+}
+/* Donors on a computer: a centred, narrower list; short amount box; names easy to find */
+@media (min-width: 900px) {
+  .UI2 #donorsPage .donor-shell {
+    max-width: 1000px !important;
+    margin-inline: auto !important;
+  }
+  .UI2 #donorsPage .donor-row {
+    grid-template-columns: 32px minmax(180px, 1fr) 76px minmax(110px, max-content) 110px 40px !important;
+    column-gap: 12px !important;
+  }
+  .UI2 #donorsPage .donor-row > .donor-amount {
+    width: 110px !important;
+    max-width: 110px !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #donorsPage .donor-table {
+    max-width: 760px !important;
+    margin-inline: auto !important;
+  }
+  .UI2 #donorsPage .donor-row {
+    grid-template-columns: 32px 250px 76px minmax(110px, max-content) 96px 36px !important;
+    column-gap: 10px !important;
+    justify-content: center;
+  }
+  .UI2 #donorsPage .donor-row > .donor-amount {
+    width: 96px !important;
+    max-width: 96px !important;
+  }
+  .UI2 .ui2-options-panel > :is(#donorPace, #donorTest) {
+    background: var(--surface2, #232838) !important;
+    border: 1px solid var(--line2) !important;
+    color: var(--ink, #eef0f6) !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Phone: the header never wraps into the title; the hide / deselect chips get their own row below it */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-head {
+    flex-wrap: wrap !important;
+    row-gap: 8px !important;
+  }
+  .UI2 #donorsPage .donor-head > .donor-title {
+    flex: 1 1 auto !important;
+    min-width: max-content !important;
+    white-space: nowrap !important;
+  }
+  .UI2 #donorsPage .donor-head > .donor-title h1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 !important;
+    white-space: nowrap !important;
+  }
+  .UI2 #donorsPage .donor-head > #donorHideRow:not([hidden]) {
+    display: flex !important;
+    flex: 1 1 100% !important;
+    order: 10 !important;
+    flex-wrap: wrap;
+    gap: 8px !important;
+    margin: 0 !important;
+  }
+  .UI2 #donorsPage #donorHideRow .hide-chip {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-height: 36px !important;
+    padding: 0 14px !important;
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* ======================= Volunteers: same look as the other donor tabs ======================= */
+.UI2 #donorsPage[data-panel='volunteers'] .donor-head {
+  display: none !important;
+}
+.UI2 #donorVolunteers {
+  background: transparent !important;
+}
+.UI2 #donorVolunteers .vol-heading {
+  display: none !important; /* the selected tab already says Volunteers */
+}
+.UI2 #donorVolunteers .vol-workspace {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+  padding: 0 !important;
+}
+.UI2 #donorVolunteers .vol-people {
+  order: 1;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: #000 !important;
+  box-shadow: none !important;
+}
+.UI2 #donorVolunteers .vol-msg {
+  order: 2;
+  border: 1px solid var(--line2, #2b3045) !important;
+  border-radius: 16px !important;
+  background: var(--surface, #1b1f2c) !important;
+  box-shadow: none !important;
+}
+.UI2 #donorVolunteers .vol-people > :is(.vol-case-options, header, h3) {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--ink-muted, #8a91a6) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.UI2 #donorVolunteers .vol-list {
+  background: #000 !important;
+}
+.UI2 #donorVolunteers .vol-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto 40px !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 56px !important;
+  padding: 6px 12px !important;
+  border: 0 !important;
+  border-bottom: 1px solid #1c1f2b !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.UI2 #donorVolunteers .vol-row .vol-name {
+  overflow: hidden;
+  color: var(--ink, #eef0f6) !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.UI2 #donorVolunteers .vol-row :is(.vol-case, .vol-share) {
+  min-height: 40px !important;
+  min-width: 0 !important;
+  padding: 0 14px !important;
+  border: 1px solid #394060 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #9aa3c0 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+}
+.UI2 #donorVolunteers .vol-row .vol-manage {
+  width: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #8a91a6 !important;
+}
+.UI2 #donorVolunteers .donor-empty {
+  color: var(--ink-muted, #8a91a6) !important;
+}
+/* Bottom bar: Back (left), DM all (middle), + Add (right), like Donors */
+.UI2 #donorVolunteers .vol-foot {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 10px 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--line2, #2b3045) !important;
+  background: transparent !important;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-back {
+  order: 1;
+  flex: 0 0 auto;
+  min-height: 48px !important;
+  padding: 0 18px !important;
+  border: 1px solid var(--line2, #3a4052) !important;
+  border-radius: 14px !important;
+  background: #263340 !important;
+  color: #dfe5ee !important;
+}
+.UI2 #donorVolunteers .vol-foot > .send-donors {
+  order: 2;
+  flex: 1 1 auto;
+  max-width: 340px;
+  min-height: 48px !important;
+  border-radius: 14px !important;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-add-panel {
+  order: 3;
+  flex: 0 0 auto;
+  position: relative;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-add-panel > summary {
+  display: flex;
+  align-items: center;
+  min-height: 48px !important;
+  padding: 0 16px !important;
+  border: 1px solid var(--line2, #3a4052) !important;
+  border-radius: 14px !important;
+  background: var(--surface, #1b1f2c) !important;
+  color: var(--ink, #eef0f6) !important;
+  font-weight: 700;
+  list-style: none;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-stop {
+  order: 2;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-add-panel[open] > .vol-add {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 40;
+  width: min(300px, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface, #1b1f2c);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+@media (min-width: 900px) {
+  .UI2 #donorVolunteers .vol-workspace {
+    max-width: 760px;
+    margin-inline: auto !important;
+  }
+  .UI2 #donorVolunteers .vol-foot {
+    max-width: 760px;
+    margin-inline: auto !important;
+  }
+}
+.UI2 #donorVolunteers .vol-foot > .vol-back {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 92px !important;
+  max-width: none !important;
+  white-space: nowrap !important;
+  flex-direction: row !important;
+  justify-content: center;
+}
+.UI2 #donorVolunteers .vol-foot > .send-donors {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+.UI2 #donorVolunteers .vol-foot > .vol-add-panel {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.UI2 #donorVolunteers .vol-workspace {
+  align-content: start !important;
+}
+.UI2 #donorVolunteers .vol-people {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+.UI2 #donorVolunteers .vol-list {
+  min-height: 0 !important;
+  max-height: none !important;
+}
+.UI2 #donorVolunteers .vol-msg {
+  align-self: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+.UI2 #donorVolunteers .vol-msg textarea {
+  min-height: 96px !important;
+  height: 96px !important;
+}
+@media (max-width: 359px) {
+  .UI2 #donorVolunteers .vol-row {
+    grid-template-columns: 1fr 1fr 40px !important;
+    row-gap: 4px !important;
+    padding-block: 8px !important;
+  }
+  .UI2 #donorVolunteers .vol-row .vol-name {
+    grid-column: 1 / -1;
+  }
+  .UI2 #donorVolunteers .vol-row .vol-manage {
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .UI2 #donorVolunteers .vol-row :is(.vol-case, .vol-share) {
+    padding: 0 8px !important;
+  }
+}
+
+/* ======================= Mobile fixes (Auto row, Chat, Donors, DM messages) ======================= */
+@media (max-width: 899px) {
+  /* 1. Auto: label and switch centred across the whole row; the whole row is the tap target */
+  .UI2 #live {
+    justify-content: center !important;
+    gap: 14px !important;
+    cursor: pointer;
+  }
+  /* 2. Chat: no top bar; Back sits with the chips near the thumb */
+  .UI2 #hist > header {
+    display: none !important;
+  }
+  .UI2 #hist .ui2-chat-return {
+    display: flex !important;
+    justify-content: flex-start !important;
+    padding: 6px 12px 0 !important;
+  }
+  .UI2 #hist .ui2-chat-return #histMain {
+    display: inline-flex !important;
+    align-items: center;
+    min-height: 44px !important;
+    padding: 0 18px !important;
+    border: 1px solid var(--line2, #3a4052) !important;
+    border-radius: 14px !important;
+    background: #263340 !important;
+    color: #dfe5ee !important;
+    font-weight: 700 !important;
+  }
+  /* 3. Donors list: title, search, Msgs, + Add and the tabs move to the bottom, above the DM bar */
+  .UI2 #donorsPage .donor-shell > .donor-table-wrap,
+  .UI2 #donorsPage .donor-shell > #donorVolunteers {
+    order: 1 !important;
+  }
+  .UI2 #donorsPage .donor-shell > .donor-toolbar {
+    order: 2 !important;
+    margin-top: 8px !important;
+  }
+  .UI2 #donorsPage .donor-shell > .donor-head {
+    order: 3 !important;
+    border-bottom: 0 !important;
+    margin-top: 6px !important;
+  }
+  .UI2 #donorsPage .donor-shell > :is(.donor-progress, .dp-show, .batch-list, .donor-bottom) {
+    order: 4 !important;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel {
+    top: auto !important;
+    bottom: calc(100% + 8px) !important;
+  }
+  /* 4. DM messages: no top bar; message centred and shown whole; DM messages / Follow-up at the bottom */
+  .UI2
+    #donorsPage
+    .donor-shell:has(#donorMessages:not([hidden]))
+    > :is(.donor-head, .donor-toolbar) {
+    display: none !important;
+  }
+  .UI2 #donorMessages .bank-followup {
+    order: 9 !important;
+    margin-top: 8px !important;
+  }
+  .UI2 #donorMessages .bank-workspace,
+  .UI2 #donorMessages .bank-message,
+  .UI2 #donorMessages .bank-preview {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .UI2 #donorMessages .bank-workspace {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .UI2 #donorMessages .bank-message {
+    align-self: center !important;
+    width: 100% !important;
+    max-width: 440px !important;
+    margin-inline: auto !important;
+    background: transparent !important;
+  }
+  .UI2 #donorMessages .bank-preview {
+    margin-inline: auto !important;
+  }
+  .UI2 #donorMessages .bank-actions .bank-pagination {
+    display: none !important;
+  }
+  .UI2 #donorMessages .ui2-bank-nav {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0;
+  }
+  .UI2 #donorMessages .ui2-bank-nav > button {
+    min-height: 40px !important;
+    padding: 0 16px !important;
+    border: 1px solid #394060 !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    color: #c3c8d8 !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #donorMessages .bank-message {
+    display: block !important;
+    min-height: 0 !important;
+  }
+  .UI2 #donorMessages .bank-preview {
+    flex: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .UI2 #donorMessages .bank-workspace {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .UI2 #hist[open] {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .UI2 #hist > #histLog {
+    order: 1;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+  .UI2 #hist > .chat-return {
+    order: 2;
+  }
+  .UI2 #hist > .next-actions {
+    order: 3;
+  }
+  .UI2 #hist > .ui2-hist-chips {
+    order: 4;
+  }
+  .UI2 #hist > form {
+    order: 5;
+  }
+  .UI2 #hist .ui2-chat-return > .sp {
+    display: none !important;
+  }
+  .UI2 #hist .ui2-chat-return #histMain {
+    order: -1;
+    flex-direction: row !important;
+    gap: 6px;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #hist .ui2-chat-return {
+    justify-content: flex-start !important;
+  }
+  .UI2 #hist .ui2-chat-return #histMain {
+    width: auto !important;
+    min-width: 96px !important;
+    white-space: nowrap !important;
+    grid-auto-flow: column !important;
+    justify-content: center !important;
+  }
+}
+
+/* Final polish: no dead space above the reader on phones; DM messages page never overflows; taller desktop reader */
+@media (max-width: 899px) {
+  .UI2 #messageFocus .ui2-reader-top {
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .UI2 #messageFocus #focusState:empty {
+    display: none !important;
+  }
+}
+@media (max-width: 699px) {
+  .UI2 #donorMessages .ui2-bank-hint {
+    display: none !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #messageFocus .focus-paper,
+  .UI2 #messageFocus #focusFormatted {
+    max-height: calc(100vh - 200px) !important;
+  }
+}
+
+/* ======================= Smoothness ======================= */
+/* Long donor lists: rows off screen are skipped until scrolled to (much faster tab changes) */
+.UI2 #donorsPage .donor-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56px;
+}
+/* Taps answer at once: no double-tap zoom delay, no grey flash, a soft press */
+.UI2 :is(button, summary, [role='tab'], [role='button'], a, label, select) {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.UI2 :is(button, summary, [role='tab'], .ui2-tile, .ui2-chip):active {
+  transform: scale(0.97);
+  filter: brightness(1.12);
+}
+.UI2 :is(button, summary, [role='tab'], .ui2-tile, .ui2-chip) {
+  transition:
+    transform 0.08s ease,
+    filter 0.08s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Screens slide up softly instead of popping; lists fade in when the tab changes */
+  .UI2 dialog[open]:not(.ui2-sheet) {
+    animation: ui2-in 0.16s ease-out;
+  }
+  .UI2 .ui2-sheet[open] {
+    animation: ui2-up 0.2s ease-out;
+  }
+  .UI2 dialog[open]::backdrop {
+    animation: ui2-fade 0.16s ease-out;
+  }
+  .UI2 #messageFocus:not([hidden]),
+  .UI2 #donorsPage :is(#donorRows, #donorMessages:not([hidden]), #donorVolunteers:not([hidden])) {
+    animation: ui2-fade 0.14s ease-out;
+  }
+  .UI2 details[open] > :is(.ui2-options-panel, .compact-nav-panel, div):not(summary) {
+    animation: ui2-in 0.12s ease-out;
+  }
+}
+@keyframes ui2-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+@keyframes ui2-up {
+  from {
+    translate: 0 100%;
+  }
+}
+@keyframes ui2-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Phone: calmer main screen and donor screen */
+@media (max-width: 699px) {
+  /* Main: the message fills the free space, so the send buttons always sit right above the bottom bar */
+  .UI2 #main-workspace {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+  .UI2 #main-workspace > #card {
+    flex: 1 1 auto !important;
+    min-height: 120px !important;
+    overflow: auto !important;
+  }
+  .UI2 #main-workspace > .side {
+    flex: 0 0 auto !important;
+  }
+  /* Donors: the All tab already shows the count, so the title goes; tools line up on the right in one calm row */
+  .UI2 #donorsPage .donor-head > .donor-title {
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-head {
+    justify-content: flex-end !important;
+  }
+  .UI2 #donorsPage .donor-head > .ui2-donor-search {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+}
+
+/* ======================= Phone: every donor tab uses the same fixed slots =======================
+   list (fills the space) > tabs > search / Msgs / + Add > one reserved row for hide / deselect > bottom bar */
+@media (max-width: 899px) {
+  /* The hide / deselect row always keeps its row, empty or not, so nothing above it moves between tabs */
+  .UI2 #donorsPage .donor-head > #donorHideRow,
+  .UI2 #donorsPage .donor-head > #donorHideRow[hidden] {
+    display: flex !important;
+    flex: 1 1 100% !important;
+    order: 10 !important;
+    min-height: 36px !important;
+    margin: 0 !important;
+  }
+  .UI2 #donorsPage .donor-head > #donorHideRow[hidden] {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  /* Volunteers: its content and its Back / DM all / + Add bar join the same slots as every other tab */
+  .UI2 #donorsPage #donorVolunteers:not([hidden]) {
+    display: contents !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace {
+    order: 1 !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    align-content: start;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-progress {
+    order: 1 !important;
+    flex: 0 0 auto !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot {
+    order: 5 !important;
+    flex: 0 0 auto !important;
+    margin-top: 0 !important;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage #donorVolunteers > .vol-foot {
+    box-sizing: border-box !important;
+    height: 59px !important;
+    padding: 5px 0 !important;
+    border-top: 1px solid var(--line2, #2b3045) !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace {
+    margin-top: 6px !important;
+  }
+}
+@media (max-width: 899px) {
+  /* Back is the same square arrow at the far right on every donor tab */
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-back {
+    order: 3 !important;
+    flex: 0 0 50px !important;
+    width: 50px !important;
+    min-width: 50px !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-back::before {
+    content: '\2190';
+    font-size: 22px;
+    line-height: 1;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .send-donors {
+    order: 1 !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-add-panel {
+    order: 2 !important;
+  }
+}
+
+/* ======================= Icons and clearer main screen ======================= */
+/* Send rows: a round icon in front of each group, and a real send arrow */
+.UI2 .group-send .gb-name::before {
+  content: '';
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 17px;
+}
+.UI2 .group-send .test-row .gb-name::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3'/%3E%3C/svg%3E");
+}
+.UI2 .group-send .group-main-btn .gb-name::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.4A4 4 0 0 1 19 10c0 5.6-7 10-7 10z'/%3E%3C/svg%3E");
+}
+.UI2 .group-send .group-free-btn .gb-name::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3'/%3E%3Cpath d='M3 20a6 6 0 0 1 12 0M16 5a3 3 0 0 1 0 6M21 20a5 5 0 0 0-4-4.9'/%3E%3C/svg%3E");
+}
+.UI2 .group-send .group-all-btn .gb-name::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12'/%3E%3C/svg%3E");
+}
+.UI2 .group-send .gb-go {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  font-size: 0 !important;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 3L3 10.5l7 3 3 7z'/%3E%3Cpath d='M21 3L10 13.5'/%3E%3C/svg%3E")
+    center / 22px no-repeat;
+}
+/* Later and Choose group: icons instead of glyphs */
+.UI2 .ui2-group-more :is(.ui2-later, .ui2-choose-btn) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.UI2 .ui2-later::before,
+.UI2 .ui2-choose-btn::after {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px;
+}
+.UI2 .ui2-later::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aab0c5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E");
+}
+.UI2 .ui2-choose-btn::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aab0c5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+/* Amount: a pencil icon that says "tap to change" */
+.UI2 #leftChip::after,
+.UI2 #leftChip[data-ui2-left='1']::after {
+  content: '' !important;
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin-left: 8px;
+  vertical-align: -2px;
+  opacity: 0.9;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4L19 9l-4-4L4 16z'/%3E%3C/svg%3E")
+    center / 15px no-repeat;
+}
+/* Bottom bar icons */
+.UI2 .ui2-tab span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Regenerate / Next under the group message (main screen on phones and tablets, and the reader) */
+.UI2 .ui2-gnav {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 2px;
+}
+.UI2 .ui2-gbtn {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 190px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #394060;
+  border-radius: 999px;
+  background: transparent;
+  color: #c3c8d8;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.UI2 .ui2-gnext {
+  border-color: #2f6fe4;
+  color: #9db8ff;
+}
+@media (min-width: 900px) {
+  .UI2 #ui2GnavMain {
+    display: none !important;
+  }
+}
+/* ======================= Donors: one fixed bottom bar on every tab (phone) ======================= */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-bottom:not([data-ui2-running]) {
+    grid-template-columns: minmax(0, 1fr) 56px !important;
+  }
+  .UI2 #donorsPage .donor-bottom > :is(#donorSendImportant, #donorSendAll) {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+  .UI2 #donorsPage .donor-bottom > #donorMainBottom {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    width: 56px !important;
+    min-width: 56px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-back {
+    flex: 0 0 56px !important;
+    width: 56px !important;
+    min-width: 56px !important;
+  }
+}
+
+.UI2 .group-send .gb-name {
+  align-items: center !important;
+}
+.UI2 .group-send .gb-name > .last-sent {
+  align-self: center;
+}
+.UI2 #ui2GnavMain {
+  margin: 8px 0 !important;
+}
+@media (max-width: 899px) {
+  .UI2 #main-workspace > #card {
+    flex: 0 1 auto !important;
+  }
+  .UI2 #main-workspace > #ui2GnavMain {
+    flex: 0 0 auto !important;
+  }
+}
+@media (min-width: 700px) and (max-width: 899px) {
+  .UI2 #main-workspace > #card {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+  .UI2 #main-workspace > #ui2GnavMain {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    align-self: start;
+  }
+  .UI2 #main-workspace > .side {
+    grid-row: 1 / span 2 !important;
+  }
+}
+
+/* ======================= Msgs in the bottom bar (phone) ======================= */
+.UI2 .ui2-msgs-bottom {
+  display: none;
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-head .donor-message-tablist {
+    display: none !important;
+  }
+  .UI2 #donorsPage .ui2-msgs-bottom {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-sizing: border-box;
+    min-height: 46px;
+    padding: 0 12px;
+    border: 1px solid var(--line2, #3a4052);
+    border-radius: 14px;
+    background: var(--surface, #1b1f2c);
+    color: var(--ink, #eef0f6);
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .UI2 #donorsPage .donor-bottom:not([data-ui2-running]) {
+    grid-template-columns: 84px minmax(0, 1fr) 56px !important;
+  }
+  .UI2 #donorsPage .donor-bottom > .ui2-msgs-bottom {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+  .UI2 #donorsPage .donor-bottom > :is(#donorSendImportant, #donorSendAll) {
+    grid-column: 2 !important;
+  }
+  .UI2 #donorsPage .donor-bottom > #donorMainBottom {
+    grid-column: 3 !important;
+  }
+  .UI2 #donorsPage .donor-bottom[data-ui2-running] > .ui2-msgs-bottom {
+    display: none !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .ui2-msgs-bottom {
+    order: 0;
+    flex: 0 0 auto;
+    min-width: 74px;
+    height: 100%;
+  }
+  .UI2 #donorsPage .donor-head {
+    justify-content: space-between !important;
+  }
+}
+@media (max-width: 359px) {
+  .UI2 #donorsPage .ui2-msgs-bottom > span {
+    display: none;
+  }
+  .UI2 #donorsPage .donor-bottom:not([data-ui2-running]) {
+    grid-template-columns: 48px minmax(0, 1fr) 56px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .ui2-msgs-bottom {
+    min-width: 48px;
+    padding: 0;
+  }
+}
+@media (max-width: 899px) {
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .ui2-msgs-bottom {
+    flex: 0 0 84px !important;
+    width: 84px !important;
+    min-width: 84px !important;
+    max-width: 84px !important;
+    height: 100% !important;
+    margin: 0 !important;
+    order: 0 !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .send-donors {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-add-panel {
+    flex: 0 0 auto !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot {
+    gap: 6px !important;
+  }
+}
+@media (max-width: 359px) {
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .ui2-msgs-bottom {
+    flex-basis: 48px !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .send-donors {
+    font-size: 12px !important;
+    padding: 0 6px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-add-panel > summary {
+    padding: 0 10px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-back {
+    flex-basis: 48px !important;
+    width: 48px !important;
+    min-width: 48px !important;
+  }
+}
+
+/* Report: the settings in one tappable line under each Auto (opens the same Edit sheet), so Edit is easy to find. */
+.UI2 .auto-card .auto-set {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  margin: 0 !important;
+  padding: 2px 4px 0 !important;
+  overflow: hidden;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--ink-muted, #8a91a6) !important;
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.UI2 .auto-card .auto-set:empty {
+  display: none;
+}
+
+/* ======================= Phone: Donors, one control row =======================
+   list (fills the space) > tabs + search icon + "⋯" > bottom bar.
+   + Add, Add numbers, Bulk message and the Important chips (hide contacted, deselect all) live inside "⋯";
+   the search field opens over the tabs, so nothing moves and the list is never pushed. */
+@media (max-width: 899px) {
+  .UI2 #donorsPage .donor-shell > .donor-head {
+    display: none !important;
+  }
+  .UI2 #donorsPage .donor-shell > .donor-toolbar {
+    position: relative;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    border: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  .UI2 #donorsPage .donor-toolbar > .donor-tabs {
+    flex: 1 1 0 !important;
+    order: 1 !important;
+    width: auto !important;
+    min-width: 0 !important;
+    border: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  .UI2 #donorsPage .donor-toolbar > .ui2-donor-search {
+    order: 2 !important;
+    flex: 0 0 48px !important;
+    width: 48px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+  }
+  .UI2 #donorsPage .donor-toolbar > .ui2-add-menu {
+    order: 3 !important;
+    flex: 0 0 48px;
+  }
+  .UI2 #donorsPage .donor-toolbar > .ui2-add-menu > summary {
+    min-width: 48px !important;
+    width: 48px;
+    padding: 0 !important;
+    border: 1px solid var(--line2) !important;
+    background: var(--surface2, #232838) !important;
+    color: var(--ink, #eef0f6) !important;
+    font-size: 24px !important;
+    line-height: 1;
+  }
+  .UI2 #donorsPage .donor-toolbar > .ui2-add-menu .compact-nav-panel {
+    top: auto !important;
+    bottom: calc(100% + 8px) !important;
+    right: 0 !important;
+    left: auto !important;
+    width: min(260px, calc(100vw - 24px));
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel > .hide-row {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel > .hide-row[hidden] {
+    display: none !important;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel :is(.hide-chip, button):not([hidden]) {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100% !important;
+    min-height: 44px !important;
+    padding: 0 12px !important;
+    border-radius: 10px;
+    font-size: 14px !important;
+    text-align: left;
+    white-space: normal;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel button[hidden] {
+    display: none !important;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel #donorHideRow:not([hidden]) {
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0 !important;
+    width: 100%;
+  }
+  .UI2 #donorsPage .ui2-add-menu .compact-nav-panel #donorHideRow .hide-chip:not([hidden]) {
+    min-height: 44px !important;
+    height: auto !important;
+    font-size: 14px !important;
+  }
+  /* A small dot on "⋯" while contacted donors are hidden on the Important list. */
+  .UI2
+    #donorsPage
+    .ui2-add-menu:has(#donorHideRow:not([hidden]) #donorHideSent:not([hidden]))
+    > summary::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f5b942;
+  }
+  /* The search button shows a clear magnifier, and a × while the field is open. */
+  .UI2 #donorsPage .donor-toolbar > .ui2-donor-search {
+    font-size: 0 !important;
+  }
+  .UI2 #donorsPage .donor-toolbar > .ui2-donor-search::before {
+    content: '';
+    width: 22px;
+    height: 22px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+  }
+  /* Search: opens over the tabs (left of the × and "⋯"), then closes again. */
+  .UI2 #donorsPage .donor-shell[data-ui2-search] .donor-toolbar > #donorSearch,
+  .UI2 #donorsPage .donor-toolbar > #donorSearch:not(:placeholder-shown) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 108px;
+    z-index: 6;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 14px !important;
+    border: 1px solid var(--line2) !important;
+    border-radius: 12px !important;
+    background: var(--surface, #1b1f2c) !important;
+    color: var(--ink, #eef0f6) !important;
+    font-size: 16px !important;
+  }
+  .UI2 #donorsPage .donor-shell[data-ui2-search] .ui2-donor-search,
+  .UI2 #donorsPage .donor-toolbar > #donorSearch:not(:placeholder-shown) ~ .ui2-donor-search {
+    position: relative;
+    z-index: 7;
+    font-size: 0 !important;
+  }
+  .UI2 #donorsPage .donor-shell[data-ui2-search] .donor-toolbar > .ui2-donor-search::before,
+  .UI2
+    #donorsPage
+    .donor-toolbar
+    > #donorSearch:not(:placeholder-shown)
+    ~ .ui2-donor-search::before {
+    content: '×';
+    width: auto;
+    height: auto;
+    background: none;
+    -webkit-mask: none;
+    mask: none;
+    font-size: 28px;
+    line-height: 1;
+  }
+  /* Every tab ends at exactly the same line, and the Volunteers area fills the screen like the donor list. */
+  .UI2 #donorsPage .donor-shell {
+    padding-bottom: 5px !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace {
+    max-height: none !important;
+  }
+  /* Volunteers has its own dock and its own + Add: the search and ⋯ buttons step aside and the tabs use the full width. */
+  .UI2 #donorsPage[data-panel='volunteers'] .donor-toolbar > :is(.ui2-donor-search, .ui2-add-menu) {
+    display: none;
+  }
+}
+
+/* ======================= Phone: Msgs, the message gets the free height =======================
+   heading > message (fills everything left; scrolls only if it is really longer) > Regenerate / Next >
+   Edit, Copy, ⋯, Back > DM messages / Follow-up. All the buttons sit together at the bottom, in thumb reach. */
+@media (max-width: 899px) {
+  .UI2 #donorMessages .bank-workspace {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+  }
+  .UI2 #donorMessages .bank-workspace > .bank-message {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column;
+    align-self: stretch !important;
+    min-height: 0 !important;
+    max-width: 440px !important;
+    overflow-y: auto !important;
+  }
+  .UI2 #donorMessages .bank-workspace > .bank-message > .bank-preview {
+    flex: 0 0 auto !important;
+    margin-block: auto !important;
+    overflow: visible !important;
+  }
+  .UI2 #donorMessages .bank-workspace > .ui2-bank-nav {
+    flex: 0 0 auto;
+  }
+  .UI2 #donorMessages .bank-workspace > .bank-actions {
+    flex: 0 0 auto !important;
+    height: 48px !important;
+    min-height: 0 !important;
+    grid-template-rows: 48px !important;
+    grid-auto-rows: 0 !important;
+  }
+}
+
+/* Computer: the Volunteers people list and message sit one above the other, never on top of each other,
+   and the people list scrolls inside its own box when there are many. */
+@media (min-width: 900px) {
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace {
+    display: flex !important;
+    flex-direction: column;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow-y: auto;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace > .vol-people {
+    flex: 0 1 auto;
+    width: 100%;
+    max-height: min(500px, 55vh) !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace > .vol-msg {
+    flex: 0 0 auto;
+  }
+}
+
+/* ======================= Computer: every option in one bottom bar =======================
+   Message, Donors, Chat, Notes, Report, Settings, More: an icon and a word each, big to hit, the page you are on lit.
+   The top bar keeps only the status (WhatsApp, Auto, amount left), so nothing is on the screen twice. */
+@media (min-width: 900px) {
+  .UI2 .app > .foot {
+    display: block !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 20;
+    padding: 10px 0 12px !important;
+    border-top: 1px solid var(--line2);
+    background: var(--bg, #11141c) !important;
+  }
+  .UI2 .app > .foot > :not(#ui2Tabs):not(.sr-only) {
+    display: none !important;
+  }
+  .UI2 .app > .foot > #ui2Tabs {
+    display: flex !important;
+    justify-content: center;
+    gap: 10px;
+  }
+  .UI2 .ui2-tab {
+    display: flex;
+    flex: 0 1 150px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 60px;
+    padding: 6px 10px;
+    border: 1px solid var(--line2);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--ink-muted, #aab0c5);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .UI2 .ui2-tab:hover {
+    background: var(--surface2, #232838);
+    color: var(--ink, #eef0f6);
+  }
+  .UI2 .ui2-tab span {
+    display: grid;
+    place-items: center;
+    line-height: 1;
+  }
+  .UI2 .ui2-tab[aria-current='true'] {
+    border-color: transparent;
+    background: #2f6fe4;
+    color: #fff;
+  }
+  .UI2 .app > .brandbar > :is(#ui2TopChat, #donorNotesShortcut, .report-open, #mainNavMore) {
+    display: none !important;
+  }
+  .UI2 #main-workspace .rail-quick {
+    display: none !important;
+  }
+  .UI2 .ui2-tile[data-dup] {
+    display: none;
+  }
+}
+/* Phone and tablet keep four big buttons; Notes, Report and Settings stay inside More. */
+@media (max-width: 899px) {
+  .UI2 .ui2-tab:is([data-tab='notes'], [data-tab='report'], [data-tab='settings']) {
+    display: none;
+  }
+}
+/* The page you are on is lit blue in the bottom bar (the global button style used to hide this). */
+.UI2 .ui2-tab[aria-current='true'] {
+  border-color: transparent !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}
+
+/* Computer: the Donors header buttons keep the same place on every tab.
+   Messages stays right after the title; the Important chips (hide contacted, deselect all) come after it. */
+@media (min-width: 900px) {
+  .UI2 #donorsPage .donor-head > .donor-title {
+    order: 0 !important;
+  }
+  .UI2 #donorsPage .donor-head > .donor-message-tablist {
+    order: 1 !important;
+    margin-left: 0 !important;
+  }
+  .UI2 #donorsPage .donor-head > #donorHideRow {
+    order: 2 !important;
+    margin: 0 0 0 8px !important;
+  }
+  .UI2 #donorsPage .donor-head > .ui2-add-menu {
+    order: 9 !important;
+    margin-left: auto !important;
+  }
+}
+
+/* Computer: Volunteers keeps the same header band as the other tabs (donor-only buttons keep their space, unused). */
+@media (min-width: 900px) {
+  .UI2 #donorsPage[data-panel='volunteers'] .donor-shell > .donor-head {
+    display: flex !important;
+  }
+  .UI2 #donorsPage[data-panel='volunteers'] .donor-head > :is(#donorHideRow, .ui2-donor-search) {
+    visibility: hidden;
+  }
+}
+
+/* Volunteers belongs to the donor directory: preserve its header, canvas and action theme. */
+.UI2 #donorsPage #donorVolunteers .vol-foot > .vol-back {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+.UI2 #donorsPage #donorVolunteers .vol-foot > .send-donors {
+  background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
+  border: 0 !important;
+  box-shadow: 0 6px 18px #4f46e555 !important;
+  flex: 0 1 auto;
+  width: auto !important;
+  padding-inline: 18px !important;
+}
+.UI2 #donorsPage #donorVolunteers .vol-row {
+  border-bottom-color: #161616 !important;
+}
+@media (min-width: 900px) {
+  .UI2 #donorsPage[data-panel='volunteers'] .donor-head {
+    display: flex !important;
+  }
+  .UI2 #donorsPage #donorVolunteers:not([hidden]) {
+    display: contents !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace {
+    flex: 1 1 0 !important;
+    width: min(760px, 100%) !important;
+    max-width: 100% !important;
+    margin: 24px auto 0 !important;
+    gap: 16px !important;
+    align-items: stretch !important;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-workspace > .vol-msg {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box;
+  }
+  .UI2 #donorsPage #donorVolunteers > .vol-foot {
+    flex: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 8px 0 !important;
+    gap: 10px !important;
+  }
+}
+
+/* Report: a screen-sized summary, with settings opened only when requested. */
+.UI2 dialog.report-dialog .report-card {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  width: min(640px, calc(100vw - 20px)) !important;
+  padding: 8px 12px 12px !important;
+  box-sizing: border-box;
+  overflow: visible !important;
+}
+.UI2 .report-card .rp-head {
+  min-height: 44px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.UI2 .report-card .report-list {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 4px 16px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  white-space: normal !important;
+}
+.UI2 .report-card .report-list::before {
+  grid-column: 1 / -1;
+}
+.UI2 .report-card .report-list > li {
+  min-height: 28px !important;
+  padding: 2px !important;
+  gap: 8px;
+}
+.UI2 .report-card #reportToday {
+  display: none !important;
+}
+.UI2 .report-card .auto-controls {
+  margin: 0 !important;
+}
+.UI2 .report-card .auto-controls h3 {
+  margin: 2px 0 6px !important;
+}
+.UI2 .report-card #autoCards {
+  display: grid;
+  gap: 6px;
+}
+.UI2 .report-card .auto-card {
+  display: block !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 6px 10px !important;
+}
+.UI2 .report-card .auto-card .auto-head {
+  min-height: 44px;
+}
+.UI2 .report-card .auto-card .auto-head h4 {
+  font-size: 14px !important;
+  line-height: 1.3;
+}
+.UI2 .report-card .auto-card .ui2-auto-sub {
+  font-size: 12px;
+}
+.UI2 .report-card .auto-card .auto-switch {
+  margin: 0 !important;
+  padding: 0 10px !important;
+  min-height: 44px !important;
+  min-width: 64px !important;
+  font-size: 13px !important;
+}
+.UI2 .report-card .auto-card :is(.auto-set, .auto-line, .auto-edit),
+.UI2 .report-card :is(.auto-note, .auto-msg):empty {
+  display: none !important;
+}
+.UI2 .report-card .auto-note {
+  margin: 4px 0 0 !important;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.UI2 .report-card #autoStopAll {
+  margin: 0 !important;
+  min-height: 44px !important;
+}
+.UI2 .report-card:has(.auto-form:not([hidden])) {
+  overflow-y: auto !important;
+}
+.UI2 .report-card:has(.auto-form:not([hidden])) .report-list,
+.UI2 .report-card:has(.auto-form:not([hidden])) .auto-card:not(:has(.auto-form:not([hidden]))) {
+  display: none !important;
+}
+@media (min-width: 600px) {
+  .UI2 .report-card #autoCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .UI2 .report-card:has(.auto-form:not([hidden])) #autoCards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Five Auto summaries still fit the small-phone Report. */
+.UI2 .report-card .auto-card .auto-head {
+  row-gap: 0 !important;
+}
+@media (min-width: 600px) and (max-height: 440px) {
+  .UI2 .report-card #autoCards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .UI2 .report-card:has(.auto-form:not([hidden])) #autoCards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Desktop DM controls only. The phone controls retain their existing placement. */
+@media (min-width: 900px) {
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-bank-nav,
+  .UI2 #donorsPage#donorsPage #donorMessages [data-bank-save-id],
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-copy {
+    display: none !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-actions > .ui2-desktop-msg-control {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    border: 1px solid var(--line2);
+    color: var(--ink);
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-regenerate {
+    order: 1 !important;
+    background: var(--surface2) !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-next {
+    order: 2 !important;
+    background: #2f6fe4 !important;
+    color: #fff !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-preview {
+    position: relative;
+    padding-top: 44px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-edit {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    z-index: 3;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-detail .ui2-desktop-msg-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    min-width: 34px !important;
+    padding: 6px !important;
+    margin: 0;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: var(--ink) !important;
+    box-shadow: none !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-preview .ui2-desktop-edit {
+    color: var(--msgink, #ecfff8) !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-copy {
+    flex: none;
+    align-self: center;
+    margin-block: 4px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-editing textarea {
+    padding-top: 44px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-detail .ui2-desktop-msg-control:hover {
+    background: #ffffff15 !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-detail .ui2-desktop-msg-control:focus-visible {
+    outline: 2px solid #9db8ff;
+    outline-offset: 2px;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-desktop-msg-control[hidden] {
+    display: none !important;
+  }
+}
+
+/* Desktop DM reading: spend the width and height on the complete message, not empty rails. */
+@media (min-width: 900px) {
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-followup {
+    flex: none !important;
+    margin: 0 !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-subtabs {
+    display: flex !important;
+    justify-content: center;
+    gap: 8px;
+    width: auto !important;
+    margin: 0 auto 4px !important;
+    padding: 0 !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-subtabs > button {
+    flex: none !important;
+    width: auto !important;
+    min-width: 112px !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 0 14px !important;
+    font-size: 12px !important;
+    border-radius: 10px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-heading {
+    min-height: 34px !important;
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-workspace {
+    width: min(640px, 100%) !important;
+    max-width: none !important;
+    max-height: none !important;
+    gap: 8px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-detail {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 10px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-detail .bank-preview {
+    flex: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 38px 14px 12px !important;
+    box-sizing: border-box;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-line.blank {
+    height: 8px !important;
+    min-height: 8px !important;
+    line-height: 8px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .ui2-bank-hint {
+    display: none !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-preview .bank-line {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 #donorsPage#donorsPage[data-panel='messages'] .donor-shell {
+    padding-block: 8px !important;
+    gap: 4px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages {
+    gap: 4px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-write-case {
+    min-height: 32px !important;
+    height: 32px !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-actions {
+    padding: 6px !important;
+    margin-top: 0 !important;
+  }
+  .UI2 #donorsPage#donorsPage #donorMessages .bank-detail {
+    padding: 6px !important;
+  }
+}
+
+/* Neutralize bottom blur glows and colored box shadows on buttons and bottom nav items */
+:is(
+  button,
+  .send-row,
+  .grp-card,
+  .gb-card,
+  .group-send button,
+  .send-donors,
+  .send-important,
+  .ui2-gbtn,
+  .ui2-tab,
+  .nav-item,
+  .main-nav button,
+  .autosw,
+  #live,
+  .prim,
+  .main,
+  .primary,
+  .go,
+  #batchStart
+) {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* App Consistency: Universal removal of all blur glows and box shadows */
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+/* Force zero box-shadow on bottom nav foot and tabs */
+.UI2 .app > .foot,
+.UI2 .ui2-tabs,
+.UI2 .ui2-tab,
+.UI2 .ui2-tab[aria-current='true'] {
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  background-image: none !important;
+}

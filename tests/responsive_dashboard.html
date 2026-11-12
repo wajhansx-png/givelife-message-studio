@@ -30,6 +30,7 @@
   <body>
     <header>
       <h1>Responsive workbench</h1>
+      <label>Version <select id="version"><option value="/">Normal</option><option value="/new/">New</option></select></label>
       <label>Screen <select id="route"></select></label>
       <label>Width <input id="w" type="range" min="260" max="1440" step="1" value="390" /> <b id="wv">390</b>px</label>
       <span id="presets"></span>
@@ -62,14 +63,16 @@
           const f = $('f' + k), s = $('s' + k);
           f.style.width = w + 'px'; f.style.height = h / scale + 'px'; f.style.transform = `scale(${scale})`;
           s.style.width = w * scale + 'px'; s.style.height = h + 'px';
-          const url = '/#/' + $('route').value;
-          if (reload || !f.dataset.src) { f.dataset.src = url; f.src = '/?' + Date.now() + url; }
+          const url = window.__sweepBase + '#/' + $('route').value;
+          if (reload || !f.dataset.src) { f.dataset.src = url; f.src = window.__sweepBase + '?' + Date.now() + '#/' + $('route').value; }
         }
       }
       $('w').oninput = () => draw(); $('route').onchange = () => draw(true); $('reload').onclick = () => draw(true);
+      $('version').onchange = () => { window.__sweepBase = $('version').value; draw(true); };
       const count = (fs, wd) => fs.filter((l) => l.includes('@' + wd + ' ') && !/TALL-WRAP/.test(l)).length;
       $('run').onclick = async () => {
         $('run').disabled = true;
+        $('version').disabled = true;
         const rows = {}, all = [];
         for (const [n, r, root] of ROUTES) {
           $('status').textContent = `checking ${n}…`;
@@ -85,6 +88,7 @@
         const left = sweepSummary(all).slice(0, 80);
         $('faults').innerHTML = '<h2><span>Errors to fix</span></h2>' + (left.length ? '<ul>' + left.map((l) => `<li><b>${l.split(' ')[1]}</b> ${l.replace(/^\S+ \S+ /, '')} <i>${l.split(' ')[0]}</i></li>`).join('') + '</ul>' : '<p>Nothing left.</p>');
         $('status').textContent = 'updated ' + new Date().toLocaleTimeString(); $('run').disabled = false;
+        $('version').disabled = false;
       };
       draw(true);
     </script>

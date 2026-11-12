@@ -1,4 +1,5 @@
 """Offline receipt ranking tests — synthetic names, no real contacts or sends."""
+
 import base64
 import copy
 import json

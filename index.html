@@ -24,9 +24,11 @@
     </script>
     <script>
       /* The main screen paints at once ('soft'); only a deep link (Donors, Notes, Settings…) waits for its route, with no loader text. */
-      document.documentElement.dataset.uiBoot = /^#\/?(donors|notes|settings|keyboard|whatsapp)/.test(location.hash) ? 'loading' : 'soft';
+      document.documentElement.dataset.uiBoot =
+        /^#\/?(donors|notes|settings|keyboard|whatsapp)/.test(location.hash) ? 'loading' : 'soft';
       window.studioBootTimer = setTimeout(function () {
-        if (document.documentElement.dataset.uiBoot) document.documentElement.dataset.uiBoot = 'error';
+        if (document.documentElement.dataset.uiBoot)
+          document.documentElement.dataset.uiBoot = 'error';
       }, 10000);
     </script>
     <style>
@@ -44,10 +46,29 @@
         color: var(--ink);
         z-index: 9999;
       }
-    </style>
-    <title>GiveLife · Message studio</title>
+      <title>GiveLife Message Studio</title>
+    <meta name="description" content="GiveLife Message Studio donor and volunteer messaging platform" />
+    <meta property="og:title" content="GiveLife Message Studio" />
+    <meta property="og:description" content="GiveLife Message Studio donor and volunteer messaging platform" />
 
     <style>
+      /* Universal box-shadow & filter removal for clean flat UI */
+      :root {
+        --sh1: none !important;
+        --sh2: none !important;
+        --sh3: none !important;
+        --lift: none !important;
+        --lift-hi: none !important;
+        --card-sh: none !important;
+        --rc-shadow: none !important;
+      }
+      *,
+      *::before,
+      *::after {
+        box-shadow: none !important;
+        filter: none !important;
+        -webkit-filter: none !important;
+      }
       /* Base tokens. studio.css supplies the final themes; first use defaults to dark. */
       :root {
         color-scheme: light;
@@ -2053,7 +2074,10 @@
     <link rel="stylesheet" href="/compact-nav.css" />
     <link rel="stylesheet" href="/focus-editor.css" />
     <link rel="stylesheet" href="/format-toolbar.css" />
+    <link rel="stylesheet" href="/auto-controls.css" />
     <link rel="stylesheet" href="/comfort.css" />
+    <link rel="stylesheet" href="/case-writer.css" />
+    <link rel="stylesheet" href="/donor-thanks.css" />
     <link rel="stylesheet" href="/responsive.css" />
   </head>
   <body class="nomsg" data-view="group">
@@ -2236,44 +2260,221 @@
               </div>
               <div class="group-two" role="group" aria-label="Send groups">
                 <div class="send-row">
-                  <button type="button" class="test-row" data-test="group" aria-label="Send to Test group">
-                    <span class="gb-name">Test group<small class="last-sent" data-last-group="test" id="sent-test"></small></span
+                  <button
+                    type="button"
+                    class="test-row"
+                    data-test="group"
+                    aria-label="Send to Test group"
+                  >
+                    <span class="gb-name"
+                      >Test group<small
+                        class="last-sent"
+                        data-last-group="test"
+                        id="sent-test"
+                      ></small></span
                     ><span class="gb-go" aria-hidden="true">➤</span>
                   </button>
                 </div>
                 <div class="grp-card" data-scope="main">
                   <div class="send-row group-drop-wrap" data-tools="1">
-                    <button class="group-main-btn" data-group="main" id="btnGivelife" aria-label="Send to GiveLife">
-                      <span class="gb-name">GiveLife<small class="last-sent" data-last-group="main" id="sent-main"></small></span
+                    <button
+                      class="group-main-btn"
+                      data-group="main"
+                      id="btnGivelife"
+                      aria-label="Send to GiveLife"
+                    >
+                      <span class="gb-name"
+                        >GiveLife<small
+                          class="last-sent"
+                          data-last-group="main"
+                          id="sent-main"
+                        ></small></span
                       ><span class="gb-go" aria-hidden="true">➤</span>
                     </button>
                     <span class="row-tools"
-                      ><button type="button" class="gb-timer" data-timer="main" aria-controls="timerMain" aria-expanded="false" aria-label="Schedule GiveLife">⏱</button></span
+                      ><button
+                        type="button"
+                        class="gb-timer"
+                        data-timer="main"
+                        aria-controls="timerMain"
+                        aria-expanded="false"
+                        aria-label="Schedule GiveLife"
+                      >
+                        ⏱
+                      </button></span
                     >
                   </div>
-                  <div class="delay-row" id="timerMain" role="group" aria-label="GiveLife timer" hidden>
-                    <button type="button" class="delay-pill" data-delay="15" data-delay-scope="main" aria-pressed="false">15m</button><button type="button" class="delay-pill" data-delay="30" data-delay-scope="main" aria-pressed="false">30m</button><button type="button" class="delay-pill" data-delay="45" data-delay-scope="main" aria-pressed="false">45m</button><button type="button" class="delay-pill" data-delay="60" data-delay-scope="main" aria-pressed="false">1h</button>
+                  <div
+                    class="delay-row"
+                    id="timerMain"
+                    role="group"
+                    aria-label="GiveLife timer"
+                    hidden
+                  >
+                    <button
+                      type="button"
+                      class="delay-pill"
+                      data-delay="15"
+                      data-delay-scope="main"
+                      aria-pressed="false"
+                    >
+                      15m</button
+                    ><button
+                      type="button"
+                      class="delay-pill"
+                      data-delay="30"
+                      data-delay-scope="main"
+                      aria-pressed="false"
+                    >
+                      30m</button
+                    ><button
+                      type="button"
+                      class="delay-pill"
+                      data-delay="45"
+                      data-delay-scope="main"
+                      aria-pressed="false"
+                    >
+                      45m</button
+                    ><button
+                      type="button"
+                      class="delay-pill"
+                      data-delay="60"
+                      data-delay-scope="main"
+                      aria-pressed="false"
+                    >
+                      1h
+                    </button>
                   </div>
                 </div>
                 <div class="grp-card" data-scope="free">
                   <div class="send-row group-drop-wrap" data-tools="2">
-                    <button class="group-free-btn" data-group="free" id="btnFree" aria-label="Send to all 5 freelance groups">
-                      <span class="gb-name">All freelance<small class="last-sent" data-last-group="free" id="sent-free"></small></span
+                    <button
+                      class="group-free-btn"
+                      data-group="free"
+                      id="btnFree"
+                      aria-label="Send to all 5 freelance groups"
+                    >
+                      <span class="gb-name"
+                        >All freelance<small
+                          class="last-sent"
+                          data-last-group="free"
+                          id="sent-free"
+                        ></small></span
                       ><span class="gb-go" aria-hidden="true">➤</span>
                     </button>
                     <span class="row-tools"
-                      ><button type="button" class="gb-pick" id="btnFreePick" aria-haspopup="true" aria-expanded="false" aria-label="Choose one freelance group">▾</button
-                      ><button type="button" class="gb-timer" data-timer="free" aria-controls="timerFree" aria-expanded="false" aria-label="Schedule all freelance">⏱</button></span
+                      ><button
+                        type="button"
+                        class="gb-pick"
+                        id="btnFreePick"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-label="Choose one freelance group"
+                      >
+                        ▾</button
+                      ><button
+                        type="button"
+                        class="gb-timer"
+                        data-timer="free"
+                        aria-controls="timerFree"
+                        aria-expanded="false"
+                        aria-label="Schedule all freelance"
+                      >
+                        ⏱
+                      </button></span
                     >
-                    <div class="group-drop" id="dropFree" hidden><button data-group="community">Upwork Community<small class="last-sent" data-last-group="community" id="sent-community"></small></button><button data-group="fiverr">Fiverr Course<small class="last-sent" data-last-group="fiverr" id="sent-fiverr"></small></button><button data-group="upwork">Upwork Course<small class="last-sent" data-last-group="upwork" id="sent-upwork"></small></button><button data-group="uet">Fiverr UET<small class="last-sent" data-last-group="uet" id="sent-uet"></small></button><button data-group="toprated">Top Rated<small class="last-sent" data-last-group="toprated" id="sent-toprated"></small></button><button type="button" class="free-sw on" id="freeAuto" role="switch" aria-checked="true"><span>Freelance auto-sending</span></button></div>
+                    <div class="group-drop" id="dropFree" hidden>
+                      <button data-group="community">
+                        Upwork Community<small
+                          class="last-sent"
+                          data-last-group="community"
+                          id="sent-community"
+                        ></small></button
+                      ><button data-group="fiverr">
+                        Fiverr Course<small
+                          class="last-sent"
+                          data-last-group="fiverr"
+                          id="sent-fiverr"
+                        ></small></button
+                      ><button data-group="upwork">
+                        Upwork Course<small
+                          class="last-sent"
+                          data-last-group="upwork"
+                          id="sent-upwork"
+                        ></small></button
+                      ><button data-group="uet">
+                        Fiverr UET<small
+                          class="last-sent"
+                          data-last-group="uet"
+                          id="sent-uet"
+                        ></small></button
+                      ><button data-group="toprated">
+                        Top Rated<small
+                          class="last-sent"
+                          data-last-group="toprated"
+                          id="sent-toprated"
+                        ></small></button
+                      ><button
+                        type="button"
+                        class="free-sw on"
+                        id="freeAuto"
+                        role="switch"
+                        aria-checked="true"
+                      >
+                        <span>Freelance auto-sending</span>
+                      </button>
+                    </div>
                   </div>
-                  <div class="delay-row" id="timerFree" role="group" aria-label="Freelance timer" hidden>
-                    <button type="button" class="delay-pill" data-delay="15" data-delay-scope="free" aria-pressed="false">15m</button><button type="button" class="delay-pill" data-delay="30" data-delay-scope="free" aria-pressed="false">30m</button><button type="button" class="delay-pill" data-delay="45" data-delay-scope="free" aria-pressed="false">45m</button><button type="button" class="delay-pill" data-delay="60" data-delay-scope="free" aria-pressed="false">1h</button>
+                  <div
+                    class="delay-row"
+                    id="timerFree"
+                    role="group"
+                    aria-label="Freelance timer"
+                    hidden
+                  >
+                    <button
+                      type="button"
+                      class="delay-pill"
+                      data-delay="15"
+                      data-delay-scope="free"
+                      aria-pressed="false"
+                    >
+                      15m</button
+                    ><button
+                      type="button"
+                      class="delay-pill"
+                      data-delay="30"
+                      data-delay-scope="free"
+                      aria-pressed="false"
+                    >
+                      30m</button
+                    ><button
+                      type="button"
+                      class="delay-pill"
+                      data-delay="45"
+                      data-delay-scope="free"
+                      aria-pressed="false"
+                    >
+                      45m</button
+                    ><button
+                      type="button"
+                      class="delay-pill"
+                      data-delay="60"
+                      data-delay-scope="free"
+                      aria-pressed="false"
+                    >
+                      1h
+                    </button>
                   </div>
                 </div>
                 <div class="send-row">
                   <button class="group-all-btn" id="sendAll" aria-label="Send to all 6 groups">
-                    <span class="gb-name">All 6 groups<small class="last-sent" data-last-group="all" id="sent-all"></small></span
+                    <span class="gb-name"
+                      >All 6 groups<small
+                        class="last-sent"
+                        data-last-group="all"
+                        id="sent-all"
+                      ></small></span
                     ><span class="gb-go" aria-hidden="true">➤</span>
                   </button>
                 </div>
@@ -2471,7 +2672,9 @@
           <a class="tool" href="/group-finder">Find groups</a>
         </div>
         <div class="row">
-          <div class="t"><b>Case plan</b><small>Facts, PDF messages, automatic Slow switch</small></div>
+          <div class="t">
+            <b>Case plan</b><small>Facts, PDF messages, automatic Slow switch</small>
+          </div>
           <a class="tool" href="/case-plan">Open</a>
         </div>
         <div class="row">
@@ -2529,6 +2732,9 @@
     <script src="/format-toolbar.js"></script>
     <script src="/app.js"></script>
     <script src="/donors.js"></script>
+    <script src="/case-writer.js"></script>
+    <script src="/donor-thanks.js"></script>
+    <script src="/app-update.js"></script>
     <script src="/replies.js"></script>
     <script src="/notes.js"></script>
     <script src="/compact-nav.js"></script>

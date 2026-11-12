@@ -21,7 +21,12 @@ for (const [width, height] of [
     await openReply();
     const dlg = page.locator('.replies-dialog');
     await expect
-      .poll(() => dlg.evaluate(() => { const s = document.getElementById('repSave').getBoundingClientRect(); return s.bottom <= innerHeight && s.top >= 0; }))
+      .poll(() =>
+        dlg.evaluate(() => {
+          const s = document.getElementById('repSave').getBoundingClientRect();
+          return s.bottom <= innerHeight && s.top >= 0;
+        }),
+      )
       .toBe(true);
     const sw = await page.locator('#repEnabled').boundingBox();
     expect(sw.width).toBeGreaterThanOrEqual(24);

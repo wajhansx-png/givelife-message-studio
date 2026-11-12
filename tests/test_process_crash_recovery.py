@@ -175,6 +175,51 @@ class CrashRecovery(unittest.TestCase):
         status = self.call("/donor-delivery")
         self.assertIn(status["state"], ("Completed", "Sending", "Waiting"), status)
 
+    def test_an_auto_control_survives_a_crash_stays_on_and_never_repeats_anyone(self):
+        self.boot()
+        for i in range(3):
+            added = self.call(
+                "/donors",
+                {"action": "add", "name": "Crash Donor %d" % i, "phone": "0300123400%d" % i},
+            )
+            ident = (added.get("donor") or {}).get("id")
+            self.call("/donors", {"action": "update", "id": ident, "important": True})
+        view = self.call(
+            "/auto-controls", {"control": "important", "on": True, "settings": {"count": 3}}
+        )
+        self.assertTrue(view["controls"]["important"]["on"])
+        self.wait_for(lambda: len(Gateway.sends) == 1, 20, "first DM never reached the gateway")
+        time.sleep(1.5)
+        self.kill()  # crash with 2 donors still to go
+        self.boot()
+        # Nothing was switched off by the crash, and the restarted server owns the run again.
+        self.wait_for(
+            lambda: self.call("/auto-controls")["controls"]["important"]["on"],
+            40,
+            "the control did not carry on",
+        )
+        mine = self.call("/auto-controls")["controls"]["important"]
+        self.assertEqual((mine["recipients"], mine["sent"]), (3, 1))
+        time.sleep(
+            10
+        )  # the 8-minute gap is honoured after a restart: no immediate second send, no repeat
+        self.assertEqual(Gateway.sends, [Gateway.sends[0]])
+        self.assertFalse(
+            self.call("/auto-controls")["controls"]["group"]["on"]
+        )  # others stayed OFF
+        # Switching OFF afterwards stops it for good: a later restart does not bring it back.
+        self.call("/auto-controls", {"control": "important", "on": False})
+        self.wait_for(
+            lambda: not self.call("/auto-controls")["controls"]["important"]["on"],
+            20,
+            "OFF did not stop it",
+        )
+        self.kill()
+        self.boot()
+        time.sleep(4)
+        self.assertFalse(self.call("/auto-controls")["controls"]["important"]["on"])
+        self.assertEqual(len(Gateway.sends), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

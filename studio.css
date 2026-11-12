@@ -5247,7 +5247,9 @@ body::after {
   gap: 6px;
   padding: 6px;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 .donor-tabs button {
   border-radius: 10px;
@@ -6061,7 +6063,13 @@ dialog::backdrop {
   transform: translateY(1px);
 }
 /* Tabs: muted list, active trigger = bg-background + border (light shadow-sm) */
-.donor-page .donor-tabs,
+.donor-page .donor-tabs {
+  border-color: transparent !important;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 10px !important;
+}
 .brandbar .seg {
   border-color: var(--line) !important;
   border-radius: 10px !important;
@@ -6625,7 +6633,7 @@ summary,
   .donor-page .donor-tabs button[aria-selected='true'],
   .seg button[aria-pressed='true']
 ) {
-  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--primary) 70%, transparent) !important;
+  box-shadow: none !important;
 }
 :is(
   .big,
@@ -7088,7 +7096,7 @@ html body .autosw[aria-checked='true'],
 html body .autosw[aria-checked='true'] {
   background: var(--grad) !important;
   border-color: transparent !important;
-  box-shadow: 0 6px 16px -8px #2f6fe8cc !important;
+  box-shadow: none !important;
 }
 html body input.sw:checked::before,
 html body input.sw:checked::after,
@@ -7347,7 +7355,7 @@ html body :is(.talk, .hist) .e.bot .rn {
   background: linear-gradient(135deg, #0e7490, #2f6fe8 55%, #6d4ef0) !important;
   color: #fff !important;
   font-weight: 700;
-  box-shadow: 0 4px 10px -4px #2f6fe899;
+  box-shadow: none;
 }
 html body :is(.talk, .hist) .e.bot .rt {
   color: var(--r-key) !important;
@@ -7590,7 +7598,7 @@ html body :is(button, summary, [role='tab'], a):focus-visible {
 }
 .vol-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 80px 36px;
+  grid-template-columns: minmax(0, 1fr) repeat(2, 76px) 36px;
   align-items: center;
   gap: 8px;
   padding: 0 10px;
@@ -7617,9 +7625,6 @@ html body :is(button, summary, [role='tab'], a):focus-visible {
 }
 .vol-row .donor-more > summary {
   min-height: 32px;
-}
-.vol-row[data-sent='true'] .vol-dm {
-  color: var(--ok-ink, #4ade80) !important;
 }
 .vol-msg {
   display: flex;
@@ -7676,7 +7681,7 @@ html body :is(button, summary, [role='tab'], a):focus-visible {
     grid-column: 1 / -1;
   }
   .vol-row {
-    grid-template-columns: minmax(0, 1fr) 72px 36px;
+    grid-template-columns: minmax(0, 1fr) repeat(2, 66px) 32px;
   }
   .vol-foot {
     flex-wrap: wrap;
@@ -8209,4 +8214,65 @@ html
   font-size: 12px;
   color: var(--mut);
   letter-spacing: 0.01em;
+}
+
+.donor-tabs,
+.donor-page .donor-tabs,
+html body .donor-page .donor-tabs {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  scroll-behavior: smooth !important;
+}
+.donor-tabs::-webkit-scrollbar,
+.donor-page .donor-tabs::-webkit-scrollbar,
+html body .donor-page .donor-tabs::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+/* Neutralize bottom blur glows and colored box shadows on buttons and bottom nav items */
+:is(
+  button,
+  .send-row,
+  .grp-card,
+  .gb-card,
+  .group-send button,
+  .send-donors,
+  .send-important,
+  .ui2-gbtn,
+  .ui2-tab,
+  .nav-item,
+  .main-nav button,
+  .autosw,
+  #live,
+  .prim,
+  .main,
+  .primary,
+  .go,
+  #batchStart
+) {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* App Consistency: Universal removal of all blur glows and box shadows */
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+/* Phase 2/3 iPhone-Level Performance & GPU Acceleration */
+.donor-table,
+.donor-shell,
+.donor-tabs,
+.chat,
+dialog {
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
 }

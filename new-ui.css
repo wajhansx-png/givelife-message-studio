@@ -5740,21 +5740,7 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
   background-clip: padding-box !important;
   margin-inline: -6px;
 }
-.UI2 dialog.case-page #crMeta {
-  display: flex;
-  align-items: center;
-  min-height: 40px !important;
-  margin: 0 !important;
-}
 @media (max-width: 359px) {
-  .UI2 dialog.case-page #crMeta {
-    display: block;
-    line-height: 40px;
-    overflow: hidden;
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
   .UI2 dialog.case-page .cr-line {
     font-size: 12.5px;
   }
@@ -5774,10 +5760,6 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
 .UI2 #card .tools :is(#edit, #fresh, #copy),
 .UI2 .ui2-styles button {
   min-height: 40px !important;
-}
-.UI2 dialog.case-page #crMeta {
-  display: inline-flex;
-  align-items: center;
 }
 .UI2 dialog.case-sheet .cr-tool:hover {
   background: var(--cr-bg);
@@ -5876,10 +5858,6 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
 .UI2 #leftChip[data-ui2-left='1']::after {
   content: none !important;
 }
-.UI2 dialog.case-page #crMeta {
-  text-decoration: underline dotted;
-  text-underline-offset: 4px;
-}
 /* Tools: three short groups, two columns when there is room */
 .UI2 dialog.case-sheet .cr-tool-h {
   grid-column: 1 / -1;
@@ -5929,5 +5907,285 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
     height: 1px;
     overflow: hidden;
     clip: rect(0 0 0 0);
+  }
+}
+
+/* ===== Case page v2: calm header, two money tiles, rows with Edit message + one main action ===== */
+.UI2 dialog.case-page .cr-top {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.UI2 dialog.case-page h1 {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.UI2 dialog.case-page h1 .cr-tap {
+  display: block;
+  width: 100%;
+  min-height: 36px !important;
+  text-decoration: none;
+}
+.UI2 dialog.case-page .cr-pills {
+  flex: none;
+  gap: 4px;
+}
+.UI2 dialog.case-page .cr-pill.cr-tap[data-ok='1']::before,
+.UI2 dialog.case-page .cr-pill.cr-tap[data-ok='0']::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: 1px;
+}
+.UI2 dialog.case-page .cr-money {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 10px 0 8px;
+}
+.UI2 dialog.case-page .cr-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 48px;
+  min-width: 0;
+  padding: 4px 12px;
+  border: 1px solid var(--cr-line);
+  border-radius: 12px;
+  background: var(--cr-surface);
+  color: var(--cr-ink);
+  font: inherit;
+  text-align: left;
+}
+button.cr-tile {
+  border-color: #3a4057;
+  cursor: pointer;
+}
+.UI2 dialog.case-page .cr-tile small {
+  color: var(--cr-muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+.UI2 dialog.case-page .cr-tile b {
+  font-size: 17px;
+  line-height: 1.25;
+}
+/* rows */
+.UI2 dialog.case-page .cr-row {
+  align-items: center;
+}
+.UI2 dialog.case-page .cr-info {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.UI2 dialog.case-page .cr-acts {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  align-items: center;
+}
+.UI2 dialog.case-page .cr-edit {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #3a4057 !important;
+  border-radius: 12px;
+  background: transparent !important;
+  color: var(--cr-ink) !important;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.UI2 dialog.case-page .cr-edit[data-add='1'] {
+  border-color: #3d4a75 !important;
+  color: #a9c1ff !important;
+}
+.UI2 dialog.case-page .cr-short {
+  display: none;
+}
+.UI2 dialog.case-page .cr-pill[data-w='1'] {
+  background: #33280f;
+  color: #fcd34d;
+}
+.UI2 dialog.case-page .cr-run {
+  min-width: 68px;
+}
+@media (max-width: 400px) {
+  .UI2 dialog.case-page .cr-long {
+    display: none;
+  }
+  .UI2 dialog.case-page .cr-short {
+    display: inline;
+  }
+  .UI2 dialog.case-page .cr-edit {
+    padding: 0 10px;
+  }
+}
+@media (max-width: 359px) {
+  .UI2 dialog.case-page .cr-tile {
+    min-height: 42px;
+    padding: 2px 10px;
+  }
+  .UI2 dialog.case-page .cr-tile small {
+    font-size: 11.5px;
+  }
+  .UI2 dialog.case-page .cr-tile b {
+    font-size: 15px;
+  }
+  .UI2 dialog.case-page .cr-money {
+    margin: 6px 0 6px;
+  }
+  .UI2 dialog.case-page .cr-name b {
+    white-space: normal;
+  }
+}
+/* sheets: tabs, blocks, message editor */
+.UI2 dialog.case-sheet .cr-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.UI2 dialog.case-sheet .cr-seg-b {
+  min-height: 42px;
+  padding: 0 8px;
+  border: 1px solid var(--cr-line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--cr-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.UI2 dialog.case-sheet .cr-seg-b[data-on='1'] {
+  background: #232a40;
+  border-color: #3d4a75;
+}
+.UI2 dialog.case-sheet .cr-pane {
+  display: grid;
+  gap: 10px;
+}
+.UI2 dialog.case-sheet .cr-pane[hidden] {
+  display: none;
+}
+.UI2 dialog.case-sheet .cr-block {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.UI2 dialog.case-sheet .cr-block .cr-quote {
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+.UI2 dialog.case-sheet .cr-block button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid #3a4057;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--cr-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.UI2 dialog.case-sheet .cr-block button.cr-act {
+  border-color: #3d4a75;
+  color: #a9c1ff;
+}
+
+.UI2 dialog.case-page .cr-pills {
+  align-items: center;
+}
+.UI2 dialog.case-page .cr-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.UI2 dialog.case-page .cr-bar button {
+  padding: 0 6px;
+  font-size: 14.5px;
+  white-space: nowrap;
+}
+@media (max-height: 780px) {
+  .UI2 dialog.case-page .cr-money {
+    margin: 8px 0 6px;
+  }
+  .UI2 dialog.case-page .cr-tile {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 6px;
+    min-height: 40px;
+    padding: 6px 10px;
+  }
+  .UI2 dialog.case-page .cr-tile small {
+    font-size: 12px;
+  }
+  .UI2 dialog.case-page .cr-hint {
+    display: none;
+  }
+  .UI2 dialog.case-page .cr-tile {
+    align-items: center;
+  }
+}
+@media (max-width: 359px) {
+  .UI2 dialog.case-page .cr-name .cr-pill {
+    display: none;
+  }
+}
+.UI2 dialog.case-page .cr-name {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+.UI2 dialog.case-page .cr-name b {
+  font-size: 15px;
+}
+.UI2 dialog.case-page .cr-name .cr-pill {
+  flex: none;
+  padding: 1px 8px;
+  font-size: 12px;
+}
+.UI2 dialog.case-page .cr-row {
+  padding-block: 6px;
+}
+.UI2 dialog.case-page .cr-tile :is(small, b) {
+  white-space: nowrap;
+}
+@media (max-width: 400px) {
+  /* the row's button already says what it is doing; keep only warnings on the name line */
+  .UI2 dialog.case-page .cr-name .cr-pill:not([data-w]) {
+    display: none;
+  }
+  .UI2 dialog.case-page .cr-giki {
+    display: none;
+  }
+  .UI2 dialog.case-page .cr-run {
+    min-width: 62px;
+    padding: 0 10px;
+  }
+}
+@media (max-height: 480px) {
+  .UI2 dialog.case-page .cr-long {
+    display: none;
+  }
+  .UI2 dialog.case-page .cr-short {
+    display: inline;
+  }
+  .UI2 dialog.case-page .cr-name .cr-pill:not([data-w]) {
+    display: none;
+  }
+  .UI2 dialog.case-page .cr-giki {
+    display: none;
+  }
+  .UI2 dialog.case-page .cr-name b {
+    white-space: nowrap;
+  }
+  .UI2 dialog.case-page .cr-run {
+    min-width: 62px;
+    padding: 0 10px;
   }
 }

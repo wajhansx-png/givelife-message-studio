@@ -91,7 +91,7 @@
   page.setAttribute('aria-label', 'Case');
   page.innerHTML =
     '<div class="cr-shell"><div class="cr-head"><div class="cr-top"><h1><button type="button" id="crName" class="cr-tap" aria-label="Change case">Case</button></h1><span class="cr-pills"><button type="button" class="cr-pill cr-tap" id="crWa" aria-label="WhatsApp connection"></button><span class="cr-pill" id="crStatus"></span></span></div>' +
-    '<button type="button" class="cr-meta cr-tap" id="crMeta" aria-label="Change the amount left"></button><div class="cr-tools-row"><button type="button" id="crPrepare" class="cr-soft">Prepare case</button>' +
+    '<div class="cr-money"><div class="cr-tile" id="crConf"></div><button type="button" class="cr-tile" id="crMeta" aria-label="Change the amount left"></button></div><div class="cr-tools-row"><button type="button" id="crPrepare" class="cr-soft">Prepare case</button>' +
     '<button type="button" id="crTools" class="cr-soft">Tools</button>' +
     '<button type="button" id="crBack" class="cr-soft">Close</button></div></div>' +
     '<main class="cr-main"><p class="cr-say" id="crSay" role="status"></p>' +
@@ -154,9 +154,15 @@
     const st = $('crStatus');
     st.textContent = STATUS[data.status] || data.status;
     st.dataset.s = data.status;
-    $('crMeta').textContent = `Confirmed ${rs(data.case.confirmed)} · Left ${rs(data.case.left)}`;
+    const tile = (el, label, hint, value) => {
+      const small = make('small', '', label);
+      if (hint) small.append(make('span', 'cr-hint', hint));
+      el.replaceChildren(small, make('b', '', value));
+    };
+    tile($('crConf'), 'Confirmed', '', rs(data.case.confirmed));
+    tile($('crMeta'), 'Left', ' · tap to change', rs(data.case.left));
     const wa = $('crWa');
-    wa.textContent = data.whatsapp ? 'WhatsApp on' : 'WhatsApp off';
+    wa.textContent = data.whatsapp ? 'WhatsApp' : 'WhatsApp off';
     wa.dataset.ok = data.whatsapp ? '1' : '0';
     paintNeeds();
     paintRows();
@@ -284,36 +290,72 @@
       };
       const info = make('div', 'cr-info'),
         name = make('div', 'cr-name');
-      name.append(
-        make('b', '', r.title),
-        make('span', 'cr-pill', r.enabled ? STATE[r.state] || r.state : 'Off'),
-      );
+      /* the status shows only when something is happening; a quiet row stays quiet */
+      const pill = !r.enabled
+        ? ['Off', '']
+        : r.state === 'idle'
+          ? r.has_msg
+            ? null
+            : ['No message', 'warn']
+          : [STATE[r.state] || r.state, ''];
+      name.append(make('b', '', r.title));
+      if (pill) {
+        const chip = make('span', 'cr-pill', pill[0]);
+        if (pill[1]) chip.dataset.w = '1';
+        name.append(chip);
+      }
       const next = r.next_at ? clock(r.next_at) : '—';
+      const busy = r.state !== 'idle';
       info.append(
         name,
         make(
           'p',
           'cr-line',
           r.key === 'group'
-            ? `Posted today ${r.sent} · Next ${next}`
-            : `Sent ${r.sent} · Left ${r.left == null ? 0 : r.left} · Next ${next}`,
+            ? busy
+              ? `${r.sent} posted · ${next}`
+              : `${r.sent} posted today`
+            : busy
+              ? `${r.sent} sent · ${r.left == null ? 0 : r.left} left · ${next}`
+              : `${r.sent} sent · ${r.left == null ? 0 : r.left} left`,
         ),
       );
       const g = r.giki;
       if (g && g.waiting + g.agreed + g.shared + g.needs > 0)
         info.append(
-          make('p', 'cr-sub', `Waiting ${g.waiting} · Agreed ${g.agreed} · Shared ${g.shared}`),
+          make(
+            'p',
+            'cr-sub cr-giki',
+            `Waiting ${g.waiting} · Agreed ${g.agreed} · Shared ${g.shared}`,
+          ),
         );
       if (r.note) info.append(make('p', 'cr-sub cr-warn-line', r.note));
       card.append(info);
-      if (r.action !== 'none') {
-        const label = { start: 'Start', pause: 'Pause', review: 'Review' }[r.action];
-        const run = btn(label, 'cr-run', () =>
-          r.action === 'review' ? rowSheet(r.key) : rowOp(r.key, r.action),
+      /* Edit message (or Add message) on every row that sends one; then the one main action */
+      const acts = make('div', 'cr-acts');
+      if (r.key !== 'important' || r.enabled) {
+        const long = r.has_msg ? 'Edit message' : 'Add message';
+        const edit = btn('', 'cr-edit', () => editSheet(r.key));
+        edit.append(
+          make('span', 'cr-long', long),
+          make('span', 'cr-short', r.has_msg ? 'Edit' : 'Add'),
+        );
+        edit.setAttribute('aria-label', `${long}: ${r.title}`);
+        if (!r.has_msg) edit.dataset.add = '1';
+        acts.append(edit);
+      }
+      if (r.action === 'start' || r.action === 'pause') {
+        const run = btn(r.action === 'start' ? 'Start' : 'Pause', 'cr-run', () =>
+          rowOp(r.key, r.action),
         );
         run.dataset.act = r.action;
-        card.append(run);
+        acts.append(run);
+      } else if (r.key === 'important' && !r.enabled) {
+        acts.append(btn('Choose', 'cr-edit', () => rowSheet(r.key, 'people')));
+      } else if (r.action === 'review') {
+        acts.append(btn('Timing', 'cr-edit', () => rowSheet(r.key, 'timing')));
       }
+      if (acts.children.length) card.append(acts);
       box.append(card);
     }
   }
@@ -508,23 +550,148 @@
   }
 
   /* Row details: timing, who, what, and (Important) who to include. Saving never starts sending. */
-  async function rowSheet(key) {
+  /* One place to write each message: the same saved messages the rest of the app sends. */
+  const EDITORS = {
+    group: {
+      title: 'GiveLife Group message',
+      load: async () => (await call('/focus-bank?kind=group')).source || '',
+      save: async (text) => {
+        await call('/focus-bank', { kind: 'group', text });
+        await call('/focus-bank', { kind: 'group', action: 'generate' }).catch(() => {});
+      },
+    },
+    dm: {
+      title: 'Donor message',
+      load: async () => {
+        const d = await call('/donor-messages');
+        return d.base || d.origin || ((d.items || [])[0] || {}).text || '';
+      },
+      save: async (text) => {
+        await call('/donor-messages', { action: 'base', text });
+        await call('/donor-messages', { action: 'regenerate' }).catch(() => {});
+      },
+    },
+    question: {
+      title: 'Share question',
+      load: async () => (await call('/donor-messages')).follow_up || '',
+      save: (text) => call('/donor-messages', { action: 'follow_up', text }),
+    },
+    volunteers: {
+      title: 'Volunteers message',
+      load: async () => (await call('/volunteers')).message || '',
+      save: (text) => call('/volunteers', { action: 'message', text }),
+    },
+  };
+  async function editSheet(key, part) {
+    const kind = part || (key === 'group' ? 'group' : key === 'volunteers' ? 'volunteers' : 'dm');
+    const ed = EDITORS[kind];
+    const text = make('textarea', 'cr-text');
+    text.rows = 10;
+    text.placeholder = 'Loading…';
+    text.disabled = true;
+    text.setAttribute('aria-label', ed.title);
+    openSheet(ed.title, text, [
+      [
+        'Save',
+        'cr-go',
+        async () => {
+          if (text.disabled) throw Error('Still loading. Try again in a moment.');
+          await ed.save(text.value);
+          await load();
+        },
+      ],
+      ['Close', 'cr-soft', null],
+    ]);
+    try {
+      text.value = await ed.load();
+      text.disabled = false;
+      text.placeholder = kind === 'volunteers' ? 'What should volunteers share?' : '';
+      text.focus({ preventScroll: true });
+    } catch (e) {
+      $('csError').textContent = e.message;
+    }
+  }
+  async function rowSheet(key, tab = 'message') {
     const r = data.rows.find((x) => x.key === key);
     openSheet(r.title, make('p', 'cr-sub', 'Loading…'), [['Close', 'cr-soft', null]]); // answer the tap at once
-    const body = make('div', 'cr-sum');
     let s = null;
     try {
       s = await post({ action: 'summary' });
     } catch (e) {}
+    const body = make('div', 'cr-sum');
+    const panes = {
+      message: make('div', 'cr-pane'),
+      timing: make('div', 'cr-pane'),
+      people: make('div', 'cr-pane'),
+    };
+    const seg = make('div', 'cr-seg');
+    const count = s && s.rows[key] && s.rows[key].count != null ? s.rows[key].count : r.left || 0;
+    const show = (name) => {
+      for (const [k, el] of Object.entries(panes)) el.hidden = k !== name;
+      for (const b of seg.children) b.dataset.on = b.dataset.k === name ? '1' : '0';
+      const save = $('csFoot').firstElementChild;
+      if (save && sheet.open) save.hidden = name === 'message'; // Save is for timing and people only
+    };
+    for (const [k, label] of [
+      ['message', 'Message'],
+      ['timing', 'Timing'],
+      ['people', key === 'group' ? 'Groups' : `People (${count})`],
+    ]) {
+      if (k === 'people' && key === 'group') continue;
+      const b = btn(label, 'cr-seg-b', () => show(k));
+      b.dataset.k = k;
+      seg.append(b);
+    }
+    body.append(seg, panes.message, panes.timing, panes.people);
+    /* Message */
+    const kind = key === 'group' ? 'group' : key === 'volunteers' ? 'volunteers' : 'dm';
+    const mtext = s ? (kind === 'dm' ? s.messages.dm : s.messages[kind]) : '';
+    const block = (label, text, editLabel, fn) => {
+      const w = make('div', 'cr-block');
+      w.append(make('b', '', label));
+      if (text) w.append(make('p', 'cr-quote', text));
+      else w.append(make('p', 'cr-sub', 'Nothing written yet.'));
+      w.append(btn(editLabel, text ? 'cr-more' : 'cr-act', fn));
+      return w;
+    };
+    panes.message.append(
+      block(
+        kind === 'volunteers'
+          ? 'Volunteers message'
+          : kind === 'group'
+            ? 'Group message'
+            : 'Donor message',
+        mtext,
+        mtext ? 'Edit message' : 'Add message',
+        () => editSheet(key),
+      ),
+    );
+    if (key === 'volunteers' && !mtext)
+      panes.message.append(
+        btn('Use the case message', 'cr-more', async () => {
+          try {
+            const g = (await call('/focus-bank?kind=group')).source || '';
+            await call('/volunteers', { action: 'message', text: g });
+            await load();
+            sheet.close();
+          } catch (e) {
+            $('csError').textContent = e.message;
+          }
+        }),
+      );
+    if (key === 'giki')
+      panes.message.append(
+        block('Share question', s ? s.messages.question : '', 'Edit question', () =>
+          editSheet(key, 'question'),
+        ),
+      );
+    /* Timing */
     const on = make('input');
     on.type = 'checkbox';
     on.checked = r.enabled;
     const onLabel = make('label', 'cr-check');
     onLabel.append(on, make('span', '', 'Include in this case'));
-    body.append(
-      make('p', 'cr-sub', `${r.title} · ${r.enabled ? STATE[r.state] || r.state : 'Off'}`),
-      onLabel,
-    );
+    panes.timing.append(onLabel);
     const inputs = {};
     for (const [name, label, lo, hi] of FIELDS[key === 'group' ? 'group' : 'dm']) {
       const i = make('input');
@@ -533,17 +700,15 @@
       i.max = hi;
       i.value = r.plan[name];
       inputs[name] = i;
-      body.append(field(`${label} (${lo}–${hi})`, i));
+      panes.timing.append(field(`${label} (${lo}–${hi})`, i));
     }
+    /* People */
     let picked = null;
-    if (key === 'important') picked = await importantPicker(body, s);
+    if (key === 'important') picked = await importantPicker(panes.people, s);
     if (s && s.names && s.names[key] && s.names[key].length)
-      body.append(
-        make('b', '', `Names (${s.rows[key].count})`),
-        make('p', 'cr-names', s.names[key].join(', ')),
-      );
-    if (r.giki && r.giki.people)
-      body.append(
+      panes.people.append(make('p', 'cr-names', s.names[key].join(', ')));
+    if (r.giki && r.giki.people && r.giki.people.length)
+      panes.people.append(
         make('b', '', 'Sharing'),
         make(
           'p',
@@ -551,14 +716,11 @@
           r.giki.people.map((p) => `${p.name}: ${GIKI[p.step] || p.step}`).join(' · '),
         ),
       );
-    if (s && key === 'group')
-      body.append(make('b', '', 'Message'), make('p', 'cr-quote', s.messages.group));
-    if (s && key !== 'group' && s.messages.dm && key !== 'volunteers')
-      body.append(make('b', '', 'Message'), make('p', 'cr-quote', s.messages.dm));
-    if (s && key === 'giki')
-      body.append(make('b', '', 'Share question'), make('p', 'cr-quote', s.messages.question));
+    if (!panes.people.children.length) panes.people.append(make('p', 'cr-sub', 'No one yet.'));
     const locked = data.status === 'running';
-    if (locked) body.append(make('p', 'cr-warn', 'The plan is running. Pause all to change it.'));
+    if (locked)
+      body.append(make('p', 'cr-warn', 'The plan is running. Pause all to change timing.'));
+    show(tab === 'people' && key === 'group' ? 'message' : tab);
     openSheet(r.title, body, [
       [
         'Save',
@@ -573,6 +735,7 @@
       ],
       ['Close', 'cr-soft', null],
     ]);
+    show(tab === 'people' && key === 'group' ? 'message' : tab);
   }
   async function importantPicker(body, s) {
     let items = [];

@@ -460,7 +460,10 @@
   /* Clicking outside the editor saves the edit and leaves editing (buttons in the tool rail keep their own behaviour). */
   document.addEventListener('pointerdown', (e) => {
     if (screen.hidden || !editing || baseDialog.open) return;
-    if ($('focusText').contains(e.target) || e.target.closest('.focus-rail, dialog, #waMarkBar, #ui2Live, #ui2Float'))
+    if (
+      $('focusText').contains(e.target) ||
+      e.target.closest('.focus-rail, dialog, #waMarkBar, #ui2Live, #ui2Float')
+    )
       return;
     edit(false);
   });
@@ -500,7 +503,9 @@
       if (editing) edit(false);
       await save();
       sessionStorage.removeItem('focus-draft-' + kind);
-      location.hash = '';
+      /* go back in history (no new entry), so the phone Back never lands on a stale page */
+      if (typeof Nav !== 'undefined' && Nav.top() === 'preview') Nav.leave('preview');
+      else location.hash = '';
     } catch (e) {
       status(e.message);
     }

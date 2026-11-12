@@ -45,6 +45,12 @@ for (const [width, height] of [
     for (const [tab, label, scope, free] of TABS) {
       await page.locator(`.donor-tabs [data-tab="${tab}"]`).click();
       const dm = page.locator('#donorSendImportant');
+      if (tab === 'donated') {
+        // People who already gave are thanked, not asked again: Thank donors replaces the DM button here.
+        await expect(dm, tab).toBeHidden();
+        await expect(page.locator('#donorsPage .donor-thanks'), tab).toBeVisible();
+        continue;
+      }
       await expect(dm, tab).toHaveText(label);
       await dm.click();
       await expect(page.locator('#batchAudience'), tab).toContainText(`${free} not contacted yet`);

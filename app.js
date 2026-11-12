@@ -538,6 +538,8 @@ $('chatLatest').onclick = () => showLatest('log');
 $('histLatest').onclick = () => showLatest('histLog');
 $('histClose').onclick = closeChat;
 $('histMain').onclick = closeChat;
+// The phone Back gesture can close Chat itself; the address must follow or the next Back does nothing.
+$('hist').addEventListener('close', () => Nav.leave('chat'));
 $('hist').addEventListener('cancel', (e) => {
   e.preventDefault();
   closeChat();

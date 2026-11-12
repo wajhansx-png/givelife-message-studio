@@ -46,12 +46,11 @@ for (const [width, height] of [
     ]);
     await expect(page.locator('#crStatus')).toHaveText('Not started');
     await expect(page.locator('#crMeta')).toContainText('Left');
-    if (width !== 320)
-      /* every common phone and desktop: the whole page is on screen, nothing to scroll */
-      expect(
-        await page.locator('.cr-main').evaluate((e) => e.scrollHeight <= e.clientHeight + 1),
-        'the page should not need scrolling',
-      ).toBe(true);
+    /* every phone (even 320x568) and desktop: the whole page is on screen, nothing to scroll */
+    expect(
+      await page.locator('.cr-main').evaluate((e) => e.scrollHeight <= e.clientHeight + 1),
+      'the page should not need scrolling',
+    ).toBe(true);
     for (const id of ['#crStart', '#crPause', '#crFinish']) await inView(page, page.locator(id));
     await expect(page.locator('#crStart')).toBeEnabled();
     await expect(page.locator('#crPause')).toBeDisabled();
@@ -75,13 +74,15 @@ test('the Case tab is the first tab, and Tools opens the existing tools and come
   await tabs.first().click();
   await expect(page.locator('#casePage')).toBeVisible();
   await page.locator('#crTools').click();
+  await expect(page.locator('#crMenu .cr-tool-h')).toHaveText(['Daily', 'Messages', 'Setup']);
   await expect(page.locator('#crMenu .cr-tool')).toContainText([
     'Donors',
-    'Messages (versions, edit, test)',
-    'Case Writer',
-    'Notes',
+    'Message and send',
     'Chat',
+    'Notes',
     'Reports',
+    'Message versions and tests',
+    'Case Writer',
     'Settings',
   ]);
   await page.locator('#crMenu').getByRole('button', { name: 'Donors', exact: true }).click();
@@ -219,12 +220,12 @@ test('one page controls the amount, the case and WhatsApp, and Tools reaches eve
   await page.locator('#crTools').click();
   await expect(page.locator('#crMenu .cr-tool')).toContainText([
     'Donors',
-    'Volunteers and their sharing request',
     'Thank donors',
-    'Auto replies',
-    'Resume group messages',
-    'WhatsApp connection',
     'Reports',
+    'Volunteers',
+    'Auto replies',
+    'WhatsApp connection',
+    'Resume group messages',
     'Settings',
   ]);
   await page.locator('#caseSheet #csFoot').getByRole('button', { name: 'Close' }).click();

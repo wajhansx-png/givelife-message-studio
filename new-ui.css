@@ -5727,8 +5727,42 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
 .UI2 dialog.case-sheet button:active:not(:disabled) {
   transform: scale(0.97);
 }
-.UI2 dialog.case-page :is(#crName, #crWa, #crMeta) {
-  min-height: 42px !important;
+/* Header taps are real 40px+ boxes that never overlap: the WhatsApp pill keeps its small look inside a clear border. */
+.UI2 dialog.case-page h1 {
+  overflow: visible;
+}
+.UI2 dialog.case-page #crName {
+  min-height: 40px !important;
+}
+.UI2 dialog.case-page #crWa {
+  min-height: 0 !important;
+  border: 6px solid transparent !important;
+  background-clip: padding-box !important;
+  margin-inline: -6px;
+}
+.UI2 dialog.case-page #crMeta {
+  display: flex;
+  align-items: center;
+  min-height: 40px !important;
+  margin: 0 !important;
+}
+@media (max-width: 359px) {
+  .UI2 dialog.case-page #crMeta {
+    display: block;
+    line-height: 40px;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .UI2 dialog.case-page .cr-line {
+    font-size: 12.5px;
+  }
+  .UI2 dialog.case-page .cr-row-actions .cr-run {
+    min-width: 66px;
+    padding: 0 10px;
+    font-size: 14px;
+  }
 }
 .UI2 dialog.case-sheet .cr-quote {
   font-size: 15px;
@@ -5782,12 +5816,42 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
     opacity: 0;
   }
 }
-@media (min-width: 900px) {
+/* tablet: a centred card that rises gently */
+@media (min-width: 700px) {
   .UI2 dialog.case-sheet[open] {
     animation-name: cr-sheet-pop;
   }
   .UI2 dialog.case-sheet .cr-grab {
     display: none;
+  }
+}
+/* computer: a side panel on the right; the case page moves left so the plan stays in view */
+@media (min-width: 900px) {
+  .UI2 dialog.case-sheet {
+    --cr-side: clamp(380px, 34vw, 480px);
+    inset: 0 0 0 auto;
+    transform: none;
+    width: var(--cr-side);
+    height: 100dvh;
+    max-height: none;
+    border-width: 0 0 0 1px;
+    border-radius: 0;
+  }
+  .UI2 dialog.case-sheet[open] {
+    animation-name: cr-sheet-side;
+  }
+  .UI2 dialog.case-sheet::backdrop {
+    background: rgba(0, 0, 0, 0.18);
+  }
+  .UI2 dialog.case-page.cr-side .cr-shell {
+    margin-left: max(16px, calc((100vw - clamp(380px, 34vw, 480px) - 760px) / 2));
+    margin-right: calc(clamp(380px, 34vw, 480px) + 16px);
+  }
+}
+@keyframes cr-sheet-side {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
   }
 }
 @keyframes cr-sheet-pop {
@@ -5804,5 +5868,66 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
   .UI2 dialog.case-page button,
   .UI2 dialog.case-sheet button {
     transition: none;
+  }
+}
+
+/* Amount chip: just "Rs. 25,000 left"; it is a button (tap to change), no icon and no extra words */
+.UI2 #leftChip::after,
+.UI2 #leftChip[data-ui2-left='1']::after {
+  content: none !important;
+}
+.UI2 dialog.case-page #crMeta {
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+}
+/* Tools: three short groups, two columns when there is room */
+.UI2 dialog.case-sheet .cr-tool-h {
+  grid-column: 1 / -1;
+  margin: 8px 4px 0;
+  color: var(--cr-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.UI2 dialog.case-sheet .cr-menu .cr-tool {
+  border: 1px solid var(--cr-line);
+  background: var(--cr-bg);
+}
+@media (min-width: 360px) {
+  .UI2 dialog.case-sheet .cr-menu {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+}
+/* The smallest phones (320x568): the whole case still fits with nothing to scroll */
+@media (max-height: 600px) and (max-width: 359px) {
+  .UI2 dialog.case-page .cr-bar {
+    padding-top: 5px;
+    padding-bottom: calc(5px + env(safe-area-inset-bottom, 0px));
+  }
+  .UI2 dialog.case-page .cr-bar button {
+    min-height: 42px;
+  }
+  .UI2 dialog.case-page .cr-head {
+    padding: 2px 12px 4px;
+  }
+  .UI2 dialog.case-page .cr-tools-row {
+    gap: 6px;
+  }
+  .UI2 dialog.case-page :is(.cr-rows, .cr-needs) {
+    gap: 3px;
+  }
+  .UI2 dialog.case-page .cr-main {
+    padding-top: 0;
+    padding-inline: 12px;
+  }
+  /* the five rows explain themselves here; the "Sending plan" title gives its line to them */
+  .UI2 dialog.case-page #crPlanH {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
   }
 }

@@ -53,6 +53,8 @@ for (const width of [1440, 390, 320])
     await expect(page.locator('#donorRows .donor-row')).toHaveCount(2);
     const ranked = [picked[2], picked[0]],
       searched = [...ranked].sort((a, b) => b.name.length - a.name.length)[0];
+    if (!(await page.locator('#donorSearch').isVisible()))
+      await page.locator('#donorSearchOpen').click(); // Search opens from its button
     await page.locator('#donorSearch').fill(searched.name);
     await expect(page.locator('#donorRows .donor-row')).toHaveCount(1);
     await expect(page.locator('#donorRows .donor-name')).toHaveAttribute(
@@ -65,11 +67,12 @@ for (const width of [1440, 390, 320])
     await page.waitForFunction(() => !document.documentElement.dataset.uiBoot);
     await expect(page.locator('#donorToggle')).toHaveText('Resume DMs');
     await expect(page.locator('.donor-shell > #donorResumeStatus')).toHaveCount(0);
-    await page.locator('#donorToggle').click();
-    await expect(page.locator('#donorResumeDialog')).toBeVisible();
-    await expect(page.locator('#donorResumeNow')).toBeVisible();
-    await page.locator('#donorResumeClose').click();
-    await expect(page.locator('#donorResumeDialog')).toBeHidden();
+    // Paused: Resume lives in the bottom bar, so the duplicate Resume button is hidden (owner's design).
+    await expect(page.locator('#donorToggle')).toBeHidden();
+    await expect(page.locator('.donor-bottom #donorResumeStatus')).toBeVisible();
+    if (!(await page.locator('#donorResumeNowInline').isVisible()))
+      await page.locator('#donorResumeStatus .rs-pill').click();
+    await expect(page.locator('#donorResumeNowInline')).toBeVisible();
     await page.waitForTimeout(250);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,

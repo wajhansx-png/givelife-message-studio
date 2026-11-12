@@ -139,7 +139,9 @@
       foot.append(b);
     }
     if (!sheet.open) sheet.showModal();
+    page.classList.add('cr-side'); // computer: the page moves left beside the side panel
   }
+  sheet.addEventListener('close', () => page.classList.remove('cr-side'));
   sheet.addEventListener('click', (e) => e.target === sheet && sheet.close());
 
   /* ---------------------------------------------------------------- painting */
@@ -152,8 +154,7 @@
     const st = $('crStatus');
     st.textContent = STATUS[data.status] || data.status;
     st.dataset.s = data.status;
-    $('crMeta').textContent =
-      `Confirmed ${rs(data.case.confirmed)} · Left ${rs(data.case.left)} · Change`;
+    $('crMeta').textContent = `Confirmed ${rs(data.case.confirmed)} · Left ${rs(data.case.left)}`;
     const wa = $('crWa');
     wa.textContent = data.whatsapp ? 'WhatsApp on' : 'WhatsApp off';
     wa.dataset.ok = data.whatsapp ? '1' : '0';
@@ -766,14 +767,62 @@
     const ca = make('div', 'cr-row-actions');
     ca.append(
       btn('Change amount', 'cr-act', () => amountSheet()),
-      btn(
-        'Case facts (Case Writer)',
-        'cr-more',
-        () => (sheet.close(), window.CaseWriter?.open?.()),
-      ),
       btn('Switch or new case', 'cr-more', () => caseSheet()),
     );
-    caseBox.append(ca);
+    /* Case facts and the donor message written from them, right here (same server logic as Case Writer) */
+    const facts = make('textarea', 'cr-text');
+    facts.rows = 4;
+    facts.placeholder = 'Case facts';
+    facts.setAttribute('aria-label', 'Case facts');
+    const written = make('p', 'cr-quote');
+    written.hidden = true;
+    const fnote = make('p', 'cr-sub');
+    fnote.setAttribute('role', 'status');
+    let cw = null;
+    const cwBody = (action) => ({
+      action,
+      case_id: cw.case_id,
+      revision: cw.revision,
+      details: facts.value,
+      text: cw.text || '',
+      style: cw.style || 'ur_en',
+    });
+    const showCw = (d) => {
+      cw = d;
+      written.textContent = d.text || '';
+      written.hidden = !d.text;
+    };
+    const cwRun = (b, action, done) => async () => {
+      if (!cw || b.disabled) return;
+      b.disabled = true;
+      try {
+        showCw(await call('/case-message', cwBody(action)));
+        fnote.textContent = done;
+        if (action === 'use') await load();
+      } catch (e) {
+        fnote.textContent = e.message;
+      } finally {
+        b.disabled = false;
+      }
+    };
+    const fa = make('div', 'cr-row-actions');
+    const fSave = btn('Save facts', 'cr-more'),
+      fWrite = btn('Write message', 'cr-act'),
+      fUse = btn('Use message', 'cr-go');
+    fSave.onclick = cwRun(fSave, 'save', 'Saved.');
+    fWrite.onclick = cwRun(fWrite, 'generate', 'Written. Read it, then Use message.');
+    fUse.onclick = cwRun(fUse, 'use', 'Now your donor message.');
+    fa.append(fSave, fWrite, fUse);
+    caseBox.append(ca, facts, fa, written, fnote);
+    caseBox.addEventListener('toggle', () => {
+      if (caseBox.open && !cw)
+        call('/case-message')
+          .then((d) => {
+            showCw(d);
+            facts.value = d.details || '';
+          })
+          .catch((e) => (fnote.textContent = e.message));
+    });
     /* Poster */
     const posterBox = make('details', 'cr-prep');
     posterBox.dataset.s = data.checks.poster;
@@ -920,19 +969,22 @@
       setTimeout(() => document.querySelector(`#donorsPage [data-tab="${tab}"]`)?.click(), 700);
   };
   const TOOLS = [
+    ['Daily'],
     ['Donors', donors()],
-    ['Messages (versions, edit, test)', () => Nav.go('preview')],
-    ['Message screen and send', () => Nav.go('')],
-    ['Case Writer', () => window.CaseWriter?.open?.()],
-    ['Notes', press('donorNotesShortcut')],
+    ['Message and send', () => Nav.go('')],
     ['Chat', press('chatOpen')],
-    ['Volunteers and their sharing request', donors('volunteers')],
+    ['Notes', press('donorNotesShortcut')],
     ['Thank donors', () => window.DonorThanks?.open?.()],
-    ['Auto replies', () => document.querySelector('.reply-open')?.click()],
-    ['Resume group messages', () => document.querySelector('.resume-open')?.click()],
-    ['WhatsApp connection', press('whatsappConnection')],
-    ['Find groups', () => (location.href = '/new/group-finder')],
     ['Reports', () => document.querySelector('.report-open')?.click()],
+    ['Messages'],
+    ['Message versions and tests', () => Nav.go('preview')],
+    ['Case Writer', () => window.CaseWriter?.open?.()],
+    ['Volunteers', donors('volunteers')],
+    ['Auto replies', () => document.querySelector('.reply-open')?.click()],
+    ['Setup'],
+    ['WhatsApp connection', press('whatsappConnection')],
+    ['Resume group messages', () => document.querySelector('.resume-open')?.click()],
+    ['Find groups', () => (location.href = '/new/group-finder')],
     ['Settings', press('gear')],
   ];
   /* Tools opens as a bottom sheet (never a menu dropping from the top) */
@@ -940,7 +992,9 @@
     const list = make('div', 'cr-menu');
     list.id = 'crMenu';
     for (const [label, fn] of TOOLS)
-      list.append(btn(label, 'cr-tool', () => (sheet.close(), fn())));
+      list.append(
+        fn ? btn(label, 'cr-tool', () => (sheet.close(), fn())) : make('h3', 'cr-tool-h', label),
+      );
     openSheet('Tools', list, [['Close', 'cr-soft', null]]);
   }
 

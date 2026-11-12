@@ -881,6 +881,11 @@ for (const width of [280, 360, 412]) {
 for (const width of [390, 1440, 1920]) {
   test(`/new Volunteers shares the donor theme and header at ${width}px`, async ({ page }) => {
     await open(page, '/new#/donors/all', width);
+    await page.waitForFunction(() =>
+      document
+        .getAnimations()
+        .every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity),
+    ); // opening slide done
     const shell = page.locator('#donorsPage');
     const theme = await shell.evaluate((e) => getComputedStyle(e).backgroundColor);
     const header = await page.locator('.donor-head').boundingBox();

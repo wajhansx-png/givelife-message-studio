@@ -231,3 +231,43 @@ test('one page controls the amount, the case and WhatsApp, and Tools reaches eve
   await page.locator('#crWa').click();
   await expect(page.locator('#whatsappDialog')).toBeVisible();
 });
+
+test('Prepare case: edit, Save Base, Next, Test 3 versions and Looks right, all in one panel', async ({
+  page,
+}) => {
+  await open(page, 390, 844);
+  await page.locator('#crPrepare').click();
+  const sheet = page.locator('#caseSheet');
+  await expect(sheet.locator('.cr-prep')).toHaveCount(5);
+  await expect(sheet.locator('.cr-prep summary b')).toHaveText([
+    'Case',
+    'Poster',
+    'GiveLife Group message',
+    'Donor message',
+    'Volunteers sharing request',
+  ]);
+  const group = sheet.locator('.cr-prep[data-k="group"]');
+  if (!(await group.evaluate((e) => e.open))) await group.locator('summary').click();
+  const text = group.locator('textarea');
+  await expect(text).not.toHaveValue('');
+  await group.getByRole('button', { name: 'Next' }).click();
+  await expect(group.locator('[role=status]')).toContainText(/Version \d+ of \d+|No versions yet/);
+  await group.getByRole('button', { name: 'Test 3 versions' }).click();
+  await expect(group.locator('[role=status]')).toContainText('Sent 3 versions', { timeout: 20000 });
+  await group.getByRole('button', { name: 'Looks right' }).click();
+  await expect(group.locator('summary .cr-pill')).toHaveText('Ready');
+  expect((await api(port, '/case-run')).checks.group).toBe('ok');
+
+  const vol = sheet.locator('.cr-prep[data-k="volunteers"]');
+  await vol.locator('summary').click();
+  await expect(vol.locator('textarea')).toHaveAttribute('placeholder', '');
+  await vol.locator('textarea').fill('Please share this case in your groups.');
+  await vol.getByRole('button', { name: 'Save Base' }).click();
+  await expect(vol.locator('[role=status]')).toHaveText('Saved.');
+  expect((await api(port, '/volunteers')).message).toBe('Please share this case in your groups.');
+  const before = (await api(port, '/case-run')).status;
+  expect(['idle', 'finished']).toContain(before); // preparing never starts sending
+  expect(['Starting', 'Sending', 'Waiting']).not.toContain(
+    (await api(port, '/donor-delivery')).state,
+  );
+});

@@ -213,6 +213,12 @@ class CaseRun:
         a = self.app
         group = str(a.get_message("group")["text"] or "")
         dm = str(a.get_message("dm")["text"] or "")
+        try:  # the donor engine sends the saved donor base when the owner set one, not the draft
+            bank = self.hub.messages.get()
+            if bank.get("mode") == "custom" and str(bank.get("origin") or "").strip():
+                dm = str(bank["origin"])
+        except Exception:
+            pass
         follow = str(self.hub.follow_up_text() or "")
         vol = str(self.hub.volunteers.message() or "")
         poster = (a.DATA / "poster.jpg").exists() or (a.DATA / "poster.mp4").exists()

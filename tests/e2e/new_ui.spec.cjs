@@ -165,6 +165,20 @@ test('/new desktop reader: the message with its buttons right under it; editing 
   expect(await page.locator('#focusText').inputValue()).toBe(before); // round trip keeps the text exactly
 });
 
+test('/new reader: tapping a line or the B/I bar while editing keeps editing open', async ({
+  page,
+}) => {
+  await open(page, '/new#/preview', 390);
+  await page.locator('#focusEdit').click();
+  const live = page.locator('#ui2Live');
+  await expect(live).toBeVisible();
+  await live.click({ position: { x: 40, y: 30 } });
+  await expect(live).toBeVisible();
+  await page.locator('#ui2Float [data-cmd="bold"]').click();
+  await expect(live).toBeVisible();
+  await expect(page.locator('#ui2Float')).toBeVisible();
+});
+
 test("/new computer: the main screen shows today's message beside the send list; a phone keeps one column", async ({
   page,
 }) => {

@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openSettings, openDonorMessages, showPreview } = require('./helpers.cjs');
+const { openSettings, openDonorMessages, showPreview, showDm } = require('./helpers.cjs');
 const auth = { Authorization: 'Bearer manual-fix-preview-key' };
 const LONG = Array.from(
   { length: 7 },
@@ -146,13 +146,17 @@ test('a contacted donor is hidden from Important, can be shown, and still shows 
   expect(before).toBeGreaterThan(1);
   const firstId = await rows.first().getAttribute('data-donor-id');
   const secondId = await rows.nth(1).getAttribute('data-donor-id');
-  await expect(page.locator('#donorHideRow')).toBeHidden();
+  const hiddenBefore = (await page.locator('#donorHideRow').isVisible())
+    ? Number((await page.locator('#donorHideSent').textContent()).match(/\d+/)?.[0] || 0)
+    : 0; // earlier tests may already have contacted someone
   await rows.first().locator('.donor-dm').click();
   await expect(rows).toHaveCount(before - 1);
   await expect(rows.first()).toHaveAttribute('data-donor-id', secondId);
-  await expect(page.locator('#donorHideSent')).toContainText('1 contacted hidden');
+  await expect(page.locator('#donorHideSent')).toContainText(
+    `${hiddenBefore + 1} contacted hidden`,
+  );
   await page.locator('#donorHideSent').click();
-  await expect(rows).toHaveCount(before);
+  await expect(rows).toHaveCount(before + hiddenBefore);
   const sent = page.locator(`.donor-row[data-donor-id="${firstId}"]`);
   await expect(sent.locator('.donor-dm')).toContainText('DM sent');
   await expect(rows.last()).toHaveAttribute('data-donor-id', firstId);
@@ -172,7 +176,7 @@ test('bulk paste shows when every number will be sent before anything starts', a
   request,
 }) => {
   await open(page, request, 390, 844);
-  await page.locator('[data-view-button=dm]').click();
+  await showDm(page); // the DM composer has no tab button any more
   await page.locator('#sendMoreDonors').click();
   await page.locator('#pastePeople').fill('Ali 03001234567\n03011234567\n1. Sara - 0302 1234567');
   await expect(page.locator('#pastePlan li')).toHaveCount(4);
@@ -202,6 +206,8 @@ test('DM in bulk button sits in the Donors header and opens the bulk modal', asy
 }) => {
   await open(page, request, 1280, 800);
   await page.locator('#openDonors').click();
+  if (!(await page.locator('#donorBulk').isVisible()))
+    await page.locator('#donorNavMore > summary').click(); // inside + Add
   await page.locator('#donorBulk').click();
   await expect(page.locator('.paste-dialog')).toBeVisible();
   await page.locator('#pastePeople').fill('03001234567 03011234567 03021234567');
@@ -215,7 +221,7 @@ test('the batch dialog plans batches of 20, pauses, per-batch pauses and random 
 }) => {
   await open(page, request, 390, 844);
   await page.locator('#openDonors').click();
-  await page.locator('#donorSendAll').click();
+  await page.locator('#donorSendAll:visible, #donorSendImportant:visible').first().click(); // phones: one DM button
   await expect(page.locator('#batchCount')).toHaveValue(/\d+/);
   await page.locator('#batchCount').fill('100');
   await expect(page.locator('#batchStart')).toHaveAttribute(
@@ -233,7 +239,7 @@ test('the batch dialog plans batches of 20, pauses, per-batch pauses and random 
   await page.locator('#batchRandom').check();
   await expect(page.locator('#batchJMin')).toBeVisible();
   await page.locator('#batchEach').fill('0');
-  await expect(page.locator('#batchStart')).toHaveAttribute('title', new RegExp('Check the pause'));
+  await expect(page.locator('#batchPlan')).toContainText('Check the pause'); // warnings show as text, the plan lives in Start's tooltip
   const box = await page.locator('.batch-dialog').boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(391);
@@ -242,7 +248,7 @@ test('starting sends one confirmed request with batches, pauses and random gap',
   page,
   request,
 }) => {
-  await open(page, request, 390, 844);
+  await open(page, request, 1280, 800); // desktop: DM all sends to everyone
   let posted = null;
   await page.route('**/donor-delivery', async (r) => {
     if (r.request().method() === 'POST') {
@@ -252,8 +258,9 @@ test('starting sends one confirmed request with batches, pauses and random gap',
     return r.fulfill({ json: { state: 'Idle', sent: 0, skipped: 0, failed: 0, total: 0 } });
   });
   await page.locator('#openDonors').click();
-  await page.locator('#donorSendAll').click();
+  await page.locator('#donorSendAll:visible, #donorSendImportant:visible').first().click(); // phones: one DM button
   await page.locator('#batchCount').fill('45');
+  await page.locator('.batch-gap-btn[data-gap="custom"]').click(); // gap chips; Custom opens the number box
   await page.locator('#batchGap').fill('3');
   await page.locator('#batchPause').selectOption('30');
   await page.locator('#batchPause').selectOption('each');
@@ -264,7 +271,7 @@ test('starting sends one confirmed request with batches, pauses and random gap',
   await page.locator('#batchStart').click();
   await expect.poll(() => posted).not.toBeNull();
   expect(posted).toMatchObject({
-    scope: 'all',
+    scope: 'important', // one DM button: from the All tab it sends to the Important list
     chunk: 20,
     limit: 45,
     gap_seconds: 180,
@@ -319,8 +326,9 @@ test('a stopped batch offers Continue and the dialog says already-sent people ar
   await expect(page.locator('#batchNext li')).toHaveText(['Sara', 'Omar', 'Zain']);
   await expect(page.locator('#batchOther')).toContainText('Bilal');
   await page.locator('#donorContinue').click();
+  await page.locator('#donorResumeNow').click(); // Continue first asks: now or at a time
   await expect.poll(() => posted).not.toBeNull();
-  expect(posted.scope).toBe('important');
+  expect(posted.resume).toBe(true); // the server continues the saved job (its own list and settings)
   expect(posted.fresh).toBeUndefined();
   expect(posted.ids).toBeUndefined();
   await page.locator('#donorSendImportant:visible, #donorMain:visible').first().isVisible();
@@ -345,7 +353,7 @@ test('the three dots menu has a usual-donation field that saves and shows under 
   const id = await row.getAttribute('data-donor-id');
   await expect(row.locator('input.donor-normal')).toBeHidden();
   await row.locator('.donor-more summary').click();
-  const field = row.locator('.donor-normal-box input');
+  const field = row.locator('.donor-normal-box input[name="normal_amount"]');
   await expect(field).toBeVisible();
   await field.fill('500');
   await row.locator('.donor-normal-save').click();

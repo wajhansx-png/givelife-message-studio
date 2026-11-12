@@ -34,3 +34,8 @@ Apply these rules automatically to every coding task.
 - Extra options (timer, pick group) away from the Send arrow. More opens a bottom sheet, not a top menu.
 - Show money left, tap to change. Auto ON/OFF easy to see without hiding the message.
 - Tablet: message and send list side by side. Desktop: message and send buttons together.
+
+# GRAPHIFY (use on every code task)
+- First step of every code prompt: `graphify query "<question>"` or `graphify explain "<name>"`, then open only the files it names.
+- No `graphify-out/graph.json` (it is git-ignored, so new sessions lack it): run `pip install -q graphifyy && graphify update .` first.
+- After editing code: `graphify update .`. For one simple lookup, grep is fine.

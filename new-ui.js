@@ -1215,7 +1215,7 @@ const ui2Frame = (fn) => {
           h.addEventListener('keydown', (e) => e.key === 'Enter' && edit.click());
         }
       }
-      setText(sub, line);
+      setText(sub, card.querySelector('.auto-line')?.textContent.trim() || line);
     }
   }
 

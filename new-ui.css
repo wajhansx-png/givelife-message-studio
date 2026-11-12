@@ -4571,3 +4571,258 @@
   backdrop-filter: none !important;
   background-image: none !important;
 }
+
+/* ---------- Report redesign: four colour tiles, then compact Auto rows ---------- */
+.UI2 dialog.report-dialog .report-card .rp-head b {
+  color: var(--ink, #eef0f6);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.UI2 dialog.report-dialog .report-card .report-list {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  list-style: none !important;
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 2px 0 6px !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  clip: auto !important;
+  border: 0 !important;
+  white-space: normal !important;
+}
+.UI2 dialog.report-dialog .report-card .report-list::before {
+  display: none !important;
+}
+.UI2 dialog.report-dialog .report-card .report-list > li {
+  --tc: #a78bfa;
+  --tcb: #a78bfa73;
+  --tcg: #7c5cf024;
+  --tct: #d9d0ff;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  min-height: 84px !important;
+  padding: 8px 4px 6px !important;
+  border: 1px solid var(--tcb) !important;
+  border-radius: 14px !important;
+  background: var(--tcg) !important;
+  text-align: center !important;
+}
+.UI2 dialog.report-dialog .report-card .report-list > li:nth-child(2) {
+  --tc: #60a5fa;
+  --tcb: #60a5fa66;
+  --tcg: #3b82f61f;
+  --tct: #cfe3ff;
+}
+.UI2 dialog.report-dialog .report-card .report-list > li:nth-child(3) {
+  --tc: #4ade80;
+  --tcb: #4ade8059;
+  --tcg: #22c55e1a;
+  --tct: #c9f7d8;
+}
+.UI2 dialog.report-dialog .report-card .report-list > li:nth-child(4) {
+  --tc: #fbbf24;
+  --tcb: #fbbf2466;
+  --tcg: #f59e0b1f;
+  --tct: #fde7b0;
+}
+.UI2 dialog.report-dialog .report-card .report-list > li[data-bad='1'] {
+  --tc: #f87171;
+  --tcb: #f8717199;
+  --tcg: #ef444424;
+  --tct: #fecaca;
+}
+.UI2 dialog.report-dialog .report-card .report-list > li > .rp-i {
+  width: 18px !important;
+  height: 18px !important;
+  color: var(--tc) !important;
+}
+.UI2 dialog.report-dialog .report-card .report-list > li > .rp-v {
+  order: 2 !important;
+  color: #fff !important;
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+.UI2 dialog.report-dialog .report-card .report-list > li > .rp-t {
+  order: 3 !important;
+  color: var(--tct) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.15 !important;
+}
+.UI2 dialog.report-dialog .report-card .report-list > li > :is(.rp-n, .rp-s) {
+  display: none !important;
+}
+.UI2 dialog.report-dialog .report-card:has(.auto-form:not([hidden])) .report-list {
+  display: none !important;
+}
+.UI2 dialog.report-dialog .report-card .auto-controls h3 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 4px 0 6px !important;
+  color: var(--ink, #eef0f6);
+  font-size: 15px !important;
+  font-weight: 700;
+  letter-spacing: 0 !important;
+  text-transform: none;
+}
+.UI2 dialog.report-dialog .report-card .auto-controls h3 small {
+  color: var(--ink-muted, #a3a9bd);
+  font-size: 13px;
+  font-weight: 600;
+}
+.UI2 dialog.report-dialog .report-card .auto-controls h3 small[data-run='1'] {
+  color: #34d399;
+}
+.UI2 dialog.report-dialog .report-card .auto-card {
+  position: relative;
+  padding: 4px 10px 10px !important;
+  border: 1px solid #2a2f40 !important;
+  border-radius: 14px !important;
+  background: #1c2030 !important;
+  overflow: hidden;
+}
+.UI2 dialog.report-dialog .report-card .auto-card .auto-head {
+  min-height: 40px;
+}
+.UI2 dialog.report-dialog .report-card .auto-card .auto-head h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px !important;
+  font-weight: 700;
+}
+.UI2 dialog.report-dialog .report-card .auto-card .auto-head h4::before {
+  content: '';
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #6b7287;
+  box-shadow: none;
+}
+.UI2 dialog.report-dialog .report-card .auto-card[data-state='ON'] .auto-head h4::before {
+  background: #34d399;
+}
+.UI2 dialog.report-dialog .report-card .auto-card[data-state='STOPPING'] .auto-head h4::before {
+  background: #fbbf24;
+}
+.UI2 dialog.report-dialog .report-card .auto-card[data-alert='1'] {
+  border-color: #b9474780 !important;
+  background: #2a1c20 !important;
+}
+.UI2 dialog.report-dialog .report-card .auto-card[data-alert='1'] .auto-head h4::before {
+  background: #f87171;
+}
+.UI2 dialog.report-dialog .report-card .auto-card .ui2-auto-sub {
+  color: var(--ink-muted, #a3a9bd);
+  font-size: 13px;
+}
+.UI2 dialog.report-dialog .report-card .auto-card[data-state='ON'] .ui2-auto-sub {
+  color: #86efac;
+}
+.UI2 dialog.report-dialog .report-card .auto-card[data-alert='1'] .ui2-auto-sub {
+  color: #fca5a5;
+}
+.UI2 dialog.report-dialog .report-card .auto-card .auto-switch {
+  min-width: 64px !important;
+  min-height: 40px !important;
+  border: 1px solid #3a4057 !important;
+  border-radius: 20px !important;
+  background: #272c3d !important;
+  color: #a3a9bd !important;
+  box-shadow: none !important;
+  font-weight: 700;
+}
+.UI2 dialog.report-dialog .report-card .auto-card[data-state='ON'] .auto-switch {
+  border-color: #34d399 !important;
+  background: #12332a !important;
+  color: #6ee7b7 !important;
+}
+.UI2 dialog.report-dialog .report-card .auto-card[data-state='STOPPING'] .auto-switch {
+  border-color: #fbbf24 !important;
+  background: #33280f !important;
+  color: #fcd34d !important;
+}
+/* Tiny progress bar under a row that has a batch (the width is the existing --p value). */
+.UI2 dialog.report-dialog .report-card .auto-card[data-prog='1']::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 4px;
+  height: 3px;
+  border-radius: 2px;
+  width: auto;
+  opacity: 1;
+  transition: none;
+  background: linear-gradient(90deg, #8b7cf6 calc(var(--p, 0) * 100%), #343a4e 0);
+}
+.UI2 dialog.report-dialog .report-card .auto-card[data-state='ON'][data-prog='1']::after {
+  background: linear-gradient(90deg, #34d399 calc(var(--p, 0) * 100%), #343a4e 0);
+}
+.UI2 dialog.report-dialog .report-card .auto-card[data-alert='1'][data-prog='1']::after {
+  background: linear-gradient(90deg, #f87171 calc(var(--p, 0) * 100%), #343a4e 0);
+}
+@media (max-width: 359px) {
+  .UI2 dialog.report-dialog .report-card .report-list > li {
+    min-height: 76px !important;
+  }
+  .UI2 dialog.report-dialog .report-card .report-list > li > .rp-v {
+    font-size: 22px;
+  }
+  .UI2 dialog.report-dialog .report-card .report-list > li > .rp-t {
+    font-size: 11px;
+  }
+}
+@media (max-width: 299px) {
+  .UI2 dialog.report-dialog .report-card .report-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 dialog.report-dialog .report-card .report-list > li > .rp-v {
+    font-size: 30px;
+  }
+}
+.UI2 dialog.report-dialog .report-card .report-list > li > .rp-v {
+  margin: 0 !important;
+}
+.UI2 dialog.report-dialog .report-card .auto-controls h3 {
+  color: var(--ink, #eef0f6) !important;
+}
+@media (max-width: 359px), (max-height: 620px) {
+  .UI2 dialog.report-dialog .report-card .report-list > li {
+    min-height: 66px !important;
+    padding: 5px 3px 4px !important;
+  }
+  .UI2 dialog.report-dialog .report-card .report-list > li > .rp-v {
+    font-size: 20px !important;
+  }
+  .UI2 dialog.report-dialog .report-card .report-list > li > .rp-i {
+    width: 15px;
+    height: 15px;
+  }
+  .UI2 dialog.report-dialog .report-card .auto-card {
+    padding: 2px 8px 8px !important;
+  }
+  .UI2 dialog.report-dialog .report-card .auto-card .auto-head {
+    min-height: 36px;
+  }
+  .UI2 dialog.report-dialog .report-card .auto-card .auto-switch {
+    min-height: 36px !important;
+  }
+  .UI2 dialog.report-dialog .report-card .auto-controls h3 {
+    margin: 0 0 4px !important;
+  }
+}

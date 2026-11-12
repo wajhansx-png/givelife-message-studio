@@ -210,7 +210,7 @@ test('/new computer: every option is one clear button in the bottom bar, and not
     const r = await b.boundingBox();
     expect(r.height).toBeGreaterThanOrEqual(56);
     expect(r.width).toBeGreaterThanOrEqual(110);
-    await expect(b.locator('svg')).toBeVisible(); // an icon and a word
+    await expect(b.locator('svg')).toHaveCount(0); // words only, no icons (design rule)
   }
   // The same options are not on the screen twice.
   for (const dup of [

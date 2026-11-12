@@ -131,16 +131,26 @@
   dlg.className = 'report-dialog';
   dlg.setAttribute('aria-label', 'Report');
   dlg.innerHTML =
-    '<div class="report-card"><header class="rp-head"><b>Report</b><button type="button" id="reportClose" aria-label="Close report">×</button></header><ol class="report-list" aria-label="Right now">' +
+    '<div class="report-card"><header class="rp-head"><b>Activity Report</b><button type="button" id="reportClose" aria-label="Close report">×</button></header><ol class="report-list" aria-label="Right now">' +
     [
-      ['Groups', 'reportGroups'],
-      ['DMs', 'reportDms'],
-      ['Replies', 'reportReplies'],
-      ['Resumes', 'reportResumes'],
+      [
+        'Groups Sent',
+        'reportGroups',
+        '<path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/>',
+      ],
+      ['DMs Sent', 'reportDms', '<path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4 18-7z"/>'],
+      ['Replies', 'reportReplies', '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v3"/>'],
+      [
+        'Resumes',
+        'reportResumes',
+        '<path d="M21 12a9 9 0 0 0-15.5-6.2L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.2L21 16"/><path d="M16 16h5v5"/>',
+      ],
     ]
       .map(
-        ([t, id], i) =>
-          '<li><span class="rp-n" aria-hidden="true">' +
+        ([t, id, ico], i) =>
+          '<li><svg class="rp-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          ico +
+          '</svg><span class="rp-n" aria-hidden="true">' +
           (i + 1) +
           '</span><span class="rp-t">' +
           t +
@@ -151,7 +161,7 @@
           'Sub"></small></li>',
       )
       .join('') +
-    '</ol><p id="reportToday" class="rp-today"></p><section id="autoControls" class="auto-controls" aria-label="Auto controls"><h3>Auto</h3><div id="autoCards"></div><p id="autoMsg" class="auto-msg" role="alert"></p></section><button type="button" id="autoStopAll" hidden>Stop all Auto</button></div>';
+    '</ol><p id="reportToday" class="rp-today"></p><section id="autoControls" class="auto-controls" aria-label="Auto controls"><h3>Automations <small id="autoCount"></small></h3><div id="autoCards"></div><p id="autoMsg" class="auto-msg" role="alert"></p></section><button type="button" id="autoStopAll" hidden>Stop all Auto</button></div>';
   document.body.append(dlg);
   const $ = (id) => document.getElementById(id);
   const clock = (sec) =>
@@ -159,6 +169,9 @@
   const put = (id, value, sub) => {
     $(id).textContent = value;
     $(id + 'Sub').textContent = sub || '';
+    const li = $(id).parentElement;
+    li.title = sub || '';
+    li.dataset.bad = /^Unavailable/.test(sub || '') ? '1' : '';
     const n = (k) => (/\d+/.exec($(k).textContent) || ['0'])[0];
     $('reportToday').textContent =
       'Today: ' + n('reportGroups') + ' group posts · ' + n('reportReplies') + ' replies';
@@ -172,7 +185,7 @@
         next = (st.next || [])[0];
       put(
         'reportGroups',
-        (t.posts || 0) + ' today',
+        String(t.posts || 0),
         !d.on
           ? 'Auto is off'
           : next
@@ -182,7 +195,7 @@
             : 'Nothing due',
       );
     } catch (e) {
-      put('reportGroups', 'Unavailable', 'Try again in a moment');
+      put('reportGroups', '—', 'Unavailable · try again in a moment');
     }
     try {
       const j = await (await fetch('/donor-delivery')).json(),
@@ -192,8 +205,11 @@
       if (active)
         put(
           'reportDms',
-          sent + ' / ' + total,
-          Math.max(0, total - sent) +
+          String(sent),
+          'of ' +
+            total +
+            ' · ' +
+            Math.max(0, total - sent) +
             ' left' +
             (j.next_batch_at
               ? ' · next batch ' + clock(j.next_batch_at)
@@ -201,9 +217,14 @@
                 ? ' · next in ' + Math.max(0, Math.ceil(j.next_at - Date.now() / 1000)) + 's'
                 : ''),
         );
-      else put('reportDms', 'Idle', sent ? 'Last batch: ' + sent + ' of ' + total + ' sent' : '');
+      else
+        put(
+          'reportDms',
+          String(sent),
+          sent ? 'Last batch: ' + sent + ' of ' + total + ' sent' : 'Idle',
+        );
     } catch (e) {
-      put('reportDms', 'Unavailable', 'Try again in a moment');
+      put('reportDms', '—', 'Unavailable · try again in a moment');
     }
   }
   const remember = (on) => {
@@ -221,19 +242,19 @@
         last = list[0];
       put(
         'reportReplies',
-        (r.today || 0) + ' today',
+        String(r.today || 0),
         (r.total || 0) + ' in total' + (r.on ? '' : ' · Reply is off'),
       );
       put(
         'reportResumes',
-        list.length ? String(list.length) : 'None',
+        String(list.length),
         last
           ? 'Latest: ' + last.what + ' · ' + last.when + (last.state ? ' · ' + last.state : '')
           : '',
       );
     } catch (e) {
-      put('reportReplies', 'Unavailable', '');
-      put('reportResumes', 'Unavailable', '');
+      put('reportReplies', '—', 'Unavailable');
+      put('reportResumes', '—', 'Unavailable');
     }
   }
   /* ---- Auto: Group Auto, DM Top Donors, DM Important Donors. Each card only talks to /auto-controls;
@@ -486,7 +507,18 @@
         c.id !== 'group' && total ? Math.min(1, done / total).toFixed(3) : '0',
       );
       x.card.title = c.note || '';
+      /* Same rule plain() already uses for "Stopped · check WhatsApp": red means it stopped and needs a look. */
+      x.card.dataset.alert =
+        !c.on && Number(c.pending) && /unconfirmed|disconnect|restrict/i.test(c.note || '')
+          ? '1'
+          : '';
+      x.card.dataset.prog = c.id !== 'group' && total ? '1' : '';
     }
+    const all = Object.values(cards).filter((x) => x.last),
+      running = all.filter((x) => x.last.on).length,
+      count = $('autoCount');
+    count.textContent = running + '/' + all.length + ' on';
+    count.dataset.run = running ? '1' : '';
     $('autoStopAll').hidden = !Object.values(cards).some((x) => x.last && x.last.on);
   }
   async function autoRefresh() {

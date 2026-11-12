@@ -53,7 +53,15 @@
   font-weight: 500;
   margin-left: 5px;
 }
-
+.donor-back {
+  min-width: 72px;
+  min-height: 40px;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 650;
+}
 .donor-add {
   margin-left: auto;
   min-height: 40px;
@@ -149,7 +157,17 @@
   border-left-color: #d99536;
   background: color-mix(in srgb, #d99536 8%, var(--surface));
 }
-
+.donor-row[data-donated='true'] {
+  border-left-color: var(--ok);
+}
+.donor-row[data-delivery='Sent'] {
+  border-left-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 9%, var(--surface));
+}
+.donor-row[data-delivery='Sending'],
+.donor-row[data-delivery='Requesting'] {
+  background: var(--wbg);
+}
 .donor-star {
   grid-column: 1;
   width: 32px;
@@ -187,7 +205,22 @@
   padding: 0 4px;
   white-space: nowrap;
 }
-
+.donor-row[data-delivery='Sent'] .donor-dm {
+  background: var(--btn);
+  border-color: var(--btn);
+  color: white;
+  opacity: 1;
+  cursor: default;
+}
+.donor-row[data-delivery='Uncertain'] .donor-dm,
+.donor-row[data-delivery='Skipped'] .donor-dm {
+  background: var(--wbg);
+  color: var(--warn);
+  opacity: 1;
+}
+.donor-row[data-delivery='Not sent'] .donor-dm {
+  color: var(--red);
+}
 .donor-status {
   grid-column: 4;
 }
@@ -208,7 +241,12 @@
   font-size: 11px;
   color: var(--ink);
 }
-
+.donor-row[data-donated='true'] .donor-status {
+  background: var(--btn);
+  border-color: var(--btn);
+  color: white;
+  font-weight: 650;
+}
 .donor-row .donor-amount {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -291,7 +329,16 @@
   font-size: 11px;
   color: var(--mut);
 }
-
+.donor-gap input {
+  width: 58px;
+  height: 38px;
+  min-height: 38px;
+  border: 1px solid var(--line2);
+  background: var(--surface);
+  border-radius: 7px;
+  padding: 5px;
+  font-size: 12px;
+}
 .donor-message-info {
   font-size: 11px;
   color: var(--mut);
@@ -357,7 +404,10 @@
 .donor-notice[data-error='true'] {
   color: var(--red);
 }
-
+.donor-notice button {
+  min-height: 30px;
+  text-decoration: underline;
+}
 .donor-progress {
   display: flex;
   align-items: center;
@@ -370,7 +420,18 @@
   color: var(--gink);
   flex: none;
 }
-
+.donor-progress span {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.donor-progress button {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+}
 .donor-form-dialog,
 .poster-dialog {
   width: min(460px, calc(100vw - 24px));
@@ -388,13 +449,84 @@
 .poster-dialog::backdrop {
   background: #0008;
 }
-
+.donor-form-dialog h2,
+.poster-dialog h2 {
+  font-size: 21px;
+  margin-bottom: 10px;
+}
+.donor-form-dialog p,
+.poster-dialog p {
+  color: var(--mut);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.donor-form-dialog label,
+.poster-dialog label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 12px 0 6px;
+}
+.donor-form-dialog input,
+.poster-dialog input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 10px 12px;
+  font-size: 16px;
+  color: var(--ink);
+}
 .donor-form-actions {
   display: flex;
   gap: 8px;
   margin-top: 20px;
 }
-
+.donor-form-actions button {
+  flex: 1;
+  min-height: 48px;
+  border-radius: 10px;
+  border: 1px solid var(--line2);
+  font-weight: 650;
+}
+.donor-form-actions .primary {
+  background: var(--btn);
+  color: white;
+}
+.donor-form-dialog details {
+  margin-top: 20px;
+  color: var(--mut);
+  font-size: 13px;
+}
+.donor-form-dialog summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.donor-form-dialog details button {
+  min-height: 44px;
+  text-decoration: underline;
+}
+.poster-dialog img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 40dvh;
+  object-fit: contain;
+  border-radius: 10px;
+  margin: auto;
+}
+.poster-choose {
+  display: block !important;
+  text-align: center;
+  background: var(--gs);
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+}
 @media (min-width: 1400px) {
   .donor-columns,
   .donor-row {
@@ -419,8 +551,16 @@
   .donor-count {
     font-size: 11px;
   }
-  
-  
+  .donor-back {
+    min-width: 64px;
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .donor-add {
+    min-height: 44px;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
   .donor-toolbar {
     flex-direction: column;
     gap: 5px;
@@ -495,7 +635,12 @@
     font-size: 10px;
     gap: 3px;
   }
-  
+  .donor-gap input {
+    width: 43px;
+    min-height: 44px;
+    font-size: 11px;
+    padding: 4px;
+  }
   .donor-message-info,
   .donor-poster-toggle {
     display: none;
@@ -514,7 +659,9 @@
     font-size: 10px;
     min-height: 25px;
   }
-  
+  .donor-progress button {
+    min-height: 32px;
+  }
   .donor-form-dialog,
   .poster-dialog {
     padding: 20px;
@@ -583,16 +730,30 @@
   background: var(--gs);
   white-space: nowrap;
 }
-
+.donor-total small {
+  font-size: 10px;
+  color: var(--mut);
+}
+.donor-total strong {
+  color: var(--gink);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
 @media (max-width: 899px) {
   .donor-total {
     gap: 4px;
     padding: 5px 7px;
     margin-left: auto;
   }
-  
-  
-  
+  .donor-total small {
+    font-size: 9px;
+  }
+  .donor-total strong {
+    font-size: 11px;
+  }
+  .donor-add {
+    margin-left: 0;
+  }
   .donor-head {
     gap: 6px;
   }
@@ -604,14 +765,18 @@
   }
 }
 @media (max-width: 360px) {
-  
+  .donor-total small {
+    display: none;
+  }
   .donor-total {
     padding: 4px;
   }
   .donor-head h1 {
     font-size: 13px;
   }
-  
+  .donor-add {
+    padding-inline: 8px;
+  }
 }
 .donor-messages {
   flex: 1;
@@ -620,7 +785,58 @@
   overscroll-behavior: contain;
   padding: 4px;
 }
-
+.bank-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--mut);
+  margin-bottom: 10px;
+}
+.bank-heading span {
+  flex: 1;
+}
+.bank-message {
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--surface);
+}
+.bank-message header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  min-height: 36px;
+  margin-bottom: 8px;
+}
+.bank-message .tool,
+.bank-heading .tool {
+  font-size: 12px;
+  min-height: 36px;
+}
+.bank-preview {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.45;
+  background: var(--msg);
+  color: var(--msgink);
+  border-radius: 8px;
+  padding: 12px;
+}
+.bank-message textarea {
+  width: 100%;
+  height: 340px;
+  resize: vertical;
+  background: var(--surface2);
+  color: var(--ink);
+  border: 1px solid var(--line2);
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
 .donor-gap#donorPace {
   min-height: 40px;
   padding: 6px 9px;
@@ -637,8 +853,12 @@
   .donor-tabs button {
     font-size: 10px;
   }
-  
-  
+  .bank-preview {
+    font-size: 12px;
+  }
+  .bank-heading {
+    font-size: 11px;
+  }
   .donor-gap#donorPace {
     font-size: 10px;
     min-height: 44px;
@@ -685,7 +905,18 @@ html body #donorBatchForm {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px 16px;
 }
-
+html body #donorBatchForm > label {
+  margin: 0;
+  align-self: center;
+  font-size: 13px;
+}
+html body #donorBatchForm > input,
+html body #donorBatchForm > select {
+  height: 40px;
+  min-height: 40px;
+  margin: 0;
+  font-size: 14px;
+}
 html body #donorBatchForm > .batch-hint,
 html body #donorBatchForm > .batch-more,
 html body #donorBatchForm > .batch-foot,
@@ -694,27 +925,77 @@ html body #donorBatchForm > label:has(+ .batch-gap-row),
 html body #batchResume {
   grid-column: 1/-1;
 }
-
+html body .batch-gap-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+html body .batch-gap-btn {
+  padding: 6px 14px;
+  height: 38px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--ink);
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
 html body .batch-gap-btn:hover,
 html body .batch-gap-btn[aria-pressed='true'] {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
 }
-
+html body .batch-gap-row #batchGap {
+  width: 80px;
+  min-width: 60px;
+  height: 38px;
+  flex-shrink: 0;
+}
 html body #donorBatchForm > .batch-foot {
   position: static;
   margin-top: 8px;
   padding: 0;
   background: transparent;
 }
-
+html body #batchPlan {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+html body #donorBatchPicker h2,
+html body #donorPasteDialog h2 {
+  font-size: 20px;
+  margin: 0 0 16px;
+}
 html body #donorPasteDialog {
   width: min(94vw, 540px);
   max-height: 90dvh;
   padding: 20px;
 }
-
+html body #donorPasteDialog p {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+html body #pasteMessage {
+  min-height: 100px;
+  font-size: 14px;
+}
+html body #donorPasteDialog label.batch-fresh.paste-step-time {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+html body #donorPasteDialog #pastePoster {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  margin: 0;
+  flex: none;
+}
 @media (max-width: 420px) {
   html body #donorBatchPicker,
   html body #donorPasteDialog {
@@ -726,7 +1007,182 @@ html body #donorPasteDialog {
 }
 
 /* Donor Messages shares the focused black editor design of Group Preview. */
-
+#donorsPage[data-panel='messages'] {
+  background: #232323;
+  color: #ededed;
+}
+#donorsPage[data-panel='messages'] .donor-shell {
+  width: 100%;
+  max-width: none;
+  padding: 18px 24px;
+  gap: 0;
+}
+#donorsPage[data-panel='messages'] .donor-head,
+#donorsPage[data-panel='messages'] .donor-toolbar,
+#donorsPage[data-panel='messages'] .donor-bottom,
+#donorsPage[data-panel='messages'] .donor-progress,
+#donorsPage[data-panel='messages'] .hide-row {
+  display: none !important;
+}
+#donorsPage[data-panel='messages'] .donor-messages {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  background: #232323;
+  color: #ededed;
+  font-family: Arial, system-ui, sans-serif;
+}
+#donorsPage[data-panel='messages'] .bank-heading {
+  width: min(1600px, 100%);
+  margin: 0 auto 12px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: none;
+  font-size: 13px;
+  color: #d1d1d1;
+}
+#donorsPage[data-panel='messages'] .bank-heading .bank-back {
+  order: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border: 1px solid #ffffff24;
+  border-radius: 9px;
+  padding: 8px 14px;
+  background: #2b2b2b;
+  color: #ededed;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#donorsPage[data-panel='messages'] .bank-current {
+  order: 1;
+  color: #ededed;
+  font-size: 15px;
+  white-space: nowrap;
+}
+#donorsPage[data-panel='messages'] .bank-heading > span:not(.bank-current) {
+  order: 2;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #bcbcbc;
+}
+#donorsPage[data-panel='messages'] .bank-heading .bank-top-info {
+  order: 3;
+  flex: 0 !important;
+  font-size: 11px;
+  color: #a9a9a9;
+}
+#donorsPage[data-panel='messages'] .bank-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px 280px;
+  gap: 12px;
+  width: min(1600px, 100%);
+  margin: 0 auto;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+#donorsPage[data-panel='messages'] .bank-message.bank-detail {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ffffff12;
+  border-radius: 20px;
+  padding: 0;
+  background: #232323;
+  color: #ededed;
+}
+#donorsPage[data-panel='messages'] .bank-message.bank-detail header {
+  padding: 12px 24px 0;
+  margin: 0;
+  min-height: 40px;
+  flex: none;
+  color: #ededed;
+  font-size: 13px;
+}
+#donorsPage[data-panel='messages'] .bank-preview {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: transparent;
+  color: #ededed;
+  border: 0;
+  border-radius: 0;
+  padding: 18px 28px 24px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: Arial, system-ui, sans-serif;
+  scrollbar-width: thin;
+  font-size: 17px;
+}
+#donorsPage[data-panel='messages'] .bank-preview .bank-line {
+  min-height: 1.5em;
+  max-width: 90ch;
+  width: 100%;
+  margin-inline: auto;
+}
+#donorsPage[data-panel='messages'] .bank-preview .bank-line.blank {
+  min-height: 0.75em;
+}
+#donorsPage[data-panel='messages'] .bank-message textarea {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  resize: none;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #ededed;
+  caret-color: #65a7ff;
+  padding: 18px 28px 24px;
+  font:
+    17px/1.5 Arial,
+    system-ui,
+    sans-serif;
+  max-width: 90ch;
+  margin-inline: auto;
+  outline: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+#donorsPage[data-panel='messages'] .bank-actions {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  gap: 7px;
+  max-height: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+#donorsPage[data-panel='messages'] .bank-actions button,
+#donorsPage[data-panel='messages'] .bank-picker button {
+  border: 1px solid #ffffff24;
+  background: #2b2b2b;
+  color: #ededed;
+  border-radius: 9px;
+  padding: 8px 10px;
+  min-height: 44px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
 #donorsPage[data-panel='messages'] .bank-actions button:hover,
 #donorsPage[data-panel='messages'] .bank-picker button:hover {
   background: #353535;
@@ -739,7 +1195,130 @@ html body #donorPasteDialog {
   opacity: 0.45;
   cursor: default;
 }
-
+#donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate {
+  min-height: 48px;
+  margin-top: 7px;
+  background: #315cd0;
+  color: #fff;
+}
+#donorsPage[data-panel='messages'] .bank-pagination {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  margin: 0;
+}
+#donorsPage[data-panel='messages'] .bank-pagination > span {
+  text-align: center;
+  color: #c6c6c6;
+  font-size: 12px;
+  padding: 3px 0;
+}
+#donorsPage[data-panel='messages'] .bank-picker {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  align-self: stretch;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  background: #272727;
+  border: 1px solid #ffffff12;
+  border-radius: 16px;
+  padding: 16px;
+}
+#donorsPage[data-panel='messages'] .bank-picker-title {
+  margin: 0 0 9px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #ededed;
+}
+#donorsPage[data-panel='messages'] .bank-picker button {
+  display: block;
+  flex: none;
+  text-align: center;
+  white-space: normal;
+  min-height: 46px;
+}
+#donorsPage[data-panel='messages'] .bank-picker button[aria-pressed='true'] {
+  background: #315cd0;
+  color: #fff;
+  border-color: #4775eb;
+}
+#donorsPage[data-panel='messages'] .bank-picker button:last-child {
+  margin-bottom: 4px;
+}
+@media (max-width: 850px) {
+  #donorsPage[data-panel='messages'] .donor-shell {
+    padding: 8px;
+    gap: 0;
+  }
+  #donorsPage[data-panel='messages'] .bank-heading {
+    min-height: 44px;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  #donorsPage[data-panel='messages'] .bank-heading .bank-top-info {
+    display: none;
+  }
+  #donorsPage[data-panel='messages'] .bank-heading > span:not(.bank-current) {
+    font-size: 11px;
+  }
+  #donorsPage[data-panel='messages'] .bank-workspace {
+    grid-template-columns: minmax(0, 1fr) 82px;
+    grid-template-rows: minmax(210px, 1fr) minmax(130px, 28dvh);
+    gap: 7px;
+    overflow: auto;
+  }
+  #donorsPage[data-panel='messages'] .bank-message.bank-detail {
+    border-radius: 12px;
+  }
+  #donorsPage[data-panel='messages'] .bank-message.bank-detail header {
+    padding: 8px 12px 0;
+    min-height: 32px;
+  }
+  #donorsPage[data-panel='messages'] .bank-preview,
+  #donorsPage[data-panel='messages'] .bank-message textarea {
+    padding: 12px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  #donorsPage[data-panel='messages'] .bank-actions button {
+    min-height: 44px;
+    font-size: 11px;
+    padding: 6px 4px;
+  }
+  #donorsPage[data-panel='messages'] .bank-picker {
+    grid-column: 1/-1;
+    min-height: 0;
+    border-radius: 12px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    align-content: start;
+  }
+  #donorsPage[data-panel='messages'] .bank-picker-title {
+    grid-column: 1/-1;
+    font-size: 13px;
+    margin: 0 0 3px;
+  }
+  #donorsPage[data-panel='messages'] .bank-picker button {
+    min-height: 44px;
+    font-size: 11px;
+    padding: 5px;
+  }
+}
+@media (max-width: 380px) {
+  #donorsPage[data-panel='messages'] .bank-heading .bank-current {
+    font-size: 13px;
+  }
+  #donorsPage[data-panel='messages'] .bank-heading .bank-back {
+    padding: 6px 8px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   #donorsPage[data-panel='messages'] * {
     scroll-behavior: auto !important;
@@ -760,11 +1339,37 @@ html body #donorPasteDialog {
 .donor-resume-status[hidden] {
   display: none;
 }
-
+.donor-resume-status button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+}
+.donor-resume-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.donor-resume-choices button {
+  min-height: 48px;
+  padding: 10px;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  font-weight: 650;
+}
+.donor-resume-choices .primary {
+  background: var(--btn);
+  color: white;
+}
 .donor-resume-dialog [hidden] {
   display: none;
 }
-
+.donor-resume-dialog #donorResumeNote {
+  margin-top: 12px;
+}
+.donor-resume-dialog input {
+  color-scheme: light dark;
+}
 .donor-resume-dialog form {
   margin-top: 14px;
 }
@@ -773,17 +1378,77 @@ html body #donorPasteDialog {
     align-items: stretch;
     flex-direction: column;
   }
-  
+  .donor-resume-choices {
+    grid-template-columns: 1fr;
+  }
+}
+.volunteer-timing-dialog select {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  padding: 10px 12px;
+}
+.volunteer-timing-dialog #volTimingPlan {
+  margin-top: 12px;
+  color: var(--ink);
 }
 
 /* Both saved pictures and videos fit the Poster dialog without stretching on phones. */
+.poster-dialog #posterCurrentVideo {
+  display: block;
+  max-width: 100%;
+  max-height: 38dvh;
+  width: auto;
+  height: auto;
+  margin-inline: auto;
+  border-radius: 10px;
+}
+.poster-dialog #posterCurrent[hidden],
+.poster-dialog #posterCurrentVideo[hidden] {
+  display: none !important;
+}
 
 /* Poster saving: real upload progress; success only after server confirmation. */
-
+.poster-dialog .poster-save-progress {
+  margin-top: 12px;
+  display: grid;
+  gap: 7px;
+}
+.poster-dialog .poster-save-progress[hidden] {
+  display: none !important;
+}
+.poster-dialog .poster-save-track {
+  height: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.poster-dialog #posterProgressFill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--btn);
+  border-radius: inherit;
+  transition: width 150ms linear;
+}
+.poster-dialog .poster-save-progress[data-state='saved'] #posterProgressFill {
+  background: var(--ok);
+}
 .poster-dialog .poster-save-progress[data-state='error'] #posterProgressFill {
   background: var(--red);
 }
-
+.poster-dialog #posterProgressText {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
 .poster-dialog .donor-form-actions button:disabled,
 .poster-dialog .poster-choose:has(+ input:disabled) {
   opacity: 0.7;
@@ -797,16 +1462,76 @@ html body #donorPasteDialog {
 
 /* The 20-version generator belongs beside the visible Donors > Messages actions,
    not in the cramped mobile heading (where it became unreachable). */
-
+#donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate {
+  display: block !important;
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 50px;
+  margin: 7px 0 0;
+  padding: 11px 12px;
+  border: 1px solid #5269f3;
+  border-radius: 12px;
+  background: linear-gradient(110deg, #315fdc, #7936e7);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  flex: none;
+}
 #donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate:disabled {
   opacity: 0.68;
   cursor: progress;
 }
+#donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate-progress {
+  display: block;
+  grid-column: 1 / -1;
+  min-height: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #bfcce8;
+  overflow-wrap: anywhere;
+}
+#donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate-progress:empty {
+  display: none;
+}
 
 /* Donation screenshot ranking is separate from current-case donated amount. */
+.donor-receipt-total {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #71b7dd;
+  line-height: 1.2;
+  font-size: 10px;
+  font-weight: 600;
+}
+@media (max-width: 899px) {
+  .donor-receipt-total {
+    font-size: 9px;
+  }
+}
 
 /* Add numbers dialog: a quiet, full-width "Remove all GIKI donors" button above Close / Save. */
-
+.numbers-dialog .numbers-remove {
+  width: 100%;
+  min-height: 44px;
+  margin: 4px 0 8px;
+  padding: 0 12px;
+  border: 1px solid #ff6b6b66;
+  border-radius: 12px;
+  background: transparent;
+  color: #ff9a9a;
+  font-weight: 700;
+  cursor: pointer;
+}
+.numbers-dialog .numbers-remove[data-armed='1'] {
+  background: #ff6b6b;
+  color: #1a0a0a;
+}
 .numbers-dialog .numbers-remove:disabled {
   opacity: 0.5;
 }

@@ -10,7 +10,11 @@ html body #caseWriterDialog {
   box-sizing: border-box;
   overflow-y: auto;
 }
-
+html body #caseWriterDialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 #caseWriterDialog header {
   display: flex;
   align-items: center;
@@ -18,15 +22,96 @@ html body #caseWriterDialog {
   gap: 12px;
   padding: 0;
 }
-
+#caseWriterDialog h2 {
+  font-size: 18px;
+  margin: 0;
+}
+#caseWriterContext,
+#caseWriterDialog small {
+  color: var(--mut);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.case-writer-workspace {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  min-height: 0;
+}
+.case-writer-workspace section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.case-writer-workspace label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.case-writer-workspace label small {
+  float: right;
+  font-weight: 400;
+}
+html body #caseWriterDialog textarea,
+html body #caseWriterDialog select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 15px;
+  padding: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+html body #caseWriterDialog textarea {
+  min-height: 220px;
+  line-height: 1.6;
+  resize: vertical;
+}
+#caseWriterDialog footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 0;
+}
+html body #caseWriterDialog footer button {
+  min-height: 44px;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+#caseWriterBack {
+  margin-right: auto;
+}
+#caseWriterStatus {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+html body #donorMessages .bank-write-case {
+  white-space: nowrap;
+  min-height: 40px;
+}
 @media (max-width: 650px) {
-  
+  .case-writer-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
   #caseWriterDialog header {
     align-items: flex-start;
     flex-direction: column;
     gap: 4px;
   }
-  
-  
-  
+  html body #caseWriterDialog textarea {
+    min-height: 150px;
+    font-size: 16px;
+  }
+  #caseWriterDialog footer {
+    flex-wrap: wrap;
+  }
+  html body #caseWriterDialog footer button {
+    flex: 1;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
 }

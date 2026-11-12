@@ -19,7 +19,9 @@
   border-radius: 14px;
   background: #ffffff12;
 }
-
+.auto-card[data-state='ON'] {
+  border-color: #34d399aa;
+}
 .auto-head {
   display: flex;
   align-items: center;
@@ -35,7 +37,9 @@
   margin: 0;
   padding: 0 14px;
 }
-
+.auto-card[data-state='ON'] .auto-switch {
+  background: #047857 !important;
+}
 .auto-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -65,7 +69,35 @@
   min-height: 36px;
   padding: 0 14px;
 }
-
+.auto-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.auto-form label {
+  display: grid;
+  gap: 3px;
+  font-size: 13px;
+}
+.auto-form .auto-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.auto-form input:not([type='checkbox']),
+.auto-form select {
+  min-height: 38px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid #ffffff40;
+  background: #0b1020;
+  color: inherit;
+  font: inherit;
+}
+.auto-form button {
+  margin-top: 0;
+  min-height: 38px;
+}
 .auto-error,
 .auto-msg {
   margin: 4px 0 0;

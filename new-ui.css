@@ -1175,6 +1175,26 @@
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+.UI2 .ui2-sheet-grid .ui2-tile[data-wide='1'] {
+  grid-column: 1 / -1;
+}
+.UI2 .ui2-sheet-x {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted, #9aa3b8);
+  font-size: 20px;
+}
+.UI2 .ui2-sheet .ui2-sheet-x {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
 .UI2 .ui2-tile {
   position: relative;
   display: flex;

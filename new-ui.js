@@ -697,6 +697,7 @@ const ui2Frame = (fn) => {
     const poster = $('previewChangePoster');
     const overflow = tools.querySelector('.overflow-tools > div');
     if (poster && overflow) overflow.prepend(poster);
+    if ($('openCase')) $('openCase').style.display = ''; // More → Case page exists on /new only
   }
   function placeholder() {
     const cmd = $('cmd');
@@ -804,6 +805,14 @@ const ui2Frame = (fn) => {
     for (const id of ['focusNext', 'focusTest', 'focusSave']) {
       const b = $(id);
       if (b && panel) panel.prepend(b);
+    }
+    if (panel) {
+      const c = document.createElement('button'); // More → Case page
+      c.type = 'button';
+      c.id = 'focusCase';
+      c.textContent = 'Case page';
+      c.onclick = () => Nav.go('case');
+      panel.append(c);
     }
     const sum = more.querySelector('summary');
     sum.textContent = 'More';

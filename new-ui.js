@@ -296,7 +296,7 @@ const ui2Frame = (fn) => {
       more = mk('details', 'ui2-bank-more');
       more.id = 'ui2BankMore';
       more.innerHTML =
-        '<summary aria-label="More: Next, Regenerate, Test, Bold, Italic, Base message">⋯</summary><div></div>';
+        '<summary aria-label="More: Next, Regenerate, Test, Bold, Italic, Base message">More</summary><div></div>';
       box.append(more);
       document.addEventListener('pointerdown', (e) => {
         if (more.open && !more.contains(e.target)) more.open = false;
@@ -334,7 +334,7 @@ const ui2Frame = (fn) => {
       box.append(back);
     }
     if (!box.nextElementSibling?.classList.contains('ui2-bank-hint')) {
-      const hint = mk('p', 'ui2-bank-hint', 'Base message · Test · Bold/Italic live inside ⋯');
+      const hint = mk('p', 'ui2-bank-hint', 'Base message · Test · Bold/Italic live inside More');
       box.after(hint);
     }
   }
@@ -806,14 +806,14 @@ const ui2Frame = (fn) => {
       if (b && panel) panel.prepend(b);
     }
     const sum = more.querySelector('summary');
-    sum.textContent = '⋯';
+    sum.textContent = 'More';
     sum.setAttribute('aria-label', 'More: Save Base, Test, Next wording');
     for (const id of ['focusCopy', 'focusEdit']) if ($(id)) bar.append($(id));
     bar.append(more);
     if ($('focusBack')) bar.append($('focusBack'));
     const hint = document.createElement('p');
     hint.className = 'ui2-reader-hint';
-    hint.textContent = 'Save Base · Test · Next wording live inside ⋯';
+    hint.textContent = 'Save Base · Test · Next wording live inside More';
     bar.after(hint);
     bar.dataset.ui2Row = '1';
   }
@@ -1002,8 +1002,8 @@ const ui2Frame = (fn) => {
     const phone = !wide(),
       bar = document.querySelector('.donor-toolbar'),
       hide = $('donorHideRow');
-    /* Phone: the menu is one "⋯" button at the end of the tabs row; computer: the "+ Add" button in the header. */
-    setText(sum, phone ? '⋯' : '+ Add');
+    /* Phone: the menu is one "More" button at the end of the tabs row; computer: the "+ Add" button in the header. */
+    setText(sum, phone ? 'More' : '+ Add');
     sum.setAttribute('aria-label', phone ? 'More: add donors and list options' : 'Add donors');
     nav.classList.add('ui2-add-menu');
     const numbers = $('donorNumbers'),
@@ -1063,7 +1063,7 @@ const ui2Frame = (fn) => {
         nav.parentElement === h ? msgs || nav : nav,
       );
     }
-    /* Phone: search icon and "⋯" end the tabs row; the hide / deselect chips live inside "⋯". Computer: back in the header. */
+    /* Phone: search icon and "More" end the tabs row; the hide / deselect chips live inside "More". Computer: back in the header. */
     const search = $('ui2DonorSearch');
     if (phone && bar) {
       if (search.parentElement !== bar) bar.append(search);

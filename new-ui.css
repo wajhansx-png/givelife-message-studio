@@ -3907,17 +3907,19 @@
   }
   .UI2 #donorsPage .donor-toolbar > .ui2-add-menu {
     order: 3 !important;
-    flex: 0 0 48px;
+    flex: 0 0 auto;
   }
   .UI2 #donorsPage .donor-toolbar > .ui2-add-menu > summary {
     min-width: 48px !important;
-    width: 48px;
-    padding: 0 !important;
+    width: auto;
+    padding: 0 12px !important;
     border: 1px solid var(--line2) !important;
     background: var(--surface2, #232838) !important;
     color: var(--ink, #eef0f6) !important;
-    font-size: 24px !important;
+    font-size: 14px !important;
+    font-weight: 600;
     line-height: 1;
+    white-space: nowrap;
   }
   .UI2 #donorsPage .donor-toolbar > .ui2-add-menu .compact-nav-panel {
     top: auto !important;
@@ -4965,7 +4967,7 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
   gap: 8px;
   position: relative;
 }
-.UI2 dialog.case-page :is(.cr-soft, .cr-tools > summary),
+.UI2 dialog.case-page .cr-soft,
 .UI2 dialog.case-sheet .cr-soft {
   min-height: 44px;
   padding: 0 16px;
@@ -4980,26 +4982,11 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
   cursor: pointer;
   list-style: none;
 }
-.UI2 dialog.case-page .cr-tools > summary::-webkit-details-marker {
-  display: none;
-}
-.UI2 dialog.case-page .cr-menu {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 52px;
-  z-index: 5;
+.UI2 dialog.case-sheet .cr-menu {
   display: grid;
-  gap: 4px;
-  padding: 8px;
-  border: 1px solid var(--cr-line);
-  border-radius: 16px;
-  background: var(--cr-surface);
+  gap: 2px;
 }
-.UI2 dialog.case-page .cr-tools:not([open]) .cr-menu {
-  display: none;
-}
-.UI2 dialog.case-page .cr-tool {
+.UI2 dialog.case-sheet .cr-tool {
   min-height: 44px;
   padding: 0 14px;
   border: 0;
@@ -5419,10 +5406,6 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
     width: min(560px, calc(100vw - 32px));
     border-radius: 20px;
   }
-  .UI2 dialog.case-page .cr-menu {
-    right: auto;
-    width: 320px;
-  }
 }
 @media (max-width: 359px) {
   .UI2 .ui2-tab {
@@ -5522,7 +5505,7 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
     margin: 2px 0 6px;
     font-size: 13px;
   }
-  .UI2 dialog.case-page :is(.cr-soft, .cr-tools > summary) {
+  .UI2 dialog.case-page .cr-soft {
     min-height: 40px;
   }
   .UI2 dialog.case-page .cr-row {
@@ -5727,5 +5710,99 @@ html[data-theme='light'] .UI2 dialog.case-sheet {
   .UI2 dialog.case-page .cr-head {
     padding-top: 6px;
     padding-bottom: 4px;
+  }
+}
+
+/* Design taste (PDF): words not icons, no shadow under buttons, every tap at least 40px, calm quick motion. */
+.UI2 dialog.case-page button,
+.UI2 dialog.case-sheet button {
+  box-shadow: none !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.12s ease,
+    background-color 0.15s ease;
+}
+.UI2 dialog.case-page button:active:not(:disabled),
+.UI2 dialog.case-sheet button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.UI2 dialog.case-page :is(#crName, #crWa, #crMeta) {
+  min-height: 42px !important;
+}
+.UI2 dialog.case-sheet .cr-quote {
+  font-size: 15px;
+}
+/* Every daily tap on /new is at least 40px high (thumb-friendly), words instead of symbols. */
+.UI2 .ui2-status-row :is(#leftChip, #whatsappConnection),
+.UI2 #live .autosw,
+.UI2 .ui2-group-more :is(.ui2-later, .ui2-choose-btn),
+.UI2 #card .tools :is(#edit, #fresh, #copy),
+.UI2 .ui2-styles button {
+  min-height: 40px !important;
+}
+.UI2 dialog.case-page #crMeta {
+  display: inline-flex;
+  align-items: center;
+}
+.UI2 dialog.case-sheet .cr-tool:hover {
+  background: var(--cr-bg);
+}
+.UI2 dialog.case-sheet > header {
+  position: relative;
+  padding-top: 18px;
+}
+.UI2 dialog.case-sheet .cr-grab {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: var(--cr-line);
+}
+.UI2 dialog.case-sheet #csBody {
+  overscroll-behavior: contain;
+}
+.UI2 dialog.case-sheet[open] {
+  animation: cr-sheet-up 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.UI2 dialog.case-sheet[open]::backdrop {
+  animation: cr-fade 0.2s ease;
+}
+@keyframes cr-sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@keyframes cr-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 dialog.case-sheet[open] {
+    animation-name: cr-sheet-pop;
+  }
+  .UI2 dialog.case-sheet .cr-grab {
+    display: none;
+  }
+}
+@keyframes cr-sheet-pop {
+  from {
+    transform: translate(-50%, calc(-50% + 12px));
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .UI2 dialog.case-sheet[open],
+  .UI2 dialog.case-sheet[open]::backdrop {
+    animation: none;
+  }
+  .UI2 dialog.case-page button,
+  .UI2 dialog.case-sheet button {
+    transition: none;
   }
 }

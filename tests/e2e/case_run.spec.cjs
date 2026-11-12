@@ -74,7 +74,7 @@ test('the Case tab is the first tab, and Tools opens the existing tools and come
   await expect(tabs.first()).toHaveText('Case');
   await tabs.first().click();
   await expect(page.locator('#casePage')).toBeVisible();
-  await page.locator('#crTools summary').click();
+  await page.locator('#crTools').click();
   await expect(page.locator('#crMenu .cr-tool')).toContainText([
     'Donors',
     'Messages (versions, edit, test)',
@@ -216,7 +216,7 @@ test('one page controls the amount, the case and WhatsApp, and Tools reaches eve
   await expect(sheet.locator('select option')).not.toHaveCount(0);
   await expect(sheet.getByRole('button', { name: 'Start new case' })).toBeVisible();
   await sheet.locator('#csFoot').getByRole('button', { name: 'Close' }).click();
-  await page.locator('#crTools summary').click();
+  await page.locator('#crTools').click();
   await expect(page.locator('#crMenu .cr-tool')).toContainText([
     'Donors',
     'Volunteers and their sharing request',
@@ -227,7 +227,7 @@ test('one page controls the amount, the case and WhatsApp, and Tools reaches eve
     'Reports',
     'Settings',
   ]);
-  await page.locator('#crTools summary').click();
+  await page.locator('#caseSheet #csFoot').getByRole('button', { name: 'Close' }).click();
   await page.locator('#crWa').click();
   await expect(page.locator('#whatsappDialog')).toBeVisible();
 });

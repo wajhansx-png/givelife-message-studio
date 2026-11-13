@@ -143,13 +143,46 @@ async function openReader(page, view = 'group', width = 390) {
   await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
 }
 
-test('Reader: nothing saved means disabled ticks and an Add files button', async ({ page }) => {
+test('Reader (group message): nothing saved means disabled ticks and an Add button on each', async ({ page }) => {
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
   await api(port, '/group-extras', { action: 'remove', kind: 'video' });
   await openReader(page);
-  await expect(page.locator('#ui2Rx-pdf')).toBeDisabled();
-  await expect(page.locator('#ui2Rx-video')).toBeDisabled();
-  await expect(page.locator('.ui2-rx-add')).toBeVisible();
+  for (const kind of ['pdf', 'video']) {
+    await expect(page.locator(`#ui2Rx-${kind}`)).toBeDisabled();
+    await expect(page.locator(`.ui2-rx-item[data-kind="${kind}"] .ui2-rx-add`)).toHaveText('Add');
+  }
+});
+
+test('Reader (group message): attach a PDF and a video here, then tick which ones go', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
+  await api(port, '/group-extras', { action: 'remove', kind: 'video' });
+  await openReader(page);
+  await page.locator('#ui2RxFile-pdf').setInputFiles({ name: 'case-report.pdf', mimeType: 'application/pdf', buffer: PDF });
+  await expect(page.locator('#ui2Rx-pdf')).toBeChecked(); // a new file starts ticked: it goes
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"] .ui2-rx-add')).toHaveText('Change');
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).toHaveAttribute('title', 'case-report.pdf');
+  await page.locator('#ui2RxFile-video').setInputFiles({ name: 'oxygen.mp4', mimeType: 'video/mp4', buffer: MP4 });
+  await expect(page.locator('#ui2Rx-video')).toBeChecked();
+  let v = await api(port, '/group-extras');
+  expect([v.pdf.has, v.pdf.on, v.video.has, v.video.on]).toEqual([true, true, true, true]);
+  await page.locator('#ui2Rx-pdf').uncheck();
+  v = await api(port, '/group-extras');
+  expect([v.pdf.on, v.video.on]).toEqual([false, true]); // only the video goes; the PDF stays attached
+  // a wrong file says why and changes nothing
+  await page.locator('#ui2RxFile-pdf').setInputFiles({ name: 'clip.mp4', mimeType: 'video/mp4', buffer: MP4 });
+  await expect(page.locator('.ui2-rx-msg')).toContainText('Choose a PDF');
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).toHaveAttribute('title', 'case-report.pdf');
+});
+
+test('Reader (DM message): no attach buttons; a tick with no file says to attach it on the group message', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
+  await api(port, '/group-extras', { action: 'remove', kind: 'video' });
+  await openReader(page, 'dm');
+  await expect(page.locator('.ui2-rx-add')).toHaveCount(2);
+  await expect(page.locator('.ui2-rx-add').first()).toBeHidden();
+  await page.locator('#ui2Rx-pdf').check({ force: true });
+  await expect(page.locator('.ui2-rx-msg')).toContainText('Attach it on the group message first');
+  await expect(page.locator('#ui2Rx-pdf')).not.toBeChecked();
 });
 
 test('Reader (group message): tick PDF and video, both / one / none, applied to the group posts', async ({ page }) => {

@@ -5871,8 +5871,8 @@
   font-weight: 600;
 }
 
-/* Reader: "Also send: PDF / Video" under the message (group: after the poster and caption; DM: after each DM).
-   It sits where the small hint line was (the hint is hidden), one 40px line. */
+/* Reader: "Also send: PDF / Video" under the message (group: attach + tick; DM: tick only; the files are the case's).
+   It sits where the small hint line was (the hint is hidden). */
 .UI2 #messageFocus.ui2-has-rx .ui2-reader-hint {
   display: none;
 }
@@ -5881,7 +5881,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px 8px;
   margin: 0;
 }
 .UI2 .ui2-rx-label {
@@ -5889,16 +5889,21 @@
   font-size: 12px;
   font-weight: 700;
 }
-.UI2 .ui2-rx-chip {
+.UI2 .ui2-rx-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 0 10px;
+  min-height: 44px;
+  padding: 0 4px 0 12px;
   border: 1px solid var(--line2);
   border-radius: 999px;
   background: var(--surface2, #232838);
-  font-size: 13px;
+}
+.UI2 .ui2-rx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -5908,18 +5913,22 @@
   margin: 0;
   accent-color: #2f6fe4;
 }
-.UI2 .ui2-rx-chip[data-off='1'] {
-  opacity: 0.55;
+.UI2 .ui2-rx-item[data-off='1'] .ui2-rx-chip {
+  opacity: 0.6;
 }
 .UI2 .ui2-rx-add {
+  display: inline-flex;
+  align-items: center;
   min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--line2);
+  padding: 0 10px;
   border-radius: 999px;
-  background: var(--surface2, #232838);
   color: #9db8ff;
   font-size: 13px;
   font-weight: 700;
+  cursor: pointer;
+}
+.UI2 .ui2-rx-add[hidden] {
+  display: none;
 }
 .UI2 .ui2-rx-msg {
   flex: 1 1 100%;
@@ -5939,12 +5948,14 @@
   }
 }
 @media (max-width: 299px) {
-  .UI2 .ui2-rx-chip,
-  .UI2 .ui2-rx-add {
-    padding-inline: 8px;
+  .UI2 .ui2-rx-item {
+    padding-left: 8px;
   }
-  .UI2 #ui2ReaderExtras {
+  .UI2 .ui2-rx-chip {
     gap: 6px;
+  }
+  .UI2 .ui2-rx-add {
+    padding-inline: 6px;
   }
 }
 

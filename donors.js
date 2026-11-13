@@ -355,7 +355,9 @@
   let vols = { items: [], message: '', delivery: null },
     volPoll = 0;
   let drawEpoch = 0;
-  const DRAW_CHUNK = 40;
+  const FIRST_CHUNK = 14; // one screenful: painted in the same frame as the tap
+  const DRAW_CHUNK = 16; // the rest, a few frames later, in pieces small enough not to freeze a tap or a scroll
+  let drawSig = ''; // what the list on screen is drawn from (or being drawn from): the same list is never drawn twice
   const EAGER_ROWS = 200; // up to here rows are drawn in the following frames; longer lists load as you scroll
   let tab = 'all',
     data = { items: [], counts: {} },
@@ -1734,6 +1736,9 @@
       b.setAttribute('aria-selected', b.dataset.tab === tab);
     }
     const rows = el('donorRows');
+    const sig = tab + '|' + el('donorSearch').value + '|' + JSON.stringify(data.items);
+    if (rows.children.length && sig === drawSig) return; // identical list (drawn or still being drawn): nothing flickers
+    drawSig = sig;
     rows.textContent = '';
     if (!data.items.length) {
       const empty = make('div', 'donor-empty');
@@ -1765,7 +1770,11 @@
       () => {
         if (epoch !== drawEpoch) return;
         const frag = document.createDocumentFragment();
-        for (const end = Math.min(next + DRAW_CHUNK, items.length); next < end; next++) {
+        for (
+          const end = Math.min(next + (next ? DRAW_CHUNK : FIRST_CHUNK), items.length);
+          next < end;
+          next++
+        ) {
           const d = items[next];
           if (tab === 'top' && d.group && (next === 0 || items[next - 1].group !== d.group))
             frag.append(make('div', 'donor-group-head', d.group + ' Donors'));
@@ -2159,8 +2168,9 @@
     rowsWatch.observe(mark);
   }
   function dropRows() {
-    drawEpoch++;
+    drawEpoch++; // stop any rows still being drawn
     rowsWatch?.disconnect();
+    drawSig = '';
     el('donorRows').textContent = '';
   }
   function setPanel(t) {
@@ -2199,7 +2209,7 @@
     await poll();
   }
   function close() {
-    dropRows();
+    dropRows(); // the page closes at once (no fade-out), so emptying the list is never seen
     page.close();
     Nav.leave('donors');
     clearTimeout(pollTimer);
@@ -2347,7 +2357,8 @@
       : '';
     el('batchOther').hidden = !other.length;
   }
-  let autoNote = '';
+  let autoNote = '',
+    tableRight = 0;
   function paintAuto(a) {
     if (!a || !el('donorAuto')) return;
     if (autoOn && !a.enabled && a.note && a.note !== autoNote)
@@ -2389,7 +2400,7 @@
                 : false,
         ),
         /* The count sits outside the list box, in the free space on the right; with no room it joins the green line. */
-        shellBox = el('donorTable').getBoundingClientRect(),
+        shellBox = { right: tableRight || el('donorTable').getBoundingClientRect().right },
         phone = innerWidth - shellBox.right < 190,
         overall =
           phone && inScope.length
@@ -3085,7 +3096,17 @@
       size = (n) => (heights.has(n) ? heights.get(n) : n.offsetHeight),
       sync = () => {
         /* Write only when a value changes: rewriting the same variable re-styles the whole donor screen.
-           Sizes come from the ResizeObserver entries, so no extra forced layout. */
+           Sizes come from the ResizeObserver entries, so no extra forced layout.
+           A closed page measures 0: keep the last values. Writing 0 on close and the real size on open
+           restyled every element of the page twice per open/close. */
+        if (!page.open) {
+          // Nothing to measure on a closed page (it would force a layout just to read 0).
+          if (!shell.style.getPropertyValue('--donor-foot')) {
+            shell.style.setProperty('--donor-foot', '0px');
+            shell.style.setProperty('--donor-rs', '0px');
+          }
+          return;
+        }
         const footPx = (foot ? size(foot) : 72) + 'px',
           rsH = rs ? size(rs) : 0,
           rsPx = rs && rs.parentElement !== foot && !rs.hidden && rsH ? rsH + 8 + 'px' : '0px';
@@ -3105,8 +3126,13 @@
               );
             sync();
           }).observe(n);
+    /* Where the list box ends is read here, once layout is settled, so the status poll never forces a layout. */
+    if (typeof ResizeObserver !== 'undefined')
+      new ResizeObserver(() => {
+        tableRight = el('donorTable').getBoundingClientRect().right;
+      }).observe(el('donorTable'));
     if (rs)
-      new MutationObserver(() => (heights.delete(rs), sync())).observe(rs, {
+      new MutationObserver(() => sync()).observe(rs, {
         attributes: true,
         attributeFilter: ['hidden', 'class'],
       });

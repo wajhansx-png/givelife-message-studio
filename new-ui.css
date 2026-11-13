@@ -5707,6 +5707,10 @@
 .UI2 .ui2-tab[aria-current='true'] svg .d {
   fill-opacity: 0.34;
 }
+/* The lit tab changes at once (a fading highlight showed two tabs lit for a moment). */
+.UI2 .ui2-tab {
+  transition: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .UI2 .ui2-tab svg {
     transition: none;

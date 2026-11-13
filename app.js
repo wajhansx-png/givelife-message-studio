@@ -1356,12 +1356,25 @@ function paintTimers(timers) {
     );
   });
 }
-let timerBusy = false;
+let timerBusy = false,
+  timerRev = 0; // counts local timer changes, so a status refresh that started before one cannot undo it
+/* Show the choice at once (the server answer can take a second): the tapped time lights up, or goes dark when
+   it was the one already scheduled. A failed request repaints the real state. */
+function markPill(scope, minutes) {
+  document.querySelectorAll('.delay-pill').forEach((b) => {
+    if (b.dataset.delayScope !== scope) return;
+    const on = minutes != null && Number(b.dataset.delay) === minutes;
+    b.classList.toggle('is-pending', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+}
 async function timerTap(scope, minutes) {
   if (timerBusy) return;
   timerBusy = true;
+  timerRev++;
   const t = groupTimers[scope],
     label = GN[scope] || scope;
+  markPill(scope, t && t.delay === minutes ? null : minutes);
   try {
     if (t && t.delay === minutes) {
       const r = await post('/schedule-group', { cancel: t.id }),
@@ -1388,10 +1401,12 @@ async function timerTap(scope, minutes) {
     }
     paintTimers();
   } catch (e) {
+    paintTimers(); // put the real state back
     $('groupStatus').textContent = '✗ ' + e.message;
     say('app', e.message, 1);
   } finally {
     timerBusy = false;
+    timerRev++;
   }
 }
 function showTimerRow(b, open) {
@@ -2368,14 +2383,16 @@ async function pollAuto() {
   if (autoPolling) return;
   autoPolling = true;
   const payload = JSON.stringify({ group: $('group').value, dm: $('dm').value }),
-    baseline = { payload, wasSaved: payload === draftSaved, left };
+    baseline = { payload, wasSaved: payload === draftSaved, left },
+    rev = timerRev;
   try {
     const r = await fetch('/autopilot');
     if (!r.ok) throw Error('Status unavailable. Tap for details.');
     const d = await r.json();
     checkedAt = Date.now();
     paintGroupTimes(d.last_sent);
-    paintTimers(d.status?.group_timers || {});
+    /* A timer tapped while this refresh was on its way is newer than this answer: keep the tap, the next refresh agrees. */
+    if (rev === timerRev && !timerBusy) paintTimers(d.status?.group_timers || {});
     pollError = '';
     aiAvailable = !!d.ai;
     liveSnapshot = d.status || null;

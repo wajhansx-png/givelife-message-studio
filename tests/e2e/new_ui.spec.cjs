@@ -1052,3 +1052,39 @@ for (const width of [320, 360, 390, 430])
     expect(pb.height).toBeLessThan(135); // two lines, not two stacked blocks
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   });
+
+test('/new Later timers: tapping the chosen time again deselects it at once, and a slow refresh that started earlier cannot bring it back', async ({
+  page,
+}) => {
+  await open(page, '/new', 390, 709);
+  await page.locator('#ui2Later').click();
+  const pill = page
+    .locator('#ui2LaterPanel .ui2-later-line')
+    .first()
+    .locator('.delay-pill', { hasText: '45m' });
+  await pill.click();
+  await expect(pill).toHaveAttribute('aria-pressed', 'true');
+  await page.waitForFunction(() => !autoPolling); // no refresh in flight
+  // A status refresh whose answer is slow: the server builds it now (the timer is still scheduled), it arrives later.
+  let held = false,
+    delivered = false;
+  await page.route('**/autopilot', async (r) => {
+    if (held) return r.continue();
+    held = true;
+    const answer = await r.fetch();
+    await new Promise((done) => setTimeout(done, 1600));
+    await r.fulfill({ response: answer });
+    delivered = true;
+  });
+  await page.evaluate(() => {
+    pollAuto(); // not awaited: the refresh stays in flight while we tap
+  });
+  await page.waitForTimeout(300);
+  await pill.click(); // deselect while that refresh is on its way
+  await expect(pill).toHaveAttribute('aria-pressed', 'false', { timeout: 400 }); // at once, not after the server
+  await expect.poll(() => delivered, { timeout: 5000 }).toBe(true); // the old answer has arrived
+  await page.waitForTimeout(150);
+  // No retrying here: the pill must not have flipped back, even for a moment.
+  expect(await pill.getAttribute('aria-pressed')).toBe('false');
+  await expect(pill).not.toHaveClass(/is-pending/);
+});

@@ -1976,6 +1976,11 @@ html body .brandbar .report-open {
   html body #donorsPage {
     transition: none;
   }
+  /* Each row keeps its own stacking layer (the old fade-in gave it one without anyone asking), so a row's menu
+     button never climbs over the floating progress chip. */
+  html body #donorsPage #donorRows > .donor-row {
+    isolation: isolate;
+  }
   html body #donorsPage #donorMessages:not([hidden]),
   html body #donorsPage #donorVolunteers:not([hidden]) {
     animation: glFadeUp 0.24s cubic-bezier(0.2, 0.7, 0.2, 1);

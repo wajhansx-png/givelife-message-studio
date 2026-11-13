@@ -310,9 +310,10 @@ def _prompt(source, count, avoid):
             " deadlines; every fact must come from the SOURCE:\n"
             + "\n---\n".join(t[:900] for t in own)
         )
-    try:
-        import quality
+    import quality
 
+    avoid_text += "\n\nOWNER RULE: " + quality.NEVER_RULE
+    try:
         avoid_text += quality.corrections_block(CORRECTIONS() or [])
     except Exception:
         pass
@@ -364,7 +365,7 @@ NON-NEGOTIABLE:
 - PSYCHOLOGY. Every line must earn its place; use a DIFFERENT mix in each version, built only
   from facts in the source:
   * Hook (line 1): a pattern interrupt the brain cannot ignore in under two seconds: the real
-    time left, a stark contrast (a whole family's need vs one small gift), or a direct question.
+    time left, a stark contrast (a whole family's need vs one small donation), or a direct question.
   * Identifiable victim: name the person the source names and say their exact situation as
     written. One person moves people more than numbers. Do not assume age, gender or
     relationship beyond what the source says.

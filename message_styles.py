@@ -6,7 +6,7 @@ built here in code: the amount left, the donor count and amount, the Quran/Hadit
 """
 
 import datetime, re, time
-import dm_composer, team_rules
+import dm_composer, quality, team_rules
 from message_library import style_block
 
 STYLES = ("ur_en", "ur_en_more", "en", "en_more")
@@ -216,6 +216,9 @@ def problems(style, text, parts, ctx, previous=""):
         out.append("it names a payment method other than Easypaisa")
     if dm_composer.unverified_medical_claim(text):
         out.append("it makes a medical claim that is not confirmed")
+    never = quality.NEVER.search(text)
+    if never:
+        out.append(f'it uses the word "{never.group(0)}" (never say gift: say donation, giving or helping)')
     if parts.get("verse") not in VERSES:
         out.append("the verse is not on the approved list")
     if style in TRIGGER and previous:
@@ -269,6 +272,7 @@ def build_prompt(style, ctx, angle, avoid, previous, notes):
         "- story: 1 or 2 short simple ENGLISH sentences that explain the case. Do not end it with an emoji.",
         "- help: 2 to 5 words finishing 'can help ...' for example 'this helpless father'.",
         "- Do not use * or _ characters.",
+        "- " + quality.NEVER_RULE,
         "",
         "VERSES (choose the one id that fits this case and angle best):",
         verses,

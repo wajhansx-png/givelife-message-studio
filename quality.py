@@ -12,8 +12,18 @@ BANNED = re.compile(
 )
 
 
+# Owner rule: a donation is never called a "gift" (gift, gifts, gifted, gifting) in any written message, even
+# when the source says it: the new wording must say donation, giving, helping or an amount instead.
+NEVER = re.compile(r"(?i)\bgift(?:s|ed|ing)?\b")
+NEVER_RULE = 'Never use the word "gift" (or gifts or gifting). Say donation, giving, helping or the amount instead.'
+
+
 def hard_reason(source, text):
-    """'' when the owner's hard rules hold, else why not. Only phrases NOT already in the source count."""
+    """'' when the owner's hard rules hold, else why not. Only phrases NOT already in the source count (except
+    the word "gift", which is never allowed)."""
+    m = NEVER.search(text)
+    if m:
+        return f'owner rule: never use "{m.group(0)}"'
     for m in BANNED.finditer(text):
         if m.group(0).lower() not in source.lower():
             return f'owner rule: never use "{m.group(0)}"'

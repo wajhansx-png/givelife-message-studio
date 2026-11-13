@@ -174,7 +174,7 @@ if "--fake-ai" in sys.argv:
     _ENG = [
         "A helpless father needs you today",
         "One door knock after another",
-        "Your small gift can lift this weight",
+        "Your small donation can lift this weight",
         "This debt is now too heavy",
         "Help before this family breaks",
         "A father is begging for time",

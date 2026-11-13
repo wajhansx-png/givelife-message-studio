@@ -29,7 +29,7 @@ _B = [
     "This family has nobody else to ask but you",
     "Every single hour without help makes this harder for them",
     "They never thought they would have to ask strangers",
-    "A small gift from many hands would lift this burden",
+    "A small donation from many hands would lift this burden",
     "They are trying to stay strong for their child",
     "Please do not leave them alone with this",
 ]
@@ -212,9 +212,9 @@ class FocusTests(unittest.TestCase):
             "His boy was just 2 years old, and Rs. 17,000 of the burial debt is still open..",
         ]
         d = [
-            "A gift of only 1,000 rs from 16 of us closes this debt for good.",
+            "A donation of only 1,000 rs from 16 of us closes this debt for good.",
             "If each of us gives 1,000 rs, just 16 of us leave nothing owing.",
-            "A 1,000 rs gift, from just 16 of us, can finish what remains today.",
+            "A 1,000 rs donation, from just 16 of us, can finish what remains today.",
             "Just 1,000 rs from 16 hands, and this father is free of the loan.",
             "It takes only 1,000 rs from 16 donors to clear the last of it.",
         ]

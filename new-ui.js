@@ -449,27 +449,37 @@ const ui2Frame = (fn) => {
     const nav = mk('nav', 'ui2-tabs');
     nav.id = 'ui2Tabs';
     nav.setAttribute('aria-label', 'Main');
+    /* One matched set on a 24-grid: even 1.6 line, rounded ends, and a soft second tone (class "d") for depth. */
     const ico = (d) =>
-      `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+      `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
     const ICONS = {
-      message: ico('<path d="M4 5h16v11H9l-5 4z"/>'),
+      case: ico(
+        '<path class="d" d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1.2"/><path d="m9 14 2 2 4-4.2"/>',
+      ),
+      message: ico(
+        '<rect class="d" x="2.5" y="4.5" width="19" height="15" rx="3"/><path d="m21.5 8-8.3 5.2a2 2 0 0 1-2.4 0L2.5 8"/>',
+      ),
       donors: ico(
-        '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.4A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+        '<path class="d" d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/>',
       ),
       chat: ico(
-        '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.7A8 8 0 1 1 21 12z"/><path d="M9 11h6M9 14h4"/>',
+        '<path class="d" d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8.5 10.5h7M8.5 13.5h4.5"/>',
       ),
-      notes: ico('<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>'),
-      report: ico('<path d="M5 20V10M12 20V4M19 20v-7"/>'),
+      notes: ico(
+        '<path class="d" d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M9 13h6M9 17h6"/>',
+      ),
+      report: ico(
+        '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><rect class="d" x="7" y="12" width="3" height="5" rx="1"/><rect class="d" x="12" y="6" width="3" height="11" rx="1"/><rect class="d" x="17" y="9" width="3" height="8" rx="1"/>',
+      ),
       settings: ico(
-        '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+        '<path d="M3 6h9M18 6h3M3 12h3M12 12h9M3 18h11M20 18h1"/><circle class="d" cx="15" cy="6" r="2.4"/><circle class="d" cx="9" cy="12" r="2.4"/><circle class="d" cx="17" cy="18" r="2.4"/>',
       ),
       more: ico(
-        '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+        '<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>',
       ),
     };
     const items = [
-      ['case', ICONS.message, 'Case', () => (typeof Nav !== 'undefined' ? Nav.go('case') : null)],
+      ['case', ICONS.case, 'Case', () => (typeof Nav !== 'undefined' ? Nav.go('case') : null)],
       ['message', ICONS.message, 'Message', () => (typeof Nav !== 'undefined' ? Nav.go('') : null)],
       ['donors', ICONS.donors, 'Donors', press(() => $('openDonors'))],
       ['chat', ICONS.chat, 'Chat', press(() => $('chatOpen'))],
@@ -480,9 +490,11 @@ const ui2Frame = (fn) => {
       ['more', ICONS.more, 'More', () => sheet()],
     ];
     for (const [key, icon, label, fn] of items) {
-      const b = mk('button', 'ui2-tab', label);
+      const b = mk('button', 'ui2-tab', '');
       b.type = 'button';
       b.dataset.tab = key;
+      b.innerHTML = icon + '<span></span>';
+      b.lastChild.textContent = label;
       b.addEventListener('click', fn);
       nav.append(b);
     }
@@ -1396,20 +1408,25 @@ document.addEventListener('click', (e) => {
     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>';
   const NEXT =
     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
-  function row(id, regen, next) {
+  function row(id, regen, next, mini) {
     const r = document.createElement('div');
-    r.className = 'ui2-gnav';
+    r.className = 'ui2-gnav' + (mini ? ' ui2-gmini' : '');
     r.id = id;
-    r.append(
-      mk('ui2-gbtn', 'Regenerate', REGEN, regen),
-      mk('ui2-gbtn ui2-gnext', 'Next', NEXT, next),
-    );
+    const a = mk('ui2-gbtn', 'Regenerate', REGEN, regen),
+      b = mk('ui2-gbtn ui2-gnext', 'Next', NEXT, next);
+    if (mini)
+      for (const x of [a, b]) {
+        x.setAttribute('aria-label', x.textContent); /* the word stays for screen readers and tests */
+        x.title = x.textContent;
+      }
+    r.append(a, b);
     return r;
   }
   function main() {
     const card = $('card');
     if (!card || $('ui2GnavMain')) return;
-    card.after(
+    card.classList.add('ui2-has-mini');
+    card.append(
       row(
         'ui2GnavMain',
         () => {
@@ -1424,6 +1441,7 @@ document.addEventListener('click', (e) => {
           }, 100);
         },
         () => $('fresh')?.click(),
+        true,
       ),
     );
   }

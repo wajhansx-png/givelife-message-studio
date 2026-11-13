@@ -5635,3 +5635,85 @@
 .UI2 #set {
   contain: layout style;
 }
+
+/* ---------- Main screen: Regenerate / Next are two small round buttons inside the green message (bottom right).
+   The row that used to sit under the message is gone, so the message gets that height back. ---------- */
+.UI2 #ui2GnavMain.ui2-gmini {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+  margin: 0 !important;
+}
+.UI2 #ui2GnavMain.ui2-gmini .ui2-gbtn {
+  flex: 0 0 auto;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45) !important;
+  color: #fff !important;
+}
+.UI2 #ui2GnavMain.ui2-gmini .ui2-gnext {
+  background: #2f6fe4 !important;
+}
+.UI2 #ui2GnavMain.ui2-gmini .ui2-gbtn span {
+  display: none;
+}
+/* Room at the end of the message so its last line can scroll up above the two buttons. */
+@media (max-width: 899px) {
+  .UI2 #card.ui2-has-mini #chat {
+    padding-bottom: 50px !important;
+  }
+  /* The bottom fade moves from the whole card to the text only, so the two buttons stay solid. */
+  .UI2 #card.ui2-has-mini.msgcard {
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+  }
+  .UI2 #card.ui2-has-mini.msgcard #chat {
+    -webkit-mask-image: linear-gradient(#000 72%, transparent);
+    mask-image: linear-gradient(#000 72%, transparent);
+  }
+}
+/* Bottom bar: a matched icon sits above the word. Soft second tone for depth; the lit tab lifts a little.
+   No glow, no shadow. */
+.UI2 .ui2-tab {
+  gap: 3px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+.UI2 .ui2-tab svg {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  transition: transform 0.18s ease;
+}
+.UI2 .ui2-tab svg .d {
+  fill: currentColor;
+  fill-opacity: 0.16;
+}
+.UI2 .ui2-tab[aria-current='true'] {
+  font-weight: 800;
+}
+.UI2 .ui2-tab[aria-current='true'] svg {
+  transform: translateY(-1px) scale(1.06);
+}
+.UI2 .ui2-tab[aria-current='true'] svg .d {
+  fill-opacity: 0.34;
+}
+@media (prefers-reduced-motion: reduce) {
+  .UI2 .ui2-tab svg {
+    transition: none;
+  }
+}
+@media (max-width: 359px) {
+  .UI2 .ui2-tab {
+    font-size: 12px;
+  }
+}

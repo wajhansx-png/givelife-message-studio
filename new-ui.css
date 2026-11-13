@@ -6004,3 +6004,11 @@
   color: var(--cr-muted);
   font-size: 12px;
 }
+
+/* Phone reader: the ticks row takes the place of the hint line and is taller, so the message box gives it the room
+   (the message scrolls inside its box); the buttons and ticks always stay above the bottom bar. */
+@media (max-width: 899px) {
+  .UI2 #messageFocus.ui2-has-rx .focus-workspace {
+    max-height: max(150px, calc(100dvh - 304px));
+  }
+}

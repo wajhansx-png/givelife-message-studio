@@ -174,7 +174,7 @@
       const plan = volSendPlan,
         delay = volunteerDelaySeconds(el('volStartDelay').value);
       await api('/volunteers', { action: 'message', text: plan.text });
-      const result = await api('/volunteers', {
+      await api('/volunteers', {
         action: 'send_all',
         request_id: plan.request_id,
         poster: plan.poster,
@@ -184,7 +184,6 @@
       volTiming.close();
       await loadVolunteers();
       if (tab === 'volunteers') showVolunteers(true);
-      notice(result.reply);
     } catch (error) {
       el('volTimingNote').textContent = error.message;
     } finally {
@@ -265,14 +264,13 @@
       ? 'Saving your resume time…'
       : 'Resuming your saved setup…';
     try {
-      const r = await api(
+      await api(
         '/donor-delivery',
         when
           ? { resume_at: when, request_id: requestId() }
           : { resume: true, request_id: requestId() },
       );
       resumeDialog.close();
-      notice(r.reply);
       await syncToggle();
       await poll();
     } catch (e) {
@@ -311,8 +309,7 @@
   el('donorResumeCancel').onclick = async () => {
     el('donorResumeCancel').disabled = true;
     try {
-      const r = await api('/donor-delivery', { stop: true });
-      notice(r.reply);
+      await api('/donor-delivery', { stop: true });
       await syncToggle();
       await poll();
     } catch (e) {
@@ -924,9 +921,8 @@
     if (!starred || !confirm('Remove the star from all ' + starred + ' Important donors?')) return;
     el('donorDeselectAll').disabled = true;
     try {
-      const r = await api('/donors', { action: 'clear_important' });
+      await api('/donors', { action: 'clear_important' });
       await refresh(true);
-      notice(r.reply);
     } catch (e) {
       notice(e.message, true);
     } finally {
@@ -970,7 +966,7 @@
       const button = el('batchStart');
       button.disabled = true;
       try {
-        const result = await api('/donor-delivery', {
+        await api('/donor-delivery', {
           configure: editingJob,
           settings: {
             gap_seconds: secs,
@@ -983,7 +979,6 @@
         });
         editingJob = null;
         picker.close();
-        notice(result.reply);
         await poll();
       } catch (error) {
         el('batchPlan').textContent = error.message;
@@ -2279,7 +2274,6 @@
         ...(followUpOn ? { follow_up: true } : {}),
         ...(fresh ? { fresh: true } : {}),
       });
-      if (scope !== 'selected') notice(r.reply);
       selected.forEach((row) => paintDelivery(row, 'Sending'));
       await poll();
     } catch (e) {
@@ -2500,13 +2494,13 @@
                 (reason
                   ? reason.name + ': ' + reason.state.slice(9)
                   : j.error || 'Check delivery results.')
-              : 'Batch complete · ' +
-                (j.sent || 0) +
-                ' sent' +
-                (j.skipped ? ' · ' + j.skipped + ' skipped' : '');
-          notice(text, failed);
-          el('donorNotice').querySelector('.donor-notice-close').onclick = () =>
-            dismissBatch(jobKey);
+              : '';
+          /* A finished batch is shown by the progress bar (sent / total); no extra pop-up for it. */
+          if (text) {
+            notice(text, failed);
+            el('donorNotice').querySelector('.donor-notice-close').onclick = () =>
+              dismissBatch(jobKey);
+          }
           dismissedJob = jobKey;
         }
       } else if (active) {
@@ -2933,8 +2927,7 @@
         openResumeChoice();
         return;
       }
-      const r = await api('/donor-delivery', { stop: true });
-      notice(r.reply);
+      await api('/donor-delivery', { stop: true });
       await syncToggle();
       await poll();
     } catch (e) {
@@ -2964,7 +2957,6 @@
         poster: el('donorRowPoster').checked,
       });
       autoOn = !!r.enabled;
-      notice(r.reply || (want ? 'Auto is on.' : 'Auto is off.'));
       await poll();
     } catch (e) {
       box.checked = !want;

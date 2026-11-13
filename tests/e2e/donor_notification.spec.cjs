@@ -38,3 +38,23 @@ test('one dismissible outcome stays dismissed across refresh; next job appears',
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: 'test-results/notification-mobile.png' });
 });
+
+test('a finished batch shows no "Batch complete" pop-up; the progress bar already shows it', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key');
+    /* Record every text the notice ever holds (it hides itself after 4 s). */
+    window.__noticeTexts = [];
+    new MutationObserver(() => {
+      const n = document.getElementById('donorNotice');
+      if (n && n.textContent.trim()) window.__noticeTexts.push(n.textContent.trim());
+    }).observe(document, { childList: true, subtree: true, characterData: true });
+  });
+  const job = { id: 'done-ok', state: 'Complete', sent: 5, total: 5, skipped: 0, failed: 0 };
+  await page.route('**/donor-delivery', (route) => route.fulfill({ json: job }));
+  await page.goto('/#/donors/all');
+  await expect(page.locator('#donorProgress')).toContainText('5 of 5 sent');
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate(() => window.__noticeTexts)).toEqual([]);
+});

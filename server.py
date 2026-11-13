@@ -1043,6 +1043,23 @@ def send_batch_attachment(jid, caption, ident):
         cap.unlink(missing_ok=True)
 
 
+def send_group_extras(jid):
+    """After a group's poster + caption went out: the case's PDF, then its video (each only if saved and switched on).
+    Never retried: if one is not confirmed, the next one is not sent and the owner is told to check WhatsApp."""
+    import group_extras
+
+    out = []
+    for kind, ident in group_extras.to_send(STORE):
+        try:
+            r = send_batch_attachment(jid, "", ident)
+        except Exception as e:  # on hold, stopped, or the file is gone: nothing was sent for this one
+            r = {"code": "SKIPPED", "message": str(e)[:200]}
+        out.append({"kind": kind, "code": r.get("code"), "message": str(r.get("message") or "")[:200]})
+        if r.get("code") != "SUCCESS":
+            break
+    return out
+
+
 @serialized_send
 def send_image(jid, caption, check_gap=False, _retry=True):
     caption = dm_composer.payment_fix(caption)
@@ -1119,6 +1136,10 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                 + GROUPS[key][0]
                 + ". Link the number that is in the groups.",
             }
+    if result.get("code") == "SUCCESS" and str(jid).endswith("@g.us"):
+        extras = send_group_extras(jid)
+        if extras:
+            result["extras"] = extras
     with (DATA / "group-send-log.jsonl").open("a", encoding="utf-8") as f:
         f.write(
             json.dumps(
@@ -5798,6 +5819,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(donors().thanks.view())
         if self.path == "/case-message":
             return self.reply(case_writer().view())
+        if self.path == "/group-extras":
+            import group_extras
+
+            return self.reply(group_extras.view(STORE))
         if self.path == "/cases":
             try:
                 return self.reply(donors().cases.view())
@@ -6064,7 +6089,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply({}, status=403)
         try:
             length = int(self.headers.get("Content-Length", 0))
-            if not 0 < length <= (22_000_000 if self.path == "/upload-image" else 12_000_000):
+            if not 0 < length <= (
+                22_000_000 if self.path in ("/upload-image", "/group-extras") else 12_000_000
+            ):
                 return self.reply({"error": "Request is empty or too large."}, status=400)
             body = json.loads(self.rfile.read(length))
         except Exception:
@@ -6344,6 +6371,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply({"error": str(e)}, status=503)
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
+        if self.path == "/group-extras":
+            import group_extras
+
+            try:
+                return self.reply(group_extras.act(STORE, body))
+            except ValueError as e:
+                return self.reply({"error": str(e)[:300]}, status=400)
         if self.path == "/style-fix":
             try:
                 return self.reply(style_fix_message(body))

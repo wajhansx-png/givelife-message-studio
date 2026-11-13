@@ -1441,3 +1441,106 @@ html body #donorPasteDialog #pastePoster {
   filter: none !important;
   -webkit-filter: none !important;
 }
+
+/* Poster dialog: the PDF and video that follow the poster in every group post. */
+.poster-extras {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line2, #3a4052);
+}
+.poster-extras h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.poster-extras .poster-extras-note,
+.poster-extras .poster-extras-msg {
+  margin: 0;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.poster-extras .poster-extras-msg:empty {
+  display: none;
+}
+.poster-extra {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 8px;
+}
+.poster-extra-name {
+  display: grid;
+  min-width: 0;
+}
+.poster-extra-name small {
+  overflow: hidden;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.poster-extras .poster-extra-add,
+.poster-extras .poster-extra-rm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line2, #3a4052);
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.poster-extras .poster-extra-sw {
+  position: relative;
+  width: 56px;
+  min-width: 56px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.poster-extras .poster-extra-sw::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  background: #3a4052;
+  transform: translateY(-50%);
+}
+.poster-extras .poster-extra-sw::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translateY(-50%);
+}
+.poster-extras .poster-extra-sw[aria-checked='true']::before {
+  background: #2f6fe4;
+}
+.poster-extras .poster-extra-sw[aria-checked='true']::after {
+  left: 26px;
+}
+.poster-extra[data-on='0'] .poster-extra-name b {
+  opacity: 0.55;
+}
+@media (max-width: 359px) {
+  .poster-extra {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .poster-extra .poster-extra-rm {
+    grid-column: 1 / -1;
+  }
+}

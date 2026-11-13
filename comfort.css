@@ -1970,13 +1970,20 @@ html body .brandbar .report-open {
   html body dialog[open]::backdrop {
     animation: glFade 0.22s ease;
   }
-  html body #donorsPage .donor-table:not([hidden]),
+  /* The Donors page fades in once (the dialog rule above). The list and every row inside it do NOT fade
+     again: a second fade on the table and one on each of the 100+ rows made the list flash black whenever it
+     was drawn or refreshed. Closing is instant, so a page is never seen fading out half empty. */
+  html body #donorsPage {
+    transition: none;
+  }
+  /* Each row keeps its own stacking layer (the old fade-in gave it one without anyone asking), so a row's menu
+     button never climbs over the floating progress chip. */
+  html body #donorsPage #donorRows > .donor-row {
+    isolation: isolate;
+  }
   html body #donorsPage #donorMessages:not([hidden]),
   html body #donorsPage #donorVolunteers:not([hidden]) {
     animation: glFadeUp 0.24s cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
-  html body #donorsPage #donorRows > .donor-row {
-    animation: glFade 0.2s ease both;
   }
   html body #donorsPage [role='tab'],
   html body button,

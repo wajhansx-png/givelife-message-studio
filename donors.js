@@ -12,8 +12,6 @@
   page.setAttribute('aria-label', 'Donor Hub');
   page.innerHTML = `<div class="donor-shell"><header class="donor-head"><div class="donor-title"><h1>Donors <span class="donor-count" id="donorTotal"></span></h1></div><span class="donor-total"><small>Total donated</small> <strong id="donorTotalAmount">PKR 0</strong></span><span class="donor-total"><small>Normal total</small> <strong id="donorNormalTotal">PKR 0</strong></span><span class="donor-message-tablist" role="tablist" aria-label="Message bank"><button role="tab" class="donor-msgs" id="donorMessagesTab" data-tab="messages" aria-selected="false" aria-label="Messages">Messages</button></span><button class="donor-bulk" id="donorBulk">Bulk message</button><button class="donor-bulk" id="donorNumbers" type="button">Add numbers</button><button class="donor-add" id="donorAdd">+ Add</button></header><div class="donor-toolbar"><div class="donor-tabs" role="tablist" tabindex="-1" aria-label="Donor filters"><button role="tab" data-tab="all" aria-selected="true">All</button><button role="tab" data-tab="important" aria-selected="false">★ Important</button><button role="tab" data-tab="top" aria-selected="false">Top donors</button><button role="tab" data-tab="donated" aria-selected="false">Donated</button><button role="tab" data-tab="not_contacted" aria-selected="false">Not contacted</button><button role="tab" data-tab="volunteers" aria-selected="false">Volunteers</button></div><input class="donor-search" id="donorSearch" name="donor_search" type="search" autocomplete="off" placeholder="Search donors…" aria-label="Search donor names or private numbers"></div><div id="donorHideRow" class="hide-row" hidden><button type="button" id="donorHideSent" class="hide-chip"></button><button type="button" id="donorDeselectAll" class="hide-chip deselect-chip">Deselect all</button></div><div id="donorNotice" class="donor-notice" role="status" aria-live="polite"></div><div class="donor-table" id="donorTable" role="region" aria-label="Donor list" tabindex="0"><div class="donor-columns" aria-hidden="false"><span>★</span><span>Name</span><span>DM</span><span>Status</span><span>PKR</span><span><button type="button" class="donor-expand-btn" id="donorExpand" aria-label="Expand to full screen" title="Expand to full screen">⤢</button></span></div><div id="donorRows"></div></div><section id="donorMessages" class="donor-messages" aria-label="DM wording bank" hidden></section><section id="donorVolunteers" class="donor-volunteers" aria-label="Volunteers" hidden></section><div class="donor-progress" id="donorProgress" hidden><button type="button" class="dp-hide" id="donorProgressHide" aria-label="Hide sending details" title="Hide">Hide ⌄</button><span></span><div class="dp-facts" id="donorProgressFacts" aria-label="Batch plan"></div><button id="donorContinue" hidden>Restart</button><button id="donorEditBatch" title="Edit future sends without pausing the running batch">Edit settings</button><button id="donorStop">Pause</button></div><button type="button" class="dp-show" id="donorProgressShow" hidden aria-label="Show sending details" title="Show sending details">⌃ DM sending status</button><details id="donorBatchList" class="batch-list" hidden><summary id="donorBatchSummary"></summary><div class="batch-cols"><section><h3>Sent</h3><ol id="batchSent"></ol></section><section><h3>Next</h3><ol id="batchNext"></ol></section></div><p id="batchOther"></p></details><footer class="donor-bottom"><button type="button" class="donor-back-bottom back-action" id="donorMainBottom" aria-label="Back to main screen">← Back</button><button type="button" class="donor-gap" id="donorPace">Gap: 4 min ▾</button><input id="donorGap" type="hidden" value="240"><button type="button" class="donor-mini" id="donorTest" title="Send one clearly marked test DM to your own WhatsApp">Test DM</button><button type="button" class="donor-mini" id="donorToggle" title="Stop all DMs. Press again to resume everything.">Stop DMs</button><label class="donor-poster-toggle donor-auto-toggle" for="donorAuto" title="Auto: DM every Top donor not yet contacted, 10 per batch, 5 min apart, 15 min rest. Turn off to pause."><input type="checkbox" id="donorAuto"> Auto</label><label class="donor-poster-toggle" for="donorRowPoster" title="Attach the poster to the single-tap DM button beside each donor"><input type="checkbox" id="donorRowPoster" checked> Poster on DM</label><span class="donor-message-info">Saved DM · Important first</span><button class="send-important" id="donorSendImportant">DM ★ Important</button><button class="send-donors" id="donorSendAll">DM all</button></footer></div>`;
   document.body.append(page);
-  // The phone Back gesture can close Donors itself; the address must follow (no dead Back).
-  page.addEventListener('close', () => typeof Nav !== 'undefined' && Nav.leave('donors'));
   /* The Hide / Deselect chips live in the top bar, so showing them never pushes the donor list down. */
   page
     .querySelector('.donor-head')
@@ -355,7 +353,9 @@
   let vols = { items: [], message: '', delivery: null },
     volPoll = 0;
   let drawEpoch = 0;
-  const DRAW_CHUNK = 40;
+  const FIRST_CHUNK = 14; // one screenful: painted in the same frame as the tap
+  const DRAW_CHUNK = 16; // the rest, a few frames later, in pieces small enough not to freeze a tap or a scroll
+  let drawSig = ''; // what the list on screen is drawn from (or being drawn from): the same list is never drawn twice
   const EAGER_ROWS = 200; // up to here rows are drawn in the following frames; longer lists load as you scroll
   let tab = 'all',
     data = { items: [], counts: {} },
@@ -1734,6 +1734,9 @@
       b.setAttribute('aria-selected', b.dataset.tab === tab);
     }
     const rows = el('donorRows');
+    const sig = tab + '|' + el('donorSearch').value + '|' + JSON.stringify(data.items);
+    if (rows.children.length && sig === drawSig) return; // identical list (drawn or still being drawn): nothing flickers
+    drawSig = sig;
     rows.textContent = '';
     if (!data.items.length) {
       const empty = make('div', 'donor-empty');
@@ -1765,7 +1768,11 @@
       () => {
         if (epoch !== drawEpoch) return;
         const frag = document.createDocumentFragment();
-        for (const end = Math.min(next + DRAW_CHUNK, items.length); next < end; next++) {
+        for (
+          const end = Math.min(next + (next ? DRAW_CHUNK : FIRST_CHUNK), items.length);
+          next < end;
+          next++
+        ) {
           const d = items[next];
           if (tab === 'top' && d.group && (next === 0 || items[next - 1].group !== d.group))
             frag.append(make('div', 'donor-group-head', d.group + ' Donors'));
@@ -2159,8 +2166,9 @@
     rowsWatch.observe(mark);
   }
   function dropRows() {
-    drawEpoch++;
+    drawEpoch++; // stop any rows still being drawn
     rowsWatch?.disconnect();
+    drawSig = '';
     el('donorRows').textContent = '';
   }
   function setPanel(t) {
@@ -2198,9 +2206,13 @@
     await refresh(true);
     await poll();
   }
+  let closedByCode = 0; // closes started by our own code (see the 'close' listener below)
   function close() {
-    dropRows();
-    page.close();
+    dropRows(); // the page closes at once (no fade-out), so emptying the list is never seen
+    if (page.open) {
+      closedByCode++;
+      page.close();
+    }
     Nav.leave('donors');
     clearTimeout(pollTimer);
     launch.focus({ preventScroll: true });
@@ -2219,11 +2231,16 @@
   }
   function hide() {
     clearTimeout(pollTimer);
-    if (page.open) (dropRows(), page.close());
+    if (page.open) (dropRows(), closedByCode++, page.close());
   }
+  /* The phone Back gesture or Esc can close Donors itself; the address must follow (no dead Back).
+     'close' arrives a moment after close(). When our own code closed the page (Back, the arrow button) the address
+     has already been dealt with, so a late event must not step the history again; only a close the browser did
+     itself (the Esc key) needs Nav.leave here. */
   page.addEventListener('close', () => {
     clearTimeout(pollTimer);
-    Nav.leave('donors');
+    if (closedByCode > 0) return void closedByCode--;
+    if (typeof Nav !== 'undefined') Nav.leave('donors');
   });
   async function send(scope, ids, limit = 20, fresh = false) {
     if (sendPending) return;
@@ -2347,7 +2364,8 @@
       : '';
     el('batchOther').hidden = !other.length;
   }
-  let autoNote = '';
+  let autoNote = '',
+    tableRight = 0;
   function paintAuto(a) {
     if (!a || !el('donorAuto')) return;
     if (autoOn && !a.enabled && a.note && a.note !== autoNote)
@@ -2389,7 +2407,7 @@
                 : false,
         ),
         /* The count sits outside the list box, in the free space on the right; with no room it joins the green line. */
-        shellBox = el('donorTable').getBoundingClientRect(),
+        shellBox = { right: tableRight || el('donorTable').getBoundingClientRect().right },
         phone = innerWidth - shellBox.right < 190,
         overall =
           phone && inScope.length
@@ -3085,7 +3103,17 @@
       size = (n) => (heights.has(n) ? heights.get(n) : n.offsetHeight),
       sync = () => {
         /* Write only when a value changes: rewriting the same variable re-styles the whole donor screen.
-           Sizes come from the ResizeObserver entries, so no extra forced layout. */
+           Sizes come from the ResizeObserver entries, so no extra forced layout.
+           A closed page measures 0: keep the last values. Writing 0 on close and the real size on open
+           restyled every element of the page twice per open/close. */
+        if (!page.open) {
+          // Nothing to measure on a closed page (it would force a layout just to read 0).
+          if (!shell.style.getPropertyValue('--donor-foot')) {
+            shell.style.setProperty('--donor-foot', '0px');
+            shell.style.setProperty('--donor-rs', '0px');
+          }
+          return;
+        }
         const footPx = (foot ? size(foot) : 72) + 'px',
           rsH = rs ? size(rs) : 0,
           rsPx = rs && rs.parentElement !== foot && !rs.hidden && rsH ? rsH + 8 + 'px' : '0px';
@@ -3105,8 +3133,13 @@
               );
             sync();
           }).observe(n);
+    /* Where the list box ends is read here, once layout is settled, so the status poll never forces a layout. */
+    if (typeof ResizeObserver !== 'undefined')
+      new ResizeObserver(() => {
+        tableRight = el('donorTable').getBoundingClientRect().right;
+      }).observe(el('donorTable'));
     if (rs)
-      new MutationObserver(() => (heights.delete(rs), sync())).observe(rs, {
+      new MutationObserver(() => sync()).observe(rs, {
         attributes: true,
         attributeFilter: ['hidden', 'class'],
       });

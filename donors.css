@@ -1544,3 +1544,19 @@ html body #donorPasteDialog #pastePoster {
     grid-column: 1 / -1;
   }
 }
+
+/* Donors → Msgs: "Also send: PDF / Video" beside Write Case (the same ticks as the Donors bar and the DM batch). */
+.bank-extras {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.bank-extras .bank-extras-label {
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  font-weight: 700;
+}
+.bank-extras .bm-chip {
+  min-height: 40px;
+}

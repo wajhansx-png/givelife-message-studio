@@ -406,6 +406,8 @@
     screen.hidden = false;
     document.body.classList.add('message-focus-open');
     kind = document.body.dataset.view === 'dm' ? 'dm' : 'group';
+    screen.dataset.kind = kind; // the PDF / Video ticks under the message follow the message that is open
+    dispatchEvent(new Event('reader-kind'));
     styleLang = '';
     styleTrig = false;
     markStyle();

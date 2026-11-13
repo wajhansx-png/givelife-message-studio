@@ -290,7 +290,11 @@ class DonorDelivery:
         follow_up=None,
         owner=None,
         origin=None,
+        pdf=False,
+        video=False,
     ):
+        if type(pdf) is not bool or type(video) is not bool:
+            raise ValueError("PDF and video must be on or off.")
         if follow_up is not None and (
             not isinstance(follow_up, str) or not follow_up.strip() or len(follow_up) > 2000
         ):
@@ -377,6 +381,7 @@ class DonorDelivery:
                     owner,
                     origin,
                     fresh,
+                    *([pdf, video] if pdf or video else []),
                 ],
                 sort_keys=True,
             ).encode()
@@ -703,6 +708,10 @@ class DonorDelivery:
                 job["custom_template"] = custom_template
             if follow_up:
                 job["follow_up"] = follow_up.strip()
+            if pdf:
+                job["pdf"] = True  # the case's PDF follows each DM (poster + caption first)
+            if video:
+                job["video"] = True  # then its video
             if owner:
                 job["owner"] = str(owner)[:40]  # which Reports > Auto control started this batch
             if attachment:
@@ -740,7 +749,7 @@ class DonorDelivery:
 
     def configure(self, ident, settings):
         """Change only future dispatch settings of this exact existing job."""
-        allowed = {"gap_seconds", "chunk", "rests", "poster", "jitter", "follow_up"}
+        allowed = {"gap_seconds", "chunk", "rests", "poster", "jitter", "follow_up", "pdf", "video"}
         if not isinstance(settings, dict) or not settings or set(settings) - allowed:
             raise ValueError("Choose gap, batch size, pauses or poster settings.")
         values = copy.deepcopy(settings)
@@ -756,6 +765,9 @@ class DonorDelivery:
             raise ValueError("Choose 1 to 20 people per batch.")
         if "poster" in values and type(values["poster"]) is not bool:
             raise ValueError("Poster must be on or off.")
+        for flag in ("pdf", "video"):
+            if flag in values and type(values[flag]) is not bool:
+                raise ValueError("PDF and video must be on or off.")
         if "follow_up" in values:
             fu = values["follow_up"]
             if fu is not None and (not isinstance(fu, str) or not fu.strip() or len(fu) > 2000):
@@ -895,6 +907,45 @@ class DonorDelivery:
         """'{name}' becomes the saved greeting: Sohaib Bhai / Areeba Sister / just the name."""
         word = "Sister" if gender == "Sister" else "" if gender == "Neutral" and name else "Bhai"
         return template.replace("{name}", (name + " " + word).strip() if name else word or "Bhai")
+
+    EXTRA_LABEL = {"pdf": "PDF", "video": "video"}
+
+    def _send_extras(self, j, r, name, gender, receipts, sent, skipped):
+        """After the DM (poster + caption) was confirmed: the case's PDF, then its video, only those ticked for this
+        batch. Never retried; one that is not confirmed stops the next one and the batch (check WhatsApp)."""
+        for kind in ("pdf", "video"):
+            if not j.get(kind):
+                continue
+            if self.stop.is_set() or self.held():
+                return "Cancelled", ""
+            if not self.eligible(r["phone"]):
+                return "Skipped: opted out or blocked", ""
+            try:
+                res = self._dispatch(
+                    j,
+                    {
+                        "target": "phone",
+                        "phone": r["phone"],
+                        "message": "",
+                        "poster": False,
+                        "kind": "dm_extra",
+                        "extra": kind,
+                        "name": name,
+                        "gender": gender,
+                    },
+                    receipts,
+                    sent,
+                    skipped,
+                )
+            except ValueError as e:
+                return "Not sent", hide_numbers(e)
+            except Exception:
+                return "Uncertain", f"The {self.EXTRA_LABEL[kind]} was not confirmed. Check WhatsApp. No automatic retry."
+            if res is None:
+                return "Cancelled", ""
+            if not isinstance(res, dict) or res.get("code") != "SUCCESS":
+                return "Uncertain", f"The {self.EXTRA_LABEL[kind]} was not confirmed. Check WhatsApp. No automatic retry."
+        return "Sent", ""
 
     def _send_follow_up(self, j, r, name, gender, receipts, sent, skipped):
         """Only after the poster DM was confirmed. Never retried; an uncertain follow-up stops the batch."""
@@ -1222,6 +1273,15 @@ class DonorDelivery:
                     }
                 )
                 self._update(j["id"], sent=sent, skipped=skipped, receipts=receipts)
+                if j.get("pdf") or j.get("video"):
+                    ex, ex_error = self._send_extras(j, r, name, gender, receipts, sent, skipped)
+                    receipts[-1]["extras"] = ex
+                    last_completion = time.time()
+                    self._update(j["id"], sent=sent, skipped=skipped, receipts=receipts)
+                    if ex_error:
+                        state = "Stopped"
+                        error = ex_error
+                        break
                 if j.get("follow_up"):
                     fu, fu_error = self._send_follow_up(j, r, name, gender, receipts, sent, skipped)
                     receipts[-1]["follow_up"] = fu
@@ -1337,6 +1397,10 @@ class DonorDelivery:
             args["attachment"] = j["attachment"]
         if j.get("follow_up"):
             args["follow_up"] = j["follow_up"]
+        if j.get("pdf"):
+            args["pdf"] = True
+        if j.get("video"):
+            args["video"] = True
         if j.get("owner"):
             args["owner"] = j["owner"]
         if j.get("origin"):

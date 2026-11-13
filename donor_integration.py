@@ -476,12 +476,14 @@ class DonorIntegration:
             raise ValueError("Not sent: " + self.exclusion_reason(rows[0]["phone"]))
         return self.start_batch(**body)
 
-    def send_one(self, ident, request_id, poster=True, follow_up=False):
+    def send_one(self, ident, request_id, poster=True, follow_up=False, pdf=False, video=False):
         """Each explicit click is a new immediate send; repeated request IDs never resend."""
         if not self.app.STORE:
             raise ValueError("Persistent sending records are unavailable.")
         if type(poster) is not bool:
             raise ValueError("Poster must be on or off.")
+        if type(pdf) is not bool or type(video) is not bool:
+            raise ValueError("PDF and video must be on or off.")
         follow_text = self._follow_up_for(True if follow_up is True else None)
         self.resume_personal()
         if not isinstance(request_id, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{8,100}", request_id):
@@ -529,8 +531,11 @@ class DonorIntegration:
                     self.jobs.manual_sent_at = time.time()
                 state = "Sent" if confirmed else "Uncertain"
                 self.book.delivery(r["id"], state, text=caption if state == "Sent" else None)
+                extras = None
+                if (pdf or video) and confirmed:
+                    extras = self._single_extras(r, pdf, video)
                 fu = None
-                if follow_text and confirmed:
+                if follow_text and confirmed and (extras is None or extras == "Sent"):
                     fu = self._single_follow_up(r, name, gender, follow_text)
                     self.book.follow_up(r["id"], fu)
                 output = {
@@ -540,6 +545,7 @@ class DonorIntegration:
                     if confirmed
                     else "Delivery not confirmed. Check WhatsApp before another manual send.",
                     **({"follow_up": fu} if fu else {}),
+                    **({"extras": extras} if extras else {}),
                 }
                 self.app.STORE.put(key, output)
                 return output
@@ -552,6 +558,32 @@ class DonorIntegration:
                 raise
             finally:
                 self.jobs.manual_inflight.clear()
+
+    def _single_extras(self, r, pdf, video):
+        """The PDF, then the video, after the confirmed DM. Never retried; one that is not confirmed stops the next."""
+        if self.exclusion_reason(r["phone"]):
+            return "Skipped"
+        for kind, wanted in (("pdf", pdf), ("video", video)):
+            if not wanted:
+                continue
+            try:
+                res = self.app.send_custom(
+                    {
+                        "target": "phone",
+                        "phone": r["phone"],
+                        "message": "",
+                        "poster": False,
+                        "kind": "dm_extra",
+                        "extra": kind,
+                    }
+                )
+            except ValueError as e:
+                return "Not sent: " + str(e)[:120]
+            except Exception:
+                return "Uncertain"
+            if not isinstance(res, dict) or res.get("code") != "SUCCESS":
+                return "Uncertain"
+        return "Sent"
 
     def _single_follow_up(self, r, name, gender, template):
         """Second message only after the first was confirmed. Never retried."""

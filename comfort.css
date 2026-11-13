@@ -7945,3 +7945,17 @@ html body:not(#_):not(#__):not(#___) #messageFocus .focus-rail button {
   filter: none !important;
   -webkit-filter: none !important;
 }
+
+/* Follow-up, PDF and Video checkboxes are one row: each item is its own label (the group is the absolute/static box). */
+html body #donorsPage .donor-fu-opt .donor-fu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+html body #donorsPage .donor-fu-opt {
+  gap: 16px;
+  flex-wrap: wrap;
+}

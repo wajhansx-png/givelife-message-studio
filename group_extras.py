@@ -90,6 +90,13 @@ def remove(store, kind):
     return view(store)
 
 
+def saved(store, kind):
+    """The attachment id of the saved PDF or video, whether or not its GROUP switch is on (DMs have their own)."""
+    _check_kind(kind)
+    row = _rows(store).get(kind)
+    return row["id"] if row else None
+
+
 def to_send(store):
     """[(kind, attachment id)] to send after the poster, in order, only what is saved AND switched on."""
     rows = _rows(store)

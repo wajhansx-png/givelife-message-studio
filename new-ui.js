@@ -676,25 +676,41 @@ const ui2Frame = (fn) => {
     styles.id = 'ui2Styles';
     styles.setAttribute('role', 'group');
     styles.setAttribute('aria-label', 'Write a new message in another style');
-    for (const [key, label] of [
-      ['ur_en', 'Urdu + English'],
-      ['ur_en_more', 'More Trigger'],
-      ['en', 'English'],
-      ['en_more', 'English Trigger'],
+    for (const [key, label, hint] of [
+      ['ur', 'Urdu + English', 'Write a new message: Urdu + English'],
+      ['en', 'English', 'Write a new message: English'],
+      ['trigger', 'Trigger', 'Stronger message in the language you picked. Press again to turn it off.'],
     ]) {
       const b = mk('button', '', label);
       b.type = 'button';
       b.dataset.style = key;
-      b.title = 'Write a new message: ' + label;
+      b.setAttribute('aria-pressed', 'false');
+      b.title = hint;
       b.addEventListener('click', () => {
         Nav.go('preview');
         setTimeout(
-          () => document.querySelector(`.focus-styles [data-style="${key}"]`)?.click(),
+          () =>
+            document
+              .querySelector(
+                key === 'trigger'
+                  ? '.focus-styles [data-trigger]'
+                  : `.focus-styles [data-lang="${key}"]`,
+              )
+              ?.click(),
           250,
         );
       });
       styles.append(b);
     }
+    /* The reader tells us what it last wrote, so the chips here show the same choice. */
+    addEventListener('message-style-state', (e) => {
+      const { lang, trigger } = e.detail || {};
+      for (const b of styles.children)
+        b.setAttribute(
+          'aria-pressed',
+          String(b.dataset.style === 'trigger' ? !!lang && trigger : b.dataset.style === lang),
+        );
+    });
     tools.after(styles);
     const poster = $('previewChangePoster');
     const overflow = tools.querySelector('.overflow-tools > div');

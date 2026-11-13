@@ -3,7 +3,7 @@
   const screen = document.createElement('section');
   screen.id = 'messageFocus';
   screen.hidden = true;
-  screen.innerHTML = `<header><span id="focusState" role="status" aria-live="polite"></span><span class="focus-styles" role="group" aria-label="Write a new message"><button type="button" data-style="ur_en" title="New message: Urdu hook + English">Urdu + English</button><button type="button" data-style="ur_en_more" title="A completely different Urdu + English message">More Trigger</button><button type="button" data-style="en" title="New message in English">English</button><button type="button" data-style="en_more" title="A stronger, different English message">English Trigger</button></span></header><div class="focus-workspace"><main class="focus-paper"><div id="focusFormatted" tabindex="0" aria-label="Message preview"></div><textarea id="focusText" aria-label="Edit WhatsApp message" spellcheck="true" hidden></textarea></main><aside class="focus-rail" aria-label="Message tools"><button id="focusEdit">Edit</button><button id="focusCopy">Copy</button><button id="focusNext">Next version</button><small id="focusVersion">Original</small><button id="focusPoster">Change poster</button><button data-mark="*"><b>Bold</b></button><button data-mark="_"><i>Italic</i></button><button data-emoji="💔">💔 Heart</button><button data-emoji="🤲">🤲 Dua</button><button id="focusRetry">Generate 5 Versions</button></aside></div>`;
+  screen.innerHTML = `<header><span id="focusState" role="status" aria-live="polite"></span><span class="focus-styles" role="group" aria-label="Write a new message"><button type="button" data-lang="ur" aria-pressed="false" title="New message: Urdu hook + English">Urdu + English</button><button type="button" data-lang="en" aria-pressed="false" title="New message in English">English</button><button type="button" data-trigger aria-pressed="false" title="Stronger, different message in the language you picked. Press again to turn it off.">Trigger</button></span></header><div class="focus-workspace"><main class="focus-paper"><div id="focusFormatted" tabindex="0" aria-label="Message preview"></div><textarea id="focusText" aria-label="Edit WhatsApp message" spellcheck="true" hidden></textarea></main><aside class="focus-rail" aria-label="Message tools"><button id="focusEdit">Edit</button><button id="focusCopy">Copy</button><button id="focusNext">Next version</button><small id="focusVersion">Original</small><button id="focusPoster">Change poster</button><button data-mark="*"><b>Bold</b></button><button data-mark="_"><i>Italic</i></button><button data-emoji="💔">💔 Heart</button><button data-emoji="🤲">🤲 Dua</button><button id="focusRetry">Generate 5 Versions</button></aside></div>`;
   document.body.append(screen);
   // Scroll targets must clear the sticky tool dock at every viewport size.
   const focusDock = screen.querySelector('.focus-rail');
@@ -406,6 +406,9 @@
     screen.hidden = false;
     document.body.classList.add('message-focus-open');
     kind = document.body.dataset.view === 'dm' ? 'dm' : 'group';
+    styleLang = '';
+    styleTrig = false;
+    markStyle();
     placeDmPanel(kind === 'dm');
     placeGroupPanel(kind === 'group');
     status('Loading saved message…');
@@ -589,52 +592,78 @@
       t.focus({ preventScroll: true });
     };
   });
-  /* The four message buttons: ask the server for a new message from the live case and put it in the editor.
+  /* Message buttons: pick a language (Urdu + English / English), then Trigger makes it stronger in that same
+     language. Each press asks the server for a new message from the live case and puts it in the editor.
      The old text stays one Undo away, and nothing is saved until Done (the normal save path). */
-  const styleButtons = () => [...screen.querySelectorAll('[data-style]')];
+  const STYLE_KEY = { ur: ['ur_en', 'ur_en_more'], en: ['en', 'en_more'] };
+  const STYLE_NAME = { ur: 'Urdu + English', en: 'English' };
+  let styleLang = '',
+    styleTrig = false;
+  const styleButtons = () => [...screen.querySelectorAll('.focus-styles button')];
+  function markStyle() {
+    styleButtons().forEach((x) => {
+      const on = x.dataset.lang ? x.dataset.lang === styleLang : !!styleLang && styleTrig;
+      x.setAttribute('aria-pressed', String(on));
+    });
+    dispatchEvent(
+      new CustomEvent('message-style-state', { detail: { lang: styleLang, trigger: styleTrig } }),
+    );
+  }
+  async function writeStyle(lang, trig, b) {
+    if (styleButtons().some((x) => x.disabled)) return;
+    const startKind = kind,
+      label = STYLE_NAME[lang] + (trig ? ' Trigger' : '');
+    styleButtons().forEach((x) => (x.disabled = true));
+    b.setAttribute('aria-busy', 'true');
+    status('Writing: ' + label + '…');
+    try {
+      const t = $('focusText'),
+        r = await fetch('/message-style', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            style: STYLE_KEY[lang][trig ? 1 : 0],
+            kind: startKind,
+            current: t.value,
+          }),
+        }),
+        d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.text)
+        throw Error(d.error || 'Could not write a message. Your text is unchanged.');
+      if (kind !== startKind) return; /* the owner switched screens while it was writing */
+      styleLang = lang;
+      styleTrig = trig;
+      markStyle();
+      if (editing) {
+        /* Already typing: replace in place, one Undo away. */
+        t.focus({ preventScroll: true });
+        t.setSelectionRange(0, t.value.length);
+        if (!(document.execCommand && document.execCommand('insertText', false, d.text)))
+          t.value = d.text;
+        t.dispatchEvent(new Event('input', { bubbles: true }));
+        status('Written: ' + label + '. Edit it if you like, then press Done to save.');
+      } else {
+        /* Reading the preview: show the new message there. No keyboard, no edit mode. It is an unsaved
+           draft until the owner presses Save Base (or Edit, then Done). */
+        dirty = true;
+        sessionStorage.setItem('focus-draft-' + kind, d.text);
+        paint(d.text);
+        $('focusVersion').textContent = 'New · not saved';
+        status('Written: ' + label + '. Press Save Base to keep it, or Edit to change it.');
+      }
+    } catch (e) {
+      status(e.message || 'Could not write a message. Your text is unchanged.');
+    } finally {
+      styleButtons().forEach((x) => (x.disabled = false));
+      b.removeAttribute('aria-busy');
+    }
+  }
   styleButtons().forEach((b) => {
     b.onmousedown = (e) => e.preventDefault();
-    b.onclick = async () => {
-      if (styleButtons().some((x) => x.disabled)) return;
-      const startKind = kind,
-        label = b.textContent;
-      styleButtons().forEach((x) => (x.disabled = true));
-      b.setAttribute('aria-busy', 'true');
-      status('Writing: ' + label + '…');
-      try {
-        const t = $('focusText'),
-          r = await fetch('/message-style', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ style: b.dataset.style, kind: startKind, current: t.value }),
-          }),
-          d = await r.json().catch(() => ({}));
-        if (!r.ok || !d.text)
-          throw Error(d.error || 'Could not write a message. Your text is unchanged.');
-        if (kind !== startKind) return; /* the owner switched screens while it was writing */
-        if (editing) {
-          /* Already typing: replace in place, one Undo away. */
-          t.focus({ preventScroll: true });
-          t.setSelectionRange(0, t.value.length);
-          if (!(document.execCommand && document.execCommand('insertText', false, d.text)))
-            t.value = d.text;
-          t.dispatchEvent(new Event('input', { bubbles: true }));
-          status('Written: ' + label + '. Edit it if you like, then press Done to save.');
-        } else {
-          /* Reading the preview: show the new message there. No keyboard, no edit mode. It is an unsaved
-             draft until the owner presses Save Base (or Edit, then Done). */
-          dirty = true;
-          sessionStorage.setItem('focus-draft-' + kind, d.text);
-          paint(d.text);
-          $('focusVersion').textContent = 'New · not saved';
-          status('Written: ' + label + '. Press Save Base to keep it, or Edit to change it.');
-        }
-      } catch (e) {
-        status(e.message || 'Could not write a message. Your text is unchanged.');
-      } finally {
-        styleButtons().forEach((x) => (x.disabled = false));
-        b.removeAttribute('aria-busy');
-      }
+    b.onclick = () => {
+      const text = $('focusText').value;
+      if (b.dataset.lang) writeStyle(b.dataset.lang, styleTrig, b);
+      else writeStyle(styleLang || (/[\u0600-\u06FF]/.test(text) ? 'ur' : 'en'), !styleTrig, b);
     };
   });
   addEventListener('studio-navigate', sync);

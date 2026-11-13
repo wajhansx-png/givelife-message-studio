@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { showPreview, showDm } = require('./helpers.cjs');
 const { startOwnServer, KEY } = require('./own_server.cjs');
 
-/* The four message buttons at the top of the Group and DM editors. Scripted writer, private fake server. */
+/* The message buttons (Urdu + English, English, Trigger) at the top of the Group and DM editors. Scripted writer, private fake server. */
 const PORT = Number(process.env.GIVELIFE_TEST_PORT || 3011) + 201;
 let server;
 test.use({ baseURL: `http://127.0.0.1:${PORT}` });
@@ -22,10 +22,10 @@ const urdu = /[؀-ۿ]/;
 
 for (const kind of ['group', 'dm'])
   for (const width of [1440, 390, 320])
-    test(`four compact buttons, ${kind} editor, ${width}px`, async ({ page }) => {
+    test(`three compact buttons, ${kind} editor, ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await open(page, kind);
-      for (const name of ['Urdu + English', 'More Trigger', 'English', 'English Trigger']) {
+      for (const name of ['Urdu + English', 'English', 'Trigger']) {
         const box = await button(page, name).boundingBox();
         expect(box, name).not.toBeNull();
         expect(box.height).toBeLessThanOrEqual(48);
@@ -38,7 +38,7 @@ for (const kind of ['group', 'dm'])
     });
 
 for (const kind of ['group', 'dm'])
-  test(`${kind}: all four buttons write the required message, stay editable and save`, async ({
+  test(`${kind}: the buttons write the required message, stay editable and save`, async ({
     page,
     request,
   }) => {
@@ -62,23 +62,35 @@ for (const kind of ['group', 'dm'])
 
     await expect(text).toBeHidden(); // the preview stays a preview: no keyboard
 
-    await button(page, 'More Trigger').click();
-    await expect(page.locator('#focusState')).toContainText('Written: More Trigger');
+    // Trigger works on the language that is picked: Urdu + English stays on, Trigger lights up.
+    await expect(button(page, 'Urdu + English')).toHaveAttribute('aria-pressed', 'true');
+    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'false');
+    await button(page, 'Trigger').click();
+    await expect(page.locator('#focusState')).toContainText('Written: Urdu + English Trigger');
+    await expect(button(page, 'Urdu + English')).toHaveAttribute('aria-pressed', 'true');
+    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'true');
     const b = await text.inputValue();
     expect(b).not.toBe(a);
     expect(b.split('\n\n')[0]).not.toBe(paras[0]); // a different hook
     expect(b.split('\n\n')[2]).not.toBe(paras[2]); // and a different verse
     expect(b).toMatch(/🔴 Rs\. 25,000 LEFT/);
 
-    await button(page, 'English').click();
-    await expect(page.locator('#focusState')).toContainText('Written: English');
+    await button(page, 'Trigger').click(); // Trigger off again
+    await expect(page.locator('#focusState')).toContainText('Written: Urdu + English.');
+    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'false');
+    await button(page, 'English').click(); // English, plain
+    await expect(page.locator('#focusState')).toContainText('Written: English.');
+    await expect(button(page, 'English')).toHaveAttribute('aria-pressed', 'true');
+    await expect(button(page, 'Urdu + English')).toHaveAttribute('aria-pressed', 'false');
     const c = await text.inputValue();
     expect(c).not.toMatch(urdu); // fully English
     expect(c).toMatch(/Allah says:|The Prophet/);
     expect(c.split('\n\n')[0]).toMatch(/^\*[^*\n]+\*$/);
 
-    await button(page, 'English Trigger').click();
+    await button(page, 'Trigger').click(); // English becomes English Trigger
     await expect(page.locator('#focusState')).toContainText('Written: English Trigger');
+    await expect(button(page, 'English')).toHaveAttribute('aria-pressed', 'true');
+    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'true');
     const d = await text.inputValue();
     expect(d).not.toMatch(urdu);
     expect(d.split('\n\n')[0]).not.toBe(c.split('\n\n')[0]);
@@ -116,7 +128,7 @@ for (const kind of ['group', 'dm'])
           .then((r) => r.json());
       const savedBefore = (await drafts())[kind];
       const before = await page.locator('#focusFormatted').innerText();
-      for (const name of ['English', 'More Trigger']) {
+      for (const name of ['English', 'Trigger']) {
         await button(page, name).click();
         await expect(page.locator('#focusState')).toContainText('Written');
         // Still the read-only preview: the text box stays hidden and nothing is focused (no phone keyboard).
@@ -163,7 +175,7 @@ test('a failed write leaves the text alone, says why, and the buttons work again
   await button(page, 'English').click();
   await expect(page.locator('#focusState')).toContainText('AI is not connected');
   await expect(text).toHaveValue(before);
-  for (const name of ['Urdu + English', 'More Trigger', 'English', 'English Trigger'])
+  for (const name of ['Urdu + English', 'English', 'Trigger'])
     await expect(button(page, name)).toBeEnabled();
 });
 
@@ -178,7 +190,7 @@ test('only one write at a time: the buttons are locked while one is running', as
     await r.continue();
   });
   await button(page, 'English').click();
-  await expect(button(page, 'More Trigger')).toBeDisabled();
+  await expect(button(page, 'Trigger')).toBeDisabled();
   await button(page, 'English')
     .click({ force: true, timeout: 1000 })
     .catch(() => {});
@@ -209,24 +221,84 @@ for (const width of [320, 390, 768, 1440])
     await page.setViewportSize({ width, height: 800 });
     await open(page, 'group');
     const boxes = [];
-    for (const name of ['Urdu + English', 'More Trigger', 'English', 'English Trigger'])
+    for (const name of ['Urdu + English', 'English', 'Trigger'])
       boxes.push(await button(page, name).boundingBox());
     for (const b of boxes) {
       expect(b.x).toBeGreaterThanOrEqual(0);
       expect(b.x + b.width).toBeLessThanOrEqual(width);
     }
     // No label is cut off.
-    for (const name of ['Urdu + English', 'More Trigger', 'English', 'English Trigger'])
+    for (const name of ['Urdu + English', 'English', 'Trigger'])
       expect(await button(page, name).evaluate((n) => n.scrollWidth <= n.clientWidth + 1)).toBe(
         true,
       );
     if (width <= 899) {
-      expect(boxes[0].y).toBe(boxes[1].y); // two rows of two
-      expect(boxes[2].y).toBe(boxes[3].y);
-      expect(boxes[2].y).toBeGreaterThan(boxes[0].y);
-      expect(boxes[0].width).toBeGreaterThan(width / 2 - 30);
+      expect(new Set(boxes.map((b) => Math.round(b.y))).size).toBe(1); // one row of three, no sideways scroll
       expect(boxes[0].height).toBeGreaterThanOrEqual(36);
     } else {
       expect(new Set(boxes.map((b) => Math.round(b.y))).size).toBe(1);
     }
   });
+
+/* /new (the phone reader): three chips fit in one row, and Trigger works on the language that is picked. */
+for (const width of [320, 390, 1440])
+  test(`/new ${width}px: English writes English, then Trigger makes that English a Trigger one`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: width < 900 ? 800 : 900 });
+    await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+    const asked = [];
+    await page.route('**/message-style', async (r) => {
+      const body = r.request().postDataJSON();
+      asked.push(body.style);
+      await r.fulfill({ json: { text: '*Hook ' + body.style + '*\n\n🔴 Rs. 25,000 LEFT', left: 25000 } });
+    });
+    await page.goto('/new#/preview');
+    await expect(page.locator('#focusFormatted')).not.toHaveText('');
+    const chips = page.locator('#messageFocus .focus-styles button');
+    await expect(chips).toHaveText(['Urdu + English', 'English', 'Trigger']);
+    // One row, nothing cut off, nothing to scroll sideways.
+    const row = await page.locator('#messageFocus .focus-styles').evaluate((n) => ({
+      cut: n.scrollWidth > n.clientWidth + 1,
+      ys: [...n.children].map((c) => Math.round(c.getBoundingClientRect().y)),
+    }));
+    expect(row.cut).toBe(false);
+    expect(new Set(row.ys).size).toBe(1);
+    const pressed = () => chips.evaluateAll((l) => l.map((b) => b.getAttribute('aria-pressed')));
+    expect(await pressed()).toEqual(['false', 'false', 'false']);
+
+    await chips.nth(1).click(); // English
+    await expect(page.locator('#focusFormatted')).toContainText(/Hook en(?!_)/);
+    expect(await pressed()).toEqual(['false', 'true', 'false']);
+    await chips.nth(2).click(); // Trigger -> English Trigger
+    await expect(page.locator('#focusFormatted')).toContainText('Hook en_more');
+    expect(await pressed()).toEqual(['false', 'true', 'true']);
+    await chips.nth(0).click(); // Urdu + English keeps Trigger on
+    await expect(page.locator('#focusFormatted')).toContainText('Hook ur_en_more');
+    expect(await pressed()).toEqual(['true', 'false', 'true']);
+    await chips.nth(2).click(); // Trigger off
+    await expect(page.locator('#focusFormatted')).toContainText(/Hook ur_en(?!_)/);
+    expect(await pressed()).toEqual(['true', 'false', 'false']);
+    expect(asked).toEqual(['en', 'en_more', 'ur_en_more', 'ur_en']);
+  });
+
+test('/new desktop: the chips on the Message card write the same way and show the choice', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  const asked = [];
+  await page.route('**/message-style', async (r) => {
+    asked.push(r.request().postDataJSON().style);
+    await r.fulfill({ json: { text: '*Hook*\n\n🔴 Rs. 25,000 LEFT', left: 25000 } });
+  });
+  await page.goto('/new');
+  const card = page.locator('#ui2Styles button');
+  await expect(card).toHaveText(['Urdu + English', 'English', 'Trigger']);
+  await card.nth(1).click();
+  await expect(page.locator('#messageFocus')).toBeVisible();
+  await expect.poll(() => asked.length).toBe(1);
+  await expect(page.locator('#messageFocus .focus-styles button').nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await expect(card.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  expect(asked).toEqual(['en']);
+});

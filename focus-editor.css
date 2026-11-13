@@ -693,6 +693,12 @@ body.message-focus-open > .foot {
   font-size: 12px;
   white-space: nowrap;
 }
+#messageFocus .focus-styles button[aria-pressed='true'] {
+  border-color: transparent;
+  background: #2f6fe4;
+  color: #fff;
+  font-weight: 800;
+}
 #messageFocus .focus-styles button[aria-busy='true'] {
   opacity: 0.7;
   cursor: progress;

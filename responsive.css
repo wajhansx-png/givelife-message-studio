@@ -1193,11 +1193,11 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row > .row-t
 
 /* ---- Timer presets (all widths): the chosen one (15m / 30m / 45m / 1h) is filled blue ---- */
 
-/* ---- Message buttons (Urdu + English, More Trigger, English, English Trigger): a tidy 2 x 2 grid on phones and tablets ---- */
+/* ---- Message buttons (Urdu + English, English, Trigger): one row of three on phones and tablets ---- */
 @media (max-width: 899px) {
   html body:not(#a):not(#b):not(#c) #messageFocus .focus-styles {
     display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     width: 100% !important;
     margin-inline-start: 0 !important;
     gap: 6px !important;

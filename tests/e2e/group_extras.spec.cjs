@@ -99,8 +99,10 @@ test('Message page: no Also send row', async ({ page }) => {
   await expect(page.locator('.ui2-xi')).toHaveCount(0);
 });
 
-for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['dm', 360], ['dm', 412], ['group', 1280]])
+for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['group', 375], ['group', 390], ['group', 412], ['dm', 280], ['dm', 360], ['dm', 412], ['group', 1280]])
   test(`Reader (${view}) at ${width}px: the ticks show in one line above the buttons, never covered`, async ({ page }) => {
+    await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: 'data:application/pdf;base64,' + PDF.toString('base64'), name: 'a.pdf' });
+    await api(port, '/group-extras', { action: 'add', kind: 'video', data: 'data:video/mp4;base64,' + MP4.toString('base64'), name: 'b.mp4' });
     await page.setViewportSize({ width, height: width >= 900 ? 900 : 740 });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
     await page.goto('/new');
@@ -121,7 +123,9 @@ for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['d
       });
       return { b, dock, chips, hit, sw: document.documentElement.scrollWidth, w: innerWidth };
     });
-    expect(m.b.bottom, 'above the dock').toBeLessThanOrEqual(m.dock.top + 1);
+    // phone: above the fixed bottom bar; computer: the bar is part of the page, the row just stays on screen
+    if (width < 900) expect(m.b.bottom, 'above the dock').toBeLessThanOrEqual(m.dock.top + 1);
+    else expect(m.b.bottom, 'on screen').toBeLessThanOrEqual(900);
     expect(m.sw).toBeLessThanOrEqual(m.w + 1);
     for (const c of m.chips) {
       expect(c.height).toBeGreaterThanOrEqual(39);
@@ -180,7 +184,7 @@ test('Reader (DM message): no attach buttons; a tick with no file says to attach
   await openReader(page, 'dm');
   await expect(page.locator('.ui2-rx-add')).toHaveCount(2);
   await expect(page.locator('.ui2-rx-add').first()).toBeHidden();
-  await page.locator('#ui2Rx-pdf').check({ force: true });
+  await page.locator('#ui2Rx-pdf').click({ force: true }); // refused at once, so it snaps back unticked
   await expect(page.locator('.ui2-rx-msg')).toContainText('Attach it on the group message first');
   await expect(page.locator('#ui2Rx-pdf')).not.toBeChecked();
 });
@@ -206,7 +210,7 @@ test('Reader (group message): tick PDF and video, both / one / none, applied to 
 
 test('Reader (DM message): its own ticks, remembered for DMs, group choice untouched', async ({ page }) => {
   await openReader(page, 'dm');
-  await expect(page.locator('#ui2ReaderExtras')).toHaveAttribute('title', /after each DM/);
+  await expect(page.locator('#ui2ReaderExtras')).toHaveAttribute('title', /after each donor DM/);
   await expect(page.locator('#ui2Rx-pdf')).not.toBeChecked(); // DMs start unticked
   await page.locator('#ui2Rx-pdf').check();
   await expect(page.locator('#ui2Rx-pdf')).toBeChecked();

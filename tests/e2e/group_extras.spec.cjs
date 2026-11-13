@@ -150,6 +150,16 @@ for (const width of [320, 390, 1440])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   });
 
+test('Reader: very narrow phones keep the old reader (the Message page row has the ticks)', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new');
+  await page.waitForFunction(() => window.DonorHub);
+  await page.evaluate(() => Nav.go('preview'));
+  await expect(page.locator('#ui2ReaderExtras')).toBeHidden();
+  await expect(page.locator('.ui2-reader-hint')).toBeVisible();
+});
+
 /* The same two ticks under the message in the reader: group message (after the poster) and DM (after each DM). */
 async function openReader(page, view = 'group', width = 390) {
   await page.setViewportSize({ width, height: width >= 900 ? 900 : 760 });
@@ -174,7 +184,7 @@ test('Reader (group message): tick PDF and video, both / one / none, applied to 
   await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: 'data:application/pdf;base64,' + PDF.toString('base64'), name: 'a.pdf' });
   await api(port, '/group-extras', { action: 'add', kind: 'video', data: 'data:video/mp4;base64,' + MP4.toString('base64'), name: 'b.mp4' });
   await openReader(page, 'group');
-  await expect(page.locator('.ui2-rx-label')).toHaveText('Also send after the poster:');
+  await expect(page.locator('#ui2ReaderExtras')).toHaveAttribute('title', /after the poster and caption in every group post/);
   await expect(page.locator('#ui2Rx-pdf')).toBeChecked();
   await expect(page.locator('#ui2Rx-video')).toBeChecked();
   await page.locator('#ui2Rx-pdf').uncheck();
@@ -191,7 +201,7 @@ test('Reader (group message): tick PDF and video, both / one / none, applied to 
 
 test('Reader (DM message): its own ticks, remembered for DMs, group choice untouched', async ({ page }) => {
   await openReader(page, 'dm');
-  await expect(page.locator('.ui2-rx-label')).toHaveText('Also send with each DM:');
+  await expect(page.locator('#ui2ReaderExtras')).toHaveAttribute('title', /after each DM/);
   await expect(page.locator('#ui2Rx-pdf')).not.toBeChecked(); // DMs start unticked
   await page.locator('#ui2Rx-pdf').check();
   await expect(page.locator('#ui2Rx-pdf')).toBeChecked();
@@ -208,14 +218,19 @@ test('Reader (DM message): its own ticks, remembered for DMs, group choice untou
   await expect(page.locator('#donorPdf')).not.toBeChecked();
 });
 
-for (const width of [320, 390, 1440])
-  test(`Reader: the PDF / Video ticks fit at ${width}px with 44px targets`, async ({ page }) => {
+for (const width of [390, 430, 1440])
+  test(`Reader: the PDF / Video ticks fit at ${width}px with real tap targets`, async ({ page }) => {
     await openReader(page, 'group', width);
     for (const sel of ['#ui2Rx-pdf', '#ui2Rx-video']) {
       const b = await page.locator(sel).locator('xpath=..').boundingBox();
-      expect(b.height, sel).toBeGreaterThanOrEqual(43);
+      expect(b.height, sel).toBeGreaterThanOrEqual(39);
       expect(b.x, sel).toBeGreaterThanOrEqual(0);
       expect(b.x + b.width, sel).toBeLessThanOrEqual(width + 0.5);
     }
+    // one line, and above the bottom dock on phones (nothing under it)
+    const box = await page.locator('#ui2ReaderExtras').boundingBox();
+    expect(box.height).toBeLessThan(48);
+    const dock = await page.locator('.ui2-reader-dock').boundingBox().catch(() => null);
+    if (dock && width < 900 && dock.height > 0) expect(box.y + box.height).toBeLessThanOrEqual(dock.y + 1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   });

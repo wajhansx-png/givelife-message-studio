@@ -1653,14 +1653,20 @@ document.addEventListener('click', (e) => {
       box.append(lab);
       cbs[kind] = cb;
     }
-    const add = mk('button', 'ui2-rx-add', 'Add files');
+    const add = mk('button', 'ui2-rx-add', 'Add');
     add.type = 'button';
+    add.title = 'Add the PDF or video (Poster dialog)';
+    add.setAttribute('aria-label', 'Add a PDF or video');
     add.hidden = true;
     add.addEventListener('click', () => window.DonorHub?.openPoster());
     const msg = mk('p', 'ui2-rx-msg', '');
     msg.setAttribute('role', 'status');
     box.append(add, msg);
-    nav.before(box);
+    /* It takes the place of the small hint line under the buttons, so the reader grows by almost nothing. */
+    const hint = document.querySelector('#messageFocus .ui2-reader-hint');
+    if (hint) hint.after(box);
+    else nav.after(box);
+    $('messageFocus')?.classList.add('ui2-has-rx');
     const have = { pdf: false, video: false },
       groupOn = { pdf: false, video: false };
     let dmOn = { pdf: false, video: false };
@@ -1672,7 +1678,9 @@ document.addEventListener('click', (e) => {
     } catch (e) {}
     const isDm = () => $('messageFocus')?.dataset.kind === 'dm';
     const paint = () => {
-      label.textContent = isDm() ? 'Also send with each DM:' : 'Also send after the poster:';
+      // One short word on screen; the full meaning is in the title and the accessible name.
+      box.title = box.dataset.when = isDm() ? 'Also sent after each DM' : 'Also sent after the poster and caption in every group post';
+      box.setAttribute('aria-label', box.title);
       for (const k of ['pdf', 'video']) {
         cbs[k].disabled = !have[k];
         cbs[k].parentElement.dataset.off = have[k] ? '0' : '1';

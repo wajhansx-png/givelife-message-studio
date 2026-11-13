@@ -544,10 +544,16 @@
   display: none;
 }
 .UI2 #messageFocus .focus-styles button {
-  flex: 0 0 auto !important;
+  flex: 1 1 auto !important;
   min-height: 40px !important;
-  padding-inline: 12px !important;
+  padding-inline: 10px !important;
   white-space: nowrap !important;
+}
+.UI2 #messageFocus .focus-styles button[aria-pressed='true'] {
+  border-color: transparent !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+  font-weight: 800 !important;
 }
 .UI2 #messageFocus .ui2-reader-actions {
   order: 2;
@@ -1389,7 +1395,7 @@
   font-size: 12px;
   font-weight: 600;
 }
-.UI2 .ui2-styles button:first-child {
+.UI2 .ui2-styles button[aria-pressed='true'] {
   border-color: transparent;
   background: #2f6fe4;
   color: #fff;

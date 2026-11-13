@@ -5819,3 +5819,45 @@
   background: #2f6fe4 !important;
   color: #fff !important;
 }
+
+/* ---------- Later panel: each group's name and its four timers on ONE line; the timers are real buttons.
+   (Moved out of the send card, the timer row lost its layout and the pills shrank to 16-31px wide.) ---------- */
+.UI2 .ui2-later-panel {
+  gap: 6px;
+  padding: 8px 10px;
+}
+.UI2 .ui2-later-line {
+  display: grid;
+  grid-template-columns: minmax(84px, 30%) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.UI2 .ui2-later-line > span {
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.UI2 .ui2-later-line .delay-row {
+  display: grid !important;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin: 0 !important;
+}
+.UI2 .ui2-later-line .delay-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 2px;
+  white-space: nowrap;
+}
+.UI2 .ui2-later-line .delay-pill[aria-pressed='true'],
+.UI2 .ui2-later-line .delay-pill.is-pending {
+  border-color: transparent;
+  background: #2f6fe4;
+  color: #fff;
+}

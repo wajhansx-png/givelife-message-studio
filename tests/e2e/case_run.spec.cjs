@@ -376,3 +376,69 @@ test('GiveLife Group shows ON when the main page Auto is ON, and its switch turn
   await expect.poll(async () => (await api(port, '/autopilot')).on).toBe(false);
   await expect(row.locator('.cr-live-line')).toHaveCount(0);
 });
+
+/* Top Donors / Important Donors: the Start question also offers PDF and Video (the files saved for the groups). */
+const PDF = 'data:application/pdf;base64,' + Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(300, 120)]).toString('base64');
+const MP4 = 'data:video/mp4;base64,' + Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(300)]).toString('base64');
+
+test('Top Donors start question: PDF and Video ticks are disabled with no file, then tick-able once added; the group row has none', async ({ page }) => {
+  await api(port, '/cases', { action: 'new', name: 'Extras case', left: 30000 });
+  await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
+  await api(port, '/group-extras', { action: 'remove', kind: 'video' });
+  await open(page, 390, 844);
+  const sheet = page.locator('#caseSheet');
+  await page.locator('.cr-row[data-key="top"] .cr-sw').click();
+  await expect(sheet.locator('#csTitle')).toHaveText('Start Top Donors?');
+  await expect(sheet.locator('.cr-extras-label')).toHaveText('Also send:');
+  await expect(sheet.locator('#crX-pdf')).toBeDisabled();
+  await expect(sheet.locator('#crX-video')).toBeDisabled();
+  await expect(sheet.locator('.cr-extras-note')).toContainText('add it in Poster');
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+  await expect(sheet).toBeHidden();
+  // with files saved for the groups, the same two ticks can be set (nothing is sent by ticking)
+  await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: PDF, name: 'report.pdf' });
+  await api(port, '/group-extras', { action: 'add', kind: 'video', data: MP4, name: 'clip.mp4' });
+  await page.locator('.cr-row[data-key="top"] .cr-sw').click();
+  await expect(sheet.locator('#crX-pdf')).toBeEnabled();
+  await expect(sheet.locator('#crX-pdf')).not.toBeChecked();
+  await sheet.locator('#crX-pdf').check();
+  await sheet.locator('#crX-video').check();
+  await expect(sheet.locator('#crX-pdf')).toBeChecked();
+  await expect(sheet.locator('#crX-video')).toBeChecked();
+  await sheet.locator('#crX-video').uncheck(); // PDF only
+  await expect(sheet.locator('#crX-video')).not.toBeChecked();
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+  expect((await api(port, '/case-run')).status).toBe('idle'); // ticking never starts anything
+  await page.locator('.cr-row[data-key="group"] .cr-sw').click();
+  await expect(sheet.locator('#csTitle')).toHaveText('Start GiveLife Group?');
+  await expect(sheet.locator('.cr-extras')).toHaveCount(0);
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+});
+
+for (const width of [280, 320, 360, 412])
+  test(`Top Donors start question at ${width}px: the PDF / Video ticks fit inside the sheet with 44px targets`, async ({ page }) => {
+    await api(port, '/cases', { action: 'new', name: 'Extras width ' + width, left: 30000 });
+    await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: PDF, name: 'report.pdf' });
+    await api(port, '/group-extras', { action: 'add', kind: 'video', data: MP4, name: 'clip.mp4' });
+    await open(page, width, 740);
+    await page.locator('.cr-row[data-key="top"] .cr-sw').click();
+    const sheet = page.locator('#caseSheet');
+    await expect(sheet.locator('#crX-pdf')).toBeVisible();
+    const m = await page.evaluate(() => {
+      const r = (e) => e.getBoundingClientRect();
+      const dlg = r(document.getElementById('caseSheet'));
+      return {
+        dlg,
+        chips: [...document.querySelectorAll('#caseSheet .cr-xi')].map(r),
+        sw: document.documentElement.scrollWidth,
+        w: innerWidth,
+      };
+    });
+    expect(m.sw).toBeLessThanOrEqual(m.w + 1);
+    for (const c of m.chips) {
+      expect(c.height).toBeGreaterThanOrEqual(43);
+      expect(c.x).toBeGreaterThanOrEqual(m.dlg.x - 1);
+      expect(c.x + c.width).toBeLessThanOrEqual(m.dlg.x + m.dlg.width + 1);
+    }
+    await sheet.getByRole('button', { name: 'Cancel' }).click();
+  });

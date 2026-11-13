@@ -415,9 +415,47 @@
     }
     return box;
   }
+  /* Top Donors and Important Donors can also send the case PDF and video after each poster + caption. They are the
+     files saved for the groups (Poster dialog); ticked here, they go with this start. */
+  const EXTRA_ROWS = ['top', 'important'];
+  async function extrasPicker(plan) {
+    let have = {};
+    try {
+      have = await (await fetch('/group-extras')).json();
+    } catch (e) {}
+    const box = make('div', 'cr-extras');
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', 'Also send after each poster and caption');
+    box.append(make('b', 'cr-extras-label', 'Also send:'));
+    const state = { pdf: false, video: false };
+    for (const [kind, label] of [
+      ['pdf', 'PDF'],
+      ['video', 'Video'],
+    ]) {
+      const saved = !!(have[kind] && have[kind].has);
+      const lab = make('label', 'cr-xi');
+      lab.dataset.kind = kind;
+      lab.dataset.off = saved ? '0' : '1';
+      const cb = make('input');
+      cb.type = 'checkbox';
+      cb.id = 'crX-' + kind;
+      cb.disabled = !saved;
+      cb.checked = state[kind] = saved && !!plan[kind];
+      cb.onchange = () => (state[kind] = cb.checked);
+      lab.append(cb, make('span', '', label));
+      box.append(lab);
+    }
+    if (!(have.pdf && have.pdf.has) || !(have.video && have.video.has))
+      box.append(
+        make('small', 'cr-extras-note', 'A greyed one is not added yet: add it in Poster → Sent after the poster in groups.'),
+      );
+    return { el: box, get: () => ({ ...state }) };
+  }
   /* "Start Top Donors?" (before the case runs) or the same question for a row that was not approved yet. */
   async function startRowSheet(r, add) {
     const s = await post(add ? { action: 'summary', key: r.key } : { action: 'summary' });
+    const pick = EXTRA_ROWS.includes(r.key) ? await extrasPicker(s.rows[r.key].plan || {}) : null;
+    const extras = () => (pick ? { extras: { [r.key]: pick.get() } } : {});
     const buttons = [['Cancel', 'cr-soft', null]];
     if (!s.blockers.length)
       buttons.push([
@@ -426,7 +464,9 @@
         async () => {
           try {
             return await post(
-              add ? { action: 'add_row', key: r.key, token: s.token } : { action: 'start', token: s.token },
+              add
+                ? { action: 'add_row', key: r.key, token: s.token, ...extras() }
+                : { action: 'start', token: s.token, ...extras() },
             );
           } catch (e) {
             // the plan moved under us: show the fresh summary and let the owner decide again
@@ -446,7 +486,9 @@
       },
       { once: true },
     ); // Cancel or swipe away: the switch snaps back
-    openSheet(`Start ${r.title}?`, rowSummary(s, r.key), buttons);
+    const body = rowSummary(s, r.key);
+    if (pick) body.append(pick.el);
+    openSheet(`Start ${r.title}?`, body, buttons);
   }
   async function resumeAll() {
     try {

@@ -89,76 +89,48 @@ for (const width of [320, 390, 1440])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   });
 
-/* The same two options live on the Message page under the group buttons: add them there, tick which ones go. */
-async function openMessage(page, width = 390) {
-  await page.setViewportSize({ width, height: width >= 900 ? 900 : 760 });
+/* The main Message page has no PDF / Video row: the ticks live in the message screen (reader) and in Donors. */
+test('Message page: no Also send row', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new');
-  await expect(page.locator('#ui2Extras')).toBeVisible();
-}
-
-test('Message page: Also send PDF / Video, both off and not addable-to-send until a file is added', async ({ page }) => {
-  await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
-  await api(port, '/group-extras', { action: 'remove', kind: 'video' });
-  await openMessage(page);
-  await expect(page.locator('.ui2-extras-label')).toHaveText('Also send:');
-  for (const kind of ['pdf', 'video']) {
-    await expect(page.locator(`#ui2X-${kind}`)).toBeDisabled();
-    await expect(page.locator(`.ui2-xi[data-kind="${kind}"] small`)).toHaveText('none added');
-    await expect(page.locator(`.ui2-xi[data-kind="${kind}"] .ui2-xi-add`)).toContainText('Add');
-  }
+  await page.waitForFunction(() => typeof setView === 'function' && window.DonorHub);
+  await expect(page.locator('#ui2Extras')).toHaveCount(0);
+  await expect(page.locator('.ui2-xi')).toHaveCount(0);
 });
 
-test('Message page: add a PDF and a video there, tick which ones go (both, one, none)', async ({ page }) => {
-  await openMessage(page);
-  await page.locator('#ui2XFile-pdf').setInputFiles({ name: 'case-report.pdf', mimeType: 'application/pdf', buffer: PDF });
-  await expect(page.locator('#ui2X-pdf')).toBeChecked(); // a new file starts ticked: it goes
-  await expect(page.locator('.ui2-xi[data-kind="pdf"] small')).toContainText('case-report.pdf');
-  await page.locator('#ui2XFile-video').setInputFiles({ name: 'oxygen.mp4', mimeType: 'video/mp4', buffer: MP4 });
-  await expect(page.locator('#ui2X-video')).toBeChecked();
-  let v = await api(port, '/group-extras');
-  expect([v.pdf.on, v.video.on]).toEqual([true, true]); // both go
-  await page.locator('#ui2X-pdf').uncheck();
-  await expect(page.locator('#ui2X-pdf')).not.toBeChecked();
-  v = await api(port, '/group-extras');
-  expect([v.pdf.has, v.pdf.on, v.video.on]).toEqual([true, false, true]); // only the video goes; the PDF stays saved
-  await page.locator('#ui2X-video').uncheck();
-  v = await api(port, '/group-extras');
-  expect([v.pdf.on, v.video.on]).toEqual([false, false]); // none go
-  await page.locator('#ui2X-pdf').check(); // back to one
-  await page.reload();
-  await expect(page.locator('#ui2X-pdf')).toBeChecked(); // remembered by the server, not the browser
-  await expect(page.locator('#ui2X-video')).not.toBeChecked();
-});
-
-test('Message page: a wrong file says why and changes nothing', async ({ page }) => {
-  await openMessage(page);
-  await page.locator('#ui2XFile-pdf').setInputFiles({ name: 'clip.mp4', mimeType: 'video/mp4', buffer: MP4 });
-  await expect(page.locator('.ui2-extras-msg')).toContainText('Choose a PDF');
-  await expect(page.locator('.ui2-xi[data-kind="pdf"] small')).toContainText('case-report.pdf');
-});
-
-for (const width of [320, 390, 1440])
-  test(`Message page: the PDF / Video row fits at ${width}px with 44px targets`, async ({ page }) => {
-    await openMessage(page, width);
-    for (const sel of ['.ui2-xi[data-kind="pdf"]', '.ui2-xi[data-kind="video"]']) {
-      const b = await page.locator(sel).boundingBox();
-      expect(b.height, sel).toBeGreaterThanOrEqual(43);
-      expect(b.x, sel).toBeGreaterThanOrEqual(0);
-      expect(b.x + b.width, sel).toBeLessThanOrEqual(width + 0.5);
+for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['dm', 360], ['dm', 412], ['group', 1280]])
+  test(`Reader (${view}) at ${width}px: the ticks show in one line above the buttons, never covered`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width >= 900 ? 900 : 740 });
+    await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+    await page.goto('/new');
+    await page.waitForFunction(() => typeof setView === 'function' && window.DonorHub);
+    if (view === 'dm') await page.evaluate(() => setView('dm'));
+    await page.evaluate(() => { location.hash = '#/preview'; });
+    const box = page.locator('#ui2ReaderExtras');
+    await expect(box).toBeVisible();
+    const m = await page.evaluate(() => {
+      const r = (e) => e.getBoundingClientRect();
+      const b = r(document.getElementById('ui2ReaderExtras'));
+      const dock = r(document.querySelector('#messageFocus .ui2-reader-dock'));
+      const chips = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-chip')].map(r);
+      const hit = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-chip')].map((c) => {
+        const q = r(c);
+        const top = document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2);
+        return c.contains(top);
+      });
+      return { b, dock, chips, hit, sw: document.documentElement.scrollWidth, w: innerWidth };
+    });
+    expect(m.b.bottom, 'above the dock').toBeLessThanOrEqual(m.dock.top + 1);
+    expect(m.sw).toBeLessThanOrEqual(m.w + 1);
+    for (const c of m.chips) {
+      expect(c.height).toBeGreaterThanOrEqual(39);
+      expect(c.x).toBeGreaterThanOrEqual(0);
+      expect(c.x + c.width).toBeLessThanOrEqual(m.w + 0.5);
     }
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    expect(m.hit).toEqual([true, true]); // nothing sits on top of the ticks
+    expect(m.b.height, 'one line').toBeLessThan(60);
   });
-
-test('Reader: very narrow phones keep the old reader (the Message page row has the ticks)', async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 740 });
-  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
-  await page.goto('/new');
-  await page.waitForFunction(() => window.DonorHub);
-  await page.evaluate(() => { location.hash = '#/preview'; });
-  await expect(page.locator('#ui2ReaderExtras')).toBeHidden();
-  await expect(page.locator('.ui2-reader-hint')).toBeVisible();
-});
 
 /* The same two ticks under the message in the reader: group message (after the poster) and DM (after each DM). */
 async function openReader(page, view = 'group', width = 390) {
@@ -171,13 +143,46 @@ async function openReader(page, view = 'group', width = 390) {
   await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
 }
 
-test('Reader: nothing saved means disabled ticks and an Add files button', async ({ page }) => {
+test('Reader (group message): nothing saved means disabled ticks and an Add button on each', async ({ page }) => {
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
   await api(port, '/group-extras', { action: 'remove', kind: 'video' });
   await openReader(page);
-  await expect(page.locator('#ui2Rx-pdf')).toBeDisabled();
-  await expect(page.locator('#ui2Rx-video')).toBeDisabled();
-  await expect(page.locator('.ui2-rx-add')).toBeVisible();
+  for (const kind of ['pdf', 'video']) {
+    await expect(page.locator(`#ui2Rx-${kind}`)).toBeDisabled();
+    await expect(page.locator(`.ui2-rx-item[data-kind="${kind}"] .ui2-rx-add`)).toHaveText('Add');
+  }
+});
+
+test('Reader (group message): attach a PDF and a video here, then tick which ones go', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
+  await api(port, '/group-extras', { action: 'remove', kind: 'video' });
+  await openReader(page);
+  await page.locator('#ui2RxFile-pdf').setInputFiles({ name: 'case-report.pdf', mimeType: 'application/pdf', buffer: PDF });
+  await expect(page.locator('#ui2Rx-pdf')).toBeChecked(); // a new file starts ticked: it goes
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"] .ui2-rx-add')).toHaveText('Change');
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).toHaveAttribute('title', 'case-report.pdf');
+  await page.locator('#ui2RxFile-video').setInputFiles({ name: 'oxygen.mp4', mimeType: 'video/mp4', buffer: MP4 });
+  await expect(page.locator('#ui2Rx-video')).toBeChecked();
+  let v = await api(port, '/group-extras');
+  expect([v.pdf.has, v.pdf.on, v.video.has, v.video.on]).toEqual([true, true, true, true]);
+  await page.locator('#ui2Rx-pdf').uncheck();
+  v = await api(port, '/group-extras');
+  expect([v.pdf.on, v.video.on]).toEqual([false, true]); // only the video goes; the PDF stays attached
+  // a wrong file says why and changes nothing
+  await page.locator('#ui2RxFile-pdf').setInputFiles({ name: 'clip.mp4', mimeType: 'video/mp4', buffer: MP4 });
+  await expect(page.locator('.ui2-rx-msg')).toContainText('Choose a PDF');
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).toHaveAttribute('title', 'case-report.pdf');
+});
+
+test('Reader (DM message): no attach buttons; a tick with no file says to attach it on the group message', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
+  await api(port, '/group-extras', { action: 'remove', kind: 'video' });
+  await openReader(page, 'dm');
+  await expect(page.locator('.ui2-rx-add')).toHaveCount(2);
+  await expect(page.locator('.ui2-rx-add').first()).toBeHidden();
+  await page.locator('#ui2Rx-pdf').check({ force: true });
+  await expect(page.locator('.ui2-rx-msg')).toContainText('Attach it on the group message first');
+  await expect(page.locator('#ui2Rx-pdf')).not.toBeChecked();
 });
 
 test('Reader (group message): tick PDF and video, both / one / none, applied to the group posts', async ({ page }) => {

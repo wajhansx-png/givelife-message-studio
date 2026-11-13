@@ -1547,16 +1547,35 @@ html body #donorPasteDialog #pastePoster {
 
 /* Donors → Msgs: "Also send: PDF / Video" beside Write Case (the same ticks as the Donors bar and the DM batch). */
 .bank-extras {
-  display: inline-flex;
+  display: flex;
+  flex: 0 0 auto;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px 8px;
+  margin: 0;
 }
 .bank-extras .bank-extras-label {
   color: var(--ink-muted, #aab0c5);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
 }
 .bank-extras .bm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line2, #3a4157);
+  border-radius: 999px;
+  background: var(--surface2, #232838);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bank-extras .bm-chip input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #2f6fe4;
 }

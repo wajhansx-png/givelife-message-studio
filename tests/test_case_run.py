@@ -344,6 +344,70 @@ class OneRow(Base):
         self.assertEqual(self.state()["rows"]["top"]["state"], "paused")
 
 
+class ExtrasForTopDonors(Base):
+    """Top Donors / Important Donors can also send the case PDF and video after each poster + caption. They are the
+    files saved for the groups; ticks are chosen in the Start question and go with it."""
+
+    def saved(self, ok=True):
+        return patch("group_extras.saved", lambda store, kind: ("a" * 32) if ok else None)
+
+    def job(self):
+        return (self.h.jobs.export_jobs()["jobs"] or [{}])[-1]
+
+    def test_off_by_default_and_not_part_of_the_token(self):
+        self.people()
+        plan = self.state()["plan"]
+        for key in ("top", "important"):
+            self.assertEqual((plan[key]["pdf"], plan[key]["video"]), (False, False))
+        before = self.cr.summary()["token"]
+        with self.saved():
+            self.cr.set_plan({"top": {"pdf": True}})
+        self.assertEqual(self.cr.summary()["token"], before)
+
+    def test_a_tick_with_no_saved_file_is_refused_in_plain_words(self):
+        self.people()
+        with self.saved(False):
+            with self.assertRaisesRegex(ValueError, "No PDF is saved yet"):
+                self.cr.set_plan({"top": {"pdf": True}})
+            with self.assertRaisesRegex(ValueError, "No Video is saved yet"):
+                self.cr.start(self.cr.summary()["token"], {"top": {"video": True}})
+        self.assertEqual(self.cr.view()["status"], "idle")
+
+    def test_ticks_chosen_at_start_reach_the_dm_job(self):
+        self.people(tops=2, giki=0)
+        token = self.cr.summary()["token"]
+        with self.saved():
+            self.cr.start(token, {"top": {"pdf": True, "video": True}})
+            self.assertTrue(self.tick_until(lambda: self.job().get("pdf") is True))
+        job = self.job()
+        self.assertEqual((job.get("pdf"), job.get("video")), (True, True))
+        self.assertTrue(self.state()["plan"]["top"]["pdf"])  # remembered for the next Start question
+
+    def test_one_tick_sends_only_that_one(self):
+        self.people(tops=2, giki=0)
+        token = self.cr.summary()["token"]
+        with self.saved():
+            self.cr.start(token, {"top": {"pdf": False, "video": True}})
+            self.assertTrue(self.tick_until(lambda: self.job().get("video") is True))
+        self.assertFalse(self.job().get("pdf"))
+
+    def test_no_ticks_means_no_extras(self):
+        self.people(tops=2, giki=0)
+        self.approve()
+        self.assertTrue(self.tick_until(lambda: bool(self.job())))
+        self.assertFalse(self.job().get("pdf") or self.job().get("video"))
+
+    def test_only_top_and_important_rows_take_ticks(self):
+        self.people()
+        with self.saved():
+            for key in ("giki", "group", "volunteers"):
+                with self.assertRaises(ValueError):
+                    self.cr.start(self.cr.summary()["token"], {key: {"pdf": True}})
+            with self.assertRaises(ValueError):
+                self.cr.start(self.cr.summary()["token"], {"top": {"pdf": "yes"}})
+        self.assertEqual(self.cr.view()["status"], "idle")
+
+
 class LiveOutside(Base):
     """Something already ON outside the case run (the main page's Auto, a batch from the Donors page) is shown as ON
     on the Case page, and the Case page's switch turns that same thing OFF."""

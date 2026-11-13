@@ -133,6 +133,21 @@ class Sending(unittest.TestCase):
         self.assertEqual(len(self.calls), 2)
 
 
+    def test_an_auto_group_post_goes_the_same_way_poster_then_the_ticked_files(self):
+        """Auto (every 45 minutes) posts through _group_attempt exactly like this; the ticked PDF and video follow."""
+        ok = type("R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})})()
+        statuses = {"is_connected": True, "is_logged_in": True}
+        group_extras.set_on(app.STORE, "video", False)  # PDF only
+        with patch.object(app, "api_result", lambda *a, **k: statuses), patch.object(
+            app, "post_media", lambda *a, **k: ok
+        ), patch.object(app, "poster_media", lambda *a, **k: Path(__file__)), patch.object(
+            app, "record_delivery", lambda *a, **k: None
+        ), patch.object(app, "check_stop", lambda: None), patch.object(app, "check_hold", lambda: None):
+            auto = app._group_attempt({"with_picture": True, "manual": False}, GROUP, "caption")
+        self.assertEqual(auto.get("code"), "SUCCESS")
+        self.assertEqual([e["kind"] for e in auto["extras"]], ["pdf"])
+
+
 class CaseOwnership(unittest.TestCase):
     def test_a_new_case_starts_with_no_pdf_or_video_and_the_old_case_keeps_its_own(self):
         store = app.STORE

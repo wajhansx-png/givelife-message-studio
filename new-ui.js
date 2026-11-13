@@ -713,100 +713,6 @@ const ui2Frame = (fn) => {
       panel.append(line);
     }
     two.after(more, panel);
-    /* PDF and video that go after the poster + caption in every group post (Auto too, every 45 minutes): add them
-       here, tick which ones go. DMs have matching ticks in Donors; they take these same files. */
-    const extras = mk('div', 'ui2-extras');
-    extras.id = 'ui2Extras';
-    extras.setAttribute('role', 'group');
-    extras.setAttribute('aria-label', 'Also send after the poster and caption');
-    extras.append(mk('span', 'ui2-extras-label', 'Also send:'));
-    const xrows = {};
-    const xmsg = mk('p', 'ui2-extras-msg', '');
-    xmsg.setAttribute('role', 'status');
-    let xbusy = false;
-    const xpaint = (v) => {
-      for (const [kind, r] of Object.entries(xrows)) {
-        const x = (v && v[kind]) || {};
-        r.cb.disabled = !x.has;
-        r.cb.checked = !!(x.has && x.on);
-        r.name.textContent = x.has ? x.name : 'none added';
-        r.add.firstChild.textContent = x.has ? 'Change' : 'Add';
-        r.item.dataset.has = x.has ? '1' : '0';
-      }
-    };
-    const xcall = async (body, done) => {
-      if (xbusy) return;
-      xbusy = true;
-      xmsg.textContent = '';
-      try {
-        const r = await post('/group-extras', body),
-          d = await r.json().catch(() => ({}));
-        if (!r.ok) throw Error(d.error || 'Could not save that.');
-        xpaint(d);
-        if (done) xmsg.textContent = done;
-        dispatchEvent(new CustomEvent('group-extras-changed'));
-      } catch (e) {
-        xmsg.textContent = e.message;
-        xload();
-      } finally {
-        xbusy = false;
-      }
-    };
-    const xload = async () => {
-      try {
-        const r = await fetch('/group-extras');
-        if (r.ok) xpaint(await r.json());
-      } catch (e) {}
-    };
-    for (const [kind, label, accept] of [
-      ['pdf', 'PDF', 'application/pdf'],
-      ['video', 'Video', 'video/mp4'],
-    ]) {
-      const item = mk('div', 'ui2-xi');
-      item.dataset.kind = kind;
-      const lab = mk('label', 'ui2-xi-check');
-      const cb = mk('input');
-      cb.type = 'checkbox';
-      cb.id = 'ui2X-' + kind;
-      cb.disabled = true;
-      cb.addEventListener('change', () => xcall({ action: 'toggle', kind, on: cb.checked }));
-      const name = mk('small', '', 'none added');
-      const text = mk('span', 'ui2-xi-text');
-      text.append(mk('b', '', label), name);
-      lab.append(cb, text);
-      const file = mk('input');
-      file.type = 'file';
-      file.accept = accept;
-      file.hidden = true;
-      file.id = 'ui2XFile-' + kind;
-      const add = mk('label', 'ui2-xi-add');
-      add.htmlFor = file.id;
-      add.append(mk('span', '', 'Add'));
-      file.addEventListener('change', async () => {
-        const f = file.files[0];
-        file.value = '';
-        if (!f) return;
-        if (f.size > 15_000_000) return void (xmsg.textContent = 'Choose a ' + label + ' under 15 MB.');
-        xmsg.textContent = 'Saving the ' + label + '…';
-        const data = await new Promise((resolve) => {
-          const fr = new FileReader();
-          fr.onload = () => resolve(String(fr.result));
-          fr.onerror = () => resolve('');
-          fr.readAsDataURL(f);
-        });
-        if (!data.startsWith('data:')) return void (xmsg.textContent = 'The file could not be read.');
-        xcall({ action: 'add', kind, data, name: f.name }, label + ' added. It goes after the poster and caption.');
-      });
-      item.append(lab, add, file);
-      extras.append(item);
-      xrows[kind] = { item, cb, name, add };
-    }
-    extras.append(xmsg);
-    more.after(extras);
-    xload();
-    addEventListener('group-extras-changed', xload);
-    addEventListener('focus', xload);
-    document.addEventListener('visibilitychange', () => document.hidden || xload());
     const timers = () => [...document.querySelectorAll('.gb-timer')];
     later.addEventListener('click', () => {
       const open = panel.hidden;
@@ -1621,9 +1527,10 @@ document.addEventListener('click', (e) => {
       ),
     );
   }
-  /* Reader: "Also send:" PDF / Video ticks under the message. For a group message they follow the poster and caption
-     of every group post (Auto too, every 45 minutes); for a DM they follow each DM. Same ticks as the Message page
-     row (group) and the Donors page (DM); the files are the ones added in Poster / on the Message page. */
+  /* Reader (the page a message opens): "Also send:" PDF / Video under the message.
+     Group message: attach the PDF and the video here (Add / Change) and tick which ones go; they follow the poster and
+     caption of every group post, Auto too (every 45 minutes). They are the case's files, stored once.
+     DM message: the same two ticks only; they take those same files and follow each donor's DM (poster + caption). */
   function readerExtras() {
     const nav = $('ui2GnavReader');
     if (!nav || $('ui2ReaderExtras')) return;
@@ -1636,38 +1543,69 @@ document.addEventListener('click', (e) => {
     const box = mk('div', 'ui2-rx');
     box.id = 'ui2ReaderExtras';
     box.setAttribute('role', 'group');
-    box.setAttribute('aria-label', 'Also send a PDF and a video');
-    const label = mk('span', 'ui2-rx-label', 'Also send:');
-    box.append(label);
-    const cbs = {};
-    for (const [kind, name] of [
-      ['pdf', 'PDF'],
-      ['video', 'Video'],
+    box.append(mk('span', 'ui2-rx-label', 'Also send:'));
+    const items = {};
+    const msg = mk('p', 'ui2-rx-msg', '');
+    msg.setAttribute('role', 'status');
+    for (const [kind, name, accept] of [
+      ['pdf', 'PDF', 'application/pdf'],
+      ['video', 'Video', 'video/mp4'],
     ]) {
+      const item = mk('div', 'ui2-rx-item');
+      item.dataset.kind = kind;
       const lab = mk('label', 'ui2-rx-chip');
       const cb = mk('input');
       cb.type = 'checkbox';
       cb.id = 'ui2Rx-' + kind;
       cb.addEventListener('change', () => change(kind, cb.checked));
       lab.append(cb, mk('span', '', name));
-      box.append(lab);
-      cbs[kind] = cb;
+      const file = mk('input');
+      file.type = 'file';
+      file.accept = accept;
+      file.hidden = true;
+      file.id = 'ui2RxFile-' + kind;
+      const add = mk('label', 'ui2-rx-add');
+      add.htmlFor = file.id;
+      const addWord = mk('span', '', 'Add');
+      add.append(addWord);
+      add.title = 'Attach the ' + name + ' (the case file for every group post and every DM)';
+      file.addEventListener('change', async () => {
+        const f = file.files[0];
+        file.value = '';
+        if (!f) return;
+        if (f.size > 15_000_000) return void (msg.textContent = 'Choose a ' + name + ' under 15 MB.');
+        msg.textContent = 'Saving the ' + name + '…';
+        const data = await new Promise((resolve) => {
+          const fr = new FileReader();
+          fr.onload = () => resolve(String(fr.result));
+          fr.onerror = () => resolve('');
+          fr.readAsDataURL(f);
+        });
+        if (!data.startsWith('data:')) return void (msg.textContent = 'The file could not be read.');
+        try {
+          const r = await post('/group-extras', { action: 'add', kind, data, name: f.name }),
+            d = await r.json().catch(() => ({}));
+          if (!r.ok) throw Error(d.error || 'Could not save that.');
+          msg.textContent = '';
+          take(d);
+          dispatchEvent(new CustomEvent('group-extras-changed'));
+        } catch (e) {
+          msg.textContent = e.message;
+          load();
+        }
+      });
+      item.append(lab, add, file);
+      box.append(item);
+      items[kind] = { item, cb, add: addWord, file: add, lab };
     }
-    const add = mk('button', 'ui2-rx-add', 'Add');
-    add.type = 'button';
-    add.title = 'Add the PDF or video (Poster dialog)';
-    add.setAttribute('aria-label', 'Add a PDF or video');
-    add.hidden = true;
-    add.addEventListener('click', () => window.DonorHub?.openPoster());
-    const msg = mk('p', 'ui2-rx-msg', '');
-    msg.setAttribute('role', 'status');
-    box.append(add, msg);
+    box.append(msg);
     /* It takes the place of the small hint line under the buttons, so the reader grows by almost nothing. */
     const hint = document.querySelector('#messageFocus .ui2-reader-hint');
     if (hint) hint.after(box);
     else nav.after(box);
     $('messageFocus')?.classList.add('ui2-has-rx');
     const have = { pdf: false, video: false },
+      names = { pdf: '', video: '' },
       groupOn = { pdf: false, video: false };
     let dmOn = { pdf: false, video: false };
     try {
@@ -1678,19 +1616,27 @@ document.addEventListener('click', (e) => {
     } catch (e) {}
     const isDm = () => $('messageFocus')?.dataset.kind === 'dm';
     const paint = () => {
-      // One short word on screen; the full meaning is in the title and the accessible name.
-      box.title = box.dataset.when = isDm() ? 'Also sent after each DM' : 'Also sent after the poster and caption in every group post';
+      const dm = isDm();
+      box.dataset.dm = dm ? '1' : '0';
+      box.title = dm
+        ? 'Also sent after each donor DM (poster and caption first). They use the PDF and video added on the group message.'
+        : 'Also sent after the poster and caption in every group post, Auto too';
       box.setAttribute('aria-label', box.title);
       for (const k of ['pdf', 'video']) {
-        cbs[k].disabled = !have[k];
-        cbs[k].parentElement.dataset.off = have[k] ? '0' : '1';
-        cbs[k].checked = !!(have[k] && (isDm() ? dmOn[k] : groupOn[k]));
+        const it = items[k];
+        // a group message can tick only what is attached; a DM tick is checked when ticked (a missing file is refused)
+        it.cb.disabled = !dm && !have[k];
+        it.item.dataset.off = have[k] ? '0' : '1';
+        it.cb.checked = !!(have[k] && (dm ? dmOn[k] : groupOn[k]));
+        it.add.textContent = have[k] ? 'Change' : 'Add';
+        it.item.title = have[k] ? names[k] : '';
+        it.file.hidden = dm; // DMs only tick: the files are attached on the group message
       }
-      add.hidden = have.pdf && have.video;
     };
     const take = (v) => {
       for (const k of ['pdf', 'video']) {
         have[k] = !!(v[k] && v[k].has);
+        names[k] = have[k] ? String(v[k].name || '') : '';
         groupOn[k] = !!(have[k] && v[k].on);
       }
       paint();
@@ -1704,7 +1650,13 @@ document.addEventListener('click', (e) => {
     async function change(kind, on) {
       msg.textContent = '';
       if (isDm()) {
-        // donors.js checks the file is saved, remembers the tick and applies it to a running Auto
+        if (on && !have[kind]) {
+          items[kind].cb.checked = false;
+          msg.textContent =
+            'No ' + (kind === 'pdf' ? 'PDF' : 'video') + ' yet. Attach it on the group message first.';
+          return;
+        }
+        // donors.js remembers the tick and applies it to a running Auto-DM
         dispatchEvent(new CustomEvent('dm-extra-request', { detail: { kind, on } }));
         return;
       }

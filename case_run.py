@@ -17,6 +17,8 @@ from donor_book import normalize_phone
 KEY = "case_run"
 ROWS = ("group", "top", "giki", "volunteers", "important")
 DM_ORDER = ("top", "giki", "volunteers", "important")
+EXTRA_ROWS = ("top", "important")  # DM rows that can also send the case PDF / video after each poster + caption
+EXTRA_FLAGS = ("pdf", "video")
 MSG_OF = {  # which saved messages each row sends
     "group": ("group",),
     "top": ("dm",),
@@ -33,7 +35,14 @@ TITLES = {
 }
 DEFAULTS = {
     "group": {"enabled": True, "every_minutes": 45},
-    "top": {"enabled": True, "gap_minutes": 5, "batch_size": 10, "rest_minutes": 20},
+    "top": {
+        "enabled": True,
+        "gap_minutes": 5,
+        "batch_size": 10,
+        "rest_minutes": 20,
+        "pdf": False,
+        "video": False,
+    },
     "giki": {"enabled": True, "gap_minutes": 5, "batch_size": 10, "rest_minutes": 20},
     "volunteers": {"enabled": True, "gap_minutes": 5, "batch_size": 10, "rest_minutes": 15},
     "important": {
@@ -41,6 +50,8 @@ DEFAULTS = {
         "gap_minutes": 8,
         "batch_size": 10,
         "rest_minutes": 20,
+        "pdf": False,
+        "video": False,
         "ids": [],
     },
 }
@@ -164,6 +175,12 @@ class CaseRun:
                         if not isinstance(value, list) or len(value) > 1000:
                             raise ValueError("Choose the Important donors again.")
                         row["ids"] = [str(i) for i in value]
+                    elif name in EXTRA_FLAGS and key in EXTRA_ROWS:
+                        if type(value) is not bool:
+                            raise ValueError("Use on or off for " + name + ".")
+                        if value:
+                            self.app.dm_extras_check(name == "pdf", name == "video")
+                        row[name] = value
                     elif name in RANGE and name in DEFAULTS[key]:
                         lo, hi = RANGE[name]
                         if type(value) not in (int, float) or isinstance(value, bool):
@@ -182,6 +199,27 @@ class CaseRun:
 
         self._edit(apply)
         return self.view()
+
+    def _apply_extras(self, extras):
+        """The PDF / video ticks chosen in the Start question: {row: {"pdf": bool, "video": bool}}. Saved on the plan
+        (they are shown in that question itself, so they are not part of its token)."""
+        if extras is None:
+            return
+        if not isinstance(extras, dict):
+            raise ValueError("Choose PDF and Video with on or off.")
+        for key, flags in extras.items():
+            if key not in EXTRA_ROWS or not isinstance(flags, dict):
+                raise ValueError("PDF and Video can be added for Top Donors and Important Donors.")
+            if any(name not in EXTRA_FLAGS or type(v) is not bool for name, v in flags.items()):
+                raise ValueError("Choose PDF and Video with on or off.")
+        for key, flags in extras.items():
+            self.app.dm_extras_check(flags.get("pdf"), flags.get("video"))
+
+        def apply(st):
+            for key, flags in extras.items():
+                st["plan"][key].update(flags)
+
+        self._edit(apply)
 
     # ------------------------------------------------------------------ who would be messaged, and with what
     def _excluded(self, row):
@@ -340,9 +378,13 @@ class CaseRun:
             for r in self.hub.volunteers.book.recipients("all")
             if r["id"] in aud["volunteers"]
         ][:40]
+        plain = copy.deepcopy(plan)  # the PDF / video ticks are chosen in the Start question, not part of its token
+        for r in plain.values():
+            for name in EXTRA_FLAGS:
+                r.pop(name, None)
         body = {
             "case": self._cid(),
-            "plan": plan,
+            "plan": plain,
             "aud": aud,
             "msg": {k: m[k]["digest"] for k in ("group", "dm", "question", "volunteers")},
             "left": left,
@@ -351,7 +393,7 @@ class CaseRun:
             body = {
                 "case": body["case"],
                 "row": key,
-                "plan": plan[key],
+                "plan": plain[key],
                 "aud": aud[key],
                 "msg": {k: body["msg"][k] for k in MSG_OF[key]},
             }
@@ -368,13 +410,15 @@ class CaseRun:
         }
 
     # ------------------------------------------------------------------ run control
-    def start(self, token):
+    def start(self, token, extras=None):
         with self.lock:
             st = self._read()
             if st["status"] == "running":
                 return self.view()
             if st["status"] == "paused" and st["approved"]:
                 return self.resume()
+            self._apply_extras(extras)
+            st = self._read()
             s = self.summary()
             if s["blockers"]:
                 raise ValueError(s["blockers"][0])
@@ -493,7 +537,7 @@ class CaseRun:
         self.tick(quick=True)
         return self.view()
 
-    def add_row(self, key, token):
+    def add_row(self, key, token, extras=None):
         """One more row joins a running or paused case after ITS OWN summary is approved. Other rows are untouched."""
         if key not in ROWS:
             raise ValueError("Choose a row.")
@@ -504,6 +548,8 @@ class CaseRun:
             row = st["rows"].get(key)
             if row and row["state"] != "off":
                 raise ValueError(f"{TITLES[key]} is already part of this case.")
+            self._apply_extras(extras)
+            st = self._read()
             s = self.summary(key)
             if s["blockers"]:
                 raise ValueError(s["blockers"][0])
@@ -627,10 +673,13 @@ class CaseRun:
                 row["engine"] = "volunteers"
             else:
                 follow = (h.follow_up_text() or "").strip() if key == "giki" else ""
+                extra = {n: bool(cfg.get(n)) for n in EXTRA_FLAGS} if key in EXTRA_ROWS else {}
+                a.dm_extras_check(extra.get("pdf"), extra.get("video"))  # a ticked file must still be saved
                 h.jobs.start(
                     "selected",
                     poster=h.prefs().get("poster", True),
                     follow_up=follow or None,
+                    **extra,
                     **plan,
                 )
                 row["engine"] = "donors"
@@ -1325,11 +1374,11 @@ class CaseRun:
         if op == "summary":
             return self.summary(body.get("key"))
         if op == "add_row":
-            return self.add_row(body.get("key"), body.get("token"))
+            return self.add_row(body.get("key"), body.get("token"), body.get("extras"))
         if op == "live_off":
             return self.live_off(body.get("key"))
         if op == "start":
-            return self.start(body.get("token"))
+            return self.start(body.get("token"), body.get("extras"))
         if op == "resume":
             return self.resume()
         if op == "pause":

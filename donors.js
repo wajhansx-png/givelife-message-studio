@@ -1381,7 +1381,9 @@
     writeCase.type = 'button';
     writeCase.onclick = () => window.CaseWriter?.open();
     head.append(writeCase);
-    /* The same PDF / video ticks as the Donors bar and the DM batch: after each DM (poster + caption first). */
+    /* The same PDF / video ticks as the Donors bar and the DM batch: after each DM (poster + caption first).
+       They sit right under the message (not in the crowded heading). */
+    let extrasBox;
     {
       const box = make('div', 'bank-extras');
       box.setAttribute('role', 'group');
@@ -1397,7 +1399,7 @@
         lab.append(b, make('span', '', EXTRA_NAME[kind]));
         box.append(lab);
       }
-      head.append(box);
+      extrasBox = box;
     }
     const grid = make('div', 'bank-workspace'),
       picker = make('nav', 'bank-picker'),
@@ -1544,7 +1546,7 @@
       };
       actions.append(copy);
       card.append(title, preview, edit);
-      grid.append(card);
+      grid.append(card, extrasBox);
     }
     if (!item) {
       const empty = make('div', 'donor-empty bank-empty'),
@@ -1555,7 +1557,7 @@
         make('p', '', 'No saved messages yet. Add a base message, then generate versions.'),
         addBase,
       );
-      grid.append(empty);
+      grid.append(empty, extrasBox);
     }
     const nav = make('nav', 'bank-pagination');
     nav.setAttribute('aria-label', 'Message navigation');

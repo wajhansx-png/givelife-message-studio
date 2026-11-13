@@ -5871,89 +5871,10 @@
   font-weight: 600;
 }
 
-/* Message page: "Also send: PDF / Video" under the group buttons. They go after the poster and caption in every
-   group post, Auto included; DMs have matching ticks in Donors. */
-.UI2 .ui2-extras {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-.UI2 .ui2-extras-label {
-  color: var(--ink-muted, #aab0c5);
-  font-size: 13px;
-  font-weight: 700;
-}
-.UI2 .ui2-xi {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 44px;
-  padding: 0 4px 0 10px;
-  border: 1px solid var(--line2);
-  border-radius: 999px;
-  background: var(--surface2, #232838);
-}
-.UI2 .ui2-xi-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  cursor: pointer;
-}
-.UI2 .ui2-xi-check input {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  accent-color: #2f6fe4;
-}
-.UI2 .ui2-xi-text {
-  display: grid;
-  min-width: 0;
-  line-height: 1.15;
-}
-.UI2 .ui2-xi-text b {
-  font-size: 14px;
-}
-.UI2 .ui2-xi-text small {
-  max-width: 96px;
-  overflow: hidden;
-  color: var(--ink-muted, #aab0c5);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.UI2 .ui2-xi-add {
-  display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-  padding: 0 10px;
-  border-radius: 999px;
-  color: #9db8ff;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.UI2 .ui2-xi[data-has='0'] .ui2-xi-text b {
-  opacity: 0.6;
-}
-.UI2 .ui2-extras-msg {
-  flex: 1 1 100%;
-  margin: 0;
-  color: var(--ink-muted, #aab0c5);
-  font-size: 12px;
-}
-.UI2 .ui2-extras-msg:empty {
-  display: none;
-}
-
 /* Reader: "Also send: PDF / Video" under the message (group: after the poster and caption; DM: after each DM).
    It sits where the small hint line was (the hint is hidden), one 40px line. */
-@media (min-width: 380px) {
-  .UI2 #messageFocus.ui2-has-rx .ui2-reader-hint {
-    display: none;
-  }
+.UI2 #messageFocus.ui2-has-rx .ui2-reader-hint {
+  display: none;
 }
 .UI2 #ui2ReaderExtras {
   display: flex;
@@ -5992,9 +5913,10 @@
 }
 .UI2 .ui2-rx-add {
   min-height: 40px;
-  padding: 0 8px;
-  border: 0;
-  background: transparent;
+  padding: 0 12px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--surface2, #232838);
   color: #9db8ff;
   font-size: 13px;
   font-weight: 700;
@@ -6009,9 +5931,65 @@
 .UI2 .ui2-rx-msg:empty {
   display: none;
 }
-/* Narrow phones: the reader is already full of message; the Message page row has the same ticks. */
-@media (max-width: 379px) {
-  .UI2 #ui2ReaderExtras {
+
+/* Also send (PDF / Video) in the reader: on narrow phones the chips alone fit one line (their words say PDF / Video). */
+@media (max-width: 359px) {
+  .UI2 .ui2-rx-label {
     display: none;
   }
+}
+@media (max-width: 299px) {
+  .UI2 .ui2-rx-chip,
+  .UI2 .ui2-rx-add {
+    padding-inline: 8px;
+  }
+  .UI2 #ui2ReaderExtras {
+    gap: 6px;
+  }
+}
+
+/* Case page, "Start Top Donors?": Also send PDF / Video after each poster and caption. */
+.UI2 dialog.case-sheet .cr-extras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--cr-line);
+  border-radius: 12px;
+}
+.UI2 dialog.case-sheet .cr-extras-label {
+  font-size: 13.5px;
+}
+.UI2 dialog.case-sheet .cr-xi {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--cr-line);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.UI2 dialog.case-sheet .cr-xi input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #2f6fe4;
+}
+.UI2 dialog.case-sheet .cr-xi small {
+  color: var(--cr-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.UI2 dialog.case-sheet .cr-xi[data-off='1'] {
+  opacity: 0.6;
+  cursor: default;
+}
+.UI2 dialog.case-sheet .cr-extras-note {
+  flex: 1 1 100%;
+  color: var(--cr-muted);
+  font-size: 12px;
 }

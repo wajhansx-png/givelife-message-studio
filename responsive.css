@@ -3491,3 +3491,10 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
   background: #34d399 !important;
 }
 
+
+/* Also send (PDF / Video), Msgs tab: on narrow phones the chips alone fit one line. */
+@media (max-width: 359px) {
+  .bank-extras .bank-extras-label {
+    display: none;
+  }
+}

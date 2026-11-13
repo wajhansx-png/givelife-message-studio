@@ -106,18 +106,10 @@ dialog[open]::backdrop {
   background: color-mix(in srgb, var(--red) 12%, transparent);
   color: var(--ink);
 }
-#status.err {
-  padding: 6px 10px;
-  border-radius: 8px;
-  white-space: normal;
-}
 
 /* ---- Text floors: nothing under 12px ---- */
 :is(.last-sent, #donorTotal, .notes-kicker, #notesSync, #status, .donor-head small, .tab-count) {
   font-size: 12px !important;
-}
-.notes-kicker {
-  letter-spacing: 0.8px;
 }
 
 /* ---- Comfortable targets, desktop pointer ---- */
@@ -387,28 +379,12 @@ html body #messageFocus :is(small, .last-sent, .send-title span) {
   html body #messageFocus .group-send h2 {
     font-size: 15px !important;
   }
-  html body #messageFocus .group-send .chips {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 6px !important;
-  }
-  html body #messageFocus .group-send .chips button:not(.all) {
-    min-height: 44px !important;
-    padding: 4px 4px !important;
-  }
-  html body #messageFocus .group-send .chips button .group-label {
-    font-size: 12.5px;
-    line-height: 1.15;
-    overflow-wrap: anywhere;
-  }
-  html body #messageFocus .group-send .chips .all {
-    grid-column: 1/-1;
-  }
-  html body #messageFocus .group-send .group-section-title {
-    display: none;
-  }
-  html body #messageFocus .group-send .prim button {
-    min-height: 44px !important;
-  }
+  
+  
+  
+  
+  
+  
 }
 #messageFocus#messageFocus :is(small, small.last-sent, .last-sent, .send-title span) {
   font-size: 12px !important;
@@ -448,9 +424,7 @@ input#donorRowPoster {
 }
 
 /* ---- Screen changes ease in (comfort.js adds .cmf-enter when a screen, tab or message appears) ---- */
-.cmf-enter {
-  animation: cmfEnter 0.24s var(--ease) both;
-}
+
 @keyframes cmfEnter {
   from {
     opacity: 0;
@@ -461,10 +435,7 @@ input#donorRowPoster {
     transform: none;
   }
 }
-dialog.cmf-enter,
-#messageFocus.cmf-enter {
-  animation-name: cmfEnterScreen;
-}
+
 @keyframes cmfEnterScreen {
   from {
     opacity: 0;
@@ -534,11 +505,7 @@ html body .donor-page .donor-head #donorMessagesTab::before {
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z'/%3E%3C/svg%3E")
     center/contain no-repeat;
 }
-html body .donor-page .donor-head #donorMessagesTab[aria-selected='true'] {
-  background: var(--btn);
-  color: #fff;
-  border-color: transparent;
-}
+
 @media (max-width: 899px) {
   html body .donor-page .donor-head #donorMessagesTab {
     font-size: 0 !important;
@@ -594,17 +561,7 @@ html body .donor-page .donor-head #donorMessagesTab[aria-selected='true'] {
   html body .donor-page .donor-bottom > :is(.donor-message-info, #donorPace) {
     display: none !important;
   }
-  html body .donor-page .compact-nav-panel :is(#donorTest, .donor-poster-toggle) {
-    display: flex !important;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    min-height: 44px;
-    font-size: 13px !important;
-    font-weight: 600;
-    justify-content: flex-start;
-    text-align: left;
-  }
+  
 }
 
 /* ==== Donor Messages: a full-screen reader ====
@@ -634,14 +591,7 @@ html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading {
   border: 0 !important;
   background: none !important;
 }
-html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading > .bank-back {
-  grid-column: 1;
-  grid-row: 1;
-  min-height: 44px !important;
-  padding: 0 14px !important;
-  border-radius: 12px;
-  font-weight: 600;
-}
+
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading > .bank-current {
   display: block !important;
   grid-column: 2;
@@ -758,16 +708,7 @@ html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail textare
   resize: none;
   outline: none;
 }
-html
-  body
-  #donorsPage[data-panel='messages']
-  #donorMessages
-  .bank-detail
-  .bank-preview
-  .wa-line
-  + .wa-line {
-  margin-top: 0;
-}
+
 /* One action bar */
 html body #donorsPage[data-panel='messages'] #donorMessages .bank-actions {
   display: flex !important;
@@ -1074,9 +1015,7 @@ html body dialog#donorsPage[data-panel='messages'] #donorMessages {
   }
 }
 @media (max-width: 360px) {
-  html body .donor-page .donor-head .donor-total small {
-    display: none !important;
-  }
+  
   html body .donor-page .donor-tabs > button {
     padding: 4px 4px !important;
   }
@@ -1181,25 +1120,7 @@ html body .donor-page .donor-head > .donor-total {
   text-align: left;
   white-space: nowrap;
 }
-html body .donor-page .donor-head > .donor-total > small {
-  position: absolute !important;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-html body .donor-page .donor-head > .donor-total > strong {
-  font-size: 14px !important;
-  font-weight: 700;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-html body .donor-page .donor-head > .donor-total > strong::after {
-  content: ' donated';
-  font-weight: 500;
-  color: var(--mut);
-}
+
 html body .donor-page .donor-head > :is(.donor-message-tablist, #donorAdd, #donorNavMore) {
   order: 2;
 }
@@ -1207,33 +1128,9 @@ html body .donor-page .donor-head > :is(.donor-message-tablist, #donorAdd, #dono
   html body .donor-page .donor-head > .donor-total {
     margin-left: 2px !important;
   }
-  html body .donor-page .donor-head > .donor-total > strong {
-    font-size: 13px !important;
-  }
+  
 }
-@media (max-width: 360px) {
-  html body .donor-page .donor-head > .donor-total > strong::after {
-    content: '';
-  }
-}
-html body .donor-page .donor-head > .donor-total > strong {
-  border: 0 !important;
-  background: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  outline: 0 !important;
-  text-transform: none !important;
-  letter-spacing: 0 !important;
-}
-html body .donor-page .donor-head > .donor-total > strong::after {
-  text-transform: none;
-  letter-spacing: 0;
-}
-html body .donor-page .donor-head > .donor-total::before,
-html body .donor-page .donor-head > .donor-total::after {
-  content: none !important;
-}
+
 html body #donorsPage .donor-head > .donor-total {
   border: 0 !important;
   background: none !important;
@@ -1275,13 +1172,7 @@ html body #donorsPage #donorNotice .donor-notice-close {
   border-radius: 10px;
   font-size: 24px;
 }
-html body #donorsPage #donorNotice > button:not(.donor-notice-close) {
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: 10px;
-  font-weight: 700;
-  color: var(--gink);
-}
+
 @keyframes cmfToast {
   from {
     opacity: 0;
@@ -1317,10 +1208,7 @@ html body #donorsPage #donorResumeStatus:not([hidden]) {
   font-size: 14px;
   font-weight: 600;
 }
-html body #donorsPage #donorResumeStatus[data-state='attention'] {
-  border-left-color: var(--red);
-  background: color-mix(in srgb, var(--red) 12%, var(--surface2));
-}
+
 html body #donorsPage #donorResumeStatus > span {
   flex: 1 1 140px;
   min-width: 0;
@@ -1388,13 +1276,7 @@ html body #messageFocus :is(#focusFormatted, #focusText) {
   letter-spacing: 0 !important;
   padding: 14px 18px !important;
 }
-html body #messageFocus #focusFormatted .wa-line {
-  min-height: 1.45em;
-}
-html body #messageFocus #focusFormatted .wa-line.blank {
-  height: 0.5em;
-  min-height: 0.5em;
-}
+
 @media (max-width: 700px) {
   html body #messageFocus :is(#focusFormatted, #focusText) {
     font-size: 16px !important;
@@ -1590,23 +1472,12 @@ html body #donorBatchForm .batch-gap-row {
   grid-template-columns: repeat(4, 1fr) !important;
   gap: 8px !important;
 }
-html body #donorBatchForm .batch-gap-row #batchGap {
-  grid-column: 1/-1 !important;
-}
+
 html body #donorBatchForm .batch-gap-btn {
   min-height: 46px !important;
   font-size: 15px !important;
 }
-html body #donorBatchForm .batch-more {
-  padding: 8px 12px !important;
-  border: 1px solid #ffffff1f !important;
-  border-radius: 12px !important;
-}
-html body #donorBatchForm .batch-more[open] {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-}
+
 html body #donorBatchForm .batch-foot {
   position: sticky !important;
   bottom: -18px !important;
@@ -1710,9 +1581,7 @@ html body .donor-page .donor-row .donor-identity .donor-name {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-html body .donor-page .donor-row .donor-identity .donor-normal-tag {
-  display: none !important;
-}
+
 html body .donor-page .donor-row .donor-top-chip {
   flex: 0 0 auto;
   margin: 0 !important;
@@ -1724,48 +1593,6 @@ html body .donor-page .donor-row .donor-top-chip {
 }
 
 /* Full screen on the Donors page: only the donor list box fills the screen (header, tabs and search step aside). */
-html body #donorsPage.donor-expanded {
-  inset: 0 !important;
-  width: 100vw !important;
-  max-width: none !important;
-  height: 100dvh !important;
-  max-height: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-}
-html body #donorsPage.donor-expanded .donor-shell {
-  display: flex !important;
-  flex-direction: column !important;
-  width: 100% !important;
-  max-width: none !important;
-  height: 100dvh !important;
-  max-height: none !important;
-  padding: 8px !important;
-  gap: 6px !important;
-  border-radius: 0 !important;
-  box-sizing: border-box;
-}
-html
-  body
-  #donorsPage.donor-expanded
-  :is(.donor-head, .donor-toolbar, .hide-row, #donorNotice, .donor-resume-status) {
-  display: none !important;
-}
-html body #donorsPage.donor-expanded .donor-table {
-  flex: 1 1 0 !important;
-  min-height: 0 !important;
-  height: auto !important;
-  max-height: none !important;
-  overflow: auto !important;
-}
-html body #donorsPage.donor-expanded .donor-bottom {
-  flex: 0 0 auto;
-}
-html body #donorsPage.donor-expanded .donor-expand-btn {
-  position: sticky;
-  right: 0;
-}
 
 /* Hide / Deselect chips sit in the Donors top bar (no extra row above the list). */
 html body #donorsPage .donor-head > .hide-row {
@@ -1921,9 +1748,7 @@ html body #donorsPage .donor-dm-badge[hidden] {
     transform: none;
     padding: 8px 12px;
   }
-  html body #donorsPage .donor-dm-badge strong {
-    font-size: 18px;
-  }
+  
 }
 /* DM all removed; DM ★ Important stands out. */
 html body #donorsPage #donorSendAll {
@@ -1941,26 +1766,6 @@ html body #donorsPage:is([data-panel='messages'], [data-panel='volunteers']) .do
   display: none !important;
 }
 /* Full screen: list centred, smaller type, no counter or bottom buttons. */
-html body #donorsPage.donor-expanded .donor-shell {
-  align-items: center !important;
-}
-html body #donorsPage.donor-expanded .donor-table {
-  width: min(1100px, 100%) !important;
-  margin: 0 auto !important;
-}
-html body #donorsPage.donor-expanded .donor-row,
-html body #donorsPage.donor-expanded .donor-columns {
-  font-size: 14px !important;
-}
-html body #donorsPage.donor-expanded .donor-row .donor-name {
-  font-size: 15px !important;
-}
-html
-  body
-  #donorsPage.donor-expanded
-  :is(.donor-bottom, #donorProgress, #donorBatchList, .donor-dm-badge) {
-  display: none !important;
-}
 
 /* ===== DM Messages screen: one centred column, buttons right under the message ===== */
 @media (min-width: 701px) {
@@ -2048,14 +1853,7 @@ html body #liveMore {
 html body #liveMore[hidden] {
   display: none !important;
 }
-html body #liveMore :is(b, strong, h4, dt) {
-  font-size: 10.5px !important;
-  letter-spacing: 0.06em;
-  opacity: 0.7;
-}
-html body #liveMore :is(p, div, dd, span) {
-  margin: 0 !important;
-}
+
 /* App replies in chat: soft gradient card. */
 html body .e.bot {
   background: linear-gradient(135deg, #1e3a8a55, #6d28d955 60%, #0e749055) !important;
@@ -2073,16 +1871,6 @@ html body .e.bot.err {
 html body #liveMore {
   grid-template-columns: minmax(120px, 170px) 1fr !important;
   align-items: baseline;
-}
-html body #liveMore > .k {
-  font-size: 10.5px !important;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  opacity: 0.65;
-}
-html body #liveMore > div:not(.k) {
-  font-size: 13px !important;
 }
 
 /* Report dialog: centred card on a gradient. */
@@ -2116,21 +1904,7 @@ html body #liveMore > div:not(.k) {
   text-align: center;
   animation: reportIn 0.25s ease;
 }
-.report-card h2 {
-  margin: 0 0 16px;
-  font-size: 20px;
-  letter-spacing: 0.04em;
-  background: linear-gradient(90deg, #a78bfa, #22d3ee);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.report-line {
-  margin: 10px 0;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.4;
-}
+
 .report-card button {
   margin-top: 14px;
   min-height: 44px;
@@ -2308,18 +2082,6 @@ html body .replies-dialog .rep-remove {
   border-radius: 10px;
   font-size: 16px;
 }
-html body .replies-dialog .donor-form-actions {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px !important;
-}
-html body .replies-dialog .donor-form-actions button {
-  min-height: 46px;
-  padding: 0 6px;
-  font-size: 14px;
-  white-space: normal;
-  line-height: 1.15;
-}
 
 /* ===== Phone pass 2 (checked at 390px) ===== */
 @media (max-width: 700px) {
@@ -2466,14 +2228,8 @@ html body .replies-dialog .donor-form-actions button {
     align-items: center;
     justify-content: center;
   }
-  html body .donor-page .donor-row .donor-top-chip::before {
-    content: '🏆';
-    font-size: 16px;
-    filter: grayscale(1) opacity(0.55);
-  }
-  html body .donor-page .donor-row .donor-top-chip[aria-pressed='true']::before {
-    filter: none;
-  }
+  
+  
 }
 
 /* Desktop donor list fills the table: the name column stretches, header lines up with rows. */
@@ -2709,10 +2465,7 @@ html body #donorsPage[data-panel='messages'] #donorMessages .bank-pagination > b
   font-size: clamp(22px, 3vw, 34px) !important;
   margin-bottom: 24px !important;
 }
-.report-line {
-  font-size: clamp(17px, 2.2vw, 28px) !important;
-  text-shadow: 0 2px 12px #0008;
-}
+
 .report-card button {
   background: #ffffff1a !important;
   border: 1px solid #ffffff40 !important;
@@ -2803,16 +2556,7 @@ html body #messageFocus .focus-rail #focusCopy {
 .resume-groups-dialog::backdrop {
   background: #000a;
 }
-.resume-groups-dialog h2 {
-  margin: 0 0 12px;
-  font-size: 19px;
-}
-.resume-groups-dialog label {
-  display: block;
-  margin: 10px 0 6px;
-  font-weight: 700;
-  font-size: 14px;
-}
+
 .resume-groups-dialog :is(select, input) {
   width: 100%;
   box-sizing: border-box;
@@ -2864,18 +2608,8 @@ html body #messageFocus .focus-rail #focusCopy {
     width: min(760px, calc(100vw - 32px)) !important;
     overflow: auto !important;
   }
-  html body #donorBatchForm .batch-more[open] {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px 14px !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-  html body #donorBatchForm .batch-more[open] > summary,
-  html body #donorBatchForm .batch-more[open] > label.batch-fresh,
-  html body #donorBatchForm .batch-more[open] > #batchRandomRow {
-    grid-column: 1/-1;
-  }
+  
+  
 }
 html body #donorBatchForm .batch-foot {
   position: sticky !important;
@@ -3139,13 +2873,7 @@ html body #donorProgress .dp-fact {
   font-size: 12.5px;
   white-space: nowrap;
 }
-html body #donorProgress .dp-fact small {
-  opacity: 0.75;
-  font-size: 11px;
-}
-html body #donorProgress .dp-fact b {
-  font-weight: 800;
-}
+
 html body #donorProgress > .dp-hide {
   order: 3;
   width: 36px;
@@ -3200,10 +2928,7 @@ html body #donorsPage .dp-show[hidden] {
   html body #donorProgress > .dp-facts {
     grid-column: 1/-1 !important;
   }
-  html body #donorProgress .dp-fact {
-    font-size: 11.5px;
-    padding: 4px 8px;
-  }
+  
   html body #donorProgress > button:not(.dp-hide) {
     grid-row: 3;
     min-height: 38px !important;
@@ -3218,24 +2943,9 @@ html body #donorsPage .dp-show[hidden] {
     overflow: visible !important;
     flex-wrap: wrap !important;
   }
-  html body #donorProgress .dp-fact {
-    white-space: normal !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 1px !important;
-    border-radius: 12px !important;
-    padding: 6px 10px !important;
-    min-width: 0 !important;
-    overflow: visible !important;
-  }
-  html body #donorProgress .dp-fact small {
-    font-size: 10.5px !important;
-    line-height: 1.2;
-  }
-  html body #donorProgress .dp-fact b {
-    font-size: 13px !important;
-  }
+  
+  
+  
   html body #donorProgress > button:not(.dp-hide) {
     grid-column: auto !important;
     width: 100% !important;
@@ -3281,24 +2991,7 @@ html body #donorsPage .dp-show {
   }
 }
 /* Report: resume list under the lines. */
-html body .report-card .report-resumes {
-  max-height: 34dvh;
-  overflow-y: auto;
-  margin-top: 6px;
-}
-html body .report-card .report-resume {
-  font-size: clamp(13px, 1.6vw, 16px);
-  padding: 8px 12px;
-  margin: 6px 0;
-  border-radius: 12px;
-  background: #ffffff12;
-  border: 1px solid #ffffff24;
-  color: #e5e7eb;
-}
-html body .report-card .report-resume[data-state='done'],
-html body .report-card .report-resume[data-state='completed'] {
-  border-color: #34d39966;
-}
+
 html body .report-card .report-resume[data-state='pending'] {
   border-color: #facc1566;
 }
@@ -3354,9 +3047,7 @@ html body .report-card .report-resume[data-state='failed'] {
     min-width: 30px !important;
     min-height: 30px !important;
   }
-  html body .donor-page .donor-row .donor-top-chip::before {
-    font-size: 14px !important;
-  }
+  
 }
 @media (max-width: 700px) {
   html body #donorsPage .donor-table .donor-row {
@@ -3389,9 +3080,7 @@ html body .report-card .report-resume[data-state='failed'] {
     min-width: 26px !important;
     min-height: 30px !important;
   }
-  html body .donor-page .donor-row .donor-top-chip::before {
-    font-size: 13px !important;
-  }
+  
 }
 /* Resume panel: one compact row; folds to a small pill. */
 html body #donorResumeStatus:not([hidden]) {
@@ -3625,10 +3314,7 @@ html body:not(#_):not(#__) .group-send .group-drop button {
 html body:not(#_):not(#__) .group-send .group-drop button:hover {
   background: #ffffff10 !important;
 }
-html body:not(#_):not(#__) .group-send .group-drop .last-sent {
-  font-size: 12px;
-  color: var(--mut);
-}
+
 html body:not(#_):not(#__) .group-send .grp-card .delay-row {
   display: flex !important;
   align-items: center;
@@ -3663,45 +3349,7 @@ html body:not(#_):not(#__) .group-send .grp-card .delay-pill:hover {
   color: var(--ink) !important;
   border-color: #6e7180 !important;
 }
-html
-  body:not(#_):not(#__)
-  .group-send
-  .grp-card
-  .delay-pill:is([aria-pressed='true'], .is-pending) {
-  background: #2f6fe8 !important;
-  border-color: #2f6fe8 !important;
-  color: #fff !important;
-  font-weight: 700 !important;
-}
-html body:not(#_):not(#__) .group-send .grp-card .delay-pill::before {
-  content: none !important;
-}
-html body:not(#_):not(#__) .group-send #freeAuto {
-  display: flex !important;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 40px;
-  padding: 0 4px !important;
-  border: 0 !important;
-  background: none !important;
-  color: #aeb3c2 !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  box-shadow: none !important;
-}
-html body:not(#_):not(#__) .group-send #freeAuto::after {
-  content: '';
-  flex: none;
-  width: 40px;
-  height: 22px;
-  border-radius: 11px;
-  background: #3a3c48 radial-gradient(circle at 11px 11px, #fff 7px, transparent 7.5px);
-  transition: background 0.18s;
-}
-html body:not(#_):not(#__) .group-send #freeAuto[aria-checked='true']::after {
-  background: #2f6fe8 radial-gradient(circle at 29px 11px, #fff 7px, transparent 7.5px);
-}
+
 html body:not(#_):not(#__) .group-send #sendAll {
   display: flex !important;
   align-items: center;
@@ -3759,9 +3407,7 @@ html body:not(#_):not(#__) .group-send .test-row {
 html body:not(#_):not(#__) .group-send .test-row :is(.tr-name, .tr-go) {
   white-space: nowrap;
 }
-html body:not(#_):not(#__) .group-send .test-row .tr-go {
-  margin-left: auto;
-}
+
 html body:not(#_):not(#__) .group-send .test-row .last-sent {
   min-width: 0;
   white-space: nowrap;
@@ -3898,19 +3544,6 @@ html body:not(#_):not(#__) .group-send .gb-timer {
 html body:not(#_):not(#__) .group-send .gb-timer:hover {
   background: #2e3240 !important;
 }
-html body:not(#_):not(#__) .group-send .gb-timer[aria-expanded='true'] {
-  border-color: #ffffff40 !important;
-}
-html body:not(#_):not(#__) .group-send .gb-timer.is-pending {
-  font-size: 12px;
-  border: 2px solid #2f6fe8 !important;
-}
-html body:not(#_):not(#__) .group-send #dropFree #freeAuto {
-  margin-top: 4px;
-  padding: 0 12px !important;
-  border-top: 1px solid #ffffff14 !important;
-  border-radius: 0;
-}
 
 /* Equal buttons: Test group, GiveLife, All freelance and All 6 share one width and height.
    ⏱ and ▾ sit inside the right edge of their button, so no button is narrower than another. */
@@ -3998,14 +3631,7 @@ html body:not(#_):not(#__) .group-send .send-row .row-tools > button:hover,
 html body:not(#_):not(#__) .group-send .send-row .row-tools > button[aria-expanded='true'] {
   background: #ffffff40 !important;
 }
-html body:not(#_):not(#__) .group-send .send-row .row-tools > .gb-timer.is-pending {
-  width: auto !important;
-  padding: 0 9px !important;
-  background: #fff !important;
-  color: #2f6fe8 !important;
-  font-size: 12px !important;
-  border: 0 !important;
-}
+
 html body:not(#_):not(#__) .group-send .send-row > .group-drop {
   flex: 1 0 100%;
 }
@@ -4022,13 +3648,7 @@ html
   .gb-name {
   margin-right: 80px;
 }
-html
-  body:not(#_):not(#__)
-  .group-send
-  .send-row:has(.gb-timer.is-pending)[data-tools='2']
-  .gb-name {
-  margin-right: 122px;
-}
+
 html body:not(#_):not(#__) .group-send .send-row .row-tools > #btnFreePick {
   background: #ffffff26 !important;
   border: 0 !important;
@@ -4165,10 +3785,7 @@ html body:not(#_):not(#__) .group-send .gb-bar::after {
     background-position: -120% 0;
   }
 }
-html body:not(#_):not(#__) .group-send [data-progress='done'] .gb-bar {
-  background: #ffffff33;
-  border-right: 0;
-}
+
 html body:not(#_):not(#__) .group-send [data-progress='failed'] .gb-bar {
   background: #ef444466;
   border-right: 0;
@@ -4331,20 +3948,6 @@ html body:not(#_):not(#__) .group-send .group-drop {
   max-height: 300px;
   overflow-y: auto;
   overscroll-behavior: contain;
-}
-@container (max-width:300px) {
-  html
-    body:not(#_):not(#__)
-    .group-send
-    .send-row:has(.gb-timer.is-pending)
-    > :is(#btnGivelife, #btnFree) {
-    grid-column: 1/-1;
-  }
-  html body:not(#_):not(#__) .group-send .send-row:has(.gb-timer.is-pending) > .row-tools {
-    grid-column: 1/-1;
-    grid-row: 2;
-    justify-content: flex-end;
-  }
 }
 
 /* One button colour across the message and donor screens (the Donors DM gradient); only Back keeps its own colour. */
@@ -4634,11 +4237,7 @@ html body:not(#_):not(#__) .report-list .rp-s {
     font-weight: 700;
   }
 }
-@media (max-width: 360px) {
-  html body:not(#_):not(#__) .brandbar .seg button[data-view-button='group']::after {
-    font-size: 13px;
-  }
-}
+
 @media (max-width: 899px) {
   html body:not(#_):not(#__) .brandbar > .seg {
     background: none !important;
@@ -5057,14 +4656,7 @@ html body #donorsPage .donor-table-wrap > .donor-expand-btn {
 html body #donorsPage .donor-table-wrap > .donor-expand-btn:hover {
   background: #374151 !important;
 }
-html body #donorsPage.donor-expanded .donor-table-wrap {
-  width: min(1100px, 100%);
-  margin: 0 auto;
-  flex: 1 1 0 !important;
-}
-html body #donorsPage.donor-expanded .donor-table-wrap > #donorTable {
-  width: 100% !important;
-}
+
 html
   body
   #donorsPage:is([data-panel='messages'], [data-panel='volunteers'])
@@ -5079,32 +4671,11 @@ html
   }
 }
 /* Full screen: the columns themselves sit in the middle of the screen (header and rows stay aligned). */
-@media (min-width: 701px) {
-  html body #donorsPage.donor-expanded .donor-table .donor-row,
-  html body #donorsPage.donor-expanded .donor-table .donor-columns {
-    justify-content: center !important;
-  }
-  html body #donorsPage.donor-expanded .donor-table-wrap {
-    width: min(1000px, calc(100% - 32px)) !important;
-  }
-}
-html body #donorsPage.donor-expanded * {
-  transition: none !important;
-}
+
 /* Full screen: solid background (nothing shows through); the exit button gets its own strip above the list. */
-html body #donorsPage.donor-expanded,
-html body #donorsPage.donor-expanded .donor-shell {
-  background: #0f1117 !important;
-}
+
 html body #donorsPage.donor-expanded::backdrop {
   background: #0f1117 !important;
-}
-html body #donorsPage.donor-expanded .donor-table-wrap {
-  padding-top: 46px !important;
-}
-html body #donorsPage.donor-expanded .donor-table-wrap > .donor-expand-btn {
-  top: 6px !important;
-  right: 4px !important;
 }
 
 /* ===== Message screen: message dead-centre, slim right columns (this screen only) ===== */
@@ -5216,19 +4787,11 @@ html
     max-width: 520px !important;
     padding: 16px 18px !important;
   }
-  html body #messageFocus #focusFormatted :is(p, div, li) {
-    margin-top: 0 !important;
-    margin-bottom: 7px !important;
-    font-size: 13px !important;
-    line-height: 1.4 !important;
-  }
+  
   html body #messageFocus #focusFormatted :is(b, strong, h1, h2, h3) {
     font-size: 13px !important;
   }
-  html body #messageFocus #focusFormatted ul {
-    margin: 0 0 7px !important;
-    padding-left: 18px !important;
-  }
+  
 }
 @media (min-width: 701px) {
   html body #messageFocus #focusFormatted {
@@ -5255,14 +4818,6 @@ html body #donorsPage #donorNotice:not(:empty) {
 /* Full-screen icon: clear hover and press feedback. */
 html body #donorsPage .donor-table-wrap > .donor-expand-btn:active {
   transform: scale(0.92);
-}
-html body #donorsPage:fullscreen {
-  width: 100vw !important;
-  height: 100vh !important;
-  max-width: none !important;
-  max-height: none !important;
-  margin: 0 !important;
-  background: #0f1117 !important;
 }
 
 /* ===== Donor list box only: pure black, one light/grey system (white = on / tap, grey = off / done) ===== */
@@ -5617,14 +5172,7 @@ html body #donorsPage .donor-table-wrap > #donorExpand {
   html body #donorsPage .donor-head #donorMessagesTab::before {
     display: none;
   }
-  html body #donorsPage .donor-head #donorHideRow:not([hidden]) {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin: 0;
-  }
+  
   html body #donorsPage .donor-head .hide-chip {
     min-height: 44px;
     min-width: 0;
@@ -5679,14 +5227,7 @@ html body #donorsPage .donor-table-wrap > #donorExpand {
     padding-inline: 5px;
     font-size: 11px;
   }
-  html body #donorsPage#donorsPage .donor-row .donor-normal-tag {
-    grid-column: 1 / -1;
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    font-size: 10.5px;
-  }
+  
   html body #donorsPage#donorsPage .donor-row > .donor-more {
     grid-area: 1 / 5;
     min-width: 44px;
@@ -5850,10 +5391,7 @@ html body #donorsPage .donor-table-wrap > #donorExpand {
     min-height: 44px;
     font-size: 16px;
   }
-  html body #donorBatchForm > label {
-    margin: 0;
-    align-self: stretch;
-  }
+  
   html
     body
     :is(
@@ -5909,11 +5447,7 @@ html body #donorsPage .donor-table-wrap > #donorExpand {
 
 /* Show the actual Messages and Bulk actions instead of a redundant More button
    on phones; the compact-nav script reparents the existing action elements. */
-@media (max-width: 560px) {
-  html body #donorsPage #donorNavMore[hidden] {
-    display: none !important;
-  }
-}
+
 /* The ordinary donor footer must never show behind Volunteers or Messages. */
 html body #donorsPage[data-panel='volunteers'] .donor-bottom,
 html body #donorsPage[data-panel='messages'] .donor-bottom {
@@ -6580,33 +6114,6 @@ html body #donorsPage .donor-bottom > #donorResumeStatus:not([hidden]) {
 }
 
 /* A scheduled clock gets its own tool row rather than covering the group name. */
-html
-  body:not(#_):not(#__):not(#___)
-  :is(#messageFocus, .action-rail)
-  .group-send
-  .send-row:has(.gb-timer.is-pending)
-  .row-tools {
-  position: static !important;
-  transform: none !important;
-  flex: 1 0 100% !important;
-  justify-content: flex-end;
-  padding-bottom: 4px;
-}
-html
-  body:not(#_):not(#__):not(#___)
-  :is(#messageFocus, .action-rail)
-  .group-send
-  .send-row:has(.gb-timer.is-pending)
-  :is(#btnGivelife, #btnFree)
-  .gb-name {
-  padding-right: 0 !important;
-  margin-right: 0 !important;
-  white-space: normal !important;
-}
-html body:not(#_):not(#__):not(#___) .group-send .send-row .row-tools > .gb-timer.is-pending {
-  width: auto !important;
-  min-width: 72px !important;
-}
 
 /* Expanded resume controls have real header/action rows, not an overlapping Hide. */
 @media (max-width: 899px) {
@@ -6738,10 +6245,7 @@ html body #donorsPage .donor-volunteers {
     font-size: 0 !important;
     padding: 0 !important;
   }
-  html body:not(#_) #donorsPage#donorsPage .donor-row .donor-top-chip::before {
-    content: '🏆';
-    font-size: 16px;
-  }
+  
 }
 @media (max-width: 899px) {
   html body:not(#_) #donorsPage#donorsPage .donor-toolbar {
@@ -6868,35 +6372,6 @@ html body #donorsPage .donor-volunteers {
 
 /* Phone: a saved clock stays on the same row as its group button (same spot as the ⏱ icon),
    instead of dropping onto an empty row of its own. Alignment only. */
-@media (max-width: 720px) {
-  html
-    body:not(#_):not(#__):not(#___):not(#____):not(#_____)
-    .group-send
-    .send-row:has(.gb-timer.is-pending)
-    .row-tools {
-    position: absolute !important;
-    flex: none !important;
-    padding-bottom: 0 !important;
-  }
-  html
-    body:not(#_):not(#__):not(#___):not(#____):not(#_____)
-    .group-send
-    .send-row:has(.gb-timer.is-pending)
-    #btnGivelife
-    .gb-name {
-    padding-right: 0 !important;
-    margin-right: 80px !important;
-  }
-  html
-    body:not(#_):not(#__):not(#___):not(#____):not(#_____)
-    .group-send
-    .send-row:has(.gb-timer.is-pending)
-    #btnFree
-    .gb-name {
-    padding-right: 0 !important;
-    margin-right: 118px !important;
-  }
-}
 
 /* Phone: keep ⏱ and ▾ centred on their button, not on the whole row, when the freelance list is open. */
 @media (max-width: 720px) {
@@ -6933,16 +6408,6 @@ html
 }
 
 /* Desktop: the Case plan shortcut is a normal button beside Donors, not a stretched bar. */
-@media (min-width: 900px) {
-  html body .app > .foot > #openCasePlan {
-    justify-self: end;
-    margin-right: 10px;
-    width: auto;
-    min-height: 44px;
-    padding: 0 24px;
-    font-weight: 700;
-  }
-}
 
 html body .donor-page .donor-row .donor-known {
   display: block;
@@ -7187,22 +6652,6 @@ html body .brandbar > .fs-toggle {
   opacity: 1;
 }
 
-html body #donorBatchForm .batch-gap-row #batchGap {
-  grid-column: 1/3 !important;
-}
-html body #donorBatchForm .batch-gap-row #batchGapUnit {
-  grid-column: 3/-1 !important;
-  width: 100%;
-  min-height: 44px;
-}
-html body #donorBatchForm .batch-gap-row #batchGapNote {
-  grid-column: 1/-1 !important;
-  margin: 0;
-}
-html body #donorBatchForm .batch-gap-row #batchGapNote[hidden] {
-  display: none !important;
-}
-
 /* Folded sending bar: must beat every "#donorsPage #donorProgress:not([hidden])" display rule above. */
 html body #donorsPage #donorProgress.dp-collapsed:not([hidden]) {
   display: none !important;
@@ -7325,12 +6774,7 @@ html body:not(#_) #donorBatchPicker .bm-poster {
   margin: 0 !important;
   font-size: 15px !important;
 }
-html body:not(#_) #donorBatchPicker .batch-more > summary {
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-}
+
 html body:not(#_) #donorBatchPicker .batch-foot {
   display: grid;
   gap: 8px;
@@ -7837,16 +7281,7 @@ html body:not(#_) :is(#messageFocus .focus-gen-icon, #donorsPage .bank-gen-icon)
 }
 
 /* ===== Light theme: readable pressed gap button, Back on preview, empty donor star ===== */
-html[data-theme='light'] body:not(#_) #donorBatchPicker .batch-gap-btn[aria-pressed='true'] {
-  background: #3b5bdb !important;
-  color: #fff !important;
-  border-color: #3b5bdb !important;
-}
-html[data-theme='light'] body:not(#_) #donorBatchPicker .batch-gap-btn[aria-pressed='false'] {
-  background: #fff !important;
-  color: #1f2937 !important;
-  border: 1px solid #cbd5e1 !important;
-}
+
 html[data-theme='light'] body:not(#_) #messageFocus .back-action {
   color: #b42318 !important;
   border-color: #e4a29b !important;
@@ -7874,49 +7309,7 @@ html body:not(#_) #donorsPage#donorsPage .bank-detail textarea {
 }
 
 /* Send DMs: More options opens as a compact 2-column grid and the whole modal stays within the screen. */
-html body:not(#_) #donorBatchPicker .batch-more {
-  padding: 0 10px !important;
-}
-html body:not(#_) #donorBatchPicker .batch-more[open] {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
-  gap: 4px 10px !important;
-  max-height: none !important;
-  overflow: visible !important;
-  padding: 0 10px 8px !important;
-}
-html body:not(#_) #donorBatchPicker .batch-more[open] > summary,
-html body:not(#_) #donorBatchPicker .batch-more[open] > .batch-fresh,
-html body:not(#_) #donorBatchPicker .batch-more[open] > #batchRandomRow,
-html body:not(#_) #donorBatchPicker .batch-more[open] > #batchEach,
-html body:not(#_) #donorBatchPicker .batch-more[open] > label[for='batchEach'],
-html body:not(#_) #donorBatchPicker .batch-more[open] > #batchPauseCustom,
-html body:not(#_) #donorBatchPicker .batch-more[open] > #donorTest {
-  grid-column: 1/-1 !important;
-}
-html body:not(#_) #donorBatchPicker .batch-more label {
-  font-size: 12px !important;
-  margin: 2px 0 0 !important;
-}
-html body:not(#_) #donorBatchPicker .batch-more select,
-html body:not(#_) #donorBatchPicker .batch-more input[type='text'],
-html body:not(#_) #donorBatchPicker .batch-more input[type='number'] {
-  min-height: 40px !important;
-  font-size: 15px !important;
-  margin: 0 !important;
-}
-html body:not(#_) #donorBatchPicker .batch-more .batch-fresh {
-  display: flex !important;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  font-size: 14px !important;
-}
-html body:not(#_) #donorBatchPicker .batch-more input[type='checkbox'] {
-  width: 22px !important;
-  height: 22px !important;
-  margin: 0;
-}
+
 html body:not(#_) #donorBatchPicker #batchStart:disabled {
   opacity: 0.45;
 }
@@ -7989,14 +7382,7 @@ html body:not(#_) #donorBatchPicker #batchStart:disabled {
     place-items: center;
     font-size: 0 !important;
   }
-  html
-    body:not(#_)
-    #donorsPage#donorsPage[data-panel]
-    .donor-row
-    .donor-identity
-    > .donor-top-chip::before {
-    font-size: 17px !important;
-  }
+  
   html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-identity > .donor-fu {
     grid-area: fu !important;
     font-size: 11px !important;
@@ -8330,14 +7716,7 @@ html body:not(#_) #donorsPage .donor-title #donorExpand {
     background: #f59e0b22 !important;
     border-color: #f59e0b88 !important;
   }
-  html
-    body:not(#_)
-    #donorsPage#donorsPage[data-panel]
-    .donor-row
-    .donor-identity
-    > .donor-top-chip::before {
-    font-size: 15px !important;
-  }
+  
   html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row > .donor-dm {
     width: 40px !important;
     min-width: 40px !important;
@@ -8432,14 +7811,7 @@ html body:not(#_):not(#__) #donorsPage#donorsPage .donor-head .donor-title #dono
     height: 26px !important;
     max-height: 26px !important;
   }
-  html
-    body:not(#_)
-    #donorsPage#donorsPage[data-panel]
-    .donor-row
-    .donor-identity
-    > .donor-top-chip::before {
-    font-size: 13px !important;
-  }
+  
   html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row > .donor-dm {
     width: 34px !important;
     min-width: 34px !important;

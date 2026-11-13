@@ -79,12 +79,7 @@ html body .brandbar #caseSelect {
   margin: 2px 0;
   font-weight: 760;
 }
-.notes-kicker {
-  font-size: 10px;
-  letter-spacing: 1.3px;
-  color: var(--mut);
-  font-weight: 750;
-}
+
 .notes-headline {
   min-width: 0;
 }
@@ -140,12 +135,7 @@ html body .brandbar #caseSelect {
   font-size: 24px;
   margin-bottom: 20px;
 }
-.notes-unlock h2 {
-  font-size: 24px;
-  letter-spacing: -0.7px;
-  line-height: 1.25;
-  margin: 0 0 10px;
-}
+
 .notes-unlock p,
 .notes-unlock small {
   line-height: 1.6;
@@ -155,11 +145,7 @@ html body .brandbar #caseSelect {
 .notes-unlock p {
   margin: 0 0 24px;
 }
-.notes-unlock small {
-  display: block;
-  margin-top: 20px;
-  font-size: 11px;
-}
+
 .notes-unlock form > label {
   font-size: 12px;
   font-weight: 700;
@@ -216,22 +202,7 @@ html body .brandbar #caseSelect {
 .notes-editor div {
   margin: 0 0 9px;
 }
-.notes-editor h1 {
-  font-size: 1.6em;
-  line-height: 1.35;
-  letter-spacing: -0.8px;
-  margin: 26px 0 12px;
-}
-.notes-editor h2 {
-  font-size: 1.32em;
-  line-height: 1.4;
-  margin: 24px 0 11px;
-}
-.notes-editor h3 {
-  font-size: 1.14em;
-  line-height: 1.4;
-  margin: 20px 0 9px;
-}
+
 .notes-editor ul,
 .notes-editor ol {
   padding-left: 29px;
@@ -241,48 +212,7 @@ html body .brandbar #caseSelect {
   padding-left: 5px;
   line-height: 1.85;
 }
-.notes-editor blockquote {
-  margin: 15px 0;
-  padding: 6px 18px;
-  border-left: 3px solid var(--line2);
-  color: var(--mut);
-}
-.notes-editor .notes-checklist {
-  padding-left: 25px;
-  list-style: none;
-}
-.notes-editor .notes-checklist > li {
-  list-style: none;
-  position: relative;
-  padding-left: 9px;
-}
-.notes-editor .notes-checklist > li:before {
-  content: '';
-  position: absolute;
-  left: -22px;
-  top: 0.63em;
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid var(--mut);
-  border-radius: 5px;
-  cursor: pointer;
-}
-.notes-editor .notes-checklist > li[data-checked='true'] {
-  opacity: 0.65;
-  text-decoration: line-through;
-}
-.notes-editor .notes-checklist > li[data-checked='true']:before {
-  content: '✓';
-  background: #356dd4;
-  color: white;
-  border-color: #356dd4;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 800;
-  text-decoration: none;
-}
+
 .notes-foot {
   min-height: 0;
   height: 0;
@@ -317,9 +247,7 @@ html body .brandbar #caseSelect {
   .notes-headline h1 {
     font-size: 17px;
   }
-  .notes-kicker {
-    font-size: 8px;
-  }
+  
   .notes-back,
   .notes-lock {
     min-height: 42px;
@@ -352,12 +280,7 @@ html body .brandbar #caseSelect {
   .donor-page .donor-head .donor-add {
     margin-left: 0;
   }
-  .donor-page .donor-notes-shortcut {
-    min-height: 44px;
-    white-space: nowrap;
-    padding: 7px 12px;
-    flex: none;
-  }
+  
   .donor-page .donor-head .donor-total {
     margin-left: 0;
   }
@@ -386,12 +309,8 @@ html body .brandbar #caseSelect {
     padding-top: 2px;
     padding-bottom: 2px;
   }
-  .foundation-notes[data-keyboard='open'] .notes-kicker {
-    display: none;
-  }
-  .foundation-notes[data-keyboard='open'] .notes-headline h1 {
-    font-size: 16px;
-  }
+  
+  
 }
 
 /* Distraction-free writing: solid Calmly-style charcoal throughout.
@@ -508,16 +427,7 @@ html body .brandbar #caseSelect {
 .foundation-notes #notesRetry {
   pointer-events: auto;
 }
-.foundation-notes #notesRetry:not([hidden]) {
-  display: block;
-  position: fixed;
-  top: 115px;
-  right: 16px;
-  z-index: 8;
-  background: #383838;
-  border: 1px solid #666;
-  color: #f3f3f3;
-}
+
 .foundation-notes .notes-sync[data-error='true'] {
   color: #ffbdbd;
 }
@@ -531,9 +441,7 @@ html body .brandbar #caseSelect {
   .foundation-notes[data-mode='writing'] .notes-headline h1 {
     font-size: 16px;
   }
-  .foundation-notes[data-mode='writing'] .notes-kicker {
-    display: none;
-  }
+  
 
   .foundation-notes .notes-back,
   .foundation-notes .notes-lock,
@@ -631,9 +539,7 @@ html body #foundationNotes #notesSync[data-error='true'] {
   .foundation-notes[data-mode='writing'] .notes-headline {
     flex-shrink: 0;
   }
-  .foundation-notes[data-mode='writing'] .notes-kicker {
-    display: none;
-  }
+  
   .foundation-notes[data-mode='writing'] .notes-headline h1 {
     font-size: 19px;
   }
@@ -661,15 +567,6 @@ html.notes-open body {
 
 /* Eye comfort: big text, centered column with no box, text at eye level. */
 
-html body #foundationNotes .notes-style-hidden {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  overflow: hidden !important;
-  clip: rect(0 0 0 0) !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
 /* Format bar: a floating row under the selected text. Hidden when nothing is selected. */
 
 html body #foundationNotes[data-mode='writing'] .notes-toolbar button[aria-pressed='true'] {

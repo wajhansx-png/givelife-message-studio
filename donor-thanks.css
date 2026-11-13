@@ -74,10 +74,7 @@ html body #donorThanksDialog {
   font-size: 13px;
   font-weight: 600;
 }
-#donorThanksDialog label small {
-  display: block;
-  font-weight: 400;
-}
+
 html body #donorThanksDialog :is(textarea, input) {
   box-sizing: border-box;
   width: 100%;
@@ -94,90 +91,18 @@ html body #donorThanksDialog :is(textarea, input) {
   resize: vertical;
   line-height: 1.5;
 }
-#thanksCaptionWrap label {
-  display: block;
-  margin-bottom: 8px;
-}
-.thanks-file-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-#donorThanksDialog .thanks-file-row button {
-  font-size: 12px;
-  min-height: 36px;
-  padding: 0 8px;
-}
+
 .thanks-timing {
   margin-top: 4px;
   font-size: 12px;
 }
-.thanks-timing summary {
-  padding: 8px 0;
-  cursor: pointer;
-}
-#thanksPace {
-  color: var(--mut);
-}
+
 .thanks-timing > div {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
-.thanks-review {
-  min-width: 0;
-  padding: 12px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-}
-.thanks-review h3 {
-  font-size: 13px;
-  margin: 0 0 6px;
-}
-#thanksPreview {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 12px 0;
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-.thanks-bubble {
-  margin: 0;
-  padding: 10px;
-  background: var(--msg);
-  color: var(--msgink);
-  border-radius: 10px;
-  white-space: pre-wrap;
-}
-.thanks-bubble :is(img, video) {
-  display: block;
-  max-width: 100%;
-  max-height: 190px;
-  margin: auto;
-  border-radius: 8px;
-}
-.thanks-bubble p {
-  margin: 8px 0 0;
-}
-.thanks-bubble a {
-  color: inherit;
-}
-#thanksRecipients {
-  max-height: 140px;
-  padding-left: 20px;
-  overflow: auto;
-  font-size: 12px;
-}
-#thanksAudience {
-  font-size: 12px;
-  cursor: pointer;
-  padding: 8px 0;
-}
+
 #thanksStatus {
   font-size: 12px;
   line-height: 1.5;
@@ -219,20 +144,7 @@ html body #donorThanksDialog :is(textarea, input) {
 #donorThanksDialog button {
   border-radius: 10px;
 }
-.thanks-review {
-  align-self: start;
-}
-.thanks-review > summary {
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.thanks-review[open] > summary {
-  margin-bottom: 8px;
-}
-.thanks-review > small {
-  display: block;
-}
+
 @media (min-width: 900px) {
   html
     body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
@@ -272,9 +184,7 @@ html body #donorsPage .thanks-row-mode small {
   color: var(--mut);
   font-size: 12px;
 }
-html body #donorsPage[data-thanks-mode] .donor-dm {
-  border-color: #6798ff !important;
-}
+
 @media (max-width: 599px) {
   html body #donorsPage .thanks-row-mode small {
     flex-basis: 100%;
@@ -294,46 +204,15 @@ html body #donorsPage[data-thanks-mode] .donor-dm {
     max-width: none !important;
   }
 }
-html
-  body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
-  #donorsPage#donorsPage
-  .donor-bottom[data-ui2-running]
-  > .donor-thanks {
-  display: none !important;
-}
 
 /* Timing: visible at once, in minutes and seconds, with three quick speeds. */
-.thanks-timing > .thanks-presets {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.thanks-timing > .thanks-presets button {
-  flex: 1;
-  min-height: 44px;
-  font-size: 14px;
-  font-weight: 700;
-}
+
 .thanks-timing > .thanks-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
-.thanks-timing fieldset {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.thanks-timing legend {
-  grid-column: 1 / -1;
-  padding: 0 0 4px;
-  color: var(--mut);
-  font-size: 12px;
-}
+
 .thanks-timing label {
   display: grid;
   gap: 3px;
@@ -356,47 +235,14 @@ html body #donorThanksDialog .thanks-timing :is(label, legend) {
 }
 
 /* Timing, shortest: one line, three quick speeds, the exact numbers folded under Custom. */
-.thanks-timing .thanks-pace-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: baseline;
-  padding: 8px 0 6px;
-  font-size: 13px;
-}
-.thanks-timing .thanks-pace-row #thanksPace {
-  color: var(--mut);
-  font-weight: 400;
-}
+
 .thanks-timing .thanks-custom {
   margin-top: 6px;
 }
-.thanks-timing .thanks-custom > summary {
-  min-height: 36px;
-  padding: 8px 0;
-  color: var(--mut);
-  font-size: 13px;
-  cursor: pointer;
-}
 
 /* Timing: the plain fields, always visible, two to a row. */
-.thanks-timing > b {
-  display: block;
-  padding: 10px 0 6px;
-  font-size: 13px;
-}
 
 /* Message is third after the photo or video: one tap on "+ Message" opens it. */
-.thanks-msg > summary {
-  min-height: 44px;
-  padding: 10px 0;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.thanks-msg[open] > summary {
-  color: var(--mut);
-}
 
 /* Timing as four dropdowns; the exact boxes appear only under Custom. */
 .thanks-timing .thanks-opt {
@@ -423,16 +269,6 @@ html body #donorThanksDialog .thanks-timing :is(label, legend) {
 .thanks-timing .thanks-custom[hidden] {
   display: none;
 }
-html body #donorThanksDialog .thanks-attach-row {
-  display: flex;
-  gap: 8px;
-}
-html body #donorThanksDialog .thanks-attach-row > button {
-  flex: 1 1 0;
-  min-height: 48px;
-  font-size: 15px;
-  font-weight: 700;
-}
 
 /* Two attachment slots side by side; an attached slot takes the whole row and shows its caption. */
 html body #donorThanksDialog .thanks-media {
@@ -440,29 +276,7 @@ html body #donorThanksDialog .thanks-media {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
-html body #donorThanksDialog .thanks-slot {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-html body #donorThanksDialog .thanks-slot:has(> .thanks-attached:not([hidden])) {
-  grid-column: 1 / -1;
-}
-html body #donorThanksDialog .thanks-slot > .thanks-attach {
-  min-height: 48px;
-  font-size: 15px;
-  font-weight: 700;
-}
-html body #donorThanksDialog .thanks-attached {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 6px;
-  align-items: center;
-}
-html body #donorThanksDialog .thanks-attached > textarea {
-  grid-column: 1 / -1;
-  min-height: 56px;
-}
+
 html body #donorThanksDialog .thanks-name {
   overflow: hidden;
   font-size: 13px;
@@ -474,13 +288,7 @@ html body #donorThanksDialog .thanks-name {
 html body #donorThanksDialog .thanks-capd {
   grid-column: 1 / -1;
 }
-html body #donorThanksDialog .thanks-capd > summary {
-  min-height: 40px;
-  padding: 8px 0;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
+
 html body #donorThanksDialog .thanks-capd > textarea {
   width: 100%;
   min-height: 56px;
@@ -665,15 +473,7 @@ html body #donorThanksDialog .thanks-media > button {
   min-height: 42px;
   font-size: 14px;
 }
-html body #donorThanksDialog .thanks-msg > summary,
-html body #donorThanksDialog .thanks-capd > summary {
-  min-height: 34px;
-  padding: 6px 0;
-  font-size: 14px;
-}
-html body #donorThanksDialog .thanks-timing > b {
-  padding: 6px 0 4px;
-}
+
 html body #donorThanksDialog .thanks-timing select {
   min-height: 40px;
   font-size: 15px;

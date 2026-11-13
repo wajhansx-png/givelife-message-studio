@@ -144,14 +144,7 @@ html body .donor-head > .donor-total {
   box-shadow: none;
   min-height: 0;
 }
-html body .donor-head > .donor-total small {
-  font-size: 11px;
-  text-transform: none;
-  letter-spacing: 0;
-}
-html body .donor-head > .donor-total strong {
-  font-size: 14px;
-}
+
 html body .donor-head #donorAdd {
   min-height: 40px;
   padding: 6px 14px;
@@ -187,14 +180,7 @@ html body .donor-search {
   outline: 2px solid var(--g);
   outline-offset: 3px;
 }
-.compact-nav-menu > summary[data-unread='true']::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--g);
-  margin-right: 6px;
-}
+
 html body .message-copy {
   font-size: 0 !important;
   width: 28px;
@@ -214,12 +200,7 @@ html body .message-copy::before {
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Crect x='8' y='8' width='12' height='13' rx='2'/%3E%3Cpath d='M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3'/%3E%3C/svg%3E")
     center/contain no-repeat;
 }
-html body [data-group='free'] .group-label {
-  color: #93c5fd !important;
-}
-html[data-theme='light'] body [data-group='free'] .group-label {
-  color: #1d4ed8 !important;
-}
+
 html body #donorsPage #donorProgress[data-error='true'] {
   background: var(--surface2) !important;
   color: var(--ink) !important;
@@ -568,10 +549,7 @@ html body #donorsPage[data-panel='messages'] .bank-picker {
   padding: 18px;
   gap: 10px;
 }
-html body #donorsPage[data-panel='messages'] .bank-picker-title {
-  font-size: 15px;
-  margin-bottom: 6px;
-}
+
 @media (max-width: 1100px) {
   html body #donorsPage[data-panel='messages'] .bank-workspace {
     grid-template-columns: minmax(0, 1fr) 132px 220px;
@@ -598,18 +576,11 @@ html body #donorsPage[data-panel='messages'] .bank-picker-title {
     padding: 12px;
     gap: 8px;
   }
-  html body #donorsPage[data-panel='messages'] .bank-picker-title {
-    font-size: 14px;
-  }
+  
   html body #donorsPage[data-panel='messages'] .bank-preview,
   html body #donorsPage[data-panel='messages'] .bank-message textarea {
     padding: 16px;
     font-size: 17px;
-  }
-}
-@media (max-width: 850px) {
-  html body #donorsPage[data-panel='messages'] .bank-heading .bank-back {
-    min-height: 44px;
   }
 }
 
@@ -633,9 +604,7 @@ html body #donorsPage[data-panel='messages'] .bank-picker-title {
     overflow-y: hidden;
     border-radius: 12px;
   }
-  html body #donorsPage[data-panel='messages'] .bank-picker-title {
-    display: none;
-  }
+  
   html body #donorsPage[data-panel='messages'] .bank-picker button {
     flex: 0 0 auto;
     min-width: 96px;
@@ -722,9 +691,7 @@ html body #donorsPage[data-panel='messages'] [data-bank-nav='next'] {
   border-color: #4775eb !important;
   font-weight: 700;
 }
-html body #donorsPage[data-panel='messages'] [data-bank-nav='next']::after {
-  content: ' →';
-}
+
 html body #donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate {
   background: #2b2b2b;
   color: #ededed;
@@ -925,12 +892,6 @@ html body #donorBatchForm > label.batch-fresh,
 html body #donorBatchForm > #batchPauseCustom,
 html body #donorBatchForm > #batchRandomRow {
   grid-column: 1/-1;
-}
-html body #donorBatchForm > label.batch-fresh {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
 }
 
 /* Chat: small Copy links keep their look but get a 44px touch area; the attach button is 44 wide */

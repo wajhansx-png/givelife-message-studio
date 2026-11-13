@@ -53,15 +53,7 @@
   font-weight: 500;
   margin-left: 5px;
 }
-.donor-back {
-  min-width: 72px;
-  min-height: 40px;
-  border: 1px solid var(--line2);
-  border-radius: 8px;
-  background: var(--surface);
-  font-size: 13px;
-  font-weight: 650;
-}
+
 .donor-add {
   margin-left: auto;
   min-height: 40px;
@@ -212,15 +204,7 @@
   opacity: 1;
   cursor: default;
 }
-.donor-row[data-delivery='Uncertain'] .donor-dm,
-.donor-row[data-delivery='Skipped'] .donor-dm {
-  background: var(--wbg);
-  color: var(--warn);
-  opacity: 1;
-}
-.donor-row[data-delivery='Not sent'] .donor-dm {
-  color: var(--red);
-}
+
 .donor-status {
   grid-column: 4;
 }
@@ -329,16 +313,7 @@
   font-size: 11px;
   color: var(--mut);
 }
-.donor-gap input {
-  width: 58px;
-  height: 38px;
-  min-height: 38px;
-  border: 1px solid var(--line2);
-  background: var(--surface);
-  border-radius: 7px;
-  padding: 5px;
-  font-size: 12px;
-}
+
 .donor-message-info {
   font-size: 11px;
   color: var(--mut);
@@ -551,11 +526,7 @@
   .donor-count {
     font-size: 11px;
   }
-  .donor-back {
-    min-width: 64px;
-    min-height: 44px;
-    font-size: 12px;
-  }
+  
   .donor-add {
     min-height: 44px;
     padding: 6px 12px;
@@ -635,12 +606,7 @@
     font-size: 10px;
     gap: 3px;
   }
-  .donor-gap input {
-    width: 43px;
-    min-height: 44px;
-    font-size: 11px;
-    padding: 4px;
-  }
+  
   .donor-message-info,
   .donor-poster-toggle {
     display: none;
@@ -905,11 +871,7 @@ html body #donorBatchForm {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px 16px;
 }
-html body #donorBatchForm > label {
-  margin: 0;
-  align-self: center;
-  font-size: 13px;
-}
+
 html body #donorBatchForm > input,
 html body #donorBatchForm > select {
   height: 40px;
@@ -948,12 +910,7 @@ html body .batch-gap-btn[aria-pressed='true'] {
   color: #fff;
   border-color: var(--accent);
 }
-html body .batch-gap-row #batchGap {
-  width: 80px;
-  min-width: 60px;
-  height: 38px;
-  flex-shrink: 0;
-}
+
 html body #donorBatchForm > .batch-foot {
   position: static;
   margin-top: 8px;
@@ -1046,21 +1003,7 @@ html body #donorPasteDialog #pastePoster {
   font-size: 13px;
   color: #d1d1d1;
 }
-#donorsPage[data-panel='messages'] .bank-heading .bank-back {
-  order: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  border: 1px solid #ffffff24;
-  border-radius: 9px;
-  padding: 8px 14px;
-  background: #2b2b2b;
-  color: #ededed;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
+
 #donorsPage[data-panel='messages'] .bank-current {
   order: 1;
   color: #ededed;
@@ -1229,12 +1172,7 @@ html body #donorPasteDialog #pastePoster {
   border-radius: 16px;
   padding: 16px;
 }
-#donorsPage[data-panel='messages'] .bank-picker-title {
-  margin: 0 0 9px;
-  font-size: 14px;
-  line-height: 1.35;
-  color: #ededed;
-}
+
 #donorsPage[data-panel='messages'] .bank-picker button {
   display: block;
   flex: none;
@@ -1300,11 +1238,7 @@ html body #donorPasteDialog #pastePoster {
     gap: 6px;
     align-content: start;
   }
-  #donorsPage[data-panel='messages'] .bank-picker-title {
-    grid-column: 1/-1;
-    font-size: 13px;
-    margin: 0 0 3px;
-  }
+  
   #donorsPage[data-panel='messages'] .bank-picker button {
     min-height: 44px;
     font-size: 11px;
@@ -1315,9 +1249,7 @@ html body #donorPasteDialog #pastePoster {
   #donorsPage[data-panel='messages'] .bank-heading .bank-current {
     font-size: 13px;
   }
-  #donorsPage[data-panel='messages'] .bank-heading .bank-back {
-    padding: 6px 8px;
-  }
+  
 }
 @media (prefers-reduced-motion: reduce) {
   #donorsPage[data-panel='messages'] * {
@@ -1381,22 +1313,6 @@ html body #donorPasteDialog #pastePoster {
   .donor-resume-choices {
     grid-template-columns: 1fr;
   }
-}
-.volunteer-timing-dialog select {
-  display: block;
-  width: 100%;
-  min-height: 48px;
-  border: 1px solid var(--line2);
-  border-radius: 10px;
-  background: var(--bg);
-  color: var(--ink);
-  font: inherit;
-  font-size: 16px;
-  padding: 10px 12px;
-}
-.volunteer-timing-dialog #volTimingPlan {
-  margin-top: 12px;
-  color: var(--ink);
 }
 
 /* Both saved pictures and videos fit the Poster dialog without stretching on phones. */
@@ -1498,22 +1414,6 @@ html body #donorPasteDialog #pastePoster {
 }
 
 /* Donation screenshot ranking is separate from current-case donated amount. */
-.donor-receipt-total {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: #71b7dd;
-  line-height: 1.2;
-  font-size: 10px;
-  font-weight: 600;
-}
-@media (max-width: 899px) {
-  .donor-receipt-total {
-    font-size: 9px;
-  }
-}
 
 /* Add numbers dialog: a quiet, full-width "Remove all GIKI donors" button above Close / Save. */
 .numbers-dialog .numbers-remove {
@@ -1528,10 +1428,7 @@ html body #donorPasteDialog #pastePoster {
   font-weight: 700;
   cursor: pointer;
 }
-.numbers-dialog .numbers-remove[data-armed='1'] {
-  background: #ff6b6b;
-  color: #1a0a0a;
-}
+
 .numbers-dialog .numbers-remove:disabled {
   opacity: 0.5;
 }

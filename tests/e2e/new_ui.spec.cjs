@@ -817,17 +817,34 @@ for (const [w, h] of [
   });
 }
 
-test('/new phone: Regenerate and Next sit under the group message on the main screen and in the reader', async ({
+test('/new phone: Regenerate and Next sit inside the green message (small, right) and in the reader', async ({
   page,
 }) => {
   await open(page, '/new', 390);
   const card = await page.locator('#card').boundingBox();
   const nav = await page.locator('#ui2GnavMain').boundingBox();
-  expect(nav.y).toBeGreaterThanOrEqual(card.y + card.height - 1);
+  // Inside the message card, bottom right: no row under the message any more, so the message keeps that height.
+  await expect(page.locator('#card #ui2GnavMain')).toHaveCount(1);
+  expect(nav.x).toBeGreaterThan(card.x + card.width / 2);
+  expect(nav.x + nav.width).toBeLessThanOrEqual(card.x + card.width + 0.5);
+  expect(nav.y + nav.height).toBeLessThanOrEqual(card.y + card.height + 0.5);
+  expect(nav.y).toBeGreaterThanOrEqual(card.y);
   await expect(page.locator('#ui2GnavMain .ui2-gbtn')).toHaveText(['Regenerate', 'Next']);
-  expect(nav.x).toBeGreaterThanOrEqual(0);
-  expect(nav.x + nav.width).toBeLessThanOrEqual(390.5);
+  for (const [i, name] of ['Regenerate', 'Next'].entries()) {
+    const b = page.locator('#ui2GnavMain .ui2-gbtn').nth(i);
+    await expect(b).toHaveAccessibleName(name);
+    const box = await b.boundingBox();
+    expect(box.width).toBeGreaterThanOrEqual(40);
+    expect(box.height).toBeGreaterThanOrEqual(40);
+    expect(box.width).toBeLessThanOrEqual(48); // small
+  }
+  // The message text is not under the buttons: its last line can scroll clear of them.
+  expect(
+    await page.locator('#card #chat').evaluate((n) => parseFloat(getComputedStyle(n).paddingBottom)),
+  ).toBeGreaterThanOrEqual(46);
+  // Tapping a button must not also open the reader (the card itself opens it).
   await page.locator('#ui2GnavMain .ui2-gnext').click(); // presses the real New wording button
+  await expect(page.locator('#messageFocus')).toBeHidden();
   await open(page, '/new#/preview', 390);
   await expect(page.locator('#ui2GnavReader .ui2-gbtn')).toHaveText(['Regenerate', 'Next']);
   await page.locator('#ui2GnavReader .ui2-gnext').click();
@@ -925,3 +942,19 @@ for (const width of [390, 1440, 1920]) {
     }
   });
 }
+
+test('/new phone: every button in the bottom bar has an icon above its word', async ({ page }) => {
+  await open(page, '/new', 390);
+  const tabs = page.locator('#ui2Tabs .ui2-tab:visible');
+  await expect(tabs).toHaveText(['Case', 'Message', 'Donors', 'Chat', 'More']);
+  for (let i = 0; i < 5; i++) {
+    const t = tabs.nth(i);
+    await expect(t.locator('svg')).toHaveCount(1);
+    const [icon, word] = await Promise.all([t.locator('svg').boundingBox(), t.locator('span').boundingBox()]);
+    expect(icon.y + icon.height).toBeLessThanOrEqual(word.y + 1); // icon above the word
+    expect(icon.width).toBeGreaterThanOrEqual(18);
+    expect((await t.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  }
+  // Names stay plain words for screen readers (the icon is decoration).
+  await expect(page.getByRole('button', { name: 'Donors', exact: true }).first()).toBeVisible();
+});

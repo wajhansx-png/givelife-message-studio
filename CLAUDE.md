@@ -28,7 +28,7 @@ Apply these rules automatically to every coding task.
 - Before finishing any UI change run `python tests/responsive_dashboard.py` (needs `tests/preview_fake.py --port 3003`), open `/dash`, press "Find errors": every screen and width must show no errors.
 
 # DESIGN TASTE (from GiveLife_UIUX_Visual_Only_Dark_FIXED.pdf, pages 1-10 read)
-- Most-used buttons at the bottom of the phone (thumb zone). Bottom nav: Message, Donors, Chat, More. Words only, no icons.
+- Most-used buttons at the bottom of the phone (thumb zone). Bottom nav: Case, Message, Donors, Chat, More: a small icon above each word (owner asked for icons in the bar; the word always stays).
 - Clear words instead of icons. No glow or box-shadow under buttons.
 - Message text 15px, fully readable. Send buttons one line each, about 42px, group name never overlapped.
 - Extra options (timer, pick group) away from the Send arrow. More opens a bottom sheet, not a top menu.

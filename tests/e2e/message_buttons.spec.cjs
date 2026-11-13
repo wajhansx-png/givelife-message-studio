@@ -294,11 +294,110 @@ test('/new desktop: the chips on the Message card write the same way and show th
   });
   await page.goto('/new');
   const card = page.locator('#ui2Styles button');
-  await expect(card).toHaveText(['Urdu + English', 'English', 'Trigger']);
+  await expect(card).toHaveText(['Urdu + English', 'English', 'Trigger', 'Style fix']);
   await card.nth(1).click();
   await expect(page.locator('#messageFocus')).toBeVisible();
   await expect.poll(() => asked.length).toBe(1);
   await expect(page.locator('#messageFocus .focus-styles button').nth(1)).toHaveAttribute('aria-pressed', 'true');
   await expect(card.nth(1)).toHaveAttribute('aria-pressed', 'true');
   expect(asked).toEqual(['en']);
+});
+
+/* Style fix: the same words in the owner's structure. Nothing new is written; nothing is saved until Save Base. */
+const PLAIN_MSG = [
+  'آپ کے ایک قدم سے ایک غمزدہ باپ کا بوجھ ہلکا ہو سکتا ہے',
+  'Yousaf was only 2 years old. His father borrowed money for the Janazah. Only Rs. 2,000 is left. 💔',
+  'Rs. 2,000 LEFT',
+  '- Just 2 people donating Rs. 1,000 can help this grieving father. 🤲',
+  '03097458815\nEASYPAISA ONLY (Wajdan Khan)\n\n— GiveLife Foundation',
+].join('\n\n');
+
+test('Style fix endpoint: bold hook, italic story, formatted lines; same words; idempotent; empty is refused', async ({
+  request,
+}) => {
+  const H = { Authorization: 'Bearer ' + KEY };
+  const r = await request.post('/style-fix', { headers: H, data: { text: PLAIN_MSG, kind: 'group' } });
+  expect(r.status()).toBe(200);
+  const d = await r.json();
+  const parts = d.text.split('\n\n');
+  expect(parts[0]).toBe('*آپ کے ایک قدم سے ایک غمزدہ باپ کا بوجھ ہلکا ہو سکتا ہے*');
+  expect(parts[1]).toMatch(/^_Yousaf was only 2 years old\..* 💔_$/);
+  expect(parts).toContain('🔴 Rs. 2,000 LEFT');
+  expect(parts).toContain('• *_Just 2 people donating Rs. 1,000 can help this grieving father._* 🤲');
+  expect(d.changed).toBe(true);
+  const words = (t) => t.replace(/[*_]/g, '').match(/[\p{L}\p{N}]+/gu);
+  expect(words(d.text)).toEqual(words(PLAIN_MSG)); // not one word changed
+  const again = await (
+    await request.post('/style-fix', { headers: H, data: { text: d.text, kind: 'group' } })
+  ).json();
+  expect(again.changed).toBe(false);
+  expect(again.text).toBe(d.text);
+  const empty = await request.post('/style-fix', { headers: H, data: { text: '  ', kind: 'group' } });
+  expect(empty.status()).toBe(400);
+});
+
+for (const kind of ['group', 'dm'])
+  test(`${kind} Style fix button: fixes the open message as an unsaved draft, then says it is already in style`, async ({
+    page,
+    request,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await open(page, kind);
+    const drafts = () =>
+      request.get('/drafts', { headers: { Authorization: 'Bearer ' + KEY } }).then((r) => r.json());
+    const savedBefore = (await drafts())[kind];
+    const posted = [];
+    await page.route('**/style-fix', async (r) => {
+      posted.push(r.request().postDataJSON());
+      await r.continue();
+    });
+    const fix = page.locator('#focusStyleFix');
+    await expect(fix).toBeVisible();
+    await expect(fix).toHaveText('Style fix');
+    expect((await fix.boundingBox()).height).toBeGreaterThanOrEqual(40);
+    await fix.click();
+    await expect(fix).toHaveText(/Fixed ✓|Already in your style ✓/);
+    expect(posted[0].kind).toBe(kind);
+    expect(posted[0].text.length).toBeGreaterThan(10);
+    // The preview is the fixed text; nothing is saved until Save Base.
+    if ((await fix.textContent()).startsWith('Fixed')) {
+      await expect(page.locator('#focusVersion')).toContainText('Fixed · not saved');
+      await expect(page.locator('#focusFormatted strong').first()).toBeVisible();
+    }
+    expect((await drafts())[kind]).toBe(savedBefore);
+    // The button returns to its name, and a second press has nothing left to fix.
+    await expect(fix).toHaveText('Style fix', { timeout: 5000 });
+    await fix.click();
+    await expect(fix).toHaveText('Already in your style ✓');
+    expect(posted.length).toBe(2);
+  });
+
+test('Style fix: a failed request leaves the text alone and the buttons work again', async ({ page }) => {
+  await open(page, 'group');
+  await page.locator('#focusEdit').click();
+  const text = page.locator('#focusText');
+  const before = await text.inputValue();
+  await page.route('**/style-fix', (r) => r.fulfill({ status: 400, json: { error: 'There is no message to fix.' } }));
+  await page.locator('#focusStyleFix').click();
+  await expect(page.locator('#focusState')).toContainText('There is no message to fix');
+  await expect(text).toHaveValue(before);
+  for (const name of ['Urdu + English', 'English', 'Trigger']) await expect(button(page, name)).toBeEnabled();
+  await expect(page.locator('#focusStyleFix')).toBeEnabled();
+});
+
+test('/new desktop: the Style fix chip on the Message card opens the reader and fixes it', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  const posted = [];
+  await page.route('**/style-fix', async (r) => {
+    posted.push(r.request().postDataJSON());
+    await r.continue();
+  });
+  await page.goto('/new');
+  const chip = page.locator('#ui2Styles button', { hasText: 'Style fix' });
+  await expect(chip).toBeVisible();
+  expect(await chip.getAttribute('aria-pressed')).toBeNull(); // an action, not a choice
+  await chip.click();
+  await expect(page.locator('#messageFocus')).toBeVisible();
+  await expect.poll(() => posted.length).toBe(1);
 });

@@ -5795,3 +5795,19 @@
 .UI2 .ui2-sheet {
   background-color: var(--surface, #25262e) !important;
 }
+
+/* Reader: the Style fix button sits on its own row above the style chips (phone and tablet), full width. */
+@media (max-width: 899px) {
+  .UI2 #messageFocus > header #focusStyleFix {
+    width: 100%;
+    min-height: 40px !important;
+  }
+}
+.UI2 #messageFocus .focus-fix {
+  border-color: #2f6fe4 !important;
+  color: #9db8ff !important;
+}
+.UI2 #messageFocus .focus-fix[data-done='1'] {
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}

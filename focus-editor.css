@@ -707,3 +707,28 @@ body.message-focus-open > .foot {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+/* Style fix: not a new version, so it looks like an action (outlined), apart from the style chips. */
+#messageFocus .focus-fix {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #2f6fe4;
+  border-radius: 12px;
+  background: transparent;
+  color: #9db8ff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+#messageFocus .focus-fix[data-done='1'] {
+  background: #2f6fe4;
+  color: #fff;
+}
+#messageFocus .focus-fix:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+#messageFocus .focus-fix[aria-busy='true'] {
+  opacity: 0.7;
+  cursor: progress;
+}

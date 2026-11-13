@@ -3,7 +3,7 @@
   const screen = document.createElement('section');
   screen.id = 'messageFocus';
   screen.hidden = true;
-  screen.innerHTML = `<header><span id="focusState" role="status" aria-live="polite"></span><span class="focus-styles" role="group" aria-label="Write a new message"><button type="button" data-lang="ur" aria-pressed="false" title="New message: Urdu hook + English">Urdu + English</button><button type="button" data-lang="en" aria-pressed="false" title="New message in English">English</button><button type="button" data-trigger aria-pressed="false" title="Stronger, different message in the language you picked. Press again to turn it off.">Trigger</button></span></header><div class="focus-workspace"><main class="focus-paper"><div id="focusFormatted" tabindex="0" aria-label="Message preview"></div><textarea id="focusText" aria-label="Edit WhatsApp message" spellcheck="true" hidden></textarea></main><aside class="focus-rail" aria-label="Message tools"><button id="focusEdit">Edit</button><button id="focusCopy">Copy</button><button id="focusNext">Next version</button><small id="focusVersion">Original</small><button id="focusPoster">Change poster</button><button data-mark="*"><b>Bold</b></button><button data-mark="_"><i>Italic</i></button><button data-emoji="💔">💔 Heart</button><button data-emoji="🤲">🤲 Dua</button><button id="focusRetry">Generate 5 Versions</button></aside></div>`;
+  screen.innerHTML = `<header><span id="focusState" role="status" aria-live="polite"></span><button type="button" id="focusStyleFix" class="focus-fix" title="Same words in your style: bold and italic lines, and anything missing added. Nothing new is written.">Style fix</button><span class="focus-styles" role="group" aria-label="Write a new message"><button type="button" data-lang="ur" aria-pressed="false" title="New message: Urdu hook + English">Urdu + English</button><button type="button" data-lang="en" aria-pressed="false" title="New message in English">English</button><button type="button" data-trigger aria-pressed="false" title="Stronger, different message in the language you picked. Press again to turn it off.">Trigger</button></span></header><div class="focus-workspace"><main class="focus-paper"><div id="focusFormatted" tabindex="0" aria-label="Message preview"></div><textarea id="focusText" aria-label="Edit WhatsApp message" spellcheck="true" hidden></textarea></main><aside class="focus-rail" aria-label="Message tools"><button id="focusEdit">Edit</button><button id="focusCopy">Copy</button><button id="focusNext">Next version</button><small id="focusVersion">Original</small><button id="focusPoster">Change poster</button><button data-mark="*"><b>Bold</b></button><button data-mark="_"><i>Italic</i></button><button data-emoji="💔">💔 Heart</button><button data-emoji="🤲">🤲 Dua</button><button id="focusRetry">Generate 5 Versions</button></aside></div>`;
   document.body.append(screen);
   // Scroll targets must clear the sticky tool dock at every viewport size.
   const focusDock = screen.querySelector('.focus-rail');
@@ -609,11 +609,32 @@
       new CustomEvent('message-style-state', { detail: { lang: styleLang, trigger: styleTrig } }),
     );
   }
+  const fixBtn = $('focusStyleFix');
+  const busy = () => fixBtn.disabled || styleButtons().some((x) => x.disabled);
+  const lock = (on) => [...styleButtons(), fixBtn].forEach((x) => (x.disabled = on));
+  /* Put a written or fixed text in front of the owner: replaced in place when typing (one Undo away), otherwise shown
+     in the preview as an unsaved draft. Nothing is saved until Save Base (or Edit, then Done). */
+  function showText(text, message, version) {
+    const t = $('focusText');
+    if (editing) {
+      t.focus({ preventScroll: true });
+      t.setSelectionRange(0, t.value.length);
+      if (!(document.execCommand && document.execCommand('insertText', false, text))) t.value = text;
+      t.dispatchEvent(new Event('input', { bubbles: true }));
+      status(message + ' Edit it if you like, then press Done to save.');
+    } else {
+      dirty = true;
+      sessionStorage.setItem('focus-draft-' + kind, text);
+      paint(text);
+      $('focusVersion').textContent = version;
+      status(message + ' Press Save Base to keep it, or Edit to change it.');
+    }
+  }
   async function writeStyle(lang, trig, b) {
-    if (styleButtons().some((x) => x.disabled)) return;
+    if (busy()) return;
     const startKind = kind,
       label = STYLE_NAME[lang] + (trig ? ' Trigger' : '');
-    styleButtons().forEach((x) => (x.disabled = true));
+    lock(true);
     b.setAttribute('aria-busy', 'true');
     status('Writing: ' + label + '…');
     try {
@@ -634,30 +655,59 @@
       styleLang = lang;
       styleTrig = trig;
       markStyle();
-      if (editing) {
-        /* Already typing: replace in place, one Undo away. */
-        t.focus({ preventScroll: true });
-        t.setSelectionRange(0, t.value.length);
-        if (!(document.execCommand && document.execCommand('insertText', false, d.text)))
-          t.value = d.text;
-        t.dispatchEvent(new Event('input', { bubbles: true }));
-        status('Written: ' + label + '. Edit it if you like, then press Done to save.');
-      } else {
-        /* Reading the preview: show the new message there. No keyboard, no edit mode. It is an unsaved
-           draft until the owner presses Save Base (or Edit, then Done). */
-        dirty = true;
-        sessionStorage.setItem('focus-draft-' + kind, d.text);
-        paint(d.text);
-        $('focusVersion').textContent = 'New · not saved';
-        status('Written: ' + label + '. Press Save Base to keep it, or Edit to change it.');
-      }
+      showText(d.text, 'Written: ' + label + '.', 'New · not saved');
     } catch (e) {
       status(e.message || 'Could not write a message. Your text is unchanged.');
     } finally {
-      styleButtons().forEach((x) => (x.disabled = false));
+      lock(false);
       b.removeAttribute('aria-busy');
     }
   }
+  /* Style fix: the SAME words laid out in the owner's structure (bold hook, italic story, plain verse, amount line,
+     bold+italic help line, payment). The server only changes markers and adds what is missing; it never rewrites. */
+  let fixTimer = 0;
+  /* The status line is hidden on phones, so the button itself says what happened for a moment. */
+  const fixSays = (word) => {
+    clearTimeout(fixTimer);
+    fixBtn.textContent = word;
+    fixBtn.dataset.done = '1';
+    fixTimer = setTimeout(() => {
+      fixBtn.textContent = 'Style fix';
+      delete fixBtn.dataset.done;
+    }, 2200);
+  };
+  fixBtn.onmousedown = (e) => e.preventDefault();
+  fixBtn.onclick = async () => {
+    if (busy()) return;
+    const startKind = kind,
+      t = $('focusText');
+    if (!t.value.trim()) return void status('There is no message to fix. Write or open a message first.');
+    lock(true);
+    fixBtn.setAttribute('aria-busy', 'true');
+    status('Fixing the style…');
+    try {
+      const r = await fetch('/style-fix', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: t.value, kind: startKind }),
+        }),
+        d = await r.json().catch(() => ({}));
+      if (!r.ok || typeof d.text !== 'string')
+        throw Error(d.error || 'Could not fix the style. Your text is unchanged.');
+      if (kind !== startKind) return; /* the owner switched screens meanwhile */
+      if (!d.changed) {
+        fixSays('Already in your style ✓');
+        return void status('Already in your style. Nothing to fix.');
+      }
+      fixSays('Fixed ✓');
+      showText(d.text, 'Style fixed: ' + (d.changes || []).join(' · ') + '.', 'Fixed · not saved');
+    } catch (e) {
+      status(e.message || 'Could not fix the style. Your text is unchanged.');
+    } finally {
+      lock(false);
+      fixBtn.removeAttribute('aria-busy');
+    }
+  };
   styleButtons().forEach((b) => {
     b.onmousedown = (e) => e.preventDefault();
     b.onclick = () => {

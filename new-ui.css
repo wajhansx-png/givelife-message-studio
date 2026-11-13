@@ -5942,12 +5942,12 @@
 }
 
 /* Also send (PDF / Video) in the reader: on narrow phones the chips alone fit one line (their words say PDF / Video). */
-@media (max-width: 359px) {
+@media (max-width: 411px) {
   .UI2 .ui2-rx-label {
     display: none;
   }
 }
-@media (max-width: 299px) {
+@media (max-width: 339px) {
   .UI2 .ui2-rx-item {
     padding-left: 8px;
   }
@@ -5955,7 +5955,8 @@
     gap: 6px;
   }
   .UI2 .ui2-rx-add {
-    padding-inline: 6px;
+    padding-inline: 4px;
+    font-size: 12px;
   }
 }
 

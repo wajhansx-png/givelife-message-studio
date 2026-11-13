@@ -38,6 +38,58 @@
         })
         .catch(() => {});
   } catch (e) {}
+  /* PDF and video that follow each DM (poster + caption first): the case's files saved in the Poster dialog. Each can be
+     ticked on its own, so both, one, or none go. */
+  const dmExtra = { pdf: false, video: false };
+  try {
+    dmExtra.pdf = localStorage.getItem('givelife-dm-pdf') === '1';
+    dmExtra.video = localStorage.getItem('givelife-dm-video') === '1';
+  } catch (e) {}
+  const EXTRA_NAME = { pdf: 'PDF', video: 'Video' };
+  function paintDmExtras() {
+    for (const [kind, ids] of [
+      ['pdf', ['donorPdf', 'batchPdf', 'msgPdf']],
+      ['video', ['donorVideo', 'batchVideo', 'msgVideo']],
+    ])
+      for (const id of ids) if (el(id)) el(id).checked = dmExtra[kind];
+  }
+  /* A ticked file must exist: if it does not (a new case starts with none), say so and untick it. */
+  async function setDmExtra(kind, on, remember = true) {
+    if (on) {
+      try {
+        const have = await api('/group-extras');
+        if (!have[kind] || !have[kind].has) {
+          dmExtra[kind] = false;
+          paintDmExtras();
+          notice(
+            'No ' + EXTRA_NAME[kind] + ' is saved yet. Add it in Poster → Sent after the poster in groups.',
+            true,
+          );
+          return;
+        }
+      } catch (e) {
+        dmExtra[kind] = false;
+        paintDmExtras();
+        notice(e.message, true);
+        return;
+      }
+    }
+    dmExtra[kind] = !!on;
+    paintDmExtras();
+    if (remember)
+      try {
+        localStorage.setItem('givelife-dm-' + kind, on ? '1' : '0');
+      } catch (e) {}
+    if (remember && autoOn) autoOptions({ [kind]: dmExtra[kind] });
+  }
+  /* Opening Donors: untick what is no longer saved (for example after a new case). */
+  async function syncDmExtras() {
+    try {
+      const have = await api('/group-extras');
+      for (const kind of ['pdf', 'video']) if (!have[kind] || !have[kind].has) dmExtra[kind] = false;
+    } catch (e) {}
+    paintDmExtras();
+  }
   function setFollowUp(on, remember = true) {
     followUpOn = !!on;
     if (el('donorFollowUp')) el('donorFollowUp').checked = followUpOn;
@@ -94,6 +146,20 @@
       opt.id = 'donorFollowUpOpt';
       opt.append(box, make('span', '', 'Send with follow-up'));
       box.checked = followUpOn;
+      const extraOpts = ['pdf', 'video'].map((kind) => {
+        const lab = make('label', 'donor-fu-opt'),
+          b = make('input');
+        b.type = 'checkbox';
+        b.id = kind === 'pdf' ? 'donorPdf' : 'donorVideo';
+        b.name = 'send_' + kind;
+        b.checked = dmExtra[kind];
+        b.onchange = () => setDmExtra(kind, b.checked);
+        lab.id = b.id + 'Opt';
+        lab.title = 'Also send the case ' + EXTRA_NAME[kind] + ' after each DM (poster and caption first)';
+        lab.append(b, make('span', '', EXTRA_NAME[kind]));
+        return lab;
+      });
+      wrap.prepend(...extraOpts);
       wrap.prepend(opt);
     }
     {
@@ -356,6 +422,7 @@
     extrasMsg.textContent = '';
     try {
       paintExtras(await api('/group-extras', body));
+      dispatchEvent(new CustomEvent('group-extras-changed'));
       if (done) extrasMsg.textContent = done;
     } catch (e) {
       extrasMsg.textContent = e.message;
@@ -797,6 +864,8 @@
 <div class="bm-chips" id="batchChips">
   <label class="bm-chip"><input type="checkbox" id="batchPoster" checked><span>Poster</span></label>
   <label class="bm-chip"><input type="checkbox" id="batchFollowUp"><span>Follow-up</span></label>
+  <label class="bm-chip"><input type="checkbox" id="batchPdf"><span>PDF</span></label>
+  <label class="bm-chip"><input type="checkbox" id="batchVideo"><span>Video</span></label>
   <label class="bm-chip"><input type="checkbox" id="batchIncl"><span>Include contacted</span></label>
   <label class="bm-chip"><input type="checkbox" id="batchRandom"><span>Vary gap</span></label>
 </div>
@@ -925,6 +994,7 @@
         ' people are still waiting; the ones already sent will be skipped.';
     customGap = false;
     el('batchFollowUp').checked = followUpOn;
+    paintDmExtras();
     el('batchPoster').checked = el('donorRowPoster') ? el('donorRowPoster').checked : true;
     setGap(Math.max(5, Math.min(600, Number(el('donorGap').value) || 240)));
     el('batchIncl').checked = false;
@@ -990,6 +1060,14 @@
     paintAudience();
   };
   el('batchFollowUp').onchange = () => setFollowUp(el('batchFollowUp').checked);
+  el('batchPdf').onchange = () => {
+    if (editingJob) return; // editing a running batch: the tick is applied with Save, not remembered
+    setDmExtra('pdf', el('batchPdf').checked);
+  };
+  el('batchVideo').onchange = () => {
+    if (editingJob) return;
+    setDmExtra('video', el('batchVideo').checked);
+  };
   el('batchPoster').onchange = () => {
     /* One poster choice for the app: the switch here also sets the single-tap DM poster. */
     if (
@@ -1055,6 +1133,8 @@
       rests: pauses,
       skip_contacted: !el('batchIncl').checked,
       poster: el('batchPoster').checked,
+      pdf: el('batchPdf').checked,
+      video: el('batchVideo').checked,
     };
     if (el('batchRandom').checked) {
       const lo = Number(el('batchJMin').value) || 0,
@@ -1072,6 +1152,8 @@
             chunk: per,
             rests: pauses,
             poster: body.poster,
+            pdf: body.pdf,
+            video: body.video,
             jitter: body.jitter || null,
             follow_up: el('batchFollowUp').checked,
           },
@@ -1290,6 +1372,24 @@
     writeCase.type = 'button';
     writeCase.onclick = () => window.CaseWriter?.open();
     head.append(writeCase);
+    /* The same PDF / video ticks as the Donors bar and the DM batch: after each DM (poster + caption first). */
+    {
+      const box = make('div', 'bank-extras');
+      box.setAttribute('role', 'group');
+      box.setAttribute('aria-label', 'Also send after each DM');
+      box.append(make('span', 'bank-extras-label', 'Also send:'));
+      for (const kind of ['pdf', 'video']) {
+        const lab = make('label', 'bm-chip'),
+          b = make('input');
+        b.type = 'checkbox';
+        b.id = kind === 'pdf' ? 'msgPdf' : 'msgVideo';
+        b.checked = dmExtra[kind];
+        b.onchange = () => setDmExtra(kind, b.checked);
+        lab.append(b, make('span', '', EXTRA_NAME[kind]));
+        box.append(lab);
+      }
+      head.append(box);
+    }
     const grid = make('div', 'bank-workspace'),
       picker = make('nav', 'bank-picker'),
       actions = make('aside', 'bank-actions');
@@ -2297,6 +2397,7 @@
   }
   async function open() {
     loadVolunteers();
+    syncDmExtras();
     showSelectedTab();
     if (!page.open) page.showModal();
     Nav.go('donors/' + tab);
@@ -2357,7 +2458,11 @@
           request_id: requestId(),
           poster: singlePosterOn,
           ...(followUpOn ? { follow_up: true } : {}),
+          ...(dmExtra.pdf ? { pdf: true } : {}),
+          ...(dmExtra.video ? { video: true } : {}),
         });
+        if (result.extras && result.extras !== 'Sent')
+          notice('PDF / video: ' + result.extras + '. Check WhatsApp before resending.', true);
         if (result.follow_up && result.follow_up !== 'Sent')
           notice(
             'Follow-up ' + result.follow_up.toLowerCase() + '. Check WhatsApp before resending.',
@@ -3072,6 +3177,8 @@
         auto: want,
         follow_up: followUpOn,
         poster: el('donorRowPoster').checked,
+        pdf: dmExtra.pdf,
+        video: dmExtra.video,
       });
       autoOn = !!r.enabled;
       await poll();
@@ -3106,6 +3213,8 @@
       el('batchFresh').disabled = true;
       el('batchPoster').checked = job.poster !== false;
       el('batchFollowUp').checked = !!job.follow_up;
+      el('batchPdf').checked = !!job.pdf;
+      el('batchVideo').checked = !!job.video;
       el('batchEach').value = (job.rests || [job.rest_seconds || 1200])
         .map((x) => x / 60)
         .join(', ');

@@ -141,9 +141,11 @@ class CaseOwnership(unittest.TestCase):
         cases = app.donors().cases
         first = cases.view()["current"]
         group_extras.add(store, "pdf", url(PDF, "application/pdf"), "old.pdf")
-        cases.new("Another child", 12000)
-        self.assertEqual(group_extras.to_send(store), [])
-        cases.switch(first)
+        # Another test may have left a batch marked running; this test is about who owns the files, not batches.
+        with patch.object(cases, "_busy", lambda: None):
+            cases.new("Another child", 12000)
+            self.assertEqual(group_extras.to_send(store), [])
+            cases.switch(first)
         self.assertEqual(group_extras.view(store)["pdf"]["name"], "old.pdf")
 
 

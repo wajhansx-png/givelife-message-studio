@@ -319,6 +319,8 @@ def custom_recipient(body):
 def send_custom(body):
     check_hold()
     jid, is_group = custom_recipient(body)
+    if body.get("kind") == "dm_extra":
+        return send_dm_extra(jid, is_group, body.get("extra"))
     message = body.get("message", "")
     if not is_group and body.get("kind") == "donor_thanks":
         hub = donors()
@@ -1041,6 +1043,33 @@ def send_batch_attachment(jid, caption, ident):
             }
     finally:
         cap.unlink(missing_ok=True)
+
+
+def dm_extras_check(pdf, video):
+    """A ticked PDF / video must exist: say so plainly instead of silently sending without it."""
+    import group_extras
+
+    for flag, kind in ((pdf, "pdf"), (video, "video")):
+        if flag is True and not group_extras.saved(STORE, kind):
+            raise ValueError(
+                f"No {group_extras.LABEL[kind]} is saved yet. Add it in Poster → Sent after the poster in groups."
+            )
+
+
+def send_dm_extra(jid, is_group, kind):
+    """One DM attachment (the case's PDF or video, saved in the Poster dialog). DMs only; never for a closed case."""
+    import group_extras
+
+    if is_group or kind not in group_extras.KINDS:
+        raise ValueError("Choose the PDF or the video for a DM.")
+    if read_left() <= 0:
+        raise ValueError("Not sent: the case is complete (Rs. 0 left).")
+    ident = group_extras.saved(STORE, kind)
+    if not ident:
+        raise ValueError(
+            f"No {group_extras.LABEL[kind]} is saved yet. Add it in Poster → Sent after the poster in groups."
+        )
+    return send_batch_attachment(jid, "", ident)
 
 
 def send_group_extras(jid):
@@ -6219,12 +6248,15 @@ class Handler(BaseHTTPRequestHandler):
                 if self.path == "/donors":
                     return self.reply(donors().mutate(body))
                 if self.path == "/donor-send":
+                    dm_extras_check(body.get("pdf"), body.get("video"))
                     return self.reply(
                         donors().send_one(
                             body.get("id"),
                             body.get("request_id"),
                             poster=body.get("poster", True),
                             follow_up=body.get("follow_up") is True,
+                            pdf=body.get("pdf") is True,
+                            video=body.get("video") is True,
                         )
                     )
                 if self.path == "/donor-messages":
@@ -6247,19 +6279,32 @@ class Handler(BaseHTTPRequestHandler):
                 if body.get("toggle"):
                     return self.reply(donors().toggle())
                 if type(body.get("auto")) is bool:
+                    if body["auto"]:
+                        dm_extras_check(body.get("pdf"), body.get("video"))
                     return self.reply(
                         donors().auto.set(
                             body["auto"],
                             body.get("follow_up") is True,
                             body.get("poster") is not False,
+                            body.get("pdf") is True,
+                            body.get("video") is True,
                         )
                     )
                 if isinstance(body.get("auto_options"), dict):
                     opts = body["auto_options"]
+                    dm_extras_check(opts.get("pdf"), opts.get("video"))
                     return self.reply(
-                        donors().auto.set_options(opts.get("follow_up"), opts.get("poster"))
+                        donors().auto.set_options(
+                            opts.get("follow_up"),
+                            opts.get("poster"),
+                            opts.get("pdf"),
+                            opts.get("video"),
+                        )
                     )
                 if body.get("configure"):
+                    settings = body.get("settings")
+                    if isinstance(settings, dict):
+                        dm_extras_check(settings.get("pdf"), settings.get("video"))
                     return self.reply(
                         donors().configure_job(body["configure"], body.get("settings"))
                     )
@@ -6273,6 +6318,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(donors().resume_all())
                 if CAMPAIGN.get("running"):
                     raise ValueError("Another DM campaign is running. Stop it first.")
+                dm_extras_check(body.get("pdf"), body.get("video"))
                 return self.reply(
                     donors().start_batch(
                         **{
@@ -6293,6 +6339,8 @@ class Handler(BaseHTTPRequestHandler):
                                 "jitter",
                                 "skip_contacted",
                                 "follow_up",
+                                "pdf",
+                                "video",
                             )
                         }
                     )

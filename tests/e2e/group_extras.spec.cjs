@@ -88,3 +88,64 @@ for (const width of [320, 390, 1440])
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   });
+
+/* The same two options live on the Message page under the group buttons: add them there, tick which ones go. */
+async function openMessage(page, width = 390) {
+  await page.setViewportSize({ width, height: width >= 900 ? 900 : 760 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new');
+  await expect(page.locator('#ui2Extras')).toBeVisible();
+}
+
+test('Message page: Also send PDF / Video, both off and not addable-to-send until a file is added', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
+  await api(port, '/group-extras', { action: 'remove', kind: 'video' });
+  await openMessage(page);
+  await expect(page.locator('.ui2-extras-label')).toHaveText('Also send:');
+  for (const kind of ['pdf', 'video']) {
+    await expect(page.locator(`#ui2X-${kind}`)).toBeDisabled();
+    await expect(page.locator(`.ui2-xi[data-kind="${kind}"] small`)).toHaveText('none added');
+    await expect(page.locator(`.ui2-xi[data-kind="${kind}"] .ui2-xi-add`)).toContainText('Add');
+  }
+});
+
+test('Message page: add a PDF and a video there, tick which ones go (both, one, none)', async ({ page }) => {
+  await openMessage(page);
+  await page.locator('#ui2XFile-pdf').setInputFiles({ name: 'case-report.pdf', mimeType: 'application/pdf', buffer: PDF });
+  await expect(page.locator('#ui2X-pdf')).toBeChecked(); // a new file starts ticked: it goes
+  await expect(page.locator('.ui2-xi[data-kind="pdf"] small')).toContainText('case-report.pdf');
+  await page.locator('#ui2XFile-video').setInputFiles({ name: 'oxygen.mp4', mimeType: 'video/mp4', buffer: MP4 });
+  await expect(page.locator('#ui2X-video')).toBeChecked();
+  let v = await api(port, '/group-extras');
+  expect([v.pdf.on, v.video.on]).toEqual([true, true]); // both go
+  await page.locator('#ui2X-pdf').uncheck();
+  await expect(page.locator('#ui2X-pdf')).not.toBeChecked();
+  v = await api(port, '/group-extras');
+  expect([v.pdf.has, v.pdf.on, v.video.on]).toEqual([true, false, true]); // only the video goes; the PDF stays saved
+  await page.locator('#ui2X-video').uncheck();
+  v = await api(port, '/group-extras');
+  expect([v.pdf.on, v.video.on]).toEqual([false, false]); // none go
+  await page.locator('#ui2X-pdf').check(); // back to one
+  await page.reload();
+  await expect(page.locator('#ui2X-pdf')).toBeChecked(); // remembered by the server, not the browser
+  await expect(page.locator('#ui2X-video')).not.toBeChecked();
+});
+
+test('Message page: a wrong file says why and changes nothing', async ({ page }) => {
+  await openMessage(page);
+  await page.locator('#ui2XFile-pdf').setInputFiles({ name: 'clip.mp4', mimeType: 'video/mp4', buffer: MP4 });
+  await expect(page.locator('.ui2-extras-msg')).toContainText('Choose a PDF');
+  await expect(page.locator('.ui2-xi[data-kind="pdf"] small')).toContainText('case-report.pdf');
+});
+
+for (const width of [320, 390, 1440])
+  test(`Message page: the PDF / Video row fits at ${width}px with 44px targets`, async ({ page }) => {
+    await openMessage(page, width);
+    for (const sel of ['.ui2-xi[data-kind="pdf"]', '.ui2-xi[data-kind="video"]']) {
+      const b = await page.locator(sel).boundingBox();
+      expect(b.height, sel).toBeGreaterThanOrEqual(43);
+      expect(b.x, sel).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.width, sel).toBeLessThanOrEqual(width + 0.5);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  });

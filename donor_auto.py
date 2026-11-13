@@ -68,12 +68,17 @@ class DonorAuto:
         }
 
     # ------------------------------------------------------------------ switch
-    def set(self, enabled, follow_up=False, poster=True):
+    def set(self, enabled, follow_up=False, poster=True, pdf=False, video=False):
         with self.lock:
             if not enabled:
                 return self._off()
-            if type(poster) is not bool or type(follow_up) is not bool:
-                raise ValueError("Poster and follow-up must be on or off.")
+            if (
+                type(poster) is not bool
+                or type(follow_up) is not bool
+                or type(pdf) is not bool
+                or type(video) is not bool
+            ):
+                raise ValueError("Poster, follow-up, PDF and video must be on or off.")
             if self._state().get("enabled"):
                 return self.status()  # already on: never starts a second batch
             if self.busy():
@@ -111,6 +116,8 @@ class DonorAuto:
                         skip_contacted=True,
                         poster=poster,
                         follow_up=follow_text,
+                        pdf=pdf,
+                        video=video,
                         hold_until=hold if hold > self.clock() else None,
                         origin=ORIGIN,
                         request_id="auto-toggle-" + format(int(self.clock() * 1000), "x"),
@@ -139,8 +146,8 @@ class DonorAuto:
     def disable(self, note, finished=False):
         self._save(enabled=False, finished=finished, note=note)
 
-    def set_options(self, follow_up=None, poster=None):
-        """Change follow-up / poster for the running Auto batch; applies to the next sends only."""
+    def set_options(self, follow_up=None, poster=None, pdf=None, video=None):
+        """Change follow-up / poster / PDF / video for the running Auto batch; applies to the next sends only."""
         with self.lock:
             state = self._state()
             if not state.get("enabled"):
@@ -154,6 +161,11 @@ class DonorAuto:
                 if type(follow_up) is not bool:
                     raise ValueError("Follow-up must be on or off.")
                 settings["follow_up"] = self.follow_for(follow_up)
+            for name, flag in (("pdf", pdf), ("video", video)):
+                if flag is not None:
+                    if type(flag) is not bool:
+                        raise ValueError("PDF and video must be on or off.")
+                    settings[name] = flag
             job = self._mine(state.get("started_at", 0))
             if not settings or not job or self.jobs.active != job.get("id"):
                 return {"applied": False}

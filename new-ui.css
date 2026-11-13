@@ -1563,7 +1563,7 @@
   gap: 8px !important;
   align-items: stretch;
 }
-.UI2 #messageFocus .ui2-reader-dock > :is(#focusTest, #focusEdit, #focusBack),
+.UI2 #messageFocus .ui2-reader-dock > :is(#focusTest, #focusCopy, #focusEdit, #focusBack),
 .UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > summary {
   display: flex !important;
   align-items: center;
@@ -1576,6 +1576,11 @@
   font-size: 15px !important;
   font-weight: 800 !important;
   list-style: none;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusCopy {
+  border: 0 !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
 }
 .UI2 #messageFocus .ui2-reader-dock > #focusTest {
   /* Test sends to the Test group only: an outline, so it never looks like Send */
@@ -1696,12 +1701,18 @@
     font-size: 11px;
     opacity: 0.75;
   }
+  .UI2 #messageFocus .ui2-reader-dock > #focusCopy::after {
+    content: ' C';
+    margin-left: 4px;
+    font-size: 11px;
+    opacity: 0.75;
+  }
 }
 .UI2 #messageFocus .ui2-reader-dock > * {
   grid-column: auto !important;
   grid-row: 1 !important;
 }
-.UI2 #messageFocus .ui2-reader-dock > #focusTest {
+.UI2 #messageFocus .ui2-reader-dock > :is(#focusTest, #focusCopy) {
   order: 1 !important;
 }
 .UI2 #messageFocus .ui2-reader-dock > #focusEdit {
@@ -6021,17 +6032,9 @@
   }
 }
 
-/* Copy now lives inside More (the bottom row has Test): a calm menu button like the others there. */
-.UI2 #messageFocus .ui2-reader-dock .focus-rail-more #focusCopy {
+/* Inside More (the bottom row has Test for a group message, Copy for a DM): a calm menu button like the others. */
+.UI2 #messageFocus .ui2-reader-dock .focus-rail-more :is(#focusCopy, #focusTest) {
   border: 1px solid var(--line2) !important;
   background: var(--surface) !important;
   color: var(--ink) !important;
-}
-/* Msgs on a phone: Test sits in the bottom row where Copy was (an outline: it never looks like Send). */
-@media (max-width: 899px) {
-  .UI2 #donorMessages .bank-actions > button.tool.bank-test.bank-test.bank-test:not(.ui2-bank-back) {
-    border: 2px solid #9670ff !important;
-    background: transparent !important;
-    color: #e1d2ff !important;
-  }
 }

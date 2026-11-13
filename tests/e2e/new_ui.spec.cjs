@@ -1020,3 +1020,35 @@ test('/new More: the old "New case from zero" choice opens the same form, not th
   await expect(page.locator('#ui2NewCase')).toBeVisible();
   expect(dialogs).toBe(0);
 });
+
+for (const width of [320, 360, 390, 430])
+  test(`/new Later panel at ${width}px: timers are real buttons, one line per group, nothing off-screen`, async ({
+    page,
+  }) => {
+    await open(page, '/new', width, 709);
+    await page.locator('#ui2Later').click();
+    const panel = page.locator('#ui2LaterPanel');
+    await expect(panel).toBeVisible();
+    const lines = await panel.locator('.ui2-later-line').count();
+    expect(lines).toBeGreaterThanOrEqual(2);
+    for (let i = 0; i < lines; i++) {
+      const pills = panel.locator('.ui2-later-line').nth(i).locator('.delay-pill');
+      expect(await pills.count()).toBeGreaterThanOrEqual(4);
+      const boxes = await pills.evaluateAll((l) =>
+        l.map((n) => {
+          const r = n.getBoundingClientRect();
+          return { x: r.x, y: Math.round(r.y), w: r.width, h: r.height };
+        }),
+      );
+      expect(new Set(boxes.map((b) => b.y)).size).toBe(1); // the timers share one line
+      for (const b of boxes) {
+        expect(b.w).toBeGreaterThanOrEqual(38); // was 16-31px wide
+        expect(b.h).toBeGreaterThanOrEqual(44);
+        expect(b.x).toBeGreaterThanOrEqual(0);
+        expect(b.x + b.w).toBeLessThanOrEqual(width + 0.5);
+      }
+    }
+    const pb = await panel.boundingBox();
+    expect(pb.height).toBeLessThan(135); // two lines, not two stacked blocks
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  });

@@ -759,11 +759,12 @@ const ui2Frame = (fn) => {
       ['ur', 'Urdu + English', 'Write a new message: Urdu + English'],
       ['en', 'English', 'Write a new message: English'],
       ['trigger', 'Trigger', 'Stronger message in the language you picked. Press again to turn it off.'],
+      ['fix', 'Style fix', 'Same words in your style: bold and italic lines, and anything missing added. Nothing new is written.'],
     ]) {
       const b = mk('button', '', label);
       b.type = 'button';
       b.dataset.style = key;
-      b.setAttribute('aria-pressed', 'false');
+      if (key !== 'fix') b.setAttribute('aria-pressed', 'false'); /* Style fix is an action, not a choice */
       b.title = hint;
       b.addEventListener('click', () => {
         Nav.go('preview');
@@ -771,9 +772,11 @@ const ui2Frame = (fn) => {
           () =>
             document
               .querySelector(
-                key === 'trigger'
-                  ? '.focus-styles [data-trigger]'
-                  : `.focus-styles [data-lang="${key}"]`,
+                key === 'fix'
+                  ? '#focusStyleFix'
+                  : key === 'trigger'
+                    ? '.focus-styles [data-trigger]'
+                    : `.focus-styles [data-lang="${key}"]`,
               )
               ?.click(),
           250,
@@ -785,10 +788,11 @@ const ui2Frame = (fn) => {
     addEventListener('message-style-state', (e) => {
       const { lang, trigger } = e.detail || {};
       for (const b of styles.children)
-        b.setAttribute(
-          'aria-pressed',
-          String(b.dataset.style === 'trigger' ? !!lang && trigger : b.dataset.style === lang),
-        );
+        if (b.dataset.style !== 'fix')
+          b.setAttribute(
+            'aria-pressed',
+            String(b.dataset.style === 'trigger' ? !!lang && trigger : b.dataset.style === lang),
+          );
     });
     tools.after(styles);
     const poster = $('previewChangePoster');

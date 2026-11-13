@@ -3372,6 +3372,24 @@ def message_style(body):
         MSTYLE_LOCK.release()
 
 
+def style_fix_message(body):
+    """Style fix: the same words in the owner's structure (bold, italic, amount, help line, payment). Nothing is
+    saved or sent here; the editor shows the result as an unsaved draft."""
+    import style_fix
+
+    text = body.get("text")
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("There is no message to fix. Write or open a message first.")
+    if len(text) > 12000:
+        raise ValueError("The message is too long to fix (12,000 characters at most).")
+    try:
+        left = int(read_left())
+    except (OSError, ValueError, TypeError):
+        left = None
+    saved = (get_message("group")["text"], get_message("dm")["text"])
+    return style_fix.fix(text, left=left, saved=saved)
+
+
 def plan_view():
     plan, left = plan_get(), read_left()
     checks = {}
@@ -6324,6 +6342,11 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("Choose save, generate or use.")
             except RuntimeError as e:
                 return self.reply({"error": str(e)}, status=503)
+            except ValueError as e:
+                return self.reply({"error": str(e)}, status=400)
+        if self.path == "/style-fix":
+            try:
+                return self.reply(style_fix_message(body))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
         if self.path == "/message-style":

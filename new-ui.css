@@ -5930,6 +5930,18 @@
 .UI2 .ui2-rx-add[hidden] {
   display: none;
 }
+/* Uploading: the bar fills behind the chip as the bytes go up (--p), the word shows the percentage. */
+.UI2 .ui2-rx-item[data-up='1'] {
+  background: linear-gradient(90deg, rgba(47, 111, 228, 0.55) var(--p, 0%), var(--surface2, #232838) var(--p, 0%));
+}
+.UI2 .ui2-rx-item[data-up='1'] .ui2-rx-chip {
+  opacity: 1;
+}
+.UI2 .ui2-rx-item[data-up='1'] .ui2-rx-add {
+  min-width: 3.4em;
+  justify-content: center;
+  color: #fff;
+}
 .UI2 .ui2-rx-msg {
   flex: 1 1 100%;
   margin: 0;

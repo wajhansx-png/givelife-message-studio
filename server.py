@@ -6083,6 +6083,31 @@ class Handler(BaseHTTPRequestHandler):
                     status=502,
                 )
 
+    def _group_extras_file(self):
+        """The case PDF or video sent as the raw file (not base64 inside JSON): lighter on a phone, and the page can
+        show a real upload percentage. The kind is in the X-Extra-Kind header, the file name in X-File-Name."""
+        import group_extras
+
+        kind = self.headers.get("X-Extra-Kind", "")
+        name = urllib.parse.unquote(self.headers.get("X-File-Name", ""))[:200]
+        try:
+            if kind not in group_extras.KINDS:
+                raise ValueError("Choose PDF or Video.")
+            length = int(self.headers.get("Content-Length", 0))
+            if not 0 < length <= 15_000_000:
+                raise ValueError("Choose a file under 15 MB.")
+            raw = self.rfile.read(length)  # always read it all, so a refusal still reaches the page
+            sent = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+            if sent in group_extras.MIME.values() and sent != group_extras.MIME[kind]:
+                raise ValueError(
+                    "Choose a PDF file." if kind == "pdf" else "Choose an MP4 video (it must be MP4)."
+                )
+            # the real file type is checked from its first bytes when it is saved
+            data_url = "data:" + group_extras.MIME[kind] + ";base64," + base64.b64encode(raw).decode()
+            return self.reply(group_extras.add(STORE, kind, data_url, name))
+        except ValueError as e:
+            return self.reply({"error": str(e)[:300]}, status=400)
+
     def _post(self):
         global ACTIVE, OWNER_REVISION
         if not self.authorized():
@@ -6116,6 +6141,8 @@ class Handler(BaseHTTPRequestHandler):
         same_origin = origin and urllib.parse.urlparse(origin).netloc == self.headers.get("Host")
         if origin and not same_origin and origin not in self.remote_config().get("origins", []):
             return self.reply({}, status=403)
+        if self.path == "/group-extras-file":
+            return self._group_extras_file()
         try:
             length = int(self.headers.get("Content-Length", 0))
             if not 0 < length <= (

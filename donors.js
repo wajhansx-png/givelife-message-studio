@@ -417,6 +417,7 @@
   extrasMsg.setAttribute('role', 'status');
   const paintExtras = (v) => {
     for (const [kind, r] of Object.entries(extraRows)) {
+      if (r.row.dataset.up) continue; // an upload is showing its own live percentage
       const x = (v && v[kind]) || {};
       r.small.textContent = x.has ? x.name + (x.kb ? ' · ' + (x.kb > 1024 ? (x.kb / 1024).toFixed(1) + ' MB' : x.kb + ' KB') : '') : 'Not added';
       r.add.firstChild.textContent = x.has ? 'Replace' : 'Add';
@@ -473,20 +474,52 @@
     file.onchange = async () => {
       const f = file.files[0];
       file.value = '';
-      if (!f) return;
+      if (!f || extrasBusy) return;
       if (f.size > 15_000_000) {
         extrasMsg.textContent = 'Choose a ' + label + ' under 15 MB.';
         return;
       }
-      extrasMsg.textContent = 'Saving the ' + label + '…';
-      const data = await new Promise((resolve, reject) => {
-        const fr = new FileReader();
-        fr.onload = () => resolve(String(fr.result));
-        fr.onerror = () => reject(Error('The file could not be read.'));
-        fr.readAsDataURL(f);
-      }).catch((e) => (extrasMsg.textContent = e.message));
-      if (typeof data !== 'string' || !data.startsWith('data:')) return;
-      await extrasCall({ action: 'add', kind, data, name: f.name }, label + ' saved. It goes out after the poster in group posts.');
+      extrasBusy = true;
+      extrasMsg.textContent = '';
+      row.dataset.up = '1';
+      row.setAttribute('aria-busy', 'true');
+      const mb = (n) => (n / 1048576).toFixed(1);
+      /* Live percentage: the bar fills behind the row, the line shows percent and megabytes. */
+      const show = (sent, total, phase) => {
+        const pct = total ? Math.min(99, Math.floor((sent / total) * 100)) : 0;
+        row.style.setProperty('--p', (phase === 'saving' ? 100 : pct) + '%');
+        small.textContent =
+          phase === 'saving'
+            ? 'Saving…'
+            : 'Uploading ' + pct + '% · ' + mb(sent) + ' of ' + mb(total) + ' MB';
+        extraRows[kind].add.firstChild.textContent = phase === 'saving' ? 'Saving' : pct + '%';
+      };
+      const done = () => {
+        row.removeAttribute('data-up'); // before painting, so the final answer is shown
+        row.removeAttribute('aria-busy');
+        row.style.removeProperty('--p');
+      };
+      try {
+        const saved = await uploadFile(
+          '/group-extras-file',
+          f,
+          { 'X-Extra-Kind': kind, 'X-File-Name': encodeURIComponent(f.name) },
+          show,
+        );
+        done();
+        paintExtras(saved);
+        dispatchEvent(new CustomEvent('group-extras-changed'));
+        extrasMsg.textContent = label + ' saved. It goes out after the poster in group posts.';
+      } catch (e) {
+        done();
+        extrasMsg.textContent = e.message;
+        try {
+          paintExtras(await api('/group-extras'));
+        } catch (x) {}
+      } finally {
+        extrasBusy = false;
+        done();
+      }
     };
     row.append(name, add, sw, rm, file);
     extrasBox.append(row);

@@ -1579,3 +1579,12 @@ html body #donorPasteDialog #pastePoster {
   margin: 0;
   accent-color: #2f6fe4;
 }
+
+/* Poster dialog, PDF / Video upload: the bar fills behind the row as the file goes up (--p). */
+.poster-extra[data-up='1'] {
+  background: linear-gradient(90deg, rgba(47, 111, 228, 0.4) var(--p, 0%), transparent var(--p, 0%));
+}
+.poster-extra[data-up='1'] .poster-extra-add {
+  min-width: 3.6em;
+  justify-content: center;
+}

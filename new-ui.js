@@ -1545,6 +1545,7 @@ document.addEventListener('click', (e) => {
     box.setAttribute('role', 'group');
     box.append(mk('span', 'ui2-rx-label', 'Also send:'));
     const items = {};
+    let uploading = false;
     const msg = mk('p', 'ui2-rx-msg', '');
     msg.setAttribute('role', 'status');
     for (const [kind, name, accept] of [
@@ -1572,26 +1573,38 @@ document.addEventListener('click', (e) => {
       file.addEventListener('change', async () => {
         const f = file.files[0];
         file.value = '';
-        if (!f) return;
+        if (!f || uploading) return;
         if (f.size > 15_000_000) return void (msg.textContent = 'Choose a ' + name + ' under 15 MB.');
-        msg.textContent = 'Saving the ' + name + '…';
-        const data = await new Promise((resolve) => {
-          const fr = new FileReader();
-          fr.onload = () => resolve(String(fr.result));
-          fr.onerror = () => resolve('');
-          fr.readAsDataURL(f);
-        });
-        if (!data.startsWith('data:')) return void (msg.textContent = 'The file could not be read.');
+        uploading = true;
+        msg.textContent = '';
+        const it = items[kind];
+        it.item.dataset.up = '1';
+        it.item.setAttribute('aria-busy', 'true');
+        for (const x of Object.values(items)) x.cb.disabled = true;
+        // Live percentage: the bar fills behind the word as the bytes go up; "Saving" while the server checks the file.
+        const show = (sent, total, phase) => {
+          const pct = total ? Math.min(99, Math.floor((sent / total) * 100)) : 0;
+          it.item.style.setProperty('--p', (phase === 'saving' ? 100 : pct) + '%');
+          it.add.textContent = phase === 'saving' ? 'Saving' : pct + '%';
+        };
         try {
-          const r = await post('/group-extras', { action: 'add', kind, data, name: f.name }),
-            d = await r.json().catch(() => ({}));
-          if (!r.ok) throw Error(d.error || 'Could not save that.');
-          msg.textContent = '';
+          const d = await uploadFile(
+            '/group-extras-file',
+            f,
+            { 'X-Extra-Kind': kind, 'X-File-Name': encodeURIComponent(f.name) },
+            show,
+          );
           take(d);
           dispatchEvent(new CustomEvent('group-extras-changed'));
         } catch (e) {
           msg.textContent = e.message;
           load();
+        } finally {
+          uploading = false;
+          it.item.removeAttribute('data-up');
+          it.item.removeAttribute('aria-busy');
+          it.item.style.removeProperty('--p');
+          paint();
         }
       });
       item.append(lab, add, file);
@@ -1625,10 +1638,10 @@ document.addEventListener('click', (e) => {
       for (const k of ['pdf', 'video']) {
         const it = items[k];
         // a group message can tick only what is attached; a DM tick is checked when ticked (a missing file is refused)
-        it.cb.disabled = !dm && !have[k];
+        it.cb.disabled = uploading || (!dm && !have[k]);
         it.item.dataset.off = have[k] ? '0' : '1';
         it.cb.checked = !!(have[k] && (dm ? dmOn[k] : groupOn[k]));
-        it.add.textContent = have[k] ? 'Change' : 'Add';
+        if (!it.item.dataset.up) it.add.textContent = have[k] ? 'Change' : 'Add';
         it.item.title = have[k] ? names[k] : '';
         it.file.hidden = dm; // DMs only tick: the files are attached on the group message
       }

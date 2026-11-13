@@ -353,3 +353,26 @@ test('Prepare case: edit, Save Base, Next, Test 3 versions and Looks right, all 
     (await api(port, '/donor-delivery')).state,
   );
 });
+
+test('GiveLife Group shows ON when the main page Auto is ON, and its switch turns that Auto OFF', async ({
+  page,
+}) => {
+  await api(port, '/autopilot', { on: false });
+  await api(port, '/cases', { action: 'new', name: 'Live mirror case', left: 30000 }); // an idle case (earlier tests finished theirs)
+  await open(page, 390, 740);
+  const row = page.locator('.cr-row[data-key="group"]');
+  const sw = row.locator('.cr-sw');
+  await expect(sw).toHaveAttribute('aria-checked', 'false');
+  await expect(row.locator('.cr-live-line')).toHaveCount(0);
+  // The owner switches Auto ON on the main page: the open Case page follows (it refreshes every few seconds).
+  await api(port, '/autopilot', { on: true });
+  await expect(sw).toHaveAttribute('aria-checked', 'true', { timeout: 8000 });
+  await expect(row.locator('.cr-live-line')).toContainText('main page');
+  // Other rows are not touched.
+  await expect(page.locator('.cr-row[data-key="top"] .cr-sw')).toHaveAttribute('aria-checked', 'false');
+  // Switching it OFF here switches the real Auto OFF (it overwrites).
+  await sw.click();
+  await expect(sw).toHaveAttribute('aria-checked', 'false');
+  await expect.poll(async () => (await api(port, '/autopilot')).on).toBe(false);
+  await expect(row.locator('.cr-live-line')).toHaveCount(0);
+});

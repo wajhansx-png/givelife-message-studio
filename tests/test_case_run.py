@@ -344,6 +344,63 @@ class OneRow(Base):
         self.assertEqual(self.state()["rows"]["top"]["state"], "paused")
 
 
+class LiveOutside(Base):
+    """Something already ON outside the case run (the main page's Auto, a batch from the Donors page) is shown as ON
+    on the Case page, and the Case page's switch turns that same thing OFF."""
+
+    def row(self, key):
+        return next(r for r in self.cr.view()["rows"] if r["key"] == key)
+
+    def test_main_page_auto_on_shows_the_group_row_on(self):
+        self.assertFalse(self.row("group")["live"])
+        app.set_auto(True)
+        self.assertTrue(self.row("group")["live"])  # idle case, Auto is on: no more "Off"
+        app.set_auto(False)
+        self.assertFalse(self.row("group")["live"])
+
+    def test_switching_the_group_row_off_turns_the_main_pages_auto_off(self):
+        app.set_auto(True)
+        out = self.cr.act({"action": "live_off", "key": "group"})
+        self.assertFalse(app.auto_on())
+        self.assertFalse(next(r for r in out["rows"] if r["key"] == "group")["live"])
+
+    def test_live_off_does_nothing_when_nothing_is_on(self):
+        self.assertFalse(app.auto_on())
+        self.cr.act({"action": "live_off", "key": "group"})
+        self.assertFalse(app.auto_on())
+
+    def test_a_donors_page_batch_shows_its_row_on_and_the_case_page_can_stop_it(self):
+        class Jobs:
+            active = "job1"
+            cancelled = 0
+
+            def status(self):
+                return {"state": "Sending", "scope": "top"}
+
+            def cancel(self):
+                self.cancelled += 1
+                self.active = None
+
+        fake = Jobs()
+        with patch.object(self.h, "jobs", fake):
+            self.assertTrue(self.row("top")["live"])
+            self.assertFalse(self.row("important")["live"])  # a different scope is not this row
+            self.assertFalse(self.row("group")["live"])
+            self.cr.act({"action": "live_off", "key": "top"})
+            self.assertEqual(fake.cancelled, 1)
+            self.assertFalse(self.row("top")["live"])
+
+    def test_the_case_runs_own_running_row_is_not_double_reported(self):
+        st = self.cr._read()
+        st["rows"]["group"] = {"state": "running"}
+        app.set_auto(True)
+        self.assertFalse(self.cr._live_outside(st, "group"))  # the case run itself is running it
+
+    def test_unknown_row_is_refused(self):
+        with self.assertRaises(ValueError):
+            self.cr.act({"action": "live_off", "key": "nope"})
+
+
 class Giki(Base):
     def giki_waiting(self):
         top, giki = self.people(1, 1)

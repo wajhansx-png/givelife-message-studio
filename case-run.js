@@ -298,10 +298,20 @@
     for (const r of data.rows) {
       const li = make('article', 'cr-li cr-row');
       li.dataset.key = r.key;
-      const on = (live && (r.state === 'running' || r.state === 'queued')) || asking === r.key;
+      /* r.live: already ON outside this case run (the main page's Auto, or a batch from the Donors page). */
+      const on =
+        (live && (r.state === 'running' || r.state === 'queued')) || asking === r.key || !!r.live;
       li.dataset.state = live ? r.state : 'idle';
       const name = make('button', 'cr-name', '');
       name.append(make('b', '', r.title));
+      if (r.live)
+        name.append(
+          make(
+            'small',
+            'cr-live-line',
+            r.key === 'group' ? 'On now · from the main page' : 'Sending now · from the Donors page',
+          ),
+        );
       if (r.note) name.append(make('small', 'cr-warn-line', r.note));
       name.onclick = () => rowSheet(r.key);
       name.setAttribute('aria-label', `${r.title}: messages and settings`);
@@ -357,6 +367,11 @@
     if (sw) sw.setAttribute('aria-checked', want ? 'true' : 'false'); // answer the tap at once
     try {
       const live = data.status === 'running' || data.status === 'paused';
+      if (!want && r.live) {
+        // It is on outside this case run: the same switch the main page / Donors page use, so this overwrites it.
+        take(await post({ action: 'live_off', key: r.key }));
+        return;
+      }
       if (!want && !live) return repaint();
       if (!live || r.state === 'off') asking = r.key;
       if (!live) {

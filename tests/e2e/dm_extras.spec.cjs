@@ -30,7 +30,7 @@ test('Msgs tab has Also send: PDF and Video, unticked at first', async ({ page }
 
 test('ticking one with nothing saved is refused with a plain reason and stays unticked', async ({ page }) => {
   await openMsgs(page);
-  await page.locator('#msgPdf').check({ force: true });
+  await page.locator('#msgPdf').click({ force: true });
   await expect(page.locator('#donorNotice')).toContainText('No PDF is saved yet');
   await expect(page.locator('#msgPdf')).not.toBeChecked();
 });
@@ -46,12 +46,12 @@ test('with both files saved: both, one, or none can be ticked, and the Donors ba
   await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: PDF, name: 'report.pdf' });
   await api(port, '/group-extras', { action: 'add', kind: 'video', data: MP4, name: 'clip.mp4' });
   await openMsgs(page);
-  await page.locator('#msgPdf').check({ force: true });
-  await page.locator('#msgVideo').check({ force: true });
+  await page.locator('#msgPdf').click({ force: true });
+  await page.locator('#msgVideo').click({ force: true });
   await expect(page.locator('#msgPdf')).toBeChecked();
   await expect(page.locator('#msgVideo')).toBeChecked();
   // the same two ticks live in the Donors bar (All tab) and in the DM batch picker
-  await page.evaluate(() => Nav.go('donors/all'));
+  await page.evaluate(() => { location.hash = '#/donors/all'; });
   await expect(page.locator('#donorPdf')).toBeChecked();
   await expect(page.locator('#donorVideo')).toBeChecked();
   await page.locator('#donorPace').evaluate((b) => b.click()); // opens the batch picker (the button can sit in a menu)
@@ -60,28 +60,30 @@ test('with both files saved: both, one, or none can be ticked, and the Donors ba
   await expect(page.locator('#batchPdf')).toBeChecked();
   await expect(page.locator('#batchVideo')).toBeChecked();
   // untick the PDF in the picker: only the video goes, and the Donors bar follows
-  await page.locator('#batchPdf').uncheck({ force: true });
+  await page.locator('#batchPdf').click({ force: true });
   await expect(page.locator('#batchPdf')).not.toBeChecked();
   await expect(page.locator('#batchVideo')).toBeChecked();
   await expect(page.locator('#donorPdf')).not.toBeChecked();
   await expect(page.locator('#donorVideo')).toBeChecked();
   await page.locator('#batchCancel').click();
-  expect(await page.evaluate(() => [localStorage.getItem('givelife-dm-pdf'), localStorage.getItem('givelife-dm-video')])).toEqual(['0', '1']);
+  await expect
+    .poll(() => page.evaluate(() => [localStorage.getItem('givelife-dm-pdf'), localStorage.getItem('givelife-dm-video')]))
+    .toEqual(['0', '1']);
   // survives a reload; the Msgs tab shows the same
-  await page.evaluate(() => Nav.go('donors/messages'));
+  await page.evaluate(() => { location.hash = '#/donors/messages'; });
   await expect(page.locator('#msgPdf')).toBeVisible(); // the tab has rendered (and remembered itself) before we reload
   await page.reload();
   await expect(page.locator('#msgPdf')).toBeVisible();
   await expect(page.locator('#msgPdf')).not.toBeChecked();
   await expect(page.locator('#msgVideo')).toBeChecked();
   // none
-  await page.locator('#msgVideo').uncheck({ force: true });
+  await page.locator('#msgVideo').click({ force: true });
   await expect(page.locator('#msgVideo')).not.toBeChecked();
 });
 
 test('removing a saved file unticks it the next time Donors opens (a new case starts with none)', async ({ page }) => {
   await openMsgs(page);
-  await page.locator('#msgPdf').check({ force: true });
+  await page.locator('#msgPdf').click({ force: true });
   await expect(page.locator('#msgPdf')).toBeChecked();
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
   await page.reload();

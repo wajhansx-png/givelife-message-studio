@@ -141,29 +141,34 @@
       };
       placeExpand();
       headMq.addEventListener('change', placeExpand);
-      const opt = make('label', 'donor-fu-opt'),
-        box = make('input');
-      box.type = 'checkbox';
-      box.id = 'donorFollowUp';
-      box.name = 'send_follow_up';
-      box.onchange = () => setFollowUp(box.checked);
+      /* One group (one spot above the list): follow-up, then PDF, then Video, side by side. */
+      const opt = make('div', 'donor-fu-opt');
       opt.id = 'donorFollowUpOpt';
-      opt.append(box, make('span', '', 'Send with follow-up'));
-      box.checked = followUpOn;
-      const extraOpts = ['pdf', 'video'].map((kind) => {
-        const lab = make('label', 'donor-fu-opt'),
+      const item = (id, name, text, title, on, onchange) => {
+        const lab = make('label', 'donor-fu-item'),
           b = make('input');
         b.type = 'checkbox';
-        b.id = kind === 'pdf' ? 'donorPdf' : 'donorVideo';
-        b.name = 'send_' + kind;
-        b.checked = dmExtra[kind];
-        b.onchange = () => setDmExtra(kind, b.checked);
-        lab.id = b.id + 'Opt';
-        lab.title = 'Also send the case ' + EXTRA_NAME[kind] + ' after each DM (poster and caption first)';
-        lab.append(b, make('span', '', EXTRA_NAME[kind]));
+        b.id = id;
+        b.name = name;
+        b.checked = on;
+        b.onchange = () => onchange(b.checked);
+        if (title) lab.title = title;
+        lab.append(b, make('span', '', text));
         return lab;
-      });
-      wrap.prepend(...extraOpts);
+      };
+      opt.append(
+        item('donorFollowUp', 'send_follow_up', 'Send with follow-up', '', followUpOn, setFollowUp),
+        ...['pdf', 'video'].map((kind) =>
+          item(
+            kind === 'pdf' ? 'donorPdf' : 'donorVideo',
+            'send_' + kind,
+            EXTRA_NAME[kind],
+            'Also send the case ' + EXTRA_NAME[kind] + ' after each DM (poster and caption first)',
+            dmExtra[kind],
+            (on) => setDmExtra(kind, on),
+          ),
+        ),
+      );
       wrap.prepend(opt);
     }
     {

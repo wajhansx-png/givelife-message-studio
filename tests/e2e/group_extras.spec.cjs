@@ -155,7 +155,7 @@ test('Reader: very narrow phones keep the old reader (the Message page row has t
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new');
   await page.waitForFunction(() => window.DonorHub);
-  await page.evaluate(() => Nav.go('preview'));
+  await page.evaluate(() => { location.hash = '#/preview'; });
   await expect(page.locator('#ui2ReaderExtras')).toBeHidden();
   await expect(page.locator('.ui2-reader-hint')).toBeVisible();
 });
@@ -167,7 +167,7 @@ async function openReader(page, view = 'group', width = 390) {
   await page.goto('/new');
   await page.waitForFunction(() => typeof setView === 'function' && window.DonorHub);
   if (view === 'dm') await page.evaluate(() => setView('dm'));
-  await page.evaluate(() => Nav.go('preview'));
+  await page.evaluate(() => { location.hash = '#/preview'; });
   await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
 }
 
@@ -205,7 +205,9 @@ test('Reader (DM message): its own ticks, remembered for DMs, group choice untou
   await expect(page.locator('#ui2Rx-pdf')).not.toBeChecked(); // DMs start unticked
   await page.locator('#ui2Rx-pdf').check();
   await expect(page.locator('#ui2Rx-pdf')).toBeChecked();
-  expect(await page.evaluate(() => [localStorage.getItem('givelife-dm-pdf'), localStorage.getItem('givelife-dm-video')])).toEqual(['1', null]);
+  await expect
+    .poll(() => page.evaluate(() => [localStorage.getItem('givelife-dm-pdf'), localStorage.getItem('givelife-dm-video')]))
+    .toEqual(['1', null]);
   const v = await api(port, '/group-extras');
   expect([v.pdf.on, v.video.on]).toEqual([true, true]); // the group ticks did not change
   await page.locator('#ui2Rx-pdf').uncheck();

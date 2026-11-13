@@ -6,7 +6,7 @@ test('Group opens editor; manual slots save and send from this screen', async ({
   await page.addInitScript(() =>
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
   );
-  await page.goto('/');
+  await page.goto('/old');
   await page.getByRole('button', { name: 'Group messages', exact: true }).click();
   await expect(page.locator('#messageFocus .group-send')).toBeVisible();
   await expect(page.locator('#focusFormatted')).not.toHaveText('');

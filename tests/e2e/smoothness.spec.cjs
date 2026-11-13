@@ -23,7 +23,7 @@ async function open(page, request, width = 1440, height = 900, stableChat = true
     localStorage.setItem('givelife-theme', 'dark');
   });
   await request.post('/__test/seed', { headers: auth, data: { reply } });
-  await page.goto('/');
+  await page.goto('/old');
   await expect(page.locator('#leftChip')).toContainText('25,000');
   await page.evaluate(() => document.fonts.ready);
 }
@@ -105,7 +105,7 @@ test('sending while reading old chat always reveals the new answer, even after a
 });
 test('refresh waits for unlock before restoring the requested tab', async ({ page, request }) => {
   await page.setViewportSize({ width: 390, height: 700 });
-  await page.goto('/#/donors/messages');
+  await page.goto('/old#/donors/messages');
   await expect(page.locator('#cloudLogin')).toBeVisible();
   await page.locator('#cloudKey').fill('manual-fix-preview-key');
   await page.locator('#cloudUnlock').click();

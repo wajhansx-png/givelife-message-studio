@@ -15,7 +15,7 @@ test('cloud HTML errors are readable and sends are not retried', async ({ page }
       body: '<!DOCTYPE html><title>Service unavailable</title>',
     });
   });
-  await page.goto('/');
+  await page.goto('/old');
   await expect(page.locator('#leftChip')).toContainText('25,000');
   await page.locator('.test-row').click();
   await expect(page.locator('#live')).toContainText('cloud is restarting');

@@ -12,7 +12,7 @@ for (const [width, height, largest] of [
     await page.addInitScript(() =>
       localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
     );
-    await page.goto('/#/donors/messages');
+    await page.goto('/old#/donors/messages');
     const preview = page.locator('.bank-detail .bank-preview');
     await expect(preview).toBeVisible();
     const metrics = () =>

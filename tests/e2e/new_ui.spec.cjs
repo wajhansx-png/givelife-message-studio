@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { startOwnServer, KEY } = require('./own_server.cjs');
 const { auditElements } = require('./element-audit.cjs');
 
-/* The redesign lives at /new only. "/" must stay exactly as it was. Fake WhatsApp only: nothing is sent. */
+/* The redesign is the main link ("/", also /new). The previous page is kept unchanged at /old. Fake WhatsApp only: nothing is sent. */
 const PORT = Number(process.env.GIVELIFE_TEST_PORT || 3011) + 204;
 let server;
 test.use({ baseURL: `http://127.0.0.1:${PORT}` });
@@ -25,13 +25,17 @@ const open = async (page, path, width, height) => {
   await page.goto(path);
 };
 
-test('the existing UI at "/" is untouched and /new is a separate path', async ({ request }) => {
-  const old = await (await request.get('/')).text();
+test('the main link "/" is the new design, /new is the same page, and the previous page is kept at /old', async ({ request }) => {
+  const old = await (await request.get('/old')).text();
   expect(old).not.toContain('new-ui.css');
   expect(old).not.toContain('ui2');
   const fresh = await (await request.get('/new')).text();
   expect(fresh).toContain('/new-ui.css');
   expect(fresh).toContain('class="nomsg ui2"');
+  const main = await (await request.get('/')).text();
+  expect(main).toBe(fresh); // the main link is the new design
+  expect((await request.get('/new/')).status()).toBe(200);
+  expect((await request.head('/')).status()).toBe(200);
   const css = await request.get('/new-ui.css');
   expect(css.status()).toBe(200);
   const text = await css.text();
@@ -368,8 +372,8 @@ test('/new Stop DMs is hidden while idle, and the existing page still has it', a
   await open(page, '/new#/donors/all', 1440);
   await expect(page.locator('#donorSendImportant')).toBeVisible();
   await expect(page.locator('#donorToggle')).toBeHidden();
-  const old = await (await request.get('/')).text();
-  expect(old).not.toContain('ui2');
+  const old = await (await request.get('/old')).text();
+  expect(old).not.toContain('ui2'); // the previous page is unchanged
 });
 
 test('/new phone: tapping the donated circle shows a tick, and tapping again clears it', async ({

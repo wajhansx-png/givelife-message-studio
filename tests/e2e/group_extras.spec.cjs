@@ -178,6 +178,53 @@ test('Reader (group message): attach a PDF and a video here, then tick which one
   await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).toHaveAttribute('title', 'case-report.pdf');
 });
 
+/* Live percentage: a slow connection (CDP-throttled upload) makes the steps visible. */
+async function slowUpload(page, kbps = 400) {
+  const client = await page.context().newCDPSession(page);
+  await client.send('Network.enable');
+  await client.send('Network.emulateNetworkConditions', { offline: false, latency: 20, downloadThroughput: -1, uploadThroughput: kbps * 1024 });
+}
+const BIG_PDF = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(1_300_000, 120)]);
+
+test('Reader: adding a PDF shows a live percentage that only rises, then Saving, then Change', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
+  await openReader(page);
+  await slowUpload(page);
+  await page.evaluate(() => {
+    window.__seen = [];
+    const el = document.querySelector('.ui2-rx-item[data-kind="pdf"] .ui2-rx-add');
+    new MutationObserver(() => window.__seen.push(el.textContent)).observe(el, { childList: true, characterData: true, subtree: true });
+  });
+  await page.locator('#ui2RxFile-pdf').setInputFiles({ name: 'big.pdf', mimeType: 'application/pdf', buffer: BIG_PDF });
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).toHaveAttribute('data-up', '1');
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"] .ui2-rx-add')).toHaveText('Change', { timeout: 40000 });
+  const seen = await page.evaluate(() => window.__seen);
+  const pcts = seen.filter((t) => /^\d+%$/.test(t)).map((t) => parseInt(t, 10));
+  expect(pcts.length, 'several live steps, not just the end: ' + seen.join(' ')).toBeGreaterThan(2);
+  expect(pcts).toEqual([...pcts].sort((a, b) => a - b));
+  expect(Math.max(...pcts)).toBeGreaterThan(50);
+  expect(seen).toContain('Saving');
+  await expect(page.locator('#ui2Rx-pdf')).toBeChecked();
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).not.toHaveAttribute('data-up', '1');
+});
+
+test('Poster dialog: adding a video shows percent and megabytes live', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'remove', kind: 'video' });
+  await openPoster(page);
+  await slowUpload(page);
+  await page.evaluate(() => {
+    window.__seen = [];
+    const el = document.querySelector('.poster-extra[data-kind="video"] small');
+    new MutationObserver(() => window.__seen.push(el.textContent)).observe(el, { childList: true, characterData: true, subtree: true });
+  });
+  const big = Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(1_300_000)]);
+  await page.locator('#posterExtraFile-video').setInputFiles({ name: 'big.mp4', mimeType: 'video/mp4', buffer: big });
+  await expect(row(page, 'video').locator('small')).toContainText('big.mp4', { timeout: 40000 });
+  const seen = await page.evaluate(() => window.__seen);
+  const live = seen.filter((t) => /^Uploading \d+% · [\d.]+ of 1\.2 MB$/.test(t));
+  expect(live.length, seen.join(' | ')).toBeGreaterThan(2);
+});
+
 test('Reader (DM message): no attach buttons; a tick with no file says to attach it on the group message', async ({ page }) => {
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
   await api(port, '/group-extras', { action: 'remove', kind: 'video' });

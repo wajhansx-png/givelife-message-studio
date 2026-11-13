@@ -16,7 +16,7 @@ for (const [width, height] of [
       if (r.method() === 'POST' && /\/cases/.test(r.url())) writes.push(r.postData());
     });
     page.on('dialog', (d) => d.dismiss());
-    await page.goto('/');
+    await page.goto('/old');
     await page.waitForTimeout(800);
     const more = page.locator('#mainNavMore > summary');
     const select = page.locator('#caseSelect');

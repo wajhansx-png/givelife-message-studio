@@ -11,7 +11,7 @@ for (const [width, height] of [
       localStorage.clear();
       localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key');
     });
-    await page.goto('/');
+    await page.goto('/old');
     await page.waitForTimeout(800);
     const openReply = async () => {
       await page.locator('#mainNavMore > summary').click();

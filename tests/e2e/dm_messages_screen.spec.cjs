@@ -31,7 +31,7 @@ for (const [width, height] of [
         };
       return route.fulfill({ response: res, json });
     });
-    await page.goto('/#/donors/messages');
+    await page.goto('/old#/donors/messages');
     await expect(page.locator('.bank-preview').first()).toBeVisible();
     await expect(page.locator('.donor-tabs')).toBeHidden();
     const status = page.locator('.bank-generation-state');

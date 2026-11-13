@@ -9,7 +9,7 @@ async function open(page, request, width = 1280, height = 800) {
     headers: auth,
     data: { reply: 'Ready.', reset_notes: true },
   });
-  await page.goto('/');
+  await page.goto('/old');
   /* Notes has its own button in the main navigation. */
   await page.locator('#donorNotesShortcut').click();
   await expect(page.locator('#foundationNotes')).toBeVisible();

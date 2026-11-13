@@ -7,7 +7,7 @@ for (const width of [1440, 390])
       await page.addInitScript(() =>
         localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
       );
-      await page.goto('/#/donors/all');
+      await page.goto('/old#/donors/all');
       // Start from a known state: an earlier test may have left DMs paused.
       await expect(page.locator('#donorToggle')).toBeVisible();
       if ((await page.locator('#donorToggle').innerText()).includes('Stop DMs'))

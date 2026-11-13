@@ -18,7 +18,7 @@ test('one dismissible outcome stays dismissed across refresh; next job appears',
     ],
   };
   await page.route('**/donor-delivery', (route) => route.fulfill({ json: job }));
-  await page.goto('/#/donors/all');
+  await page.goto('/old#/donors/all');
   await expect(page.locator('#donorNotice')).toContainText('Ali: This recipient opted out');
   await expect(page.locator('#donorProgress')).toBeVisible();
   await expect(page.locator('#donorProgress')).toContainText('0 of 1 sent');
@@ -53,7 +53,7 @@ test('a finished batch shows no "Batch complete" pop-up; the progress bar alread
   });
   const job = { id: 'done-ok', state: 'Complete', sent: 5, total: 5, skipped: 0, failed: 0 };
   await page.route('**/donor-delivery', (route) => route.fulfill({ json: job }));
-  await page.goto('/#/donors/all');
+  await page.goto('/old#/donors/all');
   await expect(page.locator('#donorProgress')).toContainText('5 of 5 sent');
   await page.waitForTimeout(1000);
   expect(await page.evaluate(() => window.__noticeTexts)).toEqual([]);

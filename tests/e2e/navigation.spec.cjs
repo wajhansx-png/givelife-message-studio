@@ -13,7 +13,7 @@ async function open(page, request, width, height, reply) {
     localStorage.setItem('givelife-theme', 'dark');
   });
   await request.post('/__test/seed', { headers: auth, data: { reply: reply || 'Ready.' } });
-  await page.goto('/');
+  await page.goto('/old');
   await expect(page.locator('#leftChip')).toContainText('25,000');
 }
 test('a refresh stays on the same Donors tab, and on Messages', async ({ page, request }) => {

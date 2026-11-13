@@ -46,6 +46,11 @@
     dmExtra.video = localStorage.getItem('givelife-dm-video') === '1';
   } catch (e) {}
   const EXTRA_NAME = { pdf: 'PDF', video: 'Video' };
+  /* The Msgs tab's PDF / Video ticks: under the message on a phone; in the heading row on a computer (a short
+     screen has no spare height under the message). The current render sets placeBankExtras. */
+  const bankExtrasWide = matchMedia('(min-width: 900px)');
+  let placeBankExtras = () => {};
+  bankExtrasWide.addEventListener('change', () => placeBankExtras());
   function paintDmExtras() {
     for (const [kind, ids] of [
       ['pdf', ['donorPdf', 'batchPdf', 'msgPdf']],
@@ -417,6 +422,7 @@
   extrasMsg.setAttribute('role', 'status');
   const paintExtras = (v) => {
     for (const [kind, r] of Object.entries(extraRows)) {
+      if (r.row.dataset.up) continue; // an upload is showing its own live percentage
       const x = (v && v[kind]) || {};
       r.small.textContent = x.has ? x.name + (x.kb ? ' · ' + (x.kb > 1024 ? (x.kb / 1024).toFixed(1) + ' MB' : x.kb + ' KB') : '') : 'Not added';
       r.add.firstChild.textContent = x.has ? 'Replace' : 'Add';
@@ -473,20 +479,52 @@
     file.onchange = async () => {
       const f = file.files[0];
       file.value = '';
-      if (!f) return;
+      if (!f || extrasBusy) return;
       if (f.size > 15_000_000) {
         extrasMsg.textContent = 'Choose a ' + label + ' under 15 MB.';
         return;
       }
-      extrasMsg.textContent = 'Saving the ' + label + '…';
-      const data = await new Promise((resolve, reject) => {
-        const fr = new FileReader();
-        fr.onload = () => resolve(String(fr.result));
-        fr.onerror = () => reject(Error('The file could not be read.'));
-        fr.readAsDataURL(f);
-      }).catch((e) => (extrasMsg.textContent = e.message));
-      if (typeof data !== 'string' || !data.startsWith('data:')) return;
-      await extrasCall({ action: 'add', kind, data, name: f.name }, label + ' saved. It goes out after the poster in group posts.');
+      extrasBusy = true;
+      extrasMsg.textContent = '';
+      row.dataset.up = '1';
+      row.setAttribute('aria-busy', 'true');
+      const mb = (n) => (n / 1048576).toFixed(1);
+      /* Live percentage: the bar fills behind the row, the line shows percent and megabytes. */
+      const show = (sent, total, phase) => {
+        const pct = total ? Math.min(99, Math.floor((sent / total) * 100)) : 0;
+        row.style.setProperty('--p', (phase === 'saving' ? 100 : pct) + '%');
+        small.textContent =
+          phase === 'saving'
+            ? 'Saving…'
+            : 'Uploading ' + pct + '% · ' + mb(sent) + ' of ' + mb(total) + ' MB';
+        extraRows[kind].add.firstChild.textContent = phase === 'saving' ? 'Saving' : pct + '%';
+      };
+      const done = () => {
+        row.removeAttribute('data-up'); // before painting, so the final answer is shown
+        row.removeAttribute('aria-busy');
+        row.style.removeProperty('--p');
+      };
+      try {
+        const saved = await uploadFile(
+          '/group-extras-file',
+          f,
+          { 'X-Extra-Kind': kind, 'X-File-Name': encodeURIComponent(f.name) },
+          show,
+        );
+        done();
+        paintExtras(saved);
+        dispatchEvent(new CustomEvent('group-extras-changed'));
+        extrasMsg.textContent = label + ' saved. It goes out after the poster in group posts.';
+      } catch (e) {
+        done();
+        extrasMsg.textContent = e.message;
+        try {
+          paintExtras(await api('/group-extras'));
+        } catch (x) {}
+      } finally {
+        extrasBusy = false;
+        done();
+      }
     };
     row.append(name, add, sw, rm, file);
     extrasBox.append(row);
@@ -1546,7 +1584,7 @@
       };
       actions.append(copy);
       card.append(title, preview, edit);
-      grid.append(card, extrasBox);
+      grid.append(card);
     }
     if (!item) {
       const empty = make('div', 'donor-empty bank-empty'),
@@ -1557,7 +1595,7 @@
         make('p', '', 'No saved messages yet. Add a base message, then generate versions.'),
         addBase,
       );
-      grid.append(empty, extrasBox);
+      grid.append(empty);
     }
     const nav = make('nav', 'bank-pagination');
     nav.setAttribute('aria-label', 'Message navigation');
@@ -1637,7 +1675,15 @@
         cardEl.append(arrow, gen);
       }
     }
+    placeBankExtras = () => {
+      if (!extrasBox.isConnected && !box.contains(grid)) return;
+      const card = grid.querySelector('.bank-detail');
+      if (bankExtrasWide.matches) head.append(extrasBox);
+      else if (card) card.after(extrasBox);
+      else grid.append(extrasBox);
+    };
     box.append(grid);
+    placeBankExtras();
     syncBankControls();
     if (typeof ResizeObserver !== 'undefined') {
       bankFitObserver?.disconnect();

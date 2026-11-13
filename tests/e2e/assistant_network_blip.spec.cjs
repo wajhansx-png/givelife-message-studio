@@ -10,7 +10,7 @@ async function open(page) {
   await page.route('**/wa-status', (r) =>
     r.fulfill({ json: { results: { is_connected: true, is_logged_in: true } } }),
   );
-  await page.goto('/');
+  await page.goto('/old');
   await expect(page.locator('#leftChip')).toContainText('25,000');
 }
 

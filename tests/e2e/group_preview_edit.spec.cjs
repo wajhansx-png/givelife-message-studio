@@ -14,7 +14,7 @@ for (const [width, height] of [
       }
       localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key');
     });
-    await page.goto('/#/preview');
+    await page.goto('/old#/preview');
     await expect(page.locator('#focusFormatted')).toBeVisible();
     const marker = ' EDIT' + width;
     await page.locator('#focusFormatted').dblclick();

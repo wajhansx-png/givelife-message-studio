@@ -18,7 +18,7 @@ for (const width of [1440, 390, 320])
         headers,
         data: { action: 'update', id: d.id, important: true },
       });
-    await page.goto('/#/donors/important');
+    await page.goto('/old#/donors/important');
     await expect(page.locator('#donorRows .donor-row')).toHaveCount(3);
     expect(await page.locator('#donorRows .donor-name').allTextContents()).toEqual(
       picked.map((d) => d.name),

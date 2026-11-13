@@ -33,7 +33,7 @@ for (const [width, height, versions] of [
       await route.fulfill({ response, json: data });
     });
     try {
-      await page.goto('/#/donors/messages');
+      await page.goto('/old#/donors/messages');
       const preview = page.locator('.bank-preview');
       await expect(preview).toContainText('Only 2 hours');
       await page.evaluate(() => document.fonts.ready);

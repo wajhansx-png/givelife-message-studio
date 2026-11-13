@@ -23,7 +23,7 @@ for (const [width, height] of [
         });
       return route.fulfill({ response: res, json });
     });
-    await page.goto('/#/donors/all');
+    await page.goto('/old#/donors/all');
     await expect(page.locator('.donor-row').first()).toBeVisible();
     const rows = await page.evaluate(() =>
       [...document.querySelectorAll('.donor-row')].slice(0, 6).map((r) => {
@@ -66,7 +66,7 @@ for (const [width, height] of [
     expect(fit).toBe(true);
     await page.keyboard.press('Escape');
     // Group preview: the whole message is visible without scrolling.
-    await page.goto('/#/preview');
+    await page.goto('/old#/preview');
     await expect(page.locator('#focusFormatted')).toBeVisible();
     await expect
       .poll(() =>
@@ -74,7 +74,7 @@ for (const [width, height] of [
       )
       .toBe(true);
     // DM Messages: same.
-    await page.goto('/#/donors/messages');
+    await page.goto('/old#/donors/messages');
     await expect(page.locator('.bank-preview').first()).toBeVisible();
     // A 568px-tall screen cannot show a long DM at a readable size: only enforce on taller phones.
     if (height >= 640)

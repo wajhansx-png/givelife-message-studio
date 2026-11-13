@@ -18,7 +18,7 @@ test.afterAll(async () => {
 async function openReport(page) {
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   page.on('dialog', (d) => d.accept());
-  await page.goto('/');
+  await page.goto('/old');
   await page.locator('.report-open').click();
   await expect(page.locator('.auto-card')).toHaveCount(5);
 }

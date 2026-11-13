@@ -892,7 +892,7 @@ const ui2Frame = (fn) => {
 })();
 
 /* 8. Message reader and editor (PDF pages 10-14).
-   One bottom row: Copy, Edit (Done while editing), ⋯ and Back; Save Base, Test and Next wording live inside ⋯.
+   One bottom row: Test (group message) or Copy (DM message), Edit (Done while editing), ⋯ and Back; the other one, Save Base and Next wording live inside ⋯.
    While editing, bold and italic show as bold and italic (no stars), with ONE small floating bar: B I ♥ Dua ×.
    The live editor writes WhatsApp text (*bold*, _italic_) back into the real box, so saving is unchanged. */
 (() => {
@@ -903,7 +903,7 @@ const ui2Frame = (fn) => {
     const more = screen?.querySelector('.focus-rail-more');
     if (!bar || !more || bar.dataset.ui2Row) return;
     const panel = more.querySelector(':scope > div');
-    for (const id of ['focusNext', 'focusTest', 'focusSave']) {
+    for (const id of ['focusNext', 'focusTest', 'focusCopy', 'focusSave']) {
       const b = $(id);
       if (b && panel) panel.prepend(b);
     }
@@ -917,7 +917,6 @@ const ui2Frame = (fn) => {
     }
     const sum = more.querySelector('summary');
     sum.textContent = 'More';
-    sum.setAttribute('aria-label', 'More: Save Base, Test, Next wording');
     for (const id of ['focusCopy', 'focusEdit']) if ($(id)) bar.append($(id));
     bar.append(more);
     if ($('focusBack')) bar.append($('focusBack'));
@@ -926,7 +925,26 @@ const ui2Frame = (fn) => {
     hint.textContent = 'Save Base · Test · Next wording live inside More';
     bar.after(hint);
     bar.dataset.ui2Row = '1';
+    dockKind();
   }
+  /* The bottom row's first button depends on the message: a GROUP message has Test (it goes to the Test group), a DM
+     message has Copy. The other one sits inside More, so nothing is lost. */
+  function dockKind() {
+    const screen = $('messageFocus');
+    const bar = screen?.querySelector('.ui2-reader-dock');
+    const panel = screen?.querySelector('.focus-rail-more > div');
+    if (!bar || !panel || !bar.dataset.ui2Row) return;
+    const dm = screen.dataset.kind === 'dm';
+    const first = $(dm ? 'focusCopy' : 'focusTest'),
+      inMore = $(dm ? 'focusTest' : 'focusCopy');
+    if (first && first.parentElement !== bar) bar.prepend(first);
+    if (inMore && inMore.parentElement !== panel) panel.prepend(inMore);
+    const label = dm ? 'More: Save Base, Test, Next wording' : 'More: Copy, Save Base, Next wording';
+    screen.querySelector('.focus-rail-more > summary')?.setAttribute('aria-label', label);
+    const hint = screen.querySelector('.ui2-reader-hint');
+    if (hint) hint.textContent = dm ? 'Save Base · Test · Next wording live inside More' : 'Copy · Save Base · Next wording live inside More';
+  }
+  addEventListener('reader-kind', dockKind);
 
   /* WhatsApp text <-> simple HTML for the live editor. */
   const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1545,6 +1563,7 @@ document.addEventListener('click', (e) => {
     box.setAttribute('role', 'group');
     box.append(mk('span', 'ui2-rx-label', 'Also send:'));
     const items = {};
+    let uploading = false;
     const msg = mk('p', 'ui2-rx-msg', '');
     msg.setAttribute('role', 'status');
     for (const [kind, name, accept] of [
@@ -1572,26 +1591,38 @@ document.addEventListener('click', (e) => {
       file.addEventListener('change', async () => {
         const f = file.files[0];
         file.value = '';
-        if (!f) return;
+        if (!f || uploading) return;
         if (f.size > 15_000_000) return void (msg.textContent = 'Choose a ' + name + ' under 15 MB.');
-        msg.textContent = 'Saving the ' + name + '…';
-        const data = await new Promise((resolve) => {
-          const fr = new FileReader();
-          fr.onload = () => resolve(String(fr.result));
-          fr.onerror = () => resolve('');
-          fr.readAsDataURL(f);
-        });
-        if (!data.startsWith('data:')) return void (msg.textContent = 'The file could not be read.');
+        uploading = true;
+        msg.textContent = '';
+        const it = items[kind];
+        it.item.dataset.up = '1';
+        it.item.setAttribute('aria-busy', 'true');
+        for (const x of Object.values(items)) x.cb.disabled = true;
+        // Live percentage: the bar fills behind the word as the bytes go up; "Saving" while the server checks the file.
+        const show = (sent, total, phase) => {
+          const pct = total ? Math.min(99, Math.floor((sent / total) * 100)) : 0;
+          it.item.style.setProperty('--p', (phase === 'saving' ? 100 : pct) + '%');
+          it.add.textContent = phase === 'saving' ? 'Saving' : pct + '%';
+        };
         try {
-          const r = await post('/group-extras', { action: 'add', kind, data, name: f.name }),
-            d = await r.json().catch(() => ({}));
-          if (!r.ok) throw Error(d.error || 'Could not save that.');
-          msg.textContent = '';
+          const d = await uploadFile(
+            '/group-extras-file',
+            f,
+            { 'X-Extra-Kind': kind, 'X-File-Name': encodeURIComponent(f.name) },
+            show,
+          );
           take(d);
           dispatchEvent(new CustomEvent('group-extras-changed'));
         } catch (e) {
           msg.textContent = e.message;
           load();
+        } finally {
+          uploading = false;
+          it.item.removeAttribute('data-up');
+          it.item.removeAttribute('aria-busy');
+          it.item.style.removeProperty('--p');
+          paint();
         }
       });
       item.append(lab, add, file);
@@ -1625,10 +1656,10 @@ document.addEventListener('click', (e) => {
       for (const k of ['pdf', 'video']) {
         const it = items[k];
         // a group message can tick only what is attached; a DM tick is checked when ticked (a missing file is refused)
-        it.cb.disabled = !dm && !have[k];
+        it.cb.disabled = uploading || (!dm && !have[k]);
         it.item.dataset.off = have[k] ? '0' : '1';
         it.cb.checked = !!(have[k] && (dm ? dmOn[k] : groupOn[k]));
-        it.add.textContent = have[k] ? 'Change' : 'Add';
+        if (!it.item.dataset.up) it.add.textContent = have[k] ? 'Change' : 'Add';
         it.item.title = have[k] ? names[k] : '';
         it.file.hidden = dm; // DMs only tick: the files are attached on the group message
       }

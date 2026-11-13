@@ -1563,7 +1563,7 @@
   gap: 8px !important;
   align-items: stretch;
 }
-.UI2 #messageFocus .ui2-reader-dock > :is(#focusCopy, #focusEdit, #focusBack),
+.UI2 #messageFocus .ui2-reader-dock > :is(#focusTest, #focusCopy, #focusEdit, #focusBack),
 .UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > summary {
   display: flex !important;
   align-items: center;
@@ -1581,6 +1581,12 @@
   border: 0 !important;
   background: #2f6fe4 !important;
   color: #fff !important;
+}
+.UI2 #messageFocus .ui2-reader-dock > #focusTest {
+  /* Test sends to the Test group only: an outline, so it never looks like Send */
+  border: 2px solid #9670ff !important;
+  background: transparent !important;
+  color: #e1d2ff !important;
 }
 .UI2 #messageFocus .ui2-reader-dock > #focusEdit {
   border: 0 !important;
@@ -1706,7 +1712,7 @@
   grid-column: auto !important;
   grid-row: 1 !important;
 }
-.UI2 #messageFocus .ui2-reader-dock > #focusCopy {
+.UI2 #messageFocus .ui2-reader-dock > :is(#focusTest, #focusCopy) {
   order: 1 !important;
 }
 .UI2 #messageFocus .ui2-reader-dock > #focusEdit {
@@ -5930,6 +5936,18 @@
 .UI2 .ui2-rx-add[hidden] {
   display: none;
 }
+/* Uploading: the bar fills behind the chip as the bytes go up (--p), the word shows the percentage. */
+.UI2 .ui2-rx-item[data-up='1'] {
+  background: linear-gradient(90deg, rgba(47, 111, 228, 0.55) var(--p, 0%), var(--surface2, #232838) var(--p, 0%));
+}
+.UI2 .ui2-rx-item[data-up='1'] .ui2-rx-chip {
+  opacity: 1;
+}
+.UI2 .ui2-rx-item[data-up='1'] .ui2-rx-add {
+  min-width: 3.4em;
+  justify-content: center;
+  color: #fff;
+}
 .UI2 .ui2-rx-msg {
   flex: 1 1 100%;
   margin: 0;
@@ -6012,4 +6030,11 @@
   .UI2 #messageFocus.ui2-has-rx .focus-workspace {
     max-height: max(150px, calc(100dvh - 304px));
   }
+}
+
+/* Inside More (the bottom row has Test for a group message, Copy for a DM): a calm menu button like the others. */
+.UI2 #messageFocus .ui2-reader-dock .focus-rail-more :is(#focusCopy, #focusTest) {
+  border: 1px solid var(--line2) !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
 }

@@ -18,6 +18,39 @@ const post = (url, body) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body || {}),
   });
+/* Upload one file as raw bytes (no base64, no JSON: lighter on a phone) with a live percentage.
+   onProgress(sent, total, phase): phase is 'sending' while bytes go up, then 'saving' while the server checks and
+   stores the file. Resolves with the server's JSON answer; rejects with a plain message. */
+async function uploadFile(url, file, headers, onProgress) {
+  try {
+    await fetch('/group-extras'); // the normal wrapper unlocks the studio first if the key is missing
+  } catch (e) {}
+  return new Promise((resolve, reject) => {
+    const key = localStorage.getItem('givelife-cloud-key') || '',
+      xhr = new XMLHttpRequest();
+    xhr.open('POST', (window.GIVELIFE_API || '') + url);
+    if (key) xhr.setRequestHeader('Authorization', 'Bearer ' + key);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    for (const [name, value] of Object.entries(headers || {})) xhr.setRequestHeader(name, value);
+    xhr.timeout = 300000;
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(e.loaded, e.total, 'sending');
+    };
+    xhr.upload.onload = () => onProgress(file.size, file.size, 'saving');
+    xhr.onload = () => {
+      let data = {};
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch (e) {}
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(Error(data.error || 'That did not work. Nothing was changed.'));
+    };
+    xhr.onerror = () => reject(Error('Could not reach the cloud. Check your internet and try again.'));
+    xhr.ontimeout = () => reject(Error('The upload took too long. Try again on a better connection.'));
+    onProgress(0, file.size, 'sending');
+    xhr.send(file);
+  });
+}
 /* Where you are lives in the address (#/donors/important). A refresh stays put and the phone's Back button steps out one screen. */
 const Nav = {
   rendering: false,

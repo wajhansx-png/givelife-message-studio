@@ -10,7 +10,7 @@ test.afterAll(() => server && server.kill());
 async function open(page, width = 390) {
   await page.setViewportSize({ width, height: 844 });
   await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
-  await page.goto('/#/donors/messages');
+  await page.goto('/old#/donors/messages');
   await page.getByRole('button', { name: 'Write Case', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Write Case', exact: true })).toBeVisible();
 }

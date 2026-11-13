@@ -23,7 +23,7 @@ for (const [width, height] of [
       }
       return route.continue();
     });
-    await page.goto('/#/donors/important');
+    await page.goto('/old#/donors/important');
     await expect(page.locator('.donor-row').first()).toBeVisible();
     await page.locator('#donorSendImportant').click();
     const modal = page.locator('#donorBatchPicker');

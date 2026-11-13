@@ -16,7 +16,7 @@ for (const width of [1440, 390])
           phone: '1555' + String(1230000 + i),
         },
       });
-    await page.goto('/#/donors/all');
+    await page.goto('/old#/donors/all');
     await expect(page.locator('#donorRows .donor-row')).toHaveCount(80);
     await page.locator('#donorTable').evaluate((el) => (el.scrollTop = 1600));
     const before = await page.locator('#donorTable').evaluate((el) => el.scrollTop);

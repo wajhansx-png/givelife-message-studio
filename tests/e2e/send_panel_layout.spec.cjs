@@ -9,7 +9,7 @@ async function openPanel(page, request, width, height) {
     headers: auth,
     data: { reply: 'The saved caption is ready.' },
   });
-  await page.goto('/');
+  await page.goto('/old');
   await expect(page.locator('#leftChip')).toContainText('25,000');
   await page.evaluate(() => document.fonts.ready);
 }

@@ -6,7 +6,7 @@ async function open(page, request) {
     headers: auth,
     data: { reply: 'GROUP message saved (poster + caption).\n\n' + caption },
   });
-  await page.goto('/');
+  await page.goto('/old');
   if (await page.getByLabel('Private access key', { exact: true }).isVisible()) {
     await page.getByLabel('Private access key', { exact: true }).fill('manual-fix-preview-key');
     await page.getByRole('button', { name: 'Unlock studio', exact: true }).click();

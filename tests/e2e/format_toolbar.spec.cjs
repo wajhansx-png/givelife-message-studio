@@ -8,7 +8,7 @@ async function openEditor(page, kind) {
   await page.addInitScript(() =>
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
   );
-  await page.goto('/');
+  await page.goto('/old');
   if (kind === 'dm') await showDm(page);
   await showPreview(page);
   await page.locator('#focusEdit').click();
@@ -146,7 +146,7 @@ test('the toolbar never opens outside the message editors', async ({ page }) => 
   await page.addInitScript(() =>
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
   );
-  await page.goto('/');
+  await page.goto('/old');
   await page.locator('#cmd').fill('some words in the chat box');
   await page.locator('#cmd').evaluate((t) => t.setSelectionRange(0, 4));
   await page.waitForTimeout(200);
@@ -162,7 +162,7 @@ for (const width of [1440, 390])
     await page.addInitScript(() =>
       localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
     );
-    await page.goto('/#/donors/all');
+    await page.goto('/old#/donors/all');
     await openDonorMessages(page);
     await page.getByRole('button', { name: 'Base message', exact: true }).click();
     const area = page.locator('#baseMessageText');

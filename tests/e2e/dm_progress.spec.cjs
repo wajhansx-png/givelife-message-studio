@@ -25,7 +25,7 @@ for (const width of [1440, 390])
       if (route.request().method() === 'GET') await route.fulfill({ json: job });
       else await route.continue();
     });
-    await page.goto('/#/donors/all');
+    await page.goto('/old#/donors/all');
     const progress = page.locator('#donorProgress');
     await expect(progress).toBeVisible();
     await expect(progress).toContainText('7 of 10 sent');

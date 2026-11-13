@@ -37,7 +37,8 @@ class H(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?")[0]
-        name = {"/": "index.html", "/dash": "tests/responsive_dashboard.html"}.get(
+        # "/" is the new design now (the real server builds it); the previous page is /old (index.html)
+        name = {"/old": "index.html", "/dash": "tests/responsive_dashboard.html"}.get(
             path, path.lstrip("/")
         )
         if name == "new-ui.css":

@@ -5,7 +5,7 @@ for (const width of [1440, 390])
     await page.addInitScript(() =>
       localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
     );
-    await page.goto('/#/donors/messages');
+    await page.goto('/old#/donors/messages');
     await expect(page.locator('#donorsPage')).toBeVisible();
     await expect(page.locator('#donorsPage')).toHaveAttribute('data-panel', 'messages');
     await expect(page.locator('.bank-workspace')).toBeVisible();

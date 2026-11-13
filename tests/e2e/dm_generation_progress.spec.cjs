@@ -40,7 +40,7 @@ for (const width of [1440, 390])
         },
       });
     });
-    await page.goto('/#/donors/messages');
+    await page.goto('/old#/donors/messages');
     await expect(
       page.getByRole('button', { name: 'Regenerate versions', exact: true }),
     ).toBeVisible();

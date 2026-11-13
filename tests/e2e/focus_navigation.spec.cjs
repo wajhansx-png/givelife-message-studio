@@ -6,7 +6,7 @@ for (const width of [1440, 390])
     await page.addInitScript(() =>
       localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
     );
-    await page.goto('/');
+    await page.goto('/old');
     await showPreview(page);
     await expect(page.locator('#messageFocus')).toBeVisible();
     await expect(page.locator('#focusFormatted')).not.toHaveText('');

@@ -40,7 +40,7 @@ for (const [width, height] of [
       posts.push(r.request().postDataJSON());
       return r.fulfill({ json: { reply: 'Stubbed: nothing was sent.' } });
     });
-    await page.goto('/#/donors/all');
+    await page.goto('/old#/donors/all');
     await expect(page.locator('.donor-row').first()).toBeVisible();
     for (const [tab, label, scope, free] of TABS) {
       await page.locator(`.donor-tabs [data-tab="${tab}"]`).click();

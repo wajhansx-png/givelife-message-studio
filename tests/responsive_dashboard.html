@@ -30,7 +30,7 @@
   <body>
     <header>
       <h1>Responsive workbench</h1>
-      <label>Version <select id="version"><option value="/">Normal</option><option value="/new/">New</option></select></label>
+      <label>Version <select id="version"><option value="/">Main (new design)</option><option value="/old">Old (saved page)</option><option value="/new/">/new (same as main)</option></select></label>
       <label>Screen <select id="route"></select></label>
       <label>Width <input id="w" type="range" min="260" max="1440" step="1" value="390" /> <b id="wv">390</b>px</label>
       <span id="presets"></span>
@@ -75,7 +75,7 @@
         $('version').disabled = true;
         const rows = {}, all = [];
         for (const [n, r, root] of ROUTES) {
-          if (r === 'case' && window.__sweepBase !== '/new/') { rows[n] = []; continue; } // "/" has no Case page
+          if (r === 'case' && window.__sweepBase === '/old') { rows[n] = []; continue; } // the old page has no Case page
           $('status').textContent = `checking ${n}…`;
           const found = [];
           for (let i = 0; i < WIDTHS.length; i += 4) found.push(...(await sweep([[r, root]], WIDTHS.slice(i, i + 4), 3500)));

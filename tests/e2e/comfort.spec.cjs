@@ -15,7 +15,7 @@ async function open(page, request, width = 1440, height = 900, theme = 'dark') {
         "I've updated the message. The saved caption is ready to review.\n\n*Rs. 25,000 left.* Your existing settings are unchanged.",
     },
   });
-  await page.goto('/');
+  await page.goto('/old');
   await expect(page.locator('#leftChip')).toContainText('25,000');
   await page.evaluate(() => document.fonts.ready);
 }
@@ -183,7 +183,7 @@ test('first use defaults to dark; light and device themes persist and update', a
   await page.addInitScript(() =>
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
   );
-  await page.goto('/');
+  await page.goto('/old');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await openSettings(page);
   await page.locator('#theme [data-t=light]').click();

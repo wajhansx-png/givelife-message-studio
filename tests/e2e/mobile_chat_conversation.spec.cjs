@@ -21,7 +21,7 @@ async function showChat(page, width, height) {
     localStorage.setItem('givelife-theme', 'dark');
   });
   await page.route('**/chat', (route) => route.fulfill({ json: { items: turns } }));
-  await page.goto('/');
+  await page.goto('/old');
   await expect(page.locator('#leftChip')).toContainText('25,000');
   await page.locator('#chatOpen').click();
   await expect(page.locator('#histLog .e.bot')).toHaveCount(3);
@@ -110,7 +110,7 @@ for (const [width, height] of [
           localStorage.setItem('givelife-theme', theme);
         }, theme);
         await page.route('**/chat', (route) => route.fulfill({ json: { items: turns } }));
-        await page.goto('/');
+        await page.goto('/old');
         await expect(page.locator('#chatOpen')).toBeVisible();
         await page.locator('#chatOpen').click();
         const colors = await page.evaluate(() => {

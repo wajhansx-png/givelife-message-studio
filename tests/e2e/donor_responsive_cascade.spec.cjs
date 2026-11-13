@@ -7,7 +7,7 @@ test.use({ baseURL: `http://127.0.0.1:${port}`, reducedMotion: 'reduce' });
 test.beforeAll(async () => (server = await startOwnServer(port)));
 test.afterAll(() => server && server.kill());
 
-for (const base of ['/', '/new']) {
+for (const base of ['/old', '/new']) {
   test(`responsive layer wins the existing donor cascade on ${base}`, async ({ page }) => {
     test.setTimeout(90000);
     await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);

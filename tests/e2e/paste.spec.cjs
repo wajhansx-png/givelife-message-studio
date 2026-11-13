@@ -8,7 +8,7 @@ test('pasted DM modal validates, deduplicates and starts the first personalized 
   await page.addInitScript(() =>
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
   );
-  await page.goto('/');
+  await page.goto('/old');
   await showDm(page);
   await page.getByRole('button', { name: 'Send to more donors', exact: true }).click();
   const modal = page.getByRole('dialog', { name: 'Bulk message', exact: true });
@@ -64,7 +64,7 @@ test('bulk PDF is uploaded privately and sent with exact personalized caption', 
   await page.addInitScript(() =>
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
   );
-  await page.goto('/#/donors/all');
+  await page.goto('/old#/donors/all');
   await page.locator('#donorNavMore summary').click();
   await page.locator('#donorBulk').click();
   await page.locator('#pastePeople').fill('03001112224, Ali');
@@ -96,11 +96,11 @@ for (const width of [1440, 390])
     await page.addInitScript(() =>
       localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
     );
-    await page.goto('/');
+    await page.goto('/old');
     await expect(page.locator('.brandbar #donorNotesShortcut')).toBeVisible();
     await page.locator('.brandbar #donorNotesShortcut').click();
     await expect(page.locator('#foundationNotes')).toBeVisible();
-    await page.goto('/#/donors/important');
+    await page.goto('/old#/donors/important');
     await page.locator('#donorSendImportant').click();
     const batch = page.locator('#donorBatchPicker');
     await expect(batch).toBeVisible();

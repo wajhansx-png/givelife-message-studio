@@ -13,7 +13,7 @@ async function openDonors(page, request, width, height) {
     localStorage.setItem('givelife-theme', 'dark');
   });
   await request.post('/__test/seed', { headers: AUTH, data: { reply: 'Ready.' } });
-  await page.goto('/');
+  await page.goto('/old');
   await page.locator('#openDonors').click();
   await expect(page.locator('.donor-row').first()).toBeVisible();
 }

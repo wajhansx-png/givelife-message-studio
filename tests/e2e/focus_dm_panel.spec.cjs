@@ -11,7 +11,7 @@ for (const width of [1440, 390])
       sent = route.request().postDataJSON();
       return route.fulfill({ json: { code: 'SUCCESS' } });
     });
-    await page.goto('/');
+    await page.goto('/old');
     await showDm(page);
     await showPreview(page);
     await expect(page.locator('#messageFocus .dm-send')).toBeVisible();

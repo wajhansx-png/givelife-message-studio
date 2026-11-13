@@ -4,7 +4,7 @@ const text =
   'Brother, please help this family.\n\nRs. 25,000 LEFT.\n\n03097458815 Easypaisa only, Wajdan Khan.';
 const regenerateControl = (page, base, width) =>
   page.locator(
-    base === '/'
+    base === '/old'
       ? '.bank-gen-icon'
       : width < 900
         ? '.ui2-bank-nav [data-ui2-proxy="#donorMessages .bank-gen-icon"]'
@@ -12,7 +12,7 @@ const regenerateControl = (page, base, width) =>
   );
 const nextControl = (page, base, width) =>
   page.locator(
-    base === '/'
+    base === '/old'
       ? '.bank-next-arrow'
       : width < 900
         ? '.ui2-bank-nav [data-ui2-proxy="#donorMessages .bank-next-arrow"]'
@@ -24,7 +24,7 @@ const items = [1, 2].map((number) => ({
   enabled: true,
 }));
 
-for (const base of ['/', '/new/']) {
+for (const base of ['/old', '/new/']) {
   for (const width of [390, 1440]) {
     test(`regeneration control remains disabled after changing versions ${base} ${width}`, async ({
       page,

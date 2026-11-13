@@ -11,7 +11,7 @@ test.afterAll(() => server && server.kill());
 
 async function open(page, kind) {
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
-  await page.goto('/');
+  await page.goto('/old');
   if (kind === 'dm') await showDm(page);
   await showPreview(page);
   await expect(page.locator('#focusFormatted')).not.toHaveText('');

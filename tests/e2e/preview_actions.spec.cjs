@@ -5,7 +5,7 @@ for (const width of [1440, 390])
     await page.addInitScript(() =>
       localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
     );
-    await page.goto('/#/preview');
+    await page.goto('/old#/preview');
     await expect(page.locator('#focusFormatted')).not.toHaveText('');
     await page.locator('#focusPoster').click();
     await expect(page.locator('#posterDialog')).toBeVisible();

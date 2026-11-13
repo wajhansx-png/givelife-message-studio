@@ -5529,7 +5529,8 @@ class Handler(BaseHTTPRequestHandler):
         return self.send_cached(hit, kind)
 
     def reply_new_ui(self):
-        """The same app on its own path (/new) with the redesign switched on. "/" is never touched."""
+        """The app with the new design switched on: the main link ("/") and its old path (/new). The previous design is
+        kept as /old (plain index.html), not linked anywhere."""
 
         def build():
             html = (ROOT / "index.html").read_text(encoding="utf-8")
@@ -5611,6 +5612,7 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         public_pages = {
             "/",
+            "/old",
             "/health",
             "/new",
             "/new/",
@@ -5710,8 +5712,12 @@ class Handler(BaseHTTPRequestHandler):
                 if name.endswith(".css")
                 else "application/javascript",
             )
-        if self.path.split("?")[0] in ("/new", "/new/"):
+        # The main link ("/") is the new design. "/new" and "/new/" stay as the same page (old bookmarks and home-screen
+        # shortcuts). The previous page is saved, unchanged and not linked anywhere, at "/old" (index.html).
+        if self.path.split("?")[0] in ("/", "/new", "/new/"):
             return self.reply_new_ui()
+        if self.path.split("?")[0] == "/old":
+            return self.reply_file("index.html", "text/html")
         if self.path.split("?")[0] == "/new/group-finder":
             return self.reply_new_group_finder()
         if self.path.split("?")[0] == "/new-ui.css":

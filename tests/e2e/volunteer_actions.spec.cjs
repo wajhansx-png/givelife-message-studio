@@ -16,7 +16,7 @@ for (const width of [1440, 1024, 768, 390, 320]) {
     });
     await page.setViewportSize({ width, height: 900 });
     await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
-    await page.goto('/#/donors/volunteers');
+    await page.goto('/old#/donors/volunteers');
     await expect(page.locator('.vol-heading')).toContainText('Volunteers');
     // The header band stays (so the tabs never move); the donor-only controls are not usable here.
     await expect(page.locator('.donor-head')).toBeVisible();
@@ -86,7 +86,7 @@ test('case and unsaved share text reach only the selected volunteer through fake
   const caseText = '*Current case*\n\nRs. 25,000 left.';
   await request.post('/__test/seed', { headers, data: { group: caseText } });
   await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
-  await page.goto('/#/donors/volunteers');
+  await page.goto('/old#/donors/volunteers');
   const events = async () =>
     (await (await request.get('/__test/events', { headers })).json()).events;
   await page.getByRole('button', { name: 'DM Case to Sara', exact: true }).click();
@@ -115,7 +115,7 @@ test('empty page, add volunteer and save a share message on a small phone', asyn
   }
   await page.setViewportSize({ width: 320, height: 700 });
   await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
-  await page.goto('/#/donors/volunteers');
+  await page.goto('/old#/donors/volunteers');
   await expect(page.getByText('No volunteers yet.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'DM all volunteers', exact: true })).toBeDisabled();
   await expect(page.locator('#volName')).toBeHidden();
@@ -149,7 +149,7 @@ test('delivery refresh keeps the message draft and caret without a poster checkb
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
-  await page.goto('/#/donors/volunteers');
+  await page.goto('/old#/donors/volunteers');
   await page.getByRole('button', { name: 'DM all volunteers', exact: true }).click();
   await page.getByLabel('Start sending', { exact: true }).selectOption('3600');
   await page.getByRole('button', { name: 'Schedule DMs', exact: true }).click();
@@ -185,7 +185,7 @@ test('long volunteer lists keep the message and dock reachable, with unclipped M
     });
   }
   await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
-  await page.goto('/#/donors/volunteers');
+  await page.goto('/old#/donors/volunteers');
   for (const width of [320, 768, 1440]) {
     await page.setViewportSize({ width, height: 700 });
     const list = page.locator('.vol-list');
@@ -221,7 +221,7 @@ test('long volunteer lists keep the message and dock reachable, with unclipped M
 test('phone keyboard leaves the message and shared dock usable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
-  await page.goto('/#/donors/volunteers');
+  await page.goto('/old#/donors/volunteers');
   await page.locator('#volMessage').fill('An unsaved share request while the keyboard is open.');
   await page.setViewportSize({ width: 390, height: 360 });
   await expect(page.locator('#volMessage')).toBeFocused();

@@ -3,7 +3,7 @@ async function setup(page) {
   await page.addInitScript(() =>
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
   );
-  await page.goto('/');
+  await page.goto('/old');
 }
 test('slow Gap response cannot reopen a closed donor screen', async ({ page }) => {
   await setup(page);

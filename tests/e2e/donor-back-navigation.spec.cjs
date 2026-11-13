@@ -20,7 +20,7 @@ async function reveal(page, selector) {
   }
   await page.locator(selector).click();
 }
-for (const base of ['/', '/new/']) {
+for (const base of ['/old', '/new/']) {
   for (const width of [320, 1440]) {
     test(`${base} ${width}: modal closing consumes history and Back leaves once`, async ({
       page,
@@ -78,7 +78,7 @@ for (const base of ['/', '/new/']) {
     await expect(page).not.toHaveURL(/donors/);
   });
 }
-for (const base of ['/', '/new/']) {
+for (const base of ['/old', '/new/']) {
   test(`${base}: child closing preserves original screen and missing Back events recover`, async ({
     page,
   }) => {
@@ -165,7 +165,7 @@ test('Volunteer timing without a prepared draft returns safely to Volunteers', a
   await page.reload();
   await expect(page).toHaveURL(/#\/donors\/volunteers$/);
 });
-for (const base of ['/', '/new/']) {
+for (const base of ['/old', '/new/']) {
   for (const [route, dialog, close, parent] of [
     ['donors/important/notes', '#foundationNotes', '#notesBack', 'donors/important'],
     ['donors/top/resume', '#donorResumeDialog', '#donorResumeClose', 'donors/top'],

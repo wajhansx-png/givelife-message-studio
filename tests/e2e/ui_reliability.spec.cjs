@@ -12,7 +12,7 @@ for (const width of [1440, 768, 390, 320]) {
   test(`Notes refresh and Back preserve screen ${width}`, async ({ page }) => {
     await setup(page);
     await page.setViewportSize({ width, height: 850 });
-    await page.goto('/');
+    await page.goto('/old');
     await page.locator('#donorNotesShortcut').click();
     await expect(page).toHaveURL(/#\/notes$/);
     await page.reload();
@@ -48,13 +48,13 @@ test('refresh never paints Main before the requested screen, even with slow scri
     }
     requestAnimationFrame(inspect);
   });
-  await page.goto('/#/donors/messages');
+  await page.goto('/old#/donors/messages');
   await expect(page.locator('#donorsPage')).toBeVisible();
   expect(await page.evaluate(() => wrongScreenFrames)).toBe(0);
 });
 test('Memory restores without redoing actions', async ({ page }) => {
   await setup(page);
-  await page.goto('/#/settings/memory');
+  await page.goto('/old#/settings/memory');
   await expect(page.locator('#memoryDialog')).toBeVisible();
   await page.reload();
   await expect(page.locator('#memoryDialog')).toBeVisible();
@@ -69,7 +69,7 @@ test('secondary forms restore and close without sending', async ({ page }) => {
     ['donors/all/pace', 'donorBatchPicker', 'batchCancel'],
     ['settings/poster', 'posterDialog', 'posterClose'],
   ]) {
-    await page.goto('/#/' + route);
+    await page.goto('/old#/' + route);
     await expect(page.locator('#' + id)).toBeVisible();
     await page.reload();
     await expect(page.locator('#' + id)).toBeVisible();
@@ -79,7 +79,7 @@ test('secondary forms restore and close without sending', async ({ page }) => {
 });
 test('Notes keeps its parent navigation after refresh', async ({ page }) => {
   await setup(page);
-  await page.goto('/');
+  await page.goto('/old');
   await page.locator('#donorNotesShortcut').click();
   await page.reload();
   await page.locator('#notesBack').click();
@@ -94,7 +94,7 @@ test('closing Memory while its response is delayed never reopens it', async ({ p
     await ready;
     await route.fulfill({ json: { entries: [], feedback_count: 0, archived_turns: 0 } });
   });
-  await page.goto('/#/settings/memory');
+  await page.goto('/old#/settings/memory');
   await expect(page.locator('#memoryDialog')).toBeVisible();
   await page.locator('#memoryClose').click();
   release();
@@ -118,7 +118,7 @@ for (const width of [1440, 390])
       'settings/poster',
       'donors/all/notes',
     ]) {
-      await page.goto('/#/' + route);
+      await page.goto('/old#/' + route);
       await page.waitForTimeout(300);
       const result = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])

@@ -32,7 +32,7 @@ for (const [width, height] of [
     await page.route('**/donor-delivery', (r) =>
       r.request().method() === 'GET' ? r.fulfill({ json: job }) : r.continue(),
     );
-    await page.goto('/#/donors/all');
+    await page.goto('/old#/donors/all');
     await expect(page.locator('.donor-row').first()).toBeVisible();
     // Progress box: plain line, plan line, Hide last, outside click folds it to a small chip.
     const box = page.locator('#donorProgress');

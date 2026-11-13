@@ -6,7 +6,7 @@ for (const width of [1440, 1024, 390, 320])
     await page.addInitScript(() =>
       localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
     );
-    await page.goto('/');
+    await page.goto('/old');
     await expect(page.locator('#openTeam')).toHaveCount(0);
     await expect(page.locator('.message-copy').first()).toHaveCSS('font-size', '0px');
     const main = page.locator('#mainNavMore');
@@ -21,7 +21,7 @@ for (const width of [1440, 1024, 390, 320])
     await page.locator('#keyboardHelp').click();
     await expect(page.locator('#keyboardDialog')).toBeVisible();
     await page.locator('#keyboardClose').click();
-    await page.goto('/#/donors/all');
+    await page.goto('/old#/donors/all');
     const more = page.locator('#donorNavMore');
     await expect(more).toBeVisible();
     await expect(page.locator('#donorBulk')).not.toBeVisible();
@@ -29,13 +29,13 @@ for (const width of [1440, 1024, 390, 320])
     await openDonorMessages(page);
     await expect(page.locator('#donorMessages')).toBeVisible();
     await expect(more).not.toHaveAttribute('open');
-    await page.goto('/#/donors/all');
+    await page.goto('/old#/donors/all');
     await more.locator('summary').click();
     await page.locator('#donorBulk').click();
     await expect(page.locator('#donorPasteDialog')).toBeVisible();
     await page.locator('#pasteCancel').click();
     await expect(page.locator('#donorPasteDialog')).not.toBeVisible();
-    await page.goto('/#/donors/all');
+    await page.goto('/old#/donors/all');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,
     );

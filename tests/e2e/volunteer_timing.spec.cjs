@@ -10,7 +10,7 @@ for (const width of [1440, 390])
       headers,
       data: { action: 'add', name: 'Timing preview volunteer', phone: '15551239999' },
     });
-    await page.goto('/#/donors/volunteers');
+    await page.goto('/old#/donors/volunteers');
     await page.locator('#volMessage').fill('Please share this case.');
     await page.getByRole('button', { name: 'DM all volunteers', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'DM all volunteers', exact: true });

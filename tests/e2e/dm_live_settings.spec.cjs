@@ -26,7 +26,7 @@ test('editing live DM settings never pauses or creates another batch', async ({ 
       });
     } else await route.fulfill({ json: job });
   });
-  await page.goto('/#/donors/all');
+  await page.goto('/old#/donors/all');
   await expect(page.locator('#donorEditBatch')).toBeVisible();
   await page.locator('#donorEditBatch').click();
   await expect(page.locator('#donorBatchPicker')).toBeVisible();

@@ -26,7 +26,7 @@ async function open(page, width = 1280, height = 720) {
       },
     }),
   );
-  await page.goto('/');
+  await page.goto('/old');
   await expect(page.locator('#leftChip')).toContainText('25,000');
   await expect(page.locator('#log .bot')).toContainText('Ready to review');
   await page.evaluate(() => document.fonts.ready);

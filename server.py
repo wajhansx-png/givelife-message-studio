@@ -6131,7 +6131,9 @@ class Handler(BaseHTTPRequestHandler):
                 c = donors().cases
                 act = body.get("action")
                 if act == "new":
-                    return self.reply(c.new(body.get("name"), body.get("left")))
+                    return self.reply(
+                        c.new(body.get("name"), body.get("left"), keep_lists=body.get("keep_lists") is True)
+                    )
                 if act == "switch":
                     return self.reply(c.switch(body.get("id")))
                 if act == "rename":

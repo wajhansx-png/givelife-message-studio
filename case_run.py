@@ -1183,10 +1183,44 @@ class CaseRun:
         finally:
             self.worker.release()
 
+    def _live_outside(self, st, key):
+        """Is this row's engine already ON, started from the main page (Auto) or the Donors page instead of by this
+        case run? The Case page shows it as ON, so it never says Off about something that is sending."""
+        if (st["rows"].get(key) or {}).get("state") == "running":
+            return False  # this case run is running it itself
+        try:
+            if key == "group":
+                return bool(self.app.auto_on())
+            if key not in ("top", "important", "volunteers"):
+                return False
+            jobs = self.hub.volunteers.jobs if key == "volunteers" else self.hub.jobs
+            if not jobs.active:
+                return False
+            s = jobs.status()
+            if s.get("state") not in ("Sending", "Waiting", "Starting"):
+                return False
+            return key == "volunteers" or s.get("scope") == key
+        except Exception:
+            return False
+
+    def live_off(self, key):
+        """Switch OFF what is already on outside this case run: the same switch the main page / Donors page use."""
+        if key not in ROWS:
+            raise ValueError("Choose a row.")
+        with self.lock:
+            st = self._read()
+            if self._live_outside(st, key):
+                if key == "group":
+                    self.app.set_auto(False)
+                else:
+                    (self.hub.volunteers.jobs if key == "volunteers" else self.hub.jobs).cancel()
+        return self.view()
+
     def _row_view(self, st, key, aud, m=None):
         plan, ap, row = st["plan"][key], st["approved"], st["rows"].get(key)
         m = m or self._messages()
         out = {
+            "live": self._live_outside(st, key),
             "key": key,
             "title": TITLES[key],
             "enabled": plan["enabled"],
@@ -1292,6 +1326,8 @@ class CaseRun:
             return self.summary(body.get("key"))
         if op == "add_row":
             return self.add_row(body.get("key"), body.get("token"))
+        if op == "live_off":
+            return self.live_off(body.get("key"))
         if op == "start":
             return self.start(body.get("token"))
         if op == "resume":

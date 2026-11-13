@@ -5861,3 +5861,12 @@
   background: #2f6fe4;
   color: #fff;
 }
+
+/* Case page: a row that is already on from the main page or the Donors page says so. */
+.UI2 .cr-live-line {
+  display: block;
+  margin-top: 2px;
+  color: #5fd3a0;
+  font-size: 12px;
+  font-weight: 600;
+}

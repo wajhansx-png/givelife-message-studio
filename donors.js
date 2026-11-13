@@ -46,6 +46,11 @@
     dmExtra.video = localStorage.getItem('givelife-dm-video') === '1';
   } catch (e) {}
   const EXTRA_NAME = { pdf: 'PDF', video: 'Video' };
+  /* The Msgs tab's PDF / Video ticks: under the message on a phone; in the heading row on a computer (a short
+     screen has no spare height under the message). The current render sets placeBankExtras. */
+  const bankExtrasWide = matchMedia('(min-width: 900px)');
+  let placeBankExtras = () => {};
+  bankExtrasWide.addEventListener('change', () => placeBankExtras());
   function paintDmExtras() {
     for (const [kind, ids] of [
       ['pdf', ['donorPdf', 'batchPdf', 'msgPdf']],
@@ -1579,7 +1584,7 @@
       };
       actions.append(copy);
       card.append(title, preview, edit);
-      grid.append(card, extrasBox);
+      grid.append(card);
     }
     if (!item) {
       const empty = make('div', 'donor-empty bank-empty'),
@@ -1590,7 +1595,7 @@
         make('p', '', 'No saved messages yet. Add a base message, then generate versions.'),
         addBase,
       );
-      grid.append(empty, extrasBox);
+      grid.append(empty);
     }
     const nav = make('nav', 'bank-pagination');
     nav.setAttribute('aria-label', 'Message navigation');
@@ -1670,7 +1675,15 @@
         cardEl.append(arrow, gen);
       }
     }
+    placeBankExtras = () => {
+      if (!extrasBox.isConnected && !box.contains(grid)) return;
+      const card = grid.querySelector('.bank-detail');
+      if (bankExtrasWide.matches) head.append(extrasBox);
+      else if (card) card.after(extrasBox);
+      else grid.append(extrasBox);
+    };
     box.append(grid);
+    placeBankExtras();
     syncBankControls();
     if (typeof ResizeObserver !== 'undefined') {
       bankFitObserver?.disconnect();

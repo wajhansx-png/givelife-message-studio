@@ -326,6 +326,105 @@
   poster.setAttribute('aria-label', 'Change DM poster');
   poster.innerHTML = `<h2>Poster · groups and DMs</h2><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><video id="posterCurrentVideo" controls playsinline preload="metadata" aria-label="Saved campaign video" hidden></video><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status" aria-live="polite"></p><div id="posterProgress" class="poster-save-progress" hidden><div id="posterProgressTrack" class="poster-save-track" role="progressbar" aria-label="Poster upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="posterProgressFill"></span></div><span id="posterProgressText" role="status" aria-live="polite"></span></div><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
   document.body.append(poster);
+  /* A PDF and a video that follow the poster in every GROUP post: poster + caption first, then the PDF, then the
+     video. Each can be switched off without being removed. They belong to the case. */
+  const extrasBox = make('section', 'poster-extras');
+  extrasBox.id = 'posterExtras';
+  extrasBox.setAttribute('aria-label', 'Sent after the poster in groups');
+  extrasBox.append(
+    make('h3', '', 'Sent after the poster in groups'),
+    make('p', 'poster-extras-note', 'Order: poster and caption, then the PDF, then the video. Switch one off to skip it.'),
+  );
+  const extraRows = {};
+  let extrasBusy = false;
+  const extrasMsg = make('p', 'poster-extras-msg', '');
+  extrasMsg.id = 'posterExtrasMsg';
+  extrasMsg.setAttribute('role', 'status');
+  const paintExtras = (v) => {
+    for (const [kind, r] of Object.entries(extraRows)) {
+      const x = (v && v[kind]) || {};
+      r.small.textContent = x.has ? x.name + (x.kb ? ' · ' + (x.kb > 1024 ? (x.kb / 1024).toFixed(1) + ' MB' : x.kb + ' KB') : '') : 'Not added';
+      r.add.firstChild.textContent = x.has ? 'Replace' : 'Add';
+      r.sw.hidden = r.rm.hidden = !x.has;
+      r.sw.setAttribute('aria-checked', String(!!x.on));
+      r.row.dataset.on = x.on ? '1' : '0';
+    }
+  };
+  const extrasCall = async (body, done) => {
+    if (extrasBusy) return;
+    extrasBusy = true;
+    extrasMsg.textContent = '';
+    try {
+      paintExtras(await api('/group-extras', body));
+      if (done) extrasMsg.textContent = done;
+    } catch (e) {
+      extrasMsg.textContent = e.message;
+      try {
+        paintExtras(await api('/group-extras'));
+      } catch (x) {}
+    } finally {
+      extrasBusy = false;
+    }
+  };
+  for (const [kind, label, accept] of [
+    ['pdf', 'PDF', 'application/pdf'],
+    ['video', 'Video', 'video/mp4'],
+  ]) {
+    const row = make('div', 'poster-extra');
+    row.dataset.kind = kind;
+    const name = make('div', 'poster-extra-name');
+    const small = make('small', '', 'Not added');
+    name.append(make('b', '', label), small);
+    const file = make('input');
+    file.type = 'file';
+    file.accept = accept;
+    file.hidden = true;
+    file.id = 'posterExtraFile-' + kind;
+    const add = make('label', 'poster-extra-add');
+    add.htmlFor = file.id;
+    add.append(make('span', '', 'Add'));
+    const sw = make('button', 'poster-extra-sw');
+    sw.type = 'button';
+    sw.hidden = true;
+    sw.setAttribute('role', 'switch');
+    sw.setAttribute('aria-label', 'Send the ' + label + ' after the poster in groups');
+    const rm = make('button', 'poster-extra-rm', 'Remove');
+    rm.type = 'button';
+    rm.hidden = true;
+    rm.setAttribute('aria-label', 'Remove the ' + label);
+    sw.onclick = () => extrasCall({ action: 'toggle', kind, on: sw.getAttribute('aria-checked') !== 'true' });
+    rm.onclick = () => extrasCall({ action: 'remove', kind }, label + ' removed.');
+    file.onchange = async () => {
+      const f = file.files[0];
+      file.value = '';
+      if (!f) return;
+      if (f.size > 15_000_000) {
+        extrasMsg.textContent = 'Choose a ' + label + ' under 15 MB.';
+        return;
+      }
+      extrasMsg.textContent = 'Saving the ' + label + '…';
+      const data = await new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result));
+        fr.onerror = () => reject(Error('The file could not be read.'));
+        fr.readAsDataURL(f);
+      }).catch((e) => (extrasMsg.textContent = e.message));
+      if (typeof data !== 'string' || !data.startsWith('data:')) return;
+      await extrasCall({ action: 'add', kind, data, name: f.name }, label + ' saved. It goes out after the poster in group posts.');
+    };
+    row.append(name, add, sw, rm, file);
+    extrasBox.append(row);
+    extraRows[kind] = { row, small, add, sw, rm };
+  }
+  extrasBox.append(extrasMsg);
+  poster.querySelector('.donor-form-actions').before(extrasBox);
+  async function loadExtras() {
+    try {
+      paintExtras(await api('/group-extras'));
+    } catch (e) {
+      extrasMsg.textContent = e.message;
+    }
+  }
   const launch = make('button', 'primary donor-launch donor-launch-foot', 'Donors');
   launch.type = 'button';
   launch.id = 'openDonors';
@@ -3318,6 +3417,7 @@
     el('posterClose').textContent = 'Cancel';
     el('posterNote').textContent = 'Loading saved poster…';
     poster.showModal();
+    loadExtras();
     try {
       await loadSavedPoster();
       if (!posterData) el('posterNote').textContent = '';

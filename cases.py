@@ -56,6 +56,7 @@ class Cases:
             ),
             "poster_video_b64": a.STORE.get("poster_video_b64") if a.STORE else "",
             "poster_kind": a.STORE.get("poster_kind") if a.STORE else "image",
+            "group_extras": a.STORE.get("group_extras") if a.STORE else None,
             "papers_b64": (a.STORE.get("papers_b64", []) if a.STORE else None)
             or [
                 base64.b64encode(p.read_bytes()).decode()
@@ -143,6 +144,9 @@ class Cases:
             ):
                 a.STORE.put(key, value)
         if a.STORE:
+            # Every case owns its PDF and video too; a new case starts with none.
+            extras = media.get("group_extras") if isinstance(media, dict) else None
+            a.STORE.put("group_extras", extras if isinstance(extras, dict) else {})
             a.STORE.put("donor_messages", bank if isinstance(bank, dict) else {})
         h.messages.cache = None
         try:

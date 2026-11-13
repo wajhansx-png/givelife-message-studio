@@ -5721,3 +5721,77 @@
     font-size: 12px;
   }
 }
+
+/* ---------- More: Start a new case (name + amount). Important and Top donors stay the same. ---------- */
+.UI2 .ui2-nc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 4px 0;
+}
+.UI2 .ui2-nc h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 800;
+}
+.UI2 .ui2-nc label {
+  margin-top: 6px;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 .ui2-nc input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: var(--surface2, #232838);
+  color: var(--ink, #eef0f6);
+  font-size: 16px;
+}
+.UI2 .ui2-nc input:focus {
+  border-color: #2f6fe4;
+  outline: none;
+}
+.UI2 .ui2-nc-note {
+  margin: 8px 0 0;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.UI2 .ui2-nc-err {
+  min-height: 18px;
+  margin: 0;
+  color: #ff8a8a;
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 .ui2-nc-bar {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+.UI2 .ui2-nc-bar button {
+  min-height: 48px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink, #eef0f6);
+  font-size: 15px;
+  font-weight: 800;
+}
+.UI2 .ui2-nc-bar .ui2-nc-go {
+  border-color: transparent;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}
+.UI2 .ui2-nc-bar button:disabled {
+  opacity: 0.6;
+}
+/* The More sheet and the new-case sheet are solid: the page behind must not show through the tiles. */
+.UI2 .ui2-sheet {
+  background-color: var(--surface, #25262e) !important;
+}

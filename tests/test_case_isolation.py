@@ -38,6 +38,56 @@ class CaseIsolation(unittest.TestCase):
             self.assertNotIn("kidneys", text.lower())
         self.assertEqual(self.app.studio_state()["case_name"], "Affan family")
 
+    def _starred_people(self):
+        book = self.app.donors().book
+        a = book.add("Ali Khan", "03001234567")["donor"]
+        b = book.add("Bilal Khan", "03007654321")["donor"]
+        c = book.add("Cara Khan", "03005550000")["donor"]
+        book.update(a["id"], important=True)
+        book.update(a["id"], top_donor=True)
+        book.update(b["id"], important=True, donated=True, amount=500)
+        book.update(c["id"], donated=True, amount=100)
+        book.delivery(a["id"], "Sent")
+        return book, a["id"], b["id"], c["id"]
+
+    def test_new_case_can_keep_the_important_and_top_lists(self):
+        book, a, b, c = self._starred_people()
+        before = book.export_case_fields()
+        out = self.app.donors().cases.new("New child", 30000, keep_lists=True)
+        after = book.export_case_fields()
+        for ident in (a, b):
+            self.assertTrue(after[ident]["important"])
+            self.assertEqual(after[ident]["important_order"], before[ident]["important_order"])
+        self.assertTrue(after[a]["top_donor"])
+        self.assertEqual(after[a]["top_order"], before[a]["top_order"])
+        self.assertFalse(after[c]["important"])
+        self.assertFalse(after[b]["top_donor"])
+        for ident in (a, b, c):  # donated and DM-sent marks always start fresh
+            self.assertFalse(after[ident]["donated"])
+            self.assertEqual(after[ident]["amount"], 0)
+            self.assertFalse(after[ident]["dm_sent"])
+            self.assertEqual(after[ident]["delivery"], "Not contacted")
+        self.assertIn("Important and Top donors are kept", out["reply"])
+
+    def test_new_case_without_keep_still_starts_every_mark_fresh(self):
+        book, a, b, c = self._starred_people()
+        self.app.donors().cases.new("New child", 30000)
+        after = book.export_case_fields()
+        for ident in (a, b, c):
+            self.assertFalse(after[ident]["important"])
+            self.assertFalse(after[ident]["top_donor"])
+
+    def test_keeping_the_lists_leaves_the_saved_old_case_whole(self):
+        book, a, b, c = self._starred_people()
+        cases = self.app.donors().cases
+        first = cases.view()["current"]
+        cases.new("New child", 30000, keep_lists=True)
+        cases.switch(first)  # the old case comes back with its own donated and sent marks
+        back = book.export_case_fields()
+        self.assertTrue(back[b]["donated"])
+        self.assertEqual(back[b]["amount"], 500)
+        self.assertTrue(back[a]["dm_sent"] or back[a]["delivery"] == "Sent")
+
     def test_all_regeneration_paths_remain_inside_current_case(self):
         self.app.donors().cases.new("Food aid family", 18000)
         self.app.next_message()

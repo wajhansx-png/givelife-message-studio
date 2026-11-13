@@ -94,7 +94,7 @@ for (const width of [280, 320, 360, 390, 430, 768]) {
     await tabs.locator('[data-tab="more"]').click();
     const sheet = page.locator('#ui2Sheet');
     await expect(sheet).toBeVisible();
-    await expect(sheet.locator('.ui2-tile')).toHaveCount(7); // Case page + the six tiles
+    await expect(sheet.locator('.ui2-tile')).toHaveCount(8); // Case page + New case + the six tiles
     await expect(sheet.locator('.ui2-sheet-x')).toBeVisible(); // a cross closes it
     await sheet.locator('.ui2-sheet-x').click();
     await expect(sheet).toBeHidden();
@@ -957,4 +957,66 @@ test('/new phone: every button in the bottom bar has an icon above its word', as
   }
   // Names stay plain words for screen readers (the icon is decoration).
   await expect(page.getByRole('button', { name: 'Donors', exact: true }).first()).toBeVisible();
+});
+
+test('/new More: New case asks for a name and an amount, keeps Important and Top, and saves nothing until Start', async ({
+  page,
+}) => {
+  await open(page, '/new', 390);
+  const posts = [];
+  await page.route('**/cases', async (r) => {
+    if (r.request().method() === 'POST') {
+      posts.push(r.request().postDataJSON());
+      await r.fulfill({ json: { reply: 'ok', cases: [], current: 'x' } });
+    } else await r.continue();
+  });
+  await page.locator('#ui2Tabs [data-tab="more"]').click();
+  const tile = page.locator('#ui2Sheet button.ui2-tile', { hasText: 'New case' });
+  await expect(tile).toBeVisible();
+  await expect(tile).toContainText('Important & Top stay');
+  await tile.click();
+  const sheet = page.locator('#ui2NewCase');
+  await expect(sheet).toBeVisible();
+  // The sheet is solid (the page behind never shows through) and sits at the bottom, in thumb reach.
+  expect(await sheet.evaluate((n) => getComputedStyle(n).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+  const box = await sheet.boundingBox();
+  expect(box.y + box.height).toBeGreaterThan(page.viewportSize().height - 2);
+  await expect(sheet.locator('.ui2-nc-note')).toContainText('Important and Top donors stay the same');
+  // Empty or wrong input says why and sends nothing.
+  await sheet.getByRole('button', { name: 'Start new case' }).click();
+  await expect(sheet.locator('.ui2-nc-err')).toContainText('case name');
+  await page.locator('#ui2NcName').fill('Affan family');
+  await page.locator('#ui2NcLeft').fill('abc');
+  await sheet.getByRole('button', { name: 'Start new case' }).click();
+  await expect(sheet.locator('.ui2-nc-err')).toContainText('how much money');
+  expect(posts).toEqual([]);
+  // Cancel leaves everything alone.
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+  await expect(sheet).toBeHidden();
+  expect(posts).toEqual([]);
+  // Start sends the name, the amount and keep_lists: true.
+  await page.locator('#ui2Tabs [data-tab="more"]').click();
+  await page.locator('#ui2Sheet button.ui2-tile', { hasText: 'New case' }).click();
+  await page.locator('#ui2NcName').fill('Affan family');
+  await page.locator('#ui2NcLeft').fill('50,000');
+  await Promise.all([
+    page.waitForEvent('load'),
+    sheet.getByRole('button', { name: 'Start new case' }).click(),
+  ]);
+  expect(posts).toEqual([{ action: 'new', name: 'Affan family', left: 50000, keep_lists: true }]);
+});
+
+test('/new More: the old "New case from zero" choice opens the same form, not three browser pop-ups', async ({
+  page,
+}) => {
+  await open(page, '/new', 390);
+  let dialogs = 0;
+  page.on('dialog', (d) => (dialogs++, d.dismiss()));
+  await page.waitForTimeout(800);
+  await page.locator('#caseSelect').evaluate((sel) => {
+    sel.value = '__new'; // the real choice in the Case list (the select itself is inside the More menu)
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await expect(page.locator('#ui2NewCase')).toBeVisible();
+  expect(dialogs).toBe(0);
 });

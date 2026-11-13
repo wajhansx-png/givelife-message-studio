@@ -519,6 +519,72 @@ const ui2Frame = (fn) => {
       b.setAttribute('aria-current', String(b.dataset.tab === on));
   }
 
+  /* Start a new case: its name and the amount needed. The old case is saved first. Important and Top donors stay
+     the same (keep_lists); donated and DM-sent marks start fresh. */
+  function newCase() {
+    let d = $('ui2NewCase');
+    if (!d) {
+      d = mk('dialog', 'ui2-sheet ui2-newcase');
+      d.id = 'ui2NewCase';
+      d.setAttribute('aria-label', 'Start a new case');
+      d.innerHTML =
+        '<div class="ui2-sheet-grip" aria-hidden="true"></div><button type="button" class="ui2-sheet-x" aria-label="Close">✕</button>' +
+        '<form class="ui2-nc" novalidate><h2>Start a new case</h2>' +
+        '<label for="ui2NcName">Case name</label><input id="ui2NcName" type="text" maxlength="60" autocomplete="off" placeholder="For example the child\'s name">' +
+        '<label for="ui2NcLeft">Amount needed (Rs.)</label><input id="ui2NcLeft" type="text" inputmode="numeric" autocomplete="off" placeholder="For example 50000">' +
+        '<p class="ui2-nc-note"></p><p class="ui2-nc-err" role="alert"></p>' +
+        '<div class="ui2-nc-bar"><button type="button" class="ui2-nc-cancel">Cancel</button><button type="submit" class="ui2-nc-go">Start new case</button></div></form>';
+      const form = d.querySelector('form'),
+        err = d.querySelector('.ui2-nc-err'),
+        go = d.querySelector('.ui2-nc-go');
+      d.querySelector('.ui2-sheet-x').addEventListener('click', () => d.close());
+      d.querySelector('.ui2-nc-cancel').addEventListener('click', () => d.close());
+      d.addEventListener('click', (e) => e.target === d && d.close());
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = $('ui2NcName').value.trim(),
+          left = Number(String($('ui2NcLeft').value).replace(/[^\d.]/g, ''));
+        err.textContent = '';
+        if (!name || name.length > 60) return void (err.textContent = 'Write the case name (up to 60 letters).');
+        if (!Number.isFinite(left) || left <= 0 || left > 100000000)
+          return void (err.textContent = 'Write how much money is needed, for example 50000.');
+        go.disabled = true;
+        go.textContent = 'Starting…';
+        try {
+          const r = await post('/cases', { action: 'new', name, left, keep_lists: true }),
+            j = await r.json().catch(() => ({}));
+          if (!r.ok) throw Error(j.error || 'Could not start the new case.');
+          location.reload();
+        } catch (x) {
+          err.textContent = x.message;
+          go.disabled = false;
+          go.textContent = 'Start new case';
+        }
+      });
+      document.body.append(d);
+    }
+    const current =
+      ($('caseSelect')?.selectedOptions[0]?.textContent || 'The current case').replace(/ · done ✓$/, '').trim();
+    d.querySelector('.ui2-nc-note').textContent =
+      '"' + current + '" is saved first and stays in the case list. Important and Top donors stay the same. Donated and DM-sent marks start fresh.';
+    $('ui2NcName').value = '';
+    $('ui2NcLeft').value = '';
+    d.querySelector('.ui2-nc-err').textContent = '';
+    d.showModal();
+    $('ui2NcName').focus({ preventScroll: true });
+  }
+  /* The old "＋ New case from zero…" choice asks three browser pop-ups and clears the stars; here it opens the form. */
+  $('caseSelect')?.addEventListener(
+    'change',
+    (e) => {
+      if (e.target.value !== '__new') return;
+      e.stopImmediatePropagation();
+      if (typeof loadCases === 'function') loadCases();
+      newCase();
+    },
+    true,
+  );
+
   /* More: a bottom sheet in thumb reach (page 2). */
   function sheet() {
     let d = $('ui2Sheet');
@@ -572,6 +638,7 @@ const ui2Frame = (fn) => {
       t.append(pick);
       grid.append(t);
     }
+    tile('New case', 'Important & Top stay', newCase);
     tile(
       'Reply',
       'chat shortcuts',

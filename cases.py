@@ -7,6 +7,8 @@ import base64, json, re, threading, time, uuid
 
 class Cases:
     KEY = "cases"
+    # The marks a new case may carry over (who is Important, who is a Top donor, and their order).
+    LIST_FIELDS = ("important", "important_order", "top_donor", "top_order")
 
     def __init__(self, app, hub):
         self.app = app
@@ -189,7 +191,9 @@ class Cases:
             self._save(d)
             return self.view()
 
-    def new(self, name, left):
+    def new(self, name, left, keep_lists=False):
+        """Start a case from zero. keep_lists=True keeps who is Important and who is a Top donor (with their order);
+        donated and DM-sent marks always start fresh."""
         name = str(name or "").strip()
         if not 1 <= len(name) <= 60:
             raise ValueError("Name the new case, for example the child's name.")
@@ -200,16 +204,29 @@ class Cases:
             d = self._load()
             cur = next(c for c in d["cases"] if c["id"] == d["current"])
             cur["snapshot"] = self._capture()
+            keep = None
+            if keep_lists:
+                keep = {
+                    ident: {k: v for k, v in fields.items() if k in self.LIST_FIELDS}
+                    for ident, fields in cur["snapshot"]["donors"].items()
+                }
             cid = uuid.uuid4().hex
             d["cases"].append(
                 {"id": cid, "name": name, "created_at": time.time(), "snapshot": None}
             )
             d["current"] = cid
             self._apply(None, int(left), name)
+            if keep:
+                self.hub.book.import_case_fields(keep)
             self._save(d)
+            kept = (
+                "Names, numbers, Important and Top donors are kept; donated and DM-sent marks start fresh."
+                if keep_lists
+                else "Names and numbers are kept; stars, donated and DM-sent marks start fresh."
+            )
             return {
                 **self.view(),
-                "reply": f'Saved "{cur["name"]}" and started "{name}" from zero. Names and numbers are kept; stars, donated and DM-sent marks start fresh.',
+                "reply": f'Saved "{cur["name"]}" and started "{name}" from zero. {kept}',
             }
 
     def switch(self, cid):

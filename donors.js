@@ -52,7 +52,11 @@
       ['video', ['donorVideo', 'batchVideo', 'msgVideo']],
     ])
       for (const id of ids) if (el(id)) el(id).checked = dmExtra[kind];
+    dispatchEvent(new CustomEvent('dm-extras-changed', { detail: { pdf: dmExtra.pdf, video: dmExtra.video } }));
   }
+  /* The reader (message view) has the same two ticks for the open DM; it asks here so they are checked, remembered
+     and applied to a running Auto in one place. */
+  addEventListener('dm-extra-request', (e) => setDmExtra(e.detail.kind, !!e.detail.on));
   /* A ticked file must exist: if it does not (a new case starts with none), say so and untick it. */
   async function setDmExtra(kind, on, remember = true) {
     if (on) {

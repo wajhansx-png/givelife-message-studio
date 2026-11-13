@@ -149,3 +149,73 @@ for (const width of [320, 390, 1440])
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   });
+
+/* The same two ticks under the message in the reader: group message (after the poster) and DM (after each DM). */
+async function openReader(page, view = 'group', width = 390) {
+  await page.setViewportSize({ width, height: width >= 900 ? 900 : 760 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new');
+  await page.waitForFunction(() => typeof setView === 'function' && window.DonorHub);
+  if (view === 'dm') await page.evaluate(() => setView('dm'));
+  await page.evaluate(() => Nav.go('preview'));
+  await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
+}
+
+test('Reader: nothing saved means disabled ticks and an Add files button', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
+  await api(port, '/group-extras', { action: 'remove', kind: 'video' });
+  await openReader(page);
+  await expect(page.locator('#ui2Rx-pdf')).toBeDisabled();
+  await expect(page.locator('#ui2Rx-video')).toBeDisabled();
+  await expect(page.locator('.ui2-rx-add')).toBeVisible();
+});
+
+test('Reader (group message): tick PDF and video, both / one / none, applied to the group posts', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: 'data:application/pdf;base64,' + PDF.toString('base64'), name: 'a.pdf' });
+  await api(port, '/group-extras', { action: 'add', kind: 'video', data: 'data:video/mp4;base64,' + MP4.toString('base64'), name: 'b.mp4' });
+  await openReader(page, 'group');
+  await expect(page.locator('.ui2-rx-label')).toHaveText('Also send after the poster:');
+  await expect(page.locator('#ui2Rx-pdf')).toBeChecked();
+  await expect(page.locator('#ui2Rx-video')).toBeChecked();
+  await page.locator('#ui2Rx-pdf').uncheck();
+  let v = await api(port, '/group-extras');
+  expect([v.pdf.on, v.video.on]).toEqual([false, true]); // only the video goes
+  await page.locator('#ui2Rx-video').uncheck();
+  v = await api(port, '/group-extras');
+  expect([v.pdf.on, v.video.on]).toEqual([false, false]); // none
+  await page.locator('#ui2Rx-pdf').check();
+  await page.locator('#ui2Rx-video').check();
+  v = await api(port, '/group-extras');
+  expect([v.pdf.on, v.video.on]).toEqual([true, true]); // both
+});
+
+test('Reader (DM message): its own ticks, remembered for DMs, group choice untouched', async ({ page }) => {
+  await openReader(page, 'dm');
+  await expect(page.locator('.ui2-rx-label')).toHaveText('Also send with each DM:');
+  await expect(page.locator('#ui2Rx-pdf')).not.toBeChecked(); // DMs start unticked
+  await page.locator('#ui2Rx-pdf').check();
+  await expect(page.locator('#ui2Rx-pdf')).toBeChecked();
+  expect(await page.evaluate(() => [localStorage.getItem('givelife-dm-pdf'), localStorage.getItem('givelife-dm-video')])).toEqual(['1', null]);
+  const v = await api(port, '/group-extras');
+  expect([v.pdf.on, v.video.on]).toEqual([true, true]); // the group ticks did not change
+  await page.locator('#ui2Rx-pdf').uncheck();
+  await page.locator('#ui2Rx-video').check();
+  await expect
+    .poll(() => page.evaluate(() => [localStorage.getItem('givelife-dm-pdf'), localStorage.getItem('givelife-dm-video')]))
+    .toEqual(['0', '1']); // checked against the saved files first, so it lands a moment later
+  // the Donors page shows the same ticks
+  await expect(page.locator('#donorVideo')).toBeChecked();
+  await expect(page.locator('#donorPdf')).not.toBeChecked();
+});
+
+for (const width of [320, 390, 1440])
+  test(`Reader: the PDF / Video ticks fit at ${width}px with 44px targets`, async ({ page }) => {
+    await openReader(page, 'group', width);
+    for (const sel of ['#ui2Rx-pdf', '#ui2Rx-video']) {
+      const b = await page.locator(sel).locator('xpath=..').boundingBox();
+      expect(b.height, sel).toBeGreaterThanOrEqual(43);
+      expect(b.x, sel).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.width, sel).toBeLessThanOrEqual(width + 0.5);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  });

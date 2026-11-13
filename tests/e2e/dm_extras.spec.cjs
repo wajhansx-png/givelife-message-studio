@@ -69,6 +69,7 @@ test('with both files saved: both, one, or none can be ticked, and the Donors ba
   expect(await page.evaluate(() => [localStorage.getItem('givelife-dm-pdf'), localStorage.getItem('givelife-dm-video')])).toEqual(['0', '1']);
   // survives a reload; the Msgs tab shows the same
   await page.evaluate(() => Nav.go('donors/messages'));
+  await expect(page.locator('#msgPdf')).toBeVisible(); // the tab has rendered (and remembered itself) before we reload
   await page.reload();
   await expect(page.locator('#msgPdf')).toBeVisible();
   await expect(page.locator('#msgPdf')).not.toBeChecked();

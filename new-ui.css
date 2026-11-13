@@ -5947,3 +5947,59 @@
 .UI2 .ui2-extras-msg:empty {
   display: none;
 }
+
+/* Reader: "Also send: PDF / Video" under the message (group: after the poster and caption; DM: after each DM). */
+.UI2 #ui2ReaderExtras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+.UI2 .ui2-rx-label {
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 .ui2-rx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--surface2, #232838);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.UI2 .ui2-rx-chip input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #2f6fe4;
+}
+.UI2 .ui2-rx-chip[data-off='1'] {
+  opacity: 0.55;
+}
+.UI2 .ui2-rx-add {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: #9db8ff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 .ui2-rx-msg {
+  flex: 1 1 100%;
+  margin: 0;
+  color: #ff8a8a;
+  font-size: 12px;
+  text-align: center;
+}
+.UI2 .ui2-rx-msg:empty {
+  display: none;
+}

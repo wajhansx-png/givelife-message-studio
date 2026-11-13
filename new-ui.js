@@ -1621,9 +1621,109 @@ document.addEventListener('click', (e) => {
       ),
     );
   }
+  /* Reader: "Also send:" PDF / Video ticks under the message. For a group message they follow the poster and caption
+     of every group post (Auto too, every 45 minutes); for a DM they follow each DM. Same ticks as the Message page
+     row (group) and the Donors page (DM); the files are the ones added in Poster / on the Message page. */
+  function readerExtras() {
+    const nav = $('ui2GnavReader');
+    if (!nav || $('ui2ReaderExtras')) return;
+    const mk = (tag, cls, text) => {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text != null) n.textContent = text;
+      return n;
+    };
+    const box = mk('div', 'ui2-rx');
+    box.id = 'ui2ReaderExtras';
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', 'Also send a PDF and a video');
+    const label = mk('span', 'ui2-rx-label', 'Also send:');
+    box.append(label);
+    const cbs = {};
+    for (const [kind, name] of [
+      ['pdf', 'PDF'],
+      ['video', 'Video'],
+    ]) {
+      const lab = mk('label', 'ui2-rx-chip');
+      const cb = mk('input');
+      cb.type = 'checkbox';
+      cb.id = 'ui2Rx-' + kind;
+      cb.addEventListener('change', () => change(kind, cb.checked));
+      lab.append(cb, mk('span', '', name));
+      box.append(lab);
+      cbs[kind] = cb;
+    }
+    const add = mk('button', 'ui2-rx-add', 'Add files');
+    add.type = 'button';
+    add.hidden = true;
+    add.addEventListener('click', () => window.DonorHub?.openPoster());
+    const msg = mk('p', 'ui2-rx-msg', '');
+    msg.setAttribute('role', 'status');
+    box.append(add, msg);
+    nav.before(box);
+    const have = { pdf: false, video: false },
+      groupOn = { pdf: false, video: false };
+    let dmOn = { pdf: false, video: false };
+    try {
+      dmOn = {
+        pdf: localStorage.getItem('givelife-dm-pdf') === '1',
+        video: localStorage.getItem('givelife-dm-video') === '1',
+      };
+    } catch (e) {}
+    const isDm = () => $('messageFocus')?.dataset.kind === 'dm';
+    const paint = () => {
+      label.textContent = isDm() ? 'Also send with each DM:' : 'Also send after the poster:';
+      for (const k of ['pdf', 'video']) {
+        cbs[k].disabled = !have[k];
+        cbs[k].parentElement.dataset.off = have[k] ? '0' : '1';
+        cbs[k].checked = !!(have[k] && (isDm() ? dmOn[k] : groupOn[k]));
+      }
+      add.hidden = have.pdf && have.video;
+    };
+    const take = (v) => {
+      for (const k of ['pdf', 'video']) {
+        have[k] = !!(v[k] && v[k].has);
+        groupOn[k] = !!(have[k] && v[k].on);
+      }
+      paint();
+    };
+    const load = async () => {
+      try {
+        const r = await fetch('/group-extras');
+        if (r.ok) take(await r.json());
+      } catch (e) {}
+    };
+    async function change(kind, on) {
+      msg.textContent = '';
+      if (isDm()) {
+        // donors.js checks the file is saved, remembers the tick and applies it to a running Auto
+        dispatchEvent(new CustomEvent('dm-extra-request', { detail: { kind, on } }));
+        return;
+      }
+      try {
+        const r = await post('/group-extras', { action: 'toggle', kind, on }),
+          d = await r.json().catch(() => ({}));
+        if (!r.ok) throw Error(d.error || 'Could not save that.');
+        take(d);
+        dispatchEvent(new CustomEvent('group-extras-changed'));
+      } catch (e) {
+        msg.textContent = e.message;
+        load();
+      }
+    }
+    addEventListener('dm-extras-changed', (e) => {
+      dmOn = { pdf: !!e.detail.pdf, video: !!e.detail.video };
+      paint();
+    });
+    addEventListener('group-extras-changed', load);
+    addEventListener('reader-kind', paint);
+    addEventListener('focus', load);
+    load();
+  }
   const run = () => {
     main();
     reader();
+    readerExtras();
   };
   run();
   new MutationObserver(ui2Frame(run)).observe(document.body, { childList: true, subtree: true });

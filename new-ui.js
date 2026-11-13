@@ -319,8 +319,9 @@ const ui2Frame = (fn) => {
     for (const t of box.querySelectorAll(':scope > button.tool')) {
       if (ui2Wide.matches && t.matches('[data-bank-save-id], .bank-copy')) continue;
       const x = t.textContent.trim();
-      if (x === 'Edit' || x === 'Done' || x === 'Copy') {
-        t.style.setProperty('order', x === 'Copy' ? '2' : '1', 'important');
+      // Phone: Edit, Test, More, Back (Copy is inside More). Computer keeps Copy where it was.
+      if (x === 'Edit' || x === 'Done' || x === (ui2Wide.matches ? 'Copy' : 'Test')) {
+        t.style.setProperty('order', x === 'Edit' || x === 'Done' ? '1' : '2', 'important');
         continue;
       }
       panel.append(t);
@@ -334,7 +335,7 @@ const ui2Frame = (fn) => {
       box.append(back);
     }
     if (!box.nextElementSibling?.classList.contains('ui2-bank-hint')) {
-      const hint = mk('p', 'ui2-bank-hint', 'Base message · Test · Bold/Italic live inside More');
+      const hint = mk('p', 'ui2-bank-hint', 'Base message · Copy · Bold/Italic live inside More');
       box.after(hint);
     }
   }
@@ -892,7 +893,7 @@ const ui2Frame = (fn) => {
 })();
 
 /* 8. Message reader and editor (PDF pages 10-14).
-   One bottom row: Copy, Edit (Done while editing), ⋯ and Back; Save Base, Test and Next wording live inside ⋯.
+   One bottom row: Test, Edit (Done while editing), ⋯ and Back; Copy, Save Base and Next wording live inside ⋯.
    While editing, bold and italic show as bold and italic (no stars), with ONE small floating bar: B I ♥ Dua ×.
    The live editor writes WhatsApp text (*bold*, _italic_) back into the real box, so saving is unchanged. */
 (() => {
@@ -903,7 +904,7 @@ const ui2Frame = (fn) => {
     const more = screen?.querySelector('.focus-rail-more');
     if (!bar || !more || bar.dataset.ui2Row) return;
     const panel = more.querySelector(':scope > div');
-    for (const id of ['focusNext', 'focusTest', 'focusSave']) {
+    for (const id of ['focusNext', 'focusCopy', 'focusSave']) {
       const b = $(id);
       if (b && panel) panel.prepend(b);
     }
@@ -917,13 +918,13 @@ const ui2Frame = (fn) => {
     }
     const sum = more.querySelector('summary');
     sum.textContent = 'More';
-    sum.setAttribute('aria-label', 'More: Save Base, Test, Next wording');
-    for (const id of ['focusCopy', 'focusEdit']) if ($(id)) bar.append($(id));
+    sum.setAttribute('aria-label', 'More: Copy, Save Base, Next wording');
+    for (const id of ['focusTest', 'focusEdit']) if ($(id)) bar.append($(id));
     bar.append(more);
     if ($('focusBack')) bar.append($('focusBack'));
     const hint = document.createElement('p');
     hint.className = 'ui2-reader-hint';
-    hint.textContent = 'Save Base · Test · Next wording live inside More';
+    hint.textContent = 'Copy · Save Base · Next wording live inside More';
     bar.after(hint);
     bar.dataset.ui2Row = '1';
   }

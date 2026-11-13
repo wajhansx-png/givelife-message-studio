@@ -5796,11 +5796,19 @@
   background-color: var(--surface, #25262e) !important;
 }
 
-/* Reader: the Style fix button sits on its own row above the style chips (phone and tablet), full width. */
+/* Reader (phone and tablet): the Style fix button floats at the right of the strip above the style chips, where the
+   status line is, so the reader gets no extra height; the status text keeps clear of it. */
 @media (max-width: 899px) {
   .UI2 #messageFocus > header #focusStyleFix {
-    width: 100%;
+    position: absolute;
+    top: 4px;
+    right: 10px;
+    z-index: 2;
+    width: auto;
     min-height: 40px !important;
+  }
+  .UI2 #messageFocus > header #focusState {
+    padding-right: 116px;
   }
 }
 .UI2 #messageFocus .focus-fix {

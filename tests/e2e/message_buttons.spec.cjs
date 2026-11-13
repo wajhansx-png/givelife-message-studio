@@ -268,7 +268,7 @@ for (const width of [320, 390, 1440])
     expect(await pressed()).toEqual(['false', 'false', 'false']);
 
     await chips.nth(1).click(); // English
-    await expect(page.locator('#focusFormatted')).toContainText('Hook en');
+    await expect(page.locator('#focusFormatted')).toContainText(/Hook en(?!_)/);
     expect(await pressed()).toEqual(['false', 'true', 'false']);
     await chips.nth(2).click(); // Trigger -> English Trigger
     await expect(page.locator('#focusFormatted')).toContainText('Hook en_more');
@@ -277,7 +277,7 @@ for (const width of [320, 390, 1440])
     await expect(page.locator('#focusFormatted')).toContainText('Hook ur_en_more');
     expect(await pressed()).toEqual(['true', 'false', 'true']);
     await chips.nth(2).click(); // Trigger off
-    await expect(page.locator('#focusFormatted')).toContainText('Hook ur_en');
+    await expect(page.locator('#focusFormatted')).toContainText(/Hook ur_en(?!_)/);
     expect(await pressed()).toEqual(['true', 'false', 'false']);
     expect(asked).toEqual(['en', 'en_more', 'ur_en_more', 'ur_en']);
   });

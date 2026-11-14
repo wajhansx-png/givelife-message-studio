@@ -1480,6 +1480,50 @@
         lab.append(b, make('span', '', EXTRA_NAME[kind]));
         box.append(lab);
       }
+      /* DMs keep their own "Text goes with" and "Poster after" (groups and the Giki page keep theirs) */
+      const textLine = make('div', 'bank-text');
+      textLine.hidden = true;
+      textLine.append(make('span', 'bank-text-label', 'Text with:'));
+      const textBtns = {};
+      for (const [v, label] of [
+        ['video', 'Video'],
+        ['poster', 'Poster'],
+      ]) {
+        const t = make('button', 'bm-chip bank-text-b', label);
+        t.type = 'button';
+        t.id = 'msgTextOn-' + v;
+        t.setAttribute('aria-pressed', 'false');
+        textBtns[v] = t;
+        textLine.append(t);
+      }
+      const posterLab = make('label', 'bm-chip'),
+        posterCb = make('input');
+      posterCb.type = 'checkbox';
+      posterCb.id = 'msgPosterAfter';
+      posterLab.append(posterCb, make('span', '', 'Poster after'));
+      textLine.append(posterLab);
+      const paintText = (v) => {
+        const d = (v && v.setup && v.setup.dm) || { text_on: 'video', poster: true };
+        textLine.hidden = !(v && v.video && v.video.has); // only matters once a video is attached
+        for (const [k, t] of Object.entries(textBtns))
+          t.setAttribute('aria-pressed', String(d.text_on === k));
+        posterLab.hidden = d.text_on !== 'video';
+        posterCb.checked = d.poster !== false;
+      };
+      const saveText = async (field, value) => {
+        try {
+          paintText(await api('/group-extras', { action: 'setup', profile: 'dm', field, value }));
+        } catch (e) {
+          notice(e.message, true);
+        }
+      };
+      textBtns.video.onclick = () => saveText('text_on', 'video');
+      textBtns.poster.onclick = () => saveText('text_on', 'poster');
+      posterCb.onchange = () => saveText('poster', posterCb.checked);
+      api('/group-extras')
+        .then(paintText)
+        .catch(() => {});
+      box.append(textLine);
       extrasBox = box;
     }
     const grid = make('div', 'bank-workspace'),

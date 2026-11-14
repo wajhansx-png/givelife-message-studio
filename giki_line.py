@@ -289,8 +289,7 @@ class GikiVolunteers(Volunteers):
         off = not sent. Read at the click, from the same saved switches the group posts use."""
         import group_extras
 
-        on = {kind for kind, _ in group_extras.to_send(self.app.STORE)}
-        return {"pdf": "pdf" in on, "video": "video" in on}
+        return group_extras.extras_for(self.app.STORE, "giki")  # the Giki page's own ticks
 
     def mutate(self, body):
         if body.get("action") == "import":

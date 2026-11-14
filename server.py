@@ -1116,7 +1116,7 @@ def send_dm_extra(jid, is_group, kind):
         raise ValueError(
             f"No {group_extras.LABEL[kind]} is saved yet. Add it in Poster → Sent after the poster in groups."
         )
-    if kind == "video" and group_extras.lead(STORE) == ident:
+    if kind == "video" and group_extras.lead(STORE, "giki" if _LINE.get() == "giki" else "dm") == ident:
         return {"code": "SUCCESS", "message": "The video already went first, with the text."}
     return send_batch_attachment(jid, "", ident)
 
@@ -1178,7 +1178,8 @@ def send_image(jid, caption, check_gap=False, _retry=True):
     atomic_write(cap, caption)
     import group_extras
 
-    lead = group_extras.lead(STORE) if STORE else None  # the case video carries the text (Poster setting)
+    profile = "group" if str(jid).endswith("@g.us") else "giki" if _LINE.get() == "giki" else "dm"
+    lead = group_extras.lead(STORE, profile) if STORE else None  # the case video carries the text
     try:
         poster = poster_media("group" if str(jid).endswith("@g.us") else "dm")
         check_hold()
@@ -1194,7 +1195,12 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                     "code": "ERROR",
                     "message": "Send not confirmed. Check WhatsApp before retrying.",
                 }
-        if lead and result.get("code") == "SUCCESS" and not str(poster).endswith(".mp4"):
+        if (
+            lead
+            and result.get("code") == "SUCCESS"
+            and not str(poster).endswith(".mp4")
+            and group_extras.poster_after(STORE, profile)
+        ):
             # then the poster alone, no text. Never retried: if it is not confirmed the owner is told.
             atomic_write(cap, "")
             try:

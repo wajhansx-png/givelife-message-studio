@@ -33,29 +33,98 @@ def _rows(store):
     return out
 
 
-def _save(store, rows):
-    store.put(KEY, {**rows, "text_on": text_on(store)})
+PROFILES = ("group", "dm", "giki")  # each one has its own choices; the files are the group message's
+FLAGS = ("poster", "video", "pdf")
 
 
-def text_on(store):
+def _raw(store):
     raw = store.get(KEY) if store else None
-    value = raw.get("text_on") if isinstance(raw, dict) else None
+    return raw if isinstance(raw, dict) else {}
+
+
+def _save(store, rows):
+    """Save the files, keeping every setting stored next to them."""
+    raw = _raw(store)
+    store.put(KEY, {**{k: v for k, v in raw.items() if k not in KINDS}, **rows})
+
+
+def text_on(store, profile="group"):
+    raw = _raw(store)
+    value = raw.get("text_on") if profile == "group" else (raw.get("setup") or {}).get(profile, {}).get("text_on")
     return value if value in TEXT_ON else "video"
 
 
-def set_text_on(store, value):
-    if value not in TEXT_ON:
-        raise ValueError("Choose Video or Poster for the text.")
-    store.put(KEY, {**_rows(store), "text_on": value})
+def set_text_on(store, value, profile="group"):
+    return set_setup(store, profile, "text_on", value)
+
+
+def setup(store, profile):
+    """{text_on, poster, video, pdf} for groups, DMs or the Giki page. Groups keep the switches next to the files."""
+    if profile not in PROFILES:
+        raise ValueError("Choose groups, DMs or Giki.")
+    raw, rows = _raw(store), _rows(store)
+    if profile == "group":
+        return {
+            "text_on": text_on(store),
+            "poster": raw.get("group_poster") is not False,
+            "video": bool("video" in rows and rows["video"]["on"]),
+            "pdf": bool("pdf" in rows and rows["pdf"]["on"]),
+        }
+    own = (raw.get("setup") or {}).get(profile) or {}
+    return {
+        "text_on": text_on(store, profile),
+        "poster": own.get("poster") is not False,  # the poster follows a video with the text unless unticked
+        "video": own.get("video") is True,
+        "pdf": own.get("pdf") is True,
+    }
+
+
+def set_setup(store, profile, field, value):
+    if profile not in PROFILES:
+        raise ValueError("Choose groups, DMs or Giki.")
+    if field == "text_on":
+        if value not in TEXT_ON:
+            raise ValueError("Choose Video or Poster for the text.")
+    elif field not in FLAGS or not isinstance(value, bool):
+        raise ValueError("Use on or off.")
+    raw = _raw(store)
+    if profile == "group" and field in KINDS:
+        return set_on(store, field, value)
+    if profile == "group":
+        raw = {**raw, ("text_on" if field == "text_on" else "group_poster"): value}
+    else:
+        all_setup = dict(raw.get("setup") or {})
+        all_setup[profile] = {**(all_setup.get(profile) or {}), field: value}
+        raw = {**raw, "setup": all_setup}
+    store.put(KEY, raw)
     return view(store)
 
 
-def lead(store):
-    """The video's attachment id when it carries the case text (text on Video, video saved and switched on), else None."""
+def lead(store, profile="group"):
+    """The video's attachment id when it carries the case text for this place, else None. For groups the video must
+    also be switched on."""
     rows = _rows(store)
-    if text_on(store) == "video" and "video" in rows and rows["video"]["on"]:
-        return rows["video"]["id"]
-    return None
+    if text_on(store, profile) != "video" or "video" not in rows:
+        return None
+    if profile == "group" and not rows["video"]["on"]:
+        return None
+    return rows["video"]["id"]
+
+
+def poster_after(store, profile="group"):
+    """After a video that carried the text: does the poster follow alone?"""
+    return setup(store, profile)["poster"]
+
+
+def extras_for(store, profile):
+    """{"pdf": bool, "video": bool}: the files that follow the first message for DMs or Giki (only saved ones; the
+    video only when it did not carry the text)."""
+    rows, mine = _rows(store), setup(store, profile)
+    led = lead(store, profile)
+    return {
+        "pdf": bool(mine["pdf"] and "pdf" in rows),
+        "video": bool(mine["video"] and "video" in rows and not led),
+    }
 
 
 def _check_kind(kind):
@@ -76,6 +145,7 @@ def view(store):
         for kind in KINDS
     }
     out["text_on"] = text_on(store)
+    out["setup"] = {p: setup(store, p) for p in PROFILES}
     return out
 
 
@@ -147,7 +217,9 @@ def act(store, body):
     if op == "toggle":
         return set_on(store, body.get("kind"), body.get("on"))
     if op == "text_on":
-        return set_text_on(store, body.get("value"))
+        return set_setup(store, body.get("profile", "group"), "text_on", body.get("value"))
+    if op == "setup":
+        return set_setup(store, body.get("profile"), body.get("field"), body.get("value"))
     if op == "remove":
         return remove(store, body.get("kind"))
     raise ValueError("Unknown action.")

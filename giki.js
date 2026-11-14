@@ -405,35 +405,66 @@
       row.append(make('span', '', label), stepper);
       panes.timing.append(row);
     }
-    /* Which file carries the case text (the same setting as in Poster on the main page) */
+    /* The Giki page's own choices (groups and DMs keep theirs); the files are the group message's */
     let extras = {};
     try {
       extras = await call('/group-extras');
     } catch (e) {}
+    const saveGiki = async (field, value) => {
+      try {
+        extras = await call('/group-extras', { action: 'setup', profile: 'giki', field, value });
+        paintGiki();
+      } catch (e) {
+        $('csError').textContent = e.message;
+      }
+    };
     const textRow = make('div', 'cr-set-row gk-text-on');
     const pick = make('div', 'gk-pick');
-    const paintPick = (value) => {
-      for (const b of pick.children) b.dataset.on = b.dataset.v === value ? '1' : '0';
-    };
     for (const [v, label] of [
       ['video', 'Video'],
       ['poster', 'Poster'],
     ]) {
-      const b = btn(label, 'cr-seg-b', async () => {
-        try {
-          paintPick((await call('/group-extras', { action: 'text_on', value: v })).text_on);
-          say('Saved: the text goes with the ' + label.toLowerCase() + '.');
-        } catch (e) {
-          $('csError').textContent = e.message;
-        }
-      });
+      const b = btn(label, 'cr-seg-b', () => saveGiki('text_on', v));
       b.dataset.v = v;
       b.setAttribute('aria-label', 'Text goes with the ' + label.toLowerCase());
       pick.append(b);
     }
-    paintPick(extras.text_on || 'video');
     textRow.append(make('span', '', 'Text goes with'), pick);
-    panes.timing.prepend(textRow);
+    /* Also send: each tick on its own, remembered */
+    const ticks = make('div', 'cr-set-row gk-ticks');
+    const tickBox = make('div', 'gk-tick-box');
+    const tickEls = {};
+    for (const [k, label] of [
+      ['poster', 'Poster'],
+      ['video', 'Video'],
+      ['pdf', 'PDF'],
+    ]) {
+      const lab = make('label', 'gk-tick');
+      const cb = make('input');
+      cb.type = 'checkbox';
+      cb.id = 'gikiTick-' + k;
+      cb.onchange = () => saveGiki(k, cb.checked);
+      lab.append(cb, make('span', '', label));
+      tickEls[k] = { lab, cb };
+      tickBox.append(lab);
+    }
+    ticks.append(make('span', '', 'Also send'), tickBox);
+    function paintGiki() {
+      const g = (extras.setup && extras.setup.giki) || { text_on: 'video', poster: true };
+      for (const b of pick.children) b.dataset.on = b.dataset.v === g.text_on ? '1' : '0';
+      for (const [k, t] of Object.entries(tickEls)) {
+        t.cb.checked = !!g[k];
+        const has = k === 'poster' || (extras[k] && extras[k].has);
+        // the poster follows only a video that carries the text; the video alone only when the poster carries it
+        const used =
+          k === 'poster' ? g.text_on === 'video' : k === 'video' ? g.text_on === 'poster' : true;
+        t.lab.hidden = !used;
+        t.cb.disabled = !has;
+        t.lab.title = has ? '' : 'Not added yet: add it on the group message page';
+      }
+    }
+    paintGiki();
+    panes.timing.prepend(textRow, ticks);
     const people = btn('', 'cr-set-row cr-set-link', () => show('people'));
     people.append(make('span', '', 'People'), make('span', 'cr-set-val', String(names.length)));
     panes.timing.append(people);

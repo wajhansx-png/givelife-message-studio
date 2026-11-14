@@ -1629,7 +1629,49 @@ document.addEventListener('click', (e) => {
       box.append(item);
       items[kind] = { item, cb, add: addWord, file: add, lab };
     }
-    box.append(msg);
+    /* Which file carries the message text (same setting as in Poster): only shown once a video is attached */
+    const textRow = mk('div', 'ui2-rx-text');
+    textRow.id = 'ui2RxText';
+    textRow.setAttribute('role', 'group');
+    textRow.setAttribute('aria-label', 'Text goes with');
+    textRow.append(mk('span', 'ui2-rx-text-label', 'Text goes with:'));
+    /* Group and DM each keep their own choice (the group message view sets the groups, the DM view the DMs) */
+    let setupAll = {};
+    const profile = () => (isDm() ? 'dm' : 'group');
+    const mine = () => setupAll[profile()] || { text_on: 'video', poster: true };
+    async function saveSetup(field, value) {
+      msg.textContent = '';
+      try {
+        const r = await post('/group-extras', { action: 'setup', profile: profile(), field, value }),
+          d = await r.json().catch(() => ({}));
+        if (!r.ok) throw Error(d.error || 'Could not save that.');
+        take(d);
+        dispatchEvent(new CustomEvent('group-extras-changed'));
+      } catch (e) {
+        msg.textContent = e.message;
+        load();
+      }
+    }
+    for (const [v, label] of [
+      ['video', 'Video'],
+      ['poster', 'Poster'],
+    ]) {
+      const b = mk('button', 'ui2-rx-text-b', label);
+      b.type = 'button';
+      b.dataset.v = v;
+      b.id = 'ui2RxText-' + v;
+      b.addEventListener('click', () => mine().text_on !== v && saveSetup('text_on', v));
+      textRow.append(b);
+    }
+    /* With the text on the video: does the poster follow, alone? */
+    const posterLab = mk('label', 'ui2-rx-chip ui2-rx-poster');
+    const posterCb = mk('input');
+    posterCb.type = 'checkbox';
+    posterCb.id = 'ui2RxPoster';
+    posterCb.addEventListener('change', () => saveSetup('poster', posterCb.checked));
+    posterLab.append(posterCb, mk('span', '', 'Poster after'));
+    textRow.append(posterLab);
+    box.append(textRow, msg);
     /* It takes the place of the small hint line under the buttons, so the reader grows by almost nothing. */
     const hint = document.querySelector('#messageFocus .ui2-reader-hint');
     if (hint) hint.after(box);
@@ -1663,6 +1705,14 @@ document.addEventListener('click', (e) => {
         it.item.title = have[k] ? names[k] : '';
         it.file.hidden = dm; // DMs only tick: the files are attached on the group message
       }
+      textRow.hidden = !have.video;
+      $('messageFocus')?.classList.toggle('ui2-has-rx-text', have.video);
+      const m = mine();
+      for (const b of textRow.querySelectorAll('button'))
+        b.setAttribute('aria-pressed', String(b.dataset.v === m.text_on));
+      posterLab.hidden = m.text_on !== 'video';
+      posterCb.checked = m.poster !== false;
+      textRow.title = dm ? 'For DMs' : 'For group posts';
     };
     const take = (v) => {
       for (const k of ['pdf', 'video']) {
@@ -1670,6 +1720,7 @@ document.addEventListener('click', (e) => {
         names[k] = have[k] ? String(v[k].name || '') : '';
         groupOn[k] = !!(have[k] && v[k].on);
       }
+      setupAll = v.setup || {};
       paint();
     };
     const load = async () => {

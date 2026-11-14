@@ -17,6 +17,37 @@ def is_line_device(device_id):
     return any(str(device_id or "").startswith(p) for p in PREFIX.values())
 
 
+def number_of(jid):
+    """The phone digits of a WhatsApp id such as 923001234567:12@s.whatsapp.net."""
+    return re.sub(r"\D", "", str(jid or "").split(":")[0].split("@")[0])
+
+
+def main_candidates(devices, store):
+    """The gateway devices that may be the main WhatsApp: never a line's device, and never a line's login that
+    came back after a deploy under its number (an id with "@")."""
+    taken = line_numbers(store)
+    return [
+        d
+        for d in devices or []
+        if isinstance(d, dict)
+        and not is_line_device(d.get("id"))
+        and ("@" not in str(d.get("id")) or number_of(d.get("jid") or d.get("id")) not in taken)
+    ]
+
+
+def line_numbers(store):
+    """The numbers linked to the extra lines, so the launcher never takes one of them for the main WhatsApp."""
+    found = set()
+    for name in PREFIX:
+        try:
+            record = store.get("wa_line_" + name)
+        except Exception:
+            record = None
+        if isinstance(record, dict) and record.get("number"):
+            found.add(str(record["number"]))
+    return found
+
+
 def _digits(value):
     from donor_book import normalize_phone
 
@@ -90,10 +121,23 @@ class Line:
             self._device = str(record.get("device") or "") if isinstance(record, dict) else ""
         return self._device
 
+    def _record(self):
+        record = self.store.get(self.key) if self.store else None
+        return dict(record) if isinstance(record, dict) else {}
+
     def _save(self, device):
         if self.store:
-            self.store.put(self.key, {"device": device})
+            self.store.put(self.key, {**self._record(), "device": device})
         self._device = device
+
+    def _remember_number(self, digits):
+        """Keep the linked number, so after a restart the launcher knows this login is not the main WhatsApp."""
+        if not digits or digits == getattr(self, "_number", None) or not self.store:
+            return
+        record = self._record()
+        if record.get("number") != digits:
+            self.store.put(self.key, {**record, "number": digits})
+        self._number = digits
 
     def ensure(self):
         """The device id, creating the device in the gateway the first time. One device only."""
@@ -142,9 +186,10 @@ class Line:
         if logged:
             try:
                 info = self._call("GET", f"/devices/{device}", device=device).get("results") or {}
-                digits = re.sub(r"\D", "", str(info.get("jid") or "").split(":")[0].split("@")[0])
+                digits = number_of(info.get("jid"))
                 out["tail"] = digits[-4:]
                 out["number"] = digits  # for the server only; never sent to the page
+                self._remember_number(digits)
             except Exception:
                 pass
         return out

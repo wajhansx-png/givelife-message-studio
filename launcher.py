@@ -4,6 +4,7 @@ from persist import configured_store
 import supervisor
 import key_cache
 import wa_lines
+import gateway_registry
 
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("DATA_DIR", "/data/studio"))
@@ -130,6 +131,15 @@ gowa_data.mkdir(parents=True, exist_ok=True)
 key_path = gowa_data / "whatsapp-keys.db"
 if not os.environ.get("GOWA_DB_KEYS_URI"):
     key_cache.restore(store, key_path)
+# The gateway's device list (which device name is which login) lives on the wiped disk; put it back.
+registry_path = gowa_data / "storages" / "chatstorage.db"
+try:
+    print(
+        "[launcher] device list restored: " + str(gateway_registry.restore(store, registry_path)),
+        flush=True,
+    )
+except Exception as exc:
+    print("[launcher] device list restore failed: " + type(exc).__name__, flush=True)
 env = os.environ.copy()
 env.update(
     APP_HOST="127.0.0.1",
@@ -172,6 +182,10 @@ def stop(*args):
             key_cache.save(store, key_path)
         except Exception as exc:
             print("[launcher] key checkpoint failed: " + type(exc).__name__, flush=True)
+    try:
+        gateway_registry.save(store, registry_path)
+    except Exception as exc:
+        print("[launcher] device list checkpoint failed: " + type(exc).__name__, flush=True)
     lease.release()  # only after WhatsApp is stopped, so the next instance can take over safely
     raise SystemExit(0)
 
@@ -222,7 +236,7 @@ def ensure_device(gowa):
             with urllib.request.urlopen("http://127.0.0.1:3000/devices", timeout=3) as response:
                 devices = json.load(response).get("results", [])
             # An extra WhatsApp line (the Giki one) is a device too. It must never be taken for the main one.
-            devices = [d for d in devices or [] if not wa_lines.is_line_device(d.get("id"))]
+            devices = wa_lines.main_candidates(devices, store)
             if not devices:
                 body = json.dumps({"device_id": str(uuid.uuid4())}).encode()
                 req = urllib.request.Request(
@@ -262,6 +276,7 @@ if not device_id:
 gowa = supervisor.Child("whatsapp", start_gowa, proc=gowa_proc)
 if not os.environ.get("GOWA_DB_KEYS_URI"):
     key_cache.start(store, key_path)
+gateway_registry.start(store, registry_path)
 server = supervisor.Child("server", start_server)
 children.extend([gowa_proc, server.proc])
 

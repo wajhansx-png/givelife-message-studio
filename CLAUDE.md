@@ -28,7 +28,7 @@ Apply these rules automatically to every coding task.
 
 # GIKI PAGE (/giki)
 - The Volunteers screen for the Giki list, with its own WhatsApp (a second device in the same gateway). Page: `server.py` `reply_giki_ui` + `giki.js` + `giki.css` (only loaded there); list, message, batch and timer: `giki_line.py`; the device (connect by code or QR, status, logout): `wa_lines.py`.
-- A send for the Giki list carries `line: "giki"`; `send_custom` then runs inside `on_line()` and every gateway call uses `device()`. A line with no device sends nothing; it never falls back to the main WhatsApp. The launcher never takes a `giki-` device as the main one.
+- A send for the Giki list carries `line: "giki"`; `send_custom` then runs inside `on_line()` and every gateway call uses `device()`. A line with no device sends nothing; it never falls back to the main WhatsApp. The launcher never takes a `giki-` device (or the Giki number) as the main one. Render wipes the disk on deploy; `gateway_registry.py` saves the gateway's device list (names to logins) in the DB and puts it back before the gateway starts, so the Giki link survives deploys.
 - DM Case reads the Group msgs text at the click (with today's amount) and sends the PDF / video exactly when they are on for the group message. The Timer sheet (gap, batch, rest) is the Case page sheet and is what DM all uses.
 - The owner's 42 Giki people are in `giki_numbers.md` and are added once, the first time the page opens (`GIKI_SEED_FILE=""` switches it off; previews and tests do). More people: + Add, Add many. DM all = the case first, then the share message; Test sends it to the owner's own WhatsApp. Tests: `tests/test_giki_line.py`, `tests/test_giki_server.py`, `tests/e2e/giki.spec.cjs`.
 

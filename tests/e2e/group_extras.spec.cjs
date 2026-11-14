@@ -126,7 +126,8 @@ for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['g
         const top = document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2);
         return c.contains(top);
       });
-      return { b, dock, chips, hit, sw: document.documentElement.scrollWidth, w: innerWidth };
+      const texts = [...document.querySelectorAll('#ui2RxText button')].map(r);
+      return { b, dock, chips, hit, texts, sw: document.documentElement.scrollWidth, w: innerWidth };
     });
     // phone: above the fixed bottom bar; computer: the bar is part of the page, the row just stays on screen
     if (width < 900) expect(m.b.bottom, 'above the dock').toBeLessThanOrEqual(m.dock.top + 1);
@@ -138,7 +139,15 @@ for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['g
       expect(c.x + c.width).toBeLessThanOrEqual(m.w + 0.5);
     }
     expect(m.hit).toEqual([true, true]); // nothing sits on top of the ticks
-    expect(m.b.height, 'one line').toBeLessThan(60);
+    expect(Math.abs(m.chips[0].y - m.chips[1].y), 'PDF and Video on one line').toBeLessThan(2);
+    // a video is attached: "Text goes with: Video / Poster" sits on the next line, real buttons, on screen
+    expect(m.texts.length).toBe(2);
+    for (const t of m.texts) {
+      expect(t.height).toBeGreaterThanOrEqual(39);
+      expect(t.x).toBeGreaterThanOrEqual(0);
+      expect(t.x + t.width).toBeLessThanOrEqual(m.w + 0.5);
+      if (width < 900) expect(t.bottom).toBeLessThanOrEqual(m.dock.top + 1);
+    }
   });
 
 /* The same two ticks under the message in the reader: group message (after the poster) and DM (after each DM). */
@@ -151,6 +160,22 @@ async function openReader(page, view = 'group', width = 390) {
   await page.evaluate(() => { location.hash = '#/preview'; });
   await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
 }
+
+test('Reader: Text goes with Video / Poster is right under the ticks once a video is attached, and saves', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'add', kind: 'video', data: 'data:video/mp4;base64,' + MP4.toString('base64'), name: 'b.mp4' });
+  await openReader(page);
+  await expect(page.locator('#ui2RxText')).toBeVisible();
+  await expect(page.locator('#ui2RxText-video')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#ui2RxText-poster').click();
+  await expect(page.locator('#ui2RxText-poster')).toHaveAttribute('aria-pressed', 'true');
+  expect((await api(port, '/group-extras')).text_on).toBe('poster');
+  await page.locator('#ui2RxText-video').click();
+  await expect.poll(async () => (await api(port, '/group-extras')).text_on).toBe('video');
+  await api(port, '/group-extras', { action: 'remove', kind: 'video' });
+  await page.reload();
+  await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
+  await expect(page.locator('#ui2RxText')).toBeHidden(); // no video: nothing to choose
+});
 
 test('Reader (group message): nothing saved means disabled ticks and an Add button on each', async ({ page }) => {
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
@@ -292,7 +317,9 @@ for (const width of [390, 430, 1440])
     }
     // one line, and above the bottom dock on phones (nothing under it)
     const box = await page.locator('#ui2ReaderExtras').boundingBox();
-    expect(box.height).toBeLessThan(48);
+    const pdf = await page.locator('#ui2Rx-pdf').locator('xpath=..').boundingBox(),
+      video = await page.locator('#ui2Rx-video').locator('xpath=..').boundingBox();
+    expect(Math.abs(pdf.y - video.y)).toBeLessThan(2); // the two ticks on one line
     const dock = await page.locator('.ui2-reader-dock').boundingBox().catch(() => null);
     if (dock && width < 900 && dock.height > 0) expect(box.y + box.height).toBeLessThanOrEqual(dock.y + 1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);

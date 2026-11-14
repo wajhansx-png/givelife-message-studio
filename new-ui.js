@@ -1629,7 +1629,38 @@ document.addEventListener('click', (e) => {
       box.append(item);
       items[kind] = { item, cb, add: addWord, file: add, lab };
     }
-    box.append(msg);
+    /* Which file carries the message text (same setting as in Poster): only shown once a video is attached */
+    const textRow = mk('div', 'ui2-rx-text');
+    textRow.id = 'ui2RxText';
+    textRow.setAttribute('role', 'group');
+    textRow.setAttribute('aria-label', 'Text goes with');
+    textRow.append(mk('span', 'ui2-rx-text-label', 'Text goes with:'));
+    let textOn = 'video';
+    for (const [v, label] of [
+      ['video', 'Video'],
+      ['poster', 'Poster'],
+    ]) {
+      const b = mk('button', 'ui2-rx-text-b', label);
+      b.type = 'button';
+      b.dataset.v = v;
+      b.id = 'ui2RxText-' + v;
+      b.addEventListener('click', async () => {
+        if (textOn === v) return;
+        msg.textContent = '';
+        try {
+          const r = await post('/group-extras', { action: 'text_on', value: v }),
+            d = await r.json().catch(() => ({}));
+          if (!r.ok) throw Error(d.error || 'Could not save that.');
+          take(d);
+          dispatchEvent(new CustomEvent('group-extras-changed'));
+        } catch (e) {
+          msg.textContent = e.message;
+          load();
+        }
+      });
+      textRow.append(b);
+    }
+    box.append(textRow, msg);
     /* It takes the place of the small hint line under the buttons, so the reader grows by almost nothing. */
     const hint = document.querySelector('#messageFocus .ui2-reader-hint');
     if (hint) hint.after(box);
@@ -1663,6 +1694,10 @@ document.addEventListener('click', (e) => {
         it.item.title = have[k] ? names[k] : '';
         it.file.hidden = dm; // DMs only tick: the files are attached on the group message
       }
+      textRow.hidden = !have.video;
+      $('messageFocus')?.classList.toggle('ui2-has-rx-text', have.video);
+      for (const b of textRow.querySelectorAll('button'))
+        b.setAttribute('aria-pressed', String(b.dataset.v === textOn));
     };
     const take = (v) => {
       for (const k of ['pdf', 'video']) {
@@ -1670,6 +1705,7 @@ document.addEventListener('click', (e) => {
         names[k] = have[k] ? String(v[k].name || '') : '';
         groupOn[k] = !!(have[k] && v[k].on);
       }
+      textOn = v.text_on === 'poster' ? 'poster' : 'video';
       paint();
     };
     const load = async () => {

@@ -6038,3 +6038,42 @@
   background: var(--surface) !important;
   color: var(--ink) !important;
 }
+
+/* Reader: "Text goes with: Video / Poster" (shown once a video is attached), on its own line under PDF / Video */
+.UI2 .ui2-rx-text {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.UI2 .ui2-rx-text[hidden] {
+  display: none;
+}
+.UI2 .ui2-rx-text-label {
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  font-weight: 700;
+}
+.UI2 .ui2-rx-text-b {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #3a4052;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink, #eef0f6);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: none;
+}
+.UI2 .ui2-rx-text-b[aria-pressed='true'] {
+  border-color: #2f6fe4;
+  background: #2f6fe4;
+  color: #fff;
+}
+@media (max-width: 899px) {
+  .UI2 #messageFocus.ui2-has-rx.ui2-has-rx-text .focus-workspace {
+    max-height: max(140px, calc(100dvh - 352px));
+  }
+}

@@ -618,12 +618,28 @@
     try {
       const r = await call('/giki/volunteers', { action: 'test', text: box ? box.value : '' });
       say(r.reply);
+      watchTest(button);
     } catch (e) {
       say(e.message, true);
-    } finally {
       button.disabled = false;
       button.textContent = 'Test';
     }
+  }
+  /* The test sends in the background: check every 3 s and say how it ended. The button is free again at once. */
+  function watchTest(button) {
+    button.disabled = false;
+    button.textContent = 'Test';
+    const started = Date.now();
+    const look = async () => {
+      let t = null;
+      try {
+        t = ((await call('/giki/wa')).line || {}).test;
+      } catch (e) {}
+      if (t && t.state === 'done') return say(t.note || 'Test sent.');
+      if (t && t.state === 'failed') return say(t.note || 'The test was not confirmed.', true);
+      if (Date.now() - started < 15 * 60 * 1000) setTimeout(look, 3000);
+    };
+    setTimeout(look, 3000);
   }
 
   /* ---------------------------------------------------------------- put the buttons where Msgs / + Add live */

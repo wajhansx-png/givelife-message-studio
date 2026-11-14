@@ -238,6 +238,49 @@ class GikiTestSend(Base):
         self.assertIn("only your share message was sent", out["reply"])
         self.assertIn("TEST", self.calls[0][2][0])
 
+    def test_the_page_gets_an_answer_at_once_and_the_result_later(self):
+        import threading
+
+        gate = threading.Event()
+        real = app.send_giki_test
+
+        def slow(*a, **k):
+            gate.wait(5)  # a big file uploading
+            return real(*a, **k)
+
+        app.GIKI_TEST.update(state="idle", note="", at=0.0)
+        with patch.object(app, "send_giki_test", slow):
+            out = app.start_giki_test("CASE", "Share")
+            self.assertEqual(out["code"], "STARTED")
+            self.assertEqual(app.GIKI_TEST["state"], "sending")
+            with self.assertRaisesRegex(ValueError, "already sending"):
+                app.start_giki_test("CASE", "Share")  # never two tests at once
+            gate.set()
+            for _ in range(200):
+                if app.GIKI_TEST["state"] != "sending":
+                    break
+                __import__("time").sleep(0.02)
+        self.assertEqual(app.GIKI_TEST["state"], "done")
+        self.assertIn("Test sent", app.GIKI_TEST["note"])
+
+    def test_a_failed_background_test_says_why(self):
+        app.GIKI_TEST.update(state="idle", note="", at=0.0)
+        with patch.object(app, "send_giki_test", side_effect=ValueError("Test not confirmed at the case: nope")):
+            app.start_giki_test("CASE", "Share")
+            for _ in range(200):
+                if app.GIKI_TEST["state"] != "sending":
+                    break
+                __import__("time").sleep(0.02)
+        self.assertEqual(app.GIKI_TEST["state"], "failed")
+        self.assertIn("not confirmed", app.GIKI_TEST["note"])
+
+    def test_a_busy_send_line_is_waited_for_but_not_forever(self):
+        busy = type("L", (), {"acquire": lambda self, timeout=None: False, "release": lambda self: None})()
+        with patch.object(app, "SEND_LOCK", busy):
+            with self.assertRaisesRegex(ValueError, "busy"):
+                app.send_giki_test("CASE", "Share")
+        self.assertEqual(self.calls, [])
+
     def test_with_both_missing_nothing_is_sent(self):
         with self.assertRaisesRegex(ValueError, "Nothing to test"):
             app.send_giki_test("  ", "")

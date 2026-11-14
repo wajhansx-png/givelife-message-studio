@@ -98,7 +98,11 @@ for (const width of [280, 320, 360, 390, 430, 768]) {
     await tabs.locator('[data-tab="more"]').click();
     const sheet = page.locator('#ui2Sheet');
     await expect(sheet).toBeVisible();
-    await expect(sheet.locator('.ui2-tile')).toHaveCount(8); // Case page + New case + the six tiles
+    await expect(sheet.locator('.ui2-tile')).toHaveCount(9); // Case page + Giki + New case + the six tiles
+    // the Giki tile: its own colour, and it opens /giki
+    const giki = sheet.locator('#ui2GikiTile');
+    await expect(giki).toBeVisible();
+    expect(await giki.evaluate((b) => getComputedStyle(b).backgroundImage)).toContain('gradient');
     await expect(sheet.locator('.ui2-sheet-x')).toBeVisible(); // a cross closes it
     await sheet.locator('.ui2-sheet-x').click();
     await expect(sheet).toBeHidden();
@@ -107,6 +111,10 @@ for (const width of [280, 320, 360, 390, 430, 768]) {
     expect(b.x).toBeGreaterThanOrEqual(-0.5);
     expect(b.x + b.width).toBeLessThanOrEqual(width + 0.5);
     expect(b.y + b.height).toBeLessThanOrEqual((await page.viewportSize()).height + 0.5);
+    const g = await sheet.locator('#ui2GikiTile').boundingBox();
+    expect(g.y + g.height).toBeLessThanOrEqual((await page.viewportSize()).height + 0.5); // reachable
+    await sheet.locator('#ui2GikiTile').click();
+    await expect(page).toHaveURL(/\/giki/);
   });
 }
 

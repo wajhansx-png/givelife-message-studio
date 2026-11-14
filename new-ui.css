@@ -6154,3 +6154,13 @@
     padding-left: 8px;
   }
 }
+
+/* More sheet: the Giki tile, in its own colour */
+.UI2 .ui2-sheet .ui2-tile.ui2-tile-giki {
+  border-color: #7c5cff !important;
+  background: linear-gradient(135deg, #3b2a8a, #5b3cc4) !important;
+  color: #fff !important;
+}
+.UI2 .ui2-sheet .ui2-tile.ui2-tile-giki small {
+  color: #e2dbff !important;
+}

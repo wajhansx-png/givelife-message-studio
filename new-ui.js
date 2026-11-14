@@ -621,6 +621,10 @@ const ui2Frame = (fn) => {
     };
     const amount = ($('leftChip')?.textContent || 'Rs.').trim().replace(/\s*left$/i, '');
     tile('Case page', 'run the whole case', () => Nav.go('case')).dataset.wide = '1';
+    /* The Giki page (its own list and WhatsApp), in its own colour so it is easy to find */
+    const giki = tile('Giki', 'own list and WhatsApp', () => (location.href = '/giki'));
+    giki.id = 'ui2GikiTile';
+    giki.classList.add('ui2-tile-giki');
     tile(
       amount + ' left',
       'change amount',

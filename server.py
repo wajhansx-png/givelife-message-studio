@@ -1844,6 +1844,8 @@ def line_view(name):
             pass
     st["same_as_main"] = bool(number and number == norm_phone(OWNER_PHONE))
     st["sending"] = bool(donors().giki.jobs.active) if name == "giki" else False
+    if name == "giki":
+        st["test"] = {"state": GIKI_TEST["state"], "note": GIKI_TEST["note"]}
     return st
 
 
@@ -2698,6 +2700,44 @@ def send_dm_test(text, poster=True):
     return {"code": "SUCCESS", "reply": "Test DM sent to your own WhatsApp."}
 
 
+class _send_lock_waiting:
+    """The send line, waiting for another send (Auto, a batch) to finish, but never forever."""
+
+    def __enter__(self):
+        if not SEND_LOCK.acquire(timeout=600):
+            raise ValueError("Another send kept WhatsApp busy for 10 minutes. Try the test again.")
+
+    def __exit__(self, *exc):
+        SEND_LOCK.release()
+
+
+GIKI_TEST = {"state": "idle", "note": "", "at": 0.0}
+
+
+def start_giki_test(case, share, pdf=False, video=False):
+    """Start the Giki test in the background and answer at once (big files can take a minute or two to upload).
+    The result shows on the Giki page when it is done."""
+    if GIKI_TEST["state"] == "sending" and time.time() - GIKI_TEST["at"] < 900:
+        raise ValueError("A test is already sending. Check your WhatsApp in a minute.")
+    if not line_ok("giki"):
+        raise ValueError("The Giki WhatsApp is not connected yet. Tap Connect WhatsApp.")
+    if not str(case or "").strip() and not str(share or "").strip():
+        raise ValueError("Nothing to test yet: write the share message or set the case in Group msgs.")
+    GIKI_TEST.update(state="sending", note="", at=time.time())
+
+    def run():
+        try:
+            GIKI_TEST.update(state="done", note=send_giki_test(case, share, pdf, video)["reply"])
+        except Exception as e:
+            GIKI_TEST.update(state="failed", note=str(e)[:300] or "The test was not confirmed. Check WhatsApp.")
+
+    threading.Thread(target=run, daemon=True, name="giki-test").start()
+    return {
+        "code": "STARTED",
+        "reply": "Test is sending in the background. Big files take a minute; you will see here when it is done.",
+    }
+
+
 def send_giki_test(case, share, pdf=False, video=False):
     """The Giki DM as one person gets it: the case with the poster, the PDF / video that are on, then the share
     message. It goes only to your own WhatsApp (never to anyone in the list), from the Giki WhatsApp, marked TEST.
@@ -2728,7 +2768,7 @@ def send_giki_test(case, share, pdf=False, video=False):
             )
 
     after = []
-    with on_line("giki"), SEND_LOCK:
+    with on_line("giki"), _send_lock_waiting():
         check_hold()
         if case:
             first = mapping(send_image(me, mark + case))

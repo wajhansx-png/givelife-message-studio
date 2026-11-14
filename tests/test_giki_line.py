@@ -49,7 +49,7 @@ class Fixture(unittest.TestCase):
             wa_ok=lambda: self.main_up,
             line_ok=lambda name: self.line_up,
             on_hold=lambda: False,
-            send_giki_test=self.fake_test,
+            start_giki_test=self.fake_test,
             get_message=lambda kind: {"text": "draft text"},
             focus_bank=lambda: SimpleNamespace(get=lambda kind: {"source": self.case}),
         )

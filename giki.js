@@ -405,6 +405,35 @@
       row.append(make('span', '', label), stepper);
       panes.timing.append(row);
     }
+    /* Which file carries the case text (the same setting as in Poster on the main page) */
+    let extras = {};
+    try {
+      extras = await call('/group-extras');
+    } catch (e) {}
+    const textRow = make('div', 'cr-set-row gk-text-on');
+    const pick = make('div', 'gk-pick');
+    const paintPick = (value) => {
+      for (const b of pick.children) b.dataset.on = b.dataset.v === value ? '1' : '0';
+    };
+    for (const [v, label] of [
+      ['video', 'Video'],
+      ['poster', 'Poster'],
+    ]) {
+      const b = btn(label, 'cr-seg-b', async () => {
+        try {
+          paintPick((await call('/group-extras', { action: 'text_on', value: v })).text_on);
+          say('Saved: the text goes with the ' + label.toLowerCase() + '.');
+        } catch (e) {
+          $('csError').textContent = e.message;
+        }
+      });
+      b.dataset.v = v;
+      b.setAttribute('aria-label', 'Text goes with the ' + label.toLowerCase());
+      pick.append(b);
+    }
+    paintPick(extras.text_on || 'video');
+    textRow.append(make('span', '', 'Text goes with'), pick);
+    panes.timing.prepend(textRow);
     const people = btn('', 'cr-set-row cr-set-link', () => show('people'));
     people.append(make('span', '', 'People'), make('span', 'cr-set-val', String(names.length)));
     panes.timing.append(people);

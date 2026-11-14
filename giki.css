@@ -293,3 +293,14 @@
   align-self: stretch !important;
   width: auto !important;
 }
+
+/* Timer sheet: Text goes with Video / Poster */
+.UI2 dialog.case-sheet .gk-pick {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+.UI2 dialog.case-sheet .gk-pick .cr-seg-b {
+  min-width: 72px;
+  min-height: 44px;
+}

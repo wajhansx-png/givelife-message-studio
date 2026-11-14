@@ -431,15 +431,39 @@
   extrasBox.id = 'posterExtras';
   extrasBox.setAttribute('aria-label', 'Sent after the poster in groups');
   extrasBox.append(
-    make('h3', '', 'Sent after the poster in groups'),
-    make('p', 'poster-extras-note', 'Order: poster and caption, then the PDF, then the video. Switch one off to skip it.'),
+    make('h3', '', 'Video and PDF (groups and DMs)'),
+    make(
+      'p',
+      'poster-extras-note',
+      'Order: the file with the text first, then the other one alone, then the PDF. Switch one off to skip it.',
+    ),
   );
+  /* Which file carries the case text, for this case: the video (then the poster alone) or the poster (then the video). */
+  const textOn = make('div', 'poster-text-on');
+  textOn.setAttribute('role', 'group');
+  textOn.setAttribute('aria-label', 'Text goes with');
+  textOn.append(make('span', '', 'Text goes with:'));
+  for (const [v, label] of [
+    ['video', 'Video'],
+    ['poster', 'Poster'],
+  ]) {
+    const b = make('button', '', label);
+    b.type = 'button';
+    b.dataset.v = v;
+    b.id = 'posterTextOn-' + v;
+    b.setAttribute('aria-pressed', 'false');
+    b.onclick = () => extrasCall({ action: 'text_on', value: v }, 'Saved: the text goes with the ' + label.toLowerCase() + '.');
+    textOn.append(b);
+  }
+  extrasBox.append(textOn);
   const extraRows = {};
   let extrasBusy = false;
   const extrasMsg = make('p', 'poster-extras-msg', '');
   extrasMsg.id = 'posterExtrasMsg';
   extrasMsg.setAttribute('role', 'status');
   const paintExtras = (v) => {
+    for (const b of textOn.querySelectorAll('button'))
+      b.setAttribute('aria-pressed', String(!!v && (v.text_on || 'video') === b.dataset.v));
     for (const [kind, r] of Object.entries(extraRows)) {
       if (r.row.dataset.up) continue; // an upload is showing its own live percentage
       const x = (v && v[kind]) || {};

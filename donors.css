@@ -1588,3 +1588,28 @@ html body #donorPasteDialog #pastePoster {
   min-width: 3.6em;
   justify-content: center;
 }
+
+/* Poster: which file carries the case text (Video or Poster) */
+.poster-text-on {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 10px;
+}
+.poster-text-on button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #3a4052;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  box-shadow: none;
+}
+.poster-text-on button[aria-pressed='true'] {
+  border-color: #2f6fe4;
+  background: #2f6fe4;
+  color: #fff;
+}

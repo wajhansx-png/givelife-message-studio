@@ -913,7 +913,7 @@ class DonorDelivery:
     def _send_extras(self, j, r, name, gender, receipts, sent, skipped):
         """After the DM (poster + caption) was confirmed: the case's PDF, then its video, only those ticked for this
         batch. Never retried; one that is not confirmed stops the next one and the batch (check WhatsApp)."""
-        for kind in ("pdf", "video"):
+        for kind in ("video", "pdf"):  # same order as the groups: the video, then the PDF
             if not j.get(kind):
                 continue
             if self.stop.is_set() or self.held():

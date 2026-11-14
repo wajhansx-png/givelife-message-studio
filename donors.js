@@ -494,6 +494,7 @@
   for (const [kind, label, accept] of [
     ['pdf', 'PDF', 'application/pdf'],
     ['video', 'Video', 'video/mp4'],
+    ['poster', 'After poster', 'image/jpeg,image/png,image/webp'],
   ]) {
     const row = make('div', 'poster-extra');
     row.dataset.kind = kind;
@@ -1480,7 +1481,7 @@
         lab.append(b, make('span', '', EXTRA_NAME[kind]));
         box.append(lab);
       }
-      /* DMs keep their own "Text goes with" and "Poster after" (groups and the Giki page keep theirs) */
+      /* DMs keep their own "Text goes with" and their own after-poster tick (groups and the Giki page keep theirs) */
       const textLine = make('div', 'bank-text');
       textLine.hidden = true;
       textLine.append(make('span', 'bank-text-label', 'Text with:'));
@@ -1500,15 +1501,16 @@
         posterCb = make('input');
       posterCb.type = 'checkbox';
       posterCb.id = 'msgPosterAfter';
-      posterLab.append(posterCb, make('span', '', 'Poster after'));
-      textLine.append(posterLab);
+      posterLab.append(posterCb, make('span', '', 'Poster'));
+      posterLab.title = 'The after poster (its own picture, added on the group message), sent after each DM';
+      box.insertBefore(posterLab, textLine.parentNode === box ? textLine : null);
       const paintText = (v) => {
         const d = (v && v.setup && v.setup.dm) || { text_on: 'video', poster: true };
         textLine.hidden = !(v && v.video && v.video.has); // only matters once a video is attached
         for (const [k, t] of Object.entries(textBtns))
           t.setAttribute('aria-pressed', String(d.text_on === k));
-        posterLab.hidden = d.text_on !== 'video';
-        posterCb.checked = d.poster !== false;
+        posterLab.hidden = !(v && v.poster && v.poster.has); // only once the after poster is added
+        posterCb.checked = d.poster === true;
       };
       const saveText = async (field, value) => {
         try {

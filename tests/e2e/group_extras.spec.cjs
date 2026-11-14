@@ -10,6 +10,7 @@ test.describe.configure({ mode: 'serial' });
 
 const PDF = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(300, 120)]);
 const MP4 = Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(300)]);
+const JPG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(300, 7)]);
 
 async function openPoster(page, width = 390, path = '/new') {
   await page.setViewportSize({ width, height: 800 });
@@ -138,7 +139,7 @@ for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['g
       expect(c.x).toBeGreaterThanOrEqual(0);
       expect(c.x + c.width).toBeLessThanOrEqual(m.w + 0.5);
     }
-    expect(m.hit).toEqual([true, true]); // nothing sits on top of the ticks
+    expect(m.hit).toEqual([true, true, true]); // PDF, Video and Poster: nothing sits on top of the ticks
     expect(Math.abs(m.chips[0].y - m.chips[1].y), 'PDF and Video on one line').toBeLessThan(2);
     // a video is attached: "Text goes with: Video / Poster" sits on the next line, real buttons, on screen
     expect(m.texts.length).toBe(2);
@@ -175,6 +176,35 @@ test('Reader: Text goes with Video / Poster is right under the ticks once a vide
   await page.reload();
   await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
   await expect(page.locator('#ui2RxText')).toBeHidden(); // no video: nothing to choose
+});
+
+test('Reader: the after poster is its own picture: Add uploads it, the tick sends it after the message', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'remove', kind: 'poster' });
+  await openReader(page);
+  const item = page.locator('.ui2-rx-item[data-kind="poster"]');
+  await expect(item).toBeVisible();
+  await expect(page.locator('#ui2Rx-poster')).toBeDisabled(); // nothing to tick before it is added
+  await expect(item.locator('.ui2-rx-add')).toHaveText('Add');
+  await page.locator('#ui2RxFile-poster').setInputFiles({ name: 'after.jpg', mimeType: 'image/jpeg', buffer: JPG });
+  await expect(item.locator('.ui2-rx-add')).toHaveText('Change', { timeout: 15000 });
+  await expect(page.locator('#ui2Rx-poster')).toBeChecked(); // added = on for the groups
+  const v = await api(port, '/group-extras');
+  expect(v.poster.has).toBe(true);
+  expect(v.setup.group.poster).toBe(true);
+  expect(v.setup.dm.poster).toBe(false); // DMs and Giki keep their own tick
+  expect(v.setup.giki.poster).toBe(false);
+  await page.locator('#ui2Rx-poster').uncheck();
+  await expect.poll(async () => (await api(port, '/group-extras')).setup.group.poster).toBe(false);
+  await page.locator('#ui2Rx-poster').check();
+  // the DM view ticks the DMs' own after poster, and has no upload button
+  await openReader(page, 'dm');
+  await expect(page.locator('#ui2Rx-poster')).not.toBeChecked();
+  await page.locator('#ui2Rx-poster').check();
+  await expect.poll(async () => (await api(port, '/group-extras')).setup.dm.poster).toBe(true);
+  expect((await api(port, '/group-extras')).setup.group.poster).toBe(true);
+  // a PDF offered as the poster is refused
+  const r = await page.evaluate(async (k) => (await fetch('/group-extras-file', { method: 'POST', headers: { Authorization: 'Bearer ' + k, 'X-Extra-Kind': 'poster', 'Content-Type': 'application/pdf' }, body: '%PDF-1.4 not a picture' })).status, KEY);
+  expect(r).toBe(400);
 });
 
 test('Reader (group message): nothing saved means disabled ticks and an Add button on each', async ({ page }) => {
@@ -259,8 +289,8 @@ test('Reader (DM message): no attach buttons; a tick with no file says to attach
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
   await api(port, '/group-extras', { action: 'remove', kind: 'video' });
   await openReader(page, 'dm');
-  await expect(page.locator('.ui2-rx-add')).toHaveCount(2);
-  await expect(page.locator('.ui2-rx-add').first()).toBeHidden();
+  await expect(page.locator('.ui2-rx-add')).toHaveCount(3); // PDF, Video, Poster
+  for (let i = 0; i < 3; i++) await expect(page.locator('.ui2-rx-add').nth(i)).toBeHidden(); // DMs never upload
   await page.locator('#ui2Rx-pdf').click({ force: true }); // refused at once, so it snaps back unticked
   await expect(page.locator('.ui2-rx-msg')).toContainText('Attach it on the group message first');
   await expect(page.locator('#ui2Rx-pdf')).not.toBeChecked();

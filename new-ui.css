@@ -6100,3 +6100,57 @@
     font-size: 13px;
   }
 }
+
+/* Reader: the Poster item (tick + Change) next to PDF / Video */
+.UI2 .ui2-rx-pitem {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  background: var(--surface2, #232838);
+}
+.UI2 .ui2-rx-pitem .ui2-rx-chip[hidden],
+.UI2 .ui2-rx-pitem .ui2-rx-pword[hidden] {
+  display: none;
+}
+.UI2 .ui2-rx-pword {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 2px 0 0;
+  color: var(--ink, #eef0f6);
+  font-size: 14px;
+  font-weight: 700;
+}
+.UI2 button.ui2-rx-pchange {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #9db8ff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.UI2 button.ui2-rx-pchange[hidden] {
+  display: none;
+}
+@media (max-width: 899px) {
+  .UI2 #messageFocus.ui2-has-rx .focus-workspace {
+    max-height: max(140px, calc(100dvh - 352px));
+  }
+  .UI2 #messageFocus.ui2-has-rx.ui2-has-rx-text .focus-workspace {
+    max-height: max(120px, calc(100dvh - 400px));
+  }
+}
+@media (max-width: 339px) {
+  .UI2 .ui2-rx-pitem {
+    padding-left: 8px;
+  }
+}

@@ -1081,7 +1081,7 @@ def send_batch_attachment(jid, caption, ident):
                 "-F",
                 f"phone={jid}",
                 "-F",
-                f"{field}=@{path};type={mime}",
+                f"{field}=@{path};type={mime}" + (f";filename={pdf_title()}" if field == "file" else ""),
                 *(["-F", f"caption=<{cap}"] if caption else []),
             ],
             capture_output=True,
@@ -1095,6 +1095,13 @@ def send_batch_attachment(jid, caption, ident):
             }
     finally:
         cap.unlink(missing_ok=True)
+
+
+def pdf_title():
+    """The name a PDF shows in WhatsApp: "<case first name> Medical Documents.pdf" (Mirha Medical Documents)."""
+    words = re.sub(r"[^A-Za-z0-9 ]+", " ", active_case_name()).split()
+    first = words[0].capitalize() if words and words[0].lower() not in ("current", "case", "new") else ""
+    return ((first + " ") if first else "") + "Medical Documents.pdf"
 
 
 def dm_extras_check(pdf, video):
@@ -1200,19 +1207,22 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                     "code": "ERROR",
                     "message": "Send not confirmed. Check WhatsApp before retrying.",
                 }
-        if (
-            lead
-            and result.get("code") == "SUCCESS"
-            and not str(poster).endswith(".mp4")
-            and group_extras.poster_after(STORE, profile)
-        ):
-            # then the poster alone, no text. Never retried: if it is not confirmed the owner is told.
-            atomic_write(cap, "")
-            try:
-                after = mapping(json.loads(post_media(jid, cap, poster).stdout))
-            except Exception:
-                after = {"code": "UNCERTAIN"}
-            result = {**result, "poster_after": after.get("code")}
+        # a DM: what follows the first message (Giki: the 2nd and 3rd messages; DMs: the after poster), in order.
+        # Groups get theirs with their files. Never retried: one not confirmed stops the next, and the owner is told.
+        follow = group_extras.after_items(STORE, profile) if STORE and profile != "group" else []
+        if follow and result.get("code") == "SUCCESS":
+            done = []
+            for kind, ident in follow:
+                try:
+                    code = mapping(send_batch_attachment(jid, "", ident)).get("code")
+                except Exception:
+                    code = "UNCERTAIN"
+                done.append({"kind": kind, "code": code})
+                if code != "SUCCESS":
+                    break
+            result = {**result, "after": done}
+            if any(d["code"] != "SUCCESS" for d in done):
+                result["message"] = "The message went, but a file after it was not confirmed. Check WhatsApp."
     finally:
         cap.unlink(missing_ok=True)
     if STORE:
@@ -2717,10 +2727,16 @@ def send_giki_test(case, share, pdf=False, video=False):
                 + " Check WhatsApp."
             )
 
+    after = []
     with on_line("giki"), SEND_LOCK:
         check_hold()
         if case:
-            confirmed(send_image(me, mark + case), "case")
+            first = mapping(send_image(me, mark + case))
+            confirmed(first, "case")
+            for part in first.get("after") or []:  # the 2nd and 3rd messages (poster pic / PDF)
+                if part.get("code") != "SUCCESS":
+                    raise ValueError(f"Test not confirmed at the {part.get('kind')}. Check WhatsApp.")
+                after.append("the PDF" if part.get("kind") == "pdf" else "the poster pic")
             for kind, wanted in (("video", video), ("pdf", pdf)):
                 if wanted:
                     confirmed(send_batch_attachment(me, "", group_extras.saved(STORE, kind)), kind)
@@ -2730,6 +2746,7 @@ def send_giki_test(case, share, pdf=False, video=False):
             )
     sent = (
         ["the case"]
+        + after
         + (["the PDF"] if pdf else [])
         + (["the video"] if video else [])
         + (["your share message"] if share else [])
@@ -6356,18 +6373,27 @@ class Handler(BaseHTTPRequestHandler):
         name = urllib.parse.unquote(self.headers.get("X-File-Name", ""))[:200]
         try:
             if kind not in group_extras.KINDS:
-                raise ValueError("Choose PDF or Video.")
+                raise ValueError("Choose PDF, Video or Poster.")
             length = int(self.headers.get("Content-Length", 0))
             if not 0 < length <= 15_000_000:
                 raise ValueError("Choose a file under 15 MB.")
             raw = self.rfile.read(length)  # always read it all, so a refusal still reaches the page
             sent = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
-            if sent in group_extras.MIME.values() and sent != group_extras.MIME[kind]:
+            if kind != "poster" and sent in group_extras.MIME.values() and sent != group_extras.MIME[kind]:
                 raise ValueError(
                     "Choose a PDF file." if kind == "pdf" else "Choose an MP4 video (it must be MP4)."
                 )
             # the real file type is checked from its first bytes when it is saved
-            data_url = "data:" + group_extras.MIME[kind] + ";base64," + base64.b64encode(raw).decode()
+            mime = group_extras.MIME[kind]
+            if kind == "poster":  # a picture: its type from its first bytes (JPEG, PNG or WebP)
+                mime = (
+                    "image/png"
+                    if raw.startswith(b"\x89PNG")
+                    else "image/webp"
+                    if raw[8:12] == b"WEBP"
+                    else "image/jpeg"
+                )
+            data_url = "data:" + mime + ";base64," + base64.b64encode(raw).decode()
             return self.reply(group_extras.add(STORE, kind, data_url, name))
         except ValueError as e:
             return self.reply({"error": str(e)[:300]}, status=400)

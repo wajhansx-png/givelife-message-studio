@@ -307,9 +307,9 @@
 
 /* What is chosen stays clearly marked: the picked side is blue, a tick stays ticked */
 .UI2 dialog.case-sheet .gk-pick .cr-seg-b[data-on='1'] {
-  border-color: #2f6fe4;
-  background: #2f6fe4;
-  color: #fff;
+  border-color: #2f6fe4 !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
 }
 .UI2 dialog.case-sheet .gk-tick-box {
   display: flex;
@@ -380,4 +380,24 @@
 /* rows keep their full height inside the scrolling list (they were squeezed and overlapped) */
 .UI2.giki #donorsPage #donorVolunteers .vol-list > .vol-row {
   flex: 0 0 auto !important;
+}
+
+/* Timer: 2nd and 3rd message rows (the name on its line, the choice and the tick under it) */
+.UI2 dialog.case-sheet :is(.gk-msg2, .gk-msg3) {
+  flex-wrap: wrap;
+  row-gap: 6px;
+  padding-block: 8px;
+}
+.UI2 dialog.case-sheet :is(.gk-msg2, .gk-msg3) > span:first-child {
+  flex: 1 1 100%;
+}
+.UI2 dialog.case-sheet .gk-name3 {
+  flex: 1 1 auto;
+  font-size: 15px;
+}
+.UI2 dialog.case-sheet :is(.gk-msg2, .gk-msg3) .gk-tick {
+  margin-left: auto;
+}
+.UI2 dialog.case-sheet .gk-tick[data-missing='1'] {
+  opacity: 0.55;
 }

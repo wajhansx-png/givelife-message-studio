@@ -31,8 +31,100 @@ class GikiDelivery(VolunteerDelivery):
 
     @staticmethod
     def follow_text(template, name, gender):
-        """The share message after the case: {name} is the first name, or "friend". No "Bhai" is added."""
-        return template.replace("{name}", name or "friend")
+        """The share message after the case: {name} is the greeting ("Asad Bhai", "Areeba Sister"), or nothing."""
+        return fill_name(template, name)
+
+
+# What {name} becomes for the people the owner gave, checked one by one: first name + Bhai / Sister. A contact with
+# no real name ("Giki Donor", "ZB Giki Donor", a nickname) gets nothing, so the message just reads without a name.
+GREETING = {
+    "giki donor 4": "",
+    "ali donor giki": "Ali Bhai",
+    "anas giki 140": "Anas Bhai",
+    "areeba malik giki": "Areeba Sister",
+    "asad giki donor": "Asad Bhai",
+    "aymen fatima volunteer giki": "Aymen Sister",
+    "ba cha giki volunteer": "",
+    "donor giki good": "",
+    "emaan giki 500 donor": "Emaan Sister",
+    "farhan ali giki best volunt": "Farhan Bhai",
+    "faris giki donor": "Faris Bhai",
+    "fateha giki donor": "Fateha Sister",
+    "fatima giki donor": "Fatima Sister",
+    "fatima zafar giki donor": "Fatima Sister",
+    "giki 500 girl": "",
+    "giki donor": "",
+    "giki saim donor ali": "Saim Bhai",
+    "hajira giki donor 500": "Hajira Sister",
+    "hamza 399 giki": "Hamza Bhai",
+    "haris giki 1500": "Haris Bhai",
+    "hassan 10k afzal giki": "Hassan Bhai",
+    "maheera giki donor": "Maheera Sister",
+    "mehliqqa khattak giki": "Mehliqqa Sister",
+    "minahil giki": "Minahil Sister",
+    "muarij donor giki": "Muarij Bhai",
+    "mubashar giki donor younas": "Mubashar Bhai",
+    "mustufa basit giki donor": "Mustufa Bhai",
+    "naufal giki": "Naufal Bhai",
+    "ramna giki": "Ramna Sister",
+    "ramsha giki donkr khan": "Ramsha Sister",
+    "ranaaziz giki donor": "Aziz Bhai",
+    "sanawar giki": "Sanawar Bhai",
+    "sani giki best": "Sani Bhai",
+    "shah giki donor": "Shah Bhai",
+    "sheikh jr giki": "Sheikh Bhai",
+    "sufyan sajid giki donor": "Sufyan Bhai",
+    "tooba afzal donor giki": "Tooba Sister",
+    "wajiha giki": "Wajiha Sister",
+    "warfansameekhan giki 500 donor": "",
+    "yumna giki": "Yumna Sister",
+    "zb giki donor": "",
+    "giki donor 1000": "",
+}
+# For anyone added later: a known woman's name gets "Sister", a known man's name "Bhai", anything else just the name.
+WOMEN = set(
+    "aiman aimen aisha alina amna anam aqsa areeba arooj ayesha aymen emaan eman esha fateha fatima hafsa hajira "
+    "hania hiba hira iqra javeria kainat khadija laiba mahnoor maheera maryam mehliqqa minahil momina noor "
+    "rabia ramna ramsha sadia saima sana sara sidra sobia tooba ume urooj wajiha yumna zainab zoya".split()
+)
+MEN = set(
+    "abdullah adeel ahmad ahmed ali anas arslan asad aziz bilal daniyal farhan faris hamza haris hassan husnain "
+    "ibrahim imran irfan junaid kamran muarij mubashar muhammad mustafa mustufa naufal omer saad saim salman "
+    "sanawar sani shah shahzaib sheikh sufyan talha umar usman waleed waqas yasir zain zeeshan".split()
+)
+
+
+def _key(label):
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", clean_name(label).lower()).split())
+
+
+def greeting(label):
+    """What {name} becomes: "Asad Bhai", "Areeba Sister", just "Zoha", or "" when the contact has no real name."""
+    key = _key(label)
+    if key in GREETING:
+        return GREETING[key]
+    first = first_name(label)[0]
+    if not first:
+        return ""
+    low = first.lower()
+    return first + (" Sister" if low in WOMEN else " Bhai" if low in MEN else "")
+
+
+def fill_name(text, name):
+    """Put the greeting where {name} is; with no greeting the sentence closes up ("Salam {name}, share" -> "Salam,
+    share"), so nobody reads "friend" or a label."""
+    text = str(text or "")
+    if "{name}" not in text:
+        return text
+    name = str(name or "").strip()
+    if name:
+        return text.replace("{name}", name)
+    text = text.replace("{name}", "")
+    text = re.sub(r"[ \t]+([,.!?؟،])", r"\1", text)  # "Salam , share" -> "Salam, share"
+    text = re.sub(r"(^|\n)[ \t]*[,،][ \t]*", r"\1", text)  # a line that now starts with a comma
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"[ \t]+(\n|$)", r"\1", text).strip()
+    return text[:1].upper() + text[1:]  # "{name}, please share" -> "Please share"
 
 
 def first_name(label):
@@ -110,7 +202,11 @@ class GikiVolunteers(Volunteers):
     BOOK = GikiBook
     DELIVERY = GikiDelivery
     LINE = "giki"
-    first_name = staticmethod(first_name)
+
+    @staticmethod
+    def first_name(label):
+        """(what {name} becomes, gender word). The greeting already carries Bhai / Sister."""
+        return greeting(label), ""
 
     PACE = {"gap_minutes": 5, "batch_size": 10, "rest_minutes": 20}
     RANGE = {"gap_minutes": (1, 10), "batch_size": (1, 20), "rest_minutes": (1, 120)}

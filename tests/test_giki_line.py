@@ -131,7 +131,7 @@ class GikiList(Fixture):
             (case["message"], case["poster"]), (self.case, True)
         )  # the Group msgs text with the poster
         self.assertEqual(
-            share["message"], "Salam Sara, please share this."
+            share["message"], "Salam Sara Sister, please share this."
         )  # then the share message
         self.assertIs(share["poster"], False)
         self.assertTrue(
@@ -155,12 +155,12 @@ class GikiList(Fixture):
             ],
         )
 
-    def test_a_person_without_a_real_first_name_gets_friend_not_a_label(self):
+    def test_a_person_without_a_real_first_name_gets_no_name_and_the_sentence_closes_up(self):
         self.g.mutate({"action": "add", "name": ". Giki Donor 4", "phone": "0300 2000002"})
         self.g.mutate({"action": "message", "text": "Salam {name}!"})
         self.go(self.g, {"action": "send_all", "request_id": "r3"})
         self.run_job(self.g.jobs)
-        self.assertEqual(self.sent[-1]["message"], "Salam friend!")
+        self.assertEqual(self.sent[-1]["message"], "Salam!")
 
     def test_dm_all_skips_people_already_messaged_and_says_so(self):
         for n, p in (("Sara", "0300 2000002"), ("Bilal", "0300 3000003")):
@@ -176,7 +176,7 @@ class GikiList(Fixture):
         self.run_job(self.g.jobs)
         names = [b["name"] for b in self.sent[sent_before:]]
         self.assertEqual(
-            names, ["Bilal", "Bilal"]
+            names, ["Bilal Bhai", "Bilal Bhai"]
         )  # the case, then the share message: only for the one waiting
         self.assertEqual(self.g.view()["waiting"], 0)
         with self.assertRaisesRegex(ValueError, "already messaged"):
@@ -403,6 +403,48 @@ class GikiImport(Fixture):
         with patch.dict(os.environ, {"GIKI_SEED_FILE": str(SEED)}):
             view = self.g.view()
         self.assertEqual((len(view["items"]), view["waiting"]), (42, 42))
+
+    def test_name_becomes_a_real_name_with_bhai_or_sister_or_nothing(self):
+        import re as _re
+        from giki_line import SEED, GREETING, fill_name, greeting
+
+        rows, _ = parse_numbers(SEED.read_text(encoding="utf-8"))
+        for label, _ in rows:  # every person you gave was checked by hand
+            with self.subTest(label=label):
+                key = " ".join(_re.sub(r"[^a-z0-9]+", " ", clean_name(label).lower()).split())
+                self.assertIn(key, GREETING)
+        cases = {
+            "Asad GIKI Donor": "Asad Bhai",
+            "Areeba Malik Giki": "Areeba Sister",
+            "Giki Saim Donor Ali": "Saim Bhai",
+            "ranaaziz Giki Donor": "Aziz Bhai",
+            "Giki Donor": "",
+            "ZB Giki Donor": "",
+            "💫 Giki Donor 1000": "",
+            "Giki 500 Girl": "",
+            "Zoya Khan": "Zoya Sister",  # someone added later
+            "Bilal": "Bilal Bhai",
+            "Zoha Giki": "Zoha",  # a name we do not know: just the name
+        }
+        for label, want in cases.items():
+            with self.subTest(label=label):
+                self.assertEqual(greeting(label), want)
+        self.assertEqual(
+            fill_name("Assalam o alaikum {name}, please share.", "Asad Bhai"),
+            "Assalam o alaikum Asad Bhai, please share.",
+        )
+        self.assertEqual(
+            fill_name("Assalam o alaikum {name}, please share.", ""),
+            "Assalam o alaikum, please share.",
+        )
+        self.assertEqual(fill_name("{name}, please share.", ""), "Please share.")
+        self.assertEqual(fill_name("Hi {name}\nShare now", ""), "Hi\nShare now")
+        self.assertEqual(fill_name("No placeholder here", ""), "No placeholder here")
+        for (
+            label,
+            _,
+        ) in rows:  # never a label, never "friend", never "Donor" / "Giki" in the greeting
+            self.assertNotRegex(greeting(label).lower(), r"giki|donor|volunt|friend|\d")
 
     def test_first_names_skip_the_words_that_are_not_names(self):
         names = {

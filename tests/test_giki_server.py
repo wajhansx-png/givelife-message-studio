@@ -83,6 +83,13 @@ class GikiServer(Base):
         self.assertEqual(self.wire, [(MAIN, "hello")])
         self.assertIn("/devices/" + MAIN + "/status", self.paths)
 
+    def test_a_giki_send_with_no_name_leaves_it_out_and_the_main_list_still_says_friend(self):
+        app.send_custom({**BODY, "line": "giki", "name": "", "message": "Salam {name}, share"})
+        app.send_custom(
+            {**BODY, "kind": "volunteer_batch", "name": "", "message": "Salam {name}, share"}
+        )
+        self.assertEqual([w[1] for w in self.wire], ["Salam, share", "Salam friend, share"])
+
     def test_a_giki_send_uses_the_giki_device_and_its_status_only(self):
         self.up[MAIN] = False  # the main WhatsApp being off must not stop a Giki send
         out = app.send_custom({**BODY, "line": "giki"})

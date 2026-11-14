@@ -438,7 +438,12 @@ def _send_custom(body):
             message, body.get("name", ""), body.get("gender", "Brother")
         )
     if not is_group and body.get("kind") in ("volunteer_batch", "volunteer_manual"):
-        message = message.replace("{name}", str(body.get("name") or "").strip() or "friend")
+        if body.get("line") == "giki":  # the Giki list: "Asad Bhai" / "Areeba Sister", or no name at all
+            import giki_line
+
+            message = giki_line.fill_name(message, body.get("name"))
+        else:
+            message = message.replace("{name}", str(body.get("name") or "").strip() or "friend")
     if (
         not message.strip() and not (body.get("kind") == "donor_thanks" and body.get("attachment"))
     ) or len(message) > 10000:

@@ -184,6 +184,7 @@ test('Timer: the same sheet as the Case page, saved and used by DM all', async (
   await expect(sheet.getByRole('button', { name: 'Message' })).toBeVisible();
   await expect(sheet.getByRole('button', { name: 'Settings' })).toBeVisible();
   await expect(sheet.locator('.cr-set-row > span:first-child')).toHaveText([
+    'Text goes with',
     'Minutes between DMs',
     'DMs per batch',
     'Rest between batches',
@@ -191,6 +192,19 @@ test('Timer: the same sheet as the Case page, saved and used by DM all', async (
   ]);
   const values = async () => sheet.locator('.cr-num').evaluateAll((l) => l.map((i) => i.value));
   expect(await values()).toEqual(['5', '10', '20']);
+  // the same Text goes with setting as Poster on the main page (one setting for groups and DMs)
+  await expect(sheet.getByRole('button', { name: 'Text goes with the video' })).toHaveAttribute(
+    'data-on',
+    '1',
+  );
+  await sheet.getByRole('button', { name: 'Text goes with the poster' }).click();
+  await expect(sheet.getByRole('button', { name: 'Text goes with the poster' })).toHaveAttribute(
+    'data-on',
+    '1',
+  );
+  expect((await api(port, '/group-extras')).text_on).toBe('poster');
+  await sheet.getByRole('button', { name: 'Text goes with the video' }).click();
+  await expect.poll(async () => (await api(port, '/group-extras')).text_on).toBe('video');
   await expect(sheet.locator('.cr-set-link .cr-set-val')).toHaveText('3');
   await sheet.getByRole('button', { name: 'More: Minutes between DMs' }).click();
   await sheet.getByRole('button', { name: 'Less: DMs per batch' }).click();
@@ -256,7 +270,10 @@ test('DM Case sends the Group msgs text with the poster from the Giki WhatsApp, 
   before = await ask('Ali Donor');
   await expect.poll(async () => (await gikiSends()).length, { timeout: 30000 }).toBe(before + 3);
   sent = (await gikiSends()).slice(before);
-  expect(sent.map((e) => e.path)).toEqual(['/send/image', '/send/file', '/send/video']);
+  // text goes with the video (the default): the video with the case text, the poster alone, then the PDF
+  expect(sent.map((e) => e.path)).toEqual(['/send/video', '/send/image', '/send/file']);
+  expect(sent[0].fields.caption).toContain('GIKITEST case caption');
+  expect(sent[1].fields.caption || '').toBe('');
   // 3. video off on the group message: PDF only
   await api(port, '/group-extras', { action: 'toggle', kind: 'video', on: false });
   before = await ask('Giki Donor 4');

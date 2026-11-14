@@ -23,8 +23,13 @@ const row = (page, kind) => page.locator(`.poster-extra[data-kind="${kind}"]`);
 
 test('the poster dialog lists the PDF and the video, empty at first, with the send order', async ({ page }) => {
   await openPoster(page);
-  await expect(page.locator('#posterExtras h3')).toHaveText('Sent after the poster in groups');
-  await expect(page.locator('.poster-extras-note')).toContainText('poster and caption, then the PDF, then the video');
+  await expect(page.locator('#posterExtras h3')).toHaveText('Video and PDF (groups and DMs)');
+  await expect(page.locator('.poster-extras-note')).toContainText('the file with the text first');
+  await expect(page.locator('#posterTextOn-video')).toHaveAttribute('aria-pressed', 'true'); // a new case: text on the video
+  await page.locator('#posterTextOn-poster').click();
+  await expect(page.locator('#posterTextOn-poster')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#posterTextOn-video').click();
+  await expect(page.locator('#posterTextOn-video')).toHaveAttribute('aria-pressed', 'true');
   for (const kind of ['pdf', 'video']) {
     await expect(row(page, kind).locator('small')).toHaveText('Not added');
     await expect(row(page, kind).locator('.poster-extra-sw')).toBeHidden();

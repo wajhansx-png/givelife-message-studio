@@ -143,8 +143,8 @@ class GikiList(Fixture):
             [(b["kind"], b.get("extra"), b["message"][:12]) for b in self.sent],
             [
                 ("volunteer_batch", None, self.case[:12]),
-                ("dm_extra", "pdf", ""),
                 ("dm_extra", "video", ""),
+                ("dm_extra", "pdf", ""),
                 ("volunteer_batch", None, "Share this S"),
             ],
         )
@@ -272,7 +272,7 @@ class GikiDmCase(Fixture):
         self.start()
         self.assertEqual(
             [(b["kind"], b.get("extra")) for b in self.sent],
-            [("volunteer_batch", None), ("dm_extra", "pdf"), ("dm_extra", "video")],
+            [("volunteer_batch", None), ("dm_extra", "video"), ("dm_extra", "pdf")],
         )
         self.assertTrue(all(b["line"] == "giki" for b in self.sent))
 

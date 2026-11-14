@@ -60,11 +60,11 @@ class Batch(unittest.TestCase):
         self.assertEqual([c[2] for c in calls], [None, None])
         self.assertEqual(st["sent"], 2)
 
-    def test_both_ticked_pdf_then_video_after_each_dm(self):
+    def test_both_ticked_video_then_pdf_after_each_dm(self):
         st, calls = self.run_batch(pdf=True, video=True)
         self.assertEqual(
             [(c[0], c[2]) for c in calls],
-            [("0", None), ("0", "pdf"), ("0", "video"), ("1", None), ("1", "pdf"), ("1", "video")],
+            [("0", None), ("0", "video"), ("0", "pdf"), ("1", None), ("1", "video"), ("1", "pdf")],
         )
         self.assertEqual(st["sent"], 2)  # the attachments are not counted as extra DMs
         self.assertTrue(all(c[1] == "dm_extra" for c in calls if c[2]))
@@ -75,11 +75,11 @@ class Batch(unittest.TestCase):
         _, calls = self.run_batch(pdf=True)
         self.assertEqual([c[2] for c in calls][:2], [None, "pdf"])
 
-    def test_a_pdf_that_is_not_confirmed_stops_the_video_and_the_batch_and_is_never_retried(self):
+    def test_a_video_that_is_not_confirmed_stops_the_pdf_and_the_batch_and_is_never_retried(self):
         st, calls = self.run_batch(replies=[OK, {"code": "UNCERTAIN"}], pdf=True, video=True)
-        self.assertEqual([c[2] for c in calls], [None, "pdf"])  # no video, no second donor
+        self.assertEqual([c[2] for c in calls], [None, "video"])  # no PDF, no second donor
         self.assertEqual(st["state"], "Stopped")
-        self.assertIn("PDF was not confirmed", st["error"])
+        self.assertIn("video was not confirmed", st["error"])
 
     def test_the_choice_is_part_of_the_job_and_can_be_changed_while_it_runs(self):
         self.h.book.add("Synthetic 0", "923001230000")

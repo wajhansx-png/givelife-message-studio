@@ -35,22 +35,40 @@ class Rules(unittest.TestCase):
         v = group_extras.view(self.s)
         self.assertFalse(v["pdf"]["has"] or v["video"]["has"])
 
-    def test_pdf_then_video_in_that_order_each_switched_on_when_added(self):
+    def test_video_then_pdf_in_that_order_each_switched_on_when_added(self):
         group_extras.add(self.s, "video", url(MP4, "video/mp4"), "oxygen.mp4")
         group_extras.add(self.s, "pdf", url(PDF, "application/pdf"), "report.pdf")
+        group_extras.set_text_on(self.s, "poster")  # the poster carries the text: both files follow it
         order = [k for k, _ in group_extras.to_send(self.s)]
-        self.assertEqual(order, ["pdf", "video"])  # always the PDF first, then the video
+        self.assertEqual(order, ["video", "pdf"])  # the video first, then the PDF
         v = group_extras.view(self.s)
         self.assertEqual((v["pdf"]["name"], v["pdf"]["on"]), ("report.pdf", True))
 
     def test_each_can_be_deselected_without_being_removed(self):
         group_extras.add(self.s, "pdf", url(PDF, "application/pdf"))
         group_extras.add(self.s, "video", url(MP4, "video/mp4"))
+        group_extras.set_text_on(self.s, "poster")
         group_extras.set_on(self.s, "pdf", False)
         self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["video"])
         self.assertTrue(group_extras.view(self.s)["pdf"]["has"])  # still saved
         group_extras.set_on(self.s, "pdf", True)
-        self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["pdf", "video"])
+        self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["video", "pdf"])
+
+    def test_text_goes_with_the_video_by_default_and_the_setting_survives_changes(self):
+        group_extras.add(self.s, "video", url(MP4, "video/mp4"))
+        group_extras.add(self.s, "pdf", url(PDF, "application/pdf"))
+        self.assertEqual(group_extras.view(self.s)["text_on"], "video")
+        self.assertEqual(group_extras.lead(self.s), group_extras.saved(self.s, "video"))
+        self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["pdf"])  # the video went first
+        group_extras.set_text_on(self.s, "poster")
+        group_extras.set_on(self.s, "pdf", False)  # a later change keeps the choice
+        self.assertEqual(group_extras.view(self.s)["text_on"], "poster")
+        self.assertIsNone(group_extras.lead(self.s))
+        group_extras.set_text_on(self.s, "video")
+        group_extras.set_on(self.s, "video", False)  # a switched-off video never carries the text
+        self.assertIsNone(group_extras.lead(self.s))
+        with self.assertRaises(ValueError):
+            group_extras.set_text_on(self.s, "pdf")
 
     def test_remove_and_replace(self):
         group_extras.add(self.s, "pdf", url(PDF, "application/pdf"), "a.pdf")
@@ -89,21 +107,22 @@ class Sending(unittest.TestCase):
             self.addCleanup(p.stop)
         group_extras.add(app.STORE, "pdf", url(PDF, "application/pdf"), "r.pdf")
         group_extras.add(app.STORE, "video", url(MP4, "video/mp4"), "v.mp4")
-        self.pdf_id = group_extras.to_send(app.STORE)[0][1]
-        self.video_id = group_extras.to_send(app.STORE)[1][1]
+        group_extras.set_text_on(app.STORE, "poster")  # these tests: the poster carries the text
+        self.pdf_id = group_extras.saved(app.STORE, "pdf")
+        self.video_id = group_extras.saved(app.STORE, "video")
 
-    def test_pdf_goes_first_then_the_video_with_no_caption(self):
+    def test_video_goes_first_then_the_pdf_with_no_caption(self):
         out = app.send_group_extras(GROUP)
-        self.assertEqual([c[2] for c in self.calls], [self.pdf_id, self.video_id])
+        self.assertEqual([c[2] for c in self.calls], [self.video_id, self.pdf_id])
         self.assertTrue(all(c[0] == GROUP and c[1] == "" for c in self.calls))
-        self.assertEqual([o["kind"] for o in out], ["pdf", "video"])
+        self.assertEqual([o["kind"] for o in out], ["video", "pdf"])
 
     def test_a_deselected_one_is_not_sent(self):
         group_extras.set_on(app.STORE, "pdf", False)
         app.send_group_extras(GROUP)
         self.assertEqual([c[2] for c in self.calls], [self.video_id])
 
-    def test_a_pdf_that_is_not_confirmed_stops_the_video_and_is_never_retried(self):
+    def test_a_video_that_is_not_confirmed_stops_the_pdf_and_is_never_retried(self):
         self.results = [{"code": "UNCERTAIN", "message": "not confirmed"}]
         out = app.send_group_extras(GROUP)
         self.assertEqual(len(self.calls), 1)  # the video did not follow, nothing was resent
@@ -128,7 +147,7 @@ class Sending(unittest.TestCase):
             group = app.send_image(GROUP, "caption")
             dm = app.send_image("923001234567@s.whatsapp.net", "caption")
         self.assertEqual(group.get("code"), "SUCCESS")
-        self.assertEqual([e["kind"] for e in group["extras"]], ["pdf", "video"])
+        self.assertEqual([e["kind"] for e in group["extras"]], ["video", "pdf"])
         self.assertNotIn("extras", dm)  # DMs never get them
         self.assertEqual(len(self.calls), 2)
 
@@ -146,6 +165,41 @@ class Sending(unittest.TestCase):
             auto = app._group_attempt({"with_picture": True, "manual": False}, GROUP, "caption")
         self.assertEqual(auto.get("code"), "SUCCESS")
         self.assertEqual([e["kind"] for e in auto["extras"]], ["pdf"])
+
+
+    def test_text_on_video_sends_the_video_with_the_text_then_the_poster_alone_then_the_pdf(self):
+        group_extras.set_text_on(app.STORE, "video")
+        media = []
+        ok = type("R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})})()
+
+        def post(jid, cap, path):
+            media.append((jid, Path(cap).read_text(), str(path)))
+            return ok
+
+        statuses = {"is_connected": True, "is_logged_in": True}
+        with patch.object(app, "api_result", lambda *a, **k: statuses), patch.object(
+            app, "post_media", post
+        ), patch.object(app, "poster_media", lambda *a, **k: Path("/x/poster.jpg")), patch.object(
+            app, "record_delivery", lambda *a, **k: None
+        ), patch.object(app, "check_stop", lambda: None), patch.object(app, "check_hold", lambda: None):
+            group = app.send_image(GROUP, "the case text")
+            dm = app.send_image("923001234567@s.whatsapp.net", "the case text")
+        self.assertEqual(group["code"], "SUCCESS")
+        # group: the video with the text, the poster alone, then the PDF (the video is not sent twice)
+        self.assertEqual(self.calls[0], (GROUP, "the case text", self.video_id))
+        self.assertEqual(media[0], (GROUP, "", "/x/poster.jpg"))
+        self.assertEqual([e["kind"] for e in group["extras"]], ["pdf"])
+        # a DM goes the same way: the video with the text, then the poster alone (files are ticked per DM)
+        self.assertEqual(dm["code"], "SUCCESS")
+        self.assertEqual(self.calls[2], ("923001234567@s.whatsapp.net", "the case text", self.video_id))
+        self.assertEqual(media[1], ("923001234567@s.whatsapp.net", "", "/x/poster.jpg"))
+
+    def test_a_dm_ticked_video_is_not_sent_twice_when_it_carried_the_text(self):
+        group_extras.set_text_on(app.STORE, "video")
+        with patch.object(app, "read_left", lambda: 5000):
+            r = app.send_dm_extra("923001234567", False, "video")
+        self.assertEqual(r["code"], "SUCCESS")
+        self.assertEqual(self.calls, [])
 
 
 class CaseOwnership(unittest.TestCase):

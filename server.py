@@ -1116,6 +1116,8 @@ def send_dm_extra(jid, is_group, kind):
         raise ValueError(
             f"No {group_extras.LABEL[kind]} is saved yet. Add it in Poster → Sent after the poster in groups."
         )
+    if kind == "video" and group_extras.lead(STORE) == ident:
+        return {"code": "SUCCESS", "message": "The video already went first, with the text."}
     return send_batch_attachment(jid, "", ident)
 
 
@@ -1174,17 +1176,34 @@ def send_image(jid, caption, check_gap=False, _retry=True):
     check_stop()
     cap = DATA / ("caption-" + uuid.uuid4().hex + ".txt")
     atomic_write(cap, caption)
+    import group_extras
+
+    lead = group_extras.lead(STORE) if STORE else None  # the case video carries the text (Poster setting)
     try:
         poster = poster_media("group" if str(jid).endswith("@g.us") else "dm")
         check_hold()
         check_stop()
-        r = post_media(jid, cap, poster)
+        if lead:
+            result = mapping(send_batch_attachment(jid, caption, lead))
+        else:
+            r = post_media(jid, cap, poster)
+            try:
+                result = mapping(json.loads(r.stdout))
+            except Exception:
+                result = {
+                    "code": "ERROR",
+                    "message": "Send not confirmed. Check WhatsApp before retrying.",
+                }
+        if lead and result.get("code") == "SUCCESS" and not str(poster).endswith(".mp4"):
+            # then the poster alone, no text. Never retried: if it is not confirmed the owner is told.
+            atomic_write(cap, "")
+            try:
+                after = mapping(json.loads(post_media(jid, cap, poster).stdout))
+            except Exception:
+                after = {"code": "UNCERTAIN"}
+            result = {**result, "poster_after": after.get("code")}
     finally:
         cap.unlink(missing_ok=True)
-    try:
-        result = mapping(json.loads(r.stdout))
-    except Exception:
-        result = {"code": "ERROR", "message": "Send not confirmed. Check WhatsApp before retrying."}
     if STORE:
         receipt = {
             "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -2691,7 +2710,7 @@ def send_giki_test(case, share, pdf=False, video=False):
         check_hold()
         if case:
             confirmed(send_image(me, mark + case), "case")
-            for kind, wanted in (("pdf", pdf), ("video", video)):
+            for kind, wanted in (("video", video), ("pdf", pdf)):
                 if wanted:
                     confirmed(send_batch_attachment(me, "", group_extras.saved(STORE, kind)), kind)
         if share:

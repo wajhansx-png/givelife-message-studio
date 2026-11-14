@@ -192,10 +192,10 @@ class GikiVolunteers(Volunteers):
         out["waiting"] = len(self.waiting_ids())
         return out
 
-    def _share(self, text=None):
+    def _share(self, text=None, required=True):
         share = (text if isinstance(text, str) and text.strip() else self.message()).strip()
-        if not share:
-            raise ValueError("Write the share message first (the box under the list).")
+        if not share and required:
+            raise ValueError("Write the share message first (tap Write, under the list).")
         if len(share) > FOLLOW_MAX:
             raise ValueError(
                 f"The share message can be up to {FOLLOW_MAX:,} characters, because it follows the case."
@@ -258,11 +258,15 @@ class GikiVolunteers(Volunteers):
         return result
 
     def test(self, body):
-        """The whole DM as one person gets it, sent only to your own WhatsApp and marked TEST."""
-        share = self._share(body.get("text"))
+        """The DM as one person gets it (the case, then the share message), sent only to your own WhatsApp and
+        marked TEST. If one part is missing, the other is still sent."""
+        share = self._share(body.get("text"), required=False)
         case = self.case_text()
-        if not isinstance(case, str) or not case.strip():
-            raise ValueError("The case message is empty. Write it in Group msgs first.")
+        case = case.strip() if isinstance(case, str) else ""
+        if not case and not share:
+            raise ValueError(
+                "Nothing to test yet: write the share message (tap Write) or set the case in Group msgs."
+            )
         return self.app.send_giki_test(case, share, **self.case_extras())
 
     def case_text(self):

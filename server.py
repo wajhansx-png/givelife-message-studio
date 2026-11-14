@@ -2659,10 +2659,14 @@ def send_dm_test(text, poster=True):
 
 
 def send_giki_test(case, share, pdf=False, video=False):
-    """The whole Giki DM as one person gets it: the case with the poster, the PDF / video that are on, then the share
-    message. It goes only to your own WhatsApp (never to anyone in the list), from the Giki WhatsApp, marked TEST."""
+    """The Giki DM as one person gets it: the case with the poster, the PDF / video that are on, then the share
+    message. It goes only to your own WhatsApp (never to anyone in the list), from the Giki WhatsApp, marked TEST.
+    If the case or the share message is missing, the other one is still sent."""
     import group_extras
 
+    case, share = str(case or "").strip(), str(share or "").strip()
+    if not case and not share:
+        raise ValueError("Nothing to test yet: write the share message or set the case in Group msgs.")
     if not line_ok("giki"):
         raise ValueError("The Giki WhatsApp is not connected yet. Tap Connect WhatsApp.")
     giki_own = LINES["giki"].status().get("number", "")
@@ -2671,6 +2675,7 @@ def send_giki_test(case, share, pdf=False, video=False):
     )
     if not me:
         raise ValueError("Your own WhatsApp number is not known. Nothing was sent.")
+    pdf, video = bool(pdf and case), bool(video and case)  # the files belong to the case
     dm_extras_check(pdf, video)
     mark = "\U0001f9ea TEST DM (only you see this)\n\n"
 
@@ -2684,19 +2689,38 @@ def send_giki_test(case, share, pdf=False, video=False):
 
     with on_line("giki"), SEND_LOCK:
         check_hold()
-        confirmed(send_image(me, mark + case), "case")
-        for kind, wanted in (("pdf", pdf), ("video", video)):
-            if wanted:
-                confirmed(send_batch_attachment(me, "", group_extras.saved(STORE, kind)), kind)
-        confirmed(send_custom_text(me, mark + share.replace("{name}", "Test")), "share message")
+        if case:
+            confirmed(send_image(me, mark + case), "case")
+            for kind, wanted in (("pdf", pdf), ("video", video)):
+                if wanted:
+                    confirmed(send_batch_attachment(me, "", group_extras.saved(STORE, kind)), kind)
+        if share:
+            confirmed(
+                send_custom_text(me, mark + share.replace("{name}", "Test")), "share message"
+            )
+    sent = (
+        ["the case"]
+        + (["the PDF"] if pdf else [])
+        + (["the video"] if video else [])
+        + (["your share message"] if share else [])
+        if case
+        else ["your share message"]
+    )
+    note = (
+        ""
+        if case and share
+        else " No share message is written yet, so only the case was sent."
+        if case
+        else " The case message is empty, so only your share message was sent."
+    )
     return {
         "code": "SUCCESS",
         "reply": "Test sent to your WhatsApp ending …"
         + str(me)[-4:]
-        + ": the case first"
-        + (", then the PDF" if pdf else "")
-        + (", then the video" if video else "")
-        + ", then your share message.",
+        + ": "
+        + ", then ".join(sent)
+        + "."
+        + note,
     }
 
 

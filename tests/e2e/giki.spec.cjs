@@ -181,11 +181,12 @@ test('Timer: the same sheet as the Case page, saved and used by DM all', async (
   await page.locator('.giki-timer').click();
   const sheet = page.locator('#gikiSheet');
   await expect(sheet.locator('h2')).toHaveText('Giki');
-  await expect(sheet.getByRole('button', { name: 'Message' })).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Message', exact: true })).toBeVisible();
   await expect(sheet.getByRole('button', { name: 'Settings' })).toBeVisible();
   await expect(sheet.locator('.cr-set-row > span:first-child')).toHaveText([
-    'Text goes with',
-    'Also send',
+    'Case goes with',
+    '2nd message',
+    '3rd message',
     'Minutes between DMs',
     'DMs per batch',
     'Rest between batches',
@@ -194,12 +195,12 @@ test('Timer: the same sheet as the Case page, saved and used by DM all', async (
   const values = async () => sheet.locator('.cr-num').evaluateAll((l) => l.map((i) => i.value));
   expect(await values()).toEqual(['5', '10', '20']);
   // the same Text goes with setting as Poster on the main page (one setting for groups and DMs)
-  await expect(sheet.getByRole('button', { name: 'Text goes with the video' })).toHaveAttribute(
+  await expect(sheet.getByRole('button', { name: 'Case goes with the video' })).toHaveAttribute(
     'data-on',
     '1',
   );
-  await sheet.getByRole('button', { name: 'Text goes with the poster' }).click();
-  await expect(sheet.getByRole('button', { name: 'Text goes with the poster' })).toHaveAttribute(
+  await sheet.getByRole('button', { name: 'Case goes with the poster' }).click();
+  await expect(sheet.getByRole('button', { name: 'Case goes with the poster' })).toHaveAttribute(
     'data-on',
     '1',
   );
@@ -207,16 +208,28 @@ test('Timer: the same sheet as the Case page, saved and used by DM all', async (
   const giki = async () => (await api(port, '/group-extras')).setup.giki;
   expect((await giki()).text_on).toBe('poster');
   expect((await api(port, '/group-extras')).text_on).toBe('video');
-  await sheet.getByRole('button', { name: 'Text goes with the video' }).click();
+  await sheet.getByRole('button', { name: 'Case goes with the video' }).click();
   await expect.poll(async () => (await giki()).text_on).toBe('video');
-  // Also send: Poster (shown with the text on the video), ticked by default; PDF and Video need a file first
-  await expect(sheet.locator('#gikiTick-poster')).toBeChecked();
-  await expect(sheet.locator('#gikiTick-video')).toBeHidden(); // the video carries the text: no "video alone"
-  await expect(sheet.locator('#gikiTick-pdf')).toBeDisabled(); // no PDF added yet
-  await sheet.locator('#gikiTick-poster').uncheck();
-  await expect.poll(async () => (await giki()).poster).toBe(false);
-  await sheet.locator('#gikiTick-poster').check();
-  await expect.poll(async () => (await giki()).poster).toBe(true);
+  // Also send: Poster (the after poster) and PDF need their file first; Video only when the poster carries the text
+  // 2nd / 3rd messages: Poster pic first by default; ticks wait for the files to be added on the group message
+  await expect(sheet.getByRole('button', { name: '2nd message: Poster pic' })).toHaveAttribute(
+    'data-on',
+    '1',
+  );
+  await expect(sheet.locator('.gk-name3')).toHaveText('PDF');
+  // what is picked is clearly blue
+  const blue = (name) =>
+    sheet.getByRole('button', { name }).evaluate((b) => getComputedStyle(b).backgroundColor);
+  expect(await blue('2nd message: Poster pic')).toBe('rgb(47, 111, 228)');
+  expect(await blue('2nd message: PDF')).not.toBe('rgb(47, 111, 228)');
+  await expect(sheet.locator('#gikiTick-2')).toBeDisabled();
+  await expect(sheet.locator('#gikiTick-3')).toBeDisabled();
+  await sheet.getByRole('button', { name: '2nd message: PDF' }).click();
+  await expect(sheet.locator('.gk-name3')).toHaveText('Poster pic');
+  await expect.poll(async () => (await giki()).order).toBe('pdf_poster');
+  await sheet.getByRole('button', { name: '2nd message: Poster pic' }).click();
+  await expect.poll(async () => (await giki()).order).toBe('poster_pdf');
+  await expect(sheet.locator('#gikiTick-video')).toHaveCount(0); // no extra things
   await expect(sheet.locator('.cr-set-link .cr-set-val')).toHaveText('3');
   await sheet.getByRole('button', { name: 'More: Minutes between DMs' }).click();
   await sheet.getByRole('button', { name: 'Less: DMs per batch' }).click();
@@ -239,7 +252,7 @@ test('Timer: the same sheet as the Case page, saved and used by DM all', async (
   await sheet.getByRole('button', { name: 'People' }).click();
   await expect(sheet.locator('.cr-names')).toContainText('Sara Giki');
   await sheet.getByRole('button', { name: 'Back to settings' }).click();
-  await sheet.getByRole('button', { name: 'Message' }).click();
+  await sheet.getByRole('button', { name: 'Message', exact: true }).click();
   await expect(sheet.locator('.cr-block')).toContainText('Salam {name}'); // saved by the earlier test
   await sheet.getByRole('button', { name: 'Close' }).click();
   // the server refuses a value outside the range
@@ -283,12 +296,11 @@ test('DM Case sends the Group msgs text with the poster from the Giki WhatsApp, 
   await giki('pdf', true);
   await page.waitForTimeout(500);
   before = await ask('Ali Donor');
-  await expect.poll(async () => (await gikiSends()).length, { timeout: 30000 }).toBe(before + 3);
+  await expect.poll(async () => (await gikiSends()).length, { timeout: 30000 }).toBe(before + 2);
   sent = (await gikiSends()).slice(before);
-  // text goes with the video (the default): the video with the case text, the poster alone, then the PDF
-  expect(sent.map((e) => e.path)).toEqual(['/send/video', '/send/image', '/send/file']);
+  // text goes with the video (the default): the video with the case text, then the PDF (no after poster ticked)
+  expect(sent.map((e) => e.path)).toEqual(['/send/video', '/send/file']);
   expect(sent[0].fields.caption).toContain('GIKITEST case caption');
-  expect(sent[1].fields.caption || '').toBe('');
   // 3. Giki text on the poster (video not ticked): the poster with the text, then the PDF
   await giki('text_on', 'poster');
   before = await ask('Giki Donor 4');

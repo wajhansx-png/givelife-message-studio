@@ -426,45 +426,60 @@
     ]) {
       const b = btn(label, 'cr-seg-b', () => saveGiki('text_on', v));
       b.dataset.v = v;
-      b.setAttribute('aria-label', 'Text goes with the ' + label.toLowerCase());
+      b.setAttribute('aria-label', 'Case goes with the ' + label.toLowerCase());
       pick.append(b);
     }
-    textRow.append(make('span', '', 'Text goes with'), pick);
-    /* Also send: each tick on its own, remembered */
-    const ticks = make('div', 'cr-set-row gk-ticks');
-    const tickBox = make('div', 'gk-tick-box');
-    const tickEls = {};
-    for (const [k, label] of [
-      ['poster', 'Poster'],
-      ['video', 'Video'],
-      ['pdf', 'PDF'],
-    ]) {
+    textRow.append(make('span', '', 'Case goes with'), pick);
+    /* 2nd and 3rd messages: the poster pic and the PDF (both added on the group message page), each with its tick */
+    const NAME = { poster: 'Poster pic', pdf: 'PDF' };
+    const row2 = make('div', 'cr-set-row gk-msg2');
+    const pick2 = make('div', 'gk-pick');
+    for (const k of ['poster', 'pdf']) {
+      const b = btn(NAME[k], 'cr-seg-b', () =>
+        saveGiki('order', k === 'poster' ? 'poster_pdf' : 'pdf_poster'),
+      );
+      b.dataset.v = k;
+      b.setAttribute('aria-label', '2nd message: ' + NAME[k]);
+      pick2.append(b);
+    }
+    const tick = (id) => {
       const lab = make('label', 'gk-tick');
       const cb = make('input');
       cb.type = 'checkbox';
-      cb.id = 'gikiTick-' + k;
-      cb.onchange = () => saveGiki(k, cb.checked);
-      lab.append(cb, make('span', '', label));
-      tickEls[k] = { lab, cb };
-      tickBox.append(lab);
-    }
-    ticks.append(make('span', '', 'Also send'), tickBox);
+      cb.id = id;
+      lab.append(cb, make('span', '', 'Send'));
+      return { lab, cb };
+    };
+    const t2 = tick('gikiTick-2'),
+      t3 = tick('gikiTick-3');
+    row2.append(make('span', '', '2nd message'), pick2, t2.lab);
+    const row3 = make('div', 'cr-set-row gk-msg3');
+    const name3 = make('b', 'gk-name3');
+    row3.append(make('span', '', '3rd message'), name3, t3.lab);
+    let second = 'poster',
+      third = 'pdf';
+    t2.cb.onchange = () => saveGiki(second, t2.cb.checked);
+    t3.cb.onchange = () => saveGiki(third, t3.cb.checked);
     function paintGiki() {
-      const g = (extras.setup && extras.setup.giki) || { text_on: 'video', poster: true };
+      const g = (extras.setup && extras.setup.giki) || { text_on: 'video', order: 'poster_pdf' };
       for (const b of pick.children) b.dataset.on = b.dataset.v === g.text_on ? '1' : '0';
-      for (const [k, t] of Object.entries(tickEls)) {
-        t.cb.checked = !!g[k];
-        const has = k === 'poster' || (extras[k] && extras[k].has);
-        // the poster follows only a video that carries the text; the video alone only when the poster carries it
-        const used =
-          k === 'poster' ? g.text_on === 'video' : k === 'video' ? g.text_on === 'poster' : true;
-        t.lab.hidden = !used;
+      second = g.order === 'pdf_poster' ? 'pdf' : 'poster';
+      third = second === 'pdf' ? 'poster' : 'pdf';
+      for (const b of pick2.children) b.dataset.on = b.dataset.v === second ? '1' : '0';
+      name3.textContent = NAME[third];
+      for (const [t, k] of [
+        [t2, second],
+        [t3, third],
+      ]) {
+        const has = !!(extras[k] && extras[k].has); // added on the group message page
+        t.cb.checked = !!g[k] && has;
         t.cb.disabled = !has;
-        t.lab.title = has ? '' : 'Not added yet: add it on the group message page';
+        t.lab.title = has ? '' : 'Not added yet: add the ' + NAME[k] + ' on the group message page';
+        t.lab.dataset.missing = has ? '0' : '1';
       }
     }
     paintGiki();
-    panes.timing.prepend(textRow, ticks);
+    panes.timing.prepend(textRow, row2, row3);
     const people = btn('', 'cr-set-row cr-set-link', () => show('people'));
     people.append(make('span', '', 'People'), make('span', 'cr-set-val', String(names.length)));
     panes.timing.append(people);

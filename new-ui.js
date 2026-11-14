@@ -1569,6 +1569,7 @@ document.addEventListener('click', (e) => {
     for (const [kind, name, accept] of [
       ['pdf', 'PDF', 'application/pdf'],
       ['video', 'Video', 'video/mp4'],
+      ['poster', 'Poster', 'image/jpeg,image/png,image/webp'], // the AFTER poster: its own picture
     ]) {
       const item = mk('div', 'ui2-rx-item');
       item.dataset.kind = kind;
@@ -1663,23 +1664,15 @@ document.addEventListener('click', (e) => {
       b.addEventListener('click', () => mine().text_on !== v && saveSetup('text_on', v));
       textRow.append(b);
     }
-    /* With the text on the video: does the poster follow, alone? */
-    const posterLab = mk('label', 'ui2-rx-chip ui2-rx-poster');
-    const posterCb = mk('input');
-    posterCb.type = 'checkbox';
-    posterCb.id = 'ui2RxPoster';
-    posterCb.addEventListener('change', () => saveSetup('poster', posterCb.checked));
-    posterLab.append(posterCb, mk('span', '', 'Poster after'));
-    textRow.append(posterLab);
     box.append(textRow, msg);
     /* It takes the place of the small hint line under the buttons, so the reader grows by almost nothing. */
     const hint = document.querySelector('#messageFocus .ui2-reader-hint');
     if (hint) hint.after(box);
     else nav.after(box);
     $('messageFocus')?.classList.add('ui2-has-rx');
-    const have = { pdf: false, video: false },
-      names = { pdf: '', video: '' },
-      groupOn = { pdf: false, video: false };
+    const have = { pdf: false, video: false, poster: false },
+      names = { pdf: '', video: '', poster: '' },
+      groupOn = { pdf: false, video: false, poster: false };
     let dmOn = { pdf: false, video: false };
     try {
       dmOn = {
@@ -1695,12 +1688,14 @@ document.addEventListener('click', (e) => {
         ? 'Also sent after each donor DM (poster and caption first). They use the PDF and video added on the group message.'
         : 'Also sent after the poster and caption in every group post, Auto too';
       box.setAttribute('aria-label', box.title);
-      for (const k of ['pdf', 'video']) {
+      for (const k of ['pdf', 'video', 'poster']) {
         const it = items[k];
         // a group message can tick only what is attached; a DM tick is checked when ticked (a missing file is refused)
         it.cb.disabled = uploading || (!dm && !have[k]);
         it.item.dataset.off = have[k] ? '0' : '1';
-        it.cb.checked = !!(have[k] && (dm ? dmOn[k] : groupOn[k]));
+        // the DM poster tick is kept on the server (pdf / video DM ticks are kept by the Donors page)
+        const dmTick = k === 'poster' ? !!(setupAll.dm && setupAll.dm.poster) : dmOn[k];
+        it.cb.checked = !!(have[k] && (dm ? dmTick : groupOn[k]));
         if (!it.item.dataset.up) it.add.textContent = have[k] ? 'Change' : 'Add';
         it.item.title = have[k] ? names[k] : '';
         it.file.hidden = dm; // DMs only tick: the files are attached on the group message
@@ -1710,12 +1705,10 @@ document.addEventListener('click', (e) => {
       const m = mine();
       for (const b of textRow.querySelectorAll('button'))
         b.setAttribute('aria-pressed', String(b.dataset.v === m.text_on));
-      posterLab.hidden = m.text_on !== 'video';
-      posterCb.checked = m.poster !== false;
       textRow.title = dm ? 'For DMs' : 'For group posts';
     };
     const take = (v) => {
-      for (const k of ['pdf', 'video']) {
+      for (const k of ['pdf', 'video', 'poster']) {
         have[k] = !!(v[k] && v[k].has);
         names[k] = have[k] ? String(v[k].name || '') : '';
         groupOn[k] = !!(have[k] && v[k].on);
@@ -1735,9 +1728,12 @@ document.addEventListener('click', (e) => {
         if (on && !have[kind]) {
           items[kind].cb.checked = false;
           msg.textContent =
-            'No ' + (kind === 'pdf' ? 'PDF' : 'video') + ' yet. Attach it on the group message first.';
+            'No ' +
+            (kind === 'pdf' ? 'PDF' : kind === 'poster' ? 'poster' : 'video') +
+            ' yet. Attach it on the group message first.';
           return;
         }
+        if (kind === 'poster') return void saveSetup('poster', on); // DMs' own poster tick
         // donors.js remembers the tick and applies it to a running Auto-DM
         dispatchEvent(new CustomEvent('dm-extra-request', { detail: { kind, on } }));
         return;

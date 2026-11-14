@@ -341,3 +341,43 @@
 .UI2 dialog.case-sheet .gk-tick:has(input:checked) {
   border-color: #2f6fe4;
 }
+
+/* Names in full: the name has its own line (one line, never cut), and the three buttons sit under it, the same
+   columns on every row, so everything lines up. Phones and tablets; a computer has room for one row. */
+@media (max-width: 899px) {
+  .UI2.giki #donorsPage #donorVolunteers .vol-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 48px !important;
+    row-gap: 6px !important;
+    padding-block: 10px !important;
+  }
+  .UI2.giki #donorsPage #donorVolunteers .vol-row .vol-name {
+    grid-column: 1 / -1 !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    font-size: 16px !important;
+  }
+  .UI2.giki #donorsPage #donorVolunteers .vol-row :is(.vol-case, .vol-share) {
+    width: 100% !important;
+    padding: 0 8px !important;
+  }
+  .UI2.giki #donorsPage #donorVolunteers .vol-row .vol-manage {
+    grid-column: 3 !important;
+    grid-row: 2 !important;
+    justify-self: end;
+  }
+}
+@media (max-width: 380px) {
+  .UI2.giki #donorsPage #donorVolunteers .vol-row .vol-name {
+    font-size: 15px !important;
+  }
+}
+@media (max-width: 339px) {
+  .UI2.giki #donorsPage #donorVolunteers .vol-row .vol-name {
+    font-size: 14px !important;
+  }
+}
+/* rows keep their full height inside the scrolling list (they were squeezed and overlapped) */
+.UI2.giki #donorsPage #donorVolunteers .vol-list > .vol-row {
+  flex: 0 0 auto !important;
+}

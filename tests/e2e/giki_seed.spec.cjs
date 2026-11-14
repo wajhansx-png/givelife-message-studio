@@ -97,3 +97,56 @@ for (const [width, height] of [
     expect(b.msgTop).toBeGreaterThanOrEqual(b.listBottom - 1);
   });
 }
+
+for (const width of [320, 360, 390, 412, 768, 1280]) {
+  test(`every name is shown in full on one line and the buttons line up at ${width}px`, async ({
+    page,
+  }) => {
+    const long = [
+      'warfansameekhan Giki 500 Donor',
+      'Mubashar Giki Donor Younas',
+      'Aymen Fatima Volunteer Giki',
+      'Farhan Ali Giki Best Volunt',
+      'Ba-cha 😎 Giki Volunteer',
+    ];
+    await api(port, '/giki/volunteers', {
+      action: 'import',
+      text: long.map((n, i) => `| ${i + 1} | ${n} | +1 555 127 ${1000 + i} | x |`).join('\n'),
+    });
+    await page.setViewportSize({ width, height: 800 });
+    await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+    await page.goto('/giki');
+    await expect(page.locator('.vol-row').first()).toBeVisible();
+    const r = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll('.vol-row')];
+      const listRight = document.querySelector('.vol-list').getBoundingClientRect().right;
+      const cut = rows
+        .map((row) => row.querySelector('.vol-name'))
+        .filter(
+          (n) =>
+            n.scrollWidth > n.clientWidth + 1 || n.getBoundingClientRect().right > listRight + 1,
+        )
+        .map((n) => n.textContent);
+      const x = (sel) =>
+        new Set(rows.map((row) => Math.round(row.querySelector(sel).getBoundingClientRect().left)))
+          .size;
+      let overlap = 0;
+      rows.forEach((row, i) => {
+        const b = row.getBoundingClientRect();
+        for (const el of row.querySelectorAll('.vol-name, .vol-case, .vol-share, .vol-manage')) {
+          const e = el.getBoundingClientRect();
+          if (e.top < b.top - 1 || e.bottom > b.bottom + 1) overlap++;
+        }
+        if (i && rows[i - 1].getBoundingClientRect().bottom > b.top + 1) overlap++;
+      });
+      const oneLine = rows.every(
+        (row) => row.querySelector('.vol-name').getBoundingClientRect().height < 30,
+      );
+      return { cut, cols: [x('.vol-case'), x('.vol-share'), x('.vol-manage')], overlap, oneLine };
+    });
+    expect(r.cut).toEqual([]); // no name is cut
+    expect(r.cols).toEqual([1, 1, 1]); // the buttons sit in the same columns on every row
+    expect(r.overlap).toBe(0); // nothing overlaps the next row
+    expect(r.oneLine).toBe(true);
+  });
+}

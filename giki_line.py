@@ -363,7 +363,7 @@ class GikiVolunteers(Volunteers):
             raise ValueError(
                 "Nothing to test yet: write the share message (tap Write) or set the case in Group msgs."
             )
-        return self.app.send_giki_test(case, share, **self.case_extras())
+        return self.app.start_giki_test(case, share, **self.case_extras())  # answers at once
 
     def case_text(self):
         """DM Case sends exactly what the groups send: the message set in Group msgs, with today's amount. It is read

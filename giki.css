@@ -401,3 +401,11 @@
 .UI2 dialog.case-sheet .gk-tick[data-missing='1'] {
   opacity: 0.55;
 }
+/* three choices for the 2nd / 3rd message: they share the line, the tick goes under on a narrow phone */
+.UI2 dialog.case-sheet .gk-pick3 {
+  flex-wrap: wrap;
+}
+.UI2 dialog.case-sheet .gk-pick3 .cr-seg-b {
+  min-width: 0;
+  padding: 0 12px;
+}

@@ -36,7 +36,8 @@ def _rows(store):
 
 PROFILES = ("group", "dm", "giki")  # each one has its own choices; the files are the group message's
 FLAGS = ("poster", "video", "pdf")
-ORDERS = ("poster_pdf", "pdf_poster")  # Giki: which goes as the 2nd message and which as the 3rd
+ORDERS = ("poster_pdf", "pdf_poster")  # older saved order (2nd / 3rd): still read
+SLOT_KINDS = ("poster", "pdf", "video")  # Giki: what the 2nd and the 3rd message can be
 
 
 def _raw(store):
@@ -79,7 +80,18 @@ def setup(store, profile):
         "video": own.get("video") is True,
         "pdf": own.get("pdf") is True,
         "order": own.get("order") if own.get("order") in ORDERS else "poster_pdf",
+        **_slots(own),
     }
+
+
+def _slots(own):
+    """{"second": kind, "third": kind}: what the Giki 2nd and 3rd messages are (never the same thing twice)."""
+    old = "pdf" if own.get("order") == "pdf_poster" else "poster"
+    second = own.get("second") if own.get("second") in SLOT_KINDS else old
+    third = own.get("third") if own.get("third") in SLOT_KINDS else ("poster" if old == "pdf" else "pdf")
+    if third == second:
+        third = next(k for k in SLOT_KINDS if k != second)
+    return {"second": second, "third": third}
 
 
 def set_setup(store, profile, field, value):
@@ -91,6 +103,21 @@ def set_setup(store, profile, field, value):
     elif field == "order":
         if profile == "group" or value not in ORDERS:
             raise ValueError("Choose Poster or PDF for the 2nd message.")
+    elif field in ("second", "third"):
+        if profile != "giki" or value not in SLOT_KINDS:
+            raise ValueError("Choose Poster pic, PDF or Video.")
+        raw = _raw(store)
+        all_setup = dict(raw.get("setup") or {})
+        own = dict(all_setup.get(profile) or {})
+        now = _slots(own)
+        other = "third" if field == "second" else "second"
+        if now[other] == value:  # picking what the other slot has: they swap
+            own[other] = now[field]
+        own[field] = value
+        own.pop("order", None)
+        all_setup[profile] = own
+        store.put(KEY, {**raw, "setup": all_setup})
+        return view(store)
     elif field not in FLAGS or not isinstance(value, bool):
         raise ValueError("Use on or off.")
     raw = _raw(store)
@@ -132,10 +159,16 @@ def after_items(store, profile):
     if profile == "group":
         return []
     rows, mine = _rows(store), setup(store, profile)
-    kinds = ["poster"] if profile == "dm" else (
-        ["pdf", "poster"] if mine["order"] == "pdf_poster" else ["poster", "pdf"]
-    )
-    return [(k, rows[k]["id"]) for k in kinds if mine[k] and k in rows]
+    if profile == "dm":
+        kinds = ["poster"]
+    else:
+        kinds = [mine["second"], mine["third"]]
+        led = lead(store, profile)  # the video already went with the case: never twice
+    return [
+        (k, rows[k]["id"])
+        for k in kinds
+        if mine[k] and k in rows and not (profile == "giki" and k == "video" and led)
+    ]
 
 
 def extras_for(store, profile):

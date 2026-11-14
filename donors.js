@@ -2978,7 +2978,9 @@
     const people = make('section', 'vol-people');
     people.setAttribute('aria-label', 'Volunteer list and case options');
     const caseOptions = make('div', 'vol-case-options');
-    caseOptions.append(make('span', 'vol-list-label', 'People'));
+    caseOptions.append(
+      make('span', 'vol-list-label', GIKI ? 'People · ' + vols.items.length : 'People'),
+    );
     const list = make('div', 'vol-list');
     if (vols.items.length) {
       list.setAttribute('role', 'list');

@@ -255,3 +255,41 @@
   min-height: 44px;
   padding: 0 14px;
 }
+
+/* A long list scrolls inside its own box; the share message row stays fixed under it (it used to sit over the last rows) */
+.UI2.giki #donorsPage #donorVolunteers > .vol-workspace {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  overflow: hidden !important;
+  min-height: 0 !important;
+}
+.UI2.giki #donorsPage #donorVolunteers .vol-people {
+  order: 1;
+  flex: 1 1 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-self: stretch !important;
+  min-height: 0 !important;
+  height: auto !important;
+  overflow: hidden !important;
+}
+.UI2.giki #donorsPage #donorVolunteers .vol-people > .vol-case-options {
+  flex: 0 0 auto;
+}
+.UI2.giki #donorsPage #donorVolunteers .vol-list {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.UI2.giki #donorsPage #donorVolunteers .vol-msg {
+  order: 2;
+  flex: 0 0 auto !important;
+}
+.UI2.giki #donorsPage #donorVolunteers .vol-msg {
+  align-self: stretch !important;
+  width: auto !important;
+}

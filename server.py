@@ -29,6 +29,36 @@ DATA.mkdir(parents=True, exist_ok=True)
 DRAFT = DATA / "drafts.json"
 DEVICE = os.environ.get("WHATSAPP_DEVICE_ID", "")
 GOWA_URL = os.environ.get("GOWA_URL", "http://127.0.0.1:3000").rstrip("/")
+import contextvars, wa_lines
+
+_LINE = contextvars.ContextVar("wa_line", default="")
+LINES = {}  # name -> wa_lines.Line, filled once the store is ready
+
+
+class on_line:
+    """`with on_line("giki"):` sends through the Giki WhatsApp instead of the main one, for this thread only."""
+
+    def __init__(self, name):
+        self.name = name or ""
+
+    def __enter__(self):
+        self.token = _LINE.set(self.name)
+
+    def __exit__(self, *exc):
+        _LINE.reset(self.token)
+
+
+def device():
+    """The WhatsApp device a call goes through. The main one, unless inside on_line(): then that line's own
+    device, and never the main one (a line without a device sends nothing)."""
+    name = _LINE.get()
+    if not name:
+        return DEVICE
+    line = LINES.get(name)
+    found = line.device() if line else ""
+    if not found:
+        raise ValueError("The " + name.capitalize() + " WhatsApp is not connected yet.")
+    return found
 GROUPS = {
     "main": ("GiveLife Foundation", "120363423121755785@g.us"),
     "community": ("Upwork Community 2026", "120363398623589385@g.us"),
@@ -161,6 +191,7 @@ def serialized_send(fn):
 
 
 STORE = configured_store()
+LINES["giki"] = wa_lines.Line("giki", STORE, GOWA_URL)
 CAMPAIGN_CONTACTED = (
     set(json.loads((ROOT / "campaign-blocks.json").read_text()))
     if (ROOT / "campaign-blocks.json").exists()
@@ -225,7 +256,7 @@ def read_drafts():
 
 
 def api(path):
-    req = urllib.request.Request(GOWA_URL + path, headers={"X-Device-Id": DEVICE})
+    req = urllib.request.Request(GOWA_URL + path, headers={"X-Device-Id": device()})
     with urllib.request.urlopen(req, timeout=12) as r:
         return mapping(json.load(r))
 
@@ -317,6 +348,17 @@ def custom_recipient(body):
 
 
 def send_custom(body):
+    """One send. body["line"] = "giki" sends it from the Giki WhatsApp instead of the main one; nothing else changes."""
+    line = body.get("line") or ""
+    if not line:
+        return _send_custom(body)
+    if line not in LINES:
+        raise ValueError("Unknown WhatsApp line.")
+    with on_line(line):
+        return _send_custom(body)
+
+
+def _send_custom(body):
     check_hold()
     jid, is_group = custom_recipient(body)
     if body.get("kind") == "dm_extra":
@@ -416,11 +458,15 @@ def send_custom(body):
         raise ValueError("Another send is running. Please wait for it to finish.")
     try:
         try:
-            status = api_result("/devices/" + DEVICE + "/status")
+            status = api_result("/devices/" + device() + "/status")
         except Exception:
             status = {}  # the WhatsApp service is restarting or unreachable: nothing was sent
         if not status.get("is_connected") or not status.get("is_logged_in"):
-            raise ValueError("WhatsApp is disconnected. Tap WhatsApp to reconnect.")
+            raise ValueError(
+                "The Giki WhatsApp is disconnected. Tap Connect WhatsApp."
+                if _LINE.get()
+                else "WhatsApp is disconnected. Tap WhatsApp to reconnect."
+            )
         check_hold()
         check_stop()
         now = time.time()
@@ -467,7 +513,8 @@ def send_custom(body):
                         raise ValueError(
                             "This recipient was contacted before. Check WhatsApp before sending again."
                         )
-            ledger = STORE.get("dm_daily", {})
+            ledger_key = "dm_daily" + ("_" + _LINE.get() if _LINE.get() else "")  # each WhatsApp has its own day
+            ledger = STORE.get(ledger_key, {})
             prior_ledger = dict(ledger)
             day = (
                 datetime.datetime.fromtimestamp(now, datetime.timezone(datetime.timedelta(hours=5)))
@@ -493,7 +540,7 @@ def send_custom(body):
             check_stop()  # last point where Stop leaves no trace
             prior_recipient = records.get("dm_recipient_" + digest) or {}
             ledger.update(count=ledger["count"] + 1, last=now)
-            STORE.put("dm_daily", ledger)
+            STORE.put(ledger_key, ledger)
             STORE.put("dm_recipient_" + digest, {"state": "uncertain", "time": now})
         # Every group delivery (including direct/custom sends) uses the shared saved bank.
         if is_group:
@@ -514,7 +561,7 @@ def send_custom(body):
         except (SendStopped, SendHeld):
             # Nothing was uploaded: undo the "contacted" reservation so this person can be sent to later.
             if not is_group:
-                STORE.put("dm_daily", prior_ledger)
+                STORE.put(ledger_key, prior_ledger)
                 STORE.put("dm_recipient_" + digest, prior_recipient)
             raise
         except Exception:
@@ -990,7 +1037,7 @@ def post_media(jid, cap, path):
             "POST",
             GOWA_URL + ("/send/video" if video else "/send/image"),
             "-H",
-            f"X-Device-Id: {DEVICE}",
+            f"X-Device-Id: {device()}",
             "-F",
             f"phone={jid}",
             "-F",
@@ -1025,7 +1072,7 @@ def send_batch_attachment(jid, caption, ident):
                 "POST",
                 GOWA_URL + "/send/" + field,
                 "-H",
-                f"X-Device-Id: {DEVICE}",
+                f"X-Device-Id: {device()}",
                 "-F",
                 f"phone={jid}",
                 "-F",
@@ -1097,7 +1144,7 @@ def send_image(jid, caption, check_gap=False, _retry=True):
     if jid in NEVER_GROUPS:
         return {"code": "ERROR", "message": "This group is never used."}
     try:
-        status = api_result("/devices/" + DEVICE + "/status")
+        status = api_result("/devices/" + device() + "/status")
     except Exception:
         status = {}  # gateway restarting or unreachable: nothing was sent
     if not status.get("is_connected") or not status.get("is_logged_in"):
@@ -1729,13 +1776,70 @@ def wa_ok():
         _WA["busy"] = True
     ok = False
     try:
-        s = api_result("/devices/" + DEVICE + "/status")
+        s = api_result("/devices/" + DEVICE + "/status")  # always the main WhatsApp, whatever line is active
         ok = bool(s.get("is_connected") and s.get("is_logged_in"))
     except Exception:
         ok = False
     finally:
         with _WA_LOCK:
             _WA.update(t=time.time(), ok=ok, busy=False)
+    return ok
+
+
+_LINE_WA = {}
+_LINE_TRIED = {}
+
+
+def line_view(name):
+    """What the page shows about an extra WhatsApp line. A dropped link (still logged in) is asked to reconnect, at most once a minute."""
+    line = LINES[name]
+    st = line.status()
+    number = st.pop("number", "")
+    if st["state"] == "dropped" and time.time() - _LINE_TRIED.get(name, 0) > 60:
+        _LINE_TRIED[name] = time.time()
+        try:
+            st = {**line.reconnect(), "tail": st.get("tail", "")}
+            st.pop("number", None)
+        except ValueError:
+            pass
+    st["same_as_main"] = bool(number and number == norm_phone(OWNER_PHONE))
+    st["sending"] = bool(donors().giki.jobs.active) if name == "giki" else False
+    return st
+
+
+def line_action(name, body):
+    """Connect / disconnect an extra WhatsApp line. Never touches the main WhatsApp."""
+    line = LINES[name]
+    action = body.get("action", "status")
+    if action == "status":
+        return {"line": line_view(name)}
+    if action == "qr":
+        return line.qr()
+    if action == "code":
+        return line.pair_code(body.get("phone"))
+    if action == "reconnect":
+        line.reconnect()
+        return {"line": line_view(name)}
+    if action == "logout":
+        if body.get("confirm") is not True:
+            raise ValueError("Confirm to disconnect this WhatsApp.")
+        if name == "giki" and donors().giki.jobs.active:
+            raise ValueError("Stop the Giki DMs first, then disconnect.")
+        line.logout()
+        _LINE_WA.pop(name, None)
+        return {"line": line_view(name)}
+    raise ValueError("Unknown WhatsApp action.")
+
+
+def line_ok(name):
+    """Is that extra WhatsApp line connected? Asked at most once per 5 s per line (1.5 s after a "no")."""
+    now = time.time()
+    seen = _LINE_WA.get(name)
+    if seen and now - seen[0] < (5 if seen[1] else 1.5):
+        return seen[1]
+    line = LINES.get(name)
+    ok = bool(line and line.ready())
+    _LINE_WA[name] = (time.time(), ok)
     return ok
 
 
@@ -2357,7 +2461,7 @@ def send_custom_text(jid, text):
     req = urllib.request.Request(
         GOWA_URL + "/send/message",
         data=json.dumps({"phone": jid, "message": text}).encode(),
-        headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
+        headers={"X-Device-Id": device(), "Content-Type": "application/json"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=40) as response:
@@ -2372,7 +2476,7 @@ def send_text(jid, text):
     req = urllib.request.Request(
         GOWA_URL + "/send/message",
         data=json.dumps({"phone": jid, "message": text}).encode(),
-        headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
+        headers={"X-Device-Id": device(), "Content-Type": "application/json"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=40) as r:
@@ -2392,7 +2496,7 @@ def send_thanks_test(message, media):
         raise ValueError("Another send is running. Please wait for it to finish.")
     try:
         try:
-            status = api_result("/devices/" + DEVICE + "/status")
+            status = api_result("/devices/" + device() + "/status")
         except Exception:
             status = {}
         if not status.get("is_connected") or not status.get("is_logged_in"):
@@ -2414,7 +2518,7 @@ def send_thanks_test(message, media):
                             "message": personalize_thanks(message, "Test Bhai"),
                         }
                     ).encode(),
-                    headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
+                    headers={"X-Device-Id": device(), "Content-Type": "application/json"},
                     method="POST",
                 )
                 with urllib.request.urlopen(req, timeout=40) as response:
@@ -2552,6 +2656,48 @@ def send_dm_test(text, poster=True):
             "Test not confirmed: " + str(result.get("message", ""))[:100] + " Check WhatsApp."
         )
     return {"code": "SUCCESS", "reply": "Test DM sent to your own WhatsApp."}
+
+
+def send_giki_test(case, share, pdf=False, video=False):
+    """The whole Giki DM as one person gets it: the case with the poster, the PDF / video that are on, then the share
+    message. It goes only to your own WhatsApp (never to anyone in the list), from the Giki WhatsApp, marked TEST."""
+    import group_extras
+
+    if not line_ok("giki"):
+        raise ValueError("The Giki WhatsApp is not connected yet. Tap Connect WhatsApp.")
+    giki_own = LINES["giki"].status().get("number", "")
+    me = next(
+        (n for n in (norm_phone(OWNER_PHONE), norm_phone(TEST_DM_PHONE)) if n and n != giki_own), ""
+    )
+    if not me:
+        raise ValueError("Your own WhatsApp number is not known. Nothing was sent.")
+    dm_extras_check(pdf, video)
+    mark = "\U0001f9ea TEST DM (only you see this)\n\n"
+
+    def confirmed(result, what):
+        if mapping(result).get("code") != "SUCCESS":
+            raise ValueError(
+                f"Test not confirmed at the {what}: "
+                + str(mapping(result).get("message", ""))[:100]
+                + " Check WhatsApp."
+            )
+
+    with on_line("giki"), SEND_LOCK:
+        check_hold()
+        confirmed(send_image(me, mark + case), "case")
+        for kind, wanted in (("pdf", pdf), ("video", video)):
+            if wanted:
+                confirmed(send_batch_attachment(me, "", group_extras.saved(STORE, kind)), kind)
+        confirmed(send_custom_text(me, mark + share.replace("{name}", "Test")), "share message")
+    return {
+        "code": "SUCCESS",
+        "reply": "Test sent to your WhatsApp ending …"
+        + str(me)[-4:]
+        + ": the case first"
+        + (", then the PDF" if pdf else "")
+        + (", then the video" if video else "")
+        + ", then your share message.",
+    }
 
 
 def send_dm(phone, text, digest):
@@ -2697,7 +2843,7 @@ def send_with_image(jid, caption, img):
         req = urllib.request.Request(
             GOWA_URL + "/send/message",
             data=json.dumps({"phone": jid, "message": caption}).encode(),
-            headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
+            headers={"X-Device-Id": device(), "Content-Type": "application/json"},
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=40) as r:
@@ -3861,7 +4007,7 @@ def delete_last_group(target=None):
     req = urllib.request.Request(
         GOWA_URL + "/message/" + urllib.parse.quote(str(ident), safe="") + "/revoke",
         data=json.dumps({"phone": jid}).encode(),
-        headers={"X-Device-Id": DEVICE, "Content-Type": "application/json"},
+        headers={"X-Device-Id": device(), "Content-Type": "application/json"},
         method="POST",
     )
     try:
@@ -5548,6 +5694,33 @@ class Handler(BaseHTTPRequestHandler):
 
         return self.reply_built("/new", [ROOT / "index.html"], build, "text/html")
 
+    def reply_giki_ui(self):
+        """/giki: the same app, opened straight on the Volunteers screen of the Giki list (its own people, message and
+        WhatsApp). giki.js and giki.css only exist here; every other page is untouched."""
+
+        def build():
+            html = (ROOT / "index.html").read_text(encoding="utf-8")
+            html = html.replace('<body class="nomsg"', '<body class="nomsg ui2 giki"', 1)
+            html = html.replace(
+                "<head>",
+                "<head>\n    <script>window.GIKI_LINE = true;"
+                " if (!/^#\\/donors\\/volunteers/.test(location.hash))"
+                " history.replaceState(null, '', location.pathname + location.search + '#/donors/volunteers');</script>",
+                1,
+            )
+            html = html.replace(
+                '<link rel="stylesheet" href="/responsive.css" />',
+                '<link rel="stylesheet" href="/responsive.css" />\n    <link rel="stylesheet" href="/new-ui.css" />\n    <link rel="stylesheet" href="/giki.css" />',
+                1,
+            )
+            return html.replace(
+                "</body>",
+                '<script src="/new-ui.js"></script><script src="/giki.js"></script></body>',
+                1,
+            )
+
+        return self.reply_built("/giki", [ROOT / "index.html"], build, "text/html")
+
     def reply_new_group_finder(self):
         """Group finder inside the redesign (/new/group-finder): same page, the new look added. /group-finder is untouched."""
         html = (ROOT / "group-finder.html").read_text(encoding="utf-8")
@@ -5616,6 +5789,8 @@ class Handler(BaseHTTPRequestHandler):
             "/health",
             "/new",
             "/new/",
+            "/giki",
+            "/giki/",
             "/new/group-finder",
             "/group-finder",
             "/case-plan",
@@ -5648,6 +5823,8 @@ class Handler(BaseHTTPRequestHandler):
             "/new-ui.js",
             "/case-run.js",
             "/new-ui.css",
+            "/giki.js",
+            "/giki.css",
             "/group-finder.js",
             "/group-finder.css",
             "/case-plan.js",
@@ -5718,6 +5895,17 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply_new_ui()
         if self.path.split("?")[0] == "/old":
             return self.reply_file("index.html", "text/html")
+        if self.path.split("?")[0] in ("/giki", "/giki/"):
+            return self.reply_giki_ui()
+        if self.path.split("?")[0] == "/giki.js":
+            return self.reply_file("giki.js", "application/javascript")
+        if self.path.split("?")[0] == "/giki.css":
+            return self.reply_built(
+                "/giki.css",
+                [ROOT / "giki.css"],
+                lambda: (ROOT / "giki.css").read_text(encoding="utf-8").replace(".UI2", NEW_UI_PREFIX),
+                "text/css",
+            )
         if self.path.split("?")[0] == "/new/group-finder":
             return self.reply_new_group_finder()
         if self.path.split("?")[0] == "/new-ui.css":
@@ -5872,6 +6060,22 @@ class Handler(BaseHTTPRequestHandler):
                         )[0]
                     )
                 )
+            except ValueError as e:
+                return self.reply({"error": str(e)}, status=400)
+        if self.path.split("?")[0] == "/giki/volunteers":
+            try:
+                return self.reply(
+                    donors().giki.view(
+                        urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get(
+                            "q", [""]
+                        )[0]
+                    )
+                )
+            except ValueError as e:
+                return self.reply({"error": str(e)}, status=400)
+        if self.path == "/giki/wa":
+            try:
+                return self.reply(line_action("giki", {"action": "status"}))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
         if self.path.startswith("/focus-bank?"):
@@ -6130,6 +6334,8 @@ class Handler(BaseHTTPRequestHandler):
             "/assistant-evaluate",
             "/donors",
             "/volunteers",
+            "/giki/volunteers",
+            "/giki/wa",
             "/cases",
             "/donor-messages",
             "/donor-delivery",
@@ -6251,6 +6457,16 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/volunteers":
             try:
                 return self.reply(donors().volunteers.mutate(body))
+            except ValueError as e:
+                return self.reply({"error": str(e)}, status=400)
+        if self.path == "/giki/volunteers":
+            try:
+                return self.reply(donors().giki.mutate(body))
+            except ValueError as e:
+                return self.reply({"error": str(e)}, status=400)
+        if self.path == "/giki/wa":
+            try:
+                return self.reply(line_action("giki", body))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
         if self.path in (
@@ -7064,7 +7280,11 @@ def donor_autopilot():
     while True:
         time.sleep(540)
         try:
-            if url and (donors().jobs.active or donors().volunteers.jobs.active):
+            if url and (
+                donors().jobs.active
+                or donors().volunteers.jobs.active
+                or donors().giki.jobs.active
+            ):
                 urllib.request.urlopen(url + "/health", timeout=20).read()
         except Exception:
             pass
@@ -7091,7 +7311,11 @@ def resume_batches_after_restart(wait=10, tries=90, sleep=time.sleep):
     caught mid-send is skipped, so nobody gets a second DM; batches the owner stopped stay stopped.
     Returns the number of batches resumed."""
     registries = []
-    for pick in (lambda: donors().jobs, lambda: donors().volunteers.jobs):
+    for pick in (
+        lambda: donors().jobs,
+        lambda: donors().volunteers.jobs,
+        lambda: donors().giki.jobs,
+    ):
         try:
             registries.append(pick())
         except Exception:

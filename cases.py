@@ -47,6 +47,11 @@ class Cases:
             "volunteers": h.volunteers.book.export_case_fields(),
             "jobs": h.jobs.export_jobs(),
             "vjobs": h.volunteers.jobs.export_jobs(),
+            **(
+                {"giki": h.giki.book.export_case_fields(), "gjobs": h.giki.jobs.export_jobs()}
+                if getattr(h, "giki", None)
+                else {}
+            ),
             "bank": a.STORE.get("donor_messages") if a.STORE else None,
             "poster_b64": (a.STORE.get("poster_b64") if a.STORE else None)
             or (
@@ -94,6 +99,9 @@ class Cases:
             h.volunteers.book.import_case_fields(snap.get("volunteers"))
             h.jobs.import_jobs(snap.get("jobs"))
             h.volunteers.jobs.import_jobs(snap.get("vjobs"))
+            if getattr(h, "giki", None):  # the Giki list has "messaged" marks for each case too
+                h.giki.book.import_case_fields(snap.get("giki"))
+                h.giki.jobs.import_jobs(snap.get("gjobs"))
             bank = snap.get("bank")
             media = snap
         else:
@@ -110,6 +118,9 @@ class Cases:
             h.volunteers.book.import_case_fields(None)
             h.jobs.import_jobs(None)
             h.volunteers.jobs.import_jobs(None)
+            if getattr(h, "giki", None):
+                h.giki.book.import_case_fields(None)
+                h.giki.jobs.import_jobs(None)
             bank = None
             media = {}
             a.regenerate_drafts(left, case_name)
@@ -158,6 +169,7 @@ class Cases:
         if (
             self.hub.jobs.active
             or self.hub.volunteers.jobs.active
+            or (getattr(self.hub, "giki", None) and self.hub.giki.jobs.active)
             or (getattr(self.hub, "thanks", None) and self.hub.thanks.active)
         ):
             raise ValueError("A DM batch is still running. Pause it first, then change the case.")

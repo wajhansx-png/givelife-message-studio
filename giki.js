@@ -430,52 +430,47 @@
       pick.append(b);
     }
     textRow.append(make('span', '', 'Case goes with'), pick);
-    /* 2nd and 3rd messages: the poster pic and the PDF (both added on the group message page), each with its tick */
-    const NAME = { poster: 'Poster pic', pdf: 'PDF' };
-    const row2 = make('div', 'cr-set-row gk-msg2');
-    const pick2 = make('div', 'gk-pick');
-    for (const k of ['poster', 'pdf']) {
-      const b = btn(NAME[k], 'cr-seg-b', () =>
-        saveGiki('order', k === 'poster' ? 'poster_pdf' : 'pdf_poster'),
-      );
-      b.dataset.v = k;
-      b.setAttribute('aria-label', '2nd message: ' + NAME[k]);
-      pick2.append(b);
-    }
-    const tick = (id) => {
+    /* 2nd and 3rd messages: each one is the Poster pic, the PDF or the Video (added on the group message page), with
+       its own Send tick. Picking what the other row has swaps the two. */
+    const NAME = { poster: 'Poster pic', pdf: 'PDF', video: 'Video' };
+    let g = {};
+    const slotRow = (slot, title) => {
+      const row = make('div', 'cr-set-row gk-msg2');
+      const pickS = make('div', 'gk-pick gk-pick3');
+      for (const k of ['poster', 'pdf', 'video']) {
+        const b = btn(NAME[k], 'cr-seg-b', () => saveGiki(slot, k));
+        b.dataset.v = k;
+        b.setAttribute('aria-label', title + ': ' + NAME[k]);
+        pickS.append(b);
+      }
       const lab = make('label', 'gk-tick');
       const cb = make('input');
       cb.type = 'checkbox';
-      cb.id = id;
+      cb.id = slot === 'second' ? 'gikiTick-2' : 'gikiTick-3';
+      cb.onchange = () => saveGiki(g[slot], cb.checked);
       lab.append(cb, make('span', '', 'Send'));
-      return { lab, cb };
+      row.append(make('span', '', title), pickS, lab);
+      return { row, pickS, cb, lab, slot };
     };
-    const t2 = tick('gikiTick-2'),
-      t3 = tick('gikiTick-3');
-    row2.append(make('span', '', '2nd message'), pick2, t2.lab);
-    const row3 = make('div', 'cr-set-row gk-msg3');
-    const name3 = make('b', 'gk-name3');
-    row3.append(make('span', '', '3rd message'), name3, t3.lab);
-    let second = 'poster',
-      third = 'pdf';
-    t2.cb.onchange = () => saveGiki(second, t2.cb.checked);
-    t3.cb.onchange = () => saveGiki(third, t3.cb.checked);
+    const r2 = slotRow('second', '2nd message'),
+      r3 = slotRow('third', '3rd message');
+    const row2 = r2.row,
+      row3 = r3.row;
     function paintGiki() {
-      const g = (extras.setup && extras.setup.giki) || { text_on: 'video', order: 'poster_pdf' };
+      g = (extras.setup && extras.setup.giki) || {
+        text_on: 'video',
+        second: 'poster',
+        third: 'pdf',
+      };
       for (const b of pick.children) b.dataset.on = b.dataset.v === g.text_on ? '1' : '0';
-      second = g.order === 'pdf_poster' ? 'pdf' : 'poster';
-      third = second === 'pdf' ? 'poster' : 'pdf';
-      for (const b of pick2.children) b.dataset.on = b.dataset.v === second ? '1' : '0';
-      name3.textContent = NAME[third];
-      for (const [t, k] of [
-        [t2, second],
-        [t3, third],
-      ]) {
+      for (const r of [r2, r3]) {
+        const k = g[r.slot] || (r.slot === 'second' ? 'poster' : 'pdf');
+        for (const b of r.pickS.children) b.dataset.on = b.dataset.v === k ? '1' : '0';
         const has = !!(extras[k] && extras[k].has); // added on the group message page
-        t.cb.checked = !!g[k] && has;
-        t.cb.disabled = !has;
-        t.lab.title = has ? '' : 'Not added yet: add the ' + NAME[k] + ' on the group message page';
-        t.lab.dataset.missing = has ? '0' : '1';
+        r.cb.checked = !!g[k] && has;
+        r.cb.disabled = !has;
+        r.lab.title = has ? '' : 'Not added yet: add the ' + NAME[k] + ' on the group message page';
+        r.lab.dataset.missing = has ? '0' : '1';
       }
     }
     paintGiki();

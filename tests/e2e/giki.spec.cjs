@@ -211,25 +211,24 @@ test('Timer: the same sheet as the Case page, saved and used by DM all', async (
   await sheet.getByRole('button', { name: 'Case goes with the video' }).click();
   await expect.poll(async () => (await giki()).text_on).toBe('video');
   // Also send: Poster (the after poster) and PDF need their file first; Video only when the poster carries the text
-  // 2nd / 3rd messages: Poster pic first by default; ticks wait for the files to be added on the group message
-  await expect(sheet.getByRole('button', { name: '2nd message: Poster pic' })).toHaveAttribute(
-    'data-on',
-    '1',
-  );
-  await expect(sheet.locator('.gk-name3')).toHaveText('PDF');
-  // what is picked is clearly blue
+  // 2nd / 3rd messages: Poster pic, PDF or Video each; the picked one is blue; ticks wait for the files
+  const on = (name) => sheet.getByRole('button', { name }).getAttribute('data-on');
+  expect(await on('2nd message: Poster pic')).toBe('1');
+  expect(await on('3rd message: PDF')).toBe('1');
   const blue = (name) =>
     sheet.getByRole('button', { name }).evaluate((b) => getComputedStyle(b).backgroundColor);
   expect(await blue('2nd message: Poster pic')).toBe('rgb(47, 111, 228)');
   expect(await blue('2nd message: PDF')).not.toBe('rgb(47, 111, 228)');
   await expect(sheet.locator('#gikiTick-2')).toBeDisabled();
   await expect(sheet.locator('#gikiTick-3')).toBeDisabled();
-  await sheet.getByRole('button', { name: '2nd message: PDF' }).click();
-  await expect(sheet.locator('.gk-name3')).toHaveText('Poster pic');
-  await expect.poll(async () => (await giki()).order).toBe('pdf_poster');
+  await sheet.getByRole('button', { name: '2nd message: Video' }).click();
+  await expect.poll(async () => (await giki()).second).toBe('video');
+  await expect.poll(() => on('2nd message: Video')).toBe('1');
+  await sheet.getByRole('button', { name: '3rd message: Video' }).click(); // swaps with the 2nd
+  await expect.poll(async () => [(await giki()).second, (await giki()).third].join()).toBe('pdf,video');
   await sheet.getByRole('button', { name: '2nd message: Poster pic' }).click();
-  await expect.poll(async () => (await giki()).order).toBe('poster_pdf');
-  await expect(sheet.locator('#gikiTick-video')).toHaveCount(0); // no extra things
+  await sheet.getByRole('button', { name: '3rd message: PDF' }).click();
+  await expect.poll(async () => [(await giki()).second, (await giki()).third].join()).toBe('poster,pdf');
   await expect(sheet.locator('.cr-set-link .cr-set-val')).toHaveText('3');
   await sheet.getByRole('button', { name: 'More: Minutes between DMs' }).click();
   await sheet.getByRole('button', { name: 'Less: DMs per batch' }).click();

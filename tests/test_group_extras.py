@@ -275,6 +275,24 @@ class Sending(unittest.TestCase):
         with self.assertRaises(ValueError):
             group_extras.set_setup(app.STORE, "giki", "order", "video_first")
 
+    def test_giki_2nd_message_can_be_the_video_and_picking_the_other_rows_item_swaps_them(self):
+        s = app.STORE
+        self.assertEqual((group_extras.setup(s, "giki")["second"], group_extras.setup(s, "giki")["third"]), ("poster", "pdf"))
+        group_extras.set_setup(s, "giki", "second", "video")
+        self.assertEqual((group_extras.setup(s, "giki")["second"], group_extras.setup(s, "giki")["third"]), ("video", "pdf"))
+        group_extras.set_setup(s, "giki", "third", "video")  # the 2nd had the video: they swap
+        self.assertEqual((group_extras.setup(s, "giki")["second"], group_extras.setup(s, "giki")["third"]), ("pdf", "video"))
+        group_extras.set_setup(s, "giki", "text_on", "poster")
+        group_extras.set_setup(s, "giki", "video", True)
+        group_extras.set_setup(s, "giki", "pdf", True)
+        self.assertEqual([k for k, _ in group_extras.after_items(s, "giki")], ["pdf", "video"])
+        group_extras.set_setup(s, "giki", "text_on", "video")  # the video already carried the case: not twice
+        self.assertEqual([k for k, _ in group_extras.after_items(s, "giki")], ["pdf"])
+        with self.assertRaises(ValueError):
+            group_extras.set_setup(s, "giki", "second", "audio")
+        with self.assertRaises(ValueError):
+            group_extras.set_setup(s, "dm", "second", "pdf")
+
     def test_the_after_poster_must_be_a_picture(self):
         with self.assertRaises(ValueError):
             group_extras.add(app.STORE, "poster", url(PDF, "application/pdf"))

@@ -54,7 +54,7 @@ def _save(store, rows):
 def text_on(store, profile="group"):
     raw = _raw(store)
     value = raw.get("text_on") if profile == "group" else (raw.get("setup") or {}).get(profile, {}).get("text_on")
-    return value if value in TEXT_ON else "video"
+    return value if value in TEXT_ON else "poster" if profile == "giki" else "video"  # Giki: poster with caption
 
 
 def set_text_on(store, value, profile="group"):

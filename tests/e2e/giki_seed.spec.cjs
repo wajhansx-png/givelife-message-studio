@@ -142,10 +142,12 @@ for (const width of [320, 360, 390, 412, 768, 1280]) {
       const oneLine = rows.every(
         (row) => row.querySelector('.vol-name').getBoundingClientRect().height < 30,
       );
-      return { cut, cols: [x('.vol-case'), x('.vol-share'), x('.vol-manage')], overlap, oneLine };
+      const share = document.querySelectorAll('.vol-share').length;
+      return { cut, cols: [x('.vol-case'), x('.vol-manage')], overlap, oneLine, share };
     });
     expect(r.cut).toEqual([]); // no name is cut
-    expect(r.cols).toEqual([1, 1, 1]); // the buttons sit in the same columns on every row
+    expect(r.cols).toEqual([1, 1]); // the buttons sit in the same columns on every row
+    expect(r.share).toBe(0); // no DM Share button: DM Case sends the share message too
     expect(r.overlap).toBe(0); // nothing overlaps the next row
     expect(r.oneLine).toBe(true);
   });

@@ -79,7 +79,10 @@ class Rules(unittest.TestCase):
         group_extras.set_setup(self.s, "giki", "pdf", True)
         self.assertEqual(group_extras.lead(self.s, "group"), video)  # groups: unchanged (text on the video)
         self.assertIsNone(group_extras.lead(self.s, "dm"))  # DMs: the poster carries the text
+        self.assertIsNone(group_extras.lead(self.s, "giki"))  # Giki: poster with caption unless Video is picked
+        group_extras.set_setup(self.s, "giki", "text_on", "video")
         self.assertEqual(group_extras.lead(self.s, "giki"), video)
+        group_extras.set_setup(self.s, "giki", "text_on", "poster")
         self.assertIsNone(group_extras.after_poster(self.s, "group"))  # no after poster added yet
         group_extras.add(self.s, "poster", url(b"\xff\xd8\xff" + b"0" * 200, "image/jpeg"), "after.jpg")
         after = group_extras.saved(self.s, "poster")

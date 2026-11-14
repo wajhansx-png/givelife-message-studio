@@ -139,6 +139,26 @@ class GikiList(Fixture):
         )
         self.assertIn("case first", r["reply"])
 
+    def test_dm_case_sends_one_person_the_case_then_the_share_message(self):
+        self.g.mutate({"action": "add", "name": "Sara Giki", "phone": "0300 2000002"})
+        self.g.mutate({"action": "add", "name": "Ali Giki", "phone": "0300 2000003"})
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share this."})
+        sara = next(x["id"] for x in self.g.view()["items"] if x["name"] == "Sara Giki")
+        self.go(self.g, {"action": "send_case", "id": sara, "request_id": "c1", "poster": True})
+        self.run_job(self.g.jobs)
+        self.assertEqual(len(self.sent), 2)  # only Sara
+        case, share = self.sent
+        self.assertEqual((case["message"], case["poster"]), (self.case, True))
+        self.assertEqual(share["message"], "Salam Sara Sister, please share this.")
+        self.assertIs(share["poster"], False)
+
+    def test_dm_case_with_no_share_message_still_sends_the_case(self):
+        self.g.mutate({"action": "add", "name": "Sara Giki", "phone": "0300 2000002"})
+        sara = self.g.view()["items"][0]["id"]
+        self.go(self.g, {"action": "send_case", "id": sara, "request_id": "c2", "poster": True})
+        self.run_job(self.g.jobs)
+        self.assertEqual([(s["message"], s["poster"]) for s in self.sent], [(self.case, True)])
+
     def test_dm_all_puts_the_pdf_and_video_between_the_case_and_the_share_message(self):
         self.on = [("pdf", "a" * 32), ("video", "b" * 32)]
         self.g.mutate({"action": "add", "name": "Sara Giki", "phone": "0300 2000002"})

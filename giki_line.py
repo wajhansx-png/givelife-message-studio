@@ -353,6 +353,28 @@ class GikiVolunteers(Volunteers):
         )
         return result
 
+    def send_case(self, body):
+        """DM Case to one person: the case (poster with the Group msgs text), the 2nd / 3rd messages ticked in Timer,
+        then the share message. The same as DM all, for one person. With no share message written, the case still
+        goes."""
+        case = self.case_text()
+        case = case.strip() if isinstance(case, str) else ""
+        if not case or len(case) > 8000:
+            raise ValueError("The case message is empty or too long. Edit it in Group msgs first.")
+        share = self._share(required=False)
+        return self.jobs.start(
+            "selected",
+            body.get("gap_seconds", 180),
+            ids=[self.book.resolve(body.get("id", ""))["id"]],
+            limit=1,
+            request_id=body.get("request_id"),
+            poster=True,
+            skip_contacted=False,
+            custom_template=case,
+            follow_up=share or None,
+            **self.case_extras(),
+        )
+
     def test(self, body):
         """The DM as one person gets it (the case, then the share message), sent only to your own WhatsApp and
         marked TEST. If one part is missing, the other is still sent."""
@@ -396,6 +418,8 @@ class GikiVolunteers(Volunteers):
             return self.send_all(body)
         if body.get("action") == "test":
             return self.test(body)
+        if body.get("action") == "send_case":
+            return self.send_case(body)
         return super().mutate(body)
 
     def import_numbers(self, text, dry_run=False):

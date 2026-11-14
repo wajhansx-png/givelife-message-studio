@@ -516,7 +516,7 @@
         'cr-go',
         async () => {
           await call('/giki/volunteers', { action: 'message', text: ta.value });
-          /* the (hidden) box on the page is what DM Share and DM all read: keep it the same as what was saved */
+          /* the (hidden) box on the page is what DM Case and DM all read: keep it the same as what was saved */
           const box = $('volMessage');
           if (box) box.value = ta.value.trim();
           changed();

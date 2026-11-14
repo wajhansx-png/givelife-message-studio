@@ -3079,7 +3079,9 @@
       dmCase.disabled = dmShare.disabled = !!active;
       dmCase.setAttribute('aria-label', 'DM Case to ' + d.name);
       dmShare.setAttribute('aria-label', 'DM Share to ' + d.name);
-      dmCase.title = 'Send the current case and poster to ' + d.name;
+      dmCase.title = GIKI
+        ? 'Send ' + d.name + ' the case, the 2nd and 3rd messages, then the share message'
+        : 'Send the current case and poster to ' + d.name;
       dmShare.title = 'Send text only to ' + d.name;
       const sendVolunteer = async (action) => {
         const text = el('donorVolunteers').querySelector('#volMessage').value;
@@ -3153,7 +3155,7 @@
         menu.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + 'px';
         menu.querySelector('button').focus({ preventScroll: true });
       };
-      row.append(nameEl, dmCase, dmShare, more);
+      row.append(nameEl, dmCase, ...(GIKI ? [] : [dmShare]), more); // Giki: DM Case also sends the share message
       list.append(row);
     });
     list.onscroll = () =>

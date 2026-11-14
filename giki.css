@@ -342,11 +342,16 @@
   border-color: #2f6fe4;
 }
 
+/* Giki rows: name, DM Case, ··· (DM Case also sends the share message, so there is no DM Share button) */
+.UI2.giki #donorsPage #donorVolunteers .vol-row {
+  grid-template-columns: minmax(0, 1fr) auto 40px !important;
+}
+
 /* Names in full: the name has its own line (one line, never cut), and the three buttons sit under it, the same
    columns on every row, so everything lines up. Phones and tablets; a computer has room for one row. */
 @media (max-width: 899px) {
   .UI2.giki #donorsPage #donorVolunteers .vol-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 48px !important;
+    grid-template-columns: minmax(0, 1fr) 48px !important;
     row-gap: 6px !important;
     padding-block: 10px !important;
   }
@@ -362,7 +367,7 @@
     padding: 0 8px !important;
   }
   .UI2.giki #donorsPage #donorVolunteers .vol-row .vol-manage {
-    grid-column: 3 !important;
+    grid-column: 2 !important;
     grid-row: 2 !important;
     justify-self: end;
   }

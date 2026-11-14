@@ -27,30 +27,56 @@ class VolunteerDelivery(DonorDelivery):
 
 class Volunteers:
     MESSAGE_KEY = "volunteer_message"
+    MESSAGE_FILE = "volunteer-message.txt"
+    BOOK = VolunteerBook
+    DELIVERY = VolunteerDelivery
+    LINE = ""  # "" = the main WhatsApp; another list (the Giki one) names its own WhatsApp line
     MAX = 4000
     START_DELAYS = (0, 300, 600, 900, 1800, 3600, 7200)
 
     def __init__(self, app, eligible):
         self.app = app
-        self.book = VolunteerBook(app.DATA, app.STORE)
+        self.book = self.BOOK(app.DATA, app.STORE)
         self.lock = threading.RLock()
-        self.jobs = VolunteerDelivery(
+        line = self.LINE
+        self.jobs = self.DELIVERY(
             app.DATA,
             app.STORE,
             self.book,
-            lambda body: app.send_custom({**body, "kind": VolunteerDelivery.KIND}),
+            lambda body: app.send_custom(
+                {
+                    **body,
+                    # a ticked PDF / video after the DM keeps its own kind; everything else is a volunteer DM
+                    "kind": "dm_extra"
+                    if body.get("kind") == "dm_extra"
+                    else VolunteerDelivery.KIND,
+                    **({"line": line} if line else {}),
+                }
+            ),
             self.message,
-            app.wa_ok,
+            (lambda: app.line_ok(line)) if line else app.wa_ok,
             lambda: app.on_hold(),
             eligible,
             self.first_name,
         )
-        self.path = app.DATA / "volunteer-message.txt"
+        self.path = app.DATA / self.MESSAGE_FILE
 
     @staticmethod
     def first_name(label):
         first = re.sub(r"[^\w\s'-]", " ", str(label)).split()
         return (first[0].capitalize() if first else ""), "Brother"
+
+    def pace(self, body):
+        """How DM all is spread out: the gap, the batch size and the rests. The main volunteers keep their fixed pace."""
+        return {"gap_seconds": body.get("gap_seconds", 180), "chunk": 20}
+
+    def case_text(self):
+        """The case message DM Case sends, read at the moment of the click."""
+        return self.app.get_message("group")["text"]
+
+    def case_extras(self):
+        """{"pdf": bool, "video": bool} sent after DM Case. The main volunteers send none."""
+        return {}
 
     def message(self):
         text = self.app.STORE.get(self.MESSAGE_KEY) if self.app.STORE else None
@@ -100,9 +126,7 @@ class Volunteers:
         if action == "stop":
             return self.jobs.cancel()
         if action == "send_case" or action == "send_one" and "text" in body:
-            text = (
-                self.app.get_message("group")["text"] if action == "send_case" else body.get("text")
-            )
+            text = self.case_text() if action == "send_case" else body.get("text")
             maximum = 8000 if action == "send_case" else self.MAX
             if not isinstance(text, str) or not text.strip() or len(text) > maximum:
                 raise ValueError(
@@ -119,6 +143,7 @@ class Volunteers:
                 poster=action == "send_case",
                 skip_contacted=False,
                 custom_template=text,
+                **(self.case_extras() if action == "send_case" else {}),
             )
         if action in ("send_all", "send_one"):
             if not self.message().strip():
@@ -138,6 +163,7 @@ class Volunteers:
             delay = body.get("delay_seconds", 0)
             if type(delay) is not int or delay not in self.START_DELAYS:
                 raise ValueError("Choose Send now, 5, 10, 15, 30 minutes, 1 hour or 2 hours.")
+            pace = self.pace(body)
             with self.lock:
                 rid = body.get("request_id")
                 old = next(
@@ -152,7 +178,7 @@ class Volunteers:
                     if (
                         old.get("start_delay_seconds", 0) != delay
                         or old.get("poster") != bool(body.get("poster", True))
-                        or old.get("gap_seconds") != body.get("gap_seconds", 180)
+                        or old.get("gap_seconds") != pace["gap_seconds"]
                     ):
                         raise ValueError(
                             "This request was already used for another volunteer batch. Check its delivery status."
@@ -163,9 +189,10 @@ class Volunteers:
                     }
                 result = self.jobs.start(
                     "all",
-                    body.get("gap_seconds", 180),
+                    pace["gap_seconds"],
                     limit=None,
-                    chunk=20,
+                    chunk=pace["chunk"],
+                    **({"rests": pace["rests"]} if "rests" in pace else {}),
                     request_id=rid,
                     poster=bool(body.get("poster", True)),
                     skip_contacted=bool(body.get("skip_contacted", True)),

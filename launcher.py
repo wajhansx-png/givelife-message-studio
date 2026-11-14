@@ -3,6 +3,7 @@ from pathlib import Path
 from persist import configured_store
 import supervisor
 import key_cache
+import wa_lines
 
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("DATA_DIR", "/data/studio"))
@@ -220,6 +221,8 @@ def ensure_device(gowa):
         try:
             with urllib.request.urlopen("http://127.0.0.1:3000/devices", timeout=3) as response:
                 devices = json.load(response).get("results", [])
+            # An extra WhatsApp line (the Giki one) is a device too. It must never be taken for the main one.
+            devices = [d for d in devices or [] if not wa_lines.is_line_device(d.get("id"))]
             if not devices:
                 body = json.dumps({"device_id": str(uuid.uuid4())}).encode()
                 req = urllib.request.Request(

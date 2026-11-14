@@ -19,10 +19,33 @@ def record(item):
         EVENTS.write_text(json.dumps(events, ensure_ascii=False), encoding="utf-8")
 
 
+# Extra WhatsApp devices (the Giki line). The main device is always linked. A new device becomes linked a moment
+# after its pairing code or QR was asked for (FAKE_LINK_DELAY seconds), like a person finishing the steps.
+DEVICES = {"fake-device": {"linked": True}}
+PNG = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+    "0000000d49444154789c63f8ffff3f0005fe02fea7d6d6a50000000049454e44ae426082"
+)
+
+
+def device_linked(name):
+    row = DEVICES.get(name)
+    if not row:
+        return False
+    at = row.get("pending")
+    if (
+        not row.get("linked")
+        and at
+        and time.time() - at >= float(os.environ.get("FAKE_LINK_DELAY", "1.5"))
+    ):
+        row["linked"] = True
+    return bool(row.get("linked"))
+
+
 class FakeWhatsApp(BaseHTTPRequestHandler):
-    def response(self, data):
+    def response(self, data, status=200):
         body = json.dumps(data).encode()
-        self.send_response(200)
+        self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
@@ -35,6 +58,41 @@ class FakeWhatsApp(BaseHTTPRequestHandler):
                 f.write(self.path.split("?")[0] + "\n")
         if os.environ.get("FAKE_WA_DELAY"):
             time.sleep(float(os.environ["FAKE_WA_DELAY"]))
+        parts = self.path.split("?")[0].strip("/").split("/")
+        if parts[0] == "statics":
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Content-Length", str(len(PNG)))
+            self.end_headers()
+            return self.wfile.write(PNG)
+        if parts[0] == "devices":
+            if len(parts) == 1:
+                return self.response(
+                    {
+                        "code": "SUCCESS",
+                        "results": [{"id": d, "state": "x"} for d in DEVICES] or None,
+                    }
+                )
+            name = parts[1]
+            if name not in DEVICES:
+                return self.response(
+                    {"code": "INTERNAL_SERVER_ERROR", "message": "device " + name + " not found"},
+                    500,
+                )
+            up = device_linked(name)
+            if len(parts) == 2:
+                jid = "923009998888:12@s.whatsapp.net" if up and name != "fake-device" else ""
+                return self.response({"code": "SUCCESS", "results": {"id": name, "jid": jid}})
+            if parts[2] == "status":
+                return self.response(
+                    {"code": "SUCCESS", "results": {"is_connected": up, "is_logged_in": up}}
+                )
+            if parts[2] == "login":
+                DEVICES[name]["pending"] = time.time()
+                link = "http://127.0.0.1:" + str(self.server.server_port) + "/statics/qrcode/qr.png"
+                return self.response(
+                    {"code": "SUCCESS", "results": {"qr_link": link, "qr_duration": 30}}
+                )
         if "/status" in self.path:
             return self.response(
                 {"code": "SUCCESS", "results": {"is_connected": True, "is_logged_in": True}}
@@ -78,7 +136,30 @@ class FakeWhatsApp(BaseHTTPRequestHandler):
                 fields = json.loads(raw)
             except Exception:
                 fields = {}
-        record({"path": self.path, "fields": fields, "time": time.time()})
+        parts = self.path.split("?")[0].strip("/").split("/")
+        if parts[0] == "devices":
+            if len(parts) == 1:
+                DEVICES.setdefault(str(fields.get("device_id")), {})
+                return self.response({"code": "SUCCESS", "message": "Device added", "results": {}})
+            name = parts[1]
+            if name not in DEVICES:
+                return self.response(
+                    {"code": "INTERNAL_SERVER_ERROR", "message": "device " + name + " not found"},
+                    500,
+                )
+            if parts[2:] == ["login", "code"]:
+                DEVICES[name]["pending"] = time.time()
+                return self.response({"code": "SUCCESS", "results": {"pair_code": "ABCD-EFGH"}})
+            if parts[2:] == ["logout"]:
+                DEVICES[name].update(linked=False, pending=None)
+                return self.response({"code": "SUCCESS", "message": "Logout requested"})
+            if parts[2:] == ["reconnect"]:
+                return self.response({"code": "SUCCESS"})
+        item = {"path": self.path, "fields": fields, "time": time.time()}
+        device = self.headers.get("X-Device-Id")
+        if device and device != "fake-device":
+            item["device"] = device  # a send from the Giki WhatsApp says so
+        record(item)
         self.response(
             {"code": "SUCCESS", "results": {"message_id": "fake-message-" + str(len(events))}}
         )
@@ -98,6 +179,9 @@ threading.Thread(target=fake.serve_forever, daemon=True).start()
 os.environ.pop("DB_URI", None)
 os.environ.pop("RENDER_EXTERNAL_URL", None)
 os.environ.pop("DEEPSEEK_API_KEY", None)
+os.environ.setdefault(
+    "GIKI_SEED_FILE", ""
+)  # the real Giki list is not loaded into a preview or a test
 os.environ.setdefault("NOTES_PASSWORD", "test-preview-only-pin")
 os.environ.update(
     GOWA_URL="http://127.0.0.1:" + str(fake.server_port),

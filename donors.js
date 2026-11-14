@@ -7,6 +7,9 @@
       if (text != null) n.textContent = text;
       return n;
     };
+  /* /giki: the same Volunteers screen, pointed at the Giki list and the Giki WhatsApp (see giki.js). */
+  const GIKI = !!window.GIKI_LINE,
+    VOL = GIKI ? '/giki/volunteers' : '/volunteers';
   const page = make('dialog', 'donor-page');
   page.id = 'donorsPage';
   page.setAttribute('aria-label', 'Donor Hub');
@@ -219,9 +222,18 @@
   function paintVolunteerTiming() {
     const delay = volunteerDelaySeconds(el('volStartDelay').value);
     el('volTimingStart').textContent = delay ? 'Schedule DMs' : 'Send now';
+    const pace = vols.pace;
     el('volTimingPlan').textContent =
       (delay ? 'First DM in ' + delay / 60 + ' minutes. ' : 'First DM now. ') +
-      'Then one DM every 3 minutes.';
+      (GIKI && pace
+        ? 'One person every ' +
+          pace.gap_minutes +
+          ' minutes, ' +
+          pace.batch_size +
+          ' per batch, with ' +
+          pace.rest_minutes +
+          ' minutes rest between batches.'
+        : 'Then one DM every 3 minutes.');
   }
   function openVolunteerTiming(text, poster) {
     if (volTimingPending) return;
@@ -231,10 +243,17 @@
       return;
     }
     volSendPlan = { text, poster, request_id: 'v' + requestId() };
+    el('volTimingTitle').textContent = GIKI ? 'DM all Giki' : 'DM all volunteers';
     el('volStartDelay').value = '0';
     el('volTimingNote').textContent = '';
-    el('volTimingAudience').textContent =
-      'Send to the volunteers still waiting in your list (' + vols.items.length + ' total).';
+    el('volTimingAudience').textContent = GIKI
+      ? 'The case goes first (poster and your Group msgs message), then your share message. ' +
+        (vols.waiting ?? vols.items.length) +
+        ((vols.waiting ?? vols.items.length) === 1 ? ' person is waiting' : ' people are waiting') +
+        (vols.items.length > (vols.waiting ?? vols.items.length)
+          ? ' (' + (vols.items.length - vols.waiting) + ' already messaged for this case).'
+          : '.')
+      : 'Send to the volunteers still waiting in your list (' + vols.items.length + ' total).';
     paintVolunteerTiming();
     if (!volTiming.open) volTiming.showModal();
     el('volStartDelay').focus();
@@ -251,8 +270,8 @@
     try {
       const plan = volSendPlan,
         delay = volunteerDelaySeconds(el('volStartDelay').value);
-      await api('/volunteers', { action: 'message', text: plan.text });
-      await api('/volunteers', {
+      await api(VOL, { action: 'message', text: plan.text });
+      await api(VOL, {
         action: 'send_all',
         request_id: plan.request_id,
         poster: plan.poster,
@@ -2826,7 +2845,7 @@
   /* ---- Volunteers: people who help share the case. A name, a private number, one message you write, and a DM to share it. ---- */
   async function loadVolunteers() {
     try {
-      vols = await api('/volunteers');
+      vols = await api(VOL);
       updateCounts();
     } catch (e) {
       notice(e.message, true);
@@ -2834,7 +2853,7 @@
   }
   async function volAct(body, okText) {
     try {
-      const r = await api('/volunteers', body);
+      const r = await api(VOL, body);
       await loadVolunteers();
       if (tab === 'volunteers') showVolunteers(true);
       if (okText) notice(okText);
@@ -2968,7 +2987,14 @@
     }
     const active =
       vols.delivery && ['Starting', 'Sending', 'Waiting'].includes(vols.delivery.state);
-    if (!vols.items.length) list.append(make('p', 'donor-empty', 'No volunteers yet.'));
+    if (!vols.items.length)
+      list.append(
+        make(
+          'p',
+          'donor-empty',
+          GIKI ? 'No one in the Giki list yet. Tap + Add, then Add many.' : 'No volunteers yet.',
+        ),
+      );
     vols.items.forEach((d, i) => {
       const row = make('div', 'vol-row');
       row.setAttribute('role', 'listitem');
@@ -3063,7 +3089,7 @@
     people.append(caseOptions, list);
     const msg = make('div', 'vol-msg');
     const msgHeading = make('div', 'vol-msg-heading');
-    const label = make('label', '', 'Message to Volunteers');
+    const label = make('label', '', GIKI ? 'Share message' : 'Message to Volunteers');
     label.htmlFor = 'volMessage';
     msgHeading.append(label, make('span', 'vol-text-badge', 'Text only'));
     const ta = make('textarea', '');
@@ -3087,15 +3113,16 @@
     prog.hidden = true;
     prog.setAttribute('role', 'status');
     const foot = make('footer', 'vol-foot');
-    const all = make('button', 'primary send-donors', 'DM all (' + vols.items.length + ')');
-    all.setAttribute('aria-label', 'DM all volunteers');
+    const dmCount = GIKI && typeof vols.waiting === 'number' ? vols.waiting : vols.items.length;
+    const all = make('button', 'primary send-donors', 'DM all (' + dmCount + ')');
+    all.setAttribute('aria-label', GIKI ? 'DM all Giki' : 'DM all volunteers');
     all.type = 'button';
-    all.disabled = !vols.items.length || !ta.value.trim();
+    all.disabled = !dmCount || !ta.value.trim();
     all.hidden = !!active;
     all.onclick = () => openVolunteerTiming(ta.value, false);
     ta.oninput = () => {
       save.disabled = ta.value.trim() === (vols.message || '').trim();
-      all.disabled = !vols.items.length || !ta.value.trim();
+      all.disabled = !dmCount || !ta.value.trim();
     };
     msgActions.append(hint, save);
     msg.append(msgHeading, ta, msgActions);
@@ -3108,7 +3135,7 @@
     const back = make('button', 'tool vol-back', '← Back');
     back.type = 'button';
     back.setAttribute('aria-label', 'Back to donors');
-    back.onclick = () => selectDonorTab('all');
+    back.onclick = () => (GIKI ? (location.href = '/') : selectDonorTab('all'));
     foot.append(addPanel, all, pause, back);
     const workspace = make('div', 'vol-workspace');
     workspace.append(msg, people);

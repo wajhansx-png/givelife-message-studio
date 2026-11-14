@@ -56,8 +56,12 @@ class DonorIntegration:
         self.manual_lock = threading.RLock()
         self.control_lock = threading.RLock()
         from volunteers import Volunteers
+        from giki_line import GikiVolunteers
 
         self.volunteers = Volunteers(app, self.eligible)
+        self.giki = GikiVolunteers(
+            app, self.eligible
+        )  # its own people, message, batch and WhatsApp
         from team_tasks import TeamTasks
 
         self.team = TeamTasks(app)

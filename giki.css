@@ -1,0 +1,257 @@
+/* /giki only (written with .UI2 like new-ui.css; the server expands it). The Volunteers screen keeps its own look
+   (new-ui.css); this adds the Giki bar, the connect sheet and the few rules that keep the page on that one screen. */
+
+/* only the Volunteers screen exists here: the rest of the app (and the donors' own controls) stay out of sight */
+.UI2.giki > :not(dialog, script, style, link) {
+  display: none !important;
+}
+.UI2.giki
+  #donorsPage
+  :is(
+    .donor-head,
+    .donor-toolbar,
+    #donorHideRow,
+    #donorTable,
+    #donorMessages,
+    .donor-progress,
+    .dp-show,
+    .batch-list,
+    .donor-bottom
+  ) {
+  display: none !important;
+}
+/* Msgs is the donors' DM bank: not part of this list. The Timer button uses its slot. */
+.UI2.giki #donorsPage .ui2-msgs-bottom:not(.giki-timer) {
+  display: none !important;
+}
+
+/* top bar: the list's name and its WhatsApp */
+.UI2.giki .giki-bar {
+  order: -1;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 4px 8px;
+}
+.UI2.giki .giki-title {
+  margin: 0;
+  color: var(--ink, #eef0f6);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.UI2.giki .giki-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line2, #2b3045);
+  border-radius: 999px;
+  background: var(--surface, #1b1f2c);
+  color: var(--ink, #eef0f6);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.UI2.giki .giki-chip .cr-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #d9a406;
+}
+.UI2.giki .giki-chip[data-ok='1'] .cr-dot {
+  background: #2fbf71;
+}
+.UI2.giki .giki-chip[data-ok='0'] {
+  border-color: #6b5410;
+  color: #f4d675;
+}
+@media (min-width: 900px) {
+  .UI2.giki .giki-bar {
+    max-width: 760px;
+    margin-inline: auto;
+  }
+}
+
+/* Add many sits under the number form */
+.UI2.giki .vol-add .giki-many {
+  min-height: 44px;
+  border: 1px solid var(--line2, #3a4052);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink, #eef0f6);
+  font: inherit;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+/* the connect sheet (same bottom sheet as the Case page) */
+.UI2 dialog.case-sheet .gk-state {
+  margin: 4px 0 12px;
+  color: var(--cr-muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+.UI2 dialog.case-sheet .gk-state[data-ok='1'] {
+  color: #5ddf9a;
+}
+.UI2 dialog.case-sheet .gk-connect {
+  display: grid;
+  gap: 10px;
+}
+.UI2 dialog.case-sheet .gk-link {
+  display: grid;
+  gap: 12px;
+}
+.UI2 dialog.case-sheet .gk-label {
+  color: var(--cr-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.UI2 dialog.case-sheet .gk-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--cr-line);
+  border-radius: 12px;
+  background: var(--cr-bg);
+  color: var(--cr-ink);
+  font: inherit;
+  font-size: 17px;
+}
+.UI2 dialog.case-sheet .gk-wide {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.UI2 dialog.case-sheet .gk-code {
+  padding: 16px 8px;
+  border-radius: 14px;
+  background: var(--cr-bg);
+  color: var(--cr-ink);
+  font:
+    700 clamp(26px, 9vw, 34px) / 1.1 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: 0.12em;
+  text-align: center;
+  user-select: all;
+}
+.UI2 dialog.case-sheet .gk-steps {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--cr-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.UI2 dialog.case-sheet .gk-qr {
+  justify-self: center;
+  width: min(240px, 100%);
+  padding: 10px;
+  border-radius: 14px;
+  background: #fff;
+  image-rendering: pixelated;
+}
+.UI2 dialog.case-sheet .gk-qr[hidden] {
+  display: none;
+}
+.UI2 dialog.case-sheet .gk-file {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  margin: 8px 0;
+  padding: 0 14px;
+  border: 1px solid var(--cr-line);
+  border-radius: 14px;
+  background: var(--cr-raise);
+  color: var(--cr-ink);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.UI2 dialog.case-sheet .cr-names {
+  margin: 0;
+  color: var(--cr-ink);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* computer: Msgs is not drawn in this bar at all, so the Timer button gets its own look and place (left of Back) */
+@media (min-width: 900px) {
+  .UI2.giki #donorsPage #donorVolunteers > .vol-foot > .giki-timer {
+    order: 0;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+    min-height: 48px;
+    padding: 0 18px;
+    border: 1px solid var(--line2, #3a4052);
+    border-radius: 14px;
+    background: var(--surface, #1b1f2c);
+    color: var(--ink, #eef0f6);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: none;
+  }
+}
+
+/* The big message box is hidden: one short line (what it says, Edit, Test) stands in for it */
+.UI2.giki #donorVolunteers .vol-msg > :not(.giki-share) {
+  display: none !important;
+}
+.UI2.giki #donorVolunteers .vol-msg {
+  padding: 8px 10px !important;
+}
+.UI2.giki .giki-share {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+}
+.UI2.giki .giki-share-text {
+  flex: 1 1 auto;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.UI2.giki .giki-share-text b {
+  color: var(--ink, #eef0f6);
+  font-size: 14px;
+}
+.UI2.giki .giki-share-line {
+  overflow: hidden;
+  color: var(--ink-muted, #8a91a6);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.UI2.giki .giki-share .tool {
+  flex: 0 0 auto;
+  min-width: 64px;
+  min-height: 44px;
+  padding: 0 14px;
+}

@@ -292,8 +292,19 @@ test('Test sends the case, the PDF that is on, then the share message to my own 
   page,
 }) => {
   await api(port, '/group-extras', { action: 'toggle', kind: 'pdf', on: true });
+  await api(port, '/giki/volunteers', { action: 'message', text: '' });
   await open(page);
-  const before = (await gikiSends()).length;
+  // no share message written yet: the case (and its PDF) is still sent, and the notice says what was left out
+  let before = (await gikiSends()).length;
+  await page.locator('.giki-test').click();
+  await expect(page.locator('#donorNotice')).toContainText('only the case was sent', {
+    timeout: 30000,
+  });
+  expect((await gikiSends()).slice(before).map((e) => e.path)).toEqual([
+    '/send/image',
+    '/send/file',
+  ]);
+  before = (await gikiSends()).length;
   await writeShare(page, 'Test share for {name}');
   await page.locator('.giki-test').click();
   await expect(page.locator('#donorNotice')).toContainText('Test sent to your WhatsApp', {

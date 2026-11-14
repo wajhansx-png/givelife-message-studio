@@ -204,9 +204,20 @@ class GikiList(Fixture):
         self.g.mutate({"action": "test"})
         self.assertEqual(self.tests[-1][1], "Saved share")
         self.assertEqual(self.sent, [])  # the test never goes through the list
+
+    def test_test_still_sends_the_case_when_no_share_message_is_written_and_the_other_way_round(
+        self,
+    ):
         self.g.mutate({"action": "message", "text": ""})
-        with self.assertRaisesRegex(ValueError, "share message"):
-            self.g.mutate({"action": "test"})
+        self.g.mutate({"action": "test"})
+        self.assertEqual(self.tests[-1], (self.case, "", False, False))  # the case alone
+        self.g.case_text = lambda: ""
+        self.g.mutate({"action": "test", "text": "Only the share"})
+        self.assertEqual(self.tests[-1], ("", "Only the share", False, False))  # the share alone
+        before = len(self.tests)
+        with self.assertRaisesRegex(ValueError, "Nothing to test"):
+            self.g.mutate({"action": "test"})  # both missing
+        self.assertEqual(len(self.tests), before)
 
     def test_the_timer_has_the_case_page_ranges_and_defaults(self):
         self.assertEqual(

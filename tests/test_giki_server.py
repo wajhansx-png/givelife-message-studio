@@ -220,6 +220,22 @@ class GikiTestSend(Base):
         app.send_giki_test("CASE", "Share")
         self.assertEqual({c[1] for c in self.calls}, {app.norm_phone(app.TEST_DM_PHONE)})
 
+    def test_with_no_share_message_the_case_is_still_sent(self):
+        out = app.send_giki_test("CASE", "", pdf=True)
+        self.assertEqual([c[0] for c in self.calls], ["image", "file"])
+        self.assertIn("only the case was sent", out["reply"])
+
+    def test_with_no_case_the_share_message_is_still_sent_and_files_stay_home(self):
+        out = app.send_giki_test("", "Share it", pdf=True, video=True)
+        self.assertEqual([c[0] for c in self.calls], ["text"])  # the files belong to the case
+        self.assertIn("only your share message was sent", out["reply"])
+        self.assertIn("TEST", self.calls[0][2][0])
+
+    def test_with_both_missing_nothing_is_sent(self):
+        with self.assertRaisesRegex(ValueError, "Nothing to test"):
+            app.send_giki_test("  ", "")
+        self.assertEqual(self.calls, [])
+
     def test_a_disconnected_giki_whatsapp_sends_nothing(self):
         self.line.ready = lambda: False
         with self.assertRaisesRegex(ValueError, "not connected"):

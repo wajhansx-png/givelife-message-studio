@@ -304,3 +304,40 @@
   min-width: 72px;
   min-height: 44px;
 }
+
+/* What is chosen stays clearly marked: the picked side is blue, a tick stays ticked */
+.UI2 dialog.case-sheet .gk-pick .cr-seg-b[data-on='1'] {
+  border-color: #2f6fe4;
+  background: #2f6fe4;
+  color: #fff;
+}
+.UI2 dialog.case-sheet .gk-tick-box {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.UI2 dialog.case-sheet .gk-tick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--cr-line);
+  border-radius: 12px;
+  color: var(--cr-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+.UI2 dialog.case-sheet .gk-tick[hidden] {
+  display: none;
+}
+.UI2 dialog.case-sheet .gk-tick input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #2f6fe4;
+}
+.UI2 dialog.case-sheet .gk-tick:has(input:checked) {
+  border-color: #2f6fe4;
+}

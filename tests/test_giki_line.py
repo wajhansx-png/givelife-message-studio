@@ -59,7 +59,13 @@ class Fixture(unittest.TestCase):
         self.patches = [
             patch.dict(os.environ, {"GIKI_SEED_FILE": ""}),
             patch("caption_facts.current", side_effect=lambda app, text: text),
-            patch("group_extras.to_send", side_effect=lambda store: list(self.on)),
+            patch(
+                "group_extras.extras_for",
+                side_effect=lambda store, profile: {
+                    "pdf": any(k == "pdf" for k, _ in self.on),
+                    "video": any(k == "video" for k, _ in self.on),
+                },
+            ),
         ]
         self.on = []
         for p in self.patches:

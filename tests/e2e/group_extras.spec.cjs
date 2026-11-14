@@ -120,8 +120,8 @@ for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['g
       const r = (e) => e.getBoundingClientRect();
       const b = r(document.getElementById('ui2ReaderExtras'));
       const dock = r(document.querySelector('#messageFocus .ui2-reader-dock'));
-      const chips = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-chip')].map(r);
-      const hit = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-chip')].map((c) => {
+      const chips = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item .ui2-rx-chip')].map(r);
+      const hit = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item .ui2-rx-chip')].map((c) => {
         const q = r(c);
         const top = document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2);
         return c.contains(top);

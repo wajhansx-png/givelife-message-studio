@@ -6077,3 +6077,26 @@
     max-height: max(140px, calc(100dvh - 352px));
   }
 }
+.UI2 .ui2-rx-text .ui2-rx-chip[hidden] {
+  display: none;
+}
+@media (max-width: 411px) {
+  .UI2 .ui2-rx-text-label {
+    display: none;
+  }
+  .UI2 .ui2-rx-text {
+    gap: 6px;
+  }
+  .UI2 .ui2-rx-text-b {
+    padding: 0 12px;
+  }
+}
+@media (max-width: 339px) {
+  .UI2 .ui2-rx-text-b {
+    padding: 0 9px;
+    font-size: 13px;
+  }
+  .UI2 .ui2-rx-text .ui2-rx-poster span {
+    font-size: 13px;
+  }
+}

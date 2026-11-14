@@ -185,6 +185,7 @@ test('Timer: the same sheet as the Case page, saved and used by DM all', async (
   await expect(sheet.getByRole('button', { name: 'Settings' })).toBeVisible();
   await expect(sheet.locator('.cr-set-row > span:first-child')).toHaveText([
     'Text goes with',
+    'Also send',
     'Minutes between DMs',
     'DMs per batch',
     'Rest between batches',
@@ -202,9 +203,20 @@ test('Timer: the same sheet as the Case page, saved and used by DM all', async (
     'data-on',
     '1',
   );
-  expect((await api(port, '/group-extras')).text_on).toBe('poster');
+  // the Giki page keeps its own choice: the groups' setting does not change
+  const giki = async () => (await api(port, '/group-extras')).setup.giki;
+  expect((await giki()).text_on).toBe('poster');
+  expect((await api(port, '/group-extras')).text_on).toBe('video');
   await sheet.getByRole('button', { name: 'Text goes with the video' }).click();
-  await expect.poll(async () => (await api(port, '/group-extras')).text_on).toBe('video');
+  await expect.poll(async () => (await giki()).text_on).toBe('video');
+  // Also send: Poster (shown with the text on the video), ticked by default; PDF and Video need a file first
+  await expect(sheet.locator('#gikiTick-poster')).toBeChecked();
+  await expect(sheet.locator('#gikiTick-video')).toBeHidden(); // the video carries the text: no "video alone"
+  await expect(sheet.locator('#gikiTick-pdf')).toBeDisabled(); // no PDF added yet
+  await sheet.locator('#gikiTick-poster').uncheck();
+  await expect.poll(async () => (await giki()).poster).toBe(false);
+  await sheet.locator('#gikiTick-poster').check();
+  await expect.poll(async () => (await giki()).poster).toBe(true);
   await expect(sheet.locator('.cr-set-link .cr-set-val')).toHaveText('3');
   await sheet.getByRole('button', { name: 'More: Minutes between DMs' }).click();
   await sheet.getByRole('button', { name: 'Less: DMs per batch' }).click();
@@ -263,9 +275,12 @@ test('DM Case sends the Group msgs text with the poster from the Giki WhatsApp, 
   expect(sent[0].fields.caption).toContain('GIKITEST case caption');
   expect(sent[0].fields.caption).not.toContain('Different volunteer text');
   expect(sent[0].fields.phone).toContain('15551230003');
-  // 2. PDF + video saved and on: they follow the poster, in that order
+  // 2. PDF + video saved (on the group message), PDF ticked on the Giki page: video with the text, poster, PDF
   await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: PDF, name: 'report.pdf' });
   await api(port, '/group-extras', { action: 'add', kind: 'video', data: MP4, name: 'clip.mp4' });
+  const giki = (field, value) =>
+    api(port, '/group-extras', { action: 'setup', profile: 'giki', field, value });
+  await giki('pdf', true);
   await page.waitForTimeout(500);
   before = await ask('Ali Donor');
   await expect.poll(async () => (await gikiSends()).length, { timeout: 30000 }).toBe(before + 3);
@@ -274,8 +289,8 @@ test('DM Case sends the Group msgs text with the poster from the Giki WhatsApp, 
   expect(sent.map((e) => e.path)).toEqual(['/send/video', '/send/image', '/send/file']);
   expect(sent[0].fields.caption).toContain('GIKITEST case caption');
   expect(sent[1].fields.caption || '').toBe('');
-  // 3. video off on the group message: PDF only
-  await api(port, '/group-extras', { action: 'toggle', kind: 'video', on: false });
+  // 3. Giki text on the poster (video not ticked): the poster with the text, then the PDF
+  await giki('text_on', 'poster');
   before = await ask('Giki Donor 4');
   await expect.poll(async () => (await gikiSends()).length, { timeout: 30000 }).toBe(before + 2);
   expect((await gikiSends()).slice(before).map((e) => e.path)).toEqual([
@@ -287,7 +302,7 @@ test('DM Case sends the Group msgs text with the poster from the Giki WhatsApp, 
     kind: 'group',
     text: 'GIKITEST second caption. Rs. 25,000 left.',
   });
-  await api(port, '/group-extras', { action: 'toggle', kind: 'pdf', on: false });
+  await giki('pdf', false);
   await api(port, '/giki/volunteers', {
     action: 'add',
     name: 'Fourth Person',
@@ -308,7 +323,7 @@ test('DM Case sends the Group msgs text with the poster from the Giki WhatsApp, 
 test('Test sends the case, the PDF that is on, then the share message to my own WhatsApp from the Giki WhatsApp', async ({
   page,
 }) => {
-  await api(port, '/group-extras', { action: 'toggle', kind: 'pdf', on: true });
+  await api(port, '/group-extras', { action: 'setup', profile: 'giki', field: 'pdf', value: true });
   await api(port, '/giki/volunteers', { action: 'message', text: '' });
   await open(page);
   // no share message written yet: the case (and its PDF) is still sent, and the notice says what was left out

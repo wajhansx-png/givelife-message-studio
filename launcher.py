@@ -283,6 +283,26 @@ def reconnect_whatsapp():
     urllib.request.urlopen(req, timeout=15).read()
 
 
+def line_devices():
+    """The extra WhatsApp lines (the Giki one) the gateway holds."""
+    with urllib.request.urlopen("http://127.0.0.1:3000/devices", timeout=8) as r:
+        found = json.load(r).get("results") or []
+    return [d["id"] for d in found if isinstance(d, dict) and wa_lines.is_line_device(d.get("id"))]
+
+
+def line_call(device, path, method="GET"):
+    req = urllib.request.Request(
+        "http://127.0.0.1:3000/devices/" + device + path,
+        headers={"X-Device-Id": device},
+        method=method,
+    )
+    with urllib.request.urlopen(req, timeout=15) as r:
+        data = json.load(r)
+    return data.get("results") if isinstance(data.get("results"), dict) else {}
+
+
+line_watch = {}  # device id -> DropWatch: the Giki WhatsApp gets the same reconnect care as the main one
+last_lines = 0.0
 last_wa, dropped_since, last_try, last_report = 0.0, 0.0, 0.0, 0.0
 while not stopping.is_set():
     time.sleep(2)
@@ -324,6 +344,23 @@ while not stopping.is_set():
         if state and t - last_report >= 600:
             last_report = t
             print("[watchdog] whatsapp=%s" % state, flush=True)
+    if t - last_lines >= 30:
+        last_lines = t
+        try:
+            for device in line_devices():
+                try:
+                    line_state = supervisor.wa_state(line_call(device, "/status"))
+                except Exception:
+                    continue  # gateway busy: judge next round
+                asked = line_watch.setdefault(device, supervisor.DropWatch()).step(
+                    line_state, t, lambda d=device: line_call(d, "/reconnect", "POST")
+                )
+                if asked:
+                    print(
+                        "[watchdog] Giki WhatsApp link was down; asked it to reconnect", flush=True
+                    )
+        except Exception as e:
+            print("[watchdog] line check skipped: " + type(e).__name__, flush=True)
 if not stopping.is_set():
     print("[launcher] a component keeps crashing; restarting the container", flush=True)
     stop()

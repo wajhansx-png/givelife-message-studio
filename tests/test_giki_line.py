@@ -503,6 +503,44 @@ class FakeGateway:
         raise AssertionError("unexpected call " + method + " " + path)
 
 
+class GikiReconnect(unittest.TestCase):
+    """The Giki WhatsApp gets the same reconnect care as the main one, even with the page closed."""
+
+    def test_a_dropped_link_is_asked_to_reconnect_after_45_s_and_not_more_than_every_90_s(self):
+        import supervisor
+
+        asked = []
+        w = supervisor.DropWatch()
+        w.step("dropped", 0, lambda: asked.append(0))
+        w.step("dropped", 30, lambda: asked.append(30))
+        self.assertEqual(asked, [])  # a short blip: wait
+        w.step("dropped", 45, lambda: asked.append(45))
+        w.step("dropped", 75, lambda: asked.append(75))
+        w.step("dropped", 140, lambda: asked.append(140))
+        self.assertEqual(asked, [45, 140])
+
+    def test_a_working_or_logged_out_link_is_left_alone(self):
+        import supervisor
+
+        asked = []
+        w = supervisor.DropWatch()
+        for t, state in ((0, "ok"), (100, "logged_out"), (200, "ok"), (300, None)):
+            w.step(state, t, lambda: asked.append(t))
+        self.assertEqual(asked, [])
+        w.step("dropped", 400, lambda: asked.append(400))
+        w.step(
+            "ok", 430, lambda: asked.append(430)
+        )  # it came back by itself: the clock starts again
+        w.step("dropped", 440, lambda: asked.append(440))
+        self.assertEqual(asked, [])
+
+    def test_the_launcher_watches_the_giki_line_with_it(self):
+        src = (Path(__file__).resolve().parents[1] / "launcher.py").read_text(encoding="utf-8")
+        self.assertIn("line_watch.setdefault(device, supervisor.DropWatch())", src)
+        self.assertIn('"/reconnect", "POST"', src)
+        self.assertIn("wa_lines.is_line_device", src)
+
+
 class LineTests(unittest.TestCase):
     def setUp(self):
         self.store = Store()

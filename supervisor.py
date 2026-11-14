@@ -181,3 +181,27 @@ def wa_state(status):
     if not status.get("is_logged_in"):
         return "logged_out"
     return "ok" if status.get("is_connected") else "dropped"
+
+
+class DropWatch:
+    """For one WhatsApp link: if it dropped while still logged in, ask it to reconnect after 45 s down, and at most
+    every 90 s. A logged-out link is left alone (it needs the owner to link it again)."""
+
+    def __init__(self, wait=45, every=90):
+        self.wait, self.every = wait, every
+        self.since = None  # when the link was first seen down
+        self.last = None  # when a reconnect was last asked for
+
+    def step(self, state, now, reconnect):
+        if state == "dropped":
+            if self.since is None:
+                self.since = now
+            if now - self.since >= self.wait and (
+                self.last is None or now - self.last >= self.every
+            ):
+                self.last = now
+                reconnect()
+                return "asked"
+        elif state in ("ok", "logged_out"):
+            self.since = None
+        return None

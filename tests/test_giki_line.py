@@ -335,9 +335,9 @@ class GikiList(Fixture):
             [
                 (
                     "999000000001",
-                    "Salam Ahmad, please share this.",
+                    "Salam Ahmad Bhai, please share this.",
                 ),  # to the test group (server side)
-                ("999000000002", "Salam Zain, please share this."),
+                ("999000000002", "Salam Zain Bhai, please share this."),
                 (
                     "923002000001",
                     "Salam Aaliya, please share this.",

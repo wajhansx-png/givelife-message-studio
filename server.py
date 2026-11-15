@@ -1121,6 +1121,11 @@ def poster_media(use="group"):
     return DATA / "poster.jpg"
 
 
+# Every send waits for the gateway's own answer (its limit is 300 s, see Dockerfile). Giving up first made a
+# slow send look failed: Giki then found nothing in the chat yet and could send the same message twice.
+SEND_WAIT = 330
+
+
 def post_media(jid, cap, path):
     """Send one picture or MP4 video with its caption file through the WhatsApp gateway."""
     if not Path(path).is_file():
@@ -1133,7 +1138,7 @@ def post_media(jid, cap, path):
             "curl",
             "-s",
             "--max-time",
-            "150" if video else "60",
+            str(SEND_WAIT),
             "-X",
             "POST",
             GOWA_URL + ("/send/video" if video else "/send/image"),
@@ -1168,7 +1173,7 @@ def send_batch_attachment(jid, caption, ident):
                 "curl",
                 "-s",
                 "--max-time",
-                "150",
+                str(SEND_WAIT),
                 "-X",
                 "POST",
                 GOWA_URL + "/send/" + field,
@@ -2608,7 +2613,7 @@ def send_custom_text(jid, text):
         headers={"X-Device-Id": device(), "Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=40) as response:
+    with urllib.request.urlopen(req, timeout=SEND_WAIT) as response:
         return mapping(json.load(response))
 
 
@@ -2623,7 +2628,7 @@ def send_text(jid, text):
         headers={"X-Device-Id": device(), "Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=40) as r:
+    with urllib.request.urlopen(req, timeout=SEND_WAIT) as r:
         return mapping(json.load(r))
 
 
@@ -2665,7 +2670,7 @@ def send_thanks_test(message, media):
                     headers={"X-Device-Id": device(), "Content-Type": "application/json"},
                     method="POST",
                 )
-                with urllib.request.urlopen(req, timeout=40) as response:
+                with urllib.request.urlopen(req, timeout=SEND_WAIT) as response:
                     results.append(mapping(json.load(response)))
         except Exception:
             raise ValueError(
@@ -3061,7 +3066,7 @@ def send_with_image(jid, caption, img):
             headers={"X-Device-Id": device(), "Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=40) as r:
+        with urllib.request.urlopen(req, timeout=SEND_WAIT) as r:
             return mapping(json.load(r))
     cap = DATA / ("caption-" + uuid.uuid4().hex + ".txt")
     atomic_write(cap, caption)

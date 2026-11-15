@@ -826,7 +826,10 @@ class DonorDelivery:
                 "reply": "Settings saved. The existing batch continues; sent DMs are unchanged.",
             }
 
+    stop_at = 0.0
+
     def cancel(self):
+        self.stop_at = time.time()
         self.stop.set()
         return {
             "reply": "Stopping the donor batch. Any message already in flight may still complete.",
@@ -1225,7 +1228,7 @@ class DonorDelivery:
             or result.get("code") == "UNCERTAIN"
             or "not confirmed" in str(result.get("message") or "").lower()
         )
-        for pause in self.HEAL_WATCH if unclear else self.HEAL_QUICK:
+        for pause in self.HEAL_WATCH if unclear and not self.stop.is_set() else self.HEAL_QUICK:
             time.sleep(pause)
             try:
                 found = self.seen(body, mark)
@@ -1313,6 +1316,8 @@ class DonorDelivery:
         deadline = time.time() + (180 if finish else 1800)
         tries = 0
         while True:
+            if finish and self.stop.is_set():  # Stop pressed: finish this person only if WhatsApp answers soon
+                deadline = min(deadline, (self.stop_at or time.time()) + 30)
             if not self.connected():
                 self._update(
                     j["id"],

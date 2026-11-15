@@ -1153,3 +1153,9 @@ class GikiOneRemovesTheMoved(Fixture):
         self.assertEqual([x["name"] for x in self.g.view()["items"]], ["Faris Giki Donor"])
         with patch.dict(os.environ, {"GIKI_SEED_FILE": ""}):
             self.assertEqual([x["name"] for x in g2.view()["items"]], ["Hajira Giki Donor 500"])
+
+
+class GikiExactGap(Fixture):
+    def test_the_gap_is_exactly_the_timer(self):
+        for gap in (60, 300, 600):
+            self.assertEqual(self.g.jobs._gap({"gap_seconds": gap}), float(gap))

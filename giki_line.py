@@ -54,6 +54,10 @@ class GikiDelivery(VolunteerDelivery):
         """The share message after the case: {name} is the greeting ("Asad Bhai", "Areeba Sister"), or nothing."""
         return fill_name(template, name)
 
+    def _gap(self, j):
+        """Exactly the Timer's "Minutes between DMs" (the owner wants it exact, not 5 to 7 minutes)."""
+        return float(j["gap_seconds"])
+
 
 # What {name} becomes for the people the owner gave, checked one by one: first name + Bhai / Sister. A contact with
 # no real name ("Giki Donor", "ZB Giki Donor", a nickname) gets nothing, so the message just reads without a name.
@@ -359,7 +363,11 @@ class GikiVolunteers(Volunteers):
 
     def resume(self, body):
         """Resume DMs: DM all again for the people still waiting, with today's case and share message and the saved
-        timer. The first DM waits out the gap after the last one sent, so two never go close together."""
+        timer. The first DM goes at once."""
+        for _ in range(40):  # a batch that is still stopping (finishing its person): wait up to 40 s
+            if not self.jobs.active:
+                break
+            time.sleep(1)
         if self.jobs.active:
             raise ValueError("The DMs are still stopping. Try again in a few seconds.")
         if not self.resumable():
@@ -372,14 +380,8 @@ class GikiVolunteers(Volunteers):
                 "job": self.jobs.status(),
                 "reply": f"Finished {finished} people who were missing part of their messages. Everyone has it now.",
             }
-        last = max(
-            [r.get("time", 0) for r in j.get("receipts", []) if r.get("state") == "Sent"] or [0]
-        )
-        hold = last + float(j.get("gap_seconds") or 0) if last else 0
-        result = self.send_all(
-            {"request_id": body.get("request_id"), "delay_seconds": 0},
-            hold_until=hold if hold > time.time() else None,
-        )
+        # Resume starts at once (the owner's choice): only the people still waiting, nobody twice
+        result = self.send_all({"request_id": body.get("request_id"), "delay_seconds": 0})
         result["reply"] = "DMs resumed. Nobody who already got it gets it again."
         return result
 

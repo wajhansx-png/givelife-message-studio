@@ -82,7 +82,7 @@ class Fixture(unittest.TestCase):
         self.sent.append(body)
         return {"code": "SUCCESS"}
 
-    def fake_test(self, case, share, pdf=False, video=False):
+    def fake_test(self, case, share, pdf=False, video=False, line="giki"):
         self.tests.append((case, share, pdf, video))
         return {"code": "SUCCESS", "reply": "Test sent."}
 

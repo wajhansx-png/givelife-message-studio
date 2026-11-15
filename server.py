@@ -53,7 +53,7 @@ class send_route:
             raise ValueError("Unknown WhatsApp line.")
         if line:
             self.tokens.append((_LINE, _LINE.set(line)))
-            if line == "giki" and self.body.get("target") == "phone":
+            if line.startswith("giki") and self.body.get("target") == "phone":
                 import giki_line
 
                 if giki_line.is_test_phone(self.body.get("phone")):
@@ -223,6 +223,13 @@ def serialized_send(fn):
 
 STORE = configured_store()
 LINES["giki"] = wa_lines.Line("giki", STORE, GOWA_URL)
+LINES["giki2"] = wa_lines.Line("giki2", STORE, GOWA_URL)  # the Giki 2 page's own WhatsApp
+GIKI_PAGES = {"/giki": "giki", "/giki2": "giki2"}  # page -> its line (and its list in donors())
+
+
+def giki_list(name):
+    """The Giki page's list for a line: donors().giki or donors().giki2."""
+    return getattr(donors(), name)
 CAMPAIGN_CONTACTED = (
     set(json.loads((ROOT / "campaign-blocks.json").read_text()))
     if (ROOT / "campaign-blocks.json").exists()
@@ -523,7 +530,7 @@ def _send_custom(body):
             message, body.get("name", ""), body.get("gender", "Brother")
         )
     if not is_group and body.get("kind") in ("volunteer_batch", "volunteer_manual"):
-        if body.get("line") == "giki":  # the Giki list: "Asad Bhai" / "Areeba Sister", or no name at all
+        if str(body.get("line") or "").startswith("giki"):  # the Giki lists: "Asad Bhai" / "Areeba Sister", or no name at all
             import giki_line
 
             message = giki_line.fill_name(message, body.get("name"))
@@ -1217,7 +1224,7 @@ def send_dm_extra(jid, is_group, kind):
         raise ValueError(
             f"No {group_extras.LABEL[kind]} is saved yet. Add it in Poster → Sent after the poster in groups."
         )
-    if kind == "video" and group_extras.lead(STORE, "giki" if _LINE.get() == "giki" else "dm") == ident:
+    if kind == "video" and group_extras.lead(STORE, "giki" if _LINE.get().startswith("giki") else "dm") == ident:
         return {"code": "SUCCESS", "message": "The video already went first, with the text."}
     return send_batch_attachment(jid, "", ident)
 
@@ -1280,7 +1287,7 @@ def send_image(jid, caption, check_gap=False, _retry=True):
     import group_extras
 
     to_group = str(jid).endswith("@g.us") and not _DM_TO_GROUP.get()  # a test person's DM keeps the DM rules
-    profile = "group" if to_group else "giki" if _LINE.get() == "giki" else "dm"
+    profile = "group" if to_group else "giki" if _LINE.get().startswith("giki") else "dm"
     lead = group_extras.lead(STORE, profile) if STORE else None  # the case video carries the text
     try:
         poster = poster_media("group" if to_group else "dm")
@@ -1937,9 +1944,10 @@ def line_view(name):
         except ValueError:
             pass
     st["same_as_main"] = bool(number and number == norm_phone(OWNER_PHONE))
-    st["sending"] = bool(donors().giki.jobs.active) if name == "giki" else False
-    if name == "giki":
-        st["test"] = {"state": GIKI_TEST["state"], "note": GIKI_TEST["note"]}
+    st["sending"] = bool(giki_list(name).jobs.active) if name in GIKI_PAGES.values() else False
+    if name in GIKI_PAGES.values():
+        test = GIKI_TESTS[name]
+        st["test"] = {"state": test["state"], "note": test["note"]}
     return st
 
 
@@ -1959,7 +1967,7 @@ def line_action(name, body):
     if action == "logout":
         if body.get("confirm") is not True:
             raise ValueError("Confirm to disconnect this WhatsApp.")
-        if name == "giki" and donors().giki.jobs.active:
+        if name in GIKI_PAGES.values() and giki_list(name).jobs.active:
             raise ValueError("Stop the Giki DMs first, then disconnect.")
         line.logout()
         _LINE_WA.pop(name, None)
@@ -2806,24 +2814,26 @@ class _send_lock_waiting:
 
 
 GIKI_TEST = {"state": "idle", "note": "", "at": 0.0}
+GIKI_TESTS = {"giki": GIKI_TEST, "giki2": {"state": "idle", "note": "", "at": 0.0}}  # one per page
 
 
-def start_giki_test(case, share, pdf=False, video=False):
+def start_giki_test(case, share, pdf=False, video=False, line="giki"):
     """Start the Giki test in the background and answer at once (big files can take a minute or two to upload).
     The result shows on the Giki page when it is done."""
-    if GIKI_TEST["state"] == "sending" and time.time() - GIKI_TEST["at"] < 900:
+    test = GIKI_TESTS[line]
+    if test["state"] == "sending" and time.time() - test["at"] < 900:
         raise ValueError("A test is already sending. Check your WhatsApp in a minute.")
-    if not line_ok("giki"):
+    if not line_ok(line):
         raise ValueError("The Giki WhatsApp is not connected yet. Tap Connect WhatsApp.")
     if not str(case or "").strip() and not str(share or "").strip():
         raise ValueError("Nothing to test yet: write the share message or set the case in Group msgs.")
-    GIKI_TEST.update(state="sending", note="", at=time.time())
+    test.update(state="sending", note="", at=time.time())
 
     def run():
         try:
-            GIKI_TEST.update(state="done", note=send_giki_test(case, share, pdf, video)["reply"])
+            test.update(state="done", note=send_giki_test(case, share, pdf, video, line)["reply"])
         except Exception as e:
-            GIKI_TEST.update(state="failed", note=str(e)[:300] or "The test was not confirmed. Check WhatsApp.")
+            test.update(state="failed", note=str(e)[:300] or "The test was not confirmed. Check WhatsApp.")
 
     threading.Thread(target=run, daemon=True, name="giki-test").start()
     return {
@@ -2832,7 +2842,7 @@ def start_giki_test(case, share, pdf=False, video=False):
     }
 
 
-def send_giki_test(case, share, pdf=False, video=False):
+def send_giki_test(case, share, pdf=False, video=False, line="giki"):
     """The Giki DM as one person gets it: the case with the poster, the PDF / video that are on, then the share
     message. It goes only to your own WhatsApp (never to anyone in the list), from the Giki WhatsApp, marked TEST.
     If the case or the share message is missing, the other one is still sent."""
@@ -2841,9 +2851,9 @@ def send_giki_test(case, share, pdf=False, video=False):
     case, share = str(case or "").strip(), str(share or "").strip()
     if not case and not share:
         raise ValueError("Nothing to test yet: write the share message or set the case in Group msgs.")
-    if not line_ok("giki"):
+    if not line_ok(line):
         raise ValueError("The Giki WhatsApp is not connected yet. Tap Connect WhatsApp.")
-    giki_own = LINES["giki"].status().get("number", "")
+    giki_own = LINES[line].status().get("number", "")
     me = next(
         (n for n in (norm_phone(OWNER_PHONE), norm_phone(TEST_DM_PHONE)) if n and n != giki_own), ""
     )
@@ -2862,7 +2872,7 @@ def send_giki_test(case, share, pdf=False, video=False):
             )
 
     after = []
-    with on_line("giki"), _send_lock_waiting():
+    with on_line(line), _send_lock_waiting():
         check_hold()
         if case:
             first = mapping(send_image(me, mark + case))
@@ -5899,7 +5909,7 @@ class Handler(BaseHTTPRequestHandler):
 
         return self.reply_built("/new", [ROOT / "index.html"], build, "text/html")
 
-    def reply_giki_ui(self):
+    def reply_giki_ui(self, page="/giki"):
         """/giki: the same app, opened straight on the Volunteers screen of the Giki list (its own people, message and
         WhatsApp). giki.js and giki.css only exist here; every other page is untouched."""
 
@@ -5908,7 +5918,11 @@ class Handler(BaseHTTPRequestHandler):
             html = html.replace('<body class="nomsg"', '<body class="nomsg ui2 giki"', 1)
             html = html.replace(
                 "<head>",
-                "<head>\n    <script>window.GIKI_LINE = true;"
+                "<head>\n    <script>window.GIKI_LINE = true; window.GIKI_BASE = "
+                + json.dumps(page)
+                + "; window.GIKI_TITLE = "
+                + json.dumps("Giki 2" if page == "/giki2" else "Giki")
+                + ";"
                 " if (!/^#\\/donors\\/volunteers/.test(location.hash))"
                 " history.replaceState(null, '', location.pathname + location.search + '#/donors/volunteers');</script>",
                 1,
@@ -5924,7 +5938,7 @@ class Handler(BaseHTTPRequestHandler):
                 1,
             )
 
-        return self.reply_built("/giki", [ROOT / "index.html"], build, "text/html")
+        return self.reply_built(page, [ROOT / "index.html"], build, "text/html")
 
     def reply_new_group_finder(self):
         """Group finder inside the redesign (/new/group-finder): same page, the new look added. /group-finder is untouched."""
@@ -5996,6 +6010,8 @@ class Handler(BaseHTTPRequestHandler):
             "/new/",
             "/giki",
             "/giki/",
+            "/giki2",
+            "/giki2/",
             "/new/group-finder",
             "/group-finder",
             "/case-plan",
@@ -6100,8 +6116,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply_new_ui()
         if self.path.split("?")[0] == "/old":
             return self.reply_file("index.html", "text/html")
-        if self.path.split("?")[0] in ("/giki", "/giki/"):
-            return self.reply_giki_ui()
+        if self.path.split("?")[0].rstrip("/") in GIKI_PAGES:
+            return self.reply_giki_ui(self.path.split("?")[0].rstrip("/"))
         if self.path.split("?")[0] == "/giki.js":
             return self.reply_file("giki.js", "application/javascript")
         if self.path.split("?")[0] == "/giki.css":
@@ -6267,10 +6283,10 @@ class Handler(BaseHTTPRequestHandler):
                 )
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
-        if self.path.split("?")[0] == "/giki/volunteers":
+        if self.path.split("?")[0] in ("/giki/volunteers", "/giki2/volunteers"):
             try:
                 return self.reply(
-                    donors().giki.view(
+                    giki_list(GIKI_PAGES[self.path.split("/volunteers")[0]]).view(
                         urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get(
                             "q", [""]
                         )[0]
@@ -6278,9 +6294,9 @@ class Handler(BaseHTTPRequestHandler):
                 )
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
-        if self.path == "/giki/wa":
+        if self.path in ("/giki/wa", "/giki2/wa"):
             try:
-                return self.reply(line_action("giki", {"action": "status"}))
+                return self.reply(line_action(GIKI_PAGES[self.path[:-3]], {"action": "status"}))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
         if self.path.startswith("/focus-bank?"):
@@ -6560,6 +6576,8 @@ class Handler(BaseHTTPRequestHandler):
             "/volunteers",
             "/giki/volunteers",
             "/giki/wa",
+            "/giki2/volunteers",
+            "/giki2/wa",
             "/cases",
             "/donor-messages",
             "/donor-delivery",
@@ -6683,14 +6701,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(donors().volunteers.mutate(body))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
-        if self.path == "/giki/volunteers":
+        if self.path in ("/giki/volunteers", "/giki2/volunteers"):
             try:
-                return self.reply(donors().giki.mutate(body))
+                return self.reply(giki_list(GIKI_PAGES[self.path[:-11]]).mutate(body))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
-        if self.path == "/giki/wa":
+        if self.path in ("/giki/wa", "/giki2/wa"):
             try:
-                return self.reply(line_action("giki", body))
+                return self.reply(line_action(GIKI_PAGES[self.path[:-3]], body))
             except ValueError as e:
                 return self.reply({"error": str(e)}, status=400)
         if self.path in (
@@ -7508,6 +7526,7 @@ def donor_autopilot():
                 donors().jobs.active
                 or donors().volunteers.jobs.active
                 or donors().giki.jobs.active
+                or donors().giki2.jobs.active
             ):
                 urllib.request.urlopen(url + "/health", timeout=20).read()
         except Exception:
@@ -7539,6 +7558,7 @@ def resume_batches_after_restart(wait=10, tries=90, sleep=time.sleep):
         lambda: donors().jobs,
         lambda: donors().volunteers.jobs,
         lambda: donors().giki.jobs,
+        lambda: donors().giki2.jobs,
     ):
         try:
             registries.append(pick())
@@ -7567,7 +7587,12 @@ def graceful_exit(signum=None, frame=None, wait=20, exit=os._exit):
 
     def run():
         registries = []
-        for pick in (lambda: donors().jobs, lambda: donors().volunteers.jobs, lambda: donors().giki.jobs):
+        for pick in (
+            lambda: donors().jobs,
+            lambda: donors().volunteers.jobs,
+            lambda: donors().giki.jobs,
+            lambda: donors().giki2.jobs,
+        ):
             try:
                 registries.append(pick())
             except Exception:

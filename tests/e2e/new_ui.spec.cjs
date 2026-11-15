@@ -98,7 +98,7 @@ for (const width of [280, 320, 360, 390, 430, 768]) {
     await tabs.locator('[data-tab="more"]').click();
     const sheet = page.locator('#ui2Sheet');
     await expect(sheet).toBeVisible();
-    await expect(sheet.locator('.ui2-tile')).toHaveCount(9); // Case page + Giki + New case + the six tiles
+    await expect(sheet.locator('.ui2-tile')).toHaveCount(10); // Case page + Giki + Giki 2 + New case + the six tiles
     // the Giki tile: its own colour, and it opens /giki
     const giki = sheet.locator('#ui2GikiTile');
     await expect(giki).toBeVisible();

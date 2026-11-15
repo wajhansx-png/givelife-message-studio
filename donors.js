@@ -3072,9 +3072,7 @@
       }
       caseOptions.append(tabs);
     } else caseOptions.append(make('span', 'vol-list-label', 'People'));
-    const shown = GIKI
-      ? vols.items.filter((d) => !!d.dmed === (gikiTab === 'dmed'))
-      : vols.items;
+    const shown = GIKI ? vols.items.filter((d) => !!d.dmed === (gikiTab === 'dmed')) : vols.items;
     const list = make('div', 'vol-list');
     if (vols.items.length) {
       list.setAttribute('role', 'list');
@@ -3201,12 +3199,7 @@
                   })
                 : ''),
       );
-      row.append(
-        nameEl,
-        GIKI && d.dmed ? dmedNote : dmCase,
-        ...(GIKI ? [] : [dmShare]),
-        more,
-      );
+      row.append(nameEl, GIKI && d.dmed ? dmedNote : dmCase, ...(GIKI ? [] : [dmShare]), more);
       list.append(row);
     });
     list.onscroll = () =>

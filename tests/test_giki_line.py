@@ -251,6 +251,8 @@ class GikiList(Fixture):
         j["receipts"][0].update(steps={"video": "Sending"}, follow_up=None)
         j["receipts"][1].update(steps={}, follow_up=None)
         self.g.jobs._save(jobs)
+        for receipt in j["receipts"]:
+            self.g.book.follow_up(receipt["id"], None)  # the share never went
         self.sent.clear()
         self.assertEqual(len(self.g.jobs.half_sent()), 2)
         self.assertEqual(self.g.jobs.finish_half_sent(), 2)
@@ -265,6 +267,54 @@ class GikiList(Fixture):
         )
         self.assertEqual(self.g.jobs.half_sent(), [])  # done: nothing is sent a second time
         self.assertEqual(self.g.jobs.finish_half_sent(), 0)
+
+    def test_a_share_already_sent_by_an_earlier_resume_is_never_sent_again(self):
+        self._stopped_after_first()
+        jobs = self.g.jobs._load()
+        first = jobs["jobs"][-1]["receipts"][0]
+        first["follow_up"] = "Cancelled"  # the old record says cut...
+        self.g.jobs._save(jobs)
+        self.g.book.follow_up(
+            first["id"], "Sent"
+        )  # ...but an earlier Resume already sent the share
+        self.sent.clear()
+        self.assertEqual(self.g.jobs.half_sent(), [])
+        self.assertEqual(self.g.jobs.finish_half_sent(), 0)
+        self.assertEqual(self.sent, [])
+
+    def test_an_older_record_without_steps_is_never_sent_again(self):
+        self._stopped_after_first()
+        jobs = self.g.jobs._load()
+        first = jobs["jobs"][-1]["receipts"][0]
+        first.pop("seq")  # written by the code before steps were recorded
+        first["follow_up"] = None
+        self.g.jobs._save(jobs)
+        self.g.book.follow_up(first["id"], "Cancelled")
+        self.sent.clear()
+        self.assertEqual(self.g.jobs.finish_half_sent(), 0)
+        self.assertEqual(self.sent, [])
+
+    def test_resume_and_the_restart_repair_at_the_same_time_send_once(self):
+        import threading
+
+        self._stopped_after_first()
+        jobs = self.g.jobs._load()
+        jobs["jobs"][-1]["receipts"][0]["follow_up"] = None  # the share is missing
+        self.g.jobs._save(jobs)
+        self.g.book.follow_up(jobs["jobs"][-1]["receipts"][0]["id"], None)
+        self.sent.clear()
+        go = threading.Barrier(2)
+
+        def repair():
+            go.wait()
+            self.g.jobs.finish_half_sent()
+
+        threads = [threading.Thread(target=repair) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        self.assertEqual(len(self.sent), 1)  # the share message once, never twice
 
     def test_a_restart_carries_on_a_giki_batch_by_itself(self):
         self._stopped_after_first()

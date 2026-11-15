@@ -195,11 +195,35 @@
   line-height: 1.5;
 }
 
+/* DM all, Resume DMs and Stop DMs share one spot in the bar, words on one line */
+.UI2.giki #donorsPage #donorVolunteers > .vol-foot > .vol-stop {
+  order: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 48px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 899px) {
+  .UI2.giki #donorsPage #donorVolunteers > .vol-foot > .vol-stop {
+    flex: 1 1 0 !important;
+    padding: 0 8px !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2.giki #donorsPage #donorVolunteers > .vol-foot > :is(.send-donors, .vol-stop) {
+    flex: 0 0 auto !important;
+    white-space: nowrap;
+  }
+}
+
 /* computer: Msgs is not drawn in this bar at all, so the Timer button gets its own look and place (left of Back) */
 @media (min-width: 900px) {
   .UI2.giki #donorsPage #donorVolunteers > .vol-foot > .giki-timer {
     order: 0;
     flex: 0 0 auto;
+    width: auto !important; /* it took the whole row and squeezed DM all / Resume DMs */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -413,4 +437,18 @@
 .UI2 dialog.case-sheet .gk-pick3 .cr-seg-b {
   min-width: 0;
   padding: 0 12px;
+}
+
+/* small phones while DMs are sending: the Timer shows only its icon, so Stop DMs and its count fit on one line */
+@media (max-width: 380px) {
+  .UI2.giki #donorsPage #donorVolunteers > .vol-foot:has(> .vol-stop:not([hidden])) > .giki-timer {
+    flex-basis: 48px !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    padding: 0 !important;
+  }
+  .UI2.giki #donorsPage #donorVolunteers > .vol-foot:has(> .vol-stop:not([hidden])) > .giki-timer > span {
+    display: none;
+  }
 }

@@ -286,7 +286,41 @@ class GikiVolunteers(Volunteers):
         out = super().view(query)
         out["pace"] = self.pace_values()
         out["waiting"] = len(self.waiting_ids())
+        out["resumable"] = self.resumable()
         return out
+
+    def resumable(self):
+        """After Stop DMs (or a stop of any kind) in the last 36 hours: how many people are still waiting, for
+        Resume DMs. 0 while sending, or when nothing was stopped."""
+        jobs = self.jobs.export_jobs().get("jobs", [])
+        j = jobs[-1] if jobs else None
+        if (
+            not j
+            or self.jobs.active
+            or j.get("state") not in ("Stopped", "Interrupted")
+            or time.time() - j.get("updated_at", 0) > self.jobs.AUTO_WINDOW
+        ):
+            return 0
+        return len(self.waiting_ids())
+
+    def resume(self, body):
+        """Resume DMs: DM all again for the people still waiting, with today's case and share message and the saved
+        timer. The first DM waits out the gap after the last one sent, so two never go close together."""
+        if self.jobs.active:
+            raise ValueError("The DMs are still stopping. Try again in a few seconds.")
+        if not self.resumable():
+            raise ValueError("Nothing to resume. Press DM all to start again.")
+        j = self.jobs.export_jobs()["jobs"][-1]
+        last = max(
+            [r.get("time", 0) for r in j.get("receipts", []) if r.get("state") == "Sent"] or [0]
+        )
+        hold = last + float(j.get("gap_seconds") or 0) if last else 0
+        result = self.send_all(
+            {"request_id": body.get("request_id"), "delay_seconds": 0},
+            hold_until=hold if hold > time.time() else None,
+        )
+        result["reply"] = "DMs resumed. Nobody who already got it gets it again."
+        return result
 
     def _share(self, text=None, required=True):
         share = (text if isinstance(text, str) and text.strip() else self.message()).strip()
@@ -298,7 +332,7 @@ class GikiVolunteers(Volunteers):
             )
         return share
 
-    def send_all(self, body):
+    def send_all(self, body, hold_until=None):
         """DM all: each person gets the case first (poster and the Group msgs text, then the PDF / video that are on),
         then the share message the owner wrote. One person at a time with the saved timer. Never twice."""
         share = self._share()
@@ -342,7 +376,7 @@ class GikiVolunteers(Volunteers):
                 skip_contacted=False,
                 custom_template=case,
                 follow_up=share,
-                hold_until=time.time() + delay if delay else None,
+                hold_until=hold_until or (time.time() + delay if delay else None),
                 **self.case_extras(),
             )
             self.jobs._update(result["job"]["id"], start_delay_seconds=delay)
@@ -420,6 +454,8 @@ class GikiVolunteers(Volunteers):
             return self.test(body)
         if body.get("action") == "send_case":
             return self.send_case(body)
+        if body.get("action") == "resume":
+            return self.resume(body)
         return super().mutate(body)
 
     def import_numbers(self, text, dry_run=False):

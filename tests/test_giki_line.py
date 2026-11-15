@@ -316,6 +316,50 @@ class GikiList(Fixture):
             t.join()
         self.assertEqual(len(self.sent), 1)  # the share message once, never twice
 
+    def test_the_two_test_people_come_first_in_the_list_and_in_dm_all(self):
+        for name, phone in (("Aaliya Giki", "0300 2000001"), ("Bilal Giki", "0300 2000002")):
+            self.g.mutate({"action": "add", "name": name, "phone": phone})
+        from giki_line import SEED
+
+        with patch.object(self.g, "seed_path", lambda: SEED):
+            self.g.add_test_people()
+            self.g.add_test_people()  # once only
+        names = [x["name"] for x in self.g.view()["items"]]
+        self.assertEqual(names, ["Ahmad test", "Zain test", "Aaliya Giki", "Bilal Giki"])
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share this."})
+        self.go(self.g, {"action": "send_all", "request_id": "r-test-people", "poster": False})
+        self.run_job(self.g.jobs)
+        got = [(s["phone"], s["message"]) for s in self.sent if not s["poster"]]
+        self.assertEqual(
+            got,
+            [
+                (
+                    "999000000001",
+                    "Salam Ahmad, please share this.",
+                ),  # to the test group (server side)
+                ("999000000002", "Salam Zain, please share this."),
+                (
+                    "923002000001",
+                    "Salam Aaliya, please share this.",
+                ),  # not a known name: no Bhai / Sister
+                ("923002000002", "Salam Bilal Bhai, please share this."),
+            ],
+        )
+        self.assertTrue(
+            all(s["line"] == "giki" for s in self.sent)
+        )  # the server routes the test numbers
+
+    def test_a_removed_test_person_stays_removed(self):
+        from giki_line import SEED
+
+        with patch.object(self.g, "seed_path", lambda: SEED):
+            self.g.add_test_people()
+        ahmad = next(x for x in self.g.view()["items"] if x["name"] == "Ahmad test")
+        self.g.mutate({"action": "delete", "id": ahmad["id"]})
+        with patch.object(self.g, "seed_path", lambda: SEED):
+            self.g.add_test_people()
+        self.assertEqual([x["name"] for x in self.g.view()["items"]], ["Zain test"])
+
     def test_a_restart_carries_on_a_giki_batch_by_itself(self):
         self._stopped_after_first()
         jobs = self.g.jobs._load()
@@ -585,12 +629,15 @@ class GikiImport(Fixture):
         seed = Path(self.folder.name) / "seed.md"
         seed.write_text(TABLE, encoding="utf-8")
         with patch.dict(os.environ, {"GIKI_SEED_FILE": str(seed)}):
-            self.assertEqual(len(self.g.view()["items"]), 4)
-            self.assertEqual(self.g.view()["waiting"], 4)
-            gone = self.g.view()["items"][0]
+            items = self.g.view()["items"]
+            # the 4 people from the file, under Ahmad test and Zain test (they go to the test group)
+            self.assertEqual([x["name"] for x in items[:2]], ["Ahmad test", "Zain test"])
+            self.assertEqual(len(items), 6)
+            self.assertEqual(self.g.view()["waiting"], 6)
+            gone = self.g.view()["items"][2]
             self.g.mutate({"action": "delete", "id": gone["id"]})
             self.assertEqual(
-                len(self.g.view()["items"]), 3
+                len(self.g.view()["items"]), 5
             )  # removed on purpose: it does not come back
         self.assertEqual(self.main.view()["items"], [])
 
@@ -609,7 +656,10 @@ class GikiImport(Fixture):
         self.assertIn(("Hassan 10k Afzal Giki", "97450557391"), rows)
         with patch.dict(os.environ, {"GIKI_SEED_FILE": str(SEED)}):
             view = self.g.view()
-        self.assertEqual((len(view["items"]), view["waiting"]), (42, 42))
+        self.assertEqual(
+            (len(view["items"]), view["waiting"]), (44, 44)
+        )  # the 42 + Ahmad test, Zain test
+        self.assertEqual([x["name"] for x in view["items"][:2]], ["Ahmad test", "Zain test"])
 
     def test_name_becomes_a_real_name_with_bhai_or_sister_or_nothing(self):
         import re as _re
@@ -823,3 +873,224 @@ class LineTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FakeChat:
+    """What really reached WhatsApp, per chat, like the gateway's history (the app's chat check reads it)."""
+
+    TYPES = {"pdf": "document", "video": "video", "poster": "image"}
+
+    def __init__(self):
+        self.rows = []  # (message id, phone, type, what)
+        self.readable = True
+
+    def kind(self, body):
+        if body.get("kind") == "dm_extra":
+            return self.TYPES[body["extra"]]
+        return "image" if body.get("poster") is True else ""
+
+    def add(self, body):
+        mid = "m%d" % (len(self.rows) + 1)
+        what = body.get("extra") or ("case" if body.get("poster") is True else "share")
+        self.rows.append((mid, body["phone"], self.kind(body), what))
+        return mid
+
+    def peek(self, body):
+        if not self.readable:
+            return None
+        mine = [r for r in self.rows if r[1] == body["phone"]]
+        return mine[-1][0] if mine else ""
+
+    def seen(self, body, after):
+        if not self.readable or not isinstance(after, str):
+            return None
+        mine = [r for r in self.rows if r[1] == body["phone"]]
+        ids = [r[0] for r in mine]
+        newer = mine[ids.index(after) + 1 :] if after else mine
+        want = ("image", "video") if body.get("poster") is True else (self.kind(body),)
+        hit = [r[0] for r in newer if r[2] in want]
+        return hit[-1] if hit else ""
+
+    def got(self, phone):
+        return [r[3] for r in self.rows if r[1] == phone]
+
+
+class GikiSelfHealing(Fixture):
+    """An unclear or failed answer is looked up in the chat: there = it went (never sent twice); not there = sent
+    again; the chat cannot be read = never sent again. One person is finished before the next."""
+
+    def setUp(self):
+        super().setUp()
+        self.chat = FakeChat()
+        self.script = []  # what happens to each send, in order: ok / drop (went, answer lost) / fail / lost
+        self.calls = 0
+        self.g.jobs.peek = self.chat.peek
+        self.g.jobs.seen = self.chat.seen
+        self.g.jobs.HEAL_WATCH = (0,)
+        self.g.jobs.HEAL_QUICK = (0,)
+        self.g.jobs.send = self.flaky_send
+        self.on = [("poster", "p" * 32), ("pdf", "a" * 32)]  # 2nd: poster pic, 3rd: PDF
+        for i in range(2):
+            self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share this."})
+
+    def flaky_send(self, body):
+        self.calls += 1
+        if getattr(self, "never", None) == (body["phone"], body.get("extra")):
+            return {"code": "INTERNAL_SERVER_ERROR", "message": "failed to send message"}
+        what = self.script.pop(0) if self.script else "ok"
+        if what in ("ok", "drop"):
+            self.chat.add(body)
+        if what in ("drop", "lost"):
+            raise ConnectionError("the answer was lost")
+        if what == "fail":
+            return {"code": "INTERNAL_SERVER_ERROR", "message": "failed to send message"}
+        return {"code": "SUCCESS"}
+
+    def run_all(self, request_id="heal"):
+        self.go(self.g, {"action": "send_all", "request_id": request_id, "poster": False})
+        return self.run_job(self.g.jobs)
+
+    def everyone_complete(self):
+        for i in range(2):
+            self.assertEqual(self.chat.got(f"92300200000{i}"), ["case", "poster", "pdf", "share"])
+
+    def test_a_message_that_went_but_whose_answer_was_lost_is_never_sent_again(self):
+        self.script = [
+            "drop",
+            "ok",
+            "drop",
+            "ok",
+        ]  # the case and the PDF of person 0 went, answers lost
+        job = self.run_all()
+        self.assertEqual((job["state"], job["sent"]), ("Completed", 2))
+        self.everyone_complete()
+        self.assertEqual(self.calls, 8)  # 2 people x 4 messages: nothing sent twice
+
+    def test_a_message_that_did_not_go_is_sent_again_until_it_goes(self):
+        self.script = ["fail", "ok", "lost", "ok", "fail", "fail", "ok"]
+        job = self.run_all()
+        self.assertEqual((job["state"], job["sent"], job.get("error", "")), ("Completed", 2, ""))
+        self.everyone_complete()
+
+    def test_when_the_chat_cannot_be_read_nothing_is_sent_twice(self):
+        self.chat.readable = False
+        self.script = ["ok", "drop"]  # person 0's poster went but its answer was lost: cannot check
+        job = self.run_all()
+        self.assertEqual(self.chat.got("923002000000"), ["case", "poster", "pdf", "share"])
+        self.assertEqual(
+            job["receipts"][0]["steps"]["poster"], "Uncertain"
+        )  # recorded, never resent
+        self.assertEqual(self.chat.got("923002000001"), ["case", "poster", "pdf", "share"])
+        self.assertEqual(job["state"], "Completed")  # one unclear message does not stop the others
+
+    def test_a_message_that_fails_three_times_does_not_stop_the_person_or_the_batch(self):
+        self.script = ["ok", "fail", "fail", "fail"]  # person 0's poster does not go, 3 times
+        job = self.run_all()
+        self.assertEqual(job["state"], "Completed")
+        self.assertEqual(self.chat.got("923002000001"), ["case", "poster", "pdf", "share"])
+        # person 0: the rest still went, and the poster was sent once more at the end of the batch
+        self.assertEqual(self.chat.got("923002000000"), ["case", "pdf", "share", "poster"])
+        self.assertEqual(job["receipts"][0]["steps"]["poster"], "Sent")
+        self.assertEqual(self.g.jobs.finish_half_sent(), 0)  # nothing left: never twice
+
+    def test_a_first_message_that_fails_three_times_is_tried_again_at_the_end_of_the_batch(self):
+        self.script = [
+            "fail",
+            "lost",
+            "fail",
+        ]  # person 0's case does not go, 3 times (checked in the chat)
+        job = self.run_all()
+        self.assertEqual((job["state"], job["sent"], job["failed"]), ("Completed", 2, 0))
+        self.everyone_complete()
+        self.assertEqual(
+            [r[1][-1] for r in self.chat.rows][:4], ["1"] * 4
+        )  # person 1 first, person 0 after
+        self.assertEqual(self.g.waiting_ids(), [])
+
+    def test_a_message_that_never_goes_is_left_for_resume_and_never_doubled(self):
+        self.never = (
+            "923002000000",
+            "poster",
+        )  # person 0's poster never goes: 3 tries, then 3 at the end
+        job = self.run_all()
+        self.assertEqual(job["state"], "Completed")
+        self.assertEqual(job["receipts"][0]["steps"]["poster"], "Not sent")
+        self.assertEqual(self.chat.got("923002000000"), ["case", "pdf", "share"])
+        self.never = None  # WhatsApp is fine again
+        self.assertEqual(self.g.jobs.finish_half_sent(), 1)  # Resume sends just the poster
+        self.assertEqual(self.chat.got("923002000000"), ["case", "pdf", "share", "poster"])
+        self.assertEqual(self.g.jobs.finish_half_sent(), 0)
+
+    def test_three_people_in_a_row_failing_stops_the_batch_with_a_clear_reason(self):
+        for i in range(2, 4):
+            self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})
+        self.script = ["ok"] + ["fail"] * 3 + ["ok", "ok"]  # person 0: poster fails
+        self.script += ["ok"] + ["fail"] * 3 + ["ok", "ok"]  # person 1: poster fails
+        self.script += ["ok"] + ["fail"] * 3 + ["ok", "ok"]  # person 2: poster fails
+        job = self.run_all()
+        self.assertEqual(job["state"], "Stopped")
+        self.assertIn("3 people in a row", job["error"])
+        self.assertEqual(self.chat.got("923002000003"), [])  # the 4th person was not started
+
+    def test_a_restart_in_the_middle_of_a_message_is_settled_by_the_chat(self):
+        self.run_all()
+        jobs = self.g.jobs._load()
+        j = jobs["jobs"][-1]
+        j.update(state="Interrupted", boot="an-older-boot")
+        # person 0: the PDF was going out when the service stopped, and it did reach WhatsApp
+        p0 = j["receipts"][0]
+        p0["steps"]["pdf"] = "Sending"
+        p0["follow_up"] = None  # the share never started: take it out of the chat
+        self.chat.rows = [
+            r for r in self.chat.rows if not (r[1] == "923002000000" and r[3] == "share")
+        ]
+        # person 1: the poster was going out and did NOT reach WhatsApp (take it out of the chat)
+        p1 = j["receipts"][1]
+        last_case = [r for r in self.chat.rows if r[1] == "923002000001" and r[3] == "case"][0][0]
+        self.chat.rows = [
+            r for r in self.chat.rows if not (r[1] == "923002000001" and r[3] != "case")
+        ]
+        p1["steps"] = {"poster": "Sending"}
+        p1["after_ids"] = {"poster": last_case}
+        p1["follow_up"] = None
+        self.g.jobs._save(jobs)
+        for receipt in j["receipts"]:
+            self.g.book.follow_up(receipt["id"], None)
+        self.assertEqual(self.g.jobs.finish_half_sent(), 2)
+        self.assertEqual(
+            self.chat.got("923002000000"), ["case", "poster", "pdf", "share"]
+        )  # PDF not resent
+        self.assertEqual(self.chat.got("923002000001"), ["case", "poster", "pdf", "share"])
+
+    def test_a_restart_while_the_first_message_was_going_is_settled_by_the_chat(self):
+        self.run_all()
+        jobs = self.g.jobs._load()
+        j = jobs["jobs"][-1]
+        p1 = j["receipts"].pop()  # person 1: the case was going out; no record of how it ended
+        j.update(state="Interrupted", boot="an-older-boot", sending={"id": p1["id"], "after": ""})
+        self.g.jobs._save(jobs)
+        self.g.book.delivery(p1["id"], "Sending")
+        self.chat.rows = [
+            r for r in self.chat.rows if not (r[1] == "923002000001" and r[3] != "case")
+        ]
+        self.g.book.follow_up(p1["id"], None)
+        self.assertEqual(
+            self.g.jobs.finish_half_sent(), 1
+        )  # the case is in the chat: the rest follows
+        self.assertEqual(self.chat.got("923002000001"), ["case", "poster", "pdf", "share"])
+        # the same, when the case did NOT reach WhatsApp: they simply wait for the next send
+        j = self.g.jobs._load()["jobs"][-1]
+        j["receipts"] = [r for r in j["receipts"] if r["id"] != p1["id"]]
+        j["sending"] = {"id": p1["id"], "after": ""}
+        self.g.jobs._save({"jobs": [j]})
+        data = (
+            self.g.book._load()
+        )  # as a first message caught mid-send leaves the person: never sent before
+        rec = next(r for r in data["records"] if r["id"] == p1["id"])
+        rec.update(dm_sent=False, last_sent_at=None, delivery="Sending")
+        self.g.book._save(data)
+        self.chat.rows = [r for r in self.chat.rows if r[1] != "923002000001"]
+        self.assertEqual(self.g.jobs.finish_half_sent(), 0)
+        self.assertEqual(self.chat.got("923002000001"), [])
+        self.assertIn(p1["id"], self.g.waiting_ids())

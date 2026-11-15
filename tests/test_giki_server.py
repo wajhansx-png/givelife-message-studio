@@ -173,6 +173,153 @@ class GikiServer(Base):
         self.assertNotIn("25,000", after)
 
 
+class GikiTestPeople(Base):
+    """Ahmad test and Zain test: the very same Giki DM, delivered in the GiveLife test group."""
+
+    def record(self):
+        calls = []
+
+        def image(jid, caption, *a, **k):
+            calls.append(("image", jid, caption, app._DM_TO_GROUP.get(), app.device()))
+            return {"code": "SUCCESS"}
+
+        def text(jid, message):
+            calls.append(("text", jid, message, app._DM_TO_GROUP.get(), app.device()))
+            return {"code": "SUCCESS"}
+
+        def attach(jid, caption, ident):
+            calls.append(("file", jid, ident, app._DM_TO_GROUP.get(), app.device()))
+            return {"code": "SUCCESS"}
+
+        self.stubs = [
+            patch.object(app, "send_image", image),
+            patch.object(app, "send_custom_text", text),
+            patch.object(app, "send_batch_attachment", attach),
+            patch("group_extras.saved", lambda store, kind: kind[0] * 32),
+        ]
+        for s in self.stubs:
+            s.start()
+        self.addCleanup(lambda: [s.stop() for s in self.stubs])
+        return calls
+
+    def test_a_test_person_gets_case_file_and_share_in_the_test_group_from_the_giki_whatsapp(self):
+        calls = self.record()
+        base = {"target": "phone", "phone": "999000000001", "line": "giki", "name": "Ahmad"}
+        app.send_custom({**base, "message": "Case. Rs. 5,000 left.", "kind": "volunteer_batch", "poster": True})
+        app.send_custom({**base, "kind": "dm_extra", "extra": "pdf"})
+        app.send_custom({**base, "message": "Salam {name}, share.", "kind": "volunteer_batch", "poster": False})
+        self.assertEqual([c[0] for c in calls], ["image", "file", "text"])
+        self.assertEqual({c[1] for c in calls}, {app.TEST_GROUP_JID})  # all three in the test group
+        self.assertTrue(all(c[3] for c in calls))  # sent as a DM (DM poster and DM rules), not as a group post
+        self.assertEqual({c[4] for c in calls}, {GIKI})  # from the Giki WhatsApp
+        self.assertEqual(calls[0][2], "Case. Rs. 5,000 left.")
+        self.assertEqual(calls[2][2], "Salam Ahmad, share.")
+        self.assertFalse(app._DM_TO_GROUP.get())  # nothing leaks to the next send
+
+    def test_a_real_person_is_never_sent_to_the_test_group(self):
+        calls = self.record()
+        app.send_custom({**BODY, "line": "giki", "poster": False})
+        self.assertEqual(calls[0][1], "923001234567")
+        self.assertFalse(calls[0][3])
+
+    def test_the_main_whatsapp_never_routes_a_test_number(self):
+        calls = self.record()
+        app.send_custom({**BODY, "phone": "999000000001", "poster": False})  # not a Giki send
+        self.assertEqual([(c[1], c[3], c[4]) for c in calls], [("999000000001", False, MAIN)])
+
+    def test_send_image_keeps_the_dm_rules_for_a_test_person(self):
+        seen = {}
+
+        def poster(use="group"):
+            seen["poster"] = use
+            return Path("poster.jpg")
+
+        def lead(store, profile):
+            seen["profile"] = profile
+            return None
+
+        stubs = [
+            patch.object(app, "api_result", lambda path: {"is_connected": True, "is_logged_in": True}),
+            patch.object(app, "poster_media", poster),
+            patch.object(
+                app,
+                "post_media",
+                lambda jid, cap, path: types.SimpleNamespace(
+                    stdout=json.dumps({"code": "SUCCESS", "results": {"message_id": "m1"}})
+                ),
+            ),
+            patch.object(app, "send_group_extras", lambda jid: seen.setdefault("group_files", jid) and []),
+            patch("group_extras.lead", lead),
+            patch("group_extras.after_items", lambda store, profile: []),
+        ]
+        for s in stubs:
+            s.start()
+        try:
+            with app.on_line("giki"):
+                token = app._DM_TO_GROUP.set(True)
+                try:
+                    result = app.send_image(app.TEST_GROUP_JID, "Case")
+                finally:
+                    app._DM_TO_GROUP.reset(token)
+        finally:
+            for s in stubs:
+                s.stop()
+        self.assertEqual(result["code"], "SUCCESS")
+        self.assertEqual(seen["poster"], "dm")  # the DM poster, not the group one
+        self.assertEqual(seen["profile"], "giki")  # the Giki DM choices, not the group ones
+        self.assertNotIn("group_files", seen)  # no group files after it
+
+
+class GikiChatCheck(Base):
+    """The chat check behind self-healing: the newest message before a send, and whether one of the right type came
+    after it. Read from the Giki WhatsApp; a test person's chat is the test group."""
+
+    def rows(self, path):
+        self.asked.append((path, app.device()))
+        chat = path.split("/")[2]
+        return {"results": {"data": self.chats.get(chat, [])}}
+
+    def setUp(self):
+        super().setUp()
+        self.asked = []
+        self.chats = {
+            "923001234567%40s.whatsapp.net": [  # newest first, as the gateway lists them
+                {"id": "M3", "is_from_me": True, "media_type": "document"},
+                {"id": "M2", "is_from_me": True, "media_type": "image"},
+                {"id": "M1", "is_from_me": True, "media_type": "image"},
+            ],
+            "120363431210327603%40g.us": [{"id": "T1", "is_from_me": True, "media_type": ""}],
+        }
+        self.api3 = patch.object(app, "api", self.rows)
+        self.api3.start()
+        self.addCleanup(self.api3.stop)
+
+    def body(self, **k):
+        return {"target": "phone", "phone": "923001234567", "line": "giki", **k}
+
+    def test_newest_and_what_came_after_it(self):
+        self.assertEqual(app.newest_sent(self.body()), "M3")
+        self.assertEqual(app.sent_after(self.body(kind="dm_extra", extra="pdf"), "M2"), "M3")  # the PDF went
+        self.assertEqual(app.sent_after(self.body(kind="dm_extra", extra="poster"), "M2"), "")  # no new image
+        self.assertEqual(app.sent_after(self.body(poster=True), "M1"), "M2")  # a case (image) after M1
+        self.assertEqual(app.sent_after(self.body(poster=False), "M3"), "")  # no text after M3
+        self.assertIsNone(app.sent_after(self.body(), None))  # no mark: cannot tell
+        self.assertEqual({d for _, d in self.asked}, {GIKI})  # always from the Giki WhatsApp
+
+    def test_a_test_person_is_checked_in_the_test_group(self):
+        body = {"target": "phone", "phone": "999000000001", "line": "giki"}
+        self.assertEqual(app.newest_sent(body), "T1")
+        self.assertTrue(self.asked[0][0].startswith("/chat/120363431210327603%40g.us/messages"))
+
+    def test_a_chat_that_cannot_be_read_says_so(self):
+        def broken(path):
+            raise OSError("gateway restarting")
+
+        with patch.object(app, "api", broken):
+            self.assertIsNone(app.newest_sent(self.body()))
+            self.assertIsNone(app.sent_after(self.body(), "M1"))
+
+
 class GikiTestSend(Base):
     """The Test button: the whole DM to your own WhatsApp, from the Giki WhatsApp, in the right order."""
 

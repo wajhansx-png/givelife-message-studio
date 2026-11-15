@@ -18,9 +18,28 @@ NOISE = {
 }  # fmt: skip
 
 
+# Two test people at the top of the list (the owner's checks). Everything sent to them goes to the GiveLife test group,
+# through the very same Giki steps as a real person (case, 2nd, 3rd, share), so the owner sees each DM before the real
+# people get it. Their numbers are placeholders that are not WhatsApp numbers: a send to them never reaches a person.
+TEST_PEOPLE = (("Ahmad test", "999000000001"), ("Zain test", "999000000002"))
+TEST_PHONES = {phone for _, phone in TEST_PEOPLE}
+
+
+def is_test_phone(phone):
+    try:
+        return normalize_phone(phone) in TEST_PHONES
+    except ValueError:
+        return False
+
+
 class GikiBook(VolunteerBook):
     KEY = "giki_book"
     FILE = "giki-book.json"
+
+    @staticmethod
+    def queue_key(r):
+        """The test people first (shown first, and DM all sends to them first), then everyone as before."""
+        return (0 if is_test_phone(r.get("phone")) else 1,) + VolunteerBook.queue_key(r)
 
 
 class GikiDelivery(VolunteerDelivery):
@@ -28,6 +47,7 @@ class GikiDelivery(VolunteerDelivery):
     FILE = "giki-delivery.json"
     KIND = "giki_batch"
     CLAIM = "giki_batch_request_"
+    KEEP_GOING = True  # a message that still fails after the chat check never stops the others (3 in a row do)
 
     @staticmethod
     def follow_text(template, name, gender):
@@ -42,6 +62,8 @@ GREETING = {
     "ali donor giki": "Ali Bhai",
     "anas giki 140": "Anas Bhai",
     "areeba malik giki": "Areeba Sister",
+    "ahmad test": "Ahmad",  # test person: to the test group
+    "zain test": "Zain",  # test person: to the test group
     "asad giki donor": "Asad Bhai",
     "aymen fatima volunteer giki": "Aymen Sister",
     "ba cha giki volunteer": "",
@@ -270,6 +292,19 @@ class GikiVolunteers(Volunteers):
                 return  # try again at the next open
             store.put("giki_seeded", {"added": done["added"], "time": time.time()})
 
+    def add_test_people(self):
+        """Ahmad test and Zain test, added once at the top (with the owner's list; not in previews or tests).
+        Removed later, they stay removed."""
+        store, path = self.app.STORE, self.seed_path()
+        if not store or not path or not path.is_file() or store.get("giki_test_people"):
+            return
+        with self.lock:
+            if store.get("giki_test_people"):
+                return
+            for name, phone in TEST_PEOPLE:
+                self.book.add(name, phone, source="Giki test: goes to the GiveLife test group")
+            store.put("giki_test_people", {"time": time.time()})
+
     def waiting_ids(self, skip=True):
         """Who DM all would message now: everyone, minus those already messaged for this case."""
         out = []
@@ -283,6 +318,7 @@ class GikiVolunteers(Volunteers):
 
     def view(self, query=""):
         self.seed_once()
+        self.add_test_people()
         out = super().view(query)
         out["pace"] = self.pace_values()
         out["waiting"] = len(self.waiting_ids())

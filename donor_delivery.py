@@ -972,8 +972,8 @@ class DonorDelivery:
 
     def _todo(self, j, receipt):
         """What a person whose first message went still needs: ([after kinds], share message?)."""
-        if receipt.get("state") != "Sent":
-            return [], False
+        if receipt.get("state") != "Sent" or not receipt.get("seq"):
+            return [], False  # only sequences recorded step by step; an older record is never sent again
         steps = receipt.get("steps") or {}
         kinds = [k for k in self._after_kinds(j) if steps.get(k) in self.REDO]
         if "steps" not in receipt and "after" not in j and receipt.get("extras") not in self.REDO:
@@ -991,13 +991,28 @@ class DonorDelivery:
                 continue
             for receipt in j.get("receipts", []):
                 kinds, share = self._todo(j, receipt)
-                if kinds or share:
+                if share:
+                    try:  # the share message already reached them after this case (an earlier Resume): never again
+                        record = self.book.resolve(receipt["id"])
+                        share = not (
+                            record.get("follow_up_state") == "Sent"
+                            and (record.get("follow_up_at") or 0) >= (receipt.get("time") or 0)
+                        )
+                    except ValueError:
+                        share = False
+                if (kinds or share) and receipt.get("id") not in {o[1].get("id") for o in out}:
                     out.append((j, receipt, kinds, share))
         return out
 
     def finish_half_sent(self):
         """Send each half-sent person only what they are missing (2nd, 3rd, share message), in order. Something
         that may already have gone is never sent again. Returns how many people were finished."""
+        with self.REPAIR_LOCK:  # Resume and the restart repair never run together (each would send it once)
+            return self._finish_half_sent()
+
+    REPAIR_LOCK = threading.Lock()
+
+    def _finish_half_sent(self):
         finished = 0
         for j, receipt, kinds, share in self.half_sent():
             if self.held() or not self.connected():
@@ -1418,6 +1433,7 @@ class DonorDelivery:
                         "name": hide_numbers(r["name"]),
                         "state": "Sent",
                         "time": last_completion,
+                        "seq": 1,  # every later step of this person is recorded: only these can be finished later
                     }
                 )
                 self._update(j["id"], sent=sent, skipped=skipped, receipts=receipts)

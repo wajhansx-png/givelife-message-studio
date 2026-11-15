@@ -3,7 +3,7 @@
 The main device is never touched here, and a line never falls back to the main device: if the line has no
 device, nothing is sent. The device id is created once, saved, and reused after every restart."""
 
-import base64, json, re, threading, urllib.error, urllib.parse, urllib.request, uuid
+import base64, json, re, threading, time, urllib.error, urllib.parse, urllib.request, uuid
 
 PREFIX = {"giki": "giki-", "giki2": "giki2-"}  # the Giki page and the Giki 2 page
 
@@ -130,6 +130,29 @@ class Line:
             self.store.put(self.key, {**self._record(), "device": device})
         self._device = device
 
+    _woke = 0.0
+
+    def _wake(self):
+        """A WhatsApp that was linked (its number is saved) but reads "not logged in": ask the gateway to bring its
+        saved login back (at most once a minute). True when it was asked."""
+        if time.time() - self._woke < 60:
+            return False
+        self._woke = time.time()
+        linked = self._record().get("number")
+        if not linked:  # no number saved yet: the gateway still knows the login it keeps for this device
+            try:
+                info = self._call("GET", f"/devices/{self.device()}", device=self.device()).get("results")
+                linked = (info or {}).get("jid")
+            except Exception:
+                linked = None
+        if not linked:
+            return False
+        try:
+            self._call("POST", f"/devices/{self.device()}/reconnect", device=self.device(), timeout=30)
+        except Exception:
+            return False
+        return True
+
     def _remember_number(self, digits):
         """Keep the linked number, so after a restart the launcher knows this login is not the main WhatsApp."""
         if not digits or digits == getattr(self, "_number", None) or not self.store:
@@ -178,6 +201,12 @@ class Line:
             out["state"] = "unknown"
             return out
         connected, logged = bool(s.get("is_connected")), bool(s.get("is_logged_in"))
+        if not logged and self._wake():  # after a restart the saved login sleeps until it is asked to reconnect
+            try:
+                s = self._call("GET", f"/devices/{device}/status", device=device).get("results") or {}
+            except Exception:
+                s = {}
+            connected, logged = bool(s.get("is_connected")), bool(s.get("is_logged_in"))
         out.update(
             connected=connected,
             logged_in=logged,
@@ -237,4 +266,9 @@ class Line:
             self._call("POST", f"/devices/{device}/logout", device=device, timeout=30)
         except LineError:
             pass  # already logged out
+        if self.store:  # disconnected on purpose: never woken up again
+            record = self._record()
+            record.pop("number", None)
+            self.store.put(self.key, record)
+            self._number = None
         return self.status()

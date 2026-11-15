@@ -62,8 +62,8 @@ GREETING = {
     "ali donor giki": "Ali Bhai",
     "anas giki 140": "Anas Bhai",
     "areeba malik giki": "Areeba Sister",
-    "ahmad test": "Ahmad",  # test person: to the test group
-    "zain test": "Zain",  # test person: to the test group
+    "ahmad test": "Ahmad Bhai",  # test person: to the test group
+    "zain test": "Zain Bhai",  # test person: to the test group
     "asad giki donor": "Asad Bhai",
     "aymen fatima volunteer giki": "Aymen Sister",
     "ba cha giki volunteer": "",

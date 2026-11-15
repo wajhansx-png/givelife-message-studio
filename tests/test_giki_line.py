@@ -80,6 +80,8 @@ class Fixture(unittest.TestCase):
 
     def send(self, body):
         self.sent.append(body)
+        if getattr(self, "on_send", None):
+            self.on_send(body)
         return {"code": "SUCCESS"}
 
     def fake_test(self, case, share, pdf=False, video=False, line="giki"):
@@ -1159,3 +1161,69 @@ class GikiExactGap(Fixture):
     def test_the_gap_is_exactly_the_timer(self):
         for gap in (60, 300, 600):
             self.assertEqual(self.g.jobs._gap({"gap_seconds": gap}), float(gap))
+
+    def timed_run(self, people, upload=10.0, blip_before=None):
+        """DM all with each message taking `upload` seconds. Returns [(time, phone, what)] in the order sent."""
+        for i in range(people):
+            self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 20000{i:02d}"})
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share this."})
+        self.g.mutate({"action": "pace", "gap_minutes": 3, "batch_size": 3, "rest_minutes": 10})
+        self.on = [("poster", "p1"), ("pdf", "f1")]
+        self.go(self.g, {"action": "send_all", "request_id": "timed", "poster": True})
+        clock, log, blip = [1_000_000.0], [], [0]
+
+        class Line:  # WhatsApp: there, except for one short blip when asked
+            def __bool__(self):
+                if blip[0]:
+                    blip[0] -= 1
+                    return False
+                return True
+
+        self.line_up = Line()
+
+        def on_send(body):
+            what = body.get("extra") or ("case" if "after_steps" in body else "share")
+            log.append((clock[0], body["phone"], what))
+            if what == blip_before:
+                blip[0] = 2  # the next 2 looks at WhatsApp say "not connected" (the app keeps a "no" for 1.5 s)
+            clock[0] += upload
+
+        self.on_send = on_send
+
+        def wait(seconds):
+            clock[0] += seconds
+            return False
+
+        job = self.g.jobs._load()["jobs"][-1]
+        with (
+            patch("donor_delivery.time.time", side_effect=lambda: clock[0]),
+            patch("donor_delivery.time.sleep", side_effect=wait),
+            patch.object(self.g.jobs.stop, "wait", side_effect=wait),
+        ):
+            self.g.jobs._run(job)
+        return log
+
+    def test_a_dm_every_timer_minutes_exactly_the_sending_time_is_not_added(self):
+        log = self.timed_run(5)  # each person: 4 messages of 10 s each (40 s)
+        cases = [t for t, _, what in log if what == "case"]
+        self.assertEqual(len(cases), 5)
+        self.assertEqual([what for _, _, what in log[:4]], ["case", "poster", "pdf", "share"])
+        start = cases[0]
+        # 3 min apart, case to case; the 4th starts the 2nd batch: 10 min rest after the 3rd case
+        for got, want in zip(cases, (0, 180, 360, 960, 1140)):
+            self.assertAlmostEqual(got - start, want, delta=0.11)
+
+    def test_the_next_person_never_starts_before_the_last_one_finished(self):
+        log = self.timed_run(3, upload=60.0)  # 4 minutes of sending per person, longer than the 3 min Timer
+        for k in range(1, len(log)):
+            self.assertGreaterEqual(log[k][0], log[k - 1][0] + 60.0)  # one message after another, never together
+        phones = [p for _, p, _ in log]
+        self.assertEqual(phones, sorted(phones, key=phones.index))  # each person's 4 messages together
+
+    def test_a_whatsapp_blip_costs_two_seconds_not_fifteen(self):
+        log = self.timed_run(1, blip_before="poster")
+        times = {what: t for t, _, what in log}
+        self.assertAlmostEqual(times["pdf"] - times["poster"], 10.0 + 2.0, delta=0.11)
+        self.assertEqual(
+            self.g.jobs._load()["jobs"][-1]["receipts"][0]["steps"], {"poster": "Sent", "pdf": "Sent"}
+        )

@@ -2982,10 +2982,13 @@
     box.hidden = active && !scheduled && !j.error && !GIKI; // Giki shows it while sending too
     clearTimeout(volPoll);
     if (active && tab === 'volunteers')
-      volPoll = setTimeout(async () => {
-        await loadVolunteers();
-        if (tab === 'volunteers') showVolunteers(true);
-      }, 1500);
+      volPoll = setTimeout(
+        async () => {
+          await loadVolunteers();
+          if (tab === 'volunteers') showVolunteers(true);
+        },
+        document.hidden ? 20000 : 3000 // a tab nobody looks at asks rarely: the host counts every byte sent
+      );
   }
   async function showVolunteers(keepDraft = false) {
     const box = el('donorVolunteers');

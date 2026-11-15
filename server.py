@@ -5850,8 +5850,18 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(data, (str, bytes)):
             data = json.dumps(data, ensure_ascii=False)
         payload = data if isinstance(data, bytes) else data.encode()
+        gzipped = (  # JSON lists are sent compressed (about 12x smaller): Render's free plan counts every byte sent
+            kind == "application/json"
+            and len(payload) > 1024
+            and "gzip" in self.headers.get("Accept-Encoding", "").lower()
+        )
+        if gzipped:
+            payload = gzip.compress(payload, 5)
         self.send_response(status)
         self.send_header("Content-Type", kind + "; charset=utf-8")
+        if gzipped:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
         if "Cache-Control" not in (extra_headers or {}):
             self.send_header("Cache-Control", "no-store")
         origin = self.headers.get("Origin")

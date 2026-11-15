@@ -1121,6 +1121,14 @@ def poster_media(use="group"):
     return DATA / "poster.jpg"
 
 
+GROUP_SEND_SECONDS = 330  # the gateway's own limit is 300 s (Dockerfile); wait a little longer than it
+
+
+def send_seconds(jid, normal):
+    """A group send encrypts for every member's phone; after a restart that can take minutes, so wait longer."""
+    return GROUP_SEND_SECONDS if str(jid).endswith("@g.us") else normal
+
+
 def post_media(jid, cap, path):
     """Send one picture or MP4 video with its caption file through the WhatsApp gateway."""
     if not Path(path).is_file():
@@ -1133,7 +1141,7 @@ def post_media(jid, cap, path):
             "curl",
             "-s",
             "--max-time",
-            "150" if video else "60",
+            str(send_seconds(jid, 150 if video else 60)),
             "-X",
             "POST",
             GOWA_URL + ("/send/video" if video else "/send/image"),
@@ -1168,7 +1176,7 @@ def send_batch_attachment(jid, caption, ident):
                 "curl",
                 "-s",
                 "--max-time",
-                "150",
+                str(send_seconds(jid, 150)),
                 "-X",
                 "POST",
                 GOWA_URL + "/send/" + field,
@@ -2608,7 +2616,7 @@ def send_custom_text(jid, text):
         headers={"X-Device-Id": device(), "Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=40) as response:
+    with urllib.request.urlopen(req, timeout=send_seconds(jid, 40)) as response:
         return mapping(json.load(response))
 
 
@@ -2623,7 +2631,7 @@ def send_text(jid, text):
         headers={"X-Device-Id": device(), "Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=40) as r:
+    with urllib.request.urlopen(req, timeout=send_seconds(jid, 40)) as r:
         return mapping(json.load(r))
 
 
@@ -2665,7 +2673,7 @@ def send_thanks_test(message, media):
                     headers={"X-Device-Id": device(), "Content-Type": "application/json"},
                     method="POST",
                 )
-                with urllib.request.urlopen(req, timeout=40) as response:
+                with urllib.request.urlopen(req, timeout=send_seconds(TEST_GROUP_JID, 40)) as response:
                     results.append(mapping(json.load(response)))
         except Exception:
             raise ValueError(
@@ -3061,7 +3069,7 @@ def send_with_image(jid, caption, img):
             headers={"X-Device-Id": device(), "Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=40) as r:
+        with urllib.request.urlopen(req, timeout=send_seconds(jid, 40)) as r:
             return mapping(json.load(r))
     cap = DATA / ("caption-" + uuid.uuid4().hex + ".txt")
     atomic_write(cap, caption)

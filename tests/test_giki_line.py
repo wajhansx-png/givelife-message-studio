@@ -1094,3 +1094,28 @@ class GikiSelfHealing(Fixture):
         self.assertEqual(self.g.jobs.finish_half_sent(), 0)
         self.assertEqual(self.chat.got("923002000001"), [])
         self.assertIn(p1["id"], self.g.waiting_ids())
+
+
+class GikiTwoMove(Fixture):
+    def test_the_chosen_people_move_to_giki_2_once_with_their_messaged_marks(self):
+        from giki_line import Giki2Volunteers
+
+        for name, phone in (
+            ("Areeba Malik Giki", "0300 2000001"),
+            ("Haris Giki 1500", "0300 2000002"),
+            ("Faris Giki Donor", "0300 2000003"),  # not chosen: stays on Giki
+        ):
+            self.g.mutate({"action": "add", "name": name, "phone": phone})
+        areeba = next(x for x in self.g.view()["items"] if x["name"] == "Areeba Malik Giki")
+        self.g.book.delivery(areeba["id"], "Sent")  # already got this case from the Giki WhatsApp
+        g2 = Giki2Volunteers(self.g.app, lambda phone: True)
+        g2.source = self.g
+        with patch.dict(os.environ, {"GIKI_SEED_FILE": ""}):
+            v2 = g2.view()
+            g2.view()  # once only
+        self.assertEqual(sorted(x["name"] for x in v2["items"]), ["Areeba Malik Giki", "Haris Giki 1500"])
+        self.assertEqual([x["name"] for x in self.g.view()["items"]], ["Faris Giki Donor"])
+        moved = {x["name"]: x for x in v2["items"]}
+        self.assertTrue(moved["Areeba Malik Giki"]["dmed"])  # not sent the same case again from Giki 2
+        self.assertFalse(moved["Haris Giki 1500"]["dmed"])
+        self.assertEqual(v2["waiting"], 1)

@@ -6528,9 +6528,19 @@ class Handler(BaseHTTPRequestHandler):
                     else "image/jpeg"
                 )
             data_url = "data:" + mime + ";base64," + base64.b64encode(raw).decode()
+            del raw  # a free host has little memory: keep one copy of a big video at a time
             return self.reply(group_extras.add(STORE, kind, data_url, name))
         except ValueError as e:
             return self.reply({"error": str(e)[:300]}, status=400)
+        except Exception as e:  # say what went wrong instead of a blank failure (no private details)
+            print("[group-extras-file] save failed: " + type(e).__name__, flush=True)
+            return self.reply(
+                {
+                    "error": f"The {group_extras.LABEL.get(kind, 'file')} could not be saved ({type(e).__name__}). "
+                    "Nothing was changed. Try once more; if it repeats, send a screenshot of this message."
+                },
+                status=500,
+            )
 
     def _post(self):
         global ACTIVE, OWNER_REVISION

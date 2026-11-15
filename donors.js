@@ -2960,7 +2960,18 @@
           }) +
           ' PKT · '
         : active
-          ? 'Sending to volunteers · '
+          ? GIKI // Giki: what it is doing right now (sending to someone, the next DM time, waiting for WhatsApp)
+            ? (j.current || 'Sending') +
+              (j.next_at && j.next_at > Date.now() / 1000
+                ? ' · next DM at ' +
+                  new Date(j.next_at * 1000).toLocaleTimeString('en-PK', {
+                    timeZone: 'Asia/Karachi',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })
+                : '') +
+              ' · '
+            : 'Sending to volunteers · '
           : 'Last send · ') +
       (j.sent || 0) +
       ' sent · ' +
@@ -2968,7 +2979,7 @@
       ' left' +
       (j.error ? ' · ' + j.error : '');
     box.dataset.active = String(!!active);
-    box.hidden = active && !scheduled && !j.error;
+    box.hidden = active && !scheduled && !j.error && !GIKI; // Giki shows it while sending too
     clearTimeout(volPoll);
     if (active && tab === 'volunteers')
       volPoll = setTimeout(async () => {

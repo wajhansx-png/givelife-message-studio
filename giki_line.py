@@ -323,9 +323,13 @@ class GikiVolunteers(Volunteers):
             out.append(r["id"])
         return out
 
+    partner = None  # Giki 2: opening Giki also moves the chosen people over (whichever page opens first)
+
     def view(self, query=""):
         self.seed_once()
         self.add_test_people()
+        if self.partner is not None:
+            self.partner.move_from_giki()
         out = super().view(query)
         out["pace"] = self.pace_values()
         out["waiting"] = len(self.waiting_ids())
@@ -517,7 +521,28 @@ class GikiVolunteers(Volunteers):
             return self.send_case(body)
         if body.get("action") == "resume":
             return self.resume(body)
+        if body.get("action") == "to_waiting":
+            return self.to_waiting(body.get("id", ""))
         return super().mutate(body)
+
+    def to_waiting(self, ident):
+        """Move to Waiting (the ··· menu in DMed): this person is treated as not messaged for this case, so DM all
+        sends them the whole sequence again. Nothing is sent now. Earlier half-sent records of them are closed,
+        so Resume never adds a second copy of a message on top."""
+        if self.jobs.active:
+            raise ValueError("Stop the DMs first, then move someone back to Waiting.")
+        r = self.book.resolve(ident)
+        data = self.book._load()
+        rec = next(x for x in data["records"] if x["id"] == r["id"])
+        rec.update(dm_sent=False, delivery="Not contacted", last_sent_at=None, follow_up_state=None)
+        self.book._save(data)
+        jobs = self.jobs._load()
+        for j in jobs.get("jobs", []):
+            for receipt in j.get("receipts", []):
+                if receipt.get("id") == r["id"]:
+                    receipt["seq"] = 0  # never "finished" by Resume: DM all sends the full sequence
+        self.jobs._save(jobs)
+        return {"reply": r["name"] + " is back in Waiting."}
 
     def import_numbers(self, text, dry_run=False):
         """Add many people at once. A number already in the list (or already removed from it) is not added twice."""

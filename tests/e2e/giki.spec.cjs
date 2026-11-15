@@ -520,6 +520,17 @@ test('Waiting and DMed tabs: a person who got the case moves to DMed and cannot 
   await expect(row.locator('.vol-dmed')).toContainText('DMed ·');
   await expect(row.locator('.vol-case')).toHaveCount(0);
   await expect(page.locator('.vol-row', { hasText: 'Tabs Waiting Giki' })).toHaveCount(0);
+  // ··· > Move to Waiting: back in Waiting (nothing is sent now). Only once nothing is sending.
+  await expect
+    .poll(async () => ((await api(port, '/giki/volunteers')).delivery || {}).state, { timeout: 20000 })
+    .not.toMatch(/Starting|Sending|Waiting/);
+  await page.reload();
+  await page.locator('#gikiTab-dmed').click();
+  page.once('dialog', (d) => d.accept());
+  await row.locator('.vol-manage').click();
+  await page.getByRole('button', { name: 'Move to Waiting' }).click();
+  await expect(page.locator('#gikiTab-dmed')).toHaveText('DMed · ' + (dmed - 1));
   await page.locator('#gikiTab-waiting').click();
   await expect(page.locator('.vol-row', { hasText: 'Tabs Waiting Giki' })).toBeVisible();
+  await expect(page.locator('.vol-row', { hasText: 'Tabs Sent Giki' })).toBeVisible();
 });

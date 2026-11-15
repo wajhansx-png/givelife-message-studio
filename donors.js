@@ -3161,6 +3161,17 @@
           menu.hidePopover();
         };
         menu.append(rename, del);
+        if (GIKI && d.dmed) {
+          // DMed by mistake or to send again: back to Waiting (nothing is sent now; DM all sends the full set)
+          const back = make('button', '', 'Move to Waiting');
+          back.type = 'button';
+          back.onclick = () => {
+            if (confirm('Move ' + d.name + ' back to Waiting? DM all will send them the case again.'))
+              volAct({ action: 'to_waiting', id: d.id }, d.name + ' is back in Waiting.');
+            menu.hidePopover();
+          };
+          menu.prepend(back);
+        }
         row.append(menu);
       };
       more.onclick = () => {

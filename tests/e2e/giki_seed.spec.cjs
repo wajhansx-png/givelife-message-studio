@@ -69,7 +69,8 @@ for (const [width, height] of [
     await page.goto('/giki');
     await expect(page.locator('.vol-row').first()).toBeVisible();
     const total = (await api(port, '/giki/volunteers')).items.length;
-    await expect(page.locator('.vol-list-label')).toHaveText('People · ' + total);
+    await expect(page.locator('#gikiTab-waiting')).toHaveText('Waiting · ' + total);
+    await expect(page.locator('#gikiTab-dmed')).toHaveText('DMed · 0');
     const box = () =>
       page.evaluate(() => {
         const l = document.querySelector('.vol-list').getBoundingClientRect(),

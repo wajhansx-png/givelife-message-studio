@@ -608,7 +608,8 @@
     tools.append(b);
   }
   let vols = { items: [], message: '', delivery: null },
-    volPoll = 0;
+    volPoll = 0,
+    gikiTab = 'waiting'; // Giki page: Waiting or DMed
   let drawEpoch = 0;
   const FIRST_CHUNK = 14; // one screenful: painted in the same frame as the tap
   const DRAW_CHUNK = 16; // the rest, a few frames later, in pieces small enough not to freeze a tap or a scroll
@@ -3048,9 +3049,30 @@
     const people = make('section', 'vol-people');
     people.setAttribute('aria-label', 'Volunteer list and case options');
     const caseOptions = make('div', 'vol-case-options');
-    caseOptions.append(
-      make('span', 'vol-list-label', GIKI ? 'People · ' + vols.items.length : 'People'),
-    );
+    // Giki: two tabs. Waiting = still to get this case; DMed = already sent (DM all never sends to them again)
+    const dmedCount = GIKI ? vols.items.filter((d) => d.dmed).length : 0;
+    if (GIKI) {
+      if (gikiTab === 'dmed' && !dmedCount) gikiTab = 'waiting';
+      const tabs = make('div', 'giki-tabs');
+      tabs.setAttribute('role', 'tablist');
+      for (const [key, label, n] of [
+        ['waiting', 'Waiting', vols.items.length - dmedCount],
+        ['dmed', 'DMed', dmedCount],
+      ]) {
+        const t = make('button', 'giki-tab', label + ' · ' + n);
+        t.type = 'button';
+        t.id = 'gikiTab-' + key;
+        t.setAttribute('role', 'tab');
+        t.setAttribute('aria-selected', String(gikiTab === key));
+        t.onclick = () => {
+          gikiTab = key;
+          showVolunteers(true);
+        };
+        tabs.append(t);
+      }
+      caseOptions.append(tabs);
+    } else caseOptions.append(make('span', 'vol-list-label', 'People'));
+    const shown = GIKI ? vols.items.filter((d) => !!d.dmed === (gikiTab === 'dmed')) : vols.items;
     const list = make('div', 'vol-list');
     if (vols.items.length) {
       list.setAttribute('role', 'list');
@@ -3059,15 +3081,19 @@
     }
     const active =
       vols.delivery && ['Starting', 'Sending', 'Waiting'].includes(vols.delivery.state);
-    if (!vols.items.length)
+    if (!shown.length)
       list.append(
         make(
           'p',
           'donor-empty',
-          GIKI ? 'No one in the Giki list yet. Tap + Add, then Add many.' : 'No volunteers yet.',
+          !GIKI
+            ? 'No volunteers yet.'
+            : !vols.items.length
+              ? 'No one in the Giki list yet. Tap + Add, then Add many.'
+              : 'Everyone has been DMed for this case. See the DMed tab.',
         ),
       );
-    vols.items.forEach((d, i) => {
+    shown.forEach((d, i) => {
       const row = make('div', 'vol-row');
       row.setAttribute('role', 'listitem');
       row.dataset.volId = d.id;
@@ -3155,7 +3181,25 @@
         menu.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + 'px';
         menu.querySelector('button').focus({ preventScroll: true });
       };
-      row.append(nameEl, dmCase, ...(GIKI ? [] : [dmShare]), more); // Giki: DM Case also sends the share message
+      // Giki: DM Case also sends the share message. In DMed, a note in its place, so nobody gets it twice.
+      const dmedNote = make(
+        'span',
+        'vol-dmed' + (d.dmed_unsure ? ' vol-dmed-unsure' : ''),
+        d.dmed_unsure
+          ? 'Not confirmed · check WhatsApp'
+          : 'DMed' +
+              (d.dmed_at
+                ? ' · ' +
+                  new Date(d.dmed_at * 1000).toLocaleString('en-PK', {
+                    timeZone: 'Asia/Karachi',
+                    day: 'numeric',
+                    month: 'short',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })
+                : ''),
+      );
+      row.append(nameEl, GIKI && d.dmed ? dmedNote : dmCase, ...(GIKI ? [] : [dmShare]), more);
       list.append(row);
     });
     list.onscroll = () =>

@@ -327,7 +327,7 @@ test('DM Case sends the case (poster with caption), the 2nd / 3rd messages that 
     phone: '15551230004',
   });
   await page.reload();
-  await expect(page.locator('.vol-row')).toHaveCount(4);
+  await expect(page.locator('.vol-row', { hasText: 'Fourth Person' })).toBeVisible(); // the 3 sent are in DMed
   before = await ask('Fourth Person');
   await expect.poll(async () => (await gikiSends()).length, { timeout: 20000 }).toBe(before + 2);
   sent = (await gikiSends()).slice(before);
@@ -380,7 +380,8 @@ test('DM all: each person gets the case first, then the share message; people al
     phone: '15551230005',
   });
   await open(page);
-  await expect(page.locator('.vol-row')).toHaveCount(5);
+  await expect(page.locator('#gikiTab-waiting')).toHaveText('Waiting · 1'); // 4 got DM Case: in DMed
+  await expect(page.locator('#gikiTab-dmed')).toHaveText('DMed · 4');
   await writeShare(page, 'Share message for {name}, please share.');
   await expect(page.locator('.giki-edit')).toHaveText('Edit');
   await expect(page.locator('.vol-foot .send-donors')).toHaveText('DM all (1)'); // four were messaged by DM Case
@@ -492,4 +493,33 @@ test('Stop DMs shows Resume DMs, and Resume carries on with the people still wai
   });
   expect(inside).toBe(true);
   await api(port, '/giki/volunteers', { action: 'stop' });
+});
+
+test('Waiting and DMed tabs: a person who got the case moves to DMed and cannot be sent DM Case again', async ({
+  page,
+}) => {
+  await link();
+  await api(port, '/focus-bank', { kind: 'group', text: 'GIKITEST tabs caption. Rs. 25,000 left.' });
+  await api(port, '/giki/volunteers', { action: 'message', text: 'Share for {name}, please.' });
+  await api(port, '/giki/volunteers', { action: 'add', name: 'Tabs Sent Giki', phone: '15551250001' });
+  await api(port, '/giki/volunteers', { action: 'add', name: 'Tabs Waiting Giki', phone: '15551250002' });
+  const sent = (await api(port, '/giki/volunteers')).items.find((d) => d.name === 'Tabs Sent Giki');
+  const before = (await gikiSends()).length;
+  await api(port, '/giki/volunteers', { action: 'send_case', id: sent.id, request_id: 'req-tabs-0001' });
+  await expect.poll(async () => (await gikiSends()).length, { timeout: 20000 }).toBe(before + 2);
+  const items = (await api(port, '/giki/volunteers')).items;
+  const dmed = items.filter((d) => d.dmed).length;
+  await open(page, 360);
+  await expect(page.locator('#gikiTab-waiting')).toHaveText('Waiting · ' + (items.length - dmed));
+  await expect(page.locator('#gikiTab-dmed')).toHaveText('DMed · ' + dmed);
+  await expect(page.locator('.vol-row', { hasText: 'Tabs Waiting Giki' })).toBeVisible();
+  await expect(page.locator('.vol-row', { hasText: 'Tabs Sent Giki' })).toHaveCount(0);
+  await page.locator('#gikiTab-dmed').click();
+  await expect(page.locator('#gikiTab-dmed')).toHaveAttribute('aria-selected', 'true');
+  const row = page.locator('.vol-row', { hasText: 'Tabs Sent Giki' });
+  await expect(row.locator('.vol-dmed')).toContainText('DMed ·');
+  await expect(row.locator('.vol-case')).toHaveCount(0);
+  await expect(page.locator('.vol-row', { hasText: 'Tabs Waiting Giki' })).toHaveCount(0);
+  await page.locator('#gikiTab-waiting').click();
+  await expect(page.locator('.vol-row', { hasText: 'Tabs Waiting Giki' })).toBeVisible();
 });

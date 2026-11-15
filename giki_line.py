@@ -287,6 +287,15 @@ class GikiVolunteers(Volunteers):
         out["pace"] = self.pace_values()
         out["waiting"] = len(self.waiting_ids())
         out["resumable"] = self.resumable()
+        # Waiting / DMed tabs: who already got this case (or may have: never sent again by DM all)
+        records = {r["id"]: r for r in self.book._load()["records"]}
+        for item in out.get("items", []):
+            r = records.get(item.get("id")) or {}
+            sent = self.book.contacted(r)
+            unsure = not sent and r.get("delivery") in ("Uncertain", "Sending")
+            item["dmed"] = bool(sent or unsure)
+            item["dmed_at"] = r.get("last_sent_at") if sent else None
+            item["dmed_unsure"] = unsure
         return out
 
     def resumable(self):

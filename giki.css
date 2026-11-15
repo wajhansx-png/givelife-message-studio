@@ -452,3 +452,52 @@
     display: none;
   }
 }
+
+/* Waiting / DMed tabs above the list: the picked one is blue */
+.UI2.giki #donorsPage #donorVolunteers .giki-tabs {
+  display: flex;
+  flex: 1 1 100%;
+  width: 100%;
+  gap: 8px;
+  padding: 2px 0;
+}
+.UI2.giki #donorsPage #donorVolunteers .giki-tab {
+  flex: 1 1 0;
+  min-height: 40px;
+  border: 1px solid #394060;
+  border-radius: 999px;
+  background: transparent;
+  color: #9aa3c0;
+  font: inherit;
+  font-size: 14px !important;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.UI2.giki #donorsPage #donorVolunteers .giki-tab[aria-selected='true'] {
+  border-color: #2f6fe4;
+  background: #2f6fe4;
+  color: #fff;
+}
+/* in DMed, a note sits where DM Case was */
+.UI2.giki #donorsPage #donorVolunteers .vol-row .vol-dmed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #12261a;
+  color: #6fd08c;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.UI2.giki #donorsPage #donorVolunteers .vol-row .vol-dmed-unsure {
+  background: #2a2212;
+  color: #e8b64a;
+}

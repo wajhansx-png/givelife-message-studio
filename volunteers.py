@@ -61,6 +61,9 @@ class Volunteers:
             eligible,
             self.first_name,
         )
+        if line:  # a list on its own WhatsApp (Giki) checks the chat before anything is sent again
+            self.jobs.peek = lambda body: app.newest_sent({**body, "line": line})
+            self.jobs.seen = lambda body, after: app.sent_after({**body, "line": line}, after)
         self.path = app.DATA / self.MESSAGE_FILE
 
     @staticmethod

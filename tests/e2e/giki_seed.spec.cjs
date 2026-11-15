@@ -33,17 +33,21 @@ test('the people from the file are in the list when the page opens, and a remove
   await page.setViewportSize({ width: 390, height: 800 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/giki');
-  await expect(page.locator('.vol-row')).toHaveCount(3);
+  // Ahmad test and Zain test (they go to the GiveLife test group) come first, then the people from the file
+  await expect(page.locator('.vol-row')).toHaveCount(5);
   await expect(page.locator('.vol-name')).toContainText([
+    'Ahmad test',
+    'Zain test',
     'Ali Donor Giki',
     'Giki Donor 4',
     'Sara Giki',
   ]);
-  await expect(page.locator('.vol-foot .send-donors')).toHaveText('DM all (3)');
+  await expect(page.locator('.vol-foot .send-donors')).toHaveText('DM all (5)');
   const first = (await api(port, '/giki/volunteers')).items[0];
+  expect(first.name).toBe('Ahmad test');
   await api(port, '/giki/volunteers', { action: 'delete', id: first.id });
   await page.reload();
-  await expect(page.locator('.vol-row')).toHaveCount(2); // not brought back
+  await expect(page.locator('.vol-row')).toHaveCount(4); // not brought back
   expect((await api(port, '/volunteers')).items).toHaveLength(0); // the main volunteers are untouched
 });
 

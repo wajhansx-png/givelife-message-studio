@@ -34,7 +34,36 @@ import contextvars, wa_lines
 _LINE = contextvars.ContextVar("wa_line", default="")
 # A DM batch that sends the 2nd / 3rd messages as its own recorded steps: the first message goes alone.
 _AFTER_BY_BATCH = contextvars.ContextVar("after_by_batch", default=False)
+# A Giki test person (Ahmad test, Zain test): the very same DM, delivered in the GiveLife test group.
+_DM_TO_GROUP = contextvars.ContextVar("dm_to_group", default=False)
 LINES = {}  # name -> wa_lines.Line, filled once the store is ready
+
+
+class send_route:
+    """Where a body is sent from and to: its line's WhatsApp, and for a Giki test person (Ahmad test, Zain test) the
+    GiveLife test group. The send and the chat check both use it, so they always look at the same chat."""
+
+    def __init__(self, body):
+        self.body = body if isinstance(body, dict) else {}
+        self.tokens = []
+
+    def __enter__(self):
+        line = self.body.get("line") or ""
+        if line and line not in LINES:
+            raise ValueError("Unknown WhatsApp line.")
+        if line:
+            self.tokens.append((_LINE, _LINE.set(line)))
+            if line == "giki" and self.body.get("target") == "phone":
+                import giki_line
+
+                if giki_line.is_test_phone(self.body.get("phone")):
+                    self.tokens.append((_DM_TO_GROUP, _DM_TO_GROUP.set(True)))
+        return self
+
+    def __exit__(self, *exc):
+        for var, token in reversed(self.tokens):
+            var.reset(token)
+        self.tokens = []
 
 
 class on_line:
@@ -339,6 +368,8 @@ def custom_recipient(body):
         return GROUPS[target][1], True
     if target != "phone":
         raise ValueError("Choose a saved group or phone number.")
+    if _DM_TO_GROUP.get():
+        return TEST_GROUP_JID, False  # a Giki test person: sent like a DM, delivered in the GiveLife test group
     phone = re.sub(r"[\s()+-]", "", str(body.get("phone", "")))
     if phone.startswith("00"):
         phone = phone[2:]
@@ -351,13 +382,65 @@ def custom_recipient(body):
 
 def send_custom(body):
     """One send. body["line"] = "giki" sends it from the Giki WhatsApp instead of the main one; nothing else changes."""
-    line = body.get("line") or ""
-    if not line:
+    if not body.get("line"):
         return _send_custom(body)
-    if line not in LINES:
-        raise ValueError("Unknown WhatsApp line.")
-    with on_line(line):
+    with send_route(body):  # its line's WhatsApp; Ahmad test / Zain test: the test group, as a DM
         return _send_custom(body)
+
+
+SENT_TYPES = {"pdf": ("document",), "video": ("video",), "poster": ("image",)}
+
+
+def _sent_types(body):
+    """The message types (as the gateway names them) a send makes: what to look for in the chat."""
+    if body.get("kind") == "dm_extra":
+        return SENT_TYPES.get(str(body.get("extra")), ("image", "video", "document"))
+    if body.get("attachment"):
+        return ("image", "video", "document")
+    if body.get("poster") is True:
+        return ("image", "video")
+    return ("", "text")
+
+
+def _sent_rows(body, limit):
+    """What this WhatsApp sent lately in the body's chat, newest first, as the gateway lists it."""
+    jid, _ = custom_recipient(body)
+    chat = jid if str(jid).endswith("@g.us") else jid + "@s.whatsapp.net"
+    rows = api_messages(
+        "/chat/" + urllib.parse.quote(chat, safe="") + f"/messages?limit={limit}&is_from_me=true"
+    )
+    return [m for m in rows if m.get("is_from_me") is True and m.get("id")]
+
+
+def newest_sent(body):
+    """Just before a send: the id of the newest message this WhatsApp sent in that chat ("" when none). None = the
+    chat cannot be read now; then nothing is ever sent a second time."""
+    try:
+        with send_route(body):
+            rows = _sent_rows(body, 5)
+    except Exception:
+        return None
+    return str(rows[0]["id"]) if rows else ""
+
+
+def sent_after(body, after):
+    """After an unclear or failed answer: the id of a message of this send's type that this WhatsApp sent in the chat
+    after message `after` (found = it went). "" = it is not there: it did not go. None = cannot tell."""
+    if not isinstance(after, str):
+        return None
+    try:
+        with send_route(body):
+            rows = _sent_rows(body, 30)
+    except Exception:
+        return None
+    types = _sent_types(body)
+    for m in rows:  # newest first
+        mid = str(m["id"])
+        if after and mid == after:
+            return ""  # back at the newest message from before the send: nothing new of this type
+        if str(m.get("media_type") or "") in types:
+            return mid
+    return "" if not after or len(rows) < 30 else None  # `after` out of view: cannot tell
 
 
 def _send_custom(body):
@@ -1196,10 +1279,11 @@ def send_image(jid, caption, check_gap=False, _retry=True):
     atomic_write(cap, caption)
     import group_extras
 
-    profile = "group" if str(jid).endswith("@g.us") else "giki" if _LINE.get() == "giki" else "dm"
+    to_group = str(jid).endswith("@g.us") and not _DM_TO_GROUP.get()  # a test person's DM keeps the DM rules
+    profile = "group" if to_group else "giki" if _LINE.get() == "giki" else "dm"
     lead = group_extras.lead(STORE, profile) if STORE else None  # the case video carries the text
     try:
-        poster = poster_media("group" if str(jid).endswith("@g.us") else "dm")
+        poster = poster_media("group" if to_group else "dm")
         check_hold()
         check_stop()
         if lead:
@@ -1262,7 +1346,7 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                 + GROUPS[key][0]
                 + ". Link the number that is in the groups.",
             }
-    if result.get("code") == "SUCCESS" and str(jid).endswith("@g.us"):
+    if result.get("code") == "SUCCESS" and to_group:
         extras = send_group_extras(jid)
         if extras:
             result["extras"] = extras

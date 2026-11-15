@@ -32,6 +32,8 @@ GOWA_URL = os.environ.get("GOWA_URL", "http://127.0.0.1:3000").rstrip("/")
 import contextvars, wa_lines
 
 _LINE = contextvars.ContextVar("wa_line", default="")
+# A DM batch that sends the 2nd / 3rd messages as its own recorded steps: the first message goes alone.
+_AFTER_BY_BATCH = contextvars.ContextVar("after_by_batch", default=False)
 LINES = {}  # name -> wa_lines.Line, filled once the store is ready
 
 
@@ -555,7 +557,11 @@ def _send_custom(body):
             if body.get("attachment"):
                 result = send_batch_attachment(jid, message, body["attachment"])
             elif body.get("poster") is True:
-                result = send_image(jid, message)
+                token = _AFTER_BY_BATCH.set(body.get("after_steps") is True)
+                try:
+                    result = send_image(jid, message)
+                finally:
+                    _AFTER_BY_BATCH.reset(token)
                 if (
                     result.get("code") == "ERROR"
                     and result.get("message") == "On hold: you told me to wait."
@@ -1209,7 +1215,11 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                 }
         # a DM: what follows the first message (Giki: the 2nd and 3rd messages; DMs: the after poster), in order.
         # Groups get theirs with their files. Never retried: one not confirmed stops the next, and the owner is told.
-        follow = group_extras.after_items(STORE, profile) if STORE and profile != "group" else []
+        follow = (
+            group_extras.after_items(STORE, profile)
+            if STORE and profile != "group" and not _AFTER_BY_BATCH.get()
+            else []
+        )
         if follow and result.get("code") == "SUCCESS":
             done = []
             for kind, ident in follow:

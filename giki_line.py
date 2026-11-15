@@ -299,34 +299,7 @@ class GikiVolunteers(Volunteers):
         stopped = j.get("state") in ("Stopped", "Interrupted") and (
             time.time() - j.get("updated_at", 0) <= self.jobs.AUTO_WINDOW
         )
-        return (len(self.waiting_ids()) if stopped else 0) + len(self._cut())
-
-    def _cut(self):
-        """People from the batches of the last 36 hours whose case went but whose share message did not (a Stop
-        came in between, or it was refused before sending). Resume sends them the share message only."""
-        out, seen = [], set()
-        for j in self.jobs.export_jobs().get("jobs", []):
-            if (
-                not j.get("follow_up")
-                or time.time() - j.get("updated_at", 0) > self.jobs.AUTO_WINDOW
-            ):
-                continue
-            for receipt in j.get("receipts", []):
-                ident = receipt.get("id")
-                if (
-                    ident in seen
-                    or receipt.get("state") != "Sent"
-                    or receipt.get("follow_up") not in ("Cancelled", "Not sent")
-                ):
-                    continue
-                try:
-                    record = self.book.resolve(ident)
-                except ValueError:
-                    continue
-                if record.get("follow_up_state") in ("Cancelled", "Not sent"):
-                    seen.add(ident)
-                    out.append(record)
-        return out
+        return (len(self.waiting_ids()) if stopped else 0) + len(self.jobs.half_sent())
 
     def resume(self, body):
         """Resume DMs: DM all again for the people still waiting, with today's case and share message and the saved
@@ -336,35 +309,12 @@ class GikiVolunteers(Volunteers):
         if not self.resumable():
             raise ValueError("Nothing to resume. Press DM all to start again.")
         j = self.jobs.export_jobs()["jobs"][-1]
-        finished = 0
-        share = self._share(required=False)
-        for record in self._cut() if share else []:  # first: the share message for anyone a Stop cut off
-            name, gender = self.first_name(record["name"])
-            try:
-                res = self.jobs.send(
-                    {
-                        "target": "phone",
-                        "phone": record["phone"],
-                        "message": self.DELIVERY.follow_text(share, name, gender),
-                        "poster": False,
-                        "kind": "owner_text",
-                        "attachment": None,
-                        "first_in_batch": False,
-                        "name": name,
-                        "gender": gender,
-                    }
-                )
-            except ValueError:
-                raise  # refused before sending (e.g. WhatsApp not connected): the owner sees why, nothing went
-            except Exception:
-                res = None
-            ok = isinstance(res, dict) and res.get("code") == "SUCCESS"
-            self.book.follow_up(record["id"], "Sent" if ok else "Uncertain")  # never sent twice
-            finished += ok
+        # first: anyone a Stop or a restart left half-sent gets only what they are missing (2nd, 3rd, share)
+        finished = self.jobs.finish_half_sent()
         if not self.waiting_ids() or j.get("state") not in ("Stopped", "Interrupted"):
             return {
                 "job": self.jobs.status(),
-                "reply": f"Share message sent to {finished} people whose share was cut by Stop. Everyone has it now.",
+                "reply": f"Finished {finished} people who were missing part of their messages. Everyone has it now.",
             }
         last = max(
             [r.get("time", 0) for r in j.get("receipts", []) if r.get("state") == "Sent"] or [0]
@@ -474,7 +424,10 @@ class GikiVolunteers(Volunteers):
             raise ValueError(
                 "Nothing to test yet: write the share message (tap Write) or set the case in Group msgs."
             )
-        return self.app.start_giki_test(case, share, **self.case_extras())  # answers at once
+        import group_extras  # the Test sends the 2nd / 3rd messages with the case itself
+
+        extras = group_extras.extras_for(self.app.STORE, "giki")
+        return self.app.start_giki_test(case, share, **extras)  # answers at once
 
     def case_text(self):
         """DM Case sends exactly what the groups send: the message set in Group msgs, with today's amount. It is read
@@ -496,7 +449,8 @@ class GikiVolunteers(Volunteers):
         off = not sent. Read at the click, from the same saved switches the group posts use."""
         import group_extras
 
-        return group_extras.extras_for(self.app.STORE, "giki")  # the Giki page's own ticks
+        # the 2nd / 3rd messages ticked in Timer, in order: the batch sends each as its own recorded step
+        return {"after": [kind for kind, _ in group_extras.after_items(self.app.STORE, "giki")]}
 
     def mutate(self, body):
         if body.get("action") == "import":

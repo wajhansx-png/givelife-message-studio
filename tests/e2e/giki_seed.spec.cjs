@@ -15,7 +15,7 @@ test.beforeAll(async () => {
       '| # | Name | Number | Found on |',
       '|--:|---|---|---|',
       '| 1 | . Giki Donor 4 | +1 555 124 0001 | x |',
-      '| 2 | Ali Donor Giki | +1 555 124 0002 | x |',
+      '| 2 | Bilal Donor Giki | +1 555 124 0002 | x |',
       '| 3 | Sara Giki | +1 555 124 0003 | x |',
     ].join('\n'),
   );
@@ -38,7 +38,7 @@ test('the people from the file are in the list when the page opens, and a remove
   await expect(page.locator('.vol-name')).toContainText([
     'Ahmad test',
     'Zain test',
-    'Ali Donor Giki',
+    'Bilal Donor Giki',
     'Giki Donor 4',
     'Sara Giki',
   ]);

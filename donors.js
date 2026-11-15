@@ -3191,6 +3191,7 @@
           menu.hidePopover();
           return;
         }
+        menu.dataset.openedAt = String(Date.now());
         menu.showPopover();
         const trigger = more.getBoundingClientRect(),
           bounds = menu.getBoundingClientRect();
@@ -3224,8 +3225,11 @@
       row.append(nameEl, GIKI && d.dmed ? dmedNote : dmCase, ...(GIKI ? [] : [dmShare]), more);
       list.append(row);
     });
+    // A real scroll closes an open ··· menu; the small scroll that opening it near the edge causes does not.
     list.onscroll = () =>
-      list.querySelectorAll(':popover-open').forEach((menu) => menu.hidePopover());
+      list.querySelectorAll(':popover-open').forEach((menu) => {
+        if (Date.now() - (Number(menu.dataset.openedAt) || 0) > 400) menu.hidePopover();
+      });
     people.append(caseOptions, list);
     const msg = make('div', 'vol-msg');
     const msgHeading = make('div', 'vol-msg-heading');

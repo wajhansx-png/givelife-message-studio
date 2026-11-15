@@ -525,7 +525,9 @@ test('Waiting and DMed tabs: a person who got the case moves to DMed and cannot 
     .poll(async () => ((await api(port, '/giki/volunteers')).delivery || {}).state, { timeout: 20000 })
     .not.toMatch(/Starting|Sending|Waiting/);
   await page.reload();
+  await page.waitForLoadState('networkidle'); // the list draws once more as it finishes loading
   await page.locator('#gikiTab-dmed').click();
+  await expect(row).toBeVisible();
   page.once('dialog', (d) => d.accept());
   await row.locator('.vol-manage').click();
   await page.getByRole('button', { name: 'Move to Waiting' }).click();

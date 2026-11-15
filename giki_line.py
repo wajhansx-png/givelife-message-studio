@@ -48,6 +48,8 @@ class GikiDelivery(VolunteerDelivery):
     KIND = "giki_batch"
     CLAIM = "giki_batch_request_"
     KEEP_GOING = True  # a message that still fails after the chat check never stops the others (3 in a row do)
+    GAP_FROM_CASE = True  # a DM every N minutes exactly: the Timer runs from one person's case to the next one's
+    WAIT_STEPS = (2, 2, 3, 3, 5, 5, 10, 15)  # a WhatsApp blip costs seconds, not 15 s per message
 
     @staticmethod
     def follow_text(template, name, gender):

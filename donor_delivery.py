@@ -74,6 +74,7 @@ class DonorDelivery:
         self.active = None
         self.manual_sent_at = 0
         self.manual_inflight = threading.Event()
+        self.tried_at = None  # when the last message was handed to WhatsApp (GAP_FROM_CASE counts from the case's)
         self.variants = variants
         self.case_closed = case_closed or (lambda: False)
         # Round selection advances the shared rotation cursor (same one single DMs use);
@@ -1298,6 +1299,12 @@ class DonorDelivery:
                 time.sleep(1)
         return False
 
+    WAIT_STEPS = (15,)  # seconds before looking again when WhatsApp is not there; the last one repeats
+
+    def _wait_step(self, n):
+        """The wait before the n-th look again (1 = the first)."""
+        return self.WAIT_STEPS[min(n, len(self.WAIT_STEPS)) - 1]
+
     def _pause(self, seconds, finish):
         """Wait while sending. True = stop now. Finishing a person (their case already went) never stops on Stop:
         their remaining messages go first, so nobody gets half a sequence."""
@@ -1314,7 +1321,7 @@ class DonorDelivery:
         finishing a person whose case already went). With the chat check (peek / seen), an unclear or failed answer
         is looked up in the chat: there = sent; not there = sent again (HEAL_TRIES in all); cannot tell = as before."""
         deadline = time.time() + (180 if finish else 1800)
-        tries = 0
+        tries = waits = 0
         while True:
             if finish and self.stop.is_set():  # Stop pressed: finish this person only if WhatsApp answers soon
                 deadline = min(deadline, (self.stop_at or time.time()) + 30)
@@ -1333,8 +1340,10 @@ class DonorDelivery:
                         raise ValueError(
                             "WhatsApp stayed disconnected for 30 minutes. Reconnect it, then press Continue."
                         )
-                    if self._pause(15, finish):
+                    waits += 1
+                    if self._pause(self._wait_step(waits), finish):
                         return None
+                self._update(j["id"], state="Sending", current="")  # back: the page no longer says waiting
             if self.stop.is_set() and not finish:
                 return None
             if before:
@@ -1342,11 +1351,13 @@ class DonorDelivery:
             mark = self._peek(body)  # the chat's newest message from just before this send
             if note and self.peek is not None:
                 note(mark)
+            self.tried_at = time.time()
             try:
                 result = self.send(body)
             except ValueError as e:
                 if str(e).startswith(self.TRANSIENT) and time.time() < deadline:
-                    if self._pause(15, finish):
+                    waits += 1
+                    if self._pause(self._wait_step(waits), finish):
                         return None
                     continue
                 raise
@@ -1358,7 +1369,8 @@ class DonorDelivery:
             if isinstance(result, dict) and result.get("code") == "ERROR":
                 # Refused before anything left the phone, so it is safe to wait and try this person again.
                 if message.startswith("WhatsApp disconnected") and time.time() < deadline:
-                    if self._pause(15, finish):
+                    waits += 1
+                    if self._pause(self._wait_step(waits), finish):
                         return None
                     continue
                 if message.startswith("On hold"):
@@ -1385,6 +1397,7 @@ class DonorDelivery:
         uncertain_run = step_run = 0
         second_chance = set()
         last_completion = None
+        last_case = None  # when the last person's first message was handed to WhatsApp
         state = "Completed"
         error = ""
         chunk = j.get("chunk")
@@ -1419,13 +1432,15 @@ class DonorDelivery:
                 if ident in done_here:
                     continue
                 phase_index = index + j.get("chunk_offset", 0)
+                # the gap / rest counts from the last person's first message (GAP_FROM_CASE) or their last one
+                since = last_case if self.GAP_FROM_CASE and last_case is not None else last_completion
                 if (
                     chunk
                     and phase_index
                     and phase_index % chunk == 0
                     and last_completion is not None
                 ):
-                    rest = last_completion + self._rest(j, phase_index // chunk)
+                    rest = since + self._rest(j, phase_index // chunk)
                     self._update(
                         j["id"],
                         state="Waiting",
@@ -1437,7 +1452,7 @@ class DonorDelivery:
                         skipped=skipped,
                         receipts=receipts,
                     )
-                    self.wait_context = (j, last_completion, phase_index // chunk)
+                    self.wait_context = (j, since, phase_index // chunk)
                     try:
                         stopped = self._sleep_until(rest)
                     finally:
@@ -1470,7 +1485,7 @@ class DonorDelivery:
                     or self.manual_inflight.is_set()
                     or self.manual_sent_at > j["created_at"]
                 ):
-                    due = max(last_completion or 0, self.manual_sent_at) + gap_next
+                    due = max(since or 0, self.manual_sent_at) + gap_next
                     self._update(
                         j["id"],
                         state="Waiting",
@@ -1487,7 +1502,7 @@ class DonorDelivery:
                             gap_next = self._gap(j)
                         if self.stop.wait(min(0.5, max(0.1, due - time.time()))):
                             break
-                        new_due = max(last_completion or 0, self.manual_sent_at) + gap_next
+                        new_due = max(since or 0, self.manual_sent_at) + gap_next
                         if new_due != due:
                             due = new_due
                             self._update(j["id"], next_at=due)
@@ -1537,6 +1552,7 @@ class DonorDelivery:
                     receipts=receipts,
                 )
                 self.book.delivery(ident, "Sending")
+                self.tried_at = None
                 try:
                     result = self._dispatch(
                         j,
@@ -1579,6 +1595,7 @@ class DonorDelivery:
                     failed += 1
                     uncertain_run += 1
                     last_completion = time.time()
+                    last_case = self.tried_at or last_completion
                     gap_next = self._gap(j)
                     done_here.add(ident)
                     receipts.append(
@@ -1595,6 +1612,7 @@ class DonorDelivery:
                     state = "Stopped"
                     break
                 last_completion = time.time()
+                last_case = self.tried_at or last_completion
                 done_here.add(ident)
                 gap_next = self._gap(j)
                 if not isinstance(result, dict) or result.get("code") != "SUCCESS":
@@ -1816,6 +1834,8 @@ class DonorDelivery:
     HEAL_WATCH = (5, 10, 15, 30, 60)  # an unclear answer may be a slow upload: watch the chat up to 2 minutes
     HEAL_QUICK = (3, 5)  # a clear error from WhatsApp: two quick looks
     KEEP_GOING = False  # True (Giki): a message that still fails does not stop the batch; 3 people in a row do
+    GAP_FROM_CASE = False  # True (Giki): the Timer runs from one person's first message to the next person's, so DMs go
+    # exactly every N minutes (the sending time is not added); a person still never starts before the last one finished
     shutting_down = False  # set by the server's shutdown (a deploy): see server.graceful_exit
     NAMES_AT_SEND = False  # True: a picked-people batch needs no pasted names to carry on after a restart
     UNCERTAIN_STOP = 3  # consecutive unconfirmed deliveries before a batch pauses

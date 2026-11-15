@@ -13,7 +13,7 @@
     #donorHideRow,
     #donorTable,
     #donorMessages,
-    .donor-progress,
+    .donor-progress:not(#volProgress),
     .dp-show,
     .batch-list,
     .donor-bottom

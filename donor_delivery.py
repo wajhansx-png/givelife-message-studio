@@ -983,6 +983,7 @@ class DonorDelivery:
 
     TRANSIENT = (
         "WhatsApp is disconnected",
+        "The Giki WhatsApp is disconnected",  # the Giki line's own words: refused before sending, so wait the same way
         "WhatsApp disconnected",
         "Persistent send records are unavailable",
         "Another send is running",

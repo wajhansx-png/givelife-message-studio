@@ -2946,7 +2946,7 @@
     if (stop && active)
       stop.textContent = scheduled
         ? 'Stop DMs · Scheduled'
-        : 'Stop DMs · ' + (j.sent || 0) + '/' + j.total + ' sent';
+        : 'Stop DMs · ' + (j.sent || 0) + '/' + j.total;
     box.textContent =
       (scheduled
         ? 'Scheduled · first DM at ' +
@@ -3192,8 +3192,19 @@
     all.setAttribute('aria-label', GIKI ? 'DM all Giki' : 'DM all volunteers');
     all.type = 'button';
     all.disabled = !dmCount || !ta.value.trim();
-    all.hidden = !!active;
     all.onclick = () => openVolunteerTiming(ta.value, false);
+    // After Stop DMs (or a restart that cut a batch): Resume DMs carries on with the people still waiting
+    const resume = make('button', 'primary send-donors vol-resume', 'Resume DMs');
+    resume.id = 'volResume';
+    resume.setAttribute('aria-label', 'Resume DMs, ' + (vols.resumable || 0) + ' left');
+    resume.type = 'button';
+    resume.hidden = !GIKI || !!active || !vols.resumable; // Giki page only
+    resume.onclick = async () => {
+      resume.disabled = true;
+      await volAct({ action: 'resume' }, 'Resuming DMs…');
+      resume.disabled = false;
+    };
+    all.hidden = !!active || !resume.hidden;
     ta.oninput = () => {
       save.disabled = ta.value.trim() === (vols.message || '').trim();
       all.disabled = !dmCount || !ta.value.trim();
@@ -3210,7 +3221,7 @@
     back.type = 'button';
     back.setAttribute('aria-label', 'Back to donors');
     back.onclick = () => (GIKI ? (location.href = '/') : selectDonorTab('all'));
-    foot.append(addPanel, all, pause, back);
+    foot.append(addPanel, all, ...(resume.hidden ? [] : [resume]), pause, back);
     const workspace = make('div', 'vol-workspace');
     workspace.append(msg, people);
     box.append(heading, workspace, prog, foot);

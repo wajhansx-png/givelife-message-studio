@@ -17,6 +17,7 @@ class VolunteerDelivery(DonorDelivery):
     FILE = "volunteer-delivery.json"
     KIND = "volunteer_batch"
     CLAIM = "volunteer_batch_request_"
+    NAMES_AT_SEND = True  # the greeting comes from the list at each send, so a restart can carry on
 
     def _fresh_caption(self, job, index):
         # Volunteer text uses the volunteer greeting path, not donor template personalization.

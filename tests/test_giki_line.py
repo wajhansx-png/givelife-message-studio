@@ -159,6 +159,52 @@ class GikiList(Fixture):
         self.run_job(self.g.jobs)
         self.assertEqual([(s["message"], s["poster"]) for s in self.sent], [(self.case, True)])
 
+    def _stopped_after_first(self):
+        for i in range(3):
+            self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share this."})
+
+        def stop_after_first(body):
+            out = self.send(body)
+            if len(self.sent) == 2:  # the first person's case and share message went
+                self.g.jobs.stop.set()
+            return out
+
+        self.g.jobs.send = stop_after_first
+        self.go(self.g, {"action": "send_all", "request_id": "r-stop", "poster": False})
+        job = self.run_job(self.g.jobs)
+        self.assertEqual((job["state"], job["sent"]), ("Stopped", 1))
+        self.g.jobs.stop.clear()
+        self.g.jobs.send = self.send
+
+    def test_stop_then_resume_goes_on_with_only_the_people_still_waiting(self):
+        self._stopped_after_first()
+        self.assertEqual(self.g.view()["resumable"], 2)
+        self.case = "Today's case. Rs. 900 left."  # Resume sends today's case, not the one saved at the start
+        with patch.object(self.g.jobs, "_run"):
+            self.g.mutate({"action": "resume"})
+        job = self.run_job(self.g.jobs)
+        self.assertEqual((job["state"], job["sent"]), ("Completed", 2))
+        self.assertEqual([s["message"] for s in self.sent[2::2]], [self.case, self.case])
+        phones = [s["phone"] for s in self.sent]
+        self.assertEqual(len(phones), 6)
+        self.assertEqual(len(set(phones)), 3)  # each person once: case + share, nobody twice
+        self.assertEqual(self.g.view()["resumable"], 0)
+        with self.assertRaisesRegex(ValueError, "Nothing to resume"):
+            self.g.mutate({"action": "resume"})
+
+    def test_a_restart_carries_on_a_giki_batch_by_itself(self):
+        self._stopped_after_first()
+        jobs = self.g.jobs._load()
+        jobs["jobs"][-1].update(state="Interrupted", boot="an-older-boot")  # cut by a deploy
+        self.g.jobs._save(jobs)
+        with patch.object(self.g.jobs, "_run"):
+            self.assertTrue(self.g.jobs.recover())  # what the server runs after every restart
+        job = self.run_job(self.g.jobs)
+        self.assertEqual((job["state"], job["sent"]), ("Completed", 2))
+        self.assertEqual(len(self.sent), 6)
+        self.assertEqual(job["follow_up"], "Salam {name}, please share this.")
+
     def test_a_short_giki_whatsapp_drop_is_waited_out_and_the_batch_goes_on(self):
         for i in range(3):
             self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})

@@ -1407,10 +1407,14 @@ class DonorDelivery:
         if j.get("origin"):
             args["origin"] = j["origin"]
         if j["scope"] == "selected":
-            if not j.get("personal_names"):
+            if j.get("personal_names"):
+                args.update(ids=j["ids"], personal_names=j["personal_names"], limit=len(j["ids"]))
+            elif self.NAMES_AT_SEND:  # a list whose greeting is made at each send (Volunteers, Giki)
+                args.update(ids=j["ids"], limit=len(j["ids"]))
+            else:
                 return None
-            args.update(ids=j["ids"], personal_names=j["personal_names"], limit=len(j["ids"]))
         return self.start(**args, request_id="auto-" + uuid.uuid4().hex)
 
     AUTO_WINDOW = 36 * 3600
+    NAMES_AT_SEND = False  # True: a picked-people batch needs no pasted names to carry on after a restart
     UNCERTAIN_STOP = 3  # consecutive unconfirmed deliveries before a batch pauses

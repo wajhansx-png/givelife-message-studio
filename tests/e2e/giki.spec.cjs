@@ -448,3 +448,48 @@ for (const width of [320, 360, 390, 768, 1280]) {
     expect(errors).toEqual([]);
   });
 }
+
+test('Stop DMs shows Resume DMs, and Resume carries on with the people still waiting', async ({
+  page,
+}) => {
+  await link();
+  await api(port, '/focus-bank', {
+    kind: 'group',
+    text: 'GIKITEST resume caption. Rs. 25,000 left.',
+  });
+  await api(port, '/giki/volunteers', { action: 'message', text: 'Share for {name}, please.' });
+  for (let i = 0; i < 3; i++)
+    await api(port, '/giki/volunteers', {
+      action: 'add',
+      name: 'Resume Giki ' + i,
+      phone: '1555124000' + i,
+    });
+  const r = await api(port, '/giki/volunteers', {
+    action: 'send_all',
+    request_id: 'req-resume-0001',
+    delay_seconds: 0,
+  });
+  expect(r.error).toBeUndefined();
+  await open(page, 360);
+  const foot = page.locator('#donorVolunteers .vol-foot');
+  await expect(page.locator('#volStop')).toBeVisible({ timeout: 15000 });
+  await expect(foot.locator('.send-donors:not(.vol-resume)')).toBeHidden();
+  await page.locator('#volStop').click();
+  await expect(page.locator('#volResume')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#volStop')).toBeHidden();
+  await expect(foot.locator('.send-donors:not(.vol-resume)')).toBeHidden();
+  const waiting = (await api(port, '/giki/volunteers')).resumable;
+  expect(waiting).toBeGreaterThan(0);
+  await page.locator('#volResume').click();
+  await expect(page.locator('#volStop')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#volResume')).toBeHidden();
+  // every button stays on the screen while sending at 360px
+  const inside = await foot.evaluate((f) => {
+    const r = f.getBoundingClientRect();
+    return [...f.children]
+      .filter((c) => c.offsetParent)
+      .every((c) => c.getBoundingClientRect().right <= r.right + 1);
+  });
+  expect(inside).toBe(true);
+  await api(port, '/giki/volunteers', { action: 'stop' });
+});

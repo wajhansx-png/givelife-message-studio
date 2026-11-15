@@ -555,7 +555,7 @@ class DonorDelivery:
                 )
             if not self.store:
                 raise ValueError("Persistent sending records are unavailable. Nothing was sent.")
-            if not self.connected():
+            if not self._connected_soon():
                 raise ValueError("WhatsApp is disconnected. Link it before sending.")
             ident = uuid.uuid4().hex
             now = time.time()
@@ -916,7 +916,7 @@ class DonorDelivery:
         for kind in ("video", "pdf"):  # same order as the groups: the video, then the PDF
             if not j.get(kind):
                 continue
-            if self.stop.is_set() or self.held():
+            if self.held():  # Stop lets this person finish; only a hold (wrong WhatsApp) cuts it
                 return "Cancelled", ""
             if not self.eligible(r["phone"]):
                 return "Skipped: opted out or blocked", ""
@@ -936,6 +936,7 @@ class DonorDelivery:
                     receipts,
                     sent,
                     skipped,
+                    finish=True,
                 )
             except ValueError as e:
                 return "Not sent", hide_numbers(e)
@@ -948,8 +949,9 @@ class DonorDelivery:
         return "Sent", ""
 
     def _send_follow_up(self, j, r, name, gender, receipts, sent, skipped):
-        """Only after the poster DM was confirmed. Never retried; an uncertain follow-up stops the batch."""
-        if self.stop.is_set() or self.held():
+        """Only after the poster DM was confirmed. Never retried; an uncertain follow-up stops the batch. Stop lets
+        it go (the person already has the case); a hold cuts it."""
+        if self.held():
             return "Cancelled", ""
         if not self.eligible(r["phone"]):
             return "Skipped: opted out or blocked", ""
@@ -970,6 +972,7 @@ class DonorDelivery:
                 receipts,
                 sent,
                 skipped,
+                finish=True,
             )
         except ValueError as e:
             return "Not sent", hide_numbers(e)
@@ -991,9 +994,30 @@ class DonorDelivery:
     # Problems with one person, never with the batch: record Skipped and carry on.
     PER_RECIPIENT = ("This recipient", "Your own account", "Enter a valid phone")
 
-    def _dispatch(self, j, body, receipts, sent, skipped):
-        """Send one DM. Waits for WhatsApp / storage to come back instead of giving up (30 min)."""
-        deadline = time.time() + 1800
+    def _connected_soon(self, tries=4):
+        """Connected now, or within a few seconds: a one-second blip of the WhatsApp check is not "disconnected"."""
+        for attempt in range(tries):
+            if self.connected():
+                return True
+            if attempt < tries - 1:
+                time.sleep(1)
+        return False
+
+    def _pause(self, seconds, finish):
+        """Wait while sending. True = stop now. Finishing a person (their case already went) never stops on Stop:
+        their remaining messages go first, so nobody gets half a sequence."""
+        if not finish:
+            return self.stop.wait(seconds)
+        if not self.stop.is_set():
+            self.stop.wait(seconds)
+        else:
+            time.sleep(min(seconds, 2))
+        return False
+
+    def _dispatch(self, j, body, receipts, sent, skipped, finish=False):
+        """Send one DM. Waits for WhatsApp / storage to come back instead of giving up (30 min; 3 min while
+        finishing a person whose case already went)."""
+        deadline = time.time() + (180 if finish else 1800)
         while True:
             if not self.connected():
                 self._update(
@@ -1010,15 +1034,15 @@ class DonorDelivery:
                         raise ValueError(
                             "WhatsApp stayed disconnected for 30 minutes. Reconnect it, then press Continue."
                         )
-                    if self.stop.wait(15):
+                    if self._pause(15, finish):
                         return None
-            if self.stop.is_set():
+            if self.stop.is_set() and not finish:
                 return None
             try:
                 result = self.send(body)
             except ValueError as e:
                 if str(e).startswith(self.TRANSIENT) and time.time() < deadline:
-                    if self.stop.wait(15):
+                    if self._pause(15, finish):
                         return None
                     continue
                 raise
@@ -1026,7 +1050,7 @@ class DonorDelivery:
             if isinstance(result, dict) and result.get("code") == "ERROR":
                 # Refused before anything left the phone, so it is safe to wait and try this person again.
                 if message.startswith("WhatsApp disconnected") and time.time() < deadline:
-                    if self.stop.wait(15):
+                    if self._pause(15, finish):
                         return None
                     continue
                 if message.startswith("On hold"):
@@ -1301,6 +1325,9 @@ class DonorDelivery:
             if not sent and skipped == len(j["ids"]) and state == "Completed":
                 state = "Nothing sent"
                 error = "All selected recipients were excluded. See the recipient results; this batch did not send any DM."
+            if self.shutting_down and state == "Stopped" and not error:
+                state = "Interrupted"  # a deploy, not the owner: carry on by itself after the restart
+                error = "The service restarted. Starting again by itself; nobody already sent is repeated."
             final = dict(
                 state=state,
                 error=error,
@@ -1416,5 +1443,6 @@ class DonorDelivery:
         return self.start(**args, request_id="auto-" + uuid.uuid4().hex)
 
     AUTO_WINDOW = 36 * 3600
+    shutting_down = False  # set by the server's shutdown (a deploy): see server.graceful_exit
     NAMES_AT_SEND = False  # True: a picked-people batch needs no pasted names to carry on after a restart
     UNCERTAIN_STOP = 3  # consecutive unconfirmed deliveries before a batch pauses

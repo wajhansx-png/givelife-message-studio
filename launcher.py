@@ -169,14 +169,18 @@ def stop(*args):
     if stopping.is_set():
         return
     stopping.set()
-    for child in children:
-        if child.poll() is None:
-            child.terminate()
-    for child in children:
-        try:
-            child.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            child.kill()
+    # The website first: it finishes the person being sent to and saves the batch (up to 20 s) while WhatsApp is
+    # still up. Then WhatsApp.
+    gateways = [c for c in children if str((getattr(c, "args", None) or [""])[0]).endswith("whatsapp")]
+    for group, grace in (([c for c in children if c not in gateways], 22), (gateways, 6)):
+        for child in group:
+            if child.poll() is None:
+                child.terminate()
+        for child in group:
+            try:
+                child.wait(timeout=grace)
+            except subprocess.TimeoutExpired:
+                child.kill()
     if not os.environ.get("GOWA_DB_KEYS_URI"):
         try:
             key_cache.save(store, key_path)

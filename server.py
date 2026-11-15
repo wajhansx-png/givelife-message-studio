@@ -7456,8 +7456,35 @@ def resume_batches_after_restart(wait=10, tries=90, sleep=time.sleep):
     return resumed
 
 
+def graceful_exit(signum=None, frame=None, wait=20, exit=os._exit):
+    """A deploy (SIGTERM): no new person is started; the person being sent to gets the rest of their messages
+    (case, 2nd, 3rd, share); each running batch is saved as Interrupted, so it carries on by itself after the
+    restart. Then the process ends. Never more than `wait` seconds."""
+
+    def run():
+        registries = []
+        for pick in (lambda: donors().jobs, lambda: donors().volunteers.jobs, lambda: donors().giki.jobs):
+            try:
+                registries.append(pick())
+            except Exception:
+                pass
+        for jobs in registries:
+            if jobs.active:
+                jobs.shutting_down = True
+                jobs.stop.set()
+        deadline = time.time() + wait
+        while time.time() < deadline and any(jobs.active for jobs in registries):
+            time.sleep(0.2)
+        exit(0)
+
+    threading.Thread(target=run, daemon=True, name="graceful-exit").start()
+
+
 ensure_dm_structure()
 if __name__ == "__main__":
+    import signal
+
+    signal.signal(signal.SIGTERM, graceful_exit)
     # One background worker failing to start must never keep the website itself from starting.
     def start_worker(name, start):
         try:

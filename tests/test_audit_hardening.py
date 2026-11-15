@@ -261,6 +261,31 @@ class GatewayKeys(unittest.TestCase):
                 key_cache.restore(s, target), "an existing working key cache is never replaced"
             )
 
+    def test_unchanged_gateway_cache_is_not_rewritten_to_the_database(self):
+        import key_cache
+
+        class Store:
+            puts = 0
+
+            def put(self, k, v):
+                self.puts += 1
+
+        with (
+            tempfile.TemporaryDirectory() as d,
+            patch.dict(os.environ, {"GIVELIFE_STORAGE_KEY": "k" * 48}),
+        ):
+            source = Path(d) / "keys.sqlite"
+            with sqlite3.connect(source) as db:
+                db.execute("CREATE TABLE keys(value TEXT)")
+            s = Store()
+            self.assertTrue(key_cache.save(s, source))
+            self.assertFalse(key_cache.save(s, source), "same file: no second write")
+            self.assertEqual(s.puts, 1)
+            with sqlite3.connect(source) as db:
+                db.execute("INSERT INTO keys VALUES('new key')")
+            self.assertTrue(key_cache.save(s, source), "a changed file is saved again")
+            self.assertEqual(s.puts, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

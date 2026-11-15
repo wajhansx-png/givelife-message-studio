@@ -625,6 +625,10 @@ const ui2Frame = (fn) => {
     const giki = tile('Giki', 'own list and WhatsApp', () => (location.href = '/giki'));
     giki.id = 'ui2GikiTile';
     giki.classList.add('ui2-tile-giki');
+    /* Giki 2: the same page and messages, with its own list and its own WhatsApp */
+    const giki2 = tile('Giki 2', 'own list and WhatsApp', () => (location.href = '/giki2'));
+    giki2.id = 'ui2Giki2Tile';
+    giki2.classList.add('ui2-tile-giki');
     tile(
       amount + ' left',
       'change amount',

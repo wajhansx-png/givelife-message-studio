@@ -26,7 +26,8 @@ Apply these rules automatically to every coding task.
 # MAIN LINK
 - `/` is the new design (same page as `/new`, built in `server.py` `reply_new_ui`). The previous page is saved unchanged at `/old` (`index.html`), not linked anywhere. Browser tests for the previous page use `/old`.
 
-# GIKI PAGE (/giki)
+# GIKI PAGE (/giki) and GIKI 2 (/giki2)
+- Giki 2 (`giki_line.Giki2Volunteers`, line `giki2`, More tile) is the same page and the same messages (share message, Timer, 2nd / 3rd shared with Giki) with its own people, batches and WhatsApp; routes `/giki2`, `/giki2/volunteers`, `/giki2/wa`; `server.GIKI_PAGES` maps page -> line.
 - The Volunteers screen for the Giki list, with its own WhatsApp (a second device in the same gateway). Page: `server.py` `reply_giki_ui` + `giki.js` + `giki.css` (only loaded there); list, message, batch and timer: `giki_line.py`; the device (connect by code or QR, status, logout): `wa_lines.py`.
 - A send for the Giki list carries `line: "giki"`; `send_custom` then runs inside `on_line()` and every gateway call uses `device()`. A line with no device sends nothing; it never falls back to the main WhatsApp. The launcher never takes a `giki-` device (or the Giki number) as the main one. Render wipes the disk on deploy; `gateway_registry.py` saves the gateway's device list (names to logins) in the DB and puts it back before the gateway starts, so the Giki link survives deploys.
 - DM Case reads the Group msgs text at the click (with today's amount) and sends the PDF / video exactly when they are on for the group message. The Timer sheet (gap, batch, rest) is the Case page sheet and is what DM all uses.

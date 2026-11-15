@@ -2,6 +2,8 @@
    specific to the Giki WhatsApp: its connect button, the Timer sheet, Add many, and "stay on this screen". */
 (() => {
   const $ = (id) => document.getElementById(id);
+  const BASE = window.GIKI_BASE || '/giki'; // /giki or /giki2: each page has its own list and WhatsApp
+  const TITLE = window.GIKI_TITLE || 'Giki';
   const make = (tag, cls, text) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -108,7 +110,7 @@
   const bar = make('div', 'giki-bar');
   const chip = btn('', 'giki-chip', () => connectSheet());
   chip.id = 'gikiWa';
-  bar.append(make('h1', 'giki-title', 'Giki'), chip);
+  bar.append(make('h1', 'giki-title', TITLE), chip);
   function paintChip() {
     const ready = line.state === 'ready';
     chip.dataset.ok = ready ? '1' : '0';
@@ -133,7 +135,7 @@
   }
   async function refreshLine() {
     try {
-      line = (await call('/giki/wa')).line || line;
+      line = (await call(BASE + '/wa')).line || line;
     } catch (e) {
       line = { ...line, state: line.state === 'ready' ? 'ready' : 'unknown' };
     }
@@ -203,7 +205,7 @@
       getCode.disabled = true;
       $('csError').textContent = '';
       try {
-        const d = await call('/giki/wa', { action: 'code', phone: phone.value });
+        const d = await call(BASE + '/wa', { action: 'code', phone: phone.value });
         code.textContent = d.code;
         code.hidden = steps.hidden = false;
         getCode.textContent = 'Get a new code';
@@ -230,7 +232,7 @@
       showQr.disabled = true;
       $('csError').textContent = '';
       try {
-        const d = await call('/giki/wa', { action: 'qr' });
+        const d = await call(BASE + '/wa', { action: 'qr' });
         qrImg.src = d.qr;
         qrImg.hidden = false;
         qrUntil = Date.now() + Math.max(1, Number(d.duration) || 30) * 1000;
@@ -255,7 +257,7 @@
     const drop = btn('Reconnect', 'cr-more gk-wide', async () => {
       drop.disabled = true;
       try {
-        await call('/giki/wa', { action: 'reconnect' });
+        await call(BASE + '/wa', { action: 'reconnect' });
       } catch (e) {
         $('csError').textContent = e.message;
       }
@@ -313,7 +315,7 @@
                     )
                   )
                     return false;
-                  await call('/giki/wa', { action: 'logout', confirm: true });
+                  await call(BASE + '/wa', { action: 'logout', confirm: true });
                   await paint();
                   return false;
                 },
@@ -336,10 +338,10 @@
   async function timerSheet(tab = 'timing') {
     const body = make('div', 'cr-sum'),
       loading = make('p', 'cr-sub', 'Loading…');
-    openSheet('Giki', loading, [['Close', 'cr-soft', null]]);
+    openSheet(TITLE, loading, [['Close', 'cr-soft', null]]);
     let view;
     try {
-      view = await call('/giki/volunteers');
+      view = await call(BASE + '/volunteers');
     } catch (e) {
       $('csError').textContent = e.message;
       return;
@@ -494,7 +496,7 @@
         async () => {
           const pace = { action: 'pace' };
           for (const [n, i] of Object.entries(inputs)) pace[n] = Number(i.value);
-          await call('/giki/volunteers', pace);
+          await call(BASE + '/volunteers', pace);
           changed();
           say('Timer saved. DM all uses it.');
         },
@@ -515,7 +517,7 @@
         'Save',
         'cr-go',
         async () => {
-          await call('/giki/volunteers', { action: 'message', text: ta.value });
+          await call(BASE + '/volunteers', { action: 'message', text: ta.value });
           /* the (hidden) box on the page is what DM Case and DM all read: keep it the same as what was saved */
           const box = $('volMessage');
           if (box) box.value = ta.value.trim();
@@ -564,7 +566,7 @@
     };
     body.append(pick, ta, result);
     const check = async () => {
-      const d = await call('/giki/volunteers', { action: 'import', text: ta.value, dry_run: true });
+      const d = await call(BASE + '/volunteers', { action: 'import', text: ta.value, dry_run: true });
       checked = ta.value;
       result.textContent =
         d.found +
@@ -578,7 +580,7 @@
       foot(d.added);
     };
     const add = async () => {
-      const d = await call('/giki/volunteers', { action: 'import', text: checked });
+      const d = await call(BASE + '/volunteers', { action: 'import', text: checked });
       changed();
       say(d.reply);
     };
@@ -611,7 +613,7 @@
     button.disabled = true;
     button.textContent = 'Sending…';
     try {
-      const r = await call('/giki/volunteers', { action: 'test', text: box ? box.value : '' });
+      const r = await call(BASE + '/volunteers', { action: 'test', text: box ? box.value : '' });
       say(r.reply);
       watchTest(button);
     } catch (e) {
@@ -628,7 +630,7 @@
     const look = async () => {
       let t = null;
       try {
-        t = ((await call('/giki/wa')).line || {}).test;
+        t = ((await call(BASE + '/wa')).line || {}).test;
       } catch (e) {}
       if (t && t.state === 'done') return say(t.note || 'Test sent.');
       if (t && t.state === 'failed') return say(t.note || 'The test was not confirmed.', true);

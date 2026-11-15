@@ -295,15 +295,22 @@ class GikiVolunteers(Volunteers):
     def add_test_people(self):
         """Ahmad test and Zain test, added once at the top (with the owner's list; not in previews or tests).
         Removed later, they stay removed."""
-        store, path = self.app.STORE, self.seed_path()
-        if not store or not path or not path.is_file() or store.get("giki_test_people"):
+        store = self.app.STORE
+        if not store or not self.test_people_on() or store.get(self.TEST_FLAG):
             return
         with self.lock:
-            if store.get("giki_test_people"):
+            if store.get(self.TEST_FLAG):
                 return
             for name, phone in TEST_PEOPLE:
                 self.book.add(name, phone, source="Giki test: goes to the GiveLife test group")
-            store.put("giki_test_people", {"time": time.time()})
+            store.put(self.TEST_FLAG, {"time": time.time()})
+
+    TEST_FLAG = "giki_test_people"
+
+    def test_people_on(self):
+        """With the owner's list (not in previews or tests)."""
+        path = self.seed_path()
+        return bool(path and path.is_file())
 
     def waiting_ids(self, skip=True):
         """Who DM all would message now: everyone, minus those already messaged for this case."""
@@ -472,7 +479,7 @@ class GikiVolunteers(Volunteers):
         import group_extras  # the Test sends the 2nd / 3rd messages with the case itself
 
         extras = group_extras.extras_for(self.app.STORE, "giki")
-        return self.app.start_giki_test(case, share, **extras)  # answers at once
+        return self.app.start_giki_test(case, share, **extras, line=self.LINE)  # answers at once
 
     def case_text(self):
         """DM Case sends exactly what the groups send: the message set in Group msgs, with today's amount. It is read
@@ -581,3 +588,31 @@ class GikiVolunteers(Volunteers):
                 + "."
             ),
         }
+
+
+# ------------------------------------------------------------------------------------------------ Giki 2
+class Giki2Book(GikiBook):
+    KEY = "giki2_book"
+    FILE = "giki2-book.json"
+
+
+class Giki2Delivery(GikiDelivery):
+    KEY = "giki2_delivery"
+    FILE = "giki2-delivery.json"
+    CLAIM = "giki2_batch_request_"
+
+
+class Giki2Volunteers(GikiVolunteers):
+    """The Giki 2 page: the very same page and messages as Giki (share message, case, Timer and the 2nd / 3rd
+    messages are shared), with its own people, its own batches and its own WhatsApp (line "giki2")."""
+
+    BOOK = Giki2Book
+    DELIVERY = Giki2Delivery
+    LINE = "giki2"
+    TEST_FLAG = "giki2_test_people"
+
+    def seed_path(self):
+        return None  # its people are added on the page (+ Add, Add many)
+
+    def test_people_on(self):
+        return os.environ.get("GIKI_SEED_FILE") != ""  # Ahmad test / Zain test on top (not in previews or tests)

@@ -9,7 +9,7 @@
     };
   /* /giki: the same Volunteers screen, pointed at the Giki list and the Giki WhatsApp (see giki.js). */
   const GIKI = !!window.GIKI_LINE,
-    VOL = GIKI ? '/giki/volunteers' : '/volunteers';
+    VOL = GIKI ? (window.GIKI_BASE || '/giki') + '/volunteers' : '/volunteers';
   const page = make('dialog', 'donor-page');
   page.id = 'donorsPage';
   page.setAttribute('aria-label', 'Donor Hub');

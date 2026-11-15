@@ -48,7 +48,18 @@ class Cases:
             "jobs": h.jobs.export_jobs(),
             "vjobs": h.volunteers.jobs.export_jobs(),
             **(
-                {"giki": h.giki.book.export_case_fields(), "gjobs": h.giki.jobs.export_jobs()}
+                {
+                    "giki": h.giki.book.export_case_fields(),
+                    "gjobs": h.giki.jobs.export_jobs(),
+                    **(
+                        {
+                            "giki2": h.giki2.book.export_case_fields(),
+                            "g2jobs": h.giki2.jobs.export_jobs(),
+                        }
+                        if getattr(h, "giki2", None)
+                        else {}
+                    ),
+                }
                 if getattr(h, "giki", None)
                 else {}
             ),
@@ -102,6 +113,9 @@ class Cases:
             if getattr(h, "giki", None):  # the Giki list has "messaged" marks for each case too
                 h.giki.book.import_case_fields(snap.get("giki"))
                 h.giki.jobs.import_jobs(snap.get("gjobs"))
+            if getattr(h, "giki2", None):
+                h.giki2.book.import_case_fields(snap.get("giki2"))
+                h.giki2.jobs.import_jobs(snap.get("g2jobs"))
             bank = snap.get("bank")
             media = snap
         else:
@@ -121,6 +135,9 @@ class Cases:
             if getattr(h, "giki", None):
                 h.giki.book.import_case_fields(None)
                 h.giki.jobs.import_jobs(None)
+            if getattr(h, "giki2", None):
+                h.giki2.book.import_case_fields(None)
+                h.giki2.jobs.import_jobs(None)
             bank = None
             media = {}
             a.regenerate_drafts(left, case_name)
@@ -170,6 +187,7 @@ class Cases:
             self.hub.jobs.active
             or self.hub.volunteers.jobs.active
             or (getattr(self.hub, "giki", None) and self.hub.giki.jobs.active)
+            or (getattr(self.hub, "giki2", None) and self.hub.giki2.jobs.active)
             or (getattr(self.hub, "thanks", None) and self.hub.thanks.active)
         ):
             raise ValueError("A DM batch is still running. Pause it first, then change the case.")

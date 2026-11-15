@@ -5,7 +5,7 @@ device, nothing is sent. The device id is created once, saved, and reused after 
 
 import base64, json, re, threading, urllib.error, urllib.parse, urllib.request, uuid
 
-PREFIX = {"giki": "giki-"}
+PREFIX = {"giki": "giki-", "giki2": "giki2-"}  # the Giki page and the Giki 2 page
 
 
 class LineError(ValueError):

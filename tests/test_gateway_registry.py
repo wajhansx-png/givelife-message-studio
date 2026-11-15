@@ -145,5 +145,46 @@ class MainDeviceTest(unittest.TestCase):
         self.assertEqual(store["wa_line_giki"]["number"], "923000000002")
 
 
+class WakeAfterRestartTest(unittest.TestCase):
+    """After a restart the gateway keeps a second WhatsApp's login asleep until it is asked to reconnect."""
+
+    def line(self, record, session=True):
+        self.calls, self.awake, self.session = [], False, session  # session: the gateway still keeps a login
+        store = Store({"wa_line_giki2": record})
+
+        def call(method, path, device="", body=None, timeout=15, raw=False):
+            self.calls.append((method, path))
+            if path.endswith("/logout"):
+                self.session = self.awake = False
+                return {"results": {}}
+            if path.endswith("/reconnect"):
+                self.awake = self.session
+                return {"results": {}}
+            if path.endswith("/status"):
+                return {"results": {"is_connected": self.awake, "is_logged_in": self.awake}}
+            return {"results": {"jid": "923000000009:4@s.whatsapp.net" if self.session else ""}}
+
+        return wa_lines.Line("giki2", store, "http://gw", call=call), store
+
+    def test_a_linked_whatsapp_is_woken_and_reads_ready(self):
+        line, _ = self.line({"device": "giki2-abc", "number": "923000000009"})
+        self.assertEqual(line.status()["state"], "ready")
+        self.assertIn(("POST", "/devices/giki2-abc/reconnect"), self.calls)
+
+    def test_never_linked_or_disconnected_on_purpose_is_not_woken(self):
+        line, _ = self.line({"device": "giki2-abc"}, session=False)  # never linked
+        self.assertEqual(line.status()["state"], "unlinked")
+        self.assertNotIn(("POST", "/devices/giki2-abc/reconnect"), self.calls)
+
+    def test_a_login_the_gateway_keeps_is_woken_even_without_a_saved_number(self):
+        line, _ = self.line({"device": "giki2-abc"})
+        self.assertEqual(line.status()["state"], "ready")
+
+    def test_logout_forgets_the_number(self):
+        line, store = self.line({"device": "giki2-abc", "number": "923000000009"})
+        line.logout()
+        self.assertNotIn("number", store["wa_line_giki2"])
+
+
 if __name__ == "__main__":
     unittest.main()

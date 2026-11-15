@@ -292,9 +292,14 @@ class DonorDelivery:
         origin=None,
         pdf=False,
         video=False,
+        after=None,
     ):
         if type(pdf) is not bool or type(video) is not bool:
             raise ValueError("PDF and video must be on or off.")
+        if after is not None and (
+            not isinstance(after, list) or any(k not in self.EXTRA_LABEL for k in after)
+        ):
+            raise ValueError("Choose the Poster pic, PDF or Video for the messages after the case.")
         if follow_up is not None and (
             not isinstance(follow_up, str) or not follow_up.strip() or len(follow_up) > 2000
         ):
@@ -382,6 +387,7 @@ class DonorDelivery:
                     origin,
                     fresh,
                     *([pdf, video] if pdf or video else []),
+                    *([after] if after is not None else []),
                 ],
                 sort_keys=True,
             ).encode()
@@ -712,6 +718,8 @@ class DonorDelivery:
                 job["pdf"] = True  # the case's PDF follows each DM (poster + caption first)
             if video:
                 job["video"] = True  # then its video
+            if after is not None:
+                job["after"] = list(after)  # Giki: the 2nd / 3rd messages, each its own recorded step
             if owner:
                 job["owner"] = str(owner)[:40]  # which Reports > Auto control started this batch
             if attachment:
@@ -908,14 +916,20 @@ class DonorDelivery:
         word = "Sister" if gender == "Sister" else "" if gender == "Neutral" and name else "Bhai"
         return template.replace("{name}", (name + " " + word).strip() if name else word or "Bhai")
 
-    EXTRA_LABEL = {"pdf": "PDF", "video": "video"}
+    EXTRA_LABEL = {"pdf": "PDF", "video": "video", "poster": "poster picture"}
+
+    @staticmethod
+    def _after_kinds(j):
+        """What follows the first message, in order: the Giki 2nd / 3rd messages, or the DM video then PDF."""
+        if "after" in j:
+            return list(j["after"])
+        return [k for k in ("video", "pdf") if j.get(k)]
 
     def _send_extras(self, j, r, name, gender, receipts, sent, skipped):
         """After the DM (poster + caption) was confirmed: the case's PDF, then its video, only those ticked for this
         batch. Never retried; one that is not confirmed stops the next one and the batch (check WhatsApp)."""
-        for kind in ("video", "pdf"):  # same order as the groups: the video, then the PDF
-            if not j.get(kind):
-                continue
+        steps = receipts[-1].setdefault("steps", {}) if receipts else {}
+        for kind in self._after_kinds(j):  # DMs: the video, then the PDF; Giki: the 2nd, then the 3rd
             if self.held():  # Stop lets this person finish; only a hold (wrong WhatsApp) cuts it
                 return "Cancelled", ""
             if not self.eligible(r["phone"]):
@@ -937,16 +951,121 @@ class DonorDelivery:
                     sent,
                     skipped,
                     finish=True,
+                    before=lambda: self._mark(j, receipts, steps, kind, "Sending"),
                 )
             except ValueError as e:
+                self._mark(j, receipts, steps, kind, "Not sent")
                 return "Not sent", hide_numbers(e)
             except Exception:
+                self._mark(j, receipts, steps, kind, "Uncertain")
                 return "Uncertain", f"The {self.EXTRA_LABEL[kind]} was not confirmed. Check WhatsApp. No automatic retry."
             if res is None:
+                self._mark(j, receipts, steps, kind, "Cancelled")
                 return "Cancelled", ""
             if not isinstance(res, dict) or res.get("code") != "SUCCESS":
+                self._mark(j, receipts, steps, kind, "Uncertain")
                 return "Uncertain", f"The {self.EXTRA_LABEL[kind]} was not confirmed. Check WhatsApp. No automatic retry."
+            self._mark(j, receipts, steps, kind, "Sent")
         return "Sent", ""
+
+    REDO = (None, "Not sent", "Cancelled")  # never went: safe to send. "Sending" / "Uncertain" may have: never again
+
+    def _todo(self, j, receipt):
+        """What a person whose first message went still needs: ([after kinds], share message?)."""
+        if receipt.get("state") != "Sent":
+            return [], False
+        steps = receipt.get("steps") or {}
+        kinds = [k for k in self._after_kinds(j) if steps.get(k) in self.REDO]
+        if "steps" not in receipt and "after" not in j and receipt.get("extras") not in self.REDO:
+            kinds = []  # an older receipt: its files were sent together, as one step
+        share = bool(j.get("follow_up")) and receipt.get("follow_up") in self.REDO
+        return kinds, share
+
+    def half_sent(self):
+        """People from batches of the last 36 hours that a Stop, a refusal or a restart left half-sent."""
+        out = []
+        for j in self.export_jobs().get("jobs", []):
+            if j.get("state") in ("Starting", "Sending", "Waiting") or (
+                time.time() - j.get("updated_at", 0) > self.AUTO_WINDOW
+            ):
+                continue
+            for receipt in j.get("receipts", []):
+                kinds, share = self._todo(j, receipt)
+                if kinds or share:
+                    out.append((j, receipt, kinds, share))
+        return out
+
+    def finish_half_sent(self):
+        """Send each half-sent person only what they are missing (2nd, 3rd, share message), in order. Something
+        that may already have gone is never sent again. Returns how many people were finished."""
+        finished = 0
+        for j, receipt, kinds, share in self.half_sent():
+            if self.held() or not self.connected():
+                break
+            try:
+                r = self.book.resolve(receipt["id"])
+            except ValueError:
+                continue
+            if not self.eligible(r["phone"]):
+                continue
+            name, gender = (j.get("personal_names") or {}).get(receipt["id"]) or self.name_for(
+                r if r.get("dm_salutation") else r["name"]
+            )
+            steps = receipt.setdefault("steps", {})
+            receipts = j["receipts"]
+            ok = True
+            for kind in kinds:
+                steps[kind] = "Sending"
+                self._update(j["id"], receipts=receipts)
+                state = self._send_now(
+                    {"target": "phone", "phone": r["phone"], "message": "", "poster": False,
+                     "kind": "dm_extra", "extra": kind, "name": name, "gender": gender}
+                )
+                steps[kind] = state
+                self._update(j["id"], receipts=receipts)
+                if state != "Sent":
+                    ok = False
+                    break
+            if ok and share:
+                receipt["follow_up"] = "Sending"
+                self._update(j["id"], receipts=receipts)
+                state = self._send_now(
+                    {"target": "phone", "phone": r["phone"],
+                     "message": self.follow_text(j["follow_up"], name, gender), "poster": False,
+                     "kind": "owner_text", "attachment": None, "first_in_batch": False,
+                     "name": name, "gender": gender}
+                )
+                receipt["follow_up"] = state
+                self.book.follow_up(receipt["id"], state)
+                self._update(j["id"], receipts=receipts)
+                ok = state == "Sent"
+            finished += ok
+        return finished
+
+    def _send_now(self, body):
+        """One repair send: a short blip of WhatsApp is waited out (a minute); anything unclear is never retried."""
+        deadline = time.time() + 60
+        while True:
+            try:
+                res = self.send(body)
+            except ValueError as e:
+                if str(e).startswith(self.TRANSIENT) and time.time() < deadline:
+                    time.sleep(3)
+                    continue
+                return "Not sent"
+            except Exception:
+                return "Uncertain"
+            return "Sent" if isinstance(res, dict) and res.get("code") == "SUCCESS" else "Uncertain"
+
+    def _mark_follow(self, j, receipts, state):
+        if receipts:
+            receipts[-1]["follow_up"] = state
+            self._update(j["id"], receipts=receipts)
+
+    def _mark(self, j, receipts, steps, kind, state):
+        """Record one step of a person's sequence at once, so after a restart it is known exactly what went."""
+        steps[kind] = state
+        self._update(j["id"], receipts=receipts)
 
     def _send_follow_up(self, j, r, name, gender, receipts, sent, skipped):
         """Only after the poster DM was confirmed. Never retried; an uncertain follow-up stops the batch. Stop lets
@@ -973,6 +1092,7 @@ class DonorDelivery:
                 sent,
                 skipped,
                 finish=True,
+                before=lambda: self._mark_follow(j, receipts, "Sending"),
             )
         except ValueError as e:
             return "Not sent", hide_numbers(e)
@@ -1014,7 +1134,7 @@ class DonorDelivery:
             time.sleep(min(seconds, 2))
         return False
 
-    def _dispatch(self, j, body, receipts, sent, skipped, finish=False):
+    def _dispatch(self, j, body, receipts, sent, skipped, finish=False, before=None):
         """Send one DM. Waits for WhatsApp / storage to come back instead of giving up (30 min; 3 min while
         finishing a person whose case already went)."""
         deadline = time.time() + (180 if finish else 1800)
@@ -1038,6 +1158,8 @@ class DonorDelivery:
                         return None
             if self.stop.is_set() and not finish:
                 return None
+            if before:
+                before()
             try:
                 result = self.send(body)
             except ValueError as e:
@@ -1226,6 +1348,7 @@ class DonorDelivery:
                             "kind": "owner_text" if "custom_template" in j else self.KIND,
                             "attachment": j.get("attachment"),
                             "first_in_batch": sent == 0,
+                            "after_steps": "after" in j,
                             "name": name,
                             "gender": gender,
                         },
@@ -1298,7 +1421,7 @@ class DonorDelivery:
                     }
                 )
                 self._update(j["id"], sent=sent, skipped=skipped, receipts=receipts)
-                if j.get("pdf") or j.get("video"):
+                if self._after_kinds(j):
                     ex, ex_error = self._send_extras(j, r, name, gender, receipts, sent, skipped)
                     receipts[-1]["extras"] = ex
                     last_completion = time.time()
@@ -1374,6 +1497,12 @@ class DonorDelivery:
     def recover(self, allow_stopped=False):
         """After a restart, carry on with a batch the owner already confirmed. People sent, unconfirmed or caught
         mid-send are skipped, so nobody gets a second DM. Returns the started job or None."""
+        if self.REPAIR_AFTER_RESTART and not self.active:
+            try:
+                self.status()
+                self.finish_half_sent()  # first the person a restart cut in the middle of their messages
+            except Exception:
+                traceback.print_exc()
         with self.lock:
             self.status()
             jobs = self._load().get("jobs", [])
@@ -1429,6 +1558,8 @@ class DonorDelivery:
             args["pdf"] = True
         if j.get("video"):
             args["video"] = True
+        if "after" in j:
+            args["after"] = list(j["after"])
         if j.get("owner"):
             args["owner"] = j["owner"]
         if j.get("origin"):
@@ -1443,6 +1574,7 @@ class DonorDelivery:
         return self.start(**args, request_id="auto-" + uuid.uuid4().hex)
 
     AUTO_WINDOW = 36 * 3600
+    REPAIR_AFTER_RESTART = False  # True: lists whose people get a sequence (Volunteers, Giki)
     shutting_down = False  # set by the server's shutdown (a deploy): see server.graceful_exit
     NAMES_AT_SEND = False  # True: a picked-people batch needs no pasted names to carry on after a restart
     UNCERTAIN_STOP = 3  # consecutive unconfirmed deliveries before a batch pauses

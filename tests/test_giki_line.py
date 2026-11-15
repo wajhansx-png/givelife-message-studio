@@ -66,6 +66,8 @@ class Fixture(unittest.TestCase):
                     "video": any(k == "video" for k, _ in self.on),
                 },
             ),
+            # the Giki 2nd / 3rd messages, in the Timer's order
+            patch("group_extras.after_items", side_effect=lambda store, profile: list(self.on)),
         ]
         self.on = []
         for p in self.patches:
@@ -216,7 +218,9 @@ class GikiList(Fixture):
         self._stopped_after_first()
         jobs = self.g.jobs._load()
         first = jobs["jobs"][-1]["receipts"][0]
-        first["follow_up"] = "Cancelled"  # how the old code left a person: case sent, share cut by Stop
+        first["follow_up"] = (
+            "Cancelled"  # how the old code left a person: case sent, share cut by Stop
+        )
         self.g.jobs._save(jobs)
         self.g.book.follow_up(first["id"], "Cancelled")
         self.sent.clear()
@@ -231,6 +235,36 @@ class GikiList(Fixture):
         self.assertEqual((job["state"], job["sent"]), ("Completed", 2))
         self.assertEqual(len(self.sent), 5)  # + case and share for the 2 still waiting
         self.assertEqual(self.g.view()["resumable"], 0)
+
+    def test_a_restart_in_the_middle_of_a_person_sends_only_what_they_are_missing(self):
+        self.on = [("video", "b" * 32), ("pdf", "a" * 32)]  # 2nd: video, 3rd: PDF
+        for i in range(2):
+            self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share this."})
+        self.go(self.g, {"action": "send_all", "request_id": "r-mid", "poster": False})
+        self.run_job(self.g.jobs)
+        self.assertEqual(len(self.sent), 8)  # 2 people x (case, video, PDF, share)
+        # as a restart leaves it: person 0 got the case and the video was being uploaded; person 1 only the case
+        jobs = self.g.jobs._load()
+        j = jobs["jobs"][-1]
+        j.update(state="Interrupted", boot="an-older-boot")
+        j["receipts"][0].update(steps={"video": "Sending"}, follow_up=None)
+        j["receipts"][1].update(steps={}, follow_up=None)
+        self.g.jobs._save(jobs)
+        self.sent.clear()
+        self.assertEqual(len(self.g.jobs.half_sent()), 2)
+        self.assertEqual(self.g.jobs.finish_half_sent(), 2)
+        got = [
+            (b["phone"][-1], b.get("extra") or ("share" if not b["poster"] else "case"))
+            for b in self.sent
+        ]
+        # person 0: the video may have gone, so it is never sent again; the PDF and the share go
+        # person 1: the video, the PDF, then the share; nobody gets the case twice
+        self.assertEqual(
+            got, [("0", "pdf"), ("0", "share"), ("1", "video"), ("1", "pdf"), ("1", "share")]
+        )
+        self.assertEqual(self.g.jobs.half_sent(), [])  # done: nothing is sent a second time
+        self.assertEqual(self.g.jobs.finish_half_sent(), 0)
 
     def test_a_restart_carries_on_a_giki_batch_by_itself(self):
         self._stopped_after_first()
@@ -263,7 +297,7 @@ class GikiList(Fixture):
         self.assertEqual(len(self.sent), 6)  # 3 people x (case + share), nobody twice
 
     def test_dm_all_puts_the_pdf_and_video_between_the_case_and_the_share_message(self):
-        self.on = [("pdf", "a" * 32), ("video", "b" * 32)]
+        self.on = [("video", "b" * 32), ("pdf", "a" * 32)]  # 2nd: video, 3rd: PDF
         self.g.mutate({"action": "add", "name": "Sara Giki", "phone": "0300 2000002"})
         self.g.mutate({"action": "message", "text": "Share this {name}"})
         self.go(self.g, {"action": "send_all", "request_id": "r2"})
@@ -397,7 +431,7 @@ class GikiDmCase(Fixture):
         self.assertEqual(body["line"], "giki")
 
     def test_dm_case_sends_the_pdf_and_the_video_only_when_they_are_on(self):
-        self.on = [("pdf", "a" * 32), ("video", "b" * 32)]
+        self.on = [("video", "b" * 32), ("pdf", "a" * 32)]
         self.start()
         self.assertEqual(
             [(b["kind"], b.get("extra")) for b in self.sent],

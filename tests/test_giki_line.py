@@ -159,6 +159,24 @@ class GikiList(Fixture):
         self.run_job(self.g.jobs)
         self.assertEqual([(s["message"], s["poster"]) for s in self.sent], [(self.case, True)])
 
+    def test_a_short_giki_whatsapp_drop_is_waited_out_and_the_batch_goes_on(self):
+        for i in range(3):
+            self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share this."})
+        drops = [2]  # the case and the share message of the first person each meet one drop
+
+        def flaky(body):
+            if drops[0] and len(self.sent) in (0, 1):
+                drops[0] -= 1
+                raise ValueError("The Giki WhatsApp is disconnected. Tap Connect WhatsApp.")
+            return self.send(body)
+
+        self.g.jobs.send = flaky
+        self.go(self.g, {"action": "send_all", "request_id": "r-drop", "poster": False})
+        job = self.run_job(self.g.jobs)
+        self.assertEqual((job["state"], job.get("error", "")), ("Completed", ""))
+        self.assertEqual(len(self.sent), 6)  # 3 people x (case + share), nobody twice
+
     def test_dm_all_puts_the_pdf_and_video_between_the_case_and_the_share_message(self):
         self.on = [("pdf", "a" * 32), ("video", "b" * 32)]
         self.g.mutate({"action": "add", "name": "Sara Giki", "phone": "0300 2000002"})

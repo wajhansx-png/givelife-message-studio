@@ -1121,3 +1121,35 @@ class GikiTwoMove(Fixture):
         self.assertTrue(self.store.get("giki2_all_waiting_v1"))
         g2.book.delivery(moved_id := v2["items"][0]["id"], "Sent")  # a later send stays: the reset is once only
         self.assertTrue(next(x for x in g2.view()["items"] if x["id"] == moved_id)["dmed"])
+
+
+class GikiToWaiting(Fixture):
+    def test_a_dmed_person_goes_back_to_waiting_and_resume_never_doubles_them(self):
+        self.g.mutate({"action": "add", "name": "Areeba Malik Giki", "phone": "0300 2000001"})
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share."})
+        self.go(self.g, {"action": "send_all", "request_id": "w1", "poster": False})
+        self.run_job(self.g.jobs)
+        areeba = self.g.view()["items"][0]
+        self.assertTrue(areeba["dmed"])
+        jobs = self.g.jobs._load()
+        jobs["jobs"][-1]["receipts"][0]["follow_up"] = "Not sent"  # a half-sent record from before
+        self.g.jobs._save(jobs)
+        r = self.g.mutate({"action": "to_waiting", "id": areeba["id"]})
+        self.assertIn("back in Waiting", r["reply"])
+        view = self.g.view()
+        self.assertFalse(view["items"][0]["dmed"])
+        self.assertEqual(view["waiting"], 1)
+        self.assertEqual(self.g.jobs.half_sent(), [])  # Resume adds nothing on top of the full resend
+
+
+class GikiOneRemovesTheMoved(Fixture):
+    def test_opening_giki_first_also_takes_the_chosen_people_off_it(self):
+        from giki_line import Giki2Volunteers
+
+        for name, phone in (("Hajira Giki Donor 500", "0300 2000001"), ("Faris Giki Donor", "0300 2000002")):
+            self.g.mutate({"action": "add", "name": name, "phone": phone})
+        g2 = Giki2Volunteers(self.g.app, lambda phone: True)
+        g2.source, self.g.partner = self.g, g2
+        self.assertEqual([x["name"] for x in self.g.view()["items"]], ["Faris Giki Donor"])
+        with patch.dict(os.environ, {"GIKI_SEED_FILE": ""}):
+            self.assertEqual([x["name"] for x in g2.view()["items"]], ["Hajira Giki Donor 500"])

@@ -591,6 +591,23 @@ class GikiVolunteers(Volunteers):
 
 
 # ------------------------------------------------------------------------------------------------ Giki 2
+# The people the owner moved from Giki to Giki 2 (15 Nov). Ramsha Khan Donor Gikii had no number: added on the page.
+MOVE_TO_GIKI2 = {
+    "Emaan Giki 500 Donor",
+    "Muarij Donor Giki",
+    "Anas Giki 140",
+    "Hamza 399 Giki",
+    "minahil★ Giki",
+    "Giki 500 Girl",
+    "Areeba Malik Giki",
+    "Ali Donor Giki",
+    "warfansameekhan Giki 500 Donor",
+    "Haris Giki 1500",
+    "Hajira Giki Donor 500",
+}
+MOVE_FLAG = "giki2_moved_v1"
+CASE_MARKS = ("dm_sent", "delivery", "last_sent_at", "sent_count", "follow_up_state", "follow_up_at", "last_dm_key")
+
 class Giki2Book(GikiBook):
     KEY = "giki2_book"
     FILE = "giki2-book.json"
@@ -611,8 +628,39 @@ class Giki2Volunteers(GikiVolunteers):
     LINE = "giki2"
     TEST_FLAG = "giki2_test_people"
 
+    source = None  # the Giki list, set by the donors hub: the people moved from it come from there
+
     def seed_path(self):
         return None  # its people are added on the page (+ Add, Add many)
+
+    def view(self, query=""):
+        self.move_from_giki()
+        return super().view(query)
+
+    def move_from_giki(self):
+        """Once: the people the owner chose (MOVE_TO_GIKI2) leave the Giki list for Giki 2, with their numbers and
+        their "already messaged" marks for this case, so nobody gets the same DMs from both WhatsApps. Waits while a
+        Giki batch is sending."""
+        store, src = self.app.STORE, self.source
+        if not store or src is None or store.get(MOVE_FLAG) or src.jobs.active:
+            return
+        with self.lock:
+            if store.get(MOVE_FLAG):
+                return
+            moved = []
+            for r in src.book._load()["records"]:
+                if r.get("deleted") or r.get("name") not in MOVE_TO_GIKI2 or not r.get("phone"):
+                    continue
+                self.book.add(r["name"], r["phone"], source="Moved from Giki")
+                data = self.book._load()
+                mine = next(x for x in data["records"] if x["phone"] == r["phone"])
+                for key in CASE_MARKS:  # this case's marks travel with them: never messaged twice
+                    if key in r:
+                        mine[key] = r[key]
+                self.book._save(data)
+                src.book.delete(r["id"])
+                moved.append(r["name"])
+            store.put(MOVE_FLAG, {"moved": moved, "time": time.time()})
 
     def test_people_on(self):
         return os.environ.get("GIKI_SEED_FILE") != ""  # Ahmad test / Zain test on top (not in previews or tests)

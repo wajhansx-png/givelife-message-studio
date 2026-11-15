@@ -63,6 +63,7 @@ class DonorIntegration:
             app, self.eligible
         )  # its own people, message, batch and WhatsApp
         self.giki2 = Giki2Volunteers(app, self.eligible)  # Giki 2: same messages, own people and WhatsApp
+        self.giki2.source = self.giki  # the people the owner moved come from the Giki list
         from team_tasks import TeamTasks
 
         self.team = TeamTasks(app)

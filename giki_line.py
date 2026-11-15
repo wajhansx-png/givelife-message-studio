@@ -606,6 +606,7 @@ MOVE_TO_GIKI2 = {
     "Hajira Giki Donor 500",
 }
 MOVE_FLAG = "giki2_moved_v1"
+WAITING_FLAG = "giki2_all_waiting_v1"
 CASE_MARKS = ("dm_sent", "delivery", "last_sent_at", "sent_count", "follow_up_state", "follow_up_at", "last_dm_key")
 
 class Giki2Book(GikiBook):
@@ -635,7 +636,20 @@ class Giki2Volunteers(GikiVolunteers):
 
     def view(self, query=""):
         self.move_from_giki()
+        self.all_waiting_once()
         return super().view(query)
+
+    def all_waiting_once(self):
+        """Once, after the move (the owner asked, 15 Nov): everyone on Giki 2 back to Waiting, so DM all here sends
+        to them from the Giki 2 WhatsApp. Never while Giki 2 is sending."""
+        store = self.app.STORE
+        if not store or not store.get(MOVE_FLAG) or store.get(WAITING_FLAG) or self.jobs.active:
+            return
+        with self.lock:
+            if store.get(WAITING_FLAG):
+                return
+            self.book.import_case_fields(None)  # this case's marks back to the start: not messaged
+            store.put(WAITING_FLAG, {"time": time.time()})
 
     def move_from_giki(self):
         """Once: the people the owner chose (MOVE_TO_GIKI2) leave the Giki list for Giki 2, with their numbers and

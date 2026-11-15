@@ -1115,7 +1115,9 @@ class GikiTwoMove(Fixture):
             g2.view()  # once only
         self.assertEqual(sorted(x["name"] for x in v2["items"]), ["Areeba Malik Giki", "Haris Giki 1500"])
         self.assertEqual([x["name"] for x in self.g.view()["items"]], ["Faris Giki Donor"])
-        moved = {x["name"]: x for x in v2["items"]}
-        self.assertTrue(moved["Areeba Malik Giki"]["dmed"])  # not sent the same case again from Giki 2
-        self.assertFalse(moved["Haris Giki 1500"]["dmed"])
-        self.assertEqual(v2["waiting"], 1)
+        # then, once, everyone on Giki 2 is back to Waiting (the owner asked): Areeba too
+        self.assertFalse(any(x["dmed"] for x in v2["items"]))
+        self.assertEqual(v2["waiting"], 2)
+        self.assertTrue(self.store.get("giki2_all_waiting_v1"))
+        g2.book.delivery(moved_id := v2["items"][0]["id"], "Sent")  # a later send stays: the reset is once only
+        self.assertTrue(next(x for x in g2.view()["items"] if x["id"] == moved_id)["dmed"])

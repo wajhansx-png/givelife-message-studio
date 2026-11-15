@@ -193,6 +193,45 @@ class GikiList(Fixture):
         with self.assertRaisesRegex(ValueError, "Nothing to resume"):
             self.g.mutate({"action": "resume"})
 
+    def test_stop_right_after_a_case_still_sends_that_persons_share_message(self):
+        for i in range(3):
+            self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share this."})
+
+        def stop_after_case(body):
+            out = self.send(body)
+            if len(self.sent) == 1:  # Stop pressed the moment the first case went
+                self.g.jobs.stop.set()
+            return out
+
+        self.g.jobs.send = stop_after_case
+        self.go(self.g, {"action": "send_all", "request_id": "r-cut", "poster": False})
+        job = self.run_job(self.g.jobs)
+        self.assertEqual((job["state"], job["sent"]), ("Stopped", 1))
+        self.assertEqual(len(self.sent), 2)  # the case AND its share message; nobody else started
+        self.assertEqual(self.sent[1]["message"], "Salam, please share this.")
+        self.assertEqual(job["receipts"][0]["follow_up"], "Sent")
+
+    def test_resume_sends_the_share_message_to_someone_an_old_stop_cut_off(self):
+        self._stopped_after_first()
+        jobs = self.g.jobs._load()
+        first = jobs["jobs"][-1]["receipts"][0]
+        first["follow_up"] = "Cancelled"  # how the old code left a person: case sent, share cut by Stop
+        self.g.jobs._save(jobs)
+        self.g.book.follow_up(first["id"], "Cancelled")
+        self.sent.clear()
+        self.assertEqual(self.g.view()["resumable"], 3)  # 2 still waiting + 1 share to finish
+        with patch.object(self.g.jobs, "_run"):
+            self.g.mutate({"action": "resume"})
+        self.assertEqual(len(self.sent), 1)  # the share message only, no second case
+        self.assertIs(self.sent[0]["poster"], False)
+        self.assertIn("please share this", self.sent[0]["message"])
+        self.assertEqual(self.g.book.resolve(first["id"])["follow_up_state"], "Sent")
+        job = self.run_job(self.g.jobs)
+        self.assertEqual((job["state"], job["sent"]), ("Completed", 2))
+        self.assertEqual(len(self.sent), 5)  # + case and share for the 2 still waiting
+        self.assertEqual(self.g.view()["resumable"], 0)
+
     def test_a_restart_carries_on_a_giki_batch_by_itself(self):
         self._stopped_after_first()
         jobs = self.g.jobs._load()

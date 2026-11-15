@@ -86,7 +86,9 @@ class World:
     def popen(self, args, **kw):
         kind = "gowa" if "whatsapp" in str(args[0]) else "server"
         self.events.append("start:" + kind)
-        return Proc(kind, self)
+        proc = Proc(kind, self)
+        proc.args = args  # like subprocess.Popen
+        return proc
 
     def urlopen(self, req, timeout=None):
         url = getattr(req, "full_url", req)
@@ -222,6 +224,8 @@ class LauncherFlowTests(unittest.TestCase):
         e = w.events
         self.assertLess(e.index("terminate:gowa"), e.index("lease-released"))
         self.assertLess(e.index("terminate:server"), e.index("lease-released"))
+        # the website stops first (it finishes the person being sent to), WhatsApp after it
+        self.assertLess(e.index("terminate:server"), e.index("terminate:gowa"))
 
 
 if __name__ == "__main__":

@@ -6090,6 +6090,8 @@ class Handler(BaseHTTPRequestHandler):
                     pass
 
     def _get(self):
+        if self.path == "/health/busy" and self.client_address[0] == "127.0.0.1":
+            return self.reply({"busy": sending_now()})  # for the launcher's memory guard only
         if self.path == "/health":
             return self.reply(
                 {
@@ -7561,6 +7563,32 @@ def donor_auto_loop():
             donors().caserun.tick()
         except Exception as exc:
             print("[case-run] " + type(exc).__name__, flush=True)
+
+
+def sending_now():
+    """True while a WhatsApp send is going out, or a DM batch is in the middle of a person (between their case,
+    2nd, 3rd and share message). False in the wait between people: a clean restart there cuts nobody."""
+    if not SEND_LOCK.acquire(blocking=False):
+        return True
+    SEND_LOCK.release()
+    for pick in (
+        lambda: donors().jobs,
+        lambda: donors().volunteers.jobs,
+        lambda: donors().giki.jobs,
+        lambda: donors().giki2.jobs,
+    ):
+        try:
+            jobs = pick()
+            last = ((jobs._cache or {}).get("jobs") or [{}])[-1]
+            between = last.get("state") == "Waiting" and last.get("current") in (
+                "Waiting between DMs",
+                "Waiting for the next batch time",
+            )
+            if jobs.active and not between:
+                return True
+        except Exception:
+            return True  # cannot tell: treat as busy
+    return False
 
 
 def resume_batches_after_restart(wait=10, tries=360, sleep=time.sleep):

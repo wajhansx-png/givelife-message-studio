@@ -320,6 +320,18 @@ def line_call(device, path, method="GET"):
     return data.get("results") if isinstance(data.get("results"), dict) else {}
 
 
+import memory_guard
+
+guard = memory_guard.Guard()
+last_mem = 0.0
+
+
+def server_busy():
+    url = "http://127.0.0.1:" + env.get("PORT", "10000") + "/health/busy"
+    with urllib.request.urlopen(url, timeout=5) as r:
+        return bool(json.load(r).get("busy", True))
+
+
 line_watch = {}  # device id -> DropWatch: the Giki WhatsApp gets the same reconnect care as the main one
 last_lines = 0.0
 last_wa, dropped_since, last_try, last_report = 0.0, 0.0, 0.0, 0.0
@@ -363,6 +375,22 @@ while not stopping.is_set():
         if state and t - last_report >= 600:
             last_report = t
             print("[watchdog] whatsapp=%s" % state, flush=True)
+    if t - last_mem >= 30:
+        last_mem = t
+        try:
+            used, limit = memory_guard.container_memory()
+            parts = {
+                "whatsapp": memory_guard.rss(gowa.proc.pid),
+                "app": memory_guard.rss(server.proc.pid),
+                "launcher": memory_guard.rss(os.getpid()),
+            }
+            reason = guard.step(used, limit, parts, server_busy)
+        except Exception as e:
+            reason = None
+            print("[memory] check skipped: " + type(e).__name__, flush=True)
+        if reason:
+            print("[memory] clean restart before the host kills it: " + reason, flush=True)
+            stop()
     if t - last_lines >= 30:
         last_lines = t
         try:

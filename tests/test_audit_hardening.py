@@ -286,6 +286,25 @@ class GatewayKeys(unittest.TestCase):
             self.assertTrue(key_cache.save(s, source), "a changed file is saved again")
             self.assertEqual(s.puts, 2)
 
+    def test_checkpoint_in_its_own_process_saves_and_restores(self):
+        """The launcher saves the keys in a short-lived process (its memory is given back when it ends)."""
+        import key_cache
+
+        with tempfile.TemporaryDirectory() as d:
+            env = {"GIVELIFE_STORAGE_KEY": "k" * 48, "DATA_DIR": str(Path(d) / "store"), "DB_URI": ""}
+            with patch.dict(os.environ, env), patch.dict(key_cache._saved, clear=True):
+                source = Path(d) / "keys.sqlite"
+                with sqlite3.connect(source) as db:
+                    db.execute("CREATE TABLE keys(value TEXT)")
+                    db.execute("INSERT INTO keys VALUES('PRIVATE_GATEWAY_KEY')")
+                self.assertTrue(key_cache.save_apart(source))
+                self.assertFalse(key_cache.save_apart(source), "unchanged: no new process, no write")
+                target = Path(d) / "new-instance.sqlite"
+                self.assertTrue(key_cache.restore_apart(target))
+                with sqlite3.connect(target) as db:
+                    self.assertEqual(db.execute("SELECT value FROM keys").fetchone()[0], "PRIVATE_GATEWAY_KEY")
+                self.assertFalse(key_cache.restore_apart(target), "an existing key cache is never replaced")
+
 
 if __name__ == "__main__":
     unittest.main()

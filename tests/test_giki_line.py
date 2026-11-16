@@ -1169,6 +1169,38 @@ class GikiToWaiting(Fixture):
         self.assertEqual(self.g.jobs.half_sent(), [])  # Resume adds nothing on top of the full resend
 
 
+class GikiAllToWaiting(Fixture):
+    def test_everyone_in_dmed_goes_back_to_waiting_at_once(self):
+        for i in range(3):
+            self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share."})
+        self.go(self.g, {"action": "send_all", "request_id": "a1", "poster": False})
+        self.run_job(self.g.jobs)
+        self.assertTrue(all(x["dmed"] for x in self.g.view()["items"]))
+        sent_before = len(self.sent)
+        r = self.g.mutate({"action": "all_to_waiting"})
+        self.assertEqual(r["moved"], 3)
+        view = self.g.view()
+        self.assertFalse(any(x["dmed"] for x in view["items"]))
+        self.assertEqual(view["waiting"], 3)
+        self.assertEqual(len(self.sent), sent_before)  # nothing is sent by the move
+        self.assertEqual(self.g.jobs.half_sent(), [])
+        with self.assertRaises(ValueError):
+            self.g.mutate({"action": "all_to_waiting"})  # nobody left in DMed
+
+    def test_not_while_dms_are_running(self):
+        self.g.mutate({"action": "add", "name": "Giki P0", "phone": "0300 2000000"})
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share."})
+        self.go(self.g, {"action": "send_all", "request_id": "a2", "poster": False})
+        self.run_job(self.g.jobs)
+        self.g.jobs.active = {"id": "busy"}
+        try:
+            with self.assertRaises(ValueError):
+                self.g.mutate({"action": "all_to_waiting"})
+        finally:
+            self.g.jobs.active = None
+
+
 class GikiOneRemovesTheMoved(Fixture):
     def test_opening_giki_first_also_takes_the_chosen_people_off_it(self):
         from giki_line import Giki2Volunteers

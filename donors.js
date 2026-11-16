@@ -3085,6 +3085,21 @@
         tabs.append(t);
       }
       caseOptions.append(tabs);
+      if (gikiTab === 'dmed' && dmedCount) {
+        // a new case: everyone in DMed back to Waiting at once (nothing is sent now; DM all sends them the case)
+        const allBack = make('button', 'giki-all-back', 'Move all to Waiting');
+        allBack.type = 'button';
+        allBack.id = 'gikiAllBack';
+        allBack.onclick = () => {
+          if (
+            confirm(
+              'Move all ' + dmedCount + ' DMed people back to Waiting? Nothing is sent now. DM all will send them the case again.',
+            )
+          )
+            volAct({ action: 'all_to_waiting' }, 'Everyone is back in Waiting.');
+        };
+        caseOptions.append(allBack);
+      }
     } else caseOptions.append(make('span', 'vol-list-label', 'People'));
     const shown = GIKI ? vols.items.filter((d) => !!d.dmed === (gikiTab === 'dmed')) : vols.items;
     const list = make('div', 'vol-list');

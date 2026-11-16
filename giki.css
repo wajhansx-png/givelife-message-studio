@@ -300,6 +300,21 @@
 }
 .UI2.giki #donorsPage #donorVolunteers .vol-people > .vol-case-options {
   flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+/* DMed tab: everyone back to Waiting at once, a full-width line under the tabs */
+.UI2.giki #donorsPage #donorVolunteers .giki-all-back {
+  flex: 1 1 100%;
+  min-height: 40px;
+  margin: 2px 0 6px;
+  border: 1px solid #394060;
+  border-radius: 12px;
+  background: transparent;
+  color: #e7ebf7;
+  font: inherit;
+  font-size: 14px !important;
+  font-weight: 700;
+  cursor: pointer;
 }
 .UI2.giki #donorsPage #donorVolunteers .vol-list {
   flex: 1 1 0 !important;

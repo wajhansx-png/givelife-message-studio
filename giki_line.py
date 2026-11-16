@@ -527,26 +527,48 @@ class GikiVolunteers(Volunteers):
             return self.resume(body)
         if body.get("action") == "to_waiting":
             return self.to_waiting(body.get("id", ""))
+        if body.get("action") == "all_to_waiting":
+            return self.all_to_waiting()
         return super().mutate(body)
 
     def to_waiting(self, ident):
         """Move to Waiting (the ··· menu in DMed): this person is treated as not messaged for this case, so DM all
         sends them the whole sequence again. Nothing is sent now. Earlier half-sent records of them are closed,
         so Resume never adds a second copy of a message on top."""
-        if self.jobs.active:
-            raise ValueError("Stop the DMs first, then move someone back to Waiting.")
         r = self.book.resolve(ident)
-        data = self.book._load()
-        rec = next(x for x in data["records"] if x["id"] == r["id"])
-        rec.update(dm_sent=False, delivery="Not contacted", last_sent_at=None, follow_up_state=None)
-        self.book._save(data)
+        self._back_to_waiting({r["id"]})
+        return {"reply": r["name"] + " is back in Waiting."}
+
+    def all_to_waiting(self):
+        """Move to Waiting for everyone in DMed at once (a new case): same as Move to Waiting, person by person."""
+        with self.book.lock:
+            ids = {
+                r["id"]
+                for r in self.book._load()["records"]
+                if not r.get("deleted")
+                and r.get("phone")
+                and (self.book.contacted(r) or r.get("delivery") in ("Uncertain", "Sending"))
+            }
+        if not ids:
+            raise ValueError("Nobody is in DMed.")
+        self._back_to_waiting(ids)
+        return {"reply": f"{len(ids)} people are back in Waiting.", "moved": len(ids)}
+
+    def _back_to_waiting(self, ids):
+        if self.jobs.active:
+            raise ValueError("Stop the DMs first, then move people back to Waiting.")
+        with self.book.lock:
+            data = self.book._load()
+            for rec in data["records"]:
+                if rec["id"] in ids:
+                    rec.update(dm_sent=False, delivery="Not contacted", last_sent_at=None, follow_up_state=None)
+            self.book._save(data)
         jobs = self.jobs._load()
         for j in jobs.get("jobs", []):
             for receipt in j.get("receipts", []):
-                if receipt.get("id") == r["id"]:
+                if receipt.get("id") in ids:
                     receipt["seq"] = 0  # never "finished" by Resume: DM all sends the full sequence
         self.jobs._save(jobs)
-        return {"reply": r["name"] + " is back in Waiting."}
 
     def import_numbers(self, text, dry_run=False):
         """Add many people at once. A number already in the list (or already removed from it) is not added twice."""

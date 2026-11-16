@@ -536,3 +536,36 @@ test('Waiting and DMed tabs: a person who got the case moves to DMed and cannot 
   await expect(page.locator('.vol-row', { hasText: 'Tabs Waiting Giki' })).toBeVisible();
   await expect(page.locator('.vol-row', { hasText: 'Tabs Sent Giki' })).toBeVisible();
 });
+
+test('DMed tab: Move all to Waiting puts everyone back at once and sends nothing', async ({ page }) => {
+  await link();
+  await api(port, '/focus-bank', { kind: 'group', text: 'GIKITEST all back caption. Rs. 25,000 left.' });
+  await api(port, '/giki/volunteers', { action: 'message', text: 'Share for {name}, please.' });
+  await api(port, '/giki/volunteers', { action: 'add', name: 'All Back Giki', phone: '15551260001' });
+  const p = (await api(port, '/giki/volunteers')).items.find((d) => d.name === 'All Back Giki');
+  const before = (await gikiSends()).length;
+  await api(port, '/giki/volunteers', { action: 'send_case', id: p.id, request_id: 'req-allback-01' });
+  await expect
+    .poll(async () => (await gikiSends()).length, { timeout: 20000 })
+    .toBeGreaterThanOrEqual(before + 2); // the case and the share (plus any 2nd / 3rd left on)
+  await expect
+    .poll(async () => ((await api(port, '/giki/volunteers')).delivery || {}).state, { timeout: 20000 })
+    .not.toMatch(/Starting|Sending|Waiting/);
+  const total = (await api(port, '/giki/volunteers')).items.length;
+  const errors = await open(page, 320);
+  await page.waitForLoadState('networkidle');
+  await page.locator('#gikiTab-dmed').click();
+  const all = page.locator('#gikiAllBack');
+  await expect(all).toBeVisible();
+  const box = await all.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(320);
+  const sendsNow = (await gikiSends()).length;
+  page.once('dialog', (d) => d.accept());
+  await all.click();
+  await expect(page.locator('#gikiTab-dmed')).toHaveText('DMed · 0');
+  await expect(page.locator('#gikiTab-waiting')).toHaveText('Waiting · ' + total);
+  await expect(page.locator('#gikiAllBack')).toHaveCount(0);
+  expect((await gikiSends()).length).toBe(sendsNow);
+  expect(errors).toEqual([]);
+});

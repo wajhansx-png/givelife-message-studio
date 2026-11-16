@@ -8,6 +8,8 @@ import base64
 import logging
 import os
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -93,6 +95,44 @@ def restore(store, path):
     return True
 
 
+def _apart(action, path, timeout=180):
+    """Run save / restore in a short-lived process. Each one makes several full copies of the key file in memory
+    (copy, encrypted, base64); a long-running process keeps that memory, so on a 512 MB host it grew until the host
+    killed everything mid-send. A process that ends gives all of it back."""
+    done = subprocess.run(
+        [sys.executable, str(Path(__file__).resolve()), action, str(path)],
+        cwd=str(Path(__file__).resolve().parent),
+        env=os.environ.copy(),
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    if done.returncode != 0:
+        raise RuntimeError("key checkpoint " + action + " process failed")
+    return (done.stdout.strip().splitlines() or [""])[-1] == "True"
+
+
+def save_apart(path):
+    """save(), in its own process, and only when the key file changed since the last copy."""
+    path = Path(path)
+    with _save_lock:
+        if not path.exists():
+            return False
+        signature = _signature(path)
+        if _saved.get(str(path)) == signature:
+            return False
+        saved = _apart("save", path)
+        _saved[str(path)] = signature
+        return saved
+
+
+def restore_apart(path):
+    return _apart("restore", path)
+
+
+EVERY = 120  # seconds between checkpoints; a clean stop (deploy, memory guard) always saves the latest
+
+
 def start(store, path):
     if not os.environ.get("GIVELIFE_STORAGE_KEY"):
         return
@@ -100,9 +140,16 @@ def start(store, path):
     def checkpoint():
         while True:
             try:
-                save(store, Path(path))
+                save_apart(Path(path))
             except Exception as exc:
                 LOG.error("gateway_key_checkpoint_failed error_type=%s", type(exc).__name__)
-            threading.Event().wait(60)
+            threading.Event().wait(EVERY)
 
     threading.Thread(target=checkpoint, daemon=True, name="gateway-key-checkpoint").start()
+
+
+if __name__ == "__main__":  # python key_cache.py save|restore <path>
+    from persist import configured_store
+
+    _action, _path = sys.argv[1], Path(sys.argv[2])
+    print(save(configured_store(), _path) if _action == "save" else restore(configured_store(), _path))

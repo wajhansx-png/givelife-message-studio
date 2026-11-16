@@ -7,6 +7,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /health
+    maxShutdownDelaySeconds: 180  # a deploy lets the person being sent to get all their messages first
     autoDeployTrigger: commit
     envVars:
       - key: UI_ACCESS_KEY

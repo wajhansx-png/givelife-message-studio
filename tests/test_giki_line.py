@@ -374,6 +374,31 @@ class GikiList(Fixture):
         self.assertEqual(len(self.sent), 6)
         self.assertEqual(job["follow_up"], "Salam {name}, please share this.")
 
+    def _restart_after_the_last_person(self, share_state="Sent"):
+        for i in range(2):
+            self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})
+        self.g.mutate({"action": "message", "text": "Salam {name}, please share this."})
+        self.go(self.g, {"action": "send_all", "request_id": "r-end", "poster": False})
+        self.run_job(self.g.jobs)
+        jobs = self.g.jobs._load()
+        j = jobs["jobs"][-1]
+        j["receipts"][-1]["follow_up"] = share_state
+        self.g.jobs.book.follow_up(j["receipts"][-1]["id"], share_state)
+        j.update(state="Interrupted", auto=True, boot="an-older-boot",
+                 error="The service restarted. Starting again by itself; nobody already sent is repeated.")
+        self.g.jobs._save(jobs)
+        return self.g.jobs.status()
+
+    def test_a_restart_after_the_last_person_never_says_it_starts_again(self):
+        out = self._restart_after_the_last_person()
+        self.assertEqual((out["state"], out["error"]), ("Completed", ""))
+
+    def test_a_restart_after_the_last_person_names_who_still_misses_a_message(self):
+        out = self._restart_after_the_last_person(share_state="Not sent")
+        self.assertEqual(out["state"], "Interrupted")
+        self.assertIn("1 of them did not get all their messages", out["error"])
+        self.assertNotIn("Starting again", out["error"])
+
     def test_a_short_giki_whatsapp_drop_is_waited_out_and_the_batch_goes_on(self):
         for i in range(3):
             self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})

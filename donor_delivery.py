@@ -144,6 +144,16 @@ class DonorDelivery:
 
             if left is not None:
                 out["resumable"] = len(left)
+            elif jobs[-1].get("state") == "Interrupted" and jobs[-1].get("auto") and not self.active:
+                # a restart after the last person: nothing starts again, so never say it will
+                half = self._half_sent_in(jobs[-1])
+                if half:
+                    out["error"] = (
+                        f"The service restarted. {len(half)} of them did not get all their messages yet: "
+                        "press Resume DMs to send only what is missing."
+                    )
+                else:
+                    out.update(state="Completed", error="")
             out["waiting"] = self._waiting(jobs[-1])
             j = jobs[-1]
             seen = {r.get("id") for r in j.get("receipts", [])}
@@ -1027,19 +1037,27 @@ class DonorDelivery:
                 time.time() - j.get("updated_at", 0) > self.AUTO_WINDOW
             ):
                 continue
-            for receipt in j.get("receipts", []):
-                kinds, share = self._todo(j, receipt)
-                if share and receipt.get("follow_up") != "Sending":
-                    try:  # the share message already reached them after this case (an earlier Resume): never again
-                        record = self.book.resolve(receipt["id"])
-                        share = not (
-                            record.get("follow_up_state") == "Sent"
-                            and (record.get("follow_up_at") or 0) >= (receipt.get("time") or 0)
-                        )
-                    except ValueError:
-                        share = False
-                if (kinds or share) and receipt.get("id") not in {o[1].get("id") for o in out}:
-                    out.append((j, receipt, kinds, share))
+            for item in self._half_sent_in(j):
+                if item[1].get("id") not in {o[1].get("id") for o in out}:
+                    out.append(item)
+        return out
+
+    def _half_sent_in(self, j):
+        """The half-sent people of one batch: [(job, receipt, kinds, share)]. Takes no lock."""
+        out = []
+        for receipt in j.get("receipts", []):
+            kinds, share = self._todo(j, receipt)
+            if share and receipt.get("follow_up") != "Sending":
+                try:  # the share message already reached them after this case (an earlier Resume): never again
+                    record = self.book.resolve(receipt["id"])
+                    share = not (
+                        record.get("follow_up_state") == "Sent"
+                        and (record.get("follow_up_at") or 0) >= (receipt.get("time") or 0)
+                    )
+                except ValueError:
+                    share = False
+            if kinds or share:
+                out.append((j, receipt, kinds, share))
         return out
 
     def finish_half_sent(self):

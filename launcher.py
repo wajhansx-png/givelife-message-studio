@@ -169,10 +169,10 @@ def stop(*args):
     if stopping.is_set():
         return
     stopping.set()
-    # The website first: it finishes the person being sent to and saves the batch (up to 20 s) while WhatsApp is
+    # The website first: it finishes the person being sent to and saves the batch (up to 150 s) while WhatsApp is
     # still up. Then WhatsApp.
     gateways = [c for c in children if str((getattr(c, "args", None) or [""])[0]).endswith("whatsapp")]
-    for group, grace in (([c for c in children if c not in gateways], 22), (gateways, 6)):
+    for group, grace in (([c for c in children if c not in gateways], 155), (gateways, 6)):
         for child in group:
             if child.poll() is None:
                 child.terminate()

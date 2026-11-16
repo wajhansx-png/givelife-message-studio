@@ -1,0 +1,40 @@
+# GiveLife studio on the Oracle server: the app + Caddy (free HTTPS). Secrets live ONLY in ./.env on the server.
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.arm64
+    restart: unless-stopped          # comes back after a crash or a server reboot
+    env_file: .env
+    environment:
+      PORT: "10000"
+      DATA_DIR: /data/studio
+      REQUIRE_WA_LEASE: "1"          # refuse to start while Render (or any other copy) still holds WhatsApp
+    volumes:
+      - givelife-data:/data          # WhatsApp key cache + device list + local files survive restarts
+    mem_limit: 3g
+    stop_grace_period: 200s          # the app needs up to ~160 s to finish the person being sent to
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:10000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    expose:
+      - "10000"                      # only Caddy can reach it; not published to the internet
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+volumes:
+  givelife-data:
+  caddy-data:

@@ -123,6 +123,9 @@ if state != "acquired":
     if waiting:
         waiting.close()
 print("[launcher] WhatsApp lease: " + state, flush=True)
+if state != "acquired" and os.environ.get("REQUIRE_WA_LEASE") == "1":
+    # Own server (Oracle): never share the WhatsApp numbers with another running copy. Render leaves this off.
+    raise SystemExit("WhatsApp lease not acquired: another copy is still running. Stop it first.")
 if state == "acquired":  # otherwise carry on without it: the lease must never block the app
     lease.start()
 

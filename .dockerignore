@@ -9,3 +9,6 @@ graphify-out
 __pycache__
 *.pyc
 
+**/.env
+**/.env.*
+deploy/oracle/.env

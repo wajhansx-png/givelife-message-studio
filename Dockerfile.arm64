@@ -1,0 +1,17 @@
+# ARM64 build for the Oracle Cloud "Always Free" Ampere A1 server. Render keeps using ./Dockerfile (amd64), untouched.
+FROM python:3.13-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip ffmpeg webp && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://github.com/aldinokemal/go-whatsapp-web-multidevice/releases/download/v9.7.0/whatsapp_9.7.0_linux_arm64.zip -o /tmp/gowa.zip \
+ && echo 'a1e3b393234f29c604ce6e080b3d1278c73e2e757a0ae6cd3e17556de113130d  /tmp/gowa.zip' | sha256sum -c - \
+ && unzip -j /tmp/gowa.zip linux-arm64 -d /usr/local/bin \
+ && mv /usr/local/bin/linux-arm64 /usr/local/bin/whatsapp \
+ && chmod +x /usr/local/bin/whatsapp && rm /tmp/gowa.zip
+# Same 45 s -> 300 s gateway limit as ./Dockerfile; on ARM64 it is three instructions, checked by the script (it fails the build if the binary differs).
+COPY scripts/patch_gowa_arm64.py /tmp/patch_gowa_arm64.py
+RUN python3 /tmp/patch_gowa_arm64.py /usr/local/bin/whatsapp && rm /tmp/patch_gowa_arm64.py
+WORKDIR /app/studio
+COPY . .
+RUN pip install --no-cache-dir -r requirements.txt
+ENV PYTHONUNBUFFERED=1 DATA_DIR=/data/studio TZ=Asia/Karachi
+EXPOSE 10000
+CMD ["python", "launcher.py"]

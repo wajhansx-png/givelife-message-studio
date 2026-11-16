@@ -7558,7 +7558,7 @@ def donor_auto_loop():
             print("[case-run] " + type(exc).__name__, flush=True)
 
 
-def resume_batches_after_restart(wait=10, tries=90, sleep=time.sleep):
+def resume_batches_after_restart(wait=10, tries=360, sleep=time.sleep):
     """A deploy or restart must not stop a DM batch that was running. Once WhatsApp is connected again,
     carry on with each batch that was in flight (donor and volunteer). Anyone already sent, unconfirmed or
     caught mid-send is skipped, so nobody gets a second DM; batches the owner stopped stay stopped.
@@ -7590,10 +7590,11 @@ def resume_batches_after_restart(wait=10, tries=90, sleep=time.sleep):
     return resumed
 
 
-def graceful_exit(signum=None, frame=None, wait=20, exit=os._exit):
+def graceful_exit(signum=None, frame=None, wait=150, exit=os._exit):
     """A deploy (SIGTERM): no new person is started; the person being sent to gets the rest of their messages
     (case, 2nd, 3rd, share); each running batch is saved as Interrupted, so it carries on by itself after the
-    restart. Then the process ends. Never more than `wait` seconds."""
+    restart. Then the process ends. Never more than `wait` seconds (a video on a slow host takes long; render.yaml
+    maxShutdownDelaySeconds gives the time, and it stays under the next instance's 240 s lease wait)."""
 
     def run():
         registries = []

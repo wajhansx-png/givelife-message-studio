@@ -113,6 +113,8 @@ class World:
             mock.patch.dict(os.environ, env),
             mock.patch("persist.configured_store", lambda: self.store),
             mock.patch("subprocess.Popen", self.popen),
+            # the key checkpoint's short-lived helper process is not a gateway or server start
+            mock.patch("key_cache._apart", lambda action, path, timeout=180: False),
             mock.patch("urllib.request.urlopen", self.urlopen),
             mock.patch("time.sleep", self.sleep),
             mock.patch("time.time", lambda: self.t),

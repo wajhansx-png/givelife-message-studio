@@ -3599,6 +3599,7 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
   display: flex !important;
   align-items: center !important;
   min-height: 28px !important;
+}
 
 /* Report: three live facts (DMs Sent removed), then the Auto cards; DM Top / Important and Giki 1 / 2 show the
    person being sent to now (small name) above a bar for their messages (4 messages = 25% each). */

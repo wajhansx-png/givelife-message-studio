@@ -618,3 +618,29 @@ class VolunteerAuto(Base):
         self.assertEqual(len(self.v.jobs.export_jobs()["jobs"]), 1)
         with self.assertRaises(ValueError):  # and a donor DM control cannot start beside it
             self.c.set(IMPORTANT, True, {"count": 3})
+
+
+class LiveReport(Base):
+    """Report page: the person being sent to now and how many of their messages went, in the one /auto-controls
+    answer (no extra calls); Giki 1 / Giki 2 included."""
+
+    def test_person_progress_counts_each_message_of_the_person_now(self):
+        jobs = self.h.jobs
+        j = {"state": "Sending", "current": "Ali", "after": ["second", "third"], "follow_up": "Share"}
+        self.assertEqual(jobs.person(j), {"name": "Ali", "done": 0, "steps": 4})
+        j["receipts"] = [{"name": "Ali", "state": "Sent", "steps": {"second": "Sent"}}]
+        self.assertEqual(jobs.person(j)["done"], 2)
+        j["receipts"][0]["steps"]["third"] = "Sent"
+        j["receipts"][0]["follow_up"] = "Sent"
+        self.assertEqual(jobs.person(j)["done"], 4)
+        j["current"] = "Sara"  # the next person starts again from 0
+        self.assertEqual(jobs.person(j)["done"], 0)
+        self.assertIsNone(jobs.person({"state": "Waiting", "current": "Waiting between DMs"}))
+
+    def test_view_carries_giki_lines_and_the_dm_person(self):
+        out = self.c.view()
+        self.assertEqual(set(out["giki"]), {"giki", "giki2"})
+        self.assertEqual(out["giki"]["giki2"]["title"], "Giki 2")
+        self.assertFalse(out["giki"]["giki"]["active"])
+        self.assertIn("person", out["controls"][IMPORTANT])
+        self.assertIsNone(out["controls"][IMPORTANT]["person"])

@@ -74,11 +74,10 @@ class Rules(unittest.TestCase):
         group_extras.add(self.s, "video", url(MP4, "video/mp4"))
         group_extras.add(self.s, "pdf", url(PDF, "application/pdf"))
         video = group_extras.saved(self.s, "video")
-        group_extras.set_setup(self.s, "dm", "text_on", "poster")
         group_extras.set_setup(self.s, "giki", "poster", False)
         group_extras.set_setup(self.s, "giki", "pdf", True)
-        self.assertEqual(group_extras.lead(self.s, "group"), video)  # groups: unchanged (text on the video)
-        self.assertIsNone(group_extras.lead(self.s, "dm"))  # DMs: the poster carries the text
+        self.assertEqual(group_extras.lead(self.s, "group"), video)  # groups and DMs: the text on the video
+        self.assertEqual(group_extras.lead(self.s, "dm"), video)
         self.assertIsNone(group_extras.lead(self.s, "giki"))  # Giki: poster with caption unless Video is picked
         group_extras.set_setup(self.s, "giki", "text_on", "video")
         self.assertEqual(group_extras.lead(self.s, "giki"), video)
@@ -96,7 +95,7 @@ class Rules(unittest.TestCase):
         self.assertEqual([k for k, _ in group_extras.after_items(self.s, "giki")], ["pdf"])
         self.assertEqual(group_extras.extras_for(self.s, "dm"), {"pdf": False, "video": False})
         v = group_extras.view(self.s)["setup"]
-        self.assertEqual((v["dm"]["text_on"], v["giki"]["poster"], v["giki"]["pdf"]), ("poster", False, True))
+        self.assertEqual((v["dm"]["text_on"], v["giki"]["poster"], v["giki"]["pdf"]), ("video", False, True))
         group_extras.set_on(self.s, "pdf", False)  # a group switch never changes the others
         self.assertTrue(group_extras.view(self.s)["setup"]["giki"]["pdf"])
         group_extras.remove(self.s, "pdf")  # no file: nothing to send, the tick is kept for later
@@ -304,9 +303,8 @@ class Sending(unittest.TestCase):
         group_extras.add(app.STORE, "poster", url(b"\x89PNG\r\n\x1a\n" + b"3" * 100, "image/png"), "p.png")
         self.assertTrue(group_extras.view(app.STORE)["poster"]["has"])
 
-    def test_a_dm_whose_text_is_on_the_poster_sends_the_poster_with_the_text_while_groups_use_the_video(self):
-        group_extras.set_text_on(app.STORE, "video")
-        group_extras.set_setup(app.STORE, "dm", "text_on", "poster")
+    def test_a_dm_whose_text_is_on_the_poster_sends_the_poster_with_the_text(self):
+        group_extras.set_text_on(app.STORE, "poster")  # one choice: groups and DMs both use the poster
         media = []
         ok = type("R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})})()
 
@@ -323,7 +321,7 @@ class Sending(unittest.TestCase):
             app.send_image("923001234567@s.whatsapp.net", "dm text")
             app.send_image(GROUP, "group text")
         self.assertEqual(media[0], ("923001234567@s.whatsapp.net", "dm text"))  # poster carries the DM text
-        self.assertEqual(self.calls[0], (GROUP, "group text", self.video_id))  # video carries the group text
+        self.assertEqual(media[1], (GROUP, "group text"))  # groups too: the same choice
 
     def test_a_dm_ticked_video_is_not_sent_twice_when_it_carried_the_text(self):
         group_extras.set_text_on(app.STORE, "video")
@@ -389,3 +387,11 @@ class OneTextChoice(unittest.TestCase):
         group_extras.act(s, {"action": "text_on", "profile": "giki", "value": "video"})
         group_extras.act(s, {"action": "text_on", "value": "poster"})
         self.assertEqual(group_extras.lead(s, "giki"), video)  # Giki keeps its own
+
+
+    def test_an_old_saved_state_with_groups_on_poster_and_dms_on_video_heals_to_the_poster(self):
+        s = Store()
+        group_extras.add(s, "video", url(MP4, "video/mp4"))
+        s.put(group_extras.KEY, {**s.get(group_extras.KEY), "text_on": "poster", "setup": {"dm": {"text_on": "video"}}})
+        self.assertIsNone(group_extras.lead(s, "dm"))
+        self.assertEqual(group_extras.view(s)["setup"]["dm"]["text_on"], "poster")

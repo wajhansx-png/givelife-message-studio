@@ -1670,7 +1670,7 @@ document.addEventListener('click', (e) => {
       b.type = 'button';
       b.dataset.v = v;
       b.id = 'ui2RxText-' + v;
-      b.addEventListener('click', () => mine().text_on !== v && saveSetup('text_on', v));
+      b.addEventListener('click', () => saveSetup('text_on', v));
       textRow.append(b);
     }
     /* "Order: 1. Video + text  2. Poster  3. PDF": what WhatsApp will get, in order, updated on every tick or tap.

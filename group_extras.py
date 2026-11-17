@@ -53,7 +53,9 @@ def _save(store, rows):
 
 def text_on(store, profile="group"):
     raw = _raw(store)
-    value = raw.get("text_on") if profile == "group" else (raw.get("setup") or {}).get(profile, {}).get("text_on")
+    # Groups and DMs share ONE choice (the owner clicks it in one place; two copies drifted apart and the DMs kept
+    # sending the text with the video). Giki has its own, on its own page.
+    value = (raw.get("setup") or {}).get(profile, {}).get("text_on") if profile == "giki" else raw.get("text_on")
     return value if value in TEXT_ON else "poster" if profile == "giki" else "video"  # Giki: poster with caption
 
 
@@ -123,7 +125,9 @@ def set_setup(store, profile, field, value):
     raw = _raw(store)
     if profile == "group" and field in KINDS:
         return set_on(store, field, value)
-    if profile == "group":
+    if field == "text_on" and profile != "giki":  # groups and DMs: the one shared choice
+        raw = {**raw, "text_on": value}
+    elif profile == "group":
         raw = {**raw, "text_on": value}
     else:
         all_setup = dict(raw.get("setup") or {})
@@ -278,12 +282,8 @@ def act(store, body):
     if op == "toggle":
         return set_on(store, body.get("kind"), body.get("on"))
     if op == "text_on":
-        # One choice for the Message screen: groups and DMs follow each other (clicking Poster in one place used to
-        # leave the DMs on the video). Giki has its own page and keeps its own.
-        if body.get("profile") == "giki":
-            return set_setup(store, "giki", "text_on", body.get("value"))
-        set_setup(store, "dm", "text_on", body.get("value"))
-        return set_setup(store, "group", "text_on", body.get("value"))
+        # One choice for groups and DMs (Giki has its own page and keeps its own).
+        return set_setup(store, "giki" if body.get("profile") == "giki" else "group", "text_on", body.get("value"))
     if op == "setup":
         return set_setup(store, body.get("profile"), body.get("field"), body.get("value"))
     if op == "remove":

@@ -566,6 +566,8 @@ def _send_custom(body):
             )
         check_hold()
         check_stop()
+        if body.get("poster") is True and not body.get("attachment"):
+            _refuse_video_poster("group" if is_group else "dm", "group" if is_group else "giki" if _LINE.get().startswith("giki") else "dm")
         now = time.time()
         saved = STORE.get("last_sent", {})
         if not is_group:
@@ -1086,27 +1088,20 @@ def set_left(left):
 
 
 def poster_media(use="group"):
-    """Return the selected media; never silently send an old image in place of a missing video."""
+    """The saved Poster picture (never a video, never an older picture in place of it: see below)."""
     for prefix in (("dm-",) if use == "dm" else ()) + ("",):
         key = "dm_poster" if prefix else "poster"
         kind = DATA / (prefix + "poster-kind.txt")
-        video = DATA / (prefix + "poster.mp4")
         picture = DATA / (prefix + "poster.jpg")
         try:
             selected = kind.read_text(encoding="utf-8").strip()
         except OSError:
             selected = STORE.get(key + "_kind", "image") if STORE else "image"
         if selected == "video":
-            if not video.exists() and STORE:
-                encoded = STORE.get(key + "_video_b64")
-                if encoded:
-                    try:
-                        write_atomic(video, base64.b64decode(encoded, validate=True))
-                        write_atomic(kind, b"video")
-                    except (ValueError, OSError, base64.binascii.Error):
-                        pass
-            # Fail closed instead of sending a previous fundraising picture.
-            return video
+            # The Poster is a picture only. An older video poster is never sent as "Poster + text" (that is a video
+            # with the text, which the owner did not choose), and never replaced by an older picture: the owner
+            # uploads a picture. A path that does not exist makes the send stop with a clear message.
+            return DATA / (prefix + "poster-needs-a-picture.jpg")
         if picture.exists():
             return picture
         if STORE:
@@ -1121,6 +1116,35 @@ def poster_media(use="group"):
     return DATA / "poster.jpg"
 
 
+def _refuse_video_poster(use, profile):
+    """Before anybody is marked as contacted: when the Poster picture must carry the text but the saved Poster is an
+    older video, stop with a clear message (nothing is sent, nobody is marked)."""
+    import group_extras
+
+    if STORE and group_extras.lead(STORE, profile):
+        return  # the case video carries the text; the poster picture is not used first
+    if poster_file_kind(use) == "video":
+        raise ValueError(
+            "Not sent: the saved Poster is a video, and the Poster must be a picture. Upload a picture in Poster."
+        )
+
+
+def poster_file_kind(use="dm"):
+    """What the saved Poster is, for the screens: 'image' (a picture is saved), 'video' (an older video poster: it is
+    not sent, a picture must be uploaded) or 'none'."""
+    try:
+        for prefix in ("dm-", ""):
+            try:
+                kind = (DATA / (prefix + "poster-kind.txt")).read_text(encoding="utf-8").strip()
+            except OSError:
+                kind = ""
+            if kind == "video":
+                return "video"
+        return "image" if poster_media(use).is_file() else "none"
+    except Exception:
+        return "none"
+
+
 # Every send waits for the gateway's own answer (its limit is 300 s, see Dockerfile). Giving up first made a
 # slow send look failed: Giki then found nothing in the chat yet and could send the same message twice.
 SEND_WAIT = 330
@@ -1130,7 +1154,7 @@ def post_media(jid, cap, path):
     """Send one picture or MP4 video with its caption file through the WhatsApp gateway."""
     if not Path(path).is_file():
         raise ValueError(
-            "The saved poster is missing. Please upload the poster again before sending."
+            "The saved poster is missing or is a video. The Poster must be a picture: upload one in Poster before sending."
         )
     video = str(path).endswith(".mp4")
     return subprocess.run(
@@ -3012,15 +3036,9 @@ def save_upload(data_url, use):
         if raw[4:8] != b"ftyp":
             raise ValueError("Use an MP4 video (H.264). Other video types are not accepted.")
         if use == "poster":
-            # Render's local filesystem is temporary. Persist the ENTIRE accepted video
-            # before activating it; otherwise a restart silently loses files over 3 MB.
-            if STORE:
-                STORE.put(key + "_video_b64", base64.b64encode(raw).decode())
-                STORE.put(key + "_kind", "video")
-            write_atomic(DATA / (pre + "poster.mp4"), raw)
-            write_atomic(DATA / (pre + "poster-kind.txt"), b"video")
-            clear_dm_poster()
-            return "poster"
+            raise ValueError(
+                "The Poster must be a picture. Add the video in the Video box under the message instead."
+            )
         aid = uuid.uuid4().hex[:12]
         (ATT / (aid + ".mp4")).write_bytes(raw)
         return aid
@@ -6283,7 +6301,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/group-extras":
             import group_extras
 
-            return self.reply(group_extras.view(STORE))
+            return self.reply({**group_extras.view(STORE), "poster_kind": poster_file_kind()})
         if self.path == "/cases":
             try:
                 return self.reply(donors().cases.view())
@@ -6931,7 +6949,7 @@ class Handler(BaseHTTPRequestHandler):
             import group_extras
 
             try:
-                return self.reply(group_extras.act(STORE, body))
+                return self.reply({**group_extras.act(STORE, body), "poster_kind": poster_file_kind()})
             except ValueError as e:
                 return self.reply({"error": str(e)[:300]}, status=400)
         if self.path == "/style-fix":

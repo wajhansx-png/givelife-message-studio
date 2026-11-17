@@ -423,7 +423,7 @@
   const poster = make('dialog', 'poster-dialog');
   poster.id = 'posterDialog';
   poster.setAttribute('aria-label', 'Change DM poster');
-  poster.innerHTML = `<h2>Poster · groups and DMs</h2><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><video id="posterCurrentVideo" controls playsinline preload="metadata" aria-label="Saved campaign video" hidden></video><label class="poster-choose" for="posterFile">Choose new poster (picture or MP4 video)</label><input type="file" id="posterFile" accept="image/*,video/mp4,video/quicktime" hidden><p id="posterNote" role="status" aria-live="polite"></p><div id="posterProgress" class="poster-save-progress" hidden><div id="posterProgressTrack" class="poster-save-track" role="progressbar" aria-label="Poster upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="posterProgressFill"></span></div><span id="posterProgressText" role="status" aria-live="polite"></span></div><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
+  poster.innerHTML = `<h2>Poster · groups and DMs</h2><img width="320" height="400" id="posterCurrent" alt="Current campaign poster"><video id="posterCurrentVideo" controls playsinline preload="metadata" aria-label="Saved campaign video" hidden></video><label class="poster-choose" for="posterFile">Choose new poster (a picture only)</label><input type="file" id="posterFile" accept="image/*" hidden><p id="posterNote" role="status" aria-live="polite"></p><div id="posterProgress" class="poster-save-progress" hidden><div id="posterProgressTrack" class="poster-save-track" role="progressbar" aria-label="Poster upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="posterProgressFill"></span></div><span id="posterProgressText" role="status" aria-live="polite"></span></div><div class="donor-form-actions"><button id="posterClose" type="button">Cancel</button><button id="posterSave" type="button" class="primary" disabled>Save poster</button></div>`;
   document.body.append(poster);
   /* A PDF and a video that follow the poster in every GROUP post: poster + caption first, then the PDF, then the
      video. Each can be switched off without being removed. They belong to the case. */
@@ -1505,7 +1505,32 @@
       posterLab.append(posterCb, make('span', '', 'Poster'));
       posterLab.title = 'The after poster (its own picture, added on the group message), sent after each DM';
       box.insertBefore(posterLab, textLine.parentNode === box ? textLine : null);
+      /* The exact order WhatsApp gets for a DM, from the saved files and the ticks (so the owner sees what is sent). */
+      const orderLine = make('div', 'bank-order');
+      orderLine.id = 'msgOrder';
+      orderLine.setAttribute('role', 'status');
+      let lastView = null;
+      const paintOrder = () => {
+        const v = lastView;
+        if (!v) return;
+        const d = (v.setup && v.setup.dm) || { text_on: 'video', poster: true };
+        const hasVideo = !!(v.video && v.video.has);
+        const led = d.text_on === 'video' && hasVideo; // the video carries the text
+        const pictureOk = v.poster_kind === 'image';
+        const steps = [led ? 'Video + text' : 'Poster picture + text'];
+        if (d.poster === true && v.poster && v.poster.has) steps.push(led ? 'Poster' : '2nd poster');
+        if (dmExtra.video && hasVideo && !led) steps.push('Video');
+        if (dmExtra.pdf && v.pdf && v.pdf.has) steps.push('PDF');
+        const warn = !led && !pictureOk;
+        orderLine.dataset.warn = warn ? '1' : '0';
+        orderLine.textContent = warn
+          ? 'Nothing will be sent: there is no Poster picture. Upload a picture in Poster.'
+          : 'Order:  ' + steps.map((t, i) => i + 1 + '. ' + t).join('   ');
+      };
+      addEventListener('dm-extras-changed', paintOrder);
       const paintText = (v) => {
+        lastView = v || lastView;
+        paintOrder();
         const d = (v && v.setup && v.setup.dm) || { text_on: 'video', poster: true };
         textLine.hidden = !(v && v.video && v.video.has); // only matters once a video is attached
         for (const [k, t] of Object.entries(textBtns))
@@ -1531,7 +1556,7 @@
       api('/group-extras')
         .then(paintText)
         .catch(() => {});
-      box.append(textLine);
+      box.append(textLine, orderLine);
       extrasBox = box;
     }
     const grid = make('div', 'bank-workspace'),
@@ -3714,7 +3739,7 @@
   }
   async function loadSavedPoster() {
     const r = await fetch('/dm-poster', { cache: 'no-store' });
-    if (!r.ok) throw Error('The saved poster could not load. Upload it again.');
+    if (!r.ok) throw Error('There is no saved Poster picture. Upload a picture.');
     const blob = await r.blob();
     showPosterPreview(blob, blob.type || r.headers.get('Content-Type'));
   }
@@ -3824,24 +3849,10 @@
     el('posterSave').disabled = true;
     try {
       if (f.type.startsWith('video/')) {
-        if (f.size > 15000000 || !/mp4|quicktime/.test(f.type))
-          throw Error('Choose an MP4 video under 15 MB.');
-        posterData = await new Promise((ok, no) => {
-          const r = new FileReader();
-          r.onload = () => ok(r.result);
-          r.onerror = () => no(Error('Could not read the video.'));
-          r.readAsDataURL(f);
-        });
-        showPosterPreview(f, f.type);
-        el('posterNote').textContent =
-          'Video chosen (' +
-          Math.round((f.size / 1e6) * 10) / 10 +
-          ' MB). Save to send it with every group message and DM.';
-        el('posterSave').disabled = false;
-        return;
+        throw Error('The Poster must be a picture. Add the video in the Video box under the message.');
       }
       if (!f.type.startsWith('image/') || f.size > 20000000)
-        throw Error('Choose an image under 20 MB, or an MP4 video under 15 MB.');
+        throw Error('Choose a picture under 20 MB.');
       const bitmap = await createImageBitmap(f);
       const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height));
       const c = document.createElement('canvas');

@@ -6187,3 +6187,9 @@
     max-height: max(110px, calc(100dvh - 426px));
   }
 }
+
+/* the Order line warns when there is no Poster picture to send */
+.UI2 .ui2-rx-order[data-warn='1'] {
+  color: #ffb4b4;
+  opacity: 1;
+}

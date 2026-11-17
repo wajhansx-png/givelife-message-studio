@@ -1637,3 +1637,17 @@ html body #donorPasteDialog #pastePoster {
   font-weight: 700;
   opacity: 0.8;
 }
+
+/* Msgs: the exact order WhatsApp gets for a DM */
+.bank-extras .bank-order {
+  flex: 1 1 100%;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  opacity: 0.9;
+}
+.bank-extras .bank-order[data-warn='1'] {
+  color: #ffb4b4;
+  opacity: 1;
+}

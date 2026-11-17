@@ -1,4 +1,4 @@
-"""Poster and chat attachments can be an MP4 video for DMs and groups."""
+"""The Poster is a picture only. Chat attachments can still be an MP4 video."""
 
 import base64, sys, tempfile, unittest
 from pathlib import Path
@@ -33,13 +33,13 @@ class VideoPoster(unittest.TestCase):
         self.addCleanup(lambda: [p.stop() for p in self.patches])
         self.d = d
 
-    def test_a_video_poster_is_used_for_sends_until_a_picture_replaces_it(self):
+    def test_a_video_can_not_be_the_poster(self):
         (self.d / "poster.jpg").write_bytes(JPG)
-        self.assertEqual(server.poster_media().name, "poster.jpg")
-        self.assertEqual(server.save_upload(url(MP4, "video/mp4"), "poster"), "poster")
-        self.assertEqual(server.poster_media().name, "poster.mp4")
-        server.save_upload(url(JPG, "image/jpeg"), "poster")
-        self.assertEqual(server.poster_media().name, "poster.jpg")
+        with self.assertRaisesRegex(ValueError, "Poster must be a picture"):
+            server.save_upload(url(MP4, "video/mp4"), "poster")
+        with self.assertRaisesRegex(ValueError, "Poster must be a picture"):
+            server.save_upload(url(MP4, "video/mp4"), "dm_poster")
+        self.assertEqual(server.poster_media().name, "poster.jpg")  # the picture stays
 
     def test_poster_changes_during_an_active_send_and_the_next_message_uses_it(self):
         (self.d / "poster.jpg").write_bytes(JPG)
@@ -71,51 +71,44 @@ class VideoPoster(unittest.TestCase):
                 server.post_media("test@g.us", self.d / "caption.txt", self.d / "missing.jpg")
             run.assert_not_called()
 
-    def test_missing_video_never_falls_back_to_an_old_picture(self):
+    def test_an_older_video_poster_is_never_sent_and_never_replaced_by_an_old_picture(self):
         (self.d / "poster.jpg").write_bytes(JPG)
+        (self.d / "poster.mp4").write_bytes(MP4)
         (self.d / "poster-kind.txt").write_text("video")
-        selected = server.poster_media()
-        self.assertEqual(selected.name, "poster.mp4")
-        self.assertFalse(selected.exists())
+        for use in ("group", "dm"):
+            selected = server.poster_media(use)
+            self.assertFalse(selected.exists())  # the send stops: "upload a picture"
+            self.assertEqual(selected.suffix, ".jpg")
+        with self.assertRaisesRegex(ValueError, "poster.*upload"):
+            server.post_media("1@s.whatsapp.net", self.d / "c.txt", server.poster_media("dm"))
+        self.assertEqual(server.poster_file_kind(), "video")  # the screens say so
+        server.save_upload(url(JPG, "image/jpeg"), "poster")  # a new picture heals it
+        self.assertEqual(server.poster_media("dm").name, "poster.jpg")
+        self.assertTrue(server.poster_media("dm").exists())
+        self.assertEqual(server.poster_file_kind(), "image")
 
-    def test_video_over_3mb_is_durable_and_restored_without_reverting_to_picture(self):
-        class MemoryStore:
-            values = {}
+    def test_a_refused_video_poster_changes_nothing(self):
+        class Store:
+            puts = []
 
             def put(self, key, value):
-                self.values[key] = value
-
-            def get(self, key, default=None):
-                return self.values.get(key, default)
-
-        raw = MP4 + b"x" * 3_100_000
-        (self.d / "poster.jpg").write_bytes(JPG)
-        store = MemoryStore()
-        with patch.object(server, "STORE", store):
-            self.assertEqual(server.save_upload(url(raw, "video/mp4"), "dm_poster"), "poster")
-            self.assertEqual(len(base64.b64decode(store.get("poster_video_b64"))), len(raw))
-            (self.d / "poster.mp4").unlink()
-            self.assertEqual(server.poster_media("dm").read_bytes(), raw)
-            self.assertEqual(server.poster_media("group").read_bytes(), raw)
-
-    def test_failed_persistence_does_not_select_an_unsaved_video(self):
-        class BrokenStore:
-            def put(self, key, value):
-                raise RuntimeError("Database unavailable")
+                self.puts.append(key)
 
             def get(self, key, default=None):
                 return default
 
         (self.d / "poster.jpg").write_bytes(JPG)
         (self.d / "poster-kind.txt").write_text("image")
-        with patch.object(server, "STORE", BrokenStore()):
-            with self.assertRaisesRegex(RuntimeError, "Database unavailable"):
+        store = Store()
+        with patch.object(server, "STORE", store):
+            with self.assertRaises(ValueError):
                 server.save_upload(url(MP4, "video/mp4"), "poster")
+            self.assertEqual(store.puts, [])
             self.assertEqual(server.poster_media().name, "poster.jpg")
 
     def test_only_real_mp4_under_the_whatsapp_limit(self):
         with self.assertRaisesRegex(ValueError, "MP4"):
-            server.save_upload(url(b"not a video at all", "video/webm"), "poster")
+            server.save_upload(url(b"not a video at all", "video/webm"), "attachment")
         with self.assertRaisesRegex(ValueError, "too big"):
             server.save_upload(
                 url(b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 15_000_001, "video/mp4"), "attachment"

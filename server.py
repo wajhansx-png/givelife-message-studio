@@ -1275,12 +1275,22 @@ def files_note(files):
     return ", ".join(parts)
 
 
-def send_dm_test_files(jid):
-    """After a Test DM: the video, then the PDF, exactly the ones ticked for DMs (the same order and the same sender a
-    real DM uses). Never retried: one that is not confirmed stops the next, and the owner is told."""
+def dm_ticks(pdf=None, video=None):
+    """The PDF / video ticks for DMs: what the screen sends when it says (True / False), else the DM ticks saved on the
+    server (Donors saves them there when the owner ticks, so Auto, the chat and the Report start with the same choice)."""
     import group_extras
 
-    ticks = group_extras.setup(STORE, "dm")
+    saved = group_extras.setup(STORE, "dm")
+    return {
+        "pdf": pdf if isinstance(pdf, bool) else bool(saved.get("pdf")),
+        "video": video if isinstance(video, bool) else bool(saved.get("video")),
+    }
+
+
+def send_dm_test_files(jid, pdf=None, video=None):
+    """After a Test DM: the video, then the PDF, exactly the ones ticked for DMs (the same order and the same sender a
+    real DM uses). Never retried: one that is not confirmed stops the next, and the owner is told."""
+    ticks = dm_ticks(pdf, video)
     out = []
     for kind in ("video", "pdf"):
         if not ticks.get(kind):
@@ -2850,7 +2860,7 @@ def log_resume(what):
     STORE.put("resume_log", items[-30:])
 
 
-def send_dm_test(text, poster=True, files=True):
+def send_dm_test(text, poster=True, files=True, pdf=None, video=None):
     """A clearly marked test DM to the owner's own WhatsApp. Never touches donor records or rotation."""
     if not wa_ok():
         raise ValueError("WhatsApp is not connected. Link it first.")
@@ -2861,7 +2871,7 @@ def send_dm_test(text, poster=True, files=True):
     with SEND_LOCK:
         check_hold()
         result = send_image(me, body) if poster else send_text(me, body)
-        sent_files = send_dm_test_files(me) if files and result.get("code") == "SUCCESS" else []
+        sent_files = send_dm_test_files(me, pdf, video) if files and result.get("code") == "SUCCESS" else []
     if result.get("code") != "SUCCESS":
         raise ValueError(
             "Test not confirmed: " + str(result.get("message", ""))[:100] + " Check WhatsApp."
@@ -6843,10 +6853,10 @@ class Handler(BaseHTTPRequestHandler):
                     if body.get("action") == "base":
                         return self.reply(donors().messages.set_base(body.get("text")))
                     if body.get("action") == "test":
-                        return self.reply(donors().test_dm(body.get("poster", True), body.get("files") is not False))
+                        return self.reply(donors().test_dm(body.get("poster", True), body.get("files") is not False, body.get("pdf"), body.get("video")))
                     return self.reply(donors().messages.update(body.get("id"), body.get("text")))
                 if body.get("test"):
-                    return self.reply(donors().test_dm(body.get("poster", True), body.get("files") is not False))
+                    return self.reply(donors().test_dm(body.get("poster", True), body.get("files") is not False, body.get("pdf"), body.get("video")))
                 if body.get("toggle"):
                     return self.reply(donors().toggle())
                 if type(body.get("auto")) is bool:

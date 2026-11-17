@@ -138,3 +138,70 @@ class Sender(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SavedTicks(unittest.TestCase):
+    """The DM PDF / video ticks are saved on the server, so a start that does not say (an Auto card, the chat's
+    "send dms") sends the files that are ticked, the same as the screen, and the Test button does too."""
+
+    def setUp(self):
+        fixture.SendTests.setUp(self)
+        self.h = app.donors()
+        self.h.jobs.import_jobs({"jobs": []})
+        self.h.book._save({"version": 1, "records": []})
+        self.h.book.add("Synthetic 0", "923001230000")
+        group_extras.add(app.STORE, "pdf", url(PDF, "application/pdf"), "r.pdf")
+        group_extras.add(app.STORE, "video", url(MP4, "video/mp4"), "v.mp4")
+
+    tearDown = fixture.SendTests.tearDown
+
+    def start(self, scope="all", **body):
+        with patch.object(self.h.jobs, "connected", return_value=True):
+            self.h.start_batch(scope=scope, limit=1, run=False, **body)
+        return self.h.jobs._load()["jobs"][-1]
+
+    def tick(self, kind, on=True):
+        group_extras.set_setup(app.STORE, "dm", kind, on)
+
+    def test_a_start_that_does_not_say_sends_the_ticked_files(self):
+        self.tick("pdf")
+        self.tick("video")
+        job = self.start()
+        self.assertTrue(job.get("pdf"))
+        self.assertTrue(job.get("video"))
+
+    def test_only_the_ticked_one_goes(self):
+        self.tick("pdf")
+        job = self.start()
+        self.assertTrue(job.get("pdf"))
+        self.assertFalse(job.get("video"))
+
+    def test_a_start_that_says_keeps_its_own_choice(self):
+        self.tick("pdf")
+        self.tick("video")
+        job = self.start(pdf=False, video=False)
+        self.assertFalse(job.get("pdf"))
+        self.assertFalse(job.get("video"))
+
+    def test_nothing_ticked_sends_no_file(self):
+        job = self.start()
+        self.assertFalse(job.get("pdf"))
+        self.assertFalse(job.get("video"))
+
+    def test_a_ticked_file_that_is_not_saved_is_left_out_not_an_error(self):
+        self.tick("pdf")
+        group_extras.remove(app.STORE, "pdf")
+        job = self.start()
+        self.assertFalse(job.get("pdf"))
+
+    def test_a_list_with_its_own_text_keeps_no_file_unless_it_says(self):
+        self.tick("pdf")
+        ident = self.h.book.recipients("all")[0]["id"]
+        job = self.start(scope="selected", ids=[ident], custom_template="Hello {name}")
+        self.assertFalse(job.get("pdf"))
+
+    def test_the_test_button_uses_what_the_screen_says_then_the_saved_ticks(self):
+        self.tick("pdf")  # saved: PDF only
+        self.assertEqual(app.dm_ticks(), {"pdf": True, "video": False})
+        self.assertEqual(app.dm_ticks(video=True), {"pdf": True, "video": True})  # the screen says video too
+        self.assertEqual(app.dm_ticks(pdf=False, video=False), {"pdf": False, "video": False})

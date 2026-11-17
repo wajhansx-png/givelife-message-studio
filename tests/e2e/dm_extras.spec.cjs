@@ -130,3 +130,22 @@ test('the server wins: a tick saved there shows on a screen that never had it (a
   await api(port, '/group-extras', { action: 'setup', profile: 'dm', field: 'video', value: false });
 });
 
+test('Msgs tab has a Follow-up tick (the Donors bar one is hidden on phones): same choice, in the Order line, fits at 320', async ({ page }) => {
+  await openMsgs(page, 320);
+  const tick = page.locator('#msgFollowUp');
+  await expect(tick).toBeVisible();
+  await expect(page.locator('.bank-extras-label')).toHaveText('Also send:');
+  const box = await tick.locator('xpath=..').boundingBox();
+  expect(box.height).toBeGreaterThanOrEqual(38);
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(320.5);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await tick.setChecked(true, { force: true });
+  await expect(page.locator('#msgOrder')).toContainText('Follow-up');
+  await expect(page.locator('#donorFollowUp')).toBeChecked(); // the Donors bar tick follows (hidden on phones)
+  expect(await page.evaluate(() => localStorage.getItem('givelife-follow-up'))).toBe('1');
+  await tick.setChecked(false, { force: true });
+  await expect(page.locator('#msgOrder')).not.toContainText('Follow-up');
+  expect(await page.evaluate(() => localStorage.getItem('givelife-follow-up'))).toBe('0');
+});
+

@@ -128,6 +128,8 @@
     followUpOn = !!on;
     if (el('donorFollowUp')) el('donorFollowUp').checked = followUpOn;
     if (el('batchFollowUp')) el('batchFollowUp').checked = followUpOn;
+    if (el('msgFollowUp')) el('msgFollowUp').checked = followUpOn;
+    paintDmExtras(); // the Order line on the Msgs tab lists the follow-up
     if (remember)
       try {
         localStorage.setItem('givelife-follow-up', followUpOn ? '1' : '0');
@@ -1494,6 +1496,19 @@
       box.setAttribute('role', 'group');
       box.setAttribute('aria-label', 'Also send after each DM');
       box.append(make('span', 'bank-extras-label', 'Also send:'));
+      /* The follow-up message after each DM. The Donors bar tick is hidden on phones, so it is here too: one choice,
+         the same as the bar and the DM batch. */
+      {
+        const lab = make('label', 'bm-chip'),
+          b = make('input');
+        b.type = 'checkbox';
+        b.id = 'msgFollowUp';
+        b.checked = followUpOn;
+        b.onchange = () => setFollowUp(b.checked);
+        lab.title = 'Send the saved follow-up message after each DM (write it in Follow-up)';
+        lab.append(b, make('span', '', 'Follow-up'));
+        box.append(lab);
+      }
       for (const kind of ['pdf', 'video']) {
         const lab = make('label', 'bm-chip'),
           b = make('input');
@@ -1543,6 +1558,7 @@
         if (d.poster === true && v.poster && v.poster.has) steps.push(led ? 'Poster' : '2nd poster');
         if (dmExtra.video && hasVideo && !led) steps.push('Video');
         if (dmExtra.pdf && v.pdf && v.pdf.has) steps.push('PDF');
+        if (followUpOn) steps.push('Follow-up');
         const warn = !led && !pictureOk;
         orderLine.dataset.warn = warn ? '1' : '0';
         orderLine.textContent = warn

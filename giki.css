@@ -516,3 +516,102 @@
   background: #2a2212;
   color: #e8b64a;
 }
+
+/* Computer: the list looks like the Donors list (All, Donated...): one black box, 40 px rows, DM Case right after
+   the name and ··· at the end, the same small pill sizes. It fills the screen down to the bottom bar (it stopped at
+   495 px and left an empty band), and the bottom bar is as wide as the list with buttons of one size. */
+@media (min-width: 900px) {
+  .UI2.giki #donorsPage #donorVolunteers .vol-people {
+    max-height: none !important;
+    border: 1px solid #1f1f1f !important;
+    border-radius: 22px !important;
+    background: #000 !important;
+  }
+  .UI2.giki #donorsPage #donorVolunteers .vol-row {
+    grid-template-columns: 282px auto minmax(0, 1fr) 36px !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: 40px !important;
+    padding: 0 10px !important;
+  }
+  .UI2.giki #donorsPage #donorVolunteers .vol-row .vol-name {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+  }
+  .UI2.giki #donorsPage #donorVolunteers .vol-row .vol-case {
+    grid-column: 2;
+    min-width: 84px;
+    min-height: 32px !important;
+    height: 32px;
+    padding: 0 12px !important;
+    border: 1px solid #394060 !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    color: #9aa3c0 !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+  }
+  .UI2.giki #donorsPage #donorVolunteers .vol-row .vol-manage {
+    grid-column: 4;
+    width: 36px !important;
+    min-height: 32px !important;
+    height: 32px;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #f1f2f5 !important;
+    font-size: 15px !important;
+  }
+  .UI2.giki #donorsPage #donorVolunteers > .vol-foot {
+    width: 100% !important;
+    max-width: 760px !important;
+    margin-inline: auto !important;
+    box-sizing: border-box;
+    gap: 10px !important;
+  }
+  .UI2.giki #donorsPage #donorVolunteers > .vol-foot > button,
+  .UI2.giki #donorsPage#donorsPage #donorVolunteers > .vol-foot > .vol-add-panel > summary {
+    min-height: 48px !important;
+    padding: 0 20px !important;
+    font-size: 15px !important;
+  }
+}
+
+/* The ··· menu (Move to Waiting, Rename, Remove): it had no style, so the browser drew a plain white box */
+.UI2.giki #donorsPage .vol-manage-menu {
+  display: none;
+  min-width: 180px;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--line2, #2c3142);
+  border-radius: 14px;
+  background: var(--surface, #1b1f2c);
+  color: var(--ink, #eef0f6);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+.UI2.giki #donorsPage .vol-manage-menu:popover-open {
+  display: grid;
+  gap: 4px;
+}
+.UI2.giki #donorsPage .vol-manage-menu > button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0 !important;
+  border-radius: 10px;
+  background: transparent !important;
+  color: inherit !important;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+.UI2.giki #donorsPage .vol-manage-menu > button:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+.UI2.giki #donorsPage .vol-manage-menu > button.remove {
+  color: #ff8a8a !important;
+}

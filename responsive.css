@@ -3536,8 +3536,13 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
     box-sizing: border-box !important;
   }
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper #focusText:not([hidden]) {
-    min-height: 300px !important;
+    min-height: 220px !important;
     display: block !important;
+  }
+  /* Editing: the edit box, the format bar and the live preview all show; the screen itself scrolls if it is taller. */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper:has(#focusText:not([hidden])) {
+    max-height: none !important;
+    overflow-y: visible !important;
   }
   /* Top bar: Back on the left; Style fix and the language buttons together on the right (no loose middle button). */
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus > header #focusStyleFix {

@@ -278,7 +278,12 @@ def act(store, body):
     if op == "toggle":
         return set_on(store, body.get("kind"), body.get("on"))
     if op == "text_on":
-        return set_setup(store, body.get("profile", "group"), "text_on", body.get("value"))
+        # One choice for the Message screen: groups and DMs follow each other (clicking Poster in one place used to
+        # leave the DMs on the video). Giki has its own page and keeps its own.
+        if body.get("profile") == "giki":
+            return set_setup(store, "giki", "text_on", body.get("value"))
+        set_setup(store, "dm", "text_on", body.get("value"))
+        return set_setup(store, "group", "text_on", body.get("value"))
     if op == "setup":
         return set_setup(store, body.get("profile"), body.get("field"), body.get("value"))
     if op == "remove":

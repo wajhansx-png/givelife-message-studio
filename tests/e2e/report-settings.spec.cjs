@@ -14,7 +14,7 @@ async function open(page, width = 390) {
   await page.addInitScript(key => localStorage.setItem('givelife-cloud-key', key), KEY);
   await page.goto('/new/');
   await page.evaluate(() => window.GiveLifeReport.open());
-  await expect(page.locator('.auto-card')).toHaveCount(5);
+  await expect(page.locator('.auto-card')).toHaveCount(7); // 5 Auto cards + Giki 1, Giki 2
 }
 for (const width of [320, 390, 768, 1440]) {
   test(`every automation setting is visible, editable and saved at ${width}`, async ({ page }) => {
@@ -179,7 +179,7 @@ for (const width of [320, 390, 768, 1440]) {
     await expect(page.locator('[data-control=group] .ui2-auto-sub')).toContainText('1 sent');
     await page.evaluate(() => Promise.all(document.getAnimations().filter(animation => animation.effect?.getTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {}))));
     const heights = [];
-    for (const row of await page.locator('.auto-card').all()) {
+    for (const row of await page.locator('.auto-card:not([data-giki])').all()) {
       const title = await row.locator('h4').boundingBox();
       const gear = await row.locator('.auto-edit').boundingBox();
       const toggle = await row.locator('.auto-switch').boundingBox();
@@ -241,7 +241,7 @@ for (const width of [320,390,1440]) {
     }
     const fill = bar.locator('.auto-progress-fill');
     const bounds = await bar.boundingBox();
-    expect(bounds.height).toBe(8);
+    expect(bounds.height).toBeCloseTo(8, 1); // the page can sit at a fraction of a pixel
     const identity = await card.locator('.auto-identity').boundingBox();
     const filled = await fill.boundingBox();
     expect(Math.abs(bounds.width-filled.width)).toBeLessThanOrEqual(1);
@@ -252,5 +252,29 @@ for (const width of [320,390,1440]) {
     Object.assign(batch,{sent:0,pending:0,recipients:0});
     await page.evaluate(()=>GiveLifeReport.open());
     await expect(bar).toBeHidden();
+  });
+}
+
+for (const width of [320, 1440]) {
+  test(`DM Important and Giki show the person now and their messages, 25% each, at ${width}`, async ({ page }) => {
+    const view = await api(port, '/auto-controls');
+    Object.assign(view.controls.important, { on: true, state: 'ON', sent: 2, recipients: 9, pending: 7, person: { name: 'Ali Khan', done: 1, steps: 4 } });
+    Object.assign(view.giki.giki2, { active: true, sent: 3, total: 12, person: { name: 'Zain test', done: 3, steps: 4 } });
+    await page.route('**/auto-controls', route => route.fulfill({ json: view }));
+    await open(page, width);
+    await expect(page.locator('#reportDms')).toHaveCount(0);
+    await expect(page.locator('.report-list > li')).toHaveCount(3);
+    const imp = page.locator('[data-control=important]');
+    await expect(imp.locator('.auto-who')).toHaveText('Ali Khan · 1/4 · 25%');
+    await expect(imp.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '25');
+    const g2 = page.locator('[data-control=giki2]');
+    await expect(g2.locator('h4')).toHaveText('Giki 2');
+    await expect(g2.locator('.auto-who')).toHaveText('Zain test · 3/4 · 75%');
+    await expect(g2.locator('.ui2-auto-sub')).toContainText('3 of 12 sent');
+    await expect(g2.locator('.auto-switch')).toHaveCount(0);
+    await expect(page.locator('[data-control=giki] .auto-who')).toBeHidden();
+    await expect(page.locator('[data-control=giki] .ui2-auto-sub')).toHaveText('Not sending');
+    const box = await g2.boundingBox();
+    expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
   });
 }

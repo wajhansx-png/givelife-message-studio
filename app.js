@@ -2413,7 +2413,7 @@ function refreshLiveDrafts(data, baseline) {
 }
 let autoPolling = false;
 async function pollAuto() {
-  if (autoPolling) return;
+  if (autoPolling || document.hidden) return; // a hidden tab asks nothing; it refreshes when shown
   autoPolling = true;
   const payload = JSON.stringify({ group: $('group').value, dm: $('dm').value }),
     baseline = { payload, wasSaved: payload === draftSaved, left },
@@ -3060,6 +3060,7 @@ loadPoster();
 window.addEventListener('poster-changed', loadPoster);
 pollAuto();
 setInterval(pollAuto, 5000);
+document.addEventListener('visibilitychange', () => document.hidden || pollAuto());
 pollCamp();
 refreshNextActions();
 

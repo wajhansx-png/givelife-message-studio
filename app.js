@@ -1543,12 +1543,15 @@ async function sendTest(kind) {
       d = await r.json();
     if (d.code === 'STOPPED') return showStopped(btn);
     const ok = d.code === 'SUCCESS',
+      filesBad = ok && d.files_ok === false,
       result = ok
-        ? '✓ Sent to the test group.' + (st.stopped ? ' Too late to stop.' : '')
+        ? '✓ Sent to the test group.' +
+          (d.files_note ? ' ' + d.files_note + '.' : '') +
+          (st.stopped ? ' Too late to stop.' : '')
         : 'Test failed: ' + (d.message || d.error || '');
-    say('app', result, !ok);
-    if (btn) endButtonProgress(btn, ok ? '✓ Sent' : '✗ Not sent', ok);
-    else setLiveNotice(result, !ok);
+    say('app', result, !ok || filesBad);
+    if (btn) endButtonProgress(btn, ok ? (filesBad ? '⚠ Files not sent' : '✓ Sent') : '✗ Not sent', ok && !filesBad);
+    else setLiveNotice(result, !ok || filesBad);
   } catch (e) {
     if (e.stopped) showStopped(btn);
     else {

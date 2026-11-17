@@ -360,19 +360,20 @@ class DonorIntegration:
     def toggle(self):
         return self.resume_all() if self.paused else self.pause_personal()
 
-    def test_dm(self, poster=True):
+    def test_dm(self, poster=True, files=True):
         """Send the next saved donor message (its own test cursor, never the donor rotation) to the test number, marked TEST."""
         if type(poster) is not bool:
             raise ValueError("Poster must be on or off.")
         import dm_composer
 
         number, total, text = self.messages.next_test()
-        result = self.app.send_dm_test(dm_composer.personalize(text, "", "Brother"), poster)
+        result = self.app.send_dm_test(dm_composer.personalize(text, "", "Brother"), poster, files)
         return {
             **result,
             "version": number,
             "total": total,
-            "reply": f"Test DM sent: version {number} of {total}.",
+            "reply": f"Test DM sent: version {number} of {total}."
+            + (" " + result["files_note"] + "." if result.get("files_note") else ""),
         }
 
     PREFS_KEY = "donor_batch_prefs"

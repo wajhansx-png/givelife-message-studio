@@ -218,7 +218,7 @@ def problems(style, text, parts, ctx, previous=""):
         out.append("it makes a medical claim that is not confirmed")
     never = quality.NEVER.search(text)
     if never:
-        out.append(f'it uses the word "{never.group(0)}" (never say gift: say donation, giving or helping)')
+        out.append(f'it uses the word "{never.group(0)}" (never say gift or begging: say donation, giving, helping, or what the family needs)')
     if parts.get("verse") not in VERSES:
         out.append("the verse is not on the approved list")
     if style in TRIGGER and previous:

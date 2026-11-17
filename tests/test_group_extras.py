@@ -323,6 +323,20 @@ class Sending(unittest.TestCase):
         self.assertEqual(media[0], ("923001234567@s.whatsapp.net", "dm text"))  # poster carries the DM text
         self.assertEqual(media[1], (GROUP, "group text"))  # groups too: the same choice
 
+    def test_an_older_video_poster_stops_a_poster_text_send_before_anyone_is_marked(self):
+        group_extras.set_text_on(app.STORE, "poster")
+        with patch.object(app, "poster_file_kind", lambda use="dm": "video"):
+            with self.assertRaisesRegex(ValueError, "Poster must be a picture"):
+                app._refuse_video_poster("dm", "dm")
+            with self.assertRaisesRegex(ValueError, "Poster must be a picture"):
+                app._refuse_video_poster("group", "group")
+            group_extras.set_text_on(app.STORE, "video")  # the case video carries the text: no poster picture needed
+            group_extras.set_setup(app.STORE, "dm", "text_on", "video")
+            app._refuse_video_poster("dm", "dm")
+        with patch.object(app, "poster_file_kind", lambda use="dm": "image"):
+            group_extras.set_text_on(app.STORE, "poster")
+            app._refuse_video_poster("dm", "dm")  # a picture is saved: fine
+
     def test_a_dm_ticked_video_is_not_sent_twice_when_it_carried_the_text(self):
         group_extras.set_text_on(app.STORE, "video")
         group_extras.set_setup(app.STORE, "dm", "text_on", "video")

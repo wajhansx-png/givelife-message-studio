@@ -1646,6 +1646,7 @@ document.addEventListener('click', (e) => {
     textRow.append(mk('span', 'ui2-rx-text-label', 'Text goes on:'));
     /* Group and DM each keep their own choice (the group message view sets the groups, the DM view the DMs) */
     let setupAll = {};
+    let posterKind = 'image';
     const profile = () => (isDm() ? 'dm' : 'group');
     const mine = () => setupAll[profile()] || { text_on: 'video', poster: true };
     async function saveSetup(field, value) {
@@ -1724,11 +1725,15 @@ document.addEventListener('click', (e) => {
       const on = (k) =>
         have[k] && (dm ? (k === 'poster' ? !!(setupAll.dm && setupAll.dm.poster) : dmOn[k]) : groupOn[k]);
       const led = m.text_on === 'video' && have.video && (dm || groupOn.video);
-      const steps = [led ? 'Video + text' : 'Poster + text'];
+      const steps = [led ? 'Video + text' : 'Poster picture + text'];
       if (on('poster')) steps.push(led ? 'Poster' : '2nd poster');
       if (on('video') && !led) steps.push('Video');
       if (on('pdf')) steps.push('PDF');
-      orderLine.textContent = 'Order:  ' + steps.map((t, i) => i + 1 + '. ' + t).join('   ');
+      const noPicture = !led && posterKind !== 'image'; // the Poster is a picture only: without one nothing goes out
+      orderLine.dataset.warn = noPicture ? '1' : '0';
+      orderLine.textContent = noPicture
+        ? 'Nothing will be sent: there is no Poster picture. Upload a picture in Poster.'
+        : 'Order:  ' + steps.map((t, i) => i + 1 + '. ' + t).join('   ');
     };
     const take = (v) => {
       for (const k of ['pdf', 'video', 'poster']) {
@@ -1737,6 +1742,7 @@ document.addEventListener('click', (e) => {
         groupOn[k] = !!(have[k] && v[k].on);
       }
       setupAll = v.setup || {};
+      posterKind = v.poster_kind || 'image';
       paint();
     };
     const load = async () => {

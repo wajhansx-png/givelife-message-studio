@@ -454,7 +454,9 @@ test('donor list is numbered, progress is one slim line, and tabs have a visible
   await expect(page.locator('#donorMain')).toBeHidden();
 });
 
-test('the poster dialog and the chat clip accept an MP4 video as well as a picture', async ({
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+
+test('the poster dialog takes a picture only; the chat clip still accepts an MP4 video', async ({
   page,
   request,
 }) => {
@@ -472,9 +474,9 @@ test('the poster dialog and the chat clip accept an MP4 video as well as a pictu
       ?.querySelector('input[type=file]')
       ?.getAttribute('accept'),
   );
-  expect(await page.evaluate(() => document.getElementById('posterFile').accept)).toContain(
-    'video/mp4',
-  );
+  const accept = await page.evaluate(() => document.getElementById('posterFile').accept);
+  expect(accept).toContain('image/');
+  expect(accept).not.toContain('video'); // the Poster is a picture only
 });
 
 test('poster upload shows real progress, stays open until confirmed, and then closes', async ({
@@ -496,15 +498,7 @@ test('poster upload shows real progress, stays open until confirmed, and then cl
     });
   });
   await page.evaluate(() => window.DonorHub.openPoster());
-  await page.locator('#posterFile').setInputFiles({
-    name: 'sample.mp4',
-    mimeType: 'video/mp4',
-    buffer: Buffer.concat([
-      Buffer.from([0, 0, 0, 24]),
-      Buffer.from('ftypmp42'),
-      Buffer.alloc(12000),
-    ]),
-  });
+  await page.locator('#posterFile').setInputFiles({ name: 'poster.png', mimeType: 'image/png', buffer: PNG });
   await expect(page.locator('#posterSave')).toBeEnabled();
   await page.locator('#posterSave').click();
   await expect(page.locator('#posterProgress')).toBeVisible();
@@ -515,7 +509,19 @@ test('poster upload shows real progress, stays open until confirmed, and then cl
   await expect(page.locator('#posterProgressText')).toContainText(/Uploading|saving securely/); // real progress, never a fake timer
   finishUpload();
   await expect(page.locator('#posterDialog')).not.toBeVisible({ timeout: 8000 });
-  await expect(page.locator('#donorNotice')).toContainText('Video saved for groups and DMs.');
+  await expect(page.locator('#donorNotice')).toContainText('Poster saved for groups and DMs.');
+});
+
+test('a video chosen as the Poster is refused with a clear message', async ({ page, request }) => {
+  await open(page, request, 390, 844);
+  await page.evaluate(() => window.DonorHub.openPoster());
+  await page.locator('#posterFile').setInputFiles({
+    name: 'sample.mp4',
+    mimeType: 'video/mp4',
+    buffer: Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(512)]),
+  });
+  await expect(page.locator('#posterNote')).toContainText('Poster must be a picture');
+  await expect(page.locator('#posterSave')).toBeDisabled();
 });
 
 test('poster saving errors remain visible and retry can complete', async ({ page, request }) => {
@@ -532,11 +538,7 @@ test('poster saving errors remain visible and retry can complete', async ({ page
     });
   });
   await page.evaluate(() => window.DonorHub.openPoster());
-  await page.locator('#posterFile').setInputFiles({
-    name: 'sample.mp4',
-    mimeType: 'video/mp4',
-    buffer: Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(512)]),
-  });
+  await page.locator('#posterFile').setInputFiles({ name: 'poster.png', mimeType: 'image/png', buffer: PNG });
   await page.locator('#posterSave').click();
   await expect(page.locator('#posterNote')).toContainText('Storage temporarily unavailable');
   await expect(page.locator('#posterDialog')).toBeVisible();

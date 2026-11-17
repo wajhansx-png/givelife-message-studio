@@ -1006,7 +1006,7 @@
   async function testDonor() {
     let last = '';
     for (let i = 0; i < 3; i++) {
-      const r = await call('/donor-messages', { action: 'test', poster: true });
+      const r = await call('/donor-messages', { action: 'test', poster: true, files: i === 0 });
       if (r.code && r.code !== 'SUCCESS')
         throw Error(
           r.message || `Test ${i + 1} was not confirmed. Check WhatsApp before trying again.`,

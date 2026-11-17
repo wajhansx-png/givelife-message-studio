@@ -1258,6 +1258,43 @@ def send_dm_extra(jid, is_group, kind):
     return send_batch_attachment(jid, "", ident)
 
 
+FILE_WORD = {"poster": "Poster", "video": "Video", "pdf": "PDF"}
+
+
+def files_note(files):
+    """What happened to each file after a Test message, in plain words: 'Video ✓, PDF ✓' or
+    'Video ✓, PDF NOT sent: <why>'. Empty when no file followed. The owner sees this, so a missing file is never silent."""
+    parts = []
+    for f in files or []:
+        word = FILE_WORD.get(f.get("kind"), "File")
+        if f.get("code") == "SUCCESS":
+            parts.append(word + " ✓")
+        else:
+            why = re.sub(r"\s+", " ", str(f.get("message") or "")).strip()[:100]
+            parts.append(word + " NOT sent" + (": " + why if why else ""))
+    return ", ".join(parts)
+
+
+def send_dm_test_files(jid):
+    """After a Test DM: the video, then the PDF, exactly the ones ticked for DMs (the same order and the same sender a
+    real DM uses). Never retried: one that is not confirmed stops the next, and the owner is told."""
+    import group_extras
+
+    ticks = group_extras.setup(STORE, "dm")
+    out = []
+    for kind in ("video", "pdf"):
+        if not ticks.get(kind):
+            continue
+        try:
+            r = send_dm_extra(jid, False, kind)
+        except Exception as e:  # not saved, case complete, on hold, stopped: nothing was sent for this one
+            r = {"code": "SKIPPED", "message": str(e)}
+        out.append({"kind": kind, "code": r.get("code"), "message": str(r.get("message") or "")[:200]})
+        if r.get("code") != "SUCCESS":
+            break
+    return out
+
+
 def send_group_extras(jid):
     """After a group's poster + caption went out: the case's PDF, then its video (each only if saved and switched on).
     Never retried: if one is not confirmed, the next one is not sent and the owner is told to check WhatsApp."""
@@ -2813,7 +2850,7 @@ def log_resume(what):
     STORE.put("resume_log", items[-30:])
 
 
-def send_dm_test(text, poster=True):
+def send_dm_test(text, poster=True, files=True):
     """A clearly marked test DM to the owner's own WhatsApp. Never touches donor records or rotation."""
     if not wa_ok():
         raise ValueError("WhatsApp is not connected. Link it first.")
@@ -2824,11 +2861,19 @@ def send_dm_test(text, poster=True):
     with SEND_LOCK:
         check_hold()
         result = send_image(me, body) if poster else send_text(me, body)
+        sent_files = send_dm_test_files(me) if files and result.get("code") == "SUCCESS" else []
     if result.get("code") != "SUCCESS":
         raise ValueError(
             "Test not confirmed: " + str(result.get("message", ""))[:100] + " Check WhatsApp."
         )
-    return {"code": "SUCCESS", "reply": "Test DM sent to your own WhatsApp."}
+    note = files_note(sent_files)
+    return {
+        "code": "SUCCESS",
+        "files": sent_files,
+        "files_note": note,
+        "files_ok": all(f.get("code") == "SUCCESS" for f in sent_files),
+        "reply": "Test DM sent to your own WhatsApp." + (" " + note + "." if note else ""),
+    }
 
 
 class _send_lock_waiting:
@@ -6798,10 +6843,10 @@ class Handler(BaseHTTPRequestHandler):
                     if body.get("action") == "base":
                         return self.reply(donors().messages.set_base(body.get("text")))
                     if body.get("action") == "test":
-                        return self.reply(donors().test_dm(body.get("poster", True)))
+                        return self.reply(donors().test_dm(body.get("poster", True), body.get("files") is not False))
                     return self.reply(donors().messages.update(body.get("id"), body.get("text")))
                 if body.get("test"):
-                    return self.reply(donors().test_dm(body.get("poster", True)))
+                    return self.reply(donors().test_dm(body.get("poster", True), body.get("files") is not False))
                 if body.get("toggle"):
                     return self.reply(donors().toggle())
                 if type(body.get("auto")) is bool:
@@ -7524,6 +7569,22 @@ class Handler(BaseHTTPRequestHandler):
                             saved = STORE.get("last_sent", {})
                             saved[jid] = stamp
                             STORE.put("last_sent", saved)
+                if isinstance(result, dict) and result.get("code") == "SUCCESS":
+                    import group_extras
+
+                    if picture:
+                        note = files_note(result.get("extras"))
+                    elif group_extras.to_send(STORE):  # a real text-only post sends no files either
+                        note = "Text only is on, so no poster, PDF or video went"
+                    else:
+                        note = ""
+                    sent_files = (result.get("extras") or []) if picture else []
+                    result = {
+                        **result,
+                        "files_note": note,
+                        "files_ok": (picture or not note)
+                        and all(e.get("code") == "SUCCESS" for e in sent_files),
+                    }
                 self.reply(result)
             except SendStopped:
                 self.reply({"code": "STOPPED", "message": "Sending stopped. Nothing was sent."})

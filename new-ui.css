@@ -6164,3 +6164,26 @@
 .UI2 .ui2-sheet .ui2-tile.ui2-tile-giki small {
   color: #e2dbff !important;
 }
+
+/* Reader: "Order: 1. Video + text  2. Poster  3. PDF" under the file buttons (what WhatsApp gets, in order). */
+.UI2 .ui2-rx-order {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--ink-muted, #aab0c5);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  white-space: pre-wrap;
+}
+.UI2 .ui2-rx-order:empty {
+  display: none;
+}
+@media (max-width: 899px) {
+  .UI2 #messageFocus.ui2-has-rx .focus-workspace {
+    max-height: max(130px, calc(100dvh - 378px));
+  }
+  .UI2 #messageFocus.ui2-has-rx.ui2-has-rx-text .focus-workspace {
+    max-height: max(110px, calc(100dvh - 426px));
+  }
+}

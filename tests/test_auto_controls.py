@@ -644,3 +644,71 @@ class LiveReport(Base):
         self.assertFalse(out["giki"]["giki"]["active"])
         self.assertIn("person", out["controls"][IMPORTANT])
         self.assertIsNone(out["controls"][IMPORTANT]["person"])
+
+
+class LiveWhereverStarted(Base):
+    """Report > live: a DM batch started anywhere (Donors tab, chat, Case page, Volunteers) shows live in the Report,
+    not only the ones started from an Auto card. Cards are never listed twice."""
+
+    def running(self, engine, **job):
+        row = {
+            "id": "live-1",
+            "state": "Sending",
+            "current": "Ali",
+            "total": 5,
+            "sent": 2,
+            "receipts": [],
+            "ids": [],
+            "scope": "top",
+            **job,
+        }
+        for p in (
+            patch.object(engine, "export_jobs", return_value={"jobs": [row]}),
+            patch.object(engine, "active", "live-1"),
+        ):
+            p.start()
+            self.addCleanup(p.stop)
+
+    def test_nothing_running_lists_nothing(self):
+        self.assertEqual(self.c.view()["live"], [])
+
+    def test_a_batch_started_by_hand_is_listed_with_its_count_and_person(self):
+        self.running(self.h.jobs)  # no owner: started from the Donors tab or the chat
+        live = self.c.view()["live"]
+        self.assertEqual(len(live), 1)
+        self.assertEqual(live[0]["title"], "Donor DMs")
+        self.assertEqual((live[0]["sent"], live[0]["total"]), (2, 5))
+        self.assertTrue(live[0]["active"])
+        self.assertEqual(live[0]["person"]["name"], "Ali")
+
+    def test_a_case_page_batch_is_named_for_the_case_page(self):
+        self.running(self.h.jobs, owner="case_dm")
+        self.assertEqual(self.c.view()["live"][0]["title"], "Case page DMs")
+
+    def test_a_volunteer_batch_started_by_hand_is_listed(self):
+        self.running(self.h.volunteers.jobs)
+        live = self.c.view()["live"]
+        self.assertEqual([x["title"] for x in live], ["Volunteer DMs"])
+
+    def test_a_batch_a_card_already_shows_is_not_listed_twice(self):
+        self.running(self.h.jobs, owner=IMPORTANT, scope="important")
+        view = self.c.view()
+        self.assertEqual(view["live"], [])
+        self.assertEqual(view["controls"][IMPORTANT]["state"], "ON")
+
+    def test_a_waiting_batch_keeps_showing_with_its_next_time(self):
+        self.running(self.h.jobs, state="Waiting", current="Waiting between DMs", next_at=1234567890.0)
+        live = self.c.view()["live"][0]
+        self.assertTrue(live["active"])
+        self.assertIsNone(live["person"])
+        self.assertEqual(live["next_at"], 1234567890.0)
+        self.assertEqual(live["current"], "Waiting between DMs")
+
+    def test_a_stopping_batch_says_so(self):
+        self.running(self.h.jobs)
+        self.h.jobs.stop.set()
+        self.addCleanup(self.h.jobs.stop.clear)
+        live = self.c.view()["live"][0]
+        self.assertIn("stopping", live["title"])
+        self.assertIsNone(live["person"])
+

@@ -51,6 +51,46 @@ test('five controls, all OFF at first, each with its numbers and Edit Settings',
   );
 });
 
+test('a DM batch started anywhere (not from a card) shows live in the Report, first, and goes when it ends', async ({
+  page,
+}) => {
+  let live = [
+    {
+      id: 'live_donors',
+      title: 'Donor DMs',
+      state: 'Sending',
+      active: true,
+      sent: 2,
+      total: 5,
+      current: 'Ali',
+      next_at: null,
+      person: { name: 'Ali', done: 1, steps: 3 },
+    },
+  ];
+  await page.route('**/auto-controls', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const response = await route.fetch();
+    const body = await response.json();
+    await route.fulfill({ response, json: { ...body, live } });
+  });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/old');
+  await page.locator('.report-open').click();
+  const row = page.locator('.auto-card[data-giki="1"]').first();
+  await expect(row.locator('h4')).toHaveText('Donor DMs');
+  await expect(row.locator('.ui2-auto-sub')).toHaveText('2 of 5 sent');
+  await expect(row.locator('.auto-who')).toHaveText('Ali · 1/3 · 33%');
+  await expect(row).toHaveAttribute('data-state', 'ON');
+  expect(await page.locator('#autoCards .auto-card').first().locator('h4').textContent()).toBe(
+    'Donor DMs',
+  ); // a running batch is listed before the cards
+  live = []; // the batch ended: the live row goes away by itself
+  await expect(page.locator('.auto-card[data-giki="1"] h4', { hasText: 'Donor DMs' })).toHaveCount(
+    0,
+    { timeout: 20000 },
+  );
+});
+
 test('Group Auto switches the existing Auto engine on and off', async ({ page }) => {
   await openReport(page);
   await card(page, 'group').locator('.auto-switch').click();

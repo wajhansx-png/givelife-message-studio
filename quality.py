@@ -12,10 +12,15 @@ BANNED = re.compile(
 )
 
 
-# Owner rule: a donation is never called a "gift" (gift, gifts, gifted, gifting) in any written message, even
-# when the source says it: the new wording must say donation, giving, helping or an amount instead.
-NEVER = re.compile(r"(?i)\bgift(?:s|ed|ing)?\b")
-NEVER_RULE = 'Never use the word "gift" (or gifts or gifting). Say donation, giving, helping or the amount instead.'
+# Owner rules, always on, even when the source says it: a donation is never called a "gift" (gift, gifts, gifted,
+# gifting), and a family is never "begging" (beg, begs, begged, begging, beggar). The new wording must say
+# donation, giving, helping, an amount, or state the need plainly instead.
+NEVER = re.compile(r"(?i)\b(?:gift(?:s|ed|ing)?|beg(?:s|ged|ging)?|beggars?)\b")
+NEVER_RULE = (
+    'Never use the word "gift" (or gifts or gifting). Say donation, giving, helping or the amount instead. '
+    'Never use the word "begging" (or beg, begs, begged, beggar). Say what the family needs, '
+    'or that they are asking for help, instead.'
+)
 
 
 def hard_reason(source, text):

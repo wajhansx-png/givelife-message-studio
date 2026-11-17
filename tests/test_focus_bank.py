@@ -23,7 +23,7 @@ _H = [
 ]
 _B = [
     "Their little one needs urgent care and they cannot pay the bills",
-    "A parent is begging for help to cover treatment fees",
+    "A parent is asking for help to cover treatment fees",
     "They have sold what they could and still fall short",
     "The doctors are waiting but the money is not there",
     "This family has nobody else to ask but you",
@@ -767,3 +767,45 @@ class FormatChecks(unittest.TestCase):
             "bullet", format_problem(src, "*New hook*\n\nRs. 17,500 is still needed\n_x_")
         )
         self.assertIn("unpaired", reject_reason(SRC, DEEP[0].replace("*Stop", "Stop", 1)))
+
+
+class NeverWordBegging(unittest.TestCase):
+    """Owner rule: the word "begging" (and beg, begs, begged, beggar) is never used, even when the source says it."""
+
+    SOURCE = "*Mirha's mother is begging with folded hands to save her little girl.* 💔\n\n_Her life is at risk._\n\nShe urgently needs 2 oxygen cylinders."
+
+    def test_the_word_is_found_in_every_form_but_not_in_other_words(self):
+        import quality
+
+        for word in ("begging", "Begging", "beg", "begs", "begged", "beggar", "beggars"):
+            self.assertTrue(quality.NEVER.search(f"A mother is {word} for help"), word)
+        for fine in ("begin", "beginning", "began", "regard", "Georgia begins"):
+            self.assertIsNone(quality.NEVER.search(fine), fine)
+        self.assertTrue(quality.NEVER.search("a gift of 1,000"))  # the older rule still holds
+
+    def test_a_version_with_the_word_is_rejected_even_if_the_source_has_it(self):
+        text = self.SOURCE.replace("is begging with", "is pleading with")
+        self.assertNotIn("begging", text)
+        bad = self.SOURCE.replace("save her little girl", "rescue her little girl")
+        self.assertIn("never use", reject_reason(self.SOURCE, bad, novelty=False))
+        self.assertNotIn("never use", reject_reason(self.SOURCE, text, novelty=False))
+
+    def test_saved_versions_with_the_word_are_dropped_and_the_others_kept(self):
+        from focus_bank import clean_items, verified_items
+
+        good = self.SOURCE.replace("is begging with", "is asking with")
+        bad = self.SOURCE.replace("save her", "rescue her")
+        self.assertEqual(clean_items(self.SOURCE, [bad, good]), [good])
+        self.assertEqual(verified_items(self.SOURCE, [bad, good]), [good])
+
+    def test_a_version_the_owner_wrote_by_hand_is_kept_as_written(self):
+        from focus_bank import clean_items
+
+        mine = self.SOURCE.replace("save her", "rescue her")
+        self.assertEqual(clean_items(self.SOURCE, [mine], manual=[mine]), [mine])
+
+    def test_the_writer_prompt_rule_names_the_word(self):
+        import quality
+
+        self.assertIn("begging", quality.NEVER_RULE)
+        self.assertIn("gift", quality.NEVER_RULE)

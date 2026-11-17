@@ -82,6 +82,7 @@
 - DMs go as poster image + caption (not text-only). If a DM goes out wrong, owner wants it deleted (revoke) and resent correctly. (21:48)
 - DM safety (owner 21:52): gap 1.5 min or more (random 90-120s), rests, quiet hours, stop on any error. He is worried about WhatsApp restriction.
 - DM wording: EVERY line must be re-worded for each person (same concept/facts), not just the opening. Pools in preview_site/dm_pools.json, 10 per line. (21:57)
+- NEVER use the word "begging" (or beg, begged, beggar) in any message, hook or version (owner order). Say what the family needs instead. Code rule: quality.NEVER.
 - NEVER add begging closing lines (e.g. 'Please send now', 'Please help if you can'). Group messages end with 'Reply Done after you donate.' only. Do not write new begging lines in any variant. (22:07)
 - STANDING ORDER (22:08): log EVERY owner action and what he does when donations are slow in givelife/owner_playbook.md (section E action log + sections A-D). Update it at the end of every turn where he decided or corrected something.
 

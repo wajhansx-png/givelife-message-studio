@@ -782,15 +782,17 @@ def is_wrapped(source, value):
 
 
 def clean_items(source, items, manual=()):
-    """Saved versions safe to show or send: no wrapped copies, no duplicates, and no version the
-    AI moved into another language (Urdu or Roman Urdu for an English message). Versions the
-    owner wrote by hand are kept as written."""
+    """Saved versions safe to show or send: no wrapped copies, no duplicates, no version the
+    AI moved into another language (Urdu or Roman Urdu for an English message), and no version with
+    an owner never-use word. Versions the owner wrote by hand are kept as written."""
     out, seen = [], set()
     for value in items or []:
         if not isinstance(value, str) or not value.strip() or is_wrapped(source, value):
             continue
         if value not in (manual or ()) and dm_variants.language_changed(source, value):
             continue
+        if value not in (manual or ()) and quality.NEVER.search(value):
+            continue  # an owner never-use word ("gift", "begging"): dropped, and the bank writes new ones
         key = wording_key(value)
         if key not in seen:
             out.append(value)

@@ -308,6 +308,7 @@ class AutoControls:
             "next_at": None,
             "state": "OFF",
             "note": "",
+            "person": None,
         }
         if not job:
             view["note"] = "Not started yet."
@@ -352,6 +353,7 @@ class AutoControls:
                 ).strip()
         view["batch"] = job.get("batch")
         view["batches"] = job.get("batches")
+        view["person"] = jobs.person(job) if running and not stopping else None
         return view
 
     def _group_view(self):
@@ -410,6 +412,13 @@ class AutoControls:
                 "fields": FIELDS[which],
                 **body,
             }
+        # Giki 1 / Giki 2 live, in this same answer (the Report page makes no extra calls for them)
+        out["giki"] = {}
+        for name, title in (("giki", "Giki 1"), ("giki2", "Giki 2")):
+            try:
+                out["giki"][name] = {"title": title, **self.app.giki_list(name).jobs.brief()}
+            except Exception:
+                pass
         return out
 
     # ---- changing state -------------------------------------------------------------------------

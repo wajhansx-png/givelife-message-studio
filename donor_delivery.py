@@ -245,6 +245,43 @@ class DonorDelivery:
             )
         return result
 
+    def person(self, j):
+        """The person being sent to right now and how many of their messages went: {"name", "done", "steps"}, or
+        None between people. Steps = the case message, then each 2nd / 3rd / video / PDF, then the share message."""
+        name = j.get("current") or ""
+        if j.get("state") != "Sending" or not name:
+            return None
+        kinds = self._after_kinds(j)
+        steps = 1 + len(kinds) + (1 if j.get("follow_up") else 0)
+        done = 0
+        last = (j.get("receipts") or [None])[-1]
+        if last and last.get("name") == name and last.get("state") == "Sent":
+            got = last.get("steps")
+            if got is None and "after" not in j:
+                done = steps  # files went with the first message, as one step
+            else:
+                done = 1 + sum(1 for k in kinds if (got or {}).get(k) == "Sent")
+                done += 1 if last.get("follow_up") == "Sent" else 0
+        return {"name": name, "done": min(done, steps), "steps": steps}
+
+    def brief(self):
+        """Small and cheap (copies only the newest batch, no lookups): what the Report page shows live."""
+        with self.lock:
+            if self._cache is None:
+                self._load()
+            jobs = (self._cache or {}).get("jobs") or []
+            j = copy.deepcopy(jobs[-1]) if jobs else {}
+        state = j.get("state") or "Idle"
+        return {
+            "state": state,
+            "active": bool(self.active) and state in ("Starting", "Sending", "Waiting"),
+            "sent": (j.get("previous_sent") or 0) + (j.get("sent") or 0),
+            "total": j.get("original_total") or j.get("total") or 0,
+            "current": j.get("current") or "",
+            "next_at": j.get("next_at"),
+            "person": self.person(j),
+        }
+
     def _update(self, ident, **fields):
         with self.lock:
             data = self._load()

@@ -138,7 +138,6 @@
         'reportGroups',
         '<path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/>',
       ],
-      ['DMs Sent', 'reportDms', '<path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4 18-7z"/>'],
       ['Replies', 'reportReplies', '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v3"/>'],
       [
         'Resumes',
@@ -183,7 +182,7 @@
     return data;
   }
   async function fill() {
-    for (const id of ['reportGroups', 'reportDms', 'reportReplies', 'reportResumes']) put(id, '…');
+    for (const id of ['reportGroups', 'reportReplies', 'reportResumes']) put(id, '…');
     try {
       const d = await readReport('/autopilot'),
         st = d.status || {},
@@ -202,35 +201,6 @@
       );
     } catch (e) {
       put('reportGroups', '—', 'Unavailable · try again in a moment');
-    }
-    try {
-      const j = await readReport('/donor-delivery'),
-        active = ['Starting', 'Sending', 'Waiting'].includes(j.state),
-        sent = (j.previous_sent || 0) + (j.sent || 0),
-        total = j.original_total || j.total || 0;
-      if (active)
-        put(
-          'reportDms',
-          String(sent),
-          'of ' +
-            total +
-            ' · ' +
-            Math.max(0, total - sent) +
-            ' left' +
-            (j.next_batch_at
-              ? ' · next batch ' + clock(j.next_batch_at)
-              : j.next_at
-                ? ' · next in ' + Math.max(0, Math.ceil(j.next_at - Date.now() / 1000)) + 's'
-                : ''),
-        );
-      else
-        put(
-          'reportDms',
-          String(sent),
-          sent ? 'Last batch: ' + sent + ' of ' + total + ' sent' : 'Idle',
-        );
-    } catch (e) {
-      put('reportDms', '—', 'Unavailable · try again in a moment');
     }
   }
   const remember = (on) => {
@@ -268,7 +238,8 @@
   const cards = {};
   let autoTimer = 0,
     autoBusy = false,
-    autoRevision = 0;
+    autoRevision = 0,
+    busyNow = false;
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -282,7 +253,7 @@
     stop.disabled = true;
     try {
       for (const [id, x] of Object.entries(cards))
-        if (x.last && x.last.on) paint(await autoCall({ control: id, on: false }));
+        if (x.last && x.last.on && !x.giki) paint(await autoCall({ control: id, on: false }));
       autoSay('Everything is off. Nothing more will be sent.');
     } catch (e) {
       autoSay(e.message);
@@ -332,8 +303,11 @@
     progress.setAttribute('aria-valuemax', '100');
     fill.setAttribute('aria-hidden', 'true');
     progress.append(fill);
-    identity.append(el('h4', '', c.title), progress);
-    head.append(identity, edit, sw);
+    const who = el('small', 'auto-who');
+    who.hidden = true;
+    identity.append(el('h4', '', c.title), who, progress);
+    if (c.giki) head.append(identity);
+    else head.append(identity, edit, sw);
     edit.setAttribute('aria-label', 'Edit Settings');
     edit.title = c.title + ' settings';
     settingsDialog.setAttribute('aria-label', c.title + ' settings');
@@ -355,8 +329,17 @@
     form.hidden = true;
     form.append(el('p', 'auto-error'));
     settingsDialog.append(form);
+    if (c.giki) {
+      card.dataset.giki = '1';
+      const sub = el('small', 'ui2-auto-sub');
+      identity.firstChild.after(sub);
+      card.append(head);
+      cards[c.id] = { card, line: sub, who, progress, fill, giki: true };
+      $('autoCards').append(card);
+      return;
+    }
     card.append(head, line, stats, note, set, settingsDialog);
-    cards[c.id] = { card, sw, stats, note, line, set, edit, form, settingsDialog, progress, fill, saving: false, fields: c.fields, filled: false };
+    cards[c.id] = { card, sw, stats, note, line, set, edit, form, settingsDialog, progress, fill, who, saving: false, fields: c.fields, filled: false };
     set.onclick = () => edit.click();
     sw.onclick = () => toggle(c.id);
     edit.onclick = () => {
@@ -474,7 +457,7 @@
     }
     autoBusy = true;
     autoRevision++;
-    for (const item of Object.values(cards)) item.sw.disabled = true;
+    for (const item of Object.values(cards)) if (item.sw) item.sw.disabled = true;
     x.sw.setAttribute('aria-busy', 'true');
     x.sw.textContent = turningOn ? 'Starting…' : 'Stopping…';
     autoSay('');
@@ -487,7 +470,7 @@
       autoRevision++;
       autoBusy = false;
       x.sw.removeAttribute('aria-busy');
-      for (const item of Object.values(cards)) item.sw.disabled = false;
+      for (const item of Object.values(cards)) if (item.sw) item.sw.disabled = false;
     }
   }
   /* What happened, in one plain sentence. */
@@ -538,6 +521,30 @@
       );
     return usual(s.gap_minutes, ' min') + ' apart · ' + usual(s.batch_size, '') + ' per batch';
   }
+  /* The person being sent to right now: their name, and how many of their messages went (4 messages = 25% each). */
+  function paintPerson(x, p) {
+    const pct = p ? Math.round((100 * p.done) / Math.max(1, p.steps)) : 0,
+      say = p ? p.name + ' · ' + p.done + '/' + p.steps + ' · ' + pct + '%' : '';
+    x.who.hidden = x.progress.hidden = !p;
+    x.who.textContent = say;
+    x.progress.setAttribute('aria-valuenow', String(pct));
+    x.progress.setAttribute('aria-valuetext', p ? p.name + ': ' + p.done + ' of ' + p.steps + ' messages' : '');
+    x.progress.title = say;
+    x.fill.style.width = pct + '%';
+    x.card.dataset.person = p ? '1' : '';
+  }
+  function paintGiki(id, g) {
+    if (!cards[id]) buildCard({ id, title: g.title, giki: true });
+    const x = cards[id];
+    x.last = g;
+    x.card.dataset.state = g.active ? 'ON' : 'OFF';
+    x.line.textContent = g.active
+      ? g.sent + ' of ' + g.total + ' sent' + (g.person ? '' : g.current ? ' · ' + g.current : '')
+      : g.total
+        ? (g.state === 'Completed' ? 'Done · ' : g.state + ' · ') + g.sent + ' of ' + g.total + ' sent'
+        : 'Not sending';
+    paintPerson(x, g.active ? g.person : null);
+  }
   function paint(view) {
     for (const c of Object.values(view.controls || {})) {
       if (!cards[c.id]) buildCard(c);
@@ -576,13 +583,16 @@
           ? '1'
           : '';
       x.card.dataset.prog = c.id !== 'group' && total ? '1' : '';
+      if ('person' in c) paintPerson(x, c.person); // DM cards: the bar is for the person now, not the batch
     }
-    const all = Object.values(cards).filter((x) => x.last),
+    for (const [id, g] of Object.entries(view.giki || {})) paintGiki(id, g);
+    const all = Object.values(cards).filter((x) => x.last && !x.giki),
       running = all.filter((x) => x.last.on).length,
       count = $('autoCount');
     count.textContent = running + '/' + all.length + ' on';
     count.dataset.run = running ? '1' : '';
-    $('autoStopAll').hidden = !Object.values(cards).some((x) => x.last && x.last.on);
+    $('autoStopAll').hidden = !all.some((x) => x.last.on);
+    busyNow = Object.values(cards).some((x) => x.last && (x.last.on || x.last.active));
   }
   async function autoRefresh() {
     if (autoBusy || Object.values(cards).some(x => x.saving)) return;
@@ -601,17 +611,22 @@
     fill();
     fillExtra();
     autoRefresh();
-    clearInterval(autoTimer);
-    autoTimer = setInterval(() => {
-      if (dlg.open && !document.hidden) autoRefresh();
-    }, 2500);
+    clearTimeout(autoTimer);
+    /* One call: every 3 s while something sends, every 15 s when nothing does (fewer calls, less CPU). */
+    const tick = () => {
+      autoTimer = setTimeout(async () => {
+        if (dlg.open && !document.hidden) await autoRefresh();
+        if (dlg.open) tick();
+      }, busyNow ? 3000 : 15000);
+    };
+    tick();
     if (!dlg.open) dlg.showModal();
     remember(true);
   };
   dlg.addEventListener('close', () => {
-    clearInterval(autoTimer);
+    clearTimeout(autoTimer);
     autoRevision++;
-    for (const x of Object.values(cards)) if (x.settingsDialog.open) x.settingsDialog.close();
+    for (const x of Object.values(cards)) if (x.settingsDialog && x.settingsDialog.open) x.settingsDialog.close();
     remember(false);
   });
   /* Reopening the app returns to the Report if it was open. */

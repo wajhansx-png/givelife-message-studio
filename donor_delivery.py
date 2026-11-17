@@ -96,8 +96,28 @@ class DonorDelivery:
         self._cache = raw if isinstance(raw, dict) else {"jobs": []}
         return copy.deepcopy(self._cache)
 
+    # Every send step saves the whole history (database + file). Old batches kept every person's full message, so it
+    # grew to megabytes per save: slow sends, busy CPU, heavy database disk use. Past every resume / repair window
+    # (36 h) only the record is kept: who, when, what went. Nothing that a later send or resume reads is dropped.
+    SLIM_AFTER = 48 * 3600
+    HEAVY = ("caption", "captions", "personal_names", "custom_template")
+
+    def _slim(self, jobs):
+        cut = time.time() - self.SLIM_AFTER
+        for j in jobs[:-1]:
+            if j.get("state") in ("Starting", "Sending", "Waiting"):
+                continue
+            if (j.get("updated_at") or j.get("created_at") or 0) >= cut:
+                continue
+            for k in self.HEAVY:
+                j.pop(k, None)
+            for r in j.get("receipts", []):
+                if isinstance(r, dict):
+                    r.pop("after_ids", None)
+
     def _save(self, data):
         data["jobs"] = data["jobs"][-100:]
+        self._slim(data["jobs"])
         if self.store:
             self.store.put(self.KEY, data)
         self._cache = copy.deepcopy(data)

@@ -408,10 +408,16 @@ class DonorBook:
         if not query:
             raise ValueError("Name the donor to change.")
         with self.lock:
-            records = [r for r in self._load()["records"] if not r.get("deleted")]
-            exact = [
-                r for r in records if r["id"] == query or name_key(r["name"]) == name_key(query)
-            ]
+            # Read the cached book without copying it all (this runs for every person, many times per send and
+            # page refresh); only the one match is copied out.
+            if self._cache is None:
+                self._load()
+            records = [r for r in self._cache["records"] if not r.get("deleted")]
+            by_id = [r for r in records if r["id"] == query]
+            if len(by_id) == 1:
+                return copy.deepcopy(by_id[0])
+            key = name_key(query)
+            exact = [r for r in records if r["id"] == query or name_key(r["name"]) == key]
             if not exact:
                 try:
                     p = normalize_phone(query)

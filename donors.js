@@ -2907,7 +2907,8 @@
           );
         }
       }
-      if (active || j.resume?.state === 'Pending') pollTimer = setTimeout(poll, 1200);
+      // every 2.5 s (5 s when this tab is hidden): live enough, half the calls and server work of 1.2 s
+      if (active || j.resume?.state === 'Pending') pollTimer = setTimeout(poll, document.hidden ? 5000 : 2500);
     } catch (e) {
       notice('Could not refresh delivery status. Checking again; no sends were retried.', true);
       if (page.open) pollTimer = setTimeout(poll, 3000);

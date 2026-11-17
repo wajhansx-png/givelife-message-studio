@@ -1569,7 +1569,7 @@ document.addEventListener('click', (e) => {
     const box = mk('div', 'ui2-rx');
     box.id = 'ui2ReaderExtras';
     box.setAttribute('role', 'group');
-    box.append(mk('span', 'ui2-rx-label', 'Also send:'));
+    box.append(mk('span', 'ui2-rx-label', 'Add files:'));
     const items = {};
     let uploading = false;
     const msg = mk('p', 'ui2-rx-msg', '');
@@ -1642,8 +1642,8 @@ document.addEventListener('click', (e) => {
     const textRow = mk('div', 'ui2-rx-text');
     textRow.id = 'ui2RxText';
     textRow.setAttribute('role', 'group');
-    textRow.setAttribute('aria-label', 'Text goes with');
-    textRow.append(mk('span', 'ui2-rx-text-label', 'Text goes with:'));
+    textRow.setAttribute('aria-label', 'Text goes on');
+    textRow.append(mk('span', 'ui2-rx-text-label', 'Text goes on:'));
     /* Group and DM each keep their own choice (the group message view sets the groups, the DM view the DMs) */
     let setupAll = {};
     const profile = () => (isDm() ? 'dm' : 'group');
@@ -1672,7 +1672,13 @@ document.addEventListener('click', (e) => {
       b.addEventListener('click', () => mine().text_on !== v && saveSetup('text_on', v));
       textRow.append(b);
     }
-    box.append(textRow, msg);
+    /* "Order: 1. Video + text  2. Poster  3. PDF": what WhatsApp will get, in order, updated on every tick or tap.
+       It follows the server (group_extras.lead / to_send / after_items, DonorDelivery._after_kinds): when the text
+       goes on the video the case poster is not sent; the ticked Poster is the after poster. */
+    const orderLine = mk('p', 'ui2-rx-order', '');
+    orderLine.id = 'ui2RxOrder';
+    orderLine.setAttribute('aria-live', 'polite');
+    box.append(textRow, orderLine, msg);
     /* It takes the place of the small hint line under the buttons, so the reader grows by almost nothing. */
     const hint = document.querySelector('#messageFocus .ui2-reader-hint');
     if (hint) hint.after(box);
@@ -1714,6 +1720,14 @@ document.addEventListener('click', (e) => {
       for (const b of textRow.querySelectorAll('button'))
         b.setAttribute('aria-pressed', String(b.dataset.v === m.text_on));
       textRow.title = dm ? 'For DMs' : 'For group posts';
+      const on = (k) =>
+        have[k] && (dm ? (k === 'poster' ? !!(setupAll.dm && setupAll.dm.poster) : dmOn[k]) : groupOn[k]);
+      const led = m.text_on === 'video' && have.video && (dm || groupOn.video);
+      const steps = [led ? 'Video + text' : 'Poster + text'];
+      if (on('poster')) steps.push(led ? 'Poster' : '2nd poster');
+      if (on('video') && !led) steps.push('Video');
+      if (on('pdf')) steps.push('PDF');
+      orderLine.textContent = 'Order:  ' + steps.map((t, i) => i + 1 + '. ' + t).join('   ');
     };
     const take = (v) => {
       for (const k of ['pdf', 'video', 'poster']) {

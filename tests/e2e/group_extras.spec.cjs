@@ -354,3 +354,26 @@ for (const width of [390, 430, 1440])
     if (dock && width < 900 && dock.height > 0) expect(box.y + box.height).toBeLessThanOrEqual(dock.y + 1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   });
+
+test('Reader: the Order line shows what WhatsApp gets, in order, and changes on every tick and tap', async ({ page }) => {
+  for (const kind of ['pdf', 'video', 'poster']) await api(port, '/group-extras', { action: 'remove', kind });
+  await openReader(page);
+  const order = page.locator('#ui2RxOrder');
+  await expect(order).toHaveText(/^Order:\s+1\. Poster \+ text$/);
+  await api(port, '/group-extras', { action: 'add', kind: 'video', data: 'data:video/mp4;base64,' + MP4.toString('base64'), name: 'b.mp4' });
+  await api(port, '/group-extras', { action: 'add', kind: 'poster', data: 'data:image/jpeg;base64,' + JPG.toString('base64'), name: 'a.jpg' });
+  await api(port, '/group-extras', { action: 'setup', profile: 'group', field: 'text_on', value: 'video' });
+  await page.reload();
+  await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
+  await expect(order).toHaveText(/1\. Video \+ text\s+2\. Poster$/);
+  await page.locator('#ui2RxText-poster').click();
+  await expect(order).toHaveText(/1\. Poster \+ text\s+2\. 2nd poster\s+3\. Video$/);
+  await page.locator('#ui2Rx-poster').uncheck();
+  await expect(order).toHaveText(/1\. Poster \+ text\s+2\. Video$/);
+  await page.locator('#ui2RxText-video').click();
+  await expect(order).toHaveText(/1\. Video \+ text$/);
+  const box = await order.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(390.5);
+  for (const kind of ['video', 'poster']) await api(port, '/group-extras', { action: 'remove', kind });
+});

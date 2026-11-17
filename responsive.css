@@ -3498,3 +3498,70 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
     display: none;
   }
 }
+
+
+/* Preview (reader) screen, >=900: the message text is absolutely placed inside the card (focus-editor.css), so with
+   an automatic card height the card collapsed to its 180px minimum: inner scrollbars, cut-off first line, and a big gap
+   above the buttons. Put the text (or the edit box) back in the flow so the card is as tall as its message, and let
+   the buttons follow the card instead of sitting at the bottom of the screen. */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus {
+    overflow-y: auto !important;
+    justify-content: flex-start !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-workspace {
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    width: min(860px, 100%) !important;
+    max-width: 860px !important;
+    margin: 0 auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper {
+    height: auto !important;
+    min-height: 180px !important;
+    max-height: max(180px, calc(100vh - 340px)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper :is(#focusFormatted, #focusText:not([hidden])) {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper #focusText:not([hidden]) {
+    min-height: 300px !important;
+    display: block !important;
+  }
+  /* Top bar: Back on the left; Style fix and the language buttons together on the right (no loose middle button). */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus > header #focusStyleFix {
+    margin-left: auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus > header .focus-styles {
+    margin-left: 8px !important;
+  }
+  /* The "New version ready / Refresh" pill: a small chip in the top-right corner, and the screen's top bar moves
+     down below it, so it never sits on top of Back or the language buttons. */
+  #updateBar {
+    inset: 8px 12px auto auto !important;
+    margin: 0 !important;
+    width: max-content !important;
+    max-width: min(320px, calc(100vw - 24px)) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):has(#updateBar) #messageFocus {
+    padding-top: 72px !important;
+  }
+}
+
+/* The same pill on phones and tablets: the Preview top bar moves down below it. */
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):has(#updateBar) #messageFocus > header {
+    margin-top: 72px !important;
+  }
+}

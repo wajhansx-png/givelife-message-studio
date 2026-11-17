@@ -3588,3 +3588,10 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
   min-height: 44px !important;
   padding: 0 20px !important;
 }
+
+/* Report window, auto cards (desktop): the card title is a button, so it is at least 28px tall. */
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-identity h4[role='button'] {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 28px !important;
+}

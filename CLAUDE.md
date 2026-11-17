@@ -20,6 +20,7 @@ Goal: Minimize total token usage without sacrificing code quality, accuracy or s
 16. Finish with only: Changes made; Tests passed/failed; Remaining issues.
 17. Never sacrifice correctness, security, necessary testing or functionality to save tokens.
 18. Never send real messages, modify production data, or deploy without permission.
+    Exception (owner's standing order): after tests pass, open the PR and squash-merge it yourself, then reset the branch to origin/main. Never ask "merge?". Never send real messages.
 
 Apply these rules automatically to every coding task.
 

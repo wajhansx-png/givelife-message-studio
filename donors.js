@@ -92,13 +92,35 @@
       try {
         localStorage.setItem('givelife-dm-' + kind, on ? '1' : '0');
       } catch (e) {}
+    if (remember) saveDmExtra(kind, dmExtra[kind]);
     if (remember && autoOn) autoOptions({ [kind]: dmExtra[kind] });
   }
-  /* Opening Donors: untick what is no longer saved (for example after a new case). */
+  /* The tick is also saved on the server, so every DM start (the Auto cards in Report, the chat's "send dms", the Test
+     button) sends the same files as this screen says. Before, only this browser knew it. */
+  function saveDmExtra(kind, on) {
+    api('/group-extras', { action: 'setup', profile: 'dm', field: kind, value: !!on }).catch(() => {});
+  }
+  /* Opening Donors: untick what is no longer saved (for example after a new case). The server's saved ticks win; the
+     very first time, a tick this browser already had is sent up to the server so nothing the owner chose is lost. */
   async function syncDmExtras() {
     try {
-      const have = await api('/group-extras');
-      for (const kind of ['pdf', 'video']) if (!have[kind] || !have[kind].has) dmExtra[kind] = false;
+      const have = await api('/group-extras'),
+        server = (have.setup && have.setup.dm) || {};
+      let moved = false;
+      try {
+        moved = localStorage.getItem('givelife-dm-extras-saved') === '1';
+      } catch (e) {}
+      for (const kind of ['pdf', 'video']) {
+        const saved = !!(have[kind] && have[kind].has);
+        if (!saved) dmExtra[kind] = false;
+        else if (!moved && dmExtra[kind] && !server[kind]) saveDmExtra(kind, true);
+        else if (moved || server[kind]) dmExtra[kind] = !!server[kind];
+      }
+      try {
+        localStorage.setItem('givelife-dm-extras-saved', '1');
+        for (const kind of ['pdf', 'video'])
+          localStorage.setItem('givelife-dm-' + kind, dmExtra[kind] ? '1' : '0');
+      } catch (e) {}
     } catch (e) {}
     paintDmExtras();
   }
@@ -1763,7 +1785,12 @@
     testBtn.onclick = async () => {
       testBtn.disabled = true;
       try {
-        const r = await api('/donor-messages', { action: 'test', poster: singlePosterOn });
+        const r = await api('/donor-messages', {
+          action: 'test',
+          poster: singlePosterOn,
+          pdf: dmExtra.pdf,
+          video: dmExtra.video,
+        });
         notice(r.reply);
       } catch (e) {
         notice(e.message, true);

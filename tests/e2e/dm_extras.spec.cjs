@@ -102,3 +102,31 @@ test('the Msgs checkboxes fit at 320px with real tap targets', async ({ page }) 
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
+
+test('the DM ticks are saved on the server too, so Auto, the chat and Test start with the same files', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: PDF, name: 'report.pdf' });
+  await api(port, '/group-extras', { action: 'add', kind: 'video', data: MP4, name: 'clip.mp4' });
+  await api(port, '/group-extras', { action: 'setup', profile: 'dm', field: 'pdf', value: false });
+  await api(port, '/group-extras', { action: 'setup', profile: 'dm', field: 'video', value: false });
+  await openMsgs(page);
+  await page.locator('#msgPdf').click({ force: true });
+  await expect(page.locator('#msgPdf')).toBeChecked();
+  await expect
+    .poll(async () => (await (await page.request.get('/group-extras', { headers: { Authorization: 'Bearer ' + KEY } })).json()).setup.dm.pdf)
+    .toBe(true);
+  await page.locator('#msgPdf').click({ force: true });
+  await expect(page.locator('#msgPdf')).not.toBeChecked();
+  await expect
+    .poll(async () => (await (await page.request.get('/group-extras', { headers: { Authorization: 'Bearer ' + KEY } })).json()).setup.dm.pdf)
+    .toBe(false);
+});
+
+test('the server wins: a tick saved there shows on a screen that never had it (another phone)', async ({ browser }) => {
+  await api(port, '/group-extras', { action: 'setup', profile: 'dm', field: 'video', value: true });
+  const page = await (await browser.newContext()).newPage();
+  await openMsgs(page);
+  await expect(page.locator('#msgVideo')).toBeChecked();
+  await expect(page.locator('#msgPdf')).not.toBeChecked();
+  await api(port, '/group-extras', { action: 'setup', profile: 'dm', field: 'video', value: false });
+});
+

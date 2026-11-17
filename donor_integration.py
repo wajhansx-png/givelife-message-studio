@@ -360,14 +360,14 @@ class DonorIntegration:
     def toggle(self):
         return self.resume_all() if self.paused else self.pause_personal()
 
-    def test_dm(self, poster=True, files=True):
+    def test_dm(self, poster=True, files=True, pdf=None, video=None):
         """Send the next saved donor message (its own test cursor, never the donor rotation) to the test number, marked TEST."""
         if type(poster) is not bool:
             raise ValueError("Poster must be on or off.")
         import dm_composer
 
         number, total, text = self.messages.next_test()
-        result = self.app.send_dm_test(dm_composer.personalize(text, "", "Brother"), poster, files)
+        result = self.app.send_dm_test(dm_composer.personalize(text, "", "Brother"), poster, files, pdf, video)
         return {
             **result,
             "version": number,
@@ -427,7 +427,21 @@ class DonorIntegration:
             raise ValueError("Write the follow-up in Messages → Follow-Up Message first.")
         return text
 
+    def _default_extras(self, body):
+        """A start that does not say (Auto cards, the chat's "send dms", a list from the Donors tab) sends the PDF and
+        the video that are ticked for DMs, as long as they are saved. A start that says (the batch dialog, the Case page)
+        keeps its own choice; a list with its own attachment or text keeps none unless it says."""
+        if body.get("attachment") or body.get("custom_template") is not None:
+            return
+        import group_extras
+
+        ticks = self.app.dm_ticks()
+        for kind in ("pdf", "video"):
+            if kind not in body and ticks[kind] and group_extras.saved(self.app.STORE, kind):
+                body[kind] = True
+
     def _start_batch(self, **body):
+        self._default_extras(body)
         body["follow_up"] = self._follow_up_for(body.get("follow_up"))
         if body["follow_up"] is None:
             body.pop("follow_up")

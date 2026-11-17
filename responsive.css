@@ -3499,6 +3499,108 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
   }
 }
 
+
+/* Preview (reader) screen, >=900: the message text is absolutely placed inside the card (focus-editor.css), so with
+   an automatic card height the card collapsed to its 180px minimum: inner scrollbars, cut-off first line, and a big gap
+   above the buttons. Put the text (or the edit box) back in the flow so the card is as tall as its message, and let
+   the buttons follow the card instead of sitting at the bottom of the screen. */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus {
+    overflow-y: auto !important;
+    justify-content: flex-start !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-workspace {
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    width: min(860px, 100%) !important;
+    max-width: 860px !important;
+    margin: 0 auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper {
+    height: auto !important;
+    min-height: 180px !important;
+    max-height: max(180px, calc(100vh - 340px)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper :is(#focusFormatted, #focusText:not([hidden])) {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper #focusText:not([hidden]) {
+    min-height: 220px !important;
+    display: block !important;
+  }
+  /* Editing: the edit box, the format bar and the live preview all show; the screen itself scrolls if it is taller. */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper:has(#focusText:not([hidden])) {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+  /* The More menu opens downward: the buttons now sit right under the card, so an upward menu would cover the message. */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+    top: calc(100% + 8px) !important;
+    bottom: auto !important;
+  }
+  /* Top bar: Back on the left; Style fix and the language buttons together on the right (no loose middle button). */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus > header #focusStyleFix {
+    margin-left: auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus > header .focus-styles {
+    margin-left: 8px !important;
+  }
+  /* The "New version ready / Refresh" pill: a small chip in the top-right corner, and the screen's top bar moves
+     down below it, so it never sits on top of Back or the language buttons. */
+  #updateBar {
+    inset: 8px 12px auto auto !important;
+    margin: 0 !important;
+    width: max-content !important;
+    max-width: min(320px, calc(100vw - 24px)) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):has(#updateBar) #messageFocus {
+    padding-top: 72px !important;
+  }
+}
+
+/* The same pill on phones and tablets: the Preview top bar moves down below it. */
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):has(#updateBar) #messageFocus > header {
+    margin-top: 72px !important;
+  }
+}
+
+/* Donors notice close (x) and the skip link: always a real tap target (44px), at every width. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #donorsPage #donorNotice .donor-notice-close,
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #donorsPage #donorNotice .donor-notice-close {
+  flex: 0 0 44px !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin: -8px 0 !important;
+  font-size: 22px !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) a.skip-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 44px !important;
+  padding: 0 20px !important;
+}
+
+/* Report window, auto cards (desktop): the card title is a button, so it is at least 28px tall. */
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .auto-identity h4[role='button'] {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 28px !important;
+}
+
 /* Report: three live facts (DMs Sent removed), then the Auto cards; DM Top / Important and Giki 1 / 2 show the
    person being sent to now (small name) above a bar for their messages (4 messages = 25% each). */
 html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) dialog.report-dialog .report-card .report-list {

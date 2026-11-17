@@ -78,5 +78,7 @@ class H(http.server.BaseHTTPRequestHandler):
 
 
 socketserver.ThreadingTCPServer.allow_reuse_address = True
+# Many frames load at once; the default queue of 5 refused connections on Windows (pages measured without their CSS).
+socketserver.ThreadingTCPServer.request_queue_size = 128
 print("Responsive workbench: http://127.0.0.1:8765/dash", flush=True)
 socketserver.ThreadingTCPServer(("127.0.0.1", 8765), H).serve_forever()

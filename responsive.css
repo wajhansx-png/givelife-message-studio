@@ -3544,6 +3544,11 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
     max-height: none !important;
     overflow-y: visible !important;
   }
+  /* The More menu opens downward: the buttons now sit right under the card, so an upward menu would cover the message. */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+    top: calc(100% + 8px) !important;
+    bottom: auto !important;
+  }
   /* Top bar: Back on the left; Style fix and the language buttons together on the right (no loose middle button). */
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus > header #focusStyleFix {
     margin-left: auto !important;

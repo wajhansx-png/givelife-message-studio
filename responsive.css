@@ -3570,3 +3570,21 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
     margin-top: 72px !important;
   }
 }
+
+/* Donors notice close (x) and the skip link: always a real tap target (44px), at every width. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #donorsPage #donorNotice .donor-notice-close,
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #donorsPage #donorNotice .donor-notice-close {
+  flex: 0 0 44px !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin: -8px 0 !important;
+  font-size: 22px !important;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) a.skip-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 44px !important;
+  padding: 0 20px !important;
+}

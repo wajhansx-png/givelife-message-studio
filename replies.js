@@ -534,12 +534,22 @@
     x.card.dataset.person = p ? '1' : '';
   }
   function paintGiki(id, g) {
-    if (!cards[id]) buildCard({ id, title: g.title, giki: true });
+    if (!cards[id]) {
+      buildCard({ id, title: g.title, giki: true });
+      if (id.startsWith('live_')) $('autoCards').prepend(cards[id].card); // a running batch goes first
+    }
     const x = cards[id];
     x.last = g;
+    const h = x.card.querySelector('h4');
+    if (h && h.textContent !== g.title) h.textContent = g.title;
     x.card.dataset.state = g.active ? 'ON' : 'OFF';
     x.line.textContent = g.active
-      ? g.sent + ' of ' + g.total + ' sent' + (g.person ? '' : g.current ? ' · ' + g.current : '')
+      ? g.sent +
+        ' of ' +
+        g.total +
+        ' sent' +
+        (g.person ? '' : g.current ? ' · ' + g.current : '') +
+        (!g.person && g.next_at ? ' · next ' + clock(g.next_at) : '')
       : g.total
         ? (g.state === 'Completed' ? 'Done · ' : g.state + ' · ') + g.sent + ' of ' + g.total + ' sent'
         : 'Not sending';
@@ -586,6 +596,14 @@
       if ('person' in c) paintPerson(x, c.person); // DM cards: the bar is for the person now, not the batch
     }
     for (const [id, g] of Object.entries(view.giki || {})) paintGiki(id, g);
+    /* DM batches started anywhere else (Donors tab, chat, Case page, Volunteers): live while they run, gone when done. */
+    const live = view.live || [];
+    for (const g of live) paintGiki(g.id, g);
+    for (const id of Object.keys(cards))
+      if (id.startsWith('live_') && !live.some((g) => g.id === id)) {
+        cards[id].card.remove();
+        delete cards[id];
+      }
     const all = Object.values(cards).filter((x) => x.last && !x.giki),
       running = all.filter((x) => x.last.on).length,
       count = $('autoCount');

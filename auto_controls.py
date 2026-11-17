@@ -298,8 +298,10 @@ class AutoControls:
             return self._owner(last)  # about to resume by itself after a restart
         return ""
 
-    def _dm_view(self, which):
+    def _dm_view(self, which, shown=None):
         job = self._job(which)
+        if job and shown is not None:
+            shown.add(job.get("id"))  # a card already shows this batch: the live list below skips it
         view = {
             "on": False,
             "recipients": 0,
@@ -380,8 +382,45 @@ class AutoControls:
             view["note"] = "On hold. Nothing is sent until you resume."
         return view
 
+    def _other_live(self, shown):
+        """Every DM batch that is sending or waiting for its next person right now and is NOT shown by a card above:
+        one started from the Donors tab, the chat, the Case page or the Volunteers screen. The Report lists it live, so
+        a DM run is visible there wherever it was started. Cheap: it only looks when a batch is really running."""
+        out = []
+        donors = self.app.donors()
+        for key, title, engine in (
+            ("live_donors", "Donor DMs", donors.jobs),
+            ("live_volunteers", "Volunteer DMs", donors.volunteers.jobs),
+        ):
+            ident = engine.active
+            if not ident or ident in shown:
+                continue
+            try:
+                job = next((j for j in engine.export_jobs().get("jobs", []) if j.get("id") == ident), None)
+            except Exception:
+                continue
+            if not job:
+                continue
+            owner = str(self._owner(job))
+            stopping = bool(engine.stop.is_set())
+            out.append(
+                {
+                    "id": key,
+                    "title": ("Case page DMs" if owner.startswith("case_") else title) + (" · stopping" if stopping else ""),
+                    "state": job.get("state", ""),
+                    "active": True,
+                    "sent": (job.get("previous_sent") or 0) + (job.get("sent") or 0),
+                    "total": job.get("original_total") or job.get("total") or 0,
+                    "current": job.get("current") or "",
+                    "next_at": job.get("next_at") or job.get("next_batch_at"),
+                    "person": None if stopping else engine.person(job),
+                }
+            )
+        return out
+
     def view(self):
         out = {"left": self.app.read_left(), "controls": {}}
+        shown = set()
         for which in CONTROLS:
             if which == THANKS:
                 thanks = getattr(self.app.donors(), "thanks", None)
@@ -396,7 +435,7 @@ class AutoControls:
                     "note": v.get("error") or "Saved completion update · Donated → Thank donors",
                 }
             else:
-                body = self._group_view() if which == GROUP else self._dm_view(which)
+                body = self._group_view() if which == GROUP else self._dm_view(which, shown)
             settings = self.settings(which)
             if which == GROUP:
                 summary = self.app.ENGINE.summary()
@@ -412,6 +451,10 @@ class AutoControls:
                 "fields": FIELDS[which],
                 **body,
             }
+        try:
+            out["live"] = self._other_live(shown)
+        except Exception:
+            out["live"] = []  # the Report must still load if this extra look fails
         # Giki 1 / Giki 2 live, in this same answer (the Report page makes no extra calls for them)
         out["giki"] = {}
         for name, title in (("giki", "Giki 1"), ("giki2", "Giki 2")):

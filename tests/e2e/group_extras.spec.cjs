@@ -169,7 +169,8 @@ test('Reader: Text goes with Video / Poster is right under the ticks once a vide
   await expect(page.locator('#ui2RxText-video')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('#ui2RxText-poster').click();
   await expect(page.locator('#ui2RxText-poster')).toHaveAttribute('aria-pressed', 'true');
-  expect((await api(port, '/group-extras')).text_on).toBe('poster');
+  const one = await api(port, '/group-extras');
+  expect([one.text_on, one.setup.dm.text_on]).toEqual(['poster', 'poster']); // groups and DMs together
   await page.locator('#ui2RxText-video').click();
   await expect.poll(async () => (await api(port, '/group-extras')).text_on).toBe('video');
   await api(port, '/group-extras', { action: 'remove', kind: 'video' });

@@ -372,3 +372,20 @@ class CaseOwnership(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OneTextChoice(unittest.TestCase):
+    def test_text_goes_on_choice_is_one_for_groups_and_dms_but_not_giki(self):
+        s = Store()
+        group_extras.add(s, "video", url(MP4, "video/mp4"))
+        video = group_extras.saved(s, "video")
+        self.assertEqual(group_extras.lead(s, "dm"), video)  # default: the video carries the text
+        group_extras.act(s, {"action": "text_on", "value": "poster"})  # one click, from either place
+        self.assertIsNone(group_extras.lead(s, "group"))
+        self.assertIsNone(group_extras.lead(s, "dm"))
+        group_extras.act(s, {"action": "text_on", "value": "video"})
+        self.assertEqual(group_extras.lead(s, "group"), video)
+        self.assertEqual(group_extras.lead(s, "dm"), video)
+        group_extras.act(s, {"action": "text_on", "profile": "giki", "value": "video"})
+        group_extras.act(s, {"action": "text_on", "value": "poster"})
+        self.assertEqual(group_extras.lead(s, "giki"), video)  # Giki keeps its own

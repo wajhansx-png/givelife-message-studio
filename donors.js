@@ -1515,7 +1515,12 @@
       };
       const saveText = async (field, value) => {
         try {
-          paintText(await api('/group-extras', { action: 'setup', profile: 'dm', field, value }));
+          paintText(
+            await api(
+              '/group-extras',
+              field === 'text_on' ? { action: 'text_on', value } : { action: 'setup', profile: 'dm', field, value },
+            ),
+          );
         } catch (e) {
           notice(e.message, true);
         }

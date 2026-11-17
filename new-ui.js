@@ -1651,7 +1651,8 @@ document.addEventListener('click', (e) => {
     async function saveSetup(field, value) {
       msg.textContent = '';
       try {
-        const r = await post('/group-extras', { action: 'setup', profile: profile(), field, value }),
+        // the text choice is one for groups and DMs together; the PDF / video / poster ticks stay per place
+        const r = await post('/group-extras', field === 'text_on' ? { action: 'text_on', value } : { action: 'setup', profile: profile(), field, value }),
           d = await r.json().catch(() => ({}));
         if (!r.ok) throw Error(d.error || 'Could not save that.');
         take(d);

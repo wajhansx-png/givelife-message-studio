@@ -3734,7 +3734,7 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
 }
 
 /* ---- Messages reader, minimal (owner's pick): the message fills the screen at full width; one thin row under it
-   with ‹ 1 of 5 › (a quick swipe on the message does the same) and 📎 files; then Test | Copy | Edit | More | Back.
+   with ‹ 1 of 5 › (a quick swipe on the message does the same) and 📎 files; then Edit | Copy | Test | More | Back.
    More: Rewrite (Urdu + English, English, Trigger, Style fix), New versions, Save Base and the files (preview, tick,
    Add / Change). ---- */
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus :is(#ui2GnavReader, #ui2AttChips, .focus-styles, #focusStyleFix):not(.focus-rail-more *) {
@@ -3790,14 +3790,14 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus:has(#focusText:not([hidden])) .ui2-swipe {
   visibility: hidden;
 }
-/* the row: Test | Copy | Edit | More | Back */
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > #focusTest {
+/* the row: Edit | Copy | Test | More | Back */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > #focusEdit {
   order: 1 !important;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > #focusCopy {
   order: 2 !important;
 }
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > #focusEdit {
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > #focusTest {
   order: 3 !important;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > .focus-rail-more {

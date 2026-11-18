@@ -926,7 +926,7 @@ const ui2Frame = (fn) => {
     const sum = more.querySelector('summary');
     sum.textContent = 'More';
     /* Minimal reader (owner's pick): the message fills the screen at full width; one thin row under it with
-       ‹ 1 of 5 › (a quick swipe on the message does the same) and 📎 files; then Test | Copy | Edit | More | Back.
+       ‹ 1 of 5 › (a quick swipe on the message does the same) and 📎 files; then Edit | Copy | Test | More | Back.
        More holds Rewrite (Urdu + English, English, Trigger, Style fix), New versions, Save Base and the files.
        The real buttons are moved, never rebuilt. */
     for (const id of ['focusTest', 'focusCopy', 'focusEdit']) if ($(id)) bar.append($(id));

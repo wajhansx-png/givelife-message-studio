@@ -858,22 +858,16 @@ test('/new phone: Regenerate and Next sit inside the green message (small, right
   await page.locator('#ui2GnavMain .ui2-gnext').click(); // presses the real New wording button
   await expect(page.locator('#messageFocus')).toBeHidden();
   await open(page, '/new#/preview', 390);
-  // In the reader Next, Regenerate and Save Base are small round icons beside the message (no big row under it).
+  // In the reader: one thin row under the message, ‹ version › and the files, in thumb reach; no big row.
   await expect(page.locator('#ui2GnavReader')).toBeHidden();
-  for (const [sel, name] of [
-    ['#focusNextArrow', 'Next version'],
-    ['#focusGenIcon', 'Generate 5 versions'],
-    ['#focusSaveIcon', 'Save as base message'],
-  ]) {
-    const b = page.locator(sel);
-    await expect(b).toBeVisible();
-    await expect(b).toHaveAccessibleName(name);
-    const box = await b.boundingBox();
-    expect(box.width, sel).toBeGreaterThanOrEqual(40);
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText(/^Original/);
+  for (const sel of ['.ui2-swipe-prev', '.ui2-swipe-next', '.ui2-files-btn']) {
+    const box = await page.locator('#ui2Swipe ' + sel).boundingBox();
     expect(box.height, sel).toBeGreaterThanOrEqual(40);
-    expect(box.width, sel).toBeLessThanOrEqual(48); // small
+    expect(box.y, sel).toBeGreaterThan(844 * 0.7);
   }
-  await page.locator('#focusNextArrow').click();
+  await expect(page.locator('#messageFocus .ui2-reader-dock > :is(#focusTest, #focusCopy, #focusEdit, .focus-rail-more, #focusBack)')).toHaveCount(5);
+  await page.locator('#ui2Swipe .ui2-swipe-next').click();
   await expect(page.locator('#messageFocus')).toBeVisible();
 });
 

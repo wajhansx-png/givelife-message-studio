@@ -925,27 +925,87 @@ const ui2Frame = (fn) => {
     }
     const sum = more.querySelector('summary');
     sum.textContent = 'More';
-    /* One row for group and DM messages: Test, Copy, Edit, More, Back. More holds the attached files (PDF, Video,
-       Poster); Next, Regenerate and Save Base are round icons beside the message (their real buttons stay in More,
-       hidden, so every handler is unchanged). */
+    /* Minimal reader (owner's pick): the message fills the screen at full width; one thin row under it with
+       ‹ 1 of 5 › (a quick swipe on the message does the same) and 📎 files; then Test | Copy | Edit | More | Back.
+       More holds Rewrite (Urdu + English, English, Trigger, Style fix), New versions, Save Base and the files.
+       The real buttons are moved, never rebuilt. */
     for (const id of ['focusTest', 'focusCopy', 'focusEdit']) if ($(id)) bar.append($(id));
     bar.append(more);
+    /* More opens upward; when there is no room above (a short message on a computer) it opens downward */
+    more.addEventListener('toggle', () => {
+      if (!more.open) return;
+      const list = more.querySelector(':scope > div');
+      more.dataset.down = '0';
+      requestAnimationFrame(() => {
+        if (list && list.getBoundingClientRect().top < 8) more.dataset.down = '1';
+      });
+    });
     if ($('focusBack')) {
       bar.append($('focusBack'));
       $('focusBack').setAttribute('aria-label', 'Back');
     }
+    if (panel && !panel.querySelector('.ui2-rewrite')) {
+      const rw = document.createElement('div');
+      rw.className = 'ui2-rewrite';
+      rw.setAttribute('role', 'group');
+      rw.setAttribute('aria-label', 'Rewrite the message');
+      const head = document.createElement('span');
+      head.className = 'ui2-more-head';
+      head.textContent = 'Rewrite';
+      rw.append(head);
+      const styles = screen.querySelector('.focus-styles');
+      if (styles) rw.append(styles);
+      if ($('focusStyleFix')) rw.append($('focusStyleFix'));
+      panel.prepend(rw);
+      for (const id of ['focusRetry', 'focusSave']) if ($(id)) rw.after($(id));
+    }
     const paper = $('focusFormatted')?.parentElement;
-    if (paper && !$('focusSaveIcon')) {
-      const save = document.createElement('button');
-      save.id = 'focusSaveIcon';
-      save.className = 'focus-save-icon';
-      save.type = 'button';
-      save.title = 'Save as base message';
-      save.setAttribute('aria-label', 'Save as base message');
-      save.innerHTML =
-        '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>';
-      save.onclick = () => $('focusSave')?.click();
-      paper.append(save);
+    if (paper && !$('ui2Swipe')) {
+      const sw = document.createElement('div');
+      sw.id = 'ui2Swipe';
+      sw.className = 'ui2-swipe';
+      sw.innerHTML =
+        '<button type="button" class="ui2-swipe-prev" aria-label="Previous version">‹</button>' +
+        '<span class="ui2-ver" aria-live="polite">Original</span>' +
+        '<button type="button" class="ui2-swipe-next" aria-label="Next version">›</button>' +
+        '<span class="ui2-swipe-gap"></span>' +
+        '<button type="button" class="ui2-files-btn" aria-label="Files that go with the message">📎 Files</button>';
+      bar.before(sw);
+      const go = (dir) => (window.focusVersionStep ? window.focusVersionStep(dir) : $('focusNext')?.click());
+      sw.querySelector('.ui2-swipe-prev').onclick = () => go(-1);
+      sw.querySelector('.ui2-swipe-next').onclick = () => go(1);
+      sw.querySelector('.ui2-files-btn').onclick = () => {
+        more.open = true;
+        requestAnimationFrame(() => $('ui2ReaderExtras')?.scrollIntoView({ block: 'nearest' }));
+      };
+      const ver = sw.querySelector('.ui2-ver');
+      const paintDots = () => {
+        const v = $('focusVersion'),
+          n = Number(v?.dataset.n || 0),
+          i = Number(v?.dataset.i || 0);
+        ver.textContent = i ? i + ' of ' + n : n ? 'Original · ' + n + ' more' : 'Original';
+      };
+      paintDots();
+      if ($('focusVersion'))
+        new MutationObserver(paintDots).observe($('focusVersion'), {
+          attributes: true,
+          attributeFilter: ['data-n', 'data-i'],
+        });
+      /* a quick sideways swipe on the message = next / previous version */
+      let start = null;
+      paper.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('button, a, [contenteditable="true"], textarea')) return (start = null);
+        start = { x: e.clientX, y: e.clientY, t: Date.now() };
+      });
+      paper.addEventListener('pointerup', (e) => {
+        if (!start || !$('focusText')?.hidden) return (start = null);
+        const dx = e.clientX - start.x,
+          dy = e.clientY - start.y,
+          quick = Date.now() - start.t < 600;
+        start = null;
+        if (quick && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
+      });
+      paper.addEventListener('pointercancel', () => (start = null));
     }
     bar.dataset.ui2Row = '1';
     dockKind();
@@ -959,7 +1019,7 @@ const ui2Frame = (fn) => {
       const b = $(id);
       if (b && b.parentElement !== bar) bar.prepend(b);
     }
-    screen.querySelector('.focus-rail-more > summary')?.setAttribute('aria-label', 'More: PDF, video and poster');
+    screen.querySelector('.focus-rail-more > summary')?.setAttribute('aria-label', 'More: rewrite, new versions, Save Base and files');
   }
   addEventListener('reader-kind', dockKind);
 
@@ -1773,6 +1833,8 @@ document.addEventListener('click', (e) => {
         it.file.hidden = dm; // DMs only tick: the files are attached on the group message
       }
       const shown = ['pdf', 'video', 'poster'].filter((k) => have[k] && items[k].cb.checked);
+      const fb = document.querySelector('#ui2Swipe .ui2-files-btn');
+      if (fb) fb.textContent = shown.length ? '📎 ' + shown.length + (shown.length === 1 ? ' file' : ' files') : '📎 Add files';
       const sig = shown.map((k) => k + ':' + names[k]).join('|');
       if (chips.dataset.sig !== sig) {
         chips.dataset.sig = sig;

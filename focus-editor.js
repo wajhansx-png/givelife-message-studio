@@ -343,6 +343,9 @@
     $('focusFormatted').innerHTML = window.waFormat(text);
     $('focusVersion').textContent =
       index < 0 ? 'Original' : index + 1 + ' / ' + (row?.items?.length || 0);
+    /* for the version dots under the message: how many versions, and which one shows (0 = the original) */
+    $('focusVersion').dataset.n = String(row?.items?.length || 0);
+    $('focusVersion').dataset.i = String(index + 1);
     requestAnimationFrame(fit);
   }
   function edit(on) {
@@ -526,7 +529,8 @@
       status('Could not copy. Select the text and copy.');
     }
   };
-  $('focusNext').onclick = async () => {
+  /* Next (and, with a swipe the other way, the previous) version: the original, then each saved version, round. */
+  const step = async (dir) => {
     try {
       if (editing) edit(false);
       await save();
@@ -536,7 +540,8 @@
         else status('No versions yet. Tap Generate 5 Versions. TEST works without them.');
         return;
       }
-      index = ((index + 2) % (row.items.length + 1)) - 1;
+      const n = row.items.length + 1;
+      index = ((((index + 1 + dir) % n) + n) % n) - 1;
       paint(index < 0 ? row.source : row.items[index]);
       status(
         index < 0
@@ -547,6 +552,8 @@
       status(e.message);
     }
   };
+  $('focusNext').onclick = () => step(1);
+  window.focusVersionStep = step;
   $('focusTest').onclick = async () => {
     if (actionBusy) return;
     actionBusy = true;

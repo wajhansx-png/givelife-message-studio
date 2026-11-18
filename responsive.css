@@ -3733,63 +3733,137 @@ html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i
   }
 }
 
-/* ---- Messages reader (group and DM message): ONE bottom row Test | Copy | Edit | More | Back; Next, Regenerate and Save Base
-   are round icons beside the message; the attached files (PDF, Video, Poster) live inside More with a preview each, and
-   a small chip for every attached and ticked file sits under the message. The message text is 13px at most and fits
-   without scrolling. Their real buttons stay in More, hidden, so every handler is unchanged. ---- */
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus #ui2GnavReader {
+/* ---- Messages reader, minimal (owner's pick): the message fills the screen at full width; one thin row under it
+   with ‹ 1 of 5 › (a quick swipe on the message does the same) and 📎 files; then Test | Copy | Edit | More | Back.
+   More: Rewrite (Urdu + English, English, Trigger, Style fix), New versions, Save Base and the files (preview, tick,
+   Add / Change). ---- */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus :is(#ui2GnavReader, #ui2AttChips, .focus-styles, #focusStyleFix):not(.focus-rail-more *) {
   display: none !important;
 }
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper {
-  position: relative !important;
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper > :is(.focus-next-arrow, .focus-gen-icon) {
+  display: none !important;
 }
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper > :is(.focus-next-arrow, .focus-gen-icon, .focus-save-icon) {
-  position: absolute !important;
-  right: 6px !important;
-  bottom: auto !important;
-  left: auto !important;
-  z-index: 4 !important;
-  display: grid !important;
-  place-items: center !important;
-  width: 42px !important;
-  height: 42px !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 1px solid var(--line2, #3a4057) !important;
-  border-radius: 50% !important;
-  background: #1d212b !important;
-  color: #fff !important;
-  font-size: 22px !important;
-  line-height: 1 !important;
-  transform: none !important;
-}
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper > .focus-next-arrow {
-  top: 10px !important;
-}
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper > .focus-gen-icon {
-  top: 58px !important;
-}
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper > .focus-save-icon {
-  top: 106px !important;
-}
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper > :is(.focus-next-arrow, .focus-gen-icon, .focus-save-icon):active {
-  transform: scale(0.94) !important;
-}
-/* the message leaves a clear column for the icons */
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus #focusFormatted {
   box-sizing: border-box !important;
-  padding-right: 56px !important;
+  width: auto !important;
+  max-width: none !important;
+  margin-right: 0 !important;
   line-height: 1.3 !important;
+  touch-action: pan-y;
 }
-/* More = the attached files only */
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > :not(#ui2ReaderExtras) {
+/* the thin row: ‹ 1 of 5 ›  ·  📎 files */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 6px;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > button {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  min-height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line2, #3a4057);
+  border-radius: 20px;
+  background: #1d212b;
+  color: #e9edef;
+  font-size: 20px;
+  font-weight: 700;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-files-btn {
+  padding: 0 14px;
+  font-size: 14px;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-ver {
+  min-width: 52px;
+  color: #cfd5e3;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe-gap {
+  flex: 1;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus:has(#focusText:not([hidden])) .ui2-swipe {
+  visibility: hidden;
+}
+/* the row: Test | Copy | Edit | More | Back */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > #focusTest {
+  order: 1 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > #focusCopy {
+  order: 2 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > #focusEdit {
+  order: 3 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > .focus-rail-more {
+  order: 4 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > #focusBack {
+  order: 5 !important;
+}
+/* More: Rewrite chips, New versions, Save Base, then the files */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > :not(.ui2-rewrite, #focusRetry, #focusSave, #ui2ReaderExtras) {
   display: none !important;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > .focus-rail-more > div {
-  width: min(320px, calc(100vw - 24px)) !important;
-  max-height: 70dvh !important;
+  width: min(330px, calc(100vw - 24px)) !important;
+  max-height: 72dvh !important;
   overflow-y: auto !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-more-head,
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus #ui2ReaderExtras .ui2-rx-label {
+  margin: 2px 2px 0 !important;
+  color: var(--ink-muted, #9aa1b8) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-rewrite {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 0 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-rewrite .ui2-more-head {
+  flex: 0 0 100%;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-rewrite .focus-styles {
+  display: contents !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-rewrite :is(.focus-styles button, #focusStyleFix) {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 40px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--line2, #3a4057) !important;
+  border-radius: 20px !important;
+  background: #1d212b !important;
+  color: #e9edef !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-rewrite #focusStyleFix {
+  border-color: #5b7cff !important;
+  color: #b9c6ff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-rewrite .focus-styles button[aria-pressed='true'] {
+  border-color: #2f6fe4 !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > :is(#focusRetry, #focusSave) {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus #ui2ReaderExtras {
   display: grid !important;
@@ -3798,12 +3872,6 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
-}
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus #ui2ReaderExtras .ui2-rx-label {
-  margin: 0 2px !important;
-  color: var(--ink-muted, #9aa1b8) !important;
-  font-size: 12px !important;
-  font-weight: 700 !important;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus #ui2ReaderExtras .ui2-rx-item {
   display: grid !important;
@@ -3843,13 +3911,11 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   min-height: 40px !important;
   padding: 0 12px !important;
 }
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus #ui2ReaderExtras .ui2-rx-order,
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus #ui2ReaderExtras .ui2-rx-msg {
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus #ui2ReaderExtras :is(.ui2-rx-order, .ui2-rx-msg) {
   margin: 0 2px !important;
   font-size: 12px !important;
   text-align: left !important;
 }
-/* preview boxes (in More and under the message) */
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-att-th {
   display: grid;
   place-items: center;
@@ -3871,62 +3937,47 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   font-size: 18px;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-att-th.ui2-att-none {
-  background: transparent;
   border: 1px dashed var(--line2, #3a4057);
+  background: transparent;
   color: var(--ink-muted, #9aa1b8);
   font-size: 22px;
   font-weight: 400;
 }
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-att {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 8px 0 0;
-}
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-att[hidden] {
-  display: none;
-}
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-att-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  max-width: 100%;
-  padding: 3px 4px 3px 3px;
-  border: 1px solid var(--line2, #3a4057);
-  border-radius: 12px;
-  background: #1d212b;
-  color: #e9edef;
-  font-size: 13px;
-  font-weight: 600;
-}
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-att-chip .ui2-att-th {
-  width: 40px;
-  height: 40px;
-}
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-att-name {
-  min-width: 0;
-  max-width: 130px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-att-x {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: #2b3040;
-  color: #fff;
-  font-size: 13px;
-}
 
-/* Phones and tablets: five buttons in one row, Back is an arrow so every word stays whole */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > .ui2-rewrite {
+  order: 1 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > #focusRetry {
+  order: 2 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > #focusSave {
+  order: 3 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > #ui2ReaderExtras {
+  order: 4 !important;
+  padding-top: 4px !important;
+  border-top: 1px solid var(--line2, #3a4057) !important;
+}
+/* Phones and tablets: Copy | Test | More | Back, the More list anchored to the whole bar */
 @media (max-width: 899px) {
+  /* the thin row sits right above the buttons, in thumb reach */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe {
+    position: fixed;
+    right: 10px;
+    bottom: calc(71px + env(safe-area-inset-bottom, 0px));
+    left: 10px;
+    z-index: 35;
+    margin: 0;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-workspace {
+    padding-bottom: 54px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus > header {
+    min-height: 0 !important;
+    height: auto !important;
+    padding-top: 2px !important;
+    padding-bottom: 0 !important;
+  }
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock {
     grid-template-columns: repeat(4, minmax(0, 1fr)) 48px !important;
     gap: 6px !important;
@@ -3944,7 +3995,6 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     font-size: 22px;
     line-height: 1;
   }
-  /* the More list is anchored to the whole bottom bar (not to the More button), so it never leaves the screen */
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > .focus-rail-more {
     position: static !important;
   }
@@ -3967,19 +4017,16 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > :is(#focusTest, #focusCopy, #focusEdit, .focus-rail-more > summary) {
     font-size: 13px !important;
   }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-att-name {
-    max-width: 90px;
-  }
 }
-/* Computers: Test | Copy | Edit | More | Back with their shortcut letters, the More list opens upward under the row's left edge */
+/* Computers: the same row (Back keeps its word), the thin row sits under the message, More opens upward */
 @media (min-width: 900px) {
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock {
-    grid-template-columns: repeat(5, minmax(90px, 140px)) !important;
+    grid-template-columns: repeat(5, minmax(100px, 140px)) !important;
   }
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > #focusBack {
     font-size: 15px !important;
   }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-att {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe {
     max-width: 860px;
     margin: 10px auto 0;
   }
@@ -3988,5 +4035,9 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     right: auto !important;
     bottom: calc(100% + 8px) !important;
     left: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > .focus-rail-more[data-down='1'] > div {
+    top: calc(100% + 8px) !important;
+    bottom: auto !important;
   }
 }

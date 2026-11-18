@@ -184,7 +184,7 @@ class Run(Base):
         self.addCleanup(self.fast.stop)
         self.approve()
         self.addCleanup(self.stop_everything)
-        self.assertTrue(self.tick_until(lambda: self.state()["rows"]["top"]["state"] == "running"))
+        self.assertTrue(self.tick_until(lambda: len(self.h.jobs.export_jobs()["jobs"]) == 2))
         jobs = self.h.jobs.export_jobs()["jobs"]
         self.assertEqual([j["owner"] for j in jobs], ["case_giki1", "case_top"])
         self.assertEqual((jobs[0]["ids"], jobs[0]["follow_up"]), (giki, QUESTION))
@@ -308,7 +308,7 @@ class OneRow(Base):
             self.cr.add_row("giki1", "not-the-token")
         self.assertEqual(self.state()["rows"]["giki1"]["state"], "off")
         self.cr.add_row("giki1", s["token"])
-        self.assertTrue(self.tick_until(lambda: self.state()["rows"]["giki1"]["state"] == "running"))
+        self.assertTrue(self.tick_until(lambda: len(self.h.jobs.export_jobs()["jobs"]) == 2))
         jobs = self.h.jobs.export_jobs()["jobs"]
         self.assertEqual([j["owner"] for j in jobs], ["case_top", "case_giki1"])  # one DM queue at a time
         phones = [m["phone"] for m in self.sent]

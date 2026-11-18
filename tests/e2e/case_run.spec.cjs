@@ -13,7 +13,7 @@ async function open(page, width, height, hash = '#/case') {
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new' + hash);
   await expect(page.locator('#casePage')).toBeVisible();
-  await expect(page.locator('.cr-row')).toHaveCount(5);
+  await expect(page.locator('.cr-row')).toHaveCount(6);
 }
 const inView = async (page, locator) => {
   const box = await locator.boundingBox();
@@ -33,14 +33,15 @@ for (const [width, height] of [
   [844, 390],
   [1440, 900],
 ]) {
-  test(`the case page shows the five rows and the three main buttons at ${width}x${height}`, async ({
+  test(`the case page shows the six rows and the three main buttons at ${width}x${height}`, async ({
     page,
   }) => {
     await open(page, width, height);
     await expect(page.locator('.cr-row .cr-name b')).toHaveText([
       'GiveLife Group',
+      'GIKI 1',
+      'GIKI 2',
       'Top Donors',
-      'GIKI',
       'Volunteers',
       'Important Donors',
     ]);
@@ -52,7 +53,7 @@ for (const [width, height] of [
     ).toBe(true);
     for (const id of ['#crSettings', '#crTools', '#crBack']) await inView(page, page.locator(id));
     await expect(page.locator('#casePage .cr-bar')).toBeHidden(); // no Start button: a row's switch starts it
-    await expect(page.locator('.cr-row .cr-sw')).toHaveCount(5);
+    await expect(page.locator('.cr-row .cr-sw')).toHaveCount(6);
     for (const sw of await page.locator('.cr-row .cr-sw').all())
       await expect(sw).toHaveAttribute('aria-checked', 'false'); // nothing is on before you switch it on
     await expect(page.locator('#crPause')).toBeHidden(); // Pause all and Finish appear only while it runs
@@ -142,12 +143,37 @@ test('saving settings never starts sending, and Important stays off until people
   expect((await api(port, '/case-run')).status).toBe('idle');
 });
 
+for (const [key, title] of [
+  ['giki1', 'GIKI 1'],
+  ['giki2', 'GIKI 2'],
+  ['top', 'Top Donors'],
+]) {
+  test(`${title} switch selects only its own sending row`, async ({ page }) => {
+    await open(page, 390, 844);
+    const request = page.waitForRequest((r) =>
+      r.url().endsWith('/case-run') && r.method() === 'POST' && r.postDataJSON().action === 'plan',
+    );
+    await page.locator(`.cr-row[data-key="${key}"] .cr-sw`).click();
+    const plan = (await request).postDataJSON().plan;
+    expect(Object.entries(plan).filter(([, row]) => row.enabled).map(([name]) => name)).toEqual([key]);
+    const sheet = page.locator('#caseSheet');
+    await expect(sheet.locator('#csTitle')).toHaveText(`Start ${title}?`);
+    await expect(sheet.locator('.cr-sub')).toContainText(`Mode: ${title} →`);
+    await sheet.getByRole('button', { name: 'Cancel' }).click();
+    expect((await api(port, '/case-run')).status).toBe('idle');
+    expect(['Starting', 'Sending', 'Waiting']).not.toContain((await api(port, '/donor-delivery')).state);
+  });
+}
+
 test('each row has a small settings icon that opens its timing in one tap, and it hides while sending', async ({
   page,
 }) => {
   await open(page, 390, 844);
-  await expect(page.locator('.cr-row .cr-gear')).toHaveCount(5);
-  const box = await page.locator('.cr-row[data-key="top"] .cr-gear').boundingBox();
+  await expect(page.locator('.cr-row .cr-gear')).toHaveCount(6);
+  const box = await page.locator('.cr-row[data-key="top"] .cr-gear').evaluate((e) => ({
+    width: e.offsetWidth,
+    height: e.offsetHeight,
+  }));
   expect(box.width).toBeGreaterThanOrEqual(40);
   expect(box.height).toBeGreaterThanOrEqual(40);
   await page.getByRole('button', { name: 'Edit timing: Top Donors' }).click();

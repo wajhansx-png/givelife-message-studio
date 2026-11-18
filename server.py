@@ -6905,6 +6905,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(donors().resume_all())
                 if CAMPAIGN.get("running"):
                     raise ValueError("Another DM campaign is running. Stop it first.")
+                if body.get("scope") not in (
+                    "all", "important", "top", "donated", "not_donated", "selected"
+                ):
+                    raise ValueError("Choose an explicit DM audience. Nothing was sent.")
                 dm_extras_check(body.get("pdf"), body.get("video"))
                 return self.reply(
                     donors().start_batch(

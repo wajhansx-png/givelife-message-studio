@@ -36,8 +36,18 @@ class Base(tac.Base):
                 "results": {"message_id": "x%d" % len(self.shared)},
             }
 
+        class CaseApp:
+            # Scope this transport to this case. Other tests' background queues
+            # must not be counted as GIKI sharing or consume its fake outcomes.
+            def __getattr__(self, name):
+                return send_custom if name == "send_custom" else getattr(app, name)
+
+        self.cr.app = CaseApp()
         for name, fake in (
-            ("send_custom", send_custom),
+            # Text follow-ups use fake transport, just like the fixture's image DMs.
+            ("send_custom_text", lambda *args, **kwargs: {
+                "code": "SUCCESS", "results": {"message_id": "fake-text"}
+            }),
             ("recent_chats", lambda: [(p, "Person") for p in self.replies]),
             ("scan_messages", lambda jid: list(self.replies.get(jid.split("@")[0], []))),
         ):
@@ -58,7 +68,7 @@ class Base(tac.Base):
         data = self.h.book._load()
         for rec in data["records"]:
             if rec["id"] in out[tops:]:
-                rec["group"] = "GIKI"
+                rec["group"] = "GIKI 1"
         self.h.book._save(data)
         return out[:tops], out[tops:]
 
@@ -136,8 +146,8 @@ class Plan(Base):
             sorted(aud["top"]), sorted(top)
         )  # Top comes first: Important adds nobody twice
         self.assertEqual(aud["important"], [])
-        self.assertEqual(sorted(aud["giki"]), sorted(giki))
-        self.assertNotIn(done["id"], aud["top"] + aud["giki"])  # already contacted
+        self.assertEqual(sorted(aud["giki1"]), sorted(giki))
+        self.assertNotIn(done["id"], aud["top"] + aud["giki1"])  # already contacted
 
 
 class Run(Base):
@@ -154,17 +164,19 @@ class Run(Base):
         self.assertTrue(app.auto_on())
         self.assertEqual(app.ENGINE.summary()["pace_override"][0], 45)
         self.assertTrue(self.tick_until(lambda: len(self.sent) >= 1))
-        job = self.h.jobs.export_jobs()["jobs"][-1]
+        jobs = self.h.jobs.export_jobs()["jobs"]
+        job = jobs[0]
         self.assertEqual(
-            (job["owner"], job["origin"], sorted(job["ids"])), ("case_top", "case_run", sorted(top))
+            (job["owner"], job["origin"], sorted(job["ids"])), ("case_giki1", "case_run", sorted(giki))
         )
         self.assertNotIn(late["id"], job["ids"])
-        self.assertEqual(
-            len(self.h.jobs.export_jobs()["jobs"]), 1
-        )  # GIKI waits: one DM queue at a time
+        self.assertTrue(all(late["id"] not in j["ids"] for j in jobs))
+        # A one-person GIKI queue can finish before the first poll; Top may
+        # already have started. Repeating Start must not create another queue.
+        count = len(jobs)
         again = self.cr.start("anything")  # pressing Start twice never starts a second run
         self.assertEqual(again["status"], "running")
-        self.assertEqual(len(self.h.jobs.export_jobs()["jobs"]), 1)
+        self.assertEqual(len(self.h.jobs.export_jobs()["jobs"]), count)
 
     def test_rows_run_one_after_another_and_giki_sends_the_question(self):
         top, giki = self.people(2, 1)
@@ -172,11 +184,11 @@ class Run(Base):
         self.addCleanup(self.fast.stop)
         self.approve()
         self.addCleanup(self.stop_everything)
-        self.assertTrue(self.tick_until(lambda: self.state()["rows"]["giki"]["state"] == "running"))
+        self.assertTrue(self.tick_until(lambda: len(self.h.jobs.export_jobs()["jobs"]) == 2))
         jobs = self.h.jobs.export_jobs()["jobs"]
-        self.assertEqual([j["owner"] for j in jobs], ["case_top", "case_giki"])
-        self.assertEqual((jobs[1]["ids"], jobs[1]["follow_up"]), (giki, QUESTION))
-        self.assertEqual(self.state()["rows"]["top"]["state"], "done")
+        self.assertEqual([j["owner"] for j in jobs], ["case_giki1", "case_top"])
+        self.assertEqual((jobs[0]["ids"], jobs[0]["follow_up"]), (giki, QUESTION))
+        self.assertEqual(self.state()["rows"]["giki1"]["state"], "done")
 
     def test_pause_all_stops_everything_and_resume_never_repeats_anyone(self):
         self.people(3, 0)
@@ -270,10 +282,10 @@ class OneRow(Base):
         self.approve()
         self.addCleanup(self.stop_everything)
         rows = self.state()["rows"]
-        self.assertEqual({k: r["state"] for k, r in rows.items()}["giki"], "off")
+        self.assertEqual({k: r["state"] for k, r in rows.items()}["giki1"], "off")
         self.assertEqual(rows["top"]["state"] in ("queued", "running"), True)
         with self.assertRaises(ValueError):  # a row that was never approved cannot just be started
-            self.cr.row_op("giki", "start")
+            self.cr.row_op("giki1", "start")
 
     def test_important_without_people_is_refused_and_changes_nothing(self):
         self.people(2, 1)
@@ -284,39 +296,41 @@ class OneRow(Base):
 
     def test_a_new_row_joins_only_after_its_own_summary_and_runs_after_the_others(self):
         top, giki = self.people(2, 1)
+        self.h.book.update(giki[0], top_donor=False)  # an independent cohort, not already in Top's queue
         self.fast.start()
         self.addCleanup(self.fast.stop)
         self.cr.set_plan(self.only("top"))
         self.approve()
         self.addCleanup(self.stop_everything)
-        s = self.cr.summary("giki")
-        self.assertEqual((s["blockers"], s["rows"]["giki"]["count"]), ([], 1))
+        s = self.cr.summary("giki1")
+        self.assertEqual((s["blockers"], s["rows"]["giki1"]["count"]), ([], 1))
         with self.assertRaises(ValueError):
-            self.cr.add_row("giki", "not-the-token")
-        self.assertEqual(self.state()["rows"]["giki"]["state"], "off")
-        self.cr.add_row("giki", s["token"])
-        self.assertTrue(self.tick_until(lambda: self.state()["rows"]["giki"]["state"] == "running"))
+            self.cr.add_row("giki1", "not-the-token")
+        self.assertEqual(self.state()["rows"]["giki1"]["state"], "off")
+        self.cr.add_row("giki1", s["token"])
+        self.assertTrue(self.tick_until(lambda: len(self.h.jobs.export_jobs()["jobs"]) == 2))
         jobs = self.h.jobs.export_jobs()["jobs"]
-        self.assertEqual([j["owner"] for j in jobs], ["case_top", "case_giki"])  # one DM queue at a time
+        self.assertEqual([j["owner"] for j in jobs], ["case_top", "case_giki1"])  # one DM queue at a time
         phones = [m["phone"] for m in self.sent]
         self.assertEqual(len(phones), len(set(phones)), "a person was messaged twice")
         with self.assertRaises(ValueError):  # a row that already joined cannot join twice
-            self.cr.add_row("giki", s["token"])
+            self.cr.add_row("giki1", s["token"])
 
     def test_the_row_token_ignores_other_rows_sending_meanwhile(self):
-        self.people(3, 1)
+        _, giki = self.people(3, 1)
+        self.h.book.update(giki[0], top_donor=False)
         self.cr.set_plan(self.only("top"))
         self.approve()
         self.addCleanup(self.stop_everything)
-        s = self.cr.summary("giki")
+        s = self.cr.summary("giki1")
         self.assertTrue(self.tick_until(lambda: len(self.sent) >= 1))  # Top sends someone
-        self.assertEqual(self.cr.summary("giki")["token"], s["token"])
-        self.cr.add_row("giki", s["token"])
+        self.assertEqual(self.cr.summary("giki1")["token"], s["token"])
+        self.cr.add_row("giki1", s["token"])
 
     def test_pausing_one_row_leaves_the_others_and_it_can_start_again_alone(self):
         self.people(3, 0)
         self.cr.set_plan({"group": {"enabled": True}, "top": {"enabled": True}})
-        self.cr.set_plan({"giki": {"enabled": False}, "volunteers": {"enabled": False}})
+        self.cr.set_plan({"giki1": {"enabled": False}, "volunteers": {"enabled": False}})
         self.approve()
         self.addCleanup(self.stop_everything)
         self.assertTrue(self.tick_until(lambda: len(self.sent) >= 1))

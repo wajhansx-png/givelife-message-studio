@@ -1,10 +1,10 @@
 """Explicit donor batches, saved receipts and no automatic replay after restart."""
 
-import traceback
+import traceback, logging
 import copy, hashlib, json, math, random, re, threading, time, uuid
 from functools import wraps
 from pathlib import Path
-from donor_book import hide_numbers
+from donor_book import hide_numbers, normalize_phone
 
 
 def serialized_start(fn):
@@ -532,6 +532,11 @@ class DonorDelivery:
             ]
             already = len(rows) - len(fresh_rows)
             rows = fresh_rows
+        if scope == "selected":
+            if not isinstance(ids, list) or any(not isinstance(i, str) for i in ids):
+                raise ValueError("Choose the recipients again.")
+            order = {ident: index for index, ident in enumerate(dict.fromkeys(ids))}
+            rows.sort(key=lambda row: order[row["id"]])
         rows = rows[:cap]
         if personal_names is not None:
             if (
@@ -567,12 +572,20 @@ class DonorDelivery:
             raise ValueError(
                 "The stopped batch changed. Check its delivery results before resuming."
             )
+        same_selection = bool(
+            prev
+            and prev.get("owner") == owner
+            and prev.get("origin") == origin
+            and prev.get("custom_template") == custom_template
+            and prev.get("attachment") == attachment
+            and (scope != "selected" or prev.get("ids") == list(dict.fromkeys(ids or [])))
+        )
         left = (
             self._remaining(prev, allow_expired=bool(resume_id))
             if prev
             and not fresh
             and prev.get("scope") == scope
-            and (scope != "selected" or set(prev.get("ids", [])) & set(ids or []))
+            and (bool(resume_id) or same_selection)
             else None
         )
         if resume_id and left is None:
@@ -583,7 +596,7 @@ class DonorDelivery:
             prev
             and not fresh
             and prev.get("scope") == scope
-            and (scope != "selected" or set(prev.get("ids", [])) & set(ids or []))
+            and (bool(resume_id) or same_selection)
         )
         recent = prev and time.time() - prev.get("updated_at", 0) <= (
             self.AUTO_WINDOW if prev.get("auto") else self.RESUME_WINDOW
@@ -1427,6 +1440,17 @@ class DonorDelivery:
             if note and self.peek is not None:
                 note(mark)
             self.tried_at = time.time()
+            try:
+                if body.get("target") != "phone":
+                    raise ValueError("DM mode requires a person, not a group.")
+                normalize_phone(body.get("phone"))
+            except ValueError as error:
+                logging.getLogger(__name__).warning(
+                    "Refused mismatched DM recipient type; nothing sent."
+                )
+                raise ValueError(
+                    "DM recipient does not match this sending mode. Nothing sent."
+                ) from error
             try:
                 result = self.send(body)
             except ValueError as e:

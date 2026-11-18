@@ -26,7 +26,17 @@ class Base(unittest.TestCase):
         )  # tests never wait out real gaps
         # A real wait would last minutes; the stop switch still ends it at once.
 
-    tearDown = fixture.SendTests.tearDown
+    def tearDown(self):
+        # Finish fake workers before the next test replaces the global store or
+        # transport. Otherwise a late send can write into another test's book.
+        self.h.caserun._stop_engines()
+        jobs = (self.h.jobs, self.h.volunteers.jobs)
+        for delivery in jobs:
+            delivery.stop.set()
+        deadline = time.monotonic() + 2
+        while any(delivery.active for delivery in jobs) and time.monotonic() < deadline:
+            time.sleep(0.01)
+        fixture.SendTests.tearDown(self)
 
     def donors(self, n, important=None, top=True):
         ids = []

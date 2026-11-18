@@ -19,8 +19,10 @@ IMAGES = ("image/jpeg", "image/png", "image/webp")
 
 
 def _rows(store):
-    raw = store.get(KEY) if store else None
-    raw = raw if isinstance(raw, dict) else {}
+    return _file_rows(_raw(store))
+
+
+def _file_rows(raw):
     out = {}
     for kind in KINDS:
         row = raw.get(kind)
@@ -265,9 +267,16 @@ def saved(store, kind):
 
 def to_send(store):
     """[(kind, attachment id)] to send after the poster, in order, only what is saved AND switched on."""
-    rows = _rows(store)
-    led = lead(store)
-    return [
+    return group_sequence(store)[1]
+
+
+def group_sequence(store):
+    """Freeze the lead video and following files from one saved selection for this group post."""
+    raw = _raw(store)
+    rows = _file_rows(raw)
+    video = rows.get("video")
+    led = video["id"] if video and video["on"] and raw.get("text_on") != "poster" else None
+    return led, [
         (k, rows[k]["id"])
         # after the message: the after poster, the video (unless it carried the text), then the PDF
         for k in ("poster", "video", "pdf")

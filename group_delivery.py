@@ -14,7 +14,9 @@ def summarize(results, destinations):
     if total and successes == total:
         return f"Confirmed sent to {successes}/{total} groups."
 
-    if successes:
+    if any(r.get("code") == "PARTIAL" for r in outcomes):
+        line = f"Completed {successes}/{total} group posts. A post went out with an unconfirmed attachment."
+    elif successes:
         line = f"Only {successes}/{total} group sends confirmed."
     else:
         line = f"Not confirmed: 0/{total} group sends. Nothing is marked as delivered."

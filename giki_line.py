@@ -47,8 +47,8 @@ class GikiDelivery(VolunteerDelivery):
     FILE = "giki-delivery.json"
     KIND = "giki_batch"
     CLAIM = "giki_batch_request_"
-    KEEP_GOING = True  # a message that still fails after the chat check never stops the others (3 in a row do)
-    GAP_FROM_CASE = True  # a DM every N minutes exactly: the Timer runs from one person's case to the next one's
+    STOP_ON_UNCONFIRMED = True  # keep recipient order even when a first message fails
+    REST_FROM_CASE = True  # preserve the Timer's break between batches, measured from the last opening message
     WAIT_STEPS = (2, 2, 3, 3, 5, 5, 10, 15)  # a WhatsApp blip costs seconds, not 15 s per message
 
     @staticmethod
@@ -361,7 +361,8 @@ class GikiVolunteers(Volunteers):
         stopped = j.get("state") in ("Stopped", "Interrupted") and (
             time.time() - j.get("updated_at", 0) <= self.jobs.AUTO_WINDOW
         )
-        return (len(self.waiting_ids()) if stopped else 0) + len(self.jobs.half_sent())
+        remaining = self.jobs._remaining(j, allow_expired=True) if stopped else None
+        return len(remaining or []) + len(self.jobs.half_sent())
 
     def resume(self, body):
         """Resume DMs: DM all again for the people still waiting, with today's case and share message and the saved
@@ -376,14 +377,17 @@ class GikiVolunteers(Volunteers):
             raise ValueError("Nothing to resume. Press DM all to start again.")
         j = self.jobs.export_jobs()["jobs"][-1]
         # first: anyone a Stop or a restart left half-sent gets only what they are missing (2nd, 3rd, share)
-        finished = self.jobs.finish_half_sent()
-        if not self.waiting_ids() or j.get("state") not in ("Stopped", "Interrupted"):
+        finished = self.jobs.finish_half_sent(j["id"])
+        j = self.jobs.export_jobs()["jobs"][-1]
+        self.jobs.check_chat_complete(j)
+        remaining = self.jobs._remaining(j, allow_expired=True)
+        if not remaining:
             return {
                 "job": self.jobs.status(),
                 "reply": f"Finished {finished} people who were missing part of their messages. Everyone has it now.",
             }
         # Resume starts at once (the owner's choice): only the people still waiting, nobody twice
-        result = self.send_all({"request_id": body.get("request_id"), "delay_seconds": 0})
+        result = self.send_all({"request_id": body.get("request_id"), "delay_seconds": 0}, resume_ids=remaining)
         result["reply"] = "DMs resumed. Nobody who already got it gets it again."
         return result
 
@@ -397,7 +401,7 @@ class GikiVolunteers(Volunteers):
             )
         return share
 
-    def send_all(self, body, hold_until=None):
+    def send_all(self, body, hold_until=None, *, resume_ids=None):
         """DM all: each person gets the case first (poster and the Group msgs text, then the PDF / video that are on),
         then the share message the owner wrote. One person at a time with the saved timer. Never twice."""
         share = self._share()
@@ -405,6 +409,9 @@ class GikiVolunteers(Volunteers):
         if type(delay) is not int or delay not in self.START_DELAYS:
             raise ValueError("Choose Send now, 5, 10, 15, 30 minutes, 1 hour or 2 hours.")
         ids = self.waiting_ids(body.get("skip_contacted", True) is not False)
+        if resume_ids is not None:
+            waiting = set(ids)
+            ids = [ident for ident in resume_ids if ident in waiting]
         if not ids:
             raise ValueError("Everyone in the list was already messaged for this case.")
         case = self.case_text()

@@ -77,6 +77,23 @@ class DeviceSendLocks(unittest.TestCase):
             self.parallel(self.wire("giki"), self.wire("alias"), independent=False)
             self.parallel(self.wire(""), self.wire("main_alias"), independent=False)
 
+    def test_other_send_cannot_enter_between_messages_in_one_chat(self):
+        steps = []
+
+        def chat(hold):
+            with app.send_chat("giki"):
+                app.serialized_send(steps.append)("first attachment")
+                hold()
+                app.serialized_send(steps.append)("second attachment")
+                app.serialized_send(steps.append)("share message")
+
+        def competing(done):
+            self.wire("alias")(lambda: (steps.append("next chat"), done()))
+
+        with self.routing():
+            self.parallel(chat, competing, independent=False)
+        self.assertEqual(steps, ["first attachment", "second attachment", "share message", "next chat"])
+
     def test_missing_device_never_calls_the_transport(self):
         called = []
         with self.routing(), app.on_line("missing"), self.assertRaises(ValueError):

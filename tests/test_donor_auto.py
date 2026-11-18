@@ -255,18 +255,19 @@ class Ending(AutoCase):
         self.finish()
         self.auto.tick()
         self.assertEqual(self.book.resolve(a)["delivery"], "Uncertain")
-        with self.assertRaises(ValueError):
-            self.auto.set(True)  # Bilal is contacted, Ali is unconfirmed: nobody left to ask
-        self.assertEqual(len(self.phones()), 2)
+        self.assertEqual(self.phones(), ["923001110001"])
+        self.auto.set(True)  # Ali remains unconfirmed. Only Bilal still needs his first DM.
+        self.finish()
+        self.assertEqual(self.phones(), ["923001110001", "923001110002"])
 
-    def test_three_unconfirmed_in_a_row_stops_unsafe_sending_and_alerts_once(self):
+    def test_first_unconfirmed_send_pauses_auto_and_alerts_once(self):
         for n in range(5):
             self.donor("D%d" % n, "92300444000%d" % n)
         self.replies = [{"code": "TIMEOUT"}] * 5
         self.auto.set(True)
         self.finish()
         self.auto.tick()
-        self.assertEqual(len(self.phones()), 3)
+        self.assertEqual(len(self.phones()), 1)
         self.assertFalse(self.auto.status()["enabled"])
         self.assertEqual(len(self.alerts), 1)
         self.assertIn("not confirmed", self.alerts[0])
@@ -374,7 +375,10 @@ class LiveEditing(AutoCase):
         self.assertEqual(job["settings_revision"], 2)
         dms = [b for b in self.sent if b["kind"] != "owner_text"]
         self.assertEqual([b["poster"] for b in dms], [True, False, False])
-        self.assertEqual(len([b for b in self.sent if b["kind"] == "owner_text"]), 3)
+        self.assertEqual(
+            [b["phone"] for b in self.sent if b["kind"] == "owner_text"],
+            [b["phone"] for b in dms[1:]],
+        )
         self.assertEqual(len(set(self.phones())), 3)
 
     def test_follow_up_can_be_switched_off_mid_batch(self):

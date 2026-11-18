@@ -95,27 +95,15 @@ class DmFailurePaths(unittest.TestCase):
         )
         self.assertEqual((st["state"], st["sent"], st["skipped"]), ("Completed", 1, 2))
 
-    def test_unconfirmed_delivery_is_never_retried_and_batch_goes_on(self):
+    def test_unconfirmed_delivery_is_never_retried_and_pauses_the_batch(self):
         st, calls = self.batch([URLError("timed out")])
-        self.assertEqual((st["sent"], st["failed"]), (2, 1), st.get("error"))
-        self.assertEqual(len(calls), len(set(calls)), "nobody may be sent to twice")
-        self.assertNotEqual(st["state"], "Stopped")
+        self.assertEqual((st["state"], st["sent"], st["failed"]), ("Stopped", 0, 1))
+        self.assertEqual(len(calls), 1, "neither a retry nor a send to anyone else")
 
-    def test_unconfirmed_result_code_goes_on_too(self):
+    def test_unconfirmed_result_code_keeps_the_next_chat_waiting(self):
         st, calls = self.batch([{"code": "UNCERTAIN", "message": "Send not confirmed."}])
-        self.assertEqual((st["sent"], st["failed"]), (2, 1))
-        self.assertEqual(len(calls), len(set(calls)))
-
-    def test_three_unconfirmed_in_a_row_pause_the_batch(self):
-        bad = [URLError("down")] * 3
-        st, calls = self.batch(bad, people=5)
-        self.assertEqual((st["state"], st["failed"], len(calls)), ("Stopped", 3, 3))
-        self.assertIn("in a row", st["error"])
-
-    def test_a_success_resets_the_unconfirmed_streak(self):
-        replies = [URLError("x"), URLError("x"), OK, URLError("x"), URLError("x"), OK]
-        st, _ = self.batch(replies, people=6)
-        self.assertEqual((st["state"], st["sent"], st["failed"]), ("Completed", 2, 4))
+        self.assertEqual((st["state"], st["sent"], st["failed"]), ("Stopped", 0, 1))
+        self.assertEqual(len(calls), 1)
 
     def test_on_hold_stops_cleanly(self):
         st, calls = self.batch([{"code": "ERROR", "message": "On hold: you told me to wait."}])
@@ -128,10 +116,8 @@ class DmFailurePaths(unittest.TestCase):
         self.assertIn("paused for today", st["error"])
 
     def test_unexpected_crash_is_reported_not_hung(self):
-        st, _ = self.batch(
-            [RuntimeError("boom")], people=2
-        )  # treated as unconfirmed, then carries on
-        self.assertEqual(st["sent"], 1)
+        st, calls = self.batch([RuntimeError("boom")], people=2)
+        self.assertEqual((st["state"], st["sent"], len(calls)), ("Stopped", 0, 1))
 
     def test_status_check_failure_is_a_disconnect_not_a_crash(self):
         with (

@@ -2,6 +2,7 @@
 
 import traceback, logging
 import copy, hashlib, json, math, random, re, threading, time, uuid
+from contextlib import ExitStack, nullcontext
 from functools import wraps
 from pathlib import Path
 from donor_book import hide_numbers, normalize_phone
@@ -62,6 +63,7 @@ class DonorDelivery:
         self.store = store
         self.book = book
         self.send = send
+        self.chat_scope = nullcontext
         self.caption = caption
         self.connected = connected
         self.held = held
@@ -74,7 +76,7 @@ class DonorDelivery:
         self.active = None
         self.manual_sent_at = 0
         self.manual_inflight = threading.Event()
-        self.tried_at = None  # when the last message was handed to WhatsApp (GAP_FROM_CASE counts from the case's)
+        self.tried_at = None  # when the last message was handed to WhatsApp
         self.variants = variants
         self.case_closed = case_closed or (lambda: False)
         # Round selection advances the shared rotation cursor (same one single DMs use);
@@ -271,13 +273,15 @@ class DonorDelivery:
         name = j.get("current") or ""
         if j.get("state") != "Sending" or not name:
             return None
-        kinds = self._after_kinds(j)
-        steps = 1 + len(kinds) + (1 if j.get("follow_up") else 0)
-        done = 0
         last = (j.get("receipts") or [None])[-1]
+        current = last if last and last.get("name") == name else {}
+        plan = self._receipt_plan(j, current)
+        kinds = plan["kinds"]
+        steps = 1 + len(kinds) + bool(plan["follow_up"])
+        done = 0
         if last and last.get("name") == name and last.get("state") == "Sent":
             got = last.get("steps")
-            if got is None and "after" not in j:
+            if got is None and "plan" not in last and "after" not in j:
                 done = steps  # files went with the first message, as one step
             else:
                 done = 1 + sum(1 for k in kinds if (got or {}).get(k) == "Sent")
@@ -783,6 +787,8 @@ class DonorDelivery:
                     previous_sent=prev.get("previous_sent", 0) + len(confirmed_ids),
                     chunk_offset=prev.get("chunk_offset", 0) + len(prev["ids"]) - len(left),
                 )
+                unfinished = prev.get("resume_from") or prev["id"]
+                job["resume_from"] = unfinished
             if chunk:
                 job.update(
                     chunk=chunk, rest_seconds=rests[0], rests=rests, batches=-(-len(rows) // chunk)
@@ -1009,14 +1015,15 @@ class DonorDelivery:
             return list(j["after"])
         return [k for k in ("video", "pdf") if j.get(k)]
 
+    def _receipt_plan(self, j, receipt):
+        return receipt.get("plan", {"kinds": self._after_kinds(j), "follow_up": j.get("follow_up")})
+
     def _send_extras(self, j, r, name, gender, receipts, sent, skipped):
         """After the first message was confirmed: what follows it, in order (DMs: the video, then the PDF; Giki: the
         2nd, then the 3rd message), only those ticked for this batch, each its own recorded step. A step that still
-        fails stops the batch; with KEEP_GOING (Giki) it is recorded, the person's next steps still go, and Resume
-        sends what is missing."""
+        fails stops the batch before the next file or person."""
         steps = receipts[-1].setdefault("steps", {}) if receipts else {}
         marks = receipts[-1].setdefault("after_ids", {}) if receipts else {}
-        first_bad = None
         for kind in self._after_kinds(j):
             if self.held():  # Stop lets this person finish; only a hold (wrong WhatsApp) cuts it
                 return "Cancelled", ""
@@ -1038,25 +1045,20 @@ class DonorDelivery:
                 body,
                 sent,
                 skipped,
-                before=lambda kind=kind: self._mark(j, receipts, steps, kind, "Sending"),
-                note=lambda mark, kind=kind: self._note(j, receipts, marks, kind, mark),
+                note=lambda mark, kind=kind: self._mark_attempt(j, receipts, steps, kind, marks, kind, mark),
                 label="The " + self.EXTRA_LABEL[kind],
             )
             self._mark(j, receipts, steps, kind, state)
-            if state == "Cancelled":
-                return "Cancelled", ""
             if state != "Sent":
-                if not self.KEEP_GOING:
-                    return state, problem
-                first_bad = first_bad or (state, problem)
-        return first_bad or ("Sent", "")
+                return state, problem
+        return "Sent", ""
 
-    def _send_step(self, j, receipts, body, sent, skipped, before, note, label):
+    def _send_step(self, j, receipts, body, sent, skipped, note, label):
         """One message after the first one, finishing the person (Stop does not cut it). Returns (state, problem):
         Sent; Not sent (it did not go: Resume sends it); Uncertain (it may have gone: never sent again); Cancelled."""
         try:
             res = self._dispatch(
-                j, body, receipts, sent, skipped, finish=True, before=before, note=note
+                j, body, receipts, sent, skipped, finish=True, note=note
             )
         except ValueError as e:
             return "Not sent", hide_numbers(e)
@@ -1070,8 +1072,9 @@ class DonorDelivery:
             return "Uncertain", f"{label} was not confirmed. Check WhatsApp. No automatic retry."
         return "Sent", ""
 
-    def _note(self, j, receipts, marks, key, mark):
-        """Keep the chat's newest message id from just before a step: after a restart it tells whether the step went."""
+    def _mark_attempt(self, j, receipts, steps, field, marks, key, mark):
+        """Persist the step and its recovery marker together before handing it to WhatsApp."""
+        steps[field] = "Sending"
         marks[key] = mark
         self._update(j["id"], receipts=receipts)
 
@@ -1085,19 +1088,71 @@ class DonorDelivery:
         """What a person whose first message went still needs: ([after kinds], share message?)."""
         if receipt.get("state") != "Sent" or not receipt.get("seq"):
             return [], False  # only sequences recorded step by step; an older record is never sent again
+        if receipt.get("after_poster") == "Uncertain":
+            return [], False
+        plan = self._receipt_plan(j, receipt)
         steps = receipt.get("steps") or {}
-        kinds = [
-            k
-            for k in self._after_kinds(j)
-            if steps.get(k) in self.REDO or steps.get(k) == "Sending" and self._checkable(receipt, k)
-        ]
-        if "steps" not in receipt and "after" not in j and receipt.get("extras") not in self.REDO:
+        kinds = []
+        blocked = False
+        for kind in plan["kinds"]:
+            state = steps.get(kind)
+            if state == "Sent":
+                continue
+            if state in self.REDO or (state == "Sending" and self._checkable(receipt, kind)):
+                kinds.append(kind)
+            else:
+                blocked = True
+                break
+        if "plan" not in receipt and "steps" not in receipt and "after" not in j and receipt.get("extras") not in self.REDO:
             kinds = []  # an older receipt: its files were sent together, as one step
         fu = receipt.get("follow_up")
-        share = bool(j.get("follow_up")) and (
+        share = not blocked and bool(plan["follow_up"]) and (
             fu in self.REDO or fu == "Sending" and self._checkable(receipt, "share")
         )
         return kinds, share
+
+    def incomplete_chat(self, j):
+        """The first chat that still needs confirmation before this batch can resume."""
+        flight = j.get("sending") or {}
+        receipts = list(j.get("receipts", []))
+        if flight.get("id"):
+            receipts.append({"id": flight["id"], "state": "Uncertain"})
+        for receipt in receipts:
+            state = receipt.get("state")
+            if state != "Uncertain" and (state != "Sent" or not receipt.get("seq")):
+                continue
+            if state == "Uncertain" and not self.STOP_ON_UNCONFIRMED:
+                continue
+            plan = self._receipt_plan(j, receipt)
+            steps = receipt.get("steps") or {}
+            legacy_files_sent = "plan" not in receipt and not steps and receipt.get("extras") == "Sent"
+            incomplete_files = receipt.get("after_poster") == "Uncertain" or (
+                not legacy_files_sent and any(steps.get(kind) != "Sent" for kind in plan["kinds"])
+            )
+            incomplete_share = plan["follow_up"] and receipt.get("follow_up") != "Sent"
+            if state == "Sent" and not incomplete_files and not incomplete_share:
+                continue
+            try:
+                record = self.book.resolve(receipt["id"])
+            except ValueError:
+                continue
+            if not self.eligible(record["phone"]):
+                continue
+            if state == "Uncertain":
+                if record.get("delivery") in ("Uncertain", "Sending"):
+                    return hide_numbers(record["name"])
+                continue
+            share_sent = record.get("follow_up_state") == "Sent" and (
+                (record.get("follow_up_at") or 0) >= (receipt.get("time") or 0)
+            )
+            if incomplete_files or (incomplete_share and not share_sent):
+                return hide_numbers(record["name"])
+        return ""
+
+    def check_chat_complete(self, j):
+        name = self.incomplete_chat(j)
+        if name:
+            raise ValueError(f"Check {name}'s WhatsApp chat. The remaining recipients are still waiting.")
 
     def half_sent(self):
         """People from batches of the last 36 hours that a Stop, a refusal or a restart left half-sent."""
@@ -1130,11 +1185,11 @@ class DonorDelivery:
                 out.append((j, receipt, kinds, share))
         return out
 
-    def finish_half_sent(self):
+    def finish_half_sent(self, job_id=None):
         """Send each half-sent person only what they are missing (2nd, 3rd, share message), in order. Something
         that may already have gone is never sent again. Returns how many people were finished."""
         with self.REPAIR_LOCK:  # Resume and the restart repair never run together (each would send it once)
-            return self._finish_half_sent()
+            return self._finish_half_sent(job_id)
 
     REPAIR_LOCK = threading.Lock()
 
@@ -1182,20 +1237,28 @@ class DonorDelivery:
                             "state": "Sent",
                             "time": now,
                             "seq": 1,
+                            "plan": self._receipt_plan(j, flight),
                         }
                     )
                 else:
                     self.book.delivery(ident, "Not sent")  # it did not go: they are waiting again
             self._update(j["id"], receipts=j.get("receipts", []), sending=None)
 
-    def _finish_half_sent(self):
+    def _finish_half_sent(self, job_id=None):
         self._settle_in_flight()
+        people = self.half_sent() if job_id is None else self._half_sent_in(self._job_for_repair(job_id))
         finished = 0
-        for j, receipt, kinds, share in self.half_sent():
+        for j, receipt, kinds, share in people:
             if self.held() or not self.connected():
                 break
-            finished += self._finish_person(j, receipt, kinds, share, j["receipts"])
+            with self.chat_scope():
+                if not self._finish_person(j, receipt, kinds, share, j["receipts"]):
+                    break
+            finished += 1
         return finished
+
+    def _job_for_repair(self, job_id):
+        return next((j for j in self.export_jobs()["jobs"] if j["id"] == job_id), {})
 
     def _finish_person(self, j, receipt, kinds, share, receipts):
         """Send one person only what they are missing (their 2nd, 3rd, share message), in order. Something that may
@@ -1227,14 +1290,12 @@ class DonorDelivery:
             steps[kind] = state
             self._update(j["id"], receipts=receipts)
             if state != "Sent":
-                ok = False
-                if not self.KEEP_GOING:
-                    break
-        if share and (ok or self.KEEP_GOING):
+                return False
+        if share:
             body = {
                 "target": "phone",
                 "phone": r["phone"],
-                "message": self.follow_text(j["follow_up"], name, gender),
+                "message": self.follow_text(self._receipt_plan(j, receipt)["follow_up"], name, gender),
                 "poster": False,
                 "kind": "owner_text",
                 "attachment": None,
@@ -1261,9 +1322,10 @@ class DonorDelivery:
                 return "Sent"
             if found is None:
                 return "Uncertain"
-        holder[field] = "Sending"  # recorded before it goes, with the chat mark, for a restart in the middle
-        self._update(j["id"], receipts=receipts)
-        return self._send_now(body, note=lambda mark: self._note(j, receipts, marks, key, mark))
+        return self._send_now(
+            body,
+            note=lambda mark: self._mark_attempt(j, receipts, holder, field, marks, key, mark),
+        )
 
     def _send_now(self, body, note=None):
         """One repair send, with the same chat check as a batch send. Returns Sent / Not sent / Uncertain."""
@@ -1329,11 +1391,6 @@ class DonorDelivery:
                 return "sent"
         return "not sent"
 
-    def _mark_follow(self, j, receipts, state):
-        if receipts:
-            receipts[-1]["follow_up"] = state
-            self._update(j["id"], receipts=receipts)
-
     def _mark(self, j, receipts, steps, kind, state):
         """Record one step of a person's sequence at once, so after a restart it is known exactly what went."""
         steps[kind] = state
@@ -1363,8 +1420,9 @@ class DonorDelivery:
             },
             sent,
             skipped,
-            before=lambda: self._mark_follow(j, receipts, "Sending"),
-            note=lambda mark: self._note(j, receipts, marks, "share", mark),
+            note=lambda mark: self._mark_attempt(
+                j, receipts, receipts[-1], "follow_up", marks, "share", mark
+            ),
             label="The share message",
         )
 
@@ -1404,12 +1462,13 @@ class DonorDelivery:
             time.sleep(min(seconds, 2))
         return False
 
-    def _dispatch(self, j, body, receipts, sent, skipped, finish=False, before=None, note=None):
+    def _dispatch(self, j, body, receipts, sent, skipped, finish=False, note=None, chat=None):
         """Send one DM. Waits for WhatsApp / storage to come back instead of giving up (30 min; 3 min while
         finishing a person whose case already went). With the chat check (peek / seen), an unclear or failed answer
         is looked up in the chat: there = sent; not there = sent again (HEAL_TRIES in all); cannot tell = as before."""
         deadline = time.time() + (180 if finish else 1800)
         tries = waits = 0
+        locked = False
         while True:
             if finish and self.stop.is_set():  # Stop pressed: finish this person only if WhatsApp answers soon
                 deadline = min(deadline, (self.stop_at or time.time()) + 30)
@@ -1434,10 +1493,13 @@ class DonorDelivery:
                 self._update(j["id"], state="Sending", current="")  # back: the page no longer says waiting
             if self.stop.is_set() and not finish:
                 return None
-            if before:
-                before()
+            if chat is not None and not locked:
+                chat.enter_context(self.chat_scope())
+                locked = True
+                if self.stop.is_set() or self.held():
+                    return None
             mark = self._peek(body)  # the chat's newest message from just before this send
-            if note and self.peek is not None:
+            if note:
                 note(mark)
             self.tried_at = time.time()
             try:
@@ -1455,6 +1517,9 @@ class DonorDelivery:
                 result = self.send(body)
             except ValueError as e:
                 if str(e).startswith(self.TRANSIENT) and time.time() < deadline:
+                    if locked:
+                        chat.close()
+                        locked = False
                     waits += 1
                     if self._pause(self._wait_step(waits), finish):
                         return None
@@ -1468,6 +1533,9 @@ class DonorDelivery:
             if isinstance(result, dict) and result.get("code") == "ERROR":
                 # Refused before anything left the phone, so it is safe to wait and try this person again.
                 if message.startswith("WhatsApp disconnected") and time.time() < deadline:
+                    if locked:
+                        chat.close()
+                        locked = False
                     waits += 1
                     if self._pause(self._wait_step(waits), finish):
                         return None
@@ -1493,8 +1561,6 @@ class DonorDelivery:
         self.running_job = j
         receipts = []
         sent = skipped = failed = 0
-        uncertain_run = step_run = 0
-        second_chance = set()
         last_completion = None
         last_case = None  # when the last person's first message was handed to WhatsApp
         state = "Completed"
@@ -1502,7 +1568,18 @@ class DonorDelivery:
         chunk = j.get("chunk")
         gap_next = float(j["gap_seconds"])
         done_here = set()
+        chat = ExitStack()
         try:
+            if j.get("resume_from"):
+                prior = self._job_for_repair(j["resume_from"])
+                if self.incomplete_chat(prior):
+                    self.finish_half_sent(prior["id"])
+                    pending = self.incomplete_chat(self._job_for_repair(prior["id"]))
+                    if pending:
+                        state = "Stopped"
+                        error = f"Check {pending}'s WhatsApp chat. The remaining recipients are still waiting."
+                        return
+                self._update(j["id"], resume_from=None)
             hold = j.get("hold_until")
             if hold and hold > time.time():
                 self._update(
@@ -1516,6 +1593,7 @@ class DonorDelivery:
                     state = "Stopped"
                     return
             for index, ident in enumerate(j["ids"]):
+                chat.close()
                 chunk = j.get("chunk")
                 if self.stop.is_set():
                     state = "Stopped"
@@ -1531,15 +1609,14 @@ class DonorDelivery:
                 if ident in done_here:
                     continue
                 phase_index = index + j.get("chunk_offset", 0)
-                # the gap / rest counts from the last person's first message (GAP_FROM_CASE) or their last one
-                since = last_case if self.GAP_FROM_CASE and last_case is not None else last_completion
                 if (
                     chunk
                     and phase_index
                     and phase_index % chunk == 0
                     and last_completion is not None
                 ):
-                    rest = since + self._rest(j, phase_index // chunk)
+                    rest_from = last_case if self.REST_FROM_CASE else last_completion
+                    rest = rest_from + self._rest(j, phase_index // chunk)
                     self._update(
                         j["id"],
                         state="Waiting",
@@ -1551,7 +1628,7 @@ class DonorDelivery:
                         skipped=skipped,
                         receipts=receipts,
                     )
-                    self.wait_context = (j, since, phase_index // chunk)
+                    self.wait_context = (j, rest_from, phase_index // chunk)
                     try:
                         stopped = self._sleep_until(rest)
                     finally:
@@ -1584,16 +1661,17 @@ class DonorDelivery:
                     or self.manual_inflight.is_set()
                     or self.manual_sent_at > j["created_at"]
                 ):
-                    due = max(since or 0, self.manual_sent_at) + gap_next
-                    self._update(
-                        j["id"],
-                        state="Waiting",
-                        next_at=due,
-                        current="Waiting between DMs",
-                        sent=sent,
-                        skipped=skipped,
-                        receipts=receipts,
-                    )
+                    due = max(last_case or 0, self.manual_sent_at) + gap_next
+                    if self.manual_inflight.is_set() or time.time() < due:
+                        self._update(
+                            j["id"],
+                            state="Waiting",
+                            next_at=due,
+                            current="Waiting between DMs",
+                            sent=sent,
+                            skipped=skipped,
+                            receipts=receipts,
+                        )
                     settings_revision = j.get("settings_revision", 0)
                     while self.manual_inflight.is_set() or time.time() < due:
                         if settings_revision != j.get("settings_revision", 0):
@@ -1601,7 +1679,7 @@ class DonorDelivery:
                             gap_next = self._gap(j)
                         if self.stop.wait(min(0.5, max(0.1, due - time.time()))):
                             break
-                        new_due = max(since or 0, self.manual_sent_at) + gap_next
+                        new_due = max(last_case or 0, self.manual_sent_at) + gap_next
                         if new_due != due:
                             due = new_due
                             self._update(j["id"], next_at=due)
@@ -1650,16 +1728,19 @@ class DonorDelivery:
                     skipped=skipped,
                     receipts=receipts,
                 )
+                # Settings edited mid-upload belong to the next chat.
+                current_job = dict(j)
+                plan = self._receipt_plan(current_job, {})
                 self.book.delivery(ident, "Sending")
                 self.tried_at = None
                 try:
                     result = self._dispatch(
-                        j,
+                        current_job,
                         {
                             "target": "phone",
                             "phone": r["phone"],
-                            "message": (caption_now := self._fresh_caption(j, index)),
-                            "poster": j["poster"],
+                            "message": (caption_now := self._fresh_caption(current_job, index)),
+                            "poster": current_job["poster"],
                             "kind": "owner_text" if "custom_template" in j else self.KIND,
                             "attachment": j.get("attachment"),
                             "first_in_batch": sent == 0,
@@ -1670,7 +1751,9 @@ class DonorDelivery:
                         receipts,
                         sent,
                         skipped,
-                        note=lambda mark: self._update(j["id"], sending={"id": ident, "after": mark}),
+                        chat=chat,
+                        note=(lambda mark: self._update(j["id"], sending={"id": ident, "after": mark, "plan": plan}))
+                        if self.peek is not None else None,
                     )
                 except ValueError as e:
                     self.book.delivery(ident, "Not sent")
@@ -1692,20 +1775,12 @@ class DonorDelivery:
                 except Exception:
                     self.book.delivery(ident, "Uncertain")
                     failed += 1
-                    uncertain_run += 1
-                    last_completion = time.time()
-                    last_case = self.tried_at or last_completion
-                    gap_next = self._gap(j)
-                    done_here.add(ident)
                     receipts.append(
                         {"id": ident, "name": hide_numbers(r["name"]), "state": "Uncertain"}
                     )
-                    if uncertain_run >= self.UNCERTAIN_STOP:
-                        state = "Stopped"
-                        error = f"{uncertain_run} deliveries in a row were not confirmed. Check WhatsApp. Those people are never retried."
-                        break
-                    self._update(j["id"], failed=failed, receipts=receipts)
-                    continue
+                    state = "Stopped"
+                    error = "The current chat's first message was not confirmed. Check WhatsApp."
+                    break
                 if result is None:
                     self.book.delivery(ident, "Not sent")
                     state = "Stopped"
@@ -1719,24 +1794,14 @@ class DonorDelivery:
                     gone = "Not sent" if isinstance(result, dict) and result.get("not_sent") else "Uncertain"
                     self.book.delivery(ident, gone)
                     failed += 1
-                    uncertain_run += 1
                     receipts.append({"id": ident, "name": hide_numbers(r["name"]), "state": gone})
-                    if self.KEEP_GOING and gone == "Not sent" and ident not in second_chance:
-                        second_chance.add(ident)  # it surely did not go: once more, at the end of the batch
-                        j["ids"].append(ident)
-                        done_here.discard(ident)
-                        failed -= 1
-                    if uncertain_run >= self.UNCERTAIN_STOP:
-                        state = "Stopped"
-                        error = (
-                            f"{uncertain_run} people in a row: the first message did not go after {self.HEAL_TRIES} tries. Check WhatsApp, then press Resume DMs."
-                            if gone == "Not sent"
-                            else f"{uncertain_run} deliveries in a row were not confirmed. Check WhatsApp. Those people are never retried."
-                        )
-                        break
-                    self._update(j["id"], failed=failed, receipts=receipts)
-                    continue
-                uncertain_run = 0
+                    state = "Stopped"
+                    error = (
+                        "The current chat's first message did not go. Resume DMs to try it again."
+                        if gone == "Not sent"
+                        else "The current chat's first message was not confirmed. Check WhatsApp."
+                    )
+                    break
                 sent += 1
                 self.book.delivery(ident, "Sent", last_completion, text=caption_now)
                 receipts.append(
@@ -1746,52 +1811,40 @@ class DonorDelivery:
                         "state": "Sent",
                         "time": last_completion,
                         "seq": 1,  # every later step of this person is recorded: only these can be finished later
+                        "plan": plan,
                     }
                 )
                 self._update(j["id"], sent=sent, skipped=skipped, receipts=receipts)
-                problem = ""
-                if self._after_kinds(j):
-                    ex, ex_error = self._send_extras(j, r, name, gender, receipts, sent, skipped)
+                if any(part.get("code") != "SUCCESS" for part in result.get("after") or []):
+                    receipts[-1].update(after_poster="Uncertain", extras="Uncertain")
+                    state = "Stopped"
+                    error = "The current chat's after poster was not confirmed. Check WhatsApp."
+                    break
+                if plan["kinds"]:
+                    ex, ex_error = self._send_extras(current_job, r, name, gender, receipts, sent, skipped)
                     receipts[-1]["extras"] = ex
                     last_completion = time.time()
                     self._update(j["id"], sent=sent, skipped=skipped, receipts=receipts)
-                    if ex_error:
-                        if not self.KEEP_GOING:
-                            state = "Stopped"
-                            error = ex_error
-                            break
-                        problem = ex_error
-                if j.get("follow_up"):
-                    fu, fu_error = self._send_follow_up(j, r, name, gender, receipts, sent, skipped)
+                    if ex != "Sent":
+                        state = "Stopped"
+                        error = ex_error or "The current chat's attachments did not finish."
+                        break
+                if plan["follow_up"]:
+                    fu, fu_error = self._send_follow_up(current_job, r, name, gender, receipts, sent, skipped)
                     receipts[-1]["follow_up"] = fu
                     self.book.follow_up(ident, fu)
                     last_completion = time.time()
                     self._update(j["id"], sent=sent, skipped=skipped, receipts=receipts)
-                    if fu_error:
-                        if not self.KEEP_GOING:
-                            state = "Stopped"
-                            error = fu_error
-                            break
-                        problem = problem or fu_error
-                if self.KEEP_GOING:  # one person's failed message never stops the rest; 3 people in a row do
-                    step_run = step_run + 1 if problem else 0
-                    if step_run >= self.UNCERTAIN_STOP:
+                    if fu != "Sent":
                         state = "Stopped"
-                        error = f"{step_run} people in a row had a message that did not go. {problem} Check WhatsApp, then press Resume DMs: only what is missing is sent."
+                        error = fu_error or "The current chat's follow-up did not finish."
                         break
-            if self.KEEP_GOING and state == "Completed":
-                # the end of the batch: a 2nd / 3rd / share message that surely did not go is sent now (never twice)
-                for receipt in list(receipts):
-                    if self.stop.is_set() or self.held():
-                        break
-                    kinds, share = self._todo(j, receipt)
-                    if kinds or share:
-                        self._finish_person(j, receipt, kinds, share, receipts)
         except Exception:
             traceback.print_exc()
             state = "Stopped"
             error = "The batch could not continue reliably. Check receipts before starting again."
         finally:
+            chat.close()
             if not sent and skipped == len(j["ids"]) and state == "Completed":
                 state = "Nothing sent"
                 error = "All selected recipients were excluded. See the recipient results; this batch did not send any DM."
@@ -1858,6 +1911,7 @@ class DonorDelivery:
         if (
             not j
             or not j.get("auto")
+            or (self.REPAIR_AFTER_RESTART and self.incomplete_chat(j))
             or j.get("state")
             not in (("Interrupted", "Stopped") if allow_stopped else ("Interrupted",))
             or not self._remaining(j)
@@ -1932,9 +1986,7 @@ class DonorDelivery:
     HEAL_TRIES = 3  # a message is tried at most 3 times
     HEAL_WATCH = (5, 10, 15, 30, 60)  # an unclear answer may be a slow upload: watch the chat up to 2 minutes
     HEAL_QUICK = (3, 5)  # a clear error from WhatsApp: two quick looks
-    KEEP_GOING = False  # True (Giki): a message that still fails does not stop the batch; 3 people in a row do
-    GAP_FROM_CASE = False  # True (Giki): the Timer runs from one person's first message to the next person's, so DMs go
-    # exactly every N minutes (the sending time is not added); a person still never starts before the last one finished
+    STOP_ON_UNCONFIRMED = False  # Giki also blocks Resume on an unconfirmed opening message
+    REST_FROM_CASE = False  # Giki also measures the break between batches from the opening message
     shutting_down = False  # set by the server's shutdown (a deploy): see server.graceful_exit
     NAMES_AT_SEND = False  # True: a picked-people batch needs no pasted names to carry on after a restart
-    UNCERTAIN_STOP = 3  # consecutive unconfirmed deliveries before a batch pauses

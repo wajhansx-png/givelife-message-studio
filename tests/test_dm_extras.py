@@ -1,4 +1,4 @@
-"""DM PDF and video: after each DM (poster + caption) the ticked ones follow, PDF then video. Stubbed transport."""
+"""DM PDF and video: the selected video comes before the PDF. Stubbed transport."""
 
 import base64, sys, unittest
 from pathlib import Path
@@ -80,6 +80,42 @@ class Batch(unittest.TestCase):
         self.assertEqual([c[2] for c in calls], [None, "video"])  # no PDF, no second donor
         self.assertEqual(st["state"], "Stopped")
         self.assertIn("video was not confirmed", st["error"])
+
+    def test_a_single_dm_also_sends_the_video_before_the_pdf(self):
+        calls = []
+        with (
+            patch.object(self.h, "exclusion_reason", return_value=""),
+            patch.object(app, "send_custom", side_effect=lambda body: calls.append(body["extra"]) or OK),
+        ):
+            self.assertEqual(self.h._single_extras({"phone": "923001230000"}, True, True), "Sent")
+        self.assertEqual(calls, ["video", "pdf"])
+
+    def test_a_long_attachment_uses_the_gap_and_edits_apply_to_the_next_chat(self):
+        h = self.h
+        for i in range(2):
+            h.book.add(f"Synthetic {i}", f"92300123000{i}")
+        with patch.object(h.jobs, "connected", return_value=True):
+            h.start_batch(scope="all", limit=2, run=False, video=True, pdf=True)
+            job = h.jobs._load()["jobs"][-1]
+            stamp, calls = [job["created_at"]], []
+
+            def send(body):
+                calls.append((body["phone"][-1], body.get("extra")))
+                if calls == [("0", None)]:
+                    h.jobs.configure(job["id"], {"pdf": False})
+                if body.get("extra") == "video":
+                    stamp[0] += 20
+                return OK
+
+            with (
+                patch.object(h.jobs, "send", side_effect=send),
+                patch.object(h.jobs, "_gap", return_value=10),
+                patch.object(h.jobs.stop, "wait") as wait,
+                patch("donor_delivery.time.time", side_effect=lambda: stamp[0]),
+            ):
+                h.jobs._run(job)
+            wait.assert_not_called()
+        self.assertEqual(calls, [("0", None), ("0", "video"), ("0", "pdf"), ("1", None), ("1", "video")])
 
     def test_the_choice_is_part_of_the_job_and_can_be_changed_while_it_runs(self):
         self.h.book.add("Synthetic 0", "923001230000")

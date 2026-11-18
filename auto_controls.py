@@ -528,7 +528,8 @@ class AutoControls:
             self._store_settings(which, self._normalise(which, settings))
         cfg = self.settings(which)
         donors = app.donors()
-        follow = True if cfg.get("follow_up") else None
+        # the card's own tick, or the Donors tab's "Send with follow-up" (one tick for every DM list, Auto included)
+        follow = True if cfg.get("follow_up") or donors.follow_tick() else None
         if follow and not donors.follow_up_text():
             raise ValueError(
                 "Write the follow-up in Messages → Follow-Up Message first, or untick it."

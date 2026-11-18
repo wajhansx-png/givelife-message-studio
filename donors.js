@@ -33,8 +33,10 @@
   let followUpOn = false;
   try {
     const stored = localStorage.getItem('givelife-follow-up');
-    if (stored !== null) followUpOn = stored === '1';
-    else
+    if (stored !== null) {
+      followUpOn = stored === '1';
+      setTimeout(() => saveFollowTick(), 0); // tell the server once per page open
+    } else
       api('/donor-messages')
         .then((d) => {
           if (stored === null && d && String(d.follow_up || '').trim()) setFollowUp(true, false);
@@ -135,6 +137,14 @@
         localStorage.setItem('givelife-follow-up', followUpOn ? '1' : '0');
       } catch (e) {}
     if (remember && autoOn) autoOptions({ follow_up: followUpOn });
+    saveFollowTick();
+  }
+  /* The server keeps this tick too, so the Report's DM Top / DM Important Auto send the follow-up when it is on. */
+  let tickSent = null;
+  function saveFollowTick() {
+    if (tickSent === followUpOn) return;
+    tickSent = followUpOn;
+    api('/donor-messages', { action: 'follow_tick', on: followUpOn }).catch(() => (tickSent = null));
   }
   /* Donors Auto switch (server runs it; this only mirrors state and sends live option changes). */
   let autoOn = false;

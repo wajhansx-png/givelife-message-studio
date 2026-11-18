@@ -212,6 +212,31 @@ class ImportantDonors(Base):
         self.assertFalse(self.sent[1]["poster"])
         self.assertEqual(self.sent[0]["phone"], self.sent[1]["phone"])
 
+    def test_the_donors_tab_follow_up_tick_applies_to_top_and_important_auto(self):
+        """"Send with follow-up" ticked on the Donors tab: DM Top and DM Important send it too, with no card setting."""
+        self.h.set_follow_up("Thank you for reading, Brother.")
+        for which, make in ((ac.DONOR_DM, lambda: self.donors(2)), (IMPORTANT, lambda: self.donors(2))):
+            self.h.jobs.import_jobs({"jobs": []})
+            self.h.book._save({"version": 1, "records": []})
+            make()
+            self.h.set_follow_tick(False)
+            with patch.object(self.h.jobs, "send", return_value={"code": "SUCCESS", "results": {"message_id": "m"}}):
+                self.c.set(which, True, {"count": 2} if which == IMPORTANT else {})
+                self.assertTrue(self.wait(lambda: self.h.jobs.export_jobs()["jobs"]))
+                self.assertNotIn("follow_up", self.h.jobs.export_jobs()["jobs"][-1])  # tick off: none
+                self.stop_everything()
+                self.h.jobs.import_jobs({"jobs": []})
+                self.h.set_follow_tick(True)
+                self.c.set(which, True, {"count": 2} if which == IMPORTANT else {})
+                self.assertTrue(self.wait(lambda: self.h.jobs.export_jobs()["jobs"]))
+                self.assertEqual(
+                    self.h.jobs.export_jobs()["jobs"][-1]["follow_up"], "Thank you for reading, Brother."
+                )
+                self.stop_everything()
+        self.h.set_follow_tick(False)
+        with self.assertRaises(ValueError):
+            self.h.set_follow_tick("yes")
+
     def test_a_finished_case_cannot_start_dms(self):
         self.donors(2)
         app.set_left(0)

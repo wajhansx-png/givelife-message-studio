@@ -6328,7 +6328,11 @@ class Handler(BaseHTTPRequestHandler):
             )  # resume generation if needed; never rewrite the bank just because the tab opened
             return self.reply(bank.get(kind))
         if self.path == "/donor-messages":
-            return self.reply({**donors().messages.get(), "follow_up": donors().follow_up_text()})
+            return self.reply({
+                    **donors().messages.get(),
+                    "follow_up": donors().follow_up_text(),
+                    "follow_tick": donors().follow_tick(),
+                })
         if self.path == "/wa-status":
             try:
                 return self.reply(api("/devices/" + DEVICE + "/status"))
@@ -6777,6 +6781,8 @@ class Handler(BaseHTTPRequestHandler):
                         return self.reply(donors().messages.generate(source, body.get("count", 10)))
                     if body.get("action") == "follow_up":
                         return self.reply(donors().set_follow_up(body.get("text")))
+                    if body.get("action") == "follow_tick":
+                        return self.reply(donors().set_follow_tick(body.get("on")))
                     if body.get("action") == "base":
                         return self.reply(donors().messages.set_base(body.get("text")))
                     if body.get("action") == "test":

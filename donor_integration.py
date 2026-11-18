@@ -418,6 +418,20 @@ class DonorIntegration:
         self.app.STORE.put(self.FOLLOW_KEY, {"text": text.strip()})
         return {"follow_up": text.strip(), "reply": "Follow-up message saved."}
 
+    TICK_KEY = "donor_follow_tick"
+
+    def follow_tick(self):
+        """The Donors tab's "Send with follow-up" tick, kept here so the Auto cards (DM Top / DM Important) obey it."""
+        saved = self.app.STORE.get(self.TICK_KEY) if self.app.STORE else None
+        return bool((saved or {}).get("on")) if isinstance(saved, dict) else False
+
+    def set_follow_tick(self, on):
+        if type(on) is not bool:
+            raise ValueError("Use on or off.")
+        if self.app.STORE and self.follow_tick() != on:
+            self.app.STORE.put(self.TICK_KEY, {"on": on})
+        return {"follow_tick": on}
+
     def _follow_up_for(self, wanted):
         if wanted is not True:
             return None

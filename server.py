@@ -6471,6 +6471,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(path.read_bytes(), mime)
             except ValueError:
                 return self.reply({}, status=404)
+        if self.path.startswith("/group-extras-media/"):
+            # the saved poster / video / PDF of the case, so the reader can show a small preview of each
+            try:
+                import batch_media
+                import group_extras
+
+                ident = group_extras.saved(STORE, self.path.split("?")[0].rsplit("/", 1)[-1])
+                if not ident:
+                    return self.reply({}, status=404)
+                path, mime = batch_media.load(STORE, ident, ATT)
+                return self.reply(path.read_bytes(), mime)
+            except ValueError:
+                return self.reply({}, status=404)
         if self.path == "/donor-thanks":
             return self.reply(donors().thanks.view())
         if self.path == "/case-message":

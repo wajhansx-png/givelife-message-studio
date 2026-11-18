@@ -925,32 +925,137 @@ const ui2Frame = (fn) => {
     }
     const sum = more.querySelector('summary');
     sum.textContent = 'More';
-    for (const id of ['focusCopy', 'focusEdit']) if ($(id)) bar.append($(id));
+    /* Minimal reader (owner's pick): the message fills the screen at full width; one thin row under it with
+       ‹ 1 of 5 › (a quick swipe on the message does the same) and 📎 files; then Edit | Copy | Test | More | Back.
+       More holds Rewrite (Urdu + English, English, Trigger, Style fix), New versions, Save Base and the files.
+       The real buttons are moved, never rebuilt. */
+    for (const id of ['focusTest', 'focusCopy', 'focusEdit']) if ($(id)) bar.append($(id));
     bar.append(more);
-    if ($('focusBack')) bar.append($('focusBack'));
-    const hint = document.createElement('p');
-    hint.className = 'ui2-reader-hint';
-    hint.textContent = 'Save Base · Test · Next wording live inside More';
-    bar.after(hint);
+    /* More opens upward; when there is no room above (a short message on a computer) it opens downward */
+    more.addEventListener('toggle', () => {
+      if (!more.open) return;
+      const list = more.querySelector(':scope > div');
+      more.dataset.down = '0';
+      requestAnimationFrame(() => {
+        if (list && list.getBoundingClientRect().top < 8) more.dataset.down = '1';
+      });
+    });
+    if ($('focusBack')) {
+      bar.append($('focusBack'));
+      $('focusBack').setAttribute('aria-label', 'Back');
+    }
+    if (panel && !panel.querySelector('.ui2-rewrite')) {
+      const rw = document.createElement('div');
+      rw.className = 'ui2-rewrite';
+      rw.setAttribute('role', 'group');
+      rw.setAttribute('aria-label', 'Rewrite the message');
+      const head = document.createElement('span');
+      head.className = 'ui2-more-head';
+      head.textContent = 'Rewrite';
+      rw.append(head);
+      const styles = screen.querySelector('.focus-styles');
+      if (styles) rw.append(styles);
+      if ($('focusStyleFix')) rw.append($('focusStyleFix'));
+      panel.prepend(rw);
+      for (const id of ['focusRetry', 'focusSave']) if ($(id)) rw.after($(id));
+    }
+    const paper = $('focusFormatted')?.parentElement;
+    if (paper && !$('ui2Swipe')) {
+      const sw = document.createElement('div');
+      sw.id = 'ui2Swipe';
+      sw.className = 'ui2-swipe';
+      sw.innerHTML =
+        '<button type="button" class="ui2-swipe-prev" aria-label="Previous version">‹</button>' +
+        '<span class="ui2-ver" aria-live="polite">Original</span>' +
+        '<button type="button" class="ui2-swipe-next" aria-label="Next version">›</button>' +
+        '<span class="ui2-swipe-gap"></span>' +
+        '<button type="button" class="ui2-files-btn" aria-label="Files that go with the message">📎 Files</button>';
+      bar.before(sw);
+      const go = (dir) => (window.focusVersionStep ? window.focusVersionStep(dir) : $('focusNext')?.click());
+      sw.querySelector('.ui2-swipe-prev').onclick = () => go(-1);
+      sw.querySelector('.ui2-swipe-next').onclick = () => go(1);
+      sw.querySelector('.ui2-files-btn').onclick = () => {
+        more.open = true;
+        requestAnimationFrame(() => $('ui2ReaderExtras')?.scrollIntoView({ block: 'nearest' }));
+      };
+      const ver = sw.querySelector('.ui2-ver');
+      const paintDots = () => {
+        const v = $('focusVersion'),
+          n = Number(v?.dataset.n || 0),
+          i = Number(v?.dataset.i || 0);
+        ver.textContent = i ? i + ' of ' + n : n ? 'Original · ' + n + ' more' : 'Original';
+      };
+      paintDots();
+      if ($('focusVersion'))
+        new MutationObserver(paintDots).observe($('focusVersion'), {
+          attributes: true,
+          attributeFilter: ['data-n', 'data-i'],
+        });
+      /* swipe the message sideways: it follows the finger; past 60px (or a quick flick) it slides out and the next /
+         previous version slides in. With no versions yet, the swipe makes them. */
+      const msg = $('focusFormatted');
+      const still = matchMedia('(prefers-reduced-motion: reduce)');
+      let start = null,
+        moving = false;
+      const slide = (x, ms) => {
+        msg.style.transition = ms && !still.matches ? 'transform ' + ms + 'ms ease, opacity ' + ms + 'ms ease' : 'none';
+        msg.style.transform = x ? 'translateX(' + x + 'px)' : '';
+        msg.style.opacity = x ? String(Math.max(0.35, 1 - Math.abs(x) / 400)) : '';
+      };
+      paper.addEventListener('pointerdown', (e) => {
+        if (moving || !$('focusText')?.hidden || e.target.closest('button, a, textarea, [contenteditable="true"]')) return;
+        start = { x: e.clientX, y: e.clientY, t: Date.now(), dx: 0, side: false };
+      });
+      paper.addEventListener('pointermove', (e) => {
+        if (!start) return;
+        const dx = e.clientX - start.x,
+          dy = e.clientY - start.y;
+        if (!start.side) {
+          if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) return (start = null); // reading: a vertical scroll
+          if (Math.abs(dx) < 10) return;
+          start.side = true;
+          paper.setPointerCapture?.(e.pointerId);
+        }
+        start.dx = dx;
+        slide(dx, 0);
+      });
+      const finish = async () => {
+        if (!start) return;
+        const { dx, t, side } = start;
+        start = null;
+        if (!side) return;
+        const flick = Math.abs(dx) > 30 && Date.now() - t < 300;
+        if (Math.abs(dx) < 60 && !flick) return slide(0, 180);
+        moving = true;
+        const w = paper.clientWidth || 360,
+          dir = dx < 0 ? 1 : -1;
+        slide(-dir * w, 160);
+        await new Promise((r) => setTimeout(r, still.matches ? 0 : 160));
+        const changed = window.focusVersionStep ? await window.focusVersionStep(dir, true) : false;
+        slide(changed ? dir * w : 0, 0);
+        void msg.offsetWidth;
+        slide(0, 200);
+        moving = false;
+      };
+      paper.addEventListener('pointerup', finish);
+      paper.addEventListener('pointercancel', () => {
+        if (start?.side) slide(0, 180);
+        start = null;
+      });
+    }
     bar.dataset.ui2Row = '1';
     dockKind();
   }
-  /* The bottom row's first button depends on the message: a GROUP message has Test (it goes to the Test group), a DM
-     message has Copy. The other one sits inside More, so nothing is lost. */
+  /* Test and Copy stay in the bottom row for a group and for a DM message alike. */
   function dockKind() {
     const screen = $('messageFocus');
     const bar = screen?.querySelector('.ui2-reader-dock');
-    const panel = screen?.querySelector('.focus-rail-more > div');
-    if (!bar || !panel || !bar.dataset.ui2Row) return;
-    const dm = screen.dataset.kind === 'dm';
-    const first = $(dm ? 'focusCopy' : 'focusTest'),
-      inMore = $(dm ? 'focusTest' : 'focusCopy');
-    if (first && first.parentElement !== bar) bar.prepend(first);
-    if (inMore && inMore.parentElement !== panel) panel.prepend(inMore);
-    const label = dm ? 'More: Save Base, Test, Next wording' : 'More: Copy, Save Base, Next wording';
-    screen.querySelector('.focus-rail-more > summary')?.setAttribute('aria-label', label);
-    const hint = screen.querySelector('.ui2-reader-hint');
-    if (hint) hint.textContent = dm ? 'Save Base · Test · Next wording live inside More' : 'Copy · Save Base · Next wording live inside More';
+    if (!bar || !bar.dataset.ui2Row) return;
+    for (const id of ['focusEdit', 'focusCopy', 'focusTest']) {
+      const b = $(id);
+      if (b && b.parentElement !== bar) bar.prepend(b);
+    }
+    screen.querySelector('.focus-rail-more > summary')?.setAttribute('aria-label', 'More: rewrite, new versions, Save Base and files');
   }
   addEventListener('reader-kind', dockKind);
 
@@ -1586,7 +1691,9 @@ document.addEventListener('click', (e) => {
       cb.type = 'checkbox';
       cb.id = 'ui2Rx-' + kind;
       cb.addEventListener('change', () => change(kind, cb.checked));
-      lab.append(cb, mk('span', '', name));
+      const meta = mk('small', 'ui2-rx-meta', '');
+      const th = mk('span', 'ui2-rx-th');
+      lab.append(cb, mk('span', 'ui2-rx-name', name), meta);
       const file = mk('input');
       file.type = 'file';
       file.accept = accept;
@@ -1634,9 +1741,9 @@ document.addEventListener('click', (e) => {
           paint();
         }
       });
-      item.append(lab, add, file);
+      item.append(th, lab, add, file);
       box.append(item);
-      items[kind] = { item, cb, add: addWord, file: add, lab };
+      items[kind] = { item, cb, add: addWord, file: add, lab, meta, th };
     }
     /* Which file carries the message text (same setting as in Poster): only shown once a video is attached */
     const textRow = mk('div', 'ui2-rx-text');
@@ -1681,13 +1788,46 @@ document.addEventListener('click', (e) => {
     orderLine.id = 'ui2RxOrder';
     orderLine.setAttribute('aria-live', 'polite');
     box.append(textRow, orderLine, msg);
-    /* It takes the place of the small hint line under the buttons, so the reader grows by almost nothing. */
-    const hint = document.querySelector('#messageFocus .ui2-reader-hint');
-    if (hint) hint.after(box);
+    /* The attached files live inside More (a row each: preview, name, tick, Add / Change), so the reader grows by
+       nothing. A small preview chip for each ATTACHED and ticked file shows under the message. */
+    const panel = document.querySelector('#messageFocus .focus-rail-more > div');
+    if (panel) panel.prepend(box);
     else nav.after(box);
+    const chips = mk('div', 'ui2-att');
+    chips.id = 'ui2AttChips';
+    chips.setAttribute('aria-label', 'Attached files');
+    document.querySelector('#messageFocus .ui2-reader-dock')?.before(chips);
+    const thumbs = {}; // the blob URL of the saved poster / video, fetched once per saved file (the promise is cached)
+    const preview = (kind, name) => {
+      if (kind === 'pdf') return Promise.resolve('');
+      const t = thumbs[kind];
+      if (t && t.name === name) return t.promise;
+      t?.promise.then((u) => u && URL.revokeObjectURL(u));
+      const promise = fetch('/group-extras-media/' + kind, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.blob() : null))
+        .then((b) => (b ? URL.createObjectURL(b) : ''))
+        .catch(() => '');
+      thumbs[kind] = { name, promise };
+      return promise;
+    };
+    const picture = (kind, url) => {
+      if (kind === 'pdf' || !url) return mk('span', 'ui2-att-th ui2-att-' + kind, kind === 'pdf' ? 'PDF' : kind === 'video' ? '▶' : '');
+      const el = mk(kind === 'video' ? 'video' : 'img', 'ui2-att-th');
+      if (kind === 'video') {
+        el.muted = true;
+        el.preload = 'metadata';
+        el.playsInline = true;
+        el.src = url + '#t=0.1';
+      } else {
+        el.src = url;
+        el.alt = '';
+      }
+      return el;
+    };
     $('messageFocus')?.classList.add('ui2-has-rx');
     const have = { pdf: false, video: false, poster: false },
       names = { pdf: '', video: '', poster: '' },
+      sizes = { pdf: 0, video: 0, poster: 0 },
       groupOn = { pdf: false, video: false, poster: false };
     let dmOn = { pdf: false, video: false };
     try {
@@ -1714,7 +1854,40 @@ document.addEventListener('click', (e) => {
         it.cb.checked = !!(have[k] && (dm ? dmTick : groupOn[k]));
         if (!it.item.dataset.up) it.add.textContent = have[k] ? 'Change' : 'Add';
         it.item.title = have[k] ? names[k] : '';
+        it.meta.textContent = have[k]
+          ? (names[k] || '') + (sizes[k] ? ' · ' + (sizes[k] >= 1024 ? (sizes[k] / 1024).toFixed(1) + ' MB' : sizes[k] + ' KB') : '')
+          : 'Not attached';
+        const stamp = have[k] ? names[k] || k : '';
+        if (it.th.dataset.k !== stamp) {
+          it.th.dataset.k = stamp;
+          it.th.replaceChildren(have[k] ? picture(k, '') : mk('span', 'ui2-att-th ui2-att-none', '+'));
+          if (have[k])
+            preview(k, names[k]).then((url) => {
+              if (url && it.th.dataset.k === stamp) it.th.replaceChildren(picture(k, url));
+            });
+        }
         it.file.hidden = dm; // DMs only tick: the files are attached on the group message
+      }
+      const shown = ['pdf', 'video', 'poster'].filter((k) => have[k] && items[k].cb.checked);
+      const fb = document.querySelector('#ui2Swipe .ui2-files-btn');
+      if (fb) fb.textContent = shown.length ? '📎 ' + shown.length + (shown.length === 1 ? ' file' : ' files') : '📎 Add files';
+      const sig = shown.map((k) => k + ':' + names[k]).join('|');
+      if (chips.dataset.sig !== sig) {
+        chips.dataset.sig = sig;
+        chips.hidden = !shown.length;
+        chips.replaceChildren();
+        for (const k of shown) {
+          const c = mk('div', 'ui2-att-chip');
+          const slot = mk('span', 'ui2-att-slot');
+          slot.append(picture(k, ''));
+          preview(k, names[k]).then((url) => url && slot.replaceChildren(picture(k, url)));
+          const x = mk('button', 'ui2-att-x', '✕');
+          x.type = 'button';
+          x.setAttribute('aria-label', 'Stop sending ' + (k === 'pdf' ? 'the PDF' : 'the ' + k));
+          x.onclick = () => change(k, false);
+          c.append(slot, mk('span', 'ui2-att-name', names[k] || k), x);
+          chips.append(c);
+        }
       }
       textRow.hidden = !have.video;
       $('messageFocus')?.classList.toggle('ui2-has-rx-text', have.video);
@@ -1739,6 +1912,7 @@ document.addEventListener('click', (e) => {
       for (const k of ['pdf', 'video', 'poster']) {
         have[k] = !!(v[k] && v[k].has);
         names[k] = have[k] ? String(v[k].name || '') : '';
+        sizes[k] = have[k] ? Number(v[k].kb) || 0 : 0;
         groupOn[k] = !!(have[k] && v[k].on);
       }
       setupAll = v.setup || {};

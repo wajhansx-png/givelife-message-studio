@@ -325,7 +325,7 @@
     p.dataset.fitKey = key;
     p.style.setProperty('line-height', '1.3', 'important');
     let lo = 9.5,
-      hi = 14,
+      hi = 13,
       best = lo;
     for (let i = 0; i < 7; i++) {
       const mid = (lo + hi) / 2;
@@ -343,6 +343,9 @@
     $('focusFormatted').innerHTML = window.waFormat(text);
     $('focusVersion').textContent =
       index < 0 ? 'Original' : index + 1 + ' / ' + (row?.items?.length || 0);
+    /* for the version dots under the message: how many versions, and which one shows (0 = the original) */
+    $('focusVersion').dataset.n = String(row?.items?.length || 0);
+    $('focusVersion').dataset.i = String(index + 1);
     requestAnimationFrame(fit);
   }
   function edit(on) {
@@ -526,27 +529,35 @@
       status('Could not copy. Select the text and copy.');
     }
   };
-  $('focusNext').onclick = async () => {
+  /* Next (and, with a swipe the other way, the previous) version: the original, then each saved version, round. */
+  /* returns true when the message changed (the swipe slides it in only then) */
+  const step = async (dir, swiped) => {
     try {
       if (editing) edit(false);
       await save();
       row = await api();
       if (!row.items?.length) {
         if (isBusy(row)) rowStatus(row);
+        else if (swiped) $('focusRetry').click(); // a swipe with no versions yet makes them
         else status('No versions yet. Tap Generate 5 Versions. TEST works without them.');
-        return;
+        return false;
       }
-      index = ((index + 2) % (row.items.length + 1)) - 1;
+      const n = row.items.length + 1;
+      index = ((((index + 1 + dir) % n) + n) % n) - 1;
       paint(index < 0 ? row.source : row.items[index]);
       status(
         index < 0
           ? 'Original'
           : 'Version ' + (index + 1) + ' · edit and Done to save as your message',
       );
+      return true;
     } catch (e) {
       status(e.message);
+      return false;
     }
   };
+  $('focusNext').onclick = () => step(1);
+  window.focusVersionStep = step;
   $('focusTest').onclick = async () => {
     if (actionBusy) return;
     actionBusy = true;

@@ -530,15 +530,17 @@
     }
   };
   /* Next (and, with a swipe the other way, the previous) version: the original, then each saved version, round. */
-  const step = async (dir) => {
+  /* returns true when the message changed (the swipe slides it in only then) */
+  const step = async (dir, swiped) => {
     try {
       if (editing) edit(false);
       await save();
       row = await api();
       if (!row.items?.length) {
         if (isBusy(row)) rowStatus(row);
+        else if (swiped) $('focusRetry').click(); // a swipe with no versions yet makes them
         else status('No versions yet. Tap Generate 5 Versions. TEST works without them.');
-        return;
+        return false;
       }
       const n = row.items.length + 1;
       index = ((((index + 1 + dir) % n) + n) % n) - 1;
@@ -548,8 +550,10 @@
           ? 'Original'
           : 'Version ' + (index + 1) + ' · edit and Done to save as your message',
       );
+      return true;
     } catch (e) {
       status(e.message);
+      return false;
     }
   };
   $('focusNext').onclick = () => step(1);

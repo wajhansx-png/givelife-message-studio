@@ -991,21 +991,57 @@ const ui2Frame = (fn) => {
           attributes: true,
           attributeFilter: ['data-n', 'data-i'],
         });
-      /* a quick sideways swipe on the message = next / previous version */
-      let start = null;
+      /* swipe the message sideways: it follows the finger; past 60px (or a quick flick) it slides out and the next /
+         previous version slides in. With no versions yet, the swipe makes them. */
+      const msg = $('focusFormatted');
+      const still = matchMedia('(prefers-reduced-motion: reduce)');
+      let start = null,
+        moving = false;
+      const slide = (x, ms) => {
+        msg.style.transition = ms && !still.matches ? 'transform ' + ms + 'ms ease, opacity ' + ms + 'ms ease' : 'none';
+        msg.style.transform = x ? 'translateX(' + x + 'px)' : '';
+        msg.style.opacity = x ? String(Math.max(0.35, 1 - Math.abs(x) / 400)) : '';
+      };
       paper.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('button, a, [contenteditable="true"], textarea')) return (start = null);
-        start = { x: e.clientX, y: e.clientY, t: Date.now() };
+        if (moving || !$('focusText')?.hidden || e.target.closest('button, a, textarea, [contenteditable="true"]')) return;
+        start = { x: e.clientX, y: e.clientY, t: Date.now(), dx: 0, side: false };
       });
-      paper.addEventListener('pointerup', (e) => {
-        if (!start || !$('focusText')?.hidden) return (start = null);
+      paper.addEventListener('pointermove', (e) => {
+        if (!start) return;
         const dx = e.clientX - start.x,
-          dy = e.clientY - start.y,
-          quick = Date.now() - start.t < 600;
-        start = null;
-        if (quick && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
+          dy = e.clientY - start.y;
+        if (!start.side) {
+          if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) return (start = null); // reading: a vertical scroll
+          if (Math.abs(dx) < 10) return;
+          start.side = true;
+          paper.setPointerCapture?.(e.pointerId);
+        }
+        start.dx = dx;
+        slide(dx, 0);
       });
-      paper.addEventListener('pointercancel', () => (start = null));
+      const finish = async () => {
+        if (!start) return;
+        const { dx, t, side } = start;
+        start = null;
+        if (!side) return;
+        const flick = Math.abs(dx) > 30 && Date.now() - t < 300;
+        if (Math.abs(dx) < 60 && !flick) return slide(0, 180);
+        moving = true;
+        const w = paper.clientWidth || 360,
+          dir = dx < 0 ? 1 : -1;
+        slide(-dir * w, 160);
+        await new Promise((r) => setTimeout(r, still.matches ? 0 : 160));
+        const changed = window.focusVersionStep ? await window.focusVersionStep(dir, true) : false;
+        slide(changed ? dir * w : 0, 0);
+        void msg.offsetWidth;
+        slide(0, 200);
+        moving = false;
+      };
+      paper.addEventListener('pointerup', finish);
+      paper.addEventListener('pointercancel', () => {
+        if (start?.side) slide(0, 180);
+        start = null;
+      });
     }
     bar.dataset.ui2Row = '1';
     dockKind();

@@ -1108,3 +1108,36 @@ test('/new Later timers: tapping the chosen time again deselects it at once, and
   expect(await pill.getAttribute('aria-pressed')).toBe('false');
   await expect(pill).not.toHaveClass(/is-pending/);
 });
+
+test('/new phone reader: swipe the message left for the next version, right for the one before', async ({ page, request }) => {
+  const headers = { Authorization: 'Bearer manual-fix-preview-key' };
+  await open(page, '/new#/preview', 390); // opening the reader saves the original message
+  await expect(page.locator('#focusFormatted')).not.toHaveText('');
+  await expect.poll(async () => (await (await request.get('/focus-bank?kind=group', { headers })).json()).source || '').not.toBe('');
+  const { source } = await (await request.get('/focus-bank?kind=group', { headers })).json();
+  const messages = Array.from({ length: 10 }, (_, i) => source.replace('needs help', `(swipe ${i + 1}) needs help`));
+  const made = await request.post('/focus-bank', { headers, data: { kind: 'group', action: 'manual', messages } });
+  expect(made.ok(), await made.text()).toBe(true);
+  await page.reload();
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('Original · 10 more');
+  const cdp = await page.context().newCDPSession(page);
+  const box = await page.locator('#focusFormatted').boundingBox();
+  const y = box.y + box.height / 2;
+  const swipe = async (from, to) => {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from, y }] });
+    for (let i = 1; i <= 8; i++)
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from + ((to - from) * i) / 8, y }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(500); // the slide-in finishes before the next swipe
+  };
+  await swipe(320, 80);
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('1 of 10');
+  await expect(page.locator('#focusFormatted')).toContainText('(swipe 1)');
+  await swipe(320, 80);
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('2 of 10');
+  await swipe(80, 320);
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('1 of 10');
+  // a short drag snaps back and changes nothing
+  await swipe(200, 170);
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('1 of 10');
+});

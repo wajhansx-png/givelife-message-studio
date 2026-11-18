@@ -1,6 +1,7 @@
 """Private, immutable batch attachments. Never changes the campaign poster."""
 
-import base64, json, re, time, uuid
+import base64, json, os, re, stat, tempfile, threading, time, uuid, weakref
+from collections import OrderedDict
 from pathlib import Path
 
 TYPES = {
@@ -10,6 +11,24 @@ TYPES = {
     "application/pdf": (".pdf", b"%PDF-"),
     "video/mp4": (".mp4", None),
 }
+
+# Immutable attachment ids can reuse their exact disk copy. Only small metadata
+# lives here; the potentially 15 MB file and its base64 value are never cached
+# in Python. Bound both metadata and locks even during long-lived campaigns.
+_CACHE_LIMIT = 128
+_CACHE = OrderedDict()
+_CACHE_LOCK = threading.Lock()
+_LOAD_LOCKS = tuple(threading.Lock() for _ in range(32))
+
+
+def _signature(path):
+    try:
+        info = path.stat()
+    except OSError:
+        return None
+    if not stat.S_ISREG(info.st_mode):
+        return None
+    return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
 
 
 def save(store, data):
@@ -47,14 +66,46 @@ def save(store, data):
 def load(store, ident, folder):
     if not isinstance(ident, str) or not re.fullmatch("[a-f0-9]{32}", ident):
         raise ValueError("Choose the attachment again.")
-    row = store.get("batch_media_" + ident) if store else None
-    if isinstance(row, str):
-        try:
-            row = json.loads(row)
-        except ValueError:
-            row = None
-    if not isinstance(row, dict) or row.get("mime") not in TYPES:
+    if store is None:
         raise ValueError("The attachment is unavailable. Choose it again.")
-    path = Path(folder) / ("bulk-" + ident + TYPES[row["mime"]][0])
-    path.write_bytes(base64.b64decode(row["data"], validate=True))
-    return path, row["mime"]
+    folder = Path(folder).resolve()
+    key = id(store), folder, ident
+    with _LOAD_LOCKS[hash(key) % len(_LOAD_LOCKS)]:
+        with _CACHE_LOCK:
+            cached = _CACHE.get(key)
+            if cached:
+                owner, path, mime, signature = cached
+                if owner() is store and signature is not None and _signature(path) == signature:
+                    _CACHE.move_to_end(key)
+                    return path, mime
+                _CACHE.pop(key, None)
+        row = store.get("batch_media_" + ident)
+        if isinstance(row, str):
+            try:
+                row = json.loads(row)
+            except ValueError:
+                row = None
+        if not isinstance(row, dict) or row.get("mime") not in TYPES:
+            raise ValueError("The attachment is unavailable. Choose it again.")
+        mime = row["mime"]
+        # Different stores can have the same id during tests or migrations. Their
+        # published copies must never overwrite one another while being sent.
+        path = folder / (f"bulk-{id(store):x}-{ident}" + TYPES[mime][0])
+        raw = base64.b64decode(row["data"], validate=True)
+        descriptor, temporary = tempfile.mkstemp(prefix=f".bulk-{ident}-", suffix=".tmp", dir=folder)
+        try:
+            with os.fdopen(descriptor, "wb") as output:
+                output.write(raw)
+            os.replace(temporary, path)
+        finally:
+            Path(temporary).unlink(missing_ok=True)
+        try:
+            owner = weakref.ref(store)
+        except TypeError:
+            return path, mime  # unusual store adapters remain correct without caching
+        with _CACHE_LOCK:
+            _CACHE[key] = owner, path, mime, _signature(path)
+            _CACHE.move_to_end(key)
+            while len(_CACHE) > _CACHE_LIMIT:
+                _CACHE.popitem(last=False)
+        return path, mime

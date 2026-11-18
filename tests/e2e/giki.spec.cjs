@@ -499,13 +499,21 @@ test('Waiting and DMed tabs: a person who got the case moves to DMed and cannot 
   page,
 }) => {
   await link();
+  // Earlier tests exercise Stop and turn extra files on. Settle that queue and
+  // explicitly choose the two-message sequence this tab test is asserting.
+  await expect
+    .poll(async () => ((await api(port, '/giki/volunteers')).delivery || {}).state, { timeout: 20000 })
+    .not.toMatch(/Starting|Sending|Waiting/);
+  for (const [field, value] of [['text_on', 'poster'], ['poster', false], ['pdf', false], ['video', false]])
+    await api(port, '/group-extras', { action: 'setup', profile: 'giki', field, value });
   await api(port, '/focus-bank', { kind: 'group', text: 'GIKITEST tabs caption. Rs. 25,000 left.' });
   await api(port, '/giki/volunteers', { action: 'message', text: 'Share for {name}, please.' });
   await api(port, '/giki/volunteers', { action: 'add', name: 'Tabs Sent Giki', phone: '15551250001' });
   await api(port, '/giki/volunteers', { action: 'add', name: 'Tabs Waiting Giki', phone: '15551250002' });
   const sent = (await api(port, '/giki/volunteers')).items.find((d) => d.name === 'Tabs Sent Giki');
   const before = (await gikiSends()).length;
-  await api(port, '/giki/volunteers', { action: 'send_case', id: sent.id, request_id: 'req-tabs-0001' });
+  const started = await api(port, '/giki/volunteers', { action: 'send_case', id: sent.id, request_id: 'req-tabs-0001' });
+  expect(started.error).toBeUndefined();
   await expect.poll(async () => (await gikiSends()).length, { timeout: 20000 }).toBe(before + 2);
   const items = (await api(port, '/giki/volunteers')).items;
   const dmed = items.filter((d) => d.dmed).length;

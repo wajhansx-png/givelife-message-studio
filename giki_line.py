@@ -321,7 +321,7 @@ class GikiVolunteers(Volunteers):
     def waiting_ids(self, skip=True):
         """Who DM all would message now: everyone, minus those already messaged for this case."""
         out = []
-        for r in self.book._load()["records"]:
+        for r in self.book.recipients("all"):
             if r.get("deleted") or not r.get("phone"):
                 continue
             if skip and (self.book.contacted(r) or r.get("delivery") in ("Uncertain", "Sending")):

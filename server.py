@@ -22,6 +22,7 @@ from chat_memory import Knowledge, safe_text
 from functools import wraps
 from message_library import library_for
 from case_writer import CaseWriter
+from delivery_locks import DeviceLocks
 
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("DATA_DIR", "/data/studio"))
@@ -32,10 +33,13 @@ GOWA_URL = os.environ.get("GOWA_URL", "http://127.0.0.1:3000").rstrip("/")
 import contextvars, wa_lines
 
 _LINE = contextvars.ContextVar("wa_line", default="")
+_LOCKED_ROUTE = contextvars.ContextVar("locked_send_route", default=None)
 # A DM batch that sends the 2nd / 3rd messages as its own recorded steps: the first message goes alone.
 _AFTER_BY_BATCH = contextvars.ContextVar("after_by_batch", default=False)
 # A Giki test person (Ahmad test, Zain test): the very same DM, delivered in the GiveLife test group.
 _DM_TO_GROUP = contextvars.ContextVar("dm_to_group", default=False)
+# An attestation lasts only for the nested poster send on this exact gateway/device.
+_CHECKED_MEDIA_DEVICE = contextvars.ContextVar("checked_media_device", default=None)
 LINES = {}  # name -> wa_lines.Line, filled once the store is ready
 
 
@@ -84,11 +88,15 @@ def device():
     device, and never the main one (a line without a device sends nothing)."""
     name = _LINE.get()
     if not name:
-        return DEVICE
-    line = LINES.get(name)
-    found = line.device() if line else ""
-    if not found:
-        raise ValueError("The " + name.capitalize() + " WhatsApp is not connected yet.")
+        found = DEVICE
+    else:
+        line = LINES.get(name)
+        found = line.device() if line else ""
+        if not found:
+            raise ValueError("The " + name.capitalize() + " WhatsApp is not connected yet.")
+    locked = _LOCKED_ROUTE.get()
+    if locked is not None and locked != (GOWA_URL, name, found):
+        raise ValueError("The WhatsApp device changed during this send. Review its delivery before trying again.")
     return found
 GROUPS = {
     "main": ("GiveLife Foundation", "120363423121755785@g.us"),
@@ -107,6 +115,70 @@ LOCK = threading.RLock()
 SEND_LOCK = threading.RLock()
 ACTIVE = None
 WIRE_LOCK = threading.RLock()
+_DEVICE_LOCKS = DeviceLocks()
+_RECEIPT_LOCK = threading.RLock()
+
+
+class _RouteLock:
+    """Keep the selected device stable while waiting and throughout dispatch."""
+
+    def __init__(self, lock, route):
+        self.lock, self.route = lock, route
+        self.local = threading.local()
+
+    def acquire(self, *args, **kwargs):
+        if not self.lock.acquire(*args, **kwargs):
+            return False
+        try:
+            if (GOWA_URL, _LINE.get(), device()) != self.route:
+                raise ValueError("The WhatsApp device changed while waiting. Nothing was sent.")
+            if not hasattr(self.local, "tokens"):
+                self.local.tokens = []
+            self.local.tokens.append(_LOCKED_ROUTE.set(self.route))
+        except BaseException:
+            self.lock.release()
+            raise
+        return True
+
+    def release(self):
+        _LOCKED_ROUTE.reset(self.local.tokens.pop())
+        self.lock.release()
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, *exc):
+        self.release()
+
+
+def _device_lock(kind, main):
+    chosen = device()  # a missing dedicated line raises; it never falls back
+    preferred = main if not _LINE.get() or chosen == DEVICE else None
+    lock = _DEVICE_LOCKS.get((kind, GOWA_URL, chosen), preferred)
+    return _RouteLock(lock, (GOWA_URL, _LINE.get(), chosen))
+
+
+def _send_lock():
+    return _device_lock("send", SEND_LOCK)
+
+
+def _wire_lock():
+    return _device_lock("wire", WIRE_LOCK)
+
+
+def _recipient_lock(jid):
+    return _DEVICE_LOCKS.get(("recipient", GOWA_URL, jid))
+
+
+def _record_last_sent(jid, stamp=None):
+    # Different devices can confirm at once; do not replace another chat's receipt.
+    with _RECEIPT_LOCK:
+        if STORE:
+            saved = STORE.get("last_sent", {})
+            saved[jid] = time.time() if stamp is None else stamp
+            STORE.put("last_sent", saved)
+
 OWNER_REVISION = 0
 OWNER_GUARD = threading.local()
 REQUEST_STOP = threading.local()  # .fn() is True once the owner tapped Stop for this request
@@ -201,7 +273,7 @@ def prune_finished(table, keep=100, protect=(), *, finished=lambda v: bool(v.get
 def serialized_send(fn):
     @wraps(fn)
     def call(*args, **kwargs):
-        with WIRE_LOCK:
+        with _wire_lock():
             for secret_name in ("DEEPSEEK_API_KEY", "UI_ACCESS_KEY", "DB_URI"):
                 secret = os.environ.get(secret_name, "")
                 if len(secret) > 8 and any(
@@ -551,11 +623,19 @@ def _send_custom(body):
         "volunteer_flow",
         "donor_thanks",
     )
-    if not SEND_LOCK.acquire(blocking=manual or explicit_batch):
+    send_lock = _send_lock()
+    if not send_lock.acquire(blocking=manual or explicit_batch):
         raise ValueError("Another send is running. Please wait for it to finish.")
+    recipient_lock = None
     try:
+        if not is_group:
+            recipient_lock = _recipient_lock(jid)
+            if not recipient_lock.acquire(blocking=manual or explicit_batch):
+                recipient_lock = None
+                raise ValueError("Another send to this recipient is running. Please wait.")
         try:
-            status = api_result("/devices/" + device() + "/status")
+            checked_device = device()
+            status = api_result("/devices/" + checked_device + "/status")
         except Exception:
             status = {}  # the WhatsApp service is restarting or unreachable: nothing was sent
         if not status.get("is_connected") or not status.get("is_logged_in"):
@@ -569,7 +649,6 @@ def _send_custom(body):
         if body.get("poster") is True and not body.get("attachment"):
             _refuse_video_poster("group" if is_group else "dm", "group" if is_group else "giki" if _LINE.get().startswith("giki") else "dm")
         now = time.time()
-        saved = STORE.get("last_sent", {})
         if not is_group:
             digest = hashlib.sha256(jid.encode()).hexdigest()
             alternate = hashlib.sha256((jid + "@s.whatsapp.net").encode()).hexdigest()
@@ -650,9 +729,11 @@ def _send_custom(body):
                 result = send_batch_attachment(jid, message, body["attachment"])
             elif body.get("poster") is True:
                 token = _AFTER_BY_BATCH.set(body.get("after_steps") is True)
+                checked = _CHECKED_MEDIA_DEVICE.set((GOWA_URL, checked_device))
                 try:
                     result = send_image(jid, message)
                 finally:
+                    _CHECKED_MEDIA_DEVICE.reset(checked)
                     _AFTER_BY_BATCH.reset(token)
                 if (
                     result.get("code") == "ERROR"
@@ -673,8 +754,7 @@ def _send_custom(body):
                 "message": "Send not confirmed. Check WhatsApp before retrying.",
             }
         if is_group and result.get("code") == "SUCCESS":
-            saved[jid] = time.time()
-            STORE.put("last_sent", saved)
+            _record_last_sent(jid)
             LAST_LOCAL[jid] = time.time()
             record_delivery(jid, message, result)
         STORE.put(
@@ -701,7 +781,9 @@ def _send_custom(body):
             )
         return result
     finally:
-        SEND_LOCK.release()
+        if recipient_lock is not None:
+            recipient_lock.release()
+        send_lock.release()
 
 
 HOOKS = [
@@ -1329,12 +1411,14 @@ def send_image(jid, caption, check_gap=False, _retry=True):
         return {"code": "ERROR", "message": "On hold: you told me to wait."}
     if jid in NEVER_GROUPS:
         return {"code": "ERROR", "message": "This group is never used."}
-    try:
-        status = api_result("/devices/" + device() + "/status")
-    except Exception:
-        status = {}  # gateway restarting or unreachable: nothing was sent
-    if not status.get("is_connected") or not status.get("is_logged_in"):
-        return {"code": "ERROR", "message": "WhatsApp disconnected. Log in again."}
+    selected_device = device()
+    if _CHECKED_MEDIA_DEVICE.get() != (GOWA_URL, selected_device):
+        try:
+            status = api_result("/devices/" + selected_device + "/status")
+        except Exception:
+            status = {}  # gateway restarting or unreachable: nothing was sent
+        if not status.get("is_connected") or not status.get("is_logged_in"):
+            return {"code": "ERROR", "message": "WhatsApp disconnected. Log in again."}
     if check_gap:
         saved = STORE.get("last_sent", {}) if STORE else {}
         if jid in saved:
@@ -1411,9 +1495,7 @@ def send_image(jid, caption, check_gap=False, _retry=True):
         }
         STORE.put("receipt_" + uuid.uuid4().hex, receipt)
         if result.get("code") == "SUCCESS":
-            saved = STORE.get("last_sent", {})
-            saved[jid] = time.time()
-            STORE.put("last_sent", saved)
+            _record_last_sent(jid)
     if result.get("code") == "SUCCESS":
         LAST_LOCAL[jid] = time.time()
         record_delivery(jid, caption, result)
@@ -1585,9 +1667,7 @@ def _group_attempt(job, jid, outgoing):
             record_delivery(jid, outgoing, result)
             LAST_LOCAL[jid] = time.time()
             if STORE:
-                saved = STORE.get("last_sent", {})
-                saved[jid] = time.time()
-                STORE.put("last_sent", saved)
+                _record_last_sent(jid)
         return result
     except ValueError:
         raise  # hold, missing poster: a clear reason for the whole job
@@ -1632,7 +1712,7 @@ def run_job(job_id, keys, caption, queue=False):
                     break
             result, stop_all = None, False
             for attempt in range(GROUP_RECONNECT_TRIES + 1):
-                with SEND_LOCK:
+                with _send_lock():
                     if event.is_set() or on_hold():
                         stop_all = True
                         break
@@ -2275,7 +2355,7 @@ def send_free(to, text, with_picture, literal=False):
         if not phone:
             raise ValueError("That is not a valid group, contact id or phone number.")
         target = phone + "@s.whatsapp.net"
-    with SEND_LOCK:
+    with _send_lock():
         check_hold()
         if target.endswith("@g.us"):
             text = focus_bank().reserve_groups(get_message("group")["text"], 1)[0]
@@ -2295,9 +2375,7 @@ def send_free(to, text, with_picture, literal=False):
     if target.endswith("@g.us"):
         LAST_LOCAL[target] = time.time()
         if STORE:
-            saved = STORE.get("last_sent", {})
-            saved[target] = time.time()
-            STORE.put("last_sent", saved)
+            _record_last_sent(target)
     remember_recipient(to if key else target.split("@")[0], target)
     remember_manual(
         {"kind": "text", "to": target, "text": text, "with_picture": bool(with_picture)}
@@ -2712,7 +2790,8 @@ def send_thanks_test(message, media):
     from donor_thanks import personalize_thanks
 
     check_hold()
-    if not SEND_LOCK.acquire(blocking=False):
+    send_lock = _send_lock()
+    if not send_lock.acquire(blocking=False):
         raise ValueError("Another send is running. Please wait for it to finish.")
     try:
         try:
@@ -2750,7 +2829,7 @@ def send_thanks_test(message, media):
         if not results or any(mapping(r).get("code") != "SUCCESS" for r in results):
             raise ValueError("The test was not confirmed. Check the test group on WhatsApp.")
     finally:
-        SEND_LOCK.release()
+        send_lock.release()
 
 
 def last_sent_by_key():
@@ -2868,7 +2947,7 @@ def send_dm_test(text, poster=True, files=True, pdf=None, video=None):
     if not me:
         raise ValueError("Your own WhatsApp number is not known yet. Nothing was sent.")
     body = "🧪 TEST DM (only you see this)\n\n" + str(text)
-    with SEND_LOCK:
+    with _send_lock():
         check_hold()
         result = send_image(me, body) if poster else send_text(me, body)
         sent_files = send_dm_test_files(me, pdf, video) if files and result.get("code") == "SUCCESS" else []
@@ -2890,11 +2969,12 @@ class _send_lock_waiting:
     """The send line, waiting for another send (Auto, a batch) to finish, but never forever."""
 
     def __enter__(self):
-        if not SEND_LOCK.acquire(timeout=600):
+        self.lock = _send_lock()
+        if not self.lock.acquire(timeout=600):
             raise ValueError("Another send kept WhatsApp busy for 10 minutes. Try the test again.")
 
     def __exit__(self, *exc):
-        SEND_LOCK.release()
+        self.lock.release()
 
 
 GIKI_TEST = {"state": "idle", "note": "", "at": 0.0}
@@ -4094,19 +4174,27 @@ if not LAST_MANUAL:
 def remember_manual(value):
     global LAST_MANUAL
     value = mapping(value)
-    LAST_MANUAL = dict(value)
-    atomic_write(MANUAL_STATE, json.dumps(value, ensure_ascii=False))
-    if STORE:
-        STORE.put("manual_context", dict(value))
+    with _RECEIPT_LOCK:
+        LAST_MANUAL = dict(value)
+        atomic_write(MANUAL_STATE, json.dumps(value, ensure_ascii=False))
+        if STORE:
+            STORE.put("manual_context", dict(value))
 
 
 def record_delivery(jid, text, result):
     if result.get("code") != "SUCCESS":
         return
     ident = mapping(result.get("results")).get("message_id")
-    DELIVERIES[jid] = {"message_id": ident, "text": text, "time": time.time()}
-    if STORE:
-        STORE.put("last_deliveries", DELIVERIES)
+    with _RECEIPT_LOCK:
+        DELIVERIES[jid] = {
+            "message_id": ident,
+            "text": text,
+            "time": time.time(),
+            "gateway": GOWA_URL,
+            "device": device(),
+        }
+        if STORE:
+            STORE.put("last_deliveries", DELIVERIES)
 
 
 def resolve_person(to):
@@ -4285,41 +4373,56 @@ def delete_last_group(target=None):
     if key not in GROUPS and key != "test":
         raise ValueError("Which group? Name the group whose last sent message should be deleted.")
     jid = "120363431210327603@g.us" if key == "test" else GROUPS[key][1]
-    entry = DELIVERIES.get(jid, {})
-    ident = entry.get("message_id")
-    if not ident:
-        own = [m for m in group_messages(jid) if m.get("is_from_me") is True and m.get("id")]
-        own.sort(key=lambda m: str(m.get("timestamp", "")), reverse=True)
-        if own:
-            ident = own[0]["id"]
-    if not ident:
-        raise ValueError(
-            "I cannot identify an own sent message in that group. No message was deleted."
+    with _wire_lock():
+        check_hold()
+        gateway, selected_device = GOWA_URL, device()
+        with _RECEIPT_LOCK:
+            entry = dict(DELIVERIES.get(jid, {}))
+        # Older receipts do not identify the sender. Verify them against this
+        # device's own history rather than revoking another account's message.
+        ident = (
+            entry.get("message_id")
+            if entry.get("gateway") == gateway and entry.get("device") == selected_device
+            else None
         )
-    check_hold()
-    req = urllib.request.Request(
-        GOWA_URL + "/message/" + urllib.parse.quote(str(ident), safe="") + "/revoke",
-        data=json.dumps({"phone": jid}).encode(),
-        headers={"X-Device-Id": device(), "Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with WIRE_LOCK:
-            check_hold()
-            revision = getattr(OWNER_GUARD, "revision", None)
-            if revision is not None and revision != OWNER_REVISION:
-                raise ValueError("Superseded by a newer instruction.")
+        if not ident:
+            own = [m for m in group_messages(jid) if m.get("is_from_me") is True and m.get("id")]
+            own.sort(key=lambda m: str(m.get("timestamp", "")), reverse=True)
+            if own:
+                ident = own[0]["id"]
+        if not ident:
+            raise ValueError(
+                "I cannot identify an own sent message in that group. No message was deleted."
+            )
+        check_hold()
+        revision = getattr(OWNER_GUARD, "revision", None)
+        if revision is not None and revision != OWNER_REVISION:
+            raise ValueError("Superseded by a newer instruction.")
+        req = urllib.request.Request(
+            gateway + "/message/" + urllib.parse.quote(str(ident), safe="") + "/revoke",
+            data=json.dumps({"phone": jid}).encode(),
+            headers={"X-Device-Id": device(), "Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
             with urllib.request.urlopen(req, timeout=20) as response:
                 result = mapping(json.load(response))
-    except Exception:
-        raise ValueError(
-            "WhatsApp did not confirm deletion. Check the group on your phone."
-        ) from None
-    if result.get("code") != "SUCCESS":
-        raise ValueError("WhatsApp refused deletion. Check the message on your phone.")
-    DELIVERIES.pop(jid, None)
-    if STORE:
-        STORE.put("last_deliveries", DELIVERIES)
+        except Exception:
+            raise ValueError(
+                "WhatsApp did not confirm deletion. Check the group on your phone."
+            ) from None
+        if result.get("code") != "SUCCESS":
+            raise ValueError("WhatsApp refused deletion. Check the message on your phone.")
+        with _RECEIPT_LOCK:
+            current = DELIVERIES.get(jid, {})
+            if (
+                current.get("message_id") == ident
+                and current.get("gateway") == gateway
+                and current.get("device") == selected_device
+            ):
+                DELIVERIES.pop(jid, None)
+                if STORE:
+                    STORE.put("last_deliveries", DELIVERIES)
     return (
         "WhatsApp confirmed deletion of the last own message in "
         + ("Givelife test" if key == "test" else GROUPS[key][0])
@@ -6918,6 +7021,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(donors().resume_all())
                 if CAMPAIGN.get("running"):
                     raise ValueError("Another DM campaign is running. Stop it first.")
+                if body.get("scope") not in (
+                    "all", "important", "top", "donated", "not_donated", "selected"
+                ):
+                    raise ValueError("Choose an explicit DM audience. Nothing was sent.")
                 dm_extras_check(body.get("pdf"), body.get("video"))
                 return self.reply(
                     donors().start_batch(
@@ -7080,7 +7187,8 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/wa-logout":
             if body.get("confirm") is not True:
                 return self.reply({"error": "Confirm disconnect first."}, status=400)
-            if not SEND_LOCK.acquire(blocking=False):
+            send_lock = _send_lock()
+            if not send_lock.acquire(blocking=False):
                 return self.reply(
                     {"error": "A send is running. Wait before disconnecting."}, status=409
                 )
@@ -7093,7 +7201,7 @@ class Handler(BaseHTTPRequestHandler):
                     status=502,
                 )
             finally:
-                SEND_LOCK.release()
+                send_lock.release()
         elif self.path == "/stop-send":
             if _stop_id(body.get("stop_id")):
                 stop_event(body["stop_id"]).set()
@@ -7564,7 +7672,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 watch_stop(body.get("stop_id"))
                 options = workflow().options("group", caption)
-                with SEND_LOCK:
+                with _send_lock():
                     check_stop()
                     try:
                         caption = focus_bank().reserve_groups(caption, 1)[0]
@@ -7595,9 +7703,7 @@ class Handler(BaseHTTPRequestHandler):
                         LAST_LOCAL[jid] = stamp
                         record_delivery(jid, caption, result)
                         if STORE:
-                            saved = STORE.get("last_sent", {})
-                            saved[jid] = stamp
-                            STORE.put("last_sent", saved)
+                            _record_last_sent(jid, stamp)
                 if isinstance(result, dict) and result.get("code") == "SUCCESS":
                     import group_extras
 
@@ -7676,9 +7782,10 @@ def donor_auto_loop():
 def sending_now():
     """True while a WhatsApp send is going out, or a DM batch is in the middle of a person (between their case,
     2nd, 3rd and share message). False in the wait between people: a clean restart there cuts nobody."""
-    if not SEND_LOCK.acquire(blocking=False):
-        return True
-    SEND_LOCK.release()
+    for lock in (SEND_LOCK, WIRE_LOCK, *_DEVICE_LOCKS.snapshot()):
+        if not lock.acquire(blocking=False):
+            return True
+        lock.release()
     for pick in (
         lambda: donors().jobs,
         lambda: donors().volunteers.jobs,

@@ -15,21 +15,24 @@ import autopilot, dm_composer, reply_intent
 from donor_book import normalize_phone
 
 KEY = "case_run"
-ROWS = ("group", "top", "giki", "volunteers", "important")
-DM_ORDER = ("top", "giki", "volunteers", "important")
+GIKI_GROUPS = {"giki1": "giki 1", "giki2": "giki 2"}
+ROWS = ("group", "giki1", "giki2", "top", "volunteers", "important")
+DM_ORDER = ("giki1", "giki2", "top", "volunteers", "important")
 EXTRA_ROWS = ("top", "important")  # DM rows that can also send the case PDF / video after each poster + caption
 EXTRA_FLAGS = ("pdf", "video")
 MSG_OF = {  # which saved messages each row sends
     "group": ("group",),
     "top": ("dm",),
-    "giki": ("dm", "question"),
+    "giki1": ("dm", "question"),
+    "giki2": ("dm", "question"),
     "volunteers": ("volunteers",),
     "important": ("dm",),
 }
 TITLES = {
     "group": "GiveLife Group",
     "top": "Top Donors",
-    "giki": "GIKI",
+    "giki1": "GIKI 1",
+    "giki2": "GIKI 2",
     "volunteers": "Volunteers",
     "important": "Important Donors",
 }
@@ -43,7 +46,8 @@ DEFAULTS = {
         "pdf": False,
         "video": False,
     },
-    "giki": {"enabled": True, "gap_minutes": 5, "batch_size": 10, "rest_minutes": 20},
+    "giki1": {"enabled": True, "gap_minutes": 5, "batch_size": 10, "rest_minutes": 20},
+    "giki2": {"enabled": True, "gap_minutes": 5, "batch_size": 10, "rest_minutes": 20},
     "volunteers": {"enabled": True, "gap_minutes": 5, "batch_size": 10, "rest_minutes": 15},
     "important": {
         "enabled": False,
@@ -122,6 +126,29 @@ class CaseRun:
         if not isinstance(st, dict):
             return blank
         blank.update(st)
+        if "giki" in blank["plan"]:
+            # The old merged row cannot authorize either new cohort. Stop only
+            # this case's jobs and require the owner to review the new audiences.
+            legacy = blank["plan"].pop("giki")
+            for row in blank["rows"].values():
+                self._cancel_row(row)
+            if blank["rows"].get("group", {}).get("state") in ("running", "queued"):
+                self.app.set_auto(False)
+            for key in GIKI_GROUPS:
+                blank["plan"][key] = {**DEFAULTS[key], **legacy, "enabled": False}
+            blank.update(
+                approved=None,
+                rows={},
+                status="finished" if blank["status"] == "finished" else "idle",
+            )
+            for f in blank["giki"].values():
+                if f.get("step") not in ("shared", "declined", "uncertain"):
+                    f["step"] = "cancelled"
+            self._log(
+                blank,
+                "GIKI 1 and GIKI 2 are now separate. Review the audience before starting again.",
+            )
+            self._write(blank)
         for key, base in DEFAULTS.items():
             blank["plan"][key] = {**base, **(blank["plan"].get(key) or {})}
         return blank
@@ -235,12 +262,22 @@ class CaseRun:
         """Ids per row. A person in several lists is in the first one only (donation request once per case)."""
         book, seen, out = self.hub.book, set(), {k: [] for k in ROWS}
         top = book.recipients("top")
-        giki = [r for r in top if "giki" in str(r.get("group") or "").lower()]
-        gids = {r["id"] for r in giki}
-        rest = [r for r in top if r["id"] not in gids]
+        all_rows = book.recipients("all")
+        cohorts = {
+            key: sorted(
+                (
+                    r for r in all_rows
+                    if " ".join(str(r.get("group") or "").casefold().split()) == name
+                ),
+                key=book.group_key,
+            )
+            for key, name in GIKI_GROUPS.items()
+        }
         wanted = set(plan["important"].get("ids") or [])
         chosen = [r for r in book.recipients("important") if r["id"] in wanted]
-        for key, rows in (("top", rest), ("giki", giki), ("important", chosen)):
+        # Specific enabled cohorts claim their people first. An OFF cohort does not
+        # subtract anybody from Top; Top still includes every eligible Top donor.
+        for key, rows in (*cohorts.items(), ("top", top), ("important", chosen)):
             if not plan[key]["enabled"]:
                 continue
             for r in rows:
@@ -326,6 +363,16 @@ class CaseRun:
             plan = copy.deepcopy(plan)
             plan[key]["enabled"] = True
         aud = self.audiences(plan)
+        if key in (*GIKI_GROUPS, "top", "important") and st["approved"]:
+            # Joining a running case must not steal a person from a queue the
+            # owner already approved, even if that queue has not sent yet.
+            reserved = {
+                ident
+                for other, row in st["rows"].items()
+                if other != key and other != "volunteers" and row["state"] != "off"
+                for ident in st["approved"]["ids"].get(other, [])
+            }
+            aud[key] = [ident for ident in aud[key] if ident not in reserved]
         m = self._messages()
         blockers, warnings = [], []
         left = self.app.read_left()
@@ -343,10 +390,10 @@ class CaseRun:
             )
         if plan["group"]["enabled"] and not m["group"]["text"].strip():
             blockers.append("The GiveLife Group message is empty.")
-        dm_rows = [k for k in ("top", "giki", "important") if plan[k]["enabled"]]
+        dm_rows = [k for k in ("giki1", "giki2", "top", "important") if plan[k]["enabled"]]
         if dm_rows and not m["dm"]["text"].strip():
             blockers.append("The donor message is empty.")
-        if plan["giki"]["enabled"] and not m["question"]["text"].strip():
+        if any(plan[k]["enabled"] for k in GIKI_GROUPS) and not m["question"]["text"].strip():
             blockers.append("Write the share question first (Messages → Follow-Up Message).")
         if plan["volunteers"]["enabled"] and not m["volunteers"]["text"].strip():
             warnings.append(
@@ -371,7 +418,7 @@ class CaseRun:
                 "plan": {k: v for k, v in plan[key].items() if k not in ("enabled", "ids")},
             }
         names, by = {}, {r["id"]: r["name"] for r in self.hub.book.recipients("all")}
-        for key in ("top", "giki", "important"):
+        for key in ("giki1", "giki2", "top", "important"):
             names[key] = [by.get(i, "") for i in aud[key]][:40]
         names["volunteers"] = [
             r["name"]
@@ -638,16 +685,31 @@ class CaseRun:
         return None
 
     def _start_row(self, st, key):
+        if key not in DM_ORDER:
+            raise ValueError("Choose a valid DM row. Nothing sent.")
         a, h = self.app, self.hub
         ap, row = st["approved"], st["rows"][key]
         cfg = ap["plan"][key]
         book = h.volunteers.book if key == "volunteers" else h.book
-        wanted = set(ap["ids"][key])
-        ids = [
-            r["id"] for r in book.recipients("all") if r["id"] in wanted and self._fresh(book, r)
-        ]
+        by = {r["id"]: r for r in book.recipients("all")}
+        ids = [i for i in ap["ids"][key] if i in by and self._fresh(book, by[i])]
+        for i in ids:
+            try:
+                normalize_phone(by[i]["phone"])
+                if key in GIKI_GROUPS and (
+                    " ".join(str(by[i].get("group") or "").casefold().split())
+                    != GIKI_GROUPS[key]
+                ):
+                    raise ValueError("Cohort changed")
+            except ValueError:
+                row.update(
+                    state="stopped",
+                    error="Recipient no longer matches this DM row. Review the audience.",
+                )
+                self._log(st, f"Refused mismatched recipient for {TITLES[key]}.")
+                return
         if key != "volunteers":
-            ids = [i for i in ids if not self._excluded(book.resolve(i))]
+            ids = [i for i in ids if not self._excluded(by[i])]
         if not ids:
             row.update(state="done", note="Nobody left to message.")
             return
@@ -672,7 +734,7 @@ class CaseRun:
                 )
                 row["engine"] = "volunteers"
             else:
-                follow = (h.follow_up_text() or "").strip() if key == "giki" else ""
+                follow = (h.follow_up_text() or "").strip() if key in GIKI_GROUPS else ""
                 extra = {n: bool(cfg.get(n)) for n in EXTRA_FLAGS} if key in EXTRA_ROWS else {}
                 a.dm_extras_check(extra.get("pdf"), extra.get("video"))  # a ticked file must still be saved
                 h.jobs.start(
@@ -708,8 +770,8 @@ class CaseRun:
             row["state"] = "done"
         elif state == "Stopped":
             row.update(state="stopped", error=str(job.get("error") or "")[:200])
-        if key == "giki":
-            self._giki_sync(st, job)
+        if key in GIKI_GROUPS:
+            self._giki_sync(st, job, key)
 
     def _group_tick(self, st):
         row, a = st["rows"]["group"], self.app
@@ -749,7 +811,7 @@ class CaseRun:
                 break
 
     # ------------------------------------------------------------------ GIKI sharing
-    def _giki_sync(self, st, job):
+    def _giki_sync(self, st, job, key):
         by = {r["id"]: r for r in self.hub.book.recipients("all")}
         for rec in job.get("receipts", []):
             r = by.get(rec.get("id"))
@@ -759,6 +821,7 @@ class CaseRun:
             st["giki"].setdefault(
                 phone,
                 {
+                    "row": key,
                     "step": "waiting",
                     "at": rec.get("time") or self.clock(),
                     "id": r["id"],
@@ -814,9 +877,13 @@ class CaseRun:
     def _flow(self):
         """At most one share message per tick (the DM guard keeps its own gap). Reserved before sending."""
         st = self._read()
-        if st["status"] != "running" or st["rows"].get("giki", {}).get("state") == "paused":
+        if st["status"] != "running":
             return
         for phone, f in st["giki"].items():
+            if f.get("row") not in GIKI_GROUPS or st["rows"].get(f["row"], {}).get("state") in (
+                "paused", "off", "stopped"
+            ):
+                continue
             if f["step"] != "agreed" or f.get("inflight") is not None or f["shared"] >= GIKI_SHARES:
                 continue
             n = f["shared"]
@@ -1306,8 +1373,9 @@ class CaseRun:
                 )
             else:
                 out["left"] = len(ids) if plan["enabled"] else 0
-        if key == "giki":
-            steps = [f["step"] for f in st["giki"].values()]
+        if key in GIKI_GROUPS:
+            people = [f for f in st["giki"].values() if f.get("row") == key]
+            steps = [f["step"] for f in people]
             out["giki"] = {
                 "waiting": steps.count("waiting"),
                 "agreed": steps.count("agreed"),
@@ -1315,7 +1383,7 @@ class CaseRun:
                 "needs": steps.count("needs") + steps.count("uncertain"),
                 "declined": steps.count("declined"),
                 "people": [
-                    {"name": f["name"], "step": f["step"]} for f in list(st["giki"].values())[:60]
+                    {"name": f["name"], "step": f["step"]} for f in people[:60]
                 ],
             }
         action = "review"

@@ -616,6 +616,26 @@ class DonorBook:
                 "reply": f"Deselected {n} Important donor" + ("" if n == 1 else "s") + ".",
             }
 
+    def clear_flag(self, flag):
+        """Deselect everyone in the Top donors or Donated tab at once (Important has clear_important). Same rules as
+        one tap: Top off keeps the star; Donated off also clears this case's amount."""
+        if flag not in ("top_donor", "donated"):
+            raise ValueError("Choose Top donors or Donated.")
+        with self.lock:
+            data = self._load()
+            now = time.time()
+            n = 0
+            for r in data["records"]:
+                if r.get(flag) and not r.get("deleted"):
+                    r.update({flag: False}, **({"top_order": None} if flag == "top_donor" else {"amount": 0}))
+                    r["updated_at"] = max(now, math.nextafter(float(r.get("updated_at", 0)), math.inf))
+                    n += 1
+            if flag == "top_donor":
+                data.setdefault("ranking_next", {}).update(top_donor=0)
+            self._save(data)
+            what = "Top donor" if flag == "top_donor" else "donor marked Donated"
+            return {"cleared": n, "reply": f"Deselected {n} {what}" + ("" if n == 1 else "s") + "."}
+
     def restore(self, ident):
         with self.lock:
             data = self._load()

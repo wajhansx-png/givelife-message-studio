@@ -106,7 +106,7 @@ test('Message page: no Also send row', async ({ page }) => {
 });
 
 for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['group', 375], ['group', 390], ['group', 412], ['dm', 280], ['dm', 360], ['dm', 412], ['group', 1280]])
-  test(`Reader (${view}) at ${width}px: the ticks show in one line above the buttons, never covered`, async ({ page }) => {
+  test(`Reader (${view}) at ${width}px: the attached files sit in More, one tappable row each, never covered`, async ({ page }) => {
     await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: 'data:application/pdf;base64,' + PDF.toString('base64'), name: 'a.pdf' });
     await api(port, '/group-extras', { action: 'add', kind: 'video', data: 'data:video/mp4;base64,' + MP4.toString('base64'), name: 'b.mp4' });
     await page.setViewportSize({ width, height: width >= 900 ? 900 : 740 });
@@ -115,40 +115,32 @@ for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['g
     await page.waitForFunction(() => typeof setView === 'function' && window.DonorHub);
     if (view === 'dm') await page.evaluate(() => setView('dm'));
     await page.evaluate(() => { location.hash = '#/preview'; });
-    const box = page.locator('#ui2ReaderExtras');
-    await expect(box).toBeVisible();
+    // in front: one small preview chip for each attached file that is ticked (a group message: PDF and video are on
+    // when added; a DM sends nothing extra until a tick is set)
+    await expect(page.locator('#ui2AttChips .ui2-att-chip')).toHaveCount(view === 'dm' ? 0 : 2);
+    // inside More: a row each with a preview, the tick and Add / Change
+    await page.locator('#messageFocus .focus-rail-more > summary').click();
+    await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
     const m = await page.evaluate(() => {
       const r = (e) => e.getBoundingClientRect();
-      const b = r(document.getElementById('ui2ReaderExtras'));
-      const dock = r(document.querySelector('#messageFocus .ui2-reader-dock'));
-      const chips = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item .ui2-rx-chip')].map(r);
+      const items = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item')].map(r);
       const hit = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item .ui2-rx-chip')].map((c) => {
         const q = r(c);
-        const top = document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2);
-        return c.contains(top);
+        return c.contains(document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2));
       });
       const texts = [...document.querySelectorAll('#ui2RxText button')].map(r);
-      return { b, dock, chips, hit, texts, sw: document.documentElement.scrollWidth, w: innerWidth };
+      return { items, hit, texts, sw: document.documentElement.scrollWidth, w: innerWidth, h: innerHeight };
     });
-    // phone: above the fixed bottom bar; computer: the bar is part of the page, the row just stays on screen
-    if (width < 900) expect(m.b.bottom, 'above the dock').toBeLessThanOrEqual(m.dock.top + 1);
-    else expect(m.b.bottom, 'on screen').toBeLessThanOrEqual(900);
     expect(m.sw).toBeLessThanOrEqual(m.w + 1);
-    for (const c of m.chips) {
+    expect(m.items.length).toBe(3); // PDF, Video, Poster
+    for (const c of [...m.items, ...m.texts]) {
       expect(c.height).toBeGreaterThanOrEqual(39);
       expect(c.x).toBeGreaterThanOrEqual(0);
       expect(c.x + c.width).toBeLessThanOrEqual(m.w + 0.5);
     }
     expect(m.hit).toEqual([true, true, true]); // PDF, Video and Poster: nothing sits on top of the ticks
-    expect(Math.abs(m.chips[0].y - m.chips[1].y), 'PDF and Video on one line').toBeLessThan(2);
-    // a video is attached: "Text goes with: Video / Poster" sits on the next line, real buttons, on screen
+    // a video is attached: "Text goes on: Video / Poster" is two real buttons
     expect(m.texts.length).toBe(2);
-    for (const t of m.texts) {
-      expect(t.height).toBeGreaterThanOrEqual(39);
-      expect(t.x).toBeGreaterThanOrEqual(0);
-      expect(t.x + t.width).toBeLessThanOrEqual(m.w + 0.5);
-      if (width < 900) expect(t.bottom).toBeLessThanOrEqual(m.dock.top + 1);
-    }
   });
 
 /* The same two ticks under the message in the reader: group message (after the poster) and DM (after each DM). */
@@ -159,6 +151,8 @@ async function openReader(page, view = 'group', width = 390) {
   await page.waitForFunction(() => typeof setView === 'function' && window.DonorHub);
   if (view === 'dm') await page.evaluate(() => setView('dm'));
   await page.evaluate(() => { location.hash = '#/preview'; });
+  // the attached files (ticks, Add / Change, Text goes on) live inside More
+  await page.locator('#messageFocus .focus-rail-more > summary').click();
   await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
 }
 
@@ -175,6 +169,7 @@ test('Reader: Text goes with Video / Poster is right under the ticks once a vide
   await expect.poll(async () => (await api(port, '/group-extras')).text_on).toBe('video');
   await api(port, '/group-extras', { action: 'remove', kind: 'video' });
   await page.reload();
+  await page.locator('#messageFocus .focus-rail-more > summary').click();
   await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
   await expect(page.locator('#ui2RxText')).toBeHidden(); // no video: nothing to choose
 });
@@ -346,11 +341,11 @@ for (const width of [390, 430, 1440])
       expect(b.x, sel).toBeGreaterThanOrEqual(0);
       expect(b.x + b.width, sel).toBeLessThanOrEqual(width + 0.5);
     }
-    // one line, and above the bottom dock on phones (nothing under it)
+    // one row each, and above the bottom dock on phones (nothing under it)
     const box = await page.locator('#ui2ReaderExtras').boundingBox();
     const pdf = await page.locator('#ui2Rx-pdf').locator('xpath=..').boundingBox(),
       video = await page.locator('#ui2Rx-video').locator('xpath=..').boundingBox();
-    expect(Math.abs(pdf.y - video.y)).toBeLessThan(2); // the two ticks on one line
+    expect(video.y - pdf.y).toBeGreaterThan(40); // one row each, inside More
     const dock = await page.locator('.ui2-reader-dock').boundingBox().catch(() => null);
     if (dock && width < 900 && dock.height > 0) expect(box.y + box.height).toBeLessThanOrEqual(dock.y + 1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -365,6 +360,7 @@ test('Reader: the Order line shows what WhatsApp gets, in order, and changes on 
   await api(port, '/group-extras', { action: 'add', kind: 'poster', data: 'data:image/jpeg;base64,' + JPG.toString('base64'), name: 'a.jpg' });
   await api(port, '/group-extras', { action: 'setup', profile: 'group', field: 'text_on', value: 'video' });
   await page.reload();
+  await page.locator('#messageFocus .focus-rail-more > summary').click();
   await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
   await expect(order).toHaveText(/1\. Video \+ text\s+2\. Poster$/);
   await page.locator('#ui2RxText-poster').click();
@@ -377,4 +373,18 @@ test('Reader: the Order line shows what WhatsApp gets, in order, and changes on 
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390.5);
   for (const kind of ['video', 'poster']) await api(port, '/group-extras', { action: 'remove', kind });
+});
+
+test('the reader previews: /group-extras-media serves the saved poster, and says 404 for nothing saved or a wrong kind', async ({ request }) => {
+  const headers = { Authorization: 'Bearer ' + KEY };
+  const url = (kind) => `http://127.0.0.1:${port}/group-extras-media/${kind}`;
+  await api(port, '/group-extras', { action: 'remove', kind: 'video' });
+  expect((await request.get(url('video'), { headers })).status()).toBe(404);
+  await api(port, '/group-extras', { action: 'add', kind: 'poster', data: 'data:image/jpeg;base64,' + JPG.toString('base64'), name: 'a.jpg' });
+  const r = await request.get(url('poster'), { headers });
+  expect(r.status()).toBe(200);
+  expect(r.headers()['content-type']).toContain('image/jpeg');
+  expect((await r.body()).length).toBeGreaterThan(0);
+  expect((await request.get(url('nonsense'), { headers })).status()).toBe(404);
+  await api(port, '/group-extras', { action: 'remove', kind: 'poster' });
 });

@@ -925,32 +925,41 @@ const ui2Frame = (fn) => {
     }
     const sum = more.querySelector('summary');
     sum.textContent = 'More';
-    for (const id of ['focusCopy', 'focusEdit']) if ($(id)) bar.append($(id));
+    /* One row for group and DM messages: Test, Copy, Edit, More, Back. More holds the attached files (PDF, Video,
+       Poster); Next, Regenerate and Save Base are round icons beside the message (their real buttons stay in More,
+       hidden, so every handler is unchanged). */
+    for (const id of ['focusTest', 'focusCopy', 'focusEdit']) if ($(id)) bar.append($(id));
     bar.append(more);
-    if ($('focusBack')) bar.append($('focusBack'));
-    const hint = document.createElement('p');
-    hint.className = 'ui2-reader-hint';
-    hint.textContent = 'Save Base · Test · Next wording live inside More';
-    bar.after(hint);
+    if ($('focusBack')) {
+      bar.append($('focusBack'));
+      $('focusBack').setAttribute('aria-label', 'Back');
+    }
+    const paper = $('focusFormatted')?.parentElement;
+    if (paper && !$('focusSaveIcon')) {
+      const save = document.createElement('button');
+      save.id = 'focusSaveIcon';
+      save.className = 'focus-save-icon';
+      save.type = 'button';
+      save.title = 'Save as base message';
+      save.setAttribute('aria-label', 'Save as base message');
+      save.innerHTML =
+        '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>';
+      save.onclick = () => $('focusSave')?.click();
+      paper.append(save);
+    }
     bar.dataset.ui2Row = '1';
     dockKind();
   }
-  /* The bottom row's first button depends on the message: a GROUP message has Test (it goes to the Test group), a DM
-     message has Copy. The other one sits inside More, so nothing is lost. */
+  /* Test and Copy stay in the bottom row for a group and for a DM message alike. */
   function dockKind() {
     const screen = $('messageFocus');
     const bar = screen?.querySelector('.ui2-reader-dock');
-    const panel = screen?.querySelector('.focus-rail-more > div');
-    if (!bar || !panel || !bar.dataset.ui2Row) return;
-    const dm = screen.dataset.kind === 'dm';
-    const first = $(dm ? 'focusCopy' : 'focusTest'),
-      inMore = $(dm ? 'focusTest' : 'focusCopy');
-    if (first && first.parentElement !== bar) bar.prepend(first);
-    if (inMore && inMore.parentElement !== panel) panel.prepend(inMore);
-    const label = dm ? 'More: Save Base, Test, Next wording' : 'More: Copy, Save Base, Next wording';
-    screen.querySelector('.focus-rail-more > summary')?.setAttribute('aria-label', label);
-    const hint = screen.querySelector('.ui2-reader-hint');
-    if (hint) hint.textContent = dm ? 'Save Base · Test · Next wording live inside More' : 'Copy · Save Base · Next wording live inside More';
+    if (!bar || !bar.dataset.ui2Row) return;
+    for (const id of ['focusEdit', 'focusCopy', 'focusTest']) {
+      const b = $(id);
+      if (b && b.parentElement !== bar) bar.prepend(b);
+    }
+    screen.querySelector('.focus-rail-more > summary')?.setAttribute('aria-label', 'More: PDF, video and poster');
   }
   addEventListener('reader-kind', dockKind);
 
@@ -1586,7 +1595,9 @@ document.addEventListener('click', (e) => {
       cb.type = 'checkbox';
       cb.id = 'ui2Rx-' + kind;
       cb.addEventListener('change', () => change(kind, cb.checked));
-      lab.append(cb, mk('span', '', name));
+      const meta = mk('small', 'ui2-rx-meta', '');
+      const th = mk('span', 'ui2-rx-th');
+      lab.append(cb, mk('span', 'ui2-rx-name', name), meta);
       const file = mk('input');
       file.type = 'file';
       file.accept = accept;
@@ -1634,9 +1645,9 @@ document.addEventListener('click', (e) => {
           paint();
         }
       });
-      item.append(lab, add, file);
+      item.append(th, lab, add, file);
       box.append(item);
-      items[kind] = { item, cb, add: addWord, file: add, lab };
+      items[kind] = { item, cb, add: addWord, file: add, lab, meta, th };
     }
     /* Which file carries the message text (same setting as in Poster): only shown once a video is attached */
     const textRow = mk('div', 'ui2-rx-text');
@@ -1681,13 +1692,46 @@ document.addEventListener('click', (e) => {
     orderLine.id = 'ui2RxOrder';
     orderLine.setAttribute('aria-live', 'polite');
     box.append(textRow, orderLine, msg);
-    /* It takes the place of the small hint line under the buttons, so the reader grows by almost nothing. */
-    const hint = document.querySelector('#messageFocus .ui2-reader-hint');
-    if (hint) hint.after(box);
+    /* The attached files live inside More (a row each: preview, name, tick, Add / Change), so the reader grows by
+       nothing. A small preview chip for each ATTACHED and ticked file shows under the message. */
+    const panel = document.querySelector('#messageFocus .focus-rail-more > div');
+    if (panel) panel.prepend(box);
     else nav.after(box);
+    const chips = mk('div', 'ui2-att');
+    chips.id = 'ui2AttChips';
+    chips.setAttribute('aria-label', 'Attached files');
+    document.querySelector('#messageFocus .ui2-reader-dock')?.before(chips);
+    const thumbs = {}; // the blob URL of the saved poster / video, fetched once per saved file (the promise is cached)
+    const preview = (kind, name) => {
+      if (kind === 'pdf') return Promise.resolve('');
+      const t = thumbs[kind];
+      if (t && t.name === name) return t.promise;
+      t?.promise.then((u) => u && URL.revokeObjectURL(u));
+      const promise = fetch('/group-extras-media/' + kind, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.blob() : null))
+        .then((b) => (b ? URL.createObjectURL(b) : ''))
+        .catch(() => '');
+      thumbs[kind] = { name, promise };
+      return promise;
+    };
+    const picture = (kind, url) => {
+      if (kind === 'pdf' || !url) return mk('span', 'ui2-att-th ui2-att-' + kind, kind === 'pdf' ? 'PDF' : kind === 'video' ? '▶' : '');
+      const el = mk(kind === 'video' ? 'video' : 'img', 'ui2-att-th');
+      if (kind === 'video') {
+        el.muted = true;
+        el.preload = 'metadata';
+        el.playsInline = true;
+        el.src = url + '#t=0.1';
+      } else {
+        el.src = url;
+        el.alt = '';
+      }
+      return el;
+    };
     $('messageFocus')?.classList.add('ui2-has-rx');
     const have = { pdf: false, video: false, poster: false },
       names = { pdf: '', video: '', poster: '' },
+      sizes = { pdf: 0, video: 0, poster: 0 },
       groupOn = { pdf: false, video: false, poster: false };
     let dmOn = { pdf: false, video: false };
     try {
@@ -1714,7 +1758,38 @@ document.addEventListener('click', (e) => {
         it.cb.checked = !!(have[k] && (dm ? dmTick : groupOn[k]));
         if (!it.item.dataset.up) it.add.textContent = have[k] ? 'Change' : 'Add';
         it.item.title = have[k] ? names[k] : '';
+        it.meta.textContent = have[k]
+          ? (names[k] || '') + (sizes[k] ? ' · ' + (sizes[k] >= 1024 ? (sizes[k] / 1024).toFixed(1) + ' MB' : sizes[k] + ' KB') : '')
+          : 'Not attached';
+        const stamp = have[k] ? names[k] || k : '';
+        if (it.th.dataset.k !== stamp) {
+          it.th.dataset.k = stamp;
+          it.th.replaceChildren(have[k] ? picture(k, '') : mk('span', 'ui2-att-th ui2-att-none', '+'));
+          if (have[k])
+            preview(k, names[k]).then((url) => {
+              if (url && it.th.dataset.k === stamp) it.th.replaceChildren(picture(k, url));
+            });
+        }
         it.file.hidden = dm; // DMs only tick: the files are attached on the group message
+      }
+      const shown = ['pdf', 'video', 'poster'].filter((k) => have[k] && items[k].cb.checked);
+      const sig = shown.map((k) => k + ':' + names[k]).join('|');
+      if (chips.dataset.sig !== sig) {
+        chips.dataset.sig = sig;
+        chips.hidden = !shown.length;
+        chips.replaceChildren();
+        for (const k of shown) {
+          const c = mk('div', 'ui2-att-chip');
+          const slot = mk('span', 'ui2-att-slot');
+          slot.append(picture(k, ''));
+          preview(k, names[k]).then((url) => url && slot.replaceChildren(picture(k, url)));
+          const x = mk('button', 'ui2-att-x', '✕');
+          x.type = 'button';
+          x.setAttribute('aria-label', 'Stop sending ' + (k === 'pdf' ? 'the PDF' : 'the ' + k));
+          x.onclick = () => change(k, false);
+          c.append(slot, mk('span', 'ui2-att-name', names[k] || k), x);
+          chips.append(c);
+        }
       }
       textRow.hidden = !have.video;
       $('messageFocus')?.classList.toggle('ui2-has-rx-text', have.video);
@@ -1739,6 +1814,7 @@ document.addEventListener('click', (e) => {
       for (const k of ['pdf', 'video', 'poster']) {
         have[k] = !!(v[k] && v[k].has);
         names[k] = have[k] ? String(v[k].name || '') : '';
+        sizes[k] = have[k] ? Number(v[k].kb) || 0 : 0;
         groupOn[k] = !!(have[k] && v[k].on);
       }
       setupAll = v.setup || {};

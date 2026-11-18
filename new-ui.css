@@ -6193,3 +6193,414 @@
   color: #ffb4b4;
   opacity: 1;
 }
+
+/* Message home: one workspace with sending and navigation within reach. */
+.UI2 .app.ui2-message-home {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100dvh !important;
+  min-height: 300px !important;
+  max-width: 1180px;
+  gap: 8px !important;
+  padding: 8px 12px 0 !important;
+}
+.UI2 .ui2-message-home #main-workspace {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  flex: 1 1 0 !important;
+  gap: 8px !important;
+  width: 100%;
+  max-width: 780px;
+  min-height: 0 !important;
+  margin: 0 auto !important;
+  overflow: visible !important;
+}
+.UI2 .ui2-message-home #main-workspace > #card {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column;
+  flex: 1 1 0 !important;
+  align-self: stretch !important;
+  gap: 6px;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 8px !important;
+  overflow: visible !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 14px !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+.UI2 .ui2-message-home #card #chat {
+  display: block !important;
+  flex: 1 1 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: auto !important;
+  overscroll-behavior: contain;
+  background: transparent !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+.UI2 .ui2-message-home #card #chat .message {
+  width: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 10px 12px !important;
+  border-radius: 10px !important;
+  background: #006451 !important;
+  color: #ecfff8 !important;
+  font-size: 15px !important;
+  line-height: 1.42 !important;
+  overflow-wrap: anywhere;
+}
+.UI2 .ui2-message-home #main-workspace > .side {
+  display: block !important;
+  flex: 0 0 auto !important;
+  width: 100%;
+  max-width: none !important;
+  min-width: 0;
+  height: auto !important;
+  margin: 0 !important;
+}
+.UI2 .ui2-message-home:not(.ui2-preview-collapsed) #showMsg,
+.UI2 .ui2-message-home.ui2-preview-collapsed #main-workspace > #card {
+  display: none !important;
+}
+.UI2 .ui2-message-home.ui2-preview-collapsed #showMsg {
+  display: inline-flex !important;
+  align-self: center;
+}
+.UI2 .ui2-preview-collapsed #main-workspace {
+  justify-content: flex-end;
+}
+.UI2
+  .ui2-message-home
+  #main-workspace
+  :is(.talk, .rail-quick, .navrow, .group-send .send-title, .preview-dock),
+.UI2[data-view='dm'] .ui2-message-home #main-workspace .group-send {
+  display: none !important;
+}
+.UI2 .ui2-message-home #main-workspace :is(.action-rail, .group-send) {
+  display: flex !important;
+  flex-direction: column;
+  gap: 5px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.UI2 .ui2-message-home .group-send :is(.group-two, .grp-card, .send-row) {
+  display: block !important;
+  margin: 0 !important;
+}
+.UI2 .ui2-message-home .group-send :is(#btnGivelife, #btnFree, #sendAll) {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-height: 42px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(110deg, #245bdb, #7031cf) !important;
+  box-shadow: none !important;
+}
+.UI2 .ui2-message-home .group-send #btnGivelife {
+  justify-content: center !important;
+  min-height: 44px !important;
+}
+.UI2 .ui2-message-home .group-send :is(#btnGivelife, .test-row) .gb-name::before {
+  content: none !important;
+}
+.UI2 .ui2-message-home .group-send :is(#btnGivelife, .test-row) .gb-go {
+  display: none !important;
+}
+.UI2 .ui2-message-home .group-send :is(#btnGivelife, .test-row) .gb-name {
+  justify-content: center !important;
+  gap: 5px !important;
+}
+.UI2 .ui2-message-home .group-send :is(#btnFree, #sendAll) .last-sent {
+  max-width: none !important;
+}
+.UI2 .ui2-message-home .ui2-group-more {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0;
+}
+.UI2 .ui2-message-home .group-send :is(.ui2-dock-tool, .test-row, .ui2-choose-btn) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px;
+  min-width: 0 !important;
+  min-height: 40px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 2px 3px !important;
+  border: 1px solid var(--line2) !important;
+  border-radius: 9px !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  line-height: 1.1;
+  text-align: center;
+}
+.UI2 .ui2-message-home .group-send .test-row .gb-name {
+  font-size: inherit !important;
+}
+.UI2 .ui2-message-home .group-send .test-row .last-sent {
+  display: none !important;
+}
+.UI2 .ui2-message-home .group-send [data-progress] .gb-name {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1px 5px !important;
+  padding-block: 3px;
+}
+.UI2 .ui2-message-home .group-send [data-progress] .last-sent {
+  display: none !important;
+}
+.UI2 .ui2-message-home .group-send [data-progress] .gb-progress {
+  max-width: 100%;
+  font-size: 11px !important;
+  white-space: normal;
+}
+.UI2 .ui2-message-home .ui2-group-more [aria-expanded='true'],
+.UI2 .ui2-message-home .ui2-group-more [data-scheduled] {
+  border-color: #557ef0 !important;
+  color: #b7cdff !important;
+}
+.UI2 .ui2-message-home #ui2GroupPicker::after,
+.UI2 .ui2-message-home #btnFreePick::after {
+  content: '';
+  flex: none;
+  width: 5px;
+  height: 5px;
+  background: none;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-1px) rotate(45deg);
+}
+.UI2 .ui2-message-home :is(#ui2GroupPicker, #btnFreePick)[aria-expanded='true']::after {
+  transform: translateY(2px) rotate(225deg);
+}
+.UI2 .ui2-message-home .group-send :is(.ui2-other-groups, .ui2-later-panel):not([hidden]) {
+  display: grid !important;
+  gap: 5px;
+  max-height: min(35dvh, 300px);
+  margin: 0;
+  padding: 5px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.UI2 .ui2-message-home .ui2-choose > .group-drop {
+  position: static !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-height: none !important;
+  margin-top: 5px;
+}
+.UI2 .ui2-message-home #btnFreePick {
+  width: 100%;
+}
+.UI2 .ui2-message-home .ui2-later-line {
+  grid-template-columns: minmax(58px, 26%) minmax(0, 1fr);
+  gap: 5px;
+}
+.UI2 .ui2-message-home .ui2-later-line .delay-row {
+  gap: 4px;
+}
+.UI2 .ui2-message-home .group-send #groupStatus:not(:empty) {
+  max-height: min(13dvh, 68px);
+  margin: 0 !important;
+  overflow: auto;
+}
+.UI2 .app.ui2-message-home > .foot {
+  position: static !important;
+  flex: 0 0 auto;
+  width: 100%;
+  flex-shrink: 0;
+  margin: 0 !important;
+  padding: 0 0 env(safe-area-inset-bottom) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+.UI2 .ui2-message-home #ui2Tabs {
+  gap: 2px !important;
+  padding: 0 !important;
+}
+.UI2 .ui2-message-home #ui2Tabs .ui2-tab {
+  min-width: 0 !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 4px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 11px !important;
+}
+.UI2 .ui2-message-home #ui2Tabs .ui2-tab svg {
+  width: 18px;
+  height: 18px;
+}
+.UI2 .ui2-message-home #ui2Tabs .ui2-tab[aria-current='true'] {
+  color: var(--ink) !important;
+  box-shadow: inset 0 2px #5d83f5 !important;
+}
+@media (max-width: 899px) {
+  .UI2 .ui2-message-home > .ui2-status-row {
+    order: -1;
+    flex: 0 0 auto;
+    gap: 5px !important;
+    padding: 0 5px;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #whatsappConnection {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    padding-inline: 4px !important;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #whatsappConnection::after {
+    content: 'WhatsApp';
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #whatsappConnection[data-state='offline']::after {
+    content: 'Reconnect';
+  }
+  .UI2
+    .ui2-message-home
+    .ui2-status-row
+    #whatsappConnection:not([data-state='online']):not([data-state='offline'])::after {
+    color: var(--ink-muted);
+  }
+  .UI2 .ui2-message-home .ui2-status-row #leftChip {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    overflow: hidden;
+    padding-inline: 6px !important;
+    text-overflow: ellipsis;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #live {
+    position: static !important;
+    flex: 0 0 auto !important;
+    order: 2 !important;
+    gap: 2px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 40px !important;
+    margin: 0 0 0 auto !important;
+    padding: 0 3px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #live::before {
+    content: 'Auto';
+    font-size: 12px;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #live #auto {
+    min-height: 40px !important;
+  }
+  .UI2 .ui2-message-home #card.ui2-has-mini #chat {
+    padding-bottom: 48px !important;
+  }
+}
+@media (max-height: 430px) {
+  .UI2 .ui2-message-home .group-send :is(.ui2-other-groups, .ui2-later-panel):not([hidden]) {
+    max-height: 28dvh;
+  }
+}
+@media (max-width: 299px) {
+  .UI2 .app.ui2-message-home {
+    padding-inline: 6px !important;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #whatsappConnection {
+    min-width: 34px !important;
+    justify-content: center;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #whatsappConnection::after {
+    display: none;
+  }
+  .UI2 .ui2-message-home .group-send :is(.ui2-dock-tool, .test-row, .ui2-choose-btn) {
+    font-size: 12px !important;
+  }
+}
+@media (min-width: 900px) {
+  .UI2 .ui2-message-home > .brandbar {
+    flex: 0 0 auto;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 4px 10px !important;
+    border: 1px solid var(--line2);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .UI2 .ui2-message-home > .brandbar #live::before {
+    content: 'Auto';
+    color: var(--ink-muted);
+  }
+  .UI2 .ui2-message-home > .brandbar #live[data-on='1']::before {
+    color: #3cdc96;
+  }
+  .UI2 .ui2-message-home #main-workspace > #card {
+    padding: 10px !important;
+  }
+  .UI2 .ui2-message-home #card .tools {
+    flex: 0 0 auto;
+    min-height: 36px !important;
+  }
+  .UI2 .ui2-message-home #card .tools > .sp {
+    display: none !important;
+  }
+  .UI2 .ui2-message-home #card .overflow-tools > summary {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--line2);
+    border-radius: 8px;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .UI2 .ui2-message-home #card .tools .overflow-tools > div {
+    top: auto !important;
+    right: auto !important;
+    bottom: calc(100% + 5px) !important;
+    left: 0 !important;
+    max-height: min(48dvh, 280px);
+    overflow: auto;
+  }
+  .UI2 .ui2-message-home #card .overflow-tools .ui2-styles {
+    flex-direction: column;
+  }
+  .UI2 .ui2-message-home #ui2GnavMain {
+    display: none !important;
+  }
+}

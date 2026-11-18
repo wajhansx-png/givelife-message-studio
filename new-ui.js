@@ -88,8 +88,7 @@ function ui2Observe(run, options) {
   ui2Observe(ui2Frame(run));
 })();
 
-/* 1. The home screen itself now shows the message beside the send list on a computer (see "Home" below),
-   so it no longer jumps into the full-screen reader. */
+/* 1. The home screen shows the message above the send controls without opening the reader. */
 
 /* 2. DM speed dialog (PDF page 24, V4 page 21): How fast? Slow / Normal / Fast, the four wait times, one summary
    line, and everything else folded under "More options (poster, follow-up, vary gap, test DM)".
@@ -415,7 +414,7 @@ function ui2Observe(run, options) {
     return n;
   };
 
-  /* Status pieces move to the top bar on a computer, to one line on a tablet, to two rows on a phone. */
+  /* Keep WhatsApp, the amount and Auto together at every width. */
   function placeStatus() {
     const row = document.querySelector('.ui2-status-row');
     const bar = document.querySelector('.app > .brandbar');
@@ -433,8 +432,7 @@ function ui2Observe(run, options) {
     } else {
       if (wa.parentElement !== row) row.prepend(wa);
       if (chip.parentElement !== row) wa.after(chip);
-      if (b === 'tab' && live.parentElement !== row) row.append(live);
-      if (b === 'phone' && live.previousElementSibling !== row) row.after(live);
+      if (live.parentElement !== row) row.append(live);
     }
     document.body.dataset.ui2Band = b;
     return true;
@@ -483,7 +481,16 @@ function ui2Observe(run, options) {
     };
     const items = [
       ['case', ICONS.case, 'Case', () => (typeof Nav !== 'undefined' ? Nav.go('case') : null)],
-      ['message', ICONS.message, 'Message', () => (typeof Nav !== 'undefined' ? Nav.go('') : null)],
+      [
+        'message',
+        ICONS.message,
+        'Message',
+        () => {
+          if (document.body.dataset.view === 'dm')
+            document.querySelector('[data-view-button="group"]')?.click();
+          if (typeof Nav !== 'undefined') Nav.go('');
+        },
+      ],
       ['donors', ICONS.donors, 'Donors', press(() => $('openDonors'))],
       ['chat', ICONS.chat, 'Chat', press(() => $('chatOpen'))],
       /* Computer only (the phone keeps these in More): every top-bar option is also one clear button here. */
@@ -686,74 +693,138 @@ function ui2Observe(run, options) {
     d.showModal();
   }
 
-  /* Send list: one line per group; timers and the single-group choice sit under the list (V4 page 7). */
+  /* Keep the primary destination and the three daily controls together at every width. */
   function sendList() {
     const box = document.querySelector('.group-send');
     const two = box?.querySelector('.group-two');
-    const drop = $('dropFree'),
-      tm = $('timerMain'),
-      tf = $('timerFree');
-    if (!two || !drop || !tm || !tf || $('ui2GroupMore')) return;
+    const main = $('btnGivelife');
+    const test = two?.querySelector('.test-row');
+    const free = $('btnFree')?.closest('.grp-card');
+    const all = $('sendAll')?.closest('.send-row');
+    const drop = $('dropFree');
+    const choose = $('btnFreePick');
+    const mainTimes = $('timerMain');
+    const freeTimes = $('timerFree');
+    if (
+      !two ||
+      !main ||
+      !test ||
+      !free ||
+      !all ||
+      !drop ||
+      !choose ||
+      !mainTimes ||
+      !freeTimes ||
+      $('ui2GroupMore')
+    )
+      return;
+
+    const name = main.querySelector('.gb-name');
+    name.replaceChild(document.createTextNode('Send to GiveLife'), name.firstChild);
+    main.querySelector('.gb-go').hidden = true;
+    test.querySelector('.gb-go').hidden = true;
+
     const more = mk('div', 'ui2-group-more');
     more.id = 'ui2GroupMore';
-    const later = mk('button', 'ui2-later', 'Later');
-    later.type = 'button';
-    later.id = 'ui2Later';
-    later.setAttribute('aria-expanded', 'false');
-    later.setAttribute('aria-controls', 'ui2LaterPanel');
+    const groups = mk('div', 'ui2-other-groups');
+    groups.id = 'ui2OtherGroups';
+    groups.setAttribute('role', 'group');
+    groups.setAttribute('aria-label', 'Other group sends');
+    const panel = mk('div', 'ui2-later-panel');
+    panel.id = 'ui2LaterPanel';
+    panel.setAttribute('role', 'group');
+    panel.setAttribute('aria-label', 'Schedule group sends');
+    const disclosure = (label, id, region) => {
+      const button = mk('button', 'ui2-dock-tool', label);
+      button.type = 'button';
+      button.id = id;
+      button.setAttribute('aria-controls', region.id);
+      button.setAttribute('aria-expanded', 'false');
+      return button;
+    };
+    const other = disclosure('Other groups', 'ui2GroupPicker', groups);
+    const timer = disclosure('Timer', 'ui2Later', panel);
+    other.setAttribute('aria-label', 'Other groups');
+    const choices = [
+      [other, groups],
+      [timer, panel],
+    ];
+    const show = (current) => {
+      for (const [button, region] of choices) {
+        const open = button === current;
+        region.hidden = !open;
+        button.setAttribute('aria-expanded', String(open));
+      }
+      if (current !== other && !drop.hidden) {
+        drop.hidden = true;
+        choose.setAttribute('aria-expanded', 'false');
+      }
+    };
+    for (const [button, region] of choices) {
+      button.addEventListener('click', (event) => {
+        const open = region.hidden;
+        show(open ? button : null);
+        if (open && event.detail === 0) region.querySelector('button:not([disabled])')?.focus();
+      });
+    }
+
     const wrap = mk('div', 'group-drop-wrap ui2-choose');
-    const choose = mk('button', 'ui2-choose-btn', 'Choose group');
-    choose.type = 'button';
-    choose.setAttribute('aria-haspopup', 'true');
-    choose.setAttribute('aria-expanded', 'false');
+    choose.className = 'ui2-choose-btn';
+    choose.textContent = 'Choose group';
+    choose.setAttribute('aria-label', 'Choose group');
+    choose.setAttribute('aria-controls', drop.id);
     choose.addEventListener('click', () => {
-      $('btnFreePick')?.click();
-      choose.setAttribute('aria-expanded', String(!drop.hidden));
       if (!drop.hidden) requestAnimationFrame(() => drop.scrollIntoView({ block: 'nearest' }));
     });
     wrap.append(choose, drop);
-    more.append(later, wrap);
-    const panel = mk('div', 'ui2-later-panel');
-    panel.id = 'ui2LaterPanel';
-    panel.hidden = true;
-    for (const [row, name] of [
-      [tm, 'GiveLife'],
-      [tf, 'All freelance'],
+    groups.append(free, all, wrap);
+    const emptyTestRow = test.parentElement;
+    more.append(other, timer, test);
+    emptyTestRow.remove();
+
+    for (const [row, label] of [
+      [mainTimes, 'GiveLife'],
+      [freeTimes, 'All freelance'],
     ]) {
-      const line = mk('div', 'ui2-later-line', '<span></span>');
-      line.querySelector('span').textContent = name;
-      line.append(row);
+      const line = mk('div', 'ui2-later-line');
+      const title = mk('span', '', label);
+      row.hidden = false;
+      line.append(title, row);
       panel.append(line);
     }
-    two.after(more, panel);
-    const timers = () => [...document.querySelectorAll('.gb-timer')];
-    later.addEventListener('click', () => {
-      const open = panel.hidden;
-      for (const t of timers())
-        if ((t.getAttribute('aria-expanded') === 'true') !== open) t.click();
-      panel.hidden = !open;
-      later.setAttribute('aria-expanded', String(open));
-      if (open) requestAnimationFrame(() => panel.scrollIntoView({ block: 'nearest' }));
+    two.before(groups, panel);
+    two.after(more);
+    show(null);
+    document.addEventListener('click', (event) => {
+      if (!box.contains(event.target) && (!groups.hidden || !panel.hidden)) show(null);
+    });
+    box.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      if (!drop.hidden) {
+        drop.hidden = true;
+        choose.setAttribute('aria-expanded', 'false');
+        choose.focus();
+      } else {
+        const active = choices.find(([, region]) => !region.hidden);
+        if (!active) return;
+        show(null);
+        active[0].focus();
+      }
+      event.preventDefault();
+      event.stopPropagation();
     });
     const paint = () => {
-      const due = timers()
-        .filter((t) => t.classList.contains('is-pending'))
-        .map((t) => t.textContent.trim());
-      const text = due.length ? 'Later · ' + due.join(', ') : 'Later';
-      if (later.textContent !== text) later.textContent = text;
-      if (!panel.hidden && tm.hidden && tf.hidden) {
-        panel.hidden = true;
-        later.setAttribute('aria-expanded', 'false');
-      }
+      const pending = [mainTimes, freeTimes].some((row) => row.querySelector('.is-pending'));
+      timer.toggleAttribute('data-scheduled', pending);
+      timer.title = pending ? 'A group send is scheduled' : 'Schedule a group send';
     };
-    new MutationObserver(paint).observe(box, {
+    new MutationObserver(paint).observe(panel, {
       subtree: true,
-      childList: true,
-      characterData: true,
       attributes: true,
-      attributeFilter: ['class', 'hidden'],
+      attributeFilter: ['class'],
     });
     paint();
+    box.closest('.app')?.classList.add('ui2-message-home');
   }
 
   /* Computer: today's message with its style choices and keyboard letters; chat becomes a slim bar. */
@@ -771,13 +842,22 @@ function ui2Observe(run, options) {
     for (const [key, label, hint] of [
       ['ur', 'Urdu + English', 'Write a new message: Urdu + English'],
       ['en', 'English', 'Write a new message: English'],
-      ['trigger', 'Trigger', 'Stronger message in the language you picked. Press again to turn it off.'],
-      ['fix', 'Style fix', 'Same words in your style: bold and italic lines, and anything missing added. Nothing new is written.'],
+      [
+        'trigger',
+        'Trigger',
+        'Stronger message in the language you picked. Press again to turn it off.',
+      ],
+      [
+        'fix',
+        'Style fix',
+        'Same words in your style: bold and italic lines, and anything missing added. Nothing new is written.',
+      ],
     ]) {
       const b = mk('button', '', label);
       b.type = 'button';
       b.dataset.style = key;
-      if (key !== 'fix') b.setAttribute('aria-pressed', 'false'); /* Style fix is an action, not a choice */
+      if (key !== 'fix')
+        b.setAttribute('aria-pressed', 'false'); /* Style fix is an action, not a choice */
       b.title = hint;
       b.addEventListener('click', () => {
         Nav.go('preview');
@@ -807,12 +887,19 @@ function ui2Observe(run, options) {
             String(b.dataset.style === 'trigger' ? !!lang && trigger : b.dataset.style === lang),
           );
     });
-    tools.after(styles);
     const poster = $('previewChangePoster');
     const overflow = tools.querySelector('.overflow-tools > div');
-    if (poster && overflow) overflow.prepend(poster);
+    if (overflow) {
+      const copy = $('copy');
+      copy.textContent = 'Copy';
+      overflow.parentElement.before(copy);
+      overflow.prepend($('fresh'));
+      if (poster) overflow.prepend(poster);
+      overflow.append(styles);
+    }
     if ($('openCase')) $('openCase').style.display = ''; // More → Case page exists on /new only
   }
+
   function placeholder() {
     const cmd = $('cmd');
     if (!cmd) return;

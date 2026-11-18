@@ -249,12 +249,13 @@ class PastedDonorTests(unittest.TestCase):
 
         self.jobs.send = uncertain
         self.run_job()
-        # Excluded Michael is skipped; an unconfirmed person never stops the others (3 in a row would).
-        self.assertEqual([b["name"] for b in self.sent], ["Anne", "Zaid"])
-        self.assertEqual(self.jobs.status()["failed"], 2)
+        # Excluded Michael is skipped. Anne's unconfirmed send leaves Zaid waiting.
+        self.assertEqual([b["name"] for b in self.sent], ["Anne"])
+        self.assertEqual(self.jobs.status()["state"], "Stopped")
+        self.assertEqual(self.jobs.status()["failed"], 1)
         self.assertEqual(self.jobs.status()["skipped"], 1)
         self.start(helper, preview)
-        self.assertEqual(len(self.sent), 2)  # nobody unconfirmed is ever sent again
+        self.assertEqual(len(self.sent), 1)  # repeating the request sends nothing again
 
     def test_duplicate_saved_wording_is_rejected_instead_of_reusing_a_caption(self):
         helper = self.helper()

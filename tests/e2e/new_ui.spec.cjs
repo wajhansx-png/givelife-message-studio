@@ -1114,11 +1114,14 @@ test('/new phone reader: swipe the message left for the next version, right for 
   await open(page, '/new#/preview', 390); // opening the reader saves the original message
   await expect(page.locator('#focusFormatted')).not.toHaveText('');
   await expect.poll(async () => (await (await request.get('/focus-bank?kind=group', { headers })).json()).source || '').not.toBe('');
+  // ten versions that differ only in their last line (a version must keep the message's first line)
   const { source } = await (await request.get('/focus-bank?kind=group', { headers })).json();
-  const messages = Array.from({ length: 10 }, (_, i) => source.replace('needs help', `(swipe ${i + 1}) needs help`));
+  const messages = Array.from({ length: 10 }, (_, k) => source.replace(/\n([^\n]*)$/, `\n(swipe ${k + 1}) $1`));
   const made = await request.post('/focus-bank', { headers, data: { kind: 'group', action: 'manual', messages } });
   expect(made.ok(), await made.text()).toBe(true);
+  expect((await made.json()).items.length).toBe(10);
   await page.reload();
+
   await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('Original · 10 more');
   const cdp = await page.context().newCDPSession(page);
   const box = await page.locator('#focusFormatted').boundingBox();

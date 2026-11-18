@@ -994,6 +994,11 @@ const ui2Frame = (fn) => {
       /* swipe the message sideways: it follows the finger; past 60px (or a quick flick) it slides out and the next /
          previous version slides in. With no versions yet, the swipe makes them. */
       const msg = $('focusFormatted');
+      /* the message box fills the space the phone really shows (it shrinks when the keyboard opens) */
+      const vv = window.visualViewport;
+      const fitVv = () => screen.style.setProperty('--ui2-vvh', Math.round(vv ? vv.height : innerHeight) + 'px');
+      fitVv();
+      (vv || window).addEventListener('resize', fitVv);
       const still = matchMedia('(prefers-reduced-motion: reduce)');
       let start = null,
         moving = false;

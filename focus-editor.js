@@ -325,7 +325,7 @@
     p.dataset.fitKey = key;
     p.style.setProperty('line-height', '1.3', 'important');
     let lo = 9.5,
-      hi = 13,
+      hi = 12,
       best = lo;
     for (let i = 0; i < 7; i++) {
       const mid = (lo + hi) / 2;

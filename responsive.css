@@ -3969,8 +3969,40 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     z-index: 35;
     margin: 0;
   }
+  /* the message box fills the screen from the top down to the thin row: the whole message shows, the text shrinks
+     (12px at most) until it fits; while editing it fills down to the buttons, above the keyboard */
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-workspace {
-    padding-bottom: 54px !important;
+    box-sizing: border-box !important;
+    height: calc(var(--ui2-vvh, 100dvh) - 172px - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding-bottom: 0 !important;
+    overflow: hidden !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus:has(#focusText:not([hidden])) .focus-workspace {
+    height: calc(var(--ui2-vvh, 100dvh) - 128px - env(safe-area-inset-bottom, 0px)) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-workspace > .focus-paper {
+    border-color: transparent !important;
+    background: transparent !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper > #focusFormatted {
+    height: auto !important;
+    max-height: calc(100% - 12px) !important;
+    overflow-y: auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper > #ui2Live:not([hidden]) {
+    box-sizing: border-box !important;
+    height: calc(100% - 12px) !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin-top: 6px !important;
+    margin-bottom: 6px !important;
+    overflow-y: auto !important;
+    font-size: 13px !important;
   }
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus > header {
     min-height: 0 !important;

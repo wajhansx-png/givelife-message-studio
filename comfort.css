@@ -5481,14 +5481,11 @@ html body #donorsPage[data-panel='messages'] .donor-bottom {
   }
 }
 
-/* Row editor must paint above neighbouring virtualized rows, not behind them.
-   content-visibility:auto previously gave each row its own paint containment. */
+/* Off-screen rows skip work. The open editor needs to escape its row's paint containment. */
 @media (max-width: 560px) {
-  html body #donorsPage#donorsPage .donor-row {
+  html body #donorsPage#donorsPage .donor-row:has(> .donor-more[open]) {
     content-visibility: visible !important;
     contain: none !important;
-  }
-  html body #donorsPage#donorsPage .donor-row:has(> .donor-more[open]) {
     position: relative;
     z-index: 110;
   }

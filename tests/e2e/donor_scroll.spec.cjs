@@ -1,5 +1,83 @@
 const { test, expect } = require('@playwright/test');
 const headers = { Authorization: 'Bearer manual-fix-preview-key' };
+
+test('mobile donor tabs leave a visible selection still and reveal a clipped selection once', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 740 });
+  await page.addInitScript(() => {
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key');
+    window.tabScrolls = [];
+    const scrollTo = Element.prototype.scrollTo;
+    Element.prototype.scrollTo = function (...args) {
+      if (this.classList.contains('donor-tabs')) window.tabScrolls.push(args[0]);
+      return scrollTo.apply(this, args);
+    };
+  });
+  await page.goto('/#/donors/all');
+  const strip = page.locator('.donor-tabs');
+  const important = strip.locator('[data-tab=important]');
+  await expect(page.locator('#donorRows .donor-row').first()).toBeVisible();
+  const fits = (tab) =>
+    tab.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const parent = el.parentElement.getBoundingClientRect();
+      return box.left >= parent.left - 1 && box.right <= parent.right + 1;
+    });
+  expect(await fits(important)).toBe(true);
+  const scrolls = () => page.evaluate(() => window.tabScrolls.length);
+  await page.evaluate(() => {
+    window.tabScrolls.length = 0;
+  });
+  await important.click();
+  await expect(important).toHaveAttribute('aria-selected', 'true');
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  expect(await scrolls()).toBe(0);
+
+  const clipped = strip.locator('[data-tab=not_contacted]');
+  expect(await fits(clipped)).toBe(false);
+  // Use the app click path without Playwright pre-scrolling the target.
+  await clipped.evaluate((el) => el.click());
+  await expect(clipped).toHaveAttribute('aria-selected', 'true');
+  await expect.poll(() => fits(clipped)).toBe(true);
+  expect(await scrolls()).toBe(1);
+});
+
+test('returning to Messages while it loads reuses the request', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 740 });
+  await page.addInitScript(() => {
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key');
+    localStorage.setItem('givelife-follow-up', '0');
+  });
+  await page.goto('/#/donors/all');
+  await expect(page.locator('#donorRows .donor-row').first()).toBeVisible();
+  let requests = 0;
+  let release;
+  const ready = new Promise((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/donor-messages', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    requests++;
+    await ready;
+    await route.continue();
+  });
+  try {
+    const messages = page.locator('#donorMessagesTab');
+    await messages.evaluate((b) => b.click());
+    await expect.poll(() => requests).toBe(1);
+    await page.locator('.donor-tabs [data-tab=all]').evaluate((b) => b.click());
+    await messages.evaluate((b) => b.click());
+    await expect(page.locator('#donorMessages')).toContainText('Loading saved message variants');
+  } finally {
+    release();
+  }
+  await expect(page.locator('#donorMessages .bank-detail')).toBeVisible();
+  expect(requests).toBe(1);
+});
+
 for (const width of [1440, 390])
   test(`favourite keeps donor list scroll after save at ${width}`, async ({ page, request }) => {
     await page.setViewportSize({ width, height: 700 });
@@ -17,9 +95,31 @@ for (const width of [1440, 390])
         },
       });
     await page.goto('/old#/donors/all');
-    await expect(page.locator('#donorRows .donor-row')).toHaveCount(80);
-    await page.locator('#donorTable').evaluate((el) => (el.scrollTop = 1600));
-    const before = await page.locator('#donorTable').evaluate((el) => el.scrollTop);
+    const table = page.locator('#donorTable');
+    const rows = table.locator('.donor-row');
+    await expect(rows.first()).toBeVisible();
+    if (width === 390) {
+      await page.evaluate(
+        () =>
+          new Promise((resolve) => {
+            let left = 15;
+            function frame() {
+              if (--left) requestAnimationFrame(frame);
+              else resolve();
+            }
+            requestAnimationFrame(frame);
+          }),
+      );
+      expect(await rows.count()).toBeLessThan(80);
+    }
+    await expect
+      .poll(async () => {
+        await table.evaluate((el) => (el.scrollTop = el.scrollHeight));
+        return rows.count();
+      })
+      .toBe(80);
+    await table.evaluate((el) => (el.scrollTop = 1600));
+    const before = await table.evaluate((el) => el.scrollTop);
     expect(before).toBeGreaterThan(500);
     const target = await page.locator('#donorTable').evaluate(
       (el) =>

@@ -646,9 +646,8 @@
     gikiTab = 'waiting'; // Giki page: Waiting or DMed
   let drawEpoch = 0;
   const FIRST_CHUNK = 14; // one screenful: painted in the same frame as the tap
-  const DRAW_CHUNK = 16; // the rest, a few frames later, in pieces small enough not to freeze a tap or a scroll
+  const DRAW_CHUNK = 10;
   let drawSig = ''; // what the list on screen is drawn from (or being drawn from): the same list is never drawn twice
-  const EAGER_ROWS = 200; // up to here rows are drawn in the following frames; longer lists load as you scroll
   let tab = 'all',
     data = { items: [], counts: {} },
     searchTimer,
@@ -666,6 +665,8 @@
     loaded = false,
     loadPromise = null,
     bankData = null,
+    bankLoad = null,
+    bankPaint = 0,
     bankPage = 10;
   const rowQueues = new Map(),
     rowVersions = new Map(),
@@ -690,14 +691,21 @@
   }
   /* Cached once and updated on resize: reading sizes during a DOM change forces a full page layout. */
   const narrow560 = { matches: false },
-    narrow700 = { matches: false };
+    narrow700 = { matches: false },
+    narrow900 = { matches: false };
+  const redesigned = document.body.classList.contains('ui2');
   for (const [flag, q] of [
     [narrow560, '(max-width:559.98px)'],
     [narrow700, '(max-width:699.98px)'],
+    [narrow900, '(max-width:899.98px)'],
   ]) {
     const mq = matchMedia(q);
     flag.matches = mq.matches;
-    mq.addEventListener('change', (e) => (flag.matches = e.matches));
+    mq.addEventListener('change', (e) => {
+      flag.matches = e.matches;
+      updateCounts();
+      if (page.open) revealSelectedTab();
+    });
   }
   function updateCounts() {
     const counts = {
@@ -721,21 +729,17 @@
     el('donorTotalAmount').textContent = 'PKR ' + counts.donated_amount.toLocaleString('en-PK');
     const labels = {
       all: 'All',
-      important: '★ Important',
-      top: 'Top donors',
+      important: redesigned && narrow900.matches ? '★ Star' : '★ Important',
+      top: redesigned ? 'Top' : 'Top donors',
       donated: 'Donated',
       // matchMedia, not innerWidth: reading innerWidth right after a DOM change forces a full page layout.
-      not_contacted: narrow560.matches ? 'Not DMed' : 'Not contacted',
-      volunteers: narrow700.matches ? 'Helpers' : 'Volunteers',
-      messages: 'Messages',
+      not_contacted: redesigned ? 'Not messaged' : narrow560.matches ? 'Not DMed' : 'Not contacted',
+      volunteers: redesigned || !narrow700.matches ? 'Volunteers' : 'Helpers',
+      messages: redesigned && narrow900.matches ? 'Msgs' : 'Messages',
     };
     counts.volunteers = vols.items.length;
     for (const b of page.querySelectorAll('[data-tab]')) {
       paintTab(b, labels[b.dataset.tab], counts[b.dataset.tab]);
-      b.setAttribute('aria-selected', String(tab === b.dataset.tab));
-      // setAttribute (only on change), not .tabIndex: the property forces a synchronous style recalc per tab.
-      const ti = b.dataset.tab === 'messages' || tab === b.dataset.tab ? '0' : '-1';
-      if (b.getAttribute('tabindex') !== ti) b.setAttribute('tabindex', ti);
       b.setAttribute(
         'aria-label',
         {
@@ -752,7 +756,7 @@
   }
   function paintTab(b, label, count) {
     if (b.dataset.tab === 'messages') {
-      b.textContent = label;
+      if (b.textContent !== label) b.textContent = label;
       return;
     }
     let name = b.querySelector('.tab-name'),
@@ -763,11 +767,13 @@
       n = make('span', 'tab-count');
       b.append(name, n);
     }
-    name.textContent = '';
-    if (label.startsWith('★ ')) {
-      name.append('★ ', make('span', 'tab-word', label.slice(2)));
-    } else name.textContent = label;
-    n.textContent = count == null ? '' : count;
+    if (name.textContent !== label) {
+      name.textContent = '';
+      if (label.startsWith('★ ')) name.append('★ ', make('span', 'tab-word', label.slice(2)));
+      else name.textContent = label;
+    }
+    const value = count == null ? '' : String(count);
+    if (n.textContent !== value) n.textContent = value;
   }
   function paintRow(d) {
     const row = [...el('donorRows').children].find((n) => n.dataset.donorId === d.id);
@@ -828,15 +834,11 @@
   }
   /* Sort = the server's sending order: Important first, not-yet-sent before sent, sent sink in the order sent; the top row is always next. */
   function applyFilters() {
-    setPanel(tab);
-    el('donorMessagesTab').tabIndex = 0;
+    const switched = page.dataset.panel !== tab;
+    showSelectedTab();
     const epoch = ++filterEpoch;
     updateCounts();
-    el('donorTable').hidden = tab === 'messages' || tab === 'volunteers';
-    if (el('donorFollowUpOpt'))
-      el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
-    el('donorMessages').hidden = tab !== 'messages';
-    el('donorVolunteers').hidden = tab !== 'volunteers';
+    if (switched) revealSelectedTab();
     if (tab === 'volunteers') {
       showVolunteers();
       return;
@@ -845,21 +847,17 @@
       showMessages();
       return;
     }
-    for (const [flag, field, rank] of [
-      ['important', 'important_order', 'important_rank'],
-      ['top_donor', 'top_order', 'top_rank'],
-    ])
+    if (tab === 'important')
       allDonors
-        .filter((d) => d[flag])
+        .filter((d) => d.important)
         .sort(
-          field === 'top_order'
-            ? topCmp
-            : (a, b) =>
-                (a[field] ?? Number.MAX_SAFE_INTEGER) - (b[field] ?? Number.MAX_SAFE_INTEGER),
+          (a, b) =>
+            (a.important_order ?? Number.MAX_SAFE_INTEGER) -
+            (b.important_order ?? Number.MAX_SAFE_INTEGER),
         )
-        .forEach((d, i) => (d[rank] = i + 1));
+        .forEach((d, i) => (d.important_rank = i + 1));
     /* A named group (e.g. GIKI) sits under its own heading and is numbered 1.. in its own order. */
-    {
+    if (tab === 'top') {
       const byGroup = (a, b) =>
         (a.group_order ?? Number.MAX_SAFE_INTEGER) - (b.group_order ?? Number.MAX_SAFE_INTEGER);
       let n = 0;
@@ -913,9 +911,6 @@
           (a.dm_sent ? (a.last_sent_at || 0) - (b.last_sent_at || 0) : 0) ||
           (a.important_order ?? Number.MAX_SAFE_INTEGER) -
             (b.important_order ?? Number.MAX_SAFE_INTEGER) ||
-          0 ||
-          Number(!!a.dm_sent) - Number(!!b.dm_sent) ||
-          (a.dm_sent ? (a.last_sent_at || 0) - (b.last_sent_at || 0) : 0) ||
           a.name.localeCompare(b.name),
       );
     draw();
@@ -1380,17 +1375,23 @@
   }
 
   async function showMessages(force = false) {
+    const box = el('donorMessages');
+    const paint = ++bankPaint;
+    if (force && bankLoad) await bankLoad.catch(() => {});
     if (!bankData || force) {
-      el('donorMessages').textContent = 'Loading saved message variants…';
+      if (!box.firstElementChild && box.textContent !== 'Loading saved message variants…')
+        box.textContent = 'Loading saved message variants…';
       try {
-        bankData = await api('/donor-messages');
+        bankLoad ??= api('/donor-messages')
+          .then((fresh) => (bankData = fresh))
+          .finally(() => (bankLoad = null));
+        await bankLoad;
       } catch (e) {
-        el('donorMessages').textContent = e.message;
+        if (paint === bankPaint && tab === 'messages' && page.open) box.textContent = e.message;
         return;
       }
     }
-    if (tab !== 'messages') return;
-    const box = el('donorMessages');
+    if (paint !== bankPaint || tab !== 'messages' || !page.open) return;
     box.textContent = '';
     const head = make('div', 'bank-heading');
     head.append(
@@ -1744,7 +1745,6 @@
           } finally {
             bankSaves.delete(item.id);
             syncBankControls();
-            fitBankPreview();
           }
         }
       };
@@ -1883,14 +1883,6 @@
     box.append(grid);
     placeBankExtras();
     syncBankControls();
-    if (typeof ResizeObserver !== 'undefined') {
-      bankFitObserver?.disconnect();
-      bankFitObserver = new ResizeObserver(() => fitBankPreview());
-      bankFitObserver.observe(grid);
-      const fitTarget = grid.querySelector('.bank-detail');
-      if (fitTarget) bankFitObserver.observe(fitTarget);
-    }
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => fitBankPreview());
   }
   function syncBankControls() {
     const box = el('donorMessages');
@@ -1919,7 +1911,6 @@
           : 'Save';
     }
   }
-  let bankFitObserver;
   function paintBankPreview(preview, text) {
     if (window.waFormat)
       preview.innerHTML = window
@@ -1932,17 +1923,6 @@
         .join('');
     else preview.textContent = text;
   }
-  function fitBankPreview(tries = 0) {
-    const preview = el('donorMessages').querySelector('.bank-preview');
-    if (!preview) return;
-    preview.style.removeProperty('font-size');
-    if (!preview.clientHeight) {
-      if (typeof tries === 'number' && tries < 30 && typeof requestAnimationFrame === 'function')
-        requestAnimationFrame(() => fitBankPreview(tries + 1));
-      return;
-    } /* Reading comfort: the type size stays steady; a long message scrolls inside its card instead of shrinking. */
-  }
-  document.fonts?.ready.then(() => fitBankPreview());
   async function api(path, body) {
     const controller = new AbortController(),
       timer = setTimeout(() => controller.abort(), 60000);
@@ -2151,47 +2131,11 @@
     el('donorTotal').textContent = data.counts.all ?? '';
     el('donorTotalAmount').textContent =
       'PKR ' + Number(data.counts.donated_amount || 0).toLocaleString('en-PK');
-    const labels = {
-      all: 'All',
-      important: '★ Important',
-      top: 'Top donors',
-      donated: 'Donated',
-      not_contacted: narrow560.matches ? 'Not DMed' : 'Not contacted',
-      volunteers: narrow700.matches ? 'Helpers' : 'Volunteers',
-    };
-    for (const b of page.querySelectorAll('[data-tab]')) {
-      if (b.dataset.tab === 'messages') {
-        b.textContent = 'Messages';
-        b.setAttribute('aria-label', 'Messages');
-        b.setAttribute('aria-selected', tab === 'messages');
-        continue;
-      }
-      paintTab(
-        b,
-        labels[b.dataset.tab],
-        b.dataset.tab === 'volunteers' ? vols.items.length : data.counts[b.dataset.tab] || 0,
-      );
-      b.setAttribute(
-        'aria-label',
-        {
-          all: 'All donors',
-          important: 'Important donors',
-          top: 'Top donors',
-          donated: 'Donated donors',
-          not_contacted: 'Not contacted donors',
-          volunteers: 'Volunteers',
-        }[b.dataset.tab] +
-          ' (' +
-          (b.dataset.tab === 'volunteers' ? vols.items.length : data.counts[b.dataset.tab] || 0) +
-          ')',
-      );
-      b.setAttribute('aria-selected', b.dataset.tab === tab);
-    }
     const rows = el('donorRows');
     const sig = tab + '|' + el('donorSearch').value + '|' + JSON.stringify(data.items);
     if (rows.children.length && sig === drawSig) return; // identical list (drawn or still being drawn): nothing flickers
+    dropRows();
     drawSig = sig;
-    rows.textContent = '';
     if (!data.items.length) {
       const empty = make('div', 'donor-empty');
       empty.append(
@@ -2216,9 +2160,9 @@
       return;
     }
     const items = data.items,
-      epoch = ++drawEpoch;
+      epoch = drawEpoch;
     let next = 0;
-    /* First screenful at once, the rest in the following frames: a tab click answers immediately even with hundreds of donors. */ const paintChunk =
+    /* Paint the first screenful now. Prepare the following rows as the reader approaches them. */ const paintChunk =
       () => {
         if (epoch !== drawEpoch) return;
         const frag = document.createDocumentFragment();
@@ -2563,12 +2507,7 @@
           paintDelivery(row, d.delivery || 'Not contacted');
         }
         rows.append(frag);
-        // More rows are drawn only when the list is scrolled near its end: opening Donors and
-        // switching tabs stay fast with hundreds of donors. Closed page: stop; opening redraws.
-        if (next < items.length && page.open) {
-          if (next < EAGER_ROWS) requestAnimationFrame(paintChunk);
-          else moreOnScroll(rows, paintChunk);
-        }
+        if (next < items.length && page.open) moreOnScroll(rows, paintChunk);
       };
     paintChunk();
   }
@@ -2603,21 +2542,20 @@
   let rowsWatch = null;
   function moreOnScroll(rows, paint) {
     rowsWatch?.disconnect();
-    let root = rows.parentElement;
-    while (root && !/auto|scroll/.test(getComputedStyle(root).overflowY)) root = root.parentElement;
     const mark = make('div', 'donor-rows-more');
     mark.setAttribute('aria-hidden', 'true');
     rows.append(mark);
-    rowsWatch = new IntersectionObserver(
+    const watch = new IntersectionObserver(
       (seen) => {
-        if (!seen.some((e) => e.isIntersecting)) return;
-        rowsWatch.disconnect();
+        if (!mark.isConnected || !seen.some((e) => e.isIntersecting)) return;
+        watch.disconnect();
         mark.remove();
         paint();
       },
-      { root, rootMargin: '0px 0px 1200px 0px' },
+      { root: el('donorTable'), rootMargin: '0px 0px 760px 0px' },
     );
-    rowsWatch.observe(mark);
+    rowsWatch = watch;
+    watch.observe(mark);
   }
   function dropRows() {
     drawEpoch++; // stop any rows still being drawn
@@ -2633,20 +2571,60 @@
   // Esc closes the dialog without close(): drop the rows first there too (closing restyles every row).
   page.addEventListener('cancel', dropRows);
   const TABS = ['all', 'important', 'top', 'donated', 'not_contacted', 'volunteers', 'messages'];
+  const tabStrip = page.querySelector('.donor-tabs');
+  let tabReveal = null;
+  let tabGesture = 0;
+  function revealSelectedTab() {
+    tabReveal?.disconnect();
+    const selected = tabStrip.querySelector('[aria-selected="true"]');
+    if (!page.open || !selected) return;
+    // Observe after layout instead of forcing a reflow while the new list is being built.
+    const watch = new IntersectionObserver(
+      ([{ boundingClientRect: box, rootBounds: strip }]) => {
+        watch.disconnect();
+        if (tabReveal !== watch || !page.open || !strip?.width || !box.width) return;
+        const delta =
+          box.left < strip.left - 1
+            ? box.left - strip.left
+            : box.right > strip.right + 1
+              ? box.right - strip.right
+              : 0;
+        if (delta)
+          tabStrip.scrollTo({
+            left: tabStrip.scrollLeft + delta,
+            behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+          });
+      },
+      { root: tabStrip },
+    );
+    tabReveal = watch;
+    watch.observe(selected);
+  }
+  for (const type of ['pointerdown', 'wheel', 'touchstart'])
+    tabStrip.addEventListener(
+      type,
+      () => {
+        tabGesture++;
+        tabReveal?.disconnect();
+        tabReveal = null;
+      },
+      { passive: true },
+    );
+
   function showSelectedTab() {
     setPanel(tab);
-    el('donorMessagesTab').tabIndex = 0;
     for (const b of page.querySelectorAll('[data-tab]')) {
-      b.setAttribute('aria-selected', String(tab === b.dataset.tab));
+      const selected = String(tab === b.dataset.tab);
+      if (b.getAttribute('aria-selected') !== selected) b.setAttribute('aria-selected', selected);
       // setAttribute (only on change), not .tabIndex: the property forces a synchronous style recalc per tab.
       const ti = b.dataset.tab === 'messages' || tab === b.dataset.tab ? '0' : '-1';
       if (b.getAttribute('tabindex') !== ti) b.setAttribute('tabindex', ti);
     }
-    el('donorTable').hidden = tab === 'messages' || tab === 'volunteers';
-    if (el('donorFollowUpOpt'))
-      el('donorFollowUpOpt').hidden = tab === 'messages' || tab === 'volunteers';
-    el('donorMessages').hidden = tab !== 'messages';
-    el('donorVolunteers').hidden = tab !== 'volunteers';
+    const hideTable = tab === 'messages' || tab === 'volunteers';
+    el('donorTable').toggleAttribute('hidden', hideTable);
+    el('donorFollowUpOpt')?.toggleAttribute('hidden', hideTable);
+    el('donorMessages').toggleAttribute('hidden', tab !== 'messages');
+    el('donorVolunteers').toggleAttribute('hidden', tab !== 'volunteers');
     if (tab === 'messages' && !el('donorMessages').textContent)
       el('donorMessages').textContent = 'Loading saved message variants…';
   }
@@ -2655,10 +2633,12 @@
     syncDmExtras();
     showSelectedTab();
     if (!page.open) page.showModal();
+    const gesture = tabGesture;
     Nav.go('donors/' + tab);
     el('donorMainBottom').focus({ preventScroll: true });
     if (loaded) applyFilters();
     await refresh(true);
+    if (page.open && gesture === tabGesture) revealSelectedTab();
     await poll();
   }
   let closedByCode = 0; // closes started by our own code (see the 'close' listener below)
@@ -2997,22 +2977,21 @@
       if (!active && j.state !== 'Idle') await refresh(true);
       if (active && seenSent !== null && j.sent !== seenSent) await refresh(true);
       seenSent = j.sent || 0;
-      for (const receipt of j.receipts || []) {
-        const row = [...el('donorRows').children].find((n) => n.dataset.donorId === receipt.id);
-        if (row) {
-          const previous = data.items.find((d) => d.id === receipt.id)?.delivery;
-          paintDelivery(
-            row,
-            previous === 'Sent'
+      if (j.receipts?.length) {
+        const rows = new Map(
+          [...el('donorRows').children].map((row) => [row.dataset.donorId, row]),
+        );
+        const deliveries = new Map(data.items.map((d) => [d.id, d.delivery]));
+        for (const receipt of j.receipts) {
+          const row = rows.get(receipt.id);
+          if (!row) continue;
+          const state =
+            deliveries.get(receipt.id) === 'Sent'
               ? 'Sent'
-              : receipt.state === 'Sent'
-                ? 'Sent'
-                : receipt.state === 'Uncertain'
-                  ? 'Uncertain'
-                  : receipt.state?.startsWith('Skipped')
-                    ? 'Skipped'
-                    : receipt.state,
-          );
+              : receipt.state?.startsWith('Skipped')
+                ? 'Skipped'
+                : receipt.state;
+          if (row.dataset.delivery !== state) paintDelivery(row, state);
         }
       }
       // every 2.5 s (5 s when this tab is hidden): live enough, half the calls and server work of 1.2 s
@@ -3442,24 +3421,6 @@
     clearTimeout(searchTimer);
     Nav.go('donors/' + next, { replace: true });
     applyFilters();
-    const btn = page.querySelector(`.donor-tabs [data-tab="${next}"]`);
-    if (btn) {
-      const strip = btn.closest('.donor-tabs');
-      if (strip) {
-        requestAnimationFrame(() => {
-          const r = btn.getBoundingClientRect();
-          const box = strip.getBoundingClientRect();
-          if (box.width && r.width) {
-            const targetLeft =
-              strip.scrollLeft + (r.left + r.width / 2) - (box.left + box.width / 2);
-            strip.scrollTo({
-              left: Math.max(0, targetLeft),
-              behavior: 'smooth',
-            });
-          }
-        });
-      }
-    }
   }
   launch.onclick = open;
   el('donorMainBottom').onclick = close;
@@ -3480,7 +3441,7 @@
         : e.key === 'End'
           ? buttons.length - 1
           : (i + (e.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
-    buttons[i].focus();
+    buttons[i].focus({ preventScroll: true });
     buttons[i].click();
   });
   el('donorSearch').oninput = () => {

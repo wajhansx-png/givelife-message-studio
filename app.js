@@ -1462,27 +1462,28 @@ document.querySelectorAll('.delay-pill').forEach(
 );
 paintTimers();
 /* ---- group dropdowns ---- */
+function closeGroupDrops() {
+  for (const drop of document.querySelectorAll('.group-drop:not([hidden])')) {
+    drop.hidden = true;
+    drop
+      .closest('.group-drop-wrap')
+      ?.querySelector('[aria-haspopup]')
+      ?.setAttribute('aria-expanded', 'false');
+  }
+}
 function toggleGroupDrop(btnId, dropId) {
   const btn = $(btnId),
     drop = $(dropId);
   if (!btn || !drop) return;
   const open = !drop.hidden;
-  document.querySelectorAll('.group-drop').forEach((d) => (d.hidden = true));
-  document
-    .querySelectorAll('[aria-haspopup]')
-    .forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  closeGroupDrops();
   if (!open) {
     drop.hidden = false;
     btn.setAttribute('aria-expanded', 'true');
   }
 }
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.group-drop-wrap')) {
-    document.querySelectorAll('.group-drop').forEach((d) => (d.hidden = true));
-    document
-      .querySelectorAll('[aria-haspopup]')
-      .forEach((b) => b.setAttribute('aria-expanded', 'false'));
-  }
+  if (!e.target.closest('.group-drop-wrap')) closeGroupDrops();
 });
 $('btnGivelife').onclick = () => sendGroup('main');
 $('btnFree').onclick = () => {
@@ -3004,11 +3005,8 @@ new MutationObserver((changes) => {
   attributeFilter: ['open', 'class', 'data-view'],
 });
 document.addEventListener('click', (event) => {
-  const tab = event.target.closest?.('[data-tab],[data-bank-nav]');
-  if (tab)
-    requestAnimationFrame(() =>
-      moveSurface($('donorMessages')?.hidden ? $('donorTable') : $('donorMessages')),
-    );
+  if (event.target.closest?.('#donorMessages [data-bank-nav]'))
+    requestAnimationFrame(() => moveSurface($('donorMessages')));
 });
 
 /* ---- start ---- */

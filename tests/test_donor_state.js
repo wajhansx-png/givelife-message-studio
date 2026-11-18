@@ -53,6 +53,8 @@ async function main() {
     el: (id) => nodes[id],
     page: { dataset: {}, querySelectorAll: () => [] },
     hideSent: false,
+    showSelectedTab() {},
+    revealSelectedTab() {},
     paintHideRow() {},
     updateCounts() {},
     paintRow() {},

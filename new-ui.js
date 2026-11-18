@@ -14,6 +14,13 @@ const ui2Frame = (fn) => {
     });
   };
 };
+// Row rendering does not change the chrome, menus or other screens these helpers manage.
+function ui2Observe(run, options) {
+  new MutationObserver((records) => {
+    const rows = document.getElementById('donorRows');
+    if (!rows || records.some(({ target }) => !rows.contains(target))) run();
+  }).observe(document.body, { childList: true, subtree: true, ...options });
+}
 (() => {
   function arrangeReader() {
     const screen = document.getElementById('messageFocus');
@@ -78,7 +85,7 @@ const ui2Frame = (fn) => {
     arrangeStatus();
   };
   run();
-  new MutationObserver(ui2Frame(run)).observe(document.body, { childList: true, subtree: true });
+  ui2Observe(ui2Frame(run));
 })();
 
 /* 1. The home screen itself now shows the message beside the send list on a computer (see "Home" below),
@@ -209,9 +216,7 @@ const ui2Frame = (fn) => {
     picker.toggleAttribute('data-ui2-speed-only', !!speedOnly);
     paint();
   }
-  new MutationObserver(ui2Frame(relabel)).observe(document.body, {
-    childList: true,
-    subtree: true,
+  ui2Observe(ui2Frame(relabel), {
     characterData: true,
   });
   relabel();
@@ -268,7 +273,7 @@ const ui2Frame = (fn) => {
     else restore(bar);
   }
   wide.addEventListener('change', sync);
-  new MutationObserver(ui2Frame(sync)).observe(document.body, { childList: true, subtree: true });
+  ui2Observe(ui2Frame(sync));
   sync();
 })();
 
@@ -338,7 +343,7 @@ const ui2Frame = (fn) => {
       box.after(hint);
     }
   }
-  new MutationObserver(ui2Frame(bank)).observe(document.body, { childList: true, subtree: true });
+  ui2Observe(ui2Frame(bank));
   bank();
 })();
 
@@ -373,7 +378,7 @@ const ui2Frame = (fn) => {
     help(document.getElementById('swDm'), 'Turn on only when you want the app to DM by itself');
     help(document.getElementById('swNew'), 'New donors get a DM automatically');
   }
-  new MutationObserver(ui2Frame(group)).observe(document.body, { childList: true, subtree: true });
+  ui2Observe(ui2Frame(group));
   group();
 })();
 
@@ -388,9 +393,7 @@ const ui2Frame = (fn) => {
     const idle = !running && toggle.textContent.trim() === 'Stop DMs';
     toggle.toggleAttribute('data-ui2-idle', idle);
   }
-  new MutationObserver(ui2Frame(sync)).observe(document.body, {
-    childList: true,
-    subtree: true,
+  ui2Observe(ui2Frame(sync), {
     characterData: true,
     attributes: true,
     attributeFilter: ['data-active', 'hidden'],
@@ -515,8 +518,10 @@ const ui2Frame = (fn) => {
               : path
                 ? ''
                 : 'message';
-    for (const b of document.querySelectorAll('.ui2-tab'))
-      b.setAttribute('aria-current', String(b.dataset.tab === on));
+    for (const b of document.querySelectorAll('.ui2-tab')) {
+      const current = String(b.dataset.tab === on);
+      if (b.getAttribute('aria-current') !== current) b.setAttribute('aria-current', current);
+    }
   }
 
   /* Start a new case: its name and the amount needed. The old case is saved first. Important and Top donors stay
@@ -887,9 +892,7 @@ const ui2Frame = (fn) => {
   };
   run();
   relayout();
-  new MutationObserver(ui2Frame(run)).observe(document.body, {
-    childList: true,
-    subtree: true,
+  ui2Observe(ui2Frame(run), {
     characterData: true,
   });
   for (const q of ['(min-width: 900px)', '(min-width: 700px)'])
@@ -1199,7 +1202,7 @@ const ui2Frame = (fn) => {
     live();
   };
   run();
-  new MutationObserver(ui2Frame(run)).observe(document.body, { childList: true, subtree: true });
+  ui2Observe(ui2Frame(run));
 })();
 
 /* 9. Donors (PDF pages 15-23, V4 page 40). Same tab words on phone and computer, search as an icon on a phone,
@@ -1209,48 +1212,6 @@ const ui2Frame = (fn) => {
   const $ = (id) => document.getElementById(id);
   const wide = () => ui2Wide.matches;
   const setText = (n, t) => n && n.textContent !== t && (n.textContent = t);
-  function tabs() {
-    for (const b of document.querySelectorAll('.donor-tabs [data-tab]')) {
-      const name = b.querySelector('.tab-name');
-      if (!name) continue;
-      const tab = b.dataset.tab;
-      if (tab === 'important')
-        setText(name.querySelector('.tab-word'), wide() ? 'Important' : 'Star');
-      else {
-        const t = {
-          all: 'All',
-          top: 'Top',
-          donated: 'Donated',
-          not_contacted: 'Not messaged',
-          volunteers: 'Volunteers',
-        }[tab];
-        if (t) setText(name, t);
-      }
-    }
-    /* The tab you are on is always in view: the row scrolls to it when the tab changes (and when the screen opens). */
-    const strip = document.querySelector('.donor-tabs'),
-      sel = strip?.querySelector('[aria-selected="true"]');
-    if (strip && sel) {
-      watchTabs(strip);
-      const key = sel.dataset.tab;
-      if (strip.dataset.ui2Sel !== key) {
-        strip.dataset.ui2Sel = key;
-        /* right after opening the row may not be laid out yet: try again until it is */
-        /* labels can still change width for a moment (counts load): keep the tab in view ~2.5 s */
-        const started = Date.now();
-        const tryScroll = (n) =>
-          requestAnimationFrame(() => {
-            if (sel.getAttribute('aria-selected') !== 'true' || tabsUserAt > started) return;
-            const a = sel.getBoundingClientRect(),
-              b = strip.getBoundingClientRect();
-            if (!a.width || a.left < b.left - 1 || a.right > b.right + 1)
-              scrollTabToFull(sel, false);
-            if (n > 0) setTimeout(() => tryScroll(n - 1), 150);
-          });
-        tryScroll(16);
-      }
-    }
-  }
   function head() {
     const h = document.querySelector('.donor-head'),
       nav = $('donorNavMore'),
@@ -1274,7 +1235,6 @@ const ui2Frame = (fn) => {
     const msgs = document.querySelector('.donor-message-tablist');
     if (msgs && nav.parentElement === h && msgs.nextElementSibling !== nav)
       h.insertBefore(msgs, nav);
-    setText($('donorMessagesTab'), wide() ? 'Messages' : 'Msgs');
     if (!$('ui2DonorSearch')) {
       const s = document.createElement('button');
       s.type = 'button';
@@ -1353,14 +1313,11 @@ const ui2Frame = (fn) => {
     if (toggle.dataset.ui2Sent !== sent) toggle.dataset.ui2Sent = sent;
   }
   const run = () => {
-    tabs();
     head();
     bottom();
   };
   run();
-  new MutationObserver(ui2Frame(run)).observe(document.body, {
-    childList: true,
-    subtree: true,
+  ui2Observe(ui2Frame(run), {
     characterData: true,
     attributes: true,
     attributeFilter: ['data-active', 'hidden'],
@@ -1580,9 +1537,7 @@ const ui2Frame = (fn) => {
     finder();
   };
   run();
-  new MutationObserver(ui2Frame(run)).observe(document.body, {
-    childList: true,
-    subtree: true,
+  ui2Observe(ui2Frame(run), {
     characterData: true,
   });
 })();
@@ -1972,7 +1927,7 @@ document.addEventListener('click', (e) => {
     readerExtras();
   };
   run();
-  new MutationObserver(ui2Frame(run)).observe(document.body, { childList: true, subtree: true });
+  ui2Observe(ui2Frame(run));
 })();
 
 /* 17. Phone: a Msgs button in the donors bottom bar on every tab (it presses the real Msgs control). */
@@ -1993,7 +1948,7 @@ document.addEventListener('click', (e) => {
       if (!bar.querySelector(':scope > .ui2-msgs-bottom')) bar.append(proxy());
   }
   run();
-  new MutationObserver(ui2Frame(run)).observe(document.body, { childList: true, subtree: true });
+  ui2Observe(ui2Frame(run));
 })();
 
 /* The shared header's Add action follows the selected directory tab. */
@@ -2096,72 +2051,7 @@ document.addEventListener(
     copy.hidden = editing;
   }
   const run = ui2Frame(arrange);
-  new MutationObserver(run).observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+  ui2Observe(run, {});
   ui2Wide.addEventListener('change', run);
   arrange();
 })();
-
-/* The person scrolling the tab row themselves always wins over automatic scrolling. */
-let tabsUserAt = 0;
-function watchTabs(strip) {
-  if (strip.dataset.ui2Watch) return;
-  strip.dataset.ui2Watch = '1';
-  for (const e of ['pointerdown', 'wheel', 'touchstart'])
-    strip.addEventListener(e, () => (tabsUserAt = Date.now()), { passive: true });
-}
-function scrollTabToFull(btn, smooth = true) {
-  if (!btn) return false;
-  const strip = btn.closest('.donor-tabs');
-  if (!strip) return false;
-
-  const btnBox = btn.getBoundingClientRect();
-  const stripBox = strip.getBoundingClientRect();
-  if (!stripBox.width || !btnBox.width || !btn.checkVisibility()) return false;
-
-  const nextTab = btn.nextElementSibling;
-  const prevTab = btn.previousElementSibling;
-
-  let targetScrollLeft = strip.scrollLeft;
-
-  if (nextTab) {
-    const nextBox = nextTab.getBoundingClientRect();
-    const padding = 16;
-    if (nextBox.right > stripBox.right - padding) {
-      targetScrollLeft += nextBox.right - stripBox.right + padding;
-    } else if (btnBox.left < stripBox.left + padding) {
-      targetScrollLeft -= stripBox.left - btnBox.left + padding;
-    }
-  } else {
-    const padding = 16;
-    if (btnBox.right > stripBox.right - padding) {
-      targetScrollLeft += btnBox.right - stripBox.right + padding;
-    } else if (btnBox.left < stripBox.left + padding) {
-      targetScrollLeft -= stripBox.left - btnBox.left + padding;
-    }
-  }
-
-  if (prevTab && btnBox.left < stripBox.left + 16) {
-    const prevBox = prevTab.getBoundingClientRect();
-    const padding = 16;
-    targetScrollLeft -= stripBox.left - prevBox.left + padding;
-  }
-
-  strip.scrollTo({
-    left: Math.max(0, targetScrollLeft),
-    behavior: smooth ? 'smooth' : 'instant',
-  });
-  return true;
-}
-
-document.addEventListener(
-  'click',
-  (e) => {
-    const btn = e.target.closest('.donor-tabs [data-tab], .donor-tabs button');
-    if (!btn) return;
-    requestAnimationFrame(() => scrollTabToFull(btn));
-  },
-  true,
-);

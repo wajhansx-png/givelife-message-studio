@@ -1,7 +1,6 @@
 /* Comfort helpers for screens built after page load. Reuses the live controls and their handlers. */
 (() => {
-  const phone = matchMedia('(max-width:899px)'),
-    still = matchMedia('(prefers-reduced-motion: reduce)');
+  const phone = matchMedia('(max-width:899px)');
 
   /* Accessibility: dialog headers/footers are not page landmarks; long previews must be keyboard-reachable. */
   let queued = 0;
@@ -46,53 +45,18 @@
       if (!e.hasAttribute('aria-label')) e.setAttribute('aria-label', 'Message preview');
     });
   }
-  new MutationObserver(() => {
-    if (!queued) queued = setTimeout(normalise, 120);
+  new MutationObserver((records) => {
+    if (
+      !queued &&
+      records.some(({ addedNodes }) =>
+        [...addedNodes].some(
+          (node) => node.nodeType === Node.ELEMENT_NODE && !node.closest('#donorRows'),
+        ),
+      )
+    )
+      queued = setTimeout(normalise, 120);
   }).observe(document.body, { childList: true, subtree: true });
   normalise();
-
-  /* Smooth screen changes: a short fade-and-rise whenever a screen, tab or message appears. */
-  function enter(el) {
-    // Instant response: zero animation lag
-  }
-  const shown = (el) => (el.tagName === 'DIALOG' ? el.open : !el.hidden);
-  new MutationObserver((records) => {
-    for (const r of records) {
-      const el = r.target;
-      /* Only whole screens: page dialogs and the message editor. Small dialogs and ordinary hidden toggles never animate the page. */
-      const screen =
-        (el.tagName === 'DIALOG' &&
-          !el.matches('.memory-dialog,.keyboard-dialog,#feedbackDialog')) ||
-        el.id === 'messageFocus';
-      if (!screen || r.attributeName !== (el.tagName === 'DIALOG' ? 'open' : 'hidden')) continue;
-      if (shown(el)) enter(el);
-      else if (
-        !document.querySelector('dialog[open]:not(.memory-dialog):not(.keyboard-dialog)') &&
-        document.getElementById('messageFocus')?.hidden !== false
-      )
-        enter(document.getElementById('main-workspace'));
-    }
-  }).observe(document.body, {
-    attributes: true,
-    attributeFilter: ['open', 'hidden'],
-    subtree: true,
-  });
-  document.addEventListener(
-    'click',
-    (e) => {
-      const t = e.target.closest(
-        '#donorMessagesTab,[data-bank-nav],.bank-back,.bank-back-bottom,[data-view-button]',
-      );
-      if (!t) return;
-      requestAnimationFrame(() => {
-        if (t.matches('[data-bank-nav]'))
-          enter(document.querySelector('#donorMessages .bank-detail'));
-        else if (t.matches('#donorMessagesTab')) enter(document.getElementById('donorMessages'));
-        else if (t.matches('[data-view-button]')) enter(document.getElementById('card'));
-      });
-    },
-    true,
-  );
 
   /* Donors: Messages lives in the top nav. On phones Test DM and the poster switch move into More,
     so the bottom bar is a single row: Back · Stop · DM ★ · DM all. */

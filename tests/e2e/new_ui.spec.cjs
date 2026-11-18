@@ -735,7 +735,7 @@ test('/new phone donors: the ⋯ menu holds Add numbers, Add one donor, Bulk and
   await page.locator('#donorNavMore > summary').click();
   for (const id of ['#donorNumbers', '#donorAdd', '#donorBulk'])
     await expect(page.locator(id)).toBeVisible();
-  await expect(page.locator('#donorDeselectAll')).toBeHidden(); // only on the Important tab
+  await expect(page.locator('#donorDeselectAll')).toBeHidden(); // only on Important, Top donors and Donated
   const panel = await page.locator('#donorNavMore .compact-nav-panel').boundingBox();
   const bar = await page.locator('.donor-tabs').boundingBox();
   expect(panel.y + panel.height).toBeLessThanOrEqual(bar.y + 1); // opens upward, over the list (browser rectangles differ by a subpixel)

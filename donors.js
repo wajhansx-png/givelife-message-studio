@@ -936,19 +936,42 @@
       return true;
     }
   })();
+  /* Deselect all, in the Important, Top donors and Donated tabs: the same quiet chip in the top bar, one per tab. */
+  const DESELECT = {
+    important: {
+      flag: 'important',
+      action: 'clear_important',
+      title: 'Remove the star from every Important donor',
+      ask: (n) => 'Remove the star from all ' + n + ' Important donors?',
+    },
+    top: {
+      flag: 'top_donor',
+      action: 'clear_top',
+      title: 'Take every donor off Top donors (they stay Important)',
+      ask: (n) => 'Take all ' + n + ' donors off Top donors? They stay Important.',
+    },
+    donated: {
+      flag: 'donated',
+      action: 'clear_donated',
+      title: 'Unmark every donor as Donated for this case',
+      ask: (n) => 'Unmark all ' + n + ' donors as Donated? Their amounts for this case are cleared too.',
+    },
+  };
   function paintHideRow() {
     const box = el('donorHideRow');
     if (!box) return;
     const n = allDonors.filter((d) => d.important && d.dm_sent).length;
-    const starred = allDonors.filter((d) => d.important).length;
-    box.hidden = tab !== 'important' || !starred;
+    const flag = DESELECT[tab]?.flag;
+    const starred = flag ? allDonors.filter((d) => d[flag]).length : 0;
+    box.hidden = !starred;
     if (box.hidden) return;
-    el('donorHideSent').hidden = !n;
+    el('donorHideSent').hidden = tab !== 'important' || !n;
     el('donorHideSent').textContent = hideSent
       ? n + ' contacted hidden · Show'
       : 'Showing contacted · Hide';
     el('donorHideSent').setAttribute('aria-pressed', String(!hideSent));
     el('donorDeselectAll').textContent = 'Deselect all ' + starred;
+    el('donorDeselectAll').title = DESELECT[tab].title;
   }
   const picker = make('dialog', 'donor-form-dialog batch-dialog');
   picker.setAttribute('aria-label', 'Donor batch settings');
@@ -1220,11 +1243,13 @@
     applyFilters();
   };
   el('donorDeselectAll').onclick = async () => {
-    const starred = allDonors.filter((d) => d.important).length;
-    if (!starred || !confirm('Remove the star from all ' + starred + ' Important donors?')) return;
+    const d = DESELECT[tab];
+    if (!d) return;
+    const starred = allDonors.filter((x) => x[d.flag]).length;
+    if (!starred || !confirm(d.ask(starred))) return;
     el('donorDeselectAll').disabled = true;
     try {
-      await api('/donors', { action: 'clear_important' });
+      notice((await api('/donors', { action: d.action })).reply || '');
       await refresh(true);
     } catch (e) {
       notice(e.message, true);

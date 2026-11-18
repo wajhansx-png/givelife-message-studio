@@ -799,6 +799,10 @@ class DonorIntegration:
             }
         if action == "clear_important":
             return self.book.clear_important()
+        if action == "clear_top":
+            return self.book.clear_flag("top_donor")
+        if action == "clear_donated":
+            return self.book.clear_flag("donated")
         raise ValueError("Unknown donor action.")
 
     NOT_A_NAME = r"(?!(?:send|dm|show|list|remove|delete|add|text|message|post|resend|stop|hold|resume|cancel|what|how|who|when|where|why|is|are|do|does|did|please|the|all|every|set|make|mark)\b)"

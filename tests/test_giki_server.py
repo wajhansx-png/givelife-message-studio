@@ -248,7 +248,7 @@ class GikiTestPeople(Base):
                     stdout=json.dumps({"code": "SUCCESS", "results": {"message_id": "m1"}})
                 ),
             ),
-            patch.object(app, "send_group_extras", lambda jid: seen.setdefault("group_files", jid) and []),
+            patch.object(app, "send_group_extras", lambda jid, items=None: seen.setdefault("group_files", jid) and []),
             patch("group_extras.lead", lead),
             patch("group_extras.after_items", lambda store, profile: []),
         ]

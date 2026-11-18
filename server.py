@@ -30,7 +30,7 @@ DATA.mkdir(parents=True, exist_ok=True)
 DRAFT = DATA / "drafts.json"
 DEVICE = os.environ.get("WHATSAPP_DEVICE_ID", "")
 GOWA_URL = os.environ.get("GOWA_URL", "http://127.0.0.1:3000").rstrip("/")
-import contextvars, wa_lines
+import contextlib, contextvars, wa_lines
 
 _LINE = contextvars.ContextVar("wa_line", default="")
 _LOCKED_ROUTE = contextvars.ContextVar("locked_send_route", default=None)
@@ -167,6 +167,13 @@ def _wire_lock():
     return _device_lock("wire", WIRE_LOCK)
 
 
+@contextlib.contextmanager
+def send_chat(line=""):
+    """Keep one chat's sequence together on its WhatsApp account."""
+    with on_line(line), _send_lock():
+        yield
+
+
 def _recipient_lock(jid):
     return _DEVICE_LOCKS.get(("recipient", GOWA_URL, jid))
 
@@ -273,7 +280,7 @@ def prune_finished(table, keep=100, protect=(), *, finished=lambda v: bool(v.get
 def serialized_send(fn):
     @wraps(fn)
     def call(*args, **kwargs):
-        with _wire_lock():
+        with _send_lock(), _wire_lock():
             for secret_name in ("DEEPSEEK_API_KEY", "UI_ACCESS_KEY", "DB_URI"):
                 secret = os.environ.get(secret_name, "")
                 if len(secret) > 8 and any(
@@ -1387,13 +1394,13 @@ def send_dm_test_files(jid, pdf=None, video=None):
     return out
 
 
-def send_group_extras(jid):
-    """After a group's poster + caption went out: the case's PDF, then its video (each only if saved and switched on).
+def send_group_extras(jid, items=None):
+    """After a group's opening message, send the remaining selected attachments in order.
     Never retried: if one is not confirmed, the next one is not sent and the owner is told to check WhatsApp."""
     import group_extras
 
     out = []
-    for kind, ident in group_extras.to_send(STORE):
+    for kind, ident in group_extras.to_send(STORE) if items is None else items:
         try:
             r = send_batch_attachment(jid, "", ident)
         except Exception as e:  # on hold, stopped, or the file is gone: nothing was sent for this one
@@ -1442,20 +1449,30 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                     "message": f"Posted recently. Try in {math.ceil((900 - age) / 60)} min.",
                 }
     check_stop()
-    cap = DATA / ("caption-" + uuid.uuid4().hex + ".txt")
-    atomic_write(cap, caption)
     import group_extras
 
     to_group = str(jid).endswith("@g.us") and not _DM_TO_GROUP.get()  # a test person's DM keeps the DM rules
     profile = "group" if to_group else "giki" if _LINE.get().startswith("giki") else "dm"
-    lead = group_extras.lead(STORE, profile) if STORE else None  # the case video carries the text
+    if to_group:
+        lead, group_items = group_extras.group_sequence(STORE)
+        follow = []
+    else:
+        lead = group_extras.lead(STORE, profile) if STORE else None
+        follow = (
+            group_extras.after_items(STORE, profile) if STORE and not _AFTER_BY_BATCH.get() else []
+        )
+    cap = None
     try:
-        poster = poster_media("group" if to_group else "dm")
         check_hold()
         check_stop()
         if lead:
             result = mapping(send_batch_attachment(jid, caption, lead))
         else:
+            poster = poster_media("group" if to_group else "dm")
+            cap = DATA / ("caption-" + uuid.uuid4().hex + ".txt")
+            atomic_write(cap, caption)
+            check_hold()
+            check_stop()
             r = post_media(jid, cap, poster)
             try:
                 result = mapping(json.loads(r.stdout))
@@ -1466,11 +1483,6 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                 }
         # a DM: what follows the first message (Giki: the 2nd and 3rd messages; DMs: the after poster), in order.
         # Groups get theirs with their files. Never retried: one not confirmed stops the next, and the owner is told.
-        follow = (
-            group_extras.after_items(STORE, profile)
-            if STORE and profile != "group" and not _AFTER_BY_BATCH.get()
-            else []
-        )
         if follow and result.get("code") == "SUCCESS":
             done = []
             for kind, ident in follow:
@@ -1485,7 +1497,8 @@ def send_image(jid, caption, check_gap=False, _retry=True):
             if any(d["code"] != "SUCCESS" for d in done):
                 result["message"] = "The message went, but a file after it was not confirmed. Check WhatsApp."
     finally:
-        cap.unlink(missing_ok=True)
+        if cap is not None:
+            cap.unlink(missing_ok=True)
     if STORE:
         receipt = {
             "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -1512,7 +1525,7 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                 + ". Link the number that is in the groups.",
             }
     if result.get("code") == "SUCCESS" and to_group:
-        extras = send_group_extras(jid)
+        extras = send_group_extras(jid, group_items)
         if extras:
             result["extras"] = extras
     with (DATA / "group-send-log.jsonl").open("a", encoding="utf-8") as f:
@@ -1661,7 +1674,16 @@ def _group_attempt(job, jid, outgoing):
     """One try at one group. Transport trouble becomes a result, never an exception that ends the job."""
     try:
         if job.get("with_picture", True):
-            return send_image(jid, outgoing, not job.get("manual", False))
+            result = send_image(jid, outgoing, not job.get("manual", False))
+            if result.get("code") == "SUCCESS" and any(
+                item.get("code") != "SUCCESS" for item in result.get("extras") or []
+            ):
+                return {
+                    **result,
+                    "code": "PARTIAL",
+                    "message": "The group message went, but an attachment was not confirmed. Check WhatsApp before sending again.",
+                }
+            return result
         result = send_text(jid, outgoing)
         if result.get("code") == "SUCCESS":
             record_delivery(jid, outgoing, result)
@@ -1690,25 +1712,23 @@ def run_job(job_id, keys, caption, queue=False):
     job = JOBS[job_id]
     event = JOB_CANCEL.setdefault(job_id, threading.Event())
     last_send = None
-    failed_in_row = 0
     try:
         for index, key in enumerate(keys):
-            outgoing = caption_facts.current(
-                sys.modules[__name__], job.get("captions", [caption] * len(keys))[index]
-            )
+            outgoing = job.get("captions", [caption] * len(keys))[index]
             if event.is_set() or on_hold():
                 break
             name, jid = (
                 ("Givelife test", "120363431210327603@g.us") if key == "test" else GROUPS[key]
             )
-            if last_send is not None:
+            remaining_gap = max(0, 60 - (time.monotonic() - last_send)) if last_send is not None else 0
+            if remaining_gap:
                 job.update(
-                    message="Waiting 60 seconds between recipients before " + name,
-                    next_send_at=time.time() + max(0, 60 - (time.monotonic() - last_send)),
+                    message=f"Waiting {math.ceil(remaining_gap)} seconds before {name}",
+                    next_send_at=time.time() + remaining_gap,
                     next_target=key,
                 )
                 save_job(job_id)
-                if event.wait(max(0, 60 - (time.monotonic() - last_send))):
+                if event.wait(remaining_gap):
                     break
             result, stop_all = None, False
             for attempt in range(GROUP_RECONNECT_TRIES + 1):
@@ -1718,10 +1738,11 @@ def run_job(job_id, keys, caption, queue=False):
                         break
                     job.update(message="Sending to " + name, next_send_at=None, next_target=key)
                     save_job(job_id)
-                    outgoing = caption_facts.current(sys.modules[__name__], outgoing)
+                    current_caption = caption_facts.current(sys.modules[__name__], outgoing)
                     OWNER_GUARD.cancel_event = event
                     try:
-                        result = _group_attempt(job, jid, outgoing)
+                        started_at = time.monotonic()
+                        result = _group_attempt(job, jid, current_caption)
                     finally:
                         OWNER_GUARD.cancel_event = None
                 if not _not_sent_disconnected(result) or attempt == GROUP_RECONNECT_TRIES:
@@ -1739,13 +1760,9 @@ def run_job(job_id, keys, caption, queue=False):
             job["results"].append({"group": name, **result})
             save_job(job_id)
             if result.get("code") == "SUCCESS":
-                last_send = time.monotonic()
-                failed_in_row = 0
+                last_send = started_at
             elif result.get("code") != "COOLDOWN":
-                # Never retry an uncertain/error result for this group; carry on with the others.
-                failed_in_row += 1
-                if failed_in_row >= 3 or _not_sent_disconnected(result):
-                    break
+                break  # an incomplete group post leaves all later groups untouched
         sent = sum(r.get("code") == "SUCCESS" for r in job["results"])
         if sent and job.get("manual"):
             # Owner-sent and scheduled group posts teach too (Auto posts are recorded by the engine).
@@ -2883,7 +2900,7 @@ def last_results():
 
 
 def start_keys_job(keys, caption, queue=False):
-    return bool(start_send_job([k for k in GROUPS if k in keys], caption, manual=False))
+    return bool(start_send_job([k for k in keys if k in GROUPS], caption, manual=False))
 
 
 def group_messages(jid):
@@ -2950,17 +2967,19 @@ def send_dm_test(text, poster=True, files=True, pdf=None, video=None):
     with _send_lock():
         check_hold()
         result = send_image(me, body) if poster else send_text(me, body)
-        sent_files = send_dm_test_files(me, pdf, video) if files and result.get("code") == "SUCCESS" else []
+        after = result.get("after") or []
+        after_ok = all(part.get("code") == "SUCCESS" for part in after)
+        sent_files = send_dm_test_files(me, pdf, video) if files and result.get("code") == "SUCCESS" and after_ok else []
     if result.get("code") != "SUCCESS":
         raise ValueError(
             "Test not confirmed: " + str(result.get("message", ""))[:100] + " Check WhatsApp."
         )
-    note = files_note(sent_files)
+    note = files_note(after + sent_files)
     return {
         "code": "SUCCESS",
         "files": sent_files,
         "files_note": note,
-        "files_ok": all(f.get("code") == "SUCCESS" for f in sent_files),
+        "files_ok": after_ok and all(f.get("code") == "SUCCESS" for f in sent_files),
         "reply": "Test DM sent to your own WhatsApp." + (" " + note + "." if note else ""),
     }
 

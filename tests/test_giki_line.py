@@ -250,7 +250,7 @@ class GikiList(Fixture):
         jobs = self.g.jobs._load()
         j = jobs["jobs"][-1]
         j.update(state="Interrupted", boot="an-older-boot")
-        j["receipts"][0].update(steps={"video": "Sending"}, follow_up=None)
+        j["receipts"][0].update(steps={"video": "Sent"}, follow_up=None)
         j["receipts"][1].update(steps={}, follow_up=None)
         self.g.jobs._save(jobs)
         for receipt in j["receipts"]:
@@ -262,7 +262,7 @@ class GikiList(Fixture):
             (b["phone"][-1], b.get("extra") or ("share" if not b["poster"] else "case"))
             for b in self.sent
         ]
-        # person 0: the video may have gone, so it is never sent again; the PDF and the share go
+        # person 0: the video was confirmed; only the PDF and the share go
         # person 1: the video, the PDF, then the share; nobody gets the case twice
         self.assertEqual(
             got, [("0", "pdf"), ("0", "share"), ("1", "video"), ("1", "pdf"), ("1", "share")]
@@ -1004,52 +1004,59 @@ class GikiSelfHealing(Fixture):
         self.chat.readable = False
         self.script = ["ok", "drop"]  # person 0's poster went but its answer was lost: cannot check
         job = self.run_all()
-        self.assertEqual(self.chat.got("923002000000"), ["case", "poster", "pdf", "share"])
+        self.assertEqual(self.chat.got("923002000000"), ["case", "poster"])
         self.assertEqual(
             job["receipts"][0]["steps"]["poster"], "Uncertain"
         )  # recorded, never resent
-        self.assertEqual(self.chat.got("923002000001"), ["case", "poster", "pdf", "share"])
-        self.assertEqual(job["state"], "Completed")  # one unclear message does not stop the others
+        self.assertEqual(self.chat.got("923002000001"), [])
+        self.assertEqual(job["state"], "Stopped")
+        self.assertEqual(self.g.jobs.finish_half_sent(), 0)
+        self.assertEqual(self.chat.got("923002000000"), ["case", "poster"])
 
-    def test_a_message_that_fails_three_times_does_not_stop_the_person_or_the_batch(self):
+    def test_a_message_that_fails_three_times_stops_before_later_steps_and_people(self):
         self.script = ["ok", "fail", "fail", "fail"]  # person 0's poster does not go, 3 times
         job = self.run_all()
-        self.assertEqual(job["state"], "Completed")
-        self.assertEqual(self.chat.got("923002000001"), ["case", "poster", "pdf", "share"])
-        # person 0: the rest still went, and the poster was sent once more at the end of the batch
-        self.assertEqual(self.chat.got("923002000000"), ["case", "pdf", "share", "poster"])
-        self.assertEqual(job["receipts"][0]["steps"]["poster"], "Sent")
-        self.assertEqual(self.g.jobs.finish_half_sent(), 0)  # nothing left: never twice
+        self.assertEqual(job["state"], "Stopped")
+        self.assertEqual(self.chat.got("923002000001"), [])
+        self.assertEqual(self.chat.got("923002000000"), ["case"])
+        self.assertEqual(job["receipts"][0]["steps"]["poster"], "Not sent")
+        self.assertEqual(self.g.jobs.finish_half_sent(), 1)
+        self.assertEqual(self.chat.got("923002000000"), ["case", "poster", "pdf", "share"])
+        self.assertEqual(self.g.jobs.finish_half_sent(), 0)
 
-    def test_a_first_message_that_fails_three_times_is_tried_again_at_the_end_of_the_batch(self):
+    def test_a_failed_first_message_is_never_moved_behind_another_person(self):
         self.script = [
             "fail",
             "lost",
             "fail",
         ]  # person 0's case does not go, 3 times (checked in the chat)
         job = self.run_all()
-        self.assertEqual((job["state"], job["sent"], job["failed"]), ("Completed", 2, 0))
-        self.everyone_complete()
-        self.assertEqual(
-            [r[1][-1] for r in self.chat.rows][:4], ["1"] * 4
-        )  # person 1 first, person 0 after
-        self.assertEqual(self.g.waiting_ids(), [])
+        self.assertEqual((job["state"], job["sent"], job["failed"]), ("Stopped", 0, 1))
+        self.assertEqual(self.chat.rows, [])
+        self.assertEqual(len(self.g.waiting_ids()), 2)
 
     def test_a_message_that_never_goes_is_left_for_resume_and_never_doubled(self):
         self.never = (
             "923002000000",
             "poster",
-        )  # person 0's poster never goes: 3 tries, then 3 at the end
+        )  # person 0's poster never goes
         job = self.run_all()
-        self.assertEqual(job["state"], "Completed")
+        self.assertEqual(job["state"], "Stopped")
         self.assertEqual(job["receipts"][0]["steps"]["poster"], "Not sent")
-        self.assertEqual(self.chat.got("923002000000"), ["case", "pdf", "share"])
+        self.assertEqual(self.chat.got("923002000000"), ["case"])
+        with self.assertRaisesRegex(ValueError, "remaining recipients are still waiting"):
+            self.g.resume({})
+        self.assertEqual(self.chat.got("923002000001"), [])
         self.never = None  # WhatsApp is fine again
-        self.assertEqual(self.g.jobs.finish_half_sent(), 1)  # Resume sends just the poster
-        self.assertEqual(self.chat.got("923002000000"), ["case", "pdf", "share", "poster"])
+        with patch.object(self.g.jobs, "_run"):
+            self.g.resume({"request_id": "resumed-in-order"})
+        self.assertEqual(self.chat.got("923002000000"), ["case", "poster", "pdf", "share"])
+        self.assertEqual(self.chat.got("923002000001"), [])
+        self.run_job(self.g.jobs)
+        self.everyone_complete()
         self.assertEqual(self.g.jobs.finish_half_sent(), 0)
 
-    def test_three_people_in_a_row_failing_stops_the_batch_with_a_clear_reason(self):
+    def test_first_incomplete_chat_stops_the_batch_with_a_clear_reason(self):
         for i in range(2, 4):
             self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})
         self.script = ["ok"] + ["fail"] * 3 + ["ok", "ok"]  # person 0: poster fails
@@ -1057,8 +1064,9 @@ class GikiSelfHealing(Fixture):
         self.script += ["ok"] + ["fail"] * 3 + ["ok", "ok"]  # person 2: poster fails
         job = self.run_all()
         self.assertEqual(job["state"], "Stopped")
-        self.assertIn("3 people in a row", job["error"])
-        self.assertEqual(self.chat.got("923002000003"), [])  # the 4th person was not started
+        self.assertIn("poster picture", job["error"])
+        for i in range(1, 4):
+            self.assertEqual(self.chat.got(f"92300200000{i}"), [])
 
     def test_a_restart_in_the_middle_of_a_message_is_settled_by_the_chat(self):
         self.run_all()

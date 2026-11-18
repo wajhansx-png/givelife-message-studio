@@ -187,6 +187,25 @@ class Sending(unittest.TestCase):
         self.assertNotIn("extras", dm)  # DMs never get them
         self.assertEqual(len(self.calls), 2)
 
+    def test_each_group_finishes_the_attachment_selection_it_started_with(self):
+        group_extras.set_text_on(app.STORE, "video")
+        transport = app.send_batch_attachment
+
+        def send(jid, caption, ident):
+            if caption:
+                group_extras.set_text_on(app.STORE, "poster")
+                group_extras.set_on(app.STORE, "pdf", False)
+            return transport(jid, caption, ident)
+
+        with (
+            patch.object(app, "send_batch_attachment", side_effect=send),
+            patch.object(app, "api_result", return_value={"is_connected": True, "is_logged_in": True}),
+            patch.object(app, "record_delivery"),
+        ):
+            result = app.send_image(GROUP, "Caption")
+        self.assertEqual(result["code"], "SUCCESS")
+        self.assertEqual([(c[1], c[2]) for c in self.calls], [("Caption", self.video_id), ("", self.pdf_id)])
+
 
     def test_an_auto_group_post_goes_the_same_way_poster_then_the_ticked_files(self):
         """Auto (every 45 minutes) posts through _group_attempt exactly like this; the ticked PDF and video follow."""

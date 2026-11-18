@@ -35,6 +35,8 @@ class DonorIntegration:
             balance=app.read_left,
         )
         self.jobs.exclusion_reason = self.exclusion_reason
+        if hasattr(app, "send_chat"):
+            self.jobs.chat_scope = app.send_chat
         from donor_auto import DonorAuto
 
         self.auto = DonorAuto(
@@ -528,7 +530,7 @@ class DonorIntegration:
         if not r.get("phone"):
             raise ValueError("This donor has no number yet. Open the ··· menu and add one.")
         key = "donor_manual_" + hashlib.sha256(request_id.encode()).hexdigest()
-        with self.manual_lock:
+        with self.manual_lock, self.jobs.chat_scope():
             old = self.app.STORE.get(key)
             if old:
                 if old.get("id") != r["id"]:
@@ -568,7 +570,9 @@ class DonorIntegration:
                 state = "Sent" if confirmed else "Uncertain"
                 self.book.delivery(r["id"], state, text=caption if state == "Sent" else None)
                 extras = None
-                if (pdf or video) and confirmed:
+                if confirmed and any(part.get("code") != "SUCCESS" for part in result.get("after") or []):
+                    extras = "Uncertain"
+                elif (pdf or video) and confirmed:
                     extras = self._single_extras(r, pdf, video)
                 fu = None
                 if follow_text and confirmed and (extras is None or extras == "Sent"):
@@ -577,9 +581,13 @@ class DonorIntegration:
                 output = {
                     "id": r["id"],
                     "code": "SUCCESS" if confirmed else "UNCERTAIN",
-                    "reply": "WhatsApp confirmed the DM."
-                    if confirmed
-                    else "Delivery not confirmed. Check WhatsApp before another manual send.",
+                    "reply": (
+                        "Delivery not confirmed. Check WhatsApp before another manual send."
+                        if not confirmed
+                        else "The DM went, but a later message was not confirmed. Check WhatsApp."
+                        if (extras and extras != "Sent") or (fu and fu != "Sent")
+                        else "WhatsApp confirmed the DM."
+                    ),
                     **({"follow_up": fu} if fu else {}),
                     **({"extras": extras} if extras else {}),
                 }
@@ -596,10 +604,10 @@ class DonorIntegration:
                 self.jobs.manual_inflight.clear()
 
     def _single_extras(self, r, pdf, video):
-        """The PDF, then the video, after the confirmed DM. Never retried; one that is not confirmed stops the next."""
+        """Send video then PDF, in the same order as donor batches and tests."""
         if self.exclusion_reason(r["phone"]):
             return "Skipped"
-        for kind, wanted in (("pdf", pdf), ("video", video)):
+        for kind, wanted in (("video", video), ("pdf", pdf)):
             if not wanted:
                 continue
             try:

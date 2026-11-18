@@ -379,10 +379,12 @@ class DeliveryTests(RegistryTests):
 
         self.jobs.send = send
         self.run_job(self.jobs.start("important", 60, run=False))
-        # P1 is recorded as unconfirmed and never sent again; the others still go out.
-        self.assertEqual(calls, ["P0", "P1", "P2", "P3", "P4"])
+        # An unclear reply stops the batch. Continue does not duplicate that send.
+        self.assertEqual(calls, ["P0", "P1"])
         status = self.jobs.status()
-        self.assertEqual((status["sent"], status["failed"]), (4, 1))
+        self.assertEqual((status["sent"], status["failed"], status["state"]), (1, 1, "Stopped"))
+        self.run_job(self.jobs.start("important", 60, run=False))
+        self.assertEqual(calls, ["P0", "P1", "P2", "P3", "P4"])
 
     def test_stop_button_then_continue_resumes_after_the_last_sent_and_lists_names(self):
         self._five()
@@ -631,9 +633,9 @@ class DeliveryTests(RegistryTests):
         self.jobs.send = lambda b: (calls.append(b["phone"]), {"code": "UNCERTAIN"})[1]
         r = self.jobs.start("all", run=False)
         self.run_job(r)
-        self.assertEqual(self.jobs.status()["failed"], 2)
+        self.assertEqual(self.jobs.status()["failed"], 1)
         self.assertEqual(self.jobs.status()["sent"], 0)
-        self.assertEqual(len(calls), len(set(calls)))
+        self.assertEqual(len(calls), 1)
 
     def test_restart_does_not_resume(self):
         self.add()

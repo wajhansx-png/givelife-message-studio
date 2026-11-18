@@ -61,6 +61,8 @@ class Volunteers:
             eligible,
             self.first_name,
         )
+        if hasattr(app, "send_chat"):
+            self.jobs.chat_scope = lambda: app.send_chat(line)
         if line:  # a list on its own WhatsApp (Giki) checks the chat before anything is sent again
             self.jobs.peek = lambda body: app.newest_sent({**body, "line": line})
             self.jobs.seen = lambda body, after: app.sent_after({**body, "line": line}, after)

@@ -42,9 +42,11 @@ class SendStopTests(unittest.TestCase):
                 result = self.post(
                     http.server_port, "/test", {"message": "Hi", "stop_id": "stop-test-0001"}
                 )
+                # The HTTP reply can arrive before the handler's finally block.
+                # Keep the observer installed until that cleanup has completed.
+                self.assertTrue(cleaned.wait(1), "request cleanup did not complete")
             self.assertEqual(result["code"], "STOPPED")
             send_text.assert_not_called()
-            self.assertTrue(cleaned.wait(1), "request cleanup did not complete")
             self.assertNotIn("stop-test-0001", app.STOP_EVENTS)
         finally:
             http.shutdown()

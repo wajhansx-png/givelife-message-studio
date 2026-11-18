@@ -421,7 +421,9 @@ class SendTests(unittest.TestCase):
     def test_delete_uses_only_own_group_message_id(self):
         app.LAST_MANUAL.update(kind="appeal", target="main")
         jid = app.GROUPS["main"][1]
-        app.DELIVERIES[jid] = {"message_id": "my-own-message"}
+        app.DELIVERIES[jid] = {
+            "message_id": "my-own-message", "gateway": app.GOWA_URL, "device": app.device()
+        }
         import io
 
         response = io.BytesIO(json.dumps({"code": "SUCCESS"}).encode())

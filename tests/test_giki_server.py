@@ -423,7 +423,7 @@ class GikiTestSend(Base):
 
     def test_a_busy_send_line_is_waited_for_but_not_forever(self):
         busy = type("L", (), {"acquire": lambda self, timeout=None: False, "release": lambda self: None})()
-        with patch.object(app, "SEND_LOCK", busy):
+        with patch.object(app, "_send_lock", return_value=busy):
             with self.assertRaisesRegex(ValueError, "busy"):
                 app.send_giki_test("CASE", "Share")
         self.assertEqual(self.calls, [])

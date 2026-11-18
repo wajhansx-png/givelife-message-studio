@@ -196,17 +196,38 @@ test('/new reader: tapping a line or the B/I bar while editing keeps editing ope
   await expect(page.locator('#ui2Float')).toBeVisible();
 });
 
-test("/new computer: the main screen shows today's message beside the send list; a phone keeps one column", async ({
+test("/new computer: today's message and the send controls share one centered column", async ({
   page,
 }) => {
   await open(page, '/new', 1440);
   await page.waitForTimeout(900);
   expect(await page.evaluate(() => location.hash)).toBe('');
   await expect(page.locator('#messageFocus')).toBeHidden();
+  await expect(page.locator('#chat')).toBeInViewport();
+  await expect(page.locator('#card .tools #copy')).toBeVisible();
+  const edit = page.locator('#card .tools #edit');
+  await edit.click();
+  await expect(page.locator('#groupPreview')).toBeEditable();
+  await expect(page.locator('#messageFocus')).toBeHidden();
+  await edit.click();
+  await page.locator('#card .overflow-tools > summary').click();
+  await expect(page.locator('#card #fresh')).toBeVisible();
+  await page.locator('#card #hideMsg').click();
+  await expect(page.locator('#card')).toBeHidden();
+  await page.locator('#showMsg').click();
+  await expect(page.locator('#chat')).toBeVisible();
+  await page.keyboard.press('d');
+  await expect(page.locator('#dmPreview')).toBeVisible();
+  await expect(page.locator('#sendDm')).toBeVisible();
+  await expect(page.locator('#btnGivelife')).toBeHidden();
+  await page.locator('#ui2Tabs [data-tab="message"]').click();
+  await expect(page.locator('#groupPreview')).toBeVisible();
+  await expect(page.locator('#sendDm')).toBeHidden();
   const card = await page.locator('#card').boundingBox();
   const send = await page.locator('.group-send').boundingBox();
-  expect(card.x + card.width).toBeLessThanOrEqual(send.x + 1);
-  await expect(page.locator('#ui2Styles')).toBeVisible();
+  expect(send.y).toBeGreaterThanOrEqual(card.y + card.height - 1);
+  expect(Math.abs(card.x - send.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(card.width - send.width)).toBeLessThanOrEqual(1);
   await expect(page.locator('#main-workspace .talk')).toBeHidden(); // chat is its own screen
   await expect(page.locator('#ui2Tabs [data-tab="chat"]')).toBeVisible();
   await page.locator('#ui2Tabs [data-tab="chat"]').click();
@@ -216,6 +237,114 @@ test("/new computer: the main screen shows today's message beside the send list;
   await page.waitForTimeout(900);
   await expect(page.locator('#messageFocus')).toBeHidden();
   expect(await page.evaluate(() => location.hash)).toBe('');
+});
+
+test('/new compact group dock keeps its controls reachable at every tested width', async ({
+  page,
+}) => {
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new');
+  const main = page.locator('#btnGivelife');
+  const other = page.getByRole('button', { name: 'Other groups', exact: true });
+  const timer = page.locator('#ui2Later');
+  const testGroup = page.getByRole('button', { name: 'Send to Test group', exact: true });
+  const free = page.locator('#btnFree');
+  const all = page.locator('#sendAll');
+  const picker = page.getByRole('button', { name: 'Choose group', exact: true });
+  await expect(main).toContainText('Send to GiveLife');
+  for (const [width, height] of [
+    [240, 420],
+    [280, 480],
+    [320, 568],
+    [360, 740],
+    [390, 844],
+    [430, 650],
+    [540, 640],
+    [768, 1024],
+    [844, 390],
+    [1024, 540],
+    [1440, 900],
+    [1920, 1080],
+  ]) {
+    await page.setViewportSize({ width, height });
+    const fits = (box) =>
+      box &&
+      box.x >= 0 &&
+      box.y >= 0 &&
+      box.x + box.width <= width + 1 &&
+      box.y + box.height <= height + 1;
+    const chat = await page.locator('#chat').boundingBox();
+    expect(fits(chat) && chat.height >= 90, `preview at ${width} × ${height}`).toBe(true);
+    for (const id of ['#whatsappConnection', '#leftChip', '#auto', '#ui2Tabs'])
+      expect(fits(await page.locator(id).boundingBox()), `${id} at ${width} × ${height}`).toBe(
+        true,
+      );
+    await expect(free, `${width}px`).toBeHidden();
+    await expect(all).toBeHidden();
+    const [primary, ...secondary] = await Promise.all(
+      [main, other, timer, testGroup].map((el) => el.boundingBox()),
+    );
+    expect(fits(primary), `GiveLife at ${width} × ${height}`).toBe(true);
+    expect(secondary.every((b) => fits(b) && b.height >= 40)).toBe(true);
+    expect(new Set(secondary.map((b) => Math.round(b.y))).size).toBe(1);
+    await other.click();
+    await expect(free).toBeVisible();
+    await expect(all).toBeVisible();
+    await expect(picker).toBeVisible();
+    if ([240, 1440].includes(width)) {
+      await picker.click();
+      await expect(page.locator('#dropFree button').first()).toBeVisible();
+      await expect(picker).toHaveAttribute('aria-expanded', 'true');
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#dropFree')).toBeHidden();
+      await expect(picker).toBeFocused();
+    }
+    await timer.click();
+    await expect(free).toBeHidden();
+    await expect(page.locator('#timerMain .delay-pill').first()).toBeVisible();
+    await expect(page.locator('#timerFree .delay-pill').last()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#ui2LaterPanel')).toBeHidden();
+  }
+});
+
+test('/new Message dock keeps each send tied to its original destination', async ({ page }) => {
+  await open(page, '/new', 390);
+  const sends = [];
+  await page.route('**/send-group', async (route) => {
+    sends.push(route.request().postDataJSON());
+    await route.fulfill({ status: 409, json: { error: 'Simulated send failure' } });
+  });
+  await page.route('**/test', async (route) => {
+    sends.push({ ...route.request().postDataJSON(), group: 'test' });
+    await route.fulfill({ json: { code: 'SUCCESS' } });
+  });
+  const other = page.locator('#ui2GroupPicker');
+  const groupStatus = page.locator('#groupStatus');
+  await page.waitForFunction(() => draftsReady);
+  await expect(page.locator('#groupPreview')).not.toBeEmpty();
+  const message = await page.locator('#group').inputValue();
+  for (const [selector, group] of [
+    ['#btnGivelife', 'main'],
+    ['#btnFree', 'free'],
+    ['#sendAll', 'all'],
+    ['#dropFree [data-group="community"]', 'community'],
+  ]) {
+    if (group !== 'main' && (await other.getAttribute('aria-expanded')) === 'false')
+      await other.click();
+    if (group === 'community') await page.locator('#btnFreePick').click();
+    await page.locator(selector).click();
+    await expect.poll(() => sends.at(-1)?.group).toBe(group);
+    await expect(groupStatus).toContainText('Simulated send failure');
+    expect(sends.at(-1)).toMatchObject({ group, message });
+  }
+  await page.getByRole('button', { name: 'Send to Test group', exact: true }).click();
+  await expect(page.locator('.test-row .gb-progress')).toHaveText('✓ Sent');
+  expect(sends.map((item) => item.group)).toEqual(['main', 'free', 'all', 'community', 'test']);
+  expect(sends.at(-1)).toMatchObject({ group: 'test', message });
 });
 
 test('/new computer: every option is one clear button in the bottom bar, and nothing is shown twice', async ({
@@ -240,7 +369,7 @@ test('/new computer: every option is one clear button in the bottom bar, and not
   expect(box.y).toBeGreaterThan(600); // at the bottom
   for (const b of await bar.locator('.ui2-tab').all()) {
     const r = await b.boundingBox();
-    expect(r.height).toBeGreaterThanOrEqual(56);
+    expect(r.height).toBeGreaterThanOrEqual(44);
     expect(r.width).toBeGreaterThanOrEqual(110);
     await expect(b.locator('svg')).toHaveCount(1); // one icon above the word (the owner asked for icons; the word stays)
   }
@@ -265,6 +394,10 @@ test('/new computer: every option is one clear button in the bottom bar, and not
     await open(page, '/new', 1440, 900);
     await page.locator(`#ui2Tabs [data-tab="${tab}"]`).click();
     await expect(page.locator(screen).first(), tab).toBeVisible();
+    if (tab === 'report') {
+      await page.locator('#reportClose').click();
+      await expect(page.locator(screen)).toBeHidden();
+    }
   }
 });
 

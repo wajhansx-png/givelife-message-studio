@@ -613,7 +613,7 @@ function fit() {
   if (editing) return;
   const chat = $('chat'),
     m = $(view() + 'Preview');
-  if (!chat.clientHeight) return;
+  if (chat.closest('.ui2-message-home') || !chat.clientHeight) return;
   const style = getComputedStyle(chat),
     available = chat.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
   /* Same box + same text = same answer: reuse it (no measuring, no forced layout). */
@@ -811,7 +811,11 @@ function setEditing(on, x, y) {
   const k = view(),
     m = $(k + 'Preview');
   if (on === editing) return;
-  if (on && document.body.classList.contains('nomsg')) setNoMsg(false);
+  if (on) {
+    const home = m.closest('.ui2-message-home');
+    if (home) home.classList.remove('ui2-preview-collapsed');
+    else if (document.body.classList.contains('nomsg')) setNoMsg(false);
+  }
   editing = on;
   document.body.classList.toggle('editing', on);
   $('edit').textContent = on ? 'Done' : 'Edit';
@@ -1454,6 +1458,7 @@ document.querySelectorAll('.delay-pill').forEach(
   (p) =>
     (p.onclick = async () => {
       await timerTap(p.dataset.delayScope, Number(p.dataset.delay));
+      if (p.closest('#ui2LaterPanel')) return;
       showTimerRow(
         document.querySelector('.gb-timer[data-timer="' + p.dataset.delayScope + '"]'),
         false,
@@ -2710,10 +2715,17 @@ if ($('desktopPreview'))
 if ($('previewBackBottom')) $('previewBackBottom').onclick = () => smooth(() => setNoMsg(true));
 $('hideMsg').onclick = (e) => {
   e.stopPropagation();
+  document.querySelector('.app.ui2-message-home')?.classList.add('ui2-preview-collapsed');
   smooth(() => setNoMsg(true));
 };
 $('previewBack').onclick = () => smooth(() => setNoMsg(true));
-$('showMsg').onclick = () => smooth(() => setNoMsg(false));
+$('showMsg').onclick = () => {
+  const app = document.querySelector('.app.ui2-preview-collapsed');
+  if (app) {
+    app.classList.remove('ui2-preview-collapsed');
+    $('chat').focus();
+  } else smooth(() => setNoMsg(false));
+};
 Nav.rendering = true;
 setNoMsg(true);
 Nav.rendering = false; /* the start state is not a navigation step */
@@ -2772,7 +2784,7 @@ function focusChatInput() {
     $('histCmd').focus({ preventScroll: true });
     return;
   }
-  if (isPhone()) {
+  if (isPhone() || document.querySelector('.ui2-message-home')) {
     openChat();
     $('histCmd').focus({ preventScroll: true });
     return;

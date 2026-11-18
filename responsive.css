@@ -4073,3 +4073,14 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     bottom: auto !important;
   }
 }
+
+/* Leave room for the amount on narrow phones before shortening the WhatsApp label. */
+@media (max-width: 359px) {
+  html
+    body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+    .ui2-message-home
+    .ui2-status-row
+    #leftChip {
+    flex: 0 0 auto !important;
+  }
+}

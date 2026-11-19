@@ -482,6 +482,20 @@ class FocusTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             b.manual("group", ["duplicate", "duplicate"])
 
+    def test_the_version_on_screen_is_sent_first_then_the_rotation_goes_on(self):
+        b = self.make()
+        with patch.object(b, "_spawn"):
+            b.save("group", self.drafts["group"])
+        messages = ["Owner message " + str(i) for i in range(10)]
+        b.manual("group", messages)
+        self.assertEqual(b.reserve_groups(self.drafts["group"], 1, first=messages[6]), [messages[6]])
+        many = b.reserve_groups(self.drafts["group"], 3, first=messages[2])
+        self.assertEqual(many[0], messages[2])
+        self.assertEqual(len(set(many)), 3)  # the other groups still get different versions
+        self.assertNotIn(messages[6], many[1:])
+        # text that is not a saved version (typed in the request) is never sent as is
+        self.assertNotEqual(b.reserve_groups(self.drafts["group"], 1, first="Made up text")[0], "Made up text")
+
     def test_regeneration_keeps_manual_slots_and_invalidates_old_worker(self):
         b = self.make()
         with patch.object(b, "_spawn"):

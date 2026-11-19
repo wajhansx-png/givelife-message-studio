@@ -570,7 +570,7 @@ class FocusBank:
                 self._put(data)
             return copy.deepcopy(saved)
 
-    def reserve_groups(self, caption, count, auto=False):
+    def reserve_groups(self, caption, count, auto=False, first=None):
         """Reserve only saved Group-tab versions, cycling all ten across Auto/manual sends.
 
         The persisted cursor is shared by every group sender. Uncertain sends stay
@@ -620,12 +620,17 @@ class FocusBank:
                     )
             window = len(pool) - 1
             selected = []
-            for _ in range(count):
+            # the version the owner had on screen when pressing Send goes first (only a saved, checked one)
+            pin = wording_key(first) if isinstance(first, str) and first.strip() else None
+            pin_at = next((i for i, v in enumerate(pool) if wording_key(v) == pin), None)
+            for n in range(count):
                 blocked = set(recent[-window:]) if window > 0 else set()
-                for step in range(len(pool)):
+                for step in range(0 if n == 0 and pin_at is not None else len(pool)):
                     if wording_key(pool[(cursor + step) % len(pool)]) not in blocked:
                         cursor = (cursor + step) % len(pool)
                         break
+                if n == 0 and pin_at is not None:
+                    cursor = pin_at
                 value = pool[cursor]
                 selected.append(value)
                 last = wording_key(value)

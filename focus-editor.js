@@ -389,6 +389,8 @@
     /* for the version dots under the message: how many versions, and which one shows (0 = the original) */
     $('focusVersion').dataset.n = String(n);
     $('focusVersion').dataset.i = String(index + 1);
+    // Send / Test on the Group screen send THIS version first (the base: the usual rotation)
+    window.focusShownVersion = kind === 'group' && index >= 0 ? row.items[index] : '';
   }
   function paint(text) {
     $('focusText').value = text;
@@ -510,6 +512,7 @@
       placeDmPanel(false);
       placeGroupPanel(false);
       document.body.classList.remove('message-focus-open');
+      window.focusShownVersion = '';
       clearTimeout(timer);
       ++loading;
     }

@@ -69,3 +69,30 @@ for (const width of [320, 390, 1280])
     await g.click();
     await expect.poll(async () => (await api(port, '/focus-bank?kind=group')).state).not.toBe('Not generated');
   });
+
+test('while 5 versions are written the sparkle shows the live count 0/5 … then comes back', async ({ page }) => {
+  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
+  const real = await api(port, '/focus-bank?kind=group');
+  let done = 0,
+    ready = false;
+  const row = () => ({
+    ...real,
+    items: Array.from({ length: done }, (_, i) => `*Version ${i + 1}* Please help today. Rs. 5,000 needed.`),
+    state: ready ? 'Ready' : 'Generating',
+    batch: ready ? null : { goal: 5, auto: false, at: Date.now() / 1000 },
+  });
+  await page.route('**/focus-bank**', (route) => route.fulfill({ json: row() }));
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/preview');
+  const g = page.locator('#ui2Swipe .ui2-gen-btn');
+  await expect(g).toHaveText('0/5');
+  await expect(g).toHaveAccessibleName('Writing versions 0 of 5');
+  done = 2;
+  await expect(g).toHaveText('2/5');
+  done = 5;
+  ready = true;
+  await expect(g.locator('svg')).toBeVisible(); // finished: the sparkle is back
+  await expect(g).toHaveAccessibleName('Write 5 new versions');
+  await expect(g).toBeEnabled();
+});

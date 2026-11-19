@@ -4769,14 +4769,14 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   color: #cdd6ff !important;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-gen-btn[data-busy='1'] {
-  opacity: 0.55;
-  animation: ui2-gen-pulse 1.1s ease-in-out infinite;
-}
-@keyframes ui2-gen-pulse {
-  50% { opacity: 0.25; }
-}
-@media (prefers-reduced-motion: reduce) {
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-gen-btn[data-busy='1'] { animation: none; }
+  opacity: 1 !important;
+  padding: 0 8px !important;
+  border-color: #3b6cf6 !important;
+  background: #1b2550 !important;
+  color: #dbe4ff !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums;
 }
 @media (max-width: 359px) {
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-gen-btn {

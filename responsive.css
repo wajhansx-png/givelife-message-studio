@@ -4074,14 +4074,63 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   }
 }
 
-/* Leave room for the amount on narrow phones before shortening the WhatsApp label. */
+/* Keep the status actions in one row on narrow phones. */
 @media (max-width: 359px) {
+  html
+    body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+    .ui2-message-home
+    > .ui2-status-row {
+    grid-template-columns: auto minmax(max-content, 1fr) auto;
+  }
   html
     body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
     .ui2-message-home
     .ui2-status-row
     #leftChip {
-    flex: 0 0 auto !important;
+    font-size: 12px !important;
+  }
+}
+@media (max-width: 319px) {
+  html
+    body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+    .ui2-message-home
+    .ui2-status-row
+    #whatsappConnection[data-state='online']::after {
+    content: 'WA';
+  }
+  html
+    body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+    .ui2-message-home
+    .ui2-status-row
+    #whatsappConnection:not([data-state='online'])::after {
+    content: 'Check';
+  }
+}
+@media (max-width: 349px) {
+  html
+    body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+    .ui2-message-home
+    .ui2-status-row
+    #leftChip .lw {
+    display: block !important;
+    font-size: 10px;
+  }
+}
+@media (max-width: 279px) {
+  html
+    body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+    .ui2-message-home
+    .ui2-status-row
+    #whatsappConnection::after {
+    content: 'WA' !important;
+  }
+  html
+    body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i)
+    .ui2-message-home
+    .ui2-status-row
+    :is(#whatsappConnection, #leftChip, #live #auto) {
+    gap: 4px;
+    padding-inline: 3px !important;
   }
 }
 

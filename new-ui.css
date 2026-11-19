@@ -6472,59 +6472,89 @@
 }
 @media (max-width: 899px) {
   .UI2 .ui2-message-home > .ui2-status-row {
+    display: grid;
+    grid-template-columns: minmax(max-content, 1fr) max-content minmax(max-content, 1fr);
     order: -1;
     flex: 0 0 auto;
-    gap: 5px !important;
-    padding: 0 5px;
+    gap: 4px !important;
+    padding: 0 2px;
+    border: 0;
+    border-bottom: 1px solid var(--line2);
+    border-radius: 0;
+    background: transparent;
+  }
+  .UI2 .ui2-message-home .ui2-status-row :is(#whatsappConnection, #leftChip, #live #auto) {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    padding: 0 6px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .UI2 .ui2-message-home .ui2-status-row button:focus-visible {
+    outline: 2px solid var(--btn, #2f6fe8);
+    outline-offset: -2px;
   }
   .UI2 .ui2-message-home .ui2-status-row #whatsappConnection {
-    flex: 0 1 auto !important;
-    min-width: 0 !important;
-    min-height: 40px !important;
-    padding-inline: 4px !important;
+    justify-self: start;
+    gap: 6px;
   }
   .UI2 .ui2-message-home .ui2-status-row #whatsappConnection::after {
     content: 'WhatsApp';
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: var(--ink-muted, var(--mut));
+    font-size: 12px;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #whatsappConnection:not([data-state])::after {
+    content: 'Checking';
   }
   .UI2 .ui2-message-home .ui2-status-row #whatsappConnection[data-state='offline']::after {
     content: 'Reconnect';
+    color: var(--bad-ink, #ff8a8a);
   }
-  .UI2
-    .ui2-message-home
-    .ui2-status-row
-    #whatsappConnection:not([data-state='online']):not([data-state='offline'])::after {
-    color: var(--ink-muted);
+  .UI2 .ui2-message-home .ui2-status-row #whatsappConnection[data-state='error']::after {
+    content: 'Check WA';
   }
   .UI2 .ui2-message-home .ui2-status-row #leftChip {
-    flex: 0 1 auto !important;
-    min-width: 0 !important;
-    min-height: 40px !important;
-    overflow: hidden;
-    padding-inline: 6px !important;
-    text-overflow: ellipsis;
+    justify-self: center;
+    max-width: none !important;
+    font-size: 14px !important;
+    font-weight: 700;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #leftChip .lw {
+    color: var(--ink-muted, var(--mut));
+    font-size: 11px;
+    font-weight: 500;
   }
   .UI2 .ui2-message-home .ui2-status-row #live {
     position: static !important;
-    flex: 0 0 auto !important;
-    order: 2 !important;
-    gap: 2px !important;
+    justify-self: end;
     width: auto !important;
     min-width: 0 !important;
     max-width: none !important;
-    min-height: 40px !important;
-    margin: 0 0 0 auto !important;
-    padding: 0 3px !important;
+    margin: 0 !important;
+    padding: 0 !important;
     border: 0 !important;
-    border-radius: 8px !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
   .UI2 .ui2-message-home .ui2-status-row #live::before {
-    content: 'Auto';
-    font-size: 12px;
+    content: none;
   }
-  .UI2 .ui2-message-home .ui2-status-row #live #auto {
-    min-height: 40px !important;
+  .UI2 .ui2-message-home .ui2-status-row #live #auto .lbl {
+    display: inline !important;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #live #auto .lbl::before {
+    color: var(--ink-muted, var(--mut));
+  }
+  .UI2 .ui2-message-home .ui2-status-row #live #auto .knob {
+    width: 32px;
+    height: 18px;
+  }
+  .UI2 .ui2-message-home .ui2-status-row #live #auto .knob::after {
+    width: 14px;
+    height: 14px;
+    box-shadow: none;
   }
   .UI2 .ui2-message-home #card.ui2-has-mini #chat {
     padding-bottom: 48px !important;
@@ -6538,13 +6568,6 @@
 @media (max-width: 299px) {
   .UI2 .app.ui2-message-home {
     padding-inline: 6px !important;
-  }
-  .UI2 .ui2-message-home .ui2-status-row #whatsappConnection {
-    min-width: 34px !important;
-    justify-content: center;
-  }
-  .UI2 .ui2-message-home .ui2-status-row #whatsappConnection::after {
-    display: none;
   }
   .UI2 .ui2-message-home .group-send :is(.ui2-dock-tool, .test-row, .ui2-choose-btn) {
     font-size: 12px !important;

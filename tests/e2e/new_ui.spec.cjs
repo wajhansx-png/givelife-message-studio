@@ -254,7 +254,9 @@ test('/new compact group dock keeps its controls reachable at every tested width
   await expect(main).toContainText('Send to GiveLife');
   for (const [width, height] of [
     [240, 420],
+    [260, 480],
     [280, 480],
+    [300, 620],
     [320, 568],
     [360, 740],
     [390, 844],
@@ -279,6 +281,19 @@ test('/new compact group dock keeps its controls reachable at every tested width
       expect(fits(await page.locator(id).boundingBox()), `${id} at ${width} × ${height}`).toBe(
         true,
       );
+    if (width < 900) {
+      const [wa, amount, auto] = await Promise.all(
+        ['#whatsappConnection', '#leftChip', '#auto'].map((id) => page.locator(id).boundingBox()),
+      );
+      expect(wa.x + wa.width).toBeLessThanOrEqual(amount.x);
+      expect(amount.x + amount.width).toBeLessThanOrEqual(auto.x);
+      for (const control of [wa, amount, auto]) {
+        expect(control.width).toBeGreaterThanOrEqual(44);
+        expect(control.height).toBeGreaterThanOrEqual(44);
+      }
+      if (width >= 360)
+        expect(Math.abs(amount.x + amount.width / 2 - width / 2)).toBeLessThanOrEqual(2);
+    }
     await expect(free, `${width}px`).toBeHidden();
     await expect(all).toBeHidden();
     const [primary, ...secondary] = await Promise.all(

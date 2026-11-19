@@ -4241,6 +4241,11 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   }
 }
 
+/* The home send button has no inline timer to reserve space for. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #btnGivelife .gb-name {
+  padding: 0 !important;
+}
+
 /* Home, Other groups panel: "All freelance · Not sent yet" keeps its whole status (the name box had 120px of empty right padding) */
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-other-groups :is(#btnFree, #sendAll) .gb-name {
   padding-right: 0 !important;
@@ -4287,6 +4292,8 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   }
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace > #card {
     flex: 1 1 0 !important;
+    align-self: flex-start !important;
+    max-height: 100% !important;
     min-width: 0;
   }
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace > .side {

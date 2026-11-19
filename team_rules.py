@@ -15,8 +15,6 @@ WORK_HOURS_TEXT = "12:00 PM–3:30 PM and 6:00 PM–10:30 PM"
 SLOW_AFTER_MINUTES = (
     90  # no money for this long = "donations are slow" (the app's existing L3 level)
 )
-SLOW_MAIN_GAP = 15
-SLOW_FREE_GAP = 30
 
 # Focus Guide 06: always 5 DMs per batch, 7 minutes between each message.
 DM_BATCH = 5

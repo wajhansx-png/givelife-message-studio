@@ -4139,16 +4139,30 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   }
 }
 
-/* Home polish (owner's approved design): Test group outlined in purple so it never looks like Send, a clock on
-   Timer, the bottom bar's current page in blue and bold, and the message text 12px on phones so it shows in full. */
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .group-send button.test-row {
-  border: 1.5px solid #9670ff !important;
-  background: transparent !important;
-  color: #e1d2ff !important;
+/* One shared surface keeps the three secondary actions visually together. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-group-more {
+  gap: 0;
+  background: var(--surface);
+  border-radius: 10px;
 }
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2Later::before {
-  content: '🕒';
-  margin-right: 6px;
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-group-more :is(#ui2GroupPicker, #ui2Later, button.test-row) {
+  min-height: 44px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--ink) !important;
+  font-weight: 600 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-group-more button.test-row .gb-name {
+  color: #c9baff !important;
+  font-weight: 600 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-group-more button:is([aria-expanded='true'], [data-scheduled]) {
+  background: var(--surface2, #292d3c) !important;
+  color: #b7cdff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-group-more button:focus-visible {
+  outline: 2px solid #94b8ff !important;
+  outline-offset: -3px;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-tabs .ui2-tab[aria-current='true'] {
   color: #8db4ff !important;

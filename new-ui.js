@@ -721,9 +721,8 @@ function ui2Observe(run, options) {
       return;
 
     const name = main.querySelector('.gb-name');
-    const sendLabel = mk('span', 'ui2-primary-send-label');
-    sendLabel.append(main.querySelector('.gb-go'), document.createTextNode('Send to GiveLife'));
-    name.replaceChild(sendLabel, name.firstChild);
+    name.replaceChild(document.createTextNode('Send to GiveLife'), name.firstChild);
+    main.querySelector('.gb-go').hidden = true;
     test.querySelector('.gb-go').hidden = true;
 
     const more = mk('div', 'ui2-group-more');

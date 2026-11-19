@@ -4836,3 +4836,8 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ✦ sits with Save base on the right, away from the › arrow, so a quick next-version tap never starts writing. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-gen-btn {
+  margin-left: 16px !important;
+}

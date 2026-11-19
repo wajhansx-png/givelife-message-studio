@@ -1072,6 +1072,12 @@ function ui2Observe(run, options) {
       if ($('focusStyleFix')) rw.append($('focusStyleFix'));
       panel.prepend(rw);
       for (const id of ['focusRetry', 'focusSave']) if ($(id)) rw.after($(id));
+      /* Main poster / main video (the campaign poster dialog) stays in More */
+      const mp = $('focusPoster');
+      if (mp) {
+        mp.textContent = 'Main poster / video';
+        panel.append(mp);
+      }
     }
     const paper = $('focusFormatted')?.parentElement;
     if (paper && !$('ui2Swipe')) {

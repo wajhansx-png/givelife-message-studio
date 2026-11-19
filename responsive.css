@@ -3807,7 +3807,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   order: 5 !important;
 }
 /* More: Rewrite chips, New versions, Save Base, then the files */
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > :not(.ui2-rewrite, #focusRetry, #focusSave, #ui2ReaderExtras) {
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > :not(.ui2-rewrite, #focusRetry, #focusSave, #focusPoster, #ui2ReaderExtras) {
   display: none !important;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > .focus-rail-more > div {
@@ -3860,7 +3860,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   background: #2f6fe4 !important;
   color: #fff !important;
 }
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > :is(#focusRetry, #focusSave) {
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > :is(#focusRetry, #focusSave, #focusPoster) {
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -4400,4 +4400,22 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you {
   border-radius: 14px !important;
   overflow: hidden;
+}
+
+/* Messages reader More: "Main poster / video" is back, right above the PDF / Video / Poster rows */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-rail-more > div > #focusPoster {
+  order: 4 !important;
+  min-height: 44px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: var(--ink, #eceef5) !important;
+  border: 1px solid var(--line2, #3a4057) !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-rail-more > div > #ui2ReaderExtras {
+  order: 5 !important;
+  align-self: stretch !important;
+  width: 100% !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2ReaderExtras {
+  grid-template-columns: minmax(0, 1fr) !important;
 }

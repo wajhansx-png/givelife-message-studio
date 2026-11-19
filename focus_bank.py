@@ -7,13 +7,13 @@ import dm_variants, message_rules
 
 
 PARALLEL_CALLS = 3  # AI calls made at the same time for one round of rewrites
-ANGLES = (
-    "open with a direct question to the reader",
-    "open with the most striking fact from the source",
-    "open with the person the source names and their exact situation",
-    "open with how small and doable the ask is",
-    "open by speaking to the reader's own part (you)",
-    "open with warm dua or sadqa wording",
+ANGLES = (  # each set says the SAME hook idea as the owner's first line, in a different way (never a new idea)
+    "keep the source's hook idea and say it with new words and a new sentence shape",
+    "keep the source's hook idea and lead with the person the source names",
+    "keep the source's hook idea and make it shorter and plainer",
+    "keep the source's hook idea and make it warmer and more personal",
+    "keep the source's hook idea in simple everyday words, the way a friend would say it",
+    "keep the source's hook idea and put its strongest real detail first",
 )
 BATCH = 5  # versions written per click, and per background top-up while sending
 MAX_VERSIONS = 40  # ceiling for one message's saved versions
@@ -738,6 +738,9 @@ def reject_reason(source, text, existing=(), novelty=True):
         return "an emoji changed or moved"
     if dm_variants._numbers(text) != dm_variants._numbers(source):
         return "a number, amount or phone number changed"
+    scary = dm_variants.alarm_terms(text) - dm_variants.alarm_terms(source)
+    if scary:
+        return "invented danger or urgency (" + ", ".join(sorted(scary)) + "); keep the owner's own urgency"
     for line in source.split("\n"):
         if (
             any(

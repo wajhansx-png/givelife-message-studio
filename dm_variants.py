@@ -362,27 +362,20 @@ NON-NEGOTIABLE:
   A fact in the first line (for example "22 hours until the Janazah") stays in the first
   line of every version, reworded. Keep each line within about 15% of its source line's
   length. Do not rearrange sections or move facts between lines.
-- PSYCHOLOGY. Every line must earn its place; use a DIFFERENT mix in each version, built only
-  from facts in the source:
-  * Hook (line 1): a pattern interrupt the brain cannot ignore in under two seconds: the real
-    time left, a stark contrast (a whole family's need vs one small donation), or a direct question.
-  * Identifiable victim: name the person the source names and say their exact situation as
-    written. One person moves people more than numbers. Do not assume age, gender or
-    relationship beyond what the source says.
-  * Vivid, concrete detail: turn the source's facts into a picture the reader can see.
-  * Real urgency and loss aversion: what is lost if help does not arrive in the time the
-    source gives. Only the source's own times; if it gives none, urgency is the amount still
-    needed right now.
-  * Make it small and doable: the smallest real ask from the source, and how few people it takes.
-  * Responsibility: break the "someone else will help" bystander effect; "you" are the one.
-  * Social proof and momentum: others are already helping, join them (only if the source
-    implies it).
-  * Reward: sadqa, dua and the reader's own akhirah, in warm words.
-  * Close with an easy yes: one clear action now.
-  Strong, never false: no invented guilt trips, threats, diagnoses, deadlines or outcomes.
+- SAME CONCEPT, NEW WORDS: every line keeps the SAME idea, the SAME feeling and the SAME level of
+  urgency as the same line of the source. Only the words and sentence shape change.
+  * Hook (line 1): say the source's own hook idea in new words. Never a different hook idea, never
+    a question unless the source asks one, never a new fact, never a scarier picture.
+  * Name the person the source names and keep their exact situation as written.
+  * Keep the source's ask (the amount, how few people it takes) and its reward wording (sadqa, dua).
+  * The reader's own part: gently that "you" can be the one who helps (no bystander "someone else
+    will"), in the source's own tone.
+- URGENCY STAYS THE OWNER'S: never raise it and never lower it. Do NOT add danger or alarm the source
+  does not say: no "die", "death", "dying", "last breath", "too late", "any moment", "minutes left",
+  "hours left", "fighting for her life", "could lose", "won't survive", no countdowns, no threats.
+  Strong, never false: no invented guilt trips, diagnoses, deadlines or outcomes.
 - LEARN FROM THE OWNER: the SOURCE and any OWNER'S OWN MESSAGES below are the owner's voice.
-  Match their intensity, line rhythm, emoji energy, hooks and directness; do not soften them.
-  Never lower the urgency the owner wrote.
+  Match their line rhythm, emoji energy and directness, at the same intensity the source has.
 - Return ONLY a JSON array of {count} strings. No commentary, no markdown fences.
 
 SOURCE:
@@ -390,6 +383,18 @@ SOURCE:
 {source}
 SOURCE>>>{avoid_text}
 """
+
+
+ALARM = re.compile(
+    r"\b(die|dies|dying|death|dead|last breath|too late|any moment|minutes? left|hours? left|"
+    r"fighting for (?:her|his|their) life|could lose|won'?t survive|will not survive|before it'?s too late)\b",
+    re.I,
+)
+
+
+def alarm_terms(text):
+    """Danger / alarm words in a text (lower case). A version may only use the ones its source already uses."""
+    return {m.group(0).lower() for m in ALARM.finditer(str(text or ""))}
 
 
 def _call(key, prompt, deep=False):

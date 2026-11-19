@@ -1033,7 +1033,7 @@ test('/new phone: Regenerate and Next sit inside the green message (small, right
   await open(page, '/new#/preview', 390);
   // In the reader: one thin row under the message, ‹ version › and the files, in thumb reach; no big row.
   await expect(page.locator('#ui2GnavReader')).toBeHidden();
-  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText(/^Original/);
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText(/^(Original|Base)/);
   for (const sel of ['.ui2-swipe-prev', '.ui2-swipe-next', '.ui2-files-btn']) {
     const box = await page.locator('#ui2Swipe ' + sel).boundingBox();
     expect(box.height, sel).toBeGreaterThanOrEqual(40);
@@ -1295,7 +1295,7 @@ test('/new phone reader: swipe the message left for the next version, right for 
   expect((await made.json()).items.length).toBe(10);
   await page.reload();
 
-  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('Original · 10 more');
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('Base +10');
   const cdp = await page.context().newCDPSession(page);
   const box = await page.locator('#focusFormatted').boundingBox();
   const y = box.y + box.height / 2;
@@ -1307,13 +1307,13 @@ test('/new phone reader: swipe the message left for the next version, right for 
     await page.waitForTimeout(500); // the slide-in finishes before the next swipe
   };
   await swipe(320, 80);
-  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('1 of 10');
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('1/10');
   await expect(page.locator('#focusFormatted')).toContainText('(swipe 1)');
   await swipe(320, 80);
-  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('2 of 10');
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('2/10');
   await swipe(80, 320);
-  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('1 of 10');
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('1/10');
   // a short drag snaps back and changes nothing
   await swipe(200, 182); // 18px: under both the 40px distance and the 20px flick
-  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('1 of 10');
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('1/10');
 });

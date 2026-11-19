@@ -35,7 +35,7 @@ for (const [width, kind] of [[320, 'group'], [390, 'group'], [390, 'dm'], [768, 
     await page.locator('#ui2Swipe .ui2-swipe-next').click();
     await page.locator('#ui2Swipe .ui2-swipe-next').click();
     await page.locator('#ui2Swipe .ui2-swipe-prev').click();
-    await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText(/of|Original/);
+    await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText(/of|\/|Original|Base/);
     // More opens and closes
     const more = page.locator('#messageFocus .focus-rail-more > summary');
     await more.click();

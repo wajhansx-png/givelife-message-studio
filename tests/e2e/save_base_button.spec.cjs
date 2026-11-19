@@ -96,3 +96,22 @@ test('while 5 versions are written the sparkle shows the live count 0/5 … then
   await expect(g).toHaveAccessibleName('Write 5 new versions');
   await expect(g).toBeEnabled();
 });
+
+for (const width of [320, 360, 390, 412, 430, 480, 540])
+  test(`the version label never overlaps the arrows with versions saved at ${width}px`, async ({ page }) => {
+    await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
+    await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1, V2, V1.replace('Second', 'Fourth'), V1.replace('Second', 'Fifth'), V1.replace('Second', 'Sixth')] });
+    await page.setViewportSize({ width, height: 860 });
+    await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+    await page.goto('/new#/preview');
+    const sels = ['.ui2-swipe-prev', '.ui2-ver', '.ui2-swipe-next', '.ui2-gen-btn', '.ui2-base-btn'];
+    for (const step of [0, 1]) {
+      if (step) await page.locator('#ui2Swipe .ui2-swipe-next').click();
+      const boxes = [];
+      for (const s of sels) boxes.push(await page.locator('#ui2Swipe ' + s).boundingBox());
+      for (let i = 0; i < boxes.length - 1; i++)
+        expect(boxes[i].x + boxes[i].width, sels[i] + ' vs ' + sels[i + 1]).toBeLessThanOrEqual(boxes[i + 1].x + 1);
+      const ver = page.locator('#ui2Swipe .ui2-ver');
+      expect(await ver.evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'label fits').toBe(true);
+    }
+  });

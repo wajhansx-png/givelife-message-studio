@@ -4830,3 +4830,9 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     display: none !important;
   }
 }
+
+/* The version label never spills onto the arrows: it is cut with … if the row is ever too tight. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-ver {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

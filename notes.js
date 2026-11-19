@@ -378,6 +378,43 @@
     page.dataset.controls = 'closed';
     setTools('closed');
   }
+  /* Come back to the same place: the scroll position is remembered (also after the tab is closed), and any
+     unsaved typing is saved the moment you switch away or close the page. */
+  const SCROLL_KEY = 'givelife-notes-scroll';
+  const scroller = () => {
+    for (let n = editor; n && n !== page; n = n.parentElement) {
+      const o = getComputedStyle(n).overflowY;
+      if ((o === 'auto' || o === 'scroll') && n.scrollHeight > n.clientHeight + 1) return n;
+    }
+    return editor;
+  };
+  let scrollTimer = 0;
+  page.addEventListener(
+    'scroll',
+    () => {
+      if (!loaded) return;
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        try {
+          localStorage.setItem(SCROLL_KEY, String(Math.round(scroller().scrollTop)));
+        } catch (e) {}
+      }, 200);
+    },
+    true,
+  );
+  function restoreScroll() {
+    let y = 0;
+    try {
+      y = Number(localStorage.getItem(SCROLL_KEY)) || 0;
+    } catch (e) {}
+    if (y) requestAnimationFrame(() => requestAnimationFrame(() => (scroller().scrollTop = y)));
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && dirty) save();
+  });
+  addEventListener('pagehide', () => {
+    if (dirty) save();
+  });
   async function load() {
     setStatus('Loading…');
     try {
@@ -397,6 +434,7 @@
       }
       screen(false);
       setStatus(dirty ? 'Unsaved changes' : 'Saved');
+      restoreScroll();
     } catch (e) {
       setStatus(e.message, true);
       retry.hidden = false;

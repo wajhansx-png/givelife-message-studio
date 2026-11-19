@@ -11,6 +11,7 @@ async function open(page, request, width, height, reply) {
   await page.addInitScript(() => {
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key');
     localStorage.setItem('givelife-theme', 'dark');
+    localStorage.removeItem('givelife-last-route');
   });
   await request.post('/__test/seed', { headers: auth, data: { reply: reply || 'Ready.' } });
   await page.goto('/old');

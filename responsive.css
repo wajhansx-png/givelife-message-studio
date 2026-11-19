@@ -4362,7 +4362,6 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 @media (max-width: 899px) {
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-tab[data-tab='notes'] {
     display: flex !important;
-    order: -1;
   }
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-tab[data-tab='case'] {
     display: none !important;
@@ -4418,4 +4417,16 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2ReaderExtras {
   grid-template-columns: minmax(0, 1fr) !important;
+}
+/* Save Base and Main poster / video share one row so the More list stays short */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > .focus-rail-more > div > * {
+  grid-column: 1 / -1;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > .focus-rail-more > div > :is(#focusSave, #focusPoster) {
+  grid-column: auto;
+  order: 3 !important;
+  min-height: 44px !important;
 }

@@ -480,6 +480,8 @@ function ui2Observe(run, options) {
       ),
     };
     const items = [
+      /* Notes first: on the phone it takes Case's place (Case stays in More) */
+      ['notes', ICONS.notes, 'Notes', press(() => $('donorNotesShortcut'))],
       ['case', ICONS.case, 'Case', () => (typeof Nav !== 'undefined' ? Nav.go('case') : null)],
       [
         'message',
@@ -494,7 +496,6 @@ function ui2Observe(run, options) {
       ['donors', ICONS.donors, 'Donors', press(() => $('openDonors'))],
       ['chat', ICONS.chat, 'Chat', press(() => $('chatOpen'))],
       /* Computer only (the phone keeps these in More): every top-bar option is also one clear button here. */
-      ['notes', ICONS.notes, 'Notes', press(() => $('donorNotesShortcut'))],
       ['report', ICONS.report, 'Report', press(() => document.querySelector('.report-open'))],
       ['settings', ICONS.settings, 'Settings', press(() => $('gear'))],
       ['more', ICONS.more, 'More', () => sheet()],

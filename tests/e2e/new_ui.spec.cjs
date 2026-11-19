@@ -86,7 +86,7 @@ for (const width of [280, 320, 360, 390, 430, 768]) {
     const tabs = page.locator('#ui2Tabs');
     await expect(tabs).toBeVisible();
     await expect(tabs.locator('.ui2-tab:visible')).toHaveText([
-      /Case/,
+      /Notes/,
       /Message/,
       /Donors/,
       /Chat/,
@@ -354,11 +354,11 @@ test('/new computer: every option is one clear button in the bottom bar, and not
   const bar = page.locator('#ui2Tabs');
   await expect(bar).toBeVisible();
   await expect(bar.locator('.ui2-tab')).toHaveText([
+    /Notes/,
     /Case/,
     /Message/,
     /Donors/,
     /Chat/,
-    /Notes/,
     /Report/,
     /Settings/,
     /More/,
@@ -774,7 +774,7 @@ test('/new on-screen Back leaves no stale history entry, so the phone Back never
   await page.evaluate(() => window.history.pushState({ marker: 1 }, '', location.pathname + '#/'));
   await page.evaluate(() => window.history.replaceState({ marker: 1 }, '', location.pathname));
   for (const [tab, back] of [
-    ['chat', '#histMain'],
+    ['chat', '#histClose'],
     ['donors', '#donorMainBottom'],
     ['card', '#focusBack'],
   ]) {
@@ -804,13 +804,17 @@ test('/new phone: tapping anywhere on the Auto row switches Auto', async ({ page
   await page.mouse.click(box.x + 20, box.y + box.height / 2); // switch it back
 });
 
-test('/new phone: Chat has no top bar and Back sits near the thumb', async ({ page }) => {
+test('/new phone: Chat has one Back at the top left, money left beside it, and three quick buttons', async ({ page }) => {
   await open(page, '/new#/chat', 390);
   await expect(page.locator('#hist')).toBeVisible();
-  await expect(page.locator('#hist > header')).toBeHidden();
-  const back = await page.locator('#histMain').boundingBox();
-  expect(back.y).toBeGreaterThan(740 * 0.6);
-  await page.locator('#histMain').click();
+  await expect(page.locator('#hist > header')).toBeVisible();
+  await expect(page.locator('#histMain')).toBeHidden(); // no second Back in the middle
+  await expect(page.locator('#ui2HistLeft')).toContainText('left');
+  await expect(page.locator('#ui2HistChips .ui2-chip')).toHaveText(['Amount left', 'New wording', 'Send all']);
+  const back = await page.locator('#histClose').boundingBox();
+  expect(back.y).toBeLessThan(80);
+  expect(back.x).toBeLessThan(60);
+  await page.locator('#histClose').click();
   await expect(page.locator('#hist')).toBeHidden();
 });
 
@@ -1099,7 +1103,7 @@ for (const width of [390, 1440, 1920]) {
 test('/new phone: every button in the bottom bar has an icon above its word', async ({ page }) => {
   await open(page, '/new', 390);
   const tabs = page.locator('#ui2Tabs .ui2-tab:visible');
-  await expect(tabs).toHaveText(['Case', 'Message', 'Donors', 'Chat', 'More']);
+  await expect(tabs).toHaveText(['Notes', 'Message', 'Donors', 'Chat', 'More']);
   for (let i = 0; i < 5; i++) {
     const t = tabs.nth(i);
     await expect(t.locator('svg')).toHaveCount(1);

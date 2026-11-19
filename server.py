@@ -1597,7 +1597,7 @@ def get_job(ident):
     return job
 
 
-def start_send_job(keys, caption, manual=False, request_id=None, with_picture=True):
+def start_send_job(keys, caption, manual=False, request_id=None, with_picture=True, first=None):
     global ACTIVE
     check_hold()
     keys = list(dict.fromkeys(keys))
@@ -1645,7 +1645,9 @@ def start_send_job(keys, caption, manual=False, request_id=None, with_picture=Tr
                 return None
             cancel_jobs()
         try:
-            captions = focus_bank().reserve_groups(caption, len(keys), auto=not manual)
+            captions = focus_bank().reserve_groups(
+                caption, len(keys), auto=not manual, first=first if manual else None
+            )
         except VersionsPaused as exc:
             if manual:
                 raise
@@ -7549,6 +7551,7 @@ class Handler(BaseHTTPRequestHandler):
                     True,
                     body.get("request_id"),
                     with_picture=options.get("poster", True) if options else True,
+                    first=body.get("version") if isinstance(body.get("version"), str) else None,
                 )
                 self.reply({"job_id": ident})
             except ValueError as e:
@@ -7722,7 +7725,12 @@ class Handler(BaseHTTPRequestHandler):
                 with _send_lock():
                     check_stop()
                     try:
-                        caption = focus_bank().reserve_groups(caption, 1)[0]
+                        # a DM test sends the DM text itself; a Group test sends the version on screen (or the next)
+                        if body.get("kind") != "dm":
+                            version = body.get("version")
+                            caption = focus_bank().reserve_groups(
+                                caption, 1, first=version if isinstance(version, str) else None
+                            )[0]
                     except ValueError as e:
                         # A test only checks delivery; it must not wait for the ten-version bank to finish generating.
                         if not any(

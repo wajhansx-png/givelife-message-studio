@@ -192,6 +192,7 @@ test('Test on the DM screen sends the DM and never changes the Group message', a
   await page.locator('#focusTest').click();
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0]).toContain('Brother,');
+  expect(page.url()).toContain('preview');
   await page.waitForTimeout(600);
   expect((await api(port, '/drafts')).group).toBe(BASE);
   expect((await api(port, '/focus-bank?kind=group')).source).toBe(BASE);
@@ -210,4 +211,26 @@ test('Save base while editing a message with versions: the dialog offers Save + 
   await expect(page.locator('#focusBaseSave')).toHaveText('Save + write 5 new');
   await page.locator('#focusBaseCancel').click();
   expect((await api(port, '/focus-bank?kind=group')).source).toBe(BASE); // Cancel saved nothing
+});
+test('Group: the version on screen goes with Send and Test; the base screen sends no pin', async ({ page }) => {
+  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
+  await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1, V2] });
+  const bodies = [];
+  await page.route('**/test', (route) => {
+    bodies.push(JSON.parse(route.request().postData() || '{}'));
+    return route.fulfill({ json: { code: 'SUCCESS' } });
+  });
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/preview');
+  await page.locator('#focusTest').click();
+  await expect.poll(() => bodies.length).toBe(1);
+  expect(bodies[0].version).toBeUndefined(); // the base: the usual rotation
+  await page.locator('#ui2Swipe .ui2-swipe-next').click();
+  await page.locator('#ui2Swipe .ui2-swipe-next').click();
+  await expect(page.locator('#focusFormatted')).toContainText('Third wording');
+  await expect.poll(() => page.evaluate(() => window.focusShownVersion)).toBe(V2);
+  await page.locator('#focusTest').click();
+  await expect.poll(() => bodies.length).toBe(2);
+  expect(bodies[1]).toMatchObject({ kind: 'group', version: V2 });
 });

@@ -1327,7 +1327,12 @@ async function sendGroup(key) {
     const caption = $('group').value;
     $('groupStatus').textContent = '';
     $('groupStatus').classList.remove('is-timer');
-    const r = await post('/send-group', { group: key, message: caption, request_id: requestId() }),
+    const r = await post('/send-group', {
+        group: key,
+        message: caption,
+        request_id: requestId(),
+        version: window.focusShownVersion || undefined, // the version on screen in the reader goes first
+      }),
       start = await r.json();
     if (!r.ok) throw Error(start.error || 'Could not start');
     if (!start.job_id)
@@ -1580,7 +1585,12 @@ async function sendTest(kind) {
     clearTimeout(timer);
     /* The message travels in the request, so do not wait for the draft save. */
     save().catch(() => status('Save failed', 1));
-    const r = await post('/test', { message: $(kind).value, stop_id: st.id }),
+    const r = await post('/test', {
+        message: $(kind).value,
+        stop_id: st.id,
+        kind,
+        version: kind === 'group' ? window.focusShownVersion || undefined : undefined,
+      }),
       d = await r.json();
     if (d.code === 'STOPPED') return showStopped(btn);
     const ok = d.code === 'SUCCESS',

@@ -826,6 +826,27 @@ HOOKS = [
 ]
 
 
+def timer_picks():
+    """The Timer time the owner last picked for each group (kept in the database, so it survives refresh and deploys)."""
+    try:
+        picks = STORE.get("timer_picks", {}) or {}
+        return {str(k): int(v) for k, v in picks.items() if str(v).isdigit()}
+    except Exception:
+        return {}
+
+
+def set_timer_pick(scope, delay=None):
+    picks = timer_picks()
+    if delay:
+        picks[scope] = int(delay)
+    else:
+        picks.pop(scope, None)
+    try:
+        STORE.put("timer_picks", picks)
+    except Exception:
+        pass
+
+
 def read_left():
     state = (DATA / "state.md").read_text(encoding="utf-8-sig")
     m = re.search(r"^LEFT:\s*(\d+)", state, re.M)
@@ -5978,6 +5999,7 @@ def live_snapshot():
             for t in upcoming
             if t.get("scope") and t["action"] == "send"
         }
+    status["timer_picks"] = timer_picks()
     with LOCK:
         current = {"left": read_left(), "drafts": read_drafts()}
     return {
@@ -7531,6 +7553,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply({"job_id": ident})
             except ValueError as e:
                 self.reply({"error": str(e)}, status=400)
+        elif self.path == "/schedule-group" and isinstance(body.get("forget"), str):
+            # Deselect a picked time that has already sent (nothing pending to cancel)
+            set_timer_pick(body["forget"])
+            self.reply({"forgotten": True})
         elif self.path == "/schedule-group" and body.get("cancel"):
             sched = timed_scheduler()
             with sched.lock:
@@ -7547,6 +7573,7 @@ class Handler(BaseHTTPRequestHandler):
                         {"error": "That timer already ran or was cancelled."}, status=400
                     )
                 sched.cancel_task(task)
+            set_timer_pick(task.get("scope"))
             self.reply({"cancelled": True})
         elif self.path == "/schedule-group":
             if not isinstance(body.get("group"), str):
@@ -7599,6 +7626,7 @@ class Handler(BaseHTTPRequestHandler):
                         raise ValueError("Too many pending schedules. Cancel one first.")
                     sched.tasks.append(task)
                     sched.save()
+                set_timer_pick(key, delay)
                 name = (
                     "all 6 groups"
                     if key == "all"

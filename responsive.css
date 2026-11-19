@@ -4374,3 +4374,30 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   border-color: #557ef0 !important;
   color: #b7cdff !important;
 }
+
+/* Chat colours: the app's replies are soft green, your own lines are blue, so who said what is clear at a glance */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.bot:not(.err) {
+  background: #173a33 !important;
+  border-color: #24584c !important;
+  color: #e8f5f0 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you {
+  background: #2f6fe4 !important;
+  border-color: #2f6fe4 !important;
+  color: #fff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.bot:not(.err) .message-copy {
+  color: #9cc9bb !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you,
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you .message-text {
+  background-image: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you .message-text {
+  background-color: transparent !important;
+  color: #fff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you {
+  border-radius: 14px !important;
+  overflow: hidden;
+}

@@ -912,6 +912,7 @@ function ui2Observe(run, options) {
   /* Quick chips fill the box; nothing is sent until the send arrow is pressed. */
   const CHIP_TEXT = {
     'Amount left…': 'Amount left is Rs. ',
+    'Amount left': 'Amount left is Rs. ',
     'Send all': 'Send all',
     'New wording': 'New wording',
     'Send to GiveLife': 'Send to GiveLife',
@@ -942,14 +943,37 @@ function ui2Observe(run, options) {
     const chips = mk('div', 'ui2-chips ui2-hist-chips');
     chips.id = 'ui2HistChips';
     chips.setAttribute('aria-label', 'Quick commands');
-    addChips(chips, $('histCmd'), [
-      'Amount left…',
-      'Send all',
-      'New wording',
-      'Send to GiveLife',
-      'Show message',
-    ]);
+    addChips(chips, $('histCmd'), ['Amount left', 'New wording', 'Send all']);
     form.before(chips);
+    /* Money left sits in the chat header (tap = type a new amount) */
+    const head = document.querySelector('#hist > header'),
+      left = $('leftChip');
+    if (head && left) {
+      const m = mk('button', 'ui2-hist-left', '');
+      m.type = 'button';
+      m.id = 'ui2HistLeft';
+      const sync = () => (m.textContent = left.textContent.trim());
+      sync();
+      new MutationObserver(sync).observe(left, { childList: true, subtree: true, characterData: true });
+      m.addEventListener('click', () => chips.firstChild?.click());
+      head.append(m);
+    }
+    /* Keyboard open: the chat fits the space above it and the newest reply stays in view */
+    const vv = window.visualViewport,
+      hist = $('hist'),
+      log = $('histLog');
+    if (vv && hist) {
+      const fit = () => {
+        hist.style.setProperty('--ui2-hist-vvh', Math.round(vv.height) + 'px');
+        const kb = innerHeight - vv.height > 120;
+        if (kb !== hist.classList.contains('ui2-kb')) {
+          hist.classList.toggle('ui2-kb', kb);
+          if (kb && log) log.scrollTop = log.scrollHeight;
+        }
+      };
+      vv.addEventListener('resize', fit);
+      fit();
+    }
   }
 
   /* Computer: Chat is its own screen, opened from the top bar. */

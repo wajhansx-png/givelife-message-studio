@@ -4258,3 +4258,119 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     font-size: 11px !important;
   }
 }
+
+/* Chat (owner's final design): one Back at the top left, money left beside it, Copy is a small icon inside each
+   reply, three quick buttons over the box, a narrow column on the computer, and the chat fits above the keyboard */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist > header {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist > header #histClose {
+  order: -1;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-chat-return #histMain {
+  display: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-hist-left {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line2, #3a3b46);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink, #eceef5);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e {
+  position: relative;
+  line-height: 1.45;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.bot {
+  padding-right: 42px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e .message-copy {
+  position: absolute !important;
+  right: 6px;
+  bottom: 6px;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #8d90a0 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you .message-copy {
+  display: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-hist-chips {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-hist-chips .ui2-chip {
+  min-height: 38px;
+  justify-content: center;
+  text-align: center;
+}
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist {
+    height: var(--ui2-hist-vvh, 100dvh) !important;
+    max-height: var(--ui2-hist-vvh, 100dvh) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist > header {
+    padding: 8px 12px !important;
+    border-bottom: 1px solid var(--line, #24252f);
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist > header > span:first-child {
+    order: 0;
+    font-size: 17px;
+    font-weight: 800;
+  }
+}
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist :is(header, #histLog, .ui2-chat-return, #histNextActions, .ui2-hist-chips, #histForm) {
+    width: 100%;
+    max-width: 600px !important;
+    margin-inline: auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-hist-chips {
+    grid-template-columns: repeat(3, max-content);
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-hist-left {
+    display: none;
+  }
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e .message-copy {
+  inset: auto 6px 6px auto !important;
+  transform: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist > header #histClose {
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 36px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+}
+
+/* Phone bottom bar: Notes instead of Case (Case stays in More as "Case page") */
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-tab[data-tab='notes'] {
+    display: flex !important;
+    order: -1;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-tab[data-tab='case'] {
+    display: none !important;
+  }
+}
+
+/* Timer: the time you picked last stays lit (blue outline); a scheduled time is filled blue */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .delay-pill.is-last {
+  border-color: #557ef0 !important;
+  color: #b7cdff !important;
+}

@@ -2583,15 +2583,13 @@
       ([{ boundingClientRect: box, rootBounds: strip }]) => {
         watch.disconnect();
         if (tabReveal !== watch || !page.open || !strip?.width || !box.width) return;
-        const delta =
-          box.left < strip.left - 1
-            ? box.left - strip.left
-            : box.right > strip.right + 1
-              ? box.right - strip.right
-              : 0;
-        if (delta)
+        const currentLeft = tabStrip.scrollLeft;
+        const maxLeft = tabStrip.scrollWidth - tabStrip.clientWidth;
+        const center = currentLeft + box.left - strip.left + (box.width - strip.width) / 2;
+        const targetLeft = Math.min(maxLeft, Math.max(0, center));
+        if (Math.abs(targetLeft - currentLeft) > 1)
           tabStrip.scrollTo({
-            left: tabStrip.scrollLeft + delta,
+            left: targetLeft,
             behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
           });
       },

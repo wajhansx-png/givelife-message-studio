@@ -66,7 +66,7 @@
   let dirtyBefore = false,
     baseDone = false;
   saveBase.onclick = () => {
-    if (editing) edit(false);
+    if (editing) edit(false, true); // close the editor but keep the edit for this dialog (Save or Cancel)
     dirtyBefore = dirty;
     baseDone = false;
     // a version shown with ‹ › is a different text from the base: saving makes THAT version the base
@@ -382,17 +382,21 @@
     p.style.setProperty('font-size', best + 'px', 'important');
     $('focusText').style.fontSize = Math.max(best, 14) + 'px';
   }
+  function label() {
+    const n = row?.items?.length || 0;
+    if (index >= n) index = n - 1; // the shown version was removed
+    $('focusVersion').textContent = index < 0 ? 'Original' : index + 1 + ' / ' + n;
+    /* for the version dots under the message: how many versions, and which one shows (0 = the original) */
+    $('focusVersion').dataset.n = String(n);
+    $('focusVersion').dataset.i = String(index + 1);
+  }
   function paint(text) {
     $('focusText').value = text;
     $('focusFormatted').innerHTML = window.waFormat(text);
-    $('focusVersion').textContent =
-      index < 0 ? 'Original' : index + 1 + ' / ' + (row?.items?.length || 0);
-    /* for the version dots under the message: how many versions, and which one shows (0 = the original) */
-    $('focusVersion').dataset.n = String(row?.items?.length || 0);
-    $('focusVersion').dataset.i = String(index + 1);
+    label();
     requestAnimationFrame(fit);
   }
-  function edit(on) {
+  function edit(on, keep) {
     editing = on;
     $('focusText').hidden = !on;
     $('focusFormatted').hidden = on;
@@ -400,7 +404,7 @@
     if (on) clearTimeout(timer);
     if (on) $('focusText').focus({ preventScroll: true });
     else {
-      if (dirty) save();
+      if (dirty && !keep) save();
       $('focusFormatted').innerHTML = window.waFormat($('focusText').value);
       fit();
       watch();
@@ -440,6 +444,7 @@
         const d = await api();
         if (screen.hidden || editing) return;
         row = d;
+        if (index < 0 || index < (d.items?.length || 0)) label();
         rowStatus(d);
         genButton();
         watch();
@@ -619,8 +624,9 @@
     try {
       if (editing) edit(false);
       await save();
-      $('group').value = row?.source || $('focusText').value;
-      await window.sendTest('group');
+      // the message that is open: a DM test must never be written into the Group draft
+      $(kind).value = row?.source || $('focusText').value;
+      await window.sendTest(kind);
     } catch (error) {
       status(error.message);
     } finally {

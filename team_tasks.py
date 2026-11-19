@@ -16,7 +16,6 @@ from donor_book import normalize_phone
 
 PKT = datetime.timezone(datetime.timedelta(hours=5))
 OPEN = ("Waiting", "Asked", "Late", "Reported", "Unscheduled")
-LEFT = ("Waiting", "Asked", "Late")
 DONE_CORE = r"(?:done|finished|completed?|posted|sent|submitted|uploaded|shared|ready|ho\s*gaya|ho\s*gya|hogaya|ho\s*gai|kar\s*diya|kar\s*di|kardiya|kr\s*diya)"
 DONE_WORDS = re.compile(r"(?i)\b" + DONE_CORE + r"\b")
 NOT_DONE = re.compile(
@@ -735,12 +734,6 @@ class TeamTasks:
                 if not (0 <= a <= 23 and 0 <= b <= 23) or a == b:
                     raise ValueError("Use two different hours from 0 to 23, for example 23 and 7.")
                 self._load()["quiet"] = [a, b]
-            self._save()
-            return self.view()
-
-    def mark_read(self):
-        with self.lock:
-            self._load()["unread"] = 0
             self._save()
             return self.view()
 

@@ -2726,7 +2726,7 @@
       const gap = Number(el('donorGap').value);
       if (!Number.isFinite(gap) || gap < 5 || gap > 600)
         throw Error('Choose a gap from 5 seconds to 10 minutes.');
-      const r = await api('/donor-delivery', {
+      await api('/donor-delivery', {
         scope,
         ids,
         ...(scope === 'selected' ? { limit } : batchBody),
@@ -2853,11 +2853,7 @@
         ),
         /* The count sits outside the list box, in the free space on the right; with no room it joins the green line. */
         shellBox = { right: tableRight || el('donorTable').getBoundingClientRect().right },
-        phone = innerWidth - shellBox.right < 190,
-        overall =
-          phone && inScope.length
-            ? inScope.filter((d) => d.dm_sent).length + ' / ' + inScope.length + ' DMed · '
-            : '';
+        phone = innerWidth - shellBox.right < 190;
       dmBadge.hidden = phone || !active || !inScope.length;
       dmBadge.style.left = Math.round(shellBox.right + 18) + 'px';
       if (!dmBadge.hidden) {

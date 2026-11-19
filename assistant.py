@@ -477,9 +477,6 @@ def _call(key, system, tools, messages):
     return (msg.get("content") or "").strip(), [(n, a) for _, n, a in _parse_calls(msg)]
 
 
-SCREEN_ACTIONS = ("prepare_dm",)
-
-
 def _slim(state):
     """Only what the model needs to decide; keeps the prompt (and the bill) small."""
     state = mapping(state)

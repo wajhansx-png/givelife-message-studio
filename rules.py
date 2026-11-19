@@ -23,11 +23,6 @@ GROUPS = {
     "free": ["all freelance", "freelance", "all 5"],
     "all": ["all groups", "every group", "all"],
 }
-STANDING = re.compile(
-    r"\b(always|never|from now|every day|daily|each day|only|don'?t|dont|do not|avoid|no more|at night|per day|a day)\b",
-    re.I,
-)
-
 
 def find_group(text):
     low = text.lower()

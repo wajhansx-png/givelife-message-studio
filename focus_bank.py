@@ -393,12 +393,6 @@ class FocusBank:
         if not got and errors:
             raise errors[0]
 
-    def _candidates(self, api, source, avoid, need, last_note, attempt, samples=()):
-        found = []
-        for batch in self._rounds(api, source, avoid, need, last_note, attempt, samples):
-            found.extend(batch)
-        return list(dict.fromkeys(found))
-
     def current(self, kind, revision):
         with self.lock:
             return self._load().get(kind, {}).get("revision") == revision

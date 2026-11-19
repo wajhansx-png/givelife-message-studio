@@ -6,7 +6,6 @@ let editing = false,
   left = null,
   timer,
   saveChain = Promise.resolve(),
-  allT = null,
   autoOn = false,
   autoKnown = false,
   seenAuto = 0;

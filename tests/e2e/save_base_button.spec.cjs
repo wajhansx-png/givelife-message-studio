@@ -132,3 +132,45 @@ test('✦ deletes the old versions and writes a fresh 5 (never adds to the old o
   await expect.poll(() => posts.map((b) => b.action)).toContain('regenerate');
   expect(posts.map((b) => b.action)).not.toContain('generate');
 });
+test('Save base then Cancel: swiping on never saves the version that was only looked at', async ({ page }) => {
+  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
+  await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1, V2] });
+  const posts = [];
+  await page.route('**/focus-bank', async (route) => {
+    if (route.request().method() === 'POST') posts.push(JSON.parse(route.request().postData() || '{}'));
+    await route.continue();
+  });
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/preview');
+  await page.locator('#ui2Swipe .ui2-swipe-next').click();
+  await expect(page.locator('#focusFormatted')).toContainText('Second wording');
+  await page.locator('#ui2Swipe .ui2-base-btn').click();
+  await page.locator('#focusBaseCancel').click();
+  await page.locator('#ui2Swipe .ui2-swipe-next').click();
+  await expect(page.locator('#focusFormatted')).toContainText('Third wording');
+  await page.locator('#ui2Swipe .ui2-base-btn').click();
+  await page.keyboard.press('Escape');
+  await page.locator('#ui2Swipe .ui2-swipe-next').click();
+  await expect(page.locator('#focusFormatted')).toContainText('Base wording');
+  expect(posts.filter((b) => b.action === 'save')).toEqual([]);
+  expect((await api(port, '/focus-bank?kind=group')).source).toBe(BASE);
+});
+test('✦ while a version shows: the deleted version leaves the screen and the base shows', async ({ page }) => {
+  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
+  await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1] });
+  await page.route('**/focus-bank', async (route) => {
+    const b = JSON.parse(route.request().postData() || '{}');
+    if (b.action === 'regenerate')
+      return route.fulfill({ json: { source: BASE, items: [], state: 'Generating', revision: 'r', batch: { goal: 5 } } });
+    await route.continue();
+  });
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/preview');
+  await page.locator('#ui2Swipe .ui2-swipe-next').click();
+  await expect(page.locator('#focusFormatted')).toContainText('Second wording');
+  await page.locator('#ui2Swipe .ui2-gen-btn').click();
+  await expect(page.locator('#focusFormatted')).toContainText('Base wording');
+  await expect(page.locator('#focusRegenerate')).toBeDisabled(); // one batch at a time
+});

@@ -63,8 +63,12 @@
     '<h2>Save base message?</h2><p id="focusBaseNote"></p><div class="focus-base-actions"><button type="button" id="focusBaseCancel">Cancel</button><button type="button" class="primary" id="focusBaseSave">Save</button></div>';
   document.body.append(baseDialog);
   let baseRewrite = false; // true when this save replaces saved versions: new ones are then written from it
+  let dirtyBefore = false,
+    baseDone = false;
   saveBase.onclick = () => {
     if (editing) edit(false);
+    dirtyBefore = dirty;
+    baseDone = false;
     // a version shown with ‹ › is a different text from the base: saving makes THAT version the base
     if (row && $('focusText').value !== row.source) dirty = true;
     const hasVersions = (row?.items?.length || 0) > 0;
@@ -80,7 +84,12 @@
     baseDialog.showModal();
   };
   $('focusBaseCancel').onclick = () => baseDialog.close();
+  // Cancel or Escape: a version only looked at with ‹ › must never be saved as the base later by a swipe or a send
+  baseDialog.addEventListener('close', () => {
+    if (!baseDone) dirty = dirtyBefore;
+  });
   $('focusBaseSave').onclick = async () => {
+    baseDone = true;
     try {
       const changed = dirty,
         rewrite = baseRewrite && changed;
@@ -173,6 +182,8 @@
       if (editing) edit(false);
       await save();
       row = await api({ action: 'regenerate' });
+      index = -1;
+      if (!editing) paint(row.source);
       showProgress(0);
       genButton();
       watch();
@@ -257,6 +268,7 @@
       busy = row?.state === 'Generating';
     b.disabled = busy;
     b.textContent = busy ? 'Writing 5…' : 'Generate 5 Versions';
+    if ($('focusRegenerate')) $('focusRegenerate').disabled = busy;
   }
   /* One short line. A long generation message shows as "1 of 5 ready ⓘ"; tap it for the full reason. */
   /* Writing versions shows calm progress only (1/5, 2/5 ...), never an error: the app keeps trying by itself. */
@@ -391,6 +403,7 @@
       if (dirty) save();
       $('focusFormatted').innerHTML = window.waFormat($('focusText').value);
       fit();
+      watch();
     }
   }
   async function save() {
@@ -407,6 +420,7 @@
           syncSavedDrafts(row);
           if ($('focusText').value === text) sessionStorage.removeItem('focus-draft-' + kind);
           index = -1;
+          if (!editing && $('focusText').value === text) paint(text);
           $(kind).value = text;
           status('Saved base message · TEST works · tap Generate 5 Versions for versions');
           genButton();

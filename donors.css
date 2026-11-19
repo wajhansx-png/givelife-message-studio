@@ -2,10 +2,7 @@
 .donor-launch {
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid var(--line2);
-  border-radius: 9px;
   font-weight: 650;
-  color: var(--gink);
   white-space: nowrap;
 }
 .donor-page {
@@ -19,86 +16,39 @@
   border: 0;
   border-radius: 0;
   padding: 0;
-  background: var(--bg);
   color: var(--ink);
   overflow: hidden;
 }
-.donor-page::backdrop {
-  background: var(--bg);
-}
+
 .donor-shell {
   height: 100%;
   display: flex;
   flex-direction: column;
   padding: 10px max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom));
-  gap: 8px;
   width: 100%;
   margin: auto;
 }
 .donor-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   flex: none;
-  min-height: 40px;
 }
 .donor-head h1 {
-  font-size: 19px;
-  letter-spacing: -0.4px;
   line-height: 1.2;
 }
 .donor-count {
-  color: var(--mut);
-  font-size: 13px;
-  font-weight: 500;
   margin-left: 5px;
 }
 
 .donor-add {
   margin-left: auto;
-  min-height: 40px;
-  padding: 7px 14px;
-  border: 1px dashed #c58c3a;
-  border-radius: 8px;
-  color: var(--ink);
-  background: var(--wbg);
-  font-weight: 650;
-  font-size: 13px;
 }
 .donor-toolbar {
-  display: flex;
-  gap: 10px;
-  align-items: center;
   flex: none;
 }
-.donor-tabs {
-  display: flex;
-  gap: 5px;
-}
-.donor-tabs button {
-  min-height: 36px;
-  border: 1px solid var(--line2);
-  border-radius: 8px;
-  background: var(--surface);
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--mut);
-  white-space: nowrap;
-}
-.donor-tabs [aria-selected='true'] {
-  background: #d99536;
-  border-color: #d99536;
-  color: #21180c;
-}
+
 .donor-search {
   margin-left: auto;
   min-width: 120px;
-  flex: 1;
-  max-width: 420px;
-  min-height: 36px;
   border: 1px solid var(--line2);
-  border-radius: 8px;
   background: var(--surface);
   padding: 6px 10px;
   font-size: 13px;
@@ -111,8 +61,6 @@
   overscroll-behavior: contain;
   overflow-anchor: none;
   border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--surface);
   scrollbar-width: thin;
 }
 .donor-columns,
@@ -127,28 +75,17 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  height: 28px;
   background: var(--surface2);
-  font-size: 10px;
-  color: var(--mut);
   font-weight: 650;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 .donor-row {
-  height: 42px;
-  min-height: 42px;
   border-bottom: 1px solid var(--line);
   border-left: 3px solid transparent;
-  transition: background 0.15s;
 }
 .donor-row:last-child {
   border-bottom: 0;
 }
-.donor-row[data-important='true'] {
-  border-left-color: #d99536;
-  background: color-mix(in srgb, #d99536 8%, var(--surface));
-}
+
 .donor-row[data-donated='true'] {
   border-left-color: var(--ok);
 }
@@ -164,20 +101,13 @@
   grid-column: 1;
   width: 32px;
   height: 40px;
-  border-radius: 5px;
-  color: var(--faint);
-  font-size: 20px;
 }
-.donor-star[aria-pressed='true'] {
-  color: #d99536;
-}
+
 .donor-identity {
   grid-column: 2;
   min-width: 0;
 }
 .donor-name {
-  font-size: 12px;
-  font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -198,9 +128,6 @@
   white-space: nowrap;
 }
 .donor-row[data-delivery='Sent'] .donor-dm {
-  background: var(--btn);
-  border-color: var(--btn);
-  color: white;
   opacity: 1;
   cursor: default;
 }
@@ -226,15 +153,11 @@
   color: var(--ink);
 }
 .donor-row[data-donated='true'] .donor-status {
-  background: var(--btn);
-  border-color: var(--btn);
-  color: white;
   font-weight: 650;
 }
 .donor-row .donor-amount {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  background: var(--bg);
   color: var(--gink);
   font-weight: 650;
   appearance: textfield;
@@ -255,7 +178,6 @@
   height: 40px;
   display: grid;
   place-items: center;
-  border-radius: 6px;
   cursor: pointer;
   font-size: 18px;
 }
@@ -273,8 +195,6 @@
   padding: 5px;
   background: var(--surface);
   border: 1px solid var(--line2);
-  border-radius: 9px;
-  box-shadow: var(--sh3);
   width: 130px;
 }
 .donor-more button {
@@ -303,7 +223,6 @@
 .donor-bottom {
   display: flex;
   align-items: center;
-  gap: 8px;
   flex: none;
 }
 .donor-gap {
@@ -349,21 +268,11 @@
 }
 .donor-bottom .send-important,
 .donor-bottom .send-donors {
-  min-height: 40px;
   padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
-.send-important {
-  background: #d99536;
-  color: #21180c;
-}
-.send-donors {
-  background: var(--btn);
-  color: white;
-}
+
 .donor-notice {
   font-size: 12px;
   color: var(--gink);
@@ -387,17 +296,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
-  min-height: 28px;
   border-radius: 7px;
-  padding: 3px 8px;
-  background: var(--gs);
   color: var(--gink);
   flex: none;
 }
 .donor-progress span {
   flex: 1;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -409,13 +313,10 @@
 }
 .donor-form-dialog,
 .poster-dialog {
-  width: min(460px, calc(100vw - 24px));
   max-height: calc(100dvh - 24px);
   overflow: auto;
   margin: auto;
   border: 1px solid var(--line2);
-  border-radius: 16px;
-  padding: 24px;
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--sh3);
@@ -426,13 +327,10 @@
 }
 .donor-form-dialog h2,
 .poster-dialog h2 {
-  font-size: 21px;
   margin-bottom: 10px;
 }
 .donor-form-dialog p,
 .poster-dialog p {
-  color: var(--mut);
-  font-size: 13px;
   margin-bottom: 12px;
 }
 .donor-form-dialog label,
@@ -455,20 +353,14 @@
 }
 .donor-form-actions {
   display: flex;
-  gap: 8px;
   margin-top: 20px;
 }
 .donor-form-actions button {
   flex: 1;
-  min-height: 48px;
-  border-radius: 10px;
   border: 1px solid var(--line2);
   font-weight: 650;
 }
-.donor-form-actions .primary {
-  background: var(--btn);
-  color: white;
-}
+
 .donor-form-dialog details {
   margin-top: 20px;
   color: var(--mut);
@@ -488,7 +380,6 @@
   display: block;
   width: auto;
   max-width: 100%;
-  max-height: 40dvh;
   object-fit: contain;
   border-radius: 10px;
   margin: auto;
@@ -512,50 +403,18 @@
   }
 }
 @media (max-width: 899px) {
-  .donor-shell {
-    padding: 6px max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom));
-    gap: 6px;
-  }
-  .donor-head {
-    min-height: 44px;
-    gap: 8px;
-  }
-  .donor-head h1 {
-    font-size: 16px;
-  }
-  .donor-count {
-    font-size: 11px;
-  }
+
   
-  .donor-add {
-    min-height: 44px;
-    padding: 6px 12px;
-    font-size: 12px;
-  }
-  .donor-toolbar {
-    flex-direction: column;
-    gap: 5px;
-    align-items: stretch;
-  }
+
   .donor-search {
     order: 0;
-    min-height: 40px;
-    max-width: none;
-    width: 100%;
     margin: 0;
-    font-size: 13px;
   }
   .donor-tabs {
     order: 1;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 4px;
   }
-  .donor-tabs button {
-    min-height: 40px;
-    padding: 5px 2px;
-    font-size: 11px;
-  }
+
   .donor-columns {
     display: none;
   }
@@ -565,17 +424,11 @@
     column-gap: 3px;
     padding: 0 4px;
   }
-  .donor-row {
-    height: 44px;
-    min-height: 44px;
-  }
+
   .donor-name {
-    font-size: 11.5px;
     font-weight: 600;
   }
   .donor-star {
-    width: 24px;
-    height: 44px;
     font-size: 18px;
   }
   .donor-dm {
@@ -592,16 +445,12 @@
     font-size: 10px;
   }
   .donor-more summary {
-    width: 24px;
-    height: 44px;
     font-size: 17px;
   }
   .donor-more[open] > div {
     top: 38px;
   }
-  .donor-bottom {
-    gap: 6px;
-  }
+
   .donor-gap {
     font-size: 10px;
     gap: 3px;
@@ -614,28 +463,11 @@
   .donor-bottom .send-important,
   .donor-bottom .send-donors {
     flex: 1;
-    min-height: 44px;
-    font-size: 11px;
-    padding: 7px 6px;
   }
   .donor-notice {
     font-size: 11px;
   }
-  .donor-progress {
-    font-size: 10px;
-    min-height: 25px;
-  }
-  .donor-progress button {
-    min-height: 32px;
-  }
-  .donor-form-dialog,
-  .poster-dialog {
-    padding: 20px;
-  }
-  .brandbar .gear {
-    flex: 0 0 44px;
-    width: 44px;
-  }
+
   .brandbar .seg button {
     padding-inline: 10px;
   }
@@ -651,13 +483,7 @@
   .donor-launch {
     margin-left: auto;
   }
-  .donor-name {
-    font-size: 11px;
-  }
-  .donor-row {
-    grid-template-columns: 22px minmax(45px, 1fr) 42px 80px 43px 22px;
-    column-gap: 2px;
-  }
+
   .donor-status {
     font-size: 9px !important;
   }
@@ -668,23 +494,7 @@
   }
 }
 @media (min-width: 900px) {
-  .donor-row {
-    height: 36px;
-    min-height: 36px;
-  }
-  .donor-name {
-    font-size: 12px;
-  }
-  .donor-star,
-  .donor-more summary {
-    height: 34px;
-  }
-  .donor-head {
-    min-height: 36px;
-  }
-  .donor-shell {
-    gap: 6px;
-  }
+
 }
 .donor-total {
   font-size: 12px;
@@ -692,18 +502,11 @@
   align-items: baseline;
   gap: 6px;
   padding: 6px 10px;
-  border-radius: 7px;
-  background: var(--gs);
   white-space: nowrap;
 }
-.donor-total small {
-  font-size: 10px;
-  color: var(--mut);
-}
+
 .donor-total strong {
   color: var(--gink);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
 }
 @media (max-width: 899px) {
   .donor-total {
@@ -711,52 +514,26 @@
     padding: 5px 7px;
     margin-left: auto;
   }
-  .donor-total small {
-    font-size: 9px;
-  }
-  .donor-total strong {
-    font-size: 11px;
-  }
+
   .donor-add {
     margin-left: 0;
   }
-  .donor-head {
-    gap: 6px;
-  }
-  .donor-head h1 {
-    font-size: 14px;
-  }
-  .donor-count {
-    font-size: 10px;
-  }
+
 }
 @media (max-width: 360px) {
   .donor-total small {
     display: none;
   }
-  .donor-total {
-    padding: 4px;
-  }
-  .donor-head h1 {
-    font-size: 13px;
-  }
-  .donor-add {
-    padding-inline: 8px;
-  }
+
 }
 .donor-messages {
   flex: 1;
-  min-height: 0;
-  overflow: auto;
   overscroll-behavior: contain;
   padding: 4px;
 }
 .bank-heading {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--mut);
   margin-bottom: 10px;
 }
 .bank-heading span {
@@ -764,32 +541,21 @@
 }
 .bank-message {
   border: 1px solid var(--line2);
-  border-radius: 10px;
-  padding: 12px;
-  background: var(--surface);
 }
 .bank-message header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 13px;
-  min-height: 36px;
   margin-bottom: 8px;
 }
 .bank-message .tool,
 .bank-heading .tool {
   font-size: 12px;
-  min-height: 36px;
 }
 .bank-preview {
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 12px;
-  line-height: 1.45;
-  background: var(--msg);
   color: var(--msgink);
-  border-radius: 8px;
-  padding: 12px;
 }
 .bank-message textarea {
   width: 100%;
@@ -800,34 +566,19 @@
   border: 1px solid var(--line2);
   padding: 10px;
   border-radius: 8px;
-  font-size: 13px;
-  line-height: 1.5;
 }
 .donor-gap#donorPace {
-  min-height: 40px;
   padding: 6px 9px;
   border: 1px solid var(--line2);
-  border-radius: 7px;
   color: var(--gink);
-  font-size: 11px;
   background: var(--surface);
 }
 @media (max-width: 899px) {
   .donor-tabs {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
-  .donor-tabs button {
-    font-size: 10px;
-  }
-  .bank-preview {
-    font-size: 12px;
-  }
-  .bank-heading {
-    font-size: 11px;
-  }
+
   .donor-gap#donorPace {
-    font-size: 10px;
-    min-height: 44px;
     padding: 5px;
   }
 }
@@ -855,21 +606,8 @@
   }
 }
 
-.donor-progress[data-error='true'] {
-  background: var(--wbg);
-  color: var(--warn);
-}
-
-/* Short forms: settings flow above a footer that never covers inputs. */
-html body #donorBatchPicker {
-  width: min(94vw, 540px);
-  padding: 20px;
-  max-height: 90dvh;
-}
 html body #donorBatchForm {
-  display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px 16px;
 }
 
 html body #donorBatchForm > input,
@@ -880,7 +618,6 @@ html body #donorBatchForm > select {
   font-size: 14px;
 }
 html body #donorBatchForm > .batch-hint,
-html body #donorBatchForm > .batch-more,
 html body #donorBatchForm > .batch-foot,
 html body #donorBatchForm > .batch-gap-row,
 html body #donorBatchForm > label:has(+ .batch-gap-row),
@@ -1139,10 +876,7 @@ html body #donorPasteDialog #pastePoster {
   cursor: default;
 }
 #donorsPage[data-panel='messages'] .bank-actions > .bank-regenerate {
-  min-height: 48px;
   margin-top: 7px;
-  background: #315cd0;
-  color: #fff;
 }
 #donorsPage[data-panel='messages'] .bank-pagination {
   display: flex;
@@ -1431,15 +1165,6 @@ html body #donorPasteDialog #pastePoster {
 
 .numbers-dialog .numbers-remove:disabled {
   opacity: 0.5;
-}
-
-/* App Consistency: Universal removal of all blur glows and box shadows */
-*,
-*::before,
-*::after {
-  box-shadow: none !important;
-  filter: none !important;
-  -webkit-filter: none !important;
 }
 
 /* Poster dialog: the PDF and video that follow the poster in every group post. */

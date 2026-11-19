@@ -34,7 +34,6 @@
 /* ---------- Main screen: words instead of icons, readable message, shorter send buttons ---------- */
 @media (max-width: 899px) {
   .UI2 #card .tools {
-    display: flex !important;
     min-height: 30px !important;
     padding: 0 4px !important;
   }
@@ -218,7 +217,6 @@
   .UI2 #donorsPage .donor-row > .donor-dm {
     width: 48px !important;
     min-width: 48px !important;
-    height: 34px !important;
     background: transparent !important;
     color: #9aa3c0 !important;
     border: 1px solid #394060 !important;
@@ -303,7 +301,6 @@
 @media (min-width: 900px) {
   .UI2 #messageFocus > header {
     justify-content: flex-start !important;
-    gap: 20px;
   }
   .UI2 #messageFocus > header .focus-styles {
     margin-left: 0 !important;
@@ -315,14 +312,11 @@
     align-content: flex-start !important;
   }
   .UI2 #messageFocus .focus-workspace {
-    grid-template-columns: minmax(360px, 400px) 120px minmax(280px, 360px) !important;
     justify-content: start !important;
     column-gap: 16px;
   }
   .UI2 #messageFocus .focus-workspace > .focus-paper {
     grid-column: 1 !important;
-    width: 100% !important;
-    max-width: none !important;
     padding-top: 0 !important;
   }
   .UI2 #messageFocus .focus-workspace > .focus-rail {
@@ -405,8 +399,7 @@
 }
 
 /* ---------- Settings: Back is a calm grey button ---------- */
-.UI2 #set .back-action,
-.UI2 #set #setBack {
+.UI2 #set .back-action {
   border-color: var(--line2) !important;
   color: var(--ink) !important;
 }
@@ -557,7 +550,6 @@
 }
 .UI2 #messageFocus .ui2-reader-actions {
   order: 2;
-  display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(74px, auto) minmax(72px, auto);
   gap: 7px;
   align-items: stretch;
@@ -572,9 +564,6 @@
   display: none !important;
 }
 .UI2 #messageFocus .ui2-reader-dock {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
   padding: 8px 0 max(6px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--line2);
 }
@@ -669,7 +658,6 @@
     position: relative;
   }
   .UI2 .donor-bottom > .ui2-options {
-    order: -1;
     position: relative;
     flex: none;
   }
@@ -691,7 +679,6 @@
     display: none;
   }
   .UI2 .donor-bottom > .ui2-options > summary::after {
-    content: '\2304';
     margin-left: 8px;
   }
   .UI2 .ui2-options:not([open]) > .ui2-options-panel {
@@ -720,9 +707,7 @@
     text-align: left;
     min-height: 40px;
   }
-  .UI2 .donor-bottom > #donorMainBottom {
-    order: 99;
-  }
+
 }
 
 /* ---------- DM messages page: thumb-zone buttons on phones, 12 px message ---------- */
@@ -760,10 +745,7 @@
   }
 }
 @media (min-width: 900px) {
-  .UI2 #donorMessages .bank-line {
-    font-size: 12px !important;
-    line-height: 1.4 !important;
-  }
+
 }
 
 @media (min-width: 900px) {
@@ -805,7 +787,6 @@
 /* ---------- Desktop reader: message, controls, and sends are visible in one workspace ---------- */
 @media (min-width: 900px) {
   .UI2 #messageFocus .focus-workspace {
-    display: grid !important;
     grid-template-columns: minmax(300px, 1.2fr) minmax(112px, 0.42fr) minmax(220px, 0.9fr) !important;
     align-items: start !important;
     gap: 14px !important;
@@ -828,9 +809,6 @@
     min-width: 0;
   }
   .UI2 #messageFocus .ui2-reader-dock {
-    grid-template-columns: repeat(4, minmax(80px, 130px));
-    justify-content: start;
-    padding: 12px max(16px, calc((100vw - 1280px) / 2));
     border-top: 1px solid var(--line2);
   }
   .UI2 #messageFocus #focusText {
@@ -841,14 +819,10 @@
 /* ======================= Home (PDF pages 1-9, 13; V4 pages 7, 31) ======================= */
 /* Amount: "Rs. 25,000 left ✎" once */
 .UI2 #leftChip::after {
-  content: ' left ✎' !important;
   font-size: 11px;
   font-weight: 600;
-  opacity: 0.8;
 }
-.UI2 #leftChip[data-ui2-left='1']::after {
-  content: ' ✎' !important;
-}
+
 /* Auto: one plain row, "Auto is OFF" / "Auto is ON", the switch on the right (pages 5-6) */
 .UI2 #live {
   display: flex !important;
@@ -885,7 +859,6 @@
   flex: none !important;
   width: auto !important;
   min-width: 52px !important;
-  min-height: 36px !important;
   margin: 0 !important;
   padding: 4px !important;
   border: 0 !important;
@@ -913,7 +886,6 @@
 }
 .UI2 .group-send .gb-name {
   display: flex !important;
-  align-items: baseline !important;
   gap: 8px !important;
   min-width: 0;
   font-size: 15px !important;
@@ -940,7 +912,6 @@
   margin-top: 8px;
 }
 .UI2 .ui2-group-more :is(.ui2-later, .ui2-choose-btn) {
-  min-height: 36px;
   padding: 0 14px;
   border: 1px solid var(--line2);
   border-radius: 999px;
@@ -962,16 +933,10 @@
 }
 .UI2 .ui2-later-panel {
   display: grid;
-  gap: 8px;
   margin-top: 8px;
-  padding: 10px;
   border: 1px solid var(--line2);
   border-radius: 14px;
   background: var(--surface);
-}
-
-.UI2 .ui2-later-line .delay-row {
-  margin: 0 !important;
 }
 
 /* Quick chips (chat and the slim chat bar) */
@@ -1001,7 +966,6 @@
   inset: auto 0 0 0;
   width: 100%;
   max-width: 560px;
-  margin: 0 auto;
   padding: 10px 14px calc(16px + env(safe-area-inset-bottom));
   border: 1px solid var(--line2);
   border-radius: 22px 22px 0 0;
@@ -1153,13 +1117,9 @@
     align-items: start !important;
     gap: 12px !important;
   }
-  .UI2 #main-workspace > #card {
-    grid-column: 1;
-    grid-row: 1;
-  }
+
   .UI2 #main-workspace > .side {
     grid-column: 2;
-    grid-row: 1;
     min-width: 0;
   }
 }
@@ -1259,7 +1219,6 @@
   .UI2 #main-workspace {
     display: grid !important;
     grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr) !important;
-    grid-template-rows: minmax(0, 1fr) auto !important;
     align-items: stretch !important;
     gap: 14px !important;
   }
@@ -1295,13 +1254,10 @@
     background: transparent !important;
     box-shadow: none !important;
   }
-  .UI2 #main-workspace .rail-quick {
-    margin-top: auto !important;
-  }
+
   .UI2 #main-workspace .talk {
     grid-column: 1 / -1;
     grid-row: 2;
-    display: grid !important;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 6px 12px;
@@ -1386,7 +1342,6 @@
 }
 .UI2 .ui2-styles button {
   flex: none;
-  min-height: 32px;
   padding: 0 12px;
   border: 1px solid var(--line2);
   border-radius: 999px;
@@ -1435,15 +1390,7 @@
   .UI2 .app > .brandbar > #leftChip {
     order: 3 !important;
   }
-  .UI2 .app > .brandbar > #donorNotesShortcut {
-    order: 4 !important;
-  }
-  .UI2 .app > .brandbar > .report-open {
-    order: 5 !important;
-  }
-  .UI2 .app > .brandbar > #mainNavMore {
-    order: 6 !important;
-  }
+
   .UI2 .app > .brandbar > .sp {
     display: none !important;
   }
@@ -1505,7 +1452,6 @@
 }
 @media (min-width: 900px) {
   .UI2 #main-workspace .rail-quick {
-    display: flex !important;
     margin-top: 14px !important;
     opacity: 1 !important;
     visibility: visible !important;
@@ -1528,7 +1474,6 @@
 }
 
 .UI2 .ui2-later-line .delay-pill {
-  min-height: 40px;
   border: 1px solid var(--line2);
   border-radius: 12px;
   background: var(--surface2, #232838);
@@ -1626,12 +1571,7 @@
   min-height: 42px !important;
   margin: 0 !important;
 }
-.UI2 #messageFocus .ui2-reader-hint {
-  margin: 6px 0 0;
-  color: var(--ink-muted, #8a91a6);
-  font-size: 12px;
-  text-align: center;
-}
+
 .UI2 #messageFocus .ui2-live {
   min-height: 240px;
   padding: 14px;
@@ -1686,11 +1626,7 @@
     border: 0 !important;
     background: transparent !important;
   }
-  .UI2 #messageFocus .ui2-reader-hint {
-    max-width: 860px;
-    margin: 6px auto 0;
-    text-align: left;
-  }
+
   .UI2 #messageFocus .ui2-reader-dock > .focus-rail-more > div {
     left: 0;
     right: auto;
@@ -1756,7 +1692,6 @@
   .UI2 #messageFocus .focus-paper,
   .UI2 #messageFocus #focusFormatted {
     height: auto !important;
-    max-height: calc(100vh - 260px) !important;
     overflow: auto !important;
   }
 }
@@ -1957,11 +1892,7 @@
   .UI2 #donorsPage .donor-head .ui2-add-menu {
     margin-left: auto;
   }
-  .UI2 #donorsPage .donor-row {
-    grid-template-columns:
-      32px minmax(160px, 230px) 76px minmax(110px, max-content) minmax(0, 1fr)
-      40px !important;
-  }
+
   .UI2 #donorsPage .donor-columns {
     display: none !important;
   }
@@ -2029,7 +1960,6 @@
   color: #fff !important;
 }
 .UI2 #donorMessages .bank-actions > .ui2-bank-more {
-  position: relative;
   order: 3 !important;
 }
 .UI2 #donorMessages .bank-actions > .ui2-bank-back {
@@ -2049,12 +1979,10 @@
 }
 .UI2 #donorMessages .ui2-bank-more > div {
   position: absolute;
-  right: 0;
   bottom: calc(100% + 8px);
   z-index: 50;
   display: grid;
   gap: 6px;
-  width: min(260px, calc(100vw - 32px));
   padding: 8px;
   border: 1px solid var(--line2);
   border-radius: 14px;
@@ -2157,7 +2085,6 @@
 @media (max-width: 899px) {
   .UI2 #donorsPage .donor-head {
     display: flex !important;
-    flex-wrap: nowrap !important;
     align-items: center !important;
     gap: 8px !important;
   }
@@ -2168,10 +2095,7 @@
     margin: 0 !important;
     transform: none !important;
   }
-  .UI2 #donorsPage .donor-head > .donor-title {
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-  }
+
 }
 @media (max-width: 899px) {
   .UI2 #donorsPage .donor-head > .donor-message-tablist {
@@ -2266,9 +2190,7 @@
   display: flex !important;
   flex-wrap: nowrap !important;
   gap: 4px !important;
-  width: auto !important;
   max-height: none !important;
-  margin: 8px 0 0 !important;
   padding: 6px !important;
   overflow-x: auto !important;
   border: 1px solid #36404c !important;
@@ -2281,15 +2203,9 @@
   box-shadow: none !important;
 }
 .UI2 .foundation-notes .notes-workspace > .notes-toolbar button {
-  flex: 1 0 auto !important;
   width: auto !important;
-  min-width: 44px !important;
-  min-height: 44px !important;
-  padding: 0 10px !important;
-  border: 0 !important;
   background: transparent !important;
   color: #e8edf2 !important;
-  font-size: 13px !important;
   font-weight: 700 !important;
 }
 .UI2 .foundation-notes .notes-toolbar .ui2-note-i {
@@ -2407,13 +2323,8 @@
 
 .UI2 .report-card .report-list {
   position: static !important;
-  display: grid !important;
-  grid-template-columns: 1fr !important;
   grid-template-rows: none !important;
   grid-auto-flow: row !important;
-  gap: 2px !important;
-  margin: 4px 0 10px !important;
-  padding: 0 4px !important;
   inset: auto !important;
   transform: none !important;
   width: auto !important;
@@ -2422,7 +2333,6 @@
   position: static !important;
   display: flex !important;
   justify-content: space-between !important;
-  min-height: 30px !important;
   height: auto !important;
 }
 .UI2 .report-card .report-list::before {
@@ -2466,7 +2376,6 @@
 .UI2 .report-card .report-list > li {
   flex-direction: row !important;
   align-items: center !important;
-  padding: 4px 2px !important;
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -2656,14 +2565,7 @@
     max-width: 1000px !important;
     margin-inline: auto !important;
   }
-  .UI2 #donorsPage .donor-row {
-    grid-template-columns: 32px minmax(180px, 1fr) 76px minmax(110px, max-content) 110px 40px !important;
-    column-gap: 12px !important;
-  }
-  .UI2 #donorsPage .donor-row > .donor-amount {
-    width: 110px !important;
-    max-width: 110px !important;
-  }
+
 }
 @media (min-width: 900px) {
   .UI2 #donorsPage .donor-table {
@@ -2813,7 +2715,6 @@
 }
 .UI2 #donorVolunteers .vol-foot > .vol-back {
   order: 1;
-  flex: 0 0 auto;
   min-height: 48px !important;
   padding: 0 18px !important;
   border: 1px solid var(--line2, #3a4052) !important;
@@ -2823,14 +2724,12 @@
 }
 .UI2 #donorVolunteers .vol-foot > .send-donors {
   order: 2;
-  flex: 1 1 auto;
   max-width: 340px;
   min-height: 48px !important;
   border-radius: 14px !important;
 }
 .UI2 #donorVolunteers .vol-foot > .vol-add-panel {
   order: 3;
-  flex: 0 0 auto;
   position: relative;
 }
 .UI2 #donorVolunteers .vol-foot > .vol-add-panel > summary {
@@ -2941,7 +2840,6 @@
   }
   .UI2 #hist .ui2-chat-return {
     display: flex !important;
-    justify-content: flex-start !important;
     padding: 6px 12px 0 !important;
   }
   .UI2 #hist .ui2-chat-return #histMain {
@@ -2994,10 +2892,7 @@
     max-height: none !important;
     overflow: visible !important;
   }
-  .UI2 #donorMessages .bank-workspace {
-    display: flex !important;
-    flex-direction: column !important;
-  }
+
   .UI2 #donorMessages .bank-message {
     align-self: center !important;
     width: 100% !important;
@@ -3040,7 +2935,6 @@
   }
   .UI2 #donorMessages .bank-workspace {
     height: auto !important;
-    min-height: 0 !important;
   }
   .UI2 #hist[open] {
     display: flex !important;
@@ -3235,9 +3129,6 @@
   /* Back is the same square arrow at the far right on every donor tab */
   .UI2 #donorsPage #donorVolunteers > .vol-foot > .vol-back {
     order: 3 !important;
-    flex: 0 0 50px !important;
-    width: 50px !important;
-    min-width: 50px !important;
     padding: 0 !important;
     font-size: 0 !important;
   }
@@ -3294,7 +3185,6 @@
   align-items: center;
   gap: 8px;
 }
-.UI2 .ui2-later::before,
 .UI2 .ui2-choose-btn::after {
   content: '';
   width: 16px;
@@ -3303,16 +3193,13 @@
   background-position: center;
   background-size: 16px;
 }
-.UI2 .ui2-later::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aab0c5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E");
-}
+
 .UI2 .ui2-choose-btn::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aab0c5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
 /* Amount: a pencil icon that says "tap to change" */
 .UI2 #leftChip::after,
 .UI2 #leftChip[data-ui2-left='1']::after {
-  content: '' !important;
   display: inline-block;
   width: 15px;
   height: 15px;
@@ -3360,18 +3247,14 @@
 }
 /* ======================= Donors: one fixed bottom bar on every tab (phone) ======================= */
 @media (max-width: 899px) {
-  .UI2 #donorsPage .donor-bottom:not([data-ui2-running]) {
-    grid-template-columns: minmax(0, 1fr) 56px !important;
-  }
+
   .UI2 #donorsPage .donor-bottom > :is(#donorSendImportant, #donorSendAll) {
-    grid-column: 1 !important;
     grid-row: 2 !important;
     width: auto !important;
     max-width: none !important;
     min-width: 0 !important;
   }
   .UI2 #donorsPage .donor-bottom > #donorMainBottom {
-    grid-column: 2 !important;
     grid-row: 2 !important;
     width: 56px !important;
     min-width: 56px !important;
@@ -3453,12 +3336,7 @@
     grid-column: 3 !important;
   }
   
-  .UI2 #donorsPage #donorVolunteers > .vol-foot > .ui2-msgs-bottom {
-    order: 0;
-    flex: 0 0 auto;
-    min-width: 74px;
-    height: 100%;
-  }
+
   .UI2 #donorsPage .donor-head {
     justify-content: space-between !important;
   }
@@ -3471,7 +3349,6 @@
     grid-template-columns: 48px minmax(0, 1fr) 56px !important;
   }
   .UI2 #donorsPage #donorVolunteers > .vol-foot > .ui2-msgs-bottom {
-    min-width: 48px;
     padding: 0;
   }
 }
@@ -3918,9 +3795,7 @@
 .UI2 dialog.report-dialog .report-card {
   display: flex !important;
   flex-direction: column !important;
-  gap: 8px !important;
   width: min(640px, calc(100vw - 20px)) !important;
-  padding: 8px 12px 12px !important;
   box-sizing: border-box;
   overflow: visible !important;
 }
@@ -4141,7 +4016,6 @@
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
-    padding: 10px !important;
   }
   .UI2 #donorsPage#donorsPage #donorMessages .bank-detail .bank-preview {
     flex: none !important;
@@ -4333,7 +4207,6 @@
   align-items: baseline;
   justify-content: space-between;
   margin: 2px 0 4px !important;
-  color: var(--ink, #eef0f6);
   font-size: 15px !important;
   font-weight: 700;
   letter-spacing: 0 !important;
@@ -4767,7 +4640,6 @@
   padding: 8px 10px;
   border-left: 3px solid #3a4057;
   color: #d3d7e6;
-  font-size: 14px;
   line-height: 1.4;
   white-space: pre-wrap;
 }
@@ -4826,9 +4698,7 @@
   }
 }
 @media (max-width: 359px) {
-  .UI2 .ui2-tab {
-    font-size: 12px;
-  }
+
 }
 
 /* No-scroll layout: one line of counts per row, the button beside the text, one Needs you row. */
@@ -5858,9 +5728,7 @@
 
 /* Reader: "Also send: PDF / Video" under the message (group: attach + tick; DM: tick only; the files are the case's).
    It sits where the small hint line was (the hint is hidden). */
-.UI2 #messageFocus.ui2-has-rx .ui2-reader-hint {
-  display: none;
-}
+
 .UI2 #ui2ReaderExtras {
   display: flex;
   flex-wrap: wrap;
@@ -6006,9 +5874,7 @@
 /* Phone reader: the ticks row takes the place of the hint line and is taller, so the message box gives it the room
    (the message scrolls inside its box); the buttons and ticks always stay above the bottom bar. */
 @media (max-width: 899px) {
-  .UI2 #messageFocus.ui2-has-rx .focus-workspace {
-    max-height: max(150px, calc(100dvh - 304px));
-  }
+
 }
 
 /* Inside More (the bottom row has Test for a group message, Copy for a DM): a calm menu button like the others. */
@@ -6052,9 +5918,7 @@
   color: #fff;
 }
 @media (max-width: 899px) {
-  .UI2 #messageFocus.ui2-has-rx.ui2-has-rx-text .focus-workspace {
-    max-height: max(140px, calc(100dvh - 352px));
-  }
+
 }
 .UI2 .ui2-rx-text .ui2-rx-chip[hidden] {
   display: none;
@@ -6075,63 +5939,13 @@
     padding: 0 9px;
     font-size: 13px;
   }
-  .UI2 .ui2-rx-text .ui2-rx-poster span {
-    font-size: 13px;
-  }
+
 }
 
 /* Reader: the Poster item (tick + Change) next to PDF / Video */
-.UI2 .ui2-rx-pitem {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 4px 0 12px;
-  border: 1px solid var(--line2);
-  border-radius: 999px;
-  background: var(--surface2, #232838);
-}
-.UI2 .ui2-rx-pitem .ui2-rx-chip[hidden],
-.UI2 .ui2-rx-pitem .ui2-rx-pword[hidden] {
-  display: none;
-}
-.UI2 .ui2-rx-pword {
-  display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-  padding: 0 2px 0 0;
-  color: var(--ink, #eef0f6);
-  font-size: 14px;
-  font-weight: 700;
-}
-.UI2 button.ui2-rx-pchange {
-  display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: #9db8ff;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.UI2 button.ui2-rx-pchange[hidden] {
-  display: none;
-}
+
 @media (max-width: 899px) {
-  .UI2 #messageFocus.ui2-has-rx .focus-workspace {
-    max-height: max(140px, calc(100dvh - 352px));
-  }
-  .UI2 #messageFocus.ui2-has-rx.ui2-has-rx-text .focus-workspace {
-    max-height: max(120px, calc(100dvh - 400px));
-  }
-}
-@media (max-width: 339px) {
-  .UI2 .ui2-rx-pitem {
-    padding-left: 8px;
-  }
+
 }
 
 /* More sheet: the Giki tile, in its own colour */

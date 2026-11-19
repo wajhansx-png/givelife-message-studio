@@ -1132,7 +1132,12 @@ function ui2Observe(run, options) {
         const v = $('focusVersion'),
           n = Number(v?.dataset.n || 0),
           i = Number(v?.dataset.i || 0);
-        ver.textContent = i ? i + ' of ' + n : n ? 'Original · ' + n + ' more' : 'Original';
+        // phones: a short label, so it never runs into the › arrow ("1/5", "Base +5")
+        const narrow = matchMedia('(max-width: 480px)').matches,
+          tiny = matchMedia('(max-width: 359px)').matches;
+        ver.textContent = narrow
+          ? i ? i + '/' + n : n && !tiny ? 'Base +' + n : 'Base'
+          : i ? i + ' of ' + n : n ? 'Original · ' + n + ' more' : 'Original';
         sw.querySelector('.ui2-base-btn').dataset.pending = i ? '1' : ''; // a version is showing: Save base makes it the base
       };
       paintDots();

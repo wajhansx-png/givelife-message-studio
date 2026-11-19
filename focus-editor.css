@@ -24,7 +24,6 @@ body.message-focus-open > .foot {
   gap: 18px;
   width: min(1320px, 100%);
   margin: 0 auto;
-  min-height: 40px;
 }
 #messageFocus button {
   border: 1px solid #ffffff14;
@@ -375,10 +374,7 @@ body.message-focus-open > .foot {
     gap: 10px;
   }
   #messageFocus header {
-    position: sticky;
-    top: -8px;
     z-index: 3;
-    background: #232323;
     width: 100%;
     padding-block: 4px;
   }
@@ -388,8 +384,6 @@ body.message-focus-open > .foot {
   #messageFocus .focus-workspace,
   #messageFocus.with-group .focus-workspace,
   #messageFocus.with-dm .focus-workspace {
-    display: flex;
-    flex-direction: column;
     flex: none;
     width: 100%;
     gap: 10px;
@@ -407,8 +401,6 @@ body.message-focus-open > .foot {
     height: auto;
     min-height: 30dvh;
     overflow: visible;
-    padding: 16px 14px;
-    font-size: 17px;
     line-height: 1.5;
     display: block;
   }
@@ -423,14 +415,11 @@ body.message-focus-open > .foot {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: stretch;
-    gap: 8px;
     overflow: visible;
     max-height: none;
     align-self: stretch;
   }
   #messageFocus .focus-rail button {
-    flex: 1 1 calc(33% - 8px);
-    min-width: 96px;
     padding: 8px 10px !important;
   }
   #messageFocus .focus-rail small {
@@ -446,10 +435,7 @@ body.message-focus-open > .foot {
     overflow: visible;
     padding: 12px;
   }
-  #messageFocus #focusFormatted {
-    max-height: 42dvh;
-    overflow-y: auto;
-  }
+
 }
 
 /* Editor tools: formatting only while editing; secondary actions quieter; phone actions sit in a sticky thumb bar. */

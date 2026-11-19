@@ -350,12 +350,7 @@
   background: #2f6fe4 !important;
   color: #fff !important;
 }
-.UI2 dialog.case-sheet .gk-tick-box {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
+
 .UI2 dialog.case-sheet .gk-tick {
   display: inline-flex;
   align-items: center;
@@ -435,10 +430,7 @@
 .UI2 dialog.case-sheet :is(.gk-msg2, .gk-msg3) > span:first-child {
   flex: 1 1 100%;
 }
-.UI2 dialog.case-sheet .gk-name3 {
-  flex: 1 1 auto;
-  font-size: 15px;
-}
+
 .UI2 dialog.case-sheet :is(.gk-msg2, .gk-msg3) .gk-tick {
   margin-left: auto;
 }

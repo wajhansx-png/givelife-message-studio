@@ -5,9 +5,6 @@ html body .compact-nav-menu {
   z-index: 30;
 }
 html body .compact-nav-menu > summary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   min-height: 40px;
   padding: 6px 12px;
   border: 1px solid var(--line2);
@@ -85,12 +82,7 @@ html body .compact-nav-panel .case-pick {
   order: 0;
   flex: none !important;
 }
-html body .compact-nav-panel #desktopPreview {
-  display: flex !important;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0;
-}
+
 html body .compact-nav-panel .donor-message-tablist {
   display: block;
 }
@@ -501,7 +493,6 @@ html body #donorsPage[data-panel='messages'] .bank-heading > span:not(.bank-curr
   color: #c9c9c9;
 }
 html body #donorsPage[data-panel='messages'] .bank-workspace {
-  grid-template-columns: minmax(0, 1fr) 152px 272px;
   gap: 16px;
 }
 html body #donorsPage[data-panel='messages'] .bank-message.bank-detail,
@@ -562,24 +553,17 @@ html body #donorsPage[data-panel='messages'] .bank-picker {
   }
 }
 @media (max-width: 850px) {
-  html body #donorsPage[data-panel='messages'] .bank-workspace {
-    grid-template-columns: minmax(0, 1fr) 96px;
-    gap: 10px;
-  }
+
   html body #donorsPage[data-panel='messages'] .bank-actions button,
   html body #donorsPage[data-panel='messages'] .bank-picker button {
     min-height: 48px;
     font-size: 13px;
     padding: 6px 4px;
   }
-  html body #donorsPage[data-panel='messages'] .bank-picker {
-    padding: 12px;
-    gap: 8px;
-  }
+
   
   html body #donorsPage[data-panel='messages'] .bank-preview,
   html body #donorsPage[data-panel='messages'] .bank-message textarea {
-    padding: 16px;
     font-size: 17px;
   }
 }
@@ -587,9 +571,6 @@ html body #donorsPage[data-panel='messages'] .bank-picker {
 /* Phones: versions as a chip row on top, message full width in the middle, actions in the thumb zone at the bottom. */
 @media (max-width: 850px) {
   html body #donorsPage[data-panel='messages'] .bank-workspace {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    grid-template-areas: 'pick' 'msg' 'act';
     gap: 8px;
     overflow: visible;
   }
@@ -599,7 +580,6 @@ html body #donorsPage[data-panel='messages'] .bank-picker {
     flex-direction: row;
     align-items: center;
     gap: 8px;
-    padding: 8px;
     overflow-x: auto;
     overflow-y: hidden;
     border-radius: 12px;
@@ -633,7 +613,6 @@ html body #donorsPage[data-panel='messages'] .bank-picker {
   }
   html body #donorsPage[data-panel='messages'] .bank-actions > button,
   html body #donorsPage[data-panel='messages'] .bank-pagination > button:not(.bank-back-bottom) {
-    flex: 1 1 calc(25% - 8px);
     min-width: 72px;
     min-height: 48px;
   }
@@ -648,10 +627,7 @@ html body #donorsPage[data-panel='messages'] .bank-picker {
     flex: 1 1 100%;
     margin: 0;
   }
-  html body #donorsPage[data-panel='messages'] .bank-preview,
-  html body #donorsPage[data-panel='messages'] .bank-message textarea {
-    padding: 12px 14px 16px;
-  }
+
 }
 @media (max-width: 850px) {
   html body #donorsPage[data-panel='messages'] .bank-message.bank-detail header {
@@ -909,11 +885,3 @@ html body #donorBatchForm > #batchRandomRow {
   }
 }
 
-/* App Consistency: Universal removal of all blur glows and box shadows */
-*,
-*::before,
-*::after {
-  box-shadow: none !important;
-  filter: none !important;
-  -webkit-filter: none !important;
-}

@@ -5642,49 +5642,28 @@
   contain: layout style;
 }
 
-/* ---------- Main screen: Regenerate / Next are two small round buttons inside the green message (bottom right).
-   The row that used to sit under the message is gone, so the message gets that height back. ---------- */
+/* Message controls follow the preview without covering its text. */
 .UI2 #ui2GnavMain.ui2-gmini {
-  position: absolute;
-  right: 10px;
-  bottom: 8px;
-  z-index: 3;
+  position: static;
   display: flex;
-  gap: 8px;
+  order: 2;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 4px;
   margin: 0 !important;
 }
 .UI2 #ui2GnavMain.ui2-gmini .ui2-gbtn {
   flex: 0 0 auto;
-  width: 40px;
-  min-width: 40px;
-  height: 40px;
-  min-height: 40px;
-  padding: 0;
+  width: auto;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 10px;
   border: 0;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45) !important;
-  color: #fff !important;
-}
-.UI2 #ui2GnavMain.ui2-gmini .ui2-gnext {
-  background: #2f6fe4 !important;
-}
-.UI2 #ui2GnavMain.ui2-gmini .ui2-gbtn span {
-  display: none;
-}
-/* Room at the end of the message so its last line can scroll up above the two buttons. */
-@media (max-width: 899px) {
-  .UI2 #card.ui2-has-mini #chat {
-    padding-bottom: 50px !important;
-  }
-  /* The bottom fade moves from the whole card to the text only, so the two buttons stay solid. */
-  .UI2 #card.ui2-has-mini.msgcard {
-    -webkit-mask-image: none !important;
-    mask-image: none !important;
-  }
-  .UI2 #card.ui2-has-mini.msgcard #chat {
-    -webkit-mask-image: linear-gradient(#000 72%, transparent);
-    mask-image: linear-gradient(#000 72%, transparent);
-  }
+  border-radius: 8px;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  font-size: 12px;
 }
 /* Bottom bar: a matched icon sits above the word. Soft second tone for depth; the lit tab lifts a little.
    No glow, no shadow. */
@@ -6220,7 +6199,7 @@
   position: relative !important;
   display: flex !important;
   flex-direction: column;
-  flex: 1 1 0 !important;
+  flex: 0 1 auto !important;
   align-self: stretch !important;
   gap: 6px;
   width: auto !important;
@@ -6229,18 +6208,17 @@
   min-height: 0 !important;
   max-height: none !important;
   margin: 0 !important;
-  padding: 8px !important;
+  padding: 0 !important;
   overflow: visible !important;
-  border: 1px solid var(--line2) !important;
-  border-radius: 14px !important;
-  background: var(--surface) !important;
+  border: 0 !important;
+  background: transparent !important;
   box-shadow: none !important;
   -webkit-mask-image: none !important;
   mask-image: none !important;
 }
 .UI2 .ui2-message-home #card #chat {
   display: block !important;
-  flex: 1 1 0 !important;
+  flex: 0 1 auto !important;
   height: auto !important;
   min-height: 0 !important;
   max-height: none !important;
@@ -6272,7 +6250,7 @@
   max-width: none !important;
   min-width: 0;
   height: auto !important;
-  margin: 0 !important;
+  margin: auto 0 0 !important;
 }
 .UI2 .ui2-message-home:not(.ui2-preview-collapsed) #showMsg,
 .UI2 .ui2-message-home.ui2-preview-collapsed #main-workspace > #card {
@@ -6329,9 +6307,18 @@
 .UI2 .ui2-message-home .group-send :is(#btnGivelife, .test-row) .gb-name::before {
   content: none !important;
 }
+.UI2 .ui2-message-home #btnGivelife .gb-name {
+  flex: 0 1 auto;
+  align-items: center !important;
+}
+.UI2 .ui2-primary-send-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
 .UI2 .ui2-message-home .group-send #btnGivelife .gb-go {
   display: block !important;
-  order: -1;
+  margin: 0 !important;
   flex: 0 0 20px;
   width: 20px;
   height: 20px;
@@ -6568,9 +6555,6 @@
     height: 14px;
     box-shadow: none;
   }
-  .UI2 .ui2-message-home #card.ui2-has-mini #chat {
-    padding-bottom: 48px !important;
-  }
 }
 @media (max-height: 430px) {
   .UI2 .ui2-message-home .group-send :is(.ui2-other-groups, .ui2-later-panel):not([hidden]) {
@@ -6586,6 +6570,9 @@
   }
 }
 @media (min-width: 900px) {
+  .UI2 .app.ui2-message-home {
+    max-width: 1064px;
+  }
   .UI2 .ui2-message-home > .brandbar {
     flex: 0 0 auto;
     min-height: 44px !important;
@@ -6602,8 +6589,23 @@
   .UI2 .ui2-message-home > .brandbar #live[data-on='1']::before {
     color: #3cdc96;
   }
+  .UI2 .ui2-message-home:not(.ui2-preview-collapsed) #main-workspace {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    max-width: 1040px;
+    gap: 16px !important;
+  }
   .UI2 .ui2-message-home #main-workspace > #card {
-    padding: 10px !important;
+    flex: 1 1 0 !important;
+    align-self: flex-start !important;
+    max-height: 100% !important;
+  }
+  .UI2 .ui2-message-home:not(.ui2-preview-collapsed) #main-workspace > .side {
+    flex: 0 0 min(34%, 320px) !important;
+    margin: 0 !important;
+  }
+  .UI2 .ui2-message-home #btnGivelife .gb-name {
+    flex-wrap: wrap;
   }
   .UI2 .ui2-message-home #card .tools {
     flex: 0 0 auto;

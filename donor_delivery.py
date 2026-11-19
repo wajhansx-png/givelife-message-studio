@@ -1,6 +1,7 @@
 """Explicit donor batches, saved receipts and no automatic replay after restart."""
 
 import traceback, logging
+from donor_book import _clone  # fast private copies (see there)
 import copy, hashlib, json, math, random, re, threading, time, uuid
 from contextlib import ExitStack, nullcontext
 from functools import wraps
@@ -91,12 +92,12 @@ class DonorDelivery:
 
     def _load(self):
         if self._cache is not None:
-            return copy.deepcopy(self._cache)
+            return _clone(self._cache)
         raw = self.store.get(self.KEY) if self.store else None
         if raw is None and self.path.exists():
             raw = json.loads(self.path.read_text(encoding="utf-8"))
         self._cache = raw if isinstance(raw, dict) else {"jobs": []}
-        return copy.deepcopy(self._cache)
+        return _clone(self._cache)
 
     # Every send step saves the whole history (database + file). Old batches kept every person's full message, so it
     # grew to megabytes per save: slow sends, busy CPU, heavy database disk use. Past every resume / repair window
@@ -122,7 +123,9 @@ class DonorDelivery:
         self._slim(data["jobs"])
         if self.store:
             self.store.put(self.KEY, data)
-        self._cache = copy.deepcopy(data)
+        self._cache = _clone(data)
+        if self.store:
+            return  # the database is the record; the file copy is only for running without one
         tmp = self.path.with_suffix(".tmp")
         tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         tmp.replace(self.path)
@@ -321,7 +324,7 @@ class DonorDelivery:
             ):
                 key = self.CLAIM + hashlib.sha256(j["request_id"].encode()).hexdigest()
                 self.store.put(key, j)
-            return copy.deepcopy(j)
+            return _clone(j)
 
     def _claimed_start(self, claim, request_signature):
         if not isinstance(claim, dict) or not claim.get("request_signature"):

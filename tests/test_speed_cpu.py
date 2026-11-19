@@ -43,3 +43,63 @@ class Speed(unittest.TestCase):
         self.assertEqual(book.resolve("923001234599")["id"], row["id"])
         with self.assertRaises(ValueError):
             book.resolve("Nobody With This Name")
+
+
+class FastCopies(unittest.TestCase):
+    def test_clone_is_a_private_copy_and_falls_back_for_odd_values(self):
+        from decimal import Decimal
+        from donor_book import _clone
+
+        data = {"records": [{"id": "a", "amount": 1.5, "tags": ["x"], "n": None, "ok": True}]}
+        copy = _clone(data)
+        self.assertEqual(copy, data)
+        copy["records"][0]["tags"].append("y")
+        self.assertEqual(data["records"][0]["tags"], ["x"])  # never shared
+        self.assertEqual(_clone({"d": Decimal("2")}), {"d": Decimal("2")})  # deepcopy fallback
+
+
+@unittest.skipUnless(__import__("shutil").which("ffmpeg"), "needs ffmpeg")
+class SmallerFiles(unittest.TestCase):
+    """A big case video / picture is made smaller once, so every send uploads less."""
+
+    def setUp(self):
+        import json, tempfile
+
+        self.dir = tempfile.mkdtemp()
+
+        class Store(dict):
+            def __bool__(self):
+                return True
+
+            def put(self, k, v):
+                self[k] = json.loads(json.dumps(v))
+
+        self.store = Store()
+
+    def make(self, args, mime, name):
+        import base64, os, subprocess
+
+        path = os.path.join(self.dir, name)
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *args, path], check=True)
+        import batch_media
+
+        raw = open(path, "rb").read()
+        return batch_media.save(self.store, f"data:{mime};base64," + base64.b64encode(raw).decode()), len(raw)
+
+    def test_a_big_picture_becomes_a_small_jpeg_once(self):
+        import os, batch_media
+
+        ident, size = self.make(["-f", "lavfi", "-i", "mandelbrot=size=2400x2400", "-frames:v", "1"], "image/png", "p.png")
+        self.assertGreater(size, batch_media.SHRINK_IMAGE_OVER)
+        self.assertTrue(batch_media.shrink(self.store, ident, self.dir))
+        path, mime = batch_media.load(self.store, ident, self.dir)
+        self.assertEqual(mime, "image/jpeg")
+        self.assertLess(os.path.getsize(path), size * 0.8)
+        self.assertFalse(batch_media.shrink(self.store, ident, self.dir))  # never twice
+
+    def test_a_small_file_is_left_alone(self):
+        import batch_media
+
+        ident, _ = self.make(["-f", "lavfi", "-i", "color=red:size=64x64", "-frames:v", "1"], "image/png", "s.png")
+        self.assertFalse(batch_media.shrink(self.store, ident, self.dir))
+        self.assertEqual(batch_media.load(self.store, ident, self.dir)[1], "image/png")

@@ -109,3 +109,94 @@ def load(store, ident, folder):
             while len(_CACHE) > _CACHE_LIMIT:
                 _CACHE.popitem(last=False)
         return path, mime
+
+
+# ---- Smaller files, once: every send uploads (and WhatsApp encrypts) the whole file again, so a big case video or
+# picture costs time and CPU on EVERY message. Right after it is saved it is made smaller one time in the background
+# (videos up to 1280 px, pictures up to 1600 px, the sizes WhatsApp itself sends). The original is used until the
+# smaller copy is ready, and kept when the smaller copy would not be clearly smaller.
+SHRINK_VIDEO_OVER = 3_000_000
+SHRINK_IMAGE_OVER = 600_000
+
+
+def _ffmpeg(args, timeout=900):
+    import shutil, subprocess
+
+    exe = shutil.which("ffmpeg")
+    if not exe:
+        return False
+    nice = ["nice", "-n", "19"] if shutil.which("nice") else []
+    try:
+        done = subprocess.run(
+            nice + [exe, "-hide_banner", "-loglevel", "error", "-y", *args],
+            capture_output=True,
+            timeout=timeout,
+        )
+    except Exception:
+        return False
+    return done.returncode == 0
+
+
+def shrink(store, ident, folder):
+    """Replace the saved file with a smaller copy when that helps. Returns True when it was replaced."""
+    key = "batch_media_" + ident
+    row = store.get(key)
+    if isinstance(row, str):
+        row = json.loads(row)
+    if not isinstance(row, dict) or row.get("shrunk"):
+        return False
+    mime, data = row.get("mime"), row.get("data")
+    raw = base64.b64decode(data, validate=True)
+    video = mime == "video/mp4" and len(raw) > SHRINK_VIDEO_OVER
+    image = mime in ("image/jpeg", "image/png", "image/webp") and len(raw) > SHRINK_IMAGE_OVER
+    if not (video or image):
+        return False
+    folder = Path(folder)
+    work = Path(tempfile.mkdtemp(prefix=".shrink-", dir=folder))
+    try:
+        src = work / ("in" + TYPES[mime][0])
+        src.write_bytes(raw)
+        if video:
+            out = work / "out.mp4"
+            fit = "scale='if(gt(iw,ih),min(1280,iw),-2)':'if(gt(iw,ih),-2,min(1280,ih))'"
+            ok = _ffmpeg(["-i", str(src), "-vf", fit, "-c:v", "libx264", "-preset", "veryfast", "-crf", "28",
+                          "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart",
+                          "-threads", "1", str(out)])
+            new_mime = "video/mp4"
+        else:
+            out = work / "out.jpg"
+            fit = "scale='if(gt(iw,ih),min(1600,iw),-2)':'if(gt(iw,ih),-2,min(1600,ih))'"
+            ok = _ffmpeg(["-i", str(src), "-vf", fit, "-q:v", "4", "-frames:v", "1", str(out)])
+            new_mime = "image/jpeg"
+        if not ok or not out.is_file():
+            return False
+        small = out.read_bytes()
+        if not small or len(small) > len(raw) * 0.8 or (video and small[4:8] != b"ftyp"):
+            store.put(key, {**row, "shrunk": True})  # not worth it: never try again
+            return False
+        latest = store.get(key)
+        if isinstance(latest, str):
+            latest = json.loads(latest)
+        if not isinstance(latest, dict) or latest.get("data") != data:
+            return False  # replaced meanwhile
+        store.put(key, {**row, "mime": new_mime, "data": base64.b64encode(small).decode(), "shrunk": True,
+                        "original_bytes": len(raw)})
+        with _CACHE_LOCK:
+            for k in [k for k in _CACHE if k[2] == ident]:
+                _CACHE.pop(k, None)
+        return True
+    finally:
+        import shutil
+
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def shrink_later(store, ident, folder):
+    """shrink() in the background, so the upload answers at once."""
+    def run():
+        try:
+            shrink(store, ident, folder)
+        except Exception as exc:
+            print("media_shrink_failed", ident, str(exc)[:200], flush=True)
+
+    threading.Thread(target=run, daemon=True, name="media-shrink").start()

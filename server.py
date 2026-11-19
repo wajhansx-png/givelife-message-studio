@@ -2678,6 +2678,24 @@ def timed_loop():
 CHAT_IMAGE = {}
 
 
+def shrink_saved_media():
+    """Once after a start: the case files already saved (sent on every message) are made smaller, one at a time,
+    a minute after start so sending and the page come first. Files already done are skipped at once."""
+    import batch_media
+    import group_extras
+
+    time.sleep(60)
+    try:
+        ids = [row["id"] for row in group_extras._rows(STORE).values() if isinstance(row, dict) and row.get("id")]
+    except Exception:
+        return
+    for ident in ids:
+        try:
+            batch_media.shrink(STORE, ident, ATT)
+        except Exception as exc:
+            print("media_shrink_failed", ident, str(exc)[:200], flush=True)
+
+
 def current_chat_image():
     return getattr(OWNER_GUARD, "image", CHAT_IMAGE.get("id"))
 
@@ -3134,6 +3152,7 @@ def send_dm(phone, text, digest):
 
 ATT = DATA / "attachments"
 ATT.mkdir(exist_ok=True)
+__import__("group_extras").MEDIA_FOLDER = ATT  # case files are made smaller once after upload
 if STORE:
     _p = STORE.get("poster_b64")
     if _p:
@@ -3198,7 +3217,9 @@ def save_upload(data_url, use):
     if use == "bulk":
         import batch_media
 
-        return batch_media.save(STORE, data_url)
+        ident = batch_media.save(STORE, data_url)
+        batch_media.shrink_later(STORE, ident, ATT)  # a batch sends it many times: make it smaller once
+        return ident
     if use == "papers":
         return "papers-" + str(save_papers(data_url))
     # One poster for groups and DMs: the poster dialog (use='dm_poster') replaces both, never a DM-only copy.
@@ -7948,6 +7969,7 @@ if __name__ == "__main__":
     start_worker("autopilot advisor", PILOT.start)
     start_worker("auto engine", ENGINE.start)
     spawn(timed_loop, "timed-tasks")
+    spawn(shrink_saved_media, "media-shrink")
     import backups
 
     backups.start(STORE, DATA)

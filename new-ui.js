@@ -1093,8 +1093,8 @@ function ui2Observe(run, options) {
       let start = null,
         moving = false;
       const slide = (x, ms) => {
-        msg.style.transition = ms && !still.matches ? 'transform ' + ms + 'ms ease, opacity ' + ms + 'ms ease' : 'none';
-        msg.style.transform = x ? 'translateX(' + x + 'px)' : '';
+        msg.style.transition = ms && !still.matches ? 'transform ' + ms + 'ms cubic-bezier(.2,.8,.2,1), opacity ' + ms + 'ms ease' : 'none';
+        msg.style.transform = x ? 'translate3d(' + x + 'px,0,0)' : '';
         msg.style.opacity = x ? String(Math.max(0.35, 1 - Math.abs(x) / 400)) : '';
       };
       paper.addEventListener('pointerdown', (e) => {
@@ -1112,11 +1112,19 @@ function ui2Observe(run, options) {
           paper.setPointerCapture?.(e.pointerId);
         }
         start.dx = dx;
-        slide(dx, 0);
+        /* one paint per frame while the finger moves */
+        if (!start.raf)
+          start.raf = requestAnimationFrame(() => {
+            if (start) {
+              start.raf = 0;
+              slide(start.dx, 0);
+            }
+          });
       });
       const finish = async () => {
         if (!start) return;
-        const { dx, t, side } = start;
+        const { dx, t, side, raf } = start;
+        if (raf) cancelAnimationFrame(raf);
         start = null;
         if (!side) return;
         const flick = Math.abs(dx) > 30 && Date.now() - t < 300;
@@ -1124,8 +1132,8 @@ function ui2Observe(run, options) {
         moving = true;
         const w = paper.clientWidth || 360,
           dir = dx < 0 ? 1 : -1;
-        slide(-dir * w, 160);
-        await new Promise((r) => setTimeout(r, still.matches ? 0 : 160));
+        slide(-dir * w, 140);
+        await new Promise((r) => setTimeout(r, still.matches ? 0 : 140));
         const changed = window.focusVersionStep ? await window.focusVersionStep(dir, true) : false;
         slide(changed ? dir * w : 0, 0);
         void msg.offsetWidth;

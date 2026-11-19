@@ -4136,7 +4136,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     height: 6px !important;
   }
 }
-@media (max-width: 319px) {
+@media (max-width: 339px) {
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2GroupPicker::after {
     display: none !important;
   }
@@ -4149,4 +4149,112 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #focusFormatted {
   will-change: transform;
   backface-visibility: hidden;
+}
+
+/* Home, desktop: Send to GiveLife is a centred button (not a full-width bar). Other groups | Timer | Test group sit in one
+   row under it; the group / Timer panels and the status line open full width. */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace .group-send > .group-two {
+    align-self: center;
+    width: min(400px, 100%);
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace .group-send > #groupStatus {
+    text-align: center;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .group-send :is(.ui2-dock-tool, .test-row) {
+    min-height: 44px !important;
+  }
+}
+
+/* Home, desktop: the message More menu shows all its items (it was cut at 280px, hiding English / Trigger / Style fix) */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card .tools .overflow-tools > div {
+    max-height: min(440px, calc(100dvh - 240px)) !important;
+  }
+}
+
+/* Home, Other groups panel: "All freelance · Not sent yet" keeps its whole status (the name box had 120px of empty right padding) */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-other-groups :is(#btnFree, #sendAll) .gb-name {
+  padding-right: 0 !important;
+}
+
+/* Home, small phones: the Send status ("sent 2 min ago") wraps under the name instead of being cut with "..."; in the
+   Other groups panel the round icon is dropped so "All freelance · Not sent yet" fits */
+@media (max-width: 359px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #btnGivelife .gb-name {
+    flex-wrap: wrap !important;
+    row-gap: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #btnGivelife .last-sent {
+    flex: 0 0 auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-other-groups :is(#btnFree, #sendAll) .gb-name {
+    gap: 6px !important;
+    font-size: 15px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-other-groups :is(#btnFree, #sendAll) .gb-name::before {
+    display: none !important;
+  }
+}
+
+/* Home, short or narrow phones (360x640, 280x653): a bit smaller line spacing and 11px text so the whole message
+   shows above Regenerate / Next without scrolling */
+@media (max-width: 899px) and (max-height: 700px), (max-width: 299px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message {
+    font-size: 11px !important;
+    line-height: 1.26 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message div {
+    line-height: 1.26 !important;
+  }
+}
+
+/* Home, phone on its side (short and wide): message on the left, Send and its buttons on the right, so the message
+   is not squeezed into 180px of height */
+@media (min-width: 560px) and (max-width: 899px) and (max-height: 500px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace {
+    flex-direction: row !important;
+    align-items: stretch;
+    gap: 8px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace > #card {
+    flex: 1 1 0 !important;
+    min-width: 0;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace > .side {
+    flex: 0 0 min(36%, 300px) !important;
+    width: auto !important;
+    align-self: flex-end;
+    margin-top: auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #btnGivelife .gb-name {
+    flex-wrap: wrap !important;
+    row-gap: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #btnGivelife .last-sent {
+    flex: 0 0 auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-group-more :is(#ui2GroupPicker, #ui2Later, .test-row) {
+    font-size: 12px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2GroupPicker::after,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2Later::before {
+    display: none !important;
+  }
+}
+
+/* Home, tablet (portrait): the message text is 14px, not the 12px phone size */
+@media (min-width: 600px) and (max-width: 899px) and (min-height: 600px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message div {
+    line-height: 1.4 !important;
+  }
+}
+@media (min-width: 560px) and (max-width: 719px) and (max-height: 500px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-group-more :is(#ui2GroupPicker, #ui2Later, .test-row) {
+    font-size: 11px !important;
+  }
 }

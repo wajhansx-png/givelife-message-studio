@@ -1274,6 +1274,6 @@ test('/new phone reader: swipe the message left for the next version, right for 
   await swipe(80, 320);
   await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('1 of 10');
   // a short drag snaps back and changes nothing
-  await swipe(200, 170);
+  await swipe(200, 182); // 18px: under both the 40px distance and the 20px flick
   await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('1 of 10');
 });

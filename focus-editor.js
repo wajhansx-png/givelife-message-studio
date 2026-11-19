@@ -324,17 +324,37 @@
     if (p.dataset.fitKey === key && p.style.fontSize) return; // same box + same text: nothing to measure
     p.dataset.fitKey = key;
     p.style.setProperty('line-height', '1.3', 'important');
+    /* start from the size the last version fitted at: a swipe between versions of one message needs 2-3
+       layout passes, not 7 (the layout passes were the stall on a slow phone) */
+    const fits = (size) => {
+      p.style.setProperty('font-size', size + 'px', 'important');
+      return p.scrollHeight <= p.clientHeight + 2;
+    };
     let lo = 9.5,
       hi = 12,
-      best = lo;
-    for (let i = 0; i < 7; i++) {
+      best = lo,
+      done = false;
+    const prev = parseFloat(p.dataset.fitSize || '');
+    if (prev >= 9.5 && prev <= 12) {
+      const a = Math.max(9.5, prev - 0.8),
+        b = Math.min(12, prev + 0.5);
+      if (fits(b)) {
+        best = b;
+        done = true;
+      } else if (fits(a)) {
+        lo = a;
+        hi = b;
+      }
+    }
+    for (let i = 0; i < 4 && !done; i++) {
       const mid = (lo + hi) / 2;
-      p.style.setProperty('font-size', mid + 'px', 'important');
-      if (p.scrollHeight <= p.clientHeight + 2) {
+      if (fits(mid)) {
         best = mid;
         lo = mid;
       } else hi = mid;
     }
+    if (!done && best === 9.5) fits(best);
+    p.dataset.fitSize = String(best);
     p.style.setProperty('font-size', best + 'px', 'important');
     $('focusText').style.fontSize = Math.max(best, 14) + 'px';
   }

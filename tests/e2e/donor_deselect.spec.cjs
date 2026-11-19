@@ -44,3 +44,14 @@ for (const width of [390, 1280])
     const left = (await api(port, '/donors')).items.filter((d) => d.important).length;
     expect(left).toBeGreaterThan(0); // Top donors off keeps the star
   });
+test('Donated tab: unmarking one donor takes that row out of the tab at once', async ({ page }) => {
+  await seed();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/donors/donated');
+  const rows = page.locator('.donor-row');
+  await expect(rows.first()).toBeVisible();
+  const before = await rows.count();
+  await rows.first().locator('.donor-status').click();
+  await expect(rows).toHaveCount(before - 1);
+});

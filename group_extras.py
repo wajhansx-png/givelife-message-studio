@@ -211,6 +211,9 @@ def view(store):
     return out
 
 
+MEDIA_FOLDER = None  # set by the app (its attachments folder); tests leave it off
+
+
 def add(store, kind, data_url, name=""):
     """Save (or replace) the case's PDF or video. It starts switched ON."""
     _check_kind(kind)
@@ -226,6 +229,8 @@ def add(store, kind, data_url, name=""):
             else "Choose an MP4 video (it must be MP4)."
         )
     ident = batch_media.save(store, data_url)  # checks the real file type and the 15 MB limit
+    if MEDIA_FOLDER is not None:
+        batch_media.shrink_later(store, ident, MEDIA_FOLDER)  # sent on every message: make it smaller once
     rows = _rows(store)
     size = len(data_url) * 3 // 4 // 1024
     rows[kind] = {

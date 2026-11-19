@@ -3024,9 +3024,30 @@ function scheduleNavigation() {
 }
 addEventListener('popstate', scheduleNavigation);
 addEventListener('hashchange', scheduleNavigation);
+/* Reopen where you left: the page you were on is remembered, and opening the app with no page in the address
+   goes back there (Back then returns to the main page). */
+const LAST_ROUTE = 'givelife-last-route';
+addEventListener('studio-navigate', rememberRoute);
+addEventListener('popstate', rememberRoute);
+addEventListener('hashchange', rememberRoute);
+function rememberRoute() {
+  const path = Nav.path();
+  try {
+    if (!path || (Nav.valid(path) && !/^(keyboard|whatsapp)$/.test(path)))
+      localStorage.setItem(LAST_ROUTE, path);
+  } catch (e) {}
+}
 addEventListener(
   'DOMContentLoaded',
   () => {
+    let last = '';
+    try {
+      // Only a fresh open (new tab or the app started again), not a reload of the same tab.
+      if (!sessionStorage.getItem('givelife-tab')) last = localStorage.getItem(LAST_ROUTE) || '';
+      sessionStorage.setItem('givelife-tab', '1');
+    } catch (e) {}
+    if (!location.hash && last && Nav.valid(last)) Nav.go(last);
+    else rememberRoute();
     renderNav();
   },
   { once: true },

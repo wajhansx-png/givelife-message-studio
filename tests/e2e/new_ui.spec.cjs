@@ -21,9 +21,30 @@ const open = async (page, path, width, height) => {
   await page.addInitScript((k) => {
     localStorage.setItem('givelife-cloud-key', k);
     localStorage.setItem('givelife-theme', 'dark');
+    localStorage.removeItem('givelife-last-route'); // each test starts on the page it asks for
   }, KEY);
   await page.goto(path);
 };
+
+test('/new reopens where you left: closing on Notes and opening the app again shows Notes; Back goes to the main page', async ({
+  browser,
+  baseURL,
+}) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 740 } });
+  await ctx.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  const first = await ctx.newPage();
+  await first.goto(baseURL + '/new');
+  await first.locator('.ui2-tab[data-tab="notes"]').click();
+  await expect(first.locator('#foundationNotes')).toBeVisible();
+  await first.close();
+  const again = await ctx.newPage();
+  await again.goto(baseURL + '/new');
+  await expect(again.locator('#foundationNotes')).toBeVisible();
+  await expect.poll(() => again.evaluate(() => location.hash)).toBe('#/notes');
+  await again.goBack();
+  await expect(again.locator('#foundationNotes')).toBeHidden();
+  await ctx.close();
+});
 
 test('the main link "/" is the new design, /new is the same page, and the previous page is kept at /old', async ({ request }) => {
   const old = await (await request.get('/old')).text();

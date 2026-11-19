@@ -4417,10 +4417,11 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   }
 }
 
-/* Timer: the time you picked last stays lit (blue outline); a scheduled time is filled blue */
+/* Timer: the time you picked stays filled blue until you pick another or tap it again to deselect */
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .delay-pill.is-last {
-  border-color: #557ef0 !important;
-  color: #b7cdff !important;
+  border-color: transparent !important;
+  background: #2f6fe4 !important;
+  color: #fff !important;
 }
 
 /* Chat colours: the app's replies are soft green, your own lines are blue, so who said what is clear at a glance */

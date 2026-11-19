@@ -1421,9 +1421,26 @@ async function timerTap(scope, minutes) {
   timerRev++;
   const t = groupTimers[scope],
     label = GN[scope] || scope;
+  /* Tapping the lit time again deselects it (picked by mistake): cancels it if scheduled and forgets it */
+  const forget = () => {
+    try {
+      const all = lastDelay();
+      delete all[scope];
+      localStorage.setItem('givelife-last-delay', JSON.stringify(all));
+    } catch (e) {}
+  };
+  if (!t && lastDelay()[scope] === minutes) {
+    forget();
+    paintTimers();
+    $('groupStatus').textContent = 'Time deselected for ' + label + '.';
+    $('groupStatus').classList.remove('is-timer');
+    timerBusy = false;
+    return;
+  }
   markPill(scope, t && t.delay === minutes ? null : minutes);
   try {
     if (t && t.delay === minutes) {
+      forget();
       const r = await post('/schedule-group', { cancel: t.id }),
         d = await r.json();
       if (!r.ok) throw Error(d.error || 'Could not cancel');
@@ -1446,7 +1463,7 @@ async function timerTap(scope, minutes) {
         localStorage.setItem('givelife-last-delay', JSON.stringify({ ...lastDelay(), [scope]: minutes }));
       } catch (e) {}
       $('groupStatus').textContent =
-        '⏱ ' + label + ' sends at ' + clockText(d.due_at) + ' · tap the time to cancel';
+        '⏱ ' + label + ' sends at ' + clockText(d.due_at) + ' · tap the time again to deselect';
       $('groupStatus').classList.add('is-timer');
     }
     paintTimers();

@@ -1369,12 +1369,20 @@ try {
   localStorage.removeItem('givelife-delays');
 } catch (e) {}
 /* The time last picked for each group stays lit (outlined) when nothing is scheduled */
+let serverPicks = null; // the server's copy (survives refresh, other devices and deploys)
 function lastDelay() {
+  if (serverPicks) return { ...serverPicks };
   try {
     return JSON.parse(localStorage.getItem('givelife-last-delay') || '{}') || {};
   } catch (e) {
     return {};
   }
+}
+function keepPicks(picks) {
+  serverPicks = picks;
+  try {
+    localStorage.setItem('givelife-last-delay', JSON.stringify(picks));
+  } catch (e) {}
 }
 function paintTimers(timers) {
   if (timers && typeof timers === 'object') groupTimers = timers;
@@ -1423,14 +1431,13 @@ async function timerTap(scope, minutes) {
     label = GN[scope] || scope;
   /* Tapping the lit time again deselects it (picked by mistake): cancels it if scheduled and forgets it */
   const forget = () => {
-    try {
-      const all = lastDelay();
-      delete all[scope];
-      localStorage.setItem('givelife-last-delay', JSON.stringify(all));
-    } catch (e) {}
+    const all = lastDelay();
+    delete all[scope];
+    keepPicks(all);
   };
   if (!t && lastDelay()[scope] === minutes) {
     forget();
+    post('/schedule-group', { forget: scope }).catch(() => {});
     paintTimers();
     $('groupStatus').textContent = 'Time deselected for ' + label + '.';
     $('groupStatus').classList.remove('is-timer');
@@ -1459,9 +1466,7 @@ async function timerTap(scope, minutes) {
         d = await r.json();
       if (!r.ok) throw Error(d.error || 'Could not schedule');
       groupTimers[scope] = { id: d.task_id, due_at: d.due_at, delay: minutes };
-      try {
-        localStorage.setItem('givelife-last-delay', JSON.stringify({ ...lastDelay(), [scope]: minutes }));
-      } catch (e) {}
+      keepPicks({ ...lastDelay(), [scope]: minutes });
       $('groupStatus').textContent =
         '⏱ ' + label + ' sends at ' + clockText(d.due_at) + ' · tap the time again to deselect';
       $('groupStatus').classList.add('is-timer');
@@ -2464,7 +2469,10 @@ async function pollAuto() {
     checkedAt = Date.now();
     paintGroupTimes(d.last_sent);
     /* A timer tapped while this refresh was on its way is newer than this answer: keep the tap, the next refresh agrees. */
-    if (rev === timerRev && !timerBusy) paintTimers(d.status?.group_timers || {});
+    if (rev === timerRev && !timerBusy) {
+      if (d.status?.timer_picks) keepPicks(d.status.timer_picks);
+      paintTimers(d.status?.group_timers || {});
+    }
     pollError = '';
     aiAvailable = !!d.ai;
     liveSnapshot = d.status || null;

@@ -1301,9 +1301,46 @@ function ui2Observe(run, options) {
       pushing = false;
     };
     ed.addEventListener('input', push);
+    /* Paste = the text exactly as copied. The caret may sit inside an old bold / italic line (an emptied bold line
+       keeps its <b>), and plain insertText would then be bold too (the whole message came out *wrapped*). So the
+       caret is first lifted OUT of every <b> / <i> (splitting them around it), then the text goes in. */
+    const isMark = (n) => n && n !== ed && /^(B|I|STRONG|EM)$/.test(n.nodeName);
+    function liftCaretOutOfMarks() {
+      const sel = getSelection();
+      if (!sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      let node = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+      const chain = [];
+      for (let n = node; n && n !== ed; n = n.parentElement) if (isMark(n)) chain.push(n); // innermost first
+      for (const f of chain) {
+        const tail = document.createRange();
+        tail.setStart(range.startContainer, range.startOffset);
+        tail.setEnd(f, f.childNodes.length);
+        const rest = tail.extractContents();
+        if (rest.textContent !== '') {
+          const copy = f.cloneNode(false);
+          copy.append(rest);
+          f.after(copy); // what was after the caret stays formatted
+        }
+        const empty = f.textContent === '';
+        range.setStartAfter(f);
+        range.collapse(true);
+        if (empty) f.remove();
+      }
+      sel.removeAllRanges();
+      sel.addRange(range);
+      for (const cmd of ['bold', 'italic']) if (document.queryCommandState(cmd)) document.execCommand(cmd);
+    }
     ed.addEventListener('paste', (e) => {
       e.preventDefault();
-      document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+      const text = (e.clipboardData.getData('text/plain') || '').replace(/\r\n?/g, '\n');
+      if (!text) return;
+      const sel = getSelection();
+      if (!sel.rangeCount || !ed.contains(sel.anchorNode)) return;
+      if (!sel.isCollapsed) document.execCommand('delete'); // pasting over a selection replaces it
+      liftCaretOutOfMarks();
+      document.execCommand('insertText', false, text);
+      push();
     });
     tools.addEventListener('mousedown', (e) => e.preventDefault());
     tools.addEventListener('click', (e) => {

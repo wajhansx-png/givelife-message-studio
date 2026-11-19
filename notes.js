@@ -65,9 +65,8 @@
   const backDock = page.querySelector('.notes-back-dock');
   const phoneBack = matchMedia('(max-width: 899px)');
   const placeBack = () => {
-    backDock.hidden = !phoneBack.matches;
-    if (phoneBack.matches) backDock.append(notesBack);
-    else backHome.after(notesBack);
+    backDock.hidden = true; // calm writer: Back sits in the top row on every screen
+    backHome.after(notesBack);
   };
   placeBack();
   phoneBack.addEventListener('change', placeBack);

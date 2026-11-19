@@ -1465,32 +1465,142 @@ function ui2Observe(run, options) {
     return n;
   };
 
-  /* Notes: Lock and Full always at the top; Checklist, List, Red, B, I in one bar above the keyboard. */
+  /* Notes (calm writer): only the text on the page. The top row is just ← and a full-screen icon. The tool bar
+     (Normal / Title / Heading, B I U, list, checklist, colour) appears only while text is selected. */
+  const NOTE_COLORS = [
+    ['Default', '#ededed'],
+    ['Red', '#f4a4ad'],
+    ['Orange', '#fdba74'],
+    ['Yellow', '#fde047'],
+    ['Green', '#86efac'],
+    ['Blue', '#93c5fd'],
+    ['Purple', '#c4b5fd'],
+  ];
   function notes() {
     const tools = $('notesTools'),
-      ed = $('notesEditor');
-    if (!tools || !ed) return;
-    setText($('notesFullscreen'), 'Full');
-    for (const b of tools.querySelectorAll('button')) {
-      if (b.textContent.trim() === 'Checklist') setText(b, '☑ Checklist');
-      if (b.textContent.trim() === 'Bullets') setText(b, '• List');
-    }
-    if (tools.querySelector('.ui2-note-b')) return;
-    for (const [cmd, label, cls] of [
-      ['bold', 'B', 'ui2-note-b'],
-      ['italic', 'I', 'ui2-note-i'],
+      ed = $('notesEditor'),
+      page = $('foundationNotes');
+    if (!tools || !ed || !page) return;
+    const full = $('notesFullscreen');
+    if (full && !full.getAttribute('aria-label')) full.setAttribute('aria-label', 'Full screen');
+    if (tools.querySelector('#ui2NoteStyle')) return;
+    const keep = (b) => b.addEventListener('mousedown', (e) => e.preventDefault());
+    const changed = () => ed.dispatchEvent(new Event('input', { bubbles: true }));
+    let saved = null;
+    const remember = () => {
+      const sel = getSelection();
+      if (sel.rangeCount && ed.contains(sel.anchorNode)) saved = sel.getRangeAt(0).cloneRange();
+    };
+    const restore = () => {
+      ed.focus({ preventScroll: true });
+      if (!saved) return;
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(saved);
+    };
+    const style = mk('select', 'ui2-note-style');
+    style.id = 'ui2NoteStyle';
+    style.setAttribute('aria-label', 'Text style');
+    for (const [v, t] of [
+      ['p', 'Normal'],
+      ['h1', 'Title'],
+      ['h2', 'Heading'],
+    ])
+      style.append(new Option(t, v));
+    style.addEventListener('change', () => {
+      restore();
+      document.execCommand('formatBlock', false, style.value);
+      changed();
+      remember();
+    });
+    const sep = () => mk('span', 'ui2-note-sep');
+    const marks = [];
+    for (const [cmd, html, label] of [
+      ['bold', '<b>B</b>', 'Bold'],
+      ['italic', '<i>I</i>', 'Italic'],
+      ['underline', '<u>U</u>', 'Underline'],
     ]) {
-      const b = mk('button', cls, label);
+      const b = mk('button', 'ui2-note-' + cmd, '');
       b.type = 'button';
-      b.setAttribute('aria-label', cmd === 'bold' ? 'Bold' : 'Italic');
-      b.addEventListener('mousedown', (e) => e.preventDefault());
+      b.innerHTML = html;
+      b.setAttribute('aria-label', label);
+      b.title = label;
+      keep(b);
       b.addEventListener('click', () => {
-        ed.focus();
+        restore();
         document.execCommand(cmd);
-        ed.dispatchEvent(new Event('input', { bubbles: true }));
+        changed();
+        remember();
       });
-      tools.append(b);
+      marks.push(b);
     }
+    const lists = [...tools.querySelectorAll('button')].filter((b) => b.id !== 'notesRed');
+    for (const b of lists) {
+      if (b.id === 'notesChecklist') b.textContent = '☑';
+      else {
+        b.textContent = '•≡';
+        b.setAttribute('aria-label', 'Bulleted list');
+      }
+    }
+    /* Colour: one button, a row of seven colours opens above the bar */
+    const swatches = mk('div', 'ui2-note-swatches');
+    swatches.hidden = true;
+    swatches.setAttribute('role', 'group');
+    swatches.setAttribute('aria-label', 'Text colour');
+    const color = mk('button', 'ui2-note-color', '');
+    color.type = 'button';
+    color.setAttribute('aria-label', 'Text colour');
+    color.title = 'Colour';
+    keep(color);
+    color.addEventListener('click', () => {
+      swatches.hidden = !swatches.hidden;
+      color.setAttribute('aria-expanded', String(!swatches.hidden));
+    });
+    for (const [name, hex] of NOTE_COLORS) {
+      const c = mk('button', 'ui2-note-swatch', '');
+      c.type = 'button';
+      c.style.setProperty('--c', hex);
+      c.setAttribute('aria-label', name);
+      c.title = name;
+      keep(c);
+      c.addEventListener('click', () => {
+        restore();
+        document.execCommand('foreColor', false, hex);
+        changed();
+        remember();
+        swatches.hidden = true;
+        color.setAttribute('aria-expanded', 'false');
+      });
+      swatches.append(c);
+    }
+    const red = $('notesRed');
+    if (red) red.hidden = true;
+    tools.replaceChildren(swatches, style, sep(), ...marks, sep(), ...lists, color);
+    if (red) tools.append(red);
+    /* Show the bar only while text is selected in the note */
+    let hideTimer = 0;
+    const show = (on) => {
+      page.toggleAttribute('data-ui2-sel', on);
+      if (!on) {
+        swatches.hidden = true;
+        color.setAttribute('aria-expanded', 'false');
+      }
+    };
+    document.addEventListener('selectionchange', () => {
+      const sel = getSelection();
+      const on = sel.rangeCount > 0 && !sel.isCollapsed && ed.contains(sel.anchorNode);
+      clearTimeout(hideTimer);
+      if (on) {
+        remember();
+        const n = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+        const blk = n.closest('h1,h2,h3,li,p,div');
+        style.value = blk && /^H[12]$/.test(blk.tagName) ? blk.tagName.toLowerCase() : 'p';
+        show(true);
+      } else
+        hideTimer = setTimeout(() => {
+          if (!tools.contains(document.activeElement)) show(false);
+        }, 300);
+    });
   }
 
   /* Settings: Look / Sending safety / Tools / WhatsApp, Appearance as one choice, neutral Done at the bottom. */

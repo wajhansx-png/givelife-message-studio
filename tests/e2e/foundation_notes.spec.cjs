@@ -288,12 +288,13 @@ test('narrow phone: editor and formatting rail fit with keyboard open', async ({
       overflow: document.documentElement.scrollWidth > innerWidth + 1,
     };
   });
+  /* Calm writer: only ← (top left) and the full-screen icon (top right) are in the top row; Lock is not shown */
   expect(bounds.back[0]).toBeGreaterThanOrEqual(0);
+  expect(bounds.back[0]).toBeLessThan(60);
+  expect(bounds.backTop).toBeLessThan(60);
   expect(bounds.full[1]).toBeLessThanOrEqual(321);
-  expect(bounds.lock[1]).toBeLessThanOrEqual(321);
-  expect(bounds.back[0]).toBeGreaterThan(220);
-  expect(bounds.backTop).toBeGreaterThan(bounds.lockBottom);
-  expect(bounds.lock[1]).toBeLessThan(bounds.full[0]);
+  expect(bounds.full[0]).toBeGreaterThan(220);
+  await expect(page.locator('#notesLock')).toBeHidden();
   expect(bounds.toolbar[1]).toBeLessThanOrEqual(321);
   expect(bounds.overflow).toBe(false);
   await page

@@ -65,6 +65,8 @@ for (const width of [320, 390, 1280])
     for (let i = 0; i < boxes.length - 1; i++) // nothing overlaps its neighbour
       expect(boxes[i][1].x + boxes[i][1].width, boxes[i][0]).toBeLessThanOrEqual(boxes[i + 1][1].x + 1);
     expect((await g.boundingBox()).height).toBeGreaterThanOrEqual(40);
+    const next = await page.locator('#ui2Swipe .ui2-swipe-next').boundingBox();
+    expect((await g.boundingBox()).x - (next.x + next.width), 'gap between › and ✦').toBeGreaterThanOrEqual(16);
     // pressing it starts writing: the real Generate button is pressed (it is busy while versions are written)
     await g.click();
     await expect.poll(async () => (await api(port, '/focus-bank?kind=group')).state).not.toBe('Not generated');
@@ -115,3 +117,18 @@ for (const width of [320, 360, 390, 412, 430, 480, 540])
       expect(await ver.evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'label fits').toBe(true);
     }
   });
+
+test('✦ deletes the old versions and writes a fresh 5 (never adds to the old ones)', async ({ page }) => {
+  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
+  const posts = [];
+  await page.route('**/focus-bank', async (route) => {
+    if (route.request().method() === 'POST') posts.push(JSON.parse(route.request().postData() || '{}'));
+    await route.continue();
+  });
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/preview');
+  await page.locator('#ui2Swipe .ui2-gen-btn').click();
+  await expect.poll(() => posts.map((b) => b.action)).toContain('regenerate');
+  expect(posts.map((b) => b.action)).not.toContain('generate');
+});

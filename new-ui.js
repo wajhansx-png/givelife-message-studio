@@ -1089,8 +1089,8 @@ function ui2Observe(run, options) {
         '<button type="button" class="ui2-swipe-prev" aria-label="Previous version">‹</button>' +
         '<span class="ui2-ver" aria-live="polite">Original</span>' +
         '<button type="button" class="ui2-swipe-next" aria-label="Next version">›</button>' +
-        '<button type="button" class="ui2-gen-btn" aria-label="Write 5 new versions" title="Write 5 new versions"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button>' +
         '<span class="ui2-swipe-gap"></span>' +
+        '<button type="button" class="ui2-gen-btn" aria-label="Write 5 new versions" title="Delete the old versions and write 5 new ones"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button>' +
         '<button type="button" class="ui2-base-btn" title="Make the message you see the base message. New versions are written from it.">Save base</button>' +
         '<button type="button" class="ui2-files-btn" aria-label="Files that go with the message">📎<span class="ui2-files-w"> Files</span></button>';
       bar.before(sw);
@@ -1098,7 +1098,8 @@ function ui2Observe(run, options) {
       sw.querySelector('.ui2-base-btn').onclick = () => $('focusSave')?.click();
       /* Write 5 new versions: presses the real Generate button; it waits while versions are being written */
       const writeBtn = sw.querySelector('.ui2-gen-btn');
-      writeBtn.onclick = () => $('focusRetry')?.click();
+      // ✦ = replace: the old versions are deleted and a fresh 5 are written from the base message
+      writeBtn.onclick = () => ($('focusRegenerate') || $('focusRetry'))?.click();
       if ($('focusRetry')) {
         /* While 5 versions are being written the sparkle becomes the live count: 0/5, 1/5 … 5/5 */
         const icon = writeBtn.innerHTML;
@@ -1134,7 +1135,7 @@ function ui2Observe(run, options) {
           i = Number(v?.dataset.i || 0);
         // phones: a short label, so it never runs into the › arrow ("1/5", "Base +5")
         const narrow = matchMedia('(max-width: 480px)').matches,
-          tiny = matchMedia('(max-width: 359px)').matches;
+          tiny = matchMedia('(max-width: 380px)').matches;
         ver.textContent = narrow
           ? i ? i + '/' + n : n && !tiny ? 'Base +' + n : 'Base'
           : i ? i + ' of ' + n : n ? 'Original · ' + n + ' more' : 'Original';

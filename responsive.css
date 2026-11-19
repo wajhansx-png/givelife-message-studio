@@ -3993,6 +3993,11 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     height: auto !important;
     max-height: calc(100% - 12px) !important;
     overflow-y: auto !important;
+    margin-block: auto !important; /* the message sits in the middle of the free height, easy on the eyes */
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-workspace > .focus-paper {
+    display: flex !important;
+    flex-direction: column !important;
   }
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-paper > #ui2Live:not([hidden]) {
     box-sizing: border-box !important;
@@ -4715,5 +4720,113 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 @media (max-width: 899px) {
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools {
     position: absolute !important;
+  }
+}
+
+/* Save base: right in the thin row (‹ 1 of 5 › · Save base · files). Blue while a version is showing, because
+   pressing it then makes that version the base message. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-base-btn {
+  padding: 0 12px !important;
+  border: 1px solid #3a4057 !important;
+  border-radius: 20px !important;
+  background: #1d212b !important;
+  color: #e9edef !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  white-space: nowrap;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-base-btn[data-pending='1'] {
+  border-color: #3b6cf6 !important;
+  background: #1b2550 !important;
+  color: #dbe4ff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-files-btn {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+@media (max-width: 359px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe {
+    gap: 4px;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-base-btn {
+    padding: 0 8px !important;
+    font-size: 13px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-files-btn {
+    padding: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-files-w {
+    display: none;
+  }
+}
+
+/* Write 5 new versions: one small sparkle button beside the ‹ › arrows, in the Message reader only. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-gen-btn {
+  min-width: 40px !important;
+  color: #cdd6ff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-gen-btn[data-busy='1'] {
+  opacity: 0.55;
+  animation: ui2-gen-pulse 1.1s ease-in-out infinite;
+}
+@keyframes ui2-gen-pulse {
+  50% { opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-gen-btn[data-busy='1'] { animation: none; }
+}
+@media (max-width: 359px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-gen-btn {
+    min-width: 36px !important;
+    min-height: 40px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > :is(.ui2-swipe-prev, .ui2-swipe-next) {
+    min-width: 36px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-ver {
+    min-width: 0;
+    font-size: 13px;
+  }
+}
+
+/* The thin row has 6 things now (‹ 1 of 5 › ✦ Save base 📎): nothing shrinks, so no label is ever cut. Phones
+   up to 430px show only the 📎 (the words are in More → files); up to 299px the 📎 moves into More. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > :is(.ui2-swipe-prev, .ui2-swipe-next, .ui2-gen-btn, .ui2-base-btn, .ui2-files-btn) {
+  flex: 0 0 auto !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-ver {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+@media (max-width: 430px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe {
+    gap: 6px;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-base-btn {
+    padding: 0 10px !important;
+    font-size: 13px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-files-btn {
+    padding: 0 !important;
+    min-width: 40px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-files-w {
+    display: none;
+  }
+}
+@media (max-width: 359px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe {
+    gap: 4px;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-base-btn {
+    padding: 0 8px !important;
+  }
+}
+@media (max-width: 299px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-files-btn {
+    display: none !important;
   }
 }

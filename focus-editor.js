@@ -62,26 +62,38 @@
   baseDialog.innerHTML =
     '<h2>Save base message?</h2><p id="focusBaseNote"></p><div class="focus-base-actions"><button type="button" id="focusBaseCancel">Cancel</button><button type="button" class="primary" id="focusBaseSave">Save</button></div>';
   document.body.append(baseDialog);
+  let baseRewrite = false; // true when this save replaces saved versions: new ones are then written from it
   saveBase.onclick = () => {
     if (editing) edit(false);
+    // a version shown with ‹ › is a different text from the base: saving makes THAT version the base
+    if (row && $('focusText').value !== row.source) dirty = true;
     const hasVersions = (row?.items?.length || 0) > 0;
+    baseRewrite = dirty && hasVersions;
     $('focusBaseNote').textContent = !dirty
       ? 'Nothing has changed. This is already your base message.'
       : hasVersions
-        ? 'This becomes your base message. The ' +
+        ? 'This message becomes your base message. The ' +
           row.items.length +
-          ' saved versions were written from the old text, so they are cleared. Press Generate 5 Versions for new ones.'
+          ' saved versions came from the old text, so they are replaced: 5 new versions are written from this one.'
         : 'This becomes your base message. No versions are written.';
-    $('focusBaseSave').textContent = dirty ? 'Save' : 'OK';
+    $('focusBaseSave').textContent = !dirty ? 'OK' : baseRewrite ? 'Save + write 5 new' : 'Save';
     baseDialog.showModal();
   };
   $('focusBaseCancel').onclick = () => baseDialog.close();
   $('focusBaseSave').onclick = async () => {
     try {
-      const changed = dirty;
+      const changed = dirty,
+        rewrite = baseRewrite && changed;
       await save();
       baseDialog.close();
       status(changed ? 'Saved base message ✓' : 'Saved base message · nothing changed');
+      if (rewrite) {
+        // the saved versions were cleared with the old base: write new ones from the new base
+        row = await api({ action: 'generate' });
+        showProgress(0);
+        genButton();
+        watch();
+      }
     } catch (e) {
       baseDialog.close();
       status(e.message);

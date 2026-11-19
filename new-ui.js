@@ -1089,10 +1089,25 @@ function ui2Observe(run, options) {
         '<button type="button" class="ui2-swipe-prev" aria-label="Previous version">‹</button>' +
         '<span class="ui2-ver" aria-live="polite">Original</span>' +
         '<button type="button" class="ui2-swipe-next" aria-label="Next version">›</button>' +
+        '<button type="button" class="ui2-gen-btn" aria-label="Write 5 new versions" title="Write 5 new versions"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button>' +
         '<span class="ui2-swipe-gap"></span>' +
-        '<button type="button" class="ui2-files-btn" aria-label="Files that go with the message">📎 Files</button>';
+        '<button type="button" class="ui2-base-btn" title="Make the message you see the base message. New versions are written from it.">Save base</button>' +
+        '<button type="button" class="ui2-files-btn" aria-label="Files that go with the message">📎<span class="ui2-files-w"> Files</span></button>';
       bar.before(sw);
       const go = (dir) => (window.focusVersionStep ? window.focusVersionStep(dir) : $('focusNext')?.click());
+      sw.querySelector('.ui2-base-btn').onclick = () => $('focusSave')?.click();
+      /* Write 5 new versions: presses the real Generate button; it waits while versions are being written */
+      const writeBtn = sw.querySelector('.ui2-gen-btn');
+      writeBtn.onclick = () => $('focusRetry')?.click();
+      if ($('focusRetry')) {
+        const sync = () => {
+          const busy = $('focusRetry').disabled;
+          writeBtn.disabled = busy;
+          writeBtn.dataset.busy = busy ? '1' : '';
+        };
+        sync();
+        new MutationObserver(sync).observe($('focusRetry'), { attributes: true, attributeFilter: ['disabled'] });
+      }
       sw.querySelector('.ui2-swipe-prev').onclick = () => go(-1);
       sw.querySelector('.ui2-swipe-next').onclick = () => go(1);
       sw.querySelector('.ui2-files-btn').onclick = () => {
@@ -1105,6 +1120,7 @@ function ui2Observe(run, options) {
           n = Number(v?.dataset.n || 0),
           i = Number(v?.dataset.i || 0);
         ver.textContent = i ? i + ' of ' + n : n ? 'Original · ' + n + ' more' : 'Original';
+        sw.querySelector('.ui2-base-btn').dataset.pending = i ? '1' : ''; // a version is showing: Save base makes it the base
       };
       paintDots();
       if ($('focusVersion'))
@@ -2069,7 +2085,14 @@ document.addEventListener('click', (e) => {
       }
       const shown = ['pdf', 'video', 'poster'].filter((k) => have[k] && items[k].cb.checked);
       const fb = document.querySelector('#ui2Swipe .ui2-files-btn');
-      if (fb) fb.textContent = shown.length ? '📎 ' + shown.length + (shown.length === 1 ? ' file' : ' files') : '📎 Add files';
+      if (fb) {
+        // the words go away on a narrow phone (the 📎 stays) so Save base fits the same thin row
+        const words = shown.length ? ' ' + shown.length + (shown.length === 1 ? ' file' : ' files') : ' Add files';
+        if (fb.dataset.words !== words) {
+          fb.dataset.words = words;
+          fb.replaceChildren('📎', Object.assign(document.createElement('span'), { className: 'ui2-files-w', textContent: words }));
+        }
+      }
       const sig = shown.map((k) => k + ':' + names[k]).join('|');
       if (chips.dataset.sig !== sig) {
         chips.dataset.sig = sig;

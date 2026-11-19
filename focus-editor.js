@@ -505,7 +505,7 @@
     if (screen.hidden || !editing || baseDialog.open) return;
     if (
       $('focusText').contains(e.target) ||
-      e.target.closest('.focus-rail, dialog, #waMarkBar, #ui2Live, #ui2Float')
+      e.target.closest('.focus-rail, .ui2-reader-dock, dialog, #waMarkBar, #ui2Live, #ui2Float')
     )
       return;
     edit(false);

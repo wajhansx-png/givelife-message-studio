@@ -174,3 +174,40 @@ test('✦ while a version shows: the deleted version leaves the screen and the b
   await expect(page.locator('#focusFormatted')).toContainText('Base wording');
   await expect(page.locator('#focusRegenerate')).toBeDisabled(); // one batch at a time
 });
+test('Test on the DM screen sends the DM and never changes the Group message', async ({ page }) => {
+  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
+  await api(port, '/focus-bank', { kind: 'dm', action: 'save', text: 'Brother, ' + V2 });
+  const sent = [];
+  await page.route('**/test', (route) => {
+    sent.push(JSON.parse(route.request().postData() || '{}').message);
+    return route.fulfill({ json: { code: 'SUCCESS' } });
+  });
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.addInitScript((k) => {
+    localStorage.setItem('givelife-cloud-key', k);
+    localStorage.setItem('givelife-view', 'dm');
+  }, KEY);
+  await page.goto('/new#/preview');
+  await expect(page.locator('#messageFocus')).toHaveAttribute('data-kind', 'dm');
+  await page.locator('#focusTest').click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toContain('Brother,');
+  await page.waitForTimeout(600);
+  expect((await api(port, '/drafts')).group).toBe(BASE);
+  expect((await api(port, '/focus-bank?kind=group')).source).toBe(BASE);
+});
+test('Save base while editing a message with versions: the dialog offers Save + write 5 new', async ({ page }) => {
+  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
+  await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1, V2] });
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/preview');
+  await page.locator('#focusEdit').click();
+  await page.locator('#ui2Live').click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' Thank you.');
+  await page.evaluate(() => document.getElementById('focusSave').click()); // Save base (rail / dock) while editing
+  await expect(page.locator('#focusBaseSave')).toHaveText('Save + write 5 new');
+  await page.locator('#focusBaseCancel').click();
+  expect((await api(port, '/focus-bank?kind=group')).source).toBe(BASE); // Cancel saved nothing
+});

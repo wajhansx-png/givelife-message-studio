@@ -1277,7 +1277,7 @@ function ui2Observe(run, options) {
       } else if (n.nodeName === 'BR') {
         parts.push(loose);
         loose = '';
-      } else loose += n.nodeType === 3 ? n.nodeValue : inline({ childNodes: [n] });
+      } else loose += n.nodeType === 3 ? n.nodeValue.replace(/\u00a0/g, ' ') : inline({ childNodes: [n] });
     }
     if (loose) parts.push(loose);
     return parts.join('\n');

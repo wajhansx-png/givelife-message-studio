@@ -1091,14 +1091,16 @@ function ui2Observe(run, options) {
       (vv || window).addEventListener('resize', fitVv);
       const still = matchMedia('(prefers-reduced-motion: reduce)');
       let start = null,
-        moving = false;
+        gen = 0; // each swipe gets a number: a newer swipe cancels the animation of an older one
       const slide = (x, ms) => {
         msg.style.transition = ms && !still.matches ? 'transform ' + ms + 'ms cubic-bezier(.2,.8,.2,1), opacity ' + ms + 'ms ease' : 'none';
         msg.style.transform = x ? 'translate3d(' + x + 'px,0,0)' : '';
         msg.style.opacity = x ? String(Math.max(0.35, 1 - Math.abs(x) / 400)) : '';
       };
       paper.addEventListener('pointerdown', (e) => {
-        if (moving || !$('focusText')?.hidden || e.target.closest('button, a, textarea, [contenteditable="true"]')) return;
+        if (!$('focusText')?.hidden || e.target.closest('button, a, textarea, [contenteditable="true"]')) return;
+        gen++; // a swipe made while the last one is still sliding takes over at once
+        slide(0, 0);
         start = { x: e.clientX, y: e.clientY, t: Date.now(), dx: 0, side: false };
       });
       paper.addEventListener('pointermove', (e) => {
@@ -1107,7 +1109,7 @@ function ui2Observe(run, options) {
           dy = e.clientY - start.y;
         if (!start.side) {
           if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) return (start = null); // reading: a vertical scroll
-          if (Math.abs(dx) < 10) return;
+          if (Math.abs(dx) < 6) return;
           start.side = true;
           paper.setPointerCapture?.(e.pointerId);
         }
@@ -1121,24 +1123,25 @@ function ui2Observe(run, options) {
             }
           });
       });
-      const finish = async () => {
+      /* Let go past 40px (or a quick flick): the next / previous version shows AT ONCE and slides in from the side the
+         finger came from. It does not wait for the old one to slide out or for the server. */
+      const finish = () => {
         if (!start) return;
         const { dx, t, side, raf } = start;
         if (raf) cancelAnimationFrame(raf);
         start = null;
         if (!side) return;
-        const flick = Math.abs(dx) > 30 && Date.now() - t < 300;
-        if (Math.abs(dx) < 60 && !flick) return slide(0, 180);
-        moving = true;
-        const w = paper.clientWidth || 360,
+        const flick = Math.abs(dx) > 20 && Date.now() - t < 300;
+        if (Math.abs(dx) < 40 && !flick) return slide(0, 160);
+        const mine = ++gen,
+          w = paper.clientWidth || 360,
           dir = dx < 0 ? 1 : -1;
-        slide(-dir * w, 140);
-        await new Promise((r) => setTimeout(r, still.matches ? 0 : 140));
-        const changed = window.focusVersionStep ? await window.focusVersionStep(dir, true) : false;
-        slide(changed ? dir * w : 0, 0);
-        void msg.offsetWidth;
-        slide(0, 200);
-        moving = false;
+        Promise.resolve(window.focusVersionStep ? window.focusVersionStep(dir, true) : false).then((changed) => {
+          if (mine !== gen) return; // a newer swipe took over
+          slide(changed ? dir * w * 0.3 : dx, 0);
+          void msg.offsetWidth;
+          slide(0, 170);
+        });
       };
       paper.addEventListener('pointerup', finish);
       paper.addEventListener('pointercancel', () => {

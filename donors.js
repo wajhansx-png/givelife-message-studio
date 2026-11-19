@@ -942,8 +942,8 @@
     top: {
       flag: 'top_donor',
       action: 'clear_top',
-      title: 'Take every donor off Top donors (they stay Important)',
-      ask: (n) => 'Take all ' + n + ' donors off Top donors? They stay Important.',
+      title: 'Take every donor off Top donors (their ★ stars are not changed)',
+      ask: (n) => 'Take all ' + n + ' donors off Top donors? Their ★ stars are not changed.',
     },
     donated: {
       flag: 'donated',
@@ -1711,7 +1711,14 @@
             'letter-spacing',
             'padding',
           ])
-            edit.style.setProperty(prop, look.getPropertyValue(prop), 'important');
+            edit.style.setProperty(
+              prop,
+              // never under 16px: a phone zooms the whole page in when typing in smaller text
+              prop === 'font-size'
+                ? Math.max(16, parseFloat(look.fontSize) || 16) + 'px'
+                : look.getPropertyValue(prop),
+              'important',
+            );
           edit.hidden = false;
           preview.hidden = true;
           button.textContent = 'Save';
@@ -2050,9 +2057,10 @@
           Object.assign(donor, r.donor);
           paintRow(donor);
           updateCounts();
+          // the row leaves a tab it no longer belongs to (e.g. unmarking Donated in the Donated tab)
           if (
-            ('important' in fields || 'top_donor' in fields) &&
-            ['important', 'top'].includes(tab)
+            (('important' in fields || 'top_donor' in fields) && ['important', 'top'].includes(tab)) ||
+            ('donated' in fields && ['donated', 'not_contacted'].includes(tab))
           )
             applyFilters();
         }

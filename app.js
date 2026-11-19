@@ -1368,6 +1368,14 @@ let groupTimers = {};
 try {
   localStorage.removeItem('givelife-delays');
 } catch (e) {}
+/* The time last picked for each group stays lit (outlined) when nothing is scheduled */
+function lastDelay() {
+  try {
+    return JSON.parse(localStorage.getItem('givelife-last-delay') || '{}') || {};
+  } catch (e) {
+    return {};
+  }
+}
 function paintTimers(timers) {
   if (timers && typeof timers === 'object') groupTimers = timers;
   // A timer whose time has passed has sent (or is sending): show it as plain again, not as pending.
@@ -1382,6 +1390,7 @@ function paintTimers(timers) {
     const t = groupTimers[b.dataset.delayScope],
       on = !!t && Number(b.dataset.delay) === t.delay;
     b.classList.toggle('is-pending', on);
+    b.classList.toggle('is-last', !on && lastDelay()[b.dataset.delayScope] === Number(b.dataset.delay));
     b.setAttribute('aria-pressed', String(on));
     /* The chosen time keeps its own label (e.g. 1h) and is coloured; the clock shows on the group button. */
     b.textContent = String(b.dataset.delay === '60' ? '1h' : b.dataset.delay + 'm');
@@ -1402,6 +1411,7 @@ function markPill(scope, minutes) {
     if (b.dataset.delayScope !== scope) return;
     const on = minutes != null && Number(b.dataset.delay) === minutes;
     b.classList.toggle('is-pending', on);
+    if (on) b.classList.remove('is-last');
     b.setAttribute('aria-pressed', String(on));
   });
 }
@@ -1432,6 +1442,9 @@ async function timerTap(scope, minutes) {
         d = await r.json();
       if (!r.ok) throw Error(d.error || 'Could not schedule');
       groupTimers[scope] = { id: d.task_id, due_at: d.due_at, delay: minutes };
+      try {
+        localStorage.setItem('givelife-last-delay', JSON.stringify({ ...lastDelay(), [scope]: minutes }));
+      } catch (e) {}
       $('groupStatus').textContent =
         '⏱ ' + label + ' sends at ' + clockText(d.due_at) + ' · tap the time to cancel';
       $('groupStatus').classList.add('is-timer');

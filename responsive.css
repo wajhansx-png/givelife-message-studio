@@ -3807,7 +3807,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   order: 5 !important;
 }
 /* More: Rewrite chips, New versions, Save Base, then the files */
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > :not(.ui2-rewrite, #focusRetry, #focusSave, #ui2ReaderExtras) {
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > :not(.ui2-rewrite, #focusRetry, #focusSave, #focusPoster, #ui2ReaderExtras) {
   display: none !important;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-reader-dock > .focus-rail-more > div {
@@ -3860,7 +3860,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   background: #2f6fe4 !important;
   color: #fff !important;
 }
-html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > :is(#focusRetry, #focusSave) {
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .focus-rail-more > div > :is(#focusRetry, #focusSave, #focusPoster) {
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -4185,7 +4185,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     height: 6px !important;
   }
 }
-@media (max-width: 319px) {
+@media (max-width: 339px) {
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2GroupPicker::after {
     display: none !important;
   }
@@ -4198,4 +4198,284 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #focusFormatted {
   will-change: transform;
   backface-visibility: hidden;
+}
+
+/* Home, desktop: Send to GiveLife is a centred button (not a full-width bar). Other groups | Timer | Test group sit in one
+   row under it; the group / Timer panels and the status line open full width. */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace .group-send > .group-two {
+    align-self: center;
+    width: min(400px, 100%);
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace .group-send > #groupStatus {
+    text-align: center;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .group-send :is(.ui2-dock-tool, .test-row) {
+    min-height: 44px !important;
+  }
+}
+
+/* Home, desktop: the message More menu shows all its items (it was cut at 280px, hiding English / Trigger / Style fix) */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card .tools .overflow-tools > div {
+    max-height: min(440px, calc(100dvh - 240px)) !important;
+  }
+}
+
+/* Home, Other groups panel: "All freelance · Not sent yet" keeps its whole status (the name box had 120px of empty right padding) */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-other-groups :is(#btnFree, #sendAll) .gb-name {
+  padding-right: 0 !important;
+}
+
+/* Home, small phones: the Send status ("sent 2 min ago") wraps under the name instead of being cut with "..."; in the
+   Other groups panel the round icon is dropped so "All freelance · Not sent yet" fits */
+@media (max-width: 359px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #btnGivelife .gb-name {
+    flex-wrap: wrap !important;
+    row-gap: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #btnGivelife .last-sent {
+    flex: 0 0 auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-other-groups :is(#btnFree, #sendAll) .gb-name {
+    gap: 6px !important;
+    font-size: 15px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-other-groups :is(#btnFree, #sendAll) .gb-name::before {
+    display: none !important;
+  }
+}
+
+/* Home, short or narrow phones (360x640, 280x653): a bit smaller line spacing and 11px text so the whole message
+   shows above Regenerate / Next without scrolling */
+@media (max-width: 899px) and (max-height: 700px), (max-width: 299px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message {
+    font-size: 11px !important;
+    line-height: 1.26 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message div {
+    line-height: 1.26 !important;
+  }
+}
+
+/* Home, phone on its side (short and wide): message on the left, Send and its buttons on the right, so the message
+   is not squeezed into 180px of height */
+@media (min-width: 560px) and (max-width: 899px) and (max-height: 500px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace {
+    flex-direction: row !important;
+    align-items: stretch;
+    gap: 8px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace > #card {
+    flex: 1 1 0 !important;
+    min-width: 0;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace > .side {
+    flex: 0 0 min(36%, 300px) !important;
+    width: auto !important;
+    align-self: flex-end;
+    margin-top: auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #btnGivelife .gb-name {
+    flex-wrap: wrap !important;
+    row-gap: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #btnGivelife .last-sent {
+    flex: 0 0 auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-group-more :is(#ui2GroupPicker, #ui2Later, .test-row) {
+    font-size: 12px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2GroupPicker::after,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2Later::before {
+    display: none !important;
+  }
+}
+
+/* Home, tablet (portrait): the message text is 14px, not the 12px phone size */
+@media (min-width: 600px) and (max-width: 899px) and (min-height: 600px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message div {
+    line-height: 1.4 !important;
+  }
+}
+@media (min-width: 560px) and (max-width: 719px) and (max-height: 500px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-group-more :is(#ui2GroupPicker, #ui2Later, .test-row) {
+    font-size: 11px !important;
+  }
+}
+
+/* Chat (owner's final design): one Back at the top left, money left beside it, Copy is a small icon inside each
+   reply, three quick buttons over the box, a narrow column on the computer, and the chat fits above the keyboard */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist > header {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist > header #histClose {
+  order: -1;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-chat-return #histMain {
+  display: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-hist-left {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line2, #3a3b46);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink, #eceef5);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e {
+  position: relative;
+  line-height: 1.45;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.bot {
+  padding-right: 42px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e .message-copy {
+  position: absolute !important;
+  right: 6px;
+  bottom: 6px;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #8d90a0 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you .message-copy {
+  display: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-hist-chips {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-hist-chips .ui2-chip {
+  min-height: 38px;
+  justify-content: center;
+  text-align: center;
+}
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist {
+    height: var(--ui2-hist-vvh, 100dvh) !important;
+    max-height: var(--ui2-hist-vvh, 100dvh) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist > header {
+    padding: 8px 12px !important;
+    border-bottom: 1px solid var(--line, #24252f);
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist > header > span:first-child {
+    order: 0;
+    font-size: 17px;
+    font-weight: 800;
+  }
+}
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist :is(header, #histLog, .ui2-chat-return, #histNextActions, .ui2-hist-chips, #histForm) {
+    width: 100%;
+    max-width: 600px !important;
+    margin-inline: auto !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-hist-chips {
+    grid-template-columns: repeat(3, max-content);
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist .ui2-hist-left {
+    display: none;
+  }
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e .message-copy {
+  inset: auto 6px 6px auto !important;
+  transform: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist > header #histClose {
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 36px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+}
+
+/* Phone bottom bar: Notes instead of Case (Case stays in More as "Case page") */
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-tab[data-tab='notes'] {
+    display: flex !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-tab[data-tab='case'] {
+    display: none !important;
+  }
+}
+
+/* Timer: the time you picked last stays lit (blue outline); a scheduled time is filled blue */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .delay-pill.is-last {
+  border-color: #557ef0 !important;
+  color: #b7cdff !important;
+}
+
+/* Chat colours: the app's replies are soft green, your own lines are blue, so who said what is clear at a glance */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.bot:not(.err) {
+  background: #173a33 !important;
+  border-color: #24584c !important;
+  color: #e8f5f0 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you {
+  background: #2f6fe4 !important;
+  border-color: #2f6fe4 !important;
+  color: #fff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.bot:not(.err) .message-copy {
+  color: #9cc9bb !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you,
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you .message-text {
+  background-image: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you .message-text {
+  background-color: transparent !important;
+  color: #fff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #histLog .e.you {
+  border-radius: 14px !important;
+  overflow: hidden;
+}
+
+/* Messages reader More: "Main poster / video" is back, right above the PDF / Video / Poster rows */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-rail-more > div > #focusPoster {
+  order: 4 !important;
+  min-height: 44px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: var(--ink, #eceef5) !important;
+  border: 1px solid var(--line2, #3a4057) !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-rail-more > div > #ui2ReaderExtras {
+  order: 5 !important;
+  align-self: stretch !important;
+  width: 100% !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2ReaderExtras {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+/* Save Base and Main poster / video share one row so the More list stays short */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > .focus-rail-more > div {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > .focus-rail-more > div > * {
+  grid-column: 1 / -1;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > .focus-rail-more > div > :is(#focusSave, #focusPoster) {
+  grid-column: auto;
+  order: 3 !important;
+  min-height: 44px !important;
 }

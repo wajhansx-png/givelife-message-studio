@@ -1100,13 +1100,26 @@ function ui2Observe(run, options) {
       const writeBtn = sw.querySelector('.ui2-gen-btn');
       writeBtn.onclick = () => $('focusRetry')?.click();
       if ($('focusRetry')) {
+        /* While 5 versions are being written the sparkle becomes the live count: 0/5, 1/5 … 5/5 */
+        const icon = writeBtn.innerHTML;
         const sync = () => {
           const busy = $('focusRetry').disabled;
           writeBtn.disabled = busy;
           writeBtn.dataset.busy = busy ? '1' : '';
+          const count = busy ? $('focusState')?.querySelector('.fx-count')?.textContent || '0/5' : '';
+          if (busy) {
+            if (writeBtn.textContent !== count) writeBtn.textContent = count;
+            writeBtn.setAttribute('aria-label', 'Writing versions ' + count.replace('/', ' of '));
+          } else if (writeBtn.dataset.count) {
+            writeBtn.innerHTML = icon;
+            writeBtn.setAttribute('aria-label', 'Write 5 new versions');
+          }
+          writeBtn.dataset.count = count;
         };
         sync();
         new MutationObserver(sync).observe($('focusRetry'), { attributes: true, attributeFilter: ['disabled'] });
+        if ($('focusState'))
+          new MutationObserver(sync).observe($('focusState'), { childList: true, subtree: true, characterData: true });
       }
       sw.querySelector('.ui2-swipe-prev').onclick = () => go(-1);
       sw.querySelector('.ui2-swipe-next').onclick = () => go(1);

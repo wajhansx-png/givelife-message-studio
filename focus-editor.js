@@ -534,8 +534,16 @@
   const step = async (dir, swiped) => {
     try {
       if (editing) edit(false);
-      await save();
-      row = await api();
+      if (dirty) await save();
+      /* the saved versions are already here: change at once, refresh them quietly after (a network wait made
+         every swipe stall) */
+      if (!row?.items?.length) row = await api();
+      else
+        api()
+          .then((fresh) => {
+            if (fresh?.items?.length) row = { ...fresh };
+          })
+          .catch(() => {});
       if (!row.items?.length) {
         if (isBusy(row)) rowStatus(row);
         else if (swiped) $('focusRetry').click(); // a swipe with no versions yet makes them

@@ -4141,3 +4141,12 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     display: none !important;
   }
 }
+
+/* Messages reader: the message moves on its own layer while swiped, and the whole paper hands sideways drags to the swipe */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper {
+  touch-action: pan-y;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #focusFormatted {
+  will-change: transform;
+  backface-visibility: hidden;
+}

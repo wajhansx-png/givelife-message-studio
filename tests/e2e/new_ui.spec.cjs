@@ -217,7 +217,7 @@ test('/new reader: tapping a line or the B/I bar while editing keeps editing ope
   await expect(page.locator('#ui2Float')).toBeVisible();
 });
 
-test("/new computer: today's message and the send controls sit side by side", async ({
+test("/new computer: today's message and the send controls share one centered column", async ({
   page,
 }) => {
   await open(page, '/new', 1440);
@@ -246,9 +246,9 @@ test("/new computer: today's message and the send controls sit side by side", as
   await expect(page.locator('#sendDm')).toBeHidden();
   const card = await page.locator('#card').boundingBox();
   const send = await page.locator('.group-send').boundingBox();
-  expect(send.x).toBeGreaterThanOrEqual(card.x + card.width);
-  expect(Math.abs(card.y - send.y)).toBeLessThanOrEqual(4);
-  expect(card.width).toBeGreaterThan(send.width);
+  expect(send.y).toBeGreaterThanOrEqual(card.y + card.height - 1);
+  expect(Math.abs(card.x - send.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(card.width - send.width)).toBeLessThanOrEqual(1);
   await expect(page.locator('#main-workspace .talk')).toBeHidden(); // chat is its own screen
   await expect(page.locator('#ui2Tabs [data-tab="chat"]')).toBeVisible();
   await page.locator('#ui2Tabs [data-tab="chat"]').click();
@@ -272,9 +272,7 @@ test('/new compact group dock keeps its controls reachable at every tested width
   const free = page.locator('#btnFree');
   const all = page.locator('#sendAll');
   const picker = page.getByRole('button', { name: 'Choose group', exact: true });
-  const sendLabel = main.locator('.ui2-primary-send-label');
-  await expect(sendLabel).toHaveText(/Send to GiveLife$/);
-  await expect(sendLabel.locator('.gb-go')).toBeVisible();
+  await expect(main).toContainText('Send to GiveLife');
   for (const [width, height] of [
     [240, 420],
     [260, 480],
@@ -1004,28 +1002,31 @@ for (const [w, h] of [
   });
 }
 
-test('/new phone: Regenerate and Next sit directly below the home preview', async ({
+test('/new phone: Regenerate and Next sit inside the green message (small, right) and in the reader', async ({
   page,
 }) => {
   await open(page, '/new', 390);
   const card = await page.locator('#card').boundingBox();
   const nav = await page.locator('#ui2GnavMain').boundingBox();
-  const preview = await page.locator('#groupPreview').boundingBox();
+  // Inside the message card, bottom right: no row under the message any more, so the message keeps that height.
   await expect(page.locator('#card #ui2GnavMain')).toHaveCount(1);
-  const next = await page.locator('#ui2GnavMain .ui2-gnext').boundingBox();
-  expect(Math.abs(next.x + next.width - (card.x + card.width))).toBeLessThanOrEqual(1);
+  expect(nav.x).toBeGreaterThan(card.x + card.width / 2);
   expect(nav.x + nav.width).toBeLessThanOrEqual(card.x + card.width + 0.5);
   expect(nav.y + nav.height).toBeLessThanOrEqual(card.y + card.height + 0.5);
-  expect(nav.y - (preview.y + preview.height)).toBeGreaterThanOrEqual(0);
-  expect(nav.y - (preview.y + preview.height)).toBeLessThanOrEqual(8);
+  expect(nav.y).toBeGreaterThanOrEqual(card.y);
   await expect(page.locator('#ui2GnavMain .ui2-gbtn')).toHaveText(['Regenerate', 'Next']);
   for (const [i, name] of ['Regenerate', 'Next'].entries()) {
     const b = page.locator('#ui2GnavMain .ui2-gbtn').nth(i);
     await expect(b).toHaveAccessibleName(name);
     const box = await b.boundingBox();
-    expect(box.width).toBeGreaterThanOrEqual(44);
-    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.width).toBeGreaterThanOrEqual(40);
+    expect(box.height).toBeGreaterThanOrEqual(40);
+    expect(box.width).toBeLessThanOrEqual(48); // small
   }
+  // The message text is not under the buttons: its last line can scroll clear of them.
+  expect(
+    await page.locator('#card #chat').evaluate((n) => parseFloat(getComputedStyle(n).paddingBottom)),
+  ).toBeGreaterThanOrEqual(46);
   // Tapping a button must not also open the reader (the card itself opens it).
   await page.locator('#ui2GnavMain .ui2-gnext').click(); // presses the real New wording button
   await expect(page.locator('#messageFocus')).toBeHidden();

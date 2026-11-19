@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const headers = { Authorization: 'Bearer manual-fix-preview-key' };
 
-test('mobile donor tabs leave a visible selection still and reveal a clipped selection once', async ({
+test('mobile donor tabs center the selection and let the user scroll the strip', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 740 });
@@ -16,7 +16,7 @@ test('mobile donor tabs leave a visible selection still and reveal a clipped sel
   });
   await page.goto('/#/donors/all');
   const strip = page.locator('.donor-tabs');
-  const important = strip.locator('[data-tab=important]');
+  const top = strip.locator('[data-tab=top]');
   await expect(page.locator('#donorRows .donor-row').first()).toBeVisible();
   const fits = (tab) =>
     tab.evaluate((el) => {
@@ -24,25 +24,48 @@ test('mobile donor tabs leave a visible selection still and reveal a clipped sel
       const parent = el.parentElement.getBoundingClientRect();
       return box.left >= parent.left - 1 && box.right <= parent.right + 1;
     });
-  expect(await fits(important)).toBe(true);
+  const offsetFromCenter = (tab) =>
+    tab.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const parent = el.parentElement.getBoundingClientRect();
+      return Math.abs(box.left + box.width / 2 - (parent.left + parent.width / 2));
+    });
+  expect(await fits(top)).toBe(true);
+  expect(await offsetFromCenter(top)).toBeGreaterThan(20);
   const scrolls = () => page.evaluate(() => window.tabScrolls.length);
   await page.evaluate(() => {
     window.tabScrolls.length = 0;
   });
-  await important.click();
-  await expect(important).toHaveAttribute('aria-selected', 'true');
-  await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-  );
-  expect(await scrolls()).toBe(0);
+  await top.click();
+  await expect(top).toHaveAttribute('aria-selected', 'true');
+  await expect.poll(() => offsetFromCenter(top)).toBeLessThan(2);
+  expect(await scrolls()).toBe(1);
 
   const clipped = strip.locator('[data-tab=not_contacted]');
   expect(await fits(clipped)).toBe(false);
   // Use the app click path without Playwright pre-scrolling the target.
   await clipped.evaluate((el) => el.click());
   await expect(clipped).toHaveAttribute('aria-selected', 'true');
-  await expect.poll(() => fits(clipped)).toBe(true);
-  expect(await scrolls()).toBe(1);
+  await expect.poll(() => offsetFromCenter(clipped)).toBeLessThan(2);
+  expect(await scrolls()).toBe(2);
+
+  const swipeToStart = async () => {
+    await strip.hover();
+    await page.mouse.wheel(-1000, 0);
+    await expect.poll(() => strip.evaluate((el) => el.scrollLeft)).toBe(0);
+  };
+  // Volunteers widens the strip. From the start it still has to scroll to reach the last tab.
+  await swipeToStart();
+  const last = strip.locator('[data-tab=volunteers]');
+  expect(await fits(last)).toBe(false);
+  await last.evaluate((el) => el.click());
+  await expect(last).toHaveAttribute('aria-selected', 'true');
+  await expect.poll(() => fits(last)).toBe(true);
+  expect(await scrolls()).toBe(3);
+
+  await swipeToStart();
+  await expect(last).toHaveAttribute('aria-selected', 'true');
+  expect(await scrolls()).toBe(3);
 });
 
 test('returning to Messages while it loads reuses the request', async ({ page }) => {

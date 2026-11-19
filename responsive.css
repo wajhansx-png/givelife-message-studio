@@ -4480,3 +4480,240 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   order: 3 !important;
   min-height: 44px !important;
 }
+
+/* Notes, calm writer (owner's pick, like Calmly Writer, dark): no box around the text, a slim top row, text
+   straight on the page, one flat tool bar at the bottom. On the computer the text column stays in the centre. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-paper {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-editor {
+  font-size: 17px !important;
+  line-height: 1.6 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-editor li {
+  line-height: 1.55 !important;
+  margin: 0 0 6px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-editor h1 {
+  margin: 6px 0 12px;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-editor h2 {
+  margin: 14px 0 8px;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-head :is(button, .notes-back) {
+  min-height: 36px !important;
+  padding: 0 12px !important;
+  border: 1px solid #34363e !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  color: #d6d8de !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-back-dock {
+  display: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools {
+  display: flex !important;
+  align-items: center;
+  gap: 2px !important;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom)) !important;
+  border: 0 !important;
+  border-top: 1px solid #2c2d33 !important;
+  border-radius: 0 !important;
+  background: #1c1c1f !important;
+  box-shadow: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools > button {
+  flex: 1 1 0;
+  min-width: 36px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: #e6e7ea !important;
+  font-size: 19px !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools > button[aria-pressed='true'] {
+  background: #2e3a52 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools > .notes-red::before {
+  width: 14px !important;
+  height: 14px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools .ui2-note-style {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 26px 0 10px;
+  border: 0 !important;
+  border-radius: 8px;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23d6d8de' stroke-width='1.8'/%3E%3C/svg%3E") no-repeat right 8px center !important;
+  color: #e6e7ea !important;
+  box-shadow: none !important;
+  font-size: 16px;
+  font-weight: 600;
+  appearance: none;
+  -webkit-appearance: none;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools .ui2-note-style option {
+  background: #1c1c1f;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools .ui2-note-sep {
+  flex: none;
+  width: 1px;
+  height: 26px;
+  margin: 0 4px;
+  background: #34363e;
+}
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
+    margin: 0 !important;
+    z-index: 5;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-editor {
+    padding: 12px 18px 90px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-head {
+    padding-inline: 12px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools .ui2-note-style {
+    font-size: 15px;
+    padding-right: 22px;
+  }
+}
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools {
+    border: 1px solid #2c2d33 !important;
+    border-radius: 12px !important;
+    position: relative !important;
+    inset: auto !important;
+  }
+}
+
+/* Notes, pure focus: the top row is only ← and a full-screen icon (no title, no Lock, no "Saved" unless saving
+   fails); the tool bar fades in only while text is selected, so nothing else is on screen while writing. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-head :is(.notes-headline, #notesLock) {
+  display: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-head #notesSync:not([data-error='true']) {
+  visibility: hidden !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-head {
+  justify-content: space-between !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-head :is(#notesBack, #notesFullscreen) {
+  display: grid !important;
+  place-items: center;
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  opacity: 0.7;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-head :is(#notesBack, #notesFullscreen):hover {
+  opacity: 1;
+  background: #ffffff10 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-head :is(#notesBack, #notesFullscreen)::before {
+  content: '';
+  width: 22px;
+  height: 22px;
+  background: #e6e7ea;
+  -webkit-mask: var(--ico) center / contain no-repeat;
+  mask: var(--ico) center / contain no-repeat;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-head #notesBack {
+  --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 12H5M11 6l-6 6 6 6'/%3E%3C/svg%3E");
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-head #notesFullscreen {
+  --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'/%3E%3C/svg%3E");
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .notes-head #notesFullscreen[aria-pressed='true'] {
+  --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5'/%3E%3C/svg%3E");
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  translate: 0 10px;
+  transition: opacity 0.14s ease, translate 0.14s ease;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes[data-ui2-sel] #notesTools {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  translate: 0 0;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools #notesRed {
+  display: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools > .ui2-note-color::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: conic-gradient(#f4a4ad, #fdba74, #fde047, #86efac, #93c5fd, #c4b5fd, #f4a4ad);
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools > .ui2-note-color {
+  display: grid !important;
+  place-items: center;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .ui2-note-swatches {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #2c2d33;
+  border-radius: 14px;
+  background: #1c1c1f;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .ui2-note-swatches[hidden] {
+  display: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .ui2-note-swatch {
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  border: 2px solid #00000055 !important;
+  border-radius: 50% !important;
+  background: var(--c) !important;
+  box-shadow: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes .ui2-note-swatch[aria-label='Default'] {
+  border-color: #6b6e78 !important;
+}
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .foundation-notes #notesTools {
+    position: absolute !important;
+  }
+}

@@ -4084,3 +4084,60 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     flex: 0 0 auto !important;
   }
 }
+
+/* Home polish (owner's approved design): Test group outlined in purple so it never looks like Send, a clock on
+   Timer, the bottom bar's current page in blue and bold, and the message text 12px on phones so it shows in full. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .group-send button.test-row {
+  border: 1.5px solid #9670ff !important;
+  background: transparent !important;
+  color: #e1d2ff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2Later::before {
+  content: '🕒';
+  margin-right: 6px;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-tabs .ui2-tab[aria-current='true'] {
+  color: #8db4ff !important;
+  font-weight: 800 !important;
+}
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message {
+    font-size: 12px !important;
+    line-height: 1.32 !important;
+  }
+}
+@media (max-width: 299px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2Later::before {
+    content: none;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message {
+    font-size: 11px !important;
+  }
+}
+@media (max-width: 359px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-group-more :is(#ui2GroupPicker, #ui2Later, .test-row) {
+    padding: 0 4px !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+  }
+}
+@media (max-width: 299px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home .ui2-group-more :is(#ui2GroupPicker, #ui2Later, .test-row) {
+    font-size: 12px !important;
+  }
+}
+@media (max-width: 359px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2GroupPicker {
+    gap: 2px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2GroupPicker::after {
+    margin-left: 2px !important;
+    width: 6px !important;
+    height: 6px !important;
+  }
+}
+@media (max-width: 319px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #ui2GroupPicker::after {
+    display: none !important;
+  }
+}

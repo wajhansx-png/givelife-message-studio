@@ -287,6 +287,22 @@ class OneRow(Base):
         with self.assertRaises(ValueError):  # a row that was never approved cannot just be started
             self.cr.row_op("giki1", "start")
 
+    def test_important_sends_in_picker_order(self):
+        self.people(3, 0)
+        ids = [r["id"] for r in self.h.book.recipients("important")][::-1]
+        plan = self.only("important")
+        plan["important"]["ids"] = [ids[0], ids[1], ids[0], ids[2]]
+        self.cr.set_plan(plan)
+        self.fast.start()
+        self.addCleanup(self.fast.stop)
+        self.approve()
+        self.addCleanup(self.stop_everything)
+        self.assertTrue(self.wait(lambda: not self.h.jobs.active))
+        self.assertEqual(
+            [send["phone"].split("@")[0] for send in self.sent],
+            [self.phone(i) for i in ids],
+        )
+
     def test_important_without_people_is_refused_and_changes_nothing(self):
         self.people(2, 1)
         before = self.state()["plan"]

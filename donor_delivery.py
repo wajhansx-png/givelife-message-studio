@@ -1702,7 +1702,10 @@ class DonorDelivery:
                 try:
                     r = self.book.resolve(ident)
                 except ValueError:
+                    # deleted while the batch waited between DMs: counted AND listed, like the first look above
                     skipped += 1
+                    done_here.add(ident)
+                    receipts.append({"id": ident, "name": "Removed donor", "state": "Skipped"})
                     continue
                 if self.held():
                     state = "Stopped"
@@ -1723,6 +1726,16 @@ class DonorDelivery:
                                 r["phone"]
                             ),
                         }
+                    )
+                    continue
+                created = float(j.get("created_at") or 0)
+                if created and float(r.get("last_sent_at") or 0) >= created:
+                    # Another route (the owner's tap, Auto, another batch) messaged this person after this batch
+                    # started: never twice. The same rule Resume already uses (see _done).
+                    skipped += 1
+                    done_here.add(ident)
+                    receipts.append(
+                        {"id": ident, "name": hide_numbers(r["name"]), "state": "Skipped: already messaged"}
                     )
                     continue
                 name, gender = (

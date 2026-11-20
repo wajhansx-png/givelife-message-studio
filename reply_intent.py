@@ -25,7 +25,10 @@ LATER = re.compile(
     r"will (?:try|do|send|donate|share))\b"
 )
 OPT_OUT = re.compile(
-    r"(?i)\b(stop|unsubscribe|don'?t (?:message|msg|dm|send)|not interested|block|spam|mat bhejo|band karo|remove me)\b"
+    r"(?i)\b(stop|unsubscribe|(?:do not|don'?t|dont|never) (?:message|msg|dm|send|contact|text|call|disturb|bother)|"
+    r"(?:do not|don'?t|dont) want (?:any )?(?:more )?(?:messages?|msgs?|dms?|texts?|calls?)|no more (?:messages?|msgs?|dms?|texts?)|"
+    r"not interested|block|spam|mat (?:bhejo|bhejein|bhejiye|bhejna)|(?:messages?|msgs?|dms?|calls?) mat (?:karo|karein|karna|kijiye)|"
+    r"band karo|nahi chahiye|leave me alone|remove (?:me|my number)|take me off|delete my number)\b"
 )
 ACK = re.compile(
     r"(?i)^\W*(ok+(?:ies|ay|y)?|k+|sure|theek|thik|ji|jee|g|alright|👍|🤲|❤️?|jazak ?allah\w*)\W*$"

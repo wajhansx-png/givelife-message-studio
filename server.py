@@ -562,6 +562,8 @@ def _send_custom(body):
         "donor_manual",
         "donor_batch",
         "owner_text",
+        "volunteer_batch",  # the volunteer and GIKI case message is saved when the batch starts: today's amount at send time
+        "volunteer_manual",
     ):
         message = caption_facts.current(sys.modules[__name__], message)
         body = {**body, "message": message}

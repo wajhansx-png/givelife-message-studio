@@ -1606,7 +1606,7 @@
           : 'Order:  ' + steps.map((t, i) => i + 1 + '. ' + t).join('   ');
       };
       addEventListener('dm-extras-changed', paintOrder);
-      const paintText = (v) => {
+      let paintText = (v) => {
         lastView = v || lastView;
         paintOrder();
         const d = (v && v.setup && v.setup.dm) || { text_on: 'video', poster: true };
@@ -1632,9 +1632,59 @@
       textBtns.poster.onclick = () => saveText('text_on', 'poster');
       posterCb.onchange = () => saveText('poster', posterCb.checked);
       api('/group-extras')
-        .then(paintText)
+        .then((v) => paintText(v))
         .catch(() => {});
       box.append(textLine, orderLine);
+      /* On a phone this whole block is ONE small row ("Send options · Follow-up, PDF, Video") that opens the chips
+         above it, so the message keeps its height (the rows used to take two thirds of a short phone screen). The
+         chips keep their ids and handlers: they are only moved into a panel. On a computer nothing changes. */
+      const panel = make('div', 'bank-extras-panel');
+      panel.id = 'msgExtrasPanel';
+      panel.append(...box.childNodes);
+      const sum = make('button', 'bank-extras-sum');
+      sum.type = 'button';
+      sum.setAttribute('aria-expanded', 'false');
+      sum.setAttribute('aria-controls', 'msgExtrasPanel');
+      const paintSum = () => {
+        const parts = [];
+        if (followUpOn) parts.push('Follow-up');
+        if (dmExtra.pdf) parts.push('PDF');
+        if (dmExtra.video) parts.push('Video');
+        const text = !textLine.hidden && textBtns.poster.getAttribute('aria-pressed') === 'true' ? 'Poster' : 'Video';
+        const warn = orderLine.dataset.warn === '1';
+        sum.dataset.warn = warn ? '1' : '';
+        sum.textContent = '';
+        sum.append(
+          make('b', '', warn ? '⚠ Send options' : 'Send options'),
+          make('span', '', (parts.length ? 'Also ' + parts.join(', ') : 'Nothing extra') + (textLine.hidden ? '' : ' · Text with ' + text)),
+          make('i', '', '▾'),
+        );
+        sum.setAttribute('aria-label', 'Send options. ' + (warn ? 'Warning. ' : '') + sum.textContent.replace('▾', ''));
+      };
+      const setOpen = (on) => {
+        box.dataset.open = on ? '1' : '0';
+        sum.setAttribute('aria-expanded', String(on));
+      };
+      sum.onclick = () => setOpen(box.dataset.open !== '1');
+      document.addEventListener('pointerdown', (e) => {
+        if (box.dataset.open === '1' && !box.contains(e.target)) setOpen(false);
+      });
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && box.dataset.open === '1') {
+          setOpen(false);
+          sum.focus();
+          e.stopPropagation();
+        }
+      });
+      setOpen(false);
+      box.append(sum, panel);
+      addEventListener('dm-extras-changed', () => requestAnimationFrame(paintSum));
+      const paintTextOrig = paintText;
+      paintText = (v) => {
+        paintTextOrig(v);
+        paintSum();
+      };
+      paintSum();
       extrasBox = box;
     }
     const grid = make('div', 'bank-workspace'),

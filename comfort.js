@@ -113,7 +113,25 @@
     const p = box?.querySelector('.bank-detail .bank-preview');
     if (!p || p.closest('[hidden]') || !p.clientHeight) return;
     p.style.setProperty('line-height', '1.4', 'important');
-    p.style.setProperty('font-size', '14px', 'important');
+    /* the whole message shows without scrolling: the largest size from 14px down to 11px that fits its box
+       (a message too long even at 11px keeps 11px and scrolls, as before) */
+    const card = p.closest('.bank-detail'),
+      fits = (size) => {
+        p.style.setProperty('font-size', size + 'px', 'important');
+        return !card || card.scrollHeight <= card.clientHeight + 1;
+      };
+    p.classList.remove('bank-tight');
+    card?.classList.remove('bank-tight-card');
+    p.style.setProperty('line-height', '1.4', 'important');
+    let size = 14;
+    while (!fits(size) && size > 11) size -= 0.5;
+    if (!fits(size)) {
+      /* still too tall at 11px (a very long message on a short phone): tighter lines and smaller gaps, last */
+      p.classList.add('bank-tight');
+      card?.classList.add('bank-tight-card');
+      p.style.setProperty('line-height', '1.25', 'important');
+      fits(size);
+    }
   }
   addEventListener('resize', () => requestAnimationFrame(fitBankPreview));
   if (box) {

@@ -5200,3 +5200,109 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     display: none !important;
   }
 }
+
+/* Donors > Messages: "Also send", "Text with" and "Order" were 3 to 4 rows (160px) under the message, so on a real
+   phone the message box shrank to 210px and scrolled. On phones and tablets they are ONE 40px row that opens the
+   chips above it. A computer keeps the old layout. */
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorMessages .bank-extras-sum {
+  display: none;
+}
+html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorMessages .bank-extras-panel {
+  display: contents;
+}
+@media (max-width: 899px) {
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorMessages .bank-extras {
+    position: relative;
+    display: block !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorMessages .bank-extras .bank-extras-sum {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--line2, #2b2e3c);
+    border-radius: 12px;
+    background: var(--surface2, #1a1c26);
+    color: var(--text, #eef0f6);
+    font: 600 13px Inter, system-ui, sans-serif;
+    text-align: left;
+    cursor: pointer;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorMessages .bank-extras .bank-extras-sum b {
+    flex: none;
+    font-weight: 700;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorMessages .bank-extras .bank-extras-sum span {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--ink-muted, #aab0c5);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorMessages .bank-extras .bank-extras-sum i {
+    flex: none;
+    font-style: normal;
+    opacity: 0.7;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorMessages .bank-extras .bank-extras-sum[data-warn='1'] {
+    border-color: #b8860b;
+    color: #ffd27a;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorMessages .bank-extras[data-open='1'] > .bank-extras-sum i {
+    transform: rotate(180deg);
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorMessages .bank-extras .bank-extras-panel {
+    display: none;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorMessages .bank-extras[data-open='1'] > .bank-extras-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 6px);
+    z-index: 30;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 8px;
+    padding: 12px;
+    border: 1px solid var(--line2, #2b2e3c);
+    border-radius: 14px;
+    background: var(--surface, #15161f);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* Donors > Messages on a phone: the message uses the whole width of its box (it had 26px of empty space on each
+   side, so lines wrapped more and the message needed more height) */
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorsPage#donorsPage #donorMessages .bank-detail .bank-preview {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-inline: 0 !important;
+    border-radius: 14px;
+  }
+}
+
+/* the last step of fitting a very long message on a short phone: smaller gaps between its paragraphs */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorsPage#donorsPage #donorMessages .bank-preview.bank-tight .bank-line.blank {
+  height: 3px !important;
+  min-height: 3px !important;
+  line-height: 3px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorsPage#donorsPage #donorMessages .bank-preview.bank-tight .bank-line {
+  line-height: 1.28 !important;
+}
+
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorsPage#donorsPage #donorMessages .bank-detail.bank-tight-card {
+  padding: 2px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorsPage#donorsPage #donorMessages .bank-detail .bank-preview.bank-tight {
+  padding-block: 3px !important;
+}

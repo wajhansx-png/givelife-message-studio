@@ -2,7 +2,6 @@
 arrives while a send is queued is honoured by every route. Fake WhatsApp only: nothing is sent."""
 
 import unittest
-from unittest.mock import patch
 
 import case_run
 import test_donor_hub as hub
@@ -17,7 +16,9 @@ class Replies(Base):
 
     def setUp(self):
         super().setUp()
-        saved = set(app.BLOCKED)  # an opt-out is remembered in a module-wide set: put it back after each test
+        saved = set(
+            app.BLOCKED
+        )  # an opt-out is remembered in a module-wide set: put it back after each test
         self.addCleanup(lambda: (app.BLOCKED.clear(), app.BLOCKED.update(saved)))
 
     def waiting(self):
@@ -77,12 +78,18 @@ for _i, _text in enumerate(UNCLEAR):
 def _opt_out(self, text):
     did, step = self.check_no_share(text, ("declined", "needs"))
     phone = self.phone(did)
-    self.assertTrue(self.h.exclusion_reason(case_run.normalize_phone(phone)), "the opt-out was not recorded")
+    self.assertTrue(
+        self.h.exclusion_reason(case_run.normalize_phone(phone)), "the opt-out was not recorded"
+    )
     self.assertFalse(self.h.eligible(case_run.normalize_phone(phone)))
 
 
 for _i, _text in enumerate(OPT_OUTS):
-    setattr(Replies, f"test_opt_out_{_i}_is_recorded_and_never_shares", lambda self, t=_text: _opt_out(self, t))
+    setattr(
+        Replies,
+        f"test_opt_out_{_i}_is_recorded_and_never_shares",
+        lambda self, t=_text: _opt_out(self, t),
+    )
 
 
 class Words(unittest.TestCase):
@@ -138,7 +145,9 @@ class Mid(hub.DeliveryTests):
         self.run_job(self.jobs.start("all", 60, run=False, follow_up="Please share this"))
         kinds = [b.get("kind") for b, _ in self.sent]
         self.assertNotIn("owner_text", kinds, kinds)
-        self.assertEqual(self.jobs.status()["receipts"][0].get("follow_up"), "Skipped: opted out or blocked")
+        self.assertEqual(
+            self.jobs.status()["receipts"][0].get("follow_up"), "Skipped: opted out or blocked"
+        )
 
 
 def _no_inherited_tests(cls, parent):

@@ -226,9 +226,13 @@ def validate(source, text, existing=()):
         return "payment details or the reply instruction changed"
     scary = alarm_terms(text) - alarm_terms(source)
     if scary:
-        return "invented danger or urgency (" + ", ".join(sorted(scary)) + "); keep the owner's own urgency"
-    if _names(text) - _names(source):
-        return "a name that is not in the owner's message"
+        return (
+            "invented danger or urgency ("
+            + ", ".join(sorted(scary))
+            + "); keep the owner's own urgency"
+        )
+    if other_person(source, text):
+        return "another person's name instead of the one in the owner's message"
     made_up = invented_facts(source, text)
     if made_up:
         return "a case fact that is not in the owner's message (" + ", ".join(sorted(made_up)) + ")"
@@ -273,7 +277,14 @@ def _names(text):
     for line in text.split("\n"):
         for sentence in re.split(r"(?<=[.!?])[\s_*]+", line):
             words = re.findall(r"[A-Za-z']+", sentence)
-            greeting = bool(words) and words[0].lower() in ("brother", "sister", "bhai", "dear", "assalam", "salam")
+            greeting = bool(words) and words[0].lower() in (
+                "brother",
+                "sister",
+                "bhai",
+                "dear",
+                "assalam",
+                "salam",
+            )
             for word in words[2 if greeting else 1 :]:
                 word = re.sub(r"'s$", "", word)  # "Yousuf's" is Yousuf
                 low = word.lower()
@@ -287,6 +298,13 @@ def _names(text):
                 ):
                     out.add(low)
     return out
+
+
+def other_person(source, text):
+    """True when `text` is about someone else: it names people the source does not AND keeps none of the source's names.
+    (A rewrite that keeps the patient's name and adds one more capitalised word is still the same appeal.)"""
+    mine, theirs = _names(source), _names(text)
+    return bool(theirs - mine) and not (mine & theirs)
 
 
 # A diagnosis, a death, an accident or a deadline: facts the owner never gave must not appear in a rewrite.
@@ -346,15 +364,18 @@ def fact_problem(master, text):
     if _numbers(master) != _numbers(text):
         return "a number, amount or phone number differs from the master"
     for line in master.split("\n"):
-        if re.search(r"(?i)(?:Easypaisa|JazzCash|Wajdan Khan|03097458815|Reply \*Done\*)", line) and line.strip() not in text:
+        if (
+            re.search(r"(?i)(?:Easypaisa|JazzCash|Wajdan Khan|03097458815|Reply \*Done\*)", line)
+            and line.strip() not in text
+        ):
             return "payment details or the reply instruction differ from the master"
     scary = alarm_terms(text) - alarm_terms(master)
     if scary:
         return "invented danger or urgency (" + ", ".join(sorted(scary)) + ")"
     if language_changed(master, text):
         return "language differs from the master"
-    if _names(text) - _names(master):
-        return "a name that is not in the master"
+    if other_person(master, text):
+        return "another person's name instead of the master's"
     made_up = invented_facts(master, text)
     if made_up:
         return "a case fact that is not in the master (" + ", ".join(sorted(made_up)) + ")"

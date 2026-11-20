@@ -456,8 +456,10 @@ class MessageBank:
         out = []
         for row in rows or []:
             text = row.get("text") if isinstance(row, dict) else None
-            if isinstance(text, str) and text.strip() and (
-                text == master or not dm_variants.fact_problem(master, text)
+            if (
+                isinstance(text, str)
+                and text.strip()
+                and (text == master or not dm_variants.fact_problem(master, text))
             ):
                 out.append(row)
         return out
@@ -482,14 +484,18 @@ class MessageBank:
         bank = self.get()
         texts = self._sendable(bank.get("items"))
         generation = bank.get("generation") or {}
-        master = (bank.get("items") or [{}])[0].get("text") if bank.get("mode") == "custom" else None
+        master = (
+            (bank.get("items") or [{}])[0].get("text") if bank.get("mode") == "custom" else None
+        )
         if isinstance(master, str):
             # Every version must still carry Message 1's facts (amounts, payment lines, names, urgency, arithmetic).
             texts = [t for t in texts if t == master or not dm_variants.fact_problem(master, t)]
         if len(texts) < self.MIN_VERSIONS and generation.get("state") != "Ready":
             rows = bank.get("previous_items")
             if isinstance(master, str):
-                rows = self._of_master(master, rows)  # the earlier bank counts only if it is the SAME appeal
+                rows = self._of_master(
+                    master, rows
+                )  # the earlier bank counts only if it is the SAME appeal
             earlier = self._sendable(rows)
             if len(earlier) >= self.MIN_VERSIONS and len(earlier) == len(set(earlier)):
                 texts = earlier

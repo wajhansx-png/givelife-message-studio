@@ -205,6 +205,7 @@ class GikiTestPeople(Base):
     def test_a_test_person_gets_case_file_and_share_in_the_test_group_from_the_giki_whatsapp(self):
         calls = self.record()
         base = {"target": "phone", "phone": "999000000001", "line": "giki", "name": "Ahmad"}
+        # the amount in a case message is today's amount at the moment it is sent (the app's balance here is Rs. 25,000)
         app.send_custom({**base, "message": "Case. Rs. 5,000 left.", "kind": "volunteer_batch", "poster": True})
         app.send_custom({**base, "kind": "dm_extra", "extra": "pdf"})
         app.send_custom({**base, "message": "Salam {name}, share.", "kind": "volunteer_batch", "poster": False})
@@ -212,7 +213,7 @@ class GikiTestPeople(Base):
         self.assertEqual({c[1] for c in calls}, {app.TEST_GROUP_JID})  # all three in the test group
         self.assertTrue(all(c[3] for c in calls))  # sent as a DM (DM poster and DM rules), not as a group post
         self.assertEqual({c[4] for c in calls}, {GIKI})  # from the Giki WhatsApp
-        self.assertEqual(calls[0][2], "Case. Rs. 5,000 left.")
+        self.assertEqual(calls[0][2], "Case. Rs. %s left." % format(app.read_left(), ","))
         self.assertEqual(calls[2][2], "Salam Ahmad, share.")
         self.assertFalse(app._DM_TO_GROUP.get())  # nothing leaks to the next send
 

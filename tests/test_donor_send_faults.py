@@ -43,13 +43,43 @@ class FaultySender:
             return {"code": "ERROR", "message": "timeout waiting for the gateway"}
         if kind == "lost":  # it did not go and the gateway says so
             return {"code": "ERROR", "message": "gateway refused"}
-        if kind == "boom":  # an error with no answer at all: it may or may not have gone; assume it went
+        if (
+            kind == "boom"
+        ):  # an error with no answer at all: it may or may not have gone; assume it went
             self.delivered[phone] += 1
             raise RuntimeError("socket closed")
         if kind == "ack_lost_raise":
             self.delivered[phone] += 1
             raise RuntimeError("socket closed")
         raise AssertionError(kind)
+
+
+def step_of(body):
+    if body.get("kind") == "dm_extra":
+        return body["extra"]
+    return "share" if body.get("kind") == "owner_text" else "case"
+
+
+class StepSender(FaultySender):
+    """Like FaultySender, but one person has several steps (case, video, pdf, share), each counted on its own."""
+
+    def __init__(self, rng, weights):
+        super().__init__(rng, weights)
+        self.step_calls, self.step_delivered, self.order = Counter(), Counter(), []
+
+    def __call__(self, body):
+        key = (body["phone"], step_of(body))
+        self.step_calls[key] += 1
+        self.order.append(key)
+        before = self.delivered[body["phone"]]
+        try:
+            return super().__call__(body)
+        finally:
+            if self.delivered[body["phone"]] > before:
+                self.step_delivered[key] += 1
+
+
+STEPS = ("case", "video", "pdf", "share")
 
 
 class FaultTests(hub.DeliveryTests):
@@ -104,15 +134,27 @@ class FaultTests(hub.DeliveryTests):
         book = {r["id"]: r for r in self.book._load()["records"]}
         for ident in ids:
             rec = book[ident]
-            got = sender.delivered["0" + rec["phone"][2:]] if False else sender.delivered[rec["phone"]]
+            got = (
+                sender.delivered["0" + rec["phone"][2:]]
+                if False
+                else sender.delivered[rec["phone"]]
+            )
             if rec.get("dm_sent"):
-                self.assertEqual(got, 1, ("marked Sent but nothing reached them", rec["name"], sender.log))
+                self.assertEqual(
+                    got, 1, ("marked Sent but nothing reached them", rec["name"], sender.log)
+                )
             if got and not rec.get("dm_sent"):
                 # it reached them but the answer was lost: never asked again, shown as Uncertain
-                self.assertIn(rec.get("delivery"), ("Uncertain", "Sending"), ("delivered, not shown", rec["name"], rec.get("delivery")))
+                self.assertIn(
+                    rec.get("delivery"),
+                    ("Uncertain", "Sending"),
+                    ("delivered, not shown", rec["name"], rec.get("delivery")),
+                )
         for ident in ids:
             if book[ident].get("delivery") == "Uncertain":
-                self.assertLessEqual(sender.calls[book[ident]["phone"]], 1, "an unclear person was asked again")
+                self.assertLessEqual(
+                    sender.calls[book[ident]["phone"]], 1, "an unclear person was asked again"
+                )
 
     def test_random_trouble_never_messages_anybody_twice(self):
         for seed in range(150):
@@ -125,6 +167,54 @@ class FaultTests(hub.DeliveryTests):
                 states = self.run_until_done("all" if seed % 2 == 0 else "important", sender)
                 self.assertTrue(states, "the batch never started")
                 self.check_invariants(sender, ids)
+
+    def test_trouble_in_any_step_never_repeats_a_step_skips_ahead_or_mixes_people(self):
+        """Poster + caption, then the video, then the PDF, then the share question: one person at a time, in that
+        order. A step that is confirmed is never sent again; one that is unclear is never retried; and nothing later
+        is sent to a person whose earlier step did not go."""
+        for seed in range(80):
+            with self.subTest(seed=seed):
+                self.tearDown()
+                self.setUp()
+                rng = random.Random(5000 + seed)
+                self.setup_people(rng.randint(2, 6))
+                sender = StepSender(rng, self.WEIGHTS)
+                self.jobs.send = sender
+                result = self.jobs.start(
+                    "all", 60, run=False, video=True, pdf=True, follow_up="Please share this"
+                )
+                self.run_job(result)
+                phones = []
+                for key in sender.order:
+                    if key[0] not in phones:
+                        phones.append(key[0])
+                # one person at a time: every person's calls sit together
+                blocks = [k[0] for k in sender.order]
+                self.assertEqual(
+                    blocks, sorted(blocks, key=phones.index), ("people interleaved", sender.order)
+                )
+                for phone in phones:
+                    mine = [step for p, step in sender.order if p == phone]
+                    self.assertEqual(
+                        mine, [s for s in STEPS if s in mine], ("steps out of order", phone, mine)
+                    )
+                    for step in STEPS:
+                        self.assertLessEqual(
+                            sender.step_delivered[(phone, step)],
+                            1,
+                            ("a step went twice", phone, step),
+                        )
+                        self.assertLessEqual(
+                            sender.step_calls[(phone, step)],
+                            1,
+                            ("a step was tried again", phone, step),
+                        )
+                    went = [s for s in STEPS if sender.step_delivered[(phone, s)]]
+                    self.assertEqual(
+                        went,
+                        list(STEPS[: len(went)]),
+                        ("a step went after one that did not", phone, went),
+                    )
 
     def test_a_flaky_connection_waits_and_nobody_is_sent_twice(self):
         """WhatsApp drops for a few calls in a row, then comes back; the same person is not messaged twice."""
@@ -197,7 +287,9 @@ class FaultTests(hub.DeliveryTests):
                     if self.jobs.status()["state"] == "Completed":
                         break
                 self.check_invariants(sender, ids)
-                self.assertEqual(len(sender.delivered), 7, ("not everybody was reached", sender.log))
+                self.assertEqual(
+                    len(sender.delivered), 7, ("not everybody was reached", sender.log)
+                )
 
     def test_a_person_deleted_while_the_batch_waits_is_listed_as_skipped(self):
         ids = self.setup_people(4)

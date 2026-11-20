@@ -1015,20 +1015,32 @@ class IntegrationTests(unittest.TestCase):
             ("On hold: you told me to wait.", "on hold"),
         ):
             with self.subTest(reply=reply):
-                with patch.object(app, "send_image", return_value={"code": "ERROR", "message": reply}):
+                with patch.object(
+                    app, "send_image", return_value={"code": "ERROR", "message": reply}
+                ):
                     with self.assertRaisesRegex(ValueError, "(?i)" + words) as ctx:
                         registry.send_one(d["id"], "refused-click-" + words.replace(" ", ""))
-                self.assertTrue("Nothing was sent" in str(ctx.exception) or "On hold" in str(ctx.exception))
+                self.assertTrue(
+                    "Nothing was sent" in str(ctx.exception) or "On hold" in str(ctx.exception)
+                )
                 self.assertEqual(registry.book.resolve(d["id"])["delivery"], "Not sent")
         # he is still picked by a "skip contacted" batch
-        ids = [r["id"] for r in registry.book.recipients("all", None, None) if not registry.book.contacted(r) and r.get("delivery") not in ("Uncertain", "Sending")]
+        ids = [
+            r["id"]
+            for r in registry.book.recipients("all", None, None)
+            if not registry.book.contacted(r) and r.get("delivery") not in ("Uncertain", "Sending")
+        ]
         self.assertIn(d["id"], ids)
 
     def test_a_refused_click_can_be_tried_again_with_a_new_click(self):
         app = self.app
         registry = app.donors()
         d = registry.book.add("Ali", "03001234567")["donor"]
-        with patch.object(app, "send_image", return_value={"code": "ERROR", "message": "WhatsApp disconnected. Log in again."}):
+        with patch.object(
+            app,
+            "send_image",
+            return_value={"code": "ERROR", "message": "WhatsApp disconnected. Log in again."},
+        ):
             with self.assertRaises(ValueError):
                 registry.send_one(d["id"], "first-click-aaa")
         with patch.object(app, "send_image", return_value={"code": "SUCCESS"}) as image:

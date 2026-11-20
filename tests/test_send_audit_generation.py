@@ -34,21 +34,35 @@ class Base(unittest.TestCase):
         return app.read_left()
 
     def master_a(self):
-        return appeal("Ahmed", 9, "His parents reported an accident and a leg operation.", self.left())
+        return appeal(
+            "Ahmed", 9, "His parents reported an accident and a leg operation.", self.left()
+        )
 
     def master_b(self):
-        return appeal("Bilal", 4, "His parents reported a high fever and a long hospital stay.", self.left())
+        return appeal(
+            "Bilal", 4, "His parents reported a high fever and a long hospital stay.", self.left()
+        )
 
     def rewrites(self, master, n):
         """n valid-looking distinct versions of a master (wording changes only; facts and shape kept)."""
         out = []
         openers = ("kindly read about", "do read about", "please see")
-        asks = ("requested", "asked for", "is hoping for", "is praying for", "has appealed for", "needs", "is waiting for")
+        asks = (
+            "requested",
+            "asked for",
+            "is hoping for",
+            "is praying for",
+            "has appealed for",
+            "needs",
+            "is waiting for",
+        )
         for i in range(n):
             out.append(
                 master.replace("please read about", openers[i % 3], 1)
                 .replace("the family requested", f"the family {asks[(i // 3) % len(asks)]}", 1)
-                .replace("hospital bills", "hospital costs" + " today" * (i // 21) + " now" * (i % 3), 1)
+                .replace(
+                    "hospital bills", "hospital costs" + " today" * (i // 21) + " now" * (i % 3), 1
+                )
             )
         return out
 
@@ -169,7 +183,12 @@ class CrossCase(Base):
                     shutil.rmtree(item, ignore_errors=True)
                 elif item.name != "studio_state.sqlite":
                     item.unlink(missing_ok=True)
-            shutil.copytree(backup / "data", app.DATA, dirs_exist_ok=True, ignore=shutil.ignore_patterns("studio_state.sqlite*"))
+            shutil.copytree(
+                backup / "data",
+                app.DATA,
+                dirs_exist_ok=True,
+                ignore=shutil.ignore_patterns("studio_state.sqlite*"),
+            )
             shutil.rmtree(backup, ignore_errors=True)
             app.set_left(25000)
 
@@ -184,20 +203,30 @@ class CrossCase(Base):
 
         def save_during_a_switch(data):
             if (data.get("generation") or {}).get("state") == "Generating" and "go" not in saved:
-                saved["go"] = threading.Thread(target=lambda: h.cases.new("Bilal case", self.left()))
+                saved["go"] = threading.Thread(
+                    target=lambda: h.cases.new("Bilal case", self.left())
+                )
                 saved["go"].start()
                 saved["go"].join(0.4)  # a switch that does not wait for the bank finishes here
             return real_save(data)
 
-        with patch("dm_variants.generate", side_effect=work), patch.object(bank, "_save", side_effect=save_during_a_switch):
+        with (
+            patch("dm_variants.generate", side_effect=work),
+            patch.object(bank, "_save", side_effect=save_during_a_switch),
+        ):
             bank.set_base(self.master_a().replace("support the family", "support this family", 1))
             bank.start_regeneration()
             self.wait_idle(bank)
         if "go" in saved:
             saved["go"].join(5)
         stored = app.STORE.get("donor_messages") or {}
-        texts = [r.get("text", "") for r in (stored.get("items") or []) + (stored.get("previous_items") or [])]
-        self.assertFalse([t for t in texts if "Ahmed" in t], "case A's bank was written into case B")
+        texts = [
+            r.get("text", "")
+            for r in (stored.get("items") or []) + (stored.get("previous_items") or [])
+        ]
+        self.assertFalse(
+            [t for t in texts if "Ahmed" in t], "case A's bank was written into case B"
+        )
         self.assertNotEqual(h.cases.view()["current"], first)
 
 
@@ -231,7 +260,9 @@ class Validator(Base):
             "changed amount": good.replace(f"Rs. {left:,} still", f"Rs. {left + 1000:,} still"),
             "invented diagnosis": good.replace("hospital expenses", "cancer treatment"),
             "invented death": good.replace("struggling", "mourning a death and struggling"),
-            "invented urgency": good.replace("Please do not wait", "He is fighting for his life. Do not wait"),
+            "invented urgency": good.replace(
+                "Please do not wait", "He is fighting for his life. Do not wait"
+            ),
             "invented deadline": good.replace("Please do not wait", "Please help before tonight"),
             "another patient's name": good.replace("Ahmed", "Bilal"),
             "payment line changed": good.replace("EASYPAISA ONLY", "JazzCash"),
@@ -251,6 +282,18 @@ class Validator(Base):
             with self.subTest(label):
                 self.assertNotEqual(dm_variants.validate(a, text), "", label + " was accepted")
 
+    def test_a_rewrite_that_keeps_the_patients_name_may_add_a_capitalised_word(self):
+        a, good = self.master_a(), self.good()
+        more = good.replace(
+            "what his family is asking for", "what his family in Madinah Town is asking for", 1
+        )
+        self.assertEqual(dm_variants.validate(a, more), "")
+        self.assertEqual(dm_variants.fact_problem(a, more), "")
+        no_name = good.replace("about Ahmed and", "about this boy and", 1)
+        self.assertEqual(
+            dm_variants.fact_problem(a, no_name), ""
+        )  # dropping the name is not another person
+
     def test_a_duplicate_or_the_master_itself_is_refused(self):
         a, good = self.master_a(), self.good()
         self.assertEqual(dm_variants.validate(a, good, existing=[good]), "duplicate wording")
@@ -258,14 +301,27 @@ class Validator(Base):
 
     def test_roles_in_the_wrong_places_do_not_add_up(self):
         left = self.left()
-        wrong = self.good().replace(f"Just {math.ceil(left / 2000)} people", f"Just {math.ceil(left / 1000)} people", 1)
+        wrong = self.good().replace(
+            f"Just {math.ceil(left / 2000)} people", f"Just {math.ceil(left / 1000)} people", 1
+        )
         self.assertNotEqual(dm_variants.arithmetic_problem(wrong), "")
         self.assertEqual(dm_variants.arithmetic_problem(self.good()), "")
         # even when the master carries the same wrong numbers, a rewrite cannot be better than its master but may not make it worse
-        self.assertNotEqual(dm_variants.fact_problem(self.good(), wrong.replace("Just", "Only")), "")
+        self.assertNotEqual(
+            dm_variants.fact_problem(self.good(), wrong.replace("Just", "Only")), ""
+        )
 
     def test_malformed_model_replies_never_become_versions(self):
-        for raw in ("", "no json here", "{}", "[1, 2, 3]", "[null, 5, {}]", '["ok"', "```json\n[\n```", '[""," "]'):
+        for raw in (
+            "",
+            "no json here",
+            "{}",
+            "[1, 2, 3]",
+            "[null, 5, {}]",
+            '["ok"',
+            "```json\n[\n```",
+            '[""," "]',
+        ):
             with self.subTest(raw=raw):
                 try:
                     out = dm_variants._json_list(raw)
@@ -276,14 +332,27 @@ class Validator(Base):
 
     def test_generation_keeps_only_valid_unique_versions_from_a_noisy_provider(self):
         a, good = self.master_a(), self.good()
-        noisy = [good, good, self.master_b(), good.replace("03097458815", "03097458851"), good.replace("hospital expenses", "cancer treatment"), "junk", None, 5]
+        noisy = [
+            good,
+            good,
+            self.master_b(),
+            good.replace("03097458815", "03097458851"),
+            good.replace("hospital expenses", "cancer treatment"),
+            "junk",
+            None,
+            5,
+        ]
         calls = {"n": 0}
 
         def fake_call(key, prompt, deep=False):
             calls["n"] += 1
             return noisy if calls["n"] == 1 else []
 
-        with patch.object(dm_variants.assistant, "client", return_value="fake"), patch.object(dm_variants, "_call", fake_call), patch.object(dm_variants, "_sleep"):
+        with (
+            patch.object(dm_variants.assistant, "client", return_value="fake"),
+            patch.object(dm_variants, "_call", fake_call),
+            patch.object(dm_variants, "_sleep"),
+        ):
             made = dm_variants.generate(a, 1)
         self.assertEqual(made, [good])
 
@@ -305,14 +374,26 @@ class Payload(Base):
 
     def test_greeting_is_written_once_and_no_placeholder_is_left(self):
         bank, texts = self.approved(self.master_a())
-        for name, salutation, want in (("Ali", "Brother", "Ali Bhai, "), ("Ayesha", "Sister", "Ayesha Sister, "), ("Sara", "Neutral", "Sara, ")):
+        for name, salutation, want in (
+            ("Ali", "Brother", "Ali Bhai, "),
+            ("Ayesha", "Sister", "Ayesha Sister, "),
+            ("Sara", "Neutral", "Sara, "),
+        ):
             with self.subTest(name):
                 bank.cache = None
-                sent = self.send(self.donor(name, name + " donor", salutation), "greet-" + name.lower() + "-0001")
+                sent = self.send(
+                    self.donor(name, name + " donor", salutation), "greet-" + name.lower() + "-0001"
+                )
                 self.assertTrue(sent.startswith(want), sent[:40])
-                self.assertEqual(sent.count(want.strip(", ")), 1 if salutation != "Sister" else sent.count("Ayesha"), sent[:60])
+                self.assertEqual(
+                    sent.count(want.strip(", ")),
+                    1 if salutation != "Sister" else sent.count("Ayesha"),
+                    sent[:60],
+                )
                 self.assertNotIn("{name}", sent)
-                self.assertNotRegex(sent, r"(?i)^(?:\w+ )?(?:bhai|sister|brother)[, ]+(?:bhai|sister|brother),")
+                self.assertNotRegex(
+                    sent, r"(?i)^(?:\w+ )?(?:bhai|sister|brother)[, ]+(?:bhai|sister|brother),"
+                )
                 self.assertEqual(sent.count("Ahmed"), self.master_a().count("Ahmed"))
 
     def test_sister_is_sister_all_the_way_through(self):
@@ -346,3 +427,58 @@ class Payload(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+URDU_LINE = '_"اور جس نے ایک جان کو بچایا گویا اس نے پوری انسانیت کو بچایا" (القرآن)_'
+
+
+class Styles(Base):
+    """The owner's other message styles: a GIKI share request, a thank-you, and a master that carries an Urdu verse."""
+
+    def urdu_master(self):
+        return self.master_a().replace("📲", URDU_LINE + "\n\n📲", 1)
+
+    def urdu_good(self):
+        return Validator.good(self).replace("📲", URDU_LINE + "\n\n📲", 1)
+
+    def test_a_giki_share_request_has_the_greeting_exactly_once_or_closes_up(self):
+        import giki_line
+
+        share = "Salam {name}, please share this with your class group.\n\nJazakAllah 🤲"
+        for name in ("Ali Bhai", "Areeba Sister", "Hira"):
+            out = giki_line.fill_name(share, name)
+            self.assertEqual(out.count(name), 1, out)
+            self.assertNotIn("{name}", out)
+            self.assertTrue(out.startswith("Salam " + name + ","), out)
+        closed = giki_line.fill_name(share, "")
+        self.assertTrue(closed.startswith("Salam, please share"), closed)
+        self.assertNotIn("{name}", closed)
+        self.assertNotIn(" ,", closed)
+
+    def test_the_thank_you_asks_for_no_money_and_carries_no_payment_details(self):
+        text = app.thank_text()
+        self.assertNotRegex(text, r"(?i)rs\.?\s*\d|\bleft\b|\bneeded\b|easypaisa|03097458815")
+        self.assertIn("share", text.lower())
+        self.assertEqual(text.count("JazakAllah"), 1)
+        self.assertFalse(dm_composer.complete(text), "a thank-you must not pass as an appeal")
+
+    def test_a_master_with_an_urdu_verse_keeps_it_word_for_word(self):
+        master, good = self.urdu_master(), self.urdu_good()
+        self.assertIn(URDU_LINE, master)
+        self.assertEqual(dm_variants.validate(master, good), "")
+        # the model translated the verse into English: the app puts the owner's line back, so the version is saved intact
+        translated = good.replace(
+            URDU_LINE, '_"Whoever saves one life saves all of humanity" (Quran)_'
+        )
+        repaired = dm_variants.repair(master, translated)
+        self.assertIn(URDU_LINE, repaired)
+        self.assertEqual(dm_variants.validate(master, repaired), "")
+        # the model dropped the verse line altogether: refused, never saved
+        dropped = good.replace(URDU_LINE + "\n\n", "")
+        self.assertNotEqual(dm_variants.validate(master, dm_variants.repair(master, dropped)), "")
+        # the section order stays: appeal, balance, contribution lines, verse, payment, reply instruction
+        order = [
+            good.index(x)
+            for x in ("Ahmed", "still needed", "Just", URDU_LINE, "03097458815", "Reply *Done*")
+        ]
+        self.assertEqual(order, sorted(order))

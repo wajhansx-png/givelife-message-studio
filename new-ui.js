@@ -302,21 +302,31 @@ function ui2Observe(run, options) {
       more.innerHTML =
         '<summary aria-label="More: Next, Regenerate, Test, Bold, Italic, Base message">More</summary><div></div>';
       box.append(more);
-      document.addEventListener('pointerdown', (e) => {
-        if (more.open && !more.contains(e.target)) more.open = false;
-      });
     }
     const panel = more.querySelector(':scope > div');
-    /* Next and Regenerate: one small row right under the message (pressing the real round buttons). */
-    if (!box.previousElementSibling?.classList.contains('ui2-bank-nav')) {
+    /* One small message navigation row, using the existing buttons' handlers. */
+    const previous = box.querySelector('[data-bank-nav="previous"]');
+    const next = box.querySelector('[data-bank-nav="next"]');
+    const hasVersions = previous && next && (!previous.disabled || !next.disabled);
+    if (hasVersions && !box.previousElementSibling?.classList.contains('ui2-bank-nav')) {
       const nav = mk('div', 'ui2-bank-nav');
-      if (document.querySelector('#donorMessages .bank-gen-icon'))
-        nav.append(proxy('↻ Regenerate', '#donorMessages .bank-gen-icon'));
-      if (document.querySelector('#donorMessages .bank-next-arrow'))
-        nav.append(proxy('Next ›', '#donorMessages .bank-next-arrow'));
-      if (nav.children.length) box.before(nav);
+      nav.append(
+        proxy('‹ Previous', '#donorMessages [data-bank-nav="previous"]'),
+        proxy('↻ Regenerate', '#donorMessages .bank-gen-icon'),
+        proxy('Next ›', '#donorMessages .bank-next-arrow'),
+      );
+      box.before(nav);
+    } else if (
+      !hasVersions &&
+      !panel.querySelector('[data-ui2-proxy]') &&
+      document.querySelector('#donorMessages .bank-gen-icon')
+    ) {
+      panel.append(proxy('Generate 20 versions', '#donorMessages .bank-gen-icon'));
     }
-    for (const button of box.parentElement.querySelectorAll('.ui2-bank-nav [data-ui2-proxy]')) {
+    const controls = box.parentElement.querySelectorAll(
+      '.ui2-bank-nav [data-ui2-proxy], #ui2BankMore [data-ui2-proxy]',
+    );
+    for (const button of controls) {
       const target = document.querySelector(button.dataset.ui2Proxy);
       button.disabled = !target || target.disabled;
     }
@@ -342,6 +352,10 @@ function ui2Observe(run, options) {
       box.after(hint);
     }
   }
+  document.addEventListener('pointerdown', (event) => {
+    const more = document.querySelector('#donorMessages #ui2BankMore[open]');
+    if (more && !more.contains(event.target)) more.open = false;
+  });
   ui2Observe(ui2Frame(bank));
   bank();
 })();

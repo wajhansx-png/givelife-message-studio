@@ -87,7 +87,12 @@ for (const base of ['/old', '/new/']) {
       await page.getByRole('button', { name: 'Save base message', exact: true }).click();
       await expect(page.locator('#baseMessageDialog')).toBeHidden();
       await expect(page.locator('.bank-preview')).toContainText('Brother');
-      await regenerateControl(page, base, width).click();
+      if (base !== '/old' && width < 900) {
+        await page.locator('#ui2BankMore summary').click();
+        await page.getByRole('button', { name: 'Generate 20 versions', exact: true }).click();
+      } else {
+        await regenerateControl(page, base, width).click();
+      }
       await expect(page.locator('.bank-current')).toHaveText('Message 1 of 2');
       expect(actions).toEqual(['base', 'regenerate']);
     });

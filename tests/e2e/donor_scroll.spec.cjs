@@ -168,3 +168,96 @@ for (const width of [1440, 390])
     await page.waitForTimeout(250);
     expect(await page.locator('#donorTable').evaluate((el) => el.scrollTop)).toBe(before);
   });
+
+test('one ArrowRight press activates a donor tab once', async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
+  );
+  await page.goto('/#/donors/all');
+  const tabs = page.locator('.donor-tabs');
+  const important = tabs.locator('[data-tab=important]');
+  await important.evaluate((button) => {
+    button.addEventListener('click', () => {
+      button.dataset.clicks = Number(button.dataset.clicks || 0) + 1;
+    });
+  });
+  await tabs.locator('[data-tab=all]').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(important).toHaveAttribute('data-clicks', '1');
+  await expect(tabs.locator('[data-tab=important]')).toBeFocused();
+  await expect(page).toHaveURL(/#\/donors\/important$/);
+});
+
+test('a failed overlapping donor refresh reports the error and can be retried', async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
+  );
+  await page.goto('/#/donors/all');
+  await expect(page.locator('#donorRows .donor-row').first()).toBeVisible();
+  let release;
+  const hold = new Promise((resolve) => (release = resolve));
+  let requested = false;
+  await page.route('**/donors?tab=all', async (route) => {
+    requested = true;
+    await hold;
+    await route.fulfill({ status: 503, json: { error: 'Donor list temporarily unavailable' } });
+  });
+  await page.evaluate(() => {
+    window.donorRefreshes = Promise.allSettled([
+      window.DonorHub.refresh(true),
+      window.DonorHub.refresh(true),
+    ]);
+  });
+  try {
+    await expect.poll(() => requested).toBe(true);
+  } finally {
+    release();
+  }
+  const statuses = await page.evaluate(async () =>
+    (await window.donorRefreshes).map((r) => r.status),
+  );
+  expect(statuses).toEqual(['fulfilled', 'fulfilled']);
+  await expect(page.locator('#donorNotice')).toContainText('Donor list temporarily unavailable');
+  await page.unroute('**/donors?tab=all');
+  await page.evaluate(() => window.DonorHub.refresh(true));
+  await expect(page.locator('#donorRows .donor-row').first()).toBeVisible();
+});
+
+test('a delayed donor list cannot undo a saved star', async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
+  );
+  await page.goto('/#/donors/all');
+  const row = page.locator('#donorRows .donor-row').first();
+  await expect(row).toBeVisible();
+  const id = await row.getAttribute('data-donor-id');
+  const star = page.locator(`[data-donor-id="${id}"] .donor-star`);
+  const expected = (await star.getAttribute('aria-pressed')) === 'true' ? 'false' : 'true';
+  let release;
+  const hold = new Promise((resolve) => (release = resolve));
+  let captured = false;
+  await page.route('**/donors?tab=all', async (route) => {
+    const response = await route.fetch();
+    captured = true;
+    await hold;
+    await route.fulfill({ response });
+  });
+  await page.evaluate(() => {
+    window.pendingDonorRefresh = window.DonorHub.refresh(true);
+  });
+  try {
+    await expect.poll(() => captured).toBe(true);
+    const response = page.waitForResponse((r) => {
+      return new URL(r.url()).pathname === '/donors' && r.request().method() === 'POST';
+    });
+    await star.click();
+    expect((await response).ok()).toBe(true);
+    await expect(star).toHaveAttribute('aria-pressed', expected);
+  } finally {
+    release();
+  }
+  await page.evaluate(() => window.pendingDonorRefresh);
+  await expect(star).toHaveAttribute('aria-pressed', expected);
+});

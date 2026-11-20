@@ -915,14 +915,18 @@
       );
     draw();
     paintHideRow();
-    if (q && /^[+\d ()-]+$/.test(q) && q.replace(/\D/g, '').length >= 4)
+    if (q && /^[+\d ()-]+$/.test(q) && q.replace(/\D/g, '').length >= 4) {
+      const currentSearch = () => page.open && filterEpoch === epoch;
       api('/donors?tab=' + tab + '&q=' + encodeURIComponent(q))
         .then((r) => {
-          if (filterEpoch !== epoch) return;
+          if (!currentSearch()) return;
           data.items = r.items.map((d) => allDonors.find((x) => x.id === d.id) || d);
           draw();
         })
-        .catch((e) => notice(e.message, true));
+        .catch((e) => {
+          if (currentSearch()) notice(e.message, true);
+        });
+    }
   }
   let hideSent = (() => {
     try {
@@ -2026,7 +2030,7 @@
   }
   async function change(id, fields) {
     const donor = allDonors.find((d) => d.id === id);
-    if (!donor) return;
+    if (!donor) return false;
     if (fields.donated === false) {
       cancelAmount(id);
       fields = { ...fields, amount: 0 };
@@ -2059,11 +2063,13 @@
           updateCounts();
           // the row leaves a tab it no longer belongs to (e.g. unmarking Donated in the Donated tab)
           if (
-            (('important' in fields || 'top_donor' in fields) && ['important', 'top'].includes(tab)) ||
+            (('important' in fields || 'top_donor' in fields) &&
+              ['important', 'top'].includes(tab)) ||
             ('donated' in fields && ['donated', 'not_contacted'].includes(tab))
           )
             applyFilters();
         }
+        return true;
       })
       .catch((e) => {
         if (rowVersions.get(id) === version && confirmedRows.has(id)) {
@@ -2072,6 +2078,7 @@
           updateCounts();
         }
         notice(e.message, true);
+        return false;
       })
       .finally(() => {
         if (rowQueues.get(id) === pending) rowQueues.delete(id);
@@ -2326,14 +2333,20 @@
             rlabel.append(rinput);
             const rsave = make('button', 'donor-normal-save', 'Save name');
             rsave.type = 'button';
-            const saveName = () => {
+            const saveName = async () => {
+              if (rsave.disabled) return;
               const n = rinput.value.trim();
               if (!n) {
                 notice('Enter a name.', true);
                 rinput.focus();
                 return;
               }
-              if (n !== d.name) change(d.id, { name: n });
+              if (n !== d.name) {
+                rsave.disabled = true;
+                const saved = await change(d.id, { name: n });
+                rsave.disabled = false;
+                if (!saved) return;
+              }
               more.open = false;
             };
             rsave.onclick = saveName;
@@ -2373,15 +2386,17 @@
             );
             const dmSave = make('button', 'donor-normal-save', 'Save DM greeting');
             dmSave.type = 'button';
-            dmSave.onclick = () => {
+            dmSave.onclick = async () => {
               const first = dmFirst.value.trim();
               if (first && !/^[A-Za-z][A-Za-z'-]{1,24}$/.test(first)) {
                 notice('Enter one simple first name, or leave it blank.', true);
                 dmFirst.focus();
                 return;
               }
-              change(d.id, { dm_name: first, dm_salutation: dmTitle.value });
-              more.open = false;
+              dmSave.disabled = true;
+              const saved = await change(d.id, { dm_name: first, dm_salutation: dmTitle.value });
+              dmSave.disabled = false;
+              if (saved) more.open = false;
             };
             dmProfile.append(dmNameLabel, dmTitleLabel, dmPreview, dmSave);
             const normal = make('div', 'donor-normal-box');
@@ -2399,7 +2414,8 @@
             nlabel.append(ninput);
             const nsave = make('button', 'donor-normal-save', 'Save');
             nsave.type = 'button';
-            const saveNormal = () => {
+            const saveNormal = async () => {
+              if (nsave.disabled) return;
               const raw = ninput.value.trim();
               const v = raw === '' ? 0 : Number(raw);
               if (!Number.isFinite(v) || v < 0 || v > 100000000) {
@@ -2407,7 +2423,13 @@
                 ninput.focus();
                 return;
               }
-              change(d.id, { normal_amount: v });
+              nsave.disabled = true;
+              const saved = await change(d.id, { normal_amount: v });
+              nsave.disabled = false;
+              if (!saved) {
+                ninput.value = raw;
+                return;
+              }
               notice(
                 v
                   ? 'Saved. ' +
@@ -2520,24 +2542,26 @@
     paintChunk();
   }
   async function refresh(force = false) {
-    if (loadPromise) await loadPromise;
-    if (!loaded || force) {
-      loadPromise = (async () => {
-        const fresh = await api('/donors?tab=all');
-        const incoming = fresh.items || [];
-        allDonors = incoming.map((r) => {
-          confirmedRows.set(r.id, { ...r });
-          const pending = rowQueues.has(r.id) && allDonors.find((d) => d.id === r.id);
-          return pending || r;
-        });
-        loaded = true;
-      })().finally(() => (loadPromise = null));
-      try {
+    try {
+      if (loadPromise) await loadPromise;
+      if (!loaded || force) {
+        loadPromise ??= (async () => {
+          const fresh = await api('/donors?tab=all');
+          allDonors = (fresh.items || []).map((row) => {
+            const confirmed = confirmedRows.get(row.id);
+            // A GET started before an edit can arrive after its save response.
+            const latest = confirmed?.updated_at > row.updated_at ? confirmed : row;
+            confirmedRows.set(row.id, { ...latest });
+            const pending = rowQueues.has(row.id) && allDonors.find((d) => d.id === row.id);
+            return pending || { ...latest };
+          });
+          loaded = true;
+        })().finally(() => (loadPromise = null));
         await loadPromise;
-      } catch (e) {
-        notice(e.message, true);
-        return;
       }
+    } catch (e) {
+      notice(e.message, true);
+      return;
     }
     if (tab === 'messages' && bankData) {
       updateCounts();
@@ -3432,21 +3456,8 @@
   });
   for (const b of page.querySelectorAll('[data-tab]'))
     b.onclick = () => selectDonorTab(b.dataset.tab);
-  page.querySelector('.donor-tabs').addEventListener('keydown', (e) => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
-    e.preventDefault();
-    const buttons = [...page.querySelectorAll('.donor-tabs [data-tab]')];
-    let i = buttons.indexOf(e.target);
-    i =
-      e.key === 'Home'
-        ? 0
-        : e.key === 'End'
-          ? buttons.length - 1
-          : (i + (e.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
-    buttons[i].focus({ preventScroll: true });
-    buttons[i].click();
-  });
   el('donorSearch').oninput = () => {
+    filterEpoch++;
     try {
       sessionStorage.setItem('givelife-donor-search', el('donorSearch').value);
     } catch (e) {}
@@ -3609,6 +3620,7 @@
       !progressHidden &&
       !box.contains(e.target) &&
       !el('donorProgressShow').contains(e.target) &&
+      !el('donorNotice').contains(e.target) &&
       e.target.closest('dialog') === page
     )
       foldProgress();

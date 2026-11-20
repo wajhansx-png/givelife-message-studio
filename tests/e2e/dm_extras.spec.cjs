@@ -11,6 +11,11 @@ test.describe.configure({ mode: 'serial' });
 const PDF = 'data:application/pdf;base64,' + Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(300, 120)]).toString('base64');
 const MP4 = 'data:video/mp4;base64,' + Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(300)]).toString('base64');
 
+const openOptions = async (page) => {
+  const sum = page.locator('.bank-extras-sum');
+  if ((await sum.isVisible()) && (await sum.getAttribute('aria-expanded')) !== 'true') await sum.click();
+};
+
 async function openMsgs(page, width = 390) {
   await page.setViewportSize({ width, height: 800 });
   await page.addInitScript((k) => {
@@ -18,6 +23,10 @@ async function openMsgs(page, width = 390) {
   }, KEY);
   await page.goto('/new#/donors/messages');
   await expect(page.locator('#donorsPage')).toBeVisible();
+  // on a phone the chips are in the "Send options" row that opens above it
+  const sum = page.locator('.bank-extras-sum');
+  await expect(page.locator('.bank-extras')).toBeVisible();
+  if (await sum.isVisible()) await sum.click();
   await expect(page.locator('#msgPdf')).toBeVisible();
 }
 
@@ -71,8 +80,12 @@ test('with both files saved: both, one, or none can be ticked, and the Donors ba
     .toEqual(['0', '1']);
   // survives a reload; the Msgs tab shows the same
   await page.evaluate(() => { location.hash = '#/donors/messages'; });
+  await expect(page.locator('.bank-extras')).toBeVisible();
+  await openOptions(page);
   await expect(page.locator('#msgPdf')).toBeVisible(); // the tab has rendered (and remembered itself) before we reload
   await page.reload();
+  await expect(page.locator('.bank-extras')).toBeVisible();
+  await openOptions(page);
   await expect(page.locator('#msgPdf')).toBeVisible();
   await expect(page.locator('#msgPdf')).not.toBeChecked();
   await expect(page.locator('#msgVideo')).toBeChecked();
@@ -88,6 +101,8 @@ test('removing a saved file unticks it the next time Donors opens (a new case st
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
   await page.reload();
   await expect(page.locator('#donorsPage')).toBeVisible();
+  await expect(page.locator('.bank-extras')).toBeVisible();
+  await openOptions(page);
   await expect(page.locator('#msgPdf')).toBeVisible();
   await expect(page.locator('#msgPdf')).not.toBeChecked();
 });
@@ -149,3 +164,50 @@ test('Msgs tab has a Follow-up tick (the Donors bar one is hidden on phones): sa
   expect(await page.evaluate(() => localStorage.getItem('givelife-follow-up'))).toBe('0');
 });
 
+
+test('phone: Also send / Text with / Order are one 40px row that opens above it, and the message keeps its height', async ({ page }) => {
+  await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: PDF, name: 'report.pdf' });
+  await api(port, '/group-extras', { action: 'add', kind: 'video', data: MP4, name: 'clip.mp4' });
+  await page.setViewportSize({ width: 369, height: 640 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/donors/messages');
+  const sum = page.locator('.bank-extras-sum');
+  await expect(sum).toBeVisible();
+  const box = await sum.boundingBox();
+  expect(box.height).toBeLessThanOrEqual(44);
+  await expect(page.locator('#msgPdf')).toBeHidden(); // closed: nothing but the row
+  const card = await page.locator('.bank-detail').boundingBox();
+  expect(card.height).toBeGreaterThan(300); // was 212px with the rows open
+  await sum.click();
+  await expect(page.locator('#msgPdf')).toBeVisible();
+  await expect(page.locator('#msgOrder')).toBeVisible();
+  await page.locator('#msgPdf').click({ force: true });
+  await expect(sum).toContainText('PDF'); // the row says what is ticked
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#msgPdf')).toBeHidden();
+  await expect(sum).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('phone: the whole message shows without scrolling inside its box', async ({ page }) => {
+  const long = '*Mirha is only 2. Her life is at risk.*\n\nShe urgently needs 2 oxygen cylinders.\n\n' + 'Every single breath is hard for her and her family begs for help today.\n\n'.repeat(3) + 'Easypaisa ONLY\n03097458815\nWajdan Khan';
+  await page.route('**/donor-messages', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const r = await route.fetch();
+    const d = await r.json();
+    d.items = d.items.slice(0, 20).map((it) => ({ ...it, text: long }));
+    d.generation = null;
+    await route.fulfill({ response: r, json: d });
+  });
+  await page.setViewportSize({ width: 369, height: 640 });
+  await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+  await page.goto('/new#/donors/messages');
+  await expect(page.locator('.bank-preview')).toContainText('Easypaisa ONLY');
+  await page.waitForTimeout(400);
+  const r = await page.evaluate(() => {
+    const card = document.querySelector('.bank-detail');
+    return { over: card.scrollHeight - card.clientHeight, size: parseFloat(getComputedStyle(document.querySelector('.bank-preview')).fontSize) };
+  });
+  expect(r.over).toBeLessThanOrEqual(1);
+  expect(r.size).toBeGreaterThanOrEqual(11);
+  expect(r.size).toBeLessThanOrEqual(14);
+});

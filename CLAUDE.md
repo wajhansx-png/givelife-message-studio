@@ -25,6 +25,7 @@ Goal: Minimize total token usage without sacrificing code quality, accuracy or s
 Apply these rules automatically to every coding task.
 
 # MAIN LINK
+- Live site: Oracle, https://129-225-68-143.sslip.io. Render is suspended: never resume it while Oracle runs. Oracle's /health says `version: local`; check a deploy by comparing a served file (CRLF stripped) with main.
 - `/` is the new design (same page as `/new`, built in `server.py` `reply_new_ui`). The previous page is saved unchanged at `/old` (`index.html`), not linked anywhere. Browser tests for the previous page use `/old`.
 
 # GIKI PAGE (/giki) and GIKI 2 (/giki2)

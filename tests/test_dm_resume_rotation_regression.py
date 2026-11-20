@@ -46,6 +46,65 @@ class ResumeRotationTests(unittest.TestCase):
         self.assertEqual(resumed["original_total"], 3)
         self.assertEqual(resumed["previous_sent"], 1)
 
+    def fourth_step_scenario(self, count, restart=False):
+        h = app.donors()
+        for i in range(count):
+            h.book.add("Synthetic " + str(i), "92300123000" + str(i))
+        delivered = []
+        blocked = True
+
+        def transport(body):
+            step = body.get("extra") or ("case" if body.get("poster") else body["message"])
+            if step == "Fourth message" and blocked:
+                raise ValueError("Account temporarily blocked before sending")
+            delivered.append((body["phone"], step))
+            return {"code": "SUCCESS"}
+
+        h.set_follow_up("Fourth message")
+        with (
+            patch.object(h.jobs, "connected", return_value=True),
+            patch.object(h.jobs, "send", side_effect=transport),
+            patch.object(h.jobs, "_sleep_until", return_value=False),
+            patch("donor_delivery.threading.Thread"),
+        ):
+            h.start_batch(scope="all", limit=count, run=False, follow_up=True, video=True, pdf=True)
+            original = h.jobs.export_jobs()["jobs"][-1]
+            phones = [h.book.resolve(i)["phone"] for i in original["ids"]]
+            expected = [(phone, step) for phone in phones for step in ("case", "video", "pdf", "Fourth message")]
+            h.jobs._run(original)
+            self.assertEqual(delivered, expected[:3])
+            h.pause_personal()
+            h.set_follow_up("Changed after the error")
+            if restart:
+                from donor_integration import DonorIntegration
+
+                h = DonorIntegration(app)
+            with (
+                patch.object(h.jobs, "send", side_effect=transport),
+                patch.object(h.jobs, "connected", return_value=True),
+                patch.object(h.jobs, "_sleep_until", return_value=False),
+            ):
+                if count == 1:
+                    with self.assertRaisesRegex(ValueError, "remaining recipients"):
+                        h.resume_all()
+                    self.assertEqual(delivered, expected[:3])
+                blocked = False
+                h.resume_all()
+                if h.jobs.active:
+                    resumed = h.jobs.export_jobs()["jobs"][-1]
+                    self.assertEqual(resumed["captions"], original["captions"][1:])
+                    h.jobs._run(resumed)
+            self.assertEqual(delivered, expected)
+
+    def test_restart_between_third_and_fourth_donor_messages(self):
+        self.fourth_step_scenario(2, restart=True)
+
+    def test_resume_fourth_step_before_next_donor(self):
+        self.fourth_step_scenario(2)
+
+    def test_resume_fourth_step_for_last_donor(self):
+        self.fourth_step_scenario(1)
+
     def test_reserved_wording_survives_live_bank_peek(self):
         h = app.donors()
         job = {

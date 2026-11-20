@@ -47,7 +47,6 @@ class GikiDelivery(VolunteerDelivery):
     FILE = "giki-delivery.json"
     KIND = "giki_batch"
     CLAIM = "giki_batch_request_"
-    STOP_ON_UNCONFIRMED = True  # keep recipient order even when a first message fails
     REST_FROM_CASE = True  # preserve the Timer's break between batches, measured from the last opening message
     WAIT_STEPS = (2, 2, 3, 3, 5, 5, 10, 15)  # a WhatsApp blip costs seconds, not 15 s per message
 

@@ -143,7 +143,7 @@ class DonorIntegration:
         """Resume settings for a pasted/bulk batch: the same people, names, message and attachment as the stopped job."""
         jobs = self.jobs.export_jobs().get("jobs", [])
         raw = next((x for x in reversed(jobs) if x.get("id") == job.get("id")), None)
-        if not raw or not raw.get("ids") or not raw.get("personal_names"):
+        if not raw or not raw.get("ids"):
             return None
         batch = {
             k: raw[k]
@@ -161,7 +161,7 @@ class DonorIntegration:
         batch.update(
             scope="selected",
             ids=list(raw["ids"]),
-            personal_names=copy.deepcopy(raw["personal_names"]),
+            personal_names=copy.deepcopy(raw.get("personal_names") or None),
             limit=len(raw["ids"]),
             resume_id=raw["id"],
             skip_contacted=False,
@@ -232,7 +232,12 @@ class DonorIntegration:
                     and set(last["ids"]) <= self.jobs._done(last)
                 )
                 if drained:
-                    notes.append("The stopped batch already finished; nobody was sent again.")
+                    if self.jobs.incomplete_chat(last):
+                        self.jobs.finish_half_sent(last["id"])
+                        self.jobs.check_chat_complete(self.jobs._job_for_repair(last["id"]))
+                        notes.append("The last chat is complete.")
+                    else:
+                        notes.append("The stopped batch already finished; nobody was sent again.")
                 else:
                     self.start_batch(**batch, request_id="resume-" + uuid.uuid4().hex)
                     notes.append(

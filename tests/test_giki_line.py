@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import wa_lines
-from giki_line import GikiVolunteers, clean_name, first_name, parse_numbers
+from giki_line import Giki2Volunteers, GikiVolunteers, clean_name, first_name, parse_numbers
 from volunteers import Volunteers
 
 TABLE = """# Giki numbers
@@ -34,6 +34,8 @@ class Store:
 
 
 class Fixture(unittest.TestCase):
+    line_class = GikiVolunteers
+
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
         self.store = Store()
@@ -53,7 +55,7 @@ class Fixture(unittest.TestCase):
             get_message=lambda kind: {"text": "draft text"},
             focus_bank=lambda: SimpleNamespace(get=lambda kind: {"source": self.case}),
         )
-        self.g = GikiVolunteers(app, lambda phone: True)
+        self.g = self.line_class(app, lambda phone: True)
         self.main = Volunteers(app, lambda phone: True)
         self.tests = []
         self.patches = [
@@ -1056,6 +1058,23 @@ class GikiSelfHealing(Fixture):
         self.everyone_complete()
         self.assertEqual(self.g.jobs.finish_half_sent(), 0)
 
+    def test_each_following_step_resumes_before_next_chat(self):
+        for failed_step in (1, 2, 3):
+            with self.subTest(failed_step=failed_step):
+                self.script = ["ok"] * failed_step + ["fail"] * 3
+                job = self.run_all(f"stop-{failed_step}")
+                self.assertEqual(job["state"], "Stopped")
+                steps = ["case", "poster", "pdf", "share"]
+                self.assertEqual(self.chat.got("923002000000"), steps[:failed_step])
+                self.assertEqual(self.chat.got("923002000001"), [])
+                with patch.object(self.g.jobs, "_run"):
+                    self.g.resume({"request_id": f"resume-{failed_step}"})
+                self.run_job(self.g.jobs)
+                expected = [(p, step) for p in ("923002000000", "923002000001") for step in steps]
+                self.assertEqual([(r[1], r[3]) for r in self.chat.rows], expected)
+                self.g.all_to_waiting()
+                self.chat.rows.clear()
+
     def test_first_incomplete_chat_stops_the_batch_with_a_clear_reason(self):
         for i in range(2, 4):
             self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})
@@ -1092,6 +1111,9 @@ class GikiSelfHealing(Fixture):
         self.g.jobs._save(jobs)
         for receipt in j["receipts"]:
             self.g.book.follow_up(receipt["id"], None)
+        self.chat.readable = False
+        self.assertEqual(self.g.jobs.finish_half_sent(), 0)
+        self.chat.readable = True
         self.assertEqual(self.g.jobs.finish_half_sent(), 2)
         self.assertEqual(
             self.chat.got("923002000000"), ["case", "poster", "pdf", "share"]
@@ -1129,6 +1151,10 @@ class GikiSelfHealing(Fixture):
         self.assertEqual(self.g.jobs.finish_half_sent(), 0)
         self.assertEqual(self.chat.got("923002000001"), [])
         self.assertIn(p1["id"], self.g.waiting_ids())
+
+
+class GikiTwoSelfHealing(GikiSelfHealing):
+    line_class = Giki2Volunteers
 
 
 class GikiTwoMove(Fixture):

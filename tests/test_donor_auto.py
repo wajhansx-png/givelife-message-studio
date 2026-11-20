@@ -256,9 +256,10 @@ class Ending(AutoCase):
         self.auto.tick()
         self.assertEqual(self.book.resolve(a)["delivery"], "Uncertain")
         self.assertEqual(self.phones(), ["923001110001"])
-        self.auto.set(True)  # Ali remains unconfirmed. Only Bilal still needs his first DM.
+        self.auto.set(True)  # Ali remains unconfirmed, so Bilal must keep waiting.
         self.finish()
-        self.assertEqual(self.phones(), ["923001110001", "923001110002"])
+        self.assertEqual(self.phones(), ["923001110001"])
+        self.assertIn("remaining recipients", self.last()["error"])
 
     def test_first_unconfirmed_send_pauses_auto_and_alerts_once(self):
         for n in range(5):

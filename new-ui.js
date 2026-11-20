@@ -2387,3 +2387,279 @@ document.addEventListener(
   ui2Wide.addEventListener('change', run);
   arrange();
 })();
+
+/* Desktop Message home: the whole message always shows, no scrolling. It is read at 13px; a long message on a short
+   screen steps down (to 11px at the smallest) until the card fits the screen. Phones and tablets are not touched. */
+(() => {
+  const wide = matchMedia('(min-width: 900px)');
+  let busy = false;
+  const fit = () => {
+    const app = document.querySelector('.app.ui2-message-home'),
+      card = document.getElementById('card'),
+      msg = document.getElementById('groupPreview');
+    if (busy || !app || !card || !msg) return;
+    busy = true;
+    try {
+      if (!wide.matches) return app.style.removeProperty('--home-msg-size');
+      const room = () => window.innerHeight - card.getBoundingClientRect().bottom - 12;
+      let size = 13;
+      app.style.setProperty('--home-msg-size', size + 'px');
+      while (room() < 0 && size > 11) {
+        size -= 0.5;
+        app.style.setProperty('--home-msg-size', size + 'px');
+      }
+    } finally {
+      busy = false;
+    }
+  };
+  let queued = 0;
+  const later = () => {
+    cancelAnimationFrame(queued);
+    queued = requestAnimationFrame(fit);
+  };
+  addEventListener('resize', later);
+  wide.addEventListener('change', later);
+  const watch = () => {
+    const msg = document.getElementById('groupPreview');
+    if (!msg) return setTimeout(watch, 500);
+    new MutationObserver(later).observe(msg, { childList: true, subtree: true, characterData: true });
+    later();
+  };
+  watch();
+})();
+
+/* Desktop Message home: ‹ › under the message, centred, icons only: previous / next saved version in the message box
+   (base → 1 → 2 … → base). Send then sends the version on screen first (same as the reader). Edit always edits the
+   base message. */
+(() => {
+  const $ = (id) => document.getElementById(id);
+  let list = [],
+    index = 0,
+    nav = null;
+  const svg = (d) =>
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"/></svg>';
+  const showing = () => index > 0 && list[index];
+  const label = () => {
+    if (!nav) return;
+    const n = Math.max(0, list.length - 1),
+      where = index > 0 ? 'Version ' + index + ' of ' + n : n ? 'Base message (' + n + ' versions)' : 'Base message';
+    nav.dataset.i = String(index);
+    nav.title = where;
+    for (const [b, word] of [
+      [nav.firstChild, 'Previous version'],
+      [nav.lastChild, 'Next version'],
+    ]) {
+      b.setAttribute('aria-label', word + ' · now: ' + where);
+      b.title = word;
+    }
+    window.focusShownVersion = showing() || '';
+  };
+  const draw = (text) => {
+    $('groupPreview').innerHTML = window
+      .waFormat(text)
+      .split('\n')
+      .map((l) => '<div class="wa-line' + (l ? '' : ' blank') + '">' + (l || '<br>') + '</div>')
+      .join('');
+  };
+  const reset = () => {
+    index = 0;
+    label();
+  };
+  let stepping = false;
+  async function step(dir, b) {
+    const msg = $('groupPreview');
+    if (stepping || !msg || msg.isContentEditable) return; // never replace text that is being edited
+    stepping = true;
+    try {
+      await go(dir, b);
+    } finally {
+      stepping = false;
+    }
+  }
+  async function go(dir, b) {
+    if (index === 0) {
+      try {
+        const d = await (await fetch('/focus-bank?kind=group')).json();
+        list = [d.source, ...(d.items || [])].filter((t) => typeof t === 'string' && t.trim());
+      } catch (e) {
+        list = [];
+      }
+    }
+    if (list.length < 2) {
+      b.title = 'No versions yet';
+      b.dataset.empty = '1';
+      setTimeout(() => (delete b.dataset.empty, label()), 1600);
+      return;
+    }
+    index = (index + dir + list.length) % list.length;
+    if (index === 0) window.paint?.('group');
+    else draw(list[index]);
+    label();
+    dispatchEvent(new Event('resize')); // the message box fits the new text
+  }
+  function add() {
+    const tools = document.querySelector('#card .tools');
+    if (!tools || $('homeNext') || typeof window.paint !== 'function') return !!$('homeNext');
+    nav = document.createElement('div');
+    nav.id = 'ui2VerNav';
+    nav.className = 'ui2-ver-nav';
+    nav.setAttribute('role', 'group');
+    nav.setAttribute('aria-label', 'Versions');
+    for (const [id, d, dir] of [
+      ['homePrev', 'm15 6-6 6 6 6', -1],
+      ['homeNext', 'm9 6 6 6-6 6', 1],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.id = id;
+      b.className = 'ui2-ver-btn';
+      b.innerHTML = svg(d);
+      b.addEventListener('click', () => step(dir, b));
+      nav.append(b);
+    }
+    tools.append(nav);
+    label();
+    addEventListener('hashchange', label); // back from another page: Send still matches the version on screen
+    /* the DM screen shows the DM message: the Group version view ends (Copy and Send then use the DM text) */
+    new MutationObserver(() => {
+      if (document.body.dataset.view === 'dm' && index > 0) window.paint('group');
+    }).observe(document.body, { attributes: true, attributeFilter: ['data-view'] });
+    /* the app redraws the base message (a save, a new draft): the version view ends there */
+    const paint = window.paint;
+    window.paint = (k) => {
+      paint(k);
+      if (k === 'group' && index > 0) reset();
+    };
+    $('edit')?.addEventListener(
+      'click',
+      () => {
+        if (index > 0) window.paint('group');
+      },
+      true,
+    );
+    $('copy')?.addEventListener(
+      'click',
+      (e) => {
+        const text = showing();
+        if (!text) return; // the base message: the app's own Copy
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        navigator.clipboard.writeText(text).then(
+          () => window.dispatchEvent(new CustomEvent('ui2-copied')),
+          () => {},
+        );
+      },
+      true,
+    );
+    return true;
+  }
+  if (!add()) {
+    const t = setInterval(() => add() && clearInterval(t), 400);
+    setTimeout(() => clearInterval(t), 20000);
+  }
+})();
+
+/* Desktop side menu: a Hide button folds it to a slim strip of icons (remembered); Show opens it again. */
+(() => {
+  const KEY = 'givelife-rail-min';
+  function add() {
+    const tabs = document.getElementById('ui2Tabs'),
+      app = document.querySelector('.app');
+    if (!tabs || !app) return false;
+    if (document.getElementById('ui2RailHide')) return true;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.id = 'ui2RailHide';
+    b.className = 'ui2-rail-hide';
+    const paint = () => {
+      const min = app.classList.contains('ui2-rail-min');
+      b.innerHTML = '<span aria-hidden="true">' + (min ? '»' : '«') + '</span><b>' + (min ? 'Show' : 'Hide') + '</b>';
+      b.setAttribute('aria-label', min ? 'Show the menu' : 'Hide the menu');
+      b.title = min ? 'Show the menu' : 'Hide the menu';
+      b.setAttribute('aria-expanded', String(!min));
+    };
+    let min = false;
+    try {
+      min = localStorage.getItem(KEY) === '1';
+    } catch (e) {}
+    app.classList.toggle('ui2-rail-min', min);
+    b.addEventListener('click', () => {
+      const on = !app.classList.contains('ui2-rail-min');
+      app.classList.toggle('ui2-rail-min', on);
+      try {
+        localStorage.setItem(KEY, on ? '1' : '0');
+      } catch (e) {}
+      paint();
+      dispatchEvent(new Event('resize')); // the message box re-fits the new width
+    });
+    paint();
+    tabs.prepend(b);
+    /* a folded menu still names each place when the mouse rests on it */
+    for (const t of tabs.querySelectorAll('.ui2-tab')) if (!t.title) t.title = t.textContent.trim();
+    return true;
+  }
+  if (!add()) {
+    const t = setInterval(() => add() && clearInterval(t), 400);
+    setTimeout(() => clearInterval(t), 20000);
+  }
+})();
+
+/* Desktop Message home: Copy and Edit are small icons inside the message box (bottom right), like ChatGPT / Claude.
+   The real buttons are moved, never rebuilt; on a phone they go back to the row under the message. */
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const wide = matchMedia('(min-width: 900px)');
+  let box = null;
+  const mark = (b) => {
+    const t = b.textContent.trim();
+    b.dataset.state = /^(Done|Copied)/i.test(t) ? 'done' : '';
+    b.setAttribute('aria-label', b.id === 'edit' ? (t === 'Done' ? 'Done editing' : 'Edit message') : t === 'Copied' ? 'Copied' : 'Copy message');
+  };
+  function place() {
+    const chat = $('chat'),
+      tools = document.querySelector('#card .tools'),
+      edit = $('edit'),
+      copy = $('copy'),
+      more = document.querySelector('#card .overflow-tools');
+    if (!chat || !tools || !edit || !copy) return false;
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'ui2MsgActions';
+      box.className = 'ui2-msg-actions';
+      for (const b of [copy, edit]) {
+        mark(b);
+        new MutationObserver(() => mark(b)).observe(b, { childList: true, characterData: true, subtree: true });
+      }
+    }
+    if (wide.matches) {
+      if (box.parentElement !== chat) chat.append(box);
+      if (copy.parentElement !== box) box.append(copy, edit);
+      if (more && more.parentElement !== box) box.append(more);
+    } else if (edit.parentElement === box) {
+      tools.prepend(edit, copy);
+      const verNav = tools.querySelector('#ui2VerNav');
+      if (more) verNav ? verNav.before(more) : tools.append(more);
+      box.remove();
+    }
+    return true;
+  }
+  let tick = 0;
+  const copied = () => {
+    const c = $('copy');
+    if (!c) return;
+    c.dataset.state = 'done';
+    c.setAttribute('aria-label', 'Copied');
+    clearTimeout(tick);
+    tick = setTimeout(() => mark(c), 1400);
+  };
+  addEventListener('ui2-copied', copied);
+  document.addEventListener('click', (e) => {
+    if (e.target.closest?.('#copy') && e.target.closest('#ui2MsgActions'))
+      setTimeout(copied, 120); // a short ✓ (never reads the clipboard: that would ask the owner for permission)
+  });
+  wide.addEventListener('change', place);
+  if (!place()) {
+    const t = setInterval(() => place() && clearInterval(t), 400);
+    setTimeout(() => clearInterval(t), 20000);
+  }
+})();

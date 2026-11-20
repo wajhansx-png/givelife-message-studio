@@ -38,9 +38,14 @@
       if (actionBusy) return;
       actionBusy = true;
       try {
-        if (editing) edit(false);
-        await save();
-        $('group').value = row?.source || $('focusText').value;
+        // Only while the reader is open does its text decide what is sent. From the home page the reader is closed
+        // (often never opened: its box is empty), and writing its text here emptied the message, so the next saved
+        // version was fetched and saved as the base: every Send quietly swapped the owner's message.
+        if (!screen.hidden) {
+          if (editing) edit(false);
+          await save();
+          if (row?.source || $('focusText').value) $('group').value = row?.source || $('focusText').value;
+        }
         await original?.call(button, e);
       } catch (error) {
         status(error.message);
@@ -206,9 +211,12 @@
       if (actionBusy) return;
       actionBusy = true;
       try {
-        if (editing) edit(false);
-        await save();
-        $('dm').value = $('focusText').value;
+        if (!screen.hidden) {
+          // same rule as Group: the reader's text only counts while the reader is open
+          if (editing) edit(false);
+          await save();
+          if ($('focusText').value) $('dm').value = $('focusText').value;
+        }
         await original?.call(button, e);
       } catch (error) {
         status(error.message);

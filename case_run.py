@@ -273,8 +273,8 @@ class CaseRun:
             )
             for key, name in GIKI_GROUPS.items()
         }
-        wanted = set(plan["important"].get("ids") or [])
-        chosen = [r for r in book.recipients("important") if r["id"] in wanted]
+        eligible = {r["id"]: r for r in book.recipients("important")}
+        chosen = [eligible[i] for i in plan["important"].get("ids", []) if i in eligible]
         # Specific enabled cohorts claim their people first. An OFF cohort does not
         # subtract anybody from Top; Top still includes every eligible Top donor.
         for key, rows in (*cohorts.items(), ("top", top), ("important", chosen)):

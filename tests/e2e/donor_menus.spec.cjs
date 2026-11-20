@@ -74,3 +74,26 @@ for (const [width, height] of [
       await expect(page.locator('#donorBatchPicker #donorTest')).toHaveCount(1);
     }
   });
+
+test('a failed usual donation save keeps the edit open and reports the failure', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() =>
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
+  );
+  await page.route('**/donors', (route) =>
+    route.request().method() === 'POST'
+      ? route.fulfill({ status: 409, json: { error: 'Donor changed. Refresh before saving.' } })
+      : route.continue(),
+  );
+  await page.goto('/new#/donors/all');
+  const menu = page.locator('.donor-more').first();
+  await menu.locator('summary').click();
+  const input = menu.getByRole('spinbutton', { name: 'Usually donates (Rs.)' });
+  await input.fill('2300');
+  await input.press('Enter');
+  await expect(page.locator('#donorNotice')).toHaveText(/Donor changed/);
+  await expect(menu).toHaveAttribute('open', '');
+  await expect(input).toHaveValue('2300');
+});

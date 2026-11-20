@@ -963,7 +963,9 @@ test('/new phone DM messages: no top bar, whole message shown, Next/Regenerate r
   await expect(page.locator('#donorsPage .donor-head')).toBeHidden();
   const prev = page.locator('#donorMessages .bank-preview');
   expect(await prev.evaluate((e) => e.scrollHeight <= e.clientHeight + 1)).toBe(true);
-  await expect(page.locator('.ui2-bank-nav > button')).toHaveCount(2);
+  const navigation = page.locator('.ui2-bank-nav');
+  await expect(navigation.getByRole('button', { name: '‹ Previous', exact: true })).toBeDisabled();
+  await expect(navigation.getByRole('button', { name: 'Next ›', exact: true })).toBeEnabled();
   const tabs = await page.locator('#donorMessages .bank-followup').boundingBox();
   const actions = await page.locator('#donorMessages .bank-actions').boundingBox();
   expect(tabs.y).toBeGreaterThan(actions.y);

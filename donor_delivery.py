@@ -1702,7 +1702,10 @@ class DonorDelivery:
                 try:
                     r = self.book.resolve(ident)
                 except ValueError:
+                    # deleted while the batch waited between DMs: counted AND listed, like the first look above
                     skipped += 1
+                    done_here.add(ident)
+                    receipts.append({"id": ident, "name": "Removed donor", "state": "Skipped"})
                     continue
                 if self.held():
                     state = "Stopped"

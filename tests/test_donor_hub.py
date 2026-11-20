@@ -1004,6 +1004,39 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(result["code"], "UNCERTAIN")
         self.assertEqual(registry.book.resolve(d["id"])["delivery"], "Uncertain")
 
+    def test_a_refused_single_send_is_not_sent_and_does_not_block_later_batches(self):
+        # WhatsApp logged out / sending on hold: the gateway refuses BEFORE anything leaves. That is "Not sent" (the
+        # person stays a normal "not contacted" donor), never "Uncertain" (which hides them from every later batch).
+        app = self.app
+        registry = app.donors()
+        d = registry.book.add("Ali", "03001234567")["donor"]
+        for reply, words in (
+            ("WhatsApp disconnected. Log in again.", "not connected"),
+            ("On hold: you told me to wait.", "on hold"),
+        ):
+            with self.subTest(reply=reply):
+                with patch.object(app, "send_image", return_value={"code": "ERROR", "message": reply}):
+                    with self.assertRaisesRegex(ValueError, "(?i)" + words) as ctx:
+                        registry.send_one(d["id"], "refused-click-" + words.replace(" ", ""))
+                self.assertTrue("Nothing was sent" in str(ctx.exception) or "On hold" in str(ctx.exception))
+                self.assertEqual(registry.book.resolve(d["id"])["delivery"], "Not sent")
+        # he is still picked by a "skip contacted" batch
+        ids = [r["id"] for r in registry.book.recipients("all", None, None) if not registry.book.contacted(r) and r.get("delivery") not in ("Uncertain", "Sending")]
+        self.assertIn(d["id"], ids)
+
+    def test_a_refused_click_can_be_tried_again_with_a_new_click(self):
+        app = self.app
+        registry = app.donors()
+        d = registry.book.add("Ali", "03001234567")["donor"]
+        with patch.object(app, "send_image", return_value={"code": "ERROR", "message": "WhatsApp disconnected. Log in again."}):
+            with self.assertRaises(ValueError):
+                registry.send_one(d["id"], "first-click-aaa")
+        with patch.object(app, "send_image", return_value={"code": "SUCCESS"}) as image:
+            result = registry.send_one(d["id"], "second-click-aaa")
+        self.assertEqual(result["code"], "SUCCESS")
+        image.assert_called_once()
+        self.assertEqual(registry.book.resolve(d["id"])["delivery"], "Sent")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -569,6 +569,11 @@ class DonorIntegration:
                         "gender": gender,
                     }
                 )
+                refused = str(result.get("message", "")) if isinstance(result, dict) and result.get("code") == "ERROR" else ""
+                if refused.startswith(("WhatsApp disconnected", "The Giki WhatsApp is disconnected")):
+                    # refused BEFORE anything left the phone: not "Uncertain" (that would hide this person from every
+                    # later batch and tell the owner to check a chat that has nothing in it)
+                    raise ValueError("WhatsApp is not connected. Nothing was sent. Reconnect it, then tap DM again.")
                 confirmed = isinstance(result, dict) and result.get("code") == "SUCCESS"
                 if confirmed:
                     self.jobs.manual_sent_at = time.time()

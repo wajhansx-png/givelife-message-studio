@@ -2465,7 +2465,18 @@ document.addEventListener(
     index = 0;
     label();
   };
+  let stepping = false;
   async function step(dir, b) {
+    const msg = $('groupPreview');
+    if (stepping || !msg || msg.isContentEditable) return; // never replace text that is being edited
+    stepping = true;
+    try {
+      await go(dir, b);
+    } finally {
+      stepping = false;
+    }
+  }
+  async function go(dir, b) {
     if (index === 0) {
       try {
         const d = await (await fetch('/focus-bank?kind=group')).json();
@@ -2509,6 +2520,10 @@ document.addEventListener(
     tools.append(nav);
     label();
     addEventListener('hashchange', label); // back from another page: Send still matches the version on screen
+    /* the DM screen shows the DM message: the Group version view ends (Copy and Send then use the DM text) */
+    new MutationObserver(() => {
+      if (document.body.dataset.view === 'dm' && index > 0) window.paint('group');
+    }).observe(document.body, { attributes: true, attributeFilter: ['data-view'] });
     /* the app redraws the base message (a save, a new draft): the version view ends there */
     const paint = window.paint;
     window.paint = (k) => {
@@ -2519,6 +2534,20 @@ document.addEventListener(
       'click',
       () => {
         if (index > 0) window.paint('group');
+      },
+      true,
+    );
+    $('copy')?.addEventListener(
+      'click',
+      (e) => {
+        const text = showing();
+        if (!text) return; // the base message: the app's own Copy
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        navigator.clipboard.writeText(text).then(
+          () => window.dispatchEvent(new CustomEvent('ui2-copied')),
+          () => {},
+        );
       },
       true,
     );
@@ -2614,6 +2643,20 @@ document.addEventListener(
     }
     return true;
   }
+  let tick = 0;
+  const copied = () => {
+    const c = $('copy');
+    if (!c) return;
+    c.dataset.state = 'done';
+    c.setAttribute('aria-label', 'Copied');
+    clearTimeout(tick);
+    tick = setTimeout(() => mark(c), 1400);
+  };
+  addEventListener('ui2-copied', copied);
+  document.addEventListener('click', (e) => {
+    if (e.target.closest?.('#copy') && e.target.closest('#ui2MsgActions'))
+      setTimeout(copied, 120); // a short ✓ (never reads the clipboard: that would ask the owner for permission)
+  });
   wide.addEventListener('change', place);
   if (!place()) {
     const t = setInterval(() => place() && clearInterval(t), 400);

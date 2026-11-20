@@ -43,9 +43,14 @@ for (const [width, height] of [[900, 600], [1024, 600], [1280, 720], [1366, 768]
     expect(r.page).toBeLessThanOrEqual(1);
     expect(r.size).toBeGreaterThanOrEqual(11); // small, quick to read, never tiny
     expect(r.size).toBeLessThanOrEqual(14);
-    await expect(page.locator('#btnFree')).toBeVisible(); // other groups shown, not hidden behind a menu
+    // only Send to GiveLife and Test group stand out; the other groups open under "Other groups" (owner's choice)
+    await expect(page.locator('#btnGivelife')).toBeVisible();
+    await expect(page.locator('.group-send .test-row')).toBeVisible();
+    await expect(page.locator('#btnFree')).toBeHidden();
+    await page.locator('#ui2GroupPicker').click();
+    await expect(page.locator('#btnFree')).toBeVisible();
     await expect(page.locator('#sendAll')).toBeVisible();
-    for (const sel of ['#btnGivelife', '#btnFree', '#sendAll', '#ui2Later']) {
+    for (const sel of ['#btnGivelife', '#btnFree', '#sendAll', '.group-send .test-row']) {
       const b = await page.locator(sel).boundingBox();
       expect(b.height, sel).toBeGreaterThanOrEqual(40);
       expect(b.height, sel).toBeLessThanOrEqual(46);
@@ -143,4 +148,50 @@ test('the menu folds with Hide and opens with Show (remembered)', async ({ page 
   await expect(page.locator('#ui2RailHide')).toHaveAttribute('aria-label', 'Show the menu');
   await page.locator('#ui2RailHide').click();
   expect((await page.locator('#ui2Tabs').boundingBox()).width).toBeGreaterThan(150);
+});
+
+test('Send on the home page never changes the message (the reader was never opened)', async ({ page }) => {
+  const posts = [];
+  page.on('request', (r) => {
+    if (r.method() === 'POST' && /\/(next-message|drafts)$/.test(r.url())) posts.push(r.url());
+  });
+  await page.route('**/send-group', (r) => r.fulfill({ json: { job_id: 'fake-job' } }));
+  await open(page, 1280, 800);
+  const before = await page.locator('#group').inputValue();
+  await page.locator('#btnGivelife').click();
+  await page.waitForTimeout(1000);
+  expect(await page.locator('#group').inputValue()).toBe(before);
+  expect(posts.filter((u) => u.endsWith('/next-message'))).toEqual([]);
+});
+
+test('Copy copies the version on screen; the arrows never replace text being edited', async ({ browser }) => {
+  const ctx = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
+  const page = await ctx.newPage();
+  await open(page, 1280, 800);
+  await page.evaluate(async () => {
+    const post = (b) =>
+      fetch('/focus-bank', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'group', ...b }) });
+    const d = await (await fetch('/focus-bank?kind=group')).json();
+    if (!d.revision) await post({ action: 'save', text: d.source || document.getElementById('group').value });
+    await post({ action: 'manual', messages: ['Copy me version. Rs. 25,000 needed.'] });
+  });
+  await page.locator('#homeNext').click();
+  await expect(page.locator('#groupPreview')).toContainText('Copy me version');
+  await page.locator('#copy').click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('Copy me version');
+  await expect(page.locator('#copy')).toHaveAttribute('data-state', 'done');
+  await page.locator('#edit').click(); // edits the base, not the version
+  await expect(page.locator('#groupPreview')).not.toContainText('Copy me version');
+  const editing = await page.locator('#groupPreview').textContent();
+  await page.locator('#homeNext').click();
+  expect(await page.locator('#groupPreview').textContent()).toBe(editing);
+  await page.locator('#edit').click();
+  await ctx.close();
+});
+
+test('phones keep their own message buttons (no ‹ › there)', async ({ page }) => {
+  await open(page, 390, 844);
+  await expect(page.locator('#ui2VerNav')).toBeHidden();
+  // Edit / Copy stay in the phone's own row (not moved into the message box)
+  expect(await page.evaluate(() => !!document.querySelector('#card .tools #edit') && !document.querySelector('#chat #edit'))).toBe(true);
 });

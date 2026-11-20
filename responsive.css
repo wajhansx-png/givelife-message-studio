@@ -4699,7 +4699,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     grid-template-columns: minmax(0, 620px) 320px !important;
     grid-template-rows: auto !important;
     justify-content: center !important;
-    align-content: center !important;
+    align-content: safe center !important; /* a very long message starts at the top instead of being cut */
     align-items: start !important;
     gap: 20px !important;
     min-height: 0 !important;
@@ -5019,7 +5019,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   }
 }
 @media (max-width: 899px) {
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #homeNext {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #ui2VerNav {
     display: none !important; /* phones keep their own layout */
   }
 }
@@ -5187,4 +5187,9 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     content: none !important;
     display: none !important;
   }
+}
+
+/* the ‹ › versions are for the Group message; the DM screen does not show them */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j)[data-view='dm'] #ui2VerNav {
+  display: none !important;
 }

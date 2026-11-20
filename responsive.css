@@ -5193,3 +5193,10 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j)[data-view='dm'] #ui2VerNav {
   display: none !important;
 }
+
+/* The menu's Hide / Show button is for the computer's side menu only; on phones and tablets the bottom bar stays as it was */
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #ui2Tabs > .ui2-rail-hide {
+    display: none !important;
+  }
+}

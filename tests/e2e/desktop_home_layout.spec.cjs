@@ -68,6 +68,15 @@ for (const width of [390, 768])
     await open(page, width, 844);
     const tabs = await page.locator('#ui2Tabs').boundingBox();
     expect(tabs.y).toBeGreaterThan(600);
+    // the Hide button belongs to the computer's side menu only; every tab label stays on one line
+    await expect(page.locator('#ui2RailHide')).toBeHidden();
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll('#ui2Tabs .ui2-tab')]
+        .filter((t) => t.offsetParent)
+        .map((t) => Math.round(t.getBoundingClientRect().top)),
+    );
+    expect(new Set(rows).size).toBe(1); // all tabs on one row
+    expect(rows.length).toBeGreaterThanOrEqual(5);
   });
 
 for (const width of [900, 980, 1280])

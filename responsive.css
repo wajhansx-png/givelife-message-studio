@@ -4598,34 +4598,593 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   margin-left: 16px !important;
 }
 
-/* Home, computer / phone in "desktop site" mode, TALL screen (over 900px high): the message card hugs its message
-   (it used to stretch to the full height, a 1700px box around 300px of text) and the card, Send and the group row
-   sit together in the middle. Normal desktop heights keep the stretched layout. */
-@media (min-width: 900px) and (min-height: 901px) {
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace {
-    justify-content: center !important;
-  }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace > #card {
-    flex: 0 1 auto !important;
-  }
-  /* a tall screen has the room: the message is read at 18px, not 14px */
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message {
-    font-size: 18px !important;
-    line-height: 1.5 !important;
-  }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message div {
-    line-height: 1.5 !important;
-  }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace > #card > #chat {
-    flex: 1 1 auto !important; /* the message's own height, not a share of the stretched card */
-  }
-}
-
 /* Home, computer: the WhatsApp state ("Reconnect WhatsApp" is the longest) never shrinks, so it can not run into
    the Auto switch beside it when the bar is crowded */
 @media (min-width: 900px) {
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app > .brandbar > #whatsappConnection {
     flex: none !important;
     white-space: nowrap;
+  }
+}
+
+/* ===== Desktop Message home (owner's pick "A", menu like "B"): the menu down the left, the message in the middle
+   shown in full at a small reading size (no scroll inside it), and Send with the other groups right beside it.
+   Phones and tablets are not touched. ===== */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home {
+    display: grid !important;
+    grid-template-columns: 196px minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+    column-gap: 28px !important;
+    row-gap: 12px !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 28px 0 0 !important;
+  }
+  /* the menu: a column on the left, small icon + word */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot {
+    grid-column: 1 !important;
+    grid-row: 1 / -1 !important;
+    position: static !important;
+    height: auto !important;
+    min-height: 100dvh;
+    margin: 0 !important;
+    padding: 22px 12px !important;
+    border: 0 !important;
+    border-right: 1px solid var(--line2, #22242f) !important;
+    border-radius: 0 !important;
+    background: var(--surface, #15161f) !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+    flex: 1 1 auto !important;
+    height: auto !important;
+    width: 100% !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs::before {
+    content: '\2665  GiveLife';
+    padding: 2px 12px 22px;
+    color: var(--text, #eef0f6);
+    font-size: 18px;
+    font-weight: 800;
+    white-space: pre;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab {
+    flex: none !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    width: 100% !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    padding: 0 12px !important;
+    border-radius: 10px !important;
+    font-size: 15px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab svg {
+    width: 18px !important;
+    height: 18px !important;
+    flex: none !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab span {
+    font-size: 15px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='settings'] {
+    margin-top: auto !important; /* Settings and More sit at the bottom of the menu */
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .brandbar {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    margin: 8px 0 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .brandbar > .brand {
+    display: none !important; /* the name is at the top of the menu */
+  }
+  /* the message and Send side by side, together in the middle */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > #main-workspace {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    /* eyes: the message and Send start on the same top line (read down, then look right to Send), the pair sits in
+       the middle of the screen, and a line of the message stays about 80 letters long (faster to read) */
+    display: grid !important;
+    grid-template-columns: minmax(0, 620px) 320px !important;
+    grid-template-rows: auto !important;
+    justify-content: center !important;
+    align-content: center !important;
+    align-items: start !important;
+    gap: 20px !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 0 16px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > #main-workspace > #card {
+    min-width: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    align-self: start !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > #main-workspace > #card > #chat {
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important; /* the whole message shows; never a scroll box */
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card #chat .message {
+    font-size: var(--home-msg-size, 13px) !important;
+    line-height: 1.45 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card #chat .message div {
+    line-height: 1.45 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > #main-workspace > .side {
+    width: 320px !important;
+    max-width: 320px !important;
+    margin: 0 !important;
+    padding-top: 28px !important; /* level with the message itself, under the "Today's message" label */
+  }
+  /* the Send panel: Send to GiveLife, then the other groups (always shown), then Choose group / Timer / Test */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > .group-two {
+    order: 1;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send #btnGivelife {
+    width: 100% !important;
+    height: 42px !important;
+    min-height: 42px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2OtherGroups:not([hidden]) {
+    order: 4;
+    display: grid !important; /* opens under Other groups when it is clicked */
+    max-height: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2OtherGroups :is(#btnFree, #sendAll) {
+    height: 42px !important;
+    min-height: 42px !important;
+    border: 1px solid var(--line2, #2b2e3c) !important;
+    background: var(--surface, #1a1c26) !important; /* quieter than Send to GiveLife, the main one */
+    color: var(--text, #eef0f6) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore {
+    order: 3;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin: 6px 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  /* only Send to GiveLife and Test group stand out; Other groups and Timer are quiet and open their list on a click */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > .test-row {
+    order: -1;
+    grid-column: 1 / -1 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2GroupPicker {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #9aa1b5 !important;
+    font-size: 14px !important;
+    cursor: pointer;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2GroupPicker:hover,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2GroupPicker[aria-expanded='true'] {
+    color: #fff !important;
+    background: #1c1f2b !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > .test-row {
+    height: 42px !important;
+    min-height: 42px !important;
+    border: 1px solid var(--line2, #2b2e3c) !important;
+    border-radius: 10px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2Later {
+    height: 36px !important;
+    min-height: 36px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    color: #9aa1b5 !important;
+    font-size: 14px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2Later:hover,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2Later[aria-expanded='true'] {
+    color: #fff !important;
+    background: #1c1f2b !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2LaterPanel {
+    order: 5;
+  }
+}
+
+/* ===== Desktop Message home, comfort pass (owner: "eyes should not struggle", icons beside words, a better menu
+   with a Hide option). Phones and tablets are not touched. ===== */
+@media (min-width: 900px) {
+  /* --- the side menu: Message first, quiet colours, a clear hover for the mouse, Settings / More at the bottom --- */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab {
+    color: #9aa1b5 !important;
+    background: transparent !important;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab:hover {
+    color: #fff !important;
+    background: #1c1f2b !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[aria-current='true'] {
+    color: #fff !important;
+    background: #1f2540 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[aria-current='true'] svg {
+    color: #7d9bff !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab:focus-visible,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-rail-hide:focus-visible {
+    outline: 2px solid #7d9bff !important;
+    outline-offset: 2px;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='message'] { order: 1; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='case'] { order: 2; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='donors'] { order: 3; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='chat'] { order: 4; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='report'] { order: 5; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='notes'] { order: 6; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='settings'] { order: 7; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='more'] { order: 8; }
+  /* Hide: a small quiet button under the name */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-rail-hide {
+    order: 0;
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    margin: -12px 0 10px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #7d849a;
+    font: 600 13px Inter, system-ui, sans-serif;
+    cursor: pointer;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-rail-hide:hover {
+    color: #fff;
+    background: #1c1f2b;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-rail-hide b {
+    font-weight: 600;
+  }
+  /* folded: a 64px strip of icons; the name of each place shows when the mouse rests on it */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home.ui2-rail-min {
+    grid-template-columns: 64px minmax(0, 1fr) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home.ui2-rail-min > .foot {
+    padding: 22px 8px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home.ui2-rail-min > .foot > #ui2Tabs::before {
+    content: '\2665' !important;
+    padding: 2px 0 22px !important;
+    text-align: center;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home.ui2-rail-min > .foot > #ui2Tabs .ui2-tab {
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home.ui2-rail-min > .foot > #ui2Tabs .ui2-tab span,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home.ui2-rail-min > .foot > #ui2Tabs .ui2-rail-hide b {
+    display: none !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home.ui2-rail-min > .foot > #ui2Tabs .ui2-rail-hide {
+    justify-content: center;
+    padding: 0;
+  }
+
+  /* --- the top bar sits over the message and Send (not across the whole screen): eyes stay in one place --- */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .brandbar {
+    justify-self: center !important;
+    width: min(960px, 100%) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .brandbar > #whatsappConnection {
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 14px !important;
+    border: 1px solid #2b2e3c !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .brandbar > #live {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  /* --- icons beside the words (owner's choice), same size and colour as the word --- */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools :is(#edit, #copy, #homeNext),
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools .overflow-tools > summary,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > :is(#ui2Later, .test-row) {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    cursor: pointer;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools :is(#edit, #copy, #homeNext)::before,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools .overflow-tools > summary::before,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2Later::before,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > .test-row::before {
+    content: '' !important;
+    display: block !important;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    background: currentColor;
+    -webkit-mask: var(--ui2-ic) center / contain no-repeat;
+    mask: var(--ui2-ic) center / contain no-repeat;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools #edit { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 20h9'/><path d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/></svg>"); }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools #copy { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2'/><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/></svg>"); }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools #homeNext { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12h14'/><path d='m13 6 6 6-6 6'/></svg>"); }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools .overflow-tools > summary { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><circle cx='5' cy='12' r='1'/><circle cx='12' cy='12' r='1'/><circle cx='19' cy='12' r='1'/></svg>"); }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2Later { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='13' r='8'/><path d='M12 9v4l2 2M9 2h6'/></svg>"); }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > .test-row { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3'/></svg>"); }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools .overflow-tools > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* --- the mouse: every button shows it can be pressed, and keyboard focus is easy to see --- */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools :is(#copy, #homeNext),
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools .overflow-tools > summary,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send :is(#btnFree, #sendAll, .ui2-choose-btn),
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > :is(#ui2Later, .test-row) {
+    transition: background-color 0.12s, border-color 0.12s;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools :is(#copy, #homeNext):hover,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools .overflow-tools > summary:hover,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send :is(#btnFree, #sendAll, .ui2-choose-btn):hover,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > :is(#ui2Later, .test-row):hover {
+    background: #23263a !important;
+    border-color: #3a3f55 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home :is(#edit, #btnGivelife):hover {
+    filter: brightness(1.08);
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools :is(#edit, #copy, #homeNext):focus-visible,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools .overflow-tools > summary:focus-visible,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send button:focus-visible {
+    outline: 2px solid #7d9bff !important;
+    outline-offset: 2px;
+  }
+  /* the three message buttons are one even row */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools :is(#edit, #copy, #homeNext),
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools .overflow-tools > summary {
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 14px !important;
+    font-size: 14px !important;
+  }
+}
+
+/* Desktop Message home: Edit / Copy show no key letters (E and C still work); Next shows which version is on screen */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools :is(#edit, #copy)::after {
+    content: none !important;
+    display: none !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools #homeNext small {
+    margin-left: 2px;
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.7;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-rail-hide {
+    border: 0 !important;
+    min-height: 32px !important;
+    box-shadow: none !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .brandbar > #live #auto {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #homeNext {
+    display: none !important; /* phones keep their own layout */
+  }
+}
+
+/* Desktop Message home: Copy and Edit as small icons inside the message box, bottom right (like ChatGPT / Claude) */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card > #chat {
+    position: relative !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card > #chat > #groupPreview {
+    padding-bottom: 40px !important; /* room for the two icons, so they never sit on the text */
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card > #chat > .ui2-msg-actions {
+    position: absolute;
+    right: 10px;
+    bottom: 8px;
+    display: flex;
+    gap: 4px;
+    z-index: 2;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > :is(#edit, #copy) {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: rgba(242, 251, 247, 0.72) !important;
+    font-size: 0 !important; /* the word stays for screen readers and the tooltip; the icon shows */
+    box-shadow: none !important;
+    filter: none !important;
+    cursor: pointer;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > :is(#edit, #copy):hover {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > :is(#edit, #copy):focus-visible {
+    outline: 2px solid #fff !important;
+    outline-offset: 1px;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > :is(#edit, #copy)::before {
+    content: '' !important;
+    display: block !important;
+    width: 17px;
+    height: 17px;
+    background: currentColor;
+    -webkit-mask: var(--ui2-ic) center / contain no-repeat;
+    mask: var(--ui2-ic) center / contain no-repeat;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > :is(#edit, #copy)::after {
+    content: none !important;
+    display: none !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > #edit { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 20h9'/><path d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/></svg>"); }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > #copy { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2'/><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/></svg>"); }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > :is(#edit, #copy)[data-state='done'] {
+    --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>") !important;
+    color: #fff !important;
+  }
+}
+
+/* Desktop Message home: under the message only ‹ › (centred, icons only); More is a … icon inside the message */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools {
+    justify-content: center !important;
+    min-height: 40px;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools > .ui2-ver-nav {
+    display: flex;
+    gap: 14px;
+    margin: 0 auto;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-ver-nav > .ui2-ver-btn {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid #2b2e3c;
+    border-radius: 999px;
+    background: #1a1c26;
+    color: #c9d1e4;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s, border-color 0.12s;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-ver-nav > .ui2-ver-btn:hover {
+    color: #fff;
+    background: #23263a;
+    border-color: #3a3f55;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-ver-nav > .ui2-ver-btn:focus-visible {
+    outline: 2px solid #7d9bff;
+    outline-offset: 2px;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-ver-nav > .ui2-ver-btn[data-empty='1'] {
+    opacity: 0.45;
+  }
+  /* More: the same small icon as Copy and Edit, inside the message; its list opens upward */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > .overflow-tools {
+    position: relative;
+    margin: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > .overflow-tools > summary {
+    --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><circle cx='5' cy='12' r='1'/><circle cx='12' cy='12' r='1'/><circle cx='19' cy='12' r='1'/></svg>");
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: rgba(242, 251, 247, 0.72) !important;
+    font-size: 0 !important;
+    list-style: none;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > .overflow-tools > summary::-webkit-details-marker {
+    display: none;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > .overflow-tools > summary::before {
+    content: '' !important;
+    display: block !important;
+    width: 17px;
+    height: 17px;
+    background: currentColor;
+    -webkit-mask: var(--ui2-ic) center / contain no-repeat;
+    mask: var(--ui2-ic) center / contain no-repeat;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > .overflow-tools > summary:hover,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > .overflow-tools[open] > summary {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .ui2-msg-actions > .overflow-tools > :not(summary) {
+    position: absolute !important;
+    right: 0 !important;
+    left: auto !important;
+    bottom: calc(100% + 6px) !important;
+    top: auto !important;
+    z-index: 5 !important;
+  }
+}
+
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools > .ui2-ver-nav > :is(#homePrev, #homeNext) {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools > .ui2-ver-nav > :is(#homePrev, #homeNext)::before,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #card .tools > .ui2-ver-nav > :is(#homePrev, #homeNext)::after {
+    content: none !important;
+    display: none !important;
   }
 }

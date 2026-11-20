@@ -224,5 +224,15 @@ class FaultTests(hub.DeliveryTests):
         self.assertEqual(st["sent"], 3)
 
 
+def _no_inherited_tests(cls, parent):
+    """The parent class only supplies the fixture; its own tests are not run again here."""
+    for name in dir(parent):
+        if name.startswith("test_") and name not in vars(cls):
+            setattr(cls, name, None)
+
+
+_no_inherited_tests(FaultTests, hub.DeliveryTests)
+
+
 if __name__ == "__main__":
     unittest.main()

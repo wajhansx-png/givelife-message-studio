@@ -83,7 +83,9 @@ def agreement(text):
     t = str(text or "").strip()
     if len(t) > 60:
         return "unclear"
-    if AGREE.match(t) and not re.search(r"(?i)\b(but|not|nahi|later)\b", t):
+    if AGREE.match(t) and not re.search(
+        r"(?i)\b(but|not|nahi|nahin|nhi|no|nope|na|never|dont|don'?t|can'?t|cannot|stop|later|baad|abhi\s+nahi)\b", t
+    ):
         return "agree"
     if DECLINE.match(t) and not AGREE.search(t):
         return "decline"

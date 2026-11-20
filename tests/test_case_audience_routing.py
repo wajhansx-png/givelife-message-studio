@@ -85,6 +85,9 @@ class Routing(Base):
         follow = [c for c in self.calls if c['kind'] == 'owner_text']
         self.assertEqual([c['phone'] for c in follow],
                          [self.phone(i) for i in expected['giki1'] + expected['giki2']])
+        # zero extra calls: nothing but those appeals and those follow-up questions, all from the main account
+        self.assertEqual(len(self.calls), len(appeals) + len(follow), [c['kind'] for c in self.calls])
+        self.assertFalse([c for c in self.calls if c.get('line')])
 
     def test_selected_delivery_preserves_requested_order_before_limit(self):
         ids = [self.ids['Normal high'], self.ids['Normal low']]
@@ -228,14 +231,11 @@ class Routing(Base):
         self.assertEqual([r[0] for r in self.shared], [self.phone(self.ids['Second cohort first'])])
 
 
-for label, enabled in {
-    'giki1_only': {'giki1'}, 'giki2_only': {'giki2'},
-    'both_giki': {'giki1', 'giki2'}, 'donors_only': {'top'},
-    'groups_only': {'group'}, 'donors_and_giki1': {'top', 'giki1'},
-    'donors_and_giki2': {'top', 'giki2'},
-    'all_on': {'giki1', 'giki2', 'top', 'group'}, 'all_off': set(),
-}.items():
-    setattr(Routing, 'test_' + label, lambda self, e=enabled: self.check_combination(e))
+# All 16 switch combinations of GIKI 1, GIKI 2, Top Donors and Groups (every one its own test).
+for _mask in range(16):
+    _on = {k for n, k in enumerate(('giki1', 'giki2', 'top', 'group')) if _mask >> n & 1}
+    setattr(Routing, 'test_switches_' + ('_'.join(sorted(_on)) or 'all_off'),
+            lambda self, e=_on: self.check_combination(e))
 
 if __name__ == '__main__':
     unittest.main()

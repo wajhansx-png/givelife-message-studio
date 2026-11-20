@@ -180,8 +180,9 @@ class MessageBank:
             }
             # Keep the last complete approved bank as the sending source until this one is done.
             # A half-finished earlier attempt must not replace a healthy one.
-            if not retry and len(self._sendable(items)) >= self.MIN_VERSIONS:
-                data["previous_items"] = items
+            same = self._of_master(source, items)
+            if not retry and len(self._sendable(same)) >= self.MIN_VERSIONS:
+                data["previous_items"] = same
             data.update(
                 mode="custom",
                 origin=source,
@@ -233,7 +234,7 @@ class MessageBank:
                 elif state == "Partial" and 1 + len(values) < self.MIN_VERSIONS:
                     # Too few new versions to send from: the earlier approved bank is what DMs use,
                     # so show exactly that again. The new versions stay saved for Retry.
-                    earlier = data.get("previous_items")
+                    earlier = self._of_master(source, data.get("previous_items"))
                     if len(self._sendable(earlier)) >= self.MIN_VERSIONS:
                         data["items"] = earlier
                         data["generation"]["error"] = (
@@ -356,7 +357,7 @@ class MessageBank:
                 fingerprint=self._fingerprint(text),
                 base=text,
                 items=self._entries([text]),
-                previous_items=data.get("items") or [],
+                previous_items=self._of_master(text, data.get("items")),
                 generation={},
                 updated_at=time.time(),
                 warning="",
@@ -448,6 +449,29 @@ class MessageBank:
             and row["text"].strip()
         ]
 
+    @staticmethod
+    def _of_master(master, rows):
+        """The bank rows that still carry the master's verified facts (the master itself always counts).
+        An earlier bank written for another appeal fails this, so it is never shown or sent for this one."""
+        out = []
+        for row in rows or []:
+            text = row.get("text") if isinstance(row, dict) else None
+            if isinstance(text, str) and text.strip() and (
+                text == master or not dm_variants.fact_problem(master, text)
+            ):
+                out.append(row)
+        return out
+
+    def verify(self, text):
+        """'' when `text` may still be sent for the saved master (Message 1 of a custom bank); else the reason.
+        Used at send time, so a batch that was started before the owner pasted a different appeal stops
+        instead of sending the old one."""
+        bank = self.get()
+        items = bank.get("items") or []
+        if bank.get("mode") != "custom" or not items or not isinstance(items[0].get("text"), str):
+            return ""
+        return dm_variants.fact_problem(items[0]["text"], text)
+
     def _rotation_texts(self):
         """Validated, enabled Donors > Messages texts (the only source any DM route may use).
 
@@ -458,8 +482,15 @@ class MessageBank:
         bank = self.get()
         texts = self._sendable(bank.get("items"))
         generation = bank.get("generation") or {}
+        master = (bank.get("items") or [{}])[0].get("text") if bank.get("mode") == "custom" else None
+        if isinstance(master, str):
+            # Every version must still carry Message 1's facts (amounts, payment lines, names, urgency, arithmetic).
+            texts = [t for t in texts if t == master or not dm_variants.fact_problem(master, t)]
         if len(texts) < self.MIN_VERSIONS and generation.get("state") != "Ready":
-            earlier = self._sendable(bank.get("previous_items"))
+            rows = bank.get("previous_items")
+            if isinstance(master, str):
+                rows = self._of_master(master, rows)  # the earlier bank counts only if it is the SAME appeal
+            earlier = self._sendable(rows)
             if len(earlier) >= self.MIN_VERSIONS and len(earlier) == len(set(earlier)):
                 texts = earlier
         texts = list(

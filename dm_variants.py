@@ -10,7 +10,7 @@ import time
 import difflib, json, re
 
 import assistant
-import dm_composer
+import dm_composer, draft_workflow
 
 VERSION = "dm-variants-2026-11-02-deep-rewrite"
 
@@ -224,6 +224,17 @@ def validate(source, text, existing=()):
     ]
     if any(line not in text for line in fixed_lines):
         return "payment details or the reply instruction changed"
+    scary = alarm_terms(text) - alarm_terms(source)
+    if scary:
+        return "invented danger or urgency (" + ", ".join(sorted(scary)) + "); keep the owner's own urgency"
+    if _names(text) - _names(source):
+        return "a name that is not in the owner's message"
+    made_up = invented_facts(source, text)
+    if made_up:
+        return "a case fact that is not in the owner's message (" + ", ".join(sorted(made_up)) + ")"
+    bad = arithmetic_problem(text)
+    if bad and not arithmetic_problem(source):
+        return bad
     if not dm_composer.complete(text):
         return "the message is not complete"
     # Reject superficial variations that merely swap the first sentence.
@@ -234,6 +245,119 @@ def validate(source, text, existing=()):
         return "not deeply rewritten; change the opening AND the body wording"
     if any(_similarity(text, other) > 0.87 for other in existing if isinstance(other, str)):
         return "too similar to an existing version; rewrite the story differently"
+    return ""
+
+
+# Words the owner's appeals always capitalise mid-sentence; they say nothing about WHO the appeal is for.
+_COMMON_CAPS = frozenset(
+    """brother sister bhai rs easypaisa jazzcash only wajdan khan givelife foundation reply done assalam alaikum
+    allah insha inshaallah jazakallah ameen quran ramadan eid friday jummah pakistan pakistani lahore karachi
+    islamabad rawalpindi peshawar quetta""".split()
+)
+
+
+_START_WORDS = frozenset(
+    """the this that these those they them their there then than please kindly may might only just even any every many
+    one all some if when while with without our your his her we he she it its in at on for as and but or so let help give
+    support today now here also still not no yes dear who what why how can could would should will every each both
+    another each other nobody everyone someone anyone allah""".split()
+)
+
+
+def _names(text):
+    """Capitalised words that are not the first word of a sentence: the patient's and family's names. A word that is
+    also written in lower case somewhere in the same text, or that is a common sentence opener, is not a name."""
+    text = str(text or "").replace("\r\n", "\n")
+    lower = set(re.findall(r"\b[a-z][a-z']+\b", text))
+    out = set()
+    for line in text.split("\n"):
+        for sentence in re.split(r"(?<=[.!?])[\s_*]+", line):
+            words = re.findall(r"[A-Za-z']+", sentence)
+            greeting = bool(words) and words[0].lower() in ("brother", "sister", "bhai", "dear", "assalam", "salam")
+            for word in words[2 if greeting else 1 :]:
+                word = re.sub(r"'s$", "", word)  # "Yousuf's" is Yousuf
+                low = word.lower()
+                if (
+                    len(word) > 2
+                    and word[0].isupper()
+                    and not word.isupper()
+                    and low not in _COMMON_CAPS
+                    and low not in _START_WORDS
+                    and low not in lower
+                ):
+                    out.add(low)
+    return out
+
+
+# A diagnosis, a death, an accident or a deadline: facts the owner never gave must not appear in a rewrite.
+_CASE_FACTS = re.compile(
+    r"(?i)\b(cancer|tumou?rs?|kidneys?|liver|brain|surger(?:y|ies)|operation|icu|ventilator|dialysis|transplant|"
+    r"chemo\w*|fractur\w*|paraly[sz]\w*|stroke|infection|fever|diabet\w*|disease|accident|died|dead|death|"
+    r"passed away|janaz[ae]h|burial|tonight|tomorrow|deadline)\b"
+)
+
+
+def _builtin_facts():
+    """Case-fact words the app's own built-in DM versions already use (the owner approved that wording)."""
+    global _BUILTIN
+    if _BUILTIN is None:
+        import dm_templates
+
+        _BUILTIN = {
+            m.group(0).lower()
+            for i in range(dm_templates.COUNT)
+            for m in _CASE_FACTS.finditer(dm_templates.build(i, 25000))
+        }
+    return _BUILTIN
+
+
+_BUILTIN = None
+
+
+def invented_facts(source, text):
+    """Case-fact words (illness, death, accident, deadline) that the text uses and the source does not."""
+    return (
+        {m.group(0).lower() for m in _CASE_FACTS.finditer(str(text or ""))}
+        - {m.group(0).lower() for m in _CASE_FACTS.finditer(str(source or ""))}
+        - _builtin_facts()
+    )
+
+
+def arithmetic_problem(text):
+    """'' when the "N people giving Rs. 2,000 / Rs. 1,000" lines add up to the message's own remaining balance."""
+    left = draft_workflow.remaining_amount(text)
+    if left is None:
+        return ""
+    if _numbers(draft_workflow.update_amount(text, left, left)) != _numbers(text):
+        return "the people-and-amount lines do not add up to the remaining balance"
+    return ""
+
+
+def fact_problem(master, text):
+    """'' when `text` still carries the master's verified facts, else the plain reason. Judged on facts only (not on how
+    different the wording is), so it can be run again at send time: a version that was damaged after saving, or that
+    belongs to another appeal, is never sent."""
+    if not isinstance(text, str) or not isinstance(master, str):
+        return "not text"
+    master = master.replace("\r\n", "\n").strip()
+    text = text.replace("\r\n", "\n").strip()
+    if text == master:
+        return ""
+    if _numbers(master) != _numbers(text):
+        return "a number, amount or phone number differs from the master"
+    for line in master.split("\n"):
+        if re.search(r"(?i)(?:Easypaisa|JazzCash|Wajdan Khan|03097458815|Reply \*Done\*)", line) and line.strip() not in text:
+            return "payment details or the reply instruction differ from the master"
+    scary = alarm_terms(text) - alarm_terms(master)
+    if scary:
+        return "invented danger or urgency (" + ", ".join(sorted(scary)) + ")"
+    if language_changed(master, text):
+        return "language differs from the master"
+    if _names(text) - _names(master):
+        return "a name that is not in the master"
+    made_up = invented_facts(master, text)
+    if made_up:
+        return "a case fact that is not in the master (" + ", ".join(sorted(made_up)) + ")"
     return ""
 
 

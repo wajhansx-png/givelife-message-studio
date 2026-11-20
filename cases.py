@@ -175,12 +175,22 @@ class Cases:
             # Every case owns its PDF and video too; a new case starts with none.
             extras = media.get("group_extras") if isinstance(media, dict) else None
             a.STORE.put("group_extras", extras if isinstance(extras, dict) else {})
-            a.STORE.put("donor_messages", bank if isinstance(bank, dict) else {})
-        h.messages.cache = None
-        try:
-            (a.DATA / "donor-messages.json").unlink()
-        except OSError:
-            pass
+            # Under the bank's own lock: a regeneration that is saving right now must finish first, and a late one can
+            # no longer match this bank (new id), so it can never write the old case's versions into this case.
+            with h.messages.lock:
+                a.STORE.put("donor_messages", bank if isinstance(bank, dict) else {})
+                h.messages.cache = None
+                try:
+                    (a.DATA / "donor-messages.json").unlink()
+                except OSError:
+                    pass
+        else:
+            with h.messages.lock:
+                h.messages.cache = None
+                try:
+                    (a.DATA / "donor-messages.json").unlink()
+                except OSError:
+                    pass
 
     def _busy(self):
         if (

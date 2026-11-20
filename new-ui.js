@@ -2520,6 +2520,10 @@ document.addEventListener(
     tools.append(nav);
     label();
     addEventListener('hashchange', label); // back from another page: Send still matches the version on screen
+    /* below 900px the arrows are not shown: a version left on screen would stay pinned with no way back, so it ends */
+    matchMedia('(min-width: 900px)').addEventListener('change', (e) => {
+      if (!e.matches && index > 0) window.paint('group');
+    });
     /* the DM screen shows the DM message: the Group version view ends (Copy and Send then use the DM text) */
     new MutationObserver(() => {
       if (document.body.dataset.view === 'dm' && index > 0) window.paint('group');

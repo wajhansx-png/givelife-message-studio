@@ -2713,6 +2713,15 @@ document.addEventListener('pointerdown', (e) => {
   const menu = document.querySelector('.overflow-tools');
   if (menu?.open && !menu.contains(e.target)) menu.open = false;
 });
+/* Esc closes the More menu and puts the keyboard back on its button */
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || e.defaultPrevented) return;
+  const menu = document.querySelector('.overflow-tools');
+  if (!menu?.open) return;
+  menu.open = false;
+  menu.querySelector('summary')?.focus();
+  e.preventDefault();
+});
 
 /* ---- no internet: the page still opens, shows the last message, and says Auto keeps running on the server ---- */
 function netBanner() {

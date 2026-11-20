@@ -384,7 +384,8 @@ class DeliveryTests(RegistryTests):
         status = self.jobs.status()
         self.assertEqual((status["sent"], status["failed"], status["state"]), (1, 1, "Stopped"))
         self.run_job(self.jobs.start("important", 60, run=False))
-        self.assertEqual(calls, ["P0", "P1", "P2", "P3", "P4"])
+        self.assertEqual(calls, ["P0", "P1"])
+        self.assertIn("remaining recipients", self.jobs.status()["error"])
 
     def test_stop_button_then_continue_resumes_after_the_last_sent_and_lists_names(self):
         self._five()

@@ -169,6 +169,11 @@ class DonorDelivery:
 
             if left is not None:
                 out["resumable"] = len(left)
+            elif jobs[-1].get("state") in ("Stopped", "Interrupted") and self.incomplete_chat(jobs[-1]):
+                out["resumable"] = 1
+                out["error"] = (
+                    "1 of them did not get all their messages yet. Review the current chat and resume."
+                )
             elif jobs[-1].get("state") == "Interrupted" and jobs[-1].get("auto") and not self.active:
                 # a restart after the last person: nothing starts again, so never say it will
                 half = self._half_sent_in(jobs[-1])
@@ -623,6 +628,10 @@ class DonorDelivery:
                 + '). Nothing was sent again. Choose "Start over" to send to everyone again.'
             )
         if left is not None:
+            if resume_id:
+                follow_up = prev.get("follow_up")
+                pdf, video = bool(prev.get("pdf")), bool(prev.get("video"))
+                after = prev.get("after")
             by = {r["id"]: r for r in self.book.recipients(scope, ids, None)}
             mine = [by[i] for i in left if i in by]
             if not mine:
@@ -676,8 +685,7 @@ class DonorDelivery:
         size = chunk or len(rows)
         captions = []
         preserved = {}
-        restarting = bool(resume_id and prev and prev.get("boot") != self.boot)
-        if restarting and len(prev.get("captions", [])) == len(prev.get("ids", [])):
+        if resume_id and prev and len(prev.get("captions", [])) == len(prev.get("ids", [])):
             preserved = dict(zip(prev["ids"], prev["captions"]))
             if any(
                 not isinstance(preserved.get(r["id"]), str) or not preserved[r["id"]].strip()
@@ -1124,8 +1132,6 @@ class DonorDelivery:
             state = receipt.get("state")
             if state != "Uncertain" and (state != "Sent" or not receipt.get("seq")):
                 continue
-            if state == "Uncertain" and not self.STOP_ON_UNCONFIRMED:
-                continue
             plan = self._receipt_plan(j, receipt)
             steps = receipt.get("steps") or {}
             legacy_files_sent = "plan" not in receipt and not steps and receipt.get("extras") == "Sent"
@@ -1252,7 +1258,7 @@ class DonorDelivery:
         people = self.half_sent() if job_id is None else self._half_sent_in(self._job_for_repair(job_id))
         finished = 0
         for j, receipt, kinds, share in people:
-            if self.held() or not self.connected():
+            if self.held() or self.case_closed() or not self.connected():
                 break
             with self.chat_scope():
                 if not self._finish_person(j, receipt, kinds, share, j["receipts"]):
@@ -1324,7 +1330,8 @@ class DonorDelivery:
             if found:
                 return "Sent"
             if found is None:
-                return "Uncertain"
+                # Keep the recovery marker usable when the chat history is temporarily offline.
+                return "Sending"
         return self._send_now(
             body,
             note=lambda mark: self._mark_attempt(j, receipts, holder, field, marks, key, mark),
@@ -1335,6 +1342,8 @@ class DonorDelivery:
         deadline = time.time() + 60
         tries = 0
         while True:
+            if self.held() or self.case_closed() or not self.eligible(body["phone"]):
+                return "Cancelled"
             mark = self._peek(body)
             if note:
                 note(mark)
@@ -1864,11 +1873,10 @@ class DonorDelivery:
                 next_at=None,
                 next_batch_at=None,
                 current="",
-                caption="",
-                captions=[],
-                personal_names={},
                 sending=None,
             )
+            if state not in ("Stopped", "Interrupted"):
+                final.update(caption="", captions=[], personal_names={})
             try:
                 self._settle(j["id"], final)
             finally:
@@ -1989,7 +1997,6 @@ class DonorDelivery:
     HEAL_TRIES = 3  # a message is tried at most 3 times
     HEAL_WATCH = (5, 10, 15, 30, 60)  # an unclear answer may be a slow upload: watch the chat up to 2 minutes
     HEAL_QUICK = (3, 5)  # a clear error from WhatsApp: two quick looks
-    STOP_ON_UNCONFIRMED = False  # Giki also blocks Resume on an unconfirmed opening message
     REST_FROM_CASE = False  # Giki also measures the break between batches from the opening message
     shutting_down = False  # set by the server's shutdown (a deploy): see server.graceful_exit
     NAMES_AT_SEND = False  # True: a picked-people batch needs no pasted names to carry on after a restart

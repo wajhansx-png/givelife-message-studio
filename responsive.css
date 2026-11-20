@@ -4597,3 +4597,35 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i) #messageFocus .ui2-swipe > .ui2-gen-btn {
   margin-left: 16px !important;
 }
+
+/* Home, computer / phone in "desktop site" mode, TALL screen (over 900px high): the message card hugs its message
+   (it used to stretch to the full height, a 1700px box around 300px of text) and the card, Send and the group row
+   sit together in the middle. Normal desktop heights keep the stretched layout. */
+@media (min-width: 900px) and (min-height: 901px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace {
+    justify-content: center !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace > #card {
+    flex: 0 1 auto !important;
+  }
+  /* a tall screen has the room: the message is read at 18px, not 14px */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message {
+    font-size: 18px !important;
+    line-height: 1.5 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card #chat .message div {
+    line-height: 1.5 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #main-workspace > #card > #chat {
+    flex: 1 1 auto !important; /* the message's own height, not a share of the stretched card */
+  }
+}
+
+/* Home, computer: the WhatsApp state ("Reconnect WhatsApp" is the longest) never shrinks, so it can not run into
+   the Auto switch beside it when the bar is crowded */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app > .brandbar > #whatsappConnection {
+    flex: none !important;
+    white-space: nowrap;
+  }
+}

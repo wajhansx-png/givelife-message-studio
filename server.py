@@ -30,7 +30,7 @@ DATA.mkdir(parents=True, exist_ok=True)
 DRAFT = DATA / "drafts.json"
 DEVICE = os.environ.get("WHATSAPP_DEVICE_ID", "")
 GOWA_URL = os.environ.get("GOWA_URL", "http://127.0.0.1:3000").rstrip("/")
-import contextlib, contextvars, wa_lines
+import contextlib, contextvars, wa_lines, wa_login
 
 _LINE = contextvars.ContextVar("wa_line", default="")
 _LOCKED_ROUTE = contextvars.ContextVar("locked_send_route", default=None)
@@ -7305,7 +7305,13 @@ class Handler(BaseHTTPRequestHandler):
                     }
                 )
             except Exception as e:
-                self.reply({"error": "Could not get QR: " + str(e)}, status=502)
+                self.reply({"error": wa_login.problem(e)}, status=502)
+        elif self.path == "/wa-login-code":
+            # Link with a code typed in WhatsApp (no second screen needed). The number is never logged or stored.
+            try:
+                self.reply(wa_login.request_code(GOWA_URL, DEVICE, body.get("phone")))
+            except wa_lines.LineError as e:
+                self.reply({"error": str(e)}, status=400)
         elif self.path == "/next-message":
             self.reply({"message": next_message()})
         elif self.path == "/next-dm":

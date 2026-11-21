@@ -9,7 +9,7 @@
     statusPending = null;
   const css = document.createElement('style');
   css.textContent = `
- .connect-dialog{border:1px solid #dce6dc;border-radius:22px;padding:24px;width:min(440px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;color:#20362f;background:#fff;box-shadow:0 24px 90px #153e3429;font:15px/1.5 'Segoe UI',Arial,sans-serif}.connect-dialog::backdrop{background:#20362f66;backdrop-filter:blur(3px)}.connect-dialog h2{font-size:23px;line-height:1.2;margin:0 0 10px;letter-spacing:-.5px}.connect-dialog p{margin:8px 0 16px}.connect-muted{color:#62796e;font-size:13px}.connect-dialog button{min-height:44px;font-size:14px;padding:10px 15px}.connect-dialog input{width:100%;padding:13px;border:1px solid #bacdbf;border-radius:10px;font:16px 'Segoe UI',Arial}.connect-dialog input:focus{outline:3px solid #b3d4a4}.connect-dialog label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}.connect-actions{display:flex;gap:8px;flex-wrap:wrap}.connect-actions .primary{flex:1}.connect-state{display:flex;gap:12px;align-items:center;padding:14px;background:#f2f6ef;border-radius:13px;margin:18px 0}.connect-symbol{font-size:24px}.connect-state strong{display:block;font-size:16px}.connect-state span{font-size:13px;color:#62796e}.connect-close{float:right;background:transparent;min-width:40px}.connect-steps{padding-left:21px;color:#405e4f;font-size:14px}.connect-steps li{margin:8px 0}.connect-qr{background:white;border:1px solid #dce6dc;border-radius:14px;padding:10px;text-align:center}.connect-qr img{display:block;width:100%;max-width:260px;margin:auto}.connect-note{min-height:24px;font-size:13px;color:#62796e}.connect-error{color:#a1392c}.connect-badge{font-size:12px!important;min-height:34px!important;padding:6px 10px!important;white-space:nowrap}.connect-badge[data-state=online]{color:#0c6248;background:#deefdf}.connect-badge[data-state=offline]{color:#865418;background:#fff0d9}.connect-dialog [hidden]{display:none!important}@media(max-width:480px){.connect-dialog{padding:20px}.connect-dialog h2{font-size:22px}.checking{display:none}.actions{grid-template-columns:repeat(2,minmax(0,1fr))}.actions button{min-height:38px;font-size:11px}.actions .test-button{grid-column:auto}.actions .all-groups{grid-column:1/-1}.connect-dialog button{min-height:46px}}
+ .connect-dialog{border:1px solid #dce6dc;border-radius:22px;padding:24px;width:min(440px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;color:#20362f;background:#fff;box-shadow:0 24px 90px #153e3429;font:15px/1.5 'Segoe UI',Arial,sans-serif}.connect-dialog::backdrop{background:#20362f66;backdrop-filter:blur(3px)}.connect-dialog h2{font-size:23px;line-height:1.2;margin:0 0 10px;letter-spacing:-.5px}.connect-dialog p{margin:8px 0 16px}.connect-muted{color:#62796e;font-size:13px}.connect-dialog button{min-height:44px;font-size:14px;padding:10px 15px}.connect-dialog input{width:100%;padding:13px;border:1px solid #bacdbf;border-radius:10px;font:16px 'Segoe UI',Arial}.connect-dialog input:focus{outline:3px solid #b3d4a4}.connect-dialog label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}.connect-actions{display:flex;gap:8px;flex-wrap:wrap}.connect-actions .primary{flex:1}.connect-state{display:flex;gap:12px;align-items:center;padding:14px;background:#f2f6ef;border-radius:13px;margin:18px 0}.connect-symbol{font-size:24px}.connect-state strong{display:block;font-size:16px}.connect-state span{font-size:13px;color:#62796e}.connect-close{float:right;background:transparent;min-width:40px}.connect-steps{padding-left:21px;color:#405e4f;font-size:14px}.connect-steps li{margin:8px 0}.connect-qr{background:white;border:1px solid #dce6dc;border-radius:14px;padding:10px;text-align:center}.connect-qr img{display:block;width:100%;max-width:260px;margin:auto}.connect-note{min-height:24px;font-size:13px;color:#62796e}.connect-error{color:#a1392c}.connect-badge{font-size:12px!important;min-height:34px!important;padding:6px 10px!important;white-space:nowrap}.connect-badge[data-state=online]{color:#0c6248;background:#deefdf}.connect-badge[data-state=offline]{color:#865418;background:#fff0d9}.connect-code-box{margin:14px 0 4px;padding-top:12px;border-top:1px solid rgba(128,128,128,.3)}.connect-code-box button{margin-top:8px;width:100%}.connect-code{display:block;font-size:30px;font-weight:700;letter-spacing:4px;text-align:center;margin:10px 0}.connect-dialog [hidden]{display:none!important}@media(max-width:480px){.connect-dialog{padding:20px}.connect-dialog h2{font-size:22px}.checking{display:none}.actions{grid-template-columns:repeat(2,minmax(0,1fr))}.actions button{min-height:38px;font-size:11px}.actions .test-button{grid-column:auto}.actions .all-groups{grid-column:1/-1}.connect-dialog button{min-height:46px}}
  `;
   document.head.append(css);
   const modal = document.createElement('dialog');
@@ -114,7 +114,7 @@
   wa.id = 'whatsappDialog';
   wa.setAttribute('aria-label', 'WhatsApp connection');
   wa.innerHTML =
-    '<button id="waCloudClose" class="connect-close" aria-label="Close connection screen">✕</button><h2>WhatsApp connection</h2><div class="connect-state"><div class="connect-symbol" id="waSymbol">◌</div><div><strong id="waHeading">Checking connection</strong><span id="waDetail">Contacting your cloud service…</span></div></div><div id="waInstructions"><ol class="connect-steps"><li>Tap <b>Show QR code</b> below.</li><li>On your WhatsApp phone, open <b>Settings → Linked devices → Link a device</b>.</li><li>Scan the QR on another screen. Keep this page open until it says connected.</li></ol><p class="connect-muted">Using only one phone? Open this screen on another device to scan its QR.</p></div><div id="waQRBox" class="connect-qr" hidden><img width="260" height="260" id="waCloudQR" alt="Scan this QR with WhatsApp Linked devices"><p id="waQRTime" class="connect-muted"></p></div><p id="waCloudStatus" class="connect-note" role="status" aria-live="polite"></p><div class="connect-actions"><button id="waReconnect" class="primary" hidden>Reconnect WhatsApp</button><button id="waCloudLogin" class="primary">Show QR code</button><button id="waCloudRefresh">Check again</button></div>';
+    '<button id="waCloudClose" class="connect-close" aria-label="Close connection screen">✕</button><h2>WhatsApp connection</h2><div class="connect-state"><div class="connect-symbol" id="waSymbol">◌</div><div><strong id="waHeading">Checking connection</strong><span id="waDetail">Contacting your cloud service…</span></div></div><div id="waInstructions"><ol class="connect-steps"><li>Tap <b>Show QR code</b> below.</li><li>On your WhatsApp phone, open <b>Settings → Linked devices → Link a device</b>.</li><li>Scan the QR on another screen. Keep this page open until it says connected.</li></ol><p class="connect-muted">Using only one phone? Open this screen on another device to scan its QR, or get a code below.</p></div><div id="waQRBox" class="connect-qr" hidden><img width="260" height="260" id="waCloudQR" alt="Scan this QR with WhatsApp Linked devices"><p id="waQRTime" class="connect-muted"></p></div><div id="waCodeBox" class="connect-code-box"><label for="waPhone">Or link with a code (one phone is enough)</label><input id="waPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="WhatsApp number, e.g. 0300 1234567"><button id="waCodeBtn" type="button">Get code instead</button><div id="waCodeShow" hidden><strong id="waCodeValue" class="connect-code" aria-live="polite"></strong><p class="connect-muted">In WhatsApp open <b>Settings → Linked devices → Link a device → Link with phone number instead</b>, then type this code.</p></div></div><p id="waCloudStatus" class="connect-note" role="status" aria-live="polite"></p><div class="connect-actions"><button id="waReconnect" class="primary" hidden>Reconnect WhatsApp</button><button id="waCloudLogin" class="primary">Show QR code</button><button id="waCloudRefresh">Check again</button></div>';
   document.body.append(wa);
   function paint(state, detail) {
     connected = state === 'online';
@@ -134,9 +134,11 @@
     el('waInstructions').hidden = connected;
     el('waCloudLogin').hidden = connected;
     el('waReconnect').hidden = connected;
+    el('waCodeBox').hidden = connected;
     if (connected) {
       expires = 0;
       el('waQRBox').hidden = true;
+      el('waCodeShow').hidden = true;
       el('waCloudStatus').textContent = '';
     }
   }
@@ -235,6 +237,39 @@
       button.textContent = 'Refresh QR code';
       el('waCloudStatus').textContent =
         'Waiting for you to scan. Connection checks happen automatically.';
+    } catch (e) {
+      el('waCloudStatus').textContent = e.message;
+    } finally {
+      button.disabled = false;
+    }
+  };
+  el('waCodeBtn').onclick = async () => {
+    const button = el('waCodeBtn'),
+      phone = el('waPhone').value.trim();
+    if (!phone) {
+      el('waCloudStatus').textContent = 'Type the WhatsApp number you want to link first.';
+      el('waPhone').focus();
+      return;
+    }
+    button.disabled = true;
+    el('waCloudStatus').textContent = 'Asking WhatsApp for a code…';
+    try {
+      const r = await request(
+          '/wa-login-code',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone }),
+          },
+          key,
+          40000,
+        ),
+        d = await r.json();
+      if (!r.ok || !d.code) throw Error(d.error || 'Could not get a code. Try again in a minute.');
+      el('waCodeValue').textContent = d.code;
+      el('waCodeShow').hidden = false;
+      el('waCloudStatus').textContent =
+        'Type this code in WhatsApp. Connection checks happen automatically.';
     } catch (e) {
       el('waCloudStatus').textContent = e.message;
     } finally {

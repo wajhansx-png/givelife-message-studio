@@ -28,7 +28,8 @@ const ctx = {
   },
   $: (id) => nodes[id],
   document: {
-    querySelector: () => menu,
+    // the classic page has no new-design (.app.ui2-*) panel; every other lookup is the menu
+    querySelector: (sel) => (String(sel).startsWith('.app.') ? null : menu),
     body: {
       classList: {
         toggle: (name, on) => {

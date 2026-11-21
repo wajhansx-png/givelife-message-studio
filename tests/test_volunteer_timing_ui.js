@@ -11,6 +11,8 @@ test('opening timing sends nothing; confirmation queues exactly the chosen delay
     volTimingNote: {},
     volTimingAudience: {},
     volTimingForm: {},
+    volTimingTitle: {},
+    volTimingCancel: {},
   };
   nodes.volStartDelay.focus = () => {};
   let shown = 0,
@@ -18,6 +20,8 @@ test('opening timing sends nothing; confirmation queues exactly the chosen delay
   const calls = [];
   const ctx = {
     el: (id) => nodes[id],
+    GIKI: false, // the main Volunteers page, not a Giki page
+    VOL: '/volunteers',
     volTimingPending: false,
     volSendPlan: null,
     vols: { items: [{}, {}] },

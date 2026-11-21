@@ -4181,6 +4181,14 @@ __import__("dm_variants").RECORD = lambda text, quality, kind="message": library
     sys.modules[__name__]
 ).record(kind, text, source="ai_rewrite", quality=quality)
 __import__("dm_variants").CORRECTIONS = lambda: [m.get("rule", "") for m in mem_get()][-15:]
+# DM versions get the same taste review as the Group versions (owner's examples + corrections, no new facts).
+__import__("dm_variants").REVIEW = lambda source, versions: __import__("quality").review(
+    __import__("ai_call").chat,
+    source,
+    versions,
+    __import__("dm_variants").OWNER_STYLE() or [],
+    __import__("dm_variants").CORRECTIONS() or [],
+)
 __import__("dm_variants").PROVEN = lambda: (
     (learning_mod.proven_texts(ENGINE.L, 1) + donors().book.proven_dm_texts(1))
     or learning_mod.proven_texts(ENGINE.L)

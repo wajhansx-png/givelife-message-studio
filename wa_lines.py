@@ -131,11 +131,14 @@ class Line:
         self._device = device
 
     _woke = 0.0
+    _wake_gap = 60.0
 
     def _wake(self):
         """A WhatsApp that was linked (its number is saved) but reads "not logged in": ask the gateway to bring its
-        saved login back (at most once a minute). True when it was asked."""
-        if time.time() - self._woke < 60:
+        saved login back (at most once a minute). True when it was asked. A login the phone removed answers "not
+        linked" every time: then ask less and less often (2, 4, 8 ... up to 60 minutes), not every minute for ever;
+        a good status resets it."""
+        if time.time() - self._woke < self._wake_gap:
             return False
         self._woke = time.time()
         linked = self._record().get("number")
@@ -149,6 +152,10 @@ class Line:
             return False
         try:
             self._call("POST", f"/devices/{self.device()}/reconnect", device=self.device(), timeout=30)
+        except LineError as e:
+            if "not linked" in str(e):
+                self._wake_gap = min(self._wake_gap * 2, 3600.0)
+            return False
         except Exception:
             return False
         return True
@@ -201,6 +208,8 @@ class Line:
             out["state"] = "unknown"
             return out
         connected, logged = bool(s.get("is_connected")), bool(s.get("is_logged_in"))
+        if logged:
+            self._wake_gap = 60.0
         if not logged and self._wake():  # after a restart the saved login sleeps until it is asked to reconnect
             try:
                 s = self._call("GET", f"/devices/{device}/status", device=device).get("results") or {}

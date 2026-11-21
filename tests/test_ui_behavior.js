@@ -212,6 +212,20 @@ async function main() {
   assert(!ctx.lockSend('main', true), 'Keep locked until receipt');
   ctx.releaseJob('job-1');
   assert(ctx.lockSend('main', true));
+  ctx.lockSend('main', false);
+  // A start request whose answer is lost is "not confirmed", never "not sent": a resend could post twice.
+  // A clear refusal from the server stays "not sent".
+  const labels = [];
+  ctx.endButtonProgress = (btn, text) => labels.push(text);
+  ctx.post = () => Promise.reject(new TypeError('Failed to fetch'));
+  await ctx.sendGroup('main');
+  ctx.post = () =>
+    Promise.resolve({ ok: true, json: async () => Promise.reject(new SyntaxError('Bad JSON')) });
+  await ctx.sendGroup('main');
+  ctx.post = () => Promise.resolve({ ok: false, json: async () => ({ error: 'On hold' }) });
+  await ctx.sendGroup('main');
+  assert.deepEqual(labels, ['⚠ Check WhatsApp', '⚠ Check WhatsApp', '✗ Not sent']);
+  assert.match(node('groupStatus').textContent, /On hold/);
   assert(!html.includes('id="sugg"'));
   assert(!source.includes('pollSuggestions'));
   assert(!source.includes("$('histCmd').focus()"), 'No implicit keyboard reopening');
@@ -382,7 +396,7 @@ async function main() {
     'A draft that was unsaved when the poll began stays protected',
   );
   const preview = { style: { fontSize: '17px' }, textContent: 'Exact *caption*' },
-    box = { clientHeight: 364, style: {} };
+    box = { clientHeight: 364, style: {}, closest: () => null }; // not inside the new-design home
   Object.defineProperty(preview, 'scrollHeight', {
     get() {
       return 120 + 20 * parseFloat(this.style.fontSize);
@@ -390,6 +404,7 @@ async function main() {
   });
   const fitCtx = {
     $: (id) => (id === 'chat' ? box : preview),
+    fitCache: {}, // fit() remembers the last size per view
     view: () => 'group',
     isPhone: () => true,
     getComputedStyle: () => ({ paddingTop: '12px', paddingBottom: '12px' }),

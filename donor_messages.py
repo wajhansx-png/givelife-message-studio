@@ -306,7 +306,10 @@ class MessageBank:
         with self.gen_lock:
             warning = ""
             left = self.app.read_left()
-            canonical = dm_templates.matches(source)
+            with self.lock:
+                self.get()
+                starting_bank = self.cache
+            canonical = dm_templates.matches(source, left)
             if canonical:
                 texts = [dm_templates.build(i, left) for i in range(total)]
                 requested = count
@@ -330,8 +333,12 @@ class MessageBank:
                 "warning": warning,
                 "left": left,
             }
-            self._guard()
             with self.lock:
+                self._guard()
+                if self.cache is not starting_bank or self.app.read_left() != left:
+                    raise ValueError(
+                        "The message bank or balance changed while writing. Generate again."
+                    )
                 self._save(data)
             return copy.deepcopy(data)
 
@@ -371,16 +378,7 @@ class MessageBank:
     def next_test(self):
         """The next saved version for a Test DM. One version repeats; with twenty, each test is the next one."""
         with self.lock:
-            texts = [
-                row["text"]
-                for row in self.get().get("items") or []
-                if isinstance(row, dict)
-                and row.get("enabled", True)
-                and isinstance(row.get("text"), str)
-                and row["text"].strip()
-            ]
-            if not texts:
-                raise ValueError("Save a base message first. Nothing was sent.")
+            texts = self._rotation_texts()
             revision = hashlib.sha256(json.dumps(texts, ensure_ascii=False).encode()).hexdigest()
             saved = (
                 self.app.STORE.get(self.TEST_KEY, {})

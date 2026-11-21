@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import test_manual_sends as fixture
 from test_manual_sends import app
-import dm_composer, dm_variants
+import dm_composer, dm_templates, dm_variants
 
 
 def appeal(name, age, story, left):
@@ -84,6 +84,35 @@ class Base(unittest.TestCase):
 
 
 class CrossCase(Base):
+    def test_pasted_case_with_builtin_layout_keeps_its_own_content(self):
+        source = dm_templates.build(0, self.left()).replace("Yousuf", "Bilal")
+        bank = app.donors().messages
+        with patch("dm_variants.generate", return_value=[source]) as writer:
+            saved = bank.generate(source, count=1, total=1)
+        writer.assert_called_once_with(source, 1)
+        self.assertEqual(saved["items"][0]["text"], source)
+        self.assertEqual(bank.reserve_one(), source)
+
+    def test_foreground_writer_cannot_overwrite_newer_master(self):
+        bank = app.donors().messages
+
+        def late_result(source, count):
+            bank.set_base(self.master_b())
+            return [source]
+
+        with patch("dm_variants.generate", side_effect=late_result):
+            with self.assertRaisesRegex(ValueError, "changed|Superseded"):
+                bank.generate(self.master_a(), count=1, total=1)
+        self.assertEqual(bank.reserve_one(), self.master_b())
+
+    def test_test_rotation_uses_only_sendable_versions(self):
+        bank, _ = self.approved(self.master_a())
+        saved = bank.get()
+        saved["items"] = bank._entries([self.master_a(), self.master_b()])
+        bank._save(saved)
+        self.assertEqual(bank.next_test(), (1, 1, self.master_a()))
+        self.assertEqual(bank.reserve_one(), self.master_a())
+
     def test_fixtures_are_complete_and_visibly_different(self):
         a, b = self.master_a(), self.master_b()
         self.assertTrue(dm_composer.complete(a) and dm_composer.complete(b))
@@ -247,6 +276,29 @@ class Validator(Base):
             "📲 *03097458815*\nEASYPAISA ONLY\nWajdan Khan (GiveLife Foundation account)\n\n"
             "Reply *Done* after donating."
         )
+
+    def test_an_unrelated_appeals_medical_facts_cannot_be_reused(self):
+        for term in ("brain", "kidneys"):
+            variant = self.good().replace("leg operation", term + " operation")
+            with self.subTest(term=term):
+                self.assertTrue(dm_variants.validate(self.master_a(), variant))
+                self.assertTrue(dm_variants.fact_problem(self.master_a(), variant))
+
+    def test_prayer_emoji_stays_on_the_contribution_line(self):
+        moved = self.good().replace(" 🤲_*", "_*").replace(
+            "needed for treatment._*", "needed for treatment. 🤲_*"
+        )
+        self.assertTrue(dm_variants.validate(self.master_a(), moved))
+
+    def test_nested_whatsapp_formatting_closes_in_the_original_order(self):
+        broken = self.good().replace("needed for treatment._*", "needed for treatment.*_")
+        self.assertTrue(dm_variants.validate(self.master_a(), broken))
+
+    def test_personalization_placeholder_survives_on_the_same_line(self):
+        source = self.master_a().replace("Brother,", "{name},", 1)
+        good = self.good().replace("Brother,", "{name},", 1)
+        self.assertEqual(dm_variants.validate(source, good), "")
+        self.assertTrue(dm_variants.validate(source, good.replace("{name}", "{friend}", 1)))
 
     def test_the_good_rewrite_is_accepted(self):
         self.assertEqual(dm_variants.validate(self.master_a(), self.good()), "")

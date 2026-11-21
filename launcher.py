@@ -207,6 +207,8 @@ def safe_logs(proc):
         line = line.replace(os.environ["DB_URI"], "[private database]").replace(
             env["DB_URI"], "[private database]"
         )
+        if os.environ.get("GOWA_DB_URI"):
+            line = line.replace(os.environ["GOWA_DB_URI"], "[private database]")
         print(
             re.sub(r"postgres(?:ql)?://[^\s'\"]+", "[private database]", line), end="", flush=True
         )
@@ -227,7 +229,10 @@ def start_gowa():
             ),
         ],
         cwd=gowa_data,
-        env=env,
+        # GOWA_DB_URI: a database next to the server for the WhatsApp login and identity keys.
+        # Each group send checks every member's identity key; on a far database that is ~1 min
+        # per big-group post. Unset = the shared persistent database (DB_URI), as before.
+        env=dict(env, DB_URI=os.environ.get("GOWA_DB_URI") or env["DB_URI"]),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

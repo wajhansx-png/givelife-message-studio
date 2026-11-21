@@ -3980,48 +3980,6 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   }
 }
 
-/* Home, desktop: Send to GiveLife is the main button, so it is taller and its title is larger. When it was last sent
-   shows on its own small line under the title (it was a tiny "· sent 1 d ago" squeezed beside the title). */
-@media (min-width: 900px) {
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send #btnGivelife:not([data-progress]) {
-    height: 56px !important;
-    min-height: 56px !important;
-    justify-content: center !important;
-    gap: 12px !important;
-    padding: 0 16px !important;
-  }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send #btnGivelife:not([data-progress]) .gb-go {
-    margin: 0 !important; /* it had an auto left margin that pushed the icon and title to the right */
-    flex: 0 0 22px;
-    width: 22px;
-    height: 22px;
-  }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send #btnGivelife:not([data-progress]) .gb-name {
-    flex: 0 1 auto !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    justify-content: center !important;
-    gap: 1px !important;
-    padding: 0 !important;
-    font-size: 16px !important;
-    line-height: 1.2 !important;
-  }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send #btnGivelife:not([data-progress]) .gb-name > .last-sent {
-    display: block !important;
-    align-self: flex-start !important;
-    font-size: 12px !important;
-    line-height: 1.2 !important;
-    opacity: 0.85;
-    text-transform: none !important;
-  }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send #btnGivelife:not([data-progress]) .gb-name > .last-sent::before {
-    content: none !important;
-  }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send #btnGivelife:not([data-progress]) .gb-name > .last-sent::first-letter {
-    text-transform: uppercase;
-  }
-}
-
 /* Desktop: the left menu stays beside Case, Donors, Chat and Report (Notes still covers it). The page sits to the right of
    the menu; new-ui.js sets --ui2-side to the menu's width. The backdrop starts after the menu, so the menu is not dimmed. */
 @media (min-width: 900px) {

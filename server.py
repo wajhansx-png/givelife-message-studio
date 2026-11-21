@@ -2609,11 +2609,9 @@ def timed_scheduler():
                 return {"job_id": ident, "expected": len(keys)}
 
             def ready(task):
-                if task["action"] in ("auto_off", "resume"):
-                    return True
-                if on_hold():
-                    return False
-                return task["action"] != "send" or (not ACTIVE and wa_ok())
+                return timed_ready(
+                    task["action"], on_hold(), auto_on(), bool(ACTIVE), lambda: wa_ok()
+                )
 
             def cancel(ident):
                 event = JOB_CANCEL.get(ident)
@@ -2627,12 +2625,38 @@ def timed_scheduler():
         return _TIMED
 
 
+def timed_ready(action, hold, auto, busy, wa_ready):
+    """May a due timed task run now? A timed SEND never goes while Auto is OFF: turning Auto off must stop
+    every automatic message, including ones set earlier with a timer. It is not sent late either; the
+    scheduler marks it missed after 15 minutes."""
+    if action in ("auto_off", "resume"):
+        return True
+    if hold:
+        return False
+    if action != "send":
+        return True
+    return bool(auto) and not busy and bool(wa_ready())
+
+
 def timed_chat_command(text, request_id=None):
     if not fast_command_eligible(text):
         return None
     if timed_tasks.parse(text) is None:
         return None
-    return timed_scheduler().command(text, request_id)
+    reply = timed_scheduler().command(text, request_id)
+    # A timed send needs Auto ON when it is due; tell the owner now, not after nothing was sent.
+    if (
+        isinstance(reply, dict)
+        and reply.get("handled")
+        and not auto_on()
+        and re.search(r"send", text, re.I)
+    ):
+        reply = {
+            **reply,
+            "reply": str(reply.get("reply", ""))
+            + " Note: Auto is OFF. A timed send only goes while Auto is ON.",
+        }
+    return reply
 
 
 _loop_failed = set()

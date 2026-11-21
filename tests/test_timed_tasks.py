@@ -351,13 +351,17 @@ class TimedIntegrationTests(unittest.TestCase):
             scheduler = app.timed_scheduler()
             task = scheduler.tasks[-1]
             scheduler.clock = lambda: task["due"]
+            self.assertFalse(app.auto_on())
+            scheduler.tick()  # Auto is OFF: a timer must never send
+            self.assertEqual((task["state"], fixture.sent), ("pending", []))
+            app.set_auto(True)
             scheduler.tick()
             fixture.wait(task["job_id"])
             scheduler.tick()
             self.assertEqual(task["state"], "completed")
             self.assertEqual(len(fixture.sent), 1)
             self.assertIn("03097458815", fixture.sent[0]["text"])
-            self.assertFalse(app.auto_on())
+            self.assertTrue(app.auto_on())
             self.assertIn(task["id"], app.manual_command("show schedules")["reply"])
         finally:
             fixture.tearDown()

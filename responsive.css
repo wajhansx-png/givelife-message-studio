@@ -3980,6 +3980,22 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   }
 }
 
+/* Desktop: the left menu stays beside Case, Donors, Chat and Report (Notes still covers it). The page sits to the right of
+   the menu; new-ui.js sets --ui2-side to the menu's width. The backdrop starts after the menu, so the menu is not dimmed. */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) :is(#casePage, #donorsPage, dialog.report-dialog)[open] {
+    left: var(--ui2-side, 0px) !important;
+    width: calc(100vw - var(--ui2-side, 0px)) !important;
+    max-width: none !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #hist[open] {
+    left: var(--ui2-side, 0px) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) :is(#casePage, #donorsPage, #hist, dialog.report-dialog)::backdrop {
+    background: linear-gradient(90deg, transparent var(--ui2-side, 0px), rgba(0, 0, 0, 0.5) var(--ui2-side, 0px)) !important;
+  }
+}
+
 /* Home, desktop: the message More menu shows all its items (it was cut at 280px, hiding English / Trigger / Style fix) */
 @media (min-width: 900px) {
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .ui2-message-home #card .tools .overflow-tools > div {

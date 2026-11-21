@@ -520,16 +520,19 @@ function ui2Observe(run, options) {
       b.dataset.tab = key;
       b.innerHTML = icon + '<span></span>';
       b.lastChild.textContent = label;
-      b.addEventListener('click', fn);
+      b.addEventListener('click', () => sideSwitch(key, fn));
       nav.append(b);
     }
     foot.append(nav);
     paintTabs();
+    paintSide();
   }
   function paintTabs() {
     const path = typeof Nav !== 'undefined' ? Nav.path() : '';
-    const on =
-      path === 'case'
+    const report = document.querySelector('dialog.report-dialog')?.open;
+    const on = report
+      ? 'report'
+      : path === 'case'
         ? 'case'
         : path.startsWith('donors')
           ? 'donors'
@@ -537,14 +540,70 @@ function ui2Observe(run, options) {
             ? 'chat'
             : path === 'notes'
               ? 'notes'
-              : path
-                ? ''
-                : 'message';
+              : path.startsWith('settings')
+                ? 'settings'
+                : path
+                  ? ''
+                  : 'message';
     for (const b of document.querySelectorAll('.ui2-tab')) {
       const current = String(b.dataset.tab === on);
       if (b.getAttribute('aria-current') !== current) b.setAttribute('aria-current', current);
     }
   }
+
+  /* Desktop: the left menu stays beside Case, Donors, Chat and Report (only Notes covers it). Those pages sit to the
+     right of the menu (--ui2-side). A modal page puts its backdrop over the menu, so a click on that strip is handed to
+     the menu button under it, and a menu button first closes the page that is open, then opens its own. */
+  const SIDE_PAGES = { case: '#casePage', donors: '#donorsPage', chat: '#hist', report: 'dialog.report-dialog' };
+  const sideFoot = () => document.querySelector('.app > .foot');
+  function paintSide() {
+    const f = sideFoot();
+    const w = ui2Wide.matches && f ? Math.round(f.getBoundingClientRect().width) : 0;
+    document.documentElement.style.setProperty('--ui2-side', w + 'px');
+  }
+  const sideOpen = () =>
+    Object.entries(SIDE_PAGES)
+      .filter(([, q]) => document.querySelector(q)?.open)
+      .map(([k]) => k);
+  function sideSwitch(key, fn) {
+    const open = ui2Wide.matches ? sideOpen() : [];
+    if (!open.length) return fn();
+    if (open.length === 1 && open[0] === key) return; // already there
+    /* Go home first, so closing a page never sends the address back to the page before it. */
+    if (typeof Nav !== 'undefined') Nav.go('');
+    for (const k of open) {
+      if (k === 'case') $('casePage')?.close('route');
+      else if (k === 'donors') window.DonorHub?.hide();
+      else if (k === 'chat' && typeof closeChat === 'function') closeChat();
+      else document.querySelector(SIDE_PAGES[k])?.close();
+    }
+    setTimeout(fn, 80);
+  }
+  document.addEventListener(
+    'click',
+    (e) => {
+      const d = e.target;
+      if (!ui2Wide.matches || !(d instanceof HTMLDialogElement) || !d.matches(Object.values(SIDE_PAGES).join(',')))
+        return;
+      const f = sideFoot();
+      if (!f || e.clientX >= f.getBoundingClientRect().right) return;
+      const hit = [...f.querySelectorAll('button')].find((b) => {
+        const r = b.getBoundingClientRect();
+        return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      });
+      if (!hit) return;
+      e.preventDefault();
+      e.stopPropagation();
+      hit.click();
+    },
+    true,
+  );
+  addEventListener('resize', paintSide);
+  ui2Wide.addEventListener('change', paintSide);
+  new MutationObserver(() => {
+    paintTabs();
+    paintSide();
+  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] });
 
   /* Start a new case: its name and the amount needed. The old case is saved first. Important and Top donors stay
      the same (keep_lists); donated and DM-sent marks start fresh. */

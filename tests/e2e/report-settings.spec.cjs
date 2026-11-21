@@ -206,9 +206,11 @@ for (const [width,height] of [[320,740],[390,844],[768,1024],[1440,900]]) {
     await page.setViewportSize({width,height});
     await page.evaluate(() => Promise.all(document.getAnimations().filter(animation => animation.effect?.getTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {}))));
     const box = await page.locator('.report-card').boundingBox();
-    expect(box.x).toBe(0);
+    // on a computer the left menu stays beside the page, so Report fills the screen to the right of it
+    const side = await page.evaluate(() => (matchMedia('(min-width: 900px)').matches ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui2-side')) || 0 : 0));
+    expect(box.x).toBe(side);
     expect(box.y).toBe(0);
-    expect(box.width).toBe(width);
+    expect(box.width).toBe(width - side);
     expect(box.height).toBe(height);
     const back = page.locator('#reportClose');
     await expect(back).toHaveText('Back');

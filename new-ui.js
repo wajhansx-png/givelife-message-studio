@@ -489,6 +489,12 @@ function ui2Observe(run, options) {
       settings: ico(
         '<path d="M3 6h9M18 6h3M3 12h3M12 12h9M3 18h11M20 18h1"/><circle class="d" cx="15" cy="6" r="2.4"/><circle class="d" cx="9" cy="12" r="2.4"/><circle class="d" cx="17" cy="18" r="2.4"/>',
       ),
+      giki: ico(
+        '<path class="d" d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+      ),
+      thanks: ico(
+        '<path class="d" d="M20 12v9H4v-9"/><path d="M2 7h20v5H2zM12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/>',
+      ),
       more: ico(
         '<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>',
       ),
@@ -507,7 +513,11 @@ function ui2Observe(run, options) {
           if (typeof Nav !== 'undefined') Nav.go('');
         },
       ],
+      /* Computer only (the phone shows Giki 1 and Giki 2 as two small buttons above the bar) */
+      ['giki', ICONS.giki, 'Giki 1', () => (location.href = '/giki')],
+      ['giki2', ICONS.giki, 'Giki 2', () => (location.href = '/giki2')],
       ['donors', ICONS.donors, 'Donors', press(() => $('openDonors'))],
+      ['thanks', ICONS.thanks, 'Thank donors', () => window.DonorThanks?.open?.()],
       ['chat', ICONS.chat, 'Chat', press(() => $('chatOpen'))],
       /* Computer only (the phone keeps these in More): every top-bar option is also one clear button here. */
       ['report', ICONS.report, 'Report', press(() => document.querySelector('.report-open'))],
@@ -523,6 +533,14 @@ function ui2Observe(run, options) {
       b.addEventListener('click', () => sideSwitch(key, fn));
       nav.append(b);
     }
+    const quick = mk('div', 'ui2-quick');
+    for (const [label, href] of [['Giki 1', '/giki'], ['Giki 2', '/giki2']]) {
+      const c = mk('button', 'ui2-chip', label);
+      c.type = 'button';
+      c.addEventListener('click', () => (location.href = href));
+      quick.append(c);
+    }
+    nav.prepend(quick);
     foot.append(nav);
     paintTabs();
     paintSide();
@@ -711,10 +729,12 @@ function ui2Observe(run, options) {
     const giki = tile('Giki', 'own list and WhatsApp', () => (location.href = '/giki'));
     giki.id = 'ui2GikiTile';
     giki.classList.add('ui2-tile-giki');
+    giki.dataset.dup = '1';
     /* Giki 2: the same page and messages, with its own list and its own WhatsApp */
     const giki2 = tile('Giki 2', 'own list and WhatsApp', () => (location.href = '/giki2'));
     giki2.id = 'ui2Giki2Tile';
     giki2.classList.add('ui2-tile-giki');
+    giki2.dataset.dup = '1';
     tile(
       amount + ' left',
       'change amount',
@@ -2725,4 +2745,34 @@ document.addEventListener(
     const t = setInterval(() => place() && clearInterval(t), 400);
     setTimeout(() => clearInterval(t), 20000);
   }
+})();
+
+/* Phone: a short message sits in the exact middle of its card (see responsive.css). .ui2-short means there is room to
+   spare above and below it, so the strip kept for the refresh and next buttons is not needed. */
+(() => {
+  const FOOT = 50; // px kept at the bottom of the card for the buttons (same value as responsive.css)
+  let queued = 0;
+  function fit() {
+    queued = 0;
+    const chat = document.getElementById('chat');
+    const msg = document.getElementById('groupPreview');
+    if (!chat || !msg) return;
+    const short = matchMedia('(max-width: 899px)').matches && msg.offsetHeight + 2 * FOOT <= chat.clientHeight;
+    if (chat.classList.contains('ui2-short') !== short) chat.classList.toggle('ui2-short', short);
+  }
+  const soon = () => queued || (queued = requestAnimationFrame(fit));
+  function start() {
+    const chat = document.getElementById('chat');
+    const msg = document.getElementById('groupPreview');
+    if (!chat || !msg) return setTimeout(start, 300);
+    if (typeof ResizeObserver === 'function') {
+      const ro = new ResizeObserver(soon);
+      ro.observe(chat);
+      ro.observe(msg);
+    }
+    new MutationObserver(soon).observe(msg, { childList: true, subtree: true, characterData: true });
+    addEventListener('resize', soon);
+    soon();
+  }
+  start();
 })();

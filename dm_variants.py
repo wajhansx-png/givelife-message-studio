@@ -54,10 +54,10 @@ def _shape(text):
     out = []
     for line in lines:
         if not line.strip():
-            out.append(("", 0, 0, True))
+            out.append(None)
             continue
         lead = re.match(r"^[^\w\s]*", line).group(0)
-        out.append((lead, line.count("*"), line.count("_"), False))
+        out.append((lead, re.findall(r"[*_]+", line), re.findall(r"\{\w+\}", line)))
     return out
 
 
@@ -195,8 +195,8 @@ def validate(source, text, existing=()):
     if text in existing:
         return "duplicate wording"
     if _shape(text) != _shape(source):
-        return "line breaks, blank lines, emojis or bold/italic markers changed"
-    if _emojis(text) != _emojis(source):
+        return "line breaks, placeholders or WhatsApp formatting changed"
+    if any(_emojis(a) != _emojis(b) for a, b in zip(source.splitlines(), text.splitlines())):
         return "an emoji changed or moved"
     if _numbers(source) != _numbers(text):
         return "a number, amount or phone number changed"
@@ -315,30 +315,15 @@ _CASE_FACTS = re.compile(
 )
 
 
-def _builtin_facts():
-    """Case-fact words the app's own built-in DM versions already use (the owner approved that wording)."""
-    global _BUILTIN
-    if _BUILTIN is None:
-        import dm_templates
-
-        _BUILTIN = {
-            m.group(0).lower()
-            for i in range(dm_templates.COUNT)
-            for m in _CASE_FACTS.finditer(dm_templates.build(i, 25000))
-        }
-    return _BUILTIN
-
-
-_BUILTIN = None
+def _case_facts(text):
+    # The built-in appeal uses "not by accident" to mean "not by chance".
+    text = re.sub(r"(?i)\bnot by accident\b", "", str(text or ""))
+    return {m.group().lower().replace("paralyse", "paralyze") for m in _CASE_FACTS.finditer(text)}
 
 
 def invented_facts(source, text):
-    """Case-fact words (illness, death, accident, deadline) that the text uses and the source does not."""
-    return (
-        {m.group(0).lower() for m in _CASE_FACTS.finditer(str(text or ""))}
-        - {m.group(0).lower() for m in _CASE_FACTS.finditer(str(source or ""))}
-        - _builtin_facts()
-    )
+    """Only the source appeal supplies medical facts and deadlines for a rewrite."""
+    return _case_facts(text) - _case_facts(source)
 
 
 def arithmetic_problem(text):
@@ -495,7 +480,8 @@ NON-NEGOTIABLE:
   position. Do not flatten, add or remove formatting.
 - Keep every number, amount, phone number, account name, payment method and the
   final reply instruction exactly as written in the source.
-- Keep the same greeting form. Do not add a name or a new salutation.
+- Keep the same greeting form and any name placeholder exactly as written on its original line.
+  Do not add a name or a new salutation.
 - Do not invent symptoms, hospitals, dates, promises, donations or deadlines.
 - Do not use long dashes.
 - EVERY new version must differ substantively from the source and other versions

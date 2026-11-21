@@ -5,7 +5,7 @@ opening, days/condition, risk, amount, two giving options, personal line,
 payment details, reply instruction.
 """
 
-import math, re
+import math
 
 VERSION = "dm-structure-2026-10-31-verified-facts"
 
@@ -269,26 +269,6 @@ def build(index, left, greeting="Brother"):
     )
 
 
-def _shape(text):
-    """Line/marker skeleton, ignoring the words and the numbers."""
-    lines = str(text or "").replace("\r\n", "\n").strip("\n").split("\n")
-    out = []
-    for line in lines:
-        if not line.strip():
-            out.append(("", 0, 0, True))
-            continue
-        lead = re.match(r"^[^\w\s]*", line).group(0)
-        out.append((lead, line.count("*"), line.count("_"), False))
-    return out
-
-
-def matches(text):
-    """True when a supplied message has the exact canonical line/format skeleton."""
-    text = str(text or "")
-    fixed = ("03097458815", "EASYPAISA ONLY", "Wajdan Khan", "Reply *Done* after donating.")
-    if not all(token in text for token in fixed):
-        return False
-    try:
-        return _shape(text) == _shape(build(0, 15000))
-    except (TypeError, ValueError):
-        return False
+def matches(text, left):
+    """Only an unchanged built-in appeal may use the offline template bank."""
+    return any(text == build(index, left) for index in range(COUNT))

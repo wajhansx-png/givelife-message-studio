@@ -2746,3 +2746,33 @@ document.addEventListener(
     setTimeout(() => clearInterval(t), 20000);
   }
 })();
+
+/* Phone: a short message sits in the exact middle of its card (see responsive.css). .ui2-short means there is room to
+   spare above and below it, so the strip kept for the refresh and next buttons is not needed. */
+(() => {
+  const FOOT = 50; // px kept at the bottom of the card for the buttons (same value as responsive.css)
+  let queued = 0;
+  function fit() {
+    queued = 0;
+    const chat = document.getElementById('chat');
+    const msg = document.getElementById('groupPreview');
+    if (!chat || !msg) return;
+    const short = matchMedia('(max-width: 899px)').matches && msg.offsetHeight + 2 * FOOT <= chat.clientHeight;
+    if (chat.classList.contains('ui2-short') !== short) chat.classList.toggle('ui2-short', short);
+  }
+  const soon = () => queued || (queued = requestAnimationFrame(fit));
+  function start() {
+    const chat = document.getElementById('chat');
+    const msg = document.getElementById('groupPreview');
+    if (!chat || !msg) return setTimeout(start, 300);
+    if (typeof ResizeObserver === 'function') {
+      const ro = new ResizeObserver(soon);
+      ro.observe(chat);
+      ro.observe(msg);
+    }
+    new MutationObserver(soon).observe(msg, { childList: true, subtree: true, characterData: true });
+    addEventListener('resize', soon);
+    soon();
+  }
+  start();
+})();

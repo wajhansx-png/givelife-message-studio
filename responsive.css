@@ -3980,6 +3980,26 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   }
 }
 
+/* Phone: a short message sits in the middle of its card, top to bottom, so the eyes do not have to look up to the top
+   edge. A long message still fills the card from the top and scrolls as before (auto margins never push it off the top). */
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #chat {
+    display: flex !important;
+    flex-direction: column;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #chat > #groupPreview {
+    margin-block: auto !important;
+  }
+  /* The strip at the bottom of the card keeps room for the refresh and next buttons. When the message is short enough to
+     clear it (new-ui.js adds .ui2-short), that room is given back so the message is in the exact middle of the card. */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #chat {
+    padding-bottom: 50px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home #chat.ui2-short {
+    padding-bottom: 0 !important;
+  }
+}
+
 /* Desktop: the left menu stays beside Case, Donors, Chat and Report (Notes still covers it). The page sits to the right of
    the menu; new-ui.js sets --ui2-side to the menu's width. The backdrop starts after the menu, so the menu is not dimmed. */
 @media (min-width: 900px) {

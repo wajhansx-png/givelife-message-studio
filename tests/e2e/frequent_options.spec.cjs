@@ -69,3 +69,30 @@ test('phone: a Giki button opens that Giki page', async ({ page }) => {
   await open(page, 390, 844);
   await Promise.all([page.waitForURL(/\/giki$/), page.locator('#ui2Tabs .ui2-chip', { hasText: 'Giki 1' }).click()]);
 });
+
+/* Phone: the message is in the middle of its card (top to bottom) so the eyes do not have to look up to the top edge. */
+test('phone: a short message is in the exact middle of its card, and a long one fills it from the top', async ({ page }) => {
+  await open(page, 390, 844);
+  const gaps = () =>
+    page.evaluate(() => {
+      const c = document.getElementById('chat').getBoundingClientRect();
+      const g = document.getElementById('groupPreview').getBoundingClientRect();
+      return { above: g.top - c.top, below: c.bottom - g.bottom, scroll: document.getElementById('chat').scrollHeight - document.getElementById('chat').clientHeight };
+    });
+  await page.evaluate(() => (document.getElementById('groupPreview').innerHTML = '<div><b>Short message.</b></div><div>Rs. 18,000 LEFT</div>'));
+  await expect.poll(async () => Math.abs((await gaps()).above - (await gaps()).below)).toBeLessThan(3);
+  expect((await gaps()).above).toBeGreaterThan(100);
+  // a long message: starts at the top, nothing is cut off
+  await page.evaluate((m) => (document.getElementById('groupPreview').innerHTML = m), LONG.repeat(4));
+  await expect.poll(async () => (await gaps()).above).toBeLessThan(3);
+  // and back to short again: centred again (the card follows the message as it changes)
+  await page.evaluate(() => (document.getElementById('groupPreview').innerHTML = '<div><b>Short again.</b></div>'));
+  await expect.poll(async () => Math.abs((await gaps()).above - (await gaps()).below)).toBeLessThan(3);
+});
+
+test('computer: the message position is not changed', async ({ page }) => {
+  await open(page, 1280, 720);
+  await page.evaluate(() => (document.getElementById('groupPreview').innerHTML = '<div><b>Short message.</b></div>'));
+  await page.waitForTimeout(300);
+  await expect(page.locator('#chat')).not.toHaveClass(/ui2-short/);
+});

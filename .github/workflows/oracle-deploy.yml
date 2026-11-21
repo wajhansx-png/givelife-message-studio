@@ -1,0 +1,44 @@
+name: Deploy to Oracle
+
+# When main changes, send that exact commit to the Oracle server.
+# The server waits until no DMs are sending, restarts the app, checks it is healthy,
+# and puts the old version back if the new one is not.
+# Put [skip oracle] in a commit message to skip the deploy (for example a docs-only change).
+# Run it by hand any time from the Actions tab (Deploy to Oracle > Run workflow).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: oracle-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip oracle]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send this commit to Oracle
+        env:
+          DEPLOY_KEY: ${{ secrets.ORACLE_DEPLOY_KEY }}
+          ORACLE_HOST: ${{ vars.ORACLE_HOST }}
+          ORACLE_KNOWN_HOSTS: ${{ vars.ORACLE_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/oracle_deploy
+          chmod 600 ~/.ssh/oracle_deploy
+          printf '%s\n' "$ORACLE_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # The key on the server can only run the deploy script. The commit id is its only input.
+          git archive --format=tar.gz HEAD | ssh \
+            -i ~/.ssh/oracle_deploy -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=60 \
+            "ubuntu@${ORACLE_HOST}" "${GITHUB_SHA}"

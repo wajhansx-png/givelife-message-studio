@@ -91,7 +91,7 @@ class Routing(Base):
 
     def test_selected_delivery_preserves_requested_order_before_limit(self):
         ids = [self.ids['Normal high'], self.ids['Normal low']]
-        result = self.h.jobs.start('selected', ids=ids, limit=1, run=False, fresh=True)
+        self.h.jobs.start('selected', ids=ids, limit=1, run=False, fresh=True)
         job = self.h.jobs.export_jobs()['jobs'][-1]
         self.assertEqual(job['ids'], ids[:1])
 

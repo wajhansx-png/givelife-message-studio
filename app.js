@@ -1316,6 +1316,7 @@ async function sendGroup(key) {
   st.onStop = () => setButtonNote(btn, 'Stopping…');
   setButtonProgress(btn, 0.03, 'Starting… tap to stop', false);
   busy(true);
+  let asked = false; // the start request has left: from here a lost answer is "not confirmed", never "not sent"
   try {
     await fillEmptyCaption('group');
     await ensureCaption('group');
@@ -1326,6 +1327,7 @@ async function sendGroup(key) {
     const caption = $('group').value;
     $('groupStatus').textContent = '';
     $('groupStatus').classList.remove('is-timer');
+    asked = true;
     const r = await post('/send-group', {
         group: key,
         message: caption,
@@ -1333,7 +1335,7 @@ async function sendGroup(key) {
         version: window.focusShownVersion || undefined, // the version on screen in the reader goes first
       }),
       start = await r.json();
-    if (!r.ok) throw Error(start.error || 'Could not start');
+    if (!r.ok) throw Object.assign(Error(start.error || 'Could not start'), { refused: true });
     if (!start.job_id)
       throw Error('No send receipt was returned. Check WhatsApp before trying again.');
     const keys = jobLocks.get(start.job_id) || new Set();
@@ -1352,6 +1354,13 @@ async function sendGroup(key) {
       endButtonProgress(btn, 'Stopped', false);
       $('groupStatus').textContent = 'Sending stopped. Nothing was sent.';
       say('app', 'Sending stopped. Nothing was sent.');
+    } else if (asked && !e.refused) {
+      const note = /check whatsapp/i.test(e.message || '')
+        ? e.message
+        : 'No clear answer from the server, so this send is not confirmed. Check WhatsApp before sending again.';
+      endButtonProgress(btn, '⚠ Check WhatsApp', false);
+      $('groupStatus').textContent = '⚠ ' + note;
+      say('app', note, 1);
     } else {
       endButtonProgress(btn, '✗ Not sent', false);
       $('groupStatus').textContent = '✗ ' + e.message;
@@ -1577,6 +1586,10 @@ async function sendTest(kind) {
     requestAnimationFrame(() => setButtonProgress(btn, 0.9, 'Sending… tap to stop', true));
   } else setLiveNotice('Sending to test group… tap again to stop');
   busy(true);
+  /* Once the request has left, no answer is not a "no": the server may still be sending. */
+  const unsure =
+    'No clear answer from the server, so this send is not confirmed. Check WhatsApp before sending again.';
+  let asked = false;
   try {
     await fillEmptyCaption(kind);
     await ensureCaption(kind);
@@ -1584,6 +1597,7 @@ async function sendTest(kind) {
     clearTimeout(timer);
     /* The message travels in the request, so do not wait for the draft save. */
     save().catch(() => status('Save failed', 1));
+    asked = true;
     const r = await post('/test', {
         message: $(kind).value,
         stop_id: st.id,
@@ -1593,18 +1607,35 @@ async function sendTest(kind) {
       d = await r.json();
     if (d.code === 'STOPPED') return showStopped(btn);
     const ok = d.code === 'SUCCESS',
+      notSure = !ok && (d.code === 'UNCERTAIN' || /not confirmed/i.test(d.message || '')),
       filesBad = ok && d.files_ok === false,
       result = ok
         ? '✓ Sent to the test group.' +
           (d.files_note ? ' ' + d.files_note + '.' : '') +
           (st.stopped ? ' Too late to stop.' : '')
-        : 'Test failed: ' + (d.message || d.error || '');
+        : notSure
+          ? '⚠ ' + (d.message || unsure)
+          : 'Test failed: ' + (d.message || d.error || '');
     say('app', result, !ok || filesBad);
-    if (btn) endButtonProgress(btn, ok ? (filesBad ? '⚠ Files not sent' : '✓ Sent') : '✗ Not sent', ok && !filesBad);
+    if (btn)
+      endButtonProgress(
+        btn,
+        ok
+          ? filesBad
+            ? '⚠ Files not sent'
+            : '✓ Sent'
+          : notSure
+            ? '⚠ Check WhatsApp'
+            : '✗ Not sent',
+        ok && !filesBad,
+      );
     else setLiveNotice(result, !ok || filesBad);
   } catch (e) {
     if (e.stopped) showStopped(btn);
-    else {
+    else if (asked) {
+      if (btn) endButtonProgress(btn, '⚠ Check WhatsApp', false);
+      say('app', unsure, 1);
+    } else {
       if (btn) endButtonProgress(btn, '✗ Not sent', false);
       say('app', e.message || 'Could not send', 1);
     }
@@ -1641,6 +1672,7 @@ $('sendDm').onclick = async () => {
   st.onStop = () => setLiveNotice('Stopping…');
   setLiveNotice('Sending DM… tap again to stop');
   busy(true);
+  let asked = false;
   try {
     await wordingPending; /* next person's wording is made in the background; never reuse the old one */
     await fillEmptyCaption('dm');
@@ -1650,6 +1682,7 @@ $('sendDm').onclick = async () => {
     clearTimeout(timer);
     /* The message travels in the request, so do not wait for the draft save. */
     save().catch(() => status('Save failed', 1));
+    asked = true;
     const r = await post('/send-custom', {
         target: 'phone',
         phone,
@@ -1662,7 +1695,7 @@ $('sendDm').onclick = async () => {
       }),
       d = await r.json();
     if (d.code === 'STOPPED') return showStopped(null);
-    if (!r.ok) throw Error(d.error || 'Could not send');
+    if (!r.ok) throw Object.assign(Error(d.error || 'Could not send'), { refused: true });
     if (d.code === 'SUCCESS') {
       const result = '✓ DM sent to ' + greet() + '.' + (st.stopped ? ' Too late to stop.' : '');
       say('app', result + ' New wording is ready for the next person.');
@@ -1677,6 +1710,12 @@ $('sendDm').onclick = async () => {
       say('app', 'Not confirmed: ' + (d.message || '') + ' Check WhatsApp before retrying.', 1);
   } catch (e) {
     if (e.stopped) showStopped(null);
+    else if (asked && !e.refused)
+      say(
+        'app',
+        'No clear answer from the server, so this DM is not confirmed. Check WhatsApp before sending it again.',
+        1,
+      );
     else say('app', e.message, 1);
   } finally {
     lockSend('dm', false);

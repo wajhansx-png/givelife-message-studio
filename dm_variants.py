@@ -398,6 +398,12 @@ PROVEN = lambda: []
 # Set by the server: the owner's own recent saved messages (FocusBank.owner_style).
 OWNER_STYLE = lambda: []
 CORRECTIONS = lambda: []  # the owner's saved wording corrections; set by the server
+# The owner's taste check, set by the server: one batched AI review (sounds like the owner's examples, follows
+# every correction, adds no fact). One reason per version, '' = keep. The default keeps everything.
+REVIEW = lambda source, versions: [""] * len(versions)
+NEW_FACT = (
+    "review: new fact"  # a review reason that is never accepted, not even to make up the count
+)
 RECORD = lambda text, quality, kind="message": (
     None
 )  # archive candidates separately from accepted text
@@ -596,6 +602,7 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
         )
     last_error = ""
     reasons = {}
+    held = []  # (text, reason): kept every code rule but not the taste check
     waits = list(AI_BACKOFF)
     for attempt in range(5 + len(AI_BACKOFF)):
         if attempt - (len(AI_BACKOFF) - len(waits)) >= 5:
@@ -622,18 +629,34 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
             continue
         before = len(out)
         tried = {}
+        passed = []
         for candidate in candidates:
             if isinstance(candidate, str):
                 candidate = repair(source, candidate.replace("\r\n", "\n").strip())
-            reason = validate(source, candidate, existing + out)
+            reason = validate(source, candidate, existing + out + passed + [h for h, _ in held])
             if reason:
                 tried[reason] = tried.get(reason, 0) + 1
                 reasons[reason] = reasons.get(reason, 0) + 1
                 continue
-            out.append(candidate.strip())
-            RECORD(candidate.strip(), "validated", "dm")
-            if len(out) >= count:
-                break
+            passed.append(candidate.strip())
+        # The owner's taste, as for the Group versions. Its own failure never blocks a version.
+        try:
+            verdicts = list(REVIEW(source, passed) or []) if passed else []
+        except Exception:
+            verdicts = []
+        for i, text in enumerate(passed):
+            verdict = str(verdicts[i] or "") if i < len(verdicts) else ""
+            if verdict:
+                tried[verdict] = tried.get(verdict, 0) + 1
+                reasons[verdict] = reasons.get(verdict, 0) + 1
+                if not verdict.startswith(NEW_FACT):
+                    held.append(
+                        (text, verdict)
+                    )  # only used if too few versions pass the taste check
+                continue
+            if len(out) < count:
+                out.append(text)
+                RECORD(text, "validated", "dm")
         if tried:
             last_error = top_reasons(tried)
         if progress is not None and len(out) > before:
@@ -641,6 +664,17 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
                 raise ValueError(
                     "Generation stopped because the source changed. Your newer edit is safe."
                 )
+    # Backup: too few passed the taste check, so fill up with versions that kept every fact and code rule
+    # (never one with a new fact). The owner still gets the full count instead of an error.
+    before = len(out)
+    for text, _ in held:
+        if len(out) >= count:
+            break
+        if not validate(source, text, existing + out):
+            out.append(text)
+            RECORD(text, "validated", "dm")
+    if progress is not None and len(out) > before and progress(list(out)) is False:
+        raise ValueError("Generation stopped because the source changed. Your newer edit is safe.")
     if allow_partial and out:
         return out[:count]
     if len(out) < count:

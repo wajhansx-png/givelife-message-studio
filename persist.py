@@ -27,6 +27,18 @@ def atomic_write(path, text):
             pass
 
 
+# A connection that died silently (network drop to the far database) must fail within about a minute, never hang
+# for ever: a hung call can hold the send lock (every send waits) and a pool slot (6 hung = "Database is busy").
+# Client-side TCP settings only, so they work through any Supabase pooler.
+KEEPALIVE = {
+    "keepalives": 1,
+    "keepalives_idle": 30,
+    "keepalives_interval": 10,
+    "keepalives_count": 3,
+    "tcp_user_timeout": 60000,  # ms an unacknowledged write may wait
+}
+
+
 class CloudStore:
     def __init__(self, uri):
         self.uri = uri
@@ -45,7 +57,7 @@ class CloudStore:
             except queue.Empty:
                 pass
             if db is None or db.closed:
-                db = psycopg.connect(self.uri, connect_timeout=15, autocommit=True)
+                db = psycopg.connect(self.uri, connect_timeout=15, autocommit=True, **KEEPALIVE)
             try:
                 yield db
             except Exception:

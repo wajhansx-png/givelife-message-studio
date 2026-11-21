@@ -4809,6 +4809,12 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     border: 1px solid var(--line2, #2b2e3c) !important;
     border-radius: 10px !important;
   }
+  /* Test group: the flask and the words sit together in the middle (the word box was stretching, so the flask stayed on the left edge) */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > .test-row .gb-name {
+    flex: 0 1 auto !important;
+    width: auto !important;
+    min-width: 0;
+  }
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2Later {
     height: 36px !important;
     min-height: 36px !important;

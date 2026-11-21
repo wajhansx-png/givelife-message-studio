@@ -57,6 +57,29 @@ for (const [width, height] of [[900, 600], [1024, 600], [1280, 720], [1366, 768]
     }
   });
 
+test('Test group: the flask and the words sit together in the middle of the button, level with Send', async ({ page }) => {
+  for (const [width, height] of [[1280, 720], [1920, 1080]]) {
+    await open(page, width, height);
+    const m = await page.evaluate(() => {
+      const row = document.querySelector('.group-send .test-row');
+      const word = row.querySelector('.gb-name');
+      const b = row.getBoundingClientRect();
+      const w = word.getBoundingClientRect();
+      const send = document.getElementById('btnGivelife').getBoundingClientRect();
+      const flask = parseFloat(getComputedStyle(row, '::before').width) || 16;
+      return { left: b.x, right: b.x + b.width, wordLeft: w.x, wordRight: w.x + w.width, flask, sendX: send.x, sendW: send.width, boxW: b.width };
+    });
+    // the flask (16px + 7px gap) sits right before the words, and the pair is centred in the button
+    const pairLeft = m.wordLeft - 7 - m.flask;
+    const pairCentre = (pairLeft + m.wordRight) / 2;
+    expect(Math.abs(pairCentre - (m.left + m.right) / 2)).toBeLessThan(6);
+    expect(pairLeft - m.left).toBeGreaterThan(40); // not stuck to the left edge
+    expect(m.wordRight - m.wordLeft).toBeLessThan(m.boxW / 2); // the word box does not stretch
+    expect(Math.abs(m.left - m.sendX)).toBeLessThan(2); // same left edge and width as Send
+    expect(Math.abs(m.boxW - m.sendW)).toBeLessThan(2);
+  }
+});
+
 test('a message line stays short enough to read fast on a wide screen', async ({ page }) => {
   await open(page, 1920, 1080);
   const card = await page.locator('#card').boundingBox();

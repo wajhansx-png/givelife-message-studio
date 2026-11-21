@@ -4878,12 +4878,15 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   }
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='message'] { order: 1; }
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='case'] { order: 2; }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='donors'] { order: 3; }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='chat'] { order: 4; }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='report'] { order: 5; }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='notes'] { order: 6; }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='settings'] { order: 7; }
-  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='more'] { order: 8; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='giki'] { order: 3; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='giki2'] { order: 4; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='thanks'] { order: 6; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='donors'] { order: 5; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='chat'] { order: 7; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='report'] { order: 8; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='notes'] { order: 9; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='settings'] { order: 10; }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[data-tab='more'] { order: 11; }
   /* Hide: a small quiet button under the name */
   html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) .app.ui2-message-home > .foot > #ui2Tabs .ui2-rail-hide {
     order: 0;

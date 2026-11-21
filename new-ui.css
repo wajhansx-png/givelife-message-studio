@@ -3703,8 +3703,34 @@
 }
 /* Phone and tablet keep four big buttons; Notes, Report and Settings stay inside More. */
 @media (max-width: 899px) {
-  .UI2 .ui2-tab:is([data-tab='notes'], [data-tab='report'], [data-tab='settings']) {
+  .UI2 .ui2-tab:is([data-tab='notes'], [data-tab='report'], [data-tab='settings'], [data-tab='giki'], [data-tab='giki2'], [data-tab='thanks']) {
     display: none;
+  }
+}
+/* Giki 1 and Giki 2 are used every day: on the phone they are two small buttons just above the bottom bar. On a computer
+   they are items in the left menu instead. */
+.UI2 .ui2-tabs .ui2-quick {
+  display: none;
+}
+@media (max-width: 899px) {
+  .UI2 .ui2-tabs .ui2-quick {
+    display: flex;
+    grid-column: 1 / -1;
+    order: -1;
+    justify-content: center;
+    gap: 8px;
+    padding: 2px 0 4px;
+  }
+  .UI2 .ui2-tabs .ui2-chip {
+    min-width: 96px;
+    height: 32px;
+    padding: 0 16px;
+    border: 1px solid var(--line2);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-muted, #aab0c5);
+    font-size: 13px;
+    font-weight: 600;
   }
 }
 /* The page you are on is lit blue in the bottom bar (the global button style used to hide this). */

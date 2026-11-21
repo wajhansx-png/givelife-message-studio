@@ -85,6 +85,8 @@ test('phone: a short message is in the exact middle of its card, and a long one 
   // a long message: starts at the top, nothing is cut off
   await page.evaluate((m) => (document.getElementById('groupPreview').innerHTML = m), LONG.repeat(4));
   await expect.poll(async () => (await gaps()).above).toBeLessThan(3);
+  // the strip kept for the refresh and next buttons is still there, so the last line is never under them
+  expect(await page.locator('#chat').evaluate((n) => parseFloat(getComputedStyle(n).paddingBottom))).toBeGreaterThanOrEqual(46);
   // and back to short again: centred again (the card follows the message as it changes)
   await page.evaluate(() => (document.getElementById('groupPreview').innerHTML = '<div><b>Short again.</b></div>'));
   await expect.poll(async () => Math.abs((await gaps()).above - (await gaps()).below)).toBeLessThan(3);

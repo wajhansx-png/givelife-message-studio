@@ -393,7 +393,10 @@ test('/new computer: every option is one clear button in the bottom bar, and not
     /Notes/,
     /Case/,
     /Message/,
+    /Giki 1/,
+    /Giki 2/,
     /Donors/,
+    /Thank donors/,
     /Chat/,
     /Report/,
     /Settings/,
@@ -1029,9 +1032,13 @@ test('/new phone: Regenerate and Next sit inside the green message (small, right
     expect(box.width).toBeLessThanOrEqual(48); // small
   }
   // The message text is not under the buttons: its last line can scroll clear of them.
-  expect(
-    await page.locator('#card #chat').evaluate((n) => parseFloat(getComputedStyle(n).paddingBottom)),
-  ).toBeGreaterThanOrEqual(46);
+  // (a short message is centred and clears the buttons by itself; a long one keeps the 46px strip at the bottom)
+  const clear = await page.evaluate(() => ({
+    pad: parseFloat(getComputedStyle(document.getElementById('chat')).paddingBottom),
+    msgBottom: document.getElementById('groupPreview').getBoundingClientRect().bottom,
+    navTop: document.getElementById('ui2GnavMain').getBoundingClientRect().top,
+  }));
+  expect(clear.pad >= 46 || clear.msgBottom <= clear.navTop + 0.5).toBe(true);
   // Tapping a button must not also open the reader (the card itself opens it).
   await page.locator('#ui2GnavMain .ui2-gnext').click(); // presses the real New wording button
   await expect(page.locator('#messageFocus')).toBeHidden();

@@ -664,7 +664,10 @@ test('/new computer: donor list is centred and narrow, with a short amount box',
   await open(page, '/new#/donors/all', 1440);
   const t = await page.locator('#donorTable').boundingBox();
   expect(t.width).toBeLessThanOrEqual(761);
-  expect(Math.abs(t.x + t.width / 2 - 720)).toBeLessThan(40);
+  // the left menu stays beside the page, so the list is centred in the space to the right of it
+  const side = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui2-side')) || 0);
+  expect(side).toBeGreaterThan(100);
+  expect(Math.abs(t.x + t.width / 2 - (side + 1440) / 2)).toBeLessThan(40);
   await page.locator('.donor-row .donor-status').first().click();
   const amt = await page.locator('.donor-row .donor-amount').first().boundingBox();
   expect(amt.width).toBeLessThanOrEqual(110);

@@ -28,6 +28,9 @@ ANGLES = (
     ("gratitude", "gratitude: thank the donors and show their help is already making a difference"),
 )
 
+# Trigger on a message that is on screen: the SAME concept, felt harder (never a different story).
+STRONGER = ("stronger", "the SAME concept as the message on screen, written so it is felt harder and more urgent")
+
 # Every verse and hadith the app may print. The AI picks an id; the text and reference come only from here.
 # Hadith are the three the owner already approved (team_rules.HADITH, copied exactly).
 _Q_UR = 'اللّٰہ تعالیٰ کا ارشاد ہے:\n"{t}"\n({r})'
@@ -118,6 +121,15 @@ def donor_math(left):
 
 
 _DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+
+
+def verse_in(text):
+    """The id of the approved verse / hadith a message already contains ('' when none)."""
+    body = str(text or "")
+    for key, v in VERSES.items():
+        if any(v.get(f) and v[f] in body for f in ("ur", "en", "ur_full", "en_full")):
+            return key
+    return ""
 
 
 def numbers_in(text):
@@ -224,11 +236,11 @@ def problems(style, text, parts, ctx, previous=""):
         out.append(f'it uses the word "{never.group(0)}" (never say gift or begging: say donation, giving, helping, or what the family needs)')
     if parts.get("verse") not in VERSES:
         out.append("the verse is not on the approved list")
-    if style in TRIGGER and previous:
-        if similarity(previous, parts.get("hook", "") + " " + parts.get("story", "")) > 0.45:
-            out.append("it is too close to the message it should replace")
-        if parts.get("verse") and parts["verse"] == ctx.get("last_verse"):
-            out.append("it uses the same verse as before")
+    if style in TRIGGER and str(previous or "").strip():
+        # the same concept, felt harder: the first line must be stronger, not a copy of the one on screen
+        first = next((ln for ln in str(previous).splitlines() if ln.strip("*_ \t")), "").strip("*_ \t")
+        if first and similarity(first, parts.get("hook", "")) > 0.85:
+            out.append("the first line is the same as on screen: make it clearly stronger")
     if not dm_composer.complete(text):
         out.append("the message is not complete")
     return out
@@ -247,10 +259,11 @@ def pick_angle(state, style):
 
 def build_prompt(style, ctx, angle, avoid, previous, notes):
     english = style not in BILINGUAL
+    shown = style in TRIGGER and bool(str(previous or "").strip())  # a message is on screen: make THAT one stronger
     verses = "\n".join(
         f"- {k}: {v['note']}"
         for k, v in VERSES.items()
-        if k != ctx.get("last_verse") or style not in TRIGGER
+        if shown or k != ctx.get("last_verse") or style not in TRIGGER
     )
     lines = [
         "Write the emotional parts of ONE WhatsApp fundraising message for GiveLife Foundation.",
@@ -280,19 +293,23 @@ def build_prompt(style, ctx, angle, avoid, previous, notes):
         "VERSES (choose the one id that fits this case and angle best):",
         verses,
     ]
-    if style in TRIGGER:
+    if shown:
         lines += [
             "",
-            "THIS IS A SECOND, STRONGER VERSION. Change the whole concept: a new story angle, a new first line, new wording.",
-            "Do not just swap words. Make the real need feel more urgent, using only the true facts above.",
+            "THIS IS THE STRONGER VERSION OF THE MESSAGE ON SCREEN (shown below).",
+            "- Keep the SAME concept, the same story, the same facts and the same order of ideas as that message. Do not change the topic or tell a different story.",
+            "- Make it hit harder: put the real danger and the urgency in the first line, use short heavy sentences and stronger emotional words, so the reader feels they must act now.",
+            "- Only make what the message and the facts already say felt more strongly. Never add a new danger, deadline, medical claim, name, age or number.",
         ]
-    if previous:
+        if ctx.get("current_verse"):
+            lines.append(f'- The message on screen already uses the verse id "{ctx["current_verse"]}": choose that same id.')
+        lines += ["", "THE MESSAGE ON SCREEN (make THIS one stronger):", str(previous)[:1800]]
+    elif style in TRIGGER:
         lines += [
             "",
-            "THE MESSAGE BEING REPLACED (do not reuse its ideas or wording):",
-            previous[:900],
+            "THIS IS A STRONGER VERSION. Make the real need feel more urgent, using only the true facts above.",
         ]
-    if avoid:
+    if avoid and not shown:
         lines += [
             "",
             "OPENINGS ALREADY USED TODAY (the new first line must be clearly different): "
@@ -323,7 +340,9 @@ def generate(style, ctx, state, chat, json_of, today=None, deadline=75.0, archiv
     day = today or datetime.date.today().isoformat()
     used = list((state.get("openings") or {}).get(day, []))
     previous = ctx.get("current_text", "") if style in TRIGGER else ""
-    angle = pick_angle(state, style)
+    shown = style in TRIGGER and bool(str(previous).strip())  # Trigger on the message on screen: same concept, stronger
+    ctx["current_verse"] = verse_in(previous) if shown else ""
+    angle = STRONGER if shown else pick_angle(state, style)
     started, notes, failures = time.monotonic(), [], []
     for attempt in range(3):
         if attempt and time.monotonic() - started > deadline:
@@ -344,15 +363,17 @@ def generate(style, ctx, state, chat, json_of, today=None, deadline=75.0, archiv
         if archive:
             archive(text, "candidate")
         key = opening_key(parts.get("hook"))
-        if key in used:
+        if key in used and not shown:
             bad.append("the first line was already used today")
         if bad:
             notes.append("; ".join(bad))
             failures.append(bad[0])
             continue
-        used.append(key)
+        if key not in used:
+            used.append(key)
         new_state = dict(state)
-        new_state["angle"] = angle[0]
+        if not shown:  # a stronger version of the same message does not move the angle rotation on
+            new_state["angle"] = angle[0]
         new_state["n"] = int(state.get("n", 0)) + 1
         new_state["openings"] = {day: used[-40:]}
         new_state["last"] = {

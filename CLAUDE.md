@@ -48,6 +48,7 @@ Apply these rules automatically to every coding task.
 - Message text 15px, fully readable, no scroll; on the phone a short message sits in the middle of its card (top to bottom).
 - Send buttons one line each, about 42px, group name never overlapped. Send to GiveLife and Test group up front; other groups and Timer behind a click.
 - ⋯ More (message page) is one short list: Case message (Change), then the files as 1st / 2nd / 3rd (tick, Change, ↑ = send earlier; the order is saved and groups and DMs follow it), then Manual messages. No Case page, Generate, Save Base, Next version or Replace in it (they are on the screen already). While the message loads: a calm card, never a strip or a blank screen.
+- Editing: one big green Done (with its word) under the text, no ×; Done keeps the text exactly as pasted and saves it as the base. After Done the language / Trigger buttons start fresh. Trigger = the message on screen made stronger (same concept and facts, more urgent), never a different story. Generate first makes the message on screen the base.
 - Copy / Edit / Save base / ⋯ sit inside the message (bottom right) as small icons (about 34px), like the desktop home page.
 - Show money left, tap to change. Auto ON/OFF easy to see without hiding the message.
 - Tablet: message and send list side by side. Desktop: message and send buttons together.

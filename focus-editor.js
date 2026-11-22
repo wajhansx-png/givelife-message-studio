@@ -182,9 +182,16 @@
       $('manualSave').disabled = false;
     }
   };
+  /* Generate: the message on the screen (pasted, edited, a version showing, a Trigger text) becomes the base, and
+     the 5 versions are written from it. */
+  function shownBecomesBase() {
+    const text = $('focusText').value;
+    if (text.trim() && row && text !== row.source) dirty = true;
+  }
   regen.onclick = async () => {
     try {
       if (editing) edit(false);
+      shownBecomesBase();
       await save();
       row = await api({ action: 'regenerate' });
       index = -1;
@@ -237,7 +244,8 @@
         }
       }
     }).observe(log, { childList: true, subtree: true });
-  let kind = 'group',
+  let lastStyled = '', // the last text a style button wrote (typing over it starts the style buttons fresh)
+    kind = 'group',
     row = null,
     index = -1,
     editing = false,
@@ -407,6 +415,7 @@
     requestAnimationFrame(fit);
   }
   function edit(on, keep) {
+    const wasEditing = editing;
     editing = on;
     $('focusText').hidden = !on;
     $('focusFormatted').hidden = on;
@@ -414,6 +423,8 @@
     if (on) clearTimeout(timer);
     if (on) $('focusText').focus({ preventScroll: true });
     else {
+      // the owner changed the text by hand: the language / Trigger buttons start fresh on THIS message
+      if (wasEditing && dirty && $('focusText').value !== lastStyled && typeof resetStyle === 'function') resetStyle();
       if (dirty && !keep) save();
       $('focusFormatted').innerHTML = window.waFormat($('focusText').value);
       fit();
@@ -652,6 +663,7 @@
   $('focusRetry').onclick = async () => {
     try {
       if (editing) edit(false);
+      shownBecomesBase();
       await save();
       row = await api({ action: 'generate' });
       showProgress(0);
@@ -683,6 +695,11 @@
   const STYLE_NAME = { ur: 'Urdu + English', en: 'English' };
   let styleLang = '',
     styleTrig = false;
+  function resetStyle() {
+    styleLang = '';
+    styleTrig = false;
+    markStyle();
+  }
   const styleButtons = () => [...screen.querySelectorAll('.focus-styles button')];
   function markStyle() {
     styleButtons().forEach((x) => {
@@ -699,6 +716,7 @@
   /* Put a written or fixed text in front of the owner: replaced in place when typing (one Undo away), otherwise shown
      in the preview as an unsaved draft. Nothing is saved until Save Base (or Edit, then Done). */
   function showText(text, message, version) {
+    lastStyled = text;
     const t = $('focusText');
     if (editing) {
       t.focus({ preventScroll: true });

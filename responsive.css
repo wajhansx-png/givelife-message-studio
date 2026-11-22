@@ -5994,3 +5994,44 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     height: 32px !important;
   }
 }
+
+/* ---- Editing: ONE clear "Done" under the text (wide, green, with a tick); Copy, Save base and ⋯ stay small ---- */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) .focus-paper > #ui2MsgTools {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) #ui2MsgTools > #focusEdit {
+  order: 0 !important;
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 120px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 18px !important;
+  gap: 8px !important;
+  border-radius: 14px !important;
+  background: #25b57a !important;
+  color: #03261a !important;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>");
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) #ui2MsgTools > #focusEdit::before {
+  width: 18px !important;
+  height: 18px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) #ui2MsgTools > :is(#focusCopy, .ui2-base-btn),
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) #ui2MsgTools > .focus-rail-more > summary {
+  order: 1 !important;
+  flex: 0 0 40px !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) #ui2MsgTools > .focus-rail-more {
+  order: 1 !important;
+  flex: 0 0 auto !important;
+}

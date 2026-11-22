@@ -129,9 +129,18 @@ for (const [width, height] of [[390, 844], [1280, 800]])
       await page.locator('#ui2RewriteRow ' + sel).click();
       await expect.poll(() => sent.length, { message: sel }).toBeGreaterThan(n);
     }
-    // Test goes to the test group (fake WhatsApp)
+    // Test with a new, unsaved text on screen does not send it (it would have to replace the base): it says why
     await idle(page);
     const t = sent.length;
+    if ((await page.locator('#focusVersion').textContent()).includes('not saved')) {
+      await page.locator('#focusTest').click();
+      await expect(page.locator('#ui2Note')).toContainText('not saved yet');
+      await page.locator('#ui2MsgTools .ui2-base-btn').click(); // the owner keeps it: Save base
+      await page.locator('#focusBaseSave').click();
+      await expect(page.locator('#focusBaseDialog')).toBeHidden();
+      await idle(page);
+    }
+    // Test goes to the test group (fake WhatsApp)
     await page.locator('#focusTest').click();
     await expect.poll(() => sent.slice(t).join(' ')).toMatch(/send|test/i);
     // Back closes the screen

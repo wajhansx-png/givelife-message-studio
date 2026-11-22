@@ -1137,8 +1137,31 @@ function ui2Observe(run, options) {
        ‹ 1 of 5 › (a quick swipe on the message does the same) and 📎 files; then Edit | Copy | Test | More | Back.
        More holds Rewrite (Urdu + English, English, Trigger, Style fix), New versions, Save Base and the files.
        The real buttons are moved, never rebuilt. */
-    for (const id of ['focusTest', 'focusCopy', 'focusEdit']) if ($(id)) bar.append($(id));
-    bar.append(more);
+    /* Owner's layout: Copy, Edit, Save base and ⋯ More sit on the message (bottom right). The bottom row is
+       Generate · Test · Back (Back right-most, under the thumb). The real buttons are moved, never rebuilt. */
+    const tools = document.createElement('div');
+    tools.id = 'ui2MsgTools';
+    tools.className = 'ui2-msgtools';
+    tools.setAttribute('role', 'group');
+    tools.setAttribute('aria-label', 'Message tools');
+    for (const id of ['focusCopy', 'focusEdit']) if ($(id)) tools.append($(id));
+    tools.append(more);
+    $('focusFormatted')?.after(tools);
+    /* ⋯ More closes with a tap outside it (that tap does nothing else) or with Esc */
+    document.addEventListener(
+      'click',
+      (e) => {
+        if (!more.open || more.contains(e.target) || e.target.closest?.('dialog[open]')) return; // a dialog opened from More works
+        more.open = false;
+        e.preventDefault();
+        e.stopPropagation();
+      },
+      true,
+    );
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && more.open) more.open = false;
+    });
+    if ($('focusTest')) bar.append($('focusTest'));
     /* More opens upward; when there is no room above (a short message on a computer) it opens downward */
     more.addEventListener('toggle', () => {
       if (!more.open) return;
@@ -1152,20 +1175,17 @@ function ui2Observe(run, options) {
       bar.append($('focusBack'));
       $('focusBack').setAttribute('aria-label', 'Back');
     }
-    if (panel && !panel.querySelector('.ui2-rewrite')) {
-      const rw = document.createElement('div');
-      rw.className = 'ui2-rewrite';
-      rw.setAttribute('role', 'group');
-      rw.setAttribute('aria-label', 'Rewrite the message');
-      const head = document.createElement('span');
-      head.className = 'ui2-more-head';
-      head.textContent = 'Rewrite';
-      rw.append(head);
-      const styles = screen.querySelector('.focus-styles');
-      if (styles) rw.append(styles);
-      if ($('focusStyleFix')) rw.append($('focusStyleFix'));
-      panel.prepend(rw);
-      for (const id of ['focusRetry', 'focusSave']) if ($(id)) rw.after($(id));
+    const rw = document.createElement('div'); // English · Urdu + English · Trigger · Style fix, one tap each
+    rw.id = 'ui2RewriteRow';
+    rw.className = 'ui2-rewrite-row';
+    rw.setAttribute('role', 'group');
+    rw.setAttribute('aria-label', 'Rewrite the message');
+    const styles = screen.querySelector('.focus-styles');
+    if (styles) rw.append(styles);
+    if ($('focusStyleFix')) rw.append($('focusStyleFix'));
+    if (panel && !panel.dataset.ui2Top) {
+      panel.dataset.ui2Top = '1';
+      for (const id of ['focusSave', 'focusRetry']) if ($(id)) panel.prepend($(id));
       /* Main poster / main video (the campaign poster dialog) stays in More */
       const mp = $('focusPoster');
       if (mp) {
@@ -1183,14 +1203,21 @@ function ui2Observe(run, options) {
         '<span class="ui2-ver" aria-live="polite">Original</span>' +
         '<button type="button" class="ui2-swipe-next" aria-label="Next version">›</button>' +
         '<span class="ui2-swipe-gap"></span>' +
-        '<button type="button" class="ui2-gen-btn" aria-label="Write 5 new versions" title="Delete the old versions and write 5 new ones"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button>' +
+        '<button type="button" class="ui2-gen-btn" aria-label="Write 5 new versions" title="Delete the old versions and write 5 new ones"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg><span class="ui2-gen-w">Generate</span></button>' +
         '<button type="button" class="ui2-base-btn" title="Make the message you see the base message. New versions are written from it.">Save base</button>' +
         '<button type="button" class="ui2-files-btn" aria-label="Files that go with the message">📎<span class="ui2-files-w"> Files</span></button>';
       bar.before(sw);
+      sw.after(rw);
+      bar.prepend(sw.querySelector('.ui2-gen-btn')); // bottom row: Generate · Test · Back
+      const baseBtn = sw.querySelector('.ui2-base-btn'); // Save base: a small 💾 on the message
+      baseBtn.setAttribute('aria-label', 'Save base');
+      baseBtn.innerHTML =
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>';
+      tools.insertBefore(baseBtn, more);
       const go = (dir) => (window.focusVersionStep ? window.focusVersionStep(dir) : $('focusNext')?.click());
-      sw.querySelector('.ui2-base-btn').onclick = () => $('focusSave')?.click();
+      baseBtn.onclick = () => $('focusSave')?.click();
       /* Write 5 new versions: presses the real Generate button; it waits while versions are being written */
-      const writeBtn = sw.querySelector('.ui2-gen-btn');
+      const writeBtn = bar.querySelector('.ui2-gen-btn');
       // ✦ = replace: the old versions are deleted and a fresh 5 are written from the base message
       writeBtn.onclick = () => ($('focusRegenerate') || $('focusRetry'))?.click();
       if ($('focusRetry')) {
@@ -1222,6 +1249,13 @@ function ui2Observe(run, options) {
         requestAnimationFrame(() => $('ui2ReaderExtras')?.scrollIntoView({ block: 'nearest' }));
       };
       const ver = sw.querySelector('.ui2-ver');
+      const verBox = document.createElement('span'); // "4 of 10" with "or swipe the message" under it (phone, tablet)
+      verBox.className = 'ui2-ver-box';
+      ver.before(verBox);
+      const hint = document.createElement('small');
+      hint.className = 'ui2-swipe-hint';
+      hint.textContent = 'or swipe the message';
+      verBox.append(ver, hint);
       const paintDots = () => {
         const v = $('focusVersion'),
           n = Number(v?.dataset.n || 0),
@@ -1232,7 +1266,7 @@ function ui2Observe(run, options) {
         ver.textContent = narrow
           ? i ? i + '/' + n : n && !tiny ? 'Base +' + n : 'Base'
           : i ? i + ' of ' + n : n ? 'Original · ' + n + ' more' : 'Original';
-        sw.querySelector('.ui2-base-btn').dataset.pending = i ? '1' : ''; // a version is showing: Save base makes it the base
+        baseBtn.dataset.pending = i ? '1' : ''; // a version is showing: Save base makes it the base
       };
       paintDots();
       if ($('focusVersion'))
@@ -1257,7 +1291,8 @@ function ui2Observe(run, options) {
         msg.style.opacity = x ? String(Math.max(0.35, 1 - Math.abs(x) / 400)) : '';
       };
       paper.addEventListener('pointerdown', (e) => {
-        if (!$('focusText')?.hidden || e.target.closest('button, a, textarea, [contenteditable="true"]')) return;
+        if (!$('focusText')?.hidden || e.target.closest('button, a, summary, details, textarea, [contenteditable="true"]')) return;
+        if (matchMedia('(min-width: 900px)').matches) return; // the computer: Previous / Next buttons, no swipe
         gen++; // a swipe made while the last one is still sliding takes over at once
         slide(0, 0);
         start = { x: e.clientX, y: e.clientY, t: Date.now(), dx: 0, side: false };
@@ -1316,10 +1351,13 @@ function ui2Observe(run, options) {
     const screen = $('messageFocus');
     const bar = screen?.querySelector('.ui2-reader-dock');
     if (!bar || !bar.dataset.ui2Row) return;
-    for (const id of ['focusEdit', 'focusCopy', 'focusTest']) {
+    const tools = $('ui2MsgTools');
+    for (const id of ['focusEdit', 'focusCopy']) {
       const b = $(id);
-      if (b && b.parentElement !== bar) bar.prepend(b);
+      if (b && tools && b.parentElement !== tools) tools.prepend(b);
     }
+    const test = $('focusTest');
+    if (test && test.parentElement !== bar) bar.insertBefore(test, $('focusBack'));
     screen.querySelector('.focus-rail-more > summary')?.setAttribute('aria-label', 'More: rewrite, new versions, Save Base and files');
   }
   addEventListener('reader-kind', dockKind);

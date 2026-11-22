@@ -40,7 +40,8 @@ for (const [width, kind] of [[320, 'group'], [390, 'group'], [390, 'dm'], [768, 
     const more = page.locator('#messageFocus .focus-rail-more > summary');
     await more.click();
     await expect(page.locator('#messageFocus .focus-rail-more > div')).toBeVisible();
-    await more.click();
+    await page.mouse.click(4, 4); // a tap outside closes it (on a phone the sheet can cover ⋯)
+    await expect(page.locator('#messageFocus .focus-rail-more > div')).toBeHidden();
     // edit: type, bold, italic, heart, then Done
     await page.locator('#focusEdit').click();
     const ed = page.locator('#ui2Live');
@@ -58,11 +59,11 @@ for (const [width, kind] of [[320, 'group'], [390, 'group'], [390, 'dm'], [768, 
     await page.locator('#focusEdit').click(); // Done
     await expect(ed).toBeHidden();
     // Save base (dialog), then the sparkle (new versions)
-    await page.locator('#ui2Swipe .ui2-base-btn').click();
+    await page.locator('#ui2MsgTools .ui2-base-btn').click();
     await expect(page.locator('#focusBaseDialog')).toBeVisible();
     await page.locator('#focusBaseSave').click();
     await expect(page.locator('#focusBaseDialog')).toBeHidden();
-    await page.locator('#ui2Swipe .ui2-gen-btn').click();
+    await page.locator('#messageFocus .ui2-gen-btn').click();
     // Copy
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
     if (await page.locator('#focusCopy').isVisible()) await page.locator('#focusCopy').click();

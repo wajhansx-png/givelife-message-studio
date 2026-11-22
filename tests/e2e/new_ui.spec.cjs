@@ -192,7 +192,10 @@ test('/new desktop reader: the message with its buttons right under it; editing 
   await open(page, '/new#/preview', 1440);
   const bubble = await page.locator('#focusFormatted').boundingBox();
   const copy = await page.locator('#focusCopy').boundingBox();
-  expect(copy.y).toBeGreaterThan(bubble.y + bubble.height - 1);
+  // Copy · Edit · Save base · ⋯ sit on the message, bottom right (owner's layout)
+  expect(copy.y).toBeGreaterThan(bubble.y + bubble.height / 2);
+  expect(copy.y + copy.height).toBeLessThanOrEqual(bubble.y + bubble.height + 1);
+  expect(copy.x + copy.width).toBeLessThanOrEqual(bubble.x + bubble.width + 1);
   await page.locator('#focusEdit').click();
   const live = page.locator('#ui2Live');
   await expect(live).toBeVisible();
@@ -1043,15 +1046,17 @@ test('/new phone: Regenerate and Next sit inside the green message (small, right
   await page.locator('#ui2GnavMain .ui2-gnext').click(); // presses the real New wording button
   await expect(page.locator('#messageFocus')).toBeHidden();
   await open(page, '/new#/preview', 390);
-  // In the reader: one thin row under the message, ‹ version › and the files, in thumb reach; no big row.
+  // In the reader (owner's layout): ‹ version ›, the rewrites and Generate · Test · Back all in the lower part (thumb);
+  // Copy · Edit · ⋯ sit on the message.
   await expect(page.locator('#ui2GnavReader')).toBeHidden();
   await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText(/^(Original|Base)/);
-  for (const sel of ['.ui2-swipe-prev', '.ui2-swipe-next', '.ui2-files-btn']) {
-    const box = await page.locator('#ui2Swipe ' + sel).boundingBox();
+  for (const sel of ['#ui2Swipe .ui2-swipe-prev', '#ui2Swipe .ui2-swipe-next', '#ui2RewriteRow [data-lang="en"]']) {
+    const box = await page.locator(sel).boundingBox();
     expect(box.height, sel).toBeGreaterThanOrEqual(40);
-    expect(box.y, sel).toBeGreaterThan(844 * 0.7);
+    expect(box.y, sel).toBeGreaterThan(844 * 0.6);
   }
-  await expect(page.locator('#messageFocus .ui2-reader-dock > :is(#focusTest, #focusCopy, #focusEdit, .focus-rail-more, #focusBack)')).toHaveCount(5);
+  await expect(page.locator('#messageFocus .ui2-reader-dock > :is(.ui2-gen-btn, #focusTest, #focusBack)')).toHaveCount(3);
+  await expect(page.locator('#ui2MsgTools > :is(#focusCopy, #focusEdit, .ui2-base-btn, .focus-rail-more)')).toHaveCount(4);
   await page.locator('#ui2Swipe .ui2-swipe-next').click();
   await expect(page.locator('#messageFocus')).toBeVisible();
 });

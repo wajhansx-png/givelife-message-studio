@@ -1,3 +1,4 @@
+import re
 """Local full-stack preview. Every WhatsApp request goes to a fake server."""
 
 import os, sys, tempfile, json, threading, shutil, time
@@ -317,8 +318,49 @@ if "--fake-ai" in sys.argv:
         "this father",
     ]
 
+    _KEEP = {"rs", "left", "only", "easypaisa", "jazzcash", "wajdan", "khan", "givelife", "foundation", "account", "reply", "done"}
+    _POOL = {
+        "english": "please help this little family today and share this message with everyone who can give".split(),
+        "urdu": "براہ کرم آج اس چھوٹے خاندان کی مدد کریں اور یہ پیغام سب کو بھیجیں".split(),
+    }
+
+    def _rewrite(prompt, i):
+        # The in-place rewrite (English / Urdu + English / Trigger on the message on screen): same lines, numbers,
+        # emojis and markers; every word of each prose line replaced, in the language the button asks for.
+        import dm_variants
+
+        src = prompt.split("<<<SOURCE\n", 1)[1].split("\nSOURCE>>>", 1)[0]
+        mode = (
+            "ur_en" if "SAME MESSAGE, URDU + ENGLISH" in prompt
+            else "en" if "SAME MESSAGE, IN EASY ENGLISH" in prompt
+            else None
+        )
+        out, first, n = [], True, i
+        for line in src.split("\n"):
+            if not line.strip() or dm_variants.is_fixed_line(line) or re.search(r"(?i)reply|^\s*(brother|sister)\b|\{", line):
+                out.append(line)
+                first = first and not line.strip()
+                continue
+            lang = dm_variants._lang(line)
+            target = "urdu" if (mode == "ur_en" and first) else "english" if mode in ("en", "ur_en") else ("urdu" if lang == "urdu" else "english")
+            pool = _POOL[target]
+
+            def swap(m):
+                nonlocal n
+                if m.group(0).lower() in _KEEP:
+                    return m.group(0)
+                n += 1
+                return pool[n % len(pool)]
+
+            out.append(re.sub(r"[^\W\d_]+", swap, line))
+            first = False
+        return "\n".join(out)
+
     def _fake_raw(api, system, tools, messages, **k):
         i = next(_n)
+        prompt = messages[-1]["content"]
+        if "Return ONLY a JSON array" in prompt and "<<<SOURCE" in prompt:
+            return {"content": json.dumps([_rewrite(prompt, i)], ensure_ascii=False)}
         urdu = "in URDU (Urdu script)" in messages[-1]["content"]
         hooks = _URDU if urdu else _ENG
         tail = (_URDU_TAIL if urdu else _ENG_TAIL)[

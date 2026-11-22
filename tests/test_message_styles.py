@@ -297,22 +297,49 @@ class TriggerRoute(unittest.TestCase):
         self.assertEqual(out["text"], "STRONGER TEXT")
         self.assertEqual(out["angle"], "stronger")
         self.assertEqual(g.call_args.args[0], self.SHOWN)  # the shown message itself is what is rewritten
-        self.assertTrue(g.call_args.kwargs["stronger"])
+        self.assertEqual(g.call_args.kwargs["mode"], "stronger")
 
-    def test_a_language_button_never_uses_the_in_place_rewrite(self):
+    def test_every_button_rewrites_the_message_on_screen_never_a_different_one(self):
+        for style, mode in (("en", "en"), ("ur_en", "ur_en"), ("en_more", "stronger"), ("ur_en_more", "stronger")):
+            with patch("dm_variants.generate", return_value=["SAME MESSAGE " + mode]) as g, patch("message_styles.generate") as fresh:
+                out = self.run_style(style)
+            self.assertEqual(out["text"], "SAME MESSAGE " + mode)
+            self.assertEqual(g.call_args.args[0], self.SHOWN)
+            self.assertEqual(g.call_args.kwargs["mode"], mode)
+            fresh.assert_not_called()  # never a fresh message from the case while one is on screen
+
+    def test_a_refused_rewrite_leaves_the_message_alone_and_says_so(self):
+        with patch("dm_variants.generate", side_effect=ValueError("Rejected because: a number changed.")), patch(
+            "message_styles.generate"
+        ) as fresh:
+            with self.assertRaises(ValueError) as e:
+                self.run_style("ur_en_more")
+        fresh.assert_not_called()
+        self.assertIn("Your message is unchanged", str(e.exception))
+        self.assertIn("a number changed", str(e.exception))
+
+    def test_with_nothing_on_screen_a_button_writes_from_the_case(self):
+        import server
+
         fresh = ({"text": "FRESH", "angle": "family", "concept": ""}, {})
-        with patch("dm_variants.generate") as g, patch("message_styles.generate", return_value=fresh):
-            out = self.run_style("en")
+        with (
+            patch.object(server.assistant, "client", return_value=object()),
+            patch.object(server, "read_left", return_value=4000),
+            patch("dm_variants.generate") as g,
+            patch("message_styles.generate", return_value=fresh),
+        ):
+            out = server.message_style({"style": "en", "kind": "group", "current": ""})
         g.assert_not_called()
         self.assertEqual(out["text"], "FRESH")
 
-    def test_when_the_rewrite_is_refused_a_stronger_one_is_still_written_from_the_case(self):
-        fresh = ({"text": "FRESH STRONGER", "angle": "stronger", "concept": ""}, {})
-        with patch("dm_variants.generate", side_effect=ValueError("a number changed")), patch(
-            "message_styles.generate", return_value=fresh
-        ):
-            out = self.run_style("ur_en_more")
-        self.assertEqual(out["text"], "FRESH STRONGER")
+    def test_rewrites_must_use_easy_english(self):
+        import dm_variants, quality
+
+        self.assertEqual(quality.fancy_words("plain", "Her plight is dire"), ["dire", "plight"])
+        self.assertEqual(quality.fancy_words("Her plight", "Her plight"), [])  # the owner's own words are fine
+        self.assertIn("EASY ENGLISH", dm_variants._prompt("x" * 200, 1, []))
+        self.assertIn("SAME MESSAGE, IN EASY ENGLISH", dm_variants._prompt("x" * 200, 1, [], mode="en"))
+        self.assertIn("FIRST line (the hook) is in simple, moving Urdu", dm_variants._prompt("x" * 200, 1, [], mode="ur_en"))
 
     def test_the_trigger_rewrite_prompt_asks_for_much_harder_but_never_new_facts(self):
         import dm_variants

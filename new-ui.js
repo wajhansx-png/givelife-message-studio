@@ -1277,16 +1277,19 @@ function ui2Observe(run, options) {
         // phones: a short label, so it never runs into the › arrow ("1/5", "Base +5")
         const narrow = matchMedia('(max-width: 480px)').matches,
           tiny = matchMedia('(max-width: 380px)').matches;
-        ver.textContent = narrow
-          ? i ? i + '/' + n : n && !tiny ? 'Base +' + n : 'Base'
-          : i ? i + ' of ' + n : n ? 'Original · ' + n + ' more' : 'Original';
-        baseBtn.dataset.pending = i ? '1' : ''; // a version is showing: Save base makes it the base
+        const draft = v?.dataset.draft === '1'; // a button wrote it: not saved, never called "Base"
+        ver.textContent = draft
+          ? 'New · not saved'
+          : narrow
+            ? i ? i + '/' + n : n && !tiny ? 'Base +' + n : 'Base'
+            : i ? i + ' of ' + n : n ? 'Original · ' + n + ' more' : 'Original';
+        baseBtn.dataset.pending = i || draft ? '1' : ''; // Save base makes what is showing the base
       };
       paintDots();
       if ($('focusVersion'))
         new MutationObserver(paintDots).observe($('focusVersion'), {
           attributes: true,
-          attributeFilter: ['data-n', 'data-i'],
+          attributeFilter: ['data-n', 'data-i', 'data-draft'],
         });
       /* swipe the message sideways: it follows the finger; past 60px (or a quick flick) it slides out and the next /
          previous version slides in. With no versions yet, the swipe makes them. */

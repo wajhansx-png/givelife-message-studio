@@ -37,79 +37,48 @@ for (const kind of ['group', 'dm'])
       ).toBe(true);
     });
 
+/* Each button works on the message ON SCREEN (the server rewrites that message in place; tested in
+   tests/test_message_styles.py). Here: the request carries the shown message, the answer shows as an unsaved
+   preview, and it is a normal editable draft. */
+const scripted = async (page, asked) =>
+  page.route('**/message-style', async (r) => {
+    const body = r.request().postDataJSON();
+    asked.push(body);
+    const ur = body.style.startsWith('ur');
+    await r.fulfill({
+      json: { text: (ur ? '*آج اس خاندان کی مدد کریں*' : '*Help this family today*') + ' ' + body.style + ' ' + Date.now() + '\n\n_Same message, rewritten._ 💔\n\n🔴 Rs. 25,000 LEFT\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)' },
+    });
+  });
+
 for (const kind of ['group', 'dm'])
-  test(`${kind}: the buttons write the required message, stay editable and save`, async ({
-    page,
-    request,
-  }) => {
+  test(`${kind}: the buttons rewrite the message on screen, stay editable and save`, async ({ page, request }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await open(page, kind);
-    const text = page.locator('#focusText'); // hidden while previewing; its value is the draft
-
+    const asked = [];
+    await scripted(page, asked);
+    const text = page.locator('#focusText');
+    const shown = await text.inputValue();
     await button(page, 'Urdu + English').click();
     await expect(page.locator('#focusState')).toContainText('Written');
+    expect(asked[0]).toMatchObject({ style: 'ur_en', kind, current: shown }); // the message that was on screen
     const a = await text.inputValue();
-    const paras = a.split('\n\n');
-    expect(paras[0]).toMatch(/^\*[^*\n]+\*$/); // bold first line
-    expect(paras[0]).toMatch(urdu); // in Urdu
-    expect(paras[1]).toMatch(/^_.+ 💔_$/); // italic English ending 💔
-    expect(a).toMatch(/\n🔴 Rs\. 25,000 LEFT\n/); // live amount
-    expect(a).toContain('• *_Just 5 people donating Rs. 5,000 can help '); // 5 x 5,000 covers 25,000
-    expect(a).toMatch(/_\* 🤲/);
-    expect(a).toContain('03097458815'); // the saved account
-    expect(a.trimEnd()).toMatch(/GiveLife Foundation$/);
-    expect(a).toMatch(/(سورۃ|صحیح|سنن)/); // a referenced verse or hadith
-
-    await expect(text).toBeHidden(); // the preview stays a preview: no keyboard
-
-    // Trigger works on the message that is shown, in ITS language, and only when pressed: it is an action, not a mode.
-    await expect(button(page, 'Urdu + English')).toHaveAttribute('aria-pressed', 'true');
-    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'false');
-    await button(page, 'Trigger').click();
+    expect(a.split('\n')[0]).toMatch(urdu);
+    await button(page, 'Trigger').click(); // the Urdu + English on screen, stronger
     await expect(page.locator('#focusState')).toContainText('Written: Urdu + English Trigger');
-    await expect(button(page, 'Urdu + English')).toHaveAttribute('aria-pressed', 'true');
-    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'false');
-    const b = await text.inputValue();
-    expect(b).not.toBe(a);
-    expect(b.split('\n\n')[0]).not.toBe(paras[0]); // a different hook
-    expect(b.split('\n\n')[2]).not.toBe(paras[2]); // and a different verse
-    expect(b).toMatch(/🔴 Rs\. 25,000 LEFT/);
-
-    await button(page, 'Urdu + English').click(); // a language button writes plain: nothing stays triggered
-    await expect(page.locator('#focusState')).toContainText('Written: Urdu + English.');
-    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'false');
-    await button(page, 'English').click(); // English, plain
+    expect(asked[1]).toMatchObject({ style: 'ur_en_more', current: a });
+    await button(page, 'English').click();
     await expect(page.locator('#focusState')).toContainText('Written: English.');
-    await expect(button(page, 'English')).toHaveAttribute('aria-pressed', 'true');
-    await expect(button(page, 'Urdu + English')).toHaveAttribute('aria-pressed', 'false');
-    const c = await text.inputValue();
-    expect(c).not.toMatch(urdu); // fully English
-    expect(c).toMatch(/Allah says:|The Prophet/);
-    expect(c.split('\n\n')[0]).toMatch(/^\*[^*\n]+\*$/);
-
-    await button(page, 'Trigger').click(); // the English on screen gets triggered
-    await expect(page.locator('#focusState')).toContainText('Written: English Trigger');
-    await expect(button(page, 'English')).toHaveAttribute('aria-pressed', 'true');
-    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'false');
+    expect(asked[2].style).toBe('en');
     const d = await text.inputValue();
     expect(d).not.toMatch(urdu);
-    expect(d.split('\n\n')[0]).not.toBe(c.split('\n\n')[0]);
-
-    // No opening repeats today.
-    const openings = [paras[0], b.split('\n\n')[0], c.split('\n\n')[0], d.split('\n\n')[0]];
-    expect(new Set(openings).size).toBe(4);
-
     // It is a normal editable draft: Edit, change a word, Done, and it is saved by the existing path.
     await page.locator('#focusEdit').click();
     await expect(text).toBeVisible();
     await text.fill(d.replace('LEFT', 'LEFT ONLY'));
     await page.locator('#focusEdit').click();
     await expect(page.locator('#focusState')).toContainText('Saved');
-    const saved = await (
-      await request.get('/drafts', { headers: { Authorization: 'Bearer ' + KEY } })
-    ).json();
+    const saved = await (await request.get('/drafts', { headers: { Authorization: 'Bearer ' + KEY } })).json();
     expect(saved[kind]).toContain('LEFT ONLY');
-    expect(saved[kind]).toContain(openings[3].replace(/^\*|\*$/g, ''));
     await page.reload();
     await expect(page.locator('#focusFormatted')).toContainText('LEFT ONLY');
   });
@@ -126,6 +95,7 @@ for (const kind of ['group', 'dm'])
         request
           .get('/drafts', { headers: { Authorization: 'Bearer ' + KEY } })
           .then((r) => r.json());
+      await scripted(page, []);
       const savedBefore = (await drafts())[kind];
       const before = await page.locator('#focusFormatted').innerText();
       for (const name of ['English', 'Trigger']) {
@@ -187,7 +157,7 @@ test('only one write at a time: the buttons are locked while one is running', as
   await page.route('**/message-style', async (r) => {
     calls++;
     await gate;
-    await r.continue();
+    await r.fulfill({ json: { text: '*Help this family today*\n\n_Same message, rewritten._\n\n🔴 Rs. 25,000 LEFT' } });
   });
   await button(page, 'English').click();
   await expect(button(page, 'Trigger')).toBeDisabled();

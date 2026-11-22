@@ -234,6 +234,9 @@ def problems(style, text, parts, ctx, previous=""):
     never = quality.NEVER.search(text)
     if never:
         out.append(f'it uses the word "{never.group(0)}" (never say gift or begging: say donation, giving, helping, or what the family needs)')
+    hard = quality.fancy_words(ctx.get("facts", ""), parts.get("hook", "") + " " + parts.get("story", "") + " " + parts.get("help", ""))
+    if hard:
+        out.append("it uses hard words (" + ", ".join(hard) + "); use easy everyday English")
     if parts.get("verse") not in VERSES:
         out.append("the verse is not on the approved list")
     if style in TRIGGER and str(previous or "").strip():
@@ -289,6 +292,7 @@ def build_prompt(style, ctx, angle, avoid, previous, notes):
         "- help: 2 to 5 words finishing 'can help ...' for example 'this helpless father'.",
         "- Do not use * or _ characters.",
         "- " + quality.NEVER_RULE,
+        "- " + quality.EASY_RULE,
         "",
         "VERSES (choose the one id that fits this case and angle best):",
         verses,

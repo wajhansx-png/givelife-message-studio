@@ -22,6 +22,26 @@ NEVER_RULE = (
     'or that they are asking for help, instead.'
 )
 
+# The owner reads every message on a phone and so do the donors: plain words only.
+EASY_RULE = (
+    "EASY ENGLISH: write English the way you talk to a 10-year-old. Only common everyday words, short "
+    "sentences (12 words or fewer), no idioms and no fancy or poetic phrases. Never use words like: plight, "
+    "dire, endure, devastating, grave, unimaginable, harrowing, battling, shutting down, pulling toward, "
+    "slipping away, teetering, relentless. Say it plainly, for example: \"He is very sick. His family has no "
+    "money for the medicine.\""
+)
+FANCY = re.compile(
+    r"\b(plight|dire|endur\w*|devastat\w*|grave|unimaginabl\w*|harrowing|battling|shutting down|pulling\b.{0,20}\btoward|"
+    r"slipping away|teeter\w*|relentless\w*|agoniz\w*|anguish\w*|perilous|precarious|unbearabl\w*)\b",
+    re.I,
+)
+
+
+def fancy_words(source, text):
+    """Hard words a rewrite added that the owner's own message does not use (plain English only)."""
+    have = {m.group(0).lower() for m in FANCY.finditer(str(source or ""))}
+    return sorted({m.group(0).lower() for m in FANCY.finditer(str(text or ""))} - have)
+
 
 def hard_reason(source, text):
     """'' when the owner's hard rules hold, else why not. Only phrases NOT already in the source count (except

@@ -423,6 +423,7 @@
   }
   function paint(text) {
     aiDraft = ''; // whatever shows now is a saved text (base or version) unless showText marks it again
+    delete $('focusVersion').dataset.draft;
     $('focusText').value = text;
     $('focusFormatted').innerHTML = window.waFormat(text);
     label();
@@ -627,6 +628,13 @@
       if (dirty) await save();
       /* the saved versions are already here: change at once, refresh them quietly after (a network wait made
          every swipe stall) */
+      if (aiDraft && row?.source) {
+        // a new, unsaved text is showing: ‹ or › first goes back to the saved message
+        index = -1;
+        paint(row.source);
+        status('Original');
+        return true;
+      }
       if (!row?.items?.length) row = await api();
       else
         api()
@@ -756,6 +764,7 @@
       // save it quietly). Save base, Generate, or editing it and Done keep it.
       paint(text);
       aiDraft = text;
+      $('focusVersion').dataset.draft = '1';
       $('focusVersion').textContent = version;
       status(message + ' Press Save base or Generate to keep it, or Edit to change it.');
     }
@@ -763,6 +772,7 @@
   async function writeStyle(lang, trig, b) {
     if (busy()) return;
     const startKind = kind,
+      startText = $('focusText').value,
       label = STYLE_NAME[lang] + (trig ? ' Trigger' : '');
     lock(true);
     b.setAttribute('aria-busy', 'true');
@@ -782,6 +792,9 @@
       if (!r.ok || !d.text)
         throw Error(d.error || 'Could not write a message. Your text is unchanged.');
       if (kind !== startKind) return; /* the owner switched screens while it was writing */
+      // the owner changed or saved the message while it was writing: a late answer never replaces it
+      if (editing || $('focusText').value !== startText)
+        return void note('Your message changed while ' + label + ' was writing, so it was not used.');
       styleLang = lang;
       styleTrig = false; // Trigger is an action, not a mode: the next button writes plain again
       markStyle();
@@ -812,7 +825,8 @@
   fixBtn.onclick = async () => {
     if (busy()) return;
     const startKind = kind,
-      t = $('focusText');
+      t = $('focusText'),
+      startText = t.value;
     if (!t.value.trim()) return void status('There is no message to fix. Write or open a message first.');
     lock(true);
     fixBtn.setAttribute('aria-busy', 'true');
@@ -827,6 +841,8 @@
       if (!r.ok || typeof d.text !== 'string')
         throw Error(d.error || 'Could not fix the style. Your text is unchanged.');
       if (kind !== startKind) return; /* the owner switched screens meanwhile */
+      if (editing || t.value !== startText)
+        return void note('Your message changed while Style fix was working, so it was not used.');
       if (!d.changed) {
         fixSays('Already in your style ✓');
         return void status('Already in your style. Nothing to fix.');

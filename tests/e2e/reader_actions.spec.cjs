@@ -132,7 +132,10 @@ for (const [width, height] of [[390, 844], [1280, 800]])
     // Test with a new, unsaved text on screen does not send it (it would have to replace the base): it says why
     await idle(page);
     const t = sent.length;
-    if ((await page.locator('#focusVersion').textContent()).includes('not saved')) {
+    if (
+      (await page.locator('#focusVersion').textContent()).includes('not saved') ||
+      (await page.locator('#ui2Swipe .ui2-ver').textContent()).includes('not saved')
+    ) {
       await page.locator('#focusTest').click();
       await expect(page.locator('#ui2Note')).toContainText('not saved yet');
       await page.locator('#ui2MsgTools .ui2-base-btn').click(); // the owner keeps it: Save base

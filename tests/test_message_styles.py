@@ -216,6 +216,51 @@ class Variety(unittest.TestCase):
         self.assertIn(fresh["hook"], result["text"])
         self.assertNotIn("powerless", result["text"])
 
+    def test_trigger_makes_the_message_on_screen_stronger_not_a_different_one(self):
+        shown = ms.assemble(
+            "ur_en", GOOD, dict(CTX, people=4, each=1000, payment=ms.payment_block(GROUP))
+        )
+        stronger = dict(
+            GOOD,
+            hook="اگر آج مدد نہ ہوئی تو یہ باپ ٹوٹ جائے گا",
+            story="People keep coming to Yousaf's father's home for the money borrowed for his son's Janazah. His father is helpless and has nothing left to give.",
+        )
+        chat = script(stronger)
+        state = {"angle": "need"}
+        result, new_state = ms.generate(
+            "ur_en_more", dict(CTX, current_text=shown), state, chat, ai_call.json_of, today="2026-11-07"
+        )
+        prompt = chat.seen[0]
+        self.assertIn("THE MESSAGE ON SCREEN (make THIS one stronger)", prompt)
+        self.assertIn("Keep the SAME concept", prompt)
+        self.assertIn(shown[:60], prompt)  # the shown message itself is in the prompt
+        self.assertNotIn("Change the whole concept", prompt)
+        self.assertNotIn("do not reuse its ideas", prompt)
+        self.assertIn("Never add a new danger", prompt)  # stronger feeling, never new facts
+        self.assertEqual(result["angle"], "stronger")
+        self.assertEqual(new_state["angle"], "need")  # the usual rotation is not moved on
+        self.assertIn(stronger["hook"], result["text"])
+        self.assertIn("Janazah", result["text"])  # the same story is still there
+
+    def test_trigger_keeps_the_verse_the_message_already_has(self):
+        shown = ms.assemble(
+            "ur_en", dict(GOOD, verse="h_muslim_2699"), dict(CTX, people=4, each=1000, payment=ms.payment_block(GROUP))
+        )
+        self.assertEqual(ms.verse_in(shown), "h_muslim_2699")
+        self.assertEqual(ms.verse_in("no verse here"), "")
+        chat = script(dict(GOOD, hook="اگر آج مدد نہ ہوئی تو یہ باپ ٹوٹ جائے گا", verse="h_muslim_2699"))
+        result, _ = ms.generate(
+            "ur_en_more", dict(CTX, current_text=shown), {"last": {"verse": "h_muslim_2699"}}, chat, ai_call.json_of, today="2026-11-07"
+        )
+        self.assertIn('already uses the verse id "h_muslim_2699"', chat.seen[0])
+        self.assertIn(ms.VERSES["h_muslim_2699"]["ur_full"], result["text"])  # the same verse is fine now
+
+    def test_trigger_with_nothing_on_screen_still_writes_a_fresh_stronger_message(self):
+        chat = script(dict(GOOD, hook="اگر آج مدد نہ ہوئی تو یہ باپ ٹوٹ جائے گا"))
+        ms.generate("ur_en_more", dict(CTX, current_text=""), {}, chat, ai_call.json_of, today="2026-11-07")
+        self.assertNotIn("THE MESSAGE ON SCREEN", chat.seen[0])
+        self.assertIn("STRONGER VERSION", chat.seen[0])
+
     def test_prompt_carries_the_live_case_and_todays_openings_but_no_secrets(self):
         chat = script(GOOD)
         ms.generate(

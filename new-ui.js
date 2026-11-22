@@ -1433,8 +1433,7 @@ function ui2Observe(run, options) {
       '<button type="button" data-cmd="bold" aria-label="Bold"><b>B</b></button>' +
       '<button type="button" data-cmd="italic" aria-label="Italic"><i>I</i></button>' +
       '<button type="button" data-ins="💔" aria-label="Heart">♥</button>' +
-      '<button type="button" data-ins="🤲" aria-label="Dua">Dua</button>' +
-      '<button type="button" data-done aria-label="Done editing">×</button>';
+      '<button type="button" data-ins="🤲" aria-label="Dua">Dua</button>';
     ed.before(tools);
     let pushing = false;
     const push = () => {
@@ -1478,7 +1477,16 @@ function ui2Observe(run, options) {
     }
     ed.addEventListener('paste', (e) => {
       e.preventDefault();
-      const text = (e.clipboardData.getData('text/plain') || '').replace(/\r\n?/g, '\n');
+      let text = e.clipboardData.getData('text/plain') || '';
+      if (!text) {
+        // some apps copy only HTML: take its words, a line break for each <br> and block
+        const html = e.clipboardData.getData('text/html');
+        if (html)
+          text = new DOMParser()
+            .parseFromString(html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h[1-6])>/gi, '</$1>\n'), 'text/html')
+            .body.textContent.replace(/\n{3,}/g, '\n\n').replace(/\n+$/, '');
+      }
+      text = text.replace(/\r\n?/g, '\n');
       if (!text) return;
       const sel = getSelection();
       if (!sel.rangeCount || !ed.contains(sel.anchorNode)) return;

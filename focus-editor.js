@@ -361,7 +361,7 @@
       node.onclick = null;
     }
   }
-  /* The whole message shows at once: the largest size (10.5–20px) at which it fits without scrolling. */
+  /* The whole message shows at once: the largest size (11–12px) at which it fits; a very long one scrolls in its card. */
   function fit(force) {
     const p = $('focusFormatted');
     if (editing) return;
@@ -380,7 +380,7 @@
       p.style.setProperty('font-size', size + 'px', 'important');
       return p.scrollHeight <= p.clientHeight + 2;
     };
-    let lo = 9.5,
+    let lo = 11,
       hi = 12,
       best = lo,
       done = false;
@@ -388,8 +388,8 @@
     if (fresh && fits(hi)) {
       best = hi;
       done = true;
-    } else if (prev >= 9.5 && prev <= 12) {
-      const a = Math.max(9.5, prev - 0.8),
+    } else if (prev >= 11 && prev <= 12) {
+      const a = Math.max(11, prev - 0.8),
         b = Math.min(12, prev + 0.5);
       if (fits(b)) {
         best = b;
@@ -406,7 +406,7 @@
         lo = mid;
       } else hi = mid;
     }
-    if (!done && best === 9.5) fits(best);
+    if (!done && best === 11) fits(best); // never smaller than 11px: a very long message scrolls in its card
     p.dataset.fitSize = String(best);
     p.style.setProperty('font-size', best + 'px', 'important');
     $('focusText').style.fontSize = Math.max(best, 14) + 'px';
@@ -637,7 +637,10 @@
       if (!row.items?.length) {
         if (isBusy(row)) rowStatus(row);
         else if (swiped) $('focusRetry').click(); // a swipe with no versions yet makes them
-        else status('No versions yet. Tap Generate 5 Versions. TEST works without them.');
+        else {
+          status('No versions yet. Tap Generate 5 Versions. TEST works without them.');
+          note(row?.error ? 'No versions yet: ' + row.error : 'No versions yet. Press Generate to write 5.', !!row?.error);
+        }
         return false;
       }
       const n = row.items.length + 1;

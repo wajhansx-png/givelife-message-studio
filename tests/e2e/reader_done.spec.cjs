@@ -226,3 +226,25 @@ test('a message a button wrote never replaces the saved base by itself: Back, a 
   await page.locator('#focusBaseSave').click();
   await expect.poll(saved).toBe(WROTE);
 });
+
+for (const [width, height] of [
+  [320, 568],
+  [1024, 600],
+  [1280, 720],
+])
+  test(`a very long message at ${width}x${height}: readable (11px or more), and Generate / Test / Back stay on screen`, async ({ page }) => {
+    const LONG = Array.from({ length: 12 }, (_, i) => `Line ${i + 1}: Mirha is only 2 years old and takes fewer than 20 breaths every minute. Her lungs are almost failing.`).join('\n\n') + '\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\n- GiveLife Foundation';
+    await api(port, '/focus-bank', { kind: 'group', action: 'save', text: LONG });
+    await open(page, width, height);
+    await page.waitForTimeout(500);
+    for (const editing of [false, true]) {
+      if (editing) await page.locator('#focusEdit').click();
+      const m = await page.evaluate(() => ({
+        fs: parseFloat(getComputedStyle(document.getElementById('focusFormatted')).fontSize),
+        bottoms: ['.ui2-gen-btn', '#focusTest', '#focusBack'].map((s) => document.querySelector(s).getBoundingClientRect().bottom),
+        h: innerHeight,
+      }));
+      if (!editing) expect(m.fs).toBeGreaterThanOrEqual(11);
+      for (const b of m.bottoms) expect(b, editing ? 'editing' : 'reading').toBeLessThanOrEqual(m.h + 1);
+    }
+  });

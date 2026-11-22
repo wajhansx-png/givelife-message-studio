@@ -5706,3 +5706,21 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     font-size: 11.5px;
   }
 }
+/* while editing: the buttons on the message (Done, Copy, Save base, ⋯) sit under the text, never under the format bar */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) .focus-paper > #ui2MsgTools {
+  order: 10 !important;
+  margin: 8px 0 0 !important;
+  padding: 0 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) .focus-paper > #ui2Live:not([hidden]) {
+  height: calc(100% - 66px) !important;
+  max-height: calc(100% - 66px) !important;
+  flex: 0 0 auto !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) .focus-paper {
+  display: flex !important;
+  flex-direction: column !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) #ui2RewriteRow {
+  display: none !important; /* while editing: just the text, Done, and the bottom row */
+}

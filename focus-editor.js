@@ -3,7 +3,7 @@
   const screen = document.createElement('section');
   screen.id = 'messageFocus';
   screen.hidden = true;
-  screen.innerHTML = `<header><span id="focusState" role="status" aria-live="polite"></span><button type="button" id="focusStyleFix" class="focus-fix" title="Same words in your style: bold and italic lines, and anything missing added. Nothing new is written.">Style fix</button><span class="focus-styles" role="group" aria-label="Write a new message"><button type="button" data-lang="ur" aria-pressed="false" title="New message: Urdu hook + English">Urdu + English</button><button type="button" data-lang="en" aria-pressed="false" title="New message in English">English</button><button type="button" data-trigger aria-pressed="false" title="Stronger, different message in the language you picked. Press again to turn it off.">Trigger</button></span></header><div class="focus-workspace"><main class="focus-paper"><div id="focusFormatted" tabindex="0" aria-label="Message preview"></div><textarea id="focusText" aria-label="Edit WhatsApp message" spellcheck="true" hidden></textarea></main><aside class="focus-rail" aria-label="Message tools"><button id="focusEdit">Edit</button><button id="focusCopy">Copy</button><button id="focusNext">Next version</button><small id="focusVersion">Original</small><button id="focusPoster">Change poster</button><button data-mark="*"><b>Bold</b></button><button data-mark="_"><i>Italic</i></button><button data-emoji="💔">💔 Heart</button><button data-emoji="🤲">🤲 Dua</button><button id="focusRetry">Generate 5 Versions</button></aside></div>`;
+  screen.innerHTML = `<header><span id="focusState" role="status" aria-live="polite"></span><button type="button" id="focusStyleFix" class="focus-fix" title="Same words in your style: bold and italic lines, and anything missing added. Nothing new is written.">Style fix</button><span class="focus-styles" role="group" aria-label="Write a new message"><button type="button" data-lang="ur" aria-pressed="false" title="New message: Urdu hook + English">Urdu + English</button><button type="button" data-lang="en" aria-pressed="false" title="New message in English">English</button><button type="button" data-trigger aria-pressed="false" title="Makes the message on screen stronger (same story, same language). Press it again for even stronger.">Trigger</button></span></header><div class="focus-workspace"><main class="focus-paper"><div id="focusFormatted" tabindex="0" aria-label="Message preview"></div><textarea id="focusText" aria-label="Edit WhatsApp message" spellcheck="true" hidden></textarea></main><aside class="focus-rail" aria-label="Message tools"><button id="focusEdit">Edit</button><button id="focusCopy">Copy</button><button id="focusNext">Next version</button><small id="focusVersion">Original</small><button id="focusPoster">Change poster</button><button data-mark="*"><b>Bold</b></button><button data-mark="_"><i>Italic</i></button><button data-emoji="💔">💔 Heart</button><button data-emoji="🤲">🤲 Dua</button><button id="focusRetry">Generate 5 Versions</button></aside></div>`;
   document.body.append(screen);
   // Scroll targets must clear the sticky tool dock at every viewport size.
   const focusDock = screen.querySelector('.focus-rail');
@@ -201,6 +201,7 @@
       watch();
     } catch (e) {
       status(e.message);
+      note(e.message, true);
     }
   };
   const groupTab = document.querySelector('[data-view-button="group"]');
@@ -333,6 +334,9 @@
     const n = d?.items?.length || 0;
     status(n ? n + ' versions ready' : 'Original');
   }
+  /* A short note on top of the screen (the status line is hidden on a phone, so a failed write looked like nothing
+     happened). */
+  const note = (text, error) => dispatchEvent(new CustomEvent('message-note', { detail: { text, error: !!error } }));
   function status(text) {
     const node = $('focusState'),
       full = String(text || ''),
@@ -357,12 +361,17 @@
     }
   }
   /* The whole message shows at once: the largest size (10.5–20px) at which it fits without scrolling. */
-  function fit() {
+  function fit(force) {
     const p = $('focusFormatted');
     if (editing) return;
-    const key = [p.clientWidth, p.clientHeight, $('focusText').value].join('|');
-    if (p.dataset.fitKey === key && p.style.fontSize) return; // same box + same text: nothing to measure
+    const vv = String(Math.round(window.visualViewport?.height || innerHeight));
+    const key = [p.clientWidth, p.clientHeight, vv, $('focusText').value].join('|');
+    if (force !== true && p.dataset.fitKey === key && p.style.fontSize) return; // same box + same text: nothing to measure
     p.dataset.fitKey = key;
+    // the screen got taller or shorter (the keyboard opened or closed): search the whole range again, never just
+    // one small step from the old size (a long message stayed tiny after Done)
+    const fresh = force === true || p.dataset.fitVv !== vv;
+    p.dataset.fitVv = vv;
     p.style.setProperty('line-height', '1.3', 'important');
     /* start from the size the last version fitted at: a swipe between versions of one message needs 2-3
        layout passes, not 7 (the layout passes were the stall on a slow phone) */
@@ -374,8 +383,11 @@
       hi = 12,
       best = lo,
       done = false;
-    const prev = parseFloat(p.dataset.fitSize || '');
-    if (prev >= 9.5 && prev <= 12) {
+    const prev = fresh ? NaN : parseFloat(p.dataset.fitSize || '');
+    if (fresh && fits(hi)) {
+      best = hi;
+      done = true;
+    } else if (prev >= 9.5 && prev <= 12) {
       const a = Math.max(9.5, prev - 0.8),
         b = Math.min(12, prev + 0.5);
       if (fits(b)) {
@@ -428,6 +440,9 @@
       if (dirty && !keep) save();
       $('focusFormatted').innerHTML = window.waFormat($('focusText').value);
       fit();
+      // the keyboard closes a moment after Done: measure again once the screen has its full height
+      setTimeout(() => fit(true), 250);
+      setTimeout(() => fit(true), 700);
       watch();
     }
   }
@@ -755,11 +770,13 @@
         throw Error(d.error || 'Could not write a message. Your text is unchanged.');
       if (kind !== startKind) return; /* the owner switched screens while it was writing */
       styleLang = lang;
-      styleTrig = trig;
+      styleTrig = false; // Trigger is an action, not a mode: the next button writes plain again
       markStyle();
       showText(d.text, 'Written: ' + label + '.', 'New · not saved');
+      note(trig ? 'Stronger ✓ · press Generate or Save base to keep it' : label + ' ✓ · press Generate or Save base to keep it');
     } catch (e) {
       status(e.message || 'Could not write a message. Your text is unchanged.');
+      note(e.message || 'Could not write a message. Your text is unchanged.', true);
     } finally {
       lock(false);
       b.removeAttribute('aria-busy');
@@ -805,6 +822,7 @@
       showText(d.text, 'Style fixed: ' + (d.changes || []).join(' · ') + '.', 'Fixed · not saved');
     } catch (e) {
       status(e.message || 'Could not fix the style. Your text is unchanged.');
+      note(e.message || 'Could not fix the style. Your text is unchanged.', true);
     } finally {
       lock(false);
       fixBtn.removeAttribute('aria-busy');
@@ -814,14 +832,20 @@
     b.onmousedown = (e) => e.preventDefault();
     b.onclick = () => {
       const text = $('focusText').value;
-      if (b.dataset.lang) writeStyle(b.dataset.lang, styleTrig, b);
-      else writeStyle(styleLang || (/[\u0600-\u06FF]/.test(text) ? 'ur' : 'en'), !styleTrig, b);
+      // each button works on its own: a language button writes that language plain; Trigger makes the message
+      // that is on screen stronger in ITS language, and only when it is pressed
+      if (b.dataset.lang) writeStyle(b.dataset.lang, false, b);
+      else {
+        const first = text.split('\n').find((l) => l.replace(/[*_\s]/g, '')) || '';
+        writeStyle(/[\u0600-\u06FF]/.test(first) ? 'ur' : 'en', true, b);
+      }
     };
   });
   addEventListener('studio-navigate', sync);
   addEventListener('popstate', sync);
   addEventListener('hashchange', sync);
   addEventListener('resize', fit);
+  window.focusFit = fit;
   addEventListener('beforeunload', () => {
     if (dirty) sessionStorage.setItem('focus-draft-' + kind, $('focusText').value);
   });

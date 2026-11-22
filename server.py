@@ -3968,6 +3968,15 @@ def message_style(body):
     try:
         group, dm = get_message("group")["text"], get_message("dm")["text"]
         current = str(body.get("current") or "")[:6000]
+        if style in message_styles.TRIGGER and current.strip():
+            # Trigger = THIS message on screen, same concept and lines, said much harder (never a different story)
+            import dm_variants
+
+            try:
+                stronger = dm_variants.generate(current, 1, stronger=True, rounds=2)
+                return {"text": stronger[0], "angle": "stronger", "concept": "", "left": left, "kind": kind}
+            except ValueError:
+                pass  # it would not pass the fact checks: write a stronger one from the case below instead
         plan = plan_get()
         manual = body.get("case_details")
         if manual is not None:

@@ -92,27 +92,44 @@ test('a paste that only has HTML still goes in, one line per block', async ({ pa
   await page.locator('#focusEdit').click();
 });
 
-test('after Done the Trigger button works as normal on the pasted message (it does not turn itself off)', async ({ page }) => {
+test('each button works on its own: a language button is plain, Trigger strengthens the message on screen in ITS language, only when pressed', async ({ page }) => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await open(page);
   const styles = [];
   await page.route('**/message-style', async (r) => {
-    styles.push(JSON.parse(r.request().postData()));
-    await r.fulfill({ json: { text: '*Stronger hook*\n\n_Written by the scripted writer._\n\nRs. 5,000 LEFT' } });
+    const body = JSON.parse(r.request().postData());
+    styles.push(body);
+    const urdu = body.style.startsWith('ur');
+    await r.fulfill({ json: { text: (urdu ? '*اردو ہک*' : '*English hook*') + '\n\n_Written by the scripted writer._\n\nRs. 5,000 LEFT' } });
   });
   const trigger = page.locator('.focus-styles [data-trigger]');
-  await trigger.click(); // Trigger is now ON
-  await expect(trigger).toHaveAttribute('aria-pressed', 'true');
+  const lang = (l) => page.locator(`.focus-styles [data-lang="${l}"]`);
+  await lang('en').click();
+  await expect.poll(() => styles.length).toBe(1);
+  expect(styles[0].style).toBe('en'); // plain
+  await trigger.click(); // the English on screen, stronger
+  await expect.poll(() => styles.length).toBe(2);
+  expect(styles[1].style).toBe('en_more');
+  expect(styles[1].current).toContain('English hook'); // written from the message that was on screen
+  await expect(trigger).toHaveAttribute('aria-pressed', 'false'); // not a mode: it does not stay on
+  await lang('ur').click(); // Urdu + English afterwards is plain again
+  await expect.poll(() => styles.length).toBe(3);
+  expect(styles[2].style).toBe('ur_en');
+  await trigger.click(); // the Urdu + English on screen, stronger
+  await expect.poll(() => styles.length).toBe(4);
+  expect(styles[3].style).toBe('ur_en_more');
+  await lang('en').click();
+  await expect.poll(() => styles.length).toBe(5);
+  expect(styles[4].style).toBe('en'); // nothing stayed triggered
+  // pasted message + Done, then Trigger: written from the pasted message, in its language (it has an Urdu first line)
   await page.locator('#focusEdit').click();
-  await paste(page, PASTED); // the owner pastes his own message
-  await page.locator('#focusEdit').click(); // Done
-  await expect(trigger).toHaveAttribute('aria-pressed', 'false'); // fresh: nothing left over from before
+  await paste(page, PASTED);
+  await page.locator('#focusEdit').click();
   await expect(page.locator('#ui2RewriteRow')).toBeVisible();
   await trigger.click();
-  await expect.poll(() => styles.length).toBe(2);
-  expect(styles[1].style).toBe('ur_en_more'); // a real Trigger (the pasted text has Urdu), not the plain one
-  expect(styles[1].current).toBe(PASTED); // written from the pasted message
-  await expect(trigger).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => styles.length).toBe(6);
+  expect(styles[5].style).toBe('ur_en_more');
+  expect(styles[5].current).toBe(PASTED);
 });
 
 test('Generate makes the message on the screen the base first: pasted, or a version showing', async ({ page }) => {
@@ -146,4 +163,38 @@ test('Generate makes the message on the screen the base first: pasted, or a vers
   await page.locator('.ui2-gen-btn').click();
   await expect.poll(() => calls.filter((c) => c.action === 'regenerate').length).toBe(1);
   expect(await saved()).toBe(PASTED); // still the base: the new versions came from it
+});
+
+test('Done with the keyboard closing: a long message is not left tiny (it measures again for the full screen)', async ({ page }) => {
+  const LONG = Array.from({ length: 9 }, (_, i) => `Line ${i + 1}: Mirha is only 2 years old and her lungs are almost failing. Please help today.`).join('\n\n') + '\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\n- GiveLife Foundation';
+  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: LONG });
+  await open(page);
+  const size = () => page.locator('#focusFormatted').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+  const before = await size();
+  await page.locator('#focusEdit').click();
+  await page.setViewportSize({ width: 390, height: 470 }); // the keyboard opens
+  await page.waitForTimeout(300);
+  await page.locator('#focusEdit').click(); // Done (the keyboard is still up for a moment)
+  await page.setViewportSize({ width: 390, height: 844 }); // and goes away
+  await expect.poll(size, { timeout: 4000 }).toBeCloseTo(before, 0); // the same size as before editing, not 9.5px
+});
+
+test('a failed write says why on screen, and the button being used says Writing…', async ({ page }) => {
+  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
+  await open(page);
+  let release;
+  const gate = new Promise((r) => (release = r));
+  await page.route('**/message-style', async (r) => {
+    await gate;
+    await r.fulfill({ status: 503, json: { error: 'AI is not connected, so nothing was written. Your message is unchanged.' } });
+  });
+  const ur = page.locator('.focus-styles [data-lang="ur"]');
+  await ur.click();
+  const after = await ur.evaluate((e) => getComputedStyle(e, '::after').content + '|' + getComputedStyle(e, '::after').position);
+  expect(after).toBe('"Writing…"|static'); // a label inside the button, never a blank box
+  release();
+  const note = page.locator('#ui2Note');
+  await expect(note).toBeVisible(); // the status line is hidden on a phone: this note is how the owner knows
+  await expect(note).toContainText('AI is not connected');
+  await expect(page.locator('#focusFormatted')).toContainText('Base wording'); // the message was left alone
 });

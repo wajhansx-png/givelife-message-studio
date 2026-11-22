@@ -135,7 +135,7 @@ def payment_block(*texts):
         lines = str(text or "").strip().splitlines()
         for i in range(len(lines) - 1, -1, -1):
             if re.search(r"\b0?\d{10,12}\b", lines[i].replace("*", "").replace(" ", "")):
-                start = i - 1 if i and re.search(r"(?i)easypaisa|account", lines[i - 1]) else i
+                start = i - 1 if i and re.search(r"(?i)easypaisa|jazz\s?cash|account", lines[i - 1]) else i
                 tail = lines[start:]
                 end = next((n for n, line in enumerate(tail) if "GiveLife" in line), None)
                 block = "\n".join(
@@ -212,8 +212,11 @@ def problems(style, text, parts, ctx, previous=""):
             "it used numbers that are not in the case: "
             + ", ".join(f"{n:,}" for n in sorted(extra))
         )
-    if re.search(team_rules.OTHER_PAYMENT, text):
-        out.append("it names a payment method other than Easypaisa")
+    def _methods(value):
+        return {re.sub(r"\s+", "", m.lower()) for m in re.findall(team_rules.OTHER_PAYMENT, str(value or ""))}
+
+    if _methods(text) - _methods(ctx.get("payment")):  # the owner's own payment line may name it
+        out.append("it names a payment method other than the owner's")
     if dm_composer.unverified_medical_claim(text):
         out.append("it makes a medical claim that is not confirmed")
     never = quality.NEVER.search(text)

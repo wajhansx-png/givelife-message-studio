@@ -47,6 +47,13 @@ for (const [width, height] of [[390, 844], [1280, 800]])
     );
     const tools = await names('#ui2MsgTools > button, #ui2MsgTools > details');
     expect(tools.slice(0, 3)).toEqual(['Copy', 'Edit', 'Save base']);
+    // small icons only: no words on screen, all four the same small round size
+    for (const sel of ['#focusCopy', '#focusEdit', '#ui2MsgTools .ui2-base-btn', '#ui2MsgTools .focus-rail-more > summary']) {
+      const b = await page.locator(sel).boundingBox();
+      expect(b.width, sel).toBeLessThanOrEqual(36);
+      expect(b.height, sel).toBeLessThanOrEqual(36);
+      expect(await page.locator(sel).evaluate((e) => parseFloat(getComputedStyle(e).fontSize)), sel).toBe(0);
+    }
     expect(await names('#ui2RewriteRow button')).toEqual(
       ['English', 'Urdu + English', 'Trigger', 'Style fix'], // a phone shows "Urdu+Eng" for the same button
     );

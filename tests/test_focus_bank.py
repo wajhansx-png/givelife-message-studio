@@ -555,6 +555,36 @@ class SendingWorkflow(unittest.TestCase):
             b.generate("group", auto=True)
         self.assertEqual(b._load()["group"]["batch"], before)
 
+    def test_used_up_group_versions_are_replaced_by_exactly_five_new_ones(self):
+        """Owner's rule: 5 versions; when they go out in the group the next 5 replace them (the count stays 5)."""
+        b = self.ready(5)
+        old = b._load()["group"]["items"]
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch.object(b, "_spawn"),
+        ):
+            for _ in range(5):  # the 5 versions and the base go out; one left unused starts the next batch
+                b.reserve_groups("x", 1, auto=True)
+            self.assertEqual(b._load()["group"]["state"], "Generating")
+            with patch("dm_variants._call", return_value=list(DEEP[5:10])):
+                b._generate("group", b.get("group"), ("group", b.get("group")["revision"]))
+        row = b.get("group")
+        self.assertEqual(row["state"], "Ready")
+        self.assertEqual(len(row["items"]), 5)  # not 10: the used ones are gone
+        self.assertFalse(set(row["items"]) & set(old))
+        self.assertTrue(set(old) <= set(b._load()["group"]["avoid"]))  # never brought back
+
+    def test_a_click_on_generate_still_adds_or_refreshes_as_before(self):
+        b = self.ready(5)
+        with patch.object(b, "_spawn"):
+            b.generate("group")  # the owner's click (not the automatic top-up)
+        with (
+            patch("dm_variants.assistant.client", return_value="fake"),
+            patch("dm_variants._call", return_value=list(DEEP[5:10])),
+        ):
+            b._generate("group", b.get("group"), ("group", b.get("group")["revision"]))
+        self.assertEqual(len(b.get("group")["items"]), 10)
+
     def test_rotation_never_repeats_inside_a_round(self):
         b = self.ready(10)
         with patch.object(b, "_top_up"):

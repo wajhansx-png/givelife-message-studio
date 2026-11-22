@@ -42,12 +42,12 @@ Apply these rules automatically to every coding task.
 - Do not ask the owner design questions: decide what is best and do it. For a new screen, show a mock image first.
 - Phone: every often-used button sits in the bottom third (thumb zone); the most used is the biggest and lowest. Back in right-thumb reach.
 - Most used = in front, never hidden in More: Send to GiveLife, Test group, Generate, English, Urdu + English, Trigger, Style fix, Copy, Edit, Giki 1, Giki 2. More (a bottom sheet) keeps only rare things.
-- Simple: every button has a word (icon + word is fine, icon alone only for ‹ › and ⋯). One Back per screen. No glow or box-shadow under buttons.
+- Simple: every button has a word (icon + word is fine). Icon alone only for ‹ › and the small Copy · Edit · Save base · ⋯ on the message. One Back per screen. No glow or box-shadow under buttons.
 - Phone bottom bar: Notes, Message, Donors, Chat, More (icon above each word) + a small Giki 1 | Giki 2 row above it.
 - Desktop left menu: Message, Case, Giki 1, Giki 2, Donors, Thank donors, Chat, Report, Notes, Settings, More; it stays beside Case, Donors, Chat, Report (Notes covers it).
 - Message text 15px, fully readable, no scroll; on the phone a short message sits in the middle of its card (top to bottom).
 - Send buttons one line each, about 42px, group name never overlapped. Send to GiveLife and Test group up front; other groups and Timer behind a click.
-- Copy / Edit sit inside the message (bottom right), like the desktop home page.
+- Copy / Edit / Save base / ⋯ sit inside the message (bottom right) as small icons (about 34px), like the desktop home page.
 - Show money left, tap to change. Auto ON/OFF easy to see without hiding the message.
 - Tablet: message and send list side by side. Desktop: message and send buttons together.
 

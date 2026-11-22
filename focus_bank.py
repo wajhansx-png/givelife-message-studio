@@ -17,7 +17,8 @@ ANGLES = (  # each set says the SAME hook idea as the owner's first line, in a d
 )
 BATCH = 5  # versions written per click, and per background top-up while sending
 MAX_VERSIONS = 40  # ceiling for one message's saved versions
-TOP_UP_AT = 2  # when this few unused versions remain in a round, the next batch starts
+TOP_UP_AT = 2  # DM: when this few unused versions remain in a round, the next batch starts
+GROUP_TOP_UP_AT = 1  # Group: the next 5 start when 1 of the 5 is left (owner's rule: always 5)
 # One batch gives up after this long and says why (room for a deep, reasoning-model retry).
 MAX_RUN_SECONDS = 480
 FAST_RETRY = (10, 30, 90, 300, 900)  # seconds before a failed batch tries again by itself
@@ -210,6 +211,7 @@ class FocusBank:
             for i, t in enumerate(prior)
             if t in row.get("manual", []) or not reject_reason(source, t, prior[:i])
         ]
+        kept = len(items)  # versions that were there before this batch
         last_error = ""
         started = time.time()
         samples = []  # rejected near-copies, shown to the AI so it does not repeat them
@@ -308,7 +310,17 @@ class FocusBank:
                     + "."
                     + " Your original and the versions already saved are kept."
                 )
+            extra = {}
+            if kind == "group" and auto:
+                # Owner's rule: the group always has exactly 5 versions. When they are used up the next 5
+                # REPLACE them (the owner's own manual messages stay); the old wordings are remembered so the
+                # new ones never bring them back.
+                manual = row.get("manual", []) or []
+                dropped = [t for t in items[:kept] if t not in manual]
+                items = [t for t in items[:kept] if t in manual] + items[kept:]
+                extra["avoid"] = (list(row.get("avoid", []) or []) + dropped)[-30:]
             result = {
+                **extra,
                 "items": items,
                 "state": "Ready",
                 "error": "",
@@ -454,7 +466,7 @@ class FocusBank:
         if (
             not count
             or count >= MAX_VERSIONS
-            or unused > TOP_UP_AT
+            or unused > (GROUP_TOP_UP_AT if kind == "group" else TOP_UP_AT)
             or row.get("state") == "Generating"
             or (row.get("auto_failed") and not self._retry_due(row))  # backed off, not every minute
             or dm_variants.assistant.client() is None

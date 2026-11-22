@@ -5779,3 +5779,58 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     transform: translate(-50%, -50%);
   }
 }
+/* owner: Copy and Edit are small icons, no words (like Save base and ⋯); all four the same small round size */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools {
+  gap: 4px !important;
+  margin-top: -46px !important;
+  padding: 0 10px 8px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #focusFormatted {
+  padding-bottom: 50px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > :is(#focusCopy, #focusEdit, .ui2-base-btn),
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more > summary {
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  font-size: 0 !important; /* the word stays for screen readers, not on screen */
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > :is(#focusCopy, #focusEdit)::before {
+  width: 15px !important;
+  height: 15px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .ui2-base-btn > svg {
+  width: 15px;
+  height: 15px;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more > summary::before {
+  width: 15px !important;
+  height: 15px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) .focus-paper > #ui2MsgTools {
+  margin-top: 8px !important; /* while editing: under the text */
+}
+/* first open: the message never shows as a thin strip while the page settles (the paper always stacks top to
+   bottom, and the row of small icons never takes the message's width) */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper {
+  flex-direction: column !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > #ui2MsgTools {
+  width: auto !important;
+  align-self: stretch;
+  flex: 0 0 auto !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > #focusFormatted {
+  flex-shrink: 0;
+  align-self: stretch !important;
+  min-width: 0 !important;
+  width: auto !important;
+  box-sizing: border-box;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > #focusFormatted:empty,
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper:has(> #focusFormatted:empty) > #ui2MsgTools {
+  visibility: hidden; /* nothing half-drawn while the message loads */
+}

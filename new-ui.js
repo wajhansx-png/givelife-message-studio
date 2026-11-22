@@ -1147,6 +1147,20 @@ function ui2Observe(run, options) {
     for (const id of ['focusCopy', 'focusEdit']) if ($(id)) tools.append($(id));
     tools.append(more);
     $('focusFormatted')?.after(tools);
+    /* ⋯ More closes with a tap outside it (that tap does nothing else) or with Esc */
+    document.addEventListener(
+      'click',
+      (e) => {
+        if (!more.open || more.contains(e.target) || e.target.closest?.('dialog[open]')) return; // a dialog opened from More works
+        more.open = false;
+        e.preventDefault();
+        e.stopPropagation();
+      },
+      true,
+    );
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && more.open) more.open = false;
+    });
     if ($('focusTest')) bar.append($('focusTest'));
     /* More opens upward; when there is no room above (a short message on a computer) it opens downward */
     more.addEventListener('toggle', () => {

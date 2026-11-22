@@ -5360,7 +5360,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   display: none !important; /* one Back: the one in the bottom row */
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #focusFormatted {
-  padding-bottom: 58px !important; /* the last line never sits under the buttons on the message */
+  padding-bottom: 62px !important; /* the last line never sits under the buttons on the message */
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools {
   position: relative;
@@ -5370,7 +5370,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   align-items: center;
   gap: 6px;
   width: 100%;
-  margin: -52px 0 0 !important;
+  margin: -56px 0 0 !important;
   padding: 0 12px 10px !important;
   pointer-events: none; /* a swipe on the empty part still reaches the message */
 }
@@ -5384,9 +5384,9 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   justify-content: center;
   gap: 6px;
   width: auto !important;
-  min-width: 36px !important;
-  height: 36px !important;
-  min-height: 36px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
   margin: 0 !important;
   padding: 0 12px !important;
   border: 0 !important;
@@ -5411,7 +5411,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #focusCopy { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2'/><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/></svg>"); }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #focusEdit { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 20h9'/><path d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/></svg>"); }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .ui2-base-btn {
-  width: 36px !important;
+  width: 40px !important;
   padding: 0 !important;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .ui2-base-btn[data-pending='1'] {
@@ -5424,7 +5424,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   margin: 0 !important;
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more > summary {
-  width: 36px !important;
+  width: 40px !important;
   padding: 0 !important;
   font-size: 0 !important;
   list-style: none;
@@ -5723,4 +5723,59 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 }
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) #ui2RewriteRow {
   display: none !important; /* while editing: just the text, Done, and the bottom row */
+}
+/* ⋯ More open: its list sits above everything else on the screen (the bottom rows never cover it) */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools:has(.focus-rail-more[open]) {
+  z-index: 90 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools .focus-rail-more > div > #ui2ReaderExtras {
+  grid-column: 1 / -1 !important; /* the files take the whole width of More */
+  width: auto !important;
+}
+/* ⋯ More list: a clean panel (a sheet at the bottom on phones and tablets, a dropdown under ⋯ on a computer) */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more[open] > div {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-content: start;
+  gap: 8px !important;
+  padding: 12px !important;
+  border: 1px solid #2b2e3c !important;
+  border-radius: 16px !important;
+  background: #1c1e29 !important;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5) !important; /* dims the screen behind it */
+  max-height: 72dvh !important;
+  overflow-y: auto !important;
+  z-index: 80 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more[open] > div > button {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 44px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 6px 10px !important;
+  border: 1px solid #33374d !important;
+  border-radius: 10px !important;
+  background: #252838 !important;
+  box-shadow: none !important;
+  color: #eef0f6 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  text-align: center;
+  white-space: normal;
+}
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more[open] > div {
+    position: fixed !important; /* in the middle of the screen, always fully visible */
+    top: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: 50% !important;
+    width: 380px !important;
+    max-height: 84vh !important;
+    transform: translate(-50%, -50%);
+  }
 }

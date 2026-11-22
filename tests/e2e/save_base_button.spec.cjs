@@ -20,14 +20,15 @@ for (const width of [320, 390, 1280])
     await page.setViewportSize({ width, height: width < 900 ? 800 : 900 });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
     await page.goto('/new#/preview');
-    const btn = page.locator('#ui2Swipe .ui2-base-btn');
+    const btn = page.locator('#ui2MsgTools .ui2-base-btn');
     await expect(btn).toBeVisible();
-    await expect(btn).toHaveText('Save base');
+    await expect(btn).toHaveAccessibleName('Save base'); // a 💾 on the message
     const box = await btn.boundingBox();
     expect(box.height).toBeGreaterThanOrEqual(40);
-    const row = await page.locator('#ui2Swipe').boundingBox();
-    expect(box.x + box.width).toBeLessThanOrEqual(row.x + row.width + 1);
-    for (const sel of ['.ui2-swipe-prev', '.ui2-swipe-next', '.ui2-files-btn']) {
+    const msg = await page.locator('#focusFormatted').boundingBox();
+    expect(box.x + box.width).toBeLessThanOrEqual(msg.x + msg.width + 1);
+    expect(box.y + box.height).toBeLessThanOrEqual(msg.y + msg.height + 1);
+    for (const sel of ['.ui2-swipe-prev', '.ui2-swipe-next']) {
       const b = await page.locator('#ui2Swipe ' + sel).boundingBox();
       expect(b.x + b.width, sel).toBeLessThanOrEqual(width + 1);
     }
@@ -46,27 +47,21 @@ for (const width of [320, 390, 1280])
   });
 
 for (const width of [320, 390, 1280])
-  test(`the reader's thin row has a Write 5 new versions icon that fits at ${width}px`, async ({ page }) => {
+  test(`the reader's bottom row has Generate (writes 5 new versions) that fits at ${width}px`, async ({ page }) => {
     await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
     await page.setViewportSize({ width, height: width < 900 ? 800 : 900 });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
     await page.goto('/new#/preview');
-    const g = page.locator('#ui2Swipe .ui2-gen-btn');
+    const g = page.locator('#messageFocus .ui2-gen-btn');
     await expect(g).toBeVisible();
     await expect(g).toHaveAccessibleName('Write 5 new versions');
-    const row = await page.locator('#ui2Swipe').boundingBox();
-    const boxes = [];
-    for (const sel of ['.ui2-swipe-prev', '.ui2-ver', '.ui2-swipe-next', '.ui2-gen-btn', '.ui2-base-btn', '.ui2-files-btn']) {
-      const b = await page.locator('#ui2Swipe ' + sel).boundingBox();
-      expect(b.x, sel).toBeGreaterThanOrEqual(row.x - 1);
-      expect(b.x + b.width, sel).toBeLessThanOrEqual(row.x + row.width + 1);
-      boxes.push([sel, b]);
-    }
-    for (let i = 0; i < boxes.length - 1; i++) // nothing overlaps its neighbour
-      expect(boxes[i][1].x + boxes[i][1].width, boxes[i][0]).toBeLessThanOrEqual(boxes[i + 1][1].x + 1);
-    expect((await g.boundingBox()).height).toBeGreaterThanOrEqual(40);
-    const next = await page.locator('#ui2Swipe .ui2-swipe-next').boundingBox();
-    expect((await g.boundingBox()).x - (next.x + next.width), 'gap between › and ✦').toBeGreaterThanOrEqual(16);
+    await expect(g).toHaveText('Generate');
+    const b = await g.boundingBox();
+    expect(b.x).toBeGreaterThanOrEqual(0);
+    expect(b.x + b.width).toBeLessThanOrEqual(width + 0.5);
+    expect(b.height).toBeGreaterThanOrEqual(44);
+    const test = await page.locator('#focusTest').boundingBox();
+    expect(b.x + b.width, 'Generate sits left of Test').toBeLessThanOrEqual(test.x + 1);
     // pressing it starts writing: the real Generate button is pressed (it is busy while versions are written)
     await g.click();
     await expect.poll(async () => (await api(port, '/focus-bank?kind=group')).state).not.toBe('Not generated');
@@ -87,14 +82,14 @@ test('while 5 versions are written the sparkle shows the live count 0/5 … then
   await page.setViewportSize({ width: 390, height: 800 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new#/preview');
-  const g = page.locator('#ui2Swipe .ui2-gen-btn');
+  const g = page.locator('#messageFocus .ui2-gen-btn');
   await expect(g).toHaveText('0/5');
   await expect(g).toHaveAccessibleName('Writing versions 0 of 5');
   done = 2;
   await expect(g).toHaveText('2/5');
   done = 5;
   ready = true;
-  await expect(g.locator('svg')).toBeVisible(); // finished: the sparkle is back
+  await expect(g).toHaveText('Generate'); // finished: the word is back
   await expect(g).toHaveAccessibleName('Write 5 new versions');
   await expect(g).toBeEnabled();
 });
@@ -106,7 +101,7 @@ for (const width of [320, 360, 390, 412, 430, 480, 540])
     await page.setViewportSize({ width, height: 860 });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
     await page.goto('/new#/preview');
-    const sels = ['.ui2-swipe-prev', '.ui2-ver', '.ui2-swipe-next', '.ui2-gen-btn', '.ui2-base-btn'];
+    const sels = ['.ui2-swipe-prev', '.ui2-ver', '.ui2-swipe-next']; // Generate and Save base live elsewhere now
     for (const step of [0, 1]) {
       if (step) await page.locator('#ui2Swipe .ui2-swipe-next').click();
       const boxes = [];
@@ -128,7 +123,7 @@ test('✦ deletes the old versions and writes a fresh 5 (never adds to the old o
   await page.setViewportSize({ width: 390, height: 800 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new#/preview');
-  await page.locator('#ui2Swipe .ui2-gen-btn').click();
+  await page.locator('#messageFocus .ui2-gen-btn').click();
   await expect.poll(() => posts.map((b) => b.action)).toContain('regenerate');
   expect(posts.map((b) => b.action)).not.toContain('generate');
 });
@@ -145,11 +140,11 @@ test('Save base then Cancel: swiping on never saves the version that was only lo
   await page.goto('/new#/preview');
   await page.locator('#ui2Swipe .ui2-swipe-next').click();
   await expect(page.locator('#focusFormatted')).toContainText('Second wording');
-  await page.locator('#ui2Swipe .ui2-base-btn').click();
+  await page.locator('#ui2MsgTools .ui2-base-btn').click();
   await page.locator('#focusBaseCancel').click();
   await page.locator('#ui2Swipe .ui2-swipe-next').click();
   await expect(page.locator('#focusFormatted')).toContainText('Third wording');
-  await page.locator('#ui2Swipe .ui2-base-btn').click();
+  await page.locator('#ui2MsgTools .ui2-base-btn').click();
   await page.keyboard.press('Escape');
   await page.locator('#ui2Swipe .ui2-swipe-next').click();
   await expect(page.locator('#focusFormatted')).toContainText('Base wording');
@@ -170,7 +165,7 @@ test('✦ while a version shows: the deleted version leaves the screen and the b
   await page.goto('/new#/preview');
   await page.locator('#ui2Swipe .ui2-swipe-next').click();
   await expect(page.locator('#focusFormatted')).toContainText('Second wording');
-  await page.locator('#ui2Swipe .ui2-gen-btn').click();
+  await page.locator('#messageFocus .ui2-gen-btn').click();
   await expect(page.locator('#focusFormatted')).toContainText('Base wording');
   await expect(page.locator('#focusRegenerate')).toBeDisabled(); // one batch at a time
 });

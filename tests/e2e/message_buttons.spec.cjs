@@ -255,7 +255,7 @@ for (const width of [320, 390, 1440])
     });
     await page.goto('/new#/preview');
     await expect(page.locator('#focusFormatted')).not.toHaveText('');
-    await page.locator('#messageFocus .focus-rail-more > summary').click(); // Rewrite lives in More
+    // the rewrite buttons are in front, one tap each (no More needed)
     const chips = page.locator('#messageFocus .focus-styles button');
     await expect(chips).toHaveText(['Urdu + English', 'English', 'Trigger']);
     // One row, nothing cut off, nothing to scroll sideways.

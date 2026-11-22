@@ -248,3 +248,35 @@ for (const [width, height] of [
       for (const b of m.bottoms) expect(b, editing ? 'editing' : 'reading').toBeLessThanOrEqual(m.h + 1);
     }
   });
+
+test('a late answer never replaces a message the owner changed meanwhile; a new text says "New · not saved" and ‹ › goes back to the saved one', async ({ page }) => {
+  const MINE = '*My own message for Mirha.*\n\n_She is 2 and her lungs are failing. Please help her today._\n\n🔴 Rs. 11,000 LEFT\n\n*JAZZCASH ONLY*\n03097458815\n*Wajdan Khan (GiveLife Foundation account)*';
+  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
+  await open(page);
+  let release;
+  const gate = new Promise((r) => (release = r));
+  await page.route('**/message-style', async (r) => {
+    await gate; // the AI is slow
+    await r.fulfill({ json: { text: '*Mirha cannot wait.*\n\n_Written by the scripted writer._\n\nRs. 11,000 LEFT' } });
+  });
+  await page.locator('.focus-styles [data-lang="en"]').click();
+  // meanwhile the owner pastes and saves his own message
+  await page.locator('#focusEdit').click();
+  await paste(page, MINE);
+  await page.locator('#focusEdit').click();
+  await expect.poll(saved).toBe(MINE);
+  release(); // the old answer arrives late
+  await expect(page.locator('#ui2Note')).toContainText('not used');
+  await page.waitForTimeout(500);
+  expect(await page.locator('#focusText').inputValue()).toBe(MINE); // still his message on screen
+  expect(await saved()).toBe(MINE);
+  // a new text that IS shown says so, and ‹ goes back to the saved message
+  await page.unroute('**/message-style');
+  await page.route('**/message-style', (r) => r.fulfill({ json: { text: '*New wording.*\n\n_Written by the scripted writer._\n\nRs. 11,000 LEFT' } }));
+  await page.locator('.focus-styles [data-lang="en"]').click();
+  await expect(page.locator('#focusFormatted')).toContainText('New wording');
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('New · not saved');
+  await page.locator('#ui2Swipe .ui2-swipe-prev').click();
+  await expect(page.locator('#focusFormatted')).toContainText('My own message');
+  expect(await saved()).toBe(MINE);
+});

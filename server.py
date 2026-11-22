@@ -3968,15 +3968,22 @@ def message_style(body):
     try:
         group, dm = get_message("group")["text"], get_message("dm")["text"]
         current = str(body.get("current") or "")[:6000]
-        if style in message_styles.TRIGGER and current.strip():
-            # Trigger = THIS message on screen, same concept and lines, said much harder (never a different story)
+        if current.strip() and body.get("case_details") is None:
+            # A message is on screen: every button works on THAT message (never a different one).
+            # English = it in easy English; Urdu + English = Urdu first line, easy English after; Trigger = it,
+            # much stronger, in its own language. Same lines, facts, verse and payment.
             import dm_variants
 
+            mode = "stronger" if style in message_styles.TRIGGER else ("en" if style == "en" else "ur_en")
             try:
-                stronger = dm_variants.generate(current, 1, stronger=True, rounds=2)
-                return {"text": stronger[0], "angle": "stronger", "concept": "", "left": left, "kind": kind}
-            except ValueError:
-                pass  # it would not pass the fact checks: write a stronger one from the case below instead
+                out = dm_variants.generate(current, 1, mode=mode, rounds=2, ask=2)
+            except ValueError as e:
+                raise ValueError(
+                    "Could not rewrite your message this time ("
+                    + str(e).split("Rejected because:")[-1].split(". The saved")[0].strip(" .")[:140]
+                    + "). Your message is unchanged. Press the button again."
+                )
+            return {"text": out[0], "angle": mode, "concept": "", "left": left, "kind": kind}
         plan = plan_get()
         manual = body.get("case_details")
         if manual is not None:

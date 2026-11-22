@@ -10,7 +10,7 @@ import time
 import difflib, json, re
 
 import assistant
-import dm_composer, draft_workflow
+import dm_composer, draft_workflow, quality
 
 VERSION = "dm-variants-2026-11-02-deep-rewrite"
 
@@ -157,7 +157,7 @@ def is_fixed_line(line):
     return bool(_SCRIPTURE.search(s)) or (bool(first) and first in '"“«')
 
 
-def repair(source, text):
+def repair(source, text, mode=None):
     """Put back what the app is responsible for keeping, so one slip does not waste a whole version.
     When the line count matches, every fixed line (see is_fixed_line) and every line whose language
     flipped is replaced by the source's own line. The caller still runs every safety check after this,
@@ -168,12 +168,12 @@ def repair(source, text):
         return text
     out = []
     for x, y in zip(a, b):
-        flipped = _lang(x) and _lang(y) and _lang(x) != _lang(y)
+        flipped = mode not in ("en", "ur_en") and _lang(x) and _lang(y) and _lang(x) != _lang(y)
         out.append(x if x.strip() and (is_fixed_line(x) or flipped) else y)
     return "\n".join(out)
 
 
-def validate(source, text, existing=()):
+def validate(source, text, existing=(), mode=None):
     """Return an error string, or '' when the version is safe to save."""
     if not isinstance(text, str):
         return "not text"
@@ -185,7 +185,14 @@ def validate(source, text, existing=()):
         return "too long"
     if text == source:
         return "same as the source"
-    if language_changed(source, text):
+    if mode == "en":
+        if any(_lang(y) in ("urdu", "roman") and not is_fixed_line(x) for x, y in zip(source.split("\n"), text.split("\n"))):
+            return "a line is still in Urdu; write every line in easy English (only a verse stays as written)"
+    elif mode == "ur_en":
+        first = next((line for line in text.split("\n") if line.strip()), "")
+        if _lang(first) != "urdu":
+            return "the first line must be in Urdu (Urdu script)"
+    elif language_changed(source, text):
         return "language changed; keep English lines English and Urdu lines Urdu"
     low, high = length_range(source)
     if not low <= len(text) <= high:
@@ -224,6 +231,9 @@ def validate(source, text, existing=()):
     ]
     if any(line not in text for line in fixed_lines):
         return "payment details or the reply instruction changed"
+    hard = quality.fancy_words(source, text)
+    if hard:
+        return "hard words (" + ", ".join(hard) + "); use easy everyday English"
     scary = alarm_terms(text) - alarm_terms(source)
     if scary:
         return (
@@ -244,8 +254,10 @@ def validate(source, text, existing=()):
     # Reject superficial variations that merely swap the first sentence.
     # Requiring at least two rewritten editable lines makes the whole appeal change.
     editable = len(_editable_lines(source))
-    minimum_lines = 2 if editable >= 3 else 1
-    if _meaningful_changes(source, text) < minimum_lines or _similarity(source, text) > 0.81:
+    minimum_lines = 1 if mode else 2 if editable >= 3 else 1
+    # a button on the message on screen (English / Urdu + English / Trigger) keeps the same message, so it may
+    # stay close to it; only a near copy is refused. Versions must differ deeply.
+    if _meaningful_changes(source, text) < minimum_lines or _similarity(source, text) > (0.95 if mode else 0.81):
         return "not deeply rewritten; change the opening AND the body wording"
     if any(_similarity(text, other) > 0.87 for other in existing if isinstance(other, str)):
         return "too similar to an existing version; rewrite the story differently"
@@ -409,7 +421,8 @@ RECORD = lambda text, quality, kind="message": (
 )  # archive candidates separately from accepted text
 
 
-def _prompt(source, count, avoid, stronger=False):
+def _prompt(source, count, avoid, stronger=False, mode=None):
+    mode = mode or ("stronger" if stronger else None)
     lines = source.split("\n")
     blank = sum(1 for line in lines if not line.strip())
     avoid_text = ""
@@ -448,7 +461,7 @@ def _prompt(source, count, avoid, stronger=False):
         )
     import quality
 
-    avoid_text += "\n\nOWNER RULE: " + quality.NEVER_RULE
+    avoid_text += "\n\nOWNER RULE: " + quality.NEVER_RULE + "\n" + quality.EASY_RULE
     try:
         avoid_text += quality.corrections_block(CORRECTIONS() or [])
     except Exception:
@@ -514,7 +527,7 @@ NON-NEGOTIABLE:
 - LEARN FROM THE OWNER: the SOURCE and any OWNER'S OWN MESSAGES below are the owner's voice.
   Match their line rhythm, emoji energy and directness, at the same intensity the source has.
 - Return ONLY a JSON array of {count} strings. No commentary, no markdown fences.
-{STRONGER_RULES if stronger else ""}
+{MODE_RULES.get(mode, "")}
 SOURCE:
 <<<SOURCE
 {source}
@@ -528,12 +541,31 @@ The owner pressed the Trigger button. Rewrite the SAME message so it hits much h
 dangerous and heart-breaking to the reader, so they act now.
 - Keep EXACTLY the same concept, story, facts, line structure, line order, emojis, * and _ markers, numbers,
   amounts, verse and payment lines. Line N still says what line N of the source says.
-- Make every prose line stronger: put the danger the source ALREADY states in the very first line, in plainer,
-  heavier words; short punchy sentences; make the reader picture the child and the family and feel they must
+- Make every prose line stronger: put the danger the source ALREADY states in the very first line, in plain,
+  strong, simple words; short punchy sentences; make the reader picture the child and the family and feel they must
   act this minute. Use the source's own danger facts only, said with more force.
 - Still never add a new fact, number, symptom, diagnosis, deadline or promise, and never use these words:
   die, dies, dying, death, dead, last breath, won't survive, minutes left, hours left, any moment, too late.
 """
+
+
+LANG_RULES = """
+SAME MESSAGE, {what} (this OVERRIDES every earlier line about keeping each line's language):
+The owner pressed a button on THIS message. Do not write a different message: line N still says what line N of
+the source says, with the same facts, numbers, emojis, * and _ markers, verse and payment lines.
+{how}
+Use easy everyday English (short sentences, common words). A Quran verse, hadith or its reference stays exactly
+as written. Never add a new fact.
+"""
+MODE_RULES = {
+    "stronger": STRONGER_RULES,
+    "en": LANG_RULES.format(what="IN EASY ENGLISH", how="- Write EVERY line in easy English. A line in Urdu becomes easy English with the same meaning."),
+    "ur_en": LANG_RULES.format(
+        what="URDU + ENGLISH",
+        how="- The FIRST line (the hook) is in simple, moving Urdu (Urdu script), saying the same hook idea.\n"
+        "- Every other line is in easy English.",
+    ),
+}
 
 
 ALARM = re.compile(
@@ -597,7 +629,8 @@ def top_reasons(tally, limit=3):
     return "; ".join(f"{r} ({n}x)" if n > 1 else r for r, n in top)
 
 
-def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False, stronger=False, rounds=5):
+def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False, stronger=False, rounds=5, mode=None, ask=1):
+    mode = mode or ("stronger" if stronger else None)
     """Validate every rewrite, report accepted batches, and optionally retain partial results."""
     source = clean_source(source)
     if not dm_composer.complete(source):
@@ -626,7 +659,7 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
             break
         try:
             # Smaller batches avoid model truncation and improve diversity.
-            prompt = _prompt(source, min(need, 5), existing + out, stronger)
+            prompt = _prompt(source, min(max(need, ask), 5), existing + out, mode=mode)
             if last_error:
                 prompt += (
                     "\nThe previous attempt was rejected because: "
@@ -646,8 +679,8 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
         passed = []
         for candidate in candidates:
             if isinstance(candidate, str):
-                candidate = repair(source, candidate.replace("\r\n", "\n").strip())
-            reason = validate(source, candidate, existing + out + passed + [h for h, _ in held])
+                candidate = repair(source, candidate.replace("\r\n", "\n").strip(), mode)
+            reason = validate(source, candidate, existing + out + passed + [h for h, _ in held], mode)
             if reason:
                 tried[reason] = tried.get(reason, 0) + 1
                 reasons[reason] = reasons.get(reason, 0) + 1
@@ -655,7 +688,7 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
             passed.append(candidate.strip())
         # The owner's taste, as for the Group versions. Its own failure never blocks a version.
         try:
-            verdicts = list(REVIEW(source, passed) or []) if passed and not stronger else []
+            verdicts = list(REVIEW(source, passed) or []) if passed and not mode else []
         except Exception:
             verdicts = []
         for i, text in enumerate(passed):
@@ -684,7 +717,7 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
     for text, _ in held:
         if len(out) >= count:
             break
-        if not validate(source, text, existing + out):
+        if not validate(source, text, existing + out, mode):
             out.append(text)
             RECORD(text, "validated", "dm")
     if progress is not None and len(out) > before and progress(list(out)) is False:

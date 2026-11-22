@@ -54,12 +54,12 @@ def already_greets(text, name):
 
 PAYMENT_OLD = re.compile(
     r"(?i)\beasy\s?paisa\s*(?:/|&|and|or|,)\s*jazz\s?cash(?:\s+only)?\b"
-    r"|\bjazz\s?cash\s*(?:/|&|and|or|,)\s*easy\s?paisa\b|\bjazz\s?cash\b"
+    r"|\bjazz\s?cash\s*(?:/|&|and|or|,)\s*easy\s?paisa\b"
 )
 
 
 def payment_fix(text):
-    """Every outgoing message names EASYPAISA ONLY: JazzCash is never offered."""
+    """Old 'Easypaisa / JazzCash' lines become EASYPAISA ONLY. A method the owner wrote alone (e.g. JazzCash ONLY) is kept."""
     return PAYMENT_OLD.sub("EASYPAISA ONLY", str(text))
 
 

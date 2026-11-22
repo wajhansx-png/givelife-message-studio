@@ -3,7 +3,7 @@ The AI is replaced by a scripted fake: nothing here calls a model or WhatsApp.""
 
 import json, re, unittest
 import test_manual_sends  # noqa: F401  (temporary data folder and import path)
-import ai_call, focus_bank, message_styles as ms, team_rules
+import ai_call, dm_composer, focus_bank, message_styles as ms, team_rules
 
 GROUP = (
     "*Yousaf's father needs help.*\n\n_People are asking his father for the money borrowed for his son's Janazah._\n\n"
@@ -152,6 +152,12 @@ class Safety(unittest.TestCase):
             ms.payment_block(long),
             "📲 *03097458815*\nEASYPAISA ONLY: Wajdan Khan\nFor GiveLife Foundation",
         )
+
+    def test_owner_jazzcash_only_is_kept(self):
+        own = "Story\n\n*JazzCash ONLY*\n03097458815\n*Wajdan Khan (GiveLife Foundation account)*"
+        self.assertEqual(ms.payment_block(own), own.split("\n\n", 1)[1])
+        self.assertEqual(dm_composer.payment_fix(own), own)
+        self.assertIn("EASYPAISA ONLY", dm_composer.payment_fix("03097458815 Easypaisa / JazzCash"))
 
 
 class Variety(unittest.TestCase):

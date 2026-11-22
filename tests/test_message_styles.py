@@ -2,6 +2,7 @@
 The AI is replaced by a scripted fake: nothing here calls a model or WhatsApp."""
 
 import json, re, unittest
+from unittest.mock import patch
 import test_manual_sends  # noqa: F401  (temporary data folder and import path)
 import ai_call, dm_composer, focus_bank, message_styles as ms, team_rules
 
@@ -276,6 +277,52 @@ class Variety(unittest.TestCase):
         self.assertIn("Just 4 people giving Rs. 1,000", prompt)
         self.assertIn("old opening", prompt)
         self.assertIn("Janazah", prompt)
+
+
+class TriggerRoute(unittest.TestCase):
+    SHOWN = "*Mirha cannot breathe.*\n\n_Her lungs are almost failing and her life is in real danger._\n\n🔴 Rs. 4,000 LEFT\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\n- GiveLife Foundation"
+
+    def run_style(self, style, **fakes):
+        import server
+
+        with (
+            patch.object(server.assistant, "client", return_value=object()),
+            patch.object(server, "read_left", return_value=4000),
+        ):
+            return server.message_style({"style": style, "kind": "group", "current": self.SHOWN})
+
+    def test_trigger_makes_the_message_on_screen_stronger_in_place(self):
+        with patch("dm_variants.generate", return_value=["STRONGER TEXT"]) as g:
+            out = self.run_style("en_more")
+        self.assertEqual(out["text"], "STRONGER TEXT")
+        self.assertEqual(out["angle"], "stronger")
+        self.assertEqual(g.call_args.args[0], self.SHOWN)  # the shown message itself is what is rewritten
+        self.assertTrue(g.call_args.kwargs["stronger"])
+
+    def test_a_language_button_never_uses_the_in_place_rewrite(self):
+        fresh = ({"text": "FRESH", "angle": "family", "concept": ""}, {})
+        with patch("dm_variants.generate") as g, patch("message_styles.generate", return_value=fresh):
+            out = self.run_style("en")
+        g.assert_not_called()
+        self.assertEqual(out["text"], "FRESH")
+
+    def test_when_the_rewrite_is_refused_a_stronger_one_is_still_written_from_the_case(self):
+        fresh = ({"text": "FRESH STRONGER", "angle": "stronger", "concept": ""}, {})
+        with patch("dm_variants.generate", side_effect=ValueError("a number changed")), patch(
+            "message_styles.generate", return_value=fresh
+        ):
+            out = self.run_style("ur_en_more")
+        self.assertEqual(out["text"], "FRESH STRONGER")
+
+    def test_the_trigger_rewrite_prompt_asks_for_much_harder_but_never_new_facts(self):
+        import dm_variants
+
+        src = "x" * 200
+        plain, strong = dm_variants._prompt(src, 1, []), dm_variants._prompt(src, 1, [], True)
+        self.assertNotIn("TRIGGER MODE", plain)
+        self.assertIn("TRIGGER MODE", strong)
+        self.assertIn("same concept, story, facts, line structure", strong.lower().replace("exactly the ", ""))
+        self.assertIn("never add a new fact", strong.lower())
 
 
 if __name__ == "__main__":

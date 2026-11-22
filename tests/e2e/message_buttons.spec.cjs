@@ -62,20 +62,20 @@ for (const kind of ['group', 'dm'])
 
     await expect(text).toBeHidden(); // the preview stays a preview: no keyboard
 
-    // Trigger works on the language that is picked: Urdu + English stays on, Trigger lights up.
+    // Trigger works on the message that is shown, in ITS language, and only when pressed: it is an action, not a mode.
     await expect(button(page, 'Urdu + English')).toHaveAttribute('aria-pressed', 'true');
     await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'false');
     await button(page, 'Trigger').click();
     await expect(page.locator('#focusState')).toContainText('Written: Urdu + English Trigger');
     await expect(button(page, 'Urdu + English')).toHaveAttribute('aria-pressed', 'true');
-    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'true');
+    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'false');
     const b = await text.inputValue();
     expect(b).not.toBe(a);
     expect(b.split('\n\n')[0]).not.toBe(paras[0]); // a different hook
     expect(b.split('\n\n')[2]).not.toBe(paras[2]); // and a different verse
     expect(b).toMatch(/🔴 Rs\. 25,000 LEFT/);
 
-    await button(page, 'Trigger').click(); // Trigger off again
+    await button(page, 'Urdu + English').click(); // a language button writes plain: nothing stays triggered
     await expect(page.locator('#focusState')).toContainText('Written: Urdu + English.');
     await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'false');
     await button(page, 'English').click(); // English, plain
@@ -87,10 +87,10 @@ for (const kind of ['group', 'dm'])
     expect(c).toMatch(/Allah says:|The Prophet/);
     expect(c.split('\n\n')[0]).toMatch(/^\*[^*\n]+\*$/);
 
-    await button(page, 'Trigger').click(); // English becomes English Trigger
+    await button(page, 'Trigger').click(); // the English on screen gets triggered
     await expect(page.locator('#focusState')).toContainText('Written: English Trigger');
     await expect(button(page, 'English')).toHaveAttribute('aria-pressed', 'true');
-    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'true');
+    await expect(button(page, 'Trigger')).toHaveAttribute('aria-pressed', 'false');
     const d = await text.inputValue();
     expect(d).not.toMatch(urdu);
     expect(d.split('\n\n')[0]).not.toBe(c.split('\n\n')[0]);
@@ -271,16 +271,13 @@ for (const width of [320, 390, 1440])
     await chips.nth(1).click(); // English
     await expect(page.locator('#focusFormatted')).toContainText(/Hook en(?!_)/);
     expect(await pressed()).toEqual(['false', 'true', 'false']);
-    await chips.nth(2).click(); // Trigger -> English Trigger
+    await chips.nth(2).click(); // Trigger -> the English on screen, triggered (an action: it does not stay on)
     await expect(page.locator('#focusFormatted')).toContainText('Hook en_more');
-    expect(await pressed()).toEqual(['false', 'true', 'true']);
-    await chips.nth(0).click(); // Urdu + English keeps Trigger on
-    await expect(page.locator('#focusFormatted')).toContainText('Hook ur_en_more');
-    expect(await pressed()).toEqual(['true', 'false', 'true']);
-    await chips.nth(2).click(); // Trigger off
+    expect(await pressed()).toEqual(['false', 'true', 'false']);
+    await chips.nth(0).click(); // Urdu + English is plain again: nothing stays triggered
     await expect(page.locator('#focusFormatted')).toContainText(/Hook ur_en(?!_)/);
     expect(await pressed()).toEqual(['true', 'false', 'false']);
-    expect(asked).toEqual(['en', 'en_more', 'ur_en_more', 'ur_en']);
+    expect(asked).toEqual(['en', 'en_more', 'ur_en']);
   });
 
 test('/new desktop: the chips on the Message card write the same way and show the choice', async ({

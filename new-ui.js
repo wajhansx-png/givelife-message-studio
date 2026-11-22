@@ -939,7 +939,7 @@ function ui2Observe(run, options) {
       [
         'trigger',
         'Trigger',
-        'Stronger message in the language you picked. Press again to turn it off.',
+        'Makes the message on screen stronger, in its own language.',
       ],
       [
         'fix',
@@ -1167,6 +1167,25 @@ function ui2Observe(run, options) {
       bar.append($('focusBack'));
       $('focusBack').setAttribute('aria-label', 'Back');
     }
+    /* a short note above the rewrite row: what was written, or why it was not (the status line is hidden on phones) */
+    if (!$('ui2Note')) {
+      const n = document.createElement('div');
+      n.id = 'ui2Note';
+      n.className = 'ui2-note';
+      n.setAttribute('role', 'status');
+      n.hidden = true;
+      screen.append(n);
+      addEventListener('message-note', (e) => {
+        const { text, error } = e.detail || {};
+        if (!text) return;
+        n.textContent = text;
+        n.dataset.error = error ? '1' : '';
+        n.hidden = false;
+        clearTimeout(n._t);
+        n._t = setTimeout(() => (n.hidden = true), error ? 8000 : 3500);
+      });
+      n.addEventListener('click', () => (n.hidden = true));
+    }
     const rw = document.createElement('div'); // English · Urdu + English · Trigger · Style fix, one tap each
     rw.id = 'ui2RewriteRow';
     rw.className = 'ui2-rewrite-row';
@@ -1274,7 +1293,11 @@ function ui2Observe(run, options) {
       const msg = $('focusFormatted');
       /* the message box fills the space the phone really shows (it shrinks when the keyboard opens) */
       const vv = window.visualViewport;
-      const fitVv = () => screen.style.setProperty('--ui2-vvh', Math.round(vv ? vv.height : innerHeight) + 'px');
+      const fitVv = () => {
+        screen.style.setProperty('--ui2-vvh', Math.round(vv ? vv.height : innerHeight) + 'px');
+        // the keyboard opened or closed: the message measures its size again for the new height
+        requestAnimationFrame(() => window.focusFit?.(true));
+      };
       fitVv();
       (vv || window).addEventListener('resize', fitVv);
       const still = matchMedia('(prefers-reduced-motion: reduce)');

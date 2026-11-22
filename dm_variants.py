@@ -409,7 +409,7 @@ RECORD = lambda text, quality, kind="message": (
 )  # archive candidates separately from accepted text
 
 
-def _prompt(source, count, avoid):
+def _prompt(source, count, avoid, stronger=False):
     lines = source.split("\n")
     blank = sum(1 for line in lines if not line.strip())
     avoid_text = ""
@@ -514,11 +514,25 @@ NON-NEGOTIABLE:
 - LEARN FROM THE OWNER: the SOURCE and any OWNER'S OWN MESSAGES below are the owner's voice.
   Match their line rhythm, emoji energy and directness, at the same intensity the source has.
 - Return ONLY a JSON array of {count} strings. No commentary, no markdown fences.
-
+{STRONGER_RULES if stronger else ""}
 SOURCE:
 <<<SOURCE
 {source}
 SOURCE>>>{avoid_text}
+"""
+
+
+STRONGER_RULES = """
+TRIGGER MODE (this OVERRIDES every earlier line about keeping the same intensity or never raising urgency):
+The owner pressed the Trigger button. Rewrite the SAME message so it hits much harder and feels more urgent,
+dangerous and heart-breaking to the reader, so they act now.
+- Keep EXACTLY the same concept, story, facts, line structure, line order, emojis, * and _ markers, numbers,
+  amounts, verse and payment lines. Line N still says what line N of the source says.
+- Make every prose line stronger: put the danger the source ALREADY states in the very first line, in plainer,
+  heavier words; short punchy sentences; make the reader picture the child and the family and feel they must
+  act this minute. Use the source's own danger facts only, said with more force.
+- Still never add a new fact, number, symptom, diagnosis, deadline or promise, and never use these words:
+  die, dies, dying, death, dead, last breath, won't survive, minutes left, hours left, any moment, too late.
 """
 
 
@@ -583,7 +597,7 @@ def top_reasons(tally, limit=3):
     return "; ".join(f"{r} ({n}x)" if n > 1 else r for r, n in top)
 
 
-def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False):
+def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False, stronger=False, rounds=5):
     """Validate every rewrite, report accepted batches, and optionally retain partial results."""
     source = clean_source(source)
     if not dm_composer.complete(source):
@@ -605,14 +619,14 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
     held = []  # (text, reason): kept every code rule but not the taste check
     waits = list(AI_BACKOFF)
     for attempt in range(5 + len(AI_BACKOFF)):
-        if attempt - (len(AI_BACKOFF) - len(waits)) >= 5:
+        if attempt - (len(AI_BACKOFF) - len(waits)) >= rounds:
             break  # extra rounds only make up for rate-limit waits
         need = count - len(out)
         if need <= 0:
             break
         try:
             # Smaller batches avoid model truncation and improve diversity.
-            prompt = _prompt(source, min(need, 5), existing + out)
+            prompt = _prompt(source, min(need, 5), existing + out, stronger)
             if last_error:
                 prompt += (
                     "\nThe previous attempt was rejected because: "
@@ -641,7 +655,7 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
             passed.append(candidate.strip())
         # The owner's taste, as for the Group versions. Its own failure never blocks a version.
         try:
-            verdicts = list(REVIEW(source, passed) or []) if passed else []
+            verdicts = list(REVIEW(source, passed) or []) if passed and not stronger else []
         except Exception:
             verdicts = []
         for i, text in enumerate(passed):

@@ -6087,3 +6087,41 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   background: #3a1b1b;
   color: #ffc9c9;
 }
+
+/* ---- The computer: a long message never pushes Generate / Test / Back below the screen; it scrolls in its card ---- */
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > #focusFormatted {
+    max-height: calc(100dvh - 320px) !important;
+    overflow-y: auto !important;
+  }
+}
+/* phones and tablets: a very long message scrolls inside its card instead of shrinking below 11px */
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > #focusFormatted {
+    overflow-y: auto !important;
+  }
+}
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) .focus-paper > #ui2Live:not([hidden]) {
+    height: auto !important;
+    max-height: calc(100dvh - 330px) !important;
+    overflow-y: auto !important;
+  }
+}
+/* phones with the keyboard open (a short screen): the B I ♥ Dua bar never reaches down onto Done / Save base / ⋯ */
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > #ui2Float:not([hidden]) {
+    max-height: calc(100% - 78px) !important;
+    overflow-y: auto !important;
+    scrollbar-width: none;
+  }
+}
+@media (max-width: 899px) and (max-height: 480px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > #ui2Float:not([hidden]) button {
+    min-width: 32px !important;
+    min-height: 32px !important;
+    height: 32px !important;
+    padding: 0 8px !important;
+    font-size: 13px !important;
+  }
+}

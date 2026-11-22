@@ -40,6 +40,38 @@ PROFILES = ("group", "dm", "giki")  # each one has its own choices; the files ar
 FLAGS = ("poster", "video", "pdf")
 ORDERS = ("poster_pdf", "pdf_poster")  # older saved order (2nd / 3rd): still read
 SLOT_KINDS = ("poster", "pdf", "video")  # Giki: what the 2nd and the 3rd message can be
+DEFAULT_ORDER = ("poster", "video", "pdf")  # the files after the case message: 1st, 2nd, 3rd (groups and DMs)
+
+
+def order(store):
+    """The 1st, 2nd and 3rd message after the case message: always the three kinds once each. The owner moves one up."""
+    saved = _raw(store).get("after_order")
+    if isinstance(saved, list) and sorted(saved) == sorted(DEFAULT_ORDER):
+        return tuple(saved)
+    return DEFAULT_ORDER
+
+
+def move_up(store, kind):
+    """One step earlier (the one before it goes after it). The first one stays first."""
+    _check_kind(kind)
+    now = list(order(store))
+    i = now.index(kind)
+    if i:
+        now[i - 1], now[i] = now[i], now[i - 1]
+    store.put(KEY, {**_raw(store), "after_order": now})
+    return view(store)
+
+
+def dm_after(store, pdf, video):
+    """The DM's follow-up files in the owner's order, ONLY when that order is not the usual one (None = nothing
+    changes: the poster goes inline, then the video, then the PDF, as always). A kind is listed when it is saved and
+    ticked; the video is left out when it already carried the text."""
+    if order(store) == DEFAULT_ORDER:
+        return None
+    rows, mine = _rows(store), setup(store, "dm")
+    led = lead(store, "dm")
+    ticked = {"poster": bool(mine["poster"]), "video": bool(video), "pdf": bool(pdf)}
+    return [k for k in order(store) if ticked[k] and k in rows and not (k == "video" and led)]
 
 
 def _raw(store):
@@ -207,6 +239,7 @@ def view(store):
         for kind in KINDS
     }
     out["text_on"] = text_on(store)
+    out["order"] = list(order(store))
     out["setup"] = {p: setup(store, p) for p in PROFILES}
     return out
 
@@ -283,8 +316,8 @@ def group_sequence(store):
     led = video["id"] if video and video["on"] and raw.get("text_on") != "poster" else None
     return led, [
         (k, rows[k]["id"])
-        # after the message: the after poster, the video (unless it carried the text), then the PDF
-        for k in ("poster", "video", "pdf")
+        # after the message, in the owner's order (usually the after poster, the video unless it carried the text, the PDF)
+        for k in order(store)
         if k in rows and rows[k]["on"] and not (k == "video" and led)
     ]
 
@@ -300,6 +333,8 @@ def act(store, body):
         return set_setup(store, "giki" if body.get("profile") == "giki" else "group", "text_on", body.get("value"))
     if op == "setup":
         return set_setup(store, body.get("profile"), body.get("field"), body.get("value"))
+    if op == "move_up":
+        return move_up(store, body.get("kind"))
     if op == "remove":
         return remove(store, body.get("kind"))
     raise ValueError("Unknown action.")

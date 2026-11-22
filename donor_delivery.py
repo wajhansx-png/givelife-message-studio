@@ -380,6 +380,11 @@ class DonorDelivery:
             not isinstance(after, list) or any(k not in self.EXTRA_LABEL for k in after)
         ):
             raise ValueError("Choose the Poster pic, PDF or Video for the messages after the case.")
+        if after is None and self.store is not None:
+            import group_extras
+
+            # the owner put the files in a different order (1st, 2nd, 3rd): each goes as its own recorded step
+            after = group_extras.dm_after(self.store, pdf, video)
         if follow_up is not None and (
             not isinstance(follow_up, str) or not follow_up.strip() or len(follow_up) > 2000
         ):

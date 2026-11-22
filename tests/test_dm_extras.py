@@ -69,6 +69,23 @@ class Batch(unittest.TestCase):
         self.assertEqual(st["sent"], 2)  # the attachments are not counted as extra DMs
         self.assertTrue(all(c[1] == "dm_extra" for c in calls if c[2]))
 
+    def test_the_owners_1st_2nd_3rd_order_is_the_order_each_dm_gets(self):
+        for kind, raw, mime in (("pdf", PDF, "application/pdf"), ("video", MP4, "video/mp4")):
+            group_extras.add(app.STORE, kind, url(raw, mime), kind)
+        group_extras.set_setup(app.STORE, "group", "text_on", "poster")  # the video does not carry the text
+        group_extras.move_up(app.STORE, "pdf")  # poster, pdf, video: the PDF is now before the video
+        self.assertEqual(group_extras.order(app.STORE), ("poster", "pdf", "video"))
+        _, calls = self.run_batch(people=1, pdf=True, video=True)
+        self.assertEqual([c[2] for c in calls], [None, "pdf", "video"])
+        group_extras.move_up(app.STORE, "pdf")  # pdf, poster, video
+        group_extras.move_up(app.STORE, "video")  # pdf, video, poster
+        self.assertEqual(group_extras.order(app.STORE), ("pdf", "video", "poster"))
+        _, calls = self.run_batch(people=1, pdf=True)
+        self.assertEqual([c[2] for c in calls], [None, "pdf"])
+
+    def test_the_usual_order_changes_nothing_for_a_dm(self):
+        self.assertIsNone(group_extras.dm_after(app.STORE, True, True))
+
     def test_only_one_ticked_sends_only_that_one(self):
         _, calls = self.run_batch(video=True)
         self.assertEqual([c[2] for c in calls], [None, "video", None, "video"])

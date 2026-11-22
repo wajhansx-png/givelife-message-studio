@@ -121,6 +121,7 @@ for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['g
     // inside More: a row each with a preview, the tick and Add / Change
     await page.locator('#messageFocus .focus-rail-more > summary').click();
     await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
+    await page.waitForTimeout(500); // the sheet slides in: measure it once it has settled
     const m = await page.evaluate(() => {
       const r = (e) => e.getBoundingClientRect();
       const items = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item')].map(r);
@@ -128,8 +129,13 @@ for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['g
         const q = r(c);
         return c.contains(document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2));
       });
+      const hitEl = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item .ui2-rx-chip')].map((c) => {
+        const q = r(c),
+          e = document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2);
+        return (e && (e.id || e.className || e.tagName)) + '@' + Math.round(q.x + q.width / 2) + ',' + Math.round(q.y + q.height / 2);
+      });
       const texts = [...document.querySelectorAll('#ui2RxText button')].map(r);
-      return { items, hit, texts, sw: document.documentElement.scrollWidth, w: innerWidth, h: innerHeight };
+      return { items, hit, hitEl, texts, sw: document.documentElement.scrollWidth, w: innerWidth, h: innerHeight };
     });
     expect(m.sw).toBeLessThanOrEqual(m.w + 1);
     expect(m.items.length).toBe(3); // PDF, Video, Poster
@@ -138,7 +144,7 @@ for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['g
       expect(c.x).toBeGreaterThanOrEqual(0);
       expect(c.x + c.width).toBeLessThanOrEqual(m.w + 0.5);
     }
-    expect(m.hit).toEqual([true, true, true]); // PDF, Video and Poster: nothing sits on top of the ticks
+    expect(m.hit, JSON.stringify(m.hitEl)).toEqual([true, true, true]); // PDF, Video and Poster: nothing sits on top of the ticks
     // a video is attached: "Text goes on: Video / Poster" is two real buttons
     expect(m.texts.length).toBe(2);
   });
@@ -287,6 +293,7 @@ test('Reader (DM message): no attach buttons; a tick with no file says to attach
   await openReader(page, 'dm');
   await expect(page.locator('.ui2-rx-add')).toHaveCount(3); // PDF, Video, Poster
   for (let i = 0; i < 3; i++) await expect(page.locator('.ui2-rx-add').nth(i)).toBeHidden(); // DMs never upload
+  await page.waitForTimeout(500); // the sheet slides in
   await page.locator('#ui2Rx-pdf').click({ force: true }); // refused at once, so it snaps back unticked
   await expect(page.locator('.ui2-rx-msg')).toContainText('Attach it on the group message first');
   await expect(page.locator('#ui2Rx-pdf')).not.toBeChecked();
@@ -345,34 +352,56 @@ for (const width of [390, 430, 1440])
     const box = await page.locator('#ui2ReaderExtras').boundingBox();
     const pdf = await page.locator('#ui2Rx-pdf').locator('xpath=..').boundingBox(),
       video = await page.locator('#ui2Rx-video').locator('xpath=..').boundingBox();
-    expect(video.y - pdf.y).toBeGreaterThan(40); // one row each, inside More
+    expect(Math.abs(video.y - pdf.y)).toBeGreaterThan(40); // one row each, inside More (video is 2nd, PDF 3rd)
     const dock = await page.locator('.ui2-reader-dock').boundingBox().catch(() => null);
     if (dock && width < 900 && dock.height > 0) expect(box.y + box.height).toBeLessThanOrEqual(dock.y + 1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   });
 
-test('Reader: the Order line shows what WhatsApp gets, in order, and changes on every tick and tap', async ({ page }) => {
+test('Reader: More is simple - Case message, then 1st / 2nd / 3rd (the order they are sent), then Manual messages', async ({ page }) => {
   for (const kind of ['pdf', 'video', 'poster']) await api(port, '/group-extras', { action: 'remove', kind });
-  await openReader(page);
-  const order = page.locator('#ui2RxOrder');
-  await expect(order).toHaveText(/^Order:\s+1\. Poster picture \+ text$/);
+  await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: 'data:application/pdf;base64,' + PDF.toString('base64'), name: 'r.pdf' });
   await api(port, '/group-extras', { action: 'add', kind: 'video', data: 'data:video/mp4;base64,' + MP4.toString('base64'), name: 'b.mp4' });
   await api(port, '/group-extras', { action: 'add', kind: 'poster', data: 'data:image/jpeg;base64,' + JPG.toString('base64'), name: 'a.jpg' });
-  await api(port, '/group-extras', { action: 'setup', profile: 'group', field: 'text_on', value: 'video' });
+  await api(port, '/group-extras', { action: 'setup', profile: 'group', field: 'text_on', value: 'poster' });
+  await openReader(page); // More is open
+  await page.waitForTimeout(500); // the sheet slides in
+  const panel = page.locator('#messageFocus .focus-rail-more > div');
+  await expect(panel).toBeVisible();
+  // only these buttons are there: Change (case poster / video), the three files (tick, Change, up) and Manual messages
+  const names = await panel.locator('button:visible, label:visible, summary:visible').evaluateAll((els) =>
+    els.map((e) => (e.id || e.textContent.trim()).slice(0, 24)),
+  );
+  for (const gone of ['Case page', 'Generate 5 Versions', 'Save Base', 'Main poster / video', 'Next version', 'Replace with fresh 5'])
+    expect(names, gone).not.toContain(gone);
+  await expect(page.locator('#focusManual')).toBeVisible();
+  await expect(page.locator('#focusPoster')).toHaveText('Change');
+  const rows = page.locator('#ui2ReaderExtras .ui2-rx-item');
+  const ranks = () => rows.evaluateAll((els) => els.map((e) => e.dataset.kind + ':' + e.querySelector('.ui2-rx-rank').textContent));
+  expect(await ranks()).toEqual(['poster:1st', 'video:2nd', 'pdf:3rd']);
+  await expect(page.locator('#ui2RxUp-poster')).toBeHidden(); // the first one cannot go earlier
+  await page.locator('#ui2RxUp-pdf').click();
+  await expect.poll(ranks).toEqual(['poster:1st', 'pdf:2nd', 'video:3rd']);
+  expect((await (await fetch(`http://127.0.0.1:${port}/group-extras`, { headers: { Authorization: 'Bearer ' + KEY } })).json()).order).toEqual(['poster', 'pdf', 'video']);
   await page.reload();
   await page.locator('#messageFocus .focus-rail-more > summary').click();
   await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
-  await expect(order).toHaveText(/1\. Video \+ text\s+2\. Poster$/);
-  await page.locator('#ui2RxText-poster').click();
-  await expect(order).toHaveText(/1\. Poster picture \+ text\s+2\. 2nd poster\s+3\. Video$/);
-  await page.locator('#ui2Rx-poster').uncheck();
-  await expect(order).toHaveText(/1\. Poster picture \+ text\s+2\. Video$/);
+  await expect.poll(ranks).toEqual(['poster:1st', 'pdf:2nd', 'video:3rd']); // kept
+  await page.locator('#ui2RxUp-pdf').click();
+  await expect.poll(ranks).toEqual(['pdf:1st', 'poster:2nd', 'video:3rd']);
+  await page.locator('#ui2RxUp-video').click();
+  await expect.poll(ranks).toEqual(['pdf:1st', 'video:2nd', 'poster:3rd']);
+  // a video that carries the case text goes with the case, not after it
   await page.locator('#ui2RxText-video').click();
-  await expect(order).toHaveText(/1\. Video \+ text$/);
-  const box = await order.boundingBox();
+  await expect(page.locator('#ui2RxCase small')).toHaveText('Video + text');
+  await expect(page.locator('#ui2ReaderExtras .ui2-rx-item[data-kind="video"]')).toHaveAttribute('data-led', '1');
+  await page.locator('#ui2RxText-poster').click();
+  await expect(page.locator('#ui2RxCase small')).toHaveText('Poster + text');
+  const box = await panel.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390.5);
-  for (const kind of ['video', 'poster']) await api(port, '/group-extras', { action: 'remove', kind });
+  for (const kind of ['pdf', 'video', 'poster']) await api(port, '/group-extras', { action: 'remove', kind });
+  await api(port, '/group-extras', { action: 'setup', profile: 'group', field: 'text_on', value: 'video' });
 });
 
 test('the reader previews: /group-extras-media serves the saved poster, and says 404 for nothing saved or a wrong kind', async ({ request }) => {

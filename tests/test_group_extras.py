@@ -35,6 +35,29 @@ class Rules(unittest.TestCase):
         v = group_extras.view(self.s)
         self.assertFalse(v["pdf"]["has"] or v["video"]["has"])
 
+    def test_the_files_after_the_case_follow_the_owners_1st_2nd_3rd(self):
+        self.assertEqual(group_extras.view(self.s)["order"], ["poster", "video", "pdf"])
+        group_extras.add(self.s, "poster", url(b"\xff\xd8\xff" + b"x" * 200, "image/jpeg"), "p.jpg")
+        group_extras.add(self.s, "video", url(MP4, "video/mp4"), "v.mp4")
+        group_extras.add(self.s, "pdf", url(PDF, "application/pdf"), "r.pdf")
+        self.s["group_extras"]["setup"] = {"x": 1}  # other saved settings stay
+        group_extras.set_setup(self.s, "group", "text_on", "poster")  # the video does not carry the text
+        self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["poster", "video", "pdf"])
+        v = group_extras.move_up(self.s, "pdf")  # PDF before the video
+        self.assertEqual(v["order"], ["poster", "pdf", "video"])
+        self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["poster", "pdf", "video"])
+        group_extras.move_up(self.s, "pdf")
+        group_extras.move_up(self.s, "pdf")  # already first: stays first
+        self.assertEqual(group_extras.order(self.s), ("pdf", "poster", "video"))
+        self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["pdf", "poster", "video"])
+        group_extras.set_on(self.s, "poster", False)  # an off file is skipped, the rest keep the order
+        self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["pdf", "video"])
+        self.assertEqual(group_extras.act(self.s, {"action": "move_up", "kind": "video"})["order"], ["pdf", "video", "poster"])
+        with self.assertRaises(ValueError):
+            group_extras.act(self.s, {"action": "move_up", "kind": "gif"})
+        self.s["group_extras"]["after_order"] = ["pdf", "pdf", "video"]  # a damaged saved order: the usual one
+        self.assertEqual(group_extras.order(self.s), group_extras.DEFAULT_ORDER)
+
     def test_video_then_pdf_in_that_order_each_switched_on_when_added(self):
         group_extras.add(self.s, "video", url(MP4, "video/mp4"), "oxygen.mp4")
         group_extras.add(self.s, "pdf", url(PDF, "application/pdf"), "report.pdf")

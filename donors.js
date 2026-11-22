@@ -1595,9 +1595,12 @@
         const led = d.text_on === 'video' && hasVideo; // the video carries the text
         const pictureOk = v.poster_kind === 'image';
         const steps = [led ? 'Video + text' : 'Poster picture + text'];
-        if (d.poster === true && v.poster && v.poster.has) steps.push(led ? 'Poster' : '2nd poster');
-        if (dmExtra.video && hasVideo && !led) steps.push('Video');
-        if (dmExtra.pdf && v.pdf && v.pdf.has) steps.push('PDF');
+        // the files go in the owner's 1st / 2nd / 3rd order (set on the message page)
+        for (const k of Array.isArray(v.order) ? v.order : ['poster', 'video', 'pdf']) {
+          if (k === 'poster' && d.poster === true && v.poster && v.poster.has) steps.push(led ? 'Poster' : '2nd poster');
+          if (k === 'video' && dmExtra.video && hasVideo && !led) steps.push('Video');
+          if (k === 'pdf' && dmExtra.pdf && v.pdf && v.pdf.has) steps.push('PDF');
+        }
         if (followUpOn) steps.push('Follow-up');
         const warn = !led && !pictureOk;
         orderLine.dataset.warn = warn ? '1' : '0';

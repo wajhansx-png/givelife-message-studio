@@ -245,7 +245,8 @@
         }
       }
     }).observe(log, { childList: true, subtree: true });
-  let lastStyled = '', // the last text a style button wrote (typing over it starts the style buttons fresh)
+  let aiDraft = '', // a text a button wrote that is on screen but not saved
+    lastStyled = '', // the last text a style button wrote (typing over it starts the style buttons fresh)
     kind = 'group',
     row = null,
     index = -1,
@@ -421,6 +422,7 @@
     window.focusShownVersion = kind === 'group' && index >= 0 ? row.items[index] : '';
   }
   function paint(text) {
+    aiDraft = ''; // whatever shows now is a saved text (base or version) unless showText marks it again
     $('focusText').value = text;
     $('focusFormatted').innerHTML = window.waFormat(text);
     label();
@@ -660,6 +662,13 @@
     $('focusTest').disabled = true;
     try {
       if (editing) edit(false);
+      if (aiDraft && !dirty) {
+        // Test sends saved messages only: never make the new text the base without the owner saying so
+        const why = 'This new message is not saved yet. Press 💾 Save base first, then Test.';
+        status(why);
+        note(why, true);
+        return;
+      }
       await save();
       // the message that is open: a DM test must never be written into the Group draft
       $(kind).value = row?.source || $('focusText').value;
@@ -740,11 +749,12 @@
       t.dispatchEvent(new Event('input', { bubbles: true }));
       status(message + ' Edit it if you like, then press Done to save.');
     } else {
-      dirty = true;
-      sessionStorage.setItem('focus-draft-' + kind, text);
+      // a written text is only shown: it never replaces the saved base by itself (Back, a swipe or Test used to
+      // save it quietly). Save base, Generate, or editing it and Done keep it.
       paint(text);
+      aiDraft = text;
       $('focusVersion').textContent = version;
-      status(message + ' Press Save Base to keep it, or Edit to change it.');
+      status(message + ' Press Save base or Generate to keep it, or Edit to change it.');
     }
   }
   async function writeStyle(lang, trig, b) {

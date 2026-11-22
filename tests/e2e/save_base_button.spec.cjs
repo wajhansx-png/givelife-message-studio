@@ -22,9 +22,10 @@ for (const width of [320, 390, 1280])
     await page.goto('/new#/preview');
     const btn = page.locator('#ui2MsgTools .ui2-base-btn');
     await expect(btn).toBeVisible();
-    await expect(btn).toHaveAccessibleName('Save base'); // a 💾 on the message
+    await expect(btn).toHaveAccessibleName('Save base'); // a small 💾 on the message
     const box = await btn.boundingBox();
-    expect(box.height).toBeGreaterThanOrEqual(40);
+    expect(box.height).toBeGreaterThanOrEqual(32);
+    expect(box.height).toBeLessThanOrEqual(36); // small, like Copy and Edit
     const msg = await page.locator('#focusFormatted').boundingBox();
     expect(box.x + box.width).toBeLessThanOrEqual(msg.x + msg.width + 1);
     expect(box.y + box.height).toBeLessThanOrEqual(msg.y + msg.height + 1);

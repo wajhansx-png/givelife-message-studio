@@ -198,3 +198,31 @@ test('a failed write says why on screen, and the button being used says Writingâ
   await expect(note).toContainText('AI is not connected');
   await expect(page.locator('#focusFormatted')).toContainText('Base wording'); // the message was left alone
 });
+
+test('a message a button wrote never replaces the saved base by itself: Back, a swipe and Test keep the base; Save base keeps the new one', async ({ page }) => {
+  const MINE = '*My own message for Mirha.*\n\n_She is 2 and her lungs are failing. Please help her today._\n\nðŸ”´ Rs. 11,000 LEFT\n\n*JAZZCASH ONLY*\n03097458815\n*Wajdan Khan (GiveLife Foundation account)*';
+  const WROTE = '*Your kindness is already helping Mirha breathe.*\n\n_Written by the scripted writer._\n\nRs. 11,000 LEFT';
+  await page.route('**/message-style', (r) => r.fulfill({ json: { text: WROTE } }));
+  for (const leave of ['back', 'swipe', 'test']) {
+    await api(port, '/focus-bank', { kind: 'group', action: 'save', text: MINE });
+    await open(page);
+    await page.locator('.focus-styles [data-lang="en"]').click();
+    await expect(page.locator('#focusFormatted')).toContainText('Your kindness');
+    if (leave === 'back') await page.locator('#focusBack').click();
+    if (leave === 'swipe') await page.locator('#ui2Swipe .ui2-swipe-next').click();
+    if (leave === 'test') {
+      await page.locator('#focusTest').click();
+      await expect(page.locator('#ui2Note')).toContainText('not saved yet');
+    }
+    await page.waitForTimeout(800);
+    expect(await saved(), leave).toBe(MINE); // the owner's own message is still the base
+  }
+  // the owner chooses to keep it: Save base
+  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: MINE });
+  await open(page);
+  await page.locator('.focus-styles [data-lang="en"]').click();
+  await expect(page.locator('#focusFormatted')).toContainText('Your kindness');
+  await page.locator('#ui2MsgTools .ui2-base-btn').click();
+  await page.locator('#focusBaseSave').click();
+  await expect.poll(saved).toBe(WROTE);
+});

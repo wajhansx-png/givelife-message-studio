@@ -193,9 +193,11 @@
       if (editing) edit(false);
       shownBecomesBase();
       await save();
+      const asked = $('focusText').value;
       row = await api({ action: 'regenerate' });
       index = -1;
-      if (!editing) paint(row.source);
+      // a slow answer never replaces a message the owner changed meanwhile
+      if (!editing && $('focusText').value === asked) paint(row.source);
       showProgress(0);
       genButton();
       watch();

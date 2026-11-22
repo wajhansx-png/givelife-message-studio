@@ -5351,3 +5351,358 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
 html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #donorsPage#donorsPage #donorMessages .bank-detail .bank-preview.bank-tight {
   padding-block: 3px !important;
 }
+
+/* ===== Message screen (reader), owner's layout, every width =====
+   Copy · Edit · Save base · ⋯ More on the message (bottom right); versions under it; English · Urdu + English · Trigger ·
+   Style fix in one row; the bottom row Generate · Test · Back (Back right-most). Phone and tablet: round ‹ › and swipe.
+   Computer: "‹ Previous" / "Next ›" buttons, no swipe, the bottom buttons centred. */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-back {
+  display: none !important; /* one Back: the one in the bottom row */
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #focusFormatted {
+  padding-bottom: 58px !important; /* the last line never sits under the buttons on the message */
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools {
+  position: relative;
+  z-index: 3;
+  display: flex !important;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin: -52px 0 0 !important;
+  padding: 0 12px 10px !important;
+  pointer-events: none; /* a swipe on the empty part still reaches the message */
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > * {
+  pointer-events: auto;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > :is(#focusCopy, #focusEdit, .ui2-base-btn),
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more > summary {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: none !important;
+  color: #effff8 !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  cursor: pointer;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > :is(#focusCopy, #focusEdit)::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: var(--ui2-ic) center / contain no-repeat;
+  mask: var(--ui2-ic) center / contain no-repeat;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #focusCopy { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2'/><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/></svg>"); }
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #focusEdit { --ui2-ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 20h9'/><path d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/></svg>"); }
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .ui2-base-btn {
+  width: 36px !important;
+  padding: 0 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .ui2-base-btn[data-pending='1'] {
+  background: rgba(255, 255, 255, 0.26) !important; /* a version is showing: Save base makes it the base */
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more {
+  position: relative;
+  display: block !important;
+  width: auto !important;
+  margin: 0 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more > summary {
+  width: 36px !important;
+  padding: 0 !important;
+  font-size: 0 !important;
+  list-style: none;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more > summary::-webkit-details-marker {
+  display: none;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more > summary::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><circle cx='5' cy='12' r='2'/><circle cx='12' cy='12' r='2'/><circle cx='19' cy='12' r='2'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><circle cx='5' cy='12' r='2'/><circle cx='12' cy='12' r='2'/><circle cx='19' cy='12' r='2'/></svg>") center / contain no-repeat;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more > div {
+  right: 0 !important;
+  left: auto !important;
+  text-align: left;
+}
+
+/* versions: ‹ 4 of 10 › */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2Swipe {
+  display: flex !important;
+  align-items: center;
+  justify-content: center !important;
+  gap: 14px !important;
+  margin: 10px 0 0 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2Swipe > :is(.ui2-swipe-gap, .ui2-files-btn) {
+  display: none !important; /* the files live in ⋯ More */
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2Swipe > :is(.ui2-swipe-prev, .ui2-swipe-next) {
+  display: grid !important;
+  place-items: center;
+  width: 46px !important;
+  min-width: 46px !important;
+  height: 46px !important;
+  padding: 0 !important;
+  border: 1.5px solid #4a4f68 !important;
+  border-radius: 50% !important;
+  background: #1f2231 !important;
+  color: #eef0f6 !important;
+  font-size: 24px !important;
+  line-height: 1 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2Swipe .ui2-ver-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 110px;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2Swipe .ui2-ver {
+  color: #eef0f6 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2Swipe .ui2-swipe-hint {
+  margin-top: 2px;
+  color: #9aa1b5;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+/* rewrites: English · Urdu + English · Trigger · Style fix */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0 10px;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow > .focus-styles {
+  display: contents !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow :is(.focus-styles > button, #focusStyleFix) {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+  padding: 0 4px !important;
+  border: 1px solid #33374d !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #dfe5ff !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow .focus-styles > [data-lang='en'] { order: 1; }
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow .focus-styles > [data-lang='ur'] { order: 2; }
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow .focus-styles > [data-trigger] { order: 3; }
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow > #focusStyleFix { order: 4; }
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow .focus-styles > [data-trigger]::before {
+  content: none; /* no extra icons: words only */
+  width: 14px;
+  height: 14px;
+  flex: none;
+  background: #f0b429;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M13 2 3 14h9l-1 8 10-12h-9z'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M13 2 3 14h9l-1 8 10-12h-9z'/></svg>") center / contain no-repeat;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow .focus-styles > button[aria-pressed='true'] {
+  border-color: #5b7cff !important;
+  background: #24305c !important;
+  color: #fff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow :is(.focus-styles > button, #focusStyleFix):disabled {
+  opacity: 0.55;
+}
+
+/* bottom row: Generate · Test · Back */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  padding: 10px 10px calc(10px + env(safe-area-inset-bottom)) !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > :is(.ui2-gen-btn, #focusTest, #focusBack) {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  white-space: nowrap;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > .ui2-gen-btn {
+  order: 1;
+  border: 0 !important;
+  background: linear-gradient(110deg, #245bdb, #7031cf) !important;
+  color: #fff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > .ui2-gen-btn:disabled {
+  opacity: 0.75;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > #focusTest {
+  order: 2;
+  border: 2px solid #9670ff !important;
+  background: transparent !important;
+  color: #e1d2ff !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > #focusBack {
+  order: 3;
+  border: 1px solid #2b2e3c !important;
+  background: #232637 !important;
+  color: #dfe5ee !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > :not(.ui2-gen-btn):not(#focusTest):not(#focusBack) {
+  display: none !important;
+}
+
+@media (max-width: 899px) {
+  /* ⋯ More opens as a sheet at the bottom of the screen, under the thumb */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more[open] > div {
+    position: fixed !important;
+    top: auto !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    left: 10px !important;
+    z-index: 80 !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: 72vh !important;
+    overflow: auto !important;
+    border-radius: 18px !important;
+  }
+}
+@media (max-width: 480px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow#ui2RewriteRow#ui2RewriteRow .focus-styles > [data-lang='ur'] {
+    font-size: 0 !important; /* "Urdu+Eng" so all four fit one row */
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow .focus-styles > [data-lang='ur']::after {
+    content: 'Urdu+Eng';
+    font-size: 13.5px;
+  }
+}
+@media (max-width: 359px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow#ui2RewriteRow :is(.focus-styles > button, #focusStyleFix) {
+    font-size: 12px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow#ui2RewriteRow#ui2RewriteRow .focus-styles > [data-lang='ur'] {
+    font-size: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow .focus-styles > [data-lang='ur']::after {
+    font-size: 12px;
+  }
+}
+@media (min-width: 900px) {
+  /* the computer: clear Previous / Next buttons, the rows and the bottom buttons centred */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2Swipe .ui2-swipe-hint {
+    display: none;
+  }
+  /* the computer: the same clear round ‹ › buttons (icons, no words), no swipe */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow {
+    width: min(720px, 100%);
+    margin: 12px auto 0;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock {
+    grid-template-columns: repeat(3, 150px) !important;
+    justify-content: center !important;
+  }
+}
+
+/* message screen: the buttons on the message sit right under its text (the pair stays centred top to bottom) */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > #focusFormatted {
+  margin-bottom: 0 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > #ui2MsgTools {
+  margin-bottom: auto !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more {
+  flex: none !important;
+}
+@media (max-width: 899px) {
+  /* bottom up, all in thumb reach: Generate · Test · Back, then the four rewrites, then ‹ 4 of 10 › */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow {
+    position: fixed;
+    right: 0;
+    bottom: calc(77px + env(safe-area-inset-bottom, 0px));
+    left: 0;
+    z-index: 35;
+    margin: 0;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-swipe {
+    bottom: calc(129px + env(safe-area-inset-bottom, 0px)) !important;
+    margin: 0 !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-workspace {
+    height: calc(var(--ui2-vvh, 100dvh) - 230px - env(safe-area-inset-bottom, 0px)) !important;
+  }
+  /* while editing: only the text and the bottom row */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusText:not([hidden])) #ui2RewriteRow,
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#ui2Live:not([hidden])) #ui2RewriteRow {
+    display: none !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusText:not([hidden])) .focus-workspace {
+    height: calc(var(--ui2-vvh, 100dvh) - 128px - env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #focusCopy { order: 1 !important; }
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #focusEdit { order: 2 !important; }
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .ui2-base-btn { order: 3 !important; }
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more { order: 4 !important; }
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > #focusBack::before {
+  content: none !important; /* the word already starts with ← */
+}
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2Swipe {
+    width: min(720px, 100%) !important;
+    margin: 14px auto 0 !important;
+  }
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-reader-dock > .ui2-gen-btn > svg {
+  display: none !important; /* words only on the bottom row */
+}
+@media (max-width: 359px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow#ui2RewriteRow :is(.focus-styles > button, #focusStyleFix) {
+    padding: 0 2px !important;
+    letter-spacing: -0.2px;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow .focus-styles > [data-lang='ur']::after {
+    font-size: 11.5px;
+  }
+}

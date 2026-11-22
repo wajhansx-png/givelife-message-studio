@@ -1123,14 +1123,6 @@ function ui2Observe(run, options) {
       const b = $(id);
       if (b && panel) panel.prepend(b);
     }
-    if (panel) {
-      const c = document.createElement('button'); // More → Case page
-      c.type = 'button';
-      c.id = 'focusCase';
-      c.textContent = 'Case page';
-      c.onclick = () => Nav.go('case');
-      panel.append(c);
-    }
     const sum = more.querySelector('summary');
     sum.textContent = 'More';
     /* Minimal reader (owner's pick): the message fills the screen at full width; one thin row under it with
@@ -1185,13 +1177,16 @@ function ui2Observe(run, options) {
     if ($('focusStyleFix')) rw.append($('focusStyleFix'));
     if (panel && !panel.dataset.ui2Top) {
       panel.dataset.ui2Top = '1';
-      for (const id of ['focusSave', 'focusRetry']) if ($(id)) panel.prepend($(id));
-      /* Main poster / main video (the campaign poster dialog) stays in More */
-      const mp = $('focusPoster');
-      if (mp) {
-        mp.textContent = 'Main poster / video';
-        panel.append(mp);
+      /* More keeps only the files list and Manual messages. Next version, Save Base, Generate and Replace are
+         already on the screen (‹ ›, 💾, Generate), so their real buttons wait here, hidden, for those to press. */
+      let keep = $('ui2Keep');
+      if (!keep) {
+        keep = document.createElement('span');
+        keep.id = 'ui2Keep';
+        keep.hidden = true;
+        screen.append(keep);
       }
+      for (const id of ['focusNext', 'focusSave', 'focusRetry', 'focusRegenerate']) if ($(id)) keep.append($(id));
     }
     const paper = $('focusFormatted')?.parentElement;
     if (paper && !$('ui2Swipe')) {
@@ -2076,8 +2071,10 @@ document.addEventListener('click', (e) => {
     const box = mk('div', 'ui2-rx');
     box.id = 'ui2ReaderExtras';
     box.setAttribute('role', 'group');
-    box.append(mk('span', 'ui2-rx-label', 'Add files:'));
+    const rxLabel = mk('span', 'ui2-rx-label', 'Sends in this order');
     const items = {};
+    let order = ['poster', 'video', 'pdf']; // 1st, 2nd, 3rd after the case message (kept on the server)
+    const ORD = ['1st', '2nd', '3rd'];
     let uploading = false;
     const msg = mk('p', 'ui2-rx-msg', '');
     msg.setAttribute('role', 'status');
@@ -2143,9 +2140,15 @@ document.addEventListener('click', (e) => {
           paint();
         }
       });
-      item.append(th, lab, add, file);
+      const rank = mk('span', 'ui2-rx-rank', '');
+      const up = mk('button', 'ui2-rx-up', '↑');
+      up.type = 'button';
+      up.id = 'ui2RxUp-' + kind;
+      up.title = 'Send this one earlier';
+      up.addEventListener('click', () => moveUp(kind));
+      item.append(rank, th, lab, add, up, file);
       box.append(item);
-      items[kind] = { item, cb, add: addWord, file: add, lab, meta, th };
+      items[kind] = { item, cb, add: addWord, file: add, lab, meta, th, rank, up };
     }
     /* Which file carries the message text (same setting as in Poster): only shown once a video is attached */
     const textRow = mk('div', 'ui2-rx-text');
@@ -2189,7 +2192,22 @@ document.addEventListener('click', (e) => {
     const orderLine = mk('p', 'ui2-rx-order', '');
     orderLine.id = 'ui2RxOrder';
     orderLine.setAttribute('aria-live', 'polite');
-    box.append(textRow, orderLine, msg);
+    /* Top of the list: the case message itself (its poster or video is changed here), then which file carries
+       its text. Then 1st / 2nd / 3rd: the files in the order they are sent. */
+    const caseRow = mk('div', 'ui2-rx-case');
+    caseRow.id = 'ui2RxCase';
+    const caseWord = mk('span', 'ui2-rx-casew', 'Case message');
+    const caseNote = mk('small', 'ui2-rx-casen', '');
+    const caseTop = $('focusPoster');
+    if (caseTop) {
+      caseTop.textContent = 'Change';
+      caseTop.title = 'Change the case poster or video';
+      caseTop.setAttribute('aria-label', 'Change the case poster or video');
+    }
+    caseRow.append(caseWord, caseNote);
+    if (caseTop) caseRow.append(caseTop);
+    box.prepend(rxLabel, caseRow, textRow, orderLine);
+    box.append(msg);
     /* The attached files live inside More (a row each: preview, name, tick, Add / Change), so the reader grows by
        nothing. A small preview chip for each ATTACHED and ticked file shows under the message. */
     const panel = document.querySelector('#messageFocus .focus-rail-more > div');
@@ -2304,18 +2322,25 @@ document.addEventListener('click', (e) => {
       for (const b of textRow.querySelectorAll('button'))
         b.setAttribute('aria-pressed', String(b.dataset.v === m.text_on));
       textRow.title = dm ? 'For DMs' : 'For group posts';
-      const on = (k) =>
-        have[k] && (dm ? (k === 'poster' ? !!(setupAll.dm && setupAll.dm.poster) : dmOn[k]) : groupOn[k]);
       const led = m.text_on === 'video' && have.video && (dm || groupOn.video);
-      const steps = [led ? 'Video + text' : 'Poster picture + text'];
-      if (on('poster')) steps.push(led ? 'Poster' : '2nd poster');
-      if (on('video') && !led) steps.push('Video');
-      if (on('pdf')) steps.push('PDF');
       const noPicture = !led && posterKind !== 'image'; // the Poster is a picture only: without one nothing goes out
       orderLine.dataset.warn = noPicture ? '1' : '0';
       orderLine.textContent = noPicture
         ? 'Nothing will be sent: there is no Poster picture. Upload a picture in Poster.'
-        : 'Order:  ' + steps.map((t, i) => i + 1 + '. ' + t).join('   ');
+        : '';
+      caseNote.textContent = led ? 'Video + text' : 'Poster + text';
+      // the files in the owner's order; a video that carries the text goes with the case, not after it
+      const now = [...box.querySelectorAll('.ui2-rx-item')].map((e) => e.dataset.kind).join();
+      if (now !== order.join()) for (const k of order) box.insertBefore(items[k].item, msg);
+      order.forEach((k, i) => {
+        const it = items[k];
+        it.rank.textContent = ORD[i];
+        it.up.hidden = false;
+        it.up.style.visibility = i ? '' : 'hidden';
+        it.up.disabled = !i || uploading;
+        it.up.setAttribute('aria-label', 'Send the ' + (k === 'pdf' ? 'PDF' : k) + ' earlier');
+        it.item.dataset.led = k === 'video' && led && it.cb.checked ? '1' : '0';
+      });
     };
     const take = (v) => {
       for (const k of ['pdf', 'video', 'poster']) {
@@ -2326,6 +2351,7 @@ document.addEventListener('click', (e) => {
       }
       setupAll = v.setup || {};
       posterKind = v.poster_kind || 'image';
+      if (Array.isArray(v.order) && v.order.length === 3) order = v.order.slice();
       paint();
     };
     const load = async () => {
@@ -2334,6 +2360,19 @@ document.addEventListener('click', (e) => {
         if (r.ok) take(await r.json());
       } catch (e) {}
     };
+    async function moveUp(kind) {
+      msg.textContent = '';
+      try {
+        const r = await post('/group-extras', { action: 'move_up', kind }),
+          d = await r.json().catch(() => ({}));
+        if (!r.ok) throw Error(d.error || 'Could not move that.');
+        take(d);
+        dispatchEvent(new CustomEvent('group-extras-changed'));
+      } catch (e) {
+        msg.textContent = e.message;
+        load();
+      }
+    }
     async function change(kind, on) {
       msg.textContent = '';
       if (isDm()) {

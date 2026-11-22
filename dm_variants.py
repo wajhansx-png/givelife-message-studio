@@ -254,8 +254,10 @@ def validate(source, text, existing=(), mode=None):
     # Reject superficial variations that merely swap the first sentence.
     # Requiring at least two rewritten editable lines makes the whole appeal change.
     editable = len(_editable_lines(source))
-    minimum_lines = 2 if editable >= 3 else 1
-    if _meaningful_changes(source, text) < minimum_lines or _similarity(source, text) > 0.81:
+    minimum_lines = 1 if mode else 2 if editable >= 3 else 1
+    # a button on the message on screen (English / Urdu + English / Trigger) keeps the same message, so it may
+    # stay close to it; only a near copy is refused. Versions must differ deeply.
+    if _meaningful_changes(source, text) < minimum_lines or _similarity(source, text) > (0.95 if mode else 0.81):
         return "not deeply rewritten; change the opening AND the body wording"
     if any(_similarity(text, other) > 0.87 for other in existing if isinstance(other, str)):
         return "too similar to an existing version; rewrite the story differently"

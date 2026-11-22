@@ -38,11 +38,16 @@ Apply these rules automatically to every coding task.
 - Layout fixes go in `responsive.css` (loaded last), one rule block per width band: <=299, <=359, <=380, <=899, >=900.
 - Before finishing any UI change run `python tests/responsive_dashboard.py` (needs `tests/preview_fake.py --port 3003`), open `/dash`, press "Find errors": every screen and width must show no errors.
 
-# DESIGN TASTE (from GiveLife_UIUX_Visual_Only_Dark_FIXED.pdf, pages 1-10 read)
-- Most-used buttons at the bottom of the phone (thumb zone). Bottom nav: Case, Message, Donors, Chat, More: a small icon above each word (owner asked for icons in the bar; the word always stays).
-- Clear words instead of icons. No glow or box-shadow under buttons.
-- Message text 15px, fully readable. Send buttons one line each, about 42px, group name never overlapped.
-- Extra options (timer, pick group) away from the Send arrow. More opens a bottom sheet, not a top menu.
+# DESIGN TASTE (owner's rules; from GiveLife_UIUX_Visual_Only_Dark_FIXED.pdf + owner requests)
+- Do not ask the owner design questions: decide what is best and do it. For a new screen, show a mock image first.
+- Phone: every often-used button sits in the bottom third (thumb zone); the most used is the biggest and lowest. Back in right-thumb reach.
+- Most used = in front, never hidden in More: Send to GiveLife, Test group, Generate, English, Urdu + English, Trigger, Style fix, Copy, Edit, Giki 1, Giki 2. More (a bottom sheet) keeps only rare things.
+- Simple: every button has a word (icon + word is fine, icon alone only for ‹ › and ⋯). One Back per screen. No glow or box-shadow under buttons.
+- Phone bottom bar: Notes, Message, Donors, Chat, More (icon above each word) + a small Giki 1 | Giki 2 row above it.
+- Desktop left menu: Message, Case, Giki 1, Giki 2, Donors, Thank donors, Chat, Report, Notes, Settings, More; it stays beside Case, Donors, Chat, Report (Notes covers it).
+- Message text 15px, fully readable, no scroll; on the phone a short message sits in the middle of its card (top to bottom).
+- Send buttons one line each, about 42px, group name never overlapped. Send to GiveLife and Test group up front; other groups and Timer behind a click.
+- Copy / Edit sit inside the message (bottom right), like the desktop home page.
 - Show money left, tap to change. Auto ON/OFF easy to see without hiding the message.
 - Tablet: message and send list side by side. Desktop: message and send buttons together.
 

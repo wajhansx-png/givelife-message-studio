@@ -249,7 +249,7 @@ for (const [width, height] of [
     }
   });
 
-test('a late answer never replaces a message the owner changed meanwhile; a new text says "New · not saved" and ‹ › goes back to the saved one', async ({ page }) => {
+test('a late answer never replaces a message the owner changed meanwhile; a new text says "Not saved" and ‹ › goes back to the saved one', async ({ page }) => {
   const MINE = '*My own message for Mirha.*\n\n_She is 2 and her lungs are failing. Please help her today._\n\n🔴 Rs. 11,000 LEFT\n\n*JAZZCASH ONLY*\n03097458815\n*Wajdan Khan (GiveLife Foundation account)*';
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await open(page);
@@ -275,7 +275,7 @@ test('a late answer never replaces a message the owner changed meanwhile; a new 
   await page.route('**/message-style', (r) => r.fulfill({ json: { text: '*New wording.*\n\n_Written by the scripted writer._\n\nRs. 11,000 LEFT' } }));
   await page.locator('.focus-styles [data-lang="en"]').click();
   await expect(page.locator('#focusFormatted')).toContainText('New wording');
-  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('New · not saved');
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('Not saved');
   await page.locator('#ui2Swipe .ui2-swipe-prev').click();
   await expect(page.locator('#focusFormatted')).toContainText('My own message');
   expect(await saved()).toBe(MINE);

@@ -1286,7 +1286,9 @@ function ui2Observe(run, options) {
           ? 'Not saved'
           : i
             ? i + '/' + n
-            : 'Base'; // a short label: it sits in a small pill inside the message
+            : n && !tiny
+              ? 'Base +' + n
+              : 'Base'; // a short label: it sits in a small pill inside the message
         baseBtn.dataset.pending = i || draft ? '1' : ''; // Save base makes what is showing the base
       };
       paintDots();

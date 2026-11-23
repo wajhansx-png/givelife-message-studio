@@ -1050,11 +1050,16 @@ test('/new phone: Regenerate and Next sit inside the green message (small, right
   // Copy · Edit · ⋯ sit on the message.
   await expect(page.locator('#ui2GnavReader')).toBeHidden();
   await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText(/^(Original|Base)/);
-  for (const sel of ['#ui2Swipe .ui2-swipe-prev', '#ui2Swipe .ui2-swipe-next', '#ui2RewriteRow [data-lang="en"]']) {
+  // minimal layout: ‹ › are a small pill inside the message (bottom left); the rewrite bar sits low (thumb)
+  const msgBox = await page.locator('#focusFormatted').boundingBox();
+  for (const sel of ['#ui2Swipe .ui2-swipe-prev', '#ui2Swipe .ui2-swipe-next']) {
     const box = await page.locator(sel).boundingBox();
-    expect(box.height, sel).toBeGreaterThanOrEqual(40);
-    expect(box.y, sel).toBeGreaterThan(844 * 0.6);
+    expect(box.height, sel).toBeGreaterThanOrEqual(32);
+    expect(box.y + box.height, sel).toBeLessThanOrEqual(msgBox.y + msgBox.height + 1);
   }
+  const rw = await page.locator('#ui2RewriteRow [data-lang="en"]').boundingBox();
+  expect(rw.height).toBeGreaterThanOrEqual(36);
+  expect(rw.y).toBeGreaterThan(844 * 0.6);
   await expect(page.locator('#messageFocus .ui2-reader-dock > :is(.ui2-gen-btn, #focusTest, #focusBack)')).toHaveCount(3);
   await expect(page.locator('#ui2MsgTools > :is(#focusCopy, #focusEdit, .ui2-base-btn, .focus-rail-more)')).toHaveCount(4);
   await page.locator('#ui2Swipe .ui2-swipe-next').click();

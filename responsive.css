@@ -6255,3 +6255,25 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
   outline: 0;
   background: transparent !important;
 }
+@media (max-width: 359px) {
+  /* the smallest phones: the pill and the four icons still fit one row inside the message */
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next) {
+    width: 28px !important;
+    min-width: 28px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #ui2Swipe .ui2-ver {
+    font-size: 12px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools {
+    gap: 3px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > :is(#focusCopy, #focusEdit, .ui2-base-btn),
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > .focus-rail-more > summary {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+}

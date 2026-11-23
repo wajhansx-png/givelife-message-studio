@@ -1270,6 +1270,9 @@ function ui2Observe(run, options) {
       hint.className = 'ui2-swipe-hint';
       hint.textContent = 'or swipe the message';
       verBox.append(ver, hint);
+      /* minimal: ‹ 1/5 › sits inside the message (bottom left, next to the small icons), so there is one row less;
+         a new, unsaved text turns the pill yellow ("Not saved") */
+      tools.prepend(sw);
       const paintDots = () => {
         const v = $('focusVersion'),
           n = Number(v?.dataset.n || 0),
@@ -1278,11 +1281,12 @@ function ui2Observe(run, options) {
         const narrow = matchMedia('(max-width: 480px)').matches,
           tiny = matchMedia('(max-width: 380px)').matches;
         const draft = v?.dataset.draft === '1'; // a button wrote it: not saved, never called "Base"
+        sw.dataset.draft = draft ? '1' : ''; // the pill turns yellow: "Not saved"
         ver.textContent = draft
-          ? 'New · not saved'
-          : narrow
-            ? i ? i + '/' + n : n && !tiny ? 'Base +' + n : 'Base'
-            : i ? i + ' of ' + n : n ? 'Original · ' + n + ' more' : 'Original';
+          ? 'Not saved'
+          : i
+            ? i + '/' + n
+            : 'Base'; // a short label: it sits in a small pill inside the message
         baseBtn.dataset.pending = i || draft ? '1' : ''; // Save base makes what is showing the base
       };
       paintDots();

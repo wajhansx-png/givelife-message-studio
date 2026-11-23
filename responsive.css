@@ -6125,3 +6125,133 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     font-size: 13px !important;
   }
 }
+
+/* ==== Minimal message page (owner's pick): ‹ 1/5 › inside the message, one quiet rewrite bar, then Generate · Test · Back ==== */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #ui2Swipe {
+  position: static !important;
+  inset: auto !important;
+  order: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 auto 0 0 !important;
+  padding: 3px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(0, 0, 0, 0.2) !important;
+  transform: none !important;
+  z-index: auto !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next) {
+  display: grid !important;
+  place-items: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: #e9fff6 !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #ui2Swipe .ui2-ver-box {
+  display: block !important;
+  min-width: 36px !important;
+  margin: 0 !important;
+  text-align: center !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #ui2Swipe .ui2-ver {
+  display: block !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #effff8 !important;
+  white-space: nowrap !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #ui2Swipe :is(.ui2-swipe-hint, .ui2-swipe-gap, .ui2-dots) {
+  display: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) #ui2MsgTools > #ui2Swipe,
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper:has(> #focusFormatted:empty) #ui2Swipe {
+  display: none !important; /* while editing or loading */
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > .ui2-new-tag {
+  position: absolute;
+  top: -11px;
+  left: 14px;
+  z-index: 3;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #f0c24b;
+  color: #2a1d00;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  pointer-events: none;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > .ui2-new-tag[hidden],
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) .focus-paper > .ui2-new-tag {
+  display: none !important;
+}
+/* the four rewrites: one quiet bar, no boxes */
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow#ui2RewriteRow {
+  gap: 0 !important;
+  padding: 3px !important;
+  border-radius: 12px !important;
+  background: #2a2c33 !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow#ui2RewriteRow :is(.focus-styles > button, #focusStyleFix) {
+  height: 38px !important;
+  min-height: 38px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  color: #d8dcea !important;
+  box-shadow: none !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow#ui2RewriteRow .focus-styles > button[aria-pressed='true'] {
+  background: #3a3e4d !important;
+  color: #fff !important;
+}
+@media (max-width: 899px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow {
+    left: 12px !important;
+    right: 12px !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-workspace {
+    height: calc(var(--ui2-vvh, 100dvh) - 178px - env(safe-area-inset-bottom, 0px)) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .ui2-note {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 130px);
+  }
+}
+@media (min-width: 900px) {
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2RewriteRow {
+    width: min(520px, 100%) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus .focus-paper > #focusFormatted {
+    max-height: calc(100dvh - 250px) !important;
+  }
+  html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus:has(#focusFormatted[hidden]) .focus-paper > #ui2Live:not([hidden]) {
+    max-height: calc(100dvh - 260px) !important;
+  }
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #ui2Swipe[data-draft='1'] .ui2-ver {
+  padding: 4px 9px !important;
+  border-radius: 999px !important;
+  background: #f0c24b !important;
+  color: #2a1d00 !important;
+  font-size: 12px !important;
+}
+html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next) {
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0;
+  background: transparent !important;
+}

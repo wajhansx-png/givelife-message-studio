@@ -6277,3 +6277,667 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     min-height: 32px !important;
   }
 }
+
+/* ======================= Final minimal design (Apple guidelines + owner rules) =======================
+   Main Message screen, every width. 5 buttons next to the message: Rewrite and ‹ 2/6 › inside the green message
+   (bottom right, thumb side), then Test group · Timer & groups, then Send to GiveLife (one blue button).
+   Buttons 44pt+ to touch and 12px apart; the send buttons share one height (style, not size, marks Send). */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #card.ui2-has-mini {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #card.ui2-has-mini #chat {
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+  background: transparent !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #card #chat > .message {
+  background: #005c4b !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 20px !important;
+  padding: 14px 16px 60px !important;
+  box-shadow: none !important;
+}
+/* Rewrite · ‹ 2/6 › sit inside the bottom of the green message */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg {
+  position: relative !important;
+  inset: auto !important;
+  display: flex !important;
+  align-self: flex-end !important;
+  align-items: center;
+  gap: 12px;
+  margin: -48px 12px 12px 0 !important;
+  z-index: 3;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg .ui2-rewrite {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 7px;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: rgba(0, 0, 0, 0.32) !important;
+  color: #fff !important;
+  font: 700 14px/1 Inter, system-ui, sans-serif !important;
+  box-shadow: none !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg .ui2-rewrite span {
+  display: inline !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg #ui2VerNav {
+  display: inline-flex !important;
+  position: static !important;
+  align-items: center;
+  gap: 0;
+  height: 36px;
+  margin: 0 !important;
+  padding: 0 2px;
+  border: 0 !important;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.32) !important;
+  transform: none !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg #ui2VerNav .ui2-ver-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: transparent !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg #ui2VerNav .ui2-ver-btn::before,
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg #ui2VerNav .ui2-ver-btn small {
+  display: none !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg #ui2VerNav .ui2-ver-btn svg {
+  display: block !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg #ui2VerNav .ui2-ver-count {
+  color: #fff;
+  font: 700 13.5px/1 Inter, system-ui, sans-serif;
+  padding: 0 2px;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg #ui2VerNav .ui2-ver-count:empty {
+  display: none;
+}
+html body.ui2[data-view='dm']:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg #ui2VerNav {
+  display: none !important;
+}
+/* Send buttons: Test group · Timer & groups, then Send to GiveLife lowest. One height; Send is the blue one. */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore {
+  order: 1 !important;
+  display: flex !important;
+  gap: 12px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two {
+  order: 2 !important;
+  margin: 0 !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > :is(.ui2-other-groups, .ui2-later-panel) {
+  order: 0 !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2Later,
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send [hidden] {
+  display: none !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > :is(.test-row, #ui2GroupPicker) {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 25px !important;
+  background: rgba(120, 120, 128, 0.24) !important;
+  color: #fff !important;
+  font: 600 15.5px/1.1 Inter, system-ui, sans-serif !important;
+  box-shadow: none !important;
+  justify-content: center !important;
+  white-space: nowrap;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > .test-row { order: 1 !important; }
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2GroupPicker { order: 2 !important; }
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > .test-row .gb-name {
+  color: #fff !important;
+  font: inherit !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2GroupPicker::after {
+  content: '';
+  width: 9px;
+  height: 9px;
+  margin: -4px 0 0 8px;
+  border: solid rgba(235, 235, 245, 0.72);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  flex: none;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > :is(.test-row, #ui2GroupPicker):hover {
+  background: rgba(120, 120, 128, 0.34) !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > :is(.test-row, #ui2GroupPicker):active,
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send #btnGivelife:active {
+  filter: brightness(0.85);
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send #btnGivelife {
+  height: 50px !important;
+  min-height: 50px !important;
+  border: 0 !important;
+  border-radius: 25px !important;
+  background: #0066e0 !important;
+  background-image: none !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  font: 600 17px/1.1 Inter, system-ui, sans-serif !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send #btnGivelife .gb-name,
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send #btnGivelife .last-sent {
+  color: #fff !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send #btnGivelife .last-sent {
+  opacity: 0.92;
+}
+
+@media (max-width: 899px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #main-workspace {
+    gap: 12px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #card.ui2-has-mini #chat {
+    justify-content: center !important;
+  }
+  /* bottom bar: one floating rounded bar, labels 11px, the open tab lit */
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .foot > #ui2Tabs {
+    height: 64px !important;
+    min-height: 64px !important;
+    margin: 0 2px 6px !important;
+    padding: 0 5px !important;
+    border: 0.5px solid rgba(255, 255, 255, 0.14) !important;
+    border-radius: 32px !important;
+    background: rgba(36, 36, 40, 0.95) !important;
+    box-shadow: none !important;
+    align-items: center !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab {
+    height: 54px !important;
+    min-height: 54px !important;
+    border-radius: 27px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab span {
+    font-size: 11px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab[aria-current='true'] {
+    color: #66b2ff !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+}
+@media (max-width: 359px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > :is(.test-row, #ui2GroupPicker) {
+    font-size: 14px !important;
+    padding: 0 8px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > :is(.test-row)::before {
+    display: none !important;
+  }
+}
+
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #card #chat > .message {
+  margin: 0 !important;
+  font-size: var(--home-msg-size, 15px) !important;
+  line-height: 1.42 !important;
+  flex: 0 1 auto !important;
+  min-height: 0 !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #card #chat > .message div {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home.ui2-msg-scroll #card #chat {
+  overflow: hidden !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home.ui2-msg-scroll #card #chat > .message {
+  overflow-y: auto !important;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 70px), transparent calc(100% - 44px));
+  mask-image: linear-gradient(#000 calc(100% - 70px), transparent calc(100% - 44px));
+}
+
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2GroupPicker::after {
+  width: 6px !important;
+  height: 6px !important;
+  margin: -3px 0 0 9px !important;
+}
+
+/* More: one Apple-style list (rare things on top, Giki 1 · Giki 2 at the bottom next to the thumb). */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  position: relative;
+  width: 100% !important;
+  min-height: 54px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 8px 40px 8px 16px !important;
+  border: 0 !important;
+  border-top: 0.5px solid rgba(84, 84, 88, 0.55) !important;
+  border-radius: 0 !important;
+  background: rgba(120, 120, 128, 0.16) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color: #fff !important;
+  text-align: left !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile::after {
+  content: '›';
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(235, 235, 245, 0.45);
+  font-size: 20px;
+  line-height: 1;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile b {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile small {
+  font-size: 12.5px !important;
+  color: rgba(235, 235, 245, 0.72) !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile:first-child,
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile[data-gap] {
+  border-top: 0 !important;
+  border-top-left-radius: 14px !important;
+  border-top-right-radius: 14px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile[data-gap] {
+  margin-top: 12px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile:last-child,
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile:has(+ [data-gap]) {
+  border-bottom-left-radius: 14px !important;
+  border-bottom-right-radius: 14px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile:active {
+  background: rgba(120, 120, 128, 0.3) !important;
+}
+@media (min-width: 900px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile[data-dup] {
+    display: none !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile[data-dup] + .ui2-tile:not([data-dup]) {
+    border-top: 0 !important;
+    border-top-left-radius: 14px !important;
+    border-top-right-radius: 14px !important;
+  }
+}
+@media (max-width: 299px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send #btnGivelife .last-sent {
+    display: none !important;
+  }
+}
+
+/* Computer: one quiet column in the middle. The message, then one line: Timer & groups · Test group · Send to GiveLife
+   (the blue one, at the right end). The line is pinned low, so the mouse trips are short and nothing jumps. */
+@media (min-width: 900px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .brandbar {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    justify-content: flex-end !important;
+    gap: 18px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .brandbar #whatsappConnection {
+    border: 0 !important;
+    background: transparent !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #main-workspace {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 16px !important;
+    padding: 0 32px clamp(24px, 14vh, 150px) !important;
+    grid-template-columns: none !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #main-workspace > #card,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #main-workspace > .side {
+    width: min(660px, 100%) !important;
+    max-width: 660px !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #main-workspace > #card::before,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #card > .tools,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #card #ui2MsgActions {
+    display: none !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #card #chat {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #card #chat > .message {
+    border-radius: 22px !important;
+    padding: 22px 26px 66px !important;
+    line-height: 1.5 !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #ui2GnavMain.ui2-inmsg {
+    margin: -52px 16px 16px 0 !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .side,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .side .action-rail {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore {
+    flex: 0 0 auto !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > :is(.test-row, #ui2GroupPicker) {
+    flex: 0 0 auto !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    padding: 0 18px !important;
+    border-radius: 23px !important;
+    font-size: 14.5px !important;
+    cursor: pointer;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2GroupPicker { order: 1 !important; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > .test-row { order: 2 !important; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two {
+    margin-left: auto !important;
+    flex: 0 0 auto !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send #btnGivelife {
+    width: auto !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    padding: 0 24px !important;
+    border-radius: 23px !important;
+    font-size: 16px !important;
+    cursor: pointer;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > :is(.ui2-other-groups, .ui2-later-panel) {
+    order: 3 !important;
+    flex: 1 1 100% !important;
+  }
+}
+
+@media (min-width: 900px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #main-workspace > #card,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #main-workspace > .side {
+    align-self: center !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two > .grp-card,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two .send-row {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .brandbar :is(#whatsappConnection, #leftChip) {
+    border-color: transparent !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .brandbar #leftChip {
+    background: rgba(120, 120, 128, 0.16) !important;
+  }
+}
+
+@media (min-width: 900px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two .send-row {
+    display: flex !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send #btnGivelife {
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (min-width: 900px) {
+  /* the send row keeps its container size (its text fits by it), so it gets a set width here */
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two > .grp-card,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two .send-row {
+    width: 300px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send #btnGivelife {
+    width: 100% !important;
+    flex: 1 1 auto !important;
+  }
+}
+@media (min-width: 900px) and (max-width: 1100px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two > .grp-card,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .group-two .send-row {
+    width: 220px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send #btnGivelife .last-sent {
+    display: none !important;
+  }
+}
+
+/* Rewrite page (the reader): small tools on the left, ‹ 1/5 › on the right (thumb side), 12px apart; the message sits
+   low so the tools are in easy reach; Generate · Test · Back share one height, Generate is the one blue button. */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus #ui2MsgTools {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus #ui2MsgTools > #ui2Swipe {
+  order: 9 !important;
+  margin-left: auto !important;
+}
+@media (max-width: 899px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus .focus-paper {
+    justify-content: flex-end !important;
+  }
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus .ui2-reader-dock {
+  gap: 12px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus .ui2-reader-dock > :is(.ui2-gen-btn, #focusTest, #focusBack) {
+  height: 50px !important;
+  min-height: 50px !important;
+  border: 0 !important;
+  border-radius: 25px !important;
+  box-shadow: none !important;
+  background-image: none !important;
+  font-weight: 600 !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus .ui2-reader-dock > .ui2-gen-btn {
+  background: #0066e0 !important;
+  color: #fff !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus .ui2-reader-dock > :is(#focusTest, #focusBack) {
+  background: rgba(120, 120, 128, 0.24) !important;
+  color: #fff !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus .ui2-reader-dock > :is(.ui2-gen-btn, #focusTest, #focusBack):active {
+  filter: brightness(0.85);
+}
+
+@media (max-width: 899px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus .focus-paper > #focusFormatted {
+    margin-top: auto !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus .focus-paper > #ui2MsgTools {
+    margin-bottom: 12px !important;
+  }
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus #ui2MsgTools {
+  padding-right: 10px !important;
+}
+
+/* Tablet (600–899): the tab bar sits at the top like iPad apps; the message and the send buttons are side by side,
+   send buttons on the right and low (right thumb when the tablet is held). */
+@media (min-width: 600px) and (max-width: 899px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .foot {
+    order: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    margin: 4px 0 0 !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > #main-workspace {
+    order: 1 !important;
+    flex-direction: row !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    gap: 24px !important;
+    padding: 12px 8px clamp(32px, 12vh, 160px) !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .foot > #ui2Tabs {
+    width: min(560px, 100%) !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    margin: 0 !important;
+    display: flex !important;
+    grid-template-columns: none !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .foot > #ui2Tabs .ui2-tab {
+    flex: 1 1 0 !important;
+    height: 48px !important;
+    min-height: 48px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #main-workspace > #card {
+    flex: 0 1 520px !important;
+    align-self: stretch !important;
+    min-width: 0 !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #card.ui2-has-mini #chat {
+    justify-content: flex-end !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #main-workspace > .side {
+    flex: 0 0 220px !important;
+    width: 220px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore {
+    flex-direction: column !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > :is(.test-row, #ui2GroupPicker) {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > #ui2GroupPicker { order: 1 !important; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > #ui2GroupMore > .test-row { order: 2 !important; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send #btnGivelife .last-sent {
+    display: none !important;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 899px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home #main-workspace > .side {
+    align-self: flex-end !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home > .foot {
+    background: transparent !important;
+    border: 0 !important;
+  }
+}
+
+@media (max-width: 359px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) #messageFocus #ui2MsgTools {
+    flex-wrap: wrap !important;
+    row-gap: 12px !important;
+    height: auto !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .ui2-status-row #leftChip .lw {
+    font-size: 11px !important;
+  }
+}
+/* More: the close button sits above the list, never on top of a row; 12px before "Resume messages" */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid {
+  margin-top: 40px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-extra {
+  margin-top: 12px !important;
+}
+
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid {
+  margin-top: 46px !important;
+}
+
+/* Giki 1 · Giki 2 keep their own colour in the list, so they are easy to find */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .ui2-sheet .ui2-sheet-grid > .ui2-tile.ui2-tile-giki {
+  background: rgba(125, 79, 224, 0.2) !important;
+  background-image: linear-gradient(90deg, rgba(125, 79, 224, 0.34), rgba(162, 63, 216, 0.2)) !important;
+}
+
+/* Timer & groups opens as a menu above the send buttons (it lies over the message for a moment), so nothing on the
+   page moves and Send stays exactly where the thumb or mouse is. */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send {
+  position: relative !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > :is(.ui2-other-groups, .ui2-later-panel):not([hidden]) {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 30 !important;
+  margin: 0 !important;
+  padding: 12px !important;
+  border: 0.5px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 16px !important;
+  background: #1c1c1e !important;
+  box-shadow: none !important;
+  overflow: auto !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .ui2-later-panel:not([hidden]) {
+  bottom: calc(100% + 12px) !important;
+  max-height: 40vh !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > .ui2-other-groups:not([hidden]) {
+  bottom: calc(100% + 12px + var(--ui2-later-h, 0px)) !important;
+  max-height: 34vh !important;
+}
+@media (min-width: 600px) and (max-width: 899px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11) .app.ui2-message-home .group-send > :is(.ui2-other-groups, .ui2-later-panel):not([hidden]) {
+    left: auto !important;
+    width: min(480px, 80vw) !important;
+  }
+}

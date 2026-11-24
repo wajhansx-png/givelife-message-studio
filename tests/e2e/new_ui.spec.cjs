@@ -115,11 +115,15 @@ for (const width of [280, 320, 360, 390, 430, 768]) {
     ]);
     const bar = await tabs.boundingBox();
     const send = await page.locator('#btnGivelife').boundingBox();
-    expect(bar.y).toBeGreaterThan(send.y); // below the send buttons: in thumb reach
+    // phone: below the send buttons (thumb reach); tablet: at the top like iPad apps
+    if (width < 600) expect(bar.y).toBeGreaterThan(send.y);
+    else expect(bar.y).toBeLessThan(send.y);
     await tabs.locator('[data-tab="more"]').click();
     const sheet = page.locator('#ui2Sheet');
     await expect(sheet).toBeVisible();
-    await expect(sheet.locator('.ui2-tile')).toHaveCount(10); // Case page + Giki + Giki 2 + New case + the six tiles
+    // one list: Settings · Report · Reply, then amount · New case · Case · Case page, then Giki 1 · Giki 2 (Notes is a tab)
+    await expect(sheet.locator('.ui2-tile')).toHaveCount(9);
+    await expect(sheet.locator('.ui2-tile').last()).toHaveText(/Giki 2/);
     // the Giki tile: its own colour, and it opens /giki
     const giki = sheet.locator('#ui2GikiTile');
     await expect(giki).toBeVisible();
@@ -269,8 +273,7 @@ test('/new compact group dock keeps its controls reachable at every tested width
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new');
   const main = page.locator('#btnGivelife');
-  const other = page.getByRole('button', { name: 'Other groups', exact: true });
-  const timer = page.locator('#ui2Later');
+  const other = page.getByRole('button', { name: 'Timer & groups', exact: true }); // opens other groups + Timer
   const testGroup = page.getByRole('button', { name: 'Send to Test group', exact: true });
   const free = page.locator('#btnFree');
   const all = page.locator('#sendAll');
@@ -320,12 +323,11 @@ test('/new compact group dock keeps its controls reachable at every tested width
     }
     await expect(free, `${width}px`).toBeHidden();
     await expect(all).toBeHidden();
-    const [primary, ...secondary] = await Promise.all(
-      [main, other, timer, testGroup].map((el) => el.boundingBox()),
-    );
+    const [primary, ...secondary] = await Promise.all([main, other, testGroup].map((el) => el.boundingBox()));
     expect(fits(primary), `GiveLife at ${width} × ${height}`).toBe(true);
     expect(secondary.every((b) => fits(b) && b.height >= 40)).toBe(true);
-    expect(new Set(secondary.map((b) => Math.round(b.y))).size).toBe(1);
+    // one row on phones and computers; a tablet stacks them beside the message
+    if (width < 600 || width >= 900) expect(new Set(secondary.map((b) => Math.round(b.y))).size).toBe(1);
     await other.click();
     await expect(free).toBeVisible();
     await expect(all).toBeVisible();
@@ -338,8 +340,7 @@ test('/new compact group dock keeps its controls reachable at every tested width
       await expect(page.locator('#dropFree')).toBeHidden();
       await expect(picker).toBeFocused();
     }
-    await timer.click();
-    await expect(free).toBeHidden();
+    // the same click also shows the Timer
     await expect(page.locator('#timerMain .delay-pill').first()).toBeVisible();
     await expect(page.locator('#timerFree .delay-pill').last()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
@@ -1013,44 +1014,37 @@ for (const [w, h] of [
   });
 }
 
-test('/new phone: Regenerate and Next sit inside the green message (small, right) and in the reader', async ({
+test('/new phone: Rewrite and ‹ › sit inside the green message (bottom right, thumb side); Rewrite opens the reader', async ({
   page,
 }) => {
   await open(page, '/new', 390);
-  const card = await page.locator('#card').boundingBox();
+  const msg = await page.locator('#groupPreview').boundingBox();
   const nav = await page.locator('#ui2GnavMain').boundingBox();
-  // Inside the message card, bottom right: no row under the message any more, so the message keeps that height.
-  await expect(page.locator('#card #ui2GnavMain')).toHaveCount(1);
-  expect(nav.x).toBeGreaterThan(card.x + card.width / 2);
-  expect(nav.x + nav.width).toBeLessThanOrEqual(card.x + card.width + 0.5);
-  expect(nav.y + nav.height).toBeLessThanOrEqual(card.y + card.height + 0.5);
-  expect(nav.y).toBeGreaterThanOrEqual(card.y);
-  await expect(page.locator('#ui2GnavMain .ui2-gbtn')).toHaveText(['Regenerate', 'Next']);
-  for (const [i, name] of ['Regenerate', 'Next'].entries()) {
-    const b = page.locator('#ui2GnavMain .ui2-gbtn').nth(i);
-    await expect(b).toHaveAccessibleName(name);
-    const box = await b.boundingBox();
-    expect(box.width).toBeGreaterThanOrEqual(40);
-    expect(box.height).toBeGreaterThanOrEqual(40);
-    expect(box.width).toBeLessThanOrEqual(48); // small
-  }
-  // The message text is not under the buttons: its last line can scroll clear of them.
-  // (a short message is centred and clears the buttons by itself; a long one keeps the 46px strip at the bottom)
-  const clear = await page.evaluate(() => ({
-    pad: parseFloat(getComputedStyle(document.getElementById('chat')).paddingBottom),
-    msgBottom: document.getElementById('groupPreview').getBoundingClientRect().bottom,
-    navTop: document.getElementById('ui2GnavMain').getBoundingClientRect().top,
-  }));
-  expect(clear.pad >= 46 || clear.msgBottom <= clear.navTop + 0.5).toBe(true);
-  // Tapping a button must not also open the reader (the card itself opens it).
-  await page.locator('#ui2GnavMain .ui2-gnext').click(); // presses the real New wording button
-  await expect(page.locator('#messageFocus')).toBeHidden();
+  // inside the bottom of the green message, on the right
+  expect(nav.x).toBeGreaterThan(msg.x + msg.width / 3);
+  expect(nav.x + nav.width).toBeLessThanOrEqual(msg.x + msg.width + 0.5);
+  expect(nav.y).toBeGreaterThanOrEqual(msg.y);
+  expect(nav.y + nav.height).toBeLessThanOrEqual(msg.y + msg.height + 0.5);
+  const rewrite = page.locator('#ui2GnavMain .ui2-rewrite');
+  await expect(rewrite).toHaveText('Rewrite');
+  await expect(page.locator('#ui2GnavMain #ui2VerNav #homePrev')).toBeVisible();
+  await expect(page.locator('#ui2GnavMain #ui2VerNav #homeNext')).toBeVisible();
+  for (const sel of ['.ui2-rewrite', '#homePrev', '#homeNext'])
+    expect((await page.locator('#ui2GnavMain ' + sel).boundingBox()).height, sel).toBeGreaterThanOrEqual(34);
+  // the last line of text is never under the buttons
+  const textBottom = await page.evaluate(() => {
+    const lines = document.querySelectorAll('#groupPreview .wa-line');
+    return lines[lines.length - 1].getBoundingClientRect().bottom;
+  });
+  expect(textBottom).toBeLessThanOrEqual(nav.y + 0.5);
+  await rewrite.click();
+  await expect(page.locator('#messageFocus')).toBeVisible();
   await open(page, '/new#/preview', 390);
   // In the reader (owner's layout): ‹ version ›, the rewrites and Generate · Test · Back all in the lower part (thumb);
   // Copy · Edit · ⋯ sit on the message.
   await expect(page.locator('#ui2GnavReader')).toBeHidden();
   await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText(/^(Original|Base)/);
-  // minimal layout: ‹ › are a small pill inside the message (bottom left); the rewrite bar sits low (thumb)
+  // minimal layout: ‹ › are a small pill inside the message (bottom right, thumb side); the rewrite bar sits low
   const msgBox = await page.locator('#focusFormatted').boundingBox();
   for (const sel of ['#ui2Swipe .ui2-swipe-prev', '#ui2Swipe .ui2-swipe-next']) {
     const box = await page.locator(sel).boundingBox();
@@ -1241,7 +1235,7 @@ for (const width of [320, 360, 390, 430])
     page,
   }) => {
     await open(page, '/new', width, 709);
-    await page.locator('#ui2Later').click();
+    await page.locator('#ui2GroupPicker').click(); // Timer & groups opens the other groups and the Timer
     const panel = page.locator('#ui2LaterPanel');
     await expect(panel).toBeVisible();
     const lines = await panel.locator('.ui2-later-line').count();
@@ -1272,7 +1266,7 @@ test('/new Later timers: tapping the chosen time again deselects it at once, and
   page,
 }) => {
   await open(page, '/new', 390, 709);
-  await page.locator('#ui2Later').click();
+  await page.locator('#ui2GroupPicker').click(); // Timer & groups
   const pill = page
     .locator('#ui2LaterPanel .ui2-later-line')
     .first()

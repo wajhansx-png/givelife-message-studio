@@ -618,6 +618,15 @@
     try {
       await navigator.clipboard.writeText($('focusText').value);
       status('Copied');
+      // the button itself says so (the status line is hidden on a phone): every action shows a reaction
+      const btn = $('focusCopy');
+      btn.textContent = 'Copied';
+      btn.dataset.done = '1';
+      clearTimeout(btn._t);
+      btn._t = setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.dataset.done = '';
+      }, 1400);
     } catch (e) {
       status('Could not copy. Select the text and copy.');
     }

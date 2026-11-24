@@ -1224,7 +1224,19 @@ function ui2Observe(run, options) {
       baseBtn.innerHTML =
         '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>';
       tools.insertBefore(baseBtn, more);
-      const go = (dir) => (window.focusVersionStep ? window.focusVersionStep(dir) : $('focusNext')?.click());
+      let navAt = 0; // a version change slides; any other new text (a rewrite, Generate) fades in instead
+      /* ‹ ›: the next / previous version slides in from that side, like a swipe */
+      const go = (dir) => {
+        navAt = Date.now();
+        return Promise.resolve(window.focusVersionStep ? window.focusVersionStep(dir) : $('focusNext')?.click()).then(
+          (changed) => {
+            if (!changed) return;
+            slide(dir * 28, 0);
+            void msg.offsetWidth;
+            slide(0, 200);
+          }
+        );
+      };
       baseBtn.onclick = () => $('focusSave')?.click();
       /* Write 5 new versions: presses the real Generate button; it waits while versions are being written */
       const writeBtn = bar.querySelector('.ui2-gen-btn');
@@ -1266,6 +1278,25 @@ function ui2Observe(run, options) {
       hint.className = 'ui2-swipe-hint';
       hint.textContent = 'or swipe the message';
       verBox.append(ver, hint);
+      /* a new, unsaved text: the middle of the pill is a yellow "✓ Save" button; after it, "Saved" for a moment */
+      let savedT = 0;
+      const saveDraft = () => {
+        if (sw.dataset.draft !== '1') return;
+        sw.dataset.saved = '1';
+        baseBtn.click();
+        clearTimeout(savedT);
+        savedT = setTimeout(() => {
+          sw.dataset.saved = '';
+          paintDots();
+        }, 1400);
+      };
+      verBox.addEventListener('click', saveDraft);
+      verBox.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          saveDraft();
+        }
+      });
       /* minimal: ‹ 1/5 › sits inside the message (bottom left, next to the small icons), so there is one row less;
          a new, unsaved text turns the pill yellow ("Not saved") */
       tools.prepend(sw);
@@ -1277,10 +1308,21 @@ function ui2Observe(run, options) {
         const narrow = matchMedia('(max-width: 480px)').matches,
           tiny = matchMedia('(max-width: 380px)').matches;
         const draft = v?.dataset.draft === '1'; // a button wrote it: not saved, never called "Base"
-        sw.dataset.draft = draft ? '1' : ''; // the pill turns yellow: "Not saved"
+        sw.dataset.draft = draft ? '1' : ''; // the pill turns yellow: "✓ Save" (tap to save)
+        if (draft) {
+          verBox.setAttribute('role', 'button');
+          verBox.tabIndex = 0;
+          verBox.setAttribute('aria-label', 'Not saved. Save this text');
+        } else {
+          verBox.removeAttribute('role');
+          verBox.removeAttribute('tabindex');
+          verBox.removeAttribute('aria-label');
+        }
         ver.textContent = draft
-          ? 'Not saved'
-          : i
+          ? 'Save'
+          : sw.dataset.saved === '1'
+            ? 'Saved'
+            : i
             ? i + '/' + n
             : n && !tiny
               ? 'Base +' + n
@@ -1309,10 +1351,15 @@ function ui2Observe(run, options) {
       let start = null,
         gen = 0; // each swipe gets a number: a newer swipe cancels the animation of an older one
       const slide = (x, ms) => {
-        msg.style.transition = ms && !still.matches ? 'transform ' + ms + 'ms cubic-bezier(.2,.8,.2,1), opacity ' + ms + 'ms ease' : 'none';
+        msg.style.transition = ms && !still.matches ? 'transform ' + ms + 'ms cubic-bezier(.2,.8,.2,1), opacity ' + ms + 'ms ease' : x ? 'none' : '';
         msg.style.transform = x ? 'translate3d(' + x + 'px,0,0)' : '';
         msg.style.opacity = x ? String(Math.max(0.35, 1 - Math.abs(x) / 400)) : '';
       };
+      /* any other new text (a rewrite, Trigger, Generate, Done) fades in, so the change is seen and never jumps */
+      new MutationObserver(() => {
+        if (still.matches || Date.now() - navAt < 1200 || !msg.textContent.trim()) return;
+        msg.animate?.([{ opacity: 0.25 }, { opacity: 1 }], { duration: 260, easing: 'ease-out' });
+      }).observe(msg, { childList: true, characterData: true, subtree: true });
       paper.addEventListener('pointerdown', (e) => {
         if (!$('focusText')?.hidden || e.target.closest('button, a, summary, details, textarea, [contenteditable="true"]')) return;
         if (matchMedia('(min-width: 900px)').matches) return; // the computer: Previous / Next buttons, no swipe
@@ -1353,6 +1400,7 @@ function ui2Observe(run, options) {
         const mine = ++gen,
           w = paper.clientWidth || 360,
           dir = dx < 0 ? 1 : -1;
+        navAt = Date.now();
         Promise.resolve(window.focusVersionStep ? window.focusVersionStep(dir, true) : false).then((changed) => {
           if (mine !== gen) return; // a newer swipe took over
           slide(changed ? dir * w * 0.3 : dx, 0);

@@ -6941,3 +6941,380 @@ html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not
     width: min(480px, 80vw) !important;
   }
 }
+
+
+/* ======================= ‹ › pill (Apple segmented style) + smooth changes =======================
+   One 44px pill: ‹ · 3/5 · › with short hairline dividers; each arrow is a full 44px tap area with a clear chevron.
+   A new, unsaved text: the middle becomes a white inset capsule "Save" (like a selected iOS segment); tap it to
+   save, it says "✓ Saved" for a moment, then the number comes back. Every change eases; nothing jumps. */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe {
+  align-items: stretch !important;
+  gap: 0 !important;
+  height: 44px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: rgba(0, 0, 0, 0.26) !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe > * {
+  flex-shrink: 0 !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  border-radius: 0 !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  color: #fff !important;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next)::before {
+  content: '' !important;
+  display: block !important;
+  width: 20px;
+  height: 20px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 5l-7 7 7 7'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 5l-7 7 7 7'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform 0.15s ease;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next)::after {
+  content: none !important;
+  display: none !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe .ui2-swipe-next::before {
+  transform: scaleX(-1);
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next):hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next):active {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next):focus-visible {
+  outline: 2px solid #fff !important;
+  outline-offset: -4px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe .ui2-ver-box {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 48px !important;
+  padding: 0 6px !important;
+  /* short hairline dividers, like an iOS segmented control */
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.16)) left center / 1px 20px no-repeat,
+    linear-gradient(rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.16)) right center / 1px 20px no-repeat;
+  border: 0 !important;
+  -webkit-tap-highlight-color: transparent;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe .ui2-ver {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px;
+  min-width: 0 !important;
+  height: 34px;
+  padding: 0 !important;
+  border-radius: 17px !important;
+  background: transparent !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+  transition: background-color 0.22s ease, color 0.22s ease, padding 0.22s ease;
+}
+/* not saved: a white inset capsule "Save" */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe[data-draft='1'] .ui2-ver-box {
+  padding: 0 5px !important;
+  background: none;
+  cursor: pointer;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe[data-draft='1'] .ui2-ver {
+  padding: 0 12px !important;
+  background: #fff !important;
+  color: #04604f !important;
+  animation: ui2-cap-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe[data-draft='1'] .ui2-ver-box:active .ui2-ver {
+  background: #dfe9e6 !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe[data-draft='1'] .ui2-ver-box:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -3px;
+}
+/* just saved: "✓ Saved" in plain white, then the number comes back */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe[data-saved='1']:not([data-draft='1']) .ui2-ver {
+  animation: ui2-cap-in 0.24s ease-out;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe[data-saved='1']:not([data-draft='1']) .ui2-ver::before {
+  content: '';
+  width: 15px;
+  height: 15px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe[data-saved='1']:not([data-draft='1']) .ui2-ver-box {
+  padding: 0 12px !important;
+}
+@keyframes ui2-cap-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+/* phone thumb: the pill sits right after the four icons, not pressed to the right edge where the thumb must bend */
+@media (max-width: 599px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+}
+@media (max-width: 389px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next) {
+    width: 40px !important;
+    min-width: 40px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe .ui2-ver-box {
+    min-width: 44px !important;
+    padding: 0 4px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe[data-draft='1'] .ui2-ver-box {
+    padding: 0 4px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe[data-draft='1'] .ui2-ver {
+    padding: 0 10px !important;
+    font-size: 14px !important;
+  }
+}
+@media (min-width: 360px) and (max-width: 374px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe[data-draft='1'] .ui2-ver-box {
+    padding: 0 3px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe[data-draft='1'] .ui2-ver {
+    padding: 0 8px !important;
+  }
+}
+@media (max-width: 359px) {
+  /* the smallest phones: the pill has its own row under the icons, in the middle (thumb) */
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe {
+    margin: 0 auto !important;
+  }
+}
+
+/* smooth changes on the message page: buttons ease between states and dip a little when pressed; the message dims
+   while it is being rewritten; the button in use gently breathes while it says Writing… */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus :is(#ui2RewriteRow button, .ui2-reader-dock > button, #ui2MsgTools > button, #ui2MsgTools > .focus-rail-more > summary) {
+  transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease, transform 0.12s ease !important;
+  -webkit-tap-highlight-color: transparent;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus :is(#ui2RewriteRow button, .ui2-reader-dock > button, #ui2MsgTools > button, #ui2MsgTools > .focus-rail-more > summary):active:not(:disabled) {
+  transform: scale(0.96);
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2RewriteRow#ui2RewriteRow button[aria-busy='true'] {
+  animation: ui2-breathe 1.2s ease-in-out infinite alternate;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus .focus-paper > #focusFormatted {
+  transition: opacity 0.25s ease;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:has(#ui2RewriteRow button[aria-busy='true']) .focus-paper > #focusFormatted {
+  opacity: 0.55;
+}
+@keyframes ui2-breathe {
+  from { opacity: 1; }
+  to { opacity: 0.72; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2MsgTools > #ui2Swipe#ui2Swipe .ui2-ver,
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus #ui2RewriteRow#ui2RewriteRow button[aria-busy='true'] {
+    animation: none !important;
+  }
+}
+
+/* the four tools match the ‹ › pill: one dark capsule [Copy · Edit · Save base · ⋯], each a 44px tap area with a
+   20px line icon (iOS toolbar style); 12px, then the ‹ 3/5 › capsule. Reading mode only (editing has its own row). */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools {
+  column-gap: 0 !important;
+  row-gap: 10px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > :is(#focusCopy, #focusEdit, .ui2-base-btn), html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary {
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: rgba(0, 0, 0, 0.26) !important;
+  color: #fff !important;
+  transition: background-color 0.18s ease, transform 0.12s ease !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more {
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy {
+  border-radius: 22px 0 0 22px !important;
+  padding-left: 3px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary {
+  border-radius: 0 22px 22px 0 !important;
+  padding-right: 3px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy::before, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusEdit::before, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb)::before, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary::before {
+  width: 20px !important;
+  height: 20px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb) > svg {
+  width: 19px !important;
+  height: 19px !important;
+  stroke-width: 1.8;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy:hover, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusEdit:hover, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb):hover, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary:hover {
+  background: rgba(0, 0, 0, 0.34) !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy:active, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusEdit:active, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb):active, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary:active {
+  background: rgba(0, 0, 0, 0.44) !important;
+  transform: none !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb)[data-pending='1'] {
+  background: rgba(255, 255, 255, 0.12) !important; /* a version is showing: Save base makes it the base */
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy:focus-visible, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusEdit:focus-visible, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb):focus-visible, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary:focus-visible {
+  outline: 2px solid #fff !important;
+  outline-offset: -4px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #ui2Swipe {
+  margin-left: 12px !important;
+}
+@media (max-width: 389px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > :is(#focusCopy, #focusEdit, .ui2-base-btn), html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary {
+    width: 40px !important;
+    min-width: 40px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more {
+    width: 40px !important;
+    min-width: 40px !important;
+  }
+}
+@media (max-width: 359px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #ui2Swipe {
+    margin: 0 auto !important;
+  }
+}
+
+/* easy to understand: a short word under each icon (Copy · Edit · Save · More), like the iPhone tab bar.
+   Both capsules are 50px tall. Copy says "Copied" for a moment (every action shows a reaction). */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusEdit, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb), html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary {
+  flex-direction: column !important;
+  gap: 3px !important;
+  width: 48px !important;
+  min-width: 48px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more {
+  width: 48px !important;
+  min-width: 48px !important;
+  height: 50px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy { border-radius: 25px 0 0 25px !important; }
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary { border-radius: 0 25px 25px 0 !important; }
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy::before, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusEdit::before, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary::before {
+  width: 20px !important;
+  height: 20px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb)::after {
+  content: 'Save';
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy[data-done='1'] {
+  color: #8ff0b5 !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #ui2Swipe {
+  height: 50px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #ui2Swipe#ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next) {
+  height: 50px !important;
+  min-height: 50px !important;
+}
+@media (max-width: 389px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusEdit, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb), html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary {
+    width: 44px !important;
+    min-width: 44px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more {
+    width: 44px !important;
+    min-width: 44px !important;
+  }
+}
+@media (max-width: 374px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusEdit, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb), html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary {
+    width: 42px !important;
+    min-width: 42px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more {
+    width: 42px !important;
+    min-width: 42px !important;
+  }
+}
+
+/* the 50px row sits inside the green message, 12px from its bottom edge; the text keeps clear of it */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools {
+  margin-top: -62px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #focusFormatted {
+  padding-bottom: 68px !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb) {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: none !important;
+}
+@media (max-width: 359px) {
+  /* the smallest phones: two rows (tools, then ‹ › in the middle), both inside the message */
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools {
+    margin-top: -122px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #focusFormatted {
+    padding-bottom: 128px !important;
+  }
+}
+@media (min-width: 300px) and (max-width: 359px) {
+  /* small phones: still one row (the message keeps its room): narrower parts, words stay */
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools {
+    flex-wrap: nowrap !important;
+    margin-top: -62px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #focusFormatted {
+    padding-bottom: 68px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusCopy, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #focusEdit, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .ui2-base-btn:not(#zb), html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more > summary, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > .focus-rail-more {
+    width: 38px !important;
+    min-width: 38px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #ui2Swipe {
+    margin: 0 auto 0 8px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #ui2Swipe#ui2Swipe :is(.ui2-swipe-prev, .ui2-swipe-next) {
+    width: 32px !important;
+    min-width: 32px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #ui2Swipe .ui2-ver-box {
+    min-width: 40px !important;
+    padding: 0 2px !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus:not(:has(#focusFormatted[hidden])) #ui2MsgTools > #ui2Swipe#ui2Swipe[data-draft='1'] .ui2-ver {
+    padding: 0 7px !important;
+    font-size: 14px !important;
+  }
+}

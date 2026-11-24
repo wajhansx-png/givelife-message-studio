@@ -30,8 +30,8 @@ for (const [width, height] of [[1280, 720], [1920, 1080]])
     // Giki sits right after Case, before Donors
     expect(names.indexOf('Giki 1')).toBe(names.indexOf('Case') + 1);
     expect(names.indexOf('Giki 2')).toBe(names.indexOf('Giki 1') + 1);
-    // the small phone row is not shown on a computer
-    await expect(page.locator('#ui2Tabs .ui2-quick')).toBeHidden();
+    // there is no small Giki row any more (phone: More; computer: this menu)
+    await expect(page.locator('#ui2Tabs .ui2-quick')).toHaveCount(0);
     // every menu button is fully on the screen (no scroll to reach it)
     for (const b of await page.locator('#ui2Tabs .ui2-tab:visible').all()) {
       const r = await b.boundingBox();
@@ -40,23 +40,19 @@ for (const [width, height] of [[1280, 720], [1920, 1080]])
   });
 
 for (const [width, height] of [[390, 844], [360, 740], [320, 568]])
-  test(`phone ${width}: two small Giki buttons above the bar, bar keeps five buttons, message fully visible`, async ({ page }) => {
+  test(`phone ${width}: no Giki row (Giki 1 · Giki 2 are in More), bar keeps five buttons, message fully visible`, async ({ page }) => {
     await open(page, width, height);
     await page.evaluate((m) => (document.getElementById('groupPreview').innerHTML = m), LONG);
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(400);
     const bar = await page.locator('#ui2Tabs .ui2-tab:visible').allInnerTexts();
     expect(bar.map((t) => t.trim())).toEqual(['Notes', 'Message', 'Donors', 'Chat', 'More']);
-    const chips = page.locator('#ui2Tabs .ui2-chip');
-    await expect(chips).toHaveText(['Giki 1', 'Giki 2']);
-    const tabs = await page.locator('#ui2Tabs .ui2-tab[data-tab="message"]').boundingBox();
-    for (const c of await chips.all()) {
-      const r = await c.boundingBox();
-      expect(r.y + r.height, 'chip is above the bar').toBeLessThanOrEqual(tabs.y + 1);
-      expect(r.height).toBeLessThanOrEqual(40); // small
-      expect(r.x).toBeGreaterThanOrEqual(0);
-      expect(r.x + r.width).toBeLessThanOrEqual(width);
-    }
-    // the whole message is still visible: nothing scrolls inside it or on the page
+    await expect(page.locator('#ui2Tabs .ui2-chip')).toHaveCount(0); // fewer buttons: no Giki row
+    await page.locator('#ui2Tabs [data-tab="more"]').click();
+    const rows = page.locator('#ui2Sheet .ui2-tile');
+    await expect(rows.nth(-2)).toHaveText(/Giki 1/); // the last two rows, next to the thumb
+    await expect(rows.last()).toHaveText(/Giki 2/);
+    await page.keyboard.press('Escape');
+    // the whole message is still visible: nothing scrolls on the page, and the card itself does not scroll
     const m = await page.evaluate(() => {
       const chat = document.getElementById('chat');
       return { inner: chat.scrollHeight - chat.clientHeight, page: document.documentElement.scrollHeight - innerHeight };
@@ -65,9 +61,10 @@ for (const [width, height] of [[390, 844], [360, 740], [320, 568]])
     expect(m.page).toBeLessThanOrEqual(1);
   });
 
-test('phone: a Giki button opens that Giki page', async ({ page }) => {
+test('phone: Giki 1 in More opens that Giki page', async ({ page }) => {
   await open(page, 390, 844);
-  await Promise.all([page.waitForURL(/\/giki$/), page.locator('#ui2Tabs .ui2-chip', { hasText: 'Giki 1' }).click()]);
+  await page.locator('#ui2Tabs [data-tab="more"]').click();
+  await Promise.all([page.waitForURL(/\/giki$/), page.locator('#ui2GikiTile').click()]);
 });
 
 /* Phone: the message is in the middle of its card (top to bottom) so the eyes do not have to look up to the top edge. */
@@ -85,8 +82,8 @@ test('phone: a short message is in the exact middle of its card, and a long one 
   // a long message: starts at the top, nothing is cut off
   await page.evaluate((m) => (document.getElementById('groupPreview').innerHTML = m), LONG.repeat(4));
   await expect.poll(async () => (await gaps()).above).toBeLessThan(3);
-  // the strip kept for the refresh and next buttons is still there, so the last line is never under them
-  expect(await page.locator('#chat').evaluate((n) => parseFloat(getComputedStyle(n).paddingBottom))).toBeGreaterThanOrEqual(46);
+  // the message keeps room at its bottom for Rewrite and ‹ ›, so its last line is never under them
+  expect(await page.locator('#groupPreview').evaluate((n) => parseFloat(getComputedStyle(n).paddingBottom))).toBeGreaterThanOrEqual(46);
   // and back to short again: centred again (the card follows the message as it changes)
   await page.evaluate(() => (document.getElementById('groupPreview').innerHTML = '<div><b>Short again.</b></div>'));
   await expect.poll(async () => Math.abs((await gaps()).above - (await gaps()).below)).toBeLessThan(3);

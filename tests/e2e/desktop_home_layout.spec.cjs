@@ -1,6 +1,6 @@
-/* Desktop Message home (owner's pick): the menu down the left, the whole message in the middle at a small reading
-   size with no scroll inside it, and Send + the other groups right beside it, level with the message. Phones are
-   not touched. Fake WhatsApp only: nothing is sent. */
+/* Desktop Message home (owner's final minimal pick): the menu down the left, one quiet column in the middle: the
+   whole message (16px, no scroll inside it) with Rewrite and ‹ › inside it, then one line under it:
+   Timer & groups · Test group · Send to GiveLife (the blue one, right end). Fake WhatsApp only: nothing is sent. */
 const { test, expect } = require('@playwright/test');
 
 const LONG =
@@ -18,7 +18,7 @@ async function open(page, width, height) {
 }
 
 for (const [width, height] of [[900, 600], [1024, 600], [1280, 720], [1366, 768], [1920, 1080], [980, 2000]])
-  test(`desktop home ${width}x${height}: menu left, full message, Send beside it`, async ({ page }) => {
+  test(`desktop home ${width}x${height}: menu left, full message, the send line right under it`, async ({ page }) => {
     await open(page, width, height);
     await page.evaluate((m) => (document.getElementById('groupPreview').innerHTML = m), LONG);
     await page.waitForTimeout(200);
@@ -27,10 +27,10 @@ for (const [width, height] of [[900, 600], [1024, 600], [1280, 720], [1366, 768]
     const send = await page.locator('#btnGivelife').boundingBox();
     expect(tabs.x).toBeLessThan(20); // the menu is on the left edge
     expect(tabs.x + tabs.width).toBeLessThanOrEqual(card.x);
-    expect(send.x).toBeGreaterThanOrEqual(card.x + card.width); // Send is beside the message
-    expect(send.x - (card.x + card.width)).toBeLessThan(60);
-    expect(Math.abs(send.y - card.y)).toBeLessThan(60); // level with the message: read down, look right
-    expect(card.y + card.height).toBeLessThanOrEqual(height); // the whole message is on the screen
+    expect(send.y).toBeGreaterThanOrEqual(card.y + card.height); // the send line is under the message
+    expect(send.y - (card.y + card.height)).toBeLessThan(40); // right under it: a short mouse trip
+    expect(Math.abs(send.x + send.width - (card.x + card.width))).toBeLessThan(3); // Send ends where the message ends
+    expect(send.y + send.height).toBeLessThanOrEqual(height); // the whole message and Send are on the screen
     const r = await page.evaluate(() => {
       const chat = document.getElementById('chat');
       return {
@@ -41,20 +41,23 @@ for (const [width, height] of [[900, 600], [1024, 600], [1280, 720], [1366, 768]
     });
     expect(r.inner).toBeLessThanOrEqual(1); // no scroll inside the message
     expect(r.page).toBeLessThanOrEqual(1);
-    expect(r.size).toBeGreaterThanOrEqual(11); // small, quick to read, never tiny
-    expect(r.size).toBeLessThanOrEqual(14);
-    // only Send to GiveLife and Test group stand out; the other groups open under "Other groups" (owner's choice)
+    expect(r.size).toBeGreaterThanOrEqual(13); // 16px, a short screen steps down, never under 13px
+    expect(r.size).toBeLessThanOrEqual(16);
+    // only Send to GiveLife and Test group stand out; the other groups and the Timer open under "Timer & groups"
     await expect(page.locator('#btnGivelife')).toBeVisible();
     await expect(page.locator('.group-send .test-row')).toBeVisible();
     await expect(page.locator('#btnFree')).toBeHidden();
     await page.locator('#ui2GroupPicker').click();
     await expect(page.locator('#btnFree')).toBeVisible();
     await expect(page.locator('#sendAll')).toBeVisible();
-    for (const sel of ['#btnGivelife', '#btnFree', '#sendAll', '.group-send .test-row']) {
+    for (const sel of ['#btnFree', '#sendAll']) {
       const b = await page.locator(sel).boundingBox();
       expect(b.height, sel).toBeGreaterThanOrEqual(40);
-      expect(b.height, sel).toBeLessThanOrEqual(46);
     }
+    // the send line: one height (Apple: style, not size, marks Send), 12px apart
+    const line = await Promise.all(['#ui2GroupPicker', '.group-send .test-row', '#btnGivelife'].map((q) => page.locator(q).boundingBox()));
+    expect(new Set(line.map((b) => Math.round(b.height))).size).toBe(1);
+    expect(line[1].x - (line[0].x + line[0].width)).toBeGreaterThanOrEqual(11.5);
   });
 
 test('Test group: the flask and the words sit together in the middle of the button, level with Send', async ({ page }) => {
@@ -73,10 +76,8 @@ test('Test group: the flask and the words sit together in the middle of the butt
     const pairLeft = m.wordLeft - 7 - m.flask;
     const pairCentre = (pairLeft + m.wordRight) / 2;
     expect(Math.abs(pairCentre - (m.left + m.right) / 2)).toBeLessThan(6);
-    expect(pairLeft - m.left).toBeGreaterThan(40); // not stuck to the left edge
-    expect(m.wordRight - m.wordLeft).toBeLessThan(m.boxW / 2); // the word box does not stretch
-    expect(Math.abs(m.left - m.sendX)).toBeLessThan(2); // same left edge and width as Send
-    expect(Math.abs(m.boxW - m.sendW)).toBeLessThan(2);
+    expect(pairLeft - m.left).toBeGreaterThan(12); // not stuck to the left edge
+    expect(m.left).toBeLessThan(m.sendX); // on the same line, before Send
   }
 });
 
@@ -87,10 +88,11 @@ test('a message line stays short enough to read fast on a wide screen', async ({
 });
 
 for (const width of [390, 768])
-  test(`phone and tablet keep the bottom menu at ${width}px`, async ({ page }) => {
+  test(`phone keeps the bottom menu, tablet has it at the top (iPad) at ${width}px`, async ({ page }) => {
     await open(page, width, 844);
     const tabs = await page.locator('#ui2Tabs').boundingBox();
-    expect(tabs.y).toBeGreaterThan(600);
+    if (width < 600) expect(tabs.y).toBeGreaterThan(600);
+    else expect(tabs.y).toBeLessThan(150);
     // the Hide button belongs to the computer's side menu only; every tab label stays on one line
     await expect(page.locator('#ui2RailHide')).toBeHidden();
     const rows = await page.evaluate(() =>
@@ -137,36 +139,23 @@ test('‹ › show each saved version and come back to the base; Send follows th
   expect(await page.evaluate(() => window.focusShownVersion)).toBe('');
   await page.locator('#homePrev').click(); // back from the base goes to the last version
   await expect(msg).toContainText('Second version');
-  // only the two arrows under the message, icons only, in the middle
-  const tools = page.locator('#card .tools');
-  await expect(tools.locator('button:visible, summary:visible')).toHaveCount(2);
-  const card = await page.locator('#card').boundingBox();
+  // ‹ 3/3 › sits inside the message, bottom right, next to Rewrite; the arrows are icons only
+  const bubble = await page.locator('#groupPreview').boundingBox();
   const nav = await page.locator('#ui2VerNav').boundingBox();
-  expect(Math.abs(nav.x + nav.width / 2 - (card.x + card.width / 2))).toBeLessThan(12);
+  expect(nav.x + nav.width).toBeLessThanOrEqual(bubble.x + bubble.width + 1);
+  expect(nav.y + nav.height).toBeLessThanOrEqual(bubble.y + bubble.height + 1);
+  await expect(page.locator('#ui2VerNav .ui2-ver-count')).toHaveText('3/3');
   expect((await page.locator('#homeNext').innerText()).trim()).toBe('');
 });
 
-test('Copy, Edit and More are small icons inside the message; Copy copies, Edit edits', async ({ browser }) => {
-  const ctx = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
-  const page = await ctx.newPage();
+test('the home message shows only Rewrite and ‹ ›; Rewrite opens the page with Copy, Edit and ⋯', async ({ page }) => {
   await open(page, 1280, 800);
-  const bubble = await page.locator('#groupPreview').boundingBox();
-  for (const sel of ['#copy', '#edit', '#card .overflow-tools > summary']) {
-    const b = await page.locator(sel).boundingBox();
-    expect(b.x, sel).toBeGreaterThan(bubble.x);
-    expect(b.x + b.width, sel).toBeLessThanOrEqual(bubble.x + bubble.width + 1);
-    expect(b.y + b.height, sel).toBeLessThanOrEqual(bubble.y + bubble.height + 1);
-    expect(b.width, sel).toBeLessThanOrEqual(34); // an icon, not a word button
-  }
-  await page.locator('#copy').click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('Yousuf');
-  await page.locator('#edit').click();
-  await expect(page.locator('#edit')).toHaveAttribute('data-state', 'done');
-  await page.locator('#edit').click();
-  await expect(page.locator('#edit')).not.toHaveAttribute('data-state', 'done');
-  await page.locator('#card .overflow-tools > summary').click();
-  await expect(page.getByRole('button', { name: 'Change poster' })).toBeVisible();
-  await ctx.close();
+  await expect(page.locator('#copy')).toBeHidden(); // fewer buttons: the tools are one click away
+  await expect(page.locator('#edit')).toBeHidden();
+  await expect(page.locator('#ui2GnavMain .ui2-rewrite')).toBeVisible();
+  await page.locator('#ui2GnavMain .ui2-rewrite').click();
+  await expect(page.locator('#messageFocus')).toBeVisible();
+  for (const sel of ['#focusCopy', '#focusEdit', '#messageFocus .focus-rail-more > summary']) await expect(page.locator(sel)).toBeVisible();
 });
 
 test('the menu folds with Hide and opens with Show (remembered)', async ({ page }) => {
@@ -209,21 +198,20 @@ test('Copy copies the version on screen; the arrows never replace text being edi
   });
   await page.locator('#homeNext').click();
   await expect(page.locator('#groupPreview')).toContainText('Copy me version');
-  await page.locator('#copy').click();
+  // Copy and Edit are off the home screen now; their keys/old links still press them, so the rules still hold
+  await page.evaluate(() => document.getElementById('copy').click());
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('Copy me version');
-  await expect(page.locator('#copy')).toHaveAttribute('data-state', 'done');
-  await page.locator('#edit').click(); // edits the base, not the version
+  await page.evaluate(() => document.getElementById('edit').click()); // edits the base, not the version
   await expect(page.locator('#groupPreview')).not.toContainText('Copy me version');
   const editing = await page.locator('#groupPreview').textContent();
   await page.locator('#homeNext').click();
   expect(await page.locator('#groupPreview').textContent()).toBe(editing);
-  await page.locator('#edit').click();
+  await page.evaluate(() => document.getElementById('edit').click());
   await ctx.close();
 });
 
-test('phones keep their own message buttons (no ‹ › there)', async ({ page }) => {
+test('phones show the same Rewrite and ‹ › inside the message', async ({ page }) => {
   await open(page, 390, 844);
-  await expect(page.locator('#ui2VerNav')).toBeHidden();
-  // Edit / Copy stay in the phone's own row (not moved into the message box)
-  expect(await page.evaluate(() => !!document.querySelector('#card .tools #edit') && !document.querySelector('#chat #edit'))).toBe(true);
+  await expect(page.locator('#ui2GnavMain #ui2VerNav')).toBeVisible();
+  await expect(page.locator('#ui2GnavMain .ui2-rewrite')).toBeVisible();
 });

@@ -533,14 +533,7 @@ function ui2Observe(run, options) {
       b.addEventListener('click', () => sideSwitch(key, fn));
       nav.append(b);
     }
-    const quick = mk('div', 'ui2-quick');
-    for (const [label, href] of [['Giki 1', '/giki'], ['Giki 2', '/giki2']]) {
-      const c = mk('button', 'ui2-chip', label);
-      c.type = 'button';
-      c.addEventListener('click', () => (location.href = href));
-      quick.append(c);
-    }
-    nav.prepend(quick);
+    /* Phone and tablet: Giki 1 and Giki 2 are in More (fewer buttons on every screen); the computer menu keeps them. */
     foot.append(nav);
     paintTabs();
     paintSide();
@@ -724,22 +717,29 @@ function ui2Observe(run, options) {
       return b;
     };
     const amount = ($('leftChip')?.textContent || 'Rs.').trim().replace(/\s*left$/i, '');
-    tile('Case page', 'run the whole case', () => Nav.go('case')).dataset.wide = '1';
-    /* The Giki page (its own list and WhatsApp), in its own colour so it is easy to find */
-    const giki = tile('Giki', 'own list and WhatsApp', () => (location.href = '/giki'));
-    giki.id = 'ui2GikiTile';
-    giki.classList.add('ui2-tile-giki');
-    giki.dataset.dup = '1';
-    /* Giki 2: the same page and messages, with its own list and its own WhatsApp */
-    const giki2 = tile('Giki 2', 'own list and WhatsApp', () => (location.href = '/giki2'));
-    giki2.id = 'ui2Giki2Tile';
-    giki2.classList.add('ui2-tile-giki');
-    giki2.dataset.dup = '1';
+    /* One list, rare things on top and the most used at the bottom, next to the thumb:
+       Settings · Report · Reply, then the case, then Giki 1 · Giki 2. Notes is a tab, so it is not shown twice. */
+    tile(
+      'Settings',
+      '',
+      press(() => $('gear')),
+    ).dataset.dup = '1';
+    tile(
+      'Report',
+      'right-now board',
+      press(() => document.querySelector('.report-open')),
+    ).dataset.dup = '1';
+    tile(
+      'Reply',
+      'chat shortcuts',
+      press(() => document.querySelector('.reply-open')),
+    );
     tile(
       amount + ' left',
       'change amount',
       press(() => $('leftChip')),
-    );
+    ).dataset.gap = '1';
+    tile('New case', 'Important & Top stay', newCase);
     const pick = document.querySelector('.case-pick');
     if (pick) {
       const sel = pick.querySelector('select');
@@ -752,28 +752,17 @@ function ui2Observe(run, options) {
       t.append(pick);
       grid.append(t);
     }
-    tile('New case', 'Important & Top stay', newCase);
-    tile(
-      'Reply',
-      'chat shortcuts',
-      press(() => document.querySelector('.reply-open')),
-    );
-    /* On a computer these three are already buttons in the bottom bar, so they are not shown twice. */
-    tile(
-      'Notes',
-      '',
-      press(() => $('donorNotesShortcut')),
-    ).dataset.dup = '1';
-    tile(
-      'Report',
-      'right-now board',
-      press(() => document.querySelector('.report-open')),
-    ).dataset.dup = '1';
-    tile(
-      'Settings',
-      '',
-      press(() => $('gear')),
-    ).dataset.dup = '1';
+    tile('Case page', 'run the whole case', () => Nav.go('case'));
+    /* The Giki pages (each with its own list and WhatsApp). On a computer they are in the left menu (data-dup). */
+    const giki = tile('Giki 1', 'own list and WhatsApp', () => (location.href = '/giki'));
+    giki.id = 'ui2GikiTile';
+    giki.classList.add('ui2-tile-giki');
+    giki.dataset.dup = '1';
+    giki.dataset.gap = '1';
+    const giki2 = tile('Giki 2', 'own list and WhatsApp', () => (location.href = '/giki2'));
+    giki2.id = 'ui2Giki2Tile';
+    giki2.classList.add('ui2-tile-giki');
+    giki2.dataset.dup = '1';
     const resume = document.querySelector('.resume-open');
     if (resume) {
       const r = mk('button', 'ui2-sheet-link', 'Resume messages');
@@ -785,6 +774,8 @@ function ui2Observe(run, options) {
       extra.append(r);
     }
     d.showModal();
+    /* the most used rows (Giki 1 · Giki 2) are at the bottom: on a short phone the list opens scrolled to them */
+    if (d.scrollHeight > d.clientHeight) d.scrollTop = d.scrollHeight;
   }
 
   /* Keep the primary destination and the three daily controls together at every width. */
@@ -836,19 +827,24 @@ function ui2Observe(run, options) {
       button.setAttribute('aria-expanded', 'false');
       return button;
     };
-    const other = disclosure('Other groups', 'ui2GroupPicker', groups);
+    /* One quiet button opens both: the other groups and the Timer (fewer buttons on the screen). */
+    const other = disclosure('Timer & groups', 'ui2GroupPicker', groups);
     const timer = disclosure('Timer', 'ui2Later', panel);
-    other.setAttribute('aria-label', 'Other groups');
+    other.setAttribute('aria-label', 'Timer & groups');
+    other.setAttribute('aria-haspopup', 'true');
+    timer.hidden = true; /* kept for the keyboard and old links; the Timer is inside Timer & groups */
     const choices = [
       [other, groups],
       [timer, panel],
     ];
     const show = (current) => {
       for (const [button, region] of choices) {
-        const open = button === current;
+        const open = button === current || (current === other && region === panel);
         region.hidden = !open;
         button.setAttribute('aria-expanded', String(open));
       }
+      /* the two parts of the menu stack above the send buttons: the groups sit on top of the Timer */
+      box.style.setProperty('--ui2-later-h', panel.hidden ? '0px' : panel.offsetHeight + 12 + 'px');
       if (current !== other && !drop.hidden) {
         drop.hidden = true;
         choose.setAttribute('aria-expanded', 'false');
@@ -902,7 +898,7 @@ function ui2Observe(run, options) {
         const active = choices.find(([, region]) => !region.hidden);
         if (!active) return;
         show(null);
-        active[0].focus();
+        (active[0].hidden ? other : active[0]).focus();
       }
       event.preventDefault();
       event.stopPropagation();
@@ -2061,28 +2057,27 @@ document.addEventListener('click', (e) => {
     r.append(a, b);
     return r;
   }
+  /* Main screen: two small buttons sit inside the message, bottom right (thumb side): Rewrite opens the message page
+     with every tool (Copy, Edit, Save base, ⋯, English, Urdu + English, Trigger, Style fix, Generate), and ‹ 2/6 ›
+     steps through the saved versions (#ui2VerNav, added by the versions block below). */
   function main() {
-    const card = $('card');
-    if (!card || $('ui2GnavMain')) return;
+    const chat = $('chat'),
+      card = $('card');
+    if (!chat || !card || $('ui2GnavMain')) return;
     card.classList.add('ui2-has-mini');
-    card.append(
-      row(
-        'ui2GnavMain',
-        () => {
-          if (typeof Nav !== 'undefined') Nav.go('preview');
-          let tries = 0;
-          const go = setInterval(() => {
-            const b = $('focusRetry');
-            if (++tries > 40 || (b && !$('messageFocus').hidden && !b.disabled)) {
-              clearInterval(go);
-              if (tries <= 40) b.click();
-            }
-          }, 100);
-        },
-        () => $('fresh')?.click(),
-        true,
-      ),
-    );
+    const r = document.createElement('div');
+    r.className = 'ui2-gnav ui2-gmini ui2-inmsg';
+    r.id = 'ui2GnavMain';
+    const PEN =
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+    const rw = mk('ui2-gbtn ui2-rewrite', 'Rewrite', PEN, () => {
+      if (typeof Nav !== 'undefined') Nav.go('preview');
+    });
+    rw.title = 'Rewrite: English, Urdu + English, Trigger, Style fix, Generate, Copy, Edit';
+    r.append(rw);
+    const ver = $('ui2VerNav');
+    if (ver) r.append(ver);
+    $('groupPreview')?.after(r);
   }
   function reader() {
     const bar = document.querySelector('#messageFocus .ui2-reader-dock');
@@ -2584,26 +2579,33 @@ document.addEventListener(
   arrange();
 })();
 
-/* Desktop Message home: the whole message always shows, no scrolling. It is read at 13px; a long message on a short
-   screen steps down (to 11px at the smallest) until the card fits the screen. Phones and tablets are not touched. */
+/* Message home, every width: the whole message shows without scrolling. It is read at 15px on a phone or tablet and
+   16px on a computer; a long message on a short screen steps down (never under 13px). Only if it still cannot fit
+   (very small old phones) does the text scroll inside its card, and the buttons under it stay put. */
 (() => {
   const wide = matchMedia('(min-width: 900px)');
   let busy = false;
   const fit = () => {
     const app = document.querySelector('.app.ui2-message-home'),
       card = document.getElementById('card'),
+      chat = document.getElementById('chat'),
       msg = document.getElementById('groupPreview');
-    if (busy || !app || !card || !msg) return;
+    if (busy || !app || !card || !chat || !msg) return;
+    if (msg.isContentEditable) return; // never re-size text that is being edited
     busy = true;
     try {
-      if (!wide.matches) return app.style.removeProperty('--home-msg-size');
-      const room = () => window.innerHeight - card.getBoundingClientRect().bottom - 12;
-      let size = 13;
+      const send = document.querySelector('.ui2-message-home .group-send');
+      const room = wide.matches
+        ? () => window.innerHeight - Math.max(card.getBoundingClientRect().bottom, send?.getBoundingClientRect().bottom || 0) - 16
+        : () => chat.clientHeight - chat.scrollHeight + 2; // 2px for rounding
+      app.classList.remove('ui2-msg-scroll');
+      let size = wide.matches ? 16 : 15;
       app.style.setProperty('--home-msg-size', size + 'px');
-      while (room() < 0 && size > 11) {
+      while (room() < 0 && size > 13) {
         size -= 0.5;
         app.style.setProperty('--home-msg-size', size + 'px');
       }
+      app.classList.toggle('ui2-msg-scroll', room() < 0);
     } finally {
       busy = false;
     }
@@ -2616,10 +2618,15 @@ document.addEventListener(
   addEventListener('resize', later);
   wide.addEventListener('change', later);
   const watch = () => {
-    const msg = document.getElementById('groupPreview');
-    if (!msg) return setTimeout(watch, 500);
+    const msg = document.getElementById('groupPreview'),
+      chat = document.getElementById('chat');
+    if (!msg || !chat) return setTimeout(watch, 500);
     new MutationObserver(later).observe(msg, { childList: true, subtree: true, characterData: true });
+    if (typeof ResizeObserver === 'function') new ResizeObserver(later).observe(chat); // the box changed size: fit again
     later();
+    /* the page is still settling while it opens (fonts, the send buttons moving in): measure again when it is calm */
+    document.fonts?.ready?.then(later);
+    for (const ms of [600, 1500, 3000]) setTimeout(later, ms);
   };
   watch();
 })();
@@ -2641,6 +2648,8 @@ document.addEventListener(
       where = index > 0 ? 'Version ' + index + ' of ' + n : n ? 'Base message (' + n + ' versions)' : 'Base message';
     nav.dataset.i = String(index);
     nav.title = where;
+    const count = nav.querySelector('.ui2-ver-count');
+    if (count) count.textContent = list.length > 1 ? index + 1 + '/' + list.length : '';
     for (const [b, word] of [
       [nav.firstChild, 'Previous version'],
       [nav.lastChild, 'Next version'],
@@ -2712,14 +2721,24 @@ document.addEventListener(
       b.innerHTML = svg(d);
       b.addEventListener('click', () => step(dir, b));
       nav.append(b);
+      if (dir < 0) nav.append(Object.assign(document.createElement('span'), { className: 'ui2-ver-count' }));
     }
-    tools.append(nav);
+    /* ‹ 2/6 › lives inside the message (main screen, every width), next to Rewrite */
+    const home = $('ui2GnavMain');
+    (home || tools).append(nav);
     label();
-    addEventListener('hashchange', label); // back from another page: Send still matches the version on screen
-    /* below 900px the arrows are not shown: a version left on screen would stay pinned with no way back, so it ends */
-    matchMedia('(min-width: 900px)').addEventListener('change', (e) => {
-      if (!e.matches && index > 0) window.paint('group');
-    });
+    /* the count (2/6) is known before the first press; it is read again when the owner comes back from another page */
+    const count = async () => {
+      if (index > 0) return;
+      try {
+        const d = await (await fetch('/focus-bank?kind=group')).json();
+        if (index > 0) return;
+        list = [d.source, ...(d.items || [])].filter((t) => typeof t === 'string' && t.trim());
+      } catch (e) {}
+      label();
+    };
+    count();
+    addEventListener('hashchange', () => (label(), count())); // back from another page: Send still matches the version on screen
     /* the DM screen shows the DM message: the Group version view ends (Copy and Send then use the DM text) */
     new MutationObserver(() => {
       if (document.body.dataset.view === 'dm' && index > 0) window.paint('group');

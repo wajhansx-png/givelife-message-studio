@@ -23,6 +23,11 @@ Goal: Minimize total token usage without sacrificing code quality, accuracy or s
 
 Apply these rules automatically to every coding task.
 
+# GRAPHIFY: ALWAYS USE IT TO FIND CODE (owner's rule, saves tokens)
+- Every session, every time you need to find code: run `graphify query "<question>"` or `graphify explain "<name>"` FIRST, then open only the files and lines it names. Do not scan or read files to search.
+- Session start with no `graphify-out/graph.json` (git-ignored, so new sessions lack it): run `pip install -q graphifyy && graphify update .` first.
+- grep only for an exact string inside files graphify already named. After editing code: `graphify update .`.
+
 # MAIN LINK
 - Live site: Oracle, https://129-225-68-143.sslip.io. Render is suspended: never resume it while Oracle runs. Oracle's /health says `version: local`; check a deploy by comparing a served file (CRLF stripped) with main.
 - `/` is the new design (same page as `/new`, built in `server.py` `reply_new_ui`). The previous page is saved unchanged at `/old` (`index.html`), not linked anywhere. Browser tests for the previous page use `/old`.
@@ -53,10 +58,6 @@ Apply these rules automatically to every coding task.
 - Show money left, tap to change. Auto ON/OFF easy to see without hiding the message.
 - Tablet (600–899): tab bar at the top (iPad), message and send buttons side by side, send buttons on the right and low. Desktop: one quiet column, the message then one line Timer & groups · Test group · Send to GiveLife (right end); the line never moves. Every layout change is checked at 13 sizes (280–1920) for size, 12px gaps, overlap, cut words, contrast, thumb zone and mouse time.
 
-# GRAPHIFY (use on every code task)
-- First step of every code prompt: `graphify query "<question>"` or `graphify explain "<name>"`, then open only the files it names.
-- No `graphify-out/graph.json` (it is git-ignored, so new sessions lack it): run `pip install -q graphifyy && graphify update .` first.
-- After editing code: `graphify update .`. For one simple lookup, grep is fine.
 
 # CASE PAGE (/new, Case tab)
 - `case_run.py` + `/case-run` run the approved plan through the EXISTING engines (no sender of its own); `case-run.js` + the end of `new-ui.css` are the page. Tests: `tests/test_case_run.py`, `tests/e2e/case_run.spec.cjs`.

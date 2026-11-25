@@ -5599,7 +5599,7 @@ html body.ui2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):no
     position: fixed !important;
     top: auto !important;
     right: 10px !important;
-    bottom: 10px !important;
+    bottom: 14px !important; /* the files list ends above the Generate · Test · Back row */
     left: 10px !important;
     z-index: 80 !important;
     width: auto !important;
@@ -7526,3 +7526,37 @@ html body.ui2 #messageFocus #focusFormatted mark.ui2-new-word.is-fading { backgr
 @media (min-width: 900px) { html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-tile.is-case { flex-grow: 1.45; } }
 @media (min-width: 900px) and (max-height: 699px) { html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home #ui2Today:not(.is-side) { display: none; } }
 @media (min-width: 900px) and (max-width: 999px) and (max-height: 620px) { html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home #ui2SendFiles { display: none; } }
+
+/* The note after a rewrite ("English written", or why not) never covers the tools: it shows at the top and taps go
+   through it (it hides by itself). It used to sit on Copy · Edit · Save · More, so the first tap only closed it. */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus .ui2-note {
+  top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
+  bottom: auto !important;
+  pointer-events: none;
+  animation: ui2-note-in 0.22s ease-out;
+}
+@keyframes ui2-note-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* More sheet: Done at the top right (iOS sheet); tapping outside or Esc still closes it */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus#messageFocus .focus-rail-more > div > button.ui2-more-done.ui2-more-done {
+  display: block !important;
+  width: auto !important;
+  height: 36px !important;
+  box-shadow: none !important;
+  position: absolute !important;
+  top: 6px !important;
+  right: 8px !important;
+  z-index: 2 !important;
+  margin: 0 !important;
+  min-height: 36px !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: transparent !important;
+  color: #6cb4ff !important;
+  font: inherit !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #messageFocus#messageFocus .focus-rail-more > div > button.ui2-more-done.ui2-more-done:active { background: rgba(255, 255, 255, 0.08); }

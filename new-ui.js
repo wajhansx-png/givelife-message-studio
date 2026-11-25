@@ -1164,6 +1164,19 @@ function ui2Observe(run, options) {
       bar.append($('focusBack'));
       $('focusBack').setAttribute('aria-label', 'Back');
     }
+    /* the More sheet covers the More button: a clear Done closes it (tapping outside or Esc still works) */
+    const sheet = more?.querySelector(':scope > div');
+    if (sheet && !sheet.querySelector('.ui2-more-done')) {
+      const done = document.createElement('button');
+      done.type = 'button';
+      done.className = 'ui2-more-done';
+      done.textContent = 'Done';
+      done.addEventListener('click', () => {
+        more.open = false;
+        more.querySelector('summary')?.focus({ preventScroll: true });
+      });
+      sheet.prepend(done);
+    }
     /* a short note above the rewrite row: what was written, or why it was not (the status line is hidden on phones) */
     if (!$('ui2Note')) {
       const n = document.createElement('div');
@@ -1280,17 +1293,23 @@ function ui2Observe(run, options) {
       hint.textContent = 'or swipe the message';
       verBox.append(ver, hint);
       /* a new, unsaved text: the middle of the pill is a yellow "✓ Save" button; after it, "Saved" for a moment */
-      let savedT = 0;
+      let savedT = 0,
+        askedAt = 0; // Save was tapped: "✓ Saved" shows when the text really is saved (after the confirm box)
       const saveDraft = () => {
         if (sw.dataset.draft !== '1') return;
-        sw.dataset.saved = '1';
+        askedAt = Date.now();
         baseBtn.click();
+      };
+      const savedNow = () => {
+        sw.dataset.saved = '1';
         clearTimeout(savedT);
         savedT = setTimeout(() => {
           sw.dataset.saved = '';
           paintDots();
         }, 1400);
       };
+      // the confirm box closed: a save finishes within moments; after that a cleared draft is not a save (‹ › went back)
+      $('focusBaseDialog')?.addEventListener('close', () => setTimeout(() => (askedAt = 0), 3000));
       verBox.addEventListener('click', saveDraft);
       verBox.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -1309,7 +1328,11 @@ function ui2Observe(run, options) {
         const narrow = matchMedia('(max-width: 480px)').matches,
           tiny = matchMedia('(max-width: 380px)').matches;
         const draft = v?.dataset.draft === '1'; // a button wrote it: not saved, never called "Base"
-        sw.dataset.draft = draft ? '1' : ''; // the pill turns yellow: "✓ Save" (tap to save)
+        if (!draft && sw.dataset.draft === '1' && askedAt && Date.now() - askedAt < 120000) {
+          askedAt = 0;
+          if ((Number(v?.dataset.i || 0) || 0) === 0) savedNow(); // it became the base: say so where the finger is
+        }
+        sw.dataset.draft = draft ? '1' : ''; // a new text: the white "Save" capsule (tap to save)
         if (draft) {
           verBox.setAttribute('role', 'button');
           verBox.tabIndex = 0;
@@ -2828,7 +2851,7 @@ document.addEventListener(
     addEventListener('keydown', (e) => {
       if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || e.altKey || e.ctrlKey || e.metaKey) return;
       if (!matchMedia('(min-width: 900px)').matches || !row || row.hidden || !row.offsetParent) return;
-      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"], [role="menu"], [role="listbox"], [role="radiogroup"], [role="slider"], [role="tablist"]')) return;
       if ($('messageFocus')?.getClientRects().length) return; // the message page is open: it has its own keys
       e.preventDefault();
       step(e.key === 'ArrowLeft' ? -1 : 1, e.key === 'ArrowLeft' ? $('homePrev') : $('homeNext'));
@@ -2846,6 +2869,15 @@ document.addEventListener(
     };
     count();
     addEventListener('hashchange', () => (label(), count())); // back from another page: Send still matches the version on screen
+    // a send to the GiveLife group finished ("Sent just now"): the green dots follow at once
+    const lastMain = document.querySelector('.group-send [data-last-group="main"]');
+    let lastSeen = lastMain?.textContent;
+    if (lastMain)
+      new MutationObserver(() => {
+        if (lastMain.textContent === lastSeen) return; // the same words repainted: nothing new was sent
+        lastSeen = lastMain.textContent;
+        if (/just now/.test(lastSeen)) count(); // only a fresh send, not the minutes ticking
+      }).observe(lastMain, { childList: true, characterData: true, subtree: true });
     /* the DM screen shows the DM message: the Group version view ends (Copy and Send then use the DM text) */
     new MutationObserver(() => {
       if (document.body.dataset.view === 'dm' && index > 0) window.paint('group');

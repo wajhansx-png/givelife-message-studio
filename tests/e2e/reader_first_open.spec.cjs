@@ -67,3 +67,16 @@ for (const [width, height] of [
     const card = await page.evaluate(() => getComputedStyle(document.querySelector('#messageFocus .focus-paper'), '::before').content);
     expect(card).toBe('none'); // the card is gone once the text is there
   });
+
+for (const width of [390, 1440])
+  test(`opened straight on the message page (${width}px): Back shows the new main screen, not the old layout`, async ({ page }) => {
+    await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
+    await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
+    await page.goto('/new#/preview');
+    await expect(page.locator('#focusBack')).toBeVisible();
+    await page.locator('#focusBack').click();
+    await expect(page.locator('#messageFocus')).toBeHidden();
+    await expect(page.locator('.app')).toHaveClass(/ui2-message-home/);
+    await expect(page.locator('#btnGivelife')).toBeVisible();
+  });

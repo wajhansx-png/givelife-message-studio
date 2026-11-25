@@ -118,7 +118,7 @@ for (const width of [900, 980, 1280])
     expect(r.scroll).toBeLessThanOrEqual(r.client + 1);
   });
 
-test('‹ › show each saved version and come back to the base; Send follows the version on screen', async ({ page }) => {
+test('computer: the versions row shows each saved version (click or ← →) and comes back to the base; Send follows the version on screen', async ({ page }) => {
   await open(page, 1280, 800);
   await page.evaluate(async () => {
     const post = (b) =>
@@ -127,25 +127,27 @@ test('‹ › show each saved version and come back to the base; Send follows th
     if (!d.revision) await post({ action: 'save', text: d.source || document.getElementById('group').value });
     await post({ action: 'manual', messages: ['First version. Rs. 25,000 needed.', 'Second version. Rs. 25,000 needed.'] });
   });
+  await page.reload();
   const msg = page.locator('#groupPreview');
+  const row = page.locator('#ui2VerRow');
+  await expect(row.locator('.ui2-vr-chip')).toHaveCount(3); // Base · 1 · 2
+  await expect(page.locator('#ui2VerNav')).toBeHidden(); // no ‹ › on a computer: the row does it
   const base = await msg.textContent();
-  await page.locator('#homeNext').click();
+  await row.locator('.ui2-vr-chip[data-i="1"]').click();
   await expect(msg).toContainText('First version');
+  await expect(row.locator('.ui2-vr-chip.is-on')).toHaveAttribute('data-i', '1');
   expect(await page.evaluate(() => window.focusShownVersion)).toContain('First version');
-  await page.locator('#homeNext').click();
+  await page.keyboard.press('ArrowRight');
   await expect(msg).toContainText('Second version');
-  await page.locator('#homeNext').click();
-  expect(await msg.textContent()).toBe(base);
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => msg.textContent()).toBe(base);
   expect(await page.evaluate(() => window.focusShownVersion)).toBe('');
-  await page.locator('#homePrev').click(); // back from the base goes to the last version
+  await page.keyboard.press('ArrowLeft'); // back from the base goes to the last version
   await expect(msg).toContainText('Second version');
-  // ‹ 3/3 › sits inside the message, bottom right, next to Rewrite; the arrows are icons only
-  const bubble = await page.locator('#groupPreview').boundingBox();
-  const nav = await page.locator('#ui2VerNav').boundingBox();
-  expect(nav.x + nav.width).toBeLessThanOrEqual(bubble.x + bubble.width + 1);
-  expect(nav.y + nav.height).toBeLessThanOrEqual(bubble.y + bubble.height + 1);
-  await expect(page.locator('#ui2VerNav .ui2-ver-count')).toHaveText('3/3');
-  expect((await page.locator('#homeNext').innerText()).trim()).toBe('');
+  // the row sits right above the message
+  const r = await row.boundingBox(),
+    card = await page.locator('#card').boundingBox();
+  expect(r.y + r.height).toBeLessThanOrEqual(card.y + 1);
 });
 
 test('the home message shows only Rewrite and ‹ ›; Rewrite opens the page with Copy, Edit and ⋯', async ({ page }) => {
@@ -196,7 +198,8 @@ test('Copy copies the version on screen; the arrows never replace text being edi
     if (!d.revision) await post({ action: 'save', text: d.source || document.getElementById('group').value });
     await post({ action: 'manual', messages: ['Copy me version. Rs. 25,000 needed.'] });
   });
-  await page.locator('#homeNext').click();
+  await page.reload();
+  await page.locator('#ui2VerRow .ui2-vr-chip[data-i="1"]').click();
   await expect(page.locator('#groupPreview')).toContainText('Copy me version');
   // Copy and Edit are off the home screen now; their keys/old links still press them, so the rules still hold
   await page.evaluate(() => document.getElementById('copy').click());
@@ -204,7 +207,8 @@ test('Copy copies the version on screen; the arrows never replace text being edi
   await page.evaluate(() => document.getElementById('edit').click()); // edits the base, not the version
   await expect(page.locator('#groupPreview')).not.toContainText('Copy me version');
   const editing = await page.locator('#groupPreview').textContent();
-  await page.locator('#homeNext').click();
+  await page.evaluate(() => document.getElementById('homeNext').click()); // the arrow (or key) while editing
+  await page.keyboard.press('ArrowRight');
   expect(await page.locator('#groupPreview').textContent()).toBe(editing);
   await page.evaluate(() => document.getElementById('edit').click());
   await ctx.close();

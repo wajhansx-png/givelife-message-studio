@@ -377,7 +377,8 @@ test('/new Message dock keeps each send tied to its original destination', async
       await other.click();
     if (group === 'community') await page.locator('#btnFreePick').click();
     await page.locator(selector).click();
-    await expect.poll(() => sends.at(-1)?.group).toBe(group);
+    if (group === 'main') await expect(page.locator('#btnGivelife .ui2-undo')).toContainText('Undo'); // 5 s to undo first
+    await expect.poll(() => sends.at(-1)?.group, { timeout: 10000 }).toBe(group);
     await expect(groupStatus).toContainText('Simulated send failure');
     expect(sends.at(-1)).toMatchObject({ group, message });
   }

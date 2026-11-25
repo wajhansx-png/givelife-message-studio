@@ -2645,7 +2645,13 @@ document.addEventListener(
     try {
       const send = document.querySelector('.ui2-message-home .group-send');
       const room = wide.matches
-        ? () => window.innerHeight - Math.max(card.getBoundingClientRect().bottom, send?.getBoundingClientRect().bottom || 0) - 16
+        ? () => {
+            const td = document.getElementById('ui2Today'),
+              sf = document.getElementById('ui2SendFiles'),
+              under = td && !td.classList.contains('is-side') && td.getClientRects().length ? td.getBoundingClientRect().bottom : 0,
+              files = sf?.getClientRects().length ? sf.getBoundingClientRect().bottom : 0;
+            return window.innerHeight - Math.max(card.getBoundingClientRect().bottom, send?.getBoundingClientRect().bottom || 0, under, files) - 16;
+          }
         : () => chat.clientHeight - chat.scrollHeight + 2; // 2px for rounding
       app.classList.remove('ui2-msg-scroll');
       let size = wide.matches ? 16 : 15;
@@ -2687,7 +2693,34 @@ document.addEventListener(
   const $ = (id) => document.getElementById(id);
   let list = [],
     index = 0,
-    nav = null;
+    nav = null,
+    sent = { source: false, items: [] },
+    row = null;
+  const take = (d) => {
+    list = [d.source, ...(d.items || [])].filter((t) => typeof t === 'string' && t.trim());
+    sent = d.sent && typeof d.sent === 'object' ? d.sent : { source: false, items: [] };
+  };
+  /* the language of a version, for the small tag under its number (Roman Urdu words = Urdu + English) */
+  const lang = (t) => {
+    const hits = (String(t).toLowerCase().match(/\b(hai|hain|ki|ka|ke|ko|aur|se|nahi|bachi|bacha|madad|zindagi|sirf|apni|apna|abhi|kar|karein|dua)\b/g) || []).length;
+    return hits >= 4 ? 'Urdu+Eng' : 'English';
+  };
+  /* Computer: the versions as one row above the message (Base · 1 · 2 …), one click to any; a green dot = already
+     sent to the GiveLife group, so the same words do not go twice */
+  const drawRow = () => {
+    if (!row) return;
+    row.hidden = list.length < 2;
+    const chips = list.map((t, i) => {
+      const was = i ? sent.items?.[i - 1] : sent.source;
+      return (
+        '<button type="button" class="ui2-vr-chip' + (i === index ? ' is-on' : '') + (was ? ' is-sent' : '') +
+        '" data-i="' + i + '" aria-pressed="' + (i === index) + '" title="' +
+        (i ? 'Version ' + i : 'Base message') + (was ? ' · already sent to GiveLife' : '') + '"><b>' +
+        (i ? i : 'Base') + '</b><small>' + lang(t) + '</small></button>'
+      );
+    });
+    row.innerHTML = '<div class="ui2-vr-seg" role="group" aria-label="Versions">' + chips.join('') + '</div><span class="ui2-vr-keys">← → keys</span>';
+  };
   const svg = (d) =>
     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"/></svg>';
   const showing = () => index > 0 && list[index];
@@ -2707,6 +2740,7 @@ document.addEventListener(
       b.title = word;
     }
     window.focusShownVersion = showing() || '';
+    drawRow();
   };
   const draw = (text) => {
     $('groupPreview').innerHTML = window
@@ -2733,8 +2767,7 @@ document.addEventListener(
   async function go(dir, b) {
     if (index === 0) {
       try {
-        const d = await (await fetch('/focus-bank?kind=group')).json();
-        list = [d.source, ...(d.items || [])].filter((t) => typeof t === 'string' && t.trim());
+        take(await (await fetch('/focus-bank?kind=group')).json());
       } catch (e) {
         list = [];
       }
@@ -2775,6 +2808,31 @@ document.addEventListener(
     /* ‹ 2/6 › lives inside the message (main screen, every width), next to Rewrite */
     const home = $('ui2GnavMain');
     (home || tools).append(nav);
+    row = document.createElement('div');
+    row.id = 'ui2VerRow';
+    row.className = 'ui2-ver-row';
+    row.hidden = true;
+    row.addEventListener('click', (e) => {
+      const c = e.target.closest('.ui2-vr-chip');
+      if (!c || stepping || $('groupPreview')?.isContentEditable) return;
+      const i = Number(c.dataset.i);
+      if (i === index) return;
+      index = i;
+      if (i === 0) window.paint?.('group');
+      else draw(list[i]);
+      label();
+      dispatchEvent(new Event('resize'));
+    });
+    $('card')?.before(row);
+    /* computer: ← → change the version (not while typing, not on another page) */
+    addEventListener('keydown', (e) => {
+      if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (!matchMedia('(min-width: 900px)').matches || !row || row.hidden || !row.offsetParent) return;
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if ($('messageFocus')?.getClientRects().length) return; // the message page is open: it has its own keys
+      e.preventDefault();
+      step(e.key === 'ArrowLeft' ? -1 : 1, e.key === 'ArrowLeft' ? $('homePrev') : $('homeNext'));
+    });
     label();
     /* the count (2/6) is known before the first press; it is read again when the owner comes back from another page */
     const count = async () => {
@@ -2782,7 +2840,7 @@ document.addEventListener(
       try {
         const d = await (await fetch('/focus-bank?kind=group')).json();
         if (index > 0) return;
-        list = [d.source, ...(d.items || [])].filter((t) => typeof t === 'string' && t.trim());
+        take(d);
       } catch (e) {}
       label();
     };
@@ -2960,4 +3018,173 @@ document.addEventListener(
     soon();
   }
   start();
+})();
+
+/* Computer, main Message screen (owner picks 6 and 9 + reactions):
+   - "Sends in this order": the case message (poster or video + text), then the files 1st / 2nd / 3rd, on or off.
+   - Today: when the Test group, the GiveLife group and the other groups last got it, and what is scheduled.
+   - Send to GiveLife waits 5 s with Undo before it starts (every width). */
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const ORD = ['1st', '2nd', '3rd'],
+    NAME = { poster: 'Poster', video: 'Video', pdf: 'PDF' },
+    ICON = { poster: '🖼', video: '▶', pdf: '📄' };
+  let files = null,
+    today = null;
+  async function loadFiles() {
+    if (!files) return;
+    try {
+      const r = await fetch('/group-extras');
+      if (!r.ok) return;
+      const v = await r.json();
+      const order = Array.isArray(v.order) && v.order.length === 3 ? v.order : ['poster', 'video', 'pdf'];
+      const led = v.text_on === 'video' && v.video?.has && v.video?.on;
+      const tiles = ['<span class="ui2-sf-lbl">Sends in this order</span>'];
+      tiles.push('<span class="ui2-sf-tile is-case"><span class="ui2-sf-ic">' + (led ? '▶' : '🖼') + '</span><span><b>Case</b><small>' + (led ? 'Video + text' : 'Poster + text') + '</small></span></span>');
+      order.forEach((k, i) => {
+        if (k === 'video' && led) return; // the video carries the text: it is the case message above
+        const f = v[k] || {},
+          state = !f.has ? 'none yet' : f.on ? 'on' : 'off';
+        tiles.push('<span class="ui2-sf-tile' + (f.has && f.on ? '' : ' is-off') + '" title="' + NAME[k] + ': ' + state + '"><span class="ui2-sf-ic">' + ICON[k] + '</span><span><b>' + ORD[i] + ' ' + NAME[k] + '</b><small>' + state + '</small></span></span>');
+      });
+      tiles.push('<button type="button" class="ui2-sf-change">Change</button>');
+      files.innerHTML = tiles.join('');
+    } catch (e) {}
+  }
+  function paintToday() {
+    if (!today) return;
+    const t = typeof groupTimers === 'object' && groupTimers ? groupTimers : {},
+      now = Date.now() / 1000,
+      clock = (s) => (typeof clockText === 'function' ? clockText(s) : new Date(s * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })),
+      due = [['main', 'GiveLife'], ['free', 'Other groups']].filter(([k]) => t[k] && t[k].due_at > now).map(([k, w]) => w + ' at ' + clock(t[k].due_at));
+    const sch = today.querySelector('.ui2-td-sch');
+    sch.textContent = due.length ? due.join(' · ') : 'Nothing scheduled';
+    sch.classList.toggle('is-set', !!due.length);
+    if (typeof paintGroupTimes === 'function') paintGroupTimes(); // fills the "Sent 5 min ago" lines
+  }
+  /* beside the message on a wide screen; under the send line on a smaller computer */
+  function place() {
+    const card = $('card');
+    if (!today || !card) return;
+    const wide = matchMedia('(min-width: 1280px)').matches && !!card.getClientRects().length;
+    today.classList.toggle('is-side', wide);
+    if (!wide) {
+      today.style.top = today.style.left = '';
+      today.hidden = false;
+      return;
+    }
+    // the column moved left to make room: measure once it has
+    requestAnimationFrame(() => {
+      const par = today.offsetParent || card.parentElement,
+        pr = par.getBoundingClientRect(),
+        cr = card.getBoundingClientRect();
+      today.style.top = Math.round(cr.top - pr.top - par.clientTop + par.scrollTop) + 'px';
+      today.style.left = Math.round(cr.right + 24 - pr.left - par.clientLeft) + 'px';
+      today.hidden = cr.right + 24 + 260 > window.innerWidth - 12; // never over the edge
+    });
+  }
+  function add() {
+    const card = $('card'),
+      rail = document.querySelector('.ui2-message-home .action-rail') || document.querySelector('.ui2-message-home .group-send')?.parentElement;
+    if (!card || !rail || typeof sendGroup !== 'function') return false;
+    if ($('ui2SendFiles')) return true;
+    files = document.createElement('div');
+    files.id = 'ui2SendFiles';
+    files.className = 'ui2-send-files';
+    files.addEventListener('click', (e) => {
+      if (!e.target.closest('.ui2-sf-change')) return;
+      if (typeof Nav !== 'undefined') Nav.go('preview');
+      setTimeout(() => {
+        const more = document.querySelector('#messageFocus .focus-rail-more');
+        if (more) more.open = true;
+      }, 450);
+    });
+    rail.after(files); // under the send line: the send line stays right under the message
+    today = document.createElement('aside');
+    today.id = 'ui2Today';
+    today.className = 'ui2-today';
+    today.setAttribute('aria-label', 'Today');
+    today.innerHTML =
+      '<div class="ui2-td-t">Today</div>' +
+      '<div class="ui2-td-row"><span>Test group</span><span data-last-group="test">Checking…</span></div>' +
+      '<div class="ui2-td-row"><span>GiveLife group</span><span data-last-group="main">Checking…</span></div>' +
+      '<div class="ui2-td-row"><span>Other groups</span><span data-last-group="free">Checking…</span></div>' +
+      '<div class="ui2-td-row"><span>Scheduled</span><span class="ui2-td-sch">Nothing scheduled</span></div>';
+    files.after(today);
+    loadFiles();
+    paintToday();
+    place();
+    addEventListener('group-extras-changed', loadFiles);
+    addEventListener('focus', loadFiles);
+    addEventListener('resize', place);
+    if (typeof ResizeObserver === 'function') {
+      const ro = new ResizeObserver(place);
+      for (const el of [card, files, $('ui2VerRow')]) if (el) ro.observe(el); // the row above appearing moves the card
+    }
+    for (const ms of [600, 1500, 3000]) setTimeout(place, ms);
+    // the timer buttons change when a send is scheduled or done: the Today line follows
+    const timers = document.querySelectorAll('.gb-timer');
+    timers.forEach((b) => new MutationObserver(paintToday).observe(b, { attributes: true, childList: true, characterData: true, subtree: true }));
+    setInterval(paintToday, 30000);
+    return true;
+  }
+  if (!add()) {
+    const t = setInterval(() => add() && clearInterval(t), 400);
+    setTimeout(() => clearInterval(t), 20000);
+  }
+
+  /* Send to GiveLife: 5 s to undo (Gmail style) instead of an "are you sure" box. Tap again = Undo. A send that is
+     already running keeps its own tap-to-stop. */
+  const btn = $('btnGivelife');
+  if (!btn) return;
+  let timer = 0,
+    tick = 0,
+    left = 0,
+    go = false;
+  const cover = document.createElement('span');
+  cover.className = 'ui2-undo';
+  cover.hidden = true;
+  btn.append(cover);
+  const stop = () => {
+    clearTimeout(timer);
+    clearInterval(tick);
+    timer = 0;
+    cover.hidden = true;
+    btn.classList.remove('is-undo');
+  };
+  btn.addEventListener(
+    'click',
+    (e) => {
+      if (go) return; // the real send, after the 5 s
+      if (typeof stops !== 'undefined' && stops.has && stops.has('main')) return; // a running send: tap = stop
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (timer) {
+        stop(); // Undo
+        cover.hidden = false;
+        cover.textContent = 'Not sent';
+        setTimeout(() => !timer && (cover.hidden = true), 1200);
+        return;
+      }
+      left = 5;
+      btn.classList.add('is-undo');
+      cover.hidden = false;
+      cover.innerHTML = '<i class="ui2-undo-bar"></i><span>Sending in ' + left + '…</span><b>Undo</b>';
+      tick = setInterval(() => {
+        left -= 1;
+        const s = cover.querySelector('span');
+        if (s && left > 0) s.textContent = 'Sending in ' + left + '…';
+      }, 1000);
+      timer = setTimeout(() => {
+        stop();
+        go = true;
+        try {
+          btn.click();
+        } finally {
+          go = false;
+        }
+      }, 5000);
+    },
+    true,
+  );
 })();

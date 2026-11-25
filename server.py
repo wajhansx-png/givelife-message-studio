@@ -4294,6 +4294,12 @@ def remember_manual(value):
             STORE.put("manual_context", dict(value))
 
 
+def _text_key(text):
+    """The words of a message, without amounts or spacing: a version sent with a newer amount is still that version."""
+    words = re.sub(r"[^a-z]+", " ", str(text or "").lower()).split()
+    return " ".join(words[:40])
+
+
 def record_delivery(jid, text, result):
     if result.get("code") != "SUCCESS":
         return
@@ -4308,6 +4314,26 @@ def record_delivery(jid, text, result):
         }
         if STORE:
             STORE.put("last_deliveries", DELIVERIES)
+            # which wordings already went to each group (the Message screen marks those versions as sent)
+            log = STORE.get("sent_text_log", {})
+            if not isinstance(log, dict):
+                log = {}
+            key = _text_key(text)
+            rows = [r for r in log.get(jid, []) if isinstance(r, dict) and r.get("k") != key]
+            log[jid] = (rows + [{"k": key, "t": time.time()}])[-60:]
+            STORE.put("sent_text_log", log)
+
+
+def sent_versions(row, jid):
+    """For the versions row: was the base / each version already sent to this group?"""
+    try:
+        log = STORE.get("sent_text_log", {}) if STORE else {}
+        keys = {r.get("k") for r in (log.get(jid) or []) if isinstance(r, dict)}
+    except Exception:
+        keys = set()
+    keys.discard("")
+    seen = lambda t: bool(keys) and _text_key(t) in keys
+    return {"source": seen(row.get("source", "")), "items": [seen(t) for t in row.get("items") or []]}
 
 
 def resolve_person(to):
@@ -6629,7 +6655,10 @@ class Handler(BaseHTTPRequestHandler):
             bank.start(
                 kind
             )  # resume generation if needed; never rewrite the bank just because the tab opened
-            return self.reply(bank.get(kind))
+            row = bank.get(kind)
+            if kind == "group" and isinstance(row, dict):
+                row = {**row, "sent": sent_versions(row, GROUPS["main"][1])}
+            return self.reply(row)
         if self.path == "/donor-messages":
             return self.reply({
                     **donors().messages.get(),

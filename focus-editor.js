@@ -432,6 +432,34 @@
       .replace(/\n[ \t]*\n+/g, '<span class="wa-gap"></span>')
       .replace(/\n?(<span class="wa-(?:gap|rule)"[^>]*><\/span>)\n?/g, '$1');
   }
+  /* A rewrite just replaced the text: the words that are new glow blue for 2 s, so the change is seen at a glance */
+  function glow(before) {
+    const old = new Set(String(before || '').toLowerCase().match(/[\p{L}\p{N}']+/gu) || []);
+    if (!old.size || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const box = $('focusFormatted'),
+      walk = document.createTreeWalker(box, NodeFilter.SHOW_TEXT),
+      nodes = [];
+    while (walk.nextNode()) nodes.push(walk.currentNode);
+    let marked = 0;
+    for (const n of nodes) {
+      const parts = n.nodeValue.split(/([\p{L}\p{N}']+)/u);
+      if (!parts.some((w, i) => i % 2 && !old.has(w.toLowerCase()))) continue;
+      const frag = document.createDocumentFragment();
+      parts.forEach((w, i) => {
+        if (i % 2 && !old.has(w.toLowerCase())) {
+          const m = document.createElement('mark');
+          m.className = 'ui2-new-word';
+          m.textContent = w;
+          frag.append(m);
+          marked++;
+        } else if (w) frag.append(w);
+      });
+      n.replaceWith(frag);
+    }
+    if (!marked) return;
+    setTimeout(() => box.querySelectorAll('mark.ui2-new-word').forEach((m) => m.classList.add('is-fading')), 2000);
+    setTimeout(() => box.querySelectorAll('mark.ui2-new-word').forEach((m) => m.replaceWith(m.textContent)), 2700);
+  }
   function paint(text) {
     aiDraft = ''; // whatever shows now is a saved text (base or version) unless showText marks it again
     delete $('focusVersion').dataset.draft;
@@ -782,7 +810,9 @@
     } else {
       // a written text is only shown: it never replaces the saved base by itself (Back, a swipe or Test used to
       // save it quietly). Save base, Generate, or editing it and Done keep it.
+      const before = $('focusText').value;
       paint(text);
+      glow(before);
       aiDraft = text;
       $('focusVersion').dataset.draft = '1';
       $('focusVersion').textContent = version;

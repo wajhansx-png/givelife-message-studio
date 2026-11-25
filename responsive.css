@@ -7332,3 +7332,197 @@ html body.ui2 #messageFocus #focusFormatted .wa-rule {
   background: currentColor;
   opacity: 0.45;
 }
+
+/* ======================= Computer, main Message screen: versions row · sends in this order · Today =======================
+   (owner picks 3, 6, 9). Phones and tablets do not show them: the ‹ › pill and More cover it there. */
+#ui2VerRow, #ui2SendFiles, #ui2Today { display: none; }
+@media (min-width: 900px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home #ui2VerRow:not([hidden]) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 660px;
+    max-width: 100%;
+    margin: 0 auto 10px;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home:has(#ui2VerRow:not([hidden])) #ui2VerNav { display: none !important; }
+  /* the column grows from the bottom; when it is taller than the screen it starts at the top instead (never cut off) */
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home > #main-workspace { justify-content: safe flex-end !important; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2VerRow .ui2-vr-seg { display: flex; gap: 2px; padding: 3px; border-radius: 11px; background: #2a2a2e; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2VerRow .ui2-vr-chip {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 50px;
+    height: 40px;
+    padding: 0 9px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #d6d6da;
+    font: inherit;
+    line-height: 1.05;
+    cursor: pointer;
+    transition: background-color 0.18s ease, color 0.18s ease;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2VerRow .ui2-vr-chip b { font-size: 14px; font-weight: 700; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2VerRow .ui2-vr-chip small { margin-top: 2px; font-size: 10px; font-weight: 600; color: #9a9aa2; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2VerRow .ui2-vr-chip:hover { background: #38383d; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2VerRow .ui2-vr-chip.is-on { background: #fff; color: #111; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2VerRow .ui2-vr-chip.is-on small { color: #555; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2VerRow .ui2-vr-chip.is-sent::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #30d158;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2VerRow .ui2-vr-chip:focus-visible { outline: 2px solid #0a84ff; outline-offset: 1px; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2VerRow .ui2-vr-keys { font-size: 11.5px; color: #8a8a92; }
+
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home #ui2SendFiles {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 660px;
+    max-width: 100%;
+    margin: 10px auto 10px;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-lbl { width: 70px; font-size: 12px; line-height: 1.2; font-weight: 600; color: #9aa0a6; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-tile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px 5px 5px;
+    border-radius: 10px;
+    background: #26262a;
+    font-size: 13px;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-tile b { display: block; font-weight: 600; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-tile small { display: block; font-size: 11.5px; color: #9aa0a6; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-tile.is-off { opacity: 0.5; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-ic {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+    background: #3a3a42;
+    font-size: 14px;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-tile.is-case .ui2-sf-ic { background: linear-gradient(135deg, #d64545, #7a1f3d); }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-change {
+    margin-left: auto;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #6cb4ff;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-change:hover { background: #26262a; }
+
+  /* smaller computer: Today is one quiet line under the send line */
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home #ui2Today {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 18px;
+    width: 660px;
+    max-width: 100%;
+    margin: 8px auto 0;
+    font-size: 12.5px;
+    color: #9aa0a6;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2Today .ui2-td-t { display: none; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2Today .ui2-td-row { display: flex; gap: 6px; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2Today .ui2-td-row > span:first-child { color: #c9c9cf; font-weight: 600; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2Today .ui2-td-sch.is-set { color: #6cb4ff; }
+}
+@media (min-width: 1280px) {
+  /* wide computer: Today sits beside the message; the column moves left to make room */
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home #main-workspace { position: relative; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home #main-workspace:has(#ui2Today.is-side) { padding-right: 284px !important; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home #ui2Today.is-side {
+    position: absolute;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 0;
+    width: 260px;
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #232327;
+    font-size: 13.5px;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home #ui2Today.is-side[hidden] { display: none; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2Today.is-side .ui2-td-t {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #9aa0a6;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2Today.is-side .ui2-td-row { justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid #2f2f34; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2Today.is-side .ui2-td-row:nth-child(2) { border-top: 0; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2Today.is-side .ui2-td-row > span:last-child { text-align: right; font-weight: 600; }
+}
+
+/* Send to GiveLife: 5 s to undo (every width) */
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #btnGivelife { position: relative; overflow: hidden; }
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #btnGivelife > .ui2-undo {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-radius: inherit;
+  background: #1f4f8f;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #btnGivelife > .ui2-undo[hidden] { display: none; }
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #btnGivelife > .ui2-undo > span, html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #btnGivelife > .ui2-undo > b { position: relative; z-index: 1; }
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #btnGivelife > .ui2-undo > b { padding: 6px 14px; border-radius: 999px; background: #fff; color: #0b3b77; font-size: 14px; }
+html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #btnGivelife > .ui2-undo > .ui2-undo-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 100%;
+  background: #0066e0;
+  animation: ui2-undo-run 5s linear forwards;
+}
+@keyframes ui2-undo-run { from { width: 100%; } to { width: 0; } }
+@media (prefers-reduced-motion: reduce) { html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #btnGivelife > .ui2-undo > .ui2-undo-bar { animation: none; width: 0; } }
+
+/* after a rewrite: the new words glow blue for 2 s, then fade */
+html body.ui2 #messageFocus #focusFormatted mark.ui2-new-word {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: rgba(10, 132, 255, 0.42);
+  color: inherit;
+  transition: background-color 0.6s ease;
+}
+html body.ui2 #messageFocus #focusFormatted mark.ui2-new-word.is-fading { background: transparent; }
+@media (min-width: 900px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-tile { flex: 1 1 0; min-width: 0; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-tile > span:last-child { min-width: 0; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-tile :is(b, small) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-change { border: 0 !important; box-shadow: none !important; flex: none; }
+}
+@media (min-width: 900px) { html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #ui2SendFiles .ui2-sf-tile.is-case { flex-grow: 1.45; } }
+@media (min-width: 900px) and (max-height: 699px) { html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home #ui2Today:not(.is-side) { display: none; } }
+@media (min-width: 900px) and (max-width: 999px) and (max-height: 620px) { html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app.ui2-message-home #ui2SendFiles { display: none; } }

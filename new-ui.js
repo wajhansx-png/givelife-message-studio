@@ -914,7 +914,8 @@ function ui2Observe(run, options) {
       attributeFilter: ['class'],
     });
     paint();
-    box.closest('.app')?.classList.add('ui2-message-home');
+    // opened straight on the message page (#/preview, a refresh there): the card sits inside it, outside .app, for now
+    (box.closest('.app') || document.querySelector('.app'))?.classList.add('ui2-message-home');
   }
 
   /* Computer: today's message with its style choices and keyboard letters; chat becomes a slim bar. */

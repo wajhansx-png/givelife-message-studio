@@ -1015,23 +1015,25 @@ for (const [w, h] of [
   });
 }
 
-test('/new phone: Rewrite and ‹ › sit inside the green message (bottom right, thumb side); Rewrite opens the reader', async ({
+test('/new phone: Rewrite and ‹ › sit under the green message at the thumb spot; Rewrite opens the reader', async ({
   page,
 }) => {
   await open(page, '/new', 390);
   const msg = await page.locator('#groupPreview').boundingBox();
   const nav = await page.locator('#ui2GnavMain').boundingBox();
-  // inside the bottom of the green message, on the right
-  expect(nav.x).toBeGreaterThan(msg.x + msg.width / 3);
-  expect(nav.x + nav.width).toBeLessThanOrEqual(msg.x + msg.width + 0.5);
-  expect(nav.y).toBeGreaterThanOrEqual(msg.y);
-  expect(nav.y + nav.height).toBeLessThanOrEqual(msg.y + msg.height + 0.5);
+  const pill = await page.locator('#ui2VerNav').boundingBox();
+  const send = await page.locator('.group-send').boundingBox();
+  // under the message, just above Test group; ‹ › in the middle of the width (owner's resting thumb), not at the edge
+  expect(nav.y).toBeGreaterThanOrEqual(msg.y + msg.height - 0.5);
+  expect(nav.y + nav.height).toBeLessThanOrEqual(send.y + 0.5);
+  expect(pill.x + pill.width / 2).toBeGreaterThan(390 * 0.4);
+  expect(pill.x + pill.width).toBeLessThan(390 * 0.8);
   const rewrite = page.locator('#ui2GnavMain .ui2-rewrite');
   await expect(rewrite).toHaveText('Rewrite');
   await expect(page.locator('#ui2GnavMain #ui2VerNav #homePrev')).toBeVisible();
   await expect(page.locator('#ui2GnavMain #ui2VerNav #homeNext')).toBeVisible();
   for (const sel of ['.ui2-rewrite', '#homePrev', '#homeNext'])
-    expect((await page.locator('#ui2GnavMain ' + sel).boundingBox()).height, sel).toBeGreaterThanOrEqual(34);
+    expect((await page.locator('#ui2GnavMain ' + sel).boundingBox()).height, sel).toBeGreaterThanOrEqual(44);
   // the last line of text is never under the buttons
   const textBottom = await page.evaluate(() => {
     const lines = document.querySelectorAll('#groupPreview .wa-line');

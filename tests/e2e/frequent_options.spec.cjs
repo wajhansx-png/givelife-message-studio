@@ -68,25 +68,25 @@ test('phone: Giki 1 in More opens that Giki page', async ({ page }) => {
 });
 
 /* Phone: the message is in the middle of its card (top to bottom) so the eyes do not have to look up to the top edge. */
-test('phone: a short message is in the exact middle of its card, and a long one fills it from the top', async ({ page }) => {
+test('phone: the message sits low, right above Rewrite · ‹ ›, and a long one fills its card from the top', async ({ page }) => {
   await open(page, 390, 844);
   const gaps = () =>
     page.evaluate(() => {
       const c = document.getElementById('chat').getBoundingClientRect();
       const g = document.getElementById('groupPreview').getBoundingClientRect();
-      return { above: g.top - c.top, below: c.bottom - g.bottom, scroll: document.getElementById('chat').scrollHeight - document.getElementById('chat').clientHeight };
+      const n = document.getElementById('ui2GnavMain').getBoundingClientRect();
+      return { above: g.top - c.top, toNav: n.top - g.bottom, scroll: document.getElementById('chat').scrollHeight - document.getElementById('chat').clientHeight };
     });
   await page.evaluate(() => (document.getElementById('groupPreview').innerHTML = '<div><b>Short message.</b></div><div>Rs. 18,000 LEFT</div>'));
-  await expect.poll(async () => Math.abs((await gaps()).above - (await gaps()).below)).toBeLessThan(3);
+  // a short message sits low: 12px above Rewrite · ‹ › (owner: the thumb spot), the space is above it
+  await expect.poll(async () => Math.abs((await gaps()).toNav - 24)).toBeLessThan(3);
   expect((await gaps()).above).toBeGreaterThan(100);
-  // a long message: starts at the top, nothing is cut off
+  // a long message: starts at the top, nothing is cut off, never under the buttons
   await page.evaluate((m) => (document.getElementById('groupPreview').innerHTML = m), LONG.repeat(4));
   await expect.poll(async () => (await gaps()).above).toBeLessThan(3);
-  // the message keeps room at its bottom for Rewrite and ‹ ›, so its last line is never under them
-  expect(await page.locator('#groupPreview').evaluate((n) => parseFloat(getComputedStyle(n).paddingBottom))).toBeGreaterThanOrEqual(46);
-  // and back to short again: centred again (the card follows the message as it changes)
-  await page.evaluate(() => (document.getElementById('groupPreview').innerHTML = '<div><b>Short again.</b></div>'));
-  await expect.poll(async () => Math.abs((await gaps()).above - (await gaps()).below)).toBeLessThan(3);
+  // it scrolls inside its card, and the card's visible part ends above the buttons
+  const edge = await page.evaluate(() => document.getElementById('ui2GnavMain').getBoundingClientRect().top - document.getElementById('chat').getBoundingClientRect().bottom);
+  expect(edge).toBeGreaterThanOrEqual(0);
 });
 
 test('computer: the message position is not changed', async ({ page }) => {

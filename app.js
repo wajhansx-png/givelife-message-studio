@@ -596,7 +596,7 @@ $('chat').addEventListener(
 function paint(k) {
   $(k + 'Preview').innerHTML = waFormat($(k).value)
     .split('\n')
-    .map((l) => '<div class="wa-line' + (l ? '' : ' blank') + '">' + (l || '<br>') + '</div>')
+    .map((l) => '<div class="wa-line' + (l ? (/^[ \t]*[—–─_-]{3,}[ \t]*$/.test(l) ? ' rule' : '') : ' blank') + '">' + (l || '<br>') + '</div>')
     .join('');
 }
 function render() {

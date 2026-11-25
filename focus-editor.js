@@ -363,7 +363,7 @@
       node.onclick = null;
     }
   }
-  /* The whole message shows at once: the largest size (11–12px) at which it fits; a very long one scrolls in its card. */
+  /* The whole message shows at once: mini size, the largest (11–11.5px) at which it fits; a very long one scrolls. */
   function fit(force) {
     const p = $('focusFormatted');
     if (editing) return;
@@ -383,16 +383,16 @@
       return p.scrollHeight <= p.clientHeight + 2;
     };
     let lo = 11,
-      hi = 12,
+      hi = 11.5,
       best = lo,
       done = false;
     const prev = fresh ? NaN : parseFloat(p.dataset.fitSize || '');
     if (fresh && fits(hi)) {
       best = hi;
       done = true;
-    } else if (prev >= 11 && prev <= 12) {
+    } else if (prev >= 11 && prev <= 11.5) {
       const a = Math.max(11, prev - 0.8),
-        b = Math.min(12, prev + 0.5);
+        b = Math.min(11.5, prev + 0.5);
       if (fits(b)) {
         best = b;
         done = true;
@@ -423,11 +423,20 @@
     // Send / Test on the Group screen send THIS version first (the base: the usual rotation)
     window.focusShownVersion = kind === 'group' && index >= 0 ? row.items[index] : '';
   }
+  /* Mini read (owner: "read in one look"): the same text, but a blank line is a small gap and a ——— line is a short
+     thin rule, so the whole message is one compact block. Copy and Send still use the exact text. */
+  function shown(text) {
+    return window
+      .waFormat(text)
+      .replace(/(^|\n)[ \t]*[—–─_-]{3,}[ \t]*(?=\n|$)/g, '$1<span class="wa-rule" role="separator"></span>')
+      .replace(/\n[ \t]*\n+/g, '<span class="wa-gap"></span>')
+      .replace(/\n?(<span class="wa-(?:gap|rule)"[^>]*><\/span>)\n?/g, '$1');
+  }
   function paint(text) {
     aiDraft = ''; // whatever shows now is a saved text (base or version) unless showText marks it again
     delete $('focusVersion').dataset.draft;
     $('focusText').value = text;
-    $('focusFormatted').innerHTML = window.waFormat(text);
+    $('focusFormatted').innerHTML = shown(text);
     label();
     requestAnimationFrame(fit);
   }
@@ -443,7 +452,7 @@
       // the owner changed the text by hand: the language / Trigger buttons start fresh on THIS message
       if (wasEditing && dirty && $('focusText').value !== lastStyled && typeof resetStyle === 'function') resetStyle();
       if (dirty && !keep) save();
-      $('focusFormatted').innerHTML = window.waFormat($('focusText').value);
+      $('focusFormatted').innerHTML = shown($('focusText').value);
       fit();
       // the keyboard closes a moment after Done: measure again once the screen has its full height
       setTimeout(() => fit(true), 250);

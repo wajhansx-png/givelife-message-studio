@@ -7318,3 +7318,17 @@ html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not
     font-size: 14px !important;
   }
 }
+
+/* Mini read: a blank line in the message is a small gap, a ——— line a short thin rule (the text itself is unchanged) */
+html body.ui2 #messageFocus #focusFormatted .wa-gap {
+  display: block;
+  height: 5px;
+}
+html body.ui2 #messageFocus #focusFormatted .wa-rule {
+  display: block;
+  width: 34px;
+  height: 1px;
+  margin: 4px 0;
+  background: currentColor;
+  opacity: 0.45;
+}

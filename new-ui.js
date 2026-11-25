@@ -2651,8 +2651,8 @@ document.addEventListener(
   arrange();
 })();
 
-/* Message home, every width: the whole message shows without scrolling. It is read at 15px on a phone or tablet and
-   16px on a computer; a long message on a short screen steps down (never under 13px). Only if it still cannot fit
+/* Message home, every width: the whole message shows without scrolling. Mini read: 12.5px on a phone or tablet and
+   14px on a computer; a long message on a short screen steps down (never under 11px). Only if it still cannot fit
    (very small old phones) does the text scroll inside its card, and the buttons under it stay put. */
 (() => {
   const wide = matchMedia('(min-width: 900px)');
@@ -2677,9 +2677,9 @@ document.addEventListener(
           }
         : () => chat.clientHeight - chat.scrollHeight + 2; // 2px for rounding
       app.classList.remove('ui2-msg-scroll');
-      let size = wide.matches ? 16 : 15;
+      let size = wide.matches ? 14 : 12.5; // mini read: one look, the eyes do not travel down
       app.style.setProperty('--home-msg-size', size + 'px');
-      while (room() < 0 && size > 13) {
+      while (room() < 0 && size > 11) {
         size -= 0.5;
         app.style.setProperty('--home-msg-size', size + 'px');
       }
@@ -2769,7 +2769,7 @@ document.addEventListener(
     $('groupPreview').innerHTML = window
       .waFormat(text)
       .split('\n')
-      .map((l) => '<div class="wa-line' + (l ? '' : ' blank') + '">' + (l || '<br>') + '</div>')
+      .map((l) => '<div class="wa-line' + (l ? (/^[ \t]*[—–─_-]{3,}[ \t]*$/.test(l) ? ' rule' : '') : ' blank') + '">' + (l || '<br>') + '</div>')
       .join('');
   };
   const reset = () => {

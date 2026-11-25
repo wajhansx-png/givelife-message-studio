@@ -1,5 +1,5 @@
 /* Desktop Message home (owner's final minimal pick): the menu down the left, one quiet column in the middle: the
-   whole message (16px, no scroll inside it) with Rewrite and ‹ › inside it, then one line under it:
+   whole message (mini read 14px, no scroll inside it) with Rewrite and ‹ › inside it, then one line under it:
    Timer & groups · Test group · Send to GiveLife (the blue one, right end). Fake WhatsApp only: nothing is sent. */
 const { test, expect } = require('@playwright/test');
 
@@ -41,7 +41,7 @@ for (const [width, height] of [[900, 600], [1024, 600], [1280, 720], [1366, 768]
     });
     expect(r.inner).toBeLessThanOrEqual(1); // no scroll inside the message
     expect(r.page).toBeLessThanOrEqual(1);
-    expect(r.size).toBeGreaterThanOrEqual(13); // 16px, a short screen steps down, never under 13px
+    expect(r.size).toBeGreaterThanOrEqual(11); // mini read: 14px, a short screen steps down, never under 11px
     expect(r.size).toBeLessThanOrEqual(16);
     // only Send to GiveLife and Test group stand out; the other groups and the Timer open under "Timer & groups"
     await expect(page.locator('#btnGivelife')).toBeVisible();

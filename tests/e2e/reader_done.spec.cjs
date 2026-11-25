@@ -275,7 +275,7 @@ test('a late answer never replaces a message the owner changed meanwhile; a new 
   await page.route('**/message-style', (r) => r.fulfill({ json: { text: '*New wording.*\n\n_Written by the scripted writer._\n\nRs. 11,000 LEFT' } }));
   await page.locator('.focus-styles [data-lang="en"]').click();
   await expect(page.locator('#focusFormatted')).toContainText('New wording');
-  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('Not saved');
+  await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('Save'); // a new, unsaved text: the white Save capsule
   await page.locator('#ui2Swipe .ui2-swipe-prev').click();
   await expect(page.locator('#focusFormatted')).toContainText('My own message');
   expect(await saved()).toBe(MINE);

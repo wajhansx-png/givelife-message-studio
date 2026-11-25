@@ -24,8 +24,7 @@ for (const width of [320, 390, 1280])
     await expect(btn).toBeVisible();
     await expect(btn).toHaveAccessibleName('Save base'); // a small 💾 on the message
     const box = await btn.boundingBox();
-    expect(box.height).toBeGreaterThanOrEqual(32);
-    expect(box.height).toBeLessThanOrEqual(36); // small, like Copy and Edit
+    expect(box.height).toBe(50); // one part of the Copy · Edit · Save · More capsule (icon + word)
     const msg = await page.locator('#focusFormatted').boundingBox();
     expect(box.x + box.width).toBeLessThanOrEqual(msg.x + msg.width + 1);
     expect(box.y + box.height).toBeLessThanOrEqual(msg.y + msg.height + 1);

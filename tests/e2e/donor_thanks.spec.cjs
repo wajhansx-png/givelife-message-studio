@@ -543,8 +543,7 @@ for (const view of ['dialog', 'tab']) {
       });
       await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
       await page.goto('/new#/donors/donated');
-      if (view === 'dialog')
-        await page.locator('.donor-thanks').click();
+      if (view === 'dialog') await page.locator('.donor-thanks').click();
       const toggle = page.locator(view === 'dialog' ? '#thanksSwitch' : '#thanksTabSwitch');
       const label = page.locator(view === 'dialog' ? '#thanksStartLabel' : '#thanksTabLabel');
       const status = page.locator(view === 'dialog' ? '#thanksStatus' : '#thanksRowStatus');

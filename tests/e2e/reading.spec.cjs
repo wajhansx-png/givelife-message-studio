@@ -37,9 +37,9 @@ for (const [width, height] of [
     // a very small old phone: the text scrolls inside its card (same rule as the main screen), never cut off
     else
       expect(
-        await page.locator('#chat').evaluate((el) =>
-          ['auto', 'scroll'].includes(getComputedStyle(el).overflowY),
-        ),
+        await page
+          .locator('#chat')
+          .evaluate((el) => ['auto', 'scroll'].includes(getComputedStyle(el).overflowY)),
       ).toBe(true);
     const bounds = await page.locator('.app').evaluate((el) => ({
       bottom: el.getBoundingClientRect().bottom,

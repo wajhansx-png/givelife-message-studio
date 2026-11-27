@@ -1,5 +1,7 @@
 const { test, expect } = require('@playwright/test');
-test('a cloud HTML error after a send is readable, marked not confirmed, and never retried', async ({ page }) => {
+test('a cloud HTML error after a send is readable, marked not confirmed, and never retried', async ({
+  page,
+}) => {
   await page.addInitScript(() =>
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
   );

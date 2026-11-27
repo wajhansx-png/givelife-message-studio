@@ -28,7 +28,10 @@ const audit = (page, scope) =>
         continue;
       }
       // ‹ › (previous / next version) are the one owner-approved icon-only pair
-      if (!/[A-Za-z]{2}/.test(t) && !b.matches('#homePrev, #homeNext, .ui2-swipe-prev, .ui2-swipe-next'))
+      if (
+        !/[A-Za-z]{2}/.test(t) &&
+        !b.matches('#homePrev, #homeNext, .ui2-swipe-prev, .ui2-swipe-next')
+      )
         out.push('ICON ' + id);
       if (c.boxShadow !== 'none' && !/^rgba\([^)]*\) 0px 0px 0px 1px inset$/.test(c.boxShadow))
         out.push('SHADOW ' + id + ' ' + c.boxShadow.slice(0, 40));

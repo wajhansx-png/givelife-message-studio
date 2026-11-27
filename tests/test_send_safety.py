@@ -7,6 +7,8 @@ from unittest.mock import patch
 
 import test_case_audience_routing as tcar
 import test_giki_line as tgl
+import test_group_failure_paths as tgf
+from urllib.error import URLError
 
 
 class TwoRoutesOnePerson(tcar.Routing):
@@ -90,7 +92,11 @@ class StepsPerPerson(tgl.Fixture):
 
     def got(self):
         def step(b):
-            return b["extra"] if b.get("kind") == "dm_extra" else ("case" if b.get("poster") else "share")
+            return (
+                b["extra"]
+                if b.get("kind") == "dm_extra"
+                else ("case" if b.get("poster") else "share")
+            )
 
         return [(b["phone"], step(b), b.get("line")) for b in self.sent]
 
@@ -99,7 +105,10 @@ class StepsPerPerson(tgl.Fixture):
 
         def swap(body):
             if body.get("extra") == "video" and body["phone"] == phones[0]:
-                self.on = [("video", "c" * 32), ("pdf", "a" * 32)]  # the owner picks another video now
+                self.on = [
+                    ("video", "c" * 32),
+                    ("pdf", "a" * 32),
+                ]  # the owner picks another video now
 
         self.on_send = swap
         self.go(self.g, {"action": "send_all", "request_id": "swap", "poster": False})
@@ -133,14 +142,23 @@ class StepsPerPerson(tgl.Fixture):
                 answers.append(str(e))
 
         taps = [threading.Thread(target=press) for _ in range(2)]
-        with patch("giki_line.time.sleep", lambda s: time.sleep(0.01)):  # "still stopping" waits 10 ms, not 1 s
+        real_sleep = time.sleep
+        with patch(
+            "giki_line.time.sleep", lambda s: real_sleep(0.01)
+        ):  # "still stopping" waits 10 ms, not 1 s
             [t.start() for t in taps]
             [t.join(60) for t in taps]
         for _ in range(300):  # the resumed batch has one person left: their first DM goes at once
-            if not self.g.jobs.active and self.g.jobs._load()["jobs"][-1].get("state") == "Completed":
+            if (
+                not self.g.jobs.active
+                and self.g.jobs._load()["jobs"][-1].get("state") == "Completed"
+            ):
                 break
             time.sleep(0.05)
         got = [(p, s) for p, s, _ in self.got()]
+        self.assertEqual(
+            len(answers), 2, answers
+        )  # both taps were answered (one resumed, one refused)
         self.assertEqual(len(got), len(set(got)), ("a step went twice", got, answers))
         self.assertEqual(
             sorted(got),
@@ -170,6 +188,32 @@ class StepsPerPerson(tgl.Fixture):
         self.assertEqual([s for p, s in got if p == phones[1]], ["case"])
         for p in (phones[0], phones[2]):
             self.assertEqual([s for q, s in got if q == p], ["case", "video", "pdf", "share"], p)
+
+
+class ThreeGroups(tgf.GroupFailurePaths):
+    """Three groups picked: each shows its own result; a failed or unclear one stops the job there, the next group is
+    never sent blind, and nothing unclear is ever sent again."""
+
+    def results(self, job):
+        return [(r.get("key"), r.get("code")) for r in job["results"]]
+
+    def test_sent_then_failed_then_untouched(self):
+        job, calls = self.run_groups([tgf.OK, {"code": "ERROR", "message": "group not found"}])
+        keys = [app_key for app_key, _ in self.results(job)]
+        self.assertEqual([c for _, c in self.results(job)], ["SUCCESS", "ERROR"])
+        self.assertEqual(len(calls), 2)  # the third group was not sent while the second one failed
+        self.assertEqual(len(set(calls)), 2)
+        self.assertEqual(len(keys), 2)
+
+    def test_sent_then_unclear_is_never_resent_and_the_third_waits(self):
+        job, calls = self.run_groups([tgf.OK, URLError("timed out")])
+        self.assertEqual([c for _, c in self.results(job)], ["SUCCESS", "UNCERTAIN"])
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0] != calls[1], True)  # two different groups, each once
+
+
+for _name in [n for n in dir(tgf.GroupFailurePaths) if n.startswith("test_")]:
+    setattr(ThreeGroups, _name, None)  # only the tests written here
 
 
 for _name in [n for n in dir(tcar.Routing) if n.startswith("test_")]:

@@ -12169,16 +12169,29 @@ html
 }
 /* Report on a phone: Giki 1 and Giki 2 (status only, no switch) share one row, so all seven cards fit. */
 @media (max-width: 599px) {
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) dialog.report-dialog .report-card #autoCards {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j)
+    dialog.report-dialog
+    .report-card
+    #autoCards {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) dialog.report-dialog .report-card #autoCards > .auto-card:not([data-giki]) {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j)
+    dialog.report-dialog
+    .report-card
+    #autoCards
+    > .auto-card:not([data-giki]) {
     grid-column: 1 / -1;
   }
 }
 /* Short screens: the Report scrolls, but Stop all Auto (the emergency button) stays pinned in view. */
 @media (max-height: 699px) {
-  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) dialog.report-dialog .report-card #autoStopAll:not([hidden]) {
+  html
+    body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j)
+    dialog.report-dialog
+    .report-card
+    #autoStopAll:not([hidden]) {
     position: sticky !important;
     bottom: 8px !important;
     z-index: 3 !important;
@@ -12186,27 +12199,52 @@ html
 }
 /* Computer, short window (about 600px tall): the DM message page keeps its action bar fully on screen. */
 @media (min-width: 900px) and (max-height: 640px) {
-  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #donorMessages .bank-workspace {
+  html
+    body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(
+      #z9
+    ):not(#z10):not(#z11):not(#z12)
+    #donorMessages
+    .bank-workspace {
     gap: 2px !important;
   }
-  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) #donorMessages .bank-actions {
+  html
+    body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(
+      #z9
+    ):not(#z10):not(#z11):not(#z12)
+    #donorMessages
+    .bank-actions {
     padding-top: 2px !important;
     padding-bottom: 2px !important;
   }
 }
 /* Computer: the left menu's Hide, the WhatsApp status and the files' Change are real 40px targets (owner: taps 40px+). */
 @media (min-width: 900px) {
-  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) :is(#ui2RailHide, #whatsappConnection, .ui2-sf-change) {
+  html
+    body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(
+      #z9
+    ):not(#z10):not(#z11):not(#z12)
+    :is(#ui2RailHide, #whatsappConnection, .ui2-sf-change) {
     min-height: 40px !important;
   }
 }
 /* Computer, short window: the left menu never goes past the top or bottom; it starts at the top and scrolls. */
 @media (min-width: 900px) and (max-height: 640px) {
-  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app > .foot {
+  html
+    body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(
+      #z9
+    ):not(#z10):not(#z11):not(#z12)
+    .app
+    > .foot {
     align-items: stretch !important;
     overflow: hidden !important;
   }
-  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app > .foot > #ui2Tabs {
+  html
+    body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(
+      #z9
+    ):not(#z10):not(#z11):not(#z12)
+    .app
+    > .foot
+    > #ui2Tabs {
     justify-content: flex-start !important;
     max-height: 100% !important;
     overflow-y: auto !important;
@@ -12215,6 +12253,11 @@ html
   }
 }
 /* DM view (D key / DM tab): only the DM form; the group send line, its file tiles and Today belong to the group message. */
-html body.ui2[data-view='dm']:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app :is(.action-rail > .group-send, #ui2SendFiles, #ui2Today, #ui2VerRow) {
+html
+  body.ui2[data-view='dm']:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(
+    #z7
+  ):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12)
+  .app
+  :is(.action-rail > .group-send, #ui2SendFiles, #ui2Today, #ui2VerRow) {
   display: none !important;
 }

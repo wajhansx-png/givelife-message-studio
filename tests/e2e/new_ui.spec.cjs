@@ -234,18 +234,9 @@ test("/new computer: today's message and the send controls share one centered co
   expect(await page.evaluate(() => location.hash)).toBe('');
   await expect(page.locator('#messageFocus')).toBeHidden();
   await expect(page.locator('#chat')).toBeInViewport();
-  await expect(page.locator('#card .tools #copy')).toBeVisible();
-  const edit = page.locator('#card .tools #edit');
-  await edit.click();
-  await expect(page.locator('#groupPreview')).toBeEditable();
-  await expect(page.locator('#messageFocus')).toBeHidden();
-  await edit.click();
-  await page.locator('#card .overflow-tools > summary').click();
-  await expect(page.locator('#card #fresh')).toBeVisible();
-  await page.locator('#card #hideMsg').click();
-  await expect(page.locator('#card')).toBeHidden();
-  await page.locator('#showMsg').click();
-  await expect(page.locator('#chat')).toBeVisible();
+  // minimal main screen (owner): Rewrite and the versions sit with the message; Copy, Edit and the rest
+  // are on the message page that Rewrite opens (tested in reader_actions)
+  await expect(page.locator('#ui2GnavMain .ui2-rewrite')).toBeVisible();
   await page.keyboard.press('d');
   await expect(page.locator('#dmPreview')).toBeVisible();
   await expect(page.locator('#sendDm')).toBeVisible();

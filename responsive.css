@@ -12194,3 +12194,27 @@ html
     padding-bottom: 2px !important;
   }
 }
+/* Computer: the left menu's Hide, the WhatsApp status and the files' Change are real 40px targets (owner: taps 40px+). */
+@media (min-width: 900px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) :is(#ui2RailHide, #whatsappConnection, .ui2-sf-change) {
+    min-height: 40px !important;
+  }
+}
+/* Computer, short window: the left menu never goes past the top or bottom; it starts at the top and scrolls. */
+@media (min-width: 900px) and (max-height: 640px) {
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app > .foot {
+    align-items: stretch !important;
+    overflow: hidden !important;
+  }
+  html body.ui2:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app > .foot > #ui2Tabs {
+    justify-content: flex-start !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+}
+/* DM view (D key / DM tab): only the DM form; the group send line, its file tiles and Today belong to the group message. */
+html body.ui2[data-view='dm']:not(#z0):not(#z1):not(#z2):not(#z3):not(#z4):not(#z5):not(#z6):not(#z7):not(#z8):not(#z9):not(#z10):not(#z11):not(#z12) .app :is(.action-rail > .group-send, #ui2SendFiles, #ui2Today, #ui2VerRow) {
+  display: none !important;
+}

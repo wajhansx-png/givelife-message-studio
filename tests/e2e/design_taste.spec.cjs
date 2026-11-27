@@ -27,7 +27,9 @@ const audit = (page, scope) =>
         if (r.height < 38.5 || r.width < 38.5) out.push('SHORT ' + id);
         continue;
       }
-      if (!/[A-Za-z]{2}/.test(t)) out.push('ICON ' + id);
+      // ‹ › (previous / next version) are the one owner-approved icon-only pair
+      if (!/[A-Za-z]{2}/.test(t) && !b.matches('#homePrev, #homeNext, .ui2-swipe-prev, .ui2-swipe-next'))
+        out.push('ICON ' + id);
       if (c.boxShadow !== 'none' && !/^rgba\([^)]*\) 0px 0px 0px 1px inset$/.test(c.boxShadow))
         out.push('SHADOW ' + id + ' ' + c.boxShadow.slice(0, 40));
       if (r.height < 38.5) out.push('SHORT ' + id + ' h=' + (r.height | 0));
@@ -53,7 +55,7 @@ for (const [w, h] of [
       await page.setViewportSize({ width: w, height: h });
       await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
       await page.goto('/new#/case');
-      await expect(page.locator('.cr-row')).toHaveCount(5);
+      await expect(page.locator('.cr-row')).toHaveCount(6); // Group, Giki 1, Giki 2, Top, Volunteers, Important
       expect(await audit(page, '#casePage')).toEqual([]);
       await page.locator('#crTools').click();
       await page.waitForTimeout(300);

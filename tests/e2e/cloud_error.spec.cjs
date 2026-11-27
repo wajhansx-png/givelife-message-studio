@@ -17,7 +17,7 @@ test('a cloud HTML error after a send is readable, marked not confirmed, and nev
       body: '<!DOCTYPE html><title>Service unavailable</title>',
     });
   });
-  await page.goto('/old');
+  await page.goto('/new');
   await expect(page.locator('#leftChip')).toContainText('25,000');
   await page.locator('.test-row').click();
   // the request may have gone: the owner is told to check WhatsApp, not that nothing happened

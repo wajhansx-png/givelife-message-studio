@@ -117,7 +117,7 @@ for (const width of [1440, 390])
           phone: '1555' + String(1230000 + i),
         },
       });
-    await page.goto('/old#/donors/all');
+    await page.goto('/new#/donors/all');
     const table = page.locator('#donorTable');
     const rows = table.locator('.donor-row');
     await expect(rows.first()).toBeVisible();

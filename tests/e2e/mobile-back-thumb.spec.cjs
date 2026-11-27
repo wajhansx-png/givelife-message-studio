@@ -46,7 +46,7 @@ for (const [width, height] of [
     try {
       for (const [route, selector, prepare] of screens) {
         await page.goto('about:blank');
-        await page.goto(route.startsWith('/') ? route : '/old#/' + route);
+        await page.goto(route.startsWith('/') ? route : '/new#/' + route);
         if (prepare) await prepare(page);
         const back = page.locator(selector).first();
         await expect(back, route).toBeVisible();

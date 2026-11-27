@@ -18,7 +18,7 @@ test.afterAll(async () => {
 async function openReport(page) {
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   page.on('dialog', (d) => d.accept());
-  await page.goto('/old');
+  await page.goto('/new');
   await page.locator('.report-open').click();
   await expect(page.locator('.auto-card')).toHaveCount(7); // the 5 controls + Giki 1 and Giki 2;
 }
@@ -74,7 +74,7 @@ test('a DM batch started anywhere (not from a card) shows live in the Report, fi
     await route.fulfill({ response, json: { ...body, live } });
   });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
-  await page.goto('/old');
+  await page.goto('/new');
   await page.locator('.report-open').click();
   const row = page.locator('.auto-card[data-giki="1"]').first();
   await expect(row.locator('h4')).toHaveText('Donor DMs');

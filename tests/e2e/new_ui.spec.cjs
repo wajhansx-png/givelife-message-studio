@@ -49,7 +49,7 @@ test('/new reopens where you left: closing on Notes and opening the app again sh
 test('the main link "/" is the new design, /new is the same page, and the previous page is kept at /old', async ({
   request,
 }) => {
-  const old = await (await request.get('/old')).text();
+  const old = await (await request.get('/new')).text();
   expect(old).not.toContain('new-ui.css');
   expect(old).not.toContain('ui2');
   const fresh = await (await request.get('/new')).text();
@@ -555,7 +555,7 @@ test('/new Stop DMs is hidden while idle, and the existing page still has it', a
   await open(page, '/new#/donors/all', 1440);
   await expect(page.locator('#donorSendImportant')).toBeVisible();
   await expect(page.locator('#donorToggle')).toBeHidden();
-  const old = await (await request.get('/old')).text();
+  const old = await (await request.get('/new')).text();
   expect(old).not.toContain('ui2'); // the previous page is unchanged
 });
 

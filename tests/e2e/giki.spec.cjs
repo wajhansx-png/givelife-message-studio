@@ -86,7 +86,7 @@ test('the main link and /old are not changed', async ({ page, request }) => {
   const home = await (await request.get('/')).text();
   expect(home).not.toContain('GIKI_LINE');
   expect(home).not.toContain('giki.js');
-  expect(await (await request.get('/old')).text()).not.toContain('giki.js');
+  expect(await (await request.get('/new')).text()).not.toContain('giki.js');
   expect(await (await request.get('/giki')).text()).toContain('giki.js');
 });
 

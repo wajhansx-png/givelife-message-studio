@@ -133,7 +133,7 @@ for (const [width, height, theme] of sizes) {
         // A fresh document closes native modal top layers from the previous state.
         await page.goto('about:blank');
         // these screens are the previous page's (#mainNavMore, #volName ...), which lives at /old
-        await page.goto(screen.url || (process.env.AUDIT_PATH ?? '/old') + '#/' + screen.route, {
+        await page.goto(screen.url || (process.env.AUDIT_PATH ?? '/new') + '#/' + screen.route, {
           waitUntil: 'domcontentloaded',
         });
         // Navigation and data loading settle before measuring a surface.

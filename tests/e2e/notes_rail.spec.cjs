@@ -9,7 +9,7 @@ async function unlock(page, width, height = 850) {
     headers: { Authorization: 'Bearer manual-fix-preview-key' },
     data: { reset_notes: true },
   });
-  await page.goto('/old#/donors/all/notes');
+  await page.goto('/new#/donors/all/notes');
   await page.locator('#notesPassword').fill('test-preview-only-pin');
   await page.locator('#notesUnlockButton').click();
   await expect(page.locator('#notesEditor')).toBeVisible();

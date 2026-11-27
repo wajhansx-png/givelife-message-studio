@@ -6292,8 +6292,8 @@ class Handler(BaseHTTPRequestHandler):
         return self.send_cached(hit, kind)
 
     def reply_new_ui(self):
-        """The app with the new design switched on: the main link ("/") and its old path (/new). The previous design is
-        kept as /old (plain index.html), not linked anywhere."""
+        """The app with the new design switched on: the main link ("/") and its old path (/new). index.html is its base
+        page (the previous design that once lived at /old is retired)."""
 
         def build():
             html = (ROOT / "index.html").read_text(encoding="utf-8")
@@ -6517,11 +6517,15 @@ class Handler(BaseHTTPRequestHandler):
                 else "application/javascript",
             )
         # The main link ("/") is the new design. "/new" and "/new/" stay as the same page (old bookmarks and home-screen
-        # shortcuts). The previous page is saved, unchanged and not linked anywhere, at "/old" (index.html).
+        # shortcuts). The previous design (/old) was retired: an old /old link now opens the main page.
         if self.path.split("?")[0] in ("/", "/new", "/new/"):
             return self.reply_new_ui()
         if self.path.split("?")[0] == "/old":
-            return self.reply_file("index.html", "text/html")
+            self.send_response(302)
+            self.send_header("Location", "/")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         if self.path.split("?")[0].rstrip("/") in GIKI_PAGES:
             return self.reply_giki_ui(self.path.split("?")[0].rstrip("/"))
         if self.path.split("?")[0] == "/giki.js":

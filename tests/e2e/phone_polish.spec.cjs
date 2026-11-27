@@ -23,7 +23,7 @@ for (const [width, height] of [
         });
       return route.fulfill({ response: res, json });
     });
-    await page.goto('/old#/donors/all');
+    await page.goto('/new#/donors/all');
     await expect(page.locator('.donor-row').first()).toBeVisible();
     const rows = await page.evaluate(() =>
       [...document.querySelectorAll('.donor-row')].slice(0, 6).map((r) => {
@@ -69,7 +69,7 @@ for (const [width, height] of [
     expect(fit).toBe(true);
     await page.keyboard.press('Escape');
     // Group preview: the whole message is visible without scrolling.
-    await page.goto('/old#/preview');
+    await page.goto('/new#/preview');
     await expect(page.locator('#focusFormatted')).toBeVisible();
     await expect
       .poll(() =>
@@ -77,7 +77,7 @@ for (const [width, height] of [
       )
       .toBe(true);
     // DM Messages: same.
-    await page.goto('/old#/donors/messages');
+    await page.goto('/new#/donors/messages');
     await expect(page.locator('.bank-preview').first()).toBeVisible();
     // A short phone (568 / 667px) cannot show a long DM at the old page's 14px: only enforce on taller phones.
     // (The main page shows it at 12px and fits; see full_message_desktop / dm tests.)

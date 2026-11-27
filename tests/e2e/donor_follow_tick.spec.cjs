@@ -17,7 +17,7 @@ test('ticking and unticking Send with follow-up is saved on the server', async (
     localStorage.setItem('givelife-cloud-key', key);
     localStorage.setItem('givelife-follow-up', '0');
   }, KEY);
-  await page.goto('/old#/donors/top');
+  await page.goto('/new#/donors/top');
   const box = page.locator('#donorFollowUp');
   await expect(box).toBeVisible();
   await expect(box).not.toBeChecked();

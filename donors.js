@@ -376,11 +376,15 @@
       resumeStatus.append(fold, pill);
     }
     resumeStatus.dataset.state = pending ? 'scheduled' : attention ? 'attention' : 'paused';
+    /* This bar takes the progress bar's place on a phone, so it carries the counts too. */
+    const done = (st.previous_sent || 0) + (st.sent || 0),
+      whole = st.original_total || st.total || 0,
+      counts = whole ? ` · ${done} of ${whole} sent · ${Math.max(0, whole - done)} left` : '';
     resumeStatus.querySelector('span').textContent = pending
-      ? 'DMs paused · Resume at ' + st.resume.label
+      ? 'DMs paused · Resume at ' + st.resume.label + counts
       : attention
         ? 'Resume needs attention: ' + (st.resume?.error || '')
-        : 'DMs paused';
+        : 'DMs paused' + counts;
     el('donorResumeNowInline').hidden = attention || !(pending || paused);
     el('donorResumeAtInline').hidden = attention || !(pending || paused);
     el('donorResumeAtInline').textContent = pending ? 'Change time' : 'At a time…';

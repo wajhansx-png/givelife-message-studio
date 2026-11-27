@@ -65,15 +65,16 @@ for (const [width, height] of [
   });
 }
 
-test('the Case tab is the first tab, and Tools opens the existing tools and comes back', async ({
+test('phone: Case opens from More (Notes took its tab), and Tools opens the existing tools and comes back', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new');
   const tabs = page.locator('#ui2Tabs .ui2-tab:visible');
-  await expect(tabs.first()).toHaveText('Case');
-  await tabs.first().click();
+  await expect(tabs.first()).toHaveText('Notes'); // owner's phone bar: Notes, Message, Donors, Chat, More
+  await page.locator('#ui2Tabs .ui2-tab[data-tab="more"]').click();
+  await page.locator('#ui2Sheet .ui2-tile', { hasText: 'Case page' }).click();
   await expect(page.locator('#casePage')).toBeVisible();
   await page.locator('#crTools').click();
   await expect(page.locator('#crMenu .cr-tool-h')).toHaveText(['Daily', 'Messages', 'Setup']);

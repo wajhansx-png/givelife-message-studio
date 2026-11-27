@@ -28,11 +28,19 @@ for (const [width, height] of [
     await request.post('/__test/seed', { headers: auth, data: { group: caption } });
     await page.reload();
     if (width >= 900) await showPreview(page);
-    else await page.locator('#showMsg').click();
+    else if (await page.locator('#showMsg').isVisible()) await page.locator('#showMsg').click(); // the phone now shows the message at once
     await expect(page.locator('#groupPreview')).toContainText('GiveLife Foundation');
-    await expect
-      .poll(() => page.locator('#chat').evaluate((el) => el.scrollHeight <= el.clientHeight + 2))
-      .toBe(true);
+    if (height >= 700)
+      await expect
+        .poll(() => page.locator('#chat').evaluate((el) => el.scrollHeight <= el.clientHeight + 2))
+        .toBe(true);
+    // a very small old phone: the text scrolls inside its card (same rule as the main screen), never cut off
+    else
+      expect(
+        await page.locator('#chat').evaluate((el) =>
+          ['auto', 'scroll'].includes(getComputedStyle(el).overflowY),
+        ),
+      ).toBe(true);
     const bounds = await page.locator('.app').evaluate((el) => ({
       bottom: el.getBoundingClientRect().bottom,
       h: innerHeight,

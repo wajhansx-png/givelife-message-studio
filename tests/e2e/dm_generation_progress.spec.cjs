@@ -13,16 +13,16 @@ for (const width of [1440, 390])
         text: i ? source.replace('please help', `supporter ${i}, please help`) : source,
         enabled: true,
       }));
-    let started = false,
-      polls = 0;
+    let started = 0;
     await page.route('**/donor-messages', async (route) => {
       const post = route.request().method() === 'POST';
       if (post) {
         expect(route.request().postDataJSON().action).toBe('regenerate');
-        started = true;
+        started = Date.now();
       }
-      if (started && !post) polls++;
-      const ready = !started ? 20 : polls > 1 ? 20 : polls ? 6 : 1;
+      // fake progress by time, not by how often the page asks: 1 ready, then 6, then all 20 after 2.5 s
+      const age = Date.now() - started;
+      const ready = !started ? 20 : age > 2500 ? 20 : age > 1200 ? 6 : 1;
       await route.fulfill({
         json: {
           items: entries(ready),
@@ -45,11 +45,11 @@ for (const width of [1440, 390])
       page.getByRole('button', { name: 'Regenerate versions', exact: true }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Regenerate versions', exact: true }).click();
-    await expect(page.locator('.bank-generation-state')).toContainText('Generating DMs');
+    await expect(page.locator('.bank-generation-state')).toContainText('Generating · ');
     await expect(
       page.getByRole('button', { name: 'Regenerate versions', exact: true }),
     ).toBeDisabled();
-    await expect(page.locator('.bank-generation-state')).toHaveText('20 DM messages ready', {
+    await expect(page.locator('.bank-generation-state')).toHaveText('20 ready', {
       timeout: 10000,
     });
     await expect(page.locator('.bank-generation-state')).toBeVisible();
@@ -57,7 +57,7 @@ for (const width of [1440, 390])
       page.getByRole('button', { name: 'Regenerate versions', exact: true }),
     ).toBeEnabled();
     await page.reload();
-    await expect(page.locator('.bank-generation-state')).toHaveText('20 DM messages ready');
+    await expect(page.locator('.bank-generation-state')).toHaveText('20 ready');
     await expect(page.locator('.bank-preview')).toContainText('Brother');
     await page.screenshot({ path: `test-results/dm-generation-${width}.png` });
   });

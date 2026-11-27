@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-test('cloud HTML errors are readable and sends are not retried', async ({ page }) => {
+test('a cloud HTML error after a send is readable, marked not confirmed, and never retried', async ({ page }) => {
   await page.addInitScript(() =>
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
   );
@@ -18,7 +18,8 @@ test('cloud HTML errors are readable and sends are not retried', async ({ page }
   await page.goto('/old');
   await expect(page.locator('#leftChip')).toContainText('25,000');
   await page.locator('.test-row').click();
-  await expect(page.locator('#live')).toContainText('cloud is restarting');
+  // the request may have gone: the owner is told to check WhatsApp, not that nothing happened
+  await expect(page.locator('#live')).toContainText('not confirmed. Check WhatsApp');
   await expect(page.locator('#live')).not.toContainText('Unexpected token');
   expect(calls).toBe(1);
 });

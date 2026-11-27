@@ -32,6 +32,7 @@ test('editing live DM settings never pauses or creates another batch', async ({ 
   await expect(page.locator('#donorBatchPicker')).toBeVisible();
   expect(posts).toEqual([]);
   await expect(page.locator('#batchStart')).toHaveText('Save changes');
+  await page.locator('.batch-gap-btn[data-gap="custom"]').click(); // presets 2/4/6/8 min, or Custom
   await page.locator('#batchGap').fill('3');
   await page.locator('#batchStart').click();
   await expect(page.locator('#donorBatchPicker')).toBeHidden();

@@ -62,7 +62,8 @@ def _shape(text):
 
 
 def _numbers(text):
-    return [int(value.replace(",", "")) for value in re.findall(r"\d[\d,]*", str(text or ""))]
+    values = [v.replace(",", "") for v in re.findall(r"\d[\d,]*", str(text or ""))]
+    return [v if v.isascii() else "".join(str(int(d)) for d in v) for v in values]
 
 
 def _emojis(text):
@@ -205,11 +206,11 @@ def validate(source, text, existing=(), mode=None):
         return "line breaks, placeholders or WhatsApp formatting changed"
     if any(_emojis(a) != _emojis(b) for a, b in zip(source.splitlines(), text.splitlines())):
         return "an emoji changed or moved"
-    if _numbers(source) != _numbers(text):
-        return "a number, amount or phone number changed"
     source_lines = source.split("\n")
     text_lines = text.split("\n")
     for source_line, text_line in zip(source_lines, text_lines):
+        if _numbers(source_line) != _numbers(text_line):
+            return "a number, amount or phone number changed or moved to another line"
         if "Rs." in source_line and "Rs." not in text_line:
             return "the currency formatting changed"
     first_source = next((line for line in source_lines if line.strip()), "")

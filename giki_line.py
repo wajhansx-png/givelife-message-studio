@@ -407,16 +407,11 @@ class GikiVolunteers(Volunteers):
         delay = body.get("delay_seconds", 0)
         if type(delay) is not int or delay not in self.START_DELAYS:
             raise ValueError("Choose Send now, 5, 10, 15, 30 minutes, 1 hour or 2 hours.")
-        ids = self.waiting_ids(body.get("skip_contacted", True) is not False)
-        if resume_ids is not None:
-            waiting = set(ids)
-            ids = [ident for ident in resume_ids if ident in waiting]
-        if not ids:
-            raise ValueError("Everyone in the list was already messaged for this case.")
         case = self.case_text()
         if not isinstance(case, str) or not case.strip():
             raise ValueError("The case message is empty. Write it in Group msgs first.")
         pace = self.pace(body)
+        extras = self.case_extras()
         with self.lock:
             rid = body.get("request_id")
             old = next(
@@ -427,6 +422,11 @@ class GikiVolunteers(Volunteers):
                 if (
                     old.get("start_delay_seconds", 0) != delay
                     or old.get("gap_seconds") != pace["gap_seconds"]
+                    or old.get("chunk") != pace["chunk"]
+                    or old.get("rests") != pace["rests"]
+                    or old.get("after") != extras["after"]
+                    or old.get("custom_template") != case
+                    or old.get("follow_up") != share
                 ):
                     raise ValueError(
                         "This request was already used for another Giki batch. Check its delivery status."
@@ -435,6 +435,12 @@ class GikiVolunteers(Volunteers):
                     "job": self.jobs._public(old),
                     "reply": "This Giki batch is already tracked. Its original send time is unchanged.",
                 }
+            ids = self.waiting_ids(body.get("skip_contacted", True) is not False)
+            if resume_ids is not None:
+                waiting = set(ids)
+                ids = [ident for ident in resume_ids if ident in waiting]
+            if not ids:
+                raise ValueError("Everyone in the list was already messaged for this case.")
             result = self.jobs.start(
                 "selected",
                 pace["gap_seconds"],
@@ -448,7 +454,7 @@ class GikiVolunteers(Volunteers):
                 custom_template=case,
                 follow_up=share,
                 hold_until=hold_until or (time.time() + delay if delay else None),
-                **self.case_extras(),
+                **extras,
             )
             self.jobs._update(result["job"]["id"], start_delay_seconds=delay)
         result["reply"] = (

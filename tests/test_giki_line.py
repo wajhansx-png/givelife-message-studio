@@ -980,6 +980,22 @@ class GikiSelfHealing(Fixture):
         self.go(self.g, {"action": "send_all", "request_id": request_id, "poster": False})
         return self.run_job(self.g.jobs)
 
+    def test_repeated_send_after_completion_returns_original_receipt(self):
+        job = self.run_all("completed-click")
+        before = list(self.chat.rows)
+        result = self.g.send_all({"request_id": "completed-click"})
+        self.assertEqual(result["job"]["id"], job["id"])
+        self.assertEqual(result["job"]["state"], "Completed")
+        self.assertEqual(self.chat.rows, before)
+        self.assertEqual(len(self.g.jobs.export_jobs()["jobs"]), 1)
+
+    def test_reused_request_cannot_acknowledge_a_different_attachment_order(self):
+        self.run_all("ordered-click")
+        self.on.reverse()
+        with self.assertRaisesRegex(ValueError, "another Giki batch"):
+            self.g.send_all({"request_id": "ordered-click", "skip_contacted": False})
+        self.everyone_complete()
+
     def everyone_complete(self):
         for i in range(2):
             self.assertEqual(self.chat.got(f"92300200000{i}"), ["case", "poster", "pdf", "share"])

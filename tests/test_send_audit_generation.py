@@ -300,6 +300,19 @@ class Validator(Base):
         self.assertEqual(dm_variants.validate(source, good), "")
         self.assertTrue(dm_variants.validate(source, good.replace("{name}", "{friend}", 1)))
 
+    def test_leading_zero_in_case_reference_survives_generation_and_send_checks(self):
+        master = self.master_a().replace("hospital bills.", "hospital bills, reference 00124.")
+        variant = self.good().replace("hospital expenses.", "hospital expenses, reference 124.")
+        self.assertTrue(dm_variants.validate(master, variant))
+        self.assertTrue(dm_variants.fact_problem(master, variant))
+
+    def test_age_cannot_move_from_patient_line_into_another_claim(self):
+        good = self.good()
+        moved = good.replace("leg operation.", "leg operation at 9 hospitals.").replace(
+            "is 9 years old", "is a child"
+        )
+        self.assertTrue(dm_variants.validate(self.master_a(), moved))
+
     def test_the_good_rewrite_is_accepted(self):
         self.assertEqual(dm_variants.validate(self.master_a(), self.good()), "")
         self.assertEqual(dm_variants.fact_problem(self.master_a(), self.good()), "")

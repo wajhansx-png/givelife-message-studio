@@ -538,7 +538,12 @@ class DonorDelivery:
             raise ValueError("The saved DM message is empty. Edit it first.")
         cap = min(limit or 1000, 1000) if chunk else min(limit or 20, 20)
         skip = bool(chunk) if skip_contacted is None else bool(skip_contacted)
-        rows = self.book.recipients(scope, ids, None)
+        order = None
+        if scope == "selected":
+            if not isinstance(ids, list) or any(not isinstance(i, str) for i in ids):
+                raise ValueError("Choose the recipients again.")
+            order = {ident: index for index, ident in enumerate(dict.fromkeys(ids))}
+        rows = self.book.recipients(scope, order, None)
         already = 0
         if skip and scope != "selected":
             # Someone whose last DM was unconfirmed or caught mid-send is never asked again by a skip-contacted batch.
@@ -549,10 +554,7 @@ class DonorDelivery:
             ]
             already = len(rows) - len(fresh_rows)
             rows = fresh_rows
-        if scope == "selected":
-            if not isinstance(ids, list) or any(not isinstance(i, str) for i in ids):
-                raise ValueError("Choose the recipients again.")
-            order = {ident: index for index, ident in enumerate(dict.fromkeys(ids))}
+        if order is not None:
             rows.sort(key=lambda row: order[row["id"]])
         rows = rows[:cap]
         if personal_names is not None:
@@ -571,8 +573,6 @@ class DonorDelivery:
                     or value[1] not in ("Brother", "Sister")
                 ):
                     raise ValueError("Invalid pasted donor name.")
-            order = {ident: index for index, ident in enumerate(ids)}
-            rows.sort(key=lambda row: order[row["id"]])
         resumed = ""
         self.status()
         with self.lock:
@@ -637,7 +637,7 @@ class DonorDelivery:
                 follow_up = prev.get("follow_up")
                 pdf, video = bool(prev.get("pdf")), bool(prev.get("video"))
                 after = prev.get("after")
-            by = {r["id"]: r for r in self.book.recipients(scope, ids, None)}
+            by = {r["id"]: r for r in self.book.recipients(scope, order, None)}
             mine = [by[i] for i in left if i in by]
             if not mine:
                 raise ValueError(

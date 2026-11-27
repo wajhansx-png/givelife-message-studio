@@ -53,6 +53,19 @@ class PastedDonorTests(unittest.TestCase):
                 self.start(helper, preview, message=message)
         self.assertEqual(self.book.list()["counts"]["all"], 0)
 
+    def test_duplicate_selected_id_keeps_first_position_with_saved_names(self):
+        a = self.book.add("Ali", "03001234567")["donor"]["id"]
+        b = self.book.add("Sara", "03011234567")["donor"]["id"]
+        self.jobs.start(
+            "selected",
+            60,
+            ids=[a, b, a],
+            personal_names={a: ["Ali", "Brother"], b: ["Sara", "Sister"]},
+            run=False,
+        )
+        self.run_job()
+        self.assertEqual([body["name"] for body in self.sent], ["Ali", "Sara"])
+
     def test_attachment_is_saved_with_batch_and_not_replaced_by_poster(self):
         helper = self.helper()
         preview = helper.preview("03001234567, Ali")

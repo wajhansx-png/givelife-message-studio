@@ -20,7 +20,7 @@ async function openReport(page) {
   page.on('dialog', (d) => d.accept());
   await page.goto('/old');
   await page.locator('.report-open').click();
-  await expect(page.locator('.auto-card')).toHaveCount(5);
+  await expect(page.locator('.auto-card')).toHaveCount(7); // the 5 controls + Giki 1 and Giki 2;
 }
 const card = (page, id) => page.locator(`.auto-card[data-control="${id}"]`);
 const stat = (page, id, name) => card(page, id).locator(`[data-stat="${name}"] dd`);

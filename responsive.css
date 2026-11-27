@@ -1120,10 +1120,10 @@ html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row > .row-t
 }
 html body:not(#a):not(#b):not(#c):not(#e):not(#f) .group-send .send-row > .row-tools > button {
   position: static !important;
-  height: 36px !important;
-  min-height: 36px !important;
+  height: 44px !important;
+  min-height: 44px !important;
   width: auto !important;
-  min-width: 36px !important;
+  min-width: 44px !important;
   padding: 0 8px !important;
   white-space: nowrap !important;
 }
@@ -12165,5 +12165,22 @@ html
     > #ui2GnavMain.ui2-inmsg
     :is(.ui2-rewrite, #ui2VerNav) {
     background: rgba(120, 120, 128, 0.24) !important;
+  }
+}
+/* Report on a phone: Giki 1 and Giki 2 (status only, no switch) share one row, so all seven cards fit. */
+@media (max-width: 599px) {
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) dialog.report-dialog .report-card #autoCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) dialog.report-dialog .report-card #autoCards > .auto-card:not([data-giki]) {
+    grid-column: 1 / -1;
+  }
+}
+/* Short screens: the Report scrolls, but Stop all Auto (the emergency button) stays pinned in view. */
+@media (max-height: 699px) {
+  html body:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i):not(#j) dialog.report-dialog .report-card #autoStopAll:not([hidden]) {
+    position: sticky !important;
+    bottom: 8px !important;
+    z-index: 3 !important;
   }
 }

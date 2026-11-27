@@ -36,7 +36,9 @@ class TestSendExtras(unittest.TestCase):
 
         def post_media(jid, cap, poster):
             first.append(jid)
-            return types.SimpleNamespace(stdout=json.dumps({"code": "SUCCESS", "results": {}}).encode())
+            return types.SimpleNamespace(
+                stdout=json.dumps({"code": "SUCCESS", "results": {}}).encode()
+            )
 
         http = app.ThreadingHTTPServer(("127.0.0.1", 0), app.Handler)
         threading.Thread(target=http.serve_forever, daemon=True).start()
@@ -49,7 +51,9 @@ class TestSendExtras(unittest.TestCase):
             ):
                 req = urllib.request.Request(
                     "http://127.0.0.1:" + str(http.server_port) + "/test",
-                    data=json.dumps({"message": "Hello\nRs. 25,000 LEFT", "stop_id": "stop-test-9999"}).encode(),
+                    data=json.dumps(
+                        {"message": "Hello\nRs. 25,000 LEFT", "stop_id": "stop-test-9999"}
+                    ).encode(),
                     headers={
                         "Content-Type": "application/json",
                         "Authorization": "Bearer test-only-studio-access-key",
@@ -85,7 +89,10 @@ class TestSendExtras(unittest.TestCase):
     def test_a_file_that_failed_is_named_with_the_reason(self):
         self.assertEqual(
             app.files_note(
-                [{"kind": "video", "code": "SUCCESS"}, {"kind": "pdf", "code": "SKIPPED", "message": "File is gone"}]
+                [
+                    {"kind": "video", "code": "SUCCESS"},
+                    {"kind": "pdf", "code": "SKIPPED", "message": "File is gone"},
+                ]
             ),
             "Video ✓, PDF NOT sent: File is gone",
         )
@@ -127,7 +134,11 @@ class TestDmFiles(unittest.TestCase):
         out, order = self.run_dm_test(video=True, pdf=True)
         self.assertEqual(
             order,
-            [("first", None), ("file", group_extras.saved(app.STORE, "video")), ("file", group_extras.saved(app.STORE, "pdf"))],
+            [
+                ("first", None),
+                ("file", group_extras.saved(app.STORE, "video")),
+                ("file", group_extras.saved(app.STORE, "pdf")),
+            ],
         )
         self.assertEqual(out["files_note"], "Video ✓, PDF ✓")
         self.assertIn("Video ✓, PDF ✓", out["reply"])

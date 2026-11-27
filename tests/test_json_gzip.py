@@ -4,7 +4,9 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from test_manual_sends import app as server  # sets the test data folder before the server is imported
+from test_manual_sends import (
+    app as server,
+)  # sets the test data folder before the server is imported
 
 
 def call(data, accept="", kind="application/json"):

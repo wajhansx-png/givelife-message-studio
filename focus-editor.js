@@ -44,7 +44,8 @@
         if (!screen.hidden) {
           if (editing) edit(false);
           await save();
-          if (row?.source || $('focusText').value) $('group').value = row?.source || $('focusText').value;
+          if (row?.source || $('focusText').value)
+            $('group').value = row?.source || $('focusText').value;
         }
         await original?.call(button, e);
       } catch (error) {
@@ -339,7 +340,8 @@
   }
   /* A short note on top of the screen (the status line is hidden on a phone, so a failed write looked like nothing
      happened). */
-  const note = (text, error) => dispatchEvent(new CustomEvent('message-note', { detail: { text, error: !!error } }));
+  const note = (text, error) =>
+    dispatchEvent(new CustomEvent('message-note', { detail: { text, error: !!error } }));
   function status(text) {
     const node = $('focusState'),
       full = String(text || ''),
@@ -428,13 +430,20 @@
   function shown(text) {
     return window
       .waFormat(text)
-      .replace(/(^|\n)[ \t]*[—–─_-]{3,}[ \t]*(?=\n|$)/g, '$1<span class="wa-rule" role="separator"></span>')
+      .replace(
+        /(^|\n)[ \t]*[—–─_-]{3,}[ \t]*(?=\n|$)/g,
+        '$1<span class="wa-rule" role="separator"></span>',
+      )
       .replace(/\n[ \t]*\n+/g, '<span class="wa-gap"></span>')
       .replace(/\n?(<span class="wa-(?:gap|rule)"[^>]*><\/span>)\n?/g, '$1');
   }
   /* A rewrite just replaced the text: the words that are new glow blue for 2 s, so the change is seen at a glance */
   function glow(before) {
-    const old = new Set(String(before || '').toLowerCase().match(/[\p{L}\p{N}']+/gu) || []);
+    const old = new Set(
+      String(before || '')
+        .toLowerCase()
+        .match(/[\p{L}\p{N}']+/gu) || [],
+    );
     if (!old.size || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const box = $('focusFormatted'),
       walk = document.createTreeWalker(box, NodeFilter.SHOW_TEXT),
@@ -457,8 +466,14 @@
       n.replaceWith(frag);
     }
     if (!marked) return;
-    setTimeout(() => box.querySelectorAll('mark.ui2-new-word').forEach((m) => m.classList.add('is-fading')), 2000);
-    setTimeout(() => box.querySelectorAll('mark.ui2-new-word').forEach((m) => m.replaceWith(m.textContent)), 2700);
+    setTimeout(
+      () => box.querySelectorAll('mark.ui2-new-word').forEach((m) => m.classList.add('is-fading')),
+      2000,
+    );
+    setTimeout(
+      () => box.querySelectorAll('mark.ui2-new-word').forEach((m) => m.replaceWith(m.textContent)),
+      2700,
+    );
   }
   function paint(text) {
     aiDraft = ''; // whatever shows now is a saved text (base or version) unless showText marks it again
@@ -478,7 +493,13 @@
     if (on) $('focusText').focus({ preventScroll: true });
     else {
       // the owner changed the text by hand: the language / Trigger buttons start fresh on THIS message
-      if (wasEditing && dirty && $('focusText').value !== lastStyled && typeof resetStyle === 'function') resetStyle();
+      if (
+        wasEditing &&
+        dirty &&
+        $('focusText').value !== lastStyled &&
+        typeof resetStyle === 'function'
+      )
+        resetStyle();
       if (dirty && !keep) save();
       $('focusFormatted').innerHTML = shown($('focusText').value);
       fit();
@@ -692,10 +713,16 @@
           .catch(() => {});
       if (!row.items?.length) {
         if (isBusy(row)) rowStatus(row);
-        else if (swiped) $('focusRetry').click(); // a swipe with no versions yet makes them
+        else if (swiped)
+          $('focusRetry').click(); // a swipe with no versions yet makes them
         else {
           status('No versions yet. Tap Generate 5 Versions. TEST works without them.');
-          note(row?.error ? 'No versions yet: ' + row.error : 'No versions yet. Press Generate to write 5.', !!row?.error);
+          note(
+            row?.error
+              ? 'No versions yet: ' + row.error
+              : 'No versions yet. Press Generate to write 5.',
+            !!row?.error,
+          );
         }
         return false;
       }
@@ -804,7 +831,8 @@
     if (editing) {
       t.focus({ preventScroll: true });
       t.setSelectionRange(0, t.value.length);
-      if (!(document.execCommand && document.execCommand('insertText', false, text))) t.value = text;
+      if (!(document.execCommand && document.execCommand('insertText', false, text)))
+        t.value = text;
       t.dispatchEvent(new Event('input', { bubbles: true }));
       status(message + ' Edit it if you like, then press Done to save.');
     } else {
@@ -844,12 +872,18 @@
       if (kind !== startKind) return; /* the owner switched screens while it was writing */
       // the owner changed or saved the message while it was writing: a late answer never replaces it
       if (editing || $('focusText').value !== startText)
-        return void note('Your message changed while ' + label + ' was writing, so it was not used.');
+        return void note(
+          'Your message changed while ' + label + ' was writing, so it was not used.',
+        );
       styleLang = lang;
       styleTrig = false; // Trigger is an action, not a mode: the next button writes plain again
       markStyle();
       showText(d.text, 'Written: ' + label + '.', 'New · not saved');
-      note(trig ? 'Stronger ✓ · press Generate or Save base to keep it' : label + ' ✓ · press Generate or Save base to keep it');
+      note(
+        trig
+          ? 'Stronger ✓ · press Generate or Save base to keep it'
+          : label + ' ✓ · press Generate or Save base to keep it',
+      );
     } catch (e) {
       status(e.message || 'Could not write a message. Your text is unchanged.');
       note(e.message || 'Could not write a message. Your text is unchanged.', true);
@@ -877,7 +911,8 @@
     const startKind = kind,
       t = $('focusText'),
       startText = t.value;
-    if (!t.value.trim()) return void status('There is no message to fix. Write or open a message first.');
+    if (!t.value.trim())
+      return void status('There is no message to fix. Write or open a message first.');
     lock(true);
     fixBtn.setAttribute('aria-busy', 'true');
     status('Fixing the style…');

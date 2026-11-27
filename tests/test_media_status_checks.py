@@ -16,8 +16,13 @@ class MediaStatusChecks(unittest.TestCase):
     tearDown = fixture.SendTests.tearDown
 
     def body(self, phone="923001230090"):
-        return dict(target="phone", phone=phone, message="Approved case message", poster=True,
-                    kind="volunteer_batch")
+        return dict(
+            target="phone",
+            phone=phone,
+            message="Approved case message",
+            poster=True,
+            kind="volunteer_batch",
+        )
 
     def test_poster_send_checks_connection_once(self):
         with patch.object(app, "api_result", return_value=CONNECTED) as status:
@@ -37,24 +42,34 @@ class MediaStatusChecks(unittest.TestCase):
 
     def test_standalone_group_sends_still_check_each_time(self):
         with patch.object(app, "api_result", return_value=CONNECTED) as status:
-            self.assertEqual(app.send_image(app.GROUPS["main"][1], "Approved case")["code"], "SUCCESS")
+            self.assertEqual(
+                app.send_image(app.GROUPS["main"][1], "Approved case")["code"], "SUCCESS"
+            )
             status.return_value = {}
-            self.assertEqual(app.send_image(app.GROUPS["main"][1], "Approved case")["code"], "ERROR")
+            self.assertEqual(
+                app.send_image(app.GROUPS["main"][1], "Approved case")["code"], "ERROR"
+            )
         self.assertEqual(status.call_count, 2)
         self.assertEqual(len(self.sent), 1)
 
     def test_a_different_device_cannot_reuse_a_connection_check(self):
-        first, second = SimpleNamespace(device=lambda: "first"), SimpleNamespace(device=lambda: "second")
-        with patch.dict(app.LINES, {"giki": first, "giki2": second}), \
-             patch.object(app, "api_result", return_value=CONNECTED) as status:
+        first, second = (
+            SimpleNamespace(device=lambda: "first"),
+            SimpleNamespace(device=lambda: "second"),
+        )
+        with (
+            patch.dict(app.LINES, {"giki": first, "giki2": second}),
+            patch.object(app, "api_result", return_value=CONNECTED) as status,
+        ):
             token = app._CHECKED_MEDIA_DEVICE.set((app.GOWA_URL, "first"))
             try:
                 with app.on_line("giki2"):
-                    self.assertEqual(app.send_image("923001230092", "Approved case")["code"], "SUCCESS")
+                    self.assertEqual(
+                        app.send_image("923001230092", "Approved case")["code"], "SUCCESS"
+                    )
             finally:
                 app._CHECKED_MEDIA_DEVICE.reset(token)
-        self.assertEqual([c.args[0] for c in status.call_args_list],
-                         ["/devices/second/status"])
+        self.assertEqual([c.args[0] for c in status.call_args_list], ["/devices/second/status"])
 
 
 if __name__ == "__main__":

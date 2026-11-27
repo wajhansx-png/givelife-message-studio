@@ -85,6 +85,12 @@ class Agent(unittest.TestCase):
         self.assertEqual(self.sent, [])
 
     def test_team_plan_needs_a_clear_confirm_before_anything_starts(self):
+        import datetime
+
+        # "deadline 11pm" must still be ahead whatever time the test runs: the team clock is 10:00 PKT today
+        pkt = datetime.timezone(datetime.timedelta(hours=5))
+        ten = datetime.datetime.now(pkt).replace(hour=10, minute=0, second=0, microsecond=0)
+        self.app.donors().team.now = ten.timestamp
         self.app.donors().team.set_member("Bilal", "03001112222")
         out = self.cb("team tasks: update the sheet deadline 11pm")["team_action"](
             action="plan", text="update the sheet deadline 11pm"

@@ -488,13 +488,17 @@ class FocusTests(unittest.TestCase):
             b.save("group", self.drafts["group"])
         messages = ["Owner message " + str(i) for i in range(10)]
         b.manual("group", messages)
-        self.assertEqual(b.reserve_groups(self.drafts["group"], 1, first=messages[6]), [messages[6]])
+        self.assertEqual(
+            b.reserve_groups(self.drafts["group"], 1, first=messages[6]), [messages[6]]
+        )
         many = b.reserve_groups(self.drafts["group"], 3, first=messages[2])
         self.assertEqual(many[0], messages[2])
         self.assertEqual(len(set(many)), 3)  # the other groups still get different versions
         self.assertNotIn(messages[6], many[1:])
         # text that is not a saved version (typed in the request) is never sent as is
-        self.assertNotEqual(b.reserve_groups(self.drafts["group"], 1, first="Made up text")[0], "Made up text")
+        self.assertNotEqual(
+            b.reserve_groups(self.drafts["group"], 1, first="Made up text")[0], "Made up text"
+        )
 
     def test_regeneration_keeps_manual_slots_and_invalidates_old_worker(self):
         b = self.make()
@@ -563,7 +567,9 @@ class SendingWorkflow(unittest.TestCase):
             patch("dm_variants.assistant.client", return_value="fake"),
             patch.object(b, "_spawn"),
         ):
-            for _ in range(5):  # the 5 versions and the base go out; one left unused starts the next batch
+            for _ in range(
+                5
+            ):  # the 5 versions and the base go out; one left unused starts the next batch
                 b.reserve_groups("x", 1, auto=True)
             self.assertEqual(b._load()["group"]["state"], "Generating")
             with patch("dm_variants._call", return_value=list(DEEP[5:10])):

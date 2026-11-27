@@ -133,7 +133,10 @@ if not os.environ.get("GOWA_DB_KEYS_URI"):
     try:  # in a short-lived process: the copies it makes do not stay in the launcher's memory
         key_cache.restore_apart(key_path)
     except Exception as exc:
-        print("[launcher] key restore apart failed (" + type(exc).__name__ + "); in-process", flush=True)
+        print(
+            "[launcher] key restore apart failed (" + type(exc).__name__ + "); in-process",
+            flush=True,
+        )
         key_cache.restore(store, key_path)
 # The gateway's device list (which device name is which login) lives on the wiped disk; put it back.
 registry_path = gowa_data / "storages" / "chatstorage.db"
@@ -175,7 +178,9 @@ def stop(*args):
     stopping.set()
     # The website first: it finishes the person being sent to and saves the batch (up to 150 s) while WhatsApp is
     # still up. Then WhatsApp.
-    gateways = [c for c in children if str((getattr(c, "args", None) or [""])[0]).endswith("whatsapp")]
+    gateways = [
+        c for c in children if str((getattr(c, "args", None) or [""])[0]).endswith("whatsapp")
+    ]
     for group, grace in (([c for c in children if c not in gateways], 155), (gateways, 6)):
         for child in group:
             if child.poll() is None:

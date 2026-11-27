@@ -386,8 +386,12 @@ class GikiList(Fixture):
         j = jobs["jobs"][-1]
         j["receipts"][-1]["follow_up"] = share_state
         self.g.jobs.book.follow_up(j["receipts"][-1]["id"], share_state)
-        j.update(state="Interrupted", auto=True, boot="an-older-boot",
-                 error="The service restarted. Starting again by itself; nobody already sent is repeated.")
+        j.update(
+            state="Interrupted",
+            auto=True,
+            boot="an-older-boot",
+            error="The service restarted. Starting again by itself; nobody already sent is repeated.",
+        )
         self.g.jobs._save(jobs)
         return self.g.jobs.status()
 
@@ -1190,13 +1194,17 @@ class GikiTwoMove(Fixture):
         with patch.dict(os.environ, {"GIKI_SEED_FILE": ""}):
             v2 = g2.view()
             g2.view()  # once only
-        self.assertEqual(sorted(x["name"] for x in v2["items"]), ["Areeba Malik Giki", "Haris Giki 1500"])
+        self.assertEqual(
+            sorted(x["name"] for x in v2["items"]), ["Areeba Malik Giki", "Haris Giki 1500"]
+        )
         self.assertEqual([x["name"] for x in self.g.view()["items"]], ["Faris Giki Donor"])
         # then, once, everyone on Giki 2 is back to Waiting (the owner asked): Areeba too
         self.assertFalse(any(x["dmed"] for x in v2["items"]))
         self.assertEqual(v2["waiting"], 2)
         self.assertTrue(self.store.get("giki2_all_waiting_v1"))
-        g2.book.delivery(moved_id := v2["items"][0]["id"], "Sent")  # a later send stays: the reset is once only
+        g2.book.delivery(
+            moved_id := v2["items"][0]["id"], "Sent"
+        )  # a later send stays: the reset is once only
         self.assertTrue(next(x for x in g2.view()["items"] if x["id"] == moved_id)["dmed"])
 
 
@@ -1216,7 +1224,9 @@ class GikiToWaiting(Fixture):
         view = self.g.view()
         self.assertFalse(view["items"][0]["dmed"])
         self.assertEqual(view["waiting"], 1)
-        self.assertEqual(self.g.jobs.half_sent(), [])  # Resume adds nothing on top of the full resend
+        self.assertEqual(
+            self.g.jobs.half_sent(), []
+        )  # Resume adds nothing on top of the full resend
 
 
 class GikiAllToWaiting(Fixture):
@@ -1255,7 +1265,10 @@ class GikiOneRemovesTheMoved(Fixture):
     def test_opening_giki_first_also_takes_the_chosen_people_off_it(self):
         from giki_line import Giki2Volunteers
 
-        for name, phone in (("Hajira Giki Donor 500", "0300 2000001"), ("Faris Giki Donor", "0300 2000002")):
+        for name, phone in (
+            ("Hajira Giki Donor 500", "0300 2000001"),
+            ("Faris Giki Donor", "0300 2000002"),
+        ):
             self.g.mutate({"action": "add", "name": name, "phone": phone})
         g2 = Giki2Volunteers(self.g.app, lambda phone: True)
         g2.source, self.g.partner = self.g, g2
@@ -1292,7 +1305,9 @@ class GikiExactGap(Fixture):
             what = body.get("extra") or ("case" if "after_steps" in body else "share")
             log.append((clock[0], body["phone"], what))
             if what == blip_before:
-                blip[0] = 2  # the next 2 looks at WhatsApp say "not connected" (the app keeps a "no" for 1.5 s)
+                blip[0] = (
+                    2  # the next 2 looks at WhatsApp say "not connected" (the app keeps a "no" for 1.5 s)
+                )
             clock[0] += upload
 
         self.on_send = on_send
@@ -1321,16 +1336,23 @@ class GikiExactGap(Fixture):
             self.assertAlmostEqual(got - start, want, delta=0.11)
 
     def test_the_next_person_never_starts_before_the_last_one_finished(self):
-        log = self.timed_run(3, upload=60.0)  # 4 minutes of sending per person, longer than the 3 min Timer
+        log = self.timed_run(
+            3, upload=60.0
+        )  # 4 minutes of sending per person, longer than the 3 min Timer
         for k in range(1, len(log)):
-            self.assertGreaterEqual(log[k][0], log[k - 1][0] + 60.0)  # one message after another, never together
+            self.assertGreaterEqual(
+                log[k][0], log[k - 1][0] + 60.0
+            )  # one message after another, never together
         phones = [p for _, p, _ in log]
-        self.assertEqual(phones, sorted(phones, key=phones.index))  # each person's 4 messages together
+        self.assertEqual(
+            phones, sorted(phones, key=phones.index)
+        )  # each person's 4 messages together
 
     def test_a_whatsapp_blip_costs_two_seconds_not_fifteen(self):
         log = self.timed_run(1, blip_before="poster")
         times = {what: t for t, _, what in log}
         self.assertAlmostEqual(times["pdf"] - times["poster"], 10.0 + 2.0, delta=0.11)
         self.assertEqual(
-            self.g.jobs._load()["jobs"][-1]["receipts"][0]["steps"], {"poster": "Sent", "pdf": "Sent"}
+            self.g.jobs._load()["jobs"][-1]["receipts"][0]["steps"],
+            {"poster": "Sent", "pdf": "Sent"},
         )

@@ -10,7 +10,9 @@ DEVICE = "main-device-id"
 
 
 def http_error(body, code=500):
-    return urllib.error.HTTPError(GATEWAY, code, "Internal Server Error", {}, io.BytesIO(body.encode()))
+    return urllib.error.HTTPError(
+        GATEWAY, code, "Internal Server Error", {}, io.BytesIO(body.encode())
+    )
 
 
 class Clock:
@@ -64,8 +66,12 @@ class RequestCodeTests(unittest.TestCase):
 
     def test_gateway_failures_are_plain_words_without_internals(self):
         failures = [
-            http_error("GetQRChannel can only be called when there's no user ID in the client's Store"),
-            http_error("your session have been saved, please wait to connect 2 second and refresh again"),
+            http_error(
+                "GetQRChannel can only be called when there's no user ID in the client's Store"
+            ),
+            http_error(
+                "your session have been saved, please wait to connect 2 second and refresh again"
+            ),
             urllib.error.URLError("connection refused 127.0.0.1:3000"),
             http_error("boom"),
         ]
@@ -85,7 +91,9 @@ class RequestCodeTests(unittest.TestCase):
 
 class ProblemTests(unittest.TestCase):
     def test_already_linked_is_explained(self):
-        words = wa_login.problem(http_error("GetQRChannel can only be called when there's no user ID"))
+        words = wa_login.problem(
+            http_error("GetQRChannel can only be called when there's no user ID")
+        )
         self.assertIn("already linked", words)
         self.assertIn("Check again", words)
 

@@ -39,7 +39,14 @@ class SendingNow(unittest.TestCase):
         held = []
         import threading
 
-        t = threading.Thread(target=lambda: (server.SEND_LOCK.acquire(), held.append(1), ev.wait(), server.SEND_LOCK.release()))
+        t = threading.Thread(
+            target=lambda: (
+                server.SEND_LOCK.acquire(),
+                held.append(1),
+                ev.wait(),
+                server.SEND_LOCK.release(),
+            )
+        )
         ev = threading.Event()
         t.start()
         while not held:

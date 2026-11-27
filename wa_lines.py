@@ -142,16 +142,22 @@ class Line:
             return False
         self._woke = time.time()
         linked = self._record().get("number")
-        if not linked:  # no number saved yet: the gateway still knows the login it keeps for this device
+        if (
+            not linked
+        ):  # no number saved yet: the gateway still knows the login it keeps for this device
             try:
-                info = self._call("GET", f"/devices/{self.device()}", device=self.device()).get("results")
+                info = self._call("GET", f"/devices/{self.device()}", device=self.device()).get(
+                    "results"
+                )
                 linked = (info or {}).get("jid")
             except Exception:
                 linked = None
         if not linked:
             return False
         try:
-            self._call("POST", f"/devices/{self.device()}/reconnect", device=self.device(), timeout=30)
+            self._call(
+                "POST", f"/devices/{self.device()}/reconnect", device=self.device(), timeout=30
+            )
         except LineError as e:
             if "not linked" in str(e):
                 self._wake_gap = min(self._wake_gap * 2, 3600.0)
@@ -210,9 +216,14 @@ class Line:
         connected, logged = bool(s.get("is_connected")), bool(s.get("is_logged_in"))
         if logged:
             self._wake_gap = 60.0
-        if not logged and self._wake():  # after a restart the saved login sleeps until it is asked to reconnect
+        if (
+            not logged and self._wake()
+        ):  # after a restart the saved login sleeps until it is asked to reconnect
             try:
-                s = self._call("GET", f"/devices/{device}/status", device=device).get("results") or {}
+                s = (
+                    self._call("GET", f"/devices/{device}/status", device=device).get("results")
+                    or {}
+                )
             except Exception:
                 s = {}
             connected, logged = bool(s.get("is_connected")), bool(s.get("is_logged_in"))

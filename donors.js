@@ -62,7 +62,9 @@
       ['video', ['donorVideo', 'batchVideo', 'msgVideo']],
     ])
       for (const id of ids) if (el(id)) el(id).checked = dmExtra[kind];
-    dispatchEvent(new CustomEvent('dm-extras-changed', { detail: { pdf: dmExtra.pdf, video: dmExtra.video } }));
+    dispatchEvent(
+      new CustomEvent('dm-extras-changed', { detail: { pdf: dmExtra.pdf, video: dmExtra.video } }),
+    );
   }
   /* The reader (message view) has the same two ticks for the open DM; it asks here so they are checked, remembered
      and applied to a running Auto in one place. */
@@ -76,7 +78,9 @@
           dmExtra[kind] = false;
           paintDmExtras();
           notice(
-            'No ' + EXTRA_NAME[kind] + ' is saved yet. Add it in Poster → Sent after the poster in groups.',
+            'No ' +
+              EXTRA_NAME[kind] +
+              ' is saved yet. Add it in Poster → Sent after the poster in groups.',
             true,
           );
           return;
@@ -100,7 +104,9 @@
   /* The tick is also saved on the server, so every DM start (the Auto cards in Report, the chat's "send dms", the Test
      button) sends the same files as this screen says. Before, only this browser knew it. */
   function saveDmExtra(kind, on) {
-    api('/group-extras', { action: 'setup', profile: 'dm', field: kind, value: !!on }).catch(() => {});
+    api('/group-extras', { action: 'setup', profile: 'dm', field: kind, value: !!on }).catch(
+      () => {},
+    );
   }
   /* Opening Donors: untick what is no longer saved (for example after a new case). The server's saved ticks win; the
      very first time, a tick this browser already had is sent up to the server so nothing the owner chose is lost. */
@@ -144,7 +150,9 @@
   function saveFollowTick() {
     if (tickSent === followUpOn) return;
     tickSent = followUpOn;
-    api('/donor-messages', { action: 'follow_tick', on: followUpOn }).catch(() => (tickSent = null));
+    api('/donor-messages', { action: 'follow_tick', on: followUpOn }).catch(
+      () => (tickSent = null),
+    );
   }
   /* Donors Auto switch (server runs it; this only mirrors state and sends live option changes). */
   let autoOn = false;
@@ -486,7 +494,11 @@
     b.dataset.v = v;
     b.id = 'posterTextOn-' + v;
     b.setAttribute('aria-pressed', 'false');
-    b.onclick = () => extrasCall({ action: 'text_on', value: v }, 'Saved: the text goes with the ' + label.toLowerCase() + '.');
+    b.onclick = () =>
+      extrasCall(
+        { action: 'text_on', value: v },
+        'Saved: the text goes with the ' + label.toLowerCase() + '.',
+      );
     textOn.append(b);
   }
   extrasBox.append(textOn);
@@ -501,7 +513,10 @@
     for (const [kind, r] of Object.entries(extraRows)) {
       if (r.row.dataset.up) continue; // an upload is showing its own live percentage
       const x = (v && v[kind]) || {};
-      r.small.textContent = x.has ? x.name + (x.kb ? ' · ' + (x.kb > 1024 ? (x.kb / 1024).toFixed(1) + ' MB' : x.kb + ' KB') : '') : 'Not added';
+      r.small.textContent = x.has
+        ? x.name +
+          (x.kb ? ' · ' + (x.kb > 1024 ? (x.kb / 1024).toFixed(1) + ' MB' : x.kb + ' KB') : '')
+        : 'Not added';
       r.add.firstChild.textContent = x.has ? 'Replace' : 'Add';
       r.sw.hidden = r.rm.hidden = !x.has;
       r.sw.setAttribute('aria-checked', String(!!x.on));
@@ -552,7 +567,8 @@
     rm.type = 'button';
     rm.hidden = true;
     rm.setAttribute('aria-label', 'Remove the ' + label);
-    sw.onclick = () => extrasCall({ action: 'toggle', kind, on: sw.getAttribute('aria-checked') !== 'true' });
+    sw.onclick = () =>
+      extrasCall({ action: 'toggle', kind, on: sw.getAttribute('aria-checked') !== 'true' });
     rm.onclick = () => extrasCall({ action: 'remove', kind }, label + ' removed.');
     file.onchange = async () => {
       const f = file.files[0];
@@ -953,7 +969,8 @@
       flag: 'donated',
       action: 'clear_donated',
       title: 'Unmark every donor as Donated for this case',
-      ask: (n) => 'Unmark all ' + n + ' donors as Donated? Their amounts for this case are cleared too.',
+      ask: (n) =>
+        'Unmark all ' + n + ' donors as Donated? Their amounts for this case are cleared too.',
     },
   };
   function paintHideRow() {
@@ -1580,7 +1597,8 @@
       posterCb.type = 'checkbox';
       posterCb.id = 'msgPosterAfter';
       posterLab.append(posterCb, make('span', '', 'Poster'));
-      posterLab.title = 'The after poster (its own picture, added on the group message), sent after each DM';
+      posterLab.title =
+        'The after poster (its own picture, added on the group message), sent after each DM';
       box.insertBefore(posterLab, textLine.parentNode === box ? textLine : null);
       /* The exact order WhatsApp gets for a DM, from the saved files and the ticks (so the owner sees what is sent). */
       const orderLine = make('div', 'bank-order');
@@ -1597,7 +1615,8 @@
         const steps = [led ? 'Video + text' : 'Poster picture + text'];
         // the files go in the owner's 1st / 2nd / 3rd order (set on the message page)
         for (const k of Array.isArray(v.order) ? v.order : ['poster', 'video', 'pdf']) {
-          if (k === 'poster' && d.poster === true && v.poster && v.poster.has) steps.push(led ? 'Poster' : '2nd poster');
+          if (k === 'poster' && d.poster === true && v.poster && v.poster.has)
+            steps.push(led ? 'Poster' : '2nd poster');
           if (k === 'video' && dmExtra.video && hasVideo && !led) steps.push('Video');
           if (k === 'pdf' && dmExtra.pdf && v.pdf && v.pdf.has) steps.push('PDF');
         }
@@ -1624,7 +1643,9 @@
           paintText(
             await api(
               '/group-extras',
-              field === 'text_on' ? { action: 'text_on', value } : { action: 'setup', profile: 'dm', field, value },
+              field === 'text_on'
+                ? { action: 'text_on', value }
+                : { action: 'setup', profile: 'dm', field, value },
             ),
           );
         } catch (e) {
@@ -1653,16 +1674,27 @@
         if (followUpOn) parts.push('Follow-up');
         if (dmExtra.pdf) parts.push('PDF');
         if (dmExtra.video) parts.push('Video');
-        const text = !textLine.hidden && textBtns.poster.getAttribute('aria-pressed') === 'true' ? 'Poster' : 'Video';
+        const text =
+          !textLine.hidden && textBtns.poster.getAttribute('aria-pressed') === 'true'
+            ? 'Poster'
+            : 'Video';
         const warn = orderLine.dataset.warn === '1';
         sum.dataset.warn = warn ? '1' : '';
         sum.textContent = '';
         sum.append(
           make('b', '', warn ? '⚠ Send options' : 'Send options'),
-          make('span', '', (parts.length ? 'Also ' + parts.join(', ') : 'Nothing extra') + (textLine.hidden ? '' : ' · Text with ' + text)),
+          make(
+            'span',
+            '',
+            (parts.length ? 'Also ' + parts.join(', ') : 'Nothing extra') +
+              (textLine.hidden ? '' : ' · Text with ' + text),
+          ),
           make('i', '', '▾'),
         );
-        sum.setAttribute('aria-label', 'Send options. ' + (warn ? 'Warning. ' : '') + sum.textContent.replace('▾', ''));
+        sum.setAttribute(
+          'aria-label',
+          'Send options. ' + (warn ? 'Warning. ' : '') + sum.textContent.replace('▾', ''),
+        );
       };
       const setOpen = (on) => {
         box.dataset.open = on ? '1' : '0';
@@ -3074,7 +3106,8 @@
         }
       }
       // every 2.5 s (5 s when this tab is hidden): live enough, half the calls and server work of 1.2 s
-      if (active || j.resume?.state === 'Pending') pollTimer = setTimeout(poll, document.hidden ? 5000 : 2500);
+      if (active || j.resume?.state === 'Pending')
+        pollTimer = setTimeout(poll, document.hidden ? 5000 : 2500);
     } catch (e) {
       notice('Could not refresh delivery status. Checking again; no sends were retried.', true);
       if (page.open) pollTimer = setTimeout(poll, 3000);
@@ -3154,7 +3187,7 @@
           await loadVolunteers();
           if (tab === 'volunteers') showVolunteers(true);
         },
-        document.hidden ? 20000 : 3000 // a tab nobody looks at asks rarely: the host counts every byte sent
+        document.hidden ? 20000 : 3000, // a tab nobody looks at asks rarely: the host counts every byte sent
       );
   }
   async function showVolunteers(keepDraft = false) {
@@ -3260,7 +3293,9 @@
         allBack.onclick = () => {
           if (
             confirm(
-              'Move all ' + dmedCount + ' DMed people back to Waiting? Nothing is sent now. DM all will send them the case again.',
+              'Move all ' +
+                dmedCount +
+                ' DMed people back to Waiting? Nothing is sent now. DM all will send them the case again.',
             )
           )
             volAct({ action: 'all_to_waiting' }, 'Everyone is back in Waiting.');
@@ -3362,7 +3397,9 @@
           const back = make('button', '', 'Move to Waiting');
           back.type = 'button';
           back.onclick = () => {
-            if (confirm('Move ' + d.name + ' back to Waiting? DM all will send them the case again.'))
+            if (
+              confirm('Move ' + d.name + ' back to Waiting? DM all will send them the case again.')
+            )
               volAct({ action: 'to_waiting', id: d.id }, d.name + ' is back in Waiting.');
             menu.hidePopover();
           };
@@ -3955,7 +3992,9 @@
     el('posterSave').disabled = true;
     try {
       if (f.type.startsWith('video/')) {
-        throw Error('The Poster must be a picture. Add the video in the Video box under the message.');
+        throw Error(
+          'The Poster must be a picture. Add the video in the Video box under the message.',
+        );
       }
       if (!f.type.startsWith('image/') || f.size > 20000000)
         throw Error('Choose a picture under 20 MB.');

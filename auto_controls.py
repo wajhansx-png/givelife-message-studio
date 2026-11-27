@@ -301,7 +301,9 @@ class AutoControls:
     def _dm_view(self, which, shown=None):
         job = self._job(which)
         if job and shown is not None:
-            shown.add(job.get("id"))  # a card already shows this batch: the live list below skips it
+            shown.add(
+                job.get("id")
+            )  # a card already shows this batch: the live list below skips it
         view = {
             "on": False,
             "recipients": 0,
@@ -396,7 +398,9 @@ class AutoControls:
             if not ident or ident in shown:
                 continue
             try:
-                job = next((j for j in engine.export_jobs().get("jobs", []) if j.get("id") == ident), None)
+                job = next(
+                    (j for j in engine.export_jobs().get("jobs", []) if j.get("id") == ident), None
+                )
             except Exception:
                 continue
             if not job:
@@ -406,7 +410,8 @@ class AutoControls:
             out.append(
                 {
                     "id": key,
-                    "title": ("Case page DMs" if owner.startswith("case_") else title) + (" · stopping" if stopping else ""),
+                    "title": ("Case page DMs" if owner.startswith("case_") else title)
+                    + (" · stopping" if stopping else ""),
                     "state": job.get("state", ""),
                     "active": True,
                     "sent": (job.get("previous_sent") or 0) + (job.get("sent") or 0),

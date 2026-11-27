@@ -48,7 +48,9 @@ def _role(block):
     flat = _plain(block)
     if _PAYMENT.search(flat.replace(" ", "")) or _PAYMENT.search(flat):
         return "payment"
-    if "GiveLife" in flat and len(flat.split()) <= 6:  # the signature line ("— GiveLife Foundation")
+    if (
+        "GiveLife" in flat and len(flat.split()) <= 6
+    ):  # the signature line ("— GiveLife Foundation")
         return "payment"
     if _BULLET.match(first) or _JUST.search(flat):
         return "bullet"
@@ -126,7 +128,10 @@ def fix(text, left=None, saved=()):
         if label and new != block.strip():
             changes.append(label)
         out.append(new)
-    kinds = ["hook" if r == "text" and i == 0 else "story" if r == "text" and i == 1 else r for i, r in enumerate(roles)]
+    kinds = [
+        "hook" if r == "text" and i == 0 else "story" if r == "text" and i == 1 else r
+        for i, r in enumerate(roles)
+    ]
 
     pdf = "line4" in kinds or any(MR._LINE3.match(b.strip()) for b in out)
     live = isinstance(left, int) and not isinstance(left, bool) and left > 0
@@ -141,17 +146,32 @@ def fix(text, left=None, saved=()):
         changes.append(why)
 
     if live and not pdf and "amount" not in kinds:
-        put(at(("bullet", "payment")), f"🔴 Rs. {left:,} LEFT", "amount", f"Added the amount line (Rs. {left:,} left)")
+        put(
+            at(("bullet", "payment")),
+            f"🔴 Rs. {left:,} LEFT",
+            "amount",
+            f"Added the amount line (Rs. {left:,} left)",
+        )
     if live and "bullet" not in kinds:
         if pdf:
             counts = T.gift_counts(left, exact=False)
             if counts:
-                put(at(("line4", "payment")), T.LINE3.format(n=counts[0], m=counts[1]), "bullet", "Added the help line")
+                put(
+                    at(("line4", "payment")),
+                    T.LINE3.format(n=counts[0], m=counts[1]),
+                    "bullet",
+                    "Added the help line",
+                )
         else:
             people, each = MS.donor_math(left)
             who = "person" if people == 1 else "people"
             line = f"• *_Just {people} {who} donating Rs. {each:,} can help this family._* 🤲"
-            put(at(("payment",)) if "amount" not in kinds else kinds.index("amount") + 1, line, "bullet", "Added the help line")
+            put(
+                at(("payment",)) if "amount" not in kinds else kinds.index("amount") + 1,
+                line,
+                "bullet",
+                "Added the help line",
+            )
     if pdf and "line4" not in kinds and "bullet" in kinds:
         put(kinds.index("bullet") + 1, T.LINE4, "line4", "Added the closing line")
     if "payment" not in kinds:

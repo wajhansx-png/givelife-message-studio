@@ -206,12 +206,18 @@ class GikiTestPeople(Base):
         calls = self.record()
         base = {"target": "phone", "phone": "999000000001", "line": "giki", "name": "Ahmad"}
         # the amount in a case message is today's amount at the moment it is sent (the app's balance here is Rs. 25,000)
-        app.send_custom({**base, "message": "Case. Rs. 5,000 left.", "kind": "volunteer_batch", "poster": True})
+        app.send_custom(
+            {**base, "message": "Case. Rs. 5,000 left.", "kind": "volunteer_batch", "poster": True}
+        )
         app.send_custom({**base, "kind": "dm_extra", "extra": "pdf"})
-        app.send_custom({**base, "message": "Salam {name}, share.", "kind": "volunteer_batch", "poster": False})
+        app.send_custom(
+            {**base, "message": "Salam {name}, share.", "kind": "volunteer_batch", "poster": False}
+        )
         self.assertEqual([c[0] for c in calls], ["image", "file", "text"])
         self.assertEqual({c[1] for c in calls}, {app.TEST_GROUP_JID})  # all three in the test group
-        self.assertTrue(all(c[3] for c in calls))  # sent as a DM (DM poster and DM rules), not as a group post
+        self.assertTrue(
+            all(c[3] for c in calls)
+        )  # sent as a DM (DM poster and DM rules), not as a group post
         self.assertEqual({c[4] for c in calls}, {GIKI})  # from the Giki WhatsApp
         self.assertEqual(calls[0][2], "Case. Rs. %s left." % format(app.read_left(), ","))
         self.assertEqual(calls[2][2], "Salam Ahmad, share.")
@@ -240,7 +246,9 @@ class GikiTestPeople(Base):
             return None
 
         stubs = [
-            patch.object(app, "api_result", lambda path: {"is_connected": True, "is_logged_in": True}),
+            patch.object(
+                app, "api_result", lambda path: {"is_connected": True, "is_logged_in": True}
+            ),
             patch.object(app, "poster_media", poster),
             patch.object(
                 app,
@@ -249,7 +257,11 @@ class GikiTestPeople(Base):
                     stdout=json.dumps({"code": "SUCCESS", "results": {"message_id": "m1"}})
                 ),
             ),
-            patch.object(app, "send_group_extras", lambda jid, items=None: seen.setdefault("group_files", jid) and []),
+            patch.object(
+                app,
+                "send_group_extras",
+                lambda jid, items=None: seen.setdefault("group_files", jid) and [],
+            ),
             patch("group_extras.lead", lead),
             patch("group_extras.after_items", lambda store, profile: []),
         ]
@@ -300,9 +312,15 @@ class GikiChatCheck(Base):
 
     def test_newest_and_what_came_after_it(self):
         self.assertEqual(app.newest_sent(self.body()), "M3")
-        self.assertEqual(app.sent_after(self.body(kind="dm_extra", extra="pdf"), "M2"), "M3")  # the PDF went
-        self.assertEqual(app.sent_after(self.body(kind="dm_extra", extra="poster"), "M2"), "")  # no new image
-        self.assertEqual(app.sent_after(self.body(poster=True), "M1"), "M2")  # a case (image) after M1
+        self.assertEqual(
+            app.sent_after(self.body(kind="dm_extra", extra="pdf"), "M2"), "M3"
+        )  # the PDF went
+        self.assertEqual(
+            app.sent_after(self.body(kind="dm_extra", extra="poster"), "M2"), ""
+        )  # no new image
+        self.assertEqual(
+            app.sent_after(self.body(poster=True), "M1"), "M2"
+        )  # a case (image) after M1
         self.assertEqual(app.sent_after(self.body(poster=False), "M3"), "")  # no text after M3
         self.assertIsNone(app.sent_after(self.body(), None))  # no mark: cannot tell
         self.assertEqual({d for _, d in self.asked}, {GIKI})  # always from the Giki WhatsApp
@@ -413,7 +431,9 @@ class GikiTestSend(Base):
 
     def test_a_failed_background_test_says_why(self):
         app.GIKI_TEST.update(state="idle", note="", at=0.0)
-        with patch.object(app, "send_giki_test", side_effect=ValueError("Test not confirmed at the case: nope")):
+        with patch.object(
+            app, "send_giki_test", side_effect=ValueError("Test not confirmed at the case: nope")
+        ):
             app.start_giki_test("CASE", "Share")
             for _ in range(200):
                 if app.GIKI_TEST["state"] != "sending":
@@ -423,7 +443,9 @@ class GikiTestSend(Base):
         self.assertIn("not confirmed", app.GIKI_TEST["note"])
 
     def test_a_busy_send_line_is_waited_for_but_not_forever(self):
-        busy = type("L", (), {"acquire": lambda self, timeout=None: False, "release": lambda self: None})()
+        busy = type(
+            "L", (), {"acquire": lambda self, timeout=None: False, "release": lambda self: None}
+        )()
         with patch.object(app, "_send_lock", return_value=busy):
             with self.assertRaisesRegex(ValueError, "busy"):
                 app.send_giki_test("CASE", "Share")

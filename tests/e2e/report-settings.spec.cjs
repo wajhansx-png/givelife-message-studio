@@ -11,7 +11,7 @@ test.beforeAll(async () => {
 test.afterAll(() => server?.kill());
 async function open(page, width = 390) {
   await page.setViewportSize({ width, height: 740 });
-  await page.addInitScript(key => localStorage.setItem('givelife-cloud-key', key), KEY);
+  await page.addInitScript((key) => localStorage.setItem('givelife-cloud-key', key), KEY);
   await page.goto('/new/');
   await page.evaluate(() => window.GiveLifeReport.open());
   await expect(page.locator('.auto-card')).toHaveCount(7); // 5 Auto cards + Giki 1, Giki 2
@@ -37,8 +37,14 @@ for (const width of [320, 390, 768, 1440]) {
       for (const f of c.fields) {
         const input = dialog.locator(`[name="${f.key}"]`);
         await expect(input).toBeVisible();
-        if (f.type === 'check') { await input.setChecked(!c.settings[f.key]); saved[f.key] = !c.settings[f.key]; }
-        else if (f.type === 'number') { const n = Math.min(f.max, Math.max(f.min, Number(c.settings[f.key]) || f.min) + 1); await input.fill(String(n)); saved[f.key] = n; }
+        if (f.type === 'check') {
+          await input.setChecked(!c.settings[f.key]);
+          saved[f.key] = !c.settings[f.key];
+        } else if (f.type === 'number') {
+          const n = Math.min(f.max, Math.max(f.min, Number(c.settings[f.key]) || f.min) + 1);
+          await input.fill(String(n));
+          saved[f.key] = n;
+        }
       }
       await dialog.getByRole('button', { name: 'Save', exact: true }).click();
       await expect(dialog).toBeHidden();
@@ -64,16 +70,23 @@ test('failed save preserves draft and blocks repeated taps while saving', async 
   await card.locator('.auto-edit').click();
   const dialog = card.locator('.auto-settings-dialog');
   await dialog.locator('[name=count]').fill('7');
-  let release, posts = 0;
-  const gate = new Promise(resolve => { release = resolve; });
-  await page.route('**/auto-controls', async route => {
-    if (route.request().method() === 'POST') { posts++; await gate; return route.fulfill({status:503,json:{error:'Save unavailable'}}); }
+  let release,
+    posts = 0;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/auto-controls', async (route) => {
+    if (route.request().method() === 'POST') {
+      posts++;
+      await gate;
+      return route.fulfill({ status: 503, json: { error: 'Save unavailable' } });
+    }
     return route.continue();
   });
-  const save = dialog.getByRole('button', { name: 'Save', exact:true });
+  const save = dialog.getByRole('button', { name: 'Save', exact: true });
   await save.click();
   await expect(save).toBeDisabled();
-  await save.evaluate(button => button.click());
+  await save.evaluate((button) => button.click());
   release();
   await expect(dialog.locator('.auto-error')).toContainText('Save unavailable');
   await expect(dialog.locator('[name=count]')).toHaveValue('7');
@@ -81,19 +94,27 @@ test('failed save preserves draft and blocks repeated taps while saving', async 
   expect(posts).toBe(1);
 });
 test('HTTP errors show unavailable instead of false zero counts', async ({ page }) => {
-  await page.route('**/autopilot', route => route.fulfill({status:503,json:{error:'offline'}}));
+  await page.route('**/autopilot', (route) =>
+    route.fulfill({ status: 503, json: { error: 'offline' } }),
+  );
   await open(page);
   await expect(page.locator('#reportGroups')).toHaveText('—');
   await expect(page.locator('#reportGroupsSub')).toContainText('Unavailable');
 });
-test('toggle gives immediate feedback, blocks duplicate starts and restores OFF on failure', async ({ page }) => {
+test('toggle gives immediate feedback, blocks duplicate starts and restores OFF on failure', async ({
+  page,
+}) => {
   await open(page);
-  let release, posts = 0;
-  const gate = new Promise(resolve => { release = resolve; });
-  await page.route('**/auto-controls', async route => {
+  let release,
+    posts = 0;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/auto-controls', async (route) => {
     if (route.request().method() === 'POST') {
-      posts++; await gate;
-      return route.fulfill({status:503,json:{error:'WhatsApp unavailable'}});
+      posts++;
+      await gate;
+      return route.fulfill({ status: 503, json: { error: 'WhatsApp unavailable' } });
     }
     return route.continue();
   });
@@ -101,15 +122,17 @@ test('toggle gives immediate feedback, blocks duplicate starts and restores OFF 
   await toggle.click();
   await expect(toggle).toHaveText('Starting…');
   await expect(toggle).toBeDisabled();
-  await toggle.evaluate(button => button.click());
+  await toggle.evaluate((button) => button.click());
   release();
   await expect(toggle).toHaveText('OFF');
-  await expect(toggle).toHaveAttribute('aria-checked','false');
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
   await expect(toggle).toBeEnabled();
   await expect(page.locator('#autoMsg')).toContainText('WhatsApp unavailable');
   expect(posts).toBe(1);
 });
-test('Cancel keeps saved settings, and server rejects invalid timing without hiding the error', async ({ page }) => {
+test('Cancel keeps saved settings, and server rejects invalid timing without hiding the error', async ({
+  page,
+}) => {
   await open(page);
   const card = page.locator('[data-control=important]');
   const gear = card.locator('.auto-edit');
@@ -117,18 +140,22 @@ test('Cancel keeps saved settings, and server rejects invalid timing without hid
   await gear.click();
   const dialog = card.locator('.auto-settings-dialog');
   await dialog.locator('[name=count]').fill('7');
-  await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await gear.click();
   await expect(dialog.locator('[name=count]')).toHaveValue(String(previous));
   await dialog.locator('[name=gap_minutes]').fill('99');
-  await dialog.locator('form').evaluate(form => { form.noValidate=true; });
-  await dialog.getByRole('button',{name:'Save',exact:true}).click();
+  await dialog.locator('form').evaluate((form) => {
+    form.noValidate = true;
+  });
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(dialog.locator('.auto-error')).toContainText('choose');
   await expect(dialog.locator('[name=gap_minutes]')).toHaveValue('99');
 });
-test('settings dialog contains its fields and actions on a short phone screen', async ({ page }) => {
+test('settings dialog contains its fields and actions on a short phone screen', async ({
+  page,
+}) => {
   await open(page);
-  await page.setViewportSize({width:390,height:520});
+  await page.setViewportSize({ width: 390, height: 520 });
   const card = page.locator('[data-control=thanks]');
   await card.locator('.auto-edit').click();
   const dialog = card.locator('.auto-settings-dialog');
@@ -149,22 +176,31 @@ test('stalled save times out, restores draft and allows Cancel', async ({ page }
   const dialog = card.locator('.auto-settings-dialog');
   await dialog.locator('[name=count]').fill('7');
   let release;
-  const gate = new Promise(resolve => { release = resolve; });
-  await page.route('**/auto-controls', async route => {
-    if (route.request().method() === 'POST') { await gate; return route.fulfill({status:503,json:{error:'offline'}}).catch(()=>{}); }
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/auto-controls', async (route) => {
+    if (route.request().method() === 'POST') {
+      await gate;
+      return route.fulfill({ status: 503, json: { error: 'offline' } }).catch(() => {});
+    }
     return route.continue();
   });
   try {
-    await dialog.getByRole('button',{name:'Save',exact:true}).click();
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
     await page.clock.fastForward(16000);
     await expect(dialog.locator('.auto-error')).toContainText('Timed out');
     await expect(dialog.locator('[name=count]')).toHaveValue('7');
-    await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(dialog).toBeHidden();
-  } finally { release(); }
+  } finally {
+    release();
+  }
 });
 for (const width of [320, 390, 768, 1440]) {
-  test(`progress and long statuses keep every report row consistent at ${width}`, async ({ page }) => {
+  test(`progress and long statuses keep every report row consistent at ${width}`, async ({
+    page,
+  }) => {
     const view = await api(port, '/auto-controls');
     for (const [id, control] of Object.entries(view.controls)) {
       control.sent = id === 'group' ? 1 : 4;
@@ -172,12 +208,19 @@ for (const width of [320, 390, 768, 1440]) {
       control.recipients = id === 'group' ? 6 : 15;
       control.next_at = Math.floor(Date.now() / 1000) + 120;
       control.state = id === 'important' ? 'STOPPING' : id === 'donor_dm' ? 'ON' : 'OFF';
-      control.on = ['ON','STOPPING'].includes(control.state);
+      control.on = ['ON', 'STOPPING'].includes(control.state);
     }
-    await page.route('**/auto-controls', route => route.fulfill({json:view}));
+    await page.route('**/auto-controls', (route) => route.fulfill({ json: view }));
     await open(page, width);
     await expect(page.locator('[data-control=group] .ui2-auto-sub')).toContainText('1 sent');
-    await page.evaluate(() => Promise.all(document.getAnimations().filter(animation => animation.effect?.getTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {}))));
+    await page.evaluate(() =>
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+          .map((animation) => animation.finished.catch(() => {})),
+      ),
+    );
     const heights = [];
     for (const row of await page.locator('.auto-card:not([data-giki])').all()) {
       const title = await row.locator('h4').boundingBox();
@@ -191,23 +234,43 @@ for (const width of [320, 390, 768, 1440]) {
       expect(toggle.width).toBeCloseTo(72, 0);
       expect(gear.height).toBeCloseTo(44, 0);
       expect(toggle.height).toBeCloseTo(44, 0);
-      expect(await row.locator('.auto-switch').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true);
+      expect(
+        await row.locator('.auto-switch').evaluate((e) => e.scrollWidth <= e.clientWidth),
+      ).toBe(true);
       expect(title.x + title.width).toBeLessThanOrEqual(gear.x);
       expect(status.x + status.width).toBeLessThanOrEqual(gear.x);
       expect(toggle.x + toggle.width).toBeLessThanOrEqual(bounds.x + bounds.width);
     }
     expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(1);
-    await page.screenshot({path:`/workspace/scratch/report-progress-${width}.png`});
+    await page.screenshot({ path: `/workspace/scratch/report-progress-${width}.png` });
   });
 }
-for (const [width,height] of [[320,740],[390,844],[768,1024],[1440,900]]) {
-  test(`Report uses full screen with compact rows and reachable Back at ${width}`, async ({page}) => {
-    await open(page,width);
-    await page.setViewportSize({width,height});
-    await page.evaluate(() => Promise.all(document.getAnimations().filter(animation => animation.effect?.getTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {}))));
+for (const [width, height] of [
+  [320, 740],
+  [390, 844],
+  [768, 1024],
+  [1440, 900],
+]) {
+  test(`Report uses full screen with compact rows and reachable Back at ${width}`, async ({
+    page,
+  }) => {
+    await open(page, width);
+    await page.setViewportSize({ width, height });
+    await page.evaluate(() =>
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+          .map((animation) => animation.finished.catch(() => {})),
+      ),
+    );
     const box = await page.locator('.report-card').boundingBox();
     // on a computer the left menu stays beside the page, so Report fills the screen to the right of it
-    const side = await page.evaluate(() => (matchMedia('(min-width: 900px)').matches ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui2-side')) || 0 : 0));
+    const side = await page.evaluate(() =>
+      matchMedia('(min-width: 900px)').matches
+        ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui2-side')) || 0
+        : 0,
+    );
     expect(box.x).toBe(side);
     expect(box.y).toBe(0);
     expect(box.width).toBe(width - side);
@@ -217,52 +280,68 @@ for (const [width,height] of [[320,740],[390,844],[768,1024],[1440,900]]) {
     const bounds = await back.boundingBox();
     expect(bounds.width).toBe(72);
     expect(bounds.height).toBe(44);
-    expect(bounds.y).toBeGreaterThan(height-100);
+    expect(bounds.y).toBeGreaterThan(height - 100);
     await back.click();
     await expect(page.locator('.report-dialog')).toBeHidden();
   });
 }
-for (const width of [320,390,1440]) {
-  test(`progress shows true delivered fraction, not a decorative underline at ${width}`, async ({page}) => {
+for (const width of [320, 390, 1440]) {
+  test(`progress shows true delivered fraction, not a decorative underline at ${width}`, async ({
+    page,
+  }) => {
     const view = await api(port, '/auto-controls');
     const batch = view.controls.thanks;
-    Object.assign(batch,{sent:4,pending:0,recipients:15,state:'OFF',on:false});
-    await page.route('**/auto-controls', route => route.fulfill({json:view}));
-    await open(page,width);
+    Object.assign(batch, { sent: 4, pending: 0, recipients: 15, state: 'OFF', on: false });
+    await page.route('**/auto-controls', (route) => route.fulfill({ json: view }));
+    await open(page, width);
     const card = page.locator('[data-control=thanks]');
-    const bar = card.getByRole('progressbar', {name:'Thanks donors progress'});
+    const bar = card.getByRole('progressbar', { name: 'Thanks donors progress' });
     await expect(bar).toBeVisible();
-    await expect(bar).toHaveAttribute('aria-valuenow','27');
-    await expect(bar).toHaveAttribute('aria-valuetext','4 of 15 sent');
+    await expect(bar).toHaveAttribute('aria-valuenow', '27');
+    await expect(bar).toHaveAttribute('aria-valuetext', '4 of 15 sent');
     await expect(card.locator('.ui2-auto-sub')).toContainText('4/15 sent');
-    for (const sent of [0,15]) {
-      Object.assign(batch,{sent,pending:15-sent});
-      await page.evaluate(()=>GiveLifeReport.open());
-      await expect(bar).toHaveAttribute('aria-valuenow',String(sent ? 100 : 0));
-      await expect(bar).toHaveAttribute('aria-valuetext',`${sent} of 15 sent`);
+    for (const sent of [0, 15]) {
+      Object.assign(batch, { sent, pending: 15 - sent });
+      await page.evaluate(() => GiveLifeReport.open());
+      await expect(bar).toHaveAttribute('aria-valuenow', String(sent ? 100 : 0));
+      await expect(bar).toHaveAttribute('aria-valuetext', `${sent} of 15 sent`);
     }
     const fill = bar.locator('.auto-progress-fill');
     const bounds = await bar.boundingBox();
     expect(bounds.height).toBeCloseTo(8, 1); // the page can sit at a fraction of a pixel
     const identity = await card.locator('.auto-identity').boundingBox();
     const filled = await fill.boundingBox();
-    expect(Math.abs(bounds.width-filled.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(bounds.width - filled.width)).toBeLessThanOrEqual(1);
     expect(bounds.x).toBeGreaterThanOrEqual(identity.x);
-    expect(bounds.x+bounds.width).toBeLessThanOrEqual(identity.x+identity.width+1);
-    expect(await card.evaluate(e=>getComputedStyle(e,'::after').display)).toBe('none');
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(identity.x + identity.width + 1);
+    expect(await card.evaluate((e) => getComputedStyle(e, '::after').display)).toBe('none');
     expect(await page.locator('[data-control=group]').getByRole('progressbar').count()).toBe(0);
-    Object.assign(batch,{sent:0,pending:0,recipients:0});
-    await page.evaluate(()=>GiveLifeReport.open());
+    Object.assign(batch, { sent: 0, pending: 0, recipients: 0 });
+    await page.evaluate(() => GiveLifeReport.open());
     await expect(bar).toBeHidden();
   });
 }
 
 for (const width of [320, 1440]) {
-  test(`DM Important and Giki show the person now and their messages, 25% each, at ${width}`, async ({ page }) => {
+  test(`DM Important and Giki show the person now and their messages, 25% each, at ${width}`, async ({
+    page,
+  }) => {
     const view = await api(port, '/auto-controls');
-    Object.assign(view.controls.important, { on: true, state: 'ON', sent: 2, recipients: 9, pending: 7, person: { name: 'Ali Khan', done: 1, steps: 4 } });
-    Object.assign(view.giki.giki2, { active: true, sent: 3, total: 12, person: { name: 'Zain test', done: 3, steps: 4 } });
-    await page.route('**/auto-controls', route => route.fulfill({ json: view }));
+    Object.assign(view.controls.important, {
+      on: true,
+      state: 'ON',
+      sent: 2,
+      recipients: 9,
+      pending: 7,
+      person: { name: 'Ali Khan', done: 1, steps: 4 },
+    });
+    Object.assign(view.giki.giki2, {
+      active: true,
+      sent: 3,
+      total: 12,
+      person: { name: 'Zain test', done: 3, steps: 4 },
+    });
+    await page.route('**/auto-controls', (route) => route.fulfill({ json: view }));
     await open(page, width);
     await expect(page.locator('#reportDms')).toHaveCount(0);
     await expect(page.locator('.report-list > li')).toHaveCount(3);

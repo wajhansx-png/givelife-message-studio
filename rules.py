@@ -24,6 +24,7 @@ GROUPS = {
     "all": ["all groups", "every group", "all"],
 }
 
+
 def find_group(text):
     low = text.lower()
     best = None

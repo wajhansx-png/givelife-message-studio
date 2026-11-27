@@ -64,7 +64,10 @@ class MaterializationCacheTests(unittest.TestCase):
     def test_different_identifiers_and_folders_are_isolated(self):
         store = Store()
         other_id = "b" * 32
-        store.rows[other_id] = {"mime": "application/pdf", "data": base64.b64encode(b"%PDF-two").decode()}
+        store.rows[other_id] = {
+            "mime": "application/pdf",
+            "data": base64.b64encode(b"%PDF-two").decode(),
+        }
         other_folder = self.folder / "another-case"
         other_folder.mkdir()
         first, _ = batch_media.load(store, IDENT, self.folder)
@@ -86,10 +89,12 @@ class MaterializationCacheTests(unittest.TestCase):
     def test_concurrent_cold_readers_materialize_once(self):
         store = Store(delay=0.02)
         start = threading.Barrier(8)
+
         def read():
             start.wait()
             path, mime = batch_media.load(store, IDENT, self.folder)
             return path, mime, path.read_bytes()
+
         with ThreadPoolExecutor(max_workers=8) as pool:
             results = list(pool.map(lambda _: read(), range(8)))
         self.assertTrue(all(r == results[0] for r in results))
@@ -120,7 +125,10 @@ class MaterializationCacheTests(unittest.TestCase):
 
     def test_cache_has_bounded_small_metadata_and_does_not_keep_store_alive(self):
         store = Store()
-        with patch.object(batch_media, "_CACHE", OrderedDict()), patch.object(batch_media, "_CACHE_LIMIT", 2):
+        with (
+            patch.object(batch_media, "_CACHE", OrderedDict()),
+            patch.object(batch_media, "_CACHE_LIMIT", 2),
+        ):
             for digit in "abc":
                 ident = digit * 32
                 store.rows[ident] = store.rows[IDENT]
@@ -141,12 +149,17 @@ class MaterializationCacheTests(unittest.TestCase):
         store = Store(data=PDF * 1000)
         publishing, release = threading.Event(), threading.Event()
         replace = batch_media.os.replace
+
         def publish(source, target):
             publishing.set()
             if not release.wait(2):
                 raise TimeoutError("test did not release publish")
             replace(source, target)
-        with patch("batch_media.os.replace", side_effect=publish), ThreadPoolExecutor(max_workers=1) as pool:
+
+        with (
+            patch("batch_media.os.replace", side_effect=publish),
+            ThreadPoolExecutor(max_workers=1) as pool,
+        ):
             future = pool.submit(batch_media.load, store, IDENT, self.folder)
             try:
                 self.assertTrue(publishing.wait(2))

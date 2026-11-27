@@ -455,7 +455,10 @@ test('donor list is numbered, progress is one slim line, and tabs have a visible
   await expect(page.locator('#donorMain')).toBeHidden();
 });
 
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
 
 test('the poster dialog takes a picture only; the chat clip still accepts an MP4 video', async ({
   page,
@@ -499,7 +502,9 @@ test('poster upload shows real progress, stays open until confirmed, and then cl
     });
   });
   await page.evaluate(() => window.DonorHub.openPoster());
-  await page.locator('#posterFile').setInputFiles({ name: 'poster.png', mimeType: 'image/png', buffer: PNG });
+  await page
+    .locator('#posterFile')
+    .setInputFiles({ name: 'poster.png', mimeType: 'image/png', buffer: PNG });
   await expect(page.locator('#posterSave')).toBeEnabled();
   await page.locator('#posterSave').click();
   await expect(page.locator('#posterProgress')).toBeVisible();
@@ -539,7 +544,9 @@ test('poster saving errors remain visible and retry can complete', async ({ page
     });
   });
   await page.evaluate(() => window.DonorHub.openPoster());
-  await page.locator('#posterFile').setInputFiles({ name: 'poster.png', mimeType: 'image/png', buffer: PNG });
+  await page
+    .locator('#posterFile')
+    .setInputFiles({ name: 'poster.png', mimeType: 'image/png', buffer: PNG });
   await page.locator('#posterSave').click();
   await expect(page.locator('#posterNote')).toContainText('Storage temporarily unavailable');
   await expect(page.locator('#posterDialog')).toBeVisible();

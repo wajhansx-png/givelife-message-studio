@@ -15,7 +15,9 @@ SOURCE = (
 
 class Concept(unittest.TestCase):
     def test_alarm_words_not_in_the_source_are_rejected(self):
-        scary = SOURCE.replace("Her mother is asking for help with folded hands.", "She could die any moment.")
+        scary = SOURCE.replace(
+            "Her mother is asking for help with folded hands.", "She could die any moment."
+        )
         self.assertIn("invented danger", focus_bank.reject_reason(SOURCE, scary))
 
     def test_alarm_words_the_owner_wrote_are_allowed(self):

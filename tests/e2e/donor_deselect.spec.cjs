@@ -10,7 +10,10 @@ test.beforeAll(async () => (server = await startOwnServer(port)));
 test.afterAll(() => server?.kill());
 
 async function seed() {
-  for (const [name, phone] of [['Deselect One', '03001119001'], ['Deselect Two', '03001119002']]) {
+  for (const [name, phone] of [
+    ['Deselect One', '03001119001'],
+    ['Deselect Two', '03001119002'],
+  ]) {
     const r = await api(port, '/donors', { action: 'add', name, phone });
     const id = r.donor.id;
     await api(port, '/donors', { action: 'update', id, important: true });
@@ -25,7 +28,10 @@ for (const width of [390, 1280])
     await page.setViewportSize({ width, height: width < 900 ? 800 : 900 });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
     page.on('dialog', (d) => d.accept());
-    for (const [tab, flag] of [['top', 'top_donor'], ['donated', 'donated']]) {
+    for (const [tab, flag] of [
+      ['top', 'top_donor'],
+      ['donated', 'donated'],
+    ]) {
       await page.goto('/new#/donors/' + tab);
       await expect(page.locator('.donor-row').first()).toBeVisible();
       if (width < 900) await page.locator('#donorNavMore > summary').click();

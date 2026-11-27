@@ -229,7 +229,12 @@ class Variety(unittest.TestCase):
         chat = script(stronger)
         state = {"angle": "need"}
         result, new_state = ms.generate(
-            "ur_en_more", dict(CTX, current_text=shown), state, chat, ai_call.json_of, today="2026-11-07"
+            "ur_en_more",
+            dict(CTX, current_text=shown),
+            state,
+            chat,
+            ai_call.json_of,
+            today="2026-11-07",
         )
         prompt = chat.seen[0]
         self.assertIn("THE MESSAGE ON SCREEN (make THIS one stronger)", prompt)
@@ -245,20 +250,33 @@ class Variety(unittest.TestCase):
 
     def test_trigger_keeps_the_verse_the_message_already_has(self):
         shown = ms.assemble(
-            "ur_en", dict(GOOD, verse="h_muslim_2699"), dict(CTX, people=4, each=1000, payment=ms.payment_block(GROUP))
+            "ur_en",
+            dict(GOOD, verse="h_muslim_2699"),
+            dict(CTX, people=4, each=1000, payment=ms.payment_block(GROUP)),
         )
         self.assertEqual(ms.verse_in(shown), "h_muslim_2699")
         self.assertEqual(ms.verse_in("no verse here"), "")
-        chat = script(dict(GOOD, hook="اگر آج مدد نہ ہوئی تو یہ باپ ٹوٹ جائے گا", verse="h_muslim_2699"))
+        chat = script(
+            dict(GOOD, hook="اگر آج مدد نہ ہوئی تو یہ باپ ٹوٹ جائے گا", verse="h_muslim_2699")
+        )
         result, _ = ms.generate(
-            "ur_en_more", dict(CTX, current_text=shown), {"last": {"verse": "h_muslim_2699"}}, chat, ai_call.json_of, today="2026-11-07"
+            "ur_en_more",
+            dict(CTX, current_text=shown),
+            {"last": {"verse": "h_muslim_2699"}},
+            chat,
+            ai_call.json_of,
+            today="2026-11-07",
         )
         self.assertIn('already uses the verse id "h_muslim_2699"', chat.seen[0])
-        self.assertIn(ms.VERSES["h_muslim_2699"]["ur_full"], result["text"])  # the same verse is fine now
+        self.assertIn(
+            ms.VERSES["h_muslim_2699"]["ur_full"], result["text"]
+        )  # the same verse is fine now
 
     def test_trigger_with_nothing_on_screen_still_writes_a_fresh_stronger_message(self):
         chat = script(dict(GOOD, hook="اگر آج مدد نہ ہوئی تو یہ باپ ٹوٹ جائے گا"))
-        ms.generate("ur_en_more", dict(CTX, current_text=""), {}, chat, ai_call.json_of, today="2026-11-07")
+        ms.generate(
+            "ur_en_more", dict(CTX, current_text=""), {}, chat, ai_call.json_of, today="2026-11-07"
+        )
         self.assertNotIn("THE MESSAGE ON SCREEN", chat.seen[0])
         self.assertIn("STRONGER VERSION", chat.seen[0])
 
@@ -296,12 +314,22 @@ class TriggerRoute(unittest.TestCase):
             out = self.run_style("en_more")
         self.assertEqual(out["text"], "STRONGER TEXT")
         self.assertEqual(out["angle"], "stronger")
-        self.assertEqual(g.call_args.args[0], self.SHOWN)  # the shown message itself is what is rewritten
+        self.assertEqual(
+            g.call_args.args[0], self.SHOWN
+        )  # the shown message itself is what is rewritten
         self.assertEqual(g.call_args.kwargs["mode"], "stronger")
 
     def test_every_button_rewrites_the_message_on_screen_never_a_different_one(self):
-        for style, mode in (("en", "en"), ("ur_en", "ur_en"), ("en_more", "stronger"), ("ur_en_more", "stronger")):
-            with patch("dm_variants.generate", return_value=["SAME MESSAGE " + mode]) as g, patch("message_styles.generate") as fresh:
+        for style, mode in (
+            ("en", "en"),
+            ("ur_en", "ur_en"),
+            ("en_more", "stronger"),
+            ("ur_en_more", "stronger"),
+        ):
+            with (
+                patch("dm_variants.generate", return_value=["SAME MESSAGE " + mode]) as g,
+                patch("message_styles.generate") as fresh,
+            ):
                 out = self.run_style(style)
             self.assertEqual(out["text"], "SAME MESSAGE " + mode)
             self.assertEqual(g.call_args.args[0], self.SHOWN)
@@ -309,9 +337,13 @@ class TriggerRoute(unittest.TestCase):
             fresh.assert_not_called()  # never a fresh message from the case while one is on screen
 
     def test_a_refused_rewrite_leaves_the_message_alone_and_says_so(self):
-        with patch("dm_variants.generate", side_effect=ValueError("Rejected because: a number changed.")), patch(
-            "message_styles.generate"
-        ) as fresh:
+        with (
+            patch(
+                "dm_variants.generate",
+                side_effect=ValueError("Rejected because: a number changed."),
+            ),
+            patch("message_styles.generate") as fresh,
+        ):
             with self.assertRaises(ValueError) as e:
                 self.run_style("ur_en_more")
         fresh.assert_not_called()
@@ -336,10 +368,17 @@ class TriggerRoute(unittest.TestCase):
         import dm_variants, quality
 
         self.assertEqual(quality.fancy_words("plain", "Her plight is dire"), ["dire", "plight"])
-        self.assertEqual(quality.fancy_words("Her plight", "Her plight"), [])  # the owner's own words are fine
+        self.assertEqual(
+            quality.fancy_words("Her plight", "Her plight"), []
+        )  # the owner's own words are fine
         self.assertIn("EASY ENGLISH", dm_variants._prompt("x" * 200, 1, []))
-        self.assertIn("SAME MESSAGE, IN EASY ENGLISH", dm_variants._prompt("x" * 200, 1, [], mode="en"))
-        self.assertIn("FIRST line (the hook) is in simple, moving Urdu", dm_variants._prompt("x" * 200, 1, [], mode="ur_en"))
+        self.assertIn(
+            "SAME MESSAGE, IN EASY ENGLISH", dm_variants._prompt("x" * 200, 1, [], mode="en")
+        )
+        self.assertIn(
+            "FIRST line (the hook) is in simple, moving Urdu",
+            dm_variants._prompt("x" * 200, 1, [], mode="ur_en"),
+        )
 
     def test_the_trigger_rewrite_prompt_asks_for_much_harder_but_never_new_facts(self):
         import dm_variants
@@ -348,7 +387,9 @@ class TriggerRoute(unittest.TestCase):
         plain, strong = dm_variants._prompt(src, 1, []), dm_variants._prompt(src, 1, [], True)
         self.assertNotIn("TRIGGER MODE", plain)
         self.assertIn("TRIGGER MODE", strong)
-        self.assertIn("same concept, story, facts, line structure", strong.lower().replace("exactly the ", ""))
+        self.assertIn(
+            "same concept, story, facts, line structure", strong.lower().replace("exactly the ", "")
+        )
         self.assertIn("never add a new fact", strong.lower())
 
 

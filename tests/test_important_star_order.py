@@ -38,7 +38,6 @@ class ImportantStarOrderTests(unittest.TestCase):
             book.update(b, important=True)
             self.assertEqual(book.recipients("important")[0]["important_order"], 1)
 
-
     def test_deselect_all_on_top_donors_keeps_the_star_and_on_donated_clears_the_amount(self):
         with tempfile.TemporaryDirectory() as folder:
             book = donor_book.DonorBook(Path(folder))

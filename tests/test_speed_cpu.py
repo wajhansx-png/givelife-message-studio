@@ -12,13 +12,42 @@ class Speed(unittest.TestCase):
     def test_old_batches_keep_their_record_but_drop_full_messages(self):
         jobs = app.donors().jobs
         old = time.time() - 3 * 86400
-        heavy = {"caption": "x" * 1500, "captions": ["x" * 1500] * 3, "personal_names": {"a": ["A", "Brother"]}}
-        receipt = {"id": "a", "name": "A", "state": "Sent", "after_ids": {"share": "3EB0"}, "steps": {"pdf": "Sent"}}
+        heavy = {
+            "caption": "x" * 1500,
+            "captions": ["x" * 1500] * 3,
+            "personal_names": {"a": ["A", "Brother"]},
+        }
+        receipt = {
+            "id": "a",
+            "name": "A",
+            "state": "Sent",
+            "after_ids": {"share": "3EB0"},
+            "steps": {"pdf": "Sent"},
+        }
         data = {
             "jobs": [
-                {"id": "old", "state": "Completed", "updated_at": old, "ids": ["a"], "receipts": [dict(receipt)], **heavy},
-                {"id": "recent", "state": "Stopped", "updated_at": time.time(), "receipts": [dict(receipt)], **heavy},
-                {"id": "last", "state": "Completed", "updated_at": old, "receipts": [dict(receipt)], **heavy},
+                {
+                    "id": "old",
+                    "state": "Completed",
+                    "updated_at": old,
+                    "ids": ["a"],
+                    "receipts": [dict(receipt)],
+                    **heavy,
+                },
+                {
+                    "id": "recent",
+                    "state": "Stopped",
+                    "updated_at": time.time(),
+                    "receipts": [dict(receipt)],
+                    **heavy,
+                },
+                {
+                    "id": "last",
+                    "state": "Completed",
+                    "updated_at": old,
+                    "receipts": [dict(receipt)],
+                    **heavy,
+                },
             ]
         }
         with jobs.lock:
@@ -84,12 +113,18 @@ class SmallerFiles(unittest.TestCase):
         import batch_media
 
         raw = open(path, "rb").read()
-        return batch_media.save(self.store, f"data:{mime};base64," + base64.b64encode(raw).decode()), len(raw)
+        return batch_media.save(
+            self.store, f"data:{mime};base64," + base64.b64encode(raw).decode()
+        ), len(raw)
 
     def test_a_big_picture_becomes_a_small_jpeg_once(self):
         import os, batch_media
 
-        ident, size = self.make(["-f", "lavfi", "-i", "mandelbrot=size=2400x2400", "-frames:v", "1"], "image/png", "p.png")
+        ident, size = self.make(
+            ["-f", "lavfi", "-i", "mandelbrot=size=2400x2400", "-frames:v", "1"],
+            "image/png",
+            "p.png",
+        )
         self.assertGreater(size, batch_media.SHRINK_IMAGE_OVER)
         self.assertTrue(batch_media.shrink(self.store, ident, self.dir))
         path, mime = batch_media.load(self.store, ident, self.dir)
@@ -100,6 +135,8 @@ class SmallerFiles(unittest.TestCase):
     def test_a_small_file_is_left_alone(self):
         import batch_media
 
-        ident, _ = self.make(["-f", "lavfi", "-i", "color=red:size=64x64", "-frames:v", "1"], "image/png", "s.png")
+        ident, _ = self.make(
+            ["-f", "lavfi", "-i", "color=red:size=64x64", "-frames:v", "1"], "image/png", "s.png"
+        )
         self.assertFalse(batch_media.shrink(self.store, ident, self.dir))
         self.assertEqual(batch_media.load(self.store, ident, self.dir)[1], "image/png")

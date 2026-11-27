@@ -18,7 +18,10 @@ KEY = "case_run"
 GIKI_GROUPS = {"giki1": "giki 1", "giki2": "giki 2"}
 ROWS = ("group", "giki1", "giki2", "top", "volunteers", "important")
 DM_ORDER = ("giki1", "giki2", "top", "volunteers", "important")
-EXTRA_ROWS = ("top", "important")  # DM rows that can also send the case PDF / video after each poster + caption
+EXTRA_ROWS = (
+    "top",
+    "important",
+)  # DM rows that can also send the case PDF / video after each poster + caption
 EXTRA_FLAGS = ("pdf", "video")
 MSG_OF = {  # which saved messages each row sends
     "group": ("group",),
@@ -84,7 +87,8 @@ def agreement(text):
     if len(t) > 60:
         return "unclear"
     if AGREE.match(t) and not re.search(
-        r"(?i)\b(but|not|nahi|nahin|nhi|no|nope|na|never|dont|don'?t|can'?t|cannot|stop|later|baad|abhi\s+nahi)\b", t
+        r"(?i)\b(but|not|nahi|nahin|nhi|no|nope|na|never|dont|don'?t|can'?t|cannot|stop|later|baad|abhi\s+nahi)\b",
+        t,
     ):
         return "agree"
     if DECLINE.match(t) and not AGREE.search(t):
@@ -268,7 +272,8 @@ class CaseRun:
         cohorts = {
             key: sorted(
                 (
-                    r for r in all_rows
+                    r
+                    for r in all_rows
                     if " ".join(str(r.get("group") or "").casefold().split()) == name
                 ),
                 key=book.group_key,
@@ -427,7 +432,9 @@ class CaseRun:
             for r in self.hub.volunteers.book.recipients("all")
             if r["id"] in aud["volunteers"]
         ][:40]
-        plain = copy.deepcopy(plan)  # the PDF / video ticks are chosen in the Start question, not part of its token
+        plain = copy.deepcopy(
+            plan
+        )  # the PDF / video ticks are chosen in the Start question, not part of its token
         for r in plain.values():
             for name in EXTRA_FLAGS:
                 r.pop(name, None)
@@ -609,7 +616,10 @@ class CaseRun:
             ap["plan"][key] = copy.deepcopy(st["plan"][key])
             ap["ids"][key] = s["audiences"][key]
             used = {
-                m for k, r in st["rows"].items() if k != key and r["state"] != "off" for m in MSG_OF[k]
+                m
+                for k, r in st["rows"].items()
+                if k != key and r["state"] != "off"
+                for m in MSG_OF[k]
             }
             for name in MSG_OF[key]:
                 if name not in used:
@@ -699,8 +709,7 @@ class CaseRun:
             try:
                 normalize_phone(by[i]["phone"])
                 if key in GIKI_GROUPS and (
-                    " ".join(str(by[i].get("group") or "").casefold().split())
-                    != GIKI_GROUPS[key]
+                    " ".join(str(by[i].get("group") or "").casefold().split()) != GIKI_GROUPS[key]
                 ):
                     raise ValueError("Cohort changed")
             except ValueError:
@@ -738,7 +747,9 @@ class CaseRun:
             else:
                 follow = (h.follow_up_text() or "").strip() if key in GIKI_GROUPS else ""
                 extra = {n: bool(cfg.get(n)) for n in EXTRA_FLAGS} if key in EXTRA_ROWS else {}
-                a.dm_extras_check(extra.get("pdf"), extra.get("video"))  # a ticked file must still be saved
+                a.dm_extras_check(
+                    extra.get("pdf"), extra.get("video")
+                )  # a ticked file must still be saved
                 h.jobs.start(
                     "selected",
                     poster=h.prefs().get("poster", True),
@@ -883,7 +894,9 @@ class CaseRun:
             return
         for phone, f in st["giki"].items():
             if f.get("row") not in GIKI_GROUPS or st["rows"].get(f["row"], {}).get("state") in (
-                "paused", "off", "stopped"
+                "paused",
+                "off",
+                "stopped",
             ):
                 continue
             if f["step"] != "agreed" or f.get("inflight") is not None or f["shared"] >= GIKI_SHARES:
@@ -1384,9 +1397,7 @@ class CaseRun:
                 "shared": steps.count("shared"),
                 "needs": steps.count("needs") + steps.count("uncertain"),
                 "declined": steps.count("declined"),
-                "people": [
-                    {"name": f["name"], "step": f["step"]} for f in people[:60]
-                ],
+                "people": [{"name": f["name"], "step": f["step"]} for f in people[:60]],
             }
         action = "review"
         if out["state"] == "running":

@@ -46,7 +46,9 @@ test('/new reopens where you left: closing on Notes and opening the app again sh
   await ctx.close();
 });
 
-test('the main link "/" is the new design, /new is the same page, and the previous page is kept at /old', async ({ request }) => {
+test('the main link "/" is the new design, /new is the same page, and the previous page is kept at /old', async ({
+  request,
+}) => {
   const old = await (await request.get('/old')).text();
   expect(old).not.toContain('new-ui.css');
   expect(old).not.toContain('ui2');
@@ -323,11 +325,14 @@ test('/new compact group dock keeps its controls reachable at every tested width
     }
     await expect(free, `${width}px`).toBeHidden();
     await expect(all).toBeHidden();
-    const [primary, ...secondary] = await Promise.all([main, other, testGroup].map((el) => el.boundingBox()));
+    const [primary, ...secondary] = await Promise.all(
+      [main, other, testGroup].map((el) => el.boundingBox()),
+    );
     expect(fits(primary), `GiveLife at ${width} × ${height}`).toBe(true);
     expect(secondary.every((b) => fits(b) && b.height >= 40)).toBe(true);
     // one row on phones and computers; a tablet stacks them beside the message
-    if (width < 600 || width >= 900) expect(new Set(secondary.map((b) => Math.round(b.y))).size).toBe(1);
+    if (width < 600 || width >= 900)
+      expect(new Set(secondary.map((b) => Math.round(b.y))).size).toBe(1);
     await other.click();
     await expect(free).toBeVisible();
     await expect(all).toBeVisible();
@@ -377,7 +382,8 @@ test('/new Message dock keeps each send tied to its original destination', async
       await other.click();
     if (group === 'community') await page.locator('#btnFreePick').click();
     await page.locator(selector).click();
-    if (group === 'main') await expect(page.locator('#btnGivelife .ui2-undo')).toContainText('Undo'); // 5 s to undo first
+    if (group === 'main')
+      await expect(page.locator('#btnGivelife .ui2-undo')).toContainText('Undo'); // 5 s to undo first
     await expect.poll(() => sends.at(-1)?.group, { timeout: 10000 }).toBe(group);
     await expect(groupStatus).toContainText('Simulated send failure');
     expect(sends.at(-1)).toMatchObject({ group, message });
@@ -673,7 +679,10 @@ test('/new computer: donor list is centred and narrow, with a short amount box',
   const t = await page.locator('#donorTable').boundingBox();
   expect(t.width).toBeLessThanOrEqual(761);
   // the left menu stays beside the page, so the list is centred in the space to the right of it
-  const side = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui2-side')) || 0);
+  const side = await page.evaluate(
+    () =>
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui2-side')) || 0,
+  );
   expect(side).toBeGreaterThan(100);
   expect(Math.abs(t.x + t.width / 2 - (side + 1440) / 2)).toBeLessThan(40);
   await page.locator('.donor-row .donor-status').first().click();
@@ -851,13 +860,19 @@ test('/new phone: tapping anywhere on the Auto row switches Auto', async ({ page
   await page.mouse.click(box.x + 20, box.y + box.height / 2); // switch it back
 });
 
-test('/new phone: Chat has one Back at the top left, money left beside it, and three quick buttons', async ({ page }) => {
+test('/new phone: Chat has one Back at the top left, money left beside it, and three quick buttons', async ({
+  page,
+}) => {
   await open(page, '/new#/chat', 390);
   await expect(page.locator('#hist')).toBeVisible();
   await expect(page.locator('#hist > header')).toBeVisible();
   await expect(page.locator('#histMain')).toBeHidden(); // no second Back in the middle
   await expect(page.locator('#ui2HistLeft')).toContainText('left');
-  await expect(page.locator('#ui2HistChips .ui2-chip')).toHaveText(['Amount left', 'New wording', 'Send all']);
+  await expect(page.locator('#ui2HistChips .ui2-chip')).toHaveText([
+    'Amount left',
+    'New wording',
+    'Send all',
+  ]);
   const back = await page.locator('#histClose').boundingBox();
   expect(back.y).toBeLessThan(80);
   expect(back.x).toBeLessThan(60);
@@ -1033,7 +1048,10 @@ test('/new phone: Rewrite and ‹ › sit under the green message at the thumb s
   await expect(page.locator('#ui2GnavMain #ui2VerNav #homePrev')).toBeVisible();
   await expect(page.locator('#ui2GnavMain #ui2VerNav #homeNext')).toBeVisible();
   for (const sel of ['.ui2-rewrite', '#homePrev', '#homeNext'])
-    expect((await page.locator('#ui2GnavMain ' + sel).boundingBox()).height, sel).toBeGreaterThanOrEqual(44);
+    expect(
+      (await page.locator('#ui2GnavMain ' + sel).boundingBox()).height,
+      sel,
+    ).toBeGreaterThanOrEqual(44);
   // the last line of text is never under the buttons
   const textBottom = await page.evaluate(() => {
     const lines = document.querySelectorAll('#groupPreview .wa-line');
@@ -1057,8 +1075,12 @@ test('/new phone: Rewrite and ‹ › sit under the green message at the thumb s
   const rw = await page.locator('#ui2RewriteRow [data-lang="en"]').boundingBox();
   expect(rw.height).toBeGreaterThanOrEqual(36);
   expect(rw.y).toBeGreaterThan(844 * 0.6);
-  await expect(page.locator('#messageFocus .ui2-reader-dock > :is(.ui2-gen-btn, #focusTest, #focusBack)')).toHaveCount(3);
-  await expect(page.locator('#ui2MsgTools > :is(#focusCopy, #focusEdit, .ui2-base-btn, .focus-rail-more)')).toHaveCount(4);
+  await expect(
+    page.locator('#messageFocus .ui2-reader-dock > :is(.ui2-gen-btn, #focusTest, #focusBack)'),
+  ).toHaveCount(3);
+  await expect(
+    page.locator('#ui2MsgTools > :is(#focusCopy, #focusEdit, .ui2-base-btn, .focus-rail-more)'),
+  ).toHaveCount(4);
   await page.locator('#ui2Swipe .ui2-swipe-next').click();
   await expect(page.locator('#messageFocus')).toBeVisible();
 });
@@ -1162,7 +1184,10 @@ test('/new phone: every button in the bottom bar has an icon above its word', as
   for (let i = 0; i < 5; i++) {
     const t = tabs.nth(i);
     await expect(t.locator('svg')).toHaveCount(1);
-    const [icon, word] = await Promise.all([t.locator('svg').boundingBox(), t.locator('span').boundingBox()]);
+    const [icon, word] = await Promise.all([
+      t.locator('svg').boundingBox(),
+      t.locator('span').boundingBox(),
+    ]);
     expect(icon.y + icon.height).toBeLessThanOrEqual(word.y + 1); // icon above the word
     expect(icon.width).toBeGreaterThanOrEqual(18);
     expect((await t.boundingBox()).height).toBeGreaterThanOrEqual(44);
@@ -1190,10 +1215,14 @@ test('/new More: New case asks for a name and an amount, keeps Important and Top
   const sheet = page.locator('#ui2NewCase');
   await expect(sheet).toBeVisible();
   // The sheet is solid (the page behind never shows through) and sits at the bottom, in thumb reach.
-  expect(await sheet.evaluate((n) => getComputedStyle(n).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+  expect(await sheet.evaluate((n) => getComputedStyle(n).backgroundColor)).not.toBe(
+    'rgba(0, 0, 0, 0)',
+  );
   const box = await sheet.boundingBox();
   expect(box.y + box.height).toBeGreaterThan(page.viewportSize().height - 2);
-  await expect(sheet.locator('.ui2-nc-note')).toContainText('Important and Top donors stay the same');
+  await expect(sheet.locator('.ui2-nc-note')).toContainText(
+    'Important and Top donors stay the same',
+  );
   // Empty or wrong input says why and sends nothing.
   await sheet.getByRole('button', { name: 'Start new case' }).click();
   await expect(sheet.locator('.ui2-nc-err')).toContainText('case name');
@@ -1262,7 +1291,9 @@ for (const width of [320, 360, 390, 430])
     }
     const pb = await panel.boundingBox();
     expect(pb.height).toBeLessThan(135); // two lines, not two stacked blocks
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
   });
 
 test('/new Later timers: tapping the chosen time again deselects it at once, and a slow refresh that started earlier cannot bring it back', async ({
@@ -1301,15 +1332,28 @@ test('/new Later timers: tapping the chosen time again deselects it at once, and
   await expect(pill).not.toHaveClass(/is-pending/);
 });
 
-test('/new phone reader: swipe the message left for the next version, right for the one before', async ({ page, request }) => {
+test('/new phone reader: swipe the message left for the next version, right for the one before', async ({
+  page,
+  request,
+}) => {
   const headers = { Authorization: 'Bearer manual-fix-preview-key' };
   await open(page, '/new#/preview', 390); // opening the reader saves the original message
   await expect(page.locator('#focusFormatted')).not.toHaveText('');
-  await expect.poll(async () => (await (await request.get('/focus-bank?kind=group', { headers })).json()).source || '').not.toBe('');
+  await expect
+    .poll(
+      async () =>
+        (await (await request.get('/focus-bank?kind=group', { headers })).json()).source || '',
+    )
+    .not.toBe('');
   // ten versions that differ only in their last line (a version must keep the message's first line)
   const { source } = await (await request.get('/focus-bank?kind=group', { headers })).json();
-  const messages = Array.from({ length: 10 }, (_, k) => source.replace(/\n([^\n]*)$/, `\n(swipe ${k + 1}) $1`));
-  const made = await request.post('/focus-bank', { headers, data: { kind: 'group', action: 'manual', messages } });
+  const messages = Array.from({ length: 10 }, (_, k) =>
+    source.replace(/\n([^\n]*)$/, `\n(swipe ${k + 1}) $1`),
+  );
+  const made = await request.post('/focus-bank', {
+    headers,
+    data: { kind: 'group', action: 'manual', messages },
+  });
   expect(made.ok(), await made.text()).toBe(true);
   expect((await made.json()).items.length).toBe(10);
   await page.reload();
@@ -1319,9 +1363,15 @@ test('/new phone reader: swipe the message left for the next version, right for 
   const box = await page.locator('#focusFormatted').boundingBox();
   const y = box.y + box.height / 2;
   const swipe = async (from, to) => {
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from, y }] });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: from, y }],
+    });
     for (let i = 1; i <= 8; i++)
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from + ((to - from) * i) / 8, y }] });
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: from + ((to - from) * i) / 8, y }],
+      });
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await page.waitForTimeout(500); // the slide-in finishes before the next swipe
   };

@@ -130,7 +130,9 @@ def restore_apart(path):
     return _apart("restore", path)
 
 
-EVERY = 120  # seconds between checkpoints; a clean stop (deploy, memory guard) always saves the latest
+EVERY = (
+    120  # seconds between checkpoints; a clean stop (deploy, memory guard) always saves the latest
+)
 
 
 def start(store, path):
@@ -152,4 +154,6 @@ if __name__ == "__main__":  # python key_cache.py save|restore <path>
     from persist import configured_store
 
     _action, _path = sys.argv[1], Path(sys.argv[2])
-    print(save(configured_store(), _path) if _action == "save" else restore(configured_store(), _path))
+    print(
+        save(configured_store(), _path) if _action == "save" else restore(configured_store(), _path)
+    )

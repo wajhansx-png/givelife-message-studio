@@ -53,7 +53,9 @@ class GroupFailurePaths(unittest.TestCase):
         return app.JOBS[ident], calls
 
     def test_partial_group_does_not_start_the_next_group(self):
-        job, calls = self.run_groups([{"code": "SUCCESS", "extras": [{"kind": "video", "code": "UNCERTAIN"}]}])
+        job, calls = self.run_groups(
+            [{"code": "SUCCESS", "extras": [{"kind": "video", "code": "UNCERTAIN"}]}]
+        )
         self.assertEqual(self.codes(job), ["PARTIAL"])
         self.assertEqual(calls, [app.GROUPS["main"][1]])
         self.assertIn("not confirmed", job["results"][0]["message"])

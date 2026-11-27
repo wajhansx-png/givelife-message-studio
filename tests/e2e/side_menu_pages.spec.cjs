@@ -5,7 +5,9 @@ const { test, expect } = require('@playwright/test');
 
 async function open(page, width, height) {
   await page.setViewportSize({ width, height });
-  await page.addInitScript(() => localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'));
+  await page.addInitScript(() =>
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
+  );
   await page.goto('/new');
   await expect(page.locator('#groupPreview')).toBeVisible();
   await expect(page.locator('.ui2-tab[data-tab="message"]')).toBeVisible();
@@ -17,7 +19,12 @@ async function tap(page, tab) {
   await page.mouse.click(r.x + r.width / 2, r.y + r.height / 2);
 }
 
-const PAGES = { case: '#casePage', donors: '#donorsPage', chat: '#hist', report: 'dialog.report-dialog' };
+const PAGES = {
+  case: '#casePage',
+  donors: '#donorsPage',
+  chat: '#hist',
+  report: 'dialog.report-dialog',
+};
 
 async function state(page) {
   return page.evaluate((pages) => {
@@ -39,8 +46,13 @@ async function state(page) {
   }, PAGES);
 }
 
-for (const [width, height] of [[1280, 720], [1920, 1080]])
-  test(`desktop ${width}: the menu stays beside each page, and its button switches pages`, async ({ page }) => {
+for (const [width, height] of [
+  [1280, 720],
+  [1920, 1080],
+])
+  test(`desktop ${width}: the menu stays beside each page, and its button switches pages`, async ({
+    page,
+  }) => {
     await open(page, width, height);
     for (const key of ['case', 'donors', 'chat', 'report', 'case', 'chat', 'donors']) {
       await tap(page, key);
@@ -50,7 +62,9 @@ for (const [width, height] of [[1280, 720], [1920, 1080]])
       expect(s.boxLeft, `${key} starts after the menu`).toBeGreaterThanOrEqual(s.menuRight - 1);
       if (key !== 'chat')
         await expect // the page slides in: measure once it has settled
-          .poll(async () => Math.abs((await state(page)).boxRight - s.innerWidth), { message: `${key} reaches the right edge` })
+          .poll(async () => Math.abs((await state(page)).boxRight - s.innerWidth), {
+            message: `${key} reaches the right edge`,
+          })
           .toBeLessThan(2);
     }
     await tap(page, 'message');
@@ -63,7 +77,9 @@ test('Notes still covers the whole screen, and the menu comes back after it', as
   await open(page, 1280, 720);
   await tap(page, 'notes');
   await expect(page.locator('#foundationNotes')).toBeVisible();
-  await expect.poll(async () => (await page.locator('#foundationNotes').boundingBox()).x).toBeLessThan(2);
+  await expect
+    .poll(async () => (await page.locator('#foundationNotes').boundingBox()).x)
+    .toBeLessThan(2);
   await page.keyboard.press('Escape');
   await expect(page.locator('#foundationNotes')).toBeHidden();
   await tap(page, 'case');
@@ -81,7 +97,9 @@ test('phones: pages stay full width (no menu offset)', async ({ page }) => {
   await open(page, 390, 800);
   await page.evaluate(() => document.querySelector('#openDonors').click());
   await expect(page.locator('#donorsPage')).toBeVisible();
-  await expect.poll(async () => (await page.locator('#donorsPage').boundingBox()).x).toBeLessThan(2);
+  await expect
+    .poll(async () => (await page.locator('#donorsPage').boundingBox()).x)
+    .toBeLessThan(2);
   const box = await page.locator('#donorsPage').boundingBox();
   expect(Math.abs(box.width - 390)).toBeLessThan(2);
 });

@@ -422,7 +422,9 @@ class SendTests(unittest.TestCase):
         app.LAST_MANUAL.update(kind="appeal", target="main")
         jid = app.GROUPS["main"][1]
         app.DELIVERIES[jid] = {
-            "message_id": "my-own-message", "gateway": app.GOWA_URL, "device": app.device()
+            "message_id": "my-own-message",
+            "gateway": app.GOWA_URL,
+            "device": app.device(),
         }
         import io
 

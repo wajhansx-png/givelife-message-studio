@@ -29,7 +29,10 @@ ANGLES = (
 )
 
 # Trigger on a message that is on screen: the SAME concept, felt harder (never a different story).
-STRONGER = ("stronger", "the SAME concept as the message on screen, written so it is felt harder and more urgent")
+STRONGER = (
+    "stronger",
+    "the SAME concept as the message on screen, written so it is felt harder and more urgent",
+)
 
 # Every verse and hadith the app may print. The AI picks an id; the text and reference come only from here.
 # Hadith are the three the owner already approved (team_rules.HADITH, copied exactly).
@@ -147,7 +150,11 @@ def payment_block(*texts):
         lines = str(text or "").strip().splitlines()
         for i in range(len(lines) - 1, -1, -1):
             if re.search(r"\b0?\d{10,12}\b", lines[i].replace("*", "").replace(" ", "")):
-                start = i - 1 if i and re.search(r"(?i)easypaisa|jazz\s?cash|account", lines[i - 1]) else i
+                start = (
+                    i - 1
+                    if i and re.search(r"(?i)easypaisa|jazz\s?cash|account", lines[i - 1])
+                    else i
+                )
                 tail = lines[start:]
                 end = next((n for n, line in enumerate(tail) if "GiveLife" in line), None)
                 block = "\n".join(
@@ -224,8 +231,12 @@ def problems(style, text, parts, ctx, previous=""):
             "it used numbers that are not in the case: "
             + ", ".join(f"{n:,}" for n in sorted(extra))
         )
+
     def _methods(value):
-        return {re.sub(r"\s+", "", m.lower()) for m in re.findall(team_rules.OTHER_PAYMENT, str(value or ""))}
+        return {
+            re.sub(r"\s+", "", m.lower())
+            for m in re.findall(team_rules.OTHER_PAYMENT, str(value or ""))
+        }
 
     if _methods(text) - _methods(ctx.get("payment")):  # the owner's own payment line may name it
         out.append("it names a payment method other than the owner's")
@@ -233,15 +244,22 @@ def problems(style, text, parts, ctx, previous=""):
         out.append("it makes a medical claim that is not confirmed")
     never = quality.NEVER.search(text)
     if never:
-        out.append(f'it uses the word "{never.group(0)}" (never say gift or begging: say donation, giving, helping, or what the family needs)')
-    hard = quality.fancy_words(ctx.get("facts", ""), parts.get("hook", "") + " " + parts.get("story", "") + " " + parts.get("help", ""))
+        out.append(
+            f'it uses the word "{never.group(0)}" (never say gift or begging: say donation, giving, helping, or what the family needs)'
+        )
+    hard = quality.fancy_words(
+        ctx.get("facts", ""),
+        parts.get("hook", "") + " " + parts.get("story", "") + " " + parts.get("help", ""),
+    )
     if hard:
         out.append("it uses hard words (" + ", ".join(hard) + "); use easy everyday English")
     if parts.get("verse") not in VERSES:
         out.append("the verse is not on the approved list")
     if style in TRIGGER and str(previous or "").strip():
         # the same concept, felt harder: the first line must be stronger, not a copy of the one on screen
-        first = next((ln for ln in str(previous).splitlines() if ln.strip("*_ \t")), "").strip("*_ \t")
+        first = next((ln for ln in str(previous).splitlines() if ln.strip("*_ \t")), "").strip(
+            "*_ \t"
+        )
         if first and similarity(first, parts.get("hook", "")) > 0.85:
             out.append("the first line is the same as on screen: make it clearly stronger")
     if not dm_composer.complete(text):
@@ -262,7 +280,9 @@ def pick_angle(state, style):
 
 def build_prompt(style, ctx, angle, avoid, previous, notes):
     english = style not in BILINGUAL
-    shown = style in TRIGGER and bool(str(previous or "").strip())  # a message is on screen: make THAT one stronger
+    shown = style in TRIGGER and bool(
+        str(previous or "").strip()
+    )  # a message is on screen: make THAT one stronger
     verses = "\n".join(
         f"- {k}: {v['note']}"
         for k, v in VERSES.items()
@@ -306,7 +326,9 @@ def build_prompt(style, ctx, angle, avoid, previous, notes):
             "- Only make what the message and the facts already say felt more strongly. Never add a new danger, deadline, medical claim, name, age or number.",
         ]
         if ctx.get("current_verse"):
-            lines.append(f'- The message on screen already uses the verse id "{ctx["current_verse"]}": choose that same id.')
+            lines.append(
+                f'- The message on screen already uses the verse id "{ctx["current_verse"]}": choose that same id.'
+            )
         lines += ["", "THE MESSAGE ON SCREEN (make THIS one stronger):", str(previous)[:1800]]
     elif style in TRIGGER:
         lines += [
@@ -344,7 +366,9 @@ def generate(style, ctx, state, chat, json_of, today=None, deadline=75.0, archiv
     day = today or datetime.date.today().isoformat()
     used = list((state.get("openings") or {}).get(day, []))
     previous = ctx.get("current_text", "") if style in TRIGGER else ""
-    shown = style in TRIGGER and bool(str(previous).strip())  # Trigger on the message on screen: same concept, stronger
+    shown = style in TRIGGER and bool(
+        str(previous).strip()
+    )  # Trigger on the message on screen: same concept, stronger
     ctx["current_verse"] = verse_in(previous) if shown else ""
     angle = STRONGER if shown else pick_angle(state, style)
     started, notes, failures = time.monotonic(), [], []

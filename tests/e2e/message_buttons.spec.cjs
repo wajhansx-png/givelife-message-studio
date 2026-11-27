@@ -46,12 +46,23 @@ const scripted = async (page, asked) =>
     asked.push(body);
     const ur = body.style.startsWith('ur');
     await r.fulfill({
-      json: { text: (ur ? '*آج اس خاندان کی مدد کریں*' : '*Help this family today*') + ' ' + body.style + ' ' + Date.now() + '\n\n_Same message, rewritten._ 💔\n\n🔴 Rs. 25,000 LEFT\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)' },
+      json: {
+        text:
+          (ur ? '*آج اس خاندان کی مدد کریں*' : '*Help this family today*') +
+          ' ' +
+          body.style +
+          ' ' +
+          Date.now() +
+          '\n\n_Same message, rewritten._ 💔\n\n🔴 Rs. 25,000 LEFT\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)',
+      },
     });
   });
 
 for (const kind of ['group', 'dm'])
-  test(`${kind}: the buttons rewrite the message on screen, stay editable and save`, async ({ page, request }) => {
+  test(`${kind}: the buttons rewrite the message on screen, stay editable and save`, async ({
+    page,
+    request,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await open(page, kind);
     const asked = [];
@@ -77,7 +88,9 @@ for (const kind of ['group', 'dm'])
     await text.fill(d.replace('LEFT', 'LEFT ONLY'));
     await page.locator('#focusEdit').click();
     await expect(page.locator('#focusState')).toContainText('Saved');
-    const saved = await (await request.get('/drafts', { headers: { Authorization: 'Bearer ' + KEY } })).json();
+    const saved = await (
+      await request.get('/drafts', { headers: { Authorization: 'Bearer ' + KEY } })
+    ).json();
     expect(saved[kind]).toContain('LEFT ONLY');
     await page.reload();
     await expect(page.locator('#focusFormatted')).toContainText('LEFT ONLY');
@@ -157,7 +170,11 @@ test('only one write at a time: the buttons are locked while one is running', as
   await page.route('**/message-style', async (r) => {
     calls++;
     await gate;
-    await r.fulfill({ json: { text: '*Help this family today*\n\n_Same message, rewritten._\n\n🔴 Rs. 25,000 LEFT' } });
+    await r.fulfill({
+      json: {
+        text: '*Help this family today*\n\n_Same message, rewritten._\n\n🔴 Rs. 25,000 LEFT',
+      },
+    });
   });
   await button(page, 'English').click();
   await expect(button(page, 'Trigger')).toBeDisabled();
@@ -221,7 +238,9 @@ for (const width of [320, 390, 1440])
     await page.route('**/message-style', async (r) => {
       const body = r.request().postDataJSON();
       asked.push(body.style);
-      await r.fulfill({ json: { text: '*Hook ' + body.style + '*\n\n🔴 Rs. 25,000 LEFT', left: 25000 } });
+      await r.fulfill({
+        json: { text: '*Hook ' + body.style + '*\n\n🔴 Rs. 25,000 LEFT', left: 25000 },
+      });
     });
     await page.goto('/new#/preview');
     await expect(page.locator('#focusFormatted')).not.toHaveText('');
@@ -266,7 +285,10 @@ test('/new desktop: the chips on the Message card write the same way and show th
   await card.nth(1).click();
   await expect(page.locator('#messageFocus')).toBeVisible();
   await expect.poll(() => asked.length).toBe(1);
-  await expect(page.locator('#messageFocus .focus-styles button').nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#messageFocus .focus-styles button').nth(1)).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await expect(card.nth(1)).toHaveAttribute('aria-pressed', 'true');
   expect(asked).toEqual(['en']);
 });
@@ -284,14 +306,19 @@ test('Style fix endpoint: bold hook, italic story, formatted lines; same words; 
   request,
 }) => {
   const H = { Authorization: 'Bearer ' + KEY };
-  const r = await request.post('/style-fix', { headers: H, data: { text: PLAIN_MSG, kind: 'group' } });
+  const r = await request.post('/style-fix', {
+    headers: H,
+    data: { text: PLAIN_MSG, kind: 'group' },
+  });
   expect(r.status()).toBe(200);
   const d = await r.json();
   const parts = d.text.split('\n\n');
   expect(parts[0]).toBe('*آپ کے ایک قدم سے ایک غمزدہ باپ کا بوجھ ہلکا ہو سکتا ہے*');
   expect(parts[1]).toMatch(/^_Yousaf was only 2 years old\..* 💔_$/);
   expect(parts).toContain('🔴 Rs. 2,000 LEFT');
-  expect(parts).toContain('• *_Just 2 people donating Rs. 1,000 can help this grieving father._* 🤲');
+  expect(parts).toContain(
+    '• *_Just 2 people donating Rs. 1,000 can help this grieving father._* 🤲',
+  );
   expect(d.changed).toBe(true);
   const words = (t) => t.replace(/[*_]/g, '').match(/[\p{L}\p{N}]+/gu);
   expect(words(d.text)).toEqual(words(PLAIN_MSG)); // not one word changed
@@ -300,7 +327,10 @@ test('Style fix endpoint: bold hook, italic story, formatted lines; same words; 
   ).json();
   expect(again.changed).toBe(false);
   expect(again.text).toBe(d.text);
-  const empty = await request.post('/style-fix', { headers: H, data: { text: '  ', kind: 'group' } });
+  const empty = await request.post('/style-fix', {
+    headers: H,
+    data: { text: '  ', kind: 'group' },
+  });
   expect(empty.status()).toBe(400);
 });
 
@@ -340,20 +370,27 @@ for (const kind of ['group', 'dm'])
     expect(posted.length).toBe(2);
   });
 
-test('Style fix: a failed request leaves the text alone and the buttons work again', async ({ page }) => {
+test('Style fix: a failed request leaves the text alone and the buttons work again', async ({
+  page,
+}) => {
   await open(page, 'group');
   await page.locator('#focusEdit').click();
   const text = page.locator('#focusText');
   const before = await text.inputValue();
-  await page.route('**/style-fix', (r) => r.fulfill({ status: 400, json: { error: 'There is no message to fix.' } }));
+  await page.route('**/style-fix', (r) =>
+    r.fulfill({ status: 400, json: { error: 'There is no message to fix.' } }),
+  );
   await page.locator('#focusStyleFix').click();
   await expect(page.locator('#focusState')).toContainText('There is no message to fix');
   await expect(text).toHaveValue(before);
-  for (const name of ['Urdu + English', 'English', 'Trigger']) await expect(button(page, name)).toBeEnabled();
+  for (const name of ['Urdu + English', 'English', 'Trigger'])
+    await expect(button(page, name)).toBeEnabled();
   await expect(page.locator('#focusStyleFix')).toBeEnabled();
 });
 
-test('/new desktop: the Style fix chip on the Message card opens the reader and fixes it', async ({ page }) => {
+test('/new desktop: the Style fix chip on the Message card opens the reader and fixes it', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   const posted = [];

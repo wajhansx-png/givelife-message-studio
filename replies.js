@@ -339,7 +339,23 @@
       return;
     }
     card.append(head, line, stats, note, set, settingsDialog);
-    cards[c.id] = { card, sw, stats, note, line, set, edit, form, settingsDialog, progress, fill, who, saving: false, fields: c.fields, filled: false };
+    cards[c.id] = {
+      card,
+      sw,
+      stats,
+      note,
+      line,
+      set,
+      edit,
+      form,
+      settingsDialog,
+      progress,
+      fill,
+      who,
+      saving: false,
+      fields: c.fields,
+      filled: false,
+    };
     set.onclick = () => edit.click();
     sw.onclick = () => toggle(c.id);
     edit.onclick = () => {
@@ -348,10 +364,13 @@
       form.hidden = false;
       settingsDialog.showModal();
     };
-    settingsDialog.addEventListener('cancel', event => {
+    settingsDialog.addEventListener('cancel', (event) => {
       if (cards[c.id].saving) event.preventDefault();
     });
-    settingsDialog.addEventListener('close', () => { form.hidden = true; edit.focus({ preventScroll: true }); });
+    settingsDialog.addEventListener('close', () => {
+      form.hidden = true;
+      edit.focus({ preventScroll: true });
+    });
     form.onsubmit = (e) => {
       e.preventDefault();
       saveForm(c.id);
@@ -368,7 +387,24 @@
     );
     for (const f of x.fields) {
       const label = el('label'),
-        text = el('span', '', ({main_every:'GiveLife (min)', freelance_every:'Other groups (min)', gap_minutes:'Gap (min)', gap_seconds:'Gap (sec)', vary_seconds:'Variation (sec)', batch_size:'Per batch', rest_minutes:'Rest (min)', rest_seconds:'Rest (sec)', count:'Donors', follow_up:'Send follow-up', include_contacted:'Include contacted', share:'Send share message'})[f.key] || f.label);
+        text = el(
+          'span',
+          '',
+          {
+            main_every: 'GiveLife (min)',
+            freelance_every: 'Other groups (min)',
+            gap_minutes: 'Gap (min)',
+            gap_seconds: 'Gap (sec)',
+            vary_seconds: 'Variation (sec)',
+            batch_size: 'Per batch',
+            rest_minutes: 'Rest (min)',
+            rest_seconds: 'Rest (sec)',
+            count: 'Donors',
+            follow_up: 'Send follow-up',
+            include_contacted: 'Include contacted',
+            share: 'Send share message',
+          }[f.key] || f.label,
+        );
       let input;
       if (f.type === 'select') {
         input = el('select');
@@ -418,7 +454,9 @@
     x.saving = true;
     autoRevision++;
     const actions = [...x.form.querySelectorAll('button,input,select')];
-    actions.forEach(button => { button.disabled = true; });
+    actions.forEach((button) => {
+      button.disabled = true;
+    });
     x.form.setAttribute('aria-busy', 'true');
     try {
       x.form.querySelector('.auto-error').textContent = '';
@@ -430,7 +468,9 @@
     } finally {
       autoRevision++;
       x.saving = false;
-      actions.forEach(button => { button.disabled = false; });
+      actions.forEach((button) => {
+        button.disabled = false;
+      });
       x.form.removeAttribute('aria-busy');
     }
   }
@@ -528,7 +568,10 @@
     x.who.hidden = x.progress.hidden = !p;
     x.who.textContent = say;
     x.progress.setAttribute('aria-valuenow', String(pct));
-    x.progress.setAttribute('aria-valuetext', p ? p.name + ': ' + p.done + ' of ' + p.steps + ' messages' : '');
+    x.progress.setAttribute(
+      'aria-valuetext',
+      p ? p.name + ': ' + p.done + ' of ' + p.steps + ' messages' : '',
+    );
     x.progress.title = say;
     x.fill.style.width = pct + '%';
     x.card.dataset.person = p ? '1' : '';
@@ -551,7 +594,11 @@
         (g.person ? '' : g.current ? ' · ' + g.current : '') +
         (!g.person && g.next_at ? ' · next ' + clock(g.next_at) : '')
       : g.total
-        ? (g.state === 'Completed' ? 'Done · ' : g.state + ' · ') + g.sent + ' of ' + g.total + ' sent'
+        ? (g.state === 'Completed' ? 'Done · ' : g.state + ' · ') +
+          g.sent +
+          ' of ' +
+          g.total +
+          ' sent'
         : 'Not sending';
     paintPerson(x, g.active ? g.person : null);
   }
@@ -613,7 +660,7 @@
     busyNow = Object.values(cards).some((x) => x.last && (x.last.on || x.last.active));
   }
   async function autoRefresh() {
-    if (autoBusy || Object.values(cards).some(x => x.saving)) return;
+    if (autoBusy || Object.values(cards).some((x) => x.saving)) return;
     const revision = autoRevision;
     try {
       const result = await readReport('/auto-controls');
@@ -632,10 +679,13 @@
     clearTimeout(autoTimer);
     /* One call: every 3 s while something sends, every 15 s when nothing does (fewer calls, less CPU). */
     const tick = () => {
-      autoTimer = setTimeout(async () => {
-        if (dlg.open && !document.hidden) await autoRefresh();
-        if (dlg.open) tick();
-      }, busyNow ? 3000 : 15000);
+      autoTimer = setTimeout(
+        async () => {
+          if (dlg.open && !document.hidden) await autoRefresh();
+          if (dlg.open) tick();
+        },
+        busyNow ? 3000 : 15000,
+      );
     };
     tick();
     if (!dlg.open) dlg.showModal();
@@ -644,7 +694,8 @@
   dlg.addEventListener('close', () => {
     clearTimeout(autoTimer);
     autoRevision++;
-    for (const x of Object.values(cards)) if (x.settingsDialog && x.settingsDialog.open) x.settingsDialog.close();
+    for (const x of Object.values(cards))
+      if (x.settingsDialog && x.settingsDialog.open) x.settingsDialog.close();
     remember(false);
   });
   /* Reopening the app returns to the Report if it was open. */

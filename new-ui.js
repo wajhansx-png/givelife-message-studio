@@ -565,7 +565,12 @@ function ui2Observe(run, options) {
   /* Desktop: the left menu stays beside Case, Donors, Chat and Report (only Notes covers it). Those pages sit to the
      right of the menu (--ui2-side). A modal page puts its backdrop over the menu, so a click on that strip is handed to
      the menu button under it, and a menu button first closes the page that is open, then opens its own. */
-  const SIDE_PAGES = { case: '#casePage', donors: '#donorsPage', chat: '#hist', report: 'dialog.report-dialog' };
+  const SIDE_PAGES = {
+    case: '#casePage',
+    donors: '#donorsPage',
+    chat: '#hist',
+    report: 'dialog.report-dialog',
+  };
   const sideFoot = () => document.querySelector('.app > .foot');
   function paintSide() {
     const f = sideFoot();
@@ -594,13 +599,19 @@ function ui2Observe(run, options) {
     'click',
     (e) => {
       const d = e.target;
-      if (!ui2Wide.matches || !(d instanceof HTMLDialogElement) || !d.matches(Object.values(SIDE_PAGES).join(',')))
+      if (
+        !ui2Wide.matches ||
+        !(d instanceof HTMLDialogElement) ||
+        !d.matches(Object.values(SIDE_PAGES).join(','))
+      )
         return;
       const f = sideFoot();
       if (!f || e.clientX >= f.getBoundingClientRect().right) return;
       const hit = [...f.querySelectorAll('button')].find((b) => {
         const r = b.getBoundingClientRect();
-        return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+        return (
+          e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom
+        );
       });
       if (!hit) return;
       e.preventDefault();
@@ -642,7 +653,8 @@ function ui2Observe(run, options) {
         const name = $('ui2NcName').value.trim(),
           left = Number(String($('ui2NcLeft').value).replace(/[^\d.]/g, ''));
         err.textContent = '';
-        if (!name || name.length > 60) return void (err.textContent = 'Write the case name (up to 60 letters).');
+        if (!name || name.length > 60)
+          return void (err.textContent = 'Write the case name (up to 60 letters).');
         if (!Number.isFinite(left) || left <= 0 || left > 100000000)
           return void (err.textContent = 'Write how much money is needed, for example 50000.');
         go.disabled = true;
@@ -660,10 +672,13 @@ function ui2Observe(run, options) {
       });
       document.body.append(d);
     }
-    const current =
-      ($('caseSelect')?.selectedOptions[0]?.textContent || 'The current case').replace(/ · done ✓$/, '').trim();
+    const current = ($('caseSelect')?.selectedOptions[0]?.textContent || 'The current case')
+      .replace(/ · done ✓$/, '')
+      .trim();
     d.querySelector('.ui2-nc-note').textContent =
-      '"' + current + '" is saved first and stays in the case list. Important and Top donors stay the same. Donated and DM-sent marks start fresh.';
+      '"' +
+      current +
+      '" is saved first and stays in the case list. Important and Top donors stay the same. Donated and DM-sent marks start fresh.';
     $('ui2NcName').value = '';
     $('ui2NcLeft').value = '';
     d.querySelector('.ui2-nc-err').textContent = '';
@@ -933,11 +948,7 @@ function ui2Observe(run, options) {
     for (const [key, label, hint] of [
       ['ur', 'Urdu + English', 'Write a new message: Urdu + English'],
       ['en', 'English', 'Write a new message: English'],
-      [
-        'trigger',
-        'Trigger',
-        'Makes the message on screen stronger, in its own language.',
-      ],
+      ['trigger', 'Trigger', 'Makes the message on screen stronger, in its own language.'],
       [
         'fix',
         'Style fix',
@@ -1045,7 +1056,11 @@ function ui2Observe(run, options) {
       m.id = 'ui2HistLeft';
       const sync = () => (m.textContent = left.textContent.trim());
       sync();
-      new MutationObserver(sync).observe(left, { childList: true, subtree: true, characterData: true });
+      new MutationObserver(sync).observe(left, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
       m.addEventListener('click', () => chips.firstChild?.click());
       head.append(m);
     }
@@ -1215,7 +1230,8 @@ function ui2Observe(run, options) {
         keep.hidden = true;
         screen.append(keep);
       }
-      for (const id of ['focusNext', 'focusSave', 'focusRetry', 'focusRegenerate']) if ($(id)) keep.append($(id));
+      for (const id of ['focusNext', 'focusSave', 'focusRetry', 'focusRegenerate'])
+        if ($(id)) keep.append($(id));
     }
     const paper = $('focusFormatted')?.parentElement;
     if (paper && !$('ui2Swipe')) {
@@ -1242,14 +1258,14 @@ function ui2Observe(run, options) {
       /* ‹ ›: the next / previous version slides in from that side, like a swipe */
       const go = (dir) => {
         navAt = Date.now();
-        return Promise.resolve(window.focusVersionStep ? window.focusVersionStep(dir) : $('focusNext')?.click()).then(
-          (changed) => {
-            if (!changed) return;
-            slide(dir * 28, 0);
-            void msg.offsetWidth;
-            slide(0, 200);
-          }
-        );
+        return Promise.resolve(
+          window.focusVersionStep ? window.focusVersionStep(dir) : $('focusNext')?.click(),
+        ).then((changed) => {
+          if (!changed) return;
+          slide(dir * 28, 0);
+          void msg.offsetWidth;
+          slide(0, 200);
+        });
       };
       baseBtn.onclick = () => $('focusSave')?.click();
       /* Write 5 new versions: presses the real Generate button; it waits while versions are being written */
@@ -1263,7 +1279,9 @@ function ui2Observe(run, options) {
           const busy = $('focusRetry').disabled;
           writeBtn.disabled = busy;
           writeBtn.dataset.busy = busy ? '1' : '';
-          const count = busy ? $('focusState')?.querySelector('.fx-count')?.textContent || '0/5' : '';
+          const count = busy
+            ? $('focusState')?.querySelector('.fx-count')?.textContent || '0/5'
+            : '';
           if (busy) {
             if (writeBtn.textContent !== count) writeBtn.textContent = count;
             writeBtn.setAttribute('aria-label', 'Writing versions ' + count.replace('/', ' of '));
@@ -1274,9 +1292,16 @@ function ui2Observe(run, options) {
           writeBtn.dataset.count = count;
         };
         sync();
-        new MutationObserver(sync).observe($('focusRetry'), { attributes: true, attributeFilter: ['disabled'] });
+        new MutationObserver(sync).observe($('focusRetry'), {
+          attributes: true,
+          attributeFilter: ['disabled'],
+        });
         if ($('focusState'))
-          new MutationObserver(sync).observe($('focusState'), { childList: true, subtree: true, characterData: true });
+          new MutationObserver(sync).observe($('focusState'), {
+            childList: true,
+            subtree: true,
+            characterData: true,
+          });
       }
       sw.querySelector('.ui2-swipe-prev').onclick = () => go(-1);
       sw.querySelector('.ui2-swipe-next').onclick = () => go(1);
@@ -1347,10 +1372,10 @@ function ui2Observe(run, options) {
           : sw.dataset.saved === '1'
             ? 'Saved'
             : i
-            ? i + '/' + n
-            : n && !tiny
-              ? 'Base +' + n
-              : 'Base'; // a short label: it sits in a small pill inside the message
+              ? i + '/' + n
+              : n && !tiny
+                ? 'Base +' + n
+                : 'Base'; // a short label: it sits in a small pill inside the message
         baseBtn.dataset.pending = i || draft ? '1' : ''; // Save base makes what is showing the base
       };
       paintDots();
@@ -1375,7 +1400,12 @@ function ui2Observe(run, options) {
       let start = null,
         gen = 0; // each swipe gets a number: a newer swipe cancels the animation of an older one
       const slide = (x, ms) => {
-        msg.style.transition = ms && !still.matches ? 'transform ' + ms + 'ms cubic-bezier(.2,.8,.2,1), opacity ' + ms + 'ms ease' : x ? 'none' : '';
+        msg.style.transition =
+          ms && !still.matches
+            ? 'transform ' + ms + 'ms cubic-bezier(.2,.8,.2,1), opacity ' + ms + 'ms ease'
+            : x
+              ? 'none'
+              : '';
         msg.style.transform = x ? 'translate3d(' + x + 'px,0,0)' : '';
         msg.style.opacity = x ? String(Math.max(0.35, 1 - Math.abs(x) / 400)) : '';
       };
@@ -1385,7 +1415,11 @@ function ui2Observe(run, options) {
         msg.animate?.([{ opacity: 0.25 }, { opacity: 1 }], { duration: 260, easing: 'ease-out' });
       }).observe(msg, { childList: true, characterData: true, subtree: true });
       paper.addEventListener('pointerdown', (e) => {
-        if (!$('focusText')?.hidden || e.target.closest('button, a, summary, details, textarea, [contenteditable="true"]')) return;
+        if (
+          !$('focusText')?.hidden ||
+          e.target.closest('button, a, summary, details, textarea, [contenteditable="true"]')
+        )
+          return;
         if (matchMedia('(min-width: 900px)').matches) return; // the computer: Previous / Next buttons, no swipe
         gen++; // a swipe made while the last one is still sliding takes over at once
         slide(0, 0);
@@ -1425,12 +1459,14 @@ function ui2Observe(run, options) {
           w = paper.clientWidth || 360,
           dir = dx < 0 ? 1 : -1;
         navAt = Date.now();
-        Promise.resolve(window.focusVersionStep ? window.focusVersionStep(dir, true) : false).then((changed) => {
-          if (mine !== gen) return; // a newer swipe took over
-          slide(changed ? dir * w * 0.3 : dx, 0);
-          void msg.offsetWidth;
-          slide(0, 170);
-        });
+        Promise.resolve(window.focusVersionStep ? window.focusVersionStep(dir, true) : false).then(
+          (changed) => {
+            if (mine !== gen) return; // a newer swipe took over
+            slide(changed ? dir * w * 0.3 : dx, 0);
+            void msg.offsetWidth;
+            slide(0, 170);
+          },
+        );
       };
       paper.addEventListener('pointerup', finish);
       paper.addEventListener('pointercancel', () => {
@@ -1453,7 +1489,9 @@ function ui2Observe(run, options) {
     }
     const test = $('focusTest');
     if (test && test.parentElement !== bar) bar.insertBefore(test, $('focusBack'));
-    screen.querySelector('.focus-rail-more > summary')?.setAttribute('aria-label', 'More: rewrite, new versions, Save Base and files');
+    screen
+      .querySelector('.focus-rail-more > summary')
+      ?.setAttribute('aria-label', 'More: rewrite, new versions, Save Base and files');
   }
   addEventListener('reader-kind', dockKind);
 
@@ -1503,7 +1541,9 @@ function ui2Observe(run, options) {
       } else if (n.nodeName === 'BR') {
         parts.push(loose);
         loose = '';
-      } else loose += n.nodeType === 3 ? n.nodeValue.replace(/\u00a0/g, ' ') : inline({ childNodes: [n] });
+      } else
+        loose +=
+          n.nodeType === 3 ? n.nodeValue.replace(/\u00a0/g, ' ') : inline({ childNodes: [n] });
     }
     if (loose) parts.push(loose);
     return parts.join('\n');
@@ -1553,7 +1593,10 @@ function ui2Observe(run, options) {
       const sel = getSelection();
       if (!sel.rangeCount) return;
       const range = sel.getRangeAt(0);
-      let node = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+      let node =
+        range.startContainer.nodeType === 1
+          ? range.startContainer
+          : range.startContainer.parentElement;
       const chain = [];
       for (let n = node; n && n !== ed; n = n.parentElement) if (isMark(n)) chain.push(n); // innermost first
       for (const f of chain) {
@@ -1573,7 +1616,8 @@ function ui2Observe(run, options) {
       }
       sel.removeAllRanges();
       sel.addRange(range);
-      for (const cmd of ['bold', 'italic']) if (document.queryCommandState(cmd)) document.execCommand(cmd);
+      for (const cmd of ['bold', 'italic'])
+        if (document.queryCommandState(cmd)) document.execCommand(cmd);
     }
     ed.addEventListener('paste', (e) => {
       e.preventDefault();
@@ -1583,8 +1627,12 @@ function ui2Observe(run, options) {
         const html = e.clipboardData.getData('text/html');
         if (html)
           text = new DOMParser()
-            .parseFromString(html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h[1-6])>/gi, '</$1>\n'), 'text/html')
-            .body.textContent.replace(/\n{3,}/g, '\n\n').replace(/\n+$/, '');
+            .parseFromString(
+              html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h[1-6])>/gi, '</$1>\n'),
+              'text/html',
+            )
+            .body.textContent.replace(/\n{3,}/g, '\n\n')
+            .replace(/\n+$/, '');
       }
       text = text.replace(/\r\n?/g, '\n');
       if (!text) return;
@@ -2123,7 +2171,10 @@ document.addEventListener('click', (e) => {
       b = mk('ui2-gbtn ui2-gnext', 'Next', NEXT, next);
     if (mini)
       for (const x of [a, b]) {
-        x.setAttribute('aria-label', x.textContent); /* the word stays for screen readers and tests */
+        x.setAttribute(
+          'aria-label',
+          x.textContent,
+        ); /* the word stays for screen readers and tests */
         x.title = x.textContent;
       }
     r.append(a, b);
@@ -2214,7 +2265,8 @@ document.addEventListener('click', (e) => {
         const f = file.files[0];
         file.value = '';
         if (!f || uploading) return;
-        if (f.size > 15_000_000) return void (msg.textContent = 'Choose a ' + name + ' under 15 MB.');
+        if (f.size > 15_000_000)
+          return void (msg.textContent = 'Choose a ' + name + ' under 15 MB.');
         uploading = true;
         msg.textContent = '';
         const it = items[kind];
@@ -2272,7 +2324,12 @@ document.addEventListener('click', (e) => {
       msg.textContent = '';
       try {
         // the text choice is one for groups and DMs together; the PDF / video / poster ticks stay per place
-        const r = await post('/group-extras', field === 'text_on' ? { action: 'text_on', value } : { action: 'setup', profile: profile(), field, value }),
+        const r = await post(
+            '/group-extras',
+            field === 'text_on'
+              ? { action: 'text_on', value }
+              : { action: 'setup', profile: profile(), field, value },
+          ),
           d = await r.json().catch(() => ({}));
         if (!r.ok) throw Error(d.error || 'Could not save that.');
         take(d);
@@ -2338,7 +2395,12 @@ document.addEventListener('click', (e) => {
       return promise;
     };
     const picture = (kind, url) => {
-      if (kind === 'pdf' || !url) return mk('span', 'ui2-att-th ui2-att-' + kind, kind === 'pdf' ? 'PDF' : kind === 'video' ? '▶' : '');
+      if (kind === 'pdf' || !url)
+        return mk(
+          'span',
+          'ui2-att-th ui2-att-' + kind,
+          kind === 'pdf' ? 'PDF' : kind === 'video' ? '▶' : '',
+        );
       const el = mk(kind === 'video' ? 'video' : 'img', 'ui2-att-th');
       if (kind === 'video') {
         el.muted = true;
@@ -2382,12 +2444,17 @@ document.addEventListener('click', (e) => {
         if (!it.item.dataset.up) it.add.textContent = have[k] ? 'Change' : 'Add';
         it.item.title = have[k] ? names[k] : '';
         it.meta.textContent = have[k]
-          ? (names[k] || '') + (sizes[k] ? ' · ' + (sizes[k] >= 1024 ? (sizes[k] / 1024).toFixed(1) + ' MB' : sizes[k] + ' KB') : '')
+          ? (names[k] || '') +
+            (sizes[k]
+              ? ' · ' + (sizes[k] >= 1024 ? (sizes[k] / 1024).toFixed(1) + ' MB' : sizes[k] + ' KB')
+              : '')
           : 'Not attached';
         const stamp = have[k] ? names[k] || k : '';
         if (it.th.dataset.k !== stamp) {
           it.th.dataset.k = stamp;
-          it.th.replaceChildren(have[k] ? picture(k, '') : mk('span', 'ui2-att-th ui2-att-none', '+'));
+          it.th.replaceChildren(
+            have[k] ? picture(k, '') : mk('span', 'ui2-att-th ui2-att-none', '+'),
+          );
           if (have[k])
             preview(k, names[k]).then((url) => {
               if (url && it.th.dataset.k === stamp) it.th.replaceChildren(picture(k, url));
@@ -2399,10 +2466,18 @@ document.addEventListener('click', (e) => {
       const fb = document.querySelector('#ui2Swipe .ui2-files-btn');
       if (fb) {
         // the words go away on a narrow phone (the 📎 stays) so Save base fits the same thin row
-        const words = shown.length ? ' ' + shown.length + (shown.length === 1 ? ' file' : ' files') : ' Add files';
+        const words = shown.length
+          ? ' ' + shown.length + (shown.length === 1 ? ' file' : ' files')
+          : ' Add files';
         if (fb.dataset.words !== words) {
           fb.dataset.words = words;
-          fb.replaceChildren('📎', Object.assign(document.createElement('span'), { className: 'ui2-files-w', textContent: words }));
+          fb.replaceChildren(
+            '📎',
+            Object.assign(document.createElement('span'), {
+              className: 'ui2-files-w',
+              textContent: words,
+            }),
+          );
         }
       }
       const sig = shown.map((k) => k + ':' + names[k]).join('|');
@@ -2671,9 +2746,21 @@ document.addEventListener(
         ? () => {
             const td = document.getElementById('ui2Today'),
               sf = document.getElementById('ui2SendFiles'),
-              under = td && !td.classList.contains('is-side') && td.getClientRects().length ? td.getBoundingClientRect().bottom : 0,
+              under =
+                td && !td.classList.contains('is-side') && td.getClientRects().length
+                  ? td.getBoundingClientRect().bottom
+                  : 0,
               files = sf?.getClientRects().length ? sf.getBoundingClientRect().bottom : 0;
-            return window.innerHeight - Math.max(card.getBoundingClientRect().bottom, send?.getBoundingClientRect().bottom || 0, under, files) - 16;
+            return (
+              window.innerHeight -
+              Math.max(
+                card.getBoundingClientRect().bottom,
+                send?.getBoundingClientRect().bottom || 0,
+                under,
+                files,
+              ) -
+              16
+            );
           }
         : () => chat.clientHeight - chat.scrollHeight + 2; // 2px for rounding
       app.classList.remove('ui2-msg-scroll');
@@ -2699,7 +2786,11 @@ document.addEventListener(
     const msg = document.getElementById('groupPreview'),
       chat = document.getElementById('chat');
     if (!msg || !chat) return setTimeout(watch, 500);
-    new MutationObserver(later).observe(msg, { childList: true, subtree: true, characterData: true });
+    new MutationObserver(later).observe(msg, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
     if (typeof ResizeObserver === 'function') new ResizeObserver(later).observe(chat); // the box changed size: fit again
     later();
     /* the page is still settling while it opens (fonts, the send buttons moving in): measure again when it is calm */
@@ -2725,7 +2816,13 @@ document.addEventListener(
   };
   /* the language of a version, for the small tag under its number (Roman Urdu words = Urdu + English) */
   const lang = (t) => {
-    const hits = (String(t).toLowerCase().match(/\b(hai|hain|ki|ka|ke|ko|aur|se|nahi|bachi|bacha|madad|zindagi|sirf|apni|apna|abhi|kar|karein|dua)\b/g) || []).length;
+    const hits = (
+      String(t)
+        .toLowerCase()
+        .match(
+          /\b(hai|hain|ki|ka|ke|ko|aur|se|nahi|bachi|bacha|madad|zindagi|sirf|apni|apna|abhi|kar|karein|dua)\b/g,
+        ) || []
+    ).length;
     return hits >= 4 ? 'Urdu+Eng' : 'English';
   };
   /* Computer: the versions as one row above the message (Base · 1 · 2 …), one click to any; a green dot = already
@@ -2736,21 +2833,42 @@ document.addEventListener(
     const chips = list.map((t, i) => {
       const was = i ? sent.items?.[i - 1] : sent.source;
       return (
-        '<button type="button" class="ui2-vr-chip' + (i === index ? ' is-on' : '') + (was ? ' is-sent' : '') +
-        '" data-i="' + i + '" aria-pressed="' + (i === index) + '" title="' +
-        (i ? 'Version ' + i : 'Base message') + (was ? ' · already sent to GiveLife' : '') + '"><b>' +
-        (i ? i : 'Base') + '</b><small>' + lang(t) + '</small></button>'
+        '<button type="button" class="ui2-vr-chip' +
+        (i === index ? ' is-on' : '') +
+        (was ? ' is-sent' : '') +
+        '" data-i="' +
+        i +
+        '" aria-pressed="' +
+        (i === index) +
+        '" title="' +
+        (i ? 'Version ' + i : 'Base message') +
+        (was ? ' · already sent to GiveLife' : '') +
+        '"><b>' +
+        (i ? i : 'Base') +
+        '</b><small>' +
+        lang(t) +
+        '</small></button>'
       );
     });
-    row.innerHTML = '<div class="ui2-vr-seg" role="group" aria-label="Versions">' + chips.join('') + '</div><span class="ui2-vr-keys">← → keys</span>';
+    row.innerHTML =
+      '<div class="ui2-vr-seg" role="group" aria-label="Versions">' +
+      chips.join('') +
+      '</div><span class="ui2-vr-keys">← → keys</span>';
   };
   const svg = (d) =>
-    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"/></svg>';
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' +
+    d +
+    '"/></svg>';
   const showing = () => index > 0 && list[index];
   const label = () => {
     if (!nav) return;
     const n = Math.max(0, list.length - 1),
-      where = index > 0 ? 'Version ' + index + ' of ' + n : n ? 'Base message (' + n + ' versions)' : 'Base message';
+      where =
+        index > 0
+          ? 'Version ' + index + ' of ' + n
+          : n
+            ? 'Base message (' + n + ' versions)'
+            : 'Base message';
     nav.dataset.i = String(index);
     nav.title = where;
     const count = nav.querySelector('.ui2-ver-count');
@@ -2769,7 +2887,14 @@ document.addEventListener(
     $('groupPreview').innerHTML = window
       .waFormat(text)
       .split('\n')
-      .map((l) => '<div class="wa-line' + (l ? (/^[ \t]*[—–─_-]{3,}[ \t]*$/.test(l) ? ' rule' : '') : ' blank') + '">' + (l || '<br>') + '</div>')
+      .map(
+        (l) =>
+          '<div class="wa-line' +
+          (l ? (/^[ \t]*[—–─_-]{3,}[ \t]*$/.test(l) ? ' rule' : '') : ' blank') +
+          '">' +
+          (l || '<br>') +
+          '</div>',
+      )
       .join('');
   };
   const reset = () => {
@@ -2826,7 +2951,8 @@ document.addEventListener(
       b.innerHTML = svg(d);
       b.addEventListener('click', () => step(dir, b));
       nav.append(b);
-      if (dir < 0) nav.append(Object.assign(document.createElement('span'), { className: 'ui2-ver-count' }));
+      if (dir < 0)
+        nav.append(Object.assign(document.createElement('span'), { className: 'ui2-ver-count' }));
     }
     /* ‹ 2/6 › lives inside the message (main screen, every width), next to Rewrite */
     const home = $('ui2GnavMain');
@@ -2849,9 +2975,16 @@ document.addEventListener(
     $('card')?.before(row);
     /* computer: ← → change the version (not while typing, not on another page) */
     addEventListener('keydown', (e) => {
-      if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || e.altKey || e.ctrlKey || e.metaKey) return;
-      if (!matchMedia('(min-width: 900px)').matches || !row || row.hidden || !row.offsetParent) return;
-      if (e.target.closest?.('input, textarea, select, [contenteditable="true"], [role="menu"], [role="listbox"], [role="radiogroup"], [role="slider"], [role="tablist"]')) return;
+      if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || e.altKey || e.ctrlKey || e.metaKey)
+        return;
+      if (!matchMedia('(min-width: 900px)').matches || !row || row.hidden || !row.offsetParent)
+        return;
+      if (
+        e.target.closest?.(
+          'input, textarea, select, [contenteditable="true"], [role="menu"], [role="listbox"], [role="radiogroup"], [role="slider"], [role="tablist"]',
+        )
+      )
+        return;
       if ($('messageFocus')?.getClientRects().length) return; // the message page is open: it has its own keys
       e.preventDefault();
       step(e.key === 'ArrowLeft' ? -1 : 1, e.key === 'ArrowLeft' ? $('homePrev') : $('homeNext'));
@@ -2931,7 +3064,12 @@ document.addEventListener(
     b.className = 'ui2-rail-hide';
     const paint = () => {
       const min = app.classList.contains('ui2-rail-min');
-      b.innerHTML = '<span aria-hidden="true">' + (min ? '»' : '«') + '</span><b>' + (min ? 'Show' : 'Hide') + '</b>';
+      b.innerHTML =
+        '<span aria-hidden="true">' +
+        (min ? '»' : '«') +
+        '</span><b>' +
+        (min ? 'Show' : 'Hide') +
+        '</b>';
       b.setAttribute('aria-label', min ? 'Show the menu' : 'Hide the menu');
       b.title = min ? 'Show the menu' : 'Hide the menu';
       b.setAttribute('aria-expanded', String(!min));
@@ -2971,7 +3109,16 @@ document.addEventListener(
   const mark = (b) => {
     const t = b.textContent.trim();
     b.dataset.state = /^(Done|Copied)/i.test(t) ? 'done' : '';
-    b.setAttribute('aria-label', b.id === 'edit' ? (t === 'Done' ? 'Done editing' : 'Edit message') : t === 'Copied' ? 'Copied' : 'Copy message');
+    b.setAttribute(
+      'aria-label',
+      b.id === 'edit'
+        ? t === 'Done'
+          ? 'Done editing'
+          : 'Edit message'
+        : t === 'Copied'
+          ? 'Copied'
+          : 'Copy message',
+    );
   };
   function place() {
     const chat = $('chat'),
@@ -2986,7 +3133,11 @@ document.addEventListener(
       box.className = 'ui2-msg-actions';
       for (const b of [copy, edit]) {
         mark(b);
-        new MutationObserver(() => mark(b)).observe(b, { childList: true, characterData: true, subtree: true });
+        new MutationObserver(() => mark(b)).observe(b, {
+          childList: true,
+          characterData: true,
+          subtree: true,
+        });
       }
     }
     if (wide.matches) {
@@ -3012,8 +3163,7 @@ document.addEventListener(
   };
   addEventListener('ui2-copied', copied);
   document.addEventListener('click', (e) => {
-    if (e.target.closest?.('#copy') && e.target.closest('#ui2MsgActions'))
-      setTimeout(copied, 120); // a short ✓ (never reads the clipboard: that would ask the owner for permission)
+    if (e.target.closest?.('#copy') && e.target.closest('#ui2MsgActions')) setTimeout(copied, 120); // a short ✓ (never reads the clipboard: that would ask the owner for permission)
   });
   wide.addEventListener('change', place);
   if (!place()) {
@@ -3032,7 +3182,8 @@ document.addEventListener(
     const chat = document.getElementById('chat');
     const msg = document.getElementById('groupPreview');
     if (!chat || !msg) return;
-    const short = matchMedia('(max-width: 899px)').matches && msg.offsetHeight + 2 * FOOT <= chat.clientHeight;
+    const short =
+      matchMedia('(max-width: 899px)').matches && msg.offsetHeight + 2 * FOOT <= chat.clientHeight;
     if (chat.classList.contains('ui2-short') !== short) chat.classList.toggle('ui2-short', short);
   }
   const soon = () => queued || (queued = requestAnimationFrame(fit));
@@ -3045,7 +3196,11 @@ document.addEventListener(
       ro.observe(chat);
       ro.observe(msg);
     }
-    new MutationObserver(soon).observe(msg, { childList: true, subtree: true, characterData: true });
+    new MutationObserver(soon).observe(msg, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
     addEventListener('resize', soon);
     soon();
   }
@@ -3069,15 +3224,38 @@ document.addEventListener(
       const r = await fetch('/group-extras');
       if (!r.ok) return;
       const v = await r.json();
-      const order = Array.isArray(v.order) && v.order.length === 3 ? v.order : ['poster', 'video', 'pdf'];
+      const order =
+        Array.isArray(v.order) && v.order.length === 3 ? v.order : ['poster', 'video', 'pdf'];
       const led = v.text_on === 'video' && v.video?.has && v.video?.on;
       const tiles = ['<span class="ui2-sf-lbl">Sends in this order</span>'];
-      tiles.push('<span class="ui2-sf-tile is-case"><span class="ui2-sf-ic">' + (led ? '▶' : '🖼') + '</span><span><b>Case</b><small>' + (led ? 'Video + text' : 'Poster + text') + '</small></span></span>');
+      tiles.push(
+        '<span class="ui2-sf-tile is-case"><span class="ui2-sf-ic">' +
+          (led ? '▶' : '🖼') +
+          '</span><span><b>Case</b><small>' +
+          (led ? 'Video + text' : 'Poster + text') +
+          '</small></span></span>',
+      );
       order.forEach((k, i) => {
         if (k === 'video' && led) return; // the video carries the text: it is the case message above
         const f = v[k] || {},
           state = !f.has ? 'none yet' : f.on ? 'on' : 'off';
-        tiles.push('<span class="ui2-sf-tile' + (f.has && f.on ? '' : ' is-off') + '" title="' + NAME[k] + ': ' + state + '"><span class="ui2-sf-ic">' + ICON[k] + '</span><span><b>' + ORD[i] + ' ' + NAME[k] + '</b><small>' + state + '</small></span></span>');
+        tiles.push(
+          '<span class="ui2-sf-tile' +
+            (f.has && f.on ? '' : ' is-off') +
+            '" title="' +
+            NAME[k] +
+            ': ' +
+            state +
+            '"><span class="ui2-sf-ic">' +
+            ICON[k] +
+            '</span><span><b>' +
+            ORD[i] +
+            ' ' +
+            NAME[k] +
+            '</b><small>' +
+            state +
+            '</small></span></span>',
+        );
       });
       tiles.push('<button type="button" class="ui2-sf-change">Change</button>');
       files.innerHTML = tiles.join('');
@@ -3087,8 +3265,16 @@ document.addEventListener(
     if (!today) return;
     const t = typeof groupTimers === 'object' && groupTimers ? groupTimers : {},
       now = Date.now() / 1000,
-      clock = (s) => (typeof clockText === 'function' ? clockText(s) : new Date(s * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })),
-      due = [['main', 'GiveLife'], ['free', 'Other groups']].filter(([k]) => t[k] && t[k].due_at > now).map(([k, w]) => w + ' at ' + clock(t[k].due_at));
+      clock = (s) =>
+        typeof clockText === 'function'
+          ? clockText(s)
+          : new Date(s * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      due = [
+        ['main', 'GiveLife'],
+        ['free', 'Other groups'],
+      ]
+        .filter(([k]) => t[k] && t[k].due_at > now)
+        .map(([k, w]) => w + ' at ' + clock(t[k].due_at));
     const sch = today.querySelector('.ui2-td-sch');
     sch.textContent = due.length ? due.join(' · ') : 'Nothing scheduled';
     sch.classList.toggle('is-set', !!due.length);
@@ -3117,7 +3303,9 @@ document.addEventListener(
   }
   function add() {
     const card = $('card'),
-      rail = document.querySelector('.ui2-message-home .action-rail') || document.querySelector('.ui2-message-home .group-send')?.parentElement;
+      rail =
+        document.querySelector('.ui2-message-home .action-rail') ||
+        document.querySelector('.ui2-message-home .group-send')?.parentElement;
     if (!card || !rail || typeof sendGroup !== 'function') return false;
     if ($('ui2SendFiles')) return true;
     files = document.createElement('div');
@@ -3156,7 +3344,14 @@ document.addEventListener(
     for (const ms of [600, 1500, 3000]) setTimeout(place, ms);
     // the timer buttons change when a send is scheduled or done: the Today line follows
     const timers = document.querySelectorAll('.gb-timer');
-    timers.forEach((b) => new MutationObserver(paintToday).observe(b, { attributes: true, childList: true, characterData: true, subtree: true }));
+    timers.forEach((b) =>
+      new MutationObserver(paintToday).observe(b, {
+        attributes: true,
+        childList: true,
+        characterData: true,
+        subtree: true,
+      }),
+    );
     setInterval(paintToday, 30000);
     return true;
   }
@@ -3201,7 +3396,8 @@ document.addEventListener(
       left = 5;
       btn.classList.add('is-undo');
       cover.hidden = false;
-      cover.innerHTML = '<i class="ui2-undo-bar"></i><span>Sending in ' + left + '…</span><b>Undo</b>';
+      cover.innerHTML =
+        '<i class="ui2-undo-bar"></i><span>Sending in ' + left + '…</span><b>Undo</b>';
       tick = setInterval(() => {
         left -= 1;
         const s = cover.querySelector('span');

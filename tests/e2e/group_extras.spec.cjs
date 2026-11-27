@@ -464,16 +464,18 @@ test('Reader (group message): tick PDF and video, both / one / none, applied to 
   );
   await expect(page.locator('#ui2Rx-pdf')).toBeChecked();
   await expect(page.locator('#ui2Rx-video')).toBeChecked();
+  // each tick saves at once; wait for the save to land before reading it back
+  const saved = async () => {
+    const v = await api(port, '/group-extras');
+    return [v.pdf.on, v.video.on];
+  };
   await page.locator('#ui2Rx-pdf').uncheck();
-  let v = await api(port, '/group-extras');
-  expect([v.pdf.on, v.video.on]).toEqual([false, true]); // only the video goes
+  await expect.poll(saved).toEqual([false, true]); // only the video goes
   await page.locator('#ui2Rx-video').uncheck();
-  v = await api(port, '/group-extras');
-  expect([v.pdf.on, v.video.on]).toEqual([false, false]); // none
+  await expect.poll(saved).toEqual([false, false]); // none
   await page.locator('#ui2Rx-pdf').check();
   await page.locator('#ui2Rx-video').check();
-  v = await api(port, '/group-extras');
-  expect([v.pdf.on, v.video.on]).toEqual([true, true]); // both
+  await expect.poll(saved).toEqual([true, true]); // both
 });
 
 test('Reader (DM message): its own ticks, remembered for DMs, group choice untouched', async ({

@@ -269,7 +269,7 @@ for (const width of [320, 390, 1440])
     expect(asked).toEqual(['en', 'en_more', 'ur_en']);
   });
 
-test('/new desktop: the chips on the Message card write the same way and show the choice', async ({
+test('/new desktop: Rewrite opens the message page and English writes the same way and shows the choice', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -280,16 +280,15 @@ test('/new desktop: the chips on the Message card write the same way and show th
     await r.fulfill({ json: { text: '*Hook*\n\n🔴 Rs. 25,000 LEFT', left: 25000 } });
   });
   await page.goto('/new');
-  const card = page.locator('#ui2Styles button');
-  await expect(card).toHaveText(['Urdu + English', 'English', 'Trigger', 'Style fix']);
-  await card.nth(1).click();
+  // minimal main screen: the rewrite buttons live on the message page that Rewrite opens
+  await page.locator('#ui2GnavMain .ui2-rewrite').click();
   await expect(page.locator('#messageFocus')).toBeVisible();
+  await page.locator('#ui2RewriteRow [data-lang="en"]').click();
   await expect.poll(() => asked.length).toBe(1);
   await expect(page.locator('#messageFocus .focus-styles button').nth(1)).toHaveAttribute(
     'aria-pressed',
     'true',
   );
-  await expect(card.nth(1)).toHaveAttribute('aria-pressed', 'true');
   expect(asked).toEqual(['en']);
 });
 
@@ -388,9 +387,7 @@ test('Style fix: a failed request leaves the text alone and the buttons work aga
   await expect(page.locator('#focusStyleFix')).toBeEnabled();
 });
 
-test('/new desktop: the Style fix chip on the Message card opens the reader and fixes it', async ({
-  page,
-}) => {
+test('/new desktop: Style fix on the message page fixes the message', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   const posted = [];
@@ -399,10 +396,11 @@ test('/new desktop: the Style fix chip on the Message card opens the reader and 
     await r.continue();
   });
   await page.goto('/new');
-  const chip = page.locator('#ui2Styles button', { hasText: 'Style fix' });
-  await expect(chip).toBeVisible();
-  expect(await chip.getAttribute('aria-pressed')).toBeNull(); // an action, not a choice
-  await chip.click();
+  await page.locator('#ui2GnavMain .ui2-rewrite').click();
   await expect(page.locator('#messageFocus')).toBeVisible();
+  const fix = page.locator('#focusStyleFix');
+  await expect(fix).toBeVisible();
+  expect(await fix.getAttribute('aria-pressed')).toBeNull(); // an action, not a choice
+  await fix.click();
   await expect.poll(() => posted.length).toBe(1);
 });

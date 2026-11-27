@@ -385,7 +385,7 @@ test('/new Message dock keeps each send tied to its original destination', async
   expect(sends.at(-1)).toMatchObject({ group: 'test', message });
 });
 
-test('/new computer: every option is one clear button in the bottom bar, and nothing is shown twice', async ({
+test('/new computer: every option is one clear button in the left menu, and nothing is shown twice', async ({
   page,
 }) => {
   await open(page, '/new', 1440, 900);
@@ -407,10 +407,11 @@ test('/new computer: every option is one clear button in the bottom bar, and not
   await expect(bar.locator('[data-tab="message"]')).toHaveAttribute('aria-current', 'true');
   const box = await bar.boundingBox();
   expect(box.y + box.height).toBeLessThanOrEqual(900);
-  expect(box.y).toBeGreaterThan(600); // at the bottom
+  expect(box.x).toBeLessThan(40); // the computer's left menu (owner: desktop left menu)
+  expect(box.height).toBeGreaterThan(600);
   for (const b of await bar.locator('.ui2-tab').all()) {
     const r = await b.boundingBox();
-    expect(r.height).toBeGreaterThanOrEqual(44);
+    expect(r.height).toBeGreaterThanOrEqual(40); // computer menu: taps 40px+ (owner rule)
     expect(r.width).toBeGreaterThanOrEqual(110);
     await expect(b.locator('svg')).toHaveCount(1); // one icon above the word (the owner asked for icons; the word stays)
   }
@@ -700,11 +701,19 @@ test('/new Notes: tool buttons are small, centred and fully on screen (no scroll
       await pw.fill('test-preview-only-pin');
       await pw.press('Enter');
     }
+    // the tools show while text is selected in the note (owner's minimal Notes)
+    const editor = page.locator('#notesEditor');
+    await editor.click();
+    await page.keyboard.type('Tools test');
+    await page.keyboard.press('ControlOrMeta+A');
+    await expect(page.locator('#foundationNotes')).toHaveAttribute('data-ui2-sel', '');
     const bar = page.locator('#notesTools');
     await expect(bar).toBeVisible();
+    await page.waitForTimeout(250); // its 0.14 s slide-in has finished
     const b = await bar.boundingBox();
     expect(b.y + b.height).toBeLessThanOrEqual(h + 0.5);
-    expect(b.width).toBeLessThan(w > 700 ? 420 : w);
+    if (w > 700) expect(b.width).toBeLessThan(420);
+    else expect(b.width).toBeLessThanOrEqual(w); // phone: one full-width bar over the keyboard, no scroll
     const sc = await bar.evaluate((e) => e.scrollWidth <= e.clientWidth + 1);
     expect(sc).toBe(true);
   }

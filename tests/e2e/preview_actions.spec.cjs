@@ -7,6 +7,7 @@ for (const width of [1440, 390])
     );
     await page.goto('/old#/preview');
     await expect(page.locator('#focusFormatted')).not.toHaveText('');
+    await page.locator('details:has(#focusPoster) > summary').click(); // Poster lives in More now
     await page.locator('#focusPoster').click();
     await expect(page.locator('#posterDialog')).toBeVisible();
     await page.locator('#posterClose').click();

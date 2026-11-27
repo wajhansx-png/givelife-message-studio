@@ -357,7 +357,7 @@ test('the three dots menu has a usual-donation field that saves and shows under 
   const field = row.locator('.donor-normal-box input[name="normal_amount"]');
   await expect(field).toBeVisible();
   await field.fill('500');
-  await row.locator('.donor-normal-save').click();
+  await row.getByRole('button', { name: 'Save', exact: true }).click(); // the usual-amount Save (the menu also has Save name / greeting)
   await expect(page.locator(`.donor-row[data-donor-id="${id}"] .donor-normal-tag`)).toContainText(
     'Rs. 500',
   );
@@ -369,7 +369,10 @@ test('the three dots menu has a usual-donation field that saves and shows under 
     .toBe(500);
   await page.locator(`.donor-row[data-donor-id="${id}"] .donor-more summary`).click();
   await page.locator(`.donor-row[data-donor-id="${id}"] .donor-normal-box input`).fill('');
-  await page.locator(`.donor-row[data-donor-id="${id}"] .donor-normal-save`).click();
+  await page
+    .locator(`.donor-row[data-donor-id="${id}"]`)
+    .getByRole('button', { name: 'Save', exact: true })
+    .click();
   await expect(page.locator(`.donor-row[data-donor-id="${id}"] .donor-normal-tag`)).toHaveCount(0);
 });
 test('on desktop the Back button sits in the middle of the screen, and the groups box is close to the chat', async ({

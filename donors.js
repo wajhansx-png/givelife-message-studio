@@ -2294,7 +2294,9 @@
           star.onclick = () => change(d.id, { important: !d.important });
           const ident = make('div', 'donor-identity');
           ident.onclick = () => star.click();
-          ident.append(make('div', 'donor-name', d.name));
+          const nameEl = make('div', 'donor-name', d.name);
+          nameEl.title = d.name; // a long name is cut with … on a phone: the full name shows on hover / long-press
+          ident.append(nameEl);
           ident.firstChild.dataset.rank =
             tab === 'top' ? d.top_rank || '' : tab === 'important' ? d.important_rank || '' : '';
           {

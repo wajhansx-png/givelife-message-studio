@@ -289,7 +289,6 @@ class Validator(Base):
             "needed for treatment._*", "needed for treatment. 🤲_*"
         )
         self.assertTrue(dm_variants.validate(self.master_a(), moved))
-        self.assertTrue(dm_variants.fact_problem(self.master_a(), moved))
 
     def test_nested_whatsapp_formatting_closes_in_the_original_order(self):
         broken = self.good().replace("needed for treatment._*", "needed for treatment.*_")
@@ -313,6 +312,7 @@ class Validator(Base):
             "is 9 years old", "is a child"
         )
         self.assertTrue(dm_variants.validate(self.master_a(), moved))
+        self.assertTrue(dm_variants.fact_problem(self.master_a(), moved))
 
     def test_the_good_rewrite_is_accepted(self):
         self.assertEqual(dm_variants.validate(self.master_a(), self.good()), "")

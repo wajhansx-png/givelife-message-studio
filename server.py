@@ -559,6 +559,8 @@ def _send_custom(body):
     check_hold()
     jid, is_group = custom_recipient(body)
     if body.get("kind") == "dm_extra":
+        if "file_id" in body and body["file_id"] is None and _LINE.get().startswith("giki"):
+            raise ValueError("This older batch has no saved attachment ID. Review its files before sending.")
         return send_dm_extra(jid, is_group, body.get("extra"), body.get("file_id"))
     message = body.get("message", "")
     if not is_group and body.get("kind") == "donor_thanks":
@@ -1388,10 +1390,6 @@ def send_dm_extra(jid, is_group, kind, file_id=None):
         raise ValueError("Not sent: the case is complete (Rs. 0 left).")
     if file_id is not None:
         return send_batch_attachment(jid, "", file_id)
-    if _LINE.get().startswith("giki"):
-        raise ValueError(
-            "This older batch has no saved attachment ID. Review its files before sending."
-        )
     ident = group_extras.saved(STORE, kind)
     if not ident:
         raise ValueError(

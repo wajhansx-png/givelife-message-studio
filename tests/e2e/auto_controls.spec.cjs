@@ -116,6 +116,26 @@ test('DM Top Donors messages only Top donors, and only when switched ON', async 
   await card(page, 'donor_dm').locator('.auto-switch').click();
   await expect(card(page, 'donor_dm').locator('.auto-switch')).toHaveText('ON');
   await expect(stat(page, 'donor_dm', 'recipients')).toHaveText('3'); // the Top list only
+  // first DM goes out (on failure "Received" is the batch state, to tell a stuck start from a slow one)
+  await expect
+    .poll(
+      async () => {
+        if ((await events()).length > before) return 'sent';
+        const job = await api(PORT, '/donor-delivery').catch((e) => ({ error: String(e) }));
+        return JSON.stringify({
+          state: job.state,
+          error: job.error,
+          current: job.current,
+          scope: job.scope,
+          owner: job.owner,
+          sent: job.sent,
+          total: job.total,
+          next_at: job.next_at,
+        });
+      },
+      { timeout: 30000 },
+    )
+    .toBe('sent');
   await expect(stat(page, 'donor_dm', 'sent')).not.toHaveText('0', { timeout: 15000 });
   await card(page, 'donor_dm').locator('.auto-switch').click();
   await expect(card(page, 'donor_dm').locator('.auto-switch')).toHaveText('OFF', {

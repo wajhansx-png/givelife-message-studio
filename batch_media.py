@@ -92,7 +92,9 @@ def load(store, ident, folder):
         # published copies must never overwrite one another while being sent.
         path = folder / (f"bulk-{id(store):x}-{ident}" + TYPES[mime][0])
         raw = base64.b64decode(row["data"], validate=True)
-        descriptor, temporary = tempfile.mkstemp(prefix=f".bulk-{ident}-", suffix=".tmp", dir=folder)
+        descriptor, temporary = tempfile.mkstemp(
+            prefix=f".bulk-{ident}-", suffix=".tmp", dir=folder
+        )
         try:
             with os.fdopen(descriptor, "wb") as output:
                 output.write(raw)
@@ -159,9 +161,31 @@ def shrink(store, ident, folder):
         if video:
             out = work / "out.mp4"
             fit = "scale='if(gt(iw,ih),min(1280,iw),-2)':'if(gt(iw,ih),-2,min(1280,ih))'"
-            ok = _ffmpeg(["-i", str(src), "-vf", fit, "-c:v", "libx264", "-preset", "veryfast", "-crf", "28",
-                          "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart",
-                          "-threads", "1", str(out)])
+            ok = _ffmpeg(
+                [
+                    "-i",
+                    str(src),
+                    "-vf",
+                    fit,
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "veryfast",
+                    "-crf",
+                    "28",
+                    "-pix_fmt",
+                    "yuv420p",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "96k",
+                    "-movflags",
+                    "+faststart",
+                    "-threads",
+                    "1",
+                    str(out),
+                ]
+            )
             new_mime = "video/mp4"
         else:
             out = work / "out.jpg"
@@ -179,8 +203,16 @@ def shrink(store, ident, folder):
             latest = json.loads(latest)
         if not isinstance(latest, dict) or latest.get("data") != data:
             return False  # replaced meanwhile
-        store.put(key, {**row, "mime": new_mime, "data": base64.b64encode(small).decode(), "shrunk": True,
-                        "original_bytes": len(raw)})
+        store.put(
+            key,
+            {
+                **row,
+                "mime": new_mime,
+                "data": base64.b64encode(small).decode(),
+                "shrunk": True,
+                "original_bytes": len(raw),
+            },
+        )
         with _CACHE_LOCK:
             for k in [k for k in _CACHE if k[2] == ident]:
                 _CACHE.pop(k, None)
@@ -193,6 +225,7 @@ def shrink(store, ident, folder):
 
 def shrink_later(store, ident, folder):
     """shrink() in the background, so the upload answers at once."""
+
     def run():
         try:
             shrink(store, ident, folder)

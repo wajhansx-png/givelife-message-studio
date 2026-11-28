@@ -11,7 +11,11 @@ import re
 import batch_media
 
 KEY = "group_extras"
-KINDS = ("pdf", "video", "poster")  # "poster" = the AFTER poster: a separate picture sent after the message
+KINDS = (
+    "pdf",
+    "video",
+    "poster",
+)  # "poster" = the AFTER poster: a separate picture sent after the message
 TEXT_ON = ("video", "poster")  # which file carries the case text; a new case starts with the video
 MIME = {"pdf": "application/pdf", "video": "video/mp4", "poster": "image/jpeg"}
 LABEL = {"pdf": "PDF", "video": "Video", "poster": "Poster"}
@@ -36,11 +40,19 @@ def _file_rows(raw):
     return out
 
 
-PROFILES = ("group", "dm", "giki")  # each one has its own choices; the files are the group message's
+PROFILES = (
+    "group",
+    "dm",
+    "giki",
+)  # each one has its own choices; the files are the group message's
 FLAGS = ("poster", "video", "pdf")
 ORDERS = ("poster_pdf", "pdf_poster")  # older saved order (2nd / 3rd): still read
 SLOT_KINDS = ("poster", "pdf", "video")  # Giki: what the 2nd and the 3rd message can be
-DEFAULT_ORDER = ("poster", "video", "pdf")  # the files after the case message: 1st, 2nd, 3rd (groups and DMs)
+DEFAULT_ORDER = (
+    "poster",
+    "video",
+    "pdf",
+)  # the files after the case message: 1st, 2nd, 3rd (groups and DMs)
 
 
 def order(store):
@@ -89,8 +101,14 @@ def text_on(store, profile="group"):
     raw = _raw(store)
     # Groups and DMs share ONE choice (the owner clicks it in one place; two copies drifted apart and the DMs kept
     # sending the text with the video). Giki has its own, on its own page.
-    value = (raw.get("setup") or {}).get(profile, {}).get("text_on") if profile == "giki" else raw.get("text_on")
-    return value if value in TEXT_ON else "poster" if profile == "giki" else "video"  # Giki: poster with caption
+    value = (
+        (raw.get("setup") or {}).get(profile, {}).get("text_on")
+        if profile == "giki"
+        else raw.get("text_on")
+    )
+    return (
+        value if value in TEXT_ON else "poster" if profile == "giki" else "video"
+    )  # Giki: poster with caption
 
 
 def set_text_on(store, value, profile="group"):
@@ -124,7 +142,11 @@ def _slots(own):
     """{"second": kind, "third": kind}: what the Giki 2nd and 3rd messages are (never the same thing twice)."""
     old = "pdf" if own.get("order") == "pdf_poster" else "poster"
     second = own.get("second") if own.get("second") in SLOT_KINDS else old
-    third = own.get("third") if own.get("third") in SLOT_KINDS else ("poster" if old == "pdf" else "pdf")
+    third = (
+        own.get("third")
+        if own.get("third") in SLOT_KINDS
+        else ("poster" if old == "pdf" else "pdf")
+    )
     if third == second:
         third = next(k for k in SLOT_KINDS if k != second)
     return {"second": second, "third": third}
@@ -263,7 +285,9 @@ def add(store, kind, data_url, name=""):
         )
     ident = batch_media.save(store, data_url)  # checks the real file type and the 15 MB limit
     if MEDIA_FOLDER is not None:
-        batch_media.shrink_later(store, ident, MEDIA_FOLDER)  # sent on every message: make it smaller once
+        batch_media.shrink_later(
+            store, ident, MEDIA_FOLDER
+        )  # sent on every message: make it smaller once
     rows = _rows(store)
     size = len(data_url) * 3 // 4 // 1024
     rows[kind] = {
@@ -330,7 +354,12 @@ def act(store, body):
         return set_on(store, body.get("kind"), body.get("on"))
     if op == "text_on":
         # One choice for groups and DMs (Giki has its own page and keeps its own).
-        return set_setup(store, "giki" if body.get("profile") == "giki" else "group", "text_on", body.get("value"))
+        return set_setup(
+            store,
+            "giki" if body.get("profile") == "giki" else "group",
+            "text_on",
+            body.get("value"),
+        )
     if op == "setup":
         return set_setup(store, body.get("profile"), body.get("field"), body.get("value"))
     if op == "move_up":

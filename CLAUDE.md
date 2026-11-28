@@ -30,7 +30,7 @@ Apply these rules automatically to every coding task.
 
 # MAIN LINK
 - Live site: Oracle, https://129-225-68-143.sslip.io. Render is suspended: never resume it while Oracle runs. Oracle's /health says `version: local`; check a deploy by comparing a served file (CRLF stripped) with main.
-- `/` is the new design (same page as `/new`, built in `server.py` `reply_new_ui`). The previous page is saved unchanged at `/old` (`index.html`), not linked anywhere. Browser tests for the previous page use `/old`.
+- `/` is the new design (same page as `/new`, built in `server.py` `reply_new_ui` on top of `index.html`). The previous design (`/old`) is retired (owner, 2026-11-27): `/old` redirects to `/`, and every browser test runs on `/new`.
 
 # GIKI PAGE (/giki) and GIKI 2 (/giki2)
 - Giki 2 (`giki_line.Giki2Volunteers`, line `giki2`, More tile) is the same page and the same messages (share message, Timer, 2nd / 3rd shared with Giki) with its own people, batches and WhatsApp; routes `/giki2`, `/giki2/volunteers`, `/giki2/wa`; `server.GIKI_PAGES` maps page -> line.

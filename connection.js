@@ -4,7 +4,6 @@
   let key = localStorage.getItem('givelife-cloud-key') || '',
     pending = null,
     connected = false,
-    checking = false,
     expires = 0,
     statusPending = null;
   const css = document.createElement('style');
@@ -146,7 +145,6 @@
     if (statusPending) return statusPending;
     if (!key) return Promise.resolve();
     statusPending = (async () => {
-      checking = true;
       el('waCloudRefresh').disabled = true;
       try {
         const r = await request('/wa-status', {}, key, 25000);
@@ -171,7 +169,6 @@
         paint('error', 'Check your internet, then tap Check again.');
         el('waCloudStatus').textContent = e.message;
       } finally {
-        checking = false;
         el('waCloudRefresh').disabled = false;
       }
     })().finally(() => {

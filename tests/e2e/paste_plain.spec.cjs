@@ -17,12 +17,16 @@ async function paste(page, text) {
     const ed = document.getElementById('ui2Live');
     const data = new DataTransfer();
     data.setData('text/plain', t);
-    ed.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+    ed.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
+    );
   }, text);
 }
 
 for (const width of [390, 1280])
-  test(`paste after select all + delete stays exactly as pasted at ${width}px`, async ({ page }) => {
+  test(`paste after select all + delete stays exactly as pasted at ${width}px`, async ({
+    page,
+  }) => {
     await api(port, '/focus-bank', { kind: 'group', action: 'save', text: START });
     await page.setViewportSize({ width, height: width < 900 ? 800 : 900 });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
@@ -37,8 +41,14 @@ for (const width of [390, 1280])
     await expect.poll(() => page.locator('#focusText').inputValue()).toBe(PASTE);
   });
 
-test('paste in the middle of a bold word does not inherit the bold, and replaces a selection', async ({ page }) => {
-  await api(port, '/focus-bank', { kind: 'group', action: 'save', text: '*Bold line here*\nplain' });
+test('paste in the middle of a bold word does not inherit the bold, and replaces a selection', async ({
+  page,
+}) => {
+  await api(port, '/focus-bank', {
+    kind: 'group',
+    action: 'save',
+    text: '*Bold line here*\nplain',
+  });
   await page.setViewportSize({ width: 390, height: 800 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new#/preview');
@@ -57,5 +67,7 @@ test('paste in the middle of a bold word does not inherit the bold, and replaces
     s.addRange(r);
   });
   await paste(page, 'XX');
-  await expect.poll(() => page.locator('#focusText').inputValue()).toBe('*Bold*XX *line here*\nplain');
+  await expect
+    .poll(() => page.locator('#focusText').inputValue())
+    .toBe('*Bold*XX *line here*\nplain');
 });

@@ -12,13 +12,24 @@ const LONG =
 
 async function open(page, width, height) {
   await page.setViewportSize({ width, height });
-  await page.addInitScript(() => localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'));
+  await page.addInitScript(() =>
+    localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
+  );
   await page.goto('/new');
   await expect(page.locator('#groupPreview')).toBeVisible();
 }
 
-for (const [width, height] of [[900, 600], [1024, 600], [1280, 720], [1366, 768], [1920, 1080], [980, 2000]])
-  test(`desktop home ${width}x${height}: menu left, full message, the send line right under it`, async ({ page }) => {
+for (const [width, height] of [
+  [900, 600],
+  [1024, 600],
+  [1280, 720],
+  [1366, 768],
+  [1920, 1080],
+  [980, 2000],
+])
+  test(`desktop home ${width}x${height}: menu left, full message, the send line right under it`, async ({
+    page,
+  }) => {
     await open(page, width, height);
     await page.evaluate((m) => (document.getElementById('groupPreview').innerHTML = m), LONG);
     await page.waitForTimeout(200);
@@ -55,13 +66,22 @@ for (const [width, height] of [[900, 600], [1024, 600], [1280, 720], [1366, 768]
       expect(b.height, sel).toBeGreaterThanOrEqual(40);
     }
     // the send line: one height (Apple: style, not size, marks Send), 12px apart
-    const line = await Promise.all(['#ui2GroupPicker', '.group-send .test-row', '#btnGivelife'].map((q) => page.locator(q).boundingBox()));
+    const line = await Promise.all(
+      ['#ui2GroupPicker', '.group-send .test-row', '#btnGivelife'].map((q) =>
+        page.locator(q).boundingBox(),
+      ),
+    );
     expect(new Set(line.map((b) => Math.round(b.height))).size).toBe(1);
     expect(line[1].x - (line[0].x + line[0].width)).toBeGreaterThanOrEqual(11.5);
   });
 
-test('Test group: the flask and the words sit together in the middle of the button, level with Send', async ({ page }) => {
-  for (const [width, height] of [[1280, 720], [1920, 1080]]) {
+test('Test group: the flask and the words sit together in the middle of the button, level with Send', async ({
+  page,
+}) => {
+  for (const [width, height] of [
+    [1280, 720],
+    [1920, 1080],
+  ]) {
     await open(page, width, height);
     const m = await page.evaluate(() => {
       const row = document.querySelector('.group-send .test-row');
@@ -70,7 +90,16 @@ test('Test group: the flask and the words sit together in the middle of the butt
       const w = word.getBoundingClientRect();
       const send = document.getElementById('btnGivelife').getBoundingClientRect();
       const flask = parseFloat(getComputedStyle(row, '::before').width) || 16;
-      return { left: b.x, right: b.x + b.width, wordLeft: w.x, wordRight: w.x + w.width, flask, sendX: send.x, sendW: send.width, boxW: b.width };
+      return {
+        left: b.x,
+        right: b.x + b.width,
+        wordLeft: w.x,
+        wordRight: w.x + w.width,
+        flask,
+        sendX: send.x,
+        sendW: send.width,
+        boxW: b.width,
+      };
     });
     // the flask (16px + 7px gap) sits right before the words, and the pair is centred in the button
     const pairLeft = m.wordLeft - 7 - m.flask;
@@ -88,7 +117,9 @@ test('a message line stays short enough to read fast on a wide screen', async ({
 });
 
 for (const width of [390, 768])
-  test(`phone keeps the bottom menu, tablet has it at the top (iPad) at ${width}px`, async ({ page }) => {
+  test(`phone keeps the bottom menu, tablet has it at the top (iPad) at ${width}px`, async ({
+    page,
+  }) => {
     await open(page, width, 844);
     const tabs = await page.locator('#ui2Tabs').boundingBox();
     if (width < 600) expect(tabs.y).toBeGreaterThan(600);
@@ -105,27 +136,41 @@ for (const width of [390, 768])
   });
 
 for (const width of [900, 980, 1280])
-  test(`"Reconnect WhatsApp" does not touch Auto at ${width}px, even in a crowded bar`, async ({ page }) => {
+  test(`"Reconnect WhatsApp" does not touch Auto at ${width}px, even in a crowded bar`, async ({
+    page,
+  }) => {
     await open(page, width, 900);
     const r = await page.evaluate(() => {
-      const wa = document.getElementById('whatsappConnection'), live = document.getElementById('live');
+      const wa = document.getElementById('whatsappConnection'),
+        live = document.getElementById('live');
       wa.dataset.state = 'offline';
       wa.parentElement.style.maxWidth = '560px';
-      const a = wa.getBoundingClientRect(), l = live.getBoundingClientRect();
+      const a = wa.getBoundingClientRect(),
+        l = live.getBoundingClientRect();
       return { right: a.right, left: l.left, scroll: wa.scrollWidth, client: wa.clientWidth };
     });
     expect(r.right).toBeLessThanOrEqual(r.left + 1);
     expect(r.scroll).toBeLessThanOrEqual(r.client + 1);
   });
 
-test('computer: the versions row shows each saved version (click or ← →) and comes back to the base; Send follows the version on screen', async ({ page }) => {
+test('computer: the versions row shows each saved version (click or ← →) and comes back to the base; Send follows the version on screen', async ({
+  page,
+}) => {
   await open(page, 1280, 800);
   await page.evaluate(async () => {
     const post = (b) =>
-      fetch('/focus-bank', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'group', ...b }) });
+      fetch('/focus-bank', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'group', ...b }),
+      });
     const d = await (await fetch('/focus-bank?kind=group')).json();
-    if (!d.revision) await post({ action: 'save', text: d.source || document.getElementById('group').value });
-    await post({ action: 'manual', messages: ['First version. Rs. 25,000 needed.', 'Second version. Rs. 25,000 needed.'] });
+    if (!d.revision)
+      await post({ action: 'save', text: d.source || document.getElementById('group').value });
+    await post({
+      action: 'manual',
+      messages: ['First version. Rs. 25,000 needed.', 'Second version. Rs. 25,000 needed.'],
+    });
   });
   await page.reload();
   const msg = page.locator('#groupPreview');
@@ -150,14 +195,17 @@ test('computer: the versions row shows each saved version (click or ← →) and
   expect(r.y + r.height).toBeLessThanOrEqual(card.y + 1);
 });
 
-test('the home message shows only Rewrite and ‹ ›; Rewrite opens the page with Copy, Edit and ⋯', async ({ page }) => {
+test('the home message shows only Rewrite and ‹ ›; Rewrite opens the page with Copy, Edit and ⋯', async ({
+  page,
+}) => {
   await open(page, 1280, 800);
   await expect(page.locator('#copy')).toBeHidden(); // fewer buttons: the tools are one click away
   await expect(page.locator('#edit')).toBeHidden();
   await expect(page.locator('#ui2GnavMain .ui2-rewrite')).toBeVisible();
   await page.locator('#ui2GnavMain .ui2-rewrite').click();
   await expect(page.locator('#messageFocus')).toBeVisible();
-  for (const sel of ['#focusCopy', '#focusEdit', '#messageFocus .focus-rail-more > summary']) await expect(page.locator(sel)).toBeVisible();
+  for (const sel of ['#focusCopy', '#focusEdit', '#messageFocus .focus-rail-more > summary'])
+    await expect(page.locator(sel)).toBeVisible();
 });
 
 test('the menu folds with Hide and opens with Show (remembered)', async ({ page }) => {
@@ -173,7 +221,9 @@ test('the menu folds with Hide and opens with Show (remembered)', async ({ page 
   expect((await page.locator('#ui2Tabs').boundingBox()).width).toBeGreaterThan(150);
 });
 
-test('Send on the home page never changes the message (the reader was never opened)', async ({ page }) => {
+test('Send on the home page never changes the message (the reader was never opened)', async ({
+  page,
+}) => {
   const posts = [];
   page.on('request', (r) => {
     if (r.method() === 'POST' && /\/(next-message|drafts)$/.test(r.url())) posts.push(r.url());
@@ -187,15 +237,22 @@ test('Send on the home page never changes the message (the reader was never open
   expect(posts.filter((u) => u.endsWith('/next-message'))).toEqual([]);
 });
 
-test('Copy copies the version on screen; the arrows never replace text being edited', async ({ browser }) => {
+test('Copy copies the version on screen; the arrows never replace text being edited', async ({
+  browser,
+}) => {
   const ctx = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
   const page = await ctx.newPage();
   await open(page, 1280, 800);
   await page.evaluate(async () => {
     const post = (b) =>
-      fetch('/focus-bank', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'group', ...b }) });
+      fetch('/focus-bank', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'group', ...b }),
+      });
     const d = await (await fetch('/focus-bank?kind=group')).json();
-    if (!d.revision) await post({ action: 'save', text: d.source || document.getElementById('group').value });
+    if (!d.revision)
+      await post({ action: 'save', text: d.source || document.getElementById('group').value });
     await post({ action: 'manual', messages: ['Copy me version. Rs. 25,000 needed.'] });
   });
   await page.reload();

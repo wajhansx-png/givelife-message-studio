@@ -26,7 +26,9 @@ class GuardTest(unittest.TestCase):
         self.assertIn("between two people", self.step(430, busy=False))
 
     def test_near_the_limit_it_restarts_even_mid_person(self):
-        self.assertTrue(self.step(480, busy=True))  # the restart still lets that person finish first
+        self.assertTrue(
+            self.step(480, busy=True)
+        )  # the restart still lets that person finish first
 
     def test_no_restart_in_the_first_30_minutes(self):
         self.g = memory_guard.Guard(clock=lambda: self.now[0], log=self.logs.append)

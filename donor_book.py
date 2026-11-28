@@ -11,6 +11,8 @@ def _clone(value):
         return marshal.loads(marshal.dumps(value))
     except ValueError:
         return copy.deepcopy(value)
+
+
 from decimal import Decimal
 from pathlib import Path
 
@@ -105,7 +107,9 @@ class DonorBook:
                 for row in raw["records"]
                 if row.get(flag) and not (type(row.get(field)) is int and row[field] > 0)
             ]
-            for row in sorted(missing, key=self.queue_key):  # only the few without a number are sorted
+            for row in sorted(
+                missing, key=self.queue_key
+            ):  # only the few without a number are sorted
                 last += 1
                 row[field] = last
                 changed = True
@@ -643,8 +647,13 @@ class DonorBook:
             n = 0
             for r in data["records"]:
                 if r.get(flag) and not r.get("deleted"):
-                    r.update({flag: False}, **({"top_order": None} if flag == "top_donor" else {"amount": 0}))
-                    r["updated_at"] = max(now, math.nextafter(float(r.get("updated_at", 0)), math.inf))
+                    r.update(
+                        {flag: False},
+                        **({"top_order": None} if flag == "top_donor" else {"amount": 0}),
+                    )
+                    r["updated_at"] = max(
+                        now, math.nextafter(float(r.get("updated_at", 0)), math.inf)
+                    )
                     n += 1
             if flag == "top_donor":
                 data.setdefault("ranking_next", {}).update(top_donor=0)

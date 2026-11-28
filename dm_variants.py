@@ -187,7 +187,10 @@ def validate(source, text, existing=(), mode=None):
     if text == source:
         return "same as the source"
     if mode == "en":
-        if any(_lang(y) in ("urdu", "roman") and not is_fixed_line(x) for x, y in zip(source.split("\n"), text.split("\n"))):
+        if any(
+            _lang(y) in ("urdu", "roman") and not is_fixed_line(x)
+            for x, y in zip(source.split("\n"), text.split("\n"))
+        ):
             return "a line is still in Urdu; write every line in easy English (only a verse stays as written)"
     elif mode == "ur_en":
         first = next((line for line in text.split("\n") if line.strip()), "")
@@ -258,7 +261,9 @@ def validate(source, text, existing=(), mode=None):
     minimum_lines = 1 if mode else 2 if editable >= 3 else 1
     # a button on the message on screen (English / Urdu + English / Trigger) keeps the same message, so it may
     # stay close to it; only a near copy is refused. Versions must differ deeply.
-    if _meaningful_changes(source, text) < minimum_lines or _similarity(source, text) > (0.95 if mode else 0.81):
+    if _meaningful_changes(source, text) < minimum_lines or _similarity(source, text) > (
+        0.95 if mode else 0.81
+    ):
         return "not deeply rewritten; change the opening AND the body wording"
     if any(_similarity(text, other) > 0.87 for other in existing if isinstance(other, str)):
         return "too similar to an existing version; rewrite the story differently"
@@ -565,7 +570,10 @@ as written. Never add a new fact.
 """
 MODE_RULES = {
     "stronger": STRONGER_RULES,
-    "en": LANG_RULES.format(what="IN EASY ENGLISH", how="- Write EVERY line in easy English. A line in Urdu becomes easy English with the same meaning."),
+    "en": LANG_RULES.format(
+        what="IN EASY ENGLISH",
+        how="- Write EVERY line in easy English. A line in Urdu becomes easy English with the same meaning.",
+    ),
     "ur_en": LANG_RULES.format(
         what="URDU + ENGLISH",
         how="- The FIRST line (the hook) is in simple, moving Urdu (Urdu script), saying the same hook idea.\n"
@@ -635,7 +643,18 @@ def top_reasons(tally, limit=3):
     return "; ".join(f"{r} ({n}x)" if n > 1 else r for r, n in top)
 
 
-def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False, stronger=False, rounds=5, mode=None, ask=1):
+def generate(
+    source,
+    count=10,
+    avoid=None,
+    *,
+    progress=None,
+    allow_partial=False,
+    stronger=False,
+    rounds=5,
+    mode=None,
+    ask=1,
+):
     mode = mode or ("stronger" if stronger else None)
     """Validate every rewrite, report accepted batches, and optionally retain partial results."""
     source = clean_source(source)
@@ -686,7 +705,9 @@ def generate(source, count=10, avoid=None, *, progress=None, allow_partial=False
         for candidate in candidates:
             if isinstance(candidate, str):
                 candidate = repair(source, candidate.replace("\r\n", "\n").strip(), mode)
-            reason = validate(source, candidate, existing + out + passed + [h for h, _ in held], mode)
+            reason = validate(
+                source, candidate, existing + out + passed + [h for h, _ in held], mode
+            )
             if reason:
                 tried[reason] = tried.get(reason, 0) + 1
                 reasons[reason] = reasons.get(reason, 0) + 1

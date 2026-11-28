@@ -65,7 +65,13 @@ test('the DM button of the SECOND row posts exactly that one id and messages onl
   const text = String(sends[0].fields.caption || sends[0].fields.message || '');
   expect(text.length).toBeGreaterThan(100);
   expect(text).not.toContain('{name}');
-  // saved receipt: that person is Sent, the other two are untouched
+  // saved receipt: that person is Sent (saved a moment after WhatsApp answers), the other two are untouched
+  await expect
+    .poll(
+      async () =>
+        (await api(port, '/donors?tab=all')).items.find((d) => d.name === 'Alpha Second').delivery,
+    )
+    .toBe('Sent');
   const after = (await api(port, '/donors?tab=all')).items;
   const by = Object.fromEntries(after.map((d) => [d.name, d]));
   expect(by['Alpha Second'].delivery).toBe('Sent');

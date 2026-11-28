@@ -8,12 +8,19 @@ test.beforeAll(async () => (server = await startOwnServer(port)));
 test.afterAll(() => server?.kill());
 test.describe.configure({ mode: 'serial' });
 
-const PDF = 'data:application/pdf;base64,' + Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(300, 120)]).toString('base64');
-const MP4 = 'data:video/mp4;base64,' + Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(300)]).toString('base64');
+const PDF =
+  'data:application/pdf;base64,' +
+  Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(300, 120)]).toString('base64');
+const MP4 =
+  'data:video/mp4;base64,' +
+  Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(300)]).toString(
+    'base64',
+  );
 
 const openOptions = async (page) => {
   const sum = page.locator('.bank-extras-sum');
-  if ((await sum.isVisible()) && (await sum.getAttribute('aria-expanded')) !== 'true') await sum.click();
+  if ((await sum.isVisible()) && (await sum.getAttribute('aria-expanded')) !== 'true')
+    await sum.click();
 };
 
 async function openMsgs(page, width = 390) {
@@ -37,7 +44,9 @@ test('Msgs tab has Also send: PDF and Video, unticked at first', async ({ page }
   await expect(page.locator('#msgVideo')).not.toBeChecked();
 });
 
-test('ticking one with nothing saved is refused with a plain reason and stays unticked', async ({ page }) => {
+test('ticking one with nothing saved is refused with a plain reason and stays unticked', async ({
+  page,
+}) => {
   await openMsgs(page);
   await page.locator('#msgPdf').click({ force: true });
   await expect(page.locator('#donorNotice')).toContainText('No PDF is saved yet');
@@ -45,13 +54,19 @@ test('ticking one with nothing saved is refused with a plain reason and stays un
 });
 
 test('the server refuses a DM send that asks for a file that is not saved', async () => {
-  const r = await api(port, '/donor-send', { id: 'x'.repeat(8), request_id: 'req-abcdefgh', pdf: true });
+  const r = await api(port, '/donor-send', {
+    id: 'x'.repeat(8),
+    request_id: 'req-abcdefgh',
+    pdf: true,
+  });
   expect(String(r.error)).toContain('No PDF is saved yet');
   const b = await api(port, '/donor-delivery', { scope: 'all', limit: 1, video: true });
   expect(String(b.error)).toContain('No Video is saved yet');
 });
 
-test('with both files saved: both, one, or none can be ticked, and the Donors bar and batch picker follow', async ({ page }) => {
+test('with both files saved: both, one, or none can be ticked, and the Donors bar and batch picker follow', async ({
+  page,
+}) => {
   await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: PDF, name: 'report.pdf' });
   await api(port, '/group-extras', { action: 'add', kind: 'video', data: MP4, name: 'clip.mp4' });
   await openMsgs(page);
@@ -60,7 +75,9 @@ test('with both files saved: both, one, or none can be ticked, and the Donors ba
   await expect(page.locator('#msgPdf')).toBeChecked();
   await expect(page.locator('#msgVideo')).toBeChecked();
   // the same two ticks live in the Donors bar (All tab) and in the DM batch picker
-  await page.evaluate(() => { location.hash = '#/donors/all'; });
+  await page.evaluate(() => {
+    location.hash = '#/donors/all';
+  });
   await expect(page.locator('#donorPdf')).toBeChecked();
   await expect(page.locator('#donorVideo')).toBeChecked();
   await page.locator('#donorPace').evaluate((b) => b.click()); // opens the batch picker (the button can sit in a menu)
@@ -76,10 +93,17 @@ test('with both files saved: both, one, or none can be ticked, and the Donors ba
   await expect(page.locator('#donorVideo')).toBeChecked();
   await page.locator('#batchCancel').click();
   await expect
-    .poll(() => page.evaluate(() => [localStorage.getItem('givelife-dm-pdf'), localStorage.getItem('givelife-dm-video')]))
+    .poll(() =>
+      page.evaluate(() => [
+        localStorage.getItem('givelife-dm-pdf'),
+        localStorage.getItem('givelife-dm-video'),
+      ]),
+    )
     .toEqual(['0', '1']);
   // survives a reload; the Msgs tab shows the same
-  await page.evaluate(() => { location.hash = '#/donors/messages'; });
+  await page.evaluate(() => {
+    location.hash = '#/donors/messages';
+  });
   await expect(page.locator('.bank-extras')).toBeVisible();
   await openOptions(page);
   await expect(page.locator('#msgPdf')).toBeVisible(); // the tab has rendered (and remembered itself) before we reload
@@ -94,7 +118,9 @@ test('with both files saved: both, one, or none can be ticked, and the Donors ba
   await expect(page.locator('#msgVideo')).not.toBeChecked();
 });
 
-test('removing a saved file unticks it the next time Donors opens (a new case starts with none)', async ({ page }) => {
+test('removing a saved file unticks it the next time Donors opens (a new case starts with none)', async ({
+  page,
+}) => {
   await openMsgs(page);
   await page.locator('#msgPdf').click({ force: true });
   await expect(page.locator('#msgPdf')).toBeChecked();
@@ -115,37 +141,69 @@ test('the Msgs checkboxes fit at 320px with real tap targets', async ({ page }) 
     expect(b.x).toBeGreaterThanOrEqual(0);
     expect(b.x + b.width).toBeLessThanOrEqual(320.5);
   }
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  );
 });
 
-test('the DM ticks are saved on the server too, so Auto, the chat and Test start with the same files', async ({ page }) => {
+test('the DM ticks are saved on the server too, so Auto, the chat and Test start with the same files', async ({
+  page,
+}) => {
   await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: PDF, name: 'report.pdf' });
   await api(port, '/group-extras', { action: 'add', kind: 'video', data: MP4, name: 'clip.mp4' });
   await api(port, '/group-extras', { action: 'setup', profile: 'dm', field: 'pdf', value: false });
-  await api(port, '/group-extras', { action: 'setup', profile: 'dm', field: 'video', value: false });
+  await api(port, '/group-extras', {
+    action: 'setup',
+    profile: 'dm',
+    field: 'video',
+    value: false,
+  });
   await openMsgs(page);
   await page.locator('#msgPdf').click({ force: true });
   await expect(page.locator('#msgPdf')).toBeChecked();
   await expect
-    .poll(async () => (await (await page.request.get('/group-extras', { headers: { Authorization: 'Bearer ' + KEY } })).json()).setup.dm.pdf)
+    .poll(
+      async () =>
+        (
+          await (
+            await page.request.get('/group-extras', { headers: { Authorization: 'Bearer ' + KEY } })
+          ).json()
+        ).setup.dm.pdf,
+    )
     .toBe(true);
   await page.locator('#msgPdf').click({ force: true });
   await expect(page.locator('#msgPdf')).not.toBeChecked();
   await expect
-    .poll(async () => (await (await page.request.get('/group-extras', { headers: { Authorization: 'Bearer ' + KEY } })).json()).setup.dm.pdf)
+    .poll(
+      async () =>
+        (
+          await (
+            await page.request.get('/group-extras', { headers: { Authorization: 'Bearer ' + KEY } })
+          ).json()
+        ).setup.dm.pdf,
+    )
     .toBe(false);
 });
 
-test('the server wins: a tick saved there shows on a screen that never had it (another phone)', async ({ browser }) => {
+test('the server wins: a tick saved there shows on a screen that never had it (another phone)', async ({
+  browser,
+}) => {
   await api(port, '/group-extras', { action: 'setup', profile: 'dm', field: 'video', value: true });
   const page = await (await browser.newContext()).newPage();
   await openMsgs(page);
   await expect(page.locator('#msgVideo')).toBeChecked();
   await expect(page.locator('#msgPdf')).not.toBeChecked();
-  await api(port, '/group-extras', { action: 'setup', profile: 'dm', field: 'video', value: false });
+  await api(port, '/group-extras', {
+    action: 'setup',
+    profile: 'dm',
+    field: 'video',
+    value: false,
+  });
 });
 
-test('Msgs tab has a Follow-up tick (the Donors bar one is hidden on phones): same choice, in the Order line, fits at 320', async ({ page }) => {
+test('Msgs tab has a Follow-up tick (the Donors bar one is hidden on phones): same choice, in the Order line, fits at 320', async ({
+  page,
+}) => {
   await openMsgs(page, 320);
   const tick = page.locator('#msgFollowUp');
   await expect(tick).toBeVisible();
@@ -154,7 +212,9 @@ test('Msgs tab has a Follow-up tick (the Donors bar one is hidden on phones): sa
   expect(box.height).toBeGreaterThanOrEqual(38);
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(320.5);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  );
   await tick.setChecked(true, { force: true });
   await expect(page.locator('#msgOrder')).toContainText('Follow-up');
   await expect(page.locator('#donorFollowUp')).toBeChecked(); // the Donors bar tick follows (hidden on phones)
@@ -164,8 +224,9 @@ test('Msgs tab has a Follow-up tick (the Donors bar one is hidden on phones): sa
   expect(await page.evaluate(() => localStorage.getItem('givelife-follow-up'))).toBe('0');
 });
 
-
-test('phone: Also send / Text with / Order are one 40px row that opens above it, and the message keeps its height', async ({ page }) => {
+test('phone: Also send / Text with / Order are one 40px row that opens above it, and the message keeps its height', async ({
+  page,
+}) => {
   await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: PDF, name: 'report.pdf' });
   await api(port, '/group-extras', { action: 'add', kind: 'video', data: MP4, name: 'clip.mp4' });
   await page.setViewportSize({ width: 369, height: 640 });
@@ -189,7 +250,10 @@ test('phone: Also send / Text with / Order are one 40px row that opens above it,
 });
 
 test('phone: the whole message shows without scrolling inside its box', async ({ page }) => {
-  const long = '*Mirha is only 2. Her life is at risk.*\n\nShe urgently needs 2 oxygen cylinders.\n\n' + 'Every single breath is hard for her and her family begs for help today.\n\n'.repeat(3) + 'Easypaisa ONLY\n03097458815\nWajdan Khan';
+  const long =
+    '*Mirha is only 2. Her life is at risk.*\n\nShe urgently needs 2 oxygen cylinders.\n\n' +
+    'Every single breath is hard for her and her family begs for help today.\n\n'.repeat(3) +
+    'Easypaisa ONLY\n03097458815\nWajdan Khan';
   await page.route('**/donor-messages', async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
     const r = await route.fetch();
@@ -205,7 +269,10 @@ test('phone: the whole message shows without scrolling inside its box', async ({
   await page.waitForTimeout(400);
   const r = await page.evaluate(() => {
     const card = document.querySelector('.bank-detail');
-    return { over: card.scrollHeight - card.clientHeight, size: parseFloat(getComputedStyle(document.querySelector('.bank-preview')).fontSize) };
+    return {
+      over: card.scrollHeight - card.clientHeight,
+      size: parseFloat(getComputedStyle(document.querySelector('.bank-preview')).fontSize),
+    };
   });
   expect(r.over).toBeLessThanOrEqual(1);
   expect(r.size).toBeGreaterThanOrEqual(11);

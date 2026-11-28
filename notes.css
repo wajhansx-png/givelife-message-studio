@@ -25,7 +25,6 @@ html body .brandbar #caseSelect {
   font-size: 13px;
 }
 @media (max-width: 720px) {
-
   html body .brandbar .case-pick {
     max-width: 140px;
   }
@@ -230,11 +229,10 @@ html body .brandbar #caseSelect {
   display: none !important;
 }
 @media (max-width: 720px) {
-
   .notes-headline h1 {
     font-size: 17px;
   }
-  
+
   .notes-back,
   .notes-lock {
     min-height: 42px;
@@ -267,7 +265,7 @@ html body .brandbar #caseSelect {
   .donor-page .donor-head .donor-add {
     margin-left: 0;
   }
-  
+
   .donor-page .donor-head .donor-total {
     margin-left: 0;
   }
@@ -293,8 +291,6 @@ html body .brandbar #caseSelect {
     padding-top: 2px;
     padding-bottom: 2px;
   }
-  
-  
 }
 
 /* Distraction-free writing: solid Calmly-style charcoal throughout.
@@ -424,7 +420,6 @@ html body .brandbar #caseSelect {
   .foundation-notes[data-mode='writing'] .notes-headline h1 {
     font-size: 16px;
   }
-  
 
   .foundation-notes .notes-back,
   .foundation-notes .notes-lock,
@@ -522,7 +517,7 @@ html body #foundationNotes #notesSync[data-error='true'] {
   .foundation-notes[data-mode='writing'] .notes-headline {
     flex-shrink: 0;
   }
-  
+
   .foundation-notes[data-mode='writing'] .notes-headline h1 {
     font-size: 19px;
   }

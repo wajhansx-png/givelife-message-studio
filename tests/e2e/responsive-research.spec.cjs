@@ -14,9 +14,12 @@ for (const [width, height] of [
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,
     );
-    await page.locator('#targetsOpen').click();
     const dialog = page.locator('#targets');
-    await expect(dialog).toBeVisible();
+    // Universities opens only once the page's data has loaded: tap again until it does
+    await expect(async () => {
+      await page.locator('#targetsOpen').click();
+      await expect(dialog).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 15000 });
     const box = await dialog.boundingBox();
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(width + 1);

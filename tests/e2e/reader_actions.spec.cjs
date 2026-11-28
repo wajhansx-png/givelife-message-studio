@@ -5,13 +5,19 @@ const { test, expect } = require('@playwright/test');
 const { startOwnServer, api, KEY } = require('./own_server.cjs');
 const port = Number(process.env.GIVELIFE_TEST_PORT || 3011) + 733;
 let server;
-test.use({ baseURL: `http://127.0.0.1:${port}`, permissions: ['clipboard-read', 'clipboard-write'] });
+test.use({
+  baseURL: `http://127.0.0.1:${port}`,
+  permissions: ['clipboard-read', 'clipboard-write'],
+});
 test.describe.configure({ mode: 'serial' });
 test.beforeAll(async () => (server = await startOwnServer(port)));
 test.afterAll(() => server?.kill());
-const BASE = '*Base wording* of the case. Please help today. Rs. 5,000 needed. Easypaisa ONLY 03097458815';
-const V1 = '*Second wording* of the case. Please help today. Rs. 5,000 needed. Easypaisa ONLY 03097458815';
-const V2 = '*Third wording* of the case. Please help today. Rs. 5,000 needed. Easypaisa ONLY 03097458815';
+const BASE =
+  '*Base wording* of the case. Please help today. Rs. 5,000 needed. Easypaisa ONLY 03097458815';
+const V1 =
+  '*Second wording* of the case. Please help today. Rs. 5,000 needed. Easypaisa ONLY 03097458815';
+const V2 =
+  '*Third wording* of the case. Please help today. Rs. 5,000 needed. Easypaisa ONLY 03097458815';
 test.beforeEach(async () => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1, V2] });
@@ -30,9 +36,13 @@ const posts = (page) => {
   return list;
 };
 const label = (page) => page.locator('#ui2Swipe .ui2-ver').innerText();
-const idle = (page) => expect(page.locator('#messageFocus .ui2-gen-btn')).toBeEnabled({ timeout: 20000 });
+const idle = (page) =>
+  expect(page.locator('#messageFocus .ui2-gen-btn')).toBeEnabled({ timeout: 20000 });
 
-for (const [width, height] of [[390, 844], [1280, 800]])
+for (const [width, height] of [
+  [390, 844],
+  [1280, 800],
+])
   test(`${width}: the buttons are where the owner put them, in that order`, async ({ page }) => {
     await open(page, width, height);
     const names = (sel) =>
@@ -42,27 +52,41 @@ for (const [width, height] of [[390, 844], [1280, 800]])
           .sort((a, b) => a.getBoundingClientRect().x - b.getBoundingClientRect().x)
           .map((e) => (e.getAttribute('aria-label') || e.innerText).trim()),
       );
-    expect(await names('#ui2MsgTools > :is(button, details) , #ui2MsgTools > details > summary')).toEqual(
-      expect.arrayContaining(['Copy', 'Edit', 'Save base']),
-    );
+    expect(
+      await names('#ui2MsgTools > :is(button, details) , #ui2MsgTools > details > summary'),
+    ).toEqual(expect.arrayContaining(['Copy', 'Edit', 'Save base']));
     const tools = await names('#ui2MsgTools > button, #ui2MsgTools > details');
     expect(tools.slice(0, 3)).toEqual(['Copy', 'Edit', 'Save base']);
     // one capsule [Copy · Edit · Save · More]: icon with a short word under it, all four the same size, one line
     const tops = [];
-    for (const sel of ['#focusCopy', '#focusEdit', '#ui2MsgTools .ui2-base-btn', '#ui2MsgTools .focus-rail-more > summary']) {
+    for (const sel of [
+      '#focusCopy',
+      '#focusEdit',
+      '#ui2MsgTools .ui2-base-btn',
+      '#ui2MsgTools .focus-rail-more > summary',
+    ]) {
       const b = await page.locator(sel).boundingBox();
       expect(b.width, sel).toBeGreaterThanOrEqual(38);
       expect(b.height, sel).toBe(50);
-      expect(await page.locator(sel).evaluate((e) => parseFloat(getComputedStyle(e).fontSize)), sel).toBe(11);
+      expect(
+        await page.locator(sel).evaluate((e) => parseFloat(getComputedStyle(e).fontSize)),
+        sel,
+      ).toBe(11);
       tops.push(Math.round(b.y));
     }
     expect(new Set(tops).size).toBe(1);
-    expect(await page.locator('#ui2MsgTools .ui2-base-btn').evaluate((e) => getComputedStyle(e, '::after').content)).toBe('"Save"');
+    expect(
+      await page
+        .locator('#ui2MsgTools .ui2-base-btn')
+        .evaluate((e) => getComputedStyle(e, '::after').content),
+    ).toBe('"Save"');
     expect((await page.locator('#ui2Swipe').boundingBox()).height).toBe(50); // ‹ 3/5 › capsule: same height
     expect(await names('#ui2RewriteRow button')).toEqual(
       ['English', 'Urdu + English', 'Trigger', 'Style fix'], // a phone shows "Urdu+Eng" for the same button
     );
-    const dock = await names('#messageFocus .ui2-reader-dock > :is(.ui2-gen-btn, #focusTest, #focusBack)');
+    const dock = await names(
+      '#messageFocus .ui2-reader-dock > :is(.ui2-gen-btn, #focusTest, #focusBack)',
+    );
     expect(dock.length).toBe(3);
     expect(dock[1]).toBe('Test');
     expect(dock[2]).toMatch(/Back/); // Back is right-most
@@ -79,23 +103,33 @@ for (const [width, height] of [[390, 844], [1280, 800]])
     }
   });
 
-for (const [width, height] of [[390, 844], [1280, 800]])
-  test(`${width}: Copy, Edit, More, Generate, ‹ ›, Save base, rewrites, Test and Back all work`, async ({ page }) => {
+for (const [width, height] of [
+  [390, 844],
+  [1280, 800],
+])
+  test(`${width}: Copy, Edit, More, Generate, ‹ ›, Save base, rewrites, Test and Back all work`, async ({
+    page,
+  }) => {
     await open(page, width, height);
     const sent = posts(page);
     // Copy copies the message on screen
     await page.locator('#focusCopy').click();
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('03097458815');
+    await expect
+      .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+      .toContain('03097458815');
     // Edit opens the editor; pressing it again closes it
     const editing = () =>
-      page.evaluate(() => ['focusText', 'ui2Live'].some((id) => {
-        const e = document.getElementById(id);
-        return e && !e.hidden && e.getBoundingClientRect().height > 0;
-      }));
+      page.evaluate(() =>
+        ['focusText', 'ui2Live'].some((id) => {
+          const e = document.getElementById(id);
+          return e && !e.hidden && e.getBoundingClientRect().height > 0;
+        }),
+      );
     await page.locator('#focusEdit').click();
     await expect.poll(editing).toBe(true);
     await page.locator('#focusEdit').click();
-    if (await page.locator('#focusBaseDialog[open]').count()) await page.locator('#focusBaseCancel').click();
+    if (await page.locator('#focusBaseDialog[open]').count())
+      await page.locator('#focusBaseCancel').click();
     await expect.poll(editing).toBe(false);
     // ⋯ More opens fully on the screen, with Save Base, Generate 5 and the files
     await page.locator('#ui2MsgTools .focus-rail-more > summary').click();
@@ -106,8 +140,13 @@ for (const [width, height] of [[390, 844], [1280, 800]])
     expect(box.y + box.height).toBeLessThanOrEqual(height + 1);
     await expect(list.locator('#ui2ReaderExtras')).toHaveCount(1);
     await page.keyboard.press('Escape');
-    await page.locator('#ui2MsgTools .focus-rail-more > summary').click({ force: true }).catch(() => {});
-    await page.evaluate(() => (document.querySelector('#ui2MsgTools .focus-rail-more').open = false));
+    await page
+      .locator('#ui2MsgTools .focus-rail-more > summary')
+      .click({ force: true })
+      .catch(() => {});
+    await page.evaluate(
+      () => (document.querySelector('#ui2MsgTools .focus-rail-more').open = false),
+    );
     // Generate writes new versions (fake AI); then ‹ › step through them
     await page.locator('#ui2Swipe .ui2-swipe-next').click();
     await expect(page.locator('#focusFormatted')).toContainText('Second wording');
@@ -121,13 +160,19 @@ for (const [width, height] of [[390, 844], [1280, 800]])
     // Generate asks the server for a fresh 5 versions
     const bank = [];
     await page.route('**/focus-bank', async (route) => {
-      if (route.request().method() === 'POST') bank.push(JSON.parse(route.request().postData() || '{}').action);
+      if (route.request().method() === 'POST')
+        bank.push(JSON.parse(route.request().postData() || '{}').action);
       await route.continue();
     });
     await page.locator('#messageFocus .ui2-gen-btn').click();
     await expect.poll(() => bank).toContain('regenerate');
     // each rewrite button asks for a new message
-    for (const sel of ['[data-lang="en"]', '[data-lang="ur"]', '[data-trigger]', '#focusStyleFix']) {
+    for (const sel of [
+      '[data-lang="en"]',
+      '[data-lang="ur"]',
+      '[data-trigger]',
+      '#focusStyleFix',
+    ]) {
       await idle(page);
       await expect(page.locator('#ui2RewriteRow ' + sel)).toBeEnabled({ timeout: 20000 });
       const n = sent.length;
@@ -156,7 +201,9 @@ for (const [width, height] of [[390, 844], [1280, 800]])
     await expect(page.locator('#messageFocus')).toBeHidden();
   });
 
-test('phone: a swipe on the message changes the version; computer: a mouse drag does not', async ({ page }) => {
+test('phone: a swipe on the message changes the version; computer: a mouse drag does not', async ({
+  page,
+}) => {
   await open(page, 390, 844);
   await expect.poll(() => label(page)).toMatch(/\d/);
   const swipe = async () => {

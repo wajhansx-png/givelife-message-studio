@@ -33,7 +33,9 @@ const paste = (page, text, html) =>
       const dt = new DataTransfer();
       if (t) dt.setData('text/plain', t);
       if (h) dt.setData('text/html', h);
-      ed.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+      ed.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }),
+      );
     },
     [text, html],
   );
@@ -45,7 +47,9 @@ for (const [width, height] of [
   [820, 1180],
   [1280, 720],
 ])
-  test(`editing at ${width}px: one clear Done button with its word, big, not covered`, async ({ page }) => {
+  test(`editing at ${width}px: one clear Done button with its word, big, not covered`, async ({
+    page,
+  }) => {
     await open(page, width, height);
     await page.locator('#focusEdit').click();
     const done = page.locator('#focusEdit');
@@ -54,7 +58,14 @@ for (const [width, height] of [
       const r = e.getBoundingClientRect(),
         c = getComputedStyle(e);
       const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-      return { w: r.width, h: r.height, fs: parseFloat(c.fontSize), right: r.right, bottom: r.bottom, hit: e === hit || e.contains(hit) };
+      return {
+        w: r.width,
+        h: r.height,
+        fs: parseFloat(c.fontSize),
+        right: r.right,
+        bottom: r.bottom,
+        hit: e === hit || e.contains(hit),
+      };
     });
     expect(m.fs).toBeGreaterThanOrEqual(15); // the word shows (it is not an icon only)
     expect(m.h).toBeGreaterThanOrEqual(42);
@@ -67,7 +78,9 @@ for (const [width, height] of [
     await expect(done).toHaveText('Edit');
   });
 
-test('Done keeps the text exactly as pasted (blank lines, stars, Urdu, emoji) and saves it as the base', async ({ page }) => {
+test('Done keeps the text exactly as pasted (blank lines, stars, Urdu, emoji) and saves it as the base', async ({
+  page,
+}) => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await open(page);
   await page.locator('#focusEdit').click();
@@ -92,7 +105,9 @@ test('a paste that only has HTML still goes in, one line per block', async ({ pa
   await page.locator('#focusEdit').click();
 });
 
-test('each button works on its own: a language button is plain, Trigger strengthens the message on screen in ITS language, only when pressed', async ({ page }) => {
+test('each button works on its own: a language button is plain, Trigger strengthens the message on screen in ITS language, only when pressed', async ({
+  page,
+}) => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await open(page);
   const styles = [];
@@ -100,7 +115,13 @@ test('each button works on its own: a language button is plain, Trigger strength
     const body = JSON.parse(r.request().postData());
     styles.push(body);
     const urdu = body.style.startsWith('ur');
-    await r.fulfill({ json: { text: (urdu ? '*اردو ہک*' : '*English hook*') + '\n\n_Written by the scripted writer._\n\nRs. 5,000 LEFT' } });
+    await r.fulfill({
+      json: {
+        text:
+          (urdu ? '*اردو ہک*' : '*English hook*') +
+          '\n\n_Written by the scripted writer._\n\nRs. 5,000 LEFT',
+      },
+    });
   });
   const trigger = page.locator('.focus-styles [data-trigger]');
   const lang = (l) => page.locator(`.focus-styles [data-lang="${l}"]`);
@@ -132,12 +153,17 @@ test('each button works on its own: a language button is plain, Trigger strength
   expect(styles[5].current).toBe(PASTED);
 });
 
-test('Generate makes the message on the screen the base first: pasted, or a version showing', async ({ page }) => {
+test('Generate makes the message on the screen the base first: pasted, or a version showing', async ({
+  page,
+}) => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await api(port, '/focus-bank', {
     kind: 'group',
     action: 'manual',
-    messages: ['*Second wording* of the case. Please help today. Rs. 5,000 needed.', '*Third wording* of the case. Please help today. Rs. 5,000 needed.'],
+    messages: [
+      '*Second wording* of the case. Please help today. Rs. 5,000 needed.',
+      '*Third wording* of the case. Please help today. Rs. 5,000 needed.',
+    ],
   });
   await open(page);
   const calls = [];
@@ -165,11 +191,19 @@ test('Generate makes the message on the screen the base first: pasted, or a vers
   expect(await saved()).toBe(PASTED); // still the base: the new versions came from it
 });
 
-test('Done with the keyboard closing: a long message is not left tiny (it measures again for the full screen)', async ({ page }) => {
-  const LONG = Array.from({ length: 9 }, (_, i) => `Line ${i + 1}: Mirha is only 2 years old and her lungs are almost failing. Please help today.`).join('\n\n') + '\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\n- GiveLife Foundation';
+test('Done with the keyboard closing: a long message is not left tiny (it measures again for the full screen)', async ({
+  page,
+}) => {
+  const LONG =
+    Array.from(
+      { length: 9 },
+      (_, i) =>
+        `Line ${i + 1}: Mirha is only 2 years old and her lungs are almost failing. Please help today.`,
+    ).join('\n\n') + '\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\n- GiveLife Foundation';
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: LONG });
   await open(page);
-  const size = () => page.locator('#focusFormatted').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+  const size = () =>
+    page.locator('#focusFormatted').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
   const before = await size();
   await page.locator('#focusEdit').click();
   await page.setViewportSize({ width: 390, height: 470 }); // the keyboard opens
@@ -179,18 +213,25 @@ test('Done with the keyboard closing: a long message is not left tiny (it measur
   await expect.poll(size, { timeout: 4000 }).toBeCloseTo(before, 0); // the same size as before editing, not 9.5px
 });
 
-test('a failed write says why on screen, and the button being used says Writing…', async ({ page }) => {
+test('a failed write says why on screen, and the button being used says Writing…', async ({
+  page,
+}) => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await open(page);
   let release;
   const gate = new Promise((r) => (release = r));
   await page.route('**/message-style', async (r) => {
     await gate;
-    await r.fulfill({ status: 503, json: { error: 'AI is not connected, so nothing was written. Your message is unchanged.' } });
+    await r.fulfill({
+      status: 503,
+      json: { error: 'AI is not connected, so nothing was written. Your message is unchanged.' },
+    });
   });
   const ur = page.locator('.focus-styles [data-lang="ur"]');
   await ur.click();
-  const after = await ur.evaluate((e) => getComputedStyle(e, '::after').content + '|' + getComputedStyle(e, '::after').position);
+  const after = await ur.evaluate(
+    (e) => getComputedStyle(e, '::after').content + '|' + getComputedStyle(e, '::after').position,
+  );
   expect(after).toBe('"Writing…"|static'); // a label inside the button, never a blank box
   release();
   const note = page.locator('#ui2Note');
@@ -199,9 +240,13 @@ test('a failed write says why on screen, and the button being used says Writing�
   await expect(page.locator('#focusFormatted')).toContainText('Base wording'); // the message was left alone
 });
 
-test('a message a button wrote never replaces the saved base by itself: Back, a swipe and Test keep the base; Save base keeps the new one', async ({ page }) => {
-  const MINE = '*My own message for Mirha.*\n\n_She is 2 and her lungs are failing. Please help her today._\n\n🔴 Rs. 11,000 LEFT\n\n*JAZZCASH ONLY*\n03097458815\n*Wajdan Khan (GiveLife Foundation account)*';
-  const WROTE = '*Your kindness is already helping Mirha breathe.*\n\n_Written by the scripted writer._\n\nRs. 11,000 LEFT';
+test('a message a button wrote never replaces the saved base by itself: Back, a swipe and Test keep the base; Save base keeps the new one', async ({
+  page,
+}) => {
+  const MINE =
+    '*My own message for Mirha.*\n\n_She is 2 and her lungs are failing. Please help her today._\n\n🔴 Rs. 11,000 LEFT\n\n*JAZZCASH ONLY*\n03097458815\n*Wajdan Khan (GiveLife Foundation account)*';
+  const WROTE =
+    '*Your kindness is already helping Mirha breathe.*\n\n_Written by the scripted writer._\n\nRs. 11,000 LEFT';
   await page.route('**/message-style', (r) => r.fulfill({ json: { text: WROTE } }));
   for (const leave of ['back', 'swipe', 'test']) {
     await api(port, '/focus-bank', { kind: 'group', action: 'save', text: MINE });
@@ -232,8 +277,15 @@ for (const [width, height] of [
   [1024, 600],
   [1280, 720],
 ])
-  test(`a very long message at ${width}x${height}: readable (11px or more), and Generate / Test / Back stay on screen`, async ({ page }) => {
-    const LONG = Array.from({ length: 12 }, (_, i) => `Line ${i + 1}: Mirha is only 2 years old and takes fewer than 20 breaths every minute. Her lungs are almost failing.`).join('\n\n') + '\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\n- GiveLife Foundation';
+  test(`a very long message at ${width}x${height}: readable (11px or more), and Generate / Test / Back stay on screen`, async ({
+    page,
+  }) => {
+    const LONG =
+      Array.from(
+        { length: 12 },
+        (_, i) =>
+          `Line ${i + 1}: Mirha is only 2 years old and takes fewer than 20 breaths every minute. Her lungs are almost failing.`,
+      ).join('\n\n') + '\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)\n- GiveLife Foundation';
     await api(port, '/focus-bank', { kind: 'group', action: 'save', text: LONG });
     await open(page, width, height);
     await page.waitForTimeout(500);
@@ -241,23 +293,33 @@ for (const [width, height] of [
       if (editing) await page.locator('#focusEdit').click();
       const m = await page.evaluate(() => ({
         fs: parseFloat(getComputedStyle(document.getElementById('focusFormatted')).fontSize),
-        bottoms: ['.ui2-gen-btn', '#focusTest', '#focusBack'].map((s) => document.querySelector(s).getBoundingClientRect().bottom),
+        bottoms: ['.ui2-gen-btn', '#focusTest', '#focusBack'].map(
+          (s) => document.querySelector(s).getBoundingClientRect().bottom,
+        ),
         h: innerHeight,
       }));
       if (!editing) expect(m.fs).toBeGreaterThanOrEqual(11);
-      for (const b of m.bottoms) expect(b, editing ? 'editing' : 'reading').toBeLessThanOrEqual(m.h + 1);
+      for (const b of m.bottoms)
+        expect(b, editing ? 'editing' : 'reading').toBeLessThanOrEqual(m.h + 1);
     }
   });
 
-test('a late answer never replaces a message the owner changed meanwhile; a new text says "Not saved" and ‹ › goes back to the saved one', async ({ page }) => {
-  const MINE = '*My own message for Mirha.*\n\n_She is 2 and her lungs are failing. Please help her today._\n\n🔴 Rs. 11,000 LEFT\n\n*JAZZCASH ONLY*\n03097458815\n*Wajdan Khan (GiveLife Foundation account)*';
+test('a late answer never replaces a message the owner changed meanwhile; a new text says "Not saved" and ‹ › goes back to the saved one', async ({
+  page,
+}) => {
+  const MINE =
+    '*My own message for Mirha.*\n\n_She is 2 and her lungs are failing. Please help her today._\n\n🔴 Rs. 11,000 LEFT\n\n*JAZZCASH ONLY*\n03097458815\n*Wajdan Khan (GiveLife Foundation account)*';
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await open(page);
   let release;
   const gate = new Promise((r) => (release = r));
   await page.route('**/message-style', async (r) => {
     await gate; // the AI is slow
-    await r.fulfill({ json: { text: '*Mirha cannot wait.*\n\n_Written by the scripted writer._\n\nRs. 11,000 LEFT' } });
+    await r.fulfill({
+      json: {
+        text: '*Mirha cannot wait.*\n\n_Written by the scripted writer._\n\nRs. 11,000 LEFT',
+      },
+    });
   });
   await page.locator('.focus-styles [data-lang="en"]').click();
   // meanwhile the owner pastes and saves his own message
@@ -272,7 +334,11 @@ test('a late answer never replaces a message the owner changed meanwhile; a new 
   expect(await saved()).toBe(MINE);
   // a new text that IS shown says so, and ‹ goes back to the saved message
   await page.unroute('**/message-style');
-  await page.route('**/message-style', (r) => r.fulfill({ json: { text: '*New wording.*\n\n_Written by the scripted writer._\n\nRs. 11,000 LEFT' } }));
+  await page.route('**/message-style', (r) =>
+    r.fulfill({
+      json: { text: '*New wording.*\n\n_Written by the scripted writer._\n\nRs. 11,000 LEFT' },
+    }),
+  );
   await page.locator('.focus-styles [data-lang="en"]').click();
   await expect(page.locator('#focusFormatted')).toContainText('New wording');
   await expect(page.locator('#ui2Swipe .ui2-ver')).toHaveText('Save'); // a new, unsaved text: the white Save capsule

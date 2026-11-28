@@ -292,7 +292,9 @@
           make(
             'small',
             'cr-live-line',
-            r.key === 'group' ? 'On now · from the main page' : 'Sending now · from the Donors page',
+            r.key === 'group'
+              ? 'On now · from the main page'
+              : 'Sending now · from the Donors page',
           ),
         );
       if (r.note) name.append(make('small', 'cr-warn-line', r.note));
@@ -439,7 +441,11 @@
     }
     if (!(have.pdf && have.pdf.has) || !(have.video && have.video.has))
       box.append(
-        make('small', 'cr-extras-note', 'A greyed one is not added yet: add it in Poster → Sent after the poster in groups.'),
+        make(
+          'small',
+          'cr-extras-note',
+          'A greyed one is not added yet: add it in Poster → Sent after the poster in groups.',
+        ),
       );
     return { el: box, get: () => ({ ...state }) };
   }
@@ -464,7 +470,9 @@
             // the plan moved under us: show the fresh summary and let the owner decide again
             if (/changed since/i.test(e.message)) {
               await startRowSheet(r, add);
-              throw Error('The plan changed, so this was reloaded. Check it and tap Start sending again.');
+              throw Error(
+                'The plan changed, so this was reloaded. Check it and tap Start sending again.',
+              );
             }
             throw e;
           }

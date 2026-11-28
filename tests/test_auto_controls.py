@@ -223,24 +223,34 @@ class ImportantDonors(Base):
         self.assertEqual(self.sent[0]["phone"], self.sent[1]["phone"])
 
     def test_the_donors_tab_follow_up_tick_applies_to_top_and_important_auto(self):
-        """"Send with follow-up" ticked on the Donors tab: DM Top and DM Important send it too, with no card setting."""
+        """ "Send with follow-up" ticked on the Donors tab: DM Top and DM Important send it too, with no card setting."""
         self.h.set_follow_up("Thank you for reading, Brother.")
-        for which, make in ((ac.DONOR_DM, lambda: self.donors(2)), (IMPORTANT, lambda: self.donors(2))):
+        for which, make in (
+            (ac.DONOR_DM, lambda: self.donors(2)),
+            (IMPORTANT, lambda: self.donors(2)),
+        ):
             self.h.jobs.import_jobs({"jobs": []})
             self.h.book._save({"version": 1, "records": []})
             make()
             self.h.set_follow_tick(False)
-            with patch.object(self.h.jobs, "send", return_value={"code": "SUCCESS", "results": {"message_id": "m"}}):
+            with patch.object(
+                self.h.jobs,
+                "send",
+                return_value={"code": "SUCCESS", "results": {"message_id": "m"}},
+            ):
                 self.c.set(which, True, {"count": 2} if which == IMPORTANT else {})
                 self.assertTrue(self.wait(lambda: self.h.jobs.export_jobs()["jobs"]))
-                self.assertNotIn("follow_up", self.h.jobs.export_jobs()["jobs"][-1])  # tick off: none
+                self.assertNotIn(
+                    "follow_up", self.h.jobs.export_jobs()["jobs"][-1]
+                )  # tick off: none
                 self.stop_everything()
                 self.h.jobs.import_jobs({"jobs": []})
                 self.h.set_follow_tick(True)
                 self.c.set(which, True, {"count": 2} if which == IMPORTANT else {})
                 self.assertTrue(self.wait(lambda: self.h.jobs.export_jobs()["jobs"]))
                 self.assertEqual(
-                    self.h.jobs.export_jobs()["jobs"][-1]["follow_up"], "Thank you for reading, Brother."
+                    self.h.jobs.export_jobs()["jobs"][-1]["follow_up"],
+                    "Thank you for reading, Brother.",
                 )
                 self.stop_everything()
         self.h.set_follow_tick(False)
@@ -661,7 +671,12 @@ class LiveReport(Base):
 
     def test_person_progress_counts_each_message_of_the_person_now(self):
         jobs = self.h.jobs
-        j = {"state": "Sending", "current": "Ali", "after": ["second", "third"], "follow_up": "Share"}
+        j = {
+            "state": "Sending",
+            "current": "Ali",
+            "after": ["second", "third"],
+            "follow_up": "Share",
+        }
         self.assertEqual(jobs.person(j), {"name": "Ali", "done": 0, "steps": 4})
         j["receipts"] = [{"name": "Ali", "state": "Sent", "steps": {"second": "Sent"}}]
         self.assertEqual(jobs.person(j)["done"], 2)
@@ -732,7 +747,9 @@ class LiveWhereverStarted(Base):
         self.assertEqual(view["controls"][IMPORTANT]["state"], "ON")
 
     def test_a_waiting_batch_keeps_showing_with_its_next_time(self):
-        self.running(self.h.jobs, state="Waiting", current="Waiting between DMs", next_at=1234567890.0)
+        self.running(
+            self.h.jobs, state="Waiting", current="Waiting between DMs", next_at=1234567890.0
+        )
         live = self.c.view()["live"][0]
         self.assertTrue(live["active"])
         self.assertIsNone(live["person"])
@@ -746,4 +763,3 @@ class LiveWhereverStarted(Base):
         live = self.c.view()["live"][0]
         self.assertIn("stopping", live["title"])
         self.assertIsNone(live["person"])
-

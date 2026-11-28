@@ -19,7 +19,7 @@ NEVER = re.compile(r"(?i)\b(?:gift(?:s|ed|ing)?|beg(?:s|ged|ging)?|beggars?)\b")
 NEVER_RULE = (
     'Never use the word "gift" (or gifts or gifting). Say donation, giving, helping or the amount instead. '
     'Never use the word "begging" (or beg, begs, begged, beggar). Say what the family needs, '
-    'or that they are asking for help, instead.'
+    "or that they are asking for help, instead."
 )
 
 # The owner reads every message on a phone and so do the donors: plain words only.
@@ -27,8 +27,8 @@ EASY_RULE = (
     "EASY ENGLISH: write English the way you talk to a 10-year-old. Only common everyday words, short "
     "sentences (12 words or fewer), no idioms and no fancy or poetic phrases. Never use words like: plight, "
     "dire, endure, devastating, grave, unimaginable, harrowing, battling, shutting down, pulling toward, "
-    "slipping away, teetering, relentless. Say it plainly, for example: \"He is very sick. His family has no "
-    "money for the medicine.\""
+    'slipping away, teetering, relentless. Say it plainly, for example: "He is very sick. His family has no '
+    'money for the medicine."'
 )
 FANCY = re.compile(
     r"\b(plight|dire|endur\w*|devastat\w*|grave|unimaginabl\w*|harrowing|battling|shutting down|pulling\b.{0,20}\btoward|"

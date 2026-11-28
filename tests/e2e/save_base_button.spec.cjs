@@ -14,7 +14,9 @@ const V1 = '*Second wording* of the case. Please help today. Rs. 5,000 needed.';
 const V2 = '*Third wording* of the case. Please help today. Rs. 5,000 needed.';
 
 for (const width of [320, 390, 1280])
-  test(`a version shown in the reader becomes the base with Save base at ${width}px`, async ({ page }) => {
+  test(`a version shown in the reader becomes the base with Save base at ${width}px`, async ({
+    page,
+  }) => {
     await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
     await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1, V2] });
     await page.setViewportSize({ width, height: width < 900 ? 800 : 900 });
@@ -47,7 +49,9 @@ for (const width of [320, 390, 1280])
   });
 
 for (const width of [320, 390, 1280])
-  test(`the reader's bottom row has Generate (writes 5 new versions) that fits at ${width}px`, async ({ page }) => {
+  test(`the reader's bottom row has Generate (writes 5 new versions) that fits at ${width}px`, async ({
+    page,
+  }) => {
     await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
     await page.setViewportSize({ width, height: width < 900 ? 800 : 900 });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
@@ -64,17 +68,24 @@ for (const width of [320, 390, 1280])
     expect(b.x + b.width, 'Generate sits left of Test').toBeLessThanOrEqual(test.x + 1);
     // pressing it starts writing: the real Generate button is pressed (it is busy while versions are written)
     await g.click();
-    await expect.poll(async () => (await api(port, '/focus-bank?kind=group')).state).not.toBe('Not generated');
+    await expect
+      .poll(async () => (await api(port, '/focus-bank?kind=group')).state)
+      .not.toBe('Not generated');
   });
 
-test('while 5 versions are written the sparkle shows the live count 0/5 … then comes back', async ({ page }) => {
+test('while 5 versions are written the sparkle shows the live count 0/5 … then comes back', async ({
+  page,
+}) => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   const real = await api(port, '/focus-bank?kind=group');
   let done = 0,
     ready = false;
   const row = () => ({
     ...real,
-    items: Array.from({ length: done }, (_, i) => `*Version ${i + 1}* Please help today. Rs. 5,000 needed.`),
+    items: Array.from(
+      { length: done },
+      (_, i) => `*Version ${i + 1}* Please help today. Rs. 5,000 needed.`,
+    ),
     state: ready ? 'Ready' : 'Generating',
     batch: ready ? null : { goal: 5, auto: false, at: Date.now() / 1000 },
   });
@@ -95,9 +106,21 @@ test('while 5 versions are written the sparkle shows the live count 0/5 … then
 });
 
 for (const width of [320, 360, 390, 412, 430, 480, 540])
-  test(`the version label never overlaps the arrows with versions saved at ${width}px`, async ({ page }) => {
+  test(`the version label never overlaps the arrows with versions saved at ${width}px`, async ({
+    page,
+  }) => {
     await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
-    await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1, V2, V1.replace('Second', 'Fourth'), V1.replace('Second', 'Fifth'), V1.replace('Second', 'Sixth')] });
+    await api(port, '/focus-bank', {
+      kind: 'group',
+      action: 'manual',
+      messages: [
+        V1,
+        V2,
+        V1.replace('Second', 'Fourth'),
+        V1.replace('Second', 'Fifth'),
+        V1.replace('Second', 'Sixth'),
+      ],
+    });
     await page.setViewportSize({ width, height: 860 });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
     await page.goto('/new#/preview');
@@ -107,17 +130,24 @@ for (const width of [320, 360, 390, 412, 430, 480, 540])
       const boxes = [];
       for (const s of sels) boxes.push(await page.locator('#ui2Swipe ' + s).boundingBox());
       for (let i = 0; i < boxes.length - 1; i++)
-        expect(boxes[i].x + boxes[i].width, sels[i] + ' vs ' + sels[i + 1]).toBeLessThanOrEqual(boxes[i + 1].x + 1);
+        expect(boxes[i].x + boxes[i].width, sels[i] + ' vs ' + sels[i + 1]).toBeLessThanOrEqual(
+          boxes[i + 1].x + 1,
+        );
       const ver = page.locator('#ui2Swipe .ui2-ver');
-      expect(await ver.evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'label fits').toBe(true);
+      expect(await ver.evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'label fits').toBe(
+        true,
+      );
     }
   });
 
-test('✦ deletes the old versions and writes a fresh 5 (never adds to the old ones)', async ({ page }) => {
+test('✦ deletes the old versions and writes a fresh 5 (never adds to the old ones)', async ({
+  page,
+}) => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   const posts = [];
   await page.route('**/focus-bank', async (route) => {
-    if (route.request().method() === 'POST') posts.push(JSON.parse(route.request().postData() || '{}'));
+    if (route.request().method() === 'POST')
+      posts.push(JSON.parse(route.request().postData() || '{}'));
     await route.continue();
   });
   await page.setViewportSize({ width: 390, height: 800 });
@@ -127,12 +157,15 @@ test('✦ deletes the old versions and writes a fresh 5 (never adds to the old o
   await expect.poll(() => posts.map((b) => b.action)).toContain('regenerate');
   expect(posts.map((b) => b.action)).not.toContain('generate');
 });
-test('Save base then Cancel: swiping on never saves the version that was only looked at', async ({ page }) => {
+test('Save base then Cancel: swiping on never saves the version that was only looked at', async ({
+  page,
+}) => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1, V2] });
   const posts = [];
   await page.route('**/focus-bank', async (route) => {
-    if (route.request().method() === 'POST') posts.push(JSON.parse(route.request().postData() || '{}'));
+    if (route.request().method() === 'POST')
+      posts.push(JSON.parse(route.request().postData() || '{}'));
     await route.continue();
   });
   await page.setViewportSize({ width: 390, height: 800 });
@@ -151,13 +184,17 @@ test('Save base then Cancel: swiping on never saves the version that was only lo
   expect(posts.filter((b) => b.action === 'save')).toEqual([]);
   expect((await api(port, '/focus-bank?kind=group')).source).toBe(BASE);
 });
-test('✦ while a version shows: the deleted version leaves the screen and the base shows', async ({ page }) => {
+test('✦ while a version shows: the deleted version leaves the screen and the base shows', async ({
+  page,
+}) => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1] });
   await page.route('**/focus-bank', async (route) => {
     const b = JSON.parse(route.request().postData() || '{}');
     if (b.action === 'regenerate')
-      return route.fulfill({ json: { source: BASE, items: [], state: 'Generating', revision: 'r', batch: { goal: 5 } } });
+      return route.fulfill({
+        json: { source: BASE, items: [], state: 'Generating', revision: 'r', batch: { goal: 5 } },
+      });
     await route.continue();
   });
   await page.setViewportSize({ width: 390, height: 800 });
@@ -192,7 +229,9 @@ test('Test on the DM screen sends the DM and never changes the Group message', a
   expect((await api(port, '/drafts')).group).toBe(BASE);
   expect((await api(port, '/focus-bank?kind=group')).source).toBe(BASE);
 });
-test('Save base while editing a message with versions: the dialog offers Save + write 5 new', async ({ page }) => {
+test('Save base while editing a message with versions: the dialog offers Save + write 5 new', async ({
+  page,
+}) => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1, V2] });
   await page.setViewportSize({ width: 390, height: 800 });
@@ -207,7 +246,9 @@ test('Save base while editing a message with versions: the dialog offers Save + 
   await page.locator('#focusBaseCancel').click();
   expect((await api(port, '/focus-bank?kind=group')).source).toBe(BASE); // Cancel saved nothing
 });
-test('Group: the version on screen goes with Send and Test; the base screen sends no pin', async ({ page }) => {
+test('Group: the version on screen goes with Send and Test; the base screen sends no pin', async ({
+  page,
+}) => {
   await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
   await api(port, '/focus-bank', { kind: 'group', action: 'manual', messages: [V1, V2] });
   const bodies = [];

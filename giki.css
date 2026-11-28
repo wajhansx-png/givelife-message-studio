@@ -455,7 +455,12 @@
     max-width: 48px !important;
     padding: 0 !important;
   }
-  .UI2.giki #donorsPage #donorVolunteers > .vol-foot:has(> .vol-stop:not([hidden])) > .giki-timer > span {
+  .UI2.giki
+    #donorsPage
+    #donorVolunteers
+    > .vol-foot:has(> .vol-stop:not([hidden]))
+    > .giki-timer
+    > span {
     display: none;
   }
 }

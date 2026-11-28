@@ -14,7 +14,9 @@ import urllib.request
 
 import wa_lines
 
-COOLDOWN = 20  # seconds between code requests: hammering WhatsApp to link raises the risk of a restriction
+COOLDOWN = (
+    20  # seconds between code requests: hammering WhatsApp to link raises the risk of a restriction
+)
 _lock = threading.Lock()
 _last = [0.0]
 

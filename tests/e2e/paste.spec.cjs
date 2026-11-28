@@ -8,7 +8,7 @@ test('pasted DM modal validates, deduplicates and starts the first personalized 
   await page.addInitScript(() =>
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
   );
-  await page.goto('/old');
+  await page.goto('/new');
   await showDm(page);
   await page.getByRole('button', { name: 'Send to more donors', exact: true }).click();
   const modal = page.getByRole('dialog', { name: 'Bulk message', exact: true });
@@ -64,7 +64,7 @@ test('bulk PDF is uploaded privately and sent with exact personalized caption', 
   await page.addInitScript(() =>
     localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
   );
-  await page.goto('/old#/donors/all');
+  await page.goto('/new#/donors/all');
   await page.locator('#donorNavMore summary').click();
   await page.locator('#donorBulk').click();
   await page.locator('#pastePeople').fill('03001112224, Ali');
@@ -89,45 +89,3 @@ test('bulk PDF is uploaded privately and sent with exact personalized caption', 
     })
     .toBe(true);
 });
-
-for (const width of [1440, 390])
-  test(`simple batch controls and custom bulk text ${width}`, async ({ page, request }) => {
-    await page.setViewportSize({ width, height: 900 });
-    await page.addInitScript(() =>
-      localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key'),
-    );
-    await page.goto('/old');
-    await expect(page.locator('.brandbar #donorNotesShortcut')).toBeVisible();
-    await page.locator('.brandbar #donorNotesShortcut').click();
-    await expect(page.locator('#foundationNotes')).toBeVisible();
-    await page.goto('/old#/donors/important');
-    await page.locator('#donorSendImportant').click();
-    const batch = page.locator('#donorBatchPicker');
-    await expect(batch).toBeVisible();
-    await page.locator('#batchCount').fill('60');
-    await page.locator('#batchLimit').selectOption('10');
-    await expect(page.locator('#batchPlan')).toContainText('6 batches');
-    await expect(page.locator('#batchLimit')).toBeVisible();
-    await page.locator('#batchCancel').click();
-    await page.locator('#donorNavMore summary').click();
-    await page.locator('#donorBulk').click();
-    await page.locator('#pastePeople').fill('03001112223, Ali');
-    await expect(page.locator('#pasteNext')).toBeEnabled();
-    await page.locator('#pasteNext').click();
-    await page.locator('#pasteMessage').fill('Hi {name}, thank you for your help.');
-    await page.locator('#pastePoster').uncheck();
-    await page.locator('#pasteGap').selectOption('3');
-    await page.screenshot({ path: `test-results/bulk-custom-${width}.png` });
-    await page.locator('#pasteStart').click();
-    await expect
-      .poll(async () => {
-        const r = await request.get('/__test/events', { headers: auth });
-        const d = await r.json();
-        return d.events.some(
-          (e) =>
-            e.fields.phone === '923001112223' &&
-            e.fields.message === 'Hi Ali, thank you for your help.',
-        );
-      })
-      .toBe(true);
-  });

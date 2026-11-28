@@ -22,7 +22,9 @@ async function openPoster(page, width = 390, path = '/new') {
 }
 const row = (page, kind) => page.locator(`.poster-extra[data-kind="${kind}"]`);
 
-test('the poster dialog lists the PDF and the video, empty at first, with the send order', async ({ page }) => {
+test('the poster dialog lists the PDF and the video, empty at first, with the send order', async ({
+  page,
+}) => {
   await openPoster(page);
   await expect(page.locator('#posterExtras h3')).toHaveText('Video and PDF (groups and DMs)');
   await expect(page.locator('.poster-extras-note')).toContainText('the file with the text first');
@@ -38,20 +40,34 @@ test('the poster dialog lists the PDF and the video, empty at first, with the se
   }
 });
 
-test('add a PDF and a video: both switched on, and the server sends PDF first then video', async ({ page }) => {
+test('add a PDF and a video: both switched on, and the server sends PDF first then video', async ({
+  page,
+}) => {
   await openPoster(page);
-  await row(page, 'pdf').locator('input[type=file]').setInputFiles({ name: 'oxygen-report.pdf', mimeType: 'application/pdf', buffer: PDF });
+  await row(page, 'pdf')
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'oxygen-report.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(row(page, 'pdf').locator('small')).toContainText('oxygen-report.pdf');
-  await expect(row(page, 'pdf').locator('.poster-extra-sw')).toHaveAttribute('aria-checked', 'true');
-  await row(page, 'video').locator('input[type=file]').setInputFiles({ name: 'cylinders.mp4', mimeType: 'video/mp4', buffer: MP4 });
+  await expect(row(page, 'pdf').locator('.poster-extra-sw')).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await row(page, 'video')
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'cylinders.mp4', mimeType: 'video/mp4', buffer: MP4 });
   await expect(row(page, 'video').locator('small')).toContainText('cylinders.mp4');
-  await expect(row(page, 'video').locator('.poster-extra-sw')).toHaveAttribute('aria-checked', 'true');
+  await expect(row(page, 'video').locator('.poster-extra-sw')).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
   const v = await api(port, '/group-extras');
   expect([v.pdf.has, v.pdf.on, v.video.has, v.video.on]).toEqual([true, true, true, true]);
   await expect(page.locator('#posterExtrasMsg')).toContainText('goes out after the poster');
 });
 
-test('switching the PDF off keeps it saved but skips it; the choice survives a reload', async ({ page }) => {
+test('switching the PDF off keeps it saved but skips it; the choice survives a reload', async ({
+  page,
+}) => {
   await openPoster(page);
   const sw = row(page, 'pdf').locator('.poster-extra-sw');
   await expect(sw).toHaveAttribute('aria-checked', 'true');
@@ -62,15 +78,25 @@ test('switching the PDF off keeps it saved but skips it; the choice survives a r
   await page.reload();
   await page.waitForFunction(() => window.DonorHub && window.DonorHub.openPoster);
   await page.evaluate(() => window.DonorHub.openPoster());
-  await expect(row(page, 'pdf').locator('.poster-extra-sw')).toHaveAttribute('aria-checked', 'false');
+  await expect(row(page, 'pdf').locator('.poster-extra-sw')).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
   await expect(row(page, 'pdf').locator('small')).toContainText('oxygen-report.pdf');
   await row(page, 'pdf').locator('.poster-extra-sw').click(); // back on
-  await expect(row(page, 'pdf').locator('.poster-extra-sw')).toHaveAttribute('aria-checked', 'true');
+  await expect(row(page, 'pdf').locator('.poster-extra-sw')).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
 });
 
-test('a wrong file is refused with a plain reason and nothing changes; remove clears one', async ({ page }) => {
+test('a wrong file is refused with a plain reason and nothing changes; remove clears one', async ({
+  page,
+}) => {
   await openPoster(page);
-  await row(page, 'pdf').locator('input[type=file]').setInputFiles({ name: 'clip.mp4', mimeType: 'video/mp4', buffer: MP4 });
+  await row(page, 'pdf')
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'clip.mp4', mimeType: 'video/mp4', buffer: MP4 });
   await expect(page.locator('#posterExtrasMsg')).toContainText('Choose a PDF');
   await expect(row(page, 'pdf').locator('small')).toContainText('oxygen-report.pdf'); // unchanged
   await row(page, 'video').locator('.poster-extra-rm').click();
@@ -79,7 +105,9 @@ test('a wrong file is refused with a plain reason and nothing changes; remove cl
 });
 
 for (const width of [320, 390, 1440])
-  test(`the PDF and video rows fit the dialog at ${width}px with real tap targets`, async ({ page }) => {
+  test(`the PDF and video rows fit the dialog at ${width}px with real tap targets`, async ({
+    page,
+  }) => {
     await openPoster(page, width);
     const dlg = await page.locator('#posterDialog').boundingBox();
     for (const kind of ['pdf', 'video']) {
@@ -92,7 +120,9 @@ for (const width of [320, 390, 1440])
         expect(b.x + b.width, kind + sel).toBeLessThanOrEqual(dlg.x + dlg.width + 1);
       }
     }
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
   });
 
 /* The main Message page has no PDF / Video row: the ticks live in the message screen (reader) and in Donors. */
@@ -105,16 +135,41 @@ test('Message page: no Also send row', async ({ page }) => {
   await expect(page.locator('.ui2-xi')).toHaveCount(0);
 });
 
-for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['group', 375], ['group', 390], ['group', 412], ['dm', 280], ['dm', 360], ['dm', 412], ['group', 1280]])
-  test(`Reader (${view}) at ${width}px: the attached files sit in More, one tappable row each, never covered`, async ({ page }) => {
-    await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: 'data:application/pdf;base64,' + PDF.toString('base64'), name: 'a.pdf' });
-    await api(port, '/group-extras', { action: 'add', kind: 'video', data: 'data:video/mp4;base64,' + MP4.toString('base64'), name: 'b.mp4' });
+for (const [view, width] of [
+  ['group', 280],
+  ['group', 320],
+  ['group', 360],
+  ['group', 375],
+  ['group', 390],
+  ['group', 412],
+  ['dm', 280],
+  ['dm', 360],
+  ['dm', 412],
+  ['group', 1280],
+])
+  test(`Reader (${view}) at ${width}px: the attached files sit in More, one tappable row each, never covered`, async ({
+    page,
+  }) => {
+    await api(port, '/group-extras', {
+      action: 'add',
+      kind: 'pdf',
+      data: 'data:application/pdf;base64,' + PDF.toString('base64'),
+      name: 'a.pdf',
+    });
+    await api(port, '/group-extras', {
+      action: 'add',
+      kind: 'video',
+      data: 'data:video/mp4;base64,' + MP4.toString('base64'),
+      name: 'b.mp4',
+    });
     await page.setViewportSize({ width, height: width >= 900 ? 900 : 740 });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
     await page.goto('/new');
     await page.waitForFunction(() => typeof setView === 'function' && window.DonorHub);
     if (view === 'dm') await page.evaluate(() => setView('dm'));
-    await page.evaluate(() => { location.hash = '#/preview'; });
+    await page.evaluate(() => {
+      location.hash = '#/preview';
+    });
     // in front: one small preview chip for each attached file that is ticked (a group message: PDF and video are on
     // when added; a DM sends nothing extra until a tick is set)
     await expect(page.locator('#ui2AttChips .ui2-att-chip')).toHaveCount(view === 'dm' ? 0 : 2);
@@ -125,17 +180,35 @@ for (const [view, width] of [['group', 280], ['group', 320], ['group', 360], ['g
     const m = await page.evaluate(() => {
       const r = (e) => e.getBoundingClientRect();
       const items = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item')].map(r);
-      const hit = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item .ui2-rx-chip')].map((c) => {
-        const q = r(c);
-        return c.contains(document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2));
-      });
-      const hitEl = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item .ui2-rx-chip')].map((c) => {
+      const hit = [...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item .ui2-rx-chip')].map(
+        (c) => {
+          const q = r(c);
+          return c.contains(document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2));
+        },
+      );
+      const hitEl = [
+        ...document.querySelectorAll('#ui2ReaderExtras .ui2-rx-item .ui2-rx-chip'),
+      ].map((c) => {
         const q = r(c),
           e = document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2);
-        return (e && (e.id || e.className || e.tagName)) + '@' + Math.round(q.x + q.width / 2) + ',' + Math.round(q.y + q.height / 2);
+        return (
+          (e && (e.id || e.className || e.tagName)) +
+          '@' +
+          Math.round(q.x + q.width / 2) +
+          ',' +
+          Math.round(q.y + q.height / 2)
+        );
       });
       const texts = [...document.querySelectorAll('#ui2RxText button')].map(r);
-      return { items, hit, hitEl, texts, sw: document.documentElement.scrollWidth, w: innerWidth, h: innerHeight };
+      return {
+        items,
+        hit,
+        hitEl,
+        texts,
+        sw: document.documentElement.scrollWidth,
+        w: innerWidth,
+        h: innerHeight,
+      };
     });
     expect(m.sw).toBeLessThanOrEqual(m.w + 1);
     expect(m.items.length).toBe(3); // PDF, Video, Poster
@@ -156,14 +229,23 @@ async function openReader(page, view = 'group', width = 390) {
   await page.goto('/new');
   await page.waitForFunction(() => typeof setView === 'function' && window.DonorHub);
   if (view === 'dm') await page.evaluate(() => setView('dm'));
-  await page.evaluate(() => { location.hash = '#/preview'; });
+  await page.evaluate(() => {
+    location.hash = '#/preview';
+  });
   // the attached files (ticks, Add / Change, Text goes on) live inside More
   await page.locator('#messageFocus .focus-rail-more > summary').click();
   await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
 }
 
-test('Reader: Text goes with Video / Poster is right under the ticks once a video is attached, and saves', async ({ page }) => {
-  await api(port, '/group-extras', { action: 'add', kind: 'video', data: 'data:video/mp4;base64,' + MP4.toString('base64'), name: 'b.mp4' });
+test('Reader: Text goes with Video / Poster is right under the ticks once a video is attached, and saves', async ({
+  page,
+}) => {
+  await api(port, '/group-extras', {
+    action: 'add',
+    kind: 'video',
+    data: 'data:video/mp4;base64,' + MP4.toString('base64'),
+    name: 'b.mp4',
+  });
   await openReader(page);
   await expect(page.locator('#ui2RxText')).toBeVisible();
   await expect(page.locator('#ui2RxText-video')).toHaveAttribute('aria-pressed', 'true');
@@ -180,14 +262,18 @@ test('Reader: Text goes with Video / Poster is right under the ticks once a vide
   await expect(page.locator('#ui2RxText')).toBeHidden(); // no video: nothing to choose
 });
 
-test('Reader: the after poster is its own picture: Add uploads it, the tick sends it after the message', async ({ page }) => {
+test('Reader: the after poster is its own picture: Add uploads it, the tick sends it after the message', async ({
+  page,
+}) => {
   await api(port, '/group-extras', { action: 'remove', kind: 'poster' });
   await openReader(page);
   const item = page.locator('.ui2-rx-item[data-kind="poster"]');
   await expect(item).toBeVisible();
   await expect(page.locator('#ui2Rx-poster')).toBeDisabled(); // nothing to tick before it is added
   await expect(item.locator('.ui2-rx-add')).toHaveText('Add');
-  await page.locator('#ui2RxFile-poster').setInputFiles({ name: 'after.jpg', mimeType: 'image/jpeg', buffer: JPG });
+  await page
+    .locator('#ui2RxFile-poster')
+    .setInputFiles({ name: 'after.jpg', mimeType: 'image/jpeg', buffer: JPG });
   await expect(item.locator('.ui2-rx-add')).toHaveText('Change', { timeout: 15000 });
   await expect(page.locator('#ui2Rx-poster')).toBeChecked(); // added = on for the groups
   const v = await api(port, '/group-extras');
@@ -205,11 +291,27 @@ test('Reader: the after poster is its own picture: Add uploads it, the tick send
   await expect.poll(async () => (await api(port, '/group-extras')).setup.dm.poster).toBe(true);
   expect((await api(port, '/group-extras')).setup.group.poster).toBe(true);
   // a PDF offered as the poster is refused
-  const r = await page.evaluate(async (k) => (await fetch('/group-extras-file', { method: 'POST', headers: { Authorization: 'Bearer ' + k, 'X-Extra-Kind': 'poster', 'Content-Type': 'application/pdf' }, body: '%PDF-1.4 not a picture' })).status, KEY);
+  const r = await page.evaluate(
+    async (k) =>
+      (
+        await fetch('/group-extras-file', {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + k,
+            'X-Extra-Kind': 'poster',
+            'Content-Type': 'application/pdf',
+          },
+          body: '%PDF-1.4 not a picture',
+        })
+      ).status,
+    KEY,
+  );
   expect(r).toBe(400);
 });
 
-test('Reader (group message): nothing saved means disabled ticks and an Add button on each', async ({ page }) => {
+test('Reader (group message): nothing saved means disabled ticks and an Add button on each', async ({
+  page,
+}) => {
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
   await api(port, '/group-extras', { action: 'remove', kind: 'video' });
   await openReader(page);
@@ -219,15 +321,24 @@ test('Reader (group message): nothing saved means disabled ticks and an Add butt
   }
 });
 
-test('Reader (group message): attach a PDF and a video here, then tick which ones go', async ({ page }) => {
+test('Reader (group message): attach a PDF and a video here, then tick which ones go', async ({
+  page,
+}) => {
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
   await api(port, '/group-extras', { action: 'remove', kind: 'video' });
   await openReader(page);
-  await page.locator('#ui2RxFile-pdf').setInputFiles({ name: 'case-report.pdf', mimeType: 'application/pdf', buffer: PDF });
+  await page
+    .locator('#ui2RxFile-pdf')
+    .setInputFiles({ name: 'case-report.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(page.locator('#ui2Rx-pdf')).toBeChecked(); // a new file starts ticked: it goes
   await expect(page.locator('.ui2-rx-item[data-kind="pdf"] .ui2-rx-add')).toHaveText('Change');
-  await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).toHaveAttribute('title', 'case-report.pdf');
-  await page.locator('#ui2RxFile-video').setInputFiles({ name: 'oxygen.mp4', mimeType: 'video/mp4', buffer: MP4 });
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).toHaveAttribute(
+    'title',
+    'case-report.pdf',
+  );
+  await page
+    .locator('#ui2RxFile-video')
+    .setInputFiles({ name: 'oxygen.mp4', mimeType: 'video/mp4', buffer: MP4 });
   await expect(page.locator('#ui2Rx-video')).toBeChecked();
   let v = await api(port, '/group-extras');
   expect([v.pdf.has, v.pdf.on, v.video.has, v.video.on]).toEqual([true, true, true, true]);
@@ -235,31 +346,51 @@ test('Reader (group message): attach a PDF and a video here, then tick which one
   v = await api(port, '/group-extras');
   expect([v.pdf.on, v.video.on]).toEqual([false, true]); // only the video goes; the PDF stays attached
   // a wrong file says why and changes nothing
-  await page.locator('#ui2RxFile-pdf').setInputFiles({ name: 'clip.mp4', mimeType: 'video/mp4', buffer: MP4 });
+  await page
+    .locator('#ui2RxFile-pdf')
+    .setInputFiles({ name: 'clip.mp4', mimeType: 'video/mp4', buffer: MP4 });
   await expect(page.locator('.ui2-rx-msg')).toContainText('Choose a PDF');
-  await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).toHaveAttribute('title', 'case-report.pdf');
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).toHaveAttribute(
+    'title',
+    'case-report.pdf',
+  );
 });
 
 /* Live percentage: a slow connection (CDP-throttled upload) makes the steps visible. */
 async function slowUpload(page, kbps = 400) {
   const client = await page.context().newCDPSession(page);
   await client.send('Network.enable');
-  await client.send('Network.emulateNetworkConditions', { offline: false, latency: 20, downloadThroughput: -1, uploadThroughput: kbps * 1024 });
+  await client.send('Network.emulateNetworkConditions', {
+    offline: false,
+    latency: 20,
+    downloadThroughput: -1,
+    uploadThroughput: kbps * 1024,
+  });
 }
 const BIG_PDF = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(1_300_000, 120)]);
 
-test('Reader: adding a PDF shows a live percentage that only rises, then Saving, then Change', async ({ page }) => {
+test('Reader: adding a PDF shows a live percentage that only rises, then Saving, then Change', async ({
+  page,
+}) => {
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
   await openReader(page);
   await slowUpload(page);
   await page.evaluate(() => {
     window.__seen = [];
     const el = document.querySelector('.ui2-rx-item[data-kind="pdf"] .ui2-rx-add');
-    new MutationObserver(() => window.__seen.push(el.textContent)).observe(el, { childList: true, characterData: true, subtree: true });
+    new MutationObserver(() => window.__seen.push(el.textContent)).observe(el, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
   });
-  await page.locator('#ui2RxFile-pdf').setInputFiles({ name: 'big.pdf', mimeType: 'application/pdf', buffer: BIG_PDF });
+  await page
+    .locator('#ui2RxFile-pdf')
+    .setInputFiles({ name: 'big.pdf', mimeType: 'application/pdf', buffer: BIG_PDF });
   await expect(page.locator('.ui2-rx-item[data-kind="pdf"]')).toHaveAttribute('data-up', '1');
-  await expect(page.locator('.ui2-rx-item[data-kind="pdf"] .ui2-rx-add')).toHaveText('Change', { timeout: 40000 });
+  await expect(page.locator('.ui2-rx-item[data-kind="pdf"] .ui2-rx-add')).toHaveText('Change', {
+    timeout: 40000,
+  });
   const seen = await page.evaluate(() => window.__seen);
   const pcts = seen.filter((t) => /^\d+%$/.test(t)).map((t) => parseInt(t, 10));
   expect(pcts.length, 'several live steps, not just the end: ' + seen.join(' ')).toBeGreaterThan(2);
@@ -277,17 +408,29 @@ test('Poster dialog: adding a video shows percent and megabytes live', async ({ 
   await page.evaluate(() => {
     window.__seen = [];
     const el = document.querySelector('.poster-extra[data-kind="video"] small');
-    new MutationObserver(() => window.__seen.push(el.textContent)).observe(el, { childList: true, characterData: true, subtree: true });
+    new MutationObserver(() => window.__seen.push(el.textContent)).observe(el, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
   });
-  const big = Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(1_300_000)]);
-  await page.locator('#posterExtraFile-video').setInputFiles({ name: 'big.mp4', mimeType: 'video/mp4', buffer: big });
+  const big = Buffer.concat([
+    Buffer.from([0, 0, 0, 24]),
+    Buffer.from('ftypmp42'),
+    Buffer.alloc(1_300_000),
+  ]);
+  await page
+    .locator('#posterExtraFile-video')
+    .setInputFiles({ name: 'big.mp4', mimeType: 'video/mp4', buffer: big });
   await expect(row(page, 'video').locator('small')).toContainText('big.mp4', { timeout: 40000 });
   const seen = await page.evaluate(() => window.__seen);
   const live = seen.filter((t) => /^Uploading \d+% · [\d.]+ of 1\.2 MB$/.test(t));
   expect(live.length, seen.join(' | ')).toBeGreaterThan(2);
 });
 
-test('Reader (DM message): no attach buttons; a tick with no file says to attach it on the group message', async ({ page }) => {
+test('Reader (DM message): no attach buttons; a tick with no file says to attach it on the group message', async ({
+  page,
+}) => {
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
   await api(port, '/group-extras', { action: 'remove', kind: 'video' });
   await openReader(page, 'dm');
@@ -299,40 +442,69 @@ test('Reader (DM message): no attach buttons; a tick with no file says to attach
   await expect(page.locator('#ui2Rx-pdf')).not.toBeChecked();
 });
 
-test('Reader (group message): tick PDF and video, both / one / none, applied to the group posts', async ({ page }) => {
-  await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: 'data:application/pdf;base64,' + PDF.toString('base64'), name: 'a.pdf' });
-  await api(port, '/group-extras', { action: 'add', kind: 'video', data: 'data:video/mp4;base64,' + MP4.toString('base64'), name: 'b.mp4' });
+test('Reader (group message): tick PDF and video, both / one / none, applied to the group posts', async ({
+  page,
+}) => {
+  await api(port, '/group-extras', {
+    action: 'add',
+    kind: 'pdf',
+    data: 'data:application/pdf;base64,' + PDF.toString('base64'),
+    name: 'a.pdf',
+  });
+  await api(port, '/group-extras', {
+    action: 'add',
+    kind: 'video',
+    data: 'data:video/mp4;base64,' + MP4.toString('base64'),
+    name: 'b.mp4',
+  });
   await openReader(page, 'group');
-  await expect(page.locator('#ui2ReaderExtras')).toHaveAttribute('title', /after the poster and caption in every group post/);
+  await expect(page.locator('#ui2ReaderExtras')).toHaveAttribute(
+    'title',
+    /after the poster and caption in every group post/,
+  );
   await expect(page.locator('#ui2Rx-pdf')).toBeChecked();
   await expect(page.locator('#ui2Rx-video')).toBeChecked();
+  // each tick saves at once; wait for the save to land before reading it back
+  const saved = async () => {
+    const v = await api(port, '/group-extras');
+    return [v.pdf.on, v.video.on];
+  };
   await page.locator('#ui2Rx-pdf').uncheck();
-  let v = await api(port, '/group-extras');
-  expect([v.pdf.on, v.video.on]).toEqual([false, true]); // only the video goes
+  await expect.poll(saved).toEqual([false, true]); // only the video goes
   await page.locator('#ui2Rx-video').uncheck();
-  v = await api(port, '/group-extras');
-  expect([v.pdf.on, v.video.on]).toEqual([false, false]); // none
+  await expect.poll(saved).toEqual([false, false]); // none
   await page.locator('#ui2Rx-pdf').check();
   await page.locator('#ui2Rx-video').check();
-  v = await api(port, '/group-extras');
-  expect([v.pdf.on, v.video.on]).toEqual([true, true]); // both
+  await expect.poll(saved).toEqual([true, true]); // both
 });
 
-test('Reader (DM message): its own ticks, remembered for DMs, group choice untouched', async ({ page }) => {
+test('Reader (DM message): its own ticks, remembered for DMs, group choice untouched', async ({
+  page,
+}) => {
   await openReader(page, 'dm');
   await expect(page.locator('#ui2ReaderExtras')).toHaveAttribute('title', /after each donor DM/);
   await expect(page.locator('#ui2Rx-pdf')).not.toBeChecked(); // DMs start unticked
   await page.locator('#ui2Rx-pdf').check();
   await expect(page.locator('#ui2Rx-pdf')).toBeChecked();
   await expect
-    .poll(() => page.evaluate(() => [localStorage.getItem('givelife-dm-pdf'), localStorage.getItem('givelife-dm-video')]))
+    .poll(() =>
+      page.evaluate(() => [
+        localStorage.getItem('givelife-dm-pdf'),
+        localStorage.getItem('givelife-dm-video'),
+      ]),
+    )
     .toEqual(['1', null]);
   const v = await api(port, '/group-extras');
   expect([v.pdf.on, v.video.on]).toEqual([true, true]); // the group ticks did not change
   await page.locator('#ui2Rx-pdf').uncheck();
   await page.locator('#ui2Rx-video').check();
   await expect
-    .poll(() => page.evaluate(() => [localStorage.getItem('givelife-dm-pdf'), localStorage.getItem('givelife-dm-video')]))
+    .poll(() =>
+      page.evaluate(() => [
+        localStorage.getItem('givelife-dm-pdf'),
+        localStorage.getItem('givelife-dm-video'),
+      ]),
+    )
     .toEqual(['0', '1']); // checked against the saved files first, so it lands a moment later
   // the Donors page shows the same ticks
   await expect(page.locator('#donorVideo')).toBeChecked();
@@ -340,7 +512,9 @@ test('Reader (DM message): its own ticks, remembered for DMs, group choice untou
 });
 
 for (const width of [390, 430, 1440])
-  test(`Reader: the PDF / Video ticks fit at ${width}px with real tap targets`, async ({ page }) => {
+  test(`Reader: the PDF / Video ticks fit at ${width}px with real tap targets`, async ({
+    page,
+  }) => {
     await openReader(page, 'group', width);
     for (const sel of ['#ui2Rx-pdf', '#ui2Rx-video']) {
       const b = await page.locator(sel).locator('xpath=..').boundingBox();
@@ -353,36 +527,83 @@ for (const width of [390, 430, 1440])
     const pdf = await page.locator('#ui2Rx-pdf').locator('xpath=..').boundingBox(),
       video = await page.locator('#ui2Rx-video').locator('xpath=..').boundingBox();
     expect(Math.abs(video.y - pdf.y)).toBeGreaterThan(40); // one row each, inside More (video is 2nd, PDF 3rd)
-    const dock = await page.locator('.ui2-reader-dock').boundingBox().catch(() => null);
-    if (dock && width < 900 && dock.height > 0) expect(box.y + box.height).toBeLessThanOrEqual(dock.y + 1);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    const dock = await page
+      .locator('.ui2-reader-dock')
+      .boundingBox()
+      .catch(() => null);
+    if (dock && width < 900 && dock.height > 0)
+      expect(box.y + box.height).toBeLessThanOrEqual(dock.y + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
   });
 
-test('Reader: More is simple - Case message, then 1st / 2nd / 3rd (the order they are sent), then Manual messages', async ({ page }) => {
-  for (const kind of ['pdf', 'video', 'poster']) await api(port, '/group-extras', { action: 'remove', kind });
-  await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: 'data:application/pdf;base64,' + PDF.toString('base64'), name: 'r.pdf' });
-  await api(port, '/group-extras', { action: 'add', kind: 'video', data: 'data:video/mp4;base64,' + MP4.toString('base64'), name: 'b.mp4' });
-  await api(port, '/group-extras', { action: 'add', kind: 'poster', data: 'data:image/jpeg;base64,' + JPG.toString('base64'), name: 'a.jpg' });
-  await api(port, '/group-extras', { action: 'setup', profile: 'group', field: 'text_on', value: 'poster' });
+test('Reader: More is simple - Case message, then 1st / 2nd / 3rd (the order they are sent), then Manual messages', async ({
+  page,
+}) => {
+  for (const kind of ['pdf', 'video', 'poster'])
+    await api(port, '/group-extras', { action: 'remove', kind });
+  await api(port, '/group-extras', {
+    action: 'add',
+    kind: 'pdf',
+    data: 'data:application/pdf;base64,' + PDF.toString('base64'),
+    name: 'r.pdf',
+  });
+  await api(port, '/group-extras', {
+    action: 'add',
+    kind: 'video',
+    data: 'data:video/mp4;base64,' + MP4.toString('base64'),
+    name: 'b.mp4',
+  });
+  await api(port, '/group-extras', {
+    action: 'add',
+    kind: 'poster',
+    data: 'data:image/jpeg;base64,' + JPG.toString('base64'),
+    name: 'a.jpg',
+  });
+  await api(port, '/group-extras', {
+    action: 'setup',
+    profile: 'group',
+    field: 'text_on',
+    value: 'poster',
+  });
   await openReader(page); // More is open
   await page.waitForTimeout(500); // the sheet slides in
   const panel = page.locator('#messageFocus .focus-rail-more > div');
   await expect(panel).toBeVisible();
   // only these buttons are there: Change (case poster / video), the three files (tick, Change, up) and Manual messages
-  const names = await panel.locator('button:visible, label:visible, summary:visible').evaluateAll((els) =>
-    els.map((e) => (e.id || e.textContent.trim()).slice(0, 24)),
-  );
-  for (const gone of ['Case page', 'Generate 5 Versions', 'Save Base', 'Main poster / video', 'Next version', 'Replace with fresh 5'])
+  const names = await panel
+    .locator('button:visible, label:visible, summary:visible')
+    .evaluateAll((els) => els.map((e) => (e.id || e.textContent.trim()).slice(0, 24)));
+  for (const gone of [
+    'Case page',
+    'Generate 5 Versions',
+    'Save Base',
+    'Main poster / video',
+    'Next version',
+    'Replace with fresh 5',
+  ])
     expect(names, gone).not.toContain(gone);
   await expect(page.locator('#focusManual')).toBeVisible();
   await expect(page.locator('#focusPoster')).toHaveText('Change');
   const rows = page.locator('#ui2ReaderExtras .ui2-rx-item');
-  const ranks = () => rows.evaluateAll((els) => els.map((e) => e.dataset.kind + ':' + e.querySelector('.ui2-rx-rank').textContent));
+  const ranks = () =>
+    rows.evaluateAll((els) =>
+      els.map((e) => e.dataset.kind + ':' + e.querySelector('.ui2-rx-rank').textContent),
+    );
   expect(await ranks()).toEqual(['poster:1st', 'video:2nd', 'pdf:3rd']);
   await expect(page.locator('#ui2RxUp-poster')).toBeHidden(); // the first one cannot go earlier
   await page.locator('#ui2RxUp-pdf').click();
   await expect.poll(ranks).toEqual(['poster:1st', 'pdf:2nd', 'video:3rd']);
-  expect((await (await fetch(`http://127.0.0.1:${port}/group-extras`, { headers: { Authorization: 'Bearer ' + KEY } })).json()).order).toEqual(['poster', 'pdf', 'video']);
+  expect(
+    (
+      await (
+        await fetch(`http://127.0.0.1:${port}/group-extras`, {
+          headers: { Authorization: 'Bearer ' + KEY },
+        })
+      ).json()
+    ).order,
+  ).toEqual(['poster', 'pdf', 'video']);
   await page.reload();
   await page.locator('#messageFocus .focus-rail-more > summary').click();
   await expect(page.locator('#ui2ReaderExtras')).toBeVisible();
@@ -394,22 +615,38 @@ test('Reader: More is simple - Case message, then 1st / 2nd / 3rd (the order the
   // a video that carries the case text goes with the case, not after it
   await page.locator('#ui2RxText-video').click();
   await expect(page.locator('#ui2RxCase small')).toHaveText('Video + text');
-  await expect(page.locator('#ui2ReaderExtras .ui2-rx-item[data-kind="video"]')).toHaveAttribute('data-led', '1');
+  await expect(page.locator('#ui2ReaderExtras .ui2-rx-item[data-kind="video"]')).toHaveAttribute(
+    'data-led',
+    '1',
+  );
   await page.locator('#ui2RxText-poster').click();
   await expect(page.locator('#ui2RxCase small')).toHaveText('Poster + text');
   const box = await panel.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390.5);
-  for (const kind of ['pdf', 'video', 'poster']) await api(port, '/group-extras', { action: 'remove', kind });
-  await api(port, '/group-extras', { action: 'setup', profile: 'group', field: 'text_on', value: 'video' });
+  for (const kind of ['pdf', 'video', 'poster'])
+    await api(port, '/group-extras', { action: 'remove', kind });
+  await api(port, '/group-extras', {
+    action: 'setup',
+    profile: 'group',
+    field: 'text_on',
+    value: 'video',
+  });
 });
 
-test('the reader previews: /group-extras-media serves the saved poster, and says 404 for nothing saved or a wrong kind', async ({ request }) => {
+test('the reader previews: /group-extras-media serves the saved poster, and says 404 for nothing saved or a wrong kind', async ({
+  request,
+}) => {
   const headers = { Authorization: 'Bearer ' + KEY };
   const url = (kind) => `http://127.0.0.1:${port}/group-extras-media/${kind}`;
   await api(port, '/group-extras', { action: 'remove', kind: 'video' });
   expect((await request.get(url('video'), { headers })).status()).toBe(404);
-  await api(port, '/group-extras', { action: 'add', kind: 'poster', data: 'data:image/jpeg;base64,' + JPG.toString('base64'), name: 'a.jpg' });
+  await api(port, '/group-extras', {
+    action: 'add',
+    kind: 'poster',
+    data: 'data:image/jpeg;base64,' + JPG.toString('base64'),
+    name: 'a.jpg',
+  });
   const r = await request.get(url('poster'), { headers });
   expect(r.status()).toBe(200);
   expect(r.headers()['content-type']).toContain('image/jpeg');

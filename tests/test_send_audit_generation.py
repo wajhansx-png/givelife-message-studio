@@ -285,8 +285,10 @@ class Validator(Base):
                 self.assertTrue(dm_variants.fact_problem(self.master_a(), variant))
 
     def test_prayer_emoji_stays_on_the_contribution_line(self):
-        moved = self.good().replace(" 🤲_*", "_*").replace(
-            "needed for treatment._*", "needed for treatment. 🤲_*"
+        moved = (
+            self.good()
+            .replace(" 🤲_*", "_*")
+            .replace("needed for treatment._*", "needed for treatment. 🤲_*")
         )
         self.assertTrue(dm_variants.validate(self.master_a(), moved))
 

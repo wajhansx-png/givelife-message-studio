@@ -70,7 +70,11 @@ class ResumeRotationTests(unittest.TestCase):
             h.start_batch(scope="all", limit=count, run=False, follow_up=True, video=True, pdf=True)
             original = h.jobs.export_jobs()["jobs"][-1]
             phones = [h.book.resolve(i)["phone"] for i in original["ids"]]
-            expected = [(phone, step) for phone in phones for step in ("case", "video", "pdf", "Fourth message")]
+            expected = [
+                (phone, step)
+                for phone in phones
+                for step in ("case", "video", "pdf", "Fourth message")
+            ]
             h.jobs._run(original)
             self.assertEqual(delivered, expected[:3])
             h.pause_personal()

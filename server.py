@@ -96,8 +96,12 @@ def device():
             raise ValueError("The " + name.capitalize() + " WhatsApp is not connected yet.")
     locked = _LOCKED_ROUTE.get()
     if locked is not None and locked != (GOWA_URL, name, found):
-        raise ValueError("The WhatsApp device changed during this send. Review its delivery before trying again.")
+        raise ValueError(
+            "The WhatsApp device changed during this send. Review its delivery before trying again."
+        )
     return found
+
+
 GROUPS = {
     "main": ("GiveLife Foundation", "120363423121755785@g.us"),
     "community": ("Upwork Community 2026", "120363398623589385@g.us"),
@@ -185,6 +189,7 @@ def _record_last_sent(jid, stamp=None):
             saved = STORE.get("last_sent", {})
             saved[jid] = time.time() if stamp is None else stamp
             STORE.put("last_sent", saved)
+
 
 OWNER_REVISION = 0
 OWNER_GUARD = threading.local()
@@ -309,6 +314,8 @@ GIKI_PAGES = {"/giki": "giki", "/giki2": "giki2"}  # page -> its line (and its l
 def giki_list(name):
     """The Giki page's list for a line: donors().giki or donors().giki2."""
     return getattr(donors(), name)
+
+
 CAMPAIGN_CONTACTED = (
     set(json.loads((ROOT / "campaign-blocks.json").read_text()))
     if (ROOT / "campaign-blocks.json").exists()
@@ -469,7 +476,10 @@ def custom_recipient(body):
     if target != "phone":
         raise ValueError("Choose a saved group or phone number.")
     if _DM_TO_GROUP.get():
-        return TEST_GROUP_JID, False  # a Giki test person: sent like a DM, delivered in the GiveLife test group
+        return (
+            TEST_GROUP_JID,
+            False,
+        )  # a Giki test person: sent like a DM, delivered in the GiveLife test group
     phone = re.sub(r"[\s()+-]", "", str(body.get("phone", "")))
     if phone.startswith("00"):
         phone = phone[2:]
@@ -560,7 +570,9 @@ def _send_custom(body):
     jid, is_group = custom_recipient(body)
     if body.get("kind") == "dm_extra":
         if "file_id" in body and body["file_id"] is None and _LINE.get().startswith("giki"):
-            raise ValueError("This older batch has no saved attachment ID. Review its files before sending.")
+            raise ValueError(
+                "This older batch has no saved attachment ID. Review its files before sending."
+            )
         return send_dm_extra(jid, is_group, body.get("extra"), body.get("file_id"))
     message = body.get("message", "")
     if not is_group and body.get("kind") == "donor_thanks":
@@ -584,14 +596,18 @@ def _send_custom(body):
         raise ValueError("Not sent: completed case cannot use an old fundraising request.")
     if is_group:
         message = focus_bank().get("group").get("source", "")
-    if isinstance(message, str) and body.get("kind") in (
-        "dm_appeal",
-        "donor_registry",
-        "donor_manual",
-        "donor_batch",
-        "owner_text",
-        "volunteer_batch",  # the volunteer and GIKI case message is saved when the batch starts: today's amount at send time
-        "volunteer_manual",
+    if (
+        isinstance(message, str)
+        and body.get("kind")
+        in (
+            "dm_appeal",
+            "donor_registry",
+            "donor_manual",
+            "donor_batch",
+            "owner_text",
+            "volunteer_batch",  # the volunteer and GIKI case message is saved when the batch starts: today's amount at send time
+            "volunteer_manual",
+        )
     ):
         message = caption_facts.current(sys.modules[__name__], message)
         body = {**body, "message": message}
@@ -639,7 +655,9 @@ def _send_custom(body):
             message, body.get("name", ""), body.get("gender", "Brother")
         )
     if not is_group and body.get("kind") in ("volunteer_batch", "volunteer_manual"):
-        if str(body.get("line") or "").startswith("giki"):  # the Giki lists: "Asad Bhai" / "Areeba Sister", or no name at all
+        if str(body.get("line") or "").startswith(
+            "giki"
+        ):  # the Giki lists: "Asad Bhai" / "Areeba Sister", or no name at all
             import giki_line
 
             message = giki_line.fill_name(message, body.get("name"))
@@ -684,7 +702,10 @@ def _send_custom(body):
         check_hold()
         check_stop()
         if body.get("poster") is True and not body.get("attachment"):
-            _refuse_video_poster("group" if is_group else "dm", "group" if is_group else "giki" if _LINE.get().startswith("giki") else "dm")
+            _refuse_video_poster(
+                "group" if is_group else "dm",
+                "group" if is_group else "giki" if _LINE.get().startswith("giki") else "dm",
+            )
         now = time.time()
         if not is_group:
             digest = hashlib.sha256(jid.encode()).hexdigest()
@@ -728,7 +749,9 @@ def _send_custom(body):
                         raise ValueError(
                             "This recipient was contacted before. Check WhatsApp before sending again."
                         )
-            ledger_key = "dm_daily" + ("_" + _LINE.get() if _LINE.get() else "")  # each WhatsApp has its own day
+            ledger_key = "dm_daily" + (
+                "_" + _LINE.get() if _LINE.get() else ""
+            )  # each WhatsApp has its own day
             ledger = STORE.get(ledger_key, {})
             prior_ledger = dict(ledger)
             day = (
@@ -1346,7 +1369,8 @@ def send_batch_attachment(jid, caption, ident):
                 "-F",
                 f"phone={jid}",
                 "-F",
-                f"{field}=@{path};type={mime}" + (f";filename={pdf_title()}" if field == "file" else ""),
+                f"{field}=@{path};type={mime}"
+                + (f";filename={pdf_title()}" if field == "file" else ""),
                 *(["-F", f"caption=<{cap}"] if caption else []),
             ],
             capture_output=True,
@@ -1365,7 +1389,11 @@ def send_batch_attachment(jid, caption, ident):
 def pdf_title():
     """The name a PDF shows in WhatsApp: "<case first name> Medical Documents.pdf" (Mirha Medical Documents)."""
     words = re.sub(r"[^A-Za-z0-9 ]+", " ", active_case_name()).split()
-    first = words[0].capitalize() if words and words[0].lower() not in ("current", "case", "new") else ""
+    first = (
+        words[0].capitalize()
+        if words and words[0].lower() not in ("current", "case", "new")
+        else ""
+    )
     return ((first + " ") if first else "") + "Medical Documents.pdf"
 
 
@@ -1395,7 +1423,10 @@ def send_dm_extra(jid, is_group, kind, file_id=None):
         raise ValueError(
             f"No {group_extras.LABEL[kind]} is saved yet. Add it in Poster → Sent after the poster in groups."
         )
-    if kind == "video" and group_extras.lead(STORE, "giki" if _LINE.get().startswith("giki") else "dm") == ident:
+    if (
+        kind == "video"
+        and group_extras.lead(STORE, "giki" if _LINE.get().startswith("giki") else "dm") == ident
+    ):
         return {"code": "SUCCESS", "message": "The video already went first, with the text."}
     return send_batch_attachment(jid, "", ident)
 
@@ -1439,9 +1470,13 @@ def send_dm_test_files(jid, pdf=None, video=None):
             continue
         try:
             r = send_dm_extra(jid, False, kind)
-        except Exception as e:  # not saved, case complete, on hold, stopped: nothing was sent for this one
+        except (
+            Exception
+        ) as e:  # not saved, case complete, on hold, stopped: nothing was sent for this one
             r = {"code": "SKIPPED", "message": str(e)}
-        out.append({"kind": kind, "code": r.get("code"), "message": str(r.get("message") or "")[:200]})
+        out.append(
+            {"kind": kind, "code": r.get("code"), "message": str(r.get("message") or "")[:200]}
+        )
         if r.get("code") != "SUCCESS":
             break
     return out
@@ -1456,9 +1491,13 @@ def send_group_extras(jid, items=None):
     for kind, ident in group_extras.to_send(STORE) if items is None else items:
         try:
             r = send_batch_attachment(jid, "", ident)
-        except Exception as e:  # on hold, stopped, or the file is gone: nothing was sent for this one
+        except (
+            Exception
+        ) as e:  # on hold, stopped, or the file is gone: nothing was sent for this one
             r = {"code": "SKIPPED", "message": str(e)[:200]}
-        out.append({"kind": kind, "code": r.get("code"), "message": str(r.get("message") or "")[:200]})
+        out.append(
+            {"kind": kind, "code": r.get("code"), "message": str(r.get("message") or "")[:200]}
+        )
         if r.get("code") != "SUCCESS":
             break
     return out
@@ -1504,7 +1543,9 @@ def send_image(jid, caption, check_gap=False, _retry=True):
     check_stop()
     import group_extras
 
-    to_group = str(jid).endswith("@g.us") and not _DM_TO_GROUP.get()  # a test person's DM keeps the DM rules
+    to_group = (
+        str(jid).endswith("@g.us") and not _DM_TO_GROUP.get()
+    )  # a test person's DM keeps the DM rules
     profile = "group" if to_group else "giki" if _LINE.get().startswith("giki") else "dm"
     if to_group:
         lead, group_items = group_extras.group_sequence(STORE)
@@ -1548,7 +1589,9 @@ def send_image(jid, caption, check_gap=False, _retry=True):
                     break
             result = {**result, "after": done}
             if any(d["code"] != "SUCCESS" for d in done):
-                result["message"] = "The message went, but a file after it was not confirmed. Check WhatsApp."
+                result["message"] = (
+                    "The message went, but a file after it was not confirmed. Check WhatsApp."
+                )
     finally:
         if cap is not None:
             cap.unlink(missing_ok=True)
@@ -1786,7 +1829,9 @@ def run_job(job_id, keys, caption, queue=False):
             name, jid = (
                 ("Givelife test", "120363431210327603@g.us") if key == "test" else GROUPS[key]
             )
-            remaining_gap = max(0, 60 - (time.monotonic() - last_send)) if last_send is not None else 0
+            remaining_gap = (
+                max(0, 60 - (time.monotonic() - last_send)) if last_send is not None else 0
+            )
             if remaining_gap:
                 job.update(
                     message=f"Waiting {math.ceil(remaining_gap)} seconds before {name}",
@@ -2156,7 +2201,9 @@ def wa_ok():
         _WA["busy"] = True
     ok = False
     try:
-        s = api_result("/devices/" + DEVICE + "/status")  # always the main WhatsApp, whatever line is active
+        s = api_result(
+            "/devices/" + DEVICE + "/status"
+        )  # always the main WhatsApp, whatever line is active
         ok = bool(s.get("is_connected") and s.get("is_logged_in"))
     except Exception:
         ok = False
@@ -2690,7 +2737,7 @@ def timed_chat_command(text, request_id=None):
         isinstance(reply, dict)
         and reply.get("handled")
         and not auto_on()
-        and re.search(r"send", text, re.I)
+        and re.search(r"\bsend\b", text, re.I)
     ):
         reply = {
             **reply,
@@ -2753,7 +2800,11 @@ def shrink_saved_media():
 
     time.sleep(60)
     try:
-        ids = [row["id"] for row in group_extras._rows(STORE).values() if isinstance(row, dict) and row.get("id")]
+        ids = [
+            row["id"]
+            for row in group_extras._rows(STORE).values()
+            if isinstance(row, dict) and row.get("id")
+        ]
     except Exception:
         return
     for ident in ids:
@@ -3077,7 +3128,11 @@ def send_dm_test(text, poster=True, files=True, pdf=None, video=None):
         result = send_image(me, body) if poster else send_text(me, body)
         after = result.get("after") or []
         after_ok = all(part.get("code") == "SUCCESS" for part in after)
-        sent_files = send_dm_test_files(me, pdf, video) if files and result.get("code") == "SUCCESS" and after_ok else []
+        sent_files = (
+            send_dm_test_files(me, pdf, video)
+            if files and result.get("code") == "SUCCESS" and after_ok
+            else []
+        )
     if result.get("code") != "SUCCESS":
         raise ValueError(
             "Test not confirmed: " + str(result.get("message", ""))[:100] + " Check WhatsApp."
@@ -3117,14 +3172,18 @@ def start_giki_test(case, share, pdf=False, video=False, line="giki"):
     if not line_ok(line):
         raise ValueError("The Giki WhatsApp is not connected yet. Tap Connect WhatsApp.")
     if not str(case or "").strip() and not str(share or "").strip():
-        raise ValueError("Nothing to test yet: write the share message or set the case in Group msgs.")
+        raise ValueError(
+            "Nothing to test yet: write the share message or set the case in Group msgs."
+        )
     test.update(state="sending", note="", at=time.time())
 
     def run():
         try:
             test.update(state="done", note=send_giki_test(case, share, pdf, video, line)["reply"])
         except Exception as e:
-            test.update(state="failed", note=str(e)[:300] or "The test was not confirmed. Check WhatsApp.")
+            test.update(
+                state="failed", note=str(e)[:300] or "The test was not confirmed. Check WhatsApp."
+            )
 
     threading.Thread(target=run, daemon=True, name="giki-test").start()
     return {
@@ -3141,7 +3200,9 @@ def send_giki_test(case, share, pdf=False, video=False, line="giki"):
 
     case, share = str(case or "").strip(), str(share or "").strip()
     if not case and not share:
-        raise ValueError("Nothing to test yet: write the share message or set the case in Group msgs.")
+        raise ValueError(
+            "Nothing to test yet: write the share message or set the case in Group msgs."
+        )
     if not line_ok(line):
         raise ValueError("The Giki WhatsApp is not connected yet. Tap Connect WhatsApp.")
     giki_own = LINES[line].status().get("number", "")
@@ -3170,15 +3231,15 @@ def send_giki_test(case, share, pdf=False, video=False, line="giki"):
             confirmed(first, "case")
             for part in first.get("after") or []:  # the 2nd and 3rd messages (poster pic / PDF)
                 if part.get("code") != "SUCCESS":
-                    raise ValueError(f"Test not confirmed at the {part.get('kind')}. Check WhatsApp.")
+                    raise ValueError(
+                        f"Test not confirmed at the {part.get('kind')}. Check WhatsApp."
+                    )
                 after.append("the PDF" if part.get("kind") == "pdf" else "the poster pic")
             for kind, wanted in (("video", video), ("pdf", pdf)):
                 if wanted:
                     confirmed(send_batch_attachment(me, "", group_extras.saved(STORE, kind)), kind)
         if share:
-            confirmed(
-                send_custom_text(me, mark + share.replace("{name}", "Test")), "share message"
-            )
+            confirmed(send_custom_text(me, mark + share.replace("{name}", "Test")), "share message")
     sent = (
         ["the case"]
         + after
@@ -3285,7 +3346,9 @@ def save_upload(data_url, use):
         import batch_media
 
         ident = batch_media.save(STORE, data_url)
-        batch_media.shrink_later(STORE, ident, ATT)  # a batch sends it many times: make it smaller once
+        batch_media.shrink_later(
+            STORE, ident, ATT
+        )  # a batch sends it many times: make it smaller once
         return ident
     if use == "papers":
         return "papers-" + str(save_papers(data_url))
@@ -4023,13 +4086,20 @@ def message_style(body):
             # much stronger, in its own language. Same lines, facts, verse and payment.
             import dm_variants
 
-            mode = "stronger" if style in message_styles.TRIGGER else ("en" if style == "en" else "ur_en")
+            mode = (
+                "stronger"
+                if style in message_styles.TRIGGER
+                else ("en" if style == "en" else "ur_en")
+            )
             try:
                 out = dm_variants.generate(current, 1, mode=mode, rounds=2, ask=2)
             except ValueError as e:
                 raise ValueError(
                     "Could not rewrite your message this time ("
-                    + str(e).split("Rejected because:")[-1].split(". The saved")[0].strip(" .")[:140]
+                    + str(e)
+                    .split("Rejected because:")[-1]
+                    .split(". The saved")[0]
+                    .strip(" .")[:140]
                     + "). Your message is unchanged. Press the button again."
                 )
             return {"text": out[0], "angle": mode, "concept": "", "left": left, "kind": kind}
@@ -4382,7 +4452,10 @@ def sent_versions(row, jid):
         keys = set()
     keys.discard("")
     seen = lambda t: bool(keys) and _text_key(t) in keys
-    return {"source": seen(row.get("source", "")), "items": [seen(t) for t in row.get("items") or []]}
+    return {
+        "source": seen(row.get("source", "")),
+        "items": [seen(t) for t in row.get("items") or []],
+    }
 
 
 def resolve_person(to):
@@ -6270,8 +6343,8 @@ class Handler(BaseHTTPRequestHandler):
         return self.send_cached(hit, kind)
 
     def reply_new_ui(self):
-        """The app with the new design switched on: the main link ("/") and its old path (/new). The previous design is
-        kept as /old (plain index.html), not linked anywhere."""
+        """The app with the new design switched on: the main link ("/") and its old path (/new). index.html is its base
+        page (the previous design that once lived at /old is retired)."""
 
         def build():
             html = (ROOT / "index.html").read_text(encoding="utf-8")
@@ -6339,7 +6412,9 @@ class Handler(BaseHTTPRequestHandler):
         return self.reply_built(
             "/new-ui.css",
             [ROOT / "new-ui.css"],
-            lambda: (ROOT / "new-ui.css").read_text(encoding="utf-8").replace(".UI2", NEW_UI_PREFIX),
+            lambda: (
+                (ROOT / "new-ui.css").read_text(encoding="utf-8").replace(".UI2", NEW_UI_PREFIX)
+            ),
             "text/css",
         )
 
@@ -6493,11 +6568,15 @@ class Handler(BaseHTTPRequestHandler):
                 else "application/javascript",
             )
         # The main link ("/") is the new design. "/new" and "/new/" stay as the same page (old bookmarks and home-screen
-        # shortcuts). The previous page is saved, unchanged and not linked anywhere, at "/old" (index.html).
+        # shortcuts). The previous design (/old) was retired: an old /old link now opens the main page.
         if self.path.split("?")[0] in ("/", "/new", "/new/"):
             return self.reply_new_ui()
         if self.path.split("?")[0] == "/old":
-            return self.reply_file("index.html", "text/html")
+            self.send_response(302)
+            self.send_header("Location", "/")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         if self.path.split("?")[0].rstrip("/") in GIKI_PAGES:
             return self.reply_giki_ui(self.path.split("?")[0].rstrip("/"))
         if self.path.split("?")[0] == "/giki.js":
@@ -6506,7 +6585,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply_built(
                 "/giki.css",
                 [ROOT / "giki.css"],
-                lambda: (ROOT / "giki.css").read_text(encoding="utf-8").replace(".UI2", NEW_UI_PREFIX),
+                lambda: (
+                    (ROOT / "giki.css").read_text(encoding="utf-8").replace(".UI2", NEW_UI_PREFIX)
+                ),
                 "text/css",
             )
         if self.path.split("?")[0] == "/new/group-finder":
@@ -6518,7 +6599,6 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.split("?")[0] == "/case-run.js":
             return self.reply_file("case-run.js", "application/javascript")
         if self.path in (
-            "/",
             "/app.js",
             "/format.js",
             "/connection.js",
@@ -6544,14 +6624,9 @@ class Handler(BaseHTTPRequestHandler):
             "/comfort.css",
             "/responsive.css",
         ):
-            name = "index.html" if self.path == "/" else self.path[1:]
             return self.reply_file(
-                name,
-                "text/html"
-                if self.path == "/"
-                else "text/css"
-                if self.path.endswith(".css")
-                else "application/javascript",
+                self.path[1:],
+                "text/css" if self.path.endswith(".css") else "application/javascript",
             )
         if not self.authorized():
             return self.reply({"error": "Access key required"}, status=401)
@@ -6709,11 +6784,13 @@ class Handler(BaseHTTPRequestHandler):
                 row = {**row, "sent": sent_versions(row, GROUPS["main"][1])}
             return self.reply(row)
         if self.path == "/donor-messages":
-            return self.reply({
+            return self.reply(
+                {
                     **donors().messages.get(),
                     "follow_up": donors().follow_up_text(),
                     "follow_tick": donors().follow_tick(),
-                })
+                }
+            )
         if self.path == "/wa-status":
             try:
                 return self.reply(api("/devices/" + DEVICE + "/status"))
@@ -6738,7 +6815,9 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 self.reply(donors().caserun.view())
             except Exception:
-                self.reply({"error": "The case page could not be read. Nothing was changed."}, status=503)
+                self.reply(
+                    {"error": "The case page could not be read. Nothing was changed."}, status=503
+                )
         elif self.path == "/report":
             # Every resume (donor DMs and groups) and how many people the Reply feature answered.
             PKT = datetime.timezone(datetime.timedelta(hours=5))
@@ -6931,9 +7010,15 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("Choose a file under 15 MB.")
             raw = self.rfile.read(length)  # always read it all, so a refusal still reaches the page
             sent = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
-            if kind != "poster" and sent in group_extras.MIME.values() and sent != group_extras.MIME[kind]:
+            if (
+                kind != "poster"
+                and sent in group_extras.MIME.values()
+                and sent != group_extras.MIME[kind]
+            ):
                 raise ValueError(
-                    "Choose a PDF file." if kind == "pdf" else "Choose an MP4 video (it must be MP4)."
+                    "Choose a PDF file."
+                    if kind == "pdf"
+                    else "Choose an MP4 video (it must be MP4)."
                 )
             # the real file type is checked from its first bytes when it is saved
             mime = group_extras.MIME[kind]
@@ -6950,7 +7035,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(group_extras.add(STORE, kind, data_url, name))
         except ValueError as e:
             return self.reply({"error": str(e)[:300]}, status=400)
-        except Exception as e:  # say what went wrong instead of a blank failure (no private details)
+        except (
+            Exception
+        ) as e:  # say what went wrong instead of a blank failure (no private details)
             print("[group-extras-file] save failed: " + type(e).__name__, flush=True)
             return self.reply(
                 {
@@ -7001,8 +7088,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._group_extras_file()
         try:
             length = int(self.headers.get("Content-Length", 0))
-            if not 0 < length <= (
-                22_000_000 if self.path in ("/upload-image", "/group-extras") else 12_000_000
+            if (
+                not 0
+                < length
+                <= (22_000_000 if self.path in ("/upload-image", "/group-extras") else 12_000_000)
             ):
                 return self.reply({"error": "Request is empty or too large."}, status=400)
             body = json.loads(self.rfile.read(length))
@@ -7089,7 +7178,11 @@ class Handler(BaseHTTPRequestHandler):
                 act = body.get("action")
                 if act == "new":
                     return self.reply(
-                        c.new(body.get("name"), body.get("left"), keep_lists=body.get("keep_lists") is True)
+                        c.new(
+                            body.get("name"),
+                            body.get("left"),
+                            keep_lists=body.get("keep_lists") is True,
+                        )
                     )
                 if act == "switch":
                     return self.reply(c.switch(body.get("id")))
@@ -7167,10 +7260,24 @@ class Handler(BaseHTTPRequestHandler):
                     if body.get("action") == "base":
                         return self.reply(donors().messages.set_base(body.get("text")))
                     if body.get("action") == "test":
-                        return self.reply(donors().test_dm(body.get("poster", True), body.get("files") is not False, body.get("pdf"), body.get("video")))
+                        return self.reply(
+                            donors().test_dm(
+                                body.get("poster", True),
+                                body.get("files") is not False,
+                                body.get("pdf"),
+                                body.get("video"),
+                            )
+                        )
                     return self.reply(donors().messages.update(body.get("id"), body.get("text")))
                 if body.get("test"):
-                    return self.reply(donors().test_dm(body.get("poster", True), body.get("files") is not False, body.get("pdf"), body.get("video")))
+                    return self.reply(
+                        donors().test_dm(
+                            body.get("poster", True),
+                            body.get("files") is not False,
+                            body.get("pdf"),
+                            body.get("video"),
+                        )
+                    )
                 if body.get("toggle"):
                     return self.reply(donors().toggle())
                 if type(body.get("auto")) is bool:
@@ -7214,7 +7321,12 @@ class Handler(BaseHTTPRequestHandler):
                 if CAMPAIGN.get("running"):
                     raise ValueError("Another DM campaign is running. Stop it first.")
                 if body.get("scope") not in (
-                    "all", "important", "top", "donated", "not_donated", "selected"
+                    "all",
+                    "important",
+                    "top",
+                    "donated",
+                    "not_donated",
+                    "selected",
                 ):
                     raise ValueError("Choose an explicit DM audience. Nothing was sent.")
                 dm_extras_check(body.get("pdf"), body.get("video"))
@@ -7322,7 +7434,9 @@ class Handler(BaseHTTPRequestHandler):
             import group_extras
 
             try:
-                return self.reply({**group_extras.act(STORE, body), "poster_kind": poster_file_kind()})
+                return self.reply(
+                    {**group_extras.act(STORE, body), "poster_kind": poster_file_kind()}
+                )
             except ValueError as e:
                 return self.reply({"error": str(e)[:300]}, status=400)
         if self.path == "/style-fix":
@@ -8083,6 +8197,7 @@ if __name__ == "__main__":
     import signal
 
     signal.signal(signal.SIGTERM, graceful_exit)
+
     # One background worker failing to start must never keep the website itself from starting.
     def start_worker(name, start):
         try:

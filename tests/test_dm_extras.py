@@ -72,8 +72,12 @@ class Batch(unittest.TestCase):
     def test_the_owners_1st_2nd_3rd_order_is_the_order_each_dm_gets(self):
         for kind, raw, mime in (("pdf", PDF, "application/pdf"), ("video", MP4, "video/mp4")):
             group_extras.add(app.STORE, kind, url(raw, mime), kind)
-        group_extras.set_setup(app.STORE, "group", "text_on", "poster")  # the video does not carry the text
-        group_extras.move_up(app.STORE, "pdf")  # poster, pdf, video: the PDF is now before the video
+        group_extras.set_setup(
+            app.STORE, "group", "text_on", "poster"
+        )  # the video does not carry the text
+        group_extras.move_up(
+            app.STORE, "pdf"
+        )  # poster, pdf, video: the PDF is now before the video
         self.assertEqual(group_extras.order(app.STORE), ("poster", "pdf", "video"))
         _, calls = self.run_batch(people=1, pdf=True, video=True)
         self.assertEqual([c[2] for c in calls], [None, "pdf", "video"])
@@ -102,7 +106,9 @@ class Batch(unittest.TestCase):
         calls = []
         with (
             patch.object(self.h, "exclusion_reason", return_value=""),
-            patch.object(app, "send_custom", side_effect=lambda body: calls.append(body["extra"]) or OK),
+            patch.object(
+                app, "send_custom", side_effect=lambda body: calls.append(body["extra"]) or OK
+            ),
         ):
             self.assertEqual(self.h._single_extras({"phone": "923001230000"}, True, True), "Sent")
         self.assertEqual(calls, ["video", "pdf"])
@@ -132,7 +138,9 @@ class Batch(unittest.TestCase):
             ):
                 h.jobs._run(job)
             wait.assert_not_called()
-        self.assertEqual(calls, [("0", None), ("0", "video"), ("0", "pdf"), ("1", None), ("1", "video")])
+        self.assertEqual(
+            calls, [("0", None), ("0", "video"), ("0", "pdf"), ("1", None), ("1", "video")]
+        )
 
     def test_the_choice_is_part_of_the_job_and_can_be_changed_while_it_runs(self):
         self.h.book.add("Synthetic 0", "923001230000")
@@ -157,7 +165,10 @@ class Sender(unittest.TestCase):
             self.sent.append((jid, caption, ident))
             return OK
 
-        for p in (patch.object(app, "STORE", Store()), patch.object(app, "send_batch_attachment", fake)):
+        for p in (
+            patch.object(app, "STORE", Store()),
+            patch.object(app, "send_batch_attachment", fake),
+        ):
             p.start()
             self.addCleanup(p.stop)
         group_extras.add(app.STORE, "pdf", url(PDF, "application/pdf"), "r.pdf")
@@ -166,8 +177,17 @@ class Sender(unittest.TestCase):
         group_extras.set_on(app.STORE, "pdf", False)
 
     def test_a_dm_extra_sends_the_saved_file_with_no_caption_even_if_off_for_groups(self):
-        body = {"target": "phone", "phone": "923001234567", "kind": "dm_extra", "extra": "pdf", "message": ""}
-        with patch.object(app, "check_hold", lambda: None), patch.object(app, "read_left", lambda: 20000):
+        body = {
+            "target": "phone",
+            "phone": "923001234567",
+            "kind": "dm_extra",
+            "extra": "pdf",
+            "message": "",
+        }
+        with (
+            patch.object(app, "check_hold", lambda: None),
+            patch.object(app, "read_left", lambda: 20000),
+        ):
             out = app.send_custom(body)
         self.assertEqual(out["code"], "SUCCESS")
         self.assertEqual(len(self.sent), 1)
@@ -179,13 +199,33 @@ class Sender(unittest.TestCase):
         with self.assertRaises(ValueError):
             app.dm_extras_check(True, False)
         app.dm_extras_check(False, False)  # nothing ticked: fine
-        with patch.object(app, "check_hold", lambda: None), patch.object(app, "read_left", lambda: 20000):
+        with (
+            patch.object(app, "check_hold", lambda: None),
+            patch.object(app, "read_left", lambda: 20000),
+        ):
             with self.assertRaises(ValueError):
-                app.send_custom({"target": "phone", "phone": "923001234567", "kind": "dm_extra", "extra": "video"})
+                app.send_custom(
+                    {
+                        "target": "phone",
+                        "phone": "923001234567",
+                        "kind": "dm_extra",
+                        "extra": "video",
+                    }
+                )
         group_extras.add(app.STORE, "video", url(MP4, "video/mp4"), "v.mp4")
-        with patch.object(app, "check_hold", lambda: None), patch.object(app, "read_left", lambda: 0):
+        with (
+            patch.object(app, "check_hold", lambda: None),
+            patch.object(app, "read_left", lambda: 0),
+        ):
             with self.assertRaises(ValueError):
-                app.send_custom({"target": "phone", "phone": "923001234567", "kind": "dm_extra", "extra": "video"})
+                app.send_custom(
+                    {
+                        "target": "phone",
+                        "phone": "923001234567",
+                        "kind": "dm_extra",
+                        "extra": "video",
+                    }
+                )
         self.assertEqual(self.sent, [])
 
 
@@ -256,5 +296,7 @@ class SavedTicks(unittest.TestCase):
     def test_the_test_button_uses_what_the_screen_says_then_the_saved_ticks(self):
         self.tick("pdf")  # saved: PDF only
         self.assertEqual(app.dm_ticks(), {"pdf": True, "video": False})
-        self.assertEqual(app.dm_ticks(video=True), {"pdf": True, "video": True})  # the screen says video too
+        self.assertEqual(
+            app.dm_ticks(video=True), {"pdf": True, "video": True}
+        )  # the screen says video too
         self.assertEqual(app.dm_ticks(pdf=False, video=False), {"pdf": False, "video": False})

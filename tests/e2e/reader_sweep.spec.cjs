@@ -11,21 +11,46 @@ test.afterAll(() => server?.kill());
 
 const BASE = '*Bold opening line*\n\n_Italic second line_\n\nRs. 5,000 needed. Please help today.';
 
-for (const [width, kind] of [[320, 'group'], [390, 'group'], [390, 'dm'], [768, 'group'], [1280, 'group'], [1280, 'dm']])
+for (const [width, kind] of [
+  [320, 'group'],
+  [390, 'group'],
+  [390, 'dm'],
+  [768, 'group'],
+  [1280, 'group'],
+  [1280, 'dm'],
+])
   test(`reader works with no errors: ${kind} at ${width}px`, async ({ page }) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
     page.on('console', (m) => {
-      if (m.type() === 'error' && !/Failed to load resource|net::ERR|favicon|fonts\.g/i.test(m.text())) errors.push('console: ' + m.text());
+      if (
+        m.type() === 'error' &&
+        !/Failed to load resource|net::ERR|favicon|fonts\.g/i.test(m.text())
+      )
+        errors.push('console: ' + m.text());
     });
     page.on('dialog', (d) => d.dismiss());
-    await api(port, '/focus-bank', { kind, action: 'save', text: (kind === 'dm' ? 'Brother, ' : '') + BASE });
-    await api(port, '/focus-bank', { kind, action: 'manual', messages: ['*Version one* Please help today. Rs. 5,000 needed.', '*Version two* Please help today. Rs. 5,000 needed.'] });
+    await api(port, '/focus-bank', {
+      kind,
+      action: 'save',
+      text: (kind === 'dm' ? 'Brother, ' : '') + BASE,
+    });
+    await api(port, '/focus-bank', {
+      kind,
+      action: 'manual',
+      messages: [
+        '*Version one* Please help today. Rs. 5,000 needed.',
+        '*Version two* Please help today. Rs. 5,000 needed.',
+      ],
+    });
     await page.setViewportSize({ width, height: width < 900 ? 800 : 900 });
-    await page.addInitScript(([k, v]) => {
-      localStorage.setItem('givelife-cloud-key', k);
-      localStorage.setItem('givelife-view', v); // the group or the DM message opens in the reader
-    }, [KEY, kind]);
+    await page.addInitScript(
+      ([k, v]) => {
+        localStorage.setItem('givelife-cloud-key', k);
+        localStorage.setItem('givelife-view', v); // the group or the DM message opens in the reader
+      },
+      [KEY, kind],
+    );
     await page.goto('/new#/preview');
     const focus = page.locator('#messageFocus');
     await expect(focus).toBeVisible();
@@ -49,11 +74,16 @@ for (const [width, kind] of [[320, 'group'], [390, 'group'], [390, 'dm'], [768, 
     await ed.click();
     await page.keyboard.press('End');
     await page.keyboard.type(' typed');
-    for (const name of ['Bold', 'Italic', 'Heart']) await page.locator('#ui2Float').getByRole('button', { name, exact: true }).click();
+    for (const name of ['Bold', 'Italic', 'Heart'])
+      await page.locator('#ui2Float').getByRole('button', { name, exact: true }).click();
     await page.evaluate(() => {
       const d = new DataTransfer();
       d.setData('text/plain', 'pasted line');
-      document.getElementById('ui2Live').dispatchEvent(new ClipboardEvent('paste', { clipboardData: d, bubbles: true, cancelable: true }));
+      document
+        .getElementById('ui2Live')
+        .dispatchEvent(
+          new ClipboardEvent('paste', { clipboardData: d, bubbles: true, cancelable: true }),
+        );
     });
     await expect.poll(() => page.locator('#focusText').inputValue()).toContain('pasted line');
     await page.locator('#focusEdit').click(); // Done
@@ -65,7 +95,10 @@ for (const [width, kind] of [[320, 'group'], [390, 'group'], [390, 'dm'], [768, 
     await expect(page.locator('#focusBaseDialog')).toBeHidden();
     await page.locator('#messageFocus .ui2-gen-btn').click();
     // Copy
-    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+    await page
+      .context()
+      .grantPermissions(['clipboard-read', 'clipboard-write'])
+      .catch(() => {});
     if (await page.locator('#focusCopy').isVisible()) await page.locator('#focusCopy').click();
     // Files button opens More at the files
     if (await page.locator('#ui2Swipe .ui2-files-btn').isVisible()) {
@@ -73,7 +106,9 @@ for (const [width, kind] of [[320, 'group'], [390, 'group'], [390, 'dm'], [768, 
       await more.click();
     }
     // no sideways scroll
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
     await page.waitForTimeout(500);
     expect(errors).toEqual([]);
   });

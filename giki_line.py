@@ -47,7 +47,9 @@ class GikiDelivery(VolunteerDelivery):
     FILE = "giki-delivery.json"
     KIND = "giki_batch"
     CLAIM = "giki_batch_request_"
-    REST_FROM_CASE = True  # preserve the Timer's break between batches, measured from the last opening message
+    REST_FROM_CASE = (
+        True  # preserve the Timer's break between batches, measured from the last opening message
+    )
     WAIT_STEPS = (2, 2, 3, 3, 5, 5, 10, 15)  # a WhatsApp blip costs seconds, not 15 s per message
 
     @staticmethod
@@ -328,7 +330,9 @@ class GikiVolunteers(Volunteers):
             out.append(r["id"])
         return out
 
-    partner = None  # Giki 2: opening Giki also moves the chosen people over (whichever page opens first)
+    partner = (
+        None  # Giki 2: opening Giki also moves the chosen people over (whichever page opens first)
+    )
 
     def view(self, query=""):
         self.seed_once()
@@ -366,7 +370,9 @@ class GikiVolunteers(Volunteers):
     def resume(self, body):
         """Resume DMs: DM all again for the people still waiting, with today's case and share message and the saved
         timer. The first DM goes at once."""
-        for _ in range(40):  # a batch that is still stopping (finishing its person): wait up to 40 s
+        for _ in range(
+            40
+        ):  # a batch that is still stopping (finishing its person): wait up to 40 s
             if not self.jobs.active:
                 break
             time.sleep(1)
@@ -581,7 +587,12 @@ class GikiVolunteers(Volunteers):
             data = self.book._load()
             for rec in data["records"]:
                 if rec["id"] in ids:
-                    rec.update(dm_sent=False, delivery="Not contacted", last_sent_at=None, follow_up_state=None)
+                    rec.update(
+                        dm_sent=False,
+                        delivery="Not contacted",
+                        last_sent_at=None,
+                        follow_up_state=None,
+                    )
             self.book._save(data)
         jobs = self.jobs._load()
         for j in jobs.get("jobs", []):
@@ -678,7 +689,16 @@ MOVE_TO_GIKI2 = {
 }
 MOVE_FLAG = "giki2_moved_v1"
 WAITING_FLAG = "giki2_all_waiting_v1"
-CASE_MARKS = ("dm_sent", "delivery", "last_sent_at", "sent_count", "follow_up_state", "follow_up_at", "last_dm_key")
+CASE_MARKS = (
+    "dm_sent",
+    "delivery",
+    "last_sent_at",
+    "sent_count",
+    "follow_up_state",
+    "follow_up_at",
+    "last_dm_key",
+)
+
 
 class Giki2Book(GikiBook):
     KEY = "giki2_book"
@@ -748,4 +768,6 @@ class Giki2Volunteers(GikiVolunteers):
             store.put(MOVE_FLAG, {"moved": moved, "time": time.time()})
 
     def test_people_on(self):
-        return os.environ.get("GIKI_SEED_FILE") != ""  # Ahmad test / Zain test on top (not in previews or tests)
+        return (
+            os.environ.get("GIKI_SEED_FILE") != ""
+        )  # Ahmad test / Zain test on top (not in previews or tests)

@@ -403,9 +403,6 @@
   }
 }
 @media (max-width: 899px) {
-
-  
-
   .donor-search {
     order: 0;
     margin: 0;
@@ -455,7 +452,7 @@
     font-size: 10px;
     gap: 3px;
   }
-  
+
   .donor-message-info,
   .donor-poster-toggle {
     display: none;
@@ -493,9 +490,6 @@
     transition: none;
   }
 }
-@media (min-width: 900px) {
-
-}
 .donor-total {
   font-size: 12px;
   display: flex;
@@ -518,13 +512,11 @@
   .donor-add {
     margin-left: 0;
   }
-
 }
 @media (max-width: 360px) {
   .donor-total small {
     display: none;
   }
-
 }
 .donor-messages {
   flex: 1;
@@ -972,7 +964,7 @@ html body #donorPasteDialog #pastePoster {
     gap: 6px;
     align-content: start;
   }
-  
+
   #donorsPage[data-panel='messages'] .bank-picker button {
     min-height: 44px;
     font-size: 11px;
@@ -983,7 +975,6 @@ html body #donorPasteDialog #pastePoster {
   #donorsPage[data-panel='messages'] .bank-heading .bank-current {
     font-size: 13px;
   }
-  
 }
 @media (prefers-reduced-motion: reduce) {
   #donorsPage[data-panel='messages'] * {
@@ -1307,7 +1298,11 @@ html body #donorPasteDialog #pastePoster {
 
 /* Poster dialog, PDF / Video upload: the bar fills behind the row as the file goes up (--p). */
 .poster-extra[data-up='1'] {
-  background: linear-gradient(90deg, rgba(47, 111, 228, 0.4) var(--p, 0%), transparent var(--p, 0%));
+  background: linear-gradient(
+    90deg,
+    rgba(47, 111, 228, 0.4) var(--p, 0%),
+    transparent var(--p, 0%)
+  );
 }
 .poster-extra[data-up='1'] .poster-extra-add {
   min-width: 3.6em;

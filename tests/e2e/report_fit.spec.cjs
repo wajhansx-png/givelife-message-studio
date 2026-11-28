@@ -33,7 +33,7 @@ for (const active of [false, true]) {
       await page.evaluate(() => document.querySelector('.report-open').click());
       const report = page.getByRole('dialog', { name: 'Report', exact: true });
       await expect(report).toBeVisible();
-      await expect(report.locator('.auto-card')).toHaveCount(5);
+      await expect(report.locator('.auto-card')).toHaveCount(7); // the 5 controls + Giki 1 and Giki 2
       const overflow = await report.locator('.report-card').evaluate((e) => {
         const r = e.getBoundingClientRect();
         return {
@@ -43,12 +43,17 @@ for (const active of [false, true]) {
           width: document.documentElement.scrollWidth,
         };
       });
-      expect(overflow.scroll).toBe(false);
+      // seven cards (5 controls + Giki 1, Giki 2): a normal screen shows them all; a very short one
+      // (an old 568px phone, a phone turned sideways) scrolls inside the card and keeps Close in view
+      const short = height < 700;
+      expect(overflow.scroll).toBe(short ? overflow.scroll : false);
       expect(overflow.top).toBeGreaterThanOrEqual(0);
       expect(overflow.bottom).toBeLessThanOrEqual(height);
       expect(overflow.width).toBeLessThanOrEqual(width);
-      for (const sw of await report.getByRole('switch').all())
+      for (const sw of await report.getByRole('switch').all()) {
+        if (short) await sw.scrollIntoViewIfNeeded();
         await expect(sw).toBeInViewport({ ratio: 1 });
+      }
       await expect(report.getByRole('button', { name: 'Close report' })).toBeInViewport({
         ratio: 1,
       });
@@ -59,7 +64,7 @@ for (const active of [false, true]) {
       await report.locator('.auto-head h4').first().click();
       await expect(report.locator('.auto-form:not([hidden])')).toBeVisible();
       await report.getByRole('button', { name: 'Cancel', exact: true }).click();
-      await expect(report.locator('.auto-card:visible')).toHaveCount(5);
+      await expect(report.locator('.auto-card:visible')).toHaveCount(7);
     });
   }
 }

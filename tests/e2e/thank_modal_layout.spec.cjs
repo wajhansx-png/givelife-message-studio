@@ -15,7 +15,7 @@ for (const width of widths) {
       await page.setViewportSize({ width, height });
       await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
       await page.goto('/new#/donors/donated');
-      await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+      await page.locator('.donor-thanks').click();
       const modal = page.locator('#donorThanksDialog');
       await expect(modal).toBeVisible();
       await expect(page.locator('#thanksMessage')).toBeVisible();
@@ -135,7 +135,7 @@ test('Short mobile keyboard viewport: caption and message scroll above action ba
   await page.setViewportSize({ width: 390, height: 420 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new#/donors/donated');
-  await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+  await page.locator('.donor-thanks').click();
   const png = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1cAAAAASUVORK5CYII=',
     'base64',

@@ -44,8 +44,10 @@ async function uploadFile(url, file, headers, onProgress) {
       if (xhr.status >= 200 && xhr.status < 300) resolve(data);
       else reject(Error(data.error || 'That did not work. Nothing was changed.'));
     };
-    xhr.onerror = () => reject(Error('Could not reach the cloud. Check your internet and try again.'));
-    xhr.ontimeout = () => reject(Error('The upload took too long. Try again on a better connection.'));
+    xhr.onerror = () =>
+      reject(Error('Could not reach the cloud. Check your internet and try again.'));
+    xhr.ontimeout = () =>
+      reject(Error('The upload took too long. Try again on a better connection.'));
     onProgress(0, file.size, 'sending');
     xhr.send(file);
   });
@@ -596,7 +598,14 @@ $('chat').addEventListener(
 function paint(k) {
   $(k + 'Preview').innerHTML = waFormat($(k).value)
     .split('\n')
-    .map((l) => '<div class="wa-line' + (l ? (/^[ \t]*[—–─_-]{3,}[ \t]*$/.test(l) ? ' rule' : '') : ' blank') + '">' + (l || '<br>') + '</div>')
+    .map(
+      (l) =>
+        '<div class="wa-line' +
+        (l ? (/^[ \t]*[—–─_-]{3,}[ \t]*$/.test(l) ? ' rule' : '') : ' blank') +
+        '">' +
+        (l || '<br>') +
+        '</div>',
+    )
     .join('');
 }
 function render() {
@@ -632,9 +641,9 @@ function fit() {
   let best = last;
   if (fits(0)) best = 0;
   else
-    for (let lo = 1, hi = last; lo <= hi; ) {
+    for (let lo = 1, hi = last; lo <= hi;) {
       const mid = (lo + hi) >> 1;
-      if (fits(mid)) (best = mid), (hi = mid - 1);
+      if (fits(mid)) ((best = mid), (hi = mid - 1));
       else lo = mid + 1;
     }
   m.style.fontSize = at(best) + 'px';
@@ -1411,7 +1420,10 @@ function paintTimers(timers) {
     const t = groupTimers[b.dataset.delayScope],
       on = !!t && Number(b.dataset.delay) === t.delay;
     b.classList.toggle('is-pending', on);
-    b.classList.toggle('is-last', !on && lastDelay()[b.dataset.delayScope] === Number(b.dataset.delay));
+    b.classList.toggle(
+      'is-last',
+      !on && lastDelay()[b.dataset.delayScope] === Number(b.dataset.delay),
+    );
     b.setAttribute('aria-pressed', String(on));
     /* The chosen time keeps its own label (e.g. 1h) and is coloured; the clock shows on the group button. */
     b.textContent = String(b.dataset.delay === '60' ? '1h' : b.dataset.delay + 'm');

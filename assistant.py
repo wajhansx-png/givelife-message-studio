@@ -433,7 +433,11 @@ def _chat_raw(
             raise RuntimeError(
                 f"DeepSeek returned {e.code}"
                 + (" (check the API key)" if e.code in (401, 403) else "")
-                + (": the DeepSeek account has no balance left. Top up at platform.deepseek.com" if e.code == 402 else "")
+                + (
+                    ": the DeepSeek account has no balance left. Top up at platform.deepseek.com"
+                    if e.code == 402
+                    else ""
+                )
             ) from None
         except (urllib.error.URLError, OSError, ValueError):
             # A dropped connection, a timeout or a cut-off reply. Asking the AI has no side effects,

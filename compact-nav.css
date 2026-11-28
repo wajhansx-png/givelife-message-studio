@@ -553,7 +553,6 @@ html body #donorsPage[data-panel='messages'] .bank-picker {
   }
 }
 @media (max-width: 850px) {
-
   html body #donorsPage[data-panel='messages'] .bank-actions button,
   html body #donorsPage[data-panel='messages'] .bank-picker button {
     min-height: 48px;
@@ -561,7 +560,6 @@ html body #donorsPage[data-panel='messages'] .bank-picker {
     padding: 6px 4px;
   }
 
-  
   html body #donorsPage[data-panel='messages'] .bank-preview,
   html body #donorsPage[data-panel='messages'] .bank-message textarea {
     font-size: 17px;
@@ -584,7 +582,7 @@ html body #donorsPage[data-panel='messages'] .bank-picker {
     overflow-y: hidden;
     border-radius: 12px;
   }
-  
+
   html body #donorsPage[data-panel='messages'] .bank-picker button {
     flex: 0 0 auto;
     min-width: 96px;
@@ -627,7 +625,6 @@ html body #donorsPage[data-panel='messages'] .bank-picker {
     flex: 1 1 100%;
     margin: 0;
   }
-
 }
 @media (max-width: 850px) {
   html body #donorsPage[data-panel='messages'] .bank-message.bank-detail header {
@@ -884,4 +881,3 @@ html body #donorBatchForm > #batchRandomRow {
     min-width: 44px;
   }
 }
-

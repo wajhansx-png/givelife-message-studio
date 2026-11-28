@@ -2,8 +2,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   let key = localStorage.getItem('givelife-cloud-key') || '',
-    data = null,
-    timer = null;
+    data = null;
   const say = (text, bad) => {
     const f = $('feedback');
     f.textContent = text || '';
@@ -147,7 +146,7 @@
     load();
   });
   load();
-  timer = setInterval(() => {
+  setInterval(() => {
     if (!document.hidden && !document.querySelector('#factsForm :focus')) load();
   }, 30000);
 })();

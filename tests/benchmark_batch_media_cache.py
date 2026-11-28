@@ -48,12 +48,19 @@ if __name__ == "__main__":
     data = b"%PDF-1.7\n" + b"x" * (args.size_mb * 1_000_000)
     baseline = measure(previous_load, data, args.recipients, args.db_delay_ms / 1000)
     cached = measure(batch_media.load, data, args.recipients, args.db_delay_ms / 1000)
-    print(json.dumps({
-        "scope": "attachment preparation only; no network or WhatsApp messages",
-        "raw_bytes": len(data),
-        "recipients": args.recipients,
-        "fake_db_delay_ms": args.db_delay_ms,
-        "previous": baseline,
-        "cached": cached,
-        "preparation_speedup": round(baseline["seconds"] / max(cached["seconds"], 0.00001), 2),
-    }, indent=2))
+    print(
+        json.dumps(
+            {
+                "scope": "attachment preparation only; no network or WhatsApp messages",
+                "raw_bytes": len(data),
+                "recipients": args.recipients,
+                "fake_db_delay_ms": args.db_delay_ms,
+                "previous": baseline,
+                "cached": cached,
+                "preparation_speedup": round(
+                    baseline["seconds"] / max(cached["seconds"], 0.00001), 2
+                ),
+            },
+            indent=2,
+        )
+    )

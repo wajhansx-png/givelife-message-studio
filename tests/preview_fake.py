@@ -1,4 +1,5 @@
 import re
+
 """Local full-stack preview. Every WhatsApp request goes to a fake server."""
 
 import os, sys, tempfile, json, threading, shutil, time
@@ -318,7 +319,20 @@ if "--fake-ai" in sys.argv:
         "this father",
     ]
 
-    _KEEP = {"rs", "left", "only", "easypaisa", "jazzcash", "wajdan", "khan", "givelife", "foundation", "account", "reply", "done"}
+    _KEEP = {
+        "rs",
+        "left",
+        "only",
+        "easypaisa",
+        "jazzcash",
+        "wajdan",
+        "khan",
+        "givelife",
+        "foundation",
+        "account",
+        "reply",
+        "done",
+    }
     _POOL = {
         "english": "please help this little family today and share this message with everyone who can give".split(),
         "urdu": "براہ کرم آج اس چھوٹے خاندان کی مدد کریں اور یہ پیغام سب کو بھیجیں".split(),
@@ -331,18 +345,30 @@ if "--fake-ai" in sys.argv:
 
         src = prompt.split("<<<SOURCE\n", 1)[1].split("\nSOURCE>>>", 1)[0]
         mode = (
-            "ur_en" if "SAME MESSAGE, URDU + ENGLISH" in prompt
-            else "en" if "SAME MESSAGE, IN EASY ENGLISH" in prompt
+            "ur_en"
+            if "SAME MESSAGE, URDU + ENGLISH" in prompt
+            else "en"
+            if "SAME MESSAGE, IN EASY ENGLISH" in prompt
             else None
         )
         out, first, n = [], True, i
         for line in src.split("\n"):
-            if not line.strip() or dm_variants.is_fixed_line(line) or re.search(r"(?i)reply|^\s*(brother|sister)\b|\{", line):
+            if (
+                not line.strip()
+                or dm_variants.is_fixed_line(line)
+                or re.search(r"(?i)reply|^\s*(brother|sister)\b|\{", line)
+            ):
                 out.append(line)
                 first = first and not line.strip()
                 continue
             lang = dm_variants._lang(line)
-            target = "urdu" if (mode == "ur_en" and first) else "english" if mode in ("en", "ur_en") else ("urdu" if lang == "urdu" else "english")
+            target = (
+                "urdu"
+                if (mode == "ur_en" and first)
+                else "english"
+                if mode in ("en", "ur_en")
+                else ("urdu" if lang == "urdu" else "english")
+            )
             pool = _POOL[target]
 
             def swap(m):

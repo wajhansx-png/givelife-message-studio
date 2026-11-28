@@ -64,7 +64,9 @@ class DonorIntegration:
         self.giki = GikiVolunteers(
             app, self.eligible
         )  # its own people, message, batch and WhatsApp
-        self.giki2 = Giki2Volunteers(app, self.eligible)  # Giki 2: same messages, own people and WhatsApp
+        self.giki2 = Giki2Volunteers(
+            app, self.eligible
+        )  # Giki 2: same messages, own people and WhatsApp
         self.giki2.source = self.giki  # the people the owner moved come from the Giki list
         self.giki.partner = self.giki2  # opening Giki also takes them off its list
         from team_tasks import TeamTasks
@@ -374,7 +376,9 @@ class DonorIntegration:
         import dm_composer
 
         number, total, text = self.messages.next_test()
-        result = self.app.send_dm_test(dm_composer.personalize(text, "", "Brother"), poster, files, pdf, video)
+        result = self.app.send_dm_test(
+            dm_composer.personalize(text, "", "Brother"), poster, files, pdf, video
+        )
         return {
             **result,
             "version": number,
@@ -569,18 +573,28 @@ class DonorIntegration:
                         "gender": gender,
                     }
                 )
-                refused = str(result.get("message", "")) if isinstance(result, dict) and result.get("code") == "ERROR" else ""
-                if refused.startswith(("WhatsApp disconnected", "The Giki WhatsApp is disconnected")):
+                refused = (
+                    str(result.get("message", ""))
+                    if isinstance(result, dict) and result.get("code") == "ERROR"
+                    else ""
+                )
+                if refused.startswith(
+                    ("WhatsApp disconnected", "The Giki WhatsApp is disconnected")
+                ):
                     # refused BEFORE anything left the phone: not "Uncertain" (that would hide this person from every
                     # later batch and tell the owner to check a chat that has nothing in it)
-                    raise ValueError("WhatsApp is not connected. Nothing was sent. Reconnect it, then tap DM again.")
+                    raise ValueError(
+                        "WhatsApp is not connected. Nothing was sent. Reconnect it, then tap DM again."
+                    )
                 confirmed = isinstance(result, dict) and result.get("code") == "SUCCESS"
                 if confirmed:
                     self.jobs.manual_sent_at = time.time()
                 state = "Sent" if confirmed else "Uncertain"
                 self.book.delivery(r["id"], state, text=caption if state == "Sent" else None)
                 extras = None
-                if confirmed and any(part.get("code") != "SUCCESS" for part in result.get("after") or []):
+                if confirmed and any(
+                    part.get("code") != "SUCCESS" for part in result.get("after") or []
+                ):
                     extras = "Uncertain"
                 elif (pdf or video) and confirmed:
                     extras = self._single_extras(r, pdf, video)

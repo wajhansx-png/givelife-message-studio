@@ -378,12 +378,6 @@ html body #messageFocus :is(small, .last-sent, .send-title span) {
   html body #messageFocus .group-send h2 {
     font-size: 15px !important;
   }
-  
-  
-  
-  
-  
-  
 }
 #messageFocus#messageFocus :is(small, small.last-sent, .last-sent, .send-title span) {
   font-size: 12px !important;
@@ -557,7 +551,6 @@ html body .donor-page .donor-head #donorMessagesTab::before {
   html body .donor-page .donor-bottom > :is(.donor-message-info, #donorPace) {
     display: none !important;
   }
-  
 }
 
 /* ==== Donor Messages: a full-screen reader ====
@@ -780,7 +773,6 @@ html
 }
 /* Phones: card fills the screen, compact one-row thumb bar: Edit · Copy · ↻ · Next */
 @media (max-width: 899px) {
-
   html body #donorsPage[data-panel='messages'] #donorMessages .bank-heading {
     grid-template-columns: auto 1fr;
     row-gap: 2px !important;
@@ -910,7 +902,6 @@ html body dialog#donorsPage[data-panel='messages'] #donorMessages {
   border-radius: 0 !important;
 }
 @media (max-width: 899px) {
-
   html body #donorsPage[data-panel='messages'] #donorMessages .bank-detail {
     flex: 1 1 auto !important;
     max-height: none;
@@ -974,7 +965,6 @@ html body dialog#donorsPage[data-panel='messages'] #donorMessages {
   }
 }
 @media (max-width: 360px) {
-  
   html body .donor-page .donor-tabs > button {
     padding: 4px 4px !important;
   }
@@ -998,7 +988,6 @@ html body dialog#donorsPage[data-panel='messages'] #donorMessages {
     width: auto !important;
     white-space: nowrap;
   }
-
 }
 @media (max-width: 380px) {
   html body #donorsPage .donor-row {
@@ -1080,7 +1069,6 @@ html body .donor-page .donor-head > :is(.donor-message-tablist, #donorAdd, #dono
   html body .donor-page .donor-head > .donor-total {
     margin-left: 2px !important;
   }
-  
 }
 
 html body #donorsPage .donor-head > .donor-total {
@@ -1213,10 +1201,6 @@ html body #messageFocus :is(#focusFormatted, #focusText) {
     padding: 12px !important;
   }
 } /* 16px stops iOS zooming into the editor */
-/* Wide screens: the message sits in a centred reading column, lower from the top. */
-@media (min-width: 701px) {
-
-}
 /* WhatsApp look: the message is a green bubble on the dark chat wallpaper, so the eye lands on it. */
 html body #messageFocus .focus-paper {
   background: #0b141a radial-gradient(#ffffff0a 1px, transparent 1.5px) 0 0/18px 18px !important;
@@ -1649,7 +1633,6 @@ html body #donorsPage .donor-dm-badge[hidden] {
     transform: none;
     padding: 8px 12px;
   }
-  
 }
 /* DM all removed; DM ★ Important stands out. */
 html body #donorsPage #donorSendAll {
@@ -2102,8 +2085,6 @@ html body .replies-dialog .rep-remove {
     align-items: center;
     justify-content: center;
   }
-  
-  
 }
 
 /* Desktop donor list fills the table: the name column stretches, header lines up with rows. */
@@ -2458,8 +2439,6 @@ html body #messageFocus .focus-rail #focusCopy {
     width: min(760px, calc(100vw - 32px)) !important;
     overflow: auto !important;
   }
-  
-  
 }
 html body #donorBatchForm .batch-foot {
   position: sticky !important;
@@ -2672,12 +2651,6 @@ html body .report-card {
   width: min(680px, calc(100vw - 40px)) !important;
   margin: 0 auto !important;
 }
-html body .report-card .report-line {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  margin: 14px 0 !important;
-}
 html body .report-card button {
   display: block;
   margin: 22px 0 0 !important;
@@ -2748,7 +2721,7 @@ html body #donorsPage .dp-show[hidden] {
   html body #donorProgress > .dp-facts {
     grid-column: 1/-1 !important;
   }
-  
+
   html body #donorProgress > button:not(.dp-hide) {
     grid-row: 3;
     min-height: 38px !important;
@@ -2763,9 +2736,7 @@ html body #donorsPage .dp-show[hidden] {
     overflow: visible !important;
     flex-wrap: wrap !important;
   }
-  
-  
-  
+
   html body #donorProgress > button:not(.dp-hide) {
     grid-column: auto !important;
     width: 100% !important;
@@ -2808,14 +2779,6 @@ html body #donorsPage .dp-show {
     width: min(560px, calc(100% - 24px)) !important;
   }
 }
-/* Report: resume list under the lines. */
-
-html body .report-card .report-resume[data-state='pending'] {
-  border-color: #facc1566;
-}
-html body .report-card .report-resume[data-state='failed'] {
-  border-color: #f8717199;
-}
 /* Phone donor rows: tighter side columns so names get the room, and long names use two lines. */
 @media (max-width: 700px) {
   html body #donorsPage .donor-table .donor-row {
@@ -2848,8 +2811,6 @@ html body .report-card .report-resume[data-state='failed'] {
   html body #donorsPage .donor-row .donor-name::before {
     font-size: 13px !important;
   }
-
-  
 }
 @media (max-width: 700px) {
   html body #donorsPage .donor-table .donor-row {
@@ -2882,7 +2843,6 @@ html body .report-card .report-resume[data-state='failed'] {
     min-width: 26px !important;
     min-height: 30px !important;
   }
-  
 }
 /* Resume panel: one compact row; folds to a small pill. */
 html body #donorResumeStatus:not([hidden]) {
@@ -4307,9 +4267,6 @@ html
   > .donor-expand-btn {
   display: none !important;
 }
-@media (max-width: 700px) {
-
-}
 /* Full screen: the columns themselves sit in the middle of the screen (header and rows stay aligned). */
 
 /* Full screen: solid background (nothing shows through); the exit button gets its own strip above the list. */
@@ -4427,11 +4384,10 @@ html
     max-width: 520px !important;
     padding: 16px 18px !important;
   }
-  
+
   html body #messageFocus #focusFormatted :is(b, strong, h1, h2, h3) {
     font-size: 13px !important;
   }
-  
 }
 @media (min-width: 701px) {
   html body #messageFocus #focusFormatted {
@@ -4800,7 +4756,7 @@ html body #donorsPage .donor-table-wrap > #donorExpand {
   html body #donorsPage .donor-head #donorMessagesTab::before {
     display: none;
   }
-  
+
   html body #donorsPage .donor-head .hide-chip {
     min-height: 44px;
     min-width: 0;
@@ -4850,7 +4806,7 @@ html body #donorsPage .donor-table-wrap > #donorExpand {
     padding-inline: 5px;
     font-size: 11px;
   }
-  
+
   html body #donorsPage#donorsPage .donor-row > .donor-more {
     min-width: 44px;
     width: 44px;
@@ -5007,7 +4963,7 @@ html body #donorsPage .donor-table-wrap > #donorExpand {
     min-height: 44px;
     font-size: 16px;
   }
-  
+
   html
     body
     :is(
@@ -5845,7 +5801,6 @@ html body #donorsPage .donor-volunteers {
     font-size: 0 !important;
     padding: 0 !important;
   }
-  
 }
 @media (max-width: 899px) {
   html body:not(#_) #donorsPage#donorsPage .donor-toolbar {
@@ -6922,7 +6877,7 @@ html body:not(#_) #donorBatchPicker #batchStart:disabled {
     place-items: center;
     font-size: 0 !important;
   }
-  
+
   html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row .donor-identity > .donor-fu {
     line-height: 1.2 !important;
     min-width: 0;
@@ -6952,9 +6907,6 @@ html body:not(#_) #donorBatchPicker #batchStart:disabled {
     grid-area: more !important;
     align-self: center;
   }
-}
-@media (max-width: 380px) {
-
 }
 
 /* Full-screen icon in the header (phones); the follow-up switch lives in the Send DMs setup there. */
@@ -7130,7 +7082,6 @@ html body:not(#_) #donorBatchPicker select {
 
 /* Donor rows v2: small trophy; the follow-up note has its own line; nothing wraps. */
 @media (max-width: 700px) {
-
   html
     body:not(#_)
     #donorsPage#donorsPage[data-panel]
@@ -7199,7 +7150,6 @@ html body:not(#_) #donorsPage .donor-title #donorExpand {
   border-radius: 9px !important;
 }
 @media (max-width: 700px) {
-
   html
     body:not(#_)
     #donorsPage#donorsPage[data-panel]
@@ -7222,7 +7172,7 @@ html body:not(#_) #donorsPage .donor-title #donorExpand {
     background: #f59e0b22 !important;
     border-color: #f59e0b88 !important;
   }
-  
+
   html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row > .donor-dm {
     width: 40px !important;
     min-width: 40px !important;
@@ -7292,9 +7242,6 @@ html body:not(#_):not(#__) #donorsPage#donorsPage .donor-head .donor-title #dono
   }
 }
 @media (max-width: 380px) {
-
-}
-@media (max-width: 380px) {
   html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row {
     grid-template-columns: 24px minmax(0, 1fr) 26px 34px auto 28px !important;
     column-gap: 4px !important;
@@ -7313,7 +7260,7 @@ html body:not(#_):not(#__) #donorsPage#donorsPage .donor-head .donor-title #dono
     height: 26px !important;
     max-height: 26px !important;
   }
-  
+
   html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row > .donor-dm {
     width: 34px !important;
     min-width: 34px !important;

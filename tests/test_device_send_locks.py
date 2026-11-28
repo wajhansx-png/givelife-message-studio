@@ -64,6 +64,7 @@ class DeviceSendLocks(unittest.TestCase):
         def call(fn):
             with app.on_line(line):
                 app.serialized_send(fn)()
+
         return call
 
     def test_wire_upload_does_not_block_another_device_or_main(self):
@@ -92,7 +93,9 @@ class DeviceSendLocks(unittest.TestCase):
 
         with self.routing():
             self.parallel(chat, competing, independent=False)
-        self.assertEqual(steps, ["first attachment", "second attachment", "share message", "next chat"])
+        self.assertEqual(
+            steps, ["first attachment", "second attachment", "share message", "next chat"]
+        )
 
     def test_missing_device_never_calls_the_transport(self):
         called = []
@@ -102,75 +105,117 @@ class DeviceSendLocks(unittest.TestCase):
 
     def test_nested_sends_reuse_a_reentrant_wire_lock(self):
         called = []
+
         @app.serialized_send
         def nested():
             return app.serialized_send(lambda: called.append(1))()
+
         with self.routing(), app.on_line("giki"):
             nested()
         self.assertEqual(called, [1])
 
     def test_outer_send_lock_does_not_block_another_device(self):
         gates = {}
+
         def image(phone, _text):
             gates[phone]()
             return {"code": "SUCCESS"}
+
         def sender(line, phone):
             def call(fn):
                 gates[phone] = fn
-                app.send_custom({"line": line, "target": "phone", "phone": phone,
-                                 "message": "Synthetic message", "poster": True,
-                                 "kind": "owner_text"})
+                app.send_custom(
+                    {
+                        "line": line,
+                        "target": "phone",
+                        "phone": phone,
+                        "message": "Synthetic message",
+                        "poster": True,
+                        "kind": "owner_text",
+                    }
+                )
+
             return call
+
         with self.routing(), patch.object(app, "send_image", side_effect=image):
-            self.parallel(sender("giki", "923001234590"), sender("giki2", "923001234591"),
-                          independent=True)
+            self.parallel(
+                sender("giki", "923001234590"), sender("giki2", "923001234591"), independent=True
+            )
 
     def test_same_dm_recipient_does_not_upload_simultaneously_on_two_devices(self):
         # The outer fake upload blocks; the second device may enter only after it.
         gates = {}
+
         def upload(phone, _text):
             gates[threading.current_thread().name]()
             return {"code": "SUCCESS"}
+
         def call(line):
             def dispatch(fn):
                 gates[threading.current_thread().name] = fn
-                app.send_custom({"line": line, "target": "phone", "phone": "923001234592",
-                                 "message": "Synthetic message", "poster": True,
-                                 "kind": "owner_text"})
+                app.send_custom(
+                    {
+                        "line": line,
+                        "target": "phone",
+                        "phone": "923001234592",
+                        "message": "Synthetic message",
+                        "poster": True,
+                        "kind": "owner_text",
+                    }
+                )
+
             return dispatch
+
         with self.routing(), patch.object(app, "send_image", side_effect=upload):
             self.parallel(call("giki"), call("giki2"), independent=False)
 
     def test_real_poster_paths_keep_headers_recipients_and_both_receipts(self):
         barrier = threading.Barrier(2)
         uploaded, results, errors = [], [], []
+
         def upload(args, **kwargs):
             header = next(a for a in args if a.startswith("X-Device-Id:"))
             phone = next(a for a in args if a.startswith("phone="))
             uploaded.append((header, phone))
             barrier.wait(2)
-            return SimpleNamespace(stdout=json.dumps({
-                "code": "SUCCESS", "results": {"message_id": header}
-            }).encode())
+            return SimpleNamespace(
+                stdout=json.dumps({"code": "SUCCESS", "results": {"message_id": header}}).encode()
+            )
+
         def send(line, phone):
             try:
-                results.append(app.send_custom({
-                    "line": line, "target": "phone", "phone": phone,
-                    "message": "Synthetic message", "poster": True, "kind": "owner_text",
-                }))
+                results.append(
+                    app.send_custom(
+                        {
+                            "line": line,
+                            "target": "phone",
+                            "phone": phone,
+                            "message": "Synthetic message",
+                            "poster": True,
+                            "kind": "owner_text",
+                        }
+                    )
+                )
             except BaseException as error:
                 errors.append(error)
+
         original_get = app.STORE.get
+
         def slow_get(key, default=None):
             value = original_get(key, default)
             if key == "last_sent":
                 time.sleep(0.01)  # expose a stale-map overwrite without the state lock
             return value
-        with self.routing(), patch.object(app.subprocess, "run", side_effect=upload), \
-                patch.object(app.STORE, "get", side_effect=slow_get):
-            threads = [threading.Thread(target=send, args=values, daemon=True) for values in (
-                ("giki", "923001234593"), ("giki2", "923001234594")
-            )]
+
+        with (
+            self.routing(),
+            patch.object(app.subprocess, "run", side_effect=upload),
+            patch.object(app.STORE, "get", side_effect=slow_get),
+        ):
+            threads = [
+                threading.Thread(target=send, args=values, daemon=True)
+                for values in (("giki", "923001234593"), ("giki2", "923001234594"))
+            ]
             for thread in threads:
                 thread.start()
             for thread in threads:
@@ -178,10 +223,13 @@ class DeviceSendLocks(unittest.TestCase):
             self.assertTrue(all(not thread.is_alive() for thread in threads))
         self.assertEqual(errors, [])
         self.assertEqual([r["code"] for r in results], ["SUCCESS", "SUCCESS"])
-        self.assertCountEqual(uploaded, [
-            ("X-Device-Id: device-one", "phone=923001234593"),
-            ("X-Device-Id: device-two", "phone=923001234594"),
-        ])
+        self.assertCountEqual(
+            uploaded,
+            [
+                ("X-Device-Id: device-one", "phone=923001234593"),
+                ("X-Device-Id: device-two", "phone=923001234594"),
+            ],
+        )
         self.assertEqual(set(app.STORE.get("last_sent")), {"923001234593", "923001234594"})
         self.assertEqual(set(app.STORE.get("last_deliveries")), {"923001234593", "923001234594"})
 
@@ -195,17 +243,21 @@ class DeviceSendLocks(unittest.TestCase):
 
     def test_device_change_while_waiting_refuses_transport_and_releases_lock(self):
         chosen, state = threading.Event(), {"id": "device-one"}
+
         def selected():
             value = state["id"]
             if threading.current_thread().name == "route-waiter":
                 chosen.set()
             return value
+
         errors, sent = [], []
+
         def waiting():
             try:
                 self.wire("giki")(lambda: sent.append(1))
             except ValueError as error:
                 errors.append(str(error))
+
         with self.routing():
             app.LINES["giki"] = SimpleNamespace(device=selected)
             with app.on_line("giki"):
@@ -228,20 +280,24 @@ class DeviceSendLocks(unittest.TestCase):
     def test_device_change_during_preparation_fails_closed(self):
         sent = []
         with self.routing(), app.on_line("giki"):
+
             @app.serialized_send
             def prepare():
                 app.LINES["giki"] = SimpleNamespace(device=lambda: "device-new")
                 sent.append(app.device())
+
             with self.assertRaisesRegex(ValueError, "device changed"):
                 prepare()
         self.assertEqual(sent, [])
 
     def test_main_device_transition_cannot_split_an_alias_lock(self):
         first, release, other = threading.Event(), threading.Event(), threading.Event()
+
         def main_upload():
             with app.on_line(""), app._wire_lock():
                 first.set()
                 release.wait(2)
+
         with self.routing():
             thread = threading.Thread(target=main_upload, daemon=True)
             thread.start()
@@ -259,13 +315,19 @@ class DeviceSendLocks(unittest.TestCase):
 
     def test_restart_guard_sees_an_active_giki_device_lock(self):
         idle = SimpleNamespace(active=False, _cache={"jobs": []})
-        hub = SimpleNamespace(jobs=idle, volunteers=SimpleNamespace(jobs=idle),
-                              giki=SimpleNamespace(jobs=idle), giki2=SimpleNamespace(jobs=idle))
+        hub = SimpleNamespace(
+            jobs=idle,
+            volunteers=SimpleNamespace(jobs=idle),
+            giki=SimpleNamespace(jobs=idle),
+            giki2=SimpleNamespace(jobs=idle),
+        )
         entered, release = threading.Event(), threading.Event()
+
         def upload():
             with app.on_line("giki"), app._send_lock():
                 entered.set()
                 release.wait(2)
+
         with self.routing(), patch.object(app, "donors", return_value=hub):
             thread = threading.Thread(target=upload, daemon=True)
             thread.start()

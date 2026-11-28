@@ -41,7 +41,9 @@ class Rules(unittest.TestCase):
         group_extras.add(self.s, "video", url(MP4, "video/mp4"), "v.mp4")
         group_extras.add(self.s, "pdf", url(PDF, "application/pdf"), "r.pdf")
         self.s["group_extras"]["setup"] = {"x": 1}  # other saved settings stay
-        group_extras.set_setup(self.s, "group", "text_on", "poster")  # the video does not carry the text
+        group_extras.set_setup(
+            self.s, "group", "text_on", "poster"
+        )  # the video does not carry the text
         self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["poster", "video", "pdf"])
         v = group_extras.move_up(self.s, "pdf")  # PDF before the video
         self.assertEqual(v["order"], ["poster", "pdf", "video"])
@@ -50,18 +52,29 @@ class Rules(unittest.TestCase):
         group_extras.move_up(self.s, "pdf")  # already first: stays first
         self.assertEqual(group_extras.order(self.s), ("pdf", "poster", "video"))
         self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["pdf", "poster", "video"])
-        group_extras.set_on(self.s, "poster", False)  # an off file is skipped, the rest keep the order
+        group_extras.set_on(
+            self.s, "poster", False
+        )  # an off file is skipped, the rest keep the order
         self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["pdf", "video"])
-        self.assertEqual(group_extras.act(self.s, {"action": "move_up", "kind": "video"})["order"], ["pdf", "video", "poster"])
+        self.assertEqual(
+            group_extras.act(self.s, {"action": "move_up", "kind": "video"})["order"],
+            ["pdf", "video", "poster"],
+        )
         with self.assertRaises(ValueError):
             group_extras.act(self.s, {"action": "move_up", "kind": "gif"})
-        self.s["group_extras"]["after_order"] = ["pdf", "pdf", "video"]  # a damaged saved order: the usual one
+        self.s["group_extras"]["after_order"] = [
+            "pdf",
+            "pdf",
+            "video",
+        ]  # a damaged saved order: the usual one
         self.assertEqual(group_extras.order(self.s), group_extras.DEFAULT_ORDER)
 
     def test_video_then_pdf_in_that_order_each_switched_on_when_added(self):
         group_extras.add(self.s, "video", url(MP4, "video/mp4"), "oxygen.mp4")
         group_extras.add(self.s, "pdf", url(PDF, "application/pdf"), "report.pdf")
-        group_extras.set_text_on(self.s, "poster")  # the poster carries the text: both files follow it
+        group_extras.set_text_on(
+            self.s, "poster"
+        )  # the poster carries the text: both files follow it
         order = [k for k, _ in group_extras.to_send(self.s)]
         self.assertEqual(order, ["video", "pdf"])  # the video first, then the PDF
         v = group_extras.view(self.s)
@@ -82,7 +95,9 @@ class Rules(unittest.TestCase):
         group_extras.add(self.s, "pdf", url(PDF, "application/pdf"))
         self.assertEqual(group_extras.view(self.s)["text_on"], "video")
         self.assertEqual(group_extras.lead(self.s), group_extras.saved(self.s, "video"))
-        self.assertEqual([k for k, _ in group_extras.to_send(self.s)], ["pdf"])  # the video went first
+        self.assertEqual(
+            [k for k, _ in group_extras.to_send(self.s)], ["pdf"]
+        )  # the video went first
         group_extras.set_text_on(self.s, "poster")
         group_extras.set_on(self.s, "pdf", False)  # a later change keeps the choice
         self.assertEqual(group_extras.view(self.s)["text_on"], "poster")
@@ -99,14 +114,20 @@ class Rules(unittest.TestCase):
         video = group_extras.saved(self.s, "video")
         group_extras.set_setup(self.s, "giki", "poster", False)
         group_extras.set_setup(self.s, "giki", "pdf", True)
-        self.assertEqual(group_extras.lead(self.s, "group"), video)  # groups and DMs: the text on the video
+        self.assertEqual(
+            group_extras.lead(self.s, "group"), video
+        )  # groups and DMs: the text on the video
         self.assertEqual(group_extras.lead(self.s, "dm"), video)
-        self.assertIsNone(group_extras.lead(self.s, "giki"))  # Giki: poster with caption unless Video is picked
+        self.assertIsNone(
+            group_extras.lead(self.s, "giki")
+        )  # Giki: poster with caption unless Video is picked
         group_extras.set_setup(self.s, "giki", "text_on", "video")
         self.assertEqual(group_extras.lead(self.s, "giki"), video)
         group_extras.set_setup(self.s, "giki", "text_on", "poster")
         self.assertIsNone(group_extras.after_poster(self.s, "group"))  # no after poster added yet
-        group_extras.add(self.s, "poster", url(b"\xff\xd8\xff" + b"0" * 200, "image/jpeg"), "after.jpg")
+        group_extras.add(
+            self.s, "poster", url(b"\xff\xd8\xff" + b"0" * 200, "image/jpeg"), "after.jpg"
+        )
         after = group_extras.saved(self.s, "poster")
         self.assertEqual(group_extras.after_poster(self.s, "group"), after)  # groups: on when added
         self.assertIsNone(group_extras.after_poster(self.s, "giki"))  # Giki: only when ticked
@@ -118,7 +139,9 @@ class Rules(unittest.TestCase):
         self.assertEqual([k for k, _ in group_extras.after_items(self.s, "giki")], ["pdf"])
         self.assertEqual(group_extras.extras_for(self.s, "dm"), {"pdf": False, "video": False})
         v = group_extras.view(self.s)["setup"]
-        self.assertEqual((v["dm"]["text_on"], v["giki"]["poster"], v["giki"]["pdf"]), ("video", False, True))
+        self.assertEqual(
+            (v["dm"]["text_on"], v["giki"]["poster"], v["giki"]["pdf"]), ("video", False, True)
+        )
         group_extras.set_on(self.s, "pdf", False)  # a group switch never changes the others
         self.assertTrue(group_extras.view(self.s)["setup"]["giki"]["pdf"])
         group_extras.remove(self.s, "pdf")  # no file: nothing to send, the tick is kept for later
@@ -141,7 +164,9 @@ class Rules(unittest.TestCase):
         with self.assertRaises(ValueError):
             group_extras.add(self.s, "video", url(PDF, "application/pdf"))
         with self.assertRaises(ValueError):
-            group_extras.add(self.s, "pdf", url(b"not a pdf at all", "application/pdf"))  # contents do not match
+            group_extras.add(
+                self.s, "pdf", url(b"not a pdf at all", "application/pdf")
+            )  # contents do not match
         with self.assertRaises(ValueError):
             group_extras.add(self.s, "audio", url(PDF, "application/pdf"))
         with self.assertRaises(ValueError):
@@ -196,13 +221,18 @@ class Sending(unittest.TestCase):
         self.assertEqual(out[0]["code"], "SKIPPED")
 
     def test_the_group_post_adds_them_after_the_poster_and_a_dm_does_not(self):
-        ok = type("R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})})()
+        ok = type(
+            "R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})}
+        )()
         statuses = {"is_connected": True, "is_logged_in": True}
-        with patch.object(app, "api_result", lambda *a, **k: statuses), patch.object(
-            app, "post_media", lambda *a, **k: ok
-        ), patch.object(app, "poster_media", lambda *a, **k: Path(__file__)), patch.object(
-            app, "record_delivery", lambda *a, **k: None
-        ), patch.object(app, "check_stop", lambda: None), patch.object(app, "check_hold", lambda: None):
+        with (
+            patch.object(app, "api_result", lambda *a, **k: statuses),
+            patch.object(app, "post_media", lambda *a, **k: ok),
+            patch.object(app, "poster_media", lambda *a, **k: Path(__file__)),
+            patch.object(app, "record_delivery", lambda *a, **k: None),
+            patch.object(app, "check_stop", lambda: None),
+            patch.object(app, "check_hold", lambda: None),
+        ):
             group = app.send_image(GROUP, "caption")
             dm = app.send_image("923001234567@s.whatsapp.net", "caption")
         self.assertEqual(group.get("code"), "SUCCESS")
@@ -222,47 +252,61 @@ class Sending(unittest.TestCase):
 
         with (
             patch.object(app, "send_batch_attachment", side_effect=send),
-            patch.object(app, "api_result", return_value={"is_connected": True, "is_logged_in": True}),
+            patch.object(
+                app, "api_result", return_value={"is_connected": True, "is_logged_in": True}
+            ),
             patch.object(app, "record_delivery"),
         ):
             result = app.send_image(GROUP, "Caption")
         self.assertEqual(result["code"], "SUCCESS")
-        self.assertEqual([(c[1], c[2]) for c in self.calls], [("Caption", self.video_id), ("", self.pdf_id)])
-
+        self.assertEqual(
+            [(c[1], c[2]) for c in self.calls], [("Caption", self.video_id), ("", self.pdf_id)]
+        )
 
     def test_an_auto_group_post_goes_the_same_way_poster_then_the_ticked_files(self):
         """Auto (every 45 minutes) posts through _group_attempt exactly like this; the ticked PDF and video follow."""
-        ok = type("R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})})()
+        ok = type(
+            "R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})}
+        )()
         statuses = {"is_connected": True, "is_logged_in": True}
         group_extras.set_on(app.STORE, "video", False)  # PDF only
-        with patch.object(app, "api_result", lambda *a, **k: statuses), patch.object(
-            app, "post_media", lambda *a, **k: ok
-        ), patch.object(app, "poster_media", lambda *a, **k: Path(__file__)), patch.object(
-            app, "record_delivery", lambda *a, **k: None
-        ), patch.object(app, "check_stop", lambda: None), patch.object(app, "check_hold", lambda: None):
+        with (
+            patch.object(app, "api_result", lambda *a, **k: statuses),
+            patch.object(app, "post_media", lambda *a, **k: ok),
+            patch.object(app, "poster_media", lambda *a, **k: Path(__file__)),
+            patch.object(app, "record_delivery", lambda *a, **k: None),
+            patch.object(app, "check_stop", lambda: None),
+            patch.object(app, "check_hold", lambda: None),
+        ):
             auto = app._group_attempt({"with_picture": True, "manual": False}, GROUP, "caption")
         self.assertEqual(auto.get("code"), "SUCCESS")
         self.assertEqual([e["kind"] for e in auto["extras"]], ["pdf"])
 
-
     def test_the_after_poster_is_its_own_picture_sent_after_the_message_when_ticked(self):
         group_extras.set_text_on(app.STORE, "video")
         group_extras.set_setup(app.STORE, "dm", "text_on", "video")
-        group_extras.add(app.STORE, "poster", url(b"\xff\xd8\xff" + b"1" * 200, "image/jpeg"), "after.jpg")
+        group_extras.add(
+            app.STORE, "poster", url(b"\xff\xd8\xff" + b"1" * 200, "image/jpeg"), "after.jpg"
+        )
         after = group_extras.saved(app.STORE, "poster")
         media = []
-        ok = type("R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})})()
+        ok = type(
+            "R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})}
+        )()
 
         def post(jid, cap, path):
             media.append((jid, Path(cap).read_text(), str(path)))
             return ok
 
         statuses = {"is_connected": True, "is_logged_in": True}
-        with patch.object(app, "api_result", lambda *a, **k: statuses), patch.object(
-            app, "post_media", post
-        ), patch.object(app, "poster_media", lambda *a, **k: Path("/x/poster.jpg")), patch.object(
-            app, "record_delivery", lambda *a, **k: None
-        ), patch.object(app, "check_stop", lambda: None), patch.object(app, "check_hold", lambda: None):
+        with (
+            patch.object(app, "api_result", lambda *a, **k: statuses),
+            patch.object(app, "post_media", post),
+            patch.object(app, "poster_media", lambda *a, **k: Path("/x/poster.jpg")),
+            patch.object(app, "record_delivery", lambda *a, **k: None),
+            patch.object(app, "check_stop", lambda: None),
+            patch.object(app, "check_hold", lambda: None),
+        ):
             group = app.send_image(GROUP, "the case text")
             dm_off = app.send_image("923001234567@s.whatsapp.net", "the case text")
             group_extras.set_setup(app.STORE, "dm", "poster", True)
@@ -276,31 +320,44 @@ class Sending(unittest.TestCase):
         self.assertEqual(dm_off["code"], "SUCCESS")
         self.assertNotIn("after", dm_off)
         # DM, poster ticked: the video with the text, then the after poster
-        self.assertEqual(self.calls[-2], ("923001234567@s.whatsapp.net", "the case text", self.video_id))
+        self.assertEqual(
+            self.calls[-2], ("923001234567@s.whatsapp.net", "the case text", self.video_id)
+        )
         self.assertEqual(self.calls[-1], ("923001234567@s.whatsapp.net", "", after))
         self.assertEqual(dm_on["after"], [{"kind": "poster", "code": "SUCCESS"}])
 
     def test_a_group_can_switch_the_after_poster_off(self):
-        group_extras.add(app.STORE, "poster", url(b"\xff\xd8\xff" + b"2" * 200, "image/jpeg"), "after.jpg")
+        group_extras.add(
+            app.STORE, "poster", url(b"\xff\xd8\xff" + b"2" * 200, "image/jpeg"), "after.jpg"
+        )
         group_extras.set_setup(app.STORE, "group", "poster", False)
         self.assertNotIn("poster", [k for k, _ in group_extras.to_send(app.STORE)])
 
-    def test_giki_2nd_and_3rd_messages_follow_the_case_in_the_chosen_order_each_only_when_ticked(self):
+    def test_giki_2nd_and_3rd_messages_follow_the_case_in_the_chosen_order_each_only_when_ticked(
+        self,
+    ):
         group_extras.set_setup(app.STORE, "giki", "text_on", "poster")
-        group_extras.add(app.STORE, "poster", url(b"\xff\xd8\xff" + b"4" * 200, "image/jpeg"), "after.jpg")
+        group_extras.add(
+            app.STORE, "poster", url(b"\xff\xd8\xff" + b"4" * 200, "image/jpeg"), "after.jpg"
+        )
         after = group_extras.saved(app.STORE, "poster")
 
         def run():
             self.calls.clear()
-            ok = type("R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})})()
+            ok = type(
+                "R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})}
+            )()
             statuses = {"is_connected": True, "is_logged_in": True}
-            with app.on_line("giki"), patch.dict(app.LINES, {"giki": type("L", (), {"device": lambda s: "giki-x"})()}), patch.object(
-                app, "api_result", lambda *a, **k: statuses
-            ), patch.object(app, "post_media", lambda *a: ok), patch.object(
-                app, "poster_media", lambda *a, **k: Path("/x/poster.jpg")
-            ), patch.object(app, "record_delivery", lambda *a, **k: None), patch.object(
-                app, "check_stop", lambda: None
-            ), patch.object(app, "check_hold", lambda: None):
+            with (
+                app.on_line("giki"),
+                patch.dict(app.LINES, {"giki": type("L", (), {"device": lambda s: "giki-x"})()}),
+                patch.object(app, "api_result", lambda *a, **k: statuses),
+                patch.object(app, "post_media", lambda *a: ok),
+                patch.object(app, "poster_media", lambda *a, **k: Path("/x/poster.jpg")),
+                patch.object(app, "record_delivery", lambda *a, **k: None),
+                patch.object(app, "check_stop", lambda: None),
+                patch.object(app, "check_hold", lambda: None),
+            ):
                 r = app.send_image("923001234567@s.whatsapp.net", "case")
             return [c[2] for c in self.calls], r
 
@@ -321,16 +378,27 @@ class Sending(unittest.TestCase):
 
     def test_giki_2nd_message_can_be_the_video_and_picking_the_other_rows_item_swaps_them(self):
         s = app.STORE
-        self.assertEqual((group_extras.setup(s, "giki")["second"], group_extras.setup(s, "giki")["third"]), ("poster", "pdf"))
+        self.assertEqual(
+            (group_extras.setup(s, "giki")["second"], group_extras.setup(s, "giki")["third"]),
+            ("poster", "pdf"),
+        )
         group_extras.set_setup(s, "giki", "second", "video")
-        self.assertEqual((group_extras.setup(s, "giki")["second"], group_extras.setup(s, "giki")["third"]), ("video", "pdf"))
+        self.assertEqual(
+            (group_extras.setup(s, "giki")["second"], group_extras.setup(s, "giki")["third"]),
+            ("video", "pdf"),
+        )
         group_extras.set_setup(s, "giki", "third", "video")  # the 2nd had the video: they swap
-        self.assertEqual((group_extras.setup(s, "giki")["second"], group_extras.setup(s, "giki")["third"]), ("pdf", "video"))
+        self.assertEqual(
+            (group_extras.setup(s, "giki")["second"], group_extras.setup(s, "giki")["third"]),
+            ("pdf", "video"),
+        )
         group_extras.set_setup(s, "giki", "text_on", "poster")
         group_extras.set_setup(s, "giki", "video", True)
         group_extras.set_setup(s, "giki", "pdf", True)
         self.assertEqual([k for k, _ in group_extras.after_items(s, "giki")], ["pdf", "video"])
-        group_extras.set_setup(s, "giki", "text_on", "video")  # the video already carried the case: not twice
+        group_extras.set_setup(
+            s, "giki", "text_on", "video"
+        )  # the video already carried the case: not twice
         self.assertEqual([k for k, _ in group_extras.after_items(s, "giki")], ["pdf"])
         with self.assertRaises(ValueError):
             group_extras.set_setup(s, "giki", "second", "audio")
@@ -342,27 +410,38 @@ class Sending(unittest.TestCase):
             group_extras.add(app.STORE, "poster", url(PDF, "application/pdf"))
         with self.assertRaises(ValueError):
             group_extras.add(app.STORE, "poster", url(b"not a picture", "image/png"))
-        group_extras.add(app.STORE, "poster", url(b"\x89PNG\r\n\x1a\n" + b"3" * 100, "image/png"), "p.png")
+        group_extras.add(
+            app.STORE, "poster", url(b"\x89PNG\r\n\x1a\n" + b"3" * 100, "image/png"), "p.png"
+        )
         self.assertTrue(group_extras.view(app.STORE)["poster"]["has"])
 
     def test_a_dm_whose_text_is_on_the_poster_sends_the_poster_with_the_text(self):
-        group_extras.set_text_on(app.STORE, "poster")  # one choice: groups and DMs both use the poster
+        group_extras.set_text_on(
+            app.STORE, "poster"
+        )  # one choice: groups and DMs both use the poster
         media = []
-        ok = type("R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})})()
+        ok = type(
+            "R", (), {"stdout": json.dumps({"code": "SUCCESS", "results": {"message_id": "m"}})}
+        )()
 
         def post(jid, cap, path):
             media.append((jid, Path(cap).read_text()))
             return ok
 
         statuses = {"is_connected": True, "is_logged_in": True}
-        with patch.object(app, "api_result", lambda *a, **k: statuses), patch.object(
-            app, "post_media", post
-        ), patch.object(app, "poster_media", lambda *a, **k: Path("/x/poster.jpg")), patch.object(
-            app, "record_delivery", lambda *a, **k: None
-        ), patch.object(app, "check_stop", lambda: None), patch.object(app, "check_hold", lambda: None):
+        with (
+            patch.object(app, "api_result", lambda *a, **k: statuses),
+            patch.object(app, "post_media", post),
+            patch.object(app, "poster_media", lambda *a, **k: Path("/x/poster.jpg")),
+            patch.object(app, "record_delivery", lambda *a, **k: None),
+            patch.object(app, "check_stop", lambda: None),
+            patch.object(app, "check_hold", lambda: None),
+        ):
             app.send_image("923001234567@s.whatsapp.net", "dm text")
             app.send_image(GROUP, "group text")
-        self.assertEqual(media[0], ("923001234567@s.whatsapp.net", "dm text"))  # poster carries the DM text
+        self.assertEqual(
+            media[0], ("923001234567@s.whatsapp.net", "dm text")
+        )  # poster carries the DM text
         self.assertEqual(media[1], (GROUP, "group text"))  # groups too: the same choice
 
     def test_an_older_video_poster_stops_a_poster_text_send_before_anyone_is_marked(self):
@@ -372,7 +451,9 @@ class Sending(unittest.TestCase):
                 app._refuse_video_poster("dm", "dm")
             with self.assertRaisesRegex(ValueError, "Poster must be a picture"):
                 app._refuse_video_poster("group", "group")
-            group_extras.set_text_on(app.STORE, "video")  # the case video carries the text: no poster picture needed
+            group_extras.set_text_on(
+                app.STORE, "video"
+            )  # the case video carries the text: no poster picture needed
             group_extras.set_setup(app.STORE, "dm", "text_on", "video")
             app._refuse_video_poster("dm", "dm")
         with patch.object(app, "poster_file_kind", lambda use="dm": "image"):
@@ -398,11 +479,18 @@ class PdfName(unittest.TestCase):
         with patch.object(app, "STORE", store):
             group_extras.add(store, "pdf", url(PDF, "application/pdf"), "scan.pdf")
             args = []
-            with patch.object(app, "active_case_name", lambda: "Mirha"), patch.object(
-                app.subprocess,
-                "run",
-                lambda a, **k: args.append(a) or type("R", (), {"stdout": b'{"code":"SUCCESS"}'})(),
-            ), patch.object(app, "check_stop", lambda: None), patch.object(app, "check_hold", lambda: None):
+            with (
+                patch.object(app, "active_case_name", lambda: "Mirha"),
+                patch.object(
+                    app.subprocess,
+                    "run",
+                    lambda a, **k: (
+                        args.append(a) or type("R", (), {"stdout": b'{"code":"SUCCESS"}'})()
+                    ),
+                ),
+                patch.object(app, "check_stop", lambda: None),
+                patch.object(app, "check_hold", lambda: None),
+            ):
                 r = app.send_batch_attachment("923001234567", "", group_extras.saved(store, "pdf"))
         self.assertEqual(r["code"], "SUCCESS")
         self.assertTrue(any("filename=Mirha Medical Documents.pdf" in x for x in args[0]))
@@ -434,7 +522,9 @@ class OneTextChoice(unittest.TestCase):
         group_extras.add(s, "video", url(MP4, "video/mp4"))
         video = group_extras.saved(s, "video")
         self.assertEqual(group_extras.lead(s, "dm"), video)  # default: the video carries the text
-        group_extras.act(s, {"action": "text_on", "value": "poster"})  # one click, from either place
+        group_extras.act(
+            s, {"action": "text_on", "value": "poster"}
+        )  # one click, from either place
         self.assertIsNone(group_extras.lead(s, "group"))
         self.assertIsNone(group_extras.lead(s, "dm"))
         group_extras.act(s, {"action": "text_on", "value": "video"})
@@ -444,10 +534,12 @@ class OneTextChoice(unittest.TestCase):
         group_extras.act(s, {"action": "text_on", "value": "poster"})
         self.assertEqual(group_extras.lead(s, "giki"), video)  # Giki keeps its own
 
-
     def test_an_old_saved_state_with_groups_on_poster_and_dms_on_video_heals_to_the_poster(self):
         s = Store()
         group_extras.add(s, "video", url(MP4, "video/mp4"))
-        s.put(group_extras.KEY, {**s.get(group_extras.KEY), "text_on": "poster", "setup": {"dm": {"text_on": "video"}}})
+        s.put(
+            group_extras.KEY,
+            {**s.get(group_extras.KEY), "text_on": "poster", "setup": {"dm": {"text_on": "video"}}},
+        )
         self.assertIsNone(group_extras.lead(s, "dm"))
         self.assertEqual(group_extras.view(s)["setup"]["dm"]["text_on"], "poster")

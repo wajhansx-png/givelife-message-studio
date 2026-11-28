@@ -130,16 +130,32 @@ class StyleFix(unittest.TestCase):
         )
         out = style_fix.fix(pdf, left=4000)
         parts = out["text"].split("\n\n")
-        self.assertEqual(parts[0], "*Parents sit with their child's body and have no money for the burial.* 💔")
+        self.assertEqual(
+            parts[0], "*Parents sit with their child's body and have no money for the burial.* 💔"
+        )
         self.assertEqual(parts[1], "_The father borrowed money and now people ask for it back._")
         self.assertTrue(parts[2].startswith("• *_Just 2 kind people"))
         self.assertTrue(parts[2].endswith("_*"))
         self.assertNotIn("🔴", out["text"])  # the PDF layout has no separate amount line
 
     def test_lines_pasted_without_blank_lines_are_separated(self):
-        crammed = "\n".join([HOOK, STORY, "Rs. 2,000 LEFT", "- Just 2 people donating Rs. 1,000 can help this father.", "03097458815", "EASYPAISA ONLY (Wajdan Khan)", "— GiveLife Foundation"])
+        crammed = "\n".join(
+            [
+                HOOK,
+                STORY,
+                "Rs. 2,000 LEFT",
+                "- Just 2 people donating Rs. 1,000 can help this father.",
+                "03097458815",
+                "EASYPAISA ONLY (Wajdan Khan)",
+                "— GiveLife Foundation",
+            ]
+        )
         out = style_fix.fix(crammed, left=2000)
-        self.assertTrue(out["text"].startswith(f"*{HOOK}*\n\n_{STORY}_\n\n🔴 Rs. 2,000 LEFT\n\n• *_Just 2 people"))
+        self.assertTrue(
+            out["text"].startswith(
+                f"*{HOOK}*\n\n_{STORY}_\n\n🔴 Rs. 2,000 LEFT\n\n• *_Just 2 people"
+            )
+        )
 
     def test_empty_message_is_refused_with_a_plain_reason(self):
         with self.assertRaises(ValueError):

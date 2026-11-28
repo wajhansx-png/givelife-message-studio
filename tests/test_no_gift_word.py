@@ -20,7 +20,9 @@ class NoGift(unittest.TestCase):
             "Gifting Rs. 1,000 helps.",
         ):
             self.assertIn("never use", quality.hard_reason(SOURCE, text), text)
-            self.assertIn("never use", quality.hard_reason(text, text), text)  # also when the source says it
+            self.assertIn(
+                "never use", quality.hard_reason(text, text), text
+            )  # also when the source says it
 
     def test_normal_wording_and_other_words_are_fine(self):
         for text in (
@@ -31,14 +33,23 @@ class NoGift(unittest.TestCase):
             self.assertEqual(quality.hard_reason(SOURCE, text), "", text)
 
     def test_the_versions_bank_rejects_a_reworded_version_with_it(self):
-        reason = focus_bank.reject_reason(SOURCE, "ONE GIFT FROM YOU IS THE OXYGEN MIRHA NEEDS. Rs. 45,500 left.")
+        reason = focus_bank.reject_reason(
+            SOURCE, "ONE GIFT FROM YOU IS THE OXYGEN MIRHA NEEDS. Rs. 45,500 left."
+        )
         self.assertIn("gift", reason.lower())
 
     def test_a_written_message_with_it_fails_the_style_check_and_the_ai_is_told_not_to(self):
         ctx = {"facts": SOURCE, "left": 45500, "people": 23, "each": 2000}
-        bad = message_styles.problems("english", "💔 One gift from you is the oxygen she needs.", {"hook": "One gift", "verse": "x"}, ctx)
+        bad = message_styles.problems(
+            "english",
+            "💔 One gift from you is the oxygen she needs.",
+            {"hook": "One gift", "verse": "x"},
+            ctx,
+        )
         self.assertTrue(any("gift" in b for b in bad), bad)
-        prompt = message_styles.build_prompt("english", dict(ctx, style_examples=[]), ("a", "an angle"), [], "", [])
+        prompt = message_styles.build_prompt(
+            "english", dict(ctx, style_examples=[]), ("a", "an angle"), [], "", []
+        )
         self.assertIn('Never use the word "gift"', prompt)
 
     def test_the_dm_writing_prompt_carries_the_rule_and_no_longer_suggests_gift(self):

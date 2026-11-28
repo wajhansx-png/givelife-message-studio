@@ -86,7 +86,7 @@ test('the main link and /old are not changed', async ({ page, request }) => {
   const home = await (await request.get('/')).text();
   expect(home).not.toContain('GIKI_LINE');
   expect(home).not.toContain('giki.js');
-  expect(await (await request.get('/old')).text()).not.toContain('giki.js');
+  expect(await (await request.get('/new')).text()).not.toContain('giki.js');
   expect(await (await request.get('/giki')).text()).toContain('giki.js');
 });
 
@@ -230,10 +230,14 @@ test('Timer: the same sheet as the Case page, saved and used by DM all', async (
   await expect.poll(async () => (await giki()).second).toBe('video');
   await expect.poll(() => on('2nd message: Video')).toBe('1');
   await sheet.getByRole('button', { name: '3rd message: Video' }).click(); // swaps with the 2nd
-  await expect.poll(async () => [(await giki()).second, (await giki()).third].join()).toBe('pdf,video');
+  await expect
+    .poll(async () => [(await giki()).second, (await giki()).third].join())
+    .toBe('pdf,video');
   await sheet.getByRole('button', { name: '2nd message: Poster pic' }).click();
   await sheet.getByRole('button', { name: '3rd message: PDF' }).click();
-  await expect.poll(async () => [(await giki()).second, (await giki()).third].join()).toBe('poster,pdf');
+  await expect
+    .poll(async () => [(await giki()).second, (await giki()).third].join())
+    .toBe('poster,pdf');
   await expect(sheet.locator('.cr-set-link .cr-set-val')).toHaveText('3');
   await sheet.getByRole('button', { name: 'More: Minutes between DMs' }).click();
   await sheet.getByRole('button', { name: 'Less: DMs per batch' }).click();
@@ -502,17 +506,39 @@ test('Waiting and DMed tabs: a person who got the case moves to DMed and cannot 
   // Earlier tests exercise Stop and turn extra files on. Settle that queue and
   // explicitly choose the two-message sequence this tab test is asserting.
   await expect
-    .poll(async () => ((await api(port, '/giki/volunteers')).delivery || {}).state, { timeout: 20000 })
+    .poll(async () => ((await api(port, '/giki/volunteers')).delivery || {}).state, {
+      timeout: 20000,
+    })
     .not.toMatch(/Starting|Sending|Waiting/);
-  for (const [field, value] of [['text_on', 'poster'], ['poster', false], ['pdf', false], ['video', false]])
+  for (const [field, value] of [
+    ['text_on', 'poster'],
+    ['poster', false],
+    ['pdf', false],
+    ['video', false],
+  ])
     await api(port, '/group-extras', { action: 'setup', profile: 'giki', field, value });
-  await api(port, '/focus-bank', { kind: 'group', text: 'GIKITEST tabs caption. Rs. 25,000 left.' });
+  await api(port, '/focus-bank', {
+    kind: 'group',
+    text: 'GIKITEST tabs caption. Rs. 25,000 left.',
+  });
   await api(port, '/giki/volunteers', { action: 'message', text: 'Share for {name}, please.' });
-  await api(port, '/giki/volunteers', { action: 'add', name: 'Tabs Sent Giki', phone: '15551250001' });
-  await api(port, '/giki/volunteers', { action: 'add', name: 'Tabs Waiting Giki', phone: '15551250002' });
+  await api(port, '/giki/volunteers', {
+    action: 'add',
+    name: 'Tabs Sent Giki',
+    phone: '15551250001',
+  });
+  await api(port, '/giki/volunteers', {
+    action: 'add',
+    name: 'Tabs Waiting Giki',
+    phone: '15551250002',
+  });
   const sent = (await api(port, '/giki/volunteers')).items.find((d) => d.name === 'Tabs Sent Giki');
   const before = (await gikiSends()).length;
-  const started = await api(port, '/giki/volunteers', { action: 'send_case', id: sent.id, request_id: 'req-tabs-0001' });
+  const started = await api(port, '/giki/volunteers', {
+    action: 'send_case',
+    id: sent.id,
+    request_id: 'req-tabs-0001',
+  });
   expect(started.error).toBeUndefined();
   await expect.poll(async () => (await gikiSends()).length, { timeout: 20000 }).toBe(before + 2);
   const items = (await api(port, '/giki/volunteers')).items;
@@ -530,7 +556,9 @@ test('Waiting and DMed tabs: a person who got the case moves to DMed and cannot 
   await expect(page.locator('.vol-row', { hasText: 'Tabs Waiting Giki' })).toHaveCount(0);
   // ··· > Move to Waiting: back in Waiting (nothing is sent now). Only once nothing is sending.
   await expect
-    .poll(async () => ((await api(port, '/giki/volunteers')).delivery || {}).state, { timeout: 20000 })
+    .poll(async () => ((await api(port, '/giki/volunteers')).delivery || {}).state, {
+      timeout: 20000,
+    })
     .not.toMatch(/Starting|Sending|Waiting/);
   await page.reload();
   await page.waitForLoadState('networkidle'); // the list draws once more as it finishes loading
@@ -545,19 +573,34 @@ test('Waiting and DMed tabs: a person who got the case moves to DMed and cannot 
   await expect(page.locator('.vol-row', { hasText: 'Tabs Sent Giki' })).toBeVisible();
 });
 
-test('DMed tab: Move all to Waiting puts everyone back at once and sends nothing', async ({ page }) => {
+test('DMed tab: Move all to Waiting puts everyone back at once and sends nothing', async ({
+  page,
+}) => {
   await link();
-  await api(port, '/focus-bank', { kind: 'group', text: 'GIKITEST all back caption. Rs. 25,000 left.' });
+  await api(port, '/focus-bank', {
+    kind: 'group',
+    text: 'GIKITEST all back caption. Rs. 25,000 left.',
+  });
   await api(port, '/giki/volunteers', { action: 'message', text: 'Share for {name}, please.' });
-  await api(port, '/giki/volunteers', { action: 'add', name: 'All Back Giki', phone: '15551260001' });
+  await api(port, '/giki/volunteers', {
+    action: 'add',
+    name: 'All Back Giki',
+    phone: '15551260001',
+  });
   const p = (await api(port, '/giki/volunteers')).items.find((d) => d.name === 'All Back Giki');
   const before = (await gikiSends()).length;
-  await api(port, '/giki/volunteers', { action: 'send_case', id: p.id, request_id: 'req-allback-01' });
+  await api(port, '/giki/volunteers', {
+    action: 'send_case',
+    id: p.id,
+    request_id: 'req-allback-01',
+  });
   await expect
     .poll(async () => (await gikiSends()).length, { timeout: 20000 })
     .toBeGreaterThanOrEqual(before + 2); // the case and the share (plus any 2nd / 3rd left on)
   await expect
-    .poll(async () => ((await api(port, '/giki/volunteers')).delivery || {}).state, { timeout: 20000 })
+    .poll(async () => ((await api(port, '/giki/volunteers')).delivery || {}).state, {
+      timeout: 20000,
+    })
     .not.toMatch(/Starting|Sending|Waiting/);
   const total = (await api(port, '/giki/volunteers')).items.length;
   const errors = await open(page, 320);

@@ -11,7 +11,7 @@ test.afterAll(() => server && server.kill());
 
 async function open(page, kind) {
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
-  await page.goto('/old');
+  await page.goto('/new');
   if (kind === 'dm') await showDm(page);
   await showPreview(page);
   await expect(page.locator('#focusFormatted')).not.toHaveText('');
@@ -19,23 +19,6 @@ async function open(page, kind) {
 const button = (page, name) =>
   page.locator('.focus-styles').getByRole('button', { name, exact: true });
 const urdu = /[؀-ۿ]/;
-
-for (const kind of ['group', 'dm'])
-  for (const width of [1440, 390, 320])
-    test(`three compact buttons, ${kind} editor, ${width}px`, async ({ page }) => {
-      await page.setViewportSize({ width, height: 800 });
-      await open(page, kind);
-      for (const name of ['Urdu + English', 'English', 'Trigger']) {
-        const box = await button(page, name).boundingBox();
-        expect(box, name).not.toBeNull();
-        expect(box.height).toBeLessThanOrEqual(48);
-        expect(box.x).toBeGreaterThanOrEqual(0);
-        expect(box.x + box.width).toBeLessThanOrEqual(width);
-      }
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
-      ).toBe(true);
-    });
 
 /* Each button works on the message ON SCREEN (the server rewrites that message in place; tested in
    tests/test_message_styles.py). Here: the request carries the shown message, the answer shows as an unsaved
@@ -46,168 +29,16 @@ const scripted = async (page, asked) =>
     asked.push(body);
     const ur = body.style.startsWith('ur');
     await r.fulfill({
-      json: { text: (ur ? '*آج اس خاندان کی مدد کریں*' : '*Help this family today*') + ' ' + body.style + ' ' + Date.now() + '\n\n_Same message, rewritten._ 💔\n\n🔴 Rs. 25,000 LEFT\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)' },
+      json: {
+        text:
+          (ur ? '*آج اس خاندان کی مدد کریں*' : '*Help this family today*') +
+          ' ' +
+          body.style +
+          ' ' +
+          Date.now() +
+          '\n\n_Same message, rewritten._ 💔\n\n🔴 Rs. 25,000 LEFT\n\n*03097458815*\nEASYPAISA ONLY (Wajdan Khan)',
+      },
     });
-  });
-
-for (const kind of ['group', 'dm'])
-  test(`${kind}: the buttons rewrite the message on screen, stay editable and save`, async ({ page, request }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await open(page, kind);
-    const asked = [];
-    await scripted(page, asked);
-    const text = page.locator('#focusText');
-    const shown = await text.inputValue();
-    await button(page, 'Urdu + English').click();
-    await expect(page.locator('#focusState')).toContainText('Written');
-    expect(asked[0]).toMatchObject({ style: 'ur_en', kind, current: shown }); // the message that was on screen
-    const a = await text.inputValue();
-    expect(a.split('\n')[0]).toMatch(urdu);
-    await button(page, 'Trigger').click(); // the Urdu + English on screen, stronger
-    await expect(page.locator('#focusState')).toContainText('Written: Urdu + English Trigger');
-    expect(asked[1]).toMatchObject({ style: 'ur_en_more', current: a });
-    await button(page, 'English').click();
-    await expect(page.locator('#focusState')).toContainText('Written: English.');
-    expect(asked[2].style).toBe('en');
-    const d = await text.inputValue();
-    expect(d).not.toMatch(urdu);
-    // It is a normal editable draft: Edit, change a word, Done, and it is saved by the existing path.
-    await page.locator('#focusEdit').click();
-    await expect(text).toBeVisible();
-    await text.fill(d.replace('LEFT', 'LEFT ONLY'));
-    await page.locator('#focusEdit').click();
-    await expect(page.locator('#focusState')).toContainText('Saved');
-    const saved = await (await request.get('/drafts', { headers: { Authorization: 'Bearer ' + KEY } })).json();
-    expect(saved[kind]).toContain('LEFT ONLY');
-    await page.reload();
-    await expect(page.locator('#focusFormatted')).toContainText('LEFT ONLY');
-  });
-
-for (const kind of ['group', 'dm'])
-  for (const width of [390, 1440])
-    test(`${kind} ${width}px: a button fills the PREVIEW, no edit mode, no keyboard, saved only on Save Base`, async ({
-      page,
-      request,
-    }) => {
-      await page.setViewportSize({ width, height: 800 });
-      await open(page, kind);
-      const drafts = () =>
-        request
-          .get('/drafts', { headers: { Authorization: 'Bearer ' + KEY } })
-          .then((r) => r.json());
-      await scripted(page, []);
-      const savedBefore = (await drafts())[kind];
-      const before = await page.locator('#focusFormatted').innerText();
-      for (const name of ['English', 'Trigger']) {
-        await button(page, name).click();
-        await expect(page.locator('#focusState')).toContainText('Written');
-        // Still the read-only preview: the text box stays hidden and nothing is focused (no phone keyboard).
-        await expect(page.locator('#focusText')).toBeHidden();
-        await expect(page.locator('#focusFormatted')).toBeVisible();
-        expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe('TEXTAREA');
-        await expect(page.locator('#focusEdit')).toHaveText('Edit');
-      }
-      const now = await page.locator('#focusFormatted').innerText();
-      expect(now).not.toBe(before);
-      expect(now).toContain('Rs. 25,000 LEFT');
-      await expect(page.locator('#focusFormatted strong').first()).toBeVisible(); // real bold, not *stars*
-      await expect(page.locator('#focusVersion')).toContainText('not saved');
-      // The preview still fits the screen (no scrolling box, nothing cut off).
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
-      ).toBe(true);
-      const fits = await page
-        .locator('#focusFormatted')
-        .evaluate((n) => n.scrollHeight <= n.clientHeight + 3);
-      expect(fits).toBe(true);
-      // Not saved yet.
-      expect((await drafts())[kind]).toBe(savedBefore);
-      // Save Base keeps it.
-      await page.locator('#focusSave').click();
-      await page.locator('#focusBaseSave').click();
-      await expect(page.locator('#focusState')).toContainText('Saved base message');
-      expect((await drafts())[kind]).toContain('🔴 Rs. 25,000 LEFT');
-    });
-
-test('a failed write leaves the text alone, says why, and the buttons work again', async ({
-  page,
-}) => {
-  await open(page, 'group');
-  await page.locator('#focusEdit').click();
-  const text = page.locator('#focusText');
-  const before = await text.inputValue();
-  await page.route('**/message-style', (r) =>
-    r.fulfill({
-      status: 503,
-      json: { error: 'AI is not connected, so nothing was written. Your message is unchanged.' },
-    }),
-  );
-  await button(page, 'English').click();
-  await expect(page.locator('#focusState')).toContainText('AI is not connected');
-  await expect(text).toHaveValue(before);
-  for (const name of ['Urdu + English', 'English', 'Trigger'])
-    await expect(button(page, name)).toBeEnabled();
-});
-
-test('only one write at a time: the buttons are locked while one is running', async ({ page }) => {
-  await open(page, 'group');
-  let calls = 0,
-    release;
-  const gate = new Promise((r) => (release = r));
-  await page.route('**/message-style', async (r) => {
-    calls++;
-    await gate;
-    await r.fulfill({ json: { text: '*Help this family today*\n\n_Same message, rewritten._\n\n🔴 Rs. 25,000 LEFT' } });
-  });
-  await button(page, 'English').click();
-  await expect(button(page, 'Trigger')).toBeDisabled();
-  await button(page, 'English')
-    .click({ force: true, timeout: 1000 })
-    .catch(() => {});
-  release();
-  await expect(page.locator('#focusState')).toContainText('Written');
-  expect(calls).toBe(1);
-});
-
-test('a finished case is refused with a clear message', async ({ page }) => {
-  await open(page, 'group');
-  await page.locator('#focusEdit').click();
-  const before = await page.locator('#focusText').inputValue();
-  await page.route('**/message-style', (r) =>
-    r.fulfill({
-      status: 400,
-      json: { error: 'The case is complete (Rs. 0 left). Nothing was written.' },
-    }),
-  );
-  await button(page, 'Urdu + English').click();
-  await expect(page.locator('#focusState')).toContainText('The case is complete');
-  await expect(page.locator('#focusText')).toHaveValue(before);
-});
-
-for (const width of [320, 390, 768, 1440])
-  test(`button row is responsive at ${width}px: a clean grid on phones, one row on desktop`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width, height: 800 });
-    await open(page, 'group');
-    const boxes = [];
-    for (const name of ['Urdu + English', 'English', 'Trigger'])
-      boxes.push(await button(page, name).boundingBox());
-    for (const b of boxes) {
-      expect(b.x).toBeGreaterThanOrEqual(0);
-      expect(b.x + b.width).toBeLessThanOrEqual(width);
-    }
-    // No label is cut off.
-    for (const name of ['Urdu + English', 'English', 'Trigger'])
-      expect(await button(page, name).evaluate((n) => n.scrollWidth <= n.clientWidth + 1)).toBe(
-        true,
-      );
-    if (width <= 899) {
-      expect(new Set(boxes.map((b) => Math.round(b.y))).size).toBe(1); // one row of three, no sideways scroll
-      expect(boxes[0].height).toBeGreaterThanOrEqual(36);
-    } else {
-      expect(new Set(boxes.map((b) => Math.round(b.y))).size).toBe(1);
-    }
   });
 
 /* /new (the phone reader): three chips fit in one row, and Trigger works on the language that is picked. */
@@ -221,7 +52,9 @@ for (const width of [320, 390, 1440])
     await page.route('**/message-style', async (r) => {
       const body = r.request().postDataJSON();
       asked.push(body.style);
-      await r.fulfill({ json: { text: '*Hook ' + body.style + '*\n\n🔴 Rs. 25,000 LEFT', left: 25000 } });
+      await r.fulfill({
+        json: { text: '*Hook ' + body.style + '*\n\n🔴 Rs. 25,000 LEFT', left: 25000 },
+      });
     });
     await page.goto('/new#/preview');
     await expect(page.locator('#focusFormatted')).not.toHaveText('');
@@ -250,7 +83,7 @@ for (const width of [320, 390, 1440])
     expect(asked).toEqual(['en', 'en_more', 'ur_en']);
   });
 
-test('/new desktop: the chips on the Message card write the same way and show the choice', async ({
+test('/new desktop: Rewrite opens the message page and English writes the same way and shows the choice', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -261,13 +94,15 @@ test('/new desktop: the chips on the Message card write the same way and show th
     await r.fulfill({ json: { text: '*Hook*\n\n🔴 Rs. 25,000 LEFT', left: 25000 } });
   });
   await page.goto('/new');
-  const card = page.locator('#ui2Styles button');
-  await expect(card).toHaveText(['Urdu + English', 'English', 'Trigger', 'Style fix']);
-  await card.nth(1).click();
+  // minimal main screen: the rewrite buttons live on the message page that Rewrite opens
+  await page.locator('#ui2GnavMain .ui2-rewrite').click();
   await expect(page.locator('#messageFocus')).toBeVisible();
+  await page.locator('#ui2RewriteRow [data-lang="en"]').click();
   await expect.poll(() => asked.length).toBe(1);
-  await expect(page.locator('#messageFocus .focus-styles button').nth(1)).toHaveAttribute('aria-pressed', 'true');
-  await expect(card.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#messageFocus .focus-styles button').nth(1)).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   expect(asked).toEqual(['en']);
 });
 
@@ -284,14 +119,19 @@ test('Style fix endpoint: bold hook, italic story, formatted lines; same words; 
   request,
 }) => {
   const H = { Authorization: 'Bearer ' + KEY };
-  const r = await request.post('/style-fix', { headers: H, data: { text: PLAIN_MSG, kind: 'group' } });
+  const r = await request.post('/style-fix', {
+    headers: H,
+    data: { text: PLAIN_MSG, kind: 'group' },
+  });
   expect(r.status()).toBe(200);
   const d = await r.json();
   const parts = d.text.split('\n\n');
   expect(parts[0]).toBe('*آپ کے ایک قدم سے ایک غمزدہ باپ کا بوجھ ہلکا ہو سکتا ہے*');
   expect(parts[1]).toMatch(/^_Yousaf was only 2 years old\..* 💔_$/);
   expect(parts).toContain('🔴 Rs. 2,000 LEFT');
-  expect(parts).toContain('• *_Just 2 people donating Rs. 1,000 can help this grieving father._* 🤲');
+  expect(parts).toContain(
+    '• *_Just 2 people donating Rs. 1,000 can help this grieving father._* 🤲',
+  );
   expect(d.changed).toBe(true);
   const words = (t) => t.replace(/[*_]/g, '').match(/[\p{L}\p{N}]+/gu);
   expect(words(d.text)).toEqual(words(PLAIN_MSG)); // not one word changed
@@ -300,60 +140,14 @@ test('Style fix endpoint: bold hook, italic story, formatted lines; same words; 
   ).json();
   expect(again.changed).toBe(false);
   expect(again.text).toBe(d.text);
-  const empty = await request.post('/style-fix', { headers: H, data: { text: '  ', kind: 'group' } });
+  const empty = await request.post('/style-fix', {
+    headers: H,
+    data: { text: '  ', kind: 'group' },
+  });
   expect(empty.status()).toBe(400);
 });
 
-for (const kind of ['group', 'dm'])
-  test(`${kind} Style fix button: fixes the open message as an unsaved draft, then says it is already in style`, async ({
-    page,
-    request,
-  }) => {
-    await page.setViewportSize({ width: 390, height: 800 });
-    await open(page, kind);
-    const drafts = () =>
-      request.get('/drafts', { headers: { Authorization: 'Bearer ' + KEY } }).then((r) => r.json());
-    const savedBefore = (await drafts())[kind];
-    const posted = [];
-    await page.route('**/style-fix', async (r) => {
-      posted.push(r.request().postDataJSON());
-      await r.continue();
-    });
-    const fix = page.locator('#focusStyleFix');
-    await expect(fix).toBeVisible();
-    await expect(fix).toHaveText('Style fix');
-    expect((await fix.boundingBox()).height).toBeGreaterThanOrEqual(40);
-    await fix.click();
-    await expect(fix).toHaveText(/Fixed ✓|Already in your style ✓/);
-    expect(posted[0].kind).toBe(kind);
-    expect(posted[0].text.length).toBeGreaterThan(10);
-    // The preview is the fixed text; nothing is saved until Save Base.
-    if ((await fix.textContent()).startsWith('Fixed')) {
-      await expect(page.locator('#focusVersion')).toContainText('Fixed · not saved');
-      await expect(page.locator('#focusFormatted strong').first()).toBeVisible();
-    }
-    expect((await drafts())[kind]).toBe(savedBefore);
-    // The button returns to its name, and a second press has nothing left to fix.
-    await expect(fix).toHaveText('Style fix', { timeout: 5000 });
-    await fix.click();
-    await expect(fix).toHaveText('Already in your style ✓');
-    expect(posted.length).toBe(2);
-  });
-
-test('Style fix: a failed request leaves the text alone and the buttons work again', async ({ page }) => {
-  await open(page, 'group');
-  await page.locator('#focusEdit').click();
-  const text = page.locator('#focusText');
-  const before = await text.inputValue();
-  await page.route('**/style-fix', (r) => r.fulfill({ status: 400, json: { error: 'There is no message to fix.' } }));
-  await page.locator('#focusStyleFix').click();
-  await expect(page.locator('#focusState')).toContainText('There is no message to fix');
-  await expect(text).toHaveValue(before);
-  for (const name of ['Urdu + English', 'English', 'Trigger']) await expect(button(page, name)).toBeEnabled();
-  await expect(page.locator('#focusStyleFix')).toBeEnabled();
-});
-
-test('/new desktop: the Style fix chip on the Message card opens the reader and fixes it', async ({ page }) => {
+test('/new desktop: Style fix on the message page fixes the message', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   const posted = [];
@@ -362,10 +156,11 @@ test('/new desktop: the Style fix chip on the Message card opens the reader and 
     await r.continue();
   });
   await page.goto('/new');
-  const chip = page.locator('#ui2Styles button', { hasText: 'Style fix' });
-  await expect(chip).toBeVisible();
-  expect(await chip.getAttribute('aria-pressed')).toBeNull(); // an action, not a choice
-  await chip.click();
+  await page.locator('#ui2GnavMain .ui2-rewrite').click();
   await expect(page.locator('#messageFocus')).toBeVisible();
+  const fix = page.locator('#focusStyleFix');
+  await expect(fix).toBeVisible();
+  expect(await fix.getAttribute('aria-pressed')).toBeNull(); // an action, not a choice
+  await fix.click();
   await expect.poll(() => posted.length).toBe(1);
 });

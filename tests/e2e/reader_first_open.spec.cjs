@@ -10,7 +10,8 @@ test.describe.configure({ mode: 'serial' });
 test.beforeAll(async () => (server = await startOwnServer(port)));
 test.afterAll(() => server?.kill());
 
-const BASE = '*Base wording* of the case. Please help today. Rs. 5,000 needed.\n\n03097458815\nEASYPAISA ONLY (Wajdan Khan)';
+const BASE =
+  '*Base wording* of the case. Please help today. Rs. 5,000 needed.\n\n03097458815\nEASYPAISA ONLY (Wajdan Khan)';
 
 for (const [width, height] of [
   [320, 640],
@@ -18,7 +19,9 @@ for (const [width, height] of [
   [820, 1180],
   [1280, 720],
 ])
-  test(`first open at ${width}px: a calm card while the message loads, then the text, no thin strip`, async ({ page }) => {
+  test(`first open at ${width}px: a calm card while the message loads, then the text, no thin strip`, async ({
+    page,
+  }) => {
     await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
     await page.setViewportSize({ width, height });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
@@ -40,7 +43,8 @@ for (const [width, height] of [
       return {
         empty: f.textContent.trim() === '',
         formattedH: f.getBoundingClientRect().height,
-        formattedHidden: getComputedStyle(f).visibility === 'hidden' || f.getBoundingClientRect().height === 0,
+        formattedHidden:
+          getComputedStyle(f).visibility === 'hidden' || f.getBoundingClientRect().height === 0,
         toolsHidden: !tools || getComputedStyle(tools).visibility === 'hidden',
         cardH: parseFloat(card.height) || 0,
         cardContent: card.content,
@@ -58,18 +62,29 @@ for (const [width, height] of [
     const done = await page.evaluate(() => {
       const f = document.getElementById('focusFormatted').getBoundingClientRect();
       const t = document.getElementById('ui2MsgTools');
-      return { w: f.width, h: f.height, tools: getComputedStyle(t).visibility, toolsY: t.getBoundingClientRect().y, fy: f.y };
+      return {
+        w: f.width,
+        h: f.height,
+        tools: getComputedStyle(t).visibility,
+        toolsY: t.getBoundingClientRect().y,
+        fy: f.y,
+      };
     });
     expect(done.w).toBeGreaterThan(Math.min(width - 40, 250)); // a real message card, not a strip
     expect(done.h).toBeGreaterThan(60);
     expect(done.tools).toBe('visible');
     expect(done.toolsY).toBeGreaterThanOrEqual(done.fy); // the icons sit on the message
-    const card = await page.evaluate(() => getComputedStyle(document.querySelector('#messageFocus .focus-paper'), '::before').content);
+    const card = await page.evaluate(
+      () =>
+        getComputedStyle(document.querySelector('#messageFocus .focus-paper'), '::before').content,
+    );
     expect(card).toBe('none'); // the card is gone once the text is there
   });
 
 for (const width of [390, 1440])
-  test(`opened straight on the message page (${width}px): Back shows the new main screen, not the old layout`, async ({ page }) => {
+  test(`opened straight on the message page (${width}px): Back shows the new main screen, not the old layout`, async ({
+    page,
+  }) => {
     await api(port, '/focus-bank', { kind: 'group', action: 'save', text: BASE });
     await page.setViewportSize({ width, height: 900 });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);

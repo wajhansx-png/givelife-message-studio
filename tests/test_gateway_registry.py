@@ -149,7 +149,11 @@ class WakeAfterRestartTest(unittest.TestCase):
     """After a restart the gateway keeps a second WhatsApp's login asleep until it is asked to reconnect."""
 
     def line(self, record, session=True):
-        self.calls, self.awake, self.session = [], False, session  # session: the gateway still keeps a login
+        self.calls, self.awake, self.session = (
+            [],
+            False,
+            session,
+        )  # session: the gateway still keeps a login
         store = Store({"wa_line_giki2": record})
 
         def call(method, path, device="", body=None, timeout=15, raw=False):

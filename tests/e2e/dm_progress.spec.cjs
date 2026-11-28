@@ -25,11 +25,12 @@ for (const width of [1440, 390])
       if (route.request().method() === 'GET') await route.fulfill({ json: job });
       else await route.continue();
     });
-    await page.goto('/old#/donors/all');
+    await page.goto('/new#/donors/all');
     const progress = page.locator('#donorProgress');
-    await expect(progress).toBeVisible();
-    await expect(progress).toContainText('7 of 10 sent');
-    await expect(progress).toContainText('3 left');
+    // paused: on a phone the paused bar takes the progress bar's place and shows the same counts
+    const counts = page.locator(':is(#donorProgress, #donorResumeStatus):visible').first();
+    await expect(counts).toContainText('7 of 10 sent');
+    await expect(counts).toContainText('3 left');
     job = {
       ...job,
       state: 'Completed',

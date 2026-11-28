@@ -435,7 +435,6 @@ body.message-focus-open > .foot {
     overflow: visible;
     padding: 12px;
   }
-
 }
 
 /* Editor tools: formatting only while editing; secondary actions quieter; phone actions sit in a sticky thumb bar. */
@@ -509,7 +508,7 @@ body.message-focus-open > .foot {
     font-size: 16px;
     padding: 14px;
   }
-  
+
   #messageFocus #focusPoster,
   #messageFocus #focusManual,
   #messageFocus #focusRegenerate {

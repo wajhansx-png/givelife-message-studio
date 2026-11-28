@@ -751,7 +751,11 @@ def reject_reason(source, text, existing=(), novelty=True):
         return "a number, amount or phone number changed"
     scary = dm_variants.alarm_terms(text) - dm_variants.alarm_terms(source)
     if scary:
-        return "invented danger or urgency (" + ", ".join(sorted(scary)) + "); keep the owner's own urgency"
+        return (
+            "invented danger or urgency ("
+            + ", ".join(sorted(scary))
+            + "); keep the owner's own urgency"
+        )
     for line in source.split("\n"):
         if (
             any(

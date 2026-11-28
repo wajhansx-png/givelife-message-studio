@@ -13,7 +13,7 @@ on:
       - server.py
       - index.html
       - tests/test_foundation_notes.py
-      - tests/e2e/foundation_notes.spec.cjs
+      - tests/e2e/notes_rail.spec.cjs
       - tests/preview_fake.py
       - .github/workflows/notes-qa.yml
   workflow_dispatch:
@@ -43,7 +43,7 @@ jobs:
           corepack pnpm install --frozen-lockfile
           corepack pnpm exec playwright install --with-deps chromium
       - name: Notes desktop and mobile browser tests (fake data only)
-        run: corepack pnpm exec playwright test tests/e2e/foundation_notes.spec.cjs
+        run: corepack pnpm exec playwright test tests/e2e/notes_rail.spec.cjs
       - name: Diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@v4

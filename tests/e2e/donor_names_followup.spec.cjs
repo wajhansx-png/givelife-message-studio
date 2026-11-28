@@ -15,7 +15,7 @@ for (const [width, height] of [
       localStorage.clear();
       localStorage.setItem('givelife-cloud-key', 'manual-fix-preview-key');
     });
-    await page.goto('/old#/donors/all');
+    await page.goto('/new#/donors/all');
     await expect(page.locator('.donor-row').first()).toBeVisible();
     await page.evaluate(() =>
       document.querySelectorAll('.donor-row').forEach((row) => {

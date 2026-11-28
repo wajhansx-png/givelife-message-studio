@@ -566,7 +566,11 @@
     };
     body.append(pick, ta, result);
     const check = async () => {
-      const d = await call(BASE + '/volunteers', { action: 'import', text: ta.value, dry_run: true });
+      const d = await call(BASE + '/volunteers', {
+        action: 'import',
+        text: ta.value,
+        dry_run: true,
+      });
       checked = ta.value;
       result.textContent =
         d.found +

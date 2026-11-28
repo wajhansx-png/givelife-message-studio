@@ -65,15 +65,16 @@ for (const [width, height] of [
   });
 }
 
-test('the Case tab is the first tab, and Tools opens the existing tools and comes back', async ({
+test('phone: Case opens from More (Notes took its tab), and Tools opens the existing tools and comes back', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new');
   const tabs = page.locator('#ui2Tabs .ui2-tab:visible');
-  await expect(tabs.first()).toHaveText('Case');
-  await tabs.first().click();
+  await expect(tabs.first()).toHaveText('Notes'); // owner's phone bar: Notes, Message, Donors, Chat, More
+  await page.locator('#ui2Tabs .ui2-tab[data-tab="more"]').click();
+  await page.locator('#ui2Sheet .ui2-tile', { hasText: 'Case page' }).click();
   await expect(page.locator('#casePage')).toBeVisible();
   await page.locator('#crTools').click();
   await expect(page.locator('#crMenu .cr-tool-h')).toHaveText(['Daily', 'Messages', 'Setup']);
@@ -150,18 +151,27 @@ for (const [key, title] of [
 ]) {
   test(`${title} switch selects only its own sending row`, async ({ page }) => {
     await open(page, 390, 844);
-    const request = page.waitForRequest((r) =>
-      r.url().endsWith('/case-run') && r.method() === 'POST' && r.postDataJSON().action === 'plan',
+    const request = page.waitForRequest(
+      (r) =>
+        r.url().endsWith('/case-run') &&
+        r.method() === 'POST' &&
+        r.postDataJSON().action === 'plan',
     );
     await page.locator(`.cr-row[data-key="${key}"] .cr-sw`).click();
     const plan = (await request).postDataJSON().plan;
-    expect(Object.entries(plan).filter(([, row]) => row.enabled).map(([name]) => name)).toEqual([key]);
+    expect(
+      Object.entries(plan)
+        .filter(([, row]) => row.enabled)
+        .map(([name]) => name),
+    ).toEqual([key]);
     const sheet = page.locator('#caseSheet');
     await expect(sheet.locator('#csTitle')).toHaveText(`Start ${title}?`);
     await expect(sheet.locator('.cr-sub')).toContainText(`Mode: ${title} →`);
     await sheet.getByRole('button', { name: 'Cancel' }).click();
     expect((await api(port, '/case-run')).status).toBe('idle');
-    expect(['Starting', 'Sending', 'Waiting']).not.toContain((await api(port, '/donor-delivery')).state);
+    expect(['Starting', 'Sending', 'Waiting']).not.toContain(
+      (await api(port, '/donor-delivery')).state,
+    );
   });
 }
 
@@ -195,8 +205,7 @@ test('each row has a small settings icon that opens its timing in one tap, and i
   // 320px phone: the row name stays on one line
   await page.setViewportSize({ width: 320, height: 568 });
   const names = page.locator('.cr-row .cr-name');
-  for (let i = 0; i < 5; i++)
-    expect((await names.nth(i).boundingBox()).height).toBeLessThan(50);
+  for (let i = 0; i < 5; i++) expect((await names.nth(i).boundingBox()).height).toBeLessThan(50);
 });
 
 test('start one row, switch rows on and off on their own, pause all, resume and finish', async ({
@@ -395,7 +404,10 @@ test('GiveLife Group shows ON when the main page Auto is ON, and its switch turn
   await expect(sw).toHaveAttribute('aria-checked', 'true', { timeout: 8000 });
   await expect(row.locator('.cr-live-line')).toContainText('main page');
   // Other rows are not touched.
-  await expect(page.locator('.cr-row[data-key="top"] .cr-sw')).toHaveAttribute('aria-checked', 'false');
+  await expect(page.locator('.cr-row[data-key="top"] .cr-sw')).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
   // Switching it OFF here switches the real Auto OFF (it overwrites).
   await sw.click();
   await expect(sw).toHaveAttribute('aria-checked', 'false');
@@ -404,10 +416,18 @@ test('GiveLife Group shows ON when the main page Auto is ON, and its switch turn
 });
 
 /* Top Donors / Important Donors: the Start question also offers PDF and Video (the files saved for the groups). */
-const PDF = 'data:application/pdf;base64,' + Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(300, 120)]).toString('base64');
-const MP4 = 'data:video/mp4;base64,' + Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(300)]).toString('base64');
+const PDF =
+  'data:application/pdf;base64,' +
+  Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(300, 120)]).toString('base64');
+const MP4 =
+  'data:video/mp4;base64,' +
+  Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(300)]).toString(
+    'base64',
+  );
 
-test('Top Donors start question: PDF and Video ticks are disabled with no file, then tick-able once added; the group row has none', async ({ page }) => {
+test('Top Donors start question: PDF and Video ticks are disabled with no file, then tick-able once added; the group row has none', async ({
+  page,
+}) => {
   await api(port, '/cases', { action: 'new', name: 'Extras case', left: 30000 });
   await api(port, '/group-extras', { action: 'remove', kind: 'pdf' });
   await api(port, '/group-extras', { action: 'remove', kind: 'video' });
@@ -442,7 +462,9 @@ test('Top Donors start question: PDF and Video ticks are disabled with no file, 
 });
 
 for (const width of [280, 320, 360, 412])
-  test(`Top Donors start question at ${width}px: the PDF / Video ticks fit inside the sheet with 44px targets`, async ({ page }) => {
+  test(`Top Donors start question at ${width}px: the PDF / Video ticks fit inside the sheet with 44px targets`, async ({
+    page,
+  }) => {
     await api(port, '/cases', { action: 'new', name: 'Extras width ' + width, left: 30000 });
     await api(port, '/group-extras', { action: 'add', kind: 'pdf', data: PDF, name: 'report.pdf' });
     await api(port, '/group-extras', { action: 'add', kind: 'video', data: MP4, name: 'clip.mp4' });

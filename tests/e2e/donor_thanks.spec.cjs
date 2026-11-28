@@ -27,7 +27,7 @@ for (const width of [1440, 768, 390, 320, 280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
     await page.goto('/new#/donors/donated');
-    const button = page.getByRole('button', { name: 'Thank donors', exact: true });
+    const button = page.locator('.donor-thanks');
     await expect(button).toBeVisible();
     const box = await button.boundingBox();
     expect(box.x).toBeGreaterThanOrEqual(0);
@@ -325,7 +325,7 @@ test('start shows immediately while saving, then restores on failure', async ({
   await request.post('/left', { headers, data: { left: 0 } });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new#/donors/donated');
-  await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+  await page.locator('.donor-thanks').click();
   await page.locator('#thanksMessage').fill('Thank you.');
   let release;
   const gate = new Promise((resolve) => {
@@ -409,7 +409,7 @@ test('test button responds immediately and reports a failed test', async ({ page
   await page.setViewportSize({ width: 320, height: 740 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new#/donors/donated');
-  await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+  await page.locator('.donor-thanks').click();
   await page.locator('#thanksMessage').fill('Thank you.');
   let release,
     calls = 0;
@@ -488,7 +488,7 @@ test('caption and message stay visible above the footer on a short screen', asyn
   await page.setViewportSize({ width: 390, height: 420 });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new#/donors/donated');
-  await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+  await page.locator('.donor-thanks').click();
   const png = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1cAAAAASUVORK5CYII=',
     'base64',
@@ -543,8 +543,7 @@ for (const view of ['dialog', 'tab']) {
       });
       await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
       await page.goto('/new#/donors/donated');
-      if (view === 'dialog')
-        await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+      if (view === 'dialog') await page.locator('.donor-thanks').click();
       const toggle = page.locator(view === 'dialog' ? '#thanksSwitch' : '#thanksTabSwitch');
       const label = page.locator(view === 'dialog' ? '#thanksStartLabel' : '#thanksTabLabel');
       const status = page.locator(view === 'dialog' ? '#thanksStatus' : '#thanksRowStatus');
@@ -582,7 +581,7 @@ test('Test avoids an unchanged timing write and persists a changed pace', async 
   });
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   await page.goto('/new#/donors/donated');
-  await page.getByRole('button', { name: 'Thank donors', exact: true }).click();
+  await page.locator('.donor-thanks').click();
   await page.locator('#thanksMessage').fill('Thank you, {name}.');
   await page.locator('#thanksTest').click();
   await expect(page.locator('#thanksStatus')).toHaveText('Test confirmed');

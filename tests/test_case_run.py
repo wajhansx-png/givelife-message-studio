@@ -45,9 +45,10 @@ class Base(tac.Base):
         self.cr.app = CaseApp()
         for name, fake in (
             # Text follow-ups use fake transport, just like the fixture's image DMs.
-            ("send_custom_text", lambda *args, **kwargs: {
-                "code": "SUCCESS", "results": {"message_id": "fake-text"}
-            }),
+            (
+                "send_custom_text",
+                lambda *args, **kwargs: {"code": "SUCCESS", "results": {"message_id": "fake-text"}},
+            ),
             ("recent_chats", lambda: [(p, "Person") for p in self.replies]),
             (
                 "scan_messages",
@@ -170,7 +171,8 @@ class Run(Base):
         jobs = self.h.jobs.export_jobs()["jobs"]
         job = jobs[0]
         self.assertEqual(
-            (job["owner"], job["origin"], sorted(job["ids"])), ("case_giki1", "case_run", sorted(giki))
+            (job["owner"], job["origin"], sorted(job["ids"])),
+            ("case_giki1", "case_run", sorted(giki)),
         )
         self.assertNotIn(late["id"], job["ids"])
         self.assertTrue(all(late["id"] not in j["ids"] for j in jobs))
@@ -315,7 +317,9 @@ class OneRow(Base):
 
     def test_a_new_row_joins_only_after_its_own_summary_and_runs_after_the_others(self):
         top, giki = self.people(2, 1)
-        self.h.book.update(giki[0], top_donor=False)  # an independent cohort, not already in Top's queue
+        self.h.book.update(
+            giki[0], top_donor=False
+        )  # an independent cohort, not already in Top's queue
         self.fast.start()
         self.addCleanup(self.fast.stop)
         self.cr.set_plan(self.only("top"))
@@ -329,7 +333,9 @@ class OneRow(Base):
         self.cr.add_row("giki1", s["token"])
         self.assertTrue(self.tick_until(lambda: len(self.h.jobs.export_jobs()["jobs"]) == 2))
         jobs = self.h.jobs.export_jobs()["jobs"]
-        self.assertEqual([j["owner"] for j in jobs], ["case_top", "case_giki1"])  # one DM queue at a time
+        self.assertEqual(
+            [j["owner"] for j in jobs], ["case_top", "case_giki1"]
+        )  # one DM queue at a time
         phones = [m["phone"] for m in self.sent]
         self.assertEqual(len(phones), len(set(phones)), "a person was messaged twice")
         with self.assertRaises(ValueError):  # a row that already joined cannot join twice
@@ -414,7 +420,9 @@ class ExtrasForTopDonors(Base):
             self.assertTrue(self.tick_until(lambda: self.job().get("pdf") is True))
         job = self.job()
         self.assertEqual((job.get("pdf"), job.get("video")), (True, True))
-        self.assertTrue(self.state()["plan"]["top"]["pdf"])  # remembered for the next Start question
+        self.assertTrue(
+            self.state()["plan"]["top"]["pdf"]
+        )  # remembered for the next Start question
 
     def test_one_tick_sends_only_that_one(self):
         self.people(tops=2, giki=0)

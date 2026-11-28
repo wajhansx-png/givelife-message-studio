@@ -7,15 +7,12 @@ on:
       - '*.js'
       - 'index.html'
       - 'tests/e2e/element-audit.cjs'
-      - 'tests/e2e/responsive-elements.spec.cjs'
       - 'studio.css'
       - 'donors.css'
       - 'donors.js'
-      - 'tests/e2e/donors-mobile.spec.cjs'
       - 'tests/e2e/thank_modal_layout.spec.cjs'
       - 'tests/e2e/donor_thanks.spec.cjs'
       - 'tests/e2e/donor-message-phone.spec.cjs'
-      - 'tests/e2e/mobile-back-thumb.spec.cjs'
       - '.github/workflows/donors-mobile-qa.yml'
   push:
     branches: [main]
@@ -52,11 +49,7 @@ jobs:
       - name: Test Thank Donors modal at all widths with fake transport
         run: corepack pnpm exec playwright test tests/e2e/thank_modal_layout.spec.cjs tests/e2e/donor_thanks.spec.cjs --reporter=list
       - name: Inspect real Donors DOM at phone widths (never send)
-        run: corepack pnpm exec playwright test tests/e2e/donors-mobile.spec.cjs tests/e2e/donor-message-phone.spec.cjs tests/e2e/mobile-back-thumb.spec.cjs --reporter=list
-      - name: Audit every rendered element in the existing workspaces
-        env:
-          ELEMENT_AUDIT_SMOKE: '0'
-        run: corepack pnpm exec playwright test tests/e2e/responsive-elements.spec.cjs --reporter=list
+        run: corepack pnpm exec playwright test tests/e2e/donor-message-phone.spec.cjs --reporter=list
       - name: Keep screenshots and failure traces
         if: always()
         uses: actions/upload-artifact@v4

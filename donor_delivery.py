@@ -1788,13 +1788,26 @@ class DonorDelivery:
                 plan = self._receipt_plan(current_job, {})
                 self.book.delivery(ident, "Sending")
                 self.tried_at = None
+
+                def record_attempt(mark):
+                    self._update(
+                        j["id"],
+                        sending={
+                            "id": ident,
+                            "after": mark,
+                            "plan": plan,
+                            "message": caption_now,
+                        },
+                    )
+
                 try:
+                    caption_now = self._fresh_caption(current_job, index)
                     result = self._dispatch(
                         current_job,
                         {
                             "target": "phone",
                             "phone": r["phone"],
-                            "message": (caption_now := self._fresh_caption(current_job, index)),
+                            "message": caption_now,
                             "poster": current_job["poster"],
                             "kind": "owner_text" if "custom_template" in j else self.KIND,
                             "attachment": j.get("attachment"),
@@ -1807,15 +1820,9 @@ class DonorDelivery:
                         sent,
                         skipped,
                         chat=chat,
-                        note=lambda mark: self._update(
-                            j["id"],
-                            sending={
-                                "id": ident,
-                                "after": mark,
-                                "plan": plan,
-                                "message": caption_now,
-                            },
-                        ),
+                        note=record_attempt
+                        if self.peek or plan["kinds"] or plan["follow_up"]
+                        else None,
                     )
                 except ValueError as e:
                     self.book.delivery(ident, "Not sent")

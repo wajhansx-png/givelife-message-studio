@@ -258,8 +258,12 @@ class GikiList(Fixture):
         for receipt in j["receipts"]:
             self.g.book.follow_up(receipt["id"], None)  # the share never went
         self.sent.clear()
+        self.on = [("pdf", "c" * 32)]  # replacement files apply only to a new batch
         self.assertEqual(len(self.g.jobs.half_sent()), 2)
         self.assertEqual(self.g.jobs.finish_half_sent(), 2)
+        self.assertEqual(
+            [b["file_id"] for b in self.sent if b.get("extra")], ["a" * 32, "b" * 32, "a" * 32]
+        )
         got = [
             (b["phone"][-1], b.get("extra") or ("share" if not b["poster"] else "case"))
             for b in self.sent
@@ -962,7 +966,7 @@ class GikiSelfHealing(Fixture):
         self.g.jobs.HEAL_WATCH = (0,)
         self.g.jobs.HEAL_QUICK = (0,)
         self.g.jobs.send = self.flaky_send
-        self.on = [("poster", "p" * 32), ("pdf", "a" * 32)]  # 2nd: poster pic, 3rd: PDF
+        self.on = [("poster", "b" * 32), ("pdf", "a" * 32)]  # 2nd: poster pic, 3rd: PDF
         for i in range(2):
             self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 200000{i}"})
         self.g.mutate({"action": "message", "text": "Salam {name}, please share this."})
@@ -1140,6 +1144,19 @@ class GikiSelfHealing(Fixture):
         )  # PDF not resent
         self.assertEqual(self.chat.got("923002000001"), ["case", "poster", "pdf", "share"])
 
+    def test_book_confirmation_survives_missing_job_receipt(self):
+        self.run_all()
+        jobs = self.g.jobs._load()
+        j = jobs["jobs"][-1]
+        receipt = j["receipts"].pop()
+        j.update(state="Interrupted", sending={"id": receipt["id"], "plan": receipt["plan"]})
+        self.g.jobs._save(jobs)
+        self.g.book.follow_up(receipt["id"], None)
+        phone = "923002000001"
+        self.chat.rows = [r for r in self.chat.rows if r[1] != phone or r[3] == "case"]
+        self.assertEqual(self.g.jobs.finish_half_sent(), 1)
+        self.assertEqual(self.chat.got(phone), ["case", "poster", "pdf", "share"])
+
     def test_a_restart_while_the_first_message_was_going_is_settled_by_the_chat(self):
         self.run_all()
         jobs = self.g.jobs._load()
@@ -1288,7 +1305,7 @@ class GikiExactGap(Fixture):
             self.g.mutate({"action": "add", "name": f"Giki P{i}", "phone": f"0300 20000{i:02d}"})
         self.g.mutate({"action": "message", "text": "Salam {name}, please share this."})
         self.g.mutate({"action": "pace", "gap_minutes": 3, "batch_size": 3, "rest_minutes": 10})
-        self.on = [("poster", "p1"), ("pdf", "f1")]
+        self.on = [("poster", "b" * 32), ("pdf", "a" * 32)]
         self.go(self.g, {"action": "send_all", "request_id": "timed", "poster": True})
         clock, log, blip = [1_000_000.0], [], [0]
 

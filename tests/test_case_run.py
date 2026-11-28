@@ -50,7 +50,10 @@ class Base(tac.Base):
                 lambda *args, **kwargs: {"code": "SUCCESS", "results": {"message_id": "fake-text"}},
             ),
             ("recent_chats", lambda: [(p, "Person") for p in self.replies]),
-            ("scan_messages", lambda jid: list(self.replies.get(jid.split("@")[0], []))),
+            (
+                "scan_messages",
+                lambda jid, fresh=False: list(self.replies.get(jid.split("@")[0], [])),
+            ),
         ):
             patcher = patch.object(app, name, fake)
             patcher.start()
@@ -529,6 +532,23 @@ class Giki(Base):
         self.tick_until(lambda: False, 10)
         self.assertEqual(len(self.shared), 3)  # never repeated
         self.assertEqual(self.state()["giki"][self.phone(did)]["step"], "shared")
+
+    @patch.object(app, "BLOCKED", set())
+    @patch.object(app, "PENDING_OPTOUTS", set())
+    def test_stop_in_inbox_prevents_next_share_even_when_block_save_fails(self):
+        did = self.giki_waiting()
+        self.reply(did, "Yes sure", "agree")
+        self.assertTrue(self.tick_until(lambda: self.shared))
+        count = len(self.shared)
+        self.reply(did, "stop messaging me", "stop1")
+        with patch.object(app, "optout", side_effect=RuntimeError("storage unavailable")):
+            self.cr.tick()
+        self.assertEqual(len(self.shared), count)
+        self.assertIn(self.phone(did), self.state()["pending_optouts"])
+        with patch.object(app, "recent_chats", return_value=[]):
+            self.cr.tick()
+        self.assertTrue(app.is_opted_out(self.phone(did)))
+        self.assertEqual(self.state()["pending_optouts"], {})
 
     def test_an_unclear_reply_waits_for_the_owner_who_can_mark_agreed(self):
         did = self.giki_waiting()

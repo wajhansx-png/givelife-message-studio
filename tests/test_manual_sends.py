@@ -317,6 +317,14 @@ class SendTests(unittest.TestCase):
         self.assertEqual(one["job_id"], two["job_id"])
         self.assertEqual(len(self.sent), 1)
 
+    def test_same_request_id_cannot_change_groups(self):
+        rid = "same-click-different-groups"
+        job = app.start_send_job(["test"], "", manual=True, request_id=rid)
+        self.wait(job)
+        with self.assertRaisesRegex(ValueError, "different group"):
+            app.start_send_job(["main"], "", manual=True, request_id=rid)
+        self.assertEqual(len(self.sent), 1)
+
     def test_disconnected_does_not_claim_success(self):
         self.status_connected = False
         with self.assertRaisesRegex(ValueError, "not connected"):

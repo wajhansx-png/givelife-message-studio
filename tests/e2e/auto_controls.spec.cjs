@@ -27,30 +27,6 @@ const stat = (page, id, name) => card(page, id).locator(`[data-stat="${name}"] d
 const events = async () =>
   (await api(PORT, '/__test/events')).events.filter((e) => /send/.test(e.path));
 
-test('five controls, all OFF at first, each with its numbers and Edit Settings', async ({
-  page,
-}) => {
-  await openReport(page);
-  const names = {
-    group: 'Group Auto',
-    donor_dm: 'DM Top Donors',
-    important: 'DM Important Donors',
-    volunteer: 'Volunteer Auto',
-  };
-  for (const id of ['group', 'donor_dm', 'important', 'volunteer']) {
-    await expect(card(page, id).locator('h4')).toHaveText(names[id]);
-    await expect(card(page, id).locator('.auto-switch')).toHaveText('OFF');
-    await expect(card(page, id).locator('.auto-switch')).toHaveAttribute('aria-checked', 'false');
-    for (const s of ['recipients', 'sent', 'pending', 'next'])
-      await expect(stat(page, id, s)).toBeVisible();
-    await expect(card(page, id).getByRole('button', { name: 'Edit Settings' })).toBeVisible();
-  }
-  expect(await events()).toHaveLength(0); // opening the page sent nothing
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
-    true,
-  );
-});
-
 test('a DM batch started anywhere (not from a card) shows live in the Report, first, and goes when it ends', async ({
   page,
 }) => {

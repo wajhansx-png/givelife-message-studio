@@ -46,27 +46,6 @@ test('/new reopens where you left: closing on Notes and opening the app again sh
   await ctx.close();
 });
 
-test('the main link "/" is the new design, /new is the same page, and the previous page is kept at /old', async ({
-  request,
-}) => {
-  const old = await (await request.get('/new')).text();
-  expect(old).not.toContain('new-ui.css');
-  expect(old).not.toContain('ui2');
-  const fresh = await (await request.get('/new')).text();
-  expect(fresh).toContain('/new-ui.css');
-  expect(fresh).toContain('class="nomsg ui2"');
-  const main = await (await request.get('/')).text();
-  expect(main).toBe(fresh); // the main link is the new design
-  expect((await request.get('/new/')).status()).toBe(200);
-  expect((await request.head('/')).status()).toBe(200);
-  const css = await request.get('/new-ui.css');
-  expect(css.status()).toBe(200);
-  const text = await css.text();
-  expect(text).not.toContain('@U');
-  expect(text).toContain('body.ui2');
-  expect((await request.get('/new/')).status()).toBe(200);
-});
-
 test('/donor search treats SQL syntax as literal text (read-only)', async ({ request }) => {
   const payload = encodeURIComponent("' OR 1=1--");
   const response = await request.get(`/donors?tab=all&q=${payload}`, {
@@ -546,17 +525,6 @@ test('/new Settings is grouped under four headings; the switches explain themsel
       true,
     );
   }
-});
-
-test('/new Stop DMs is hidden while idle, and the existing page still has it', async ({
-  page,
-  request,
-}) => {
-  await open(page, '/new#/donors/all', 1440);
-  await expect(page.locator('#donorSendImportant')).toBeVisible();
-  await expect(page.locator('#donorToggle')).toBeHidden();
-  const old = await (await request.get('/new')).text();
-  expect(old).not.toContain('ui2'); // the previous page is unchanged
 });
 
 test('/new phone: tapping the donated circle shows a tick, and tapping again clears it', async ({

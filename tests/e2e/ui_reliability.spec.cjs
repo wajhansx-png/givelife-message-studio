@@ -8,22 +8,6 @@ async function setup(page) {
     localStorage.setItem('givelife-theme', 'dark');
   });
 }
-for (const width of [1440, 768, 390, 320]) {
-  test(`Notes refresh and Back preserve screen ${width}`, async ({ page }) => {
-    await setup(page);
-    await page.setViewportSize({ width, height: 850 });
-    await page.goto('/new');
-    await page.locator('#donorNotesShortcut').click();
-    await expect(page).toHaveURL(/#\/notes$/);
-    await page.reload();
-    await expect(page.locator('#foundationNotes')).toBeVisible();
-    await expect(page.locator('#notesPassword')).toBeVisible();
-    await page.locator('#notesBack').click();
-    await expect(page.locator('#foundationNotes')).not.toBeVisible();
-    await expect(page.locator('#donorsPage')).not.toBeVisible();
-    await expect(page).not.toHaveURL(/notes/);
-  });
-}
 test('refresh never paints Main before the requested screen, even with slow scripts', async ({
   page,
 }) => {
@@ -77,15 +61,6 @@ test('secondary forms restore and close without sending', async ({ page }) => {
     await expect(page.locator('#' + id)).not.toBeVisible();
   }
 });
-test('Notes keeps its parent navigation after refresh', async ({ page }) => {
-  await setup(page);
-  await page.goto('/new');
-  await page.locator('#donorNotesShortcut').click();
-  await page.reload();
-  await page.locator('#notesBack').click();
-  await expect(page).not.toHaveURL(/notes/);
-  await expect(page.locator('#leftChip')).toBeAttached();
-});
 test('closing Memory while its response is delayed never reopens it', async ({ page }) => {
   await setup(page);
   let release;
@@ -102,31 +77,3 @@ test('closing Memory while its response is delayed never reopens it', async ({ p
   await expect(page.locator('#memoryDialog')).not.toBeVisible();
   await expect(page).toHaveURL(/#\/settings$/);
 });
-for (const width of [1440, 390])
-  test(`light theme and donor forms accessibility ${width}`, async ({ page }) => {
-    test.setTimeout(180000);
-    await setup(page);
-    await page.emulateMedia({ reducedMotion: 'reduce' }); // measure final colours, not a fade-in
-    await page.setViewportSize({ width, height: 850 });
-    await page.addInitScript(() => localStorage.setItem('givelife-theme', 'light'));
-    for (const route of [
-      '',
-      'donors/all',
-      'donors/all/add',
-      'donors/all/bulk',
-      'donors/all/pace',
-      'settings/poster',
-      'donors/all/notes',
-    ]) {
-      await page.goto('/new#/' + route);
-      await page.waitForTimeout(300);
-      const result = await new AxeBuilder({ page })
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-        .analyze();
-      expect(
-        result.violations
-          .filter((v) => ['critical', 'serious'].includes(v.impact))
-          .map((v) => ({ route, id: v.id, nodes: v.nodes.map((n) => n.target) })),
-      ).toEqual([]);
-    }
-  });

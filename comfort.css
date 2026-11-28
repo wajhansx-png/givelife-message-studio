@@ -1201,9 +1201,6 @@ html body #messageFocus :is(#focusFormatted, #focusText) {
     padding: 12px !important;
   }
 } /* 16px stops iOS zooming into the editor */
-/* Wide screens: the message sits in a centred reading column, lower from the top. */
-@media (min-width: 701px) {
-}
 /* WhatsApp look: the message is a green bubble on the dark chat wallpaper, so the eye lands on it. */
 html body #messageFocus .focus-paper {
   background: #0b141a radial-gradient(#ffffff0a 1px, transparent 1.5px) 0 0/18px 18px !important;
@@ -2654,12 +2651,6 @@ html body .report-card {
   width: min(680px, calc(100vw - 40px)) !important;
   margin: 0 auto !important;
 }
-html body .report-card .report-line {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  margin: 14px 0 !important;
-}
 html body .report-card button {
   display: block;
   margin: 22px 0 0 !important;
@@ -2787,14 +2778,6 @@ html body #donorsPage .dp-show {
     left: auto !important;
     width: min(560px, calc(100% - 24px)) !important;
   }
-}
-/* Report: resume list under the lines. */
-
-html body .report-card .report-resume[data-state='pending'] {
-  border-color: #facc1566;
-}
-html body .report-card .report-resume[data-state='failed'] {
-  border-color: #f8717199;
 }
 /* Phone donor rows: tighter side columns so names get the room, and long names use two lines. */
 @media (max-width: 700px) {
@@ -4283,8 +4266,6 @@ html
   .donor-table-wrap
   > .donor-expand-btn {
   display: none !important;
-}
-@media (max-width: 700px) {
 }
 /* Full screen: the columns themselves sit in the middle of the screen (header and rows stay aligned). */
 
@@ -6927,8 +6908,6 @@ html body:not(#_) #donorBatchPicker #batchStart:disabled {
     align-self: center;
   }
 }
-@media (max-width: 380px) {
-}
 
 /* Full-screen icon in the header (phones); the follow-up switch lives in the Send DMs setup there. */
 html body:not(#_) #donorsPage .donor-title #donorExpand {
@@ -7261,8 +7240,6 @@ html body:not(#_):not(#__) #donorsPage#donorsPage .donor-head .donor-title #dono
     padding: 0 6px !important;
     font-size: 11.5px !important;
   }
-}
-@media (max-width: 380px) {
 }
 @media (max-width: 380px) {
   html body:not(#_) #donorsPage#donorsPage[data-panel] .donor-row {

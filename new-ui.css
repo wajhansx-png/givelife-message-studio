@@ -733,8 +733,6 @@
     line-height: 1.4 !important;
   }
 }
-@media (min-width: 900px) {
-}
 
 @media (min-width: 900px) {
   .UI2 #donorMessages .bank-line {
@@ -2190,9 +2188,6 @@
   background: transparent !important;
   color: #e8edf2 !important;
   font-weight: 700 !important;
-}
-.UI2 .foundation-notes .notes-toolbar .ui2-note-i {
-  font-style: italic;
 }
 .UI2 .foundation-notes .notes-workspace > .notes-foot {
   order: 3;
@@ -3693,18 +3688,7 @@
 }
 /* Giki 1 and Giki 2 are used every day: on the phone they are two small buttons just above the bottom bar. On a computer
    they are items in the left menu instead. */
-.UI2 .ui2-tabs .ui2-quick {
-  display: none;
-}
 @media (max-width: 899px) {
-  .UI2 .ui2-tabs .ui2-quick {
-    display: flex;
-    grid-column: 1 / -1;
-    order: -1;
-    justify-content: center;
-    gap: 8px;
-    padding: 2px 0 4px;
-  }
   .UI2 .ui2-tabs .ui2-chip {
     min-width: 96px;
     height: 32px;
@@ -4707,19 +4691,12 @@
     border-radius: 20px;
   }
 }
-@media (max-width: 359px) {
-}
 
 /* No-scroll layout: one line of counts per row, the button beside the text, one Needs you row. */
 
 /* Short screens: the same page, tighter, still without scrolling. */
 
 /* A phone on its side: plan rows in two columns, headings dropped. */
-@media (max-height: 660px) {
-  .UI2 dialog.case-page :is(.cr-rows, .cr-needs) {
-    gap: 4px;
-  }
-}
 .UI2 dialog.case-sheet .cr-field select {
   box-sizing: border-box;
   width: 100%;
@@ -4874,13 +4851,6 @@
   .UI2 dialog.case-sheet .cr-menu {
     grid-template-columns: 1fr 1fr;
     gap: 6px;
-  }
-}
-
-/* The smallest phones (320x568): the whole case still fits with nothing to scroll */
-@media (max-height: 600px) and (max-width: 359px) {
-  .UI2 dialog.case-page :is(.cr-rows, .cr-needs) {
-    gap: 3px;
   }
 }
 
@@ -5904,11 +5874,6 @@
   font-size: 12px;
 }
 
-/* Phone reader: the ticks row takes the place of the hint line and is taller, so the message box gives it the room
-   (the message scrolls inside its box); the buttons and ticks always stay above the bottom bar. */
-@media (max-width: 899px) {
-}
-
 /* Inside More (the bottom row has Test for a group message, Copy for a DM): a calm menu button like the others. */
 .UI2 #messageFocus .ui2-reader-dock .focus-rail-more :is(#focusCopy, #focusTest) {
   border: 1px solid var(--line2) !important;
@@ -5949,8 +5914,6 @@
   background: #2f6fe4;
   color: #fff;
 }
-@media (max-width: 899px) {
-}
 .UI2 .ui2-rx-text .ui2-rx-chip[hidden] {
   display: none;
 }
@@ -5970,11 +5933,6 @@
     padding: 0 9px;
     font-size: 13px;
   }
-}
-
-/* Reader: the Poster item (tick + Change) next to PDF / Video */
-
-@media (max-width: 899px) {
 }
 
 /* More sheet: the Giki tile, in its own colour */

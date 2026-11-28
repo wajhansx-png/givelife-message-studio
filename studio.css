@@ -780,8 +780,6 @@ body .connect-dialog h2 {
     overscroll-behavior: none;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-}
 /* Bounded reading workspace: the composer has its own row and never covers text. */
 .preview-back {
   display: none;
@@ -5475,9 +5473,6 @@ html body .brandbar .seg button[aria-pressed='true'] {
 /* unselected tabs keep a visible fill (eyes never read bare text) */
 :root[data-theme='dark'] .donor-page .donor-tabs button:not([aria-selected='true']) {
   background: #ffffff14 !important;
-}
-
-@media (prefers-color-scheme: dark) {
 }
 :is(.card, .action-rail, .talk, .live, .brandbar) {
   box-shadow: var(--card-sh) !important;

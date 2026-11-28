@@ -490,8 +490,6 @@
     transition: none;
   }
 }
-@media (min-width: 900px) {
-}
 .donor-total {
   font-size: 12px;
   display: flex;

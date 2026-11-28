@@ -1350,8 +1350,7 @@ function ui2Observe(run, options) {
           n = Number(v?.dataset.n || 0),
           i = Number(v?.dataset.i || 0);
         // phones: a short label, so it never runs into the › arrow ("1/5", "Base +5")
-        const narrow = matchMedia('(max-width: 480px)').matches,
-          tiny = matchMedia('(max-width: 380px)').matches;
+        const tiny = matchMedia('(max-width: 380px)').matches;
         const draft = v?.dataset.draft === '1'; // a button wrote it: not saved, never called "Base"
         if (!draft && sw.dataset.draft === '1' && askedAt && Date.now() - askedAt < 120000) {
           askedAt = 0;

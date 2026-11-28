@@ -242,7 +242,7 @@ for (const width of [320, 390, 768, 1440]) {
       expect(toggle.x + toggle.width).toBeLessThanOrEqual(bounds.x + bounds.width);
     }
     expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(1);
-    await page.screenshot({ path: `/workspace/scratch/report-progress-${width}.png` });
+    await page.screenshot({ path: test.info().outputPath(`report-progress-${width}.png`) });
   });
 }
 for (const [width, height] of [

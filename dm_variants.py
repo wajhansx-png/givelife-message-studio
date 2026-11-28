@@ -359,7 +359,12 @@ def fact_problem(master, text):
     text = text.replace("\r\n", "\n").strip()
     if text == master:
         return ""
-    if _numbers(master) != _numbers(text):
+
+    def numbered_lines(value):
+        lines = (line for line in value.splitlines() if line.strip())
+        return [(i, numbers) for i, line in enumerate(lines) if (numbers := _numbers(line))]
+
+    if numbered_lines(master) != numbered_lines(text):
         return "a number, amount or phone number differs from the master"
     for line in master.split("\n"):
         if (

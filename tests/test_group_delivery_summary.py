@@ -20,6 +20,12 @@ class GroupDeliverySummaryTests(unittest.TestCase):
         self.assertIn("Do not resend", result)
         self.assertNotIn("Confirmed sent to 0/1", result)
 
+    def test_duplicate_or_unrelated_success_cannot_cover_a_missing_group(self):
+        rows = [{"destination": key, "code": "SUCCESS"} for key in ("a", "a", "other")]
+        report = summarize(rows, ["a", "b"])
+        self.assertIn("Only 1/2", report)
+        self.assertIn("1 destination(s) had no", report)
+
     def test_missing_receipts_not_success(self):
         result = summarize([], ["main"])
         self.assertIn("0/1", result)

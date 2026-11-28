@@ -382,6 +382,18 @@ def api_result(path):
     return mapping(mapping(api(path)).get("results"))
 
 
+def checked_messages(path):
+    response = api(path)
+    rows = mapping(response.get("results")).get("data")
+    if (
+        response.get("code") not in (None, "SUCCESS")
+        or not isinstance(rows, list)
+        or any(not isinstance(row, dict) or not row.get("id") for row in rows)
+    ):
+        raise ValueError("WhatsApp message history is unavailable.")
+    return rows
+
+
 def api_messages(path):
     data = api_result(path).get("data", [])
     return [x for x in data if isinstance(x, dict)] if isinstance(data, list) else []
@@ -421,13 +433,15 @@ def _seconds_since(stamp):
         return None
 
 
-def scan_messages(jid):
+def scan_messages(jid, fresh=False):
     """Reply-scan read of a chat. A chat nobody has written in since we last read it is served
     from memory: every read is a remote database query, and re-reading ~60 idle chats every two
     minutes used up the free database transfer quota. A chat is only reused when its last
     message was already 3+ minutes old when read, so a new message can never be missed.
     Sending and delete checks never use this; they always read live."""
     path = "/chat/" + urllib.parse.quote(jid, safe="") + "/messages?limit=20"
+    if fresh:
+        return checked_messages(path)
     stamp = _chat_stamps().get(jid)
     if stamp:
         with _CHAT_LOCK:
@@ -492,7 +506,7 @@ def _sent_rows(body, limit):
     """What this WhatsApp sent lately in the body's chat, newest first, as the gateway lists it."""
     jid, _ = custom_recipient(body)
     chat = jid if str(jid).endswith("@g.us") else jid + "@s.whatsapp.net"
-    rows = api_messages(
+    rows = checked_messages(
         "/chat/" + urllib.parse.quote(chat, safe="") + f"/messages?limit={limit}&is_from_me=true"
     )
     return [m for m in rows if m.get("is_from_me") is True and m.get("id")]
@@ -520,20 +534,32 @@ def sent_after(body, after):
     except Exception:
         return None
     types = _sent_types(body)
+    if after:
+        anchor = next((i for i, row in enumerate(rows) if str(row["id"]) == after), None)
+        if anchor is None:
+            return None
+        rows = rows[:anchor]
+    elif len(rows) >= 30:
+        return None
+    ambiguous = False
     for m in rows:  # newest first
         mid = str(m["id"])
-        if after and mid == after:
-            return ""  # back at the newest message from before the send: nothing new of this type
         if str(m.get("media_type") or "") in types:
-            return mid
-    return "" if not after or len(rows) < 30 else None  # `after` out of view: cannot tell
+            if (
+                types == ("", "text")
+                and body.get("message")
+                and m.get("content") == body["message"]
+            ):
+                return mid
+            ambiguous = True
+    return None if ambiguous else ""
 
 
 def _send_custom(body):
     check_hold()
     jid, is_group = custom_recipient(body)
     if body.get("kind") == "dm_extra":
-        return send_dm_extra(jid, is_group, body.get("extra"))
+        return send_dm_extra(jid, is_group, body.get("extra"), body.get("file_id"))
     message = body.get("message", "")
     if not is_group and body.get("kind") == "donor_thanks":
         hub = donors()
@@ -1352,7 +1378,7 @@ def dm_extras_check(pdf, video):
             )
 
 
-def send_dm_extra(jid, is_group, kind):
+def send_dm_extra(jid, is_group, kind, file_id=None):
     """One DM attachment (the case's PDF or video, saved in the Poster dialog). DMs only; never for a closed case."""
     import group_extras
 
@@ -1360,6 +1386,12 @@ def send_dm_extra(jid, is_group, kind):
         raise ValueError("Choose the PDF or the video for a DM.")
     if read_left() <= 0:
         raise ValueError("Not sent: the case is complete (Rs. 0 left).")
+    if file_id is not None:
+        return send_batch_attachment(jid, "", file_id)
+    if _LINE.get().startswith("giki"):
+        raise ValueError(
+            "This older batch has no saved attachment ID. Review its files before sending."
+        )
     ident = group_extras.saved(STORE, kind)
     if not ident:
         raise ValueError(
@@ -1632,6 +1664,15 @@ def start_send_job(keys, caption, manual=False, request_id=None, with_picture=Tr
             old = STORE.get("manual_request_" + request_id)
             existing = old.get("job_id") if old else None
         if existing:
+            previous = JOBS.get(existing) or STORE.get("send_job_" + existing) or {}
+            if (
+                previous.get("keys") != keys
+                or previous.get("caption") != caption
+                or previous.get("with_picture") != with_picture
+                or previous.get("first") != first
+                or previous.get("manual") != bool(manual)
+            ):
+                raise ValueError("This send request belongs to a different group post.")
             return existing
         if ACTIVE:
             current = JOBS.get(ACTIVE, {})
@@ -1639,6 +1680,7 @@ def start_send_job(keys, caption, manual=False, request_id=None, with_picture=Tr
                 manual
                 and current.get("manual")
                 and current.get("keys") == keys
+                and current.get("first") == first
                 and current.get("caption") == caption
                 and current.get("with_picture", True) == with_picture
             ):
@@ -1665,6 +1707,7 @@ def start_send_job(keys, caption, manual=False, request_id=None, with_picture=Tr
             "message": "Sending now…",
             "manual": bool(manual),
             "keys": keys,
+            "first": first,
             "caption": caption,
             "with_picture": bool(with_picture),
         }
@@ -1782,7 +1825,7 @@ def run_job(job_id, keys, caption, queue=False):
                     break
             if stop_all:
                 break
-            job["results"].append({"group": name, **result})
+            job["results"].append({**result, "group": name, "destination": key})
             save_job(job_id)
             if result.get("code") == "SUCCESS":
                 last_send = started_at
@@ -3592,19 +3635,27 @@ def recent_dms():
     return [(p, t) for p, t in r if time.time() - t < 7 * 86400][-60:]
 
 
+PENDING_OPTOUTS = set()
+
+
 def optout(phone):
     d = hashlib.sha256((phone + "@s.whatsapp.net").encode()).hexdigest()
+    PENDING_OPTOUTS.add(d)
+    BLOCKED.add(d)
     if STORE:
-        if not STORE.get("optout_" + d):
+        new = not STORE.get("optout_" + d)
+        STORE.put("optout_" + d, True)
+        PENDING_OPTOUTS.discard(d)
+        if new:
             ledger = STORE.get("dm_daily", {}) or {}
             ledger["optouts"] = ledger.get("optouts", 0) + 1
             STORE.put("dm_daily", ledger)
-        STORE.put("optout_" + d, True)
-    BLOCKED.add(d)
 
 
 def is_opted_out(phone):
     """True when this person asked not to be messaged (either stored form of the key)."""
+    if hashlib.sha256((phone + "@s.whatsapp.net").encode()).hexdigest() in PENDING_OPTOUTS:
+        return True
     if not STORE:
         return False
     keys = (

@@ -372,6 +372,8 @@ class GikiVolunteers(Volunteers):
             time.sleep(1)
         if self.jobs.active:
             raise ValueError("The DMs are still stopping. Try again in a few seconds.")
+        with self.jobs.REPAIR_LOCK:
+            self.jobs._settle_in_flight()
         if not self.resumable():
             raise ValueError("Nothing to resume. Press DM all to start again.")
         j = self.jobs.export_jobs()["jobs"][-1]
@@ -386,7 +388,11 @@ class GikiVolunteers(Volunteers):
                 "reply": f"Finished {finished} people who were missing part of their messages. Everyone has it now.",
             }
         # Resume starts at once (the owner's choice): only the people still waiting, nobody twice
-        result = self.send_all({"request_id": body.get("request_id"), "delay_seconds": 0}, resume_ids=remaining)
+        result = self.send_all(
+            {"request_id": body.get("request_id"), "delay_seconds": 0},
+            resume_ids=remaining,
+            resume_extras={k: j[k] for k in ("after", "after_files") if k in j},
+        )
         result["reply"] = "DMs resumed. Nobody who already got it gets it again."
         return result
 
@@ -400,7 +406,7 @@ class GikiVolunteers(Volunteers):
             )
         return share
 
-    def send_all(self, body, hold_until=None, *, resume_ids=None):
+    def send_all(self, body, hold_until=None, *, resume_ids=None, resume_extras=None):
         """DM all: each person gets the case first (poster and the Group msgs text, then the PDF / video that are on),
         then the share message the owner wrote. One person at a time with the saved timer. Never twice."""
         share = self._share()
@@ -411,7 +417,7 @@ class GikiVolunteers(Volunteers):
         if not isinstance(case, str) or not case.strip():
             raise ValueError("The case message is empty. Write it in Group msgs first.")
         pace = self.pace(body)
-        extras = self.case_extras()
+        extras = self.case_extras() if resume_extras is None else resume_extras
         with self.lock:
             rid = body.get("request_id")
             old = next(
@@ -424,7 +430,8 @@ class GikiVolunteers(Volunteers):
                     or old.get("gap_seconds") != pace["gap_seconds"]
                     or old.get("chunk") != pace["chunk"]
                     or old.get("rests") != pace["rests"]
-                    or old.get("after") != extras["after"]
+                    or old.get("after") != extras.get("after")
+                    or old.get("after_files") != extras.get("after_files")
                     or old.get("custom_template") != case
                     or old.get("follow_up") != share
                 ):
@@ -522,7 +529,8 @@ class GikiVolunteers(Volunteers):
         import group_extras
 
         # the 2nd / 3rd messages ticked in Timer, in order: the batch sends each as its own recorded step
-        return {"after": [kind for kind, _ in group_extras.after_items(self.app.STORE, "giki")]}
+        files = dict(group_extras.after_items(self.app.STORE, "giki"))
+        return {"after": list(files), "after_files": files}
 
     def mutate(self, body):
         if body.get("action") == "import":

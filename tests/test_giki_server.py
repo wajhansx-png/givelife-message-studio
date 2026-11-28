@@ -144,7 +144,9 @@ class GikiServer(Base):
             patch.object(
                 app,
                 "send_batch_attachment",
-                side_effect=lambda *a: seen.append(app.device()) or {"code": "SUCCESS"},
+                side_effect=lambda jid, caption, ident: (
+                    seen.append((app.device(), ident)) or {"code": "SUCCESS"}
+                ),
             ),
             patch("group_extras.saved", return_value="a" * 32),
         ):
@@ -155,10 +157,11 @@ class GikiServer(Base):
                     "message": "",
                     "kind": "dm_extra",
                     "extra": "pdf",
+                    "file_id": "b" * 32,
                     "line": "giki",
                 }
             )
-        self.assertEqual(seen, [GIKI])
+        self.assertEqual(seen, [(GIKI, "b" * 32)])
 
     def test_giki_dm_case_reads_the_group_message_with_todays_amount_at_the_click(self):
         h = app.donors()
@@ -298,11 +301,23 @@ class GikiChatCheck(Base):
     def body(self, **k):
         return {"target": "phone", "phone": "923001234567", "line": "giki", **k}
 
+    def test_text_confirmation_needs_matching_content_and_a_known_anchor(self):
+        rows = next(iter(self.chats.values()))
+        rows.insert(0, {"id": "M4", "is_from_me": True, "media_type": "text", "content": "Hello"})
+        body = self.body(message="Hello")
+        self.assertEqual(app.sent_after(body, "M3"), "M4")
+        self.assertIsNone(app.sent_after(body, "missing"))
+        self.assertIsNone(app.sent_after(self.body(message="Different"), "M3"))
+        with patch.object(app, "api", return_value={"code": "ERROR", "results": {"data": []}}):
+            self.assertIsNone(app.sent_after(body, ""))
+
     def test_newest_and_what_came_after_it(self):
         self.assertEqual(app.newest_sent(self.body()), "M3")
-        self.assertEqual(app.sent_after(self.body(kind="dm_extra", extra="pdf"), "M2"), "M3")  # the PDF went
-        self.assertEqual(app.sent_after(self.body(kind="dm_extra", extra="poster"), "M2"), "")  # no new image
-        self.assertEqual(app.sent_after(self.body(poster=True), "M1"), "M2")  # a case (image) after M1
+        self.assertIsNone(app.sent_after(self.body(kind="dm_extra", extra="pdf"), "M2"))
+        self.assertEqual(
+            app.sent_after(self.body(kind="dm_extra", extra="poster"), "M2"), ""
+        )  # no new image
+        self.assertIsNone(app.sent_after(self.body(poster=True), "M1"))
         self.assertEqual(app.sent_after(self.body(poster=False), "M3"), "")  # no text after M3
         self.assertIsNone(app.sent_after(self.body(), None))  # no mark: cannot tell
         self.assertEqual({d for _, d in self.asked}, {GIKI})  # always from the Giki WhatsApp

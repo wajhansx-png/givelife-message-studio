@@ -876,12 +876,14 @@ class CaseRun:
             return "ok", ""
         return "uncertain", "Send not confirmed. Check WhatsApp before retrying."
 
-    def _flow(self):
+    def _flow(self, checked=None):
         """At most one share message per tick (the DM guard keeps its own gap). Reserved before sending."""
         st = self._read()
         if st["status"] != "running":
             return
         for phone, f in st["giki"].items():
+            if checked is not None and phone not in checked:
+                continue
             if f.get("row") not in GIKI_GROUPS or st["rows"].get(f["row"], {}).get("state") in (
                 "paused", "off", "stopped"
             ):
@@ -938,6 +940,15 @@ class CaseRun:
                     }
         return out
 
+    def _retry_optouts(self, st):
+        for phone, mid in list(st.get("pending_optouts", {}).items()):
+            try:
+                self.app.optout(phone)
+            except Exception:
+                continue
+            del st["pending_optouts"][phone]
+            st["seen"].append(mid)
+
     def _scan(self):
         st = self._read()
         if st["status"] != "running":
@@ -949,14 +960,20 @@ class CaseRun:
             chats = [p for p, _ in self.app.recent_chats() if p in people]
         except Exception:
             return
+        chats = list(dict.fromkeys(chats + [
+            phone for phone, entry in st["giki"].items()
+            if entry.get("step") == "agreed" and phone in people
+        ]))
         if not chats:
             return
         start = st["cursor"] % len(chats)
         batch = (chats[start:] + chats[:start])[:6]
         events = []
+        checked = set()
         for phone in batch:
             try:
-                msgs = self.app.scan_messages(phone + "@s.whatsapp.net") or []
+                msgs = self.app.scan_messages(phone + "@s.whatsapp.net", fresh=True)
+                checked.add(phone)
             except Exception:
                 continue
             info = people[phone]
@@ -997,7 +1014,8 @@ class CaseRun:
                     try:
                         self.app.optout(phone)
                     except Exception:
-                        pass
+                        s["seen"].remove(mid)
+                        s.setdefault("pending_optouts", {})[phone] = mid
                     if f:
                         f["step"] = "declined"
                     continue
@@ -1047,6 +1065,7 @@ class CaseRun:
                     )
 
         self._edit(apply)
+        return checked
 
     def _need(self, st, nid, kind, title, text, phone, info, actions, mid=None):
         st["needs"].setdefault(
@@ -1291,13 +1310,15 @@ class CaseRun:
         if not self.worker.acquire(blocking=False):
             return
         try:
-            if self._read()["status"] != "running":
+            st = self._read()
+            if not quick and st.get("pending_optouts"):
+                self._edit(self._retry_optouts)
+            if st["status"] != "running":
                 return
             self._edit(self._advance)
             if quick:  # a tap only starts the next row; reading chats (slow WhatsApp calls) is the background loop's job
                 return
-            self._flow()
-            self._scan()
+            self._flow(self._scan() or set())
         finally:
             self.worker.release()
 

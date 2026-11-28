@@ -266,6 +266,7 @@ class DonorDelivery:
                 "request_signature",
                 "personal_names",
                 "custom_template",
+                "sending",
             )
         }
         if result.get("state") == "Completed" and not result.get("sent") and result.get("skipped"):
@@ -373,9 +374,19 @@ class DonorDelivery:
         pdf=False,
         video=False,
         after=None,
+        after_files=None,
     ):
         if type(pdf) is not bool or type(video) is not bool:
             raise ValueError("PDF and video must be on or off.")
+        if after_files is not None and (
+            not isinstance(after_files, dict)
+            or set(after_files) != set(after or [])
+            or any(
+                not isinstance(v, str) or not re.fullmatch(r"[0-9a-f]{32}", v)
+                for v in after_files.values()
+            )
+        ):
+            raise ValueError("Review the selected attachments.")
         if after is not None and (
             not isinstance(after, list) or any(k not in self.EXTRA_LABEL for k in after)
         ):
@@ -473,6 +484,7 @@ class DonorDelivery:
                     fresh,
                     *([pdf, video] if pdf or video else []),
                     *([after] if after is not None else []),
+                    *([after_files] if after_files is not None else []),
                 ],
                 sort_keys=True,
             ).encode()
@@ -637,6 +649,7 @@ class DonorDelivery:
                 follow_up = prev.get("follow_up")
                 pdf, video = bool(prev.get("pdf")), bool(prev.get("video"))
                 after = prev.get("after")
+                after_files = prev.get("after_files")
             by = {r["id"]: r for r in self.book.recipients(scope, order, None)}
             mine = [by[i] for i in left if i in by]
             if not mine:
@@ -822,7 +835,11 @@ class DonorDelivery:
             if video:
                 job["video"] = True  # then its video
             if after is not None:
-                job["after"] = list(after)  # Giki: the 2nd / 3rd messages, each its own recorded step
+                job["after"] = list(
+                    after
+                )  # Giki: the 2nd / 3rd messages, each its own recorded step
+            if after_files is not None:
+                job["after_files"] = dict(after_files)
             if owner:
                 job["owner"] = str(owner)[:40]  # which Reports > Auto control started this batch
             if attachment:
@@ -1052,6 +1069,7 @@ class DonorDelivery:
                 "poster": False,
                 "kind": "dm_extra",
                 "extra": kind,
+                "file_id": (j.get("after_files") or {}).get(kind),
                 "name": name,
                 "gender": gender,
             }
@@ -1210,8 +1228,6 @@ class DonorDelivery:
     def _settle_in_flight(self):
         """A person whose first message was being sent when the service stopped (no record of how it ended): the chat
         tells. It went = recorded as sent, so their next steps follow; it did not = they wait for the next send."""
-        if self.seen is None:
-            return
         for j in self.export_jobs().get("jobs", []):
             flight = j.get("sending")
             if not isinstance(flight, dict) or j.get("state") in ("Starting", "Sending", "Waiting"):
@@ -1221,24 +1237,26 @@ class DonorDelivery:
                 r = self.book.resolve(ident)
             except ValueError:
                 r = None
-            found = ""
-            if (
-                r
-                and r.get("delivery") == "Sending"
-                and isinstance(mark, str)
-                and not any(x.get("id") == ident for x in j.get("receipts", []))
-            ):
-                body = {
-                    "target": "phone",
-                    "phone": r["phone"],
-                    "poster": j.get("poster", True),
-                    "attachment": j.get("attachment"),
-                    "kind": self.KIND,
-                }
-                try:
-                    found = self.seen(body, mark)
-                except Exception:
-                    found = None
+            if r and not any(x.get("id") == ident for x in j.get("receipts", [])):
+                if r.get("delivery") == "Sent" and (r.get("last_sent_at") or 0) >= j["created_at"]:
+                    found = True
+                elif r.get("delivery") == "Sending" and isinstance(mark, str) and self.seen:
+                    body = {
+                        "target": "phone",
+                        "phone": r["phone"],
+                        "poster": j.get("poster", True),
+                        "attachment": j.get("attachment"),
+                        "kind": self.KIND,
+                        "message": flight.get("message", ""),
+                    }
+                    try:
+                        found = self.seen(body, mark)
+                    except Exception:
+                        found = None
+                elif r.get("delivery") == "Sending":
+                    continue
+                else:
+                    found = ""
                 if found is None:
                     continue  # cannot tell now: left as it is (never sent twice); looked at again next time
                 if found:
@@ -1256,7 +1274,13 @@ class DonorDelivery:
                     )
                 else:
                     self.book.delivery(ident, "Not sent")  # it did not go: they are waiting again
-            self._update(j["id"], receipts=j.get("receipts", []), sending=None)
+            receipts = j.get("receipts", [])
+            self._update(
+                j["id"],
+                receipts=receipts,
+                sent=sum(r.get("state") == "Sent" for r in receipts),
+                sending=None,
+            )
 
     def _finish_half_sent(self, job_id=None):
         self._settle_in_flight()
@@ -1297,6 +1321,7 @@ class DonorDelivery:
                 "poster": False,
                 "kind": "dm_extra",
                 "extra": kind,
+                "file_id": (j.get("after_files") or {}).get(kind),
                 "name": name,
                 "gender": gender,
             }
@@ -1589,7 +1614,7 @@ class DonorDelivery:
         try:
             if j.get("resume_from"):
                 prior = self._job_for_repair(j["resume_from"])
-                if self.incomplete_chat(prior):
+                if prior.get("sending") or self.incomplete_chat(prior):
                     self.finish_half_sent(prior["id"])
                     pending = self.incomplete_chat(self._job_for_repair(prior["id"]))
                     if pending:
@@ -1782,8 +1807,15 @@ class DonorDelivery:
                         sent,
                         skipped,
                         chat=chat,
-                        note=(lambda mark: self._update(j["id"], sending={"id": ident, "after": mark, "plan": plan}))
-                        if self.peek is not None else None,
+                        note=lambda mark: self._update(
+                            j["id"],
+                            sending={
+                                "id": ident,
+                                "after": mark,
+                                "plan": plan,
+                                "message": caption_now,
+                            },
+                        ),
                     )
                 except ValueError as e:
                     self.book.delivery(ident, "Not sent")
@@ -1937,6 +1969,14 @@ class DonorDelivery:
             self.status()
             jobs = self._load().get("jobs", [])
             j = jobs[-1] if jobs else None
+        if (not self.REPAIR_AFTER_RESTART and j and j.get("auto") and not self.active
+            and j.get("state") == "Interrupted" and j.get("boot") != self.boot
+            and time.time() - j.get("updated_at", 0) <= self.AUTO_WINDOW
+            and (j.get("sending") or self.incomplete_chat(j))):
+            self.finish_half_sent(j["id"])
+            j = self._job_for_repair(j["id"])
+            if self.incomplete_chat(j):
+                return None
         if (
             not j
             or not j.get("auto")
@@ -1991,6 +2031,8 @@ class DonorDelivery:
             args["video"] = True
         if "after" in j:
             args["after"] = list(j["after"])
+        if "after_files" in j:
+            args["after_files"] = dict(j["after_files"])
         if j.get("owner"):
             args["owner"] = j["owner"]
         if j.get("origin"):

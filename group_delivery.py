@@ -7,10 +7,19 @@ No retries are initiated here: an uncertain send may have reached WhatsApp.
 
 def summarize(results, destinations):
     """Summarize actual per-group gateway receipts; never infer success."""
-    destinations = list(destinations)
+    destinations = list(dict.fromkeys(destinations))
     total = len(destinations)
     outcomes = [r for r in (results or []) if isinstance(r, dict)]
-    successes = sum(r.get("code") == "SUCCESS" for r in outcomes)
+    wanted = {str(k).casefold() for k in destinations}
+
+    def destination(row):
+        if row.get("destination"):
+            return str(row["destination"]).casefold()
+        name = str(row.get("group") or "").casefold()
+        return "main" if name == "givelife" else name
+
+    attempted = {destination(row) for row in outcomes} & wanted
+    successes = len({destination(r) for r in outcomes if r.get("code") == "SUCCESS"} & wanted)
     if total and successes == total:
         return f"Confirmed sent to {successes}/{total} groups."
 
@@ -32,7 +41,7 @@ def summarize(results, destinations):
         failures.append(f"{name}: {detail[:260]}")
     if not outcomes:
         failures.append("The send stopped before a gateway receipt was recorded.")
-    if len(outcomes) < total:
-        failures.append(f"{total - len(outcomes)} destination(s) had no send attempt or receipt.")
+    if len(attempted) < total:
+        failures.append(f"{total - len(attempted)} destination(s) had no send attempt or receipt.")
 
     return line + " " + " | ".join(failures) + " Do not resend without checking WhatsApp."

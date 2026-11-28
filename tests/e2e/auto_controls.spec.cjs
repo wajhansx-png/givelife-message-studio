@@ -19,7 +19,8 @@ async function openReport(page) {
   await page.addInitScript((k) => localStorage.setItem('givelife-cloud-key', k), KEY);
   page.on('dialog', (d) => d.accept());
   await page.goto('/new');
-  await page.locator('.report-open').click();
+  // the new design opens the Report from the left menu / More; the same button does it in one click
+  await page.evaluate(() => document.querySelector('.report-open').click());
   await expect(page.locator('.auto-card')).toHaveCount(7); // the 5 controls + Giki 1 and Giki 2;
 }
 const card = (page, id) => page.locator(`.auto-card[data-control="${id}"]`);
@@ -82,10 +83,7 @@ test('DM Important Donors: owner picks the count, it sends at once, shows live n
 
   // The server owns the run: reloading (or closing) the page changes nothing.
   await page.reload();
-  await page
-    .locator('.report-open')
-    .click()
-    .catch(() => {});
+  await page.evaluate(() => document.querySelector('.report-open').click());
   await expect(card(page, 'important').locator('.auto-switch')).toHaveText('ON');
   expect((await api(PORT, '/donor-delivery')).id).toBe(jobBefore);
 
